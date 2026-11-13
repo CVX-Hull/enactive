@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/3`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/4`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -91,12 +91,14 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/3"`, `model`,
+The closed route has exactly `schema: "player-host/4"`, `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
-`context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`).
-`pi-player-host/1` through `/4`, `player-host/1`, `player-host/2` and
+`context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
+amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
+text ([the dollar limit](#the-dollar-limit)).
+`pi-player-host/1` through `/4`, `player-host/1` through `/3` and
 missing/invalid fields are rejected; closed historical configurations and traces are
 evidence, not runnable current inputs.
 `model` contains Pi's
@@ -112,8 +114,9 @@ Freeze `service_tier` as `default` or `priority`. Direct-provider default leaves
 unset; priority adds only `service_tier: "priority"` through Pi's maintained
 `onPayload` hook. Verify support and pricing for the exact provider/model before
 selection. For the tested DeepInfra route, requested priority uses all configured
-rates and conservative per-attempt reservations at1.5× standard. This is a
-conservative configured estimate, separate from provider-reported estimates,
+rates at1.5× standard, which also raises the bound a request with no cost record
+counts for. This is a
+conservative configured estimate, separate from provider-reported cost,
 actual applied-tier prices and invoices. DeepInfra may serve an unsupported
 priority request at the default tier. There is no tier/model fallback or retry
 triggered by the echo. `host-start.requested_service_tier` records selection;
@@ -389,11 +392,34 @@ with `usage_available:false`; a reported complete input/output count enables
 normalized usage. Its `usage.cost` is Pi's estimate from the route's configured rates,
 which `cost_source:"configured-rates"` says; Pi discards any cost the provider reports.
 
-`response-complete.reported_cost_usd` (additive in version 3, absent from traces before
-12 November 2026, where it means not recorded) is the cost the provider itself reported
-for that response, read from the same raw usage record of the stream. It is evidence
-only: the host, the driver and the evaluator do not read it, and the run behaves the
-same with or without it. The rule is the curator's
+### The dollar limit
+
+The host stops at the route's `spend_limit_usd`, counted from what the provider
+reports; the [contract](../../docs/contracts/player-host.md#spend) states the rule.
+In this adapter:
+
+- **Counting.** Each HTTP attempt counts once, when its `response-complete` is
+  written: at `reported_cost_usd` when that is not null, otherwise at the route's
+  `unpriced_request_usd`. The event carries `counted_cost_usd`, `cost_counted_as`
+  (`provider-reported` or `unpriced-bound`) and the running `spent_usd`. An attempt
+  that reaches settlement without a `response-complete` gets a `request-unpriced`
+  event with the same three fields. `settled` carries the total `spent_usd` and the
+  count of `unpriced_requests`.
+- **`spend-limit`.** The check sits beside the `max_requests` check: on entering a
+  logical request, before every fetch, and after a first attempt fails and before its
+  retry. When the total has reached the limit the host stops and sends nothing. A
+  request already sent finishes, so the total can pass the limit by at most what one
+  request counts.
+- **`cost-unreported`.** A response that did not fail (stop reason other than `error`,
+  `aborted`, `length` or `deferred`) with a null `reported_cost_usd` stops the host
+  before any tool call from it is dispatched. It has counted at the bound.
+- **The bound is not computed here.** `unpriced_request_usd` comes from the route;
+  the package check computes it from the route's configured rates.
+- **No notice** is added for dollars. The driver's ending reserve asks for an orderly
+  finish before the limit.
+
+`response-complete.reported_cost_usd` is the cost the provider itself reported
+for that response, read from the same raw usage record of the stream. The rule is the curator's
 (`tools/curator_host/providers.py`, `reported_cost`), and both hosts' tests run the
 usage records in `tests/fixtures/provider-usage-cost.json`:
 
@@ -410,13 +436,14 @@ usage records in `tests/fixtures/provider-usage-cost.json`:
   no trailing zeros, `"0"` for zero. Each JSON number is turned once into the shortest
   decimal that reads back as the same number, which is the provider's own digits for up
   to 15 significant digits, and sums and comparisons use integers, so no floating-point
-  arithmetic touches the amount.
+  arithmetic touches the amount. The route's two amounts and every counted amount and
+  total use the same text and the same integer arithmetic.
 
 HTTP refusal status is retained before SDK rejection. `tool-result`
 text and structured data retain operation/source joins, with image references in
 place of bytes. `tool-refused`, `abort` and `settled` retain refusal and failure outcomes. An eligible first attempt has a transport-derived
 `response-complete` with its `http_status` (null for a pre-header rejection), error
-stop reason, unknown usage and a null reported cost; the final attempt is completed by the SDK assistant
+stop reason, unknown usage, a null reported cost and the bound as its counted cost; the final attempt is completed by the SDK assistant
 message. Backoff aborts and excessive-delay refusals do not duplicate that first
 receipt. `provider-retry` marks eligibility with its `retry_class` and the
 configured delay ceiling, then a second-attempt start with the preceding request ID; monotonic intervals expose actual waiting without

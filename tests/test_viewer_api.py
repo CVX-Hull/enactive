@@ -323,10 +323,9 @@ def test_bootstrap_interval_for_a_median_needs_five_values(tmp_path):
 def pause_run(directory: Path, kind: str) -> Path:
     run = Run(directory)
     a = run.actor()
-    # Synthetic requests are seconds apart, so any real ceiling is crossed by the one-hour projection; only the
+    # Synthetic requests are seconds apart, so any real limit is crossed by the one-hour projection; only the
     # spend case declares a small one.
-    ceiling = dict(accounting=dict(prior_reserved_usd='0.5', ceiling_usd='1.0', prospective_reserved_usd='0.9') if kind == 'spend'
-        else dict(prior_reserved_usd='0', ceiling_usd='1000', prospective_reserved_usd='1'))
+    ceiling = dict(spend_limit_usd='0.5' if kind == 'spend' else '1000')
     cost = Run.usage(total=0.3) if kind == 'spend' else None
     run.step(a, 'input', [key('j')], F('in_play', 3600, fill=1), usage=cost)
     run.step(a, 'input', [key('j')], F('in_play', 3660, fill=2), usage=cost)
@@ -509,14 +508,15 @@ def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
     from harness.viewer import views
     from harness.viewer.catalog import ViewError
     (tmp_path / 'runs').mkdir()
-    current, unversioned, future = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future'))
-    for directory, manifest in ((current, dict(schema='campaign-run/5', session='1' * 32)), (unversioned, dict(session='2' * 32)),
-            (future, dict(schema='campaign-run/6', session='3' * 32))):
+    current, unversioned, future, replaced = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future', 'replaced'))
+    # A campaign-run/5 manifest is read only for a session the closed archive index lists; this one is not listed.
+    for directory, manifest in ((current, dict(schema='campaign-run/6', session='1' * 32)), (unversioned, dict(session='2' * 32)),
+            (future, dict(schema='campaign-run/7', session='3' * 32)), (replaced, dict(schema='campaign-run/5', session='4' * 32))):
         directory.mkdir()
         (directory / 'manifest.json').write_text(json.dumps(manifest))
     catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))
     assert catalog.run_dir_for('1' * 32, {}) == current
-    assert catalog.run_dir_for('2' * 32, {}) is None and catalog.run_dir_for('3' * 32, {}) is None
+    assert all(catalog.run_dir_for(digit * 32, {}) is None for digit in '234')
     store = tmp_path / 'player-memory.sqlite3'
     (unversioned / 'manifest.json').write_text(json.dumps(dict(session='2' * 32, player_store=str(store))))
     with pytest.raises(ViewError, match='bad_manifest') as error:
@@ -531,7 +531,7 @@ def test_the_live_session_comes_from_a_supported_manifest(tmp_path):
     (run_dir / 'manifest.json').write_text(json.dumps(dict(session=SESSION)))
     evaluator = LiveEvaluator(run_dir, tmp_path / 'root', FakeBinding())
     assert evaluator.session() is None
-    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION)))
+    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=SESSION)))
     assert evaluator.session() == SESSION
 
 

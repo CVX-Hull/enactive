@@ -24,7 +24,7 @@ def markers(directory, *, deadline=200):
 
 
 def receipt(**changes):
-    value = dict(schema='campaign-receipt/3', session=SESSION, source_commit=COMMIT,
+    value = dict(schema='campaign-receipt/4', session=SESSION, source_commit=COMMIT,
         started_wall=1000, ended_wall=1010, elapsed_seconds=10,
         native_absence_verified=True, deciding_hosts_quiescent=True, input_authority_revoked=True,
         cleanup=dict(schema='computer-cleanup/1', session=SESSION, native_absence_verified=True,
@@ -39,7 +39,7 @@ def test_terminal_requires_current_bound_cleanup_receipt_before_the_custody_dead
     scope = dict(session=SESSION, source_commit=COMMIT, ready_wall=1000,
                  ready_at=100, started_wall=999, native_pid=99, custody_end=120)
     assert guard.terminal_coverage(receipt(), **scope)
-    for change in (dict(schema='campaign-receipt/2'), dict(source_commit='other'), dict(session='other'),
+    for change in (dict(schema='campaign-receipt/3'), dict(source_commit='other'), dict(session='other'),
                    dict(native_absence_verified=False), dict(deciding_hosts_quiescent=False),
                    dict(input_authority_revoked=False), dict(cleanup={}), dict(ended_wall=float('inf')),
                    dict(ended_wall=1050, elapsed_seconds=50), dict(started_wall=900)):

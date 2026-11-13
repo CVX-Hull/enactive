@@ -1,8 +1,10 @@
 """The `run_facts` table: what the run was configured to do (docs/contracts/evaluation.md).
 
-From `manifest.json` (campaign-run/4 or /5) and the first host-start event. Operator labels come from a
-campaign-run/5 manifest; an archived campaign-run/4 run has none, so the caller may supply them.
-The declared spend allowance is the manifest's ceiling minus what earlier admissions had reserved.
+From `manifest.json` (campaign-run/6, or an archived campaign-run/4 or /5) and the first host-start event.
+Operator labels come from the manifest; an archived campaign-run/4 run has none, so the caller may supply them.
+The spend allowance of a campaign-run/6 run is its declared dollar limit, `spend_limit_usd`. An archived run
+declared a worst-case reservation instead: its allowance is the manifest's ceiling minus what earlier admissions
+had reserved, and only an archived run has `declared_ceiling_usd` and `prior_reserved_usd`.
 """
 from __future__ import annotations
 
@@ -28,6 +30,8 @@ def run_facts(manifest: dict, host: Mapping[str, Sequence[HostEvent]], actors: S
     start = host[actors[0]][0].fields if actors and host.get(actors[0]) else {}
     accounting = manifest.get('accounting') if isinstance(manifest.get('accounting'), dict) else {}
     ceiling, prior = _usd(accounting.get('ceiling_usd')), _usd(accounting.get('prior_reserved_usd'))
+    allowance = _usd(manifest['spend_limit_usd']) if 'spend_limit_usd' in manifest else (
+        None if ceiling is None or prior is None else ceiling - prior)
     return dict(
         labels={key: labels.get(key) for key in LABEL_KEYS},
         manifest_schema=manifest.get('schema'),
@@ -40,4 +44,4 @@ def run_facts(manifest: dict, host: Mapping[str, Sequence[HostEvent]], actors: S
         max_hosts=manifest.get('max_hosts'), max_http_attempts=manifest.get('max_http_attempts'),
         declared_ceiling_usd=None if ceiling is None else float(ceiling),
         prior_reserved_usd=None if prior is None else float(prior),
-        spend_allowance_usd=None if ceiling is None or prior is None else float(ceiling - prior))
+        spend_allowance_usd=None if allowance is None else float(allowance))

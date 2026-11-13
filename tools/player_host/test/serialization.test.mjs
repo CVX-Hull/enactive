@@ -19,15 +19,15 @@ const openRouterModel = { id: 'vendor/fixture', name: 'OpenRouter fixture', api:
   contextWindow: 100000, maxTokens: 1024,
   compat: { supportsDeveloperRole: false, supportsStore: false, supportsUsageInStreaming: true,
     openRouterRouting: { only: ['fixture-backend'], order: ['fixture-backend'], allow_fallbacks: false, require_parameters: true } } };
-const route = (overrides = {}) => ({ schema: 'player-host/3', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),
-  api_key_env: 'OFFLINE_TEST_KEY', max_requests: 40, max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
+const route = (overrides = {}) => ({ schema: 'player-host/4', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),
+  api_key_env: 'OFFLINE_TEST_KEY', max_requests: 40, spend_limit_usd: '100', unpriced_request_usd: '0.25', max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
 
 function reply(content, calls = [], prefix = 'call') {
   const message = { role: 'assistant', ...(calls.length ? { tool_calls: calls.map(([name, args], index) => ({ index, id: `${prefix}-${index}`, type: 'function',
     function: { name, arguments: JSON.stringify(args) } })) } : { content }) };
   const chunks = [{ id: 'r', model: 'fixture-backend', choices: [{ index: 0, delta: message, finish_reason: null }] },
     { id: 'r', model: 'fixture-backend', choices: [{ index: 0, delta: {}, finish_reason: calls.length ? 'tool_calls' : 'stop' }],
-      usage: { prompt_tokens: 11, completion_tokens: 5, total_tokens: 16 } }];
+      usage: { prompt_tokens: 11, completion_tokens: 5, total_tokens: 16, cost: 0.000038 } }];
   return new Response(chunks.map(chunk => 'data: ' + JSON.stringify(chunk) + '\n\n').join('') + 'data: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
 }
 const finish = () => reply(null, [['player_finish', { disposition: 'task_complete', report: 'done', source_ids: [], control_id: null }]]);

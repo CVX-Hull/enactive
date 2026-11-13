@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runHost, validateConfiguration } from '../host.mjs';
-import { realDelay, model, route, reply, rateLimit, scenario } from './host-scenario.mjs';
+import { realDelay, model, route, usageRecord, reply, rateLimit, scenario } from './host-scenario.mjs';
 
 test('provider errors are nonzero without leaking exception or key',async t=>{
   const {result,events}=await scenario(t,[()=>{throw new Error('fixture-key private upstream details');}]);
@@ -93,7 +93,7 @@ test('diagnostics skip unsupported choice collections just as the pinned parser 
 test('diagnostic reasoning bytes follow first nonempty alias without counting duplicates',async t=>{
   const chunks=[{choices:[{index:0,delta:{role:'assistant',reasoning_content:'',reasoning:'思',reasoning_text:'duplicate'},finish_reason:null}]},
     {choices:[{index:0,delta:{reasoning_content:'ρ',reasoning:'ρ'},finish_reason:null}]},
-    {choices:[{index:0,delta:{reasoning_text:'z',content:'ok'},finish_reason:'stop'}]}];
+    {choices:[{index:0,delta:{reasoning_text:'z',content:'ok'},finish_reason:'stop'}],usage:usageRecord}];
   const body=chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n';
   const {result,events}=await scenario(t,[new Response(body,{headers:{'content-type':'text/event-stream'}}),reply('ok')]);
   assert.equal(result.ok,true);assert.equal(result.finalText,'ok');
@@ -178,9 +178,10 @@ test('frozen output cap reaches providers using the max_tokens compatibility fie
   assert.equal(payloads[0].max_completion_tokens,undefined);
 });
 
-test('absent provider usage remains unknown instead of zero',async t=>{
-  const {result,events}=await scenario(t,[reply('finished',[],false)]);
-  assert.equal(result.ok,true);
+test('absent provider usage remains unknown instead of zero, and the unpriced response ends the run',async t=>{
+  const {result,events,calls}=await scenario(t,[reply(null,[['observe',{}]],false),reply()]);
+  assert.equal(result.ok,false);assert.equal(result.reason,'cost-unreported');assert.equal(result.requests,1);
+  assert.equal(calls.length,0,'no tool is dispatched from a response the host cannot price');
   const completed=events.find(event=>event.type==='response-complete');
   assert.equal(completed.usage_available,false);assert.equal(completed.usage,null);assert.equal(completed.cost_source,null);
 });
@@ -210,7 +211,7 @@ test('inspected refusal and provider identities retain bounded IDs without raw t
   const refusal=events.find(e=>e.type==='provider-refusal');
   assert.equal(refusal.error_type,'invalid_request_error');assert.equal(refusal.error_code,'engine_overloaded');
   assert.ok(!JSON.stringify(events).includes('fixture-key'));
-  const bad=new Response('data: '+JSON.stringify({id:'fixture-key',provider:'fixture-key',choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n',
+  const bad=new Response('data: '+JSON.stringify({id:'fixture-key',provider:'fixture-key',choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}],usage:usageRecord})+'\n\ndata: [DONE]\n\n',
     {headers:{'content-type':'text/event-stream','x-request-id':'fixture-key'}});
   const observed=await scenario(t,[bad,reply()]);
   assert.equal(observed.result.ok,true);

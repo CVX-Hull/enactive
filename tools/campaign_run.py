@@ -19,8 +19,22 @@ from harness.computer.launch import OwnedTarget
 from harness.computer.runtime import ComputerRuntime
 from harness.player.memory import Memory
 from harness.server import serve
-from tools.campaign_package import preflight
+from tools.campaign_package import preflight,usd_text
 from tools.campaign_player import run_hosts,write_new
+
+
+def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool) -> dict:
+    """The receipt's spend record. `spent_usd` is what counted toward `spend_limit_usd`: the cost the provider
+    reported plus every request with no cost record at the route's bound. Without a driver record the spend is
+    complete only when no host was started; otherwise it is unknown and the whole request allowance is charged."""
+    bound=Decimal(route['unpriced_request_usd'])
+    reported=Decimal(driver['reported_usd']) if driver else Decimal(0)
+    unpriced=driver['unpriced_requests'] if driver else 0
+    return dict(spend_limit_usd=profile['spend_limit_usd'],reported_usd=usd_text(reported),unpriced_requests=unpriced,
+        unpriced_request_usd=usd_text(bound),spent_usd=usd_text(reported+unpriced*bound),
+        attempts_charged=driver['attempts_charged'] if driver else (profile['max_http_attempts'] if hosts_started else 0),
+        allocated_max_attempts=profile['max_http_attempts'],
+        spend_complete=driver['spend_complete'] if driver else not hosts_started)
 
 
 def run_campaign(directory: Path) -> dict:
@@ -32,7 +46,7 @@ def run_campaign(directory: Path) -> dict:
     owner=OwnedTarget(directory,profile['session'],target,Path(profile['library']['path']),Path(profile['shared_lock']),deadline)
     runtime=memory=server=server_thread=None
     stopped=threading.Event();driver=None
-    report=dict(schema='campaign-receipt/3',session=profile['session'],source_commit=profile['source_commit'],
+    report=dict(schema='campaign-receipt/4',session=profile['session'],source_commit=profile['source_commit'],
                 started_wall=time.time(),outcome='incomplete',normal_save_claimed_by_harness=False,
                 deciding_hosts_quiescent=False,native_absence_verified=False,input_authority_revoked=False)
     def cancel(signum,frame):
@@ -84,17 +98,7 @@ def run_campaign(directory: Path) -> dict:
             # Before any actor directory exists, zero hosts were launched.
             report['deciding_hosts_quiescent']=not (directory/'actors').exists()
         report['ended_wall']=time.time();report['elapsed_seconds']=time.monotonic()-started
-        attempts=driver['attempts_charged'] if driver else (profile['max_http_attempts'] if (directory/'actors').exists() else 0)
-        budget=profile['accounting']
-        allocated=Decimal(str(budget['prospective_reserved_usd']))-Decimal(str(budget['prior_reserved_usd']))
-        per=allocated/profile['max_http_attempts']
-        report['accounting']=dict(attempts_charged=attempts,cumulative_attempts=budget['prior_attempts']+attempts,
-            consumed_conservative_reservation_usd=float(per*attempts),
-            cumulative_conservative_reservation_usd=float(Decimal(str(budget['prior_reserved_usd']))+per*attempts),
-            allocated_max_attempts=profile['max_http_attempts'],unused_allocation_retired=profile['max_http_attempts']-attempts,
-            configured_estimate_usd=driver['configured_estimate_usd'] if driver else None,
-            missing_usage_attempts=driver['missing_usage_attempts'] if driver else None,
-            reservation_is_not_invoice=True)
+        report['accounting']=accounting(profile,route,driver,(directory/'actors').exists())
         attempt('receipt',lambda:write_new(directory/'receipt.json',report))
         for sig,handler in previous.items():attempt('signal_restore',lambda sig=sig,handler=handler:signal.signal(sig,handler))
     return report

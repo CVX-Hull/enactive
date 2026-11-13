@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "dev-run/1: one development-run admission in data/evaluation/runs.jsonl",
-  "description": "Derived from the admission package's campaign-receipt/3 and manifest, plus the operator's provider reconciliation. Spend is an actual-spend upper bound for the admission rule, not an invoice. Holds no local paths, ports or secrets.",
+  "description": "Derived from the admission package's receipt and manifest. A row recorded today takes its spend from the receipt (campaign-receipt/4): provider-reported cost plus each request with no cost record at the route's bound. Earlier rows took the same split from the operator's provider reconciliation. Spend is an actual-spend upper bound for the admission rule, not an invoice. Holds no local paths, ports or secrets.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "study", "run", "label", "arm", "start", "lineage", "admission", "session",

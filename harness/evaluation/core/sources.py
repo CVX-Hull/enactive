@@ -23,9 +23,11 @@ SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 #: The current versions. Any other version of these records is an error naming the file and version, except where
 #: the closed archive index below lists that exact version for that session.
-HOST_SCHEMA = 'player-host/3'
-MANIFEST_SCHEMA = 'campaign-run/5'
-RECEIPT_SCHEMA = 'campaign-receipt/3'
+HOST_SCHEMA = 'player-host/4'
+HOST_TELEMETRY = 4
+MANIFEST_SCHEMA = 'campaign-run/6'
+RECEIPT_SCHEMA = 'campaign-receipt/4'
+DRIVER_SCHEMA = 'player-driver/4'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
@@ -59,30 +61,48 @@ class ArchiveCombination:
     labels: bool = False
 
 
+#: The fields read from the records every archived session shares. All 54 sessions predate the dollar limit, so
+#: their manifest, receipt, driver record and host traces are all read as old versions.
+#:
+#: An old manifest is returned whole, as a current one is; its fields are the ones `read_run`, `facts.run_facts`
+#: and the viewer take from a manifest. Its `accounting` is the worst-case reservation that `facts.run_facts`
+#: turns into the spend allowance of an archived run.
+_MANIFEST_4 = ('schema', 'session', 'player_store', 'source_commit', 'effort', 'files', 'accounting', 'limits',
+               'ending_reserve', 'wall_seconds', 'host_seconds', 'max_hosts', 'max_http_attempts')
+_MANIFEST_5 = (*_MANIFEST_4, 'labels')
+#: `read_end_facts` takes `outcome` and `driver`; host-summary (tools/host_analysis.py) takes the rest.
+_RECEIPT_3 = ('session', 'source_commit', 'outcome', 'normal_save_claimed_by_harness', 'native_absence_verified',
+              'normal_native_exit_zero', 'deciding_hosts_quiescent', 'input_authority_revoked', 'driver')
+#: `read_end_facts` takes `actors` (each one's `settled` and `player_finish`) and `ending_request`; host-summary
+#: takes the rest.
+_DRIVER_3 = ('schema', 'outcome', 'attempts_charged', 'host_seconds_used', 'configured_estimate_usd',
+             'missing_usage_attempts', 'actors', 'ending_request')
+#: An old host trace is returned whole, event by event, as a current one is. These are the `host-start` fields
+#: the reader checks (`schema`, `telemetry_version`, `session`) and the ones the reader and `facts.run_facts` take.
+#: Nothing else differs for a reader: the dollar-limit fields a current trace adds are read by no evaluator code.
+_HOST_3 = ('schema', 'telemetry_version', 'session', 'actor_id', 'model', 'provider', 'effort', 'provider_routing')
+_SHARED = dict(receipt=_RECEIPT_3, driver=_DRIVER_3, host=_HOST_3)
 #: Every accepted combination: exactly the three the sealed store holds. An index entry with any other is an error
-#: at load. The run-ending fields are applied by `read_end_facts`, which takes nothing else from an old terminal.
-#: An old manifest is returned whole, as a current one is; its fields here are the ones `read_run`,
-#: `facts.run_facts` and the viewer take from a manifest.
+#: at load. `read_end_facts` applies the receipt, driver and run-ending fields and takes nothing else from an old
+#: record.
 ARCHIVE_COMBINATIONS = (
     # The 30 development-loop sessions. Their manifests predate the operator labels, which the index holds, and
     # their terminals predate Pause reasons.
     ArchiveCombination(
         dict(manifest='campaign-run/4', receipt='campaign-receipt/3', driver='player-driver/3', host='player-host/3',
              host_telemetry=3, run_ending='campaign-watch-terminal/2'),
-        dict(manifest=('schema', 'session', 'player_store', 'source_commit', 'effort', 'files', 'accounting', 'limits',
-                       'ending_reserve', 'wall_seconds', 'host_seconds', 'max_hosts', 'max_http_attempts'),
-             run_ending=('reason',)),
+        dict(_SHARED, manifest=_MANIFEST_4, run_ending=('reason',)),
         labels=True),
     # The 22 sessions whose terminal is one version old. `session` is checked against the manifest's.
     ArchiveCombination(
         dict(manifest='campaign-run/5', receipt='campaign-receipt/3', driver='player-driver/3', host='player-host/3',
              host_telemetry=3, run_ending='campaign-watch-terminal/3'),
-        dict(run_ending=('session', 'reason', 'pause_reason'))),
-    # The two sessions whose records are all current: nothing is read from them as an old version.
+        dict(_SHARED, manifest=_MANIFEST_5, run_ending=('session', 'reason', 'pause_reason'))),
+    # The two sessions of the supervised launch check: only their run-ending record is current.
     ArchiveCombination(
         dict(manifest='campaign-run/5', receipt='campaign-receipt/3', driver='player-driver/3', host='player-host/3',
              host_telemetry=3, run_ending='campaign-watch-terminal/4'),
-        {}),
+        dict(_SHARED, manifest=_MANIFEST_5)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
 MANIFEST_SCHEMAS = (*sorted({c.versions['manifest'] for c in ARCHIVE_COMBINATIONS} - {MANIFEST_SCHEMA}), MANIFEST_SCHEMA)
@@ -220,6 +240,24 @@ def archive_entry(manifest: dict) -> ArchiveSession | None:
     return entry if entry is not None and entry.combination.versions['manifest'] == manifest.get('schema') else None
 
 
+def run_archive_entry(run_dir: Path) -> ArchiveSession | None:
+    """The index entry of the session whose run directory this is, for a reader that starts from a file inside it
+    (a host trace). None when the directory has no readable manifest or the index does not list its session with
+    that manifest version; only current versions are then read."""
+    path = Path(run_dir) / 'manifest.json'
+    try:
+        value = read_json_file(path) if path.is_file() else None
+    except (EvaluationError, OSError):
+        return None
+    return archive_entry(value) if isinstance(value, dict) else None
+
+
+def accepted_versions(entry: ArchiveSession | None, record: str, current: str) -> tuple[str, ...]:
+    """The versions of one record that are read for a session: the current one, and the one the index lists for it."""
+    listed = entry.combination.versions[record] if entry is not None else current
+    return (current,) if listed == current else (current, listed)
+
+
 def _connect_readonly(path: Path) -> sqlite3.Connection:
     if not path.is_file():
         raise EvaluationError(f'{path}: missing database')
@@ -304,18 +342,23 @@ def _milliseconds(value: object) -> float | None:
 
 
 class HostTraceUnsupported(EvaluationError):
-    """A host trace that is not a current `player-host/3` trace. `kind` is `empty` (no event), `format` (the first
-    event is not a `host-start`) or `version` (a `host-start` of another schema or telemetry version)."""
+    """A host trace that is not a readable `player-host` trace. `kind` is `empty` (no event), `format` (the first
+    event is not a `host-start`) or `version` (a `host-start` of a schema or telemetry version that is neither the
+    current one nor the one the archive index lists for the trace's session)."""
 
     def __init__(self, message: str, kind: str) -> None:
         super().__init__(message)
         self.kind = kind
 
 
-def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False) -> Iterator[HostEvent]:
-    """Stream one player-host/3 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
+              entry: ArchiveSession | None = None) -> Iterator[HostEvent]:
+    """Stream one player-host/4 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
     host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
     evaluation never gates the control path (ADR008).
+
+    `entry` is the archive index entry of the session the trace belongs to, when it has one. An older trace is read
+    only as the version that entry lists, and only when its `host-start` names that session.
 
     Bounded: a line over `MAX_HOST_LINE_BYTES`, or more than `MAX_HOST_EVENTS` lines, is an error. A blank line is
     skipped. A duplicate key, a non-finite number or an event without a string `type` is an error. An unterminated
@@ -344,9 +387,14 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False) -> Ite
             if not count:
                 if event.get('type') != 'host-start':
                     raise HostTraceUnsupported(f"{path}: not a host trace; the first event is {event.get('type')!r}", 'format')
-                if event.get('schema') != HOST_SCHEMA or type(event.get('telemetry_version')) is not int or event['telemetry_version'] != 3:
-                    raise HostTraceUnsupported(f"{path}: unsupported host trace version {event.get('schema')!r}/"
-                        f"{event.get('telemetry_version')!r}; expected {HOST_SCHEMA} telemetry 3", 'version')
+                found = (event.get('schema'), event.get('telemetry_version'))
+                archived = (None if entry is None else
+                    (entry.combination.versions['host'], entry.combination.versions['host_telemetry']))
+                if type(found[1]) is not int or found != (HOST_SCHEMA, HOST_TELEMETRY) and (
+                        found != archived or event.get('session') != entry.session):
+                    raise HostTraceUnsupported(f"{path}: unsupported host trace version {found[0]!r}/{found[1]!r}; "
+                        f"expected {HOST_SCHEMA} telemetry {HOST_TELEMETRY}, or the version {ARCHIVE_INDEX.name} "
+                        "lists for the session this trace names", 'version')
                 if isinstance(event.get('actor_id'), str):
                     actor = event['actor_id']
             elif not isinstance(event.get('type'), str):
@@ -358,10 +406,11 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False) -> Ite
         raise HostTraceUnsupported(f'{path}: empty host trace', 'empty')
 
 
-def read_host(path: Path, actor_hint: str) -> tuple[str, tuple[HostEvent, ...]]:
-    """One whole player-host/3 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
-    still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final."""
-    events = tuple(iter_host(path, actor_hint, partial_tail=True))
+def read_host(path: Path, actor_hint: str, entry: ArchiveSession | None = None) -> tuple[str, tuple[HostEvent, ...]]:
+    """One whole player-host/4 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final.
+    `entry` is its session's archive index entry, as in `iter_host`."""
+    events = tuple(iter_host(path, actor_hint, partial_tail=True, entry=entry))
     return events[0].actor, events
 
 
@@ -416,19 +465,26 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
 
 
 def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
-    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/4), when the run has
-    ended. An older terminal is read only for a session the archive index lists with this manifest's version and
-    that terminal version, and then only the fields its combination names: a `session`, when named, must be the
-    manifest's. The owner Pause is the terminal's `reason == 'operator_pause'`."""
-    terminals: tuple[str, ...] = (WATCH_TERMINAL_SCHEMA,)
+    """`receipt.json` (campaign-receipt/4, with its player-driver/4 record) and `watch-terminal.json`
+    (campaign-watch-terminal/4), when the run has ended. An older receipt, driver record or terminal is read only
+    for a session the archive index lists with this manifest's version and that record's version, and then only
+    the fields its combination names: a terminal's `session`, when named, must be the manifest's. The owner Pause
+    is the terminal's `reason == 'operator_pause'`."""
     entry = archive_entry(manifest)
-    if entry is not None and entry.combination.versions['run_ending'] != WATCH_TERMINAL_SCHEMA:
-        terminals += (entry.combination.versions['run_ending'],)
-    receipt = _optional_json(run_dir / 'receipt.json', (RECEIPT_SCHEMA,)) or {}
+    receipt = _optional_json(run_dir / 'receipt.json', accepted_versions(entry, 'receipt', RECEIPT_SCHEMA)) or {}
+    if receipt and receipt['schema'] != RECEIPT_SCHEMA:
+        receipt = {key: receipt.get(key) for key in entry.combination.fields['receipt']}
     driver = receipt.get('driver') if isinstance(receipt.get('driver'), dict) else {}
-    actors = [a for a in driver.get('actors', ()) if isinstance(a, dict)]
+    if driver:
+        drivers = accepted_versions(entry, 'driver', DRIVER_SCHEMA)
+        if driver.get('schema') not in drivers:
+            raise EvaluationError(f'{run_dir / "receipt.json"}: unsupported driver record version '
+                f'{driver.get("schema")!r}; expected {" or ".join(drivers)}')
+        if driver['schema'] != DRIVER_SCHEMA:
+            driver = {key: driver.get(key) for key in entry.combination.fields['driver']}
+    actors = [a for a in driver.get('actors') or () if isinstance(a, dict)]
     ending = driver.get('ending_request') if isinstance(driver.get('ending_request'), dict) else {}
-    watch = _optional_json(run_dir / 'watch-terminal.json', terminals) or {}
+    watch = _optional_json(run_dir / 'watch-terminal.json', accepted_versions(entry, 'run_ending', WATCH_TERMINAL_SCHEMA)) or {}
     if watch and watch['schema'] != WATCH_TERMINAL_SCHEMA:
         fields = entry.combination.fields['run_ending']
         if 'session' in fields and watch.get('session') != manifest.get('session'):
@@ -463,11 +519,12 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
     host: dict[str, tuple[HostEvent, ...]] = {}
     actors: list[str] = []
     actor_root = run_dir / 'actors'
+    entry = archive_entry(manifest)
     for directory in sorted(p for p in actor_root.iterdir() if p.is_dir()) if actor_root.is_dir() else ():
         trace = directory / 'host.jsonl'
         if not trace.is_file():
             continue
-        actor, events = read_host(trace, directory.name)
+        actor, events = read_host(trace, directory.name, entry)
         if actor in host:
             raise EvaluationError(f'{trace}: actor {actor} appears in two host traces')
         host[actor] = events

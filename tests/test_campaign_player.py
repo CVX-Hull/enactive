@@ -1,4 +1,5 @@
-"""Original host-attempt accounting and known prelaunch failures."""
+"""Original host-attempt and spend accounting, and known prelaunch failures."""
+from decimal import Decimal
 import json
 import subprocess
 import sys
@@ -14,27 +15,57 @@ from tools.campaign_player import HostEvents,ending_trigger,finish_interruption,
 from tools.configure_player_tools import configuration
 
 
+BOUND=Decimal('0.25')
+START=dict(type='host-start',telemetry_version=4,schema='player-host/4')
+
+
+def cost(request,amount,how='provider-reported',kind='response-complete'):
+    return dict(type=kind,request_id=request,counted_cost_usd=amount,cost_counted_as=how)
+
+
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
+    """Three started requests: one priced by the provider, one counted at the bound by the host, and one that
+    left no cost record at all. The last two are unpriced; a trace that cannot be read to its end is incomplete."""
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=3,schema='player-host/3'),
-          dict(type='request-start',request_id='request-1'),
-          dict(type='request-start',request_id='request-2'),
-          dict(type='settled',requests=2,ok=False)]
+    rows=[START,
+          dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
+          dict(type='request-start',request_id='request-2'),cost('request-2','0.25','unpriced-bound'),
+          dict(type='request-start',request_id='request-3'),cost('request-3','0.7'),
+          dict(type='request-start',request_id='request-4'),
+          dict(type='settled',requests=4,ok=False)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,10)
+    events=HostEvents(path,10,BOUND)
     try:
-        assert events.finish()['attempts_charged']==2
+        result=events.finish()
+        assert result['attempts_charged']==4 and result['accounting_complete']
+        # 0.1 + 0.7 is exactly 0.8 here; the floating-point sum is 0.7999999999999999.
+        assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.8',2,'1.3',True)
+        assert events.counted_usd()==Decimal('1.05')
         with path.open('a') as stream:stream.write('{"partial":')
         result=events.finish()
         assert not result['accounting_complete'] and result['attempts_charged']==10
+        assert (result['spent_usd'],result['spend_complete'])==('1.3',False)
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema',['pi-player-host/4','player-host/2',None])
-def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
+@pytest.mark.parametrize('record',[cost('request-2','0.1'),cost('request-1','0.1','estimated'),cost('request-1',0.1),
+    cost('request-1','1e-1'),cost('request-1','0.2','unpriced-bound'),dict(type='response-complete',request_id='request-1')])
+def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_path,record):
     path=tmp_path/'host.jsonl'
-    path.write_text(json.dumps(dict(type='host-start',telemetry_version=3,schema=schema))+'\n')
-    events=HostEvents(path,10)
+    rows=[START,dict(type='request-start',request_id='request-1'),record,dict(type='settled',requests=1,ok=True)]
+    path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+    events=HostEvents(path,10,BOUND)
+    try:
+        with pytest.raises(ControlError):events.finish()
+        assert events.spend(False)==dict(reported_usd='0',unpriced_requests=1,spent_usd='0.25',spend_complete=False)
+    finally:events.close()
+
+
+@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/4',4),('player-host/3',3),('player-host/3',4),('player-host/4',3),(None,4)])
+def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
+    path=tmp_path/'host.jsonl'
+    path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
+    events=HostEvents(path,10,BOUND)
     try:
         with pytest.raises(ControlError,match='Unsupported'):events.finish()
     finally:events.close()
@@ -42,10 +73,12 @@ def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
 
 def test_known_prelaunch_failure_has_zero_attempts_and_no_successor(tmp_path):
     application=SimpleNamespace(runtime=SimpleNamespace(add_actor=Mock(side_effect=OSError('fixture store refusal')),stop=Mock()))
-    profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=30)
+    profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=30,spend_limit_usd='1')
     with patch('tools.campaign_player.subprocess.Popen') as launch:
-        result=run_hosts(tmp_path,profile,dict(max_requests=20),application,'fixture-secret',threading.Event(),time.monotonic()+300)
+        result=run_hosts(tmp_path,profile,dict(max_requests=20,unpriced_request_usd='0.25'),application,'fixture-secret',
+            threading.Event(),time.monotonic()+300)
     assert result['outcome']=='incomplete' and result['attempts_charged']==0
+    assert (result['spent_usd'],result['spend_complete'])==('0',True)
     assert result['actors'][0]['cleanup']==dict(process_absent=True,group_absent=True)
     assert 'OSError' in result['reason'] and not launch.called
     assert application.runtime.add_actor.call_count==1
@@ -53,13 +86,13 @@ def test_known_prelaunch_failure_has_zero_attempts_and_no_successor(tmp_path):
 
 def test_invalid_consumed_trace_cannot_become_valid_during_cleanup(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=3,schema='player-host/3'),
+    rows=[START,
           dict(type='request-start',request_id='request-1'),
           dict(type='settled',requests=1,ok=True),
           dict(type='player-finish',disposition='task_complete'),
           dict(type='handoff')]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,20)
+    events=HostEvents(path,20,BOUND)
     try:
         with pytest.raises(ControlError,match='Conflicting'):events.read()
         with pytest.raises(ControlError,match='trace failed validation'):events.finish()
@@ -77,8 +110,10 @@ prompt = open(flags['--prompt']).read()
 assert prompt.startswith('Frozen mission') and 'Software actor/resource note' not in prompt
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
-emit(type='host-start', telemetry_version=3, schema='player-host/3')
+route = json.load(open(flags['--config']))
+emit(type='host-start', telemetry_version=4, schema='player-host/4', spend_limit_usd=route['spend_limit_usd'])
 emit(type='request-start', request_id='request-1')
+emit(type='response-complete', request_id='request-1', counted_cost_usd='0.004', cost_counted_as='provider-reported')
 ending = 'READ_CONTROL' in prompt
 handoff = 'HANDOFF_RACE' in prompt and flags['--actor-id'] == 'a'*32
 control = json.loads(sys.stdin.readline()) if ending else None
@@ -109,10 +144,11 @@ def driver_case(tmp_path,prompt='Frozen mission',*,two_actors=False,low_frames=F
             process=SimpleNamespace(poll=lambda:None),channel=SimpleNamespace(stopped=threading.Event(),
                 stop_origin=lambda:dict(requested_wall=None,reason='fixture fence')),session='b'*32),
         host=None)
-    reserve=dict(seconds=10,http_attempts=19 if 'READ_CONTROL' in prompt else 2,inputs=10,requests=10,frames=5,frame_bytes=1000)
+    reserve=dict(seconds=10,http_attempts=19 if 'READ_CONTROL' in prompt else 2,inputs=10,requests=10,frames=5,frame_bytes=1000,usd='0.01')
     profile=dict(max_hosts=2 if two_actors else 1,host_seconds=100,total_host_seconds=200,max_http_attempts=30,effort='off',port=8766,
-                 ending_reserve=reserve,session='b'*32,host=dict(argv=[sys.executable,str(adapter)]))
-    route=dict(max_requests=20,api_key_env='FIXTURE_KEY',model=dict(id='fixture',name='fixture'))
+                 ending_reserve=reserve,session='b'*32,host=dict(argv=[sys.executable,str(adapter)]),spend_limit_usd='1')
+    # Each fake host makes one request that reports $0.004.
+    route=dict(max_requests=20,spend_limit_usd='1',unpriced_request_usd='0.25',api_key_env='FIXTURE_KEY',model=dict(id='fixture',name='fixture'))
     return profile,route,application
 
 
@@ -136,20 +172,49 @@ def test_driver_cleanup_retains_full_charge_after_invalid_consumed_trace(tmp_pat
     actor=result['actors'][0]
     assert result['outcome']=='incomplete' and result['attempts_charged']==20,result
     assert not actor['accounting_complete'] and actor['attempts_charged']==20
+    # The trace could not be read to its end: what it showed is recorded, the spend is incomplete and no successor starts.
+    assert (actor['spent_usd'],actor['spend_complete'])==('0.004',False)
+    assert (result['reported_usd'],result['spent_usd'],result['spend_complete'])==('0.004','0.004',False)
     assert application.runtime.add_actor.call_count==1 and not application.runtime.confirm_quiescent.called
     assert actor['cleanup']['process_absent'] and actor['cleanup']['group_absent']
 
 
-@pytest.mark.parametrize('trigger',['seconds','http_attempts','inputs','requests','frames','frame_bytes'])
+@pytest.mark.parametrize('trigger',['seconds','http_attempts','usd','inputs','requests','frames','frame_bytes'])
 def test_each_external_resource_can_trigger_ending(trigger):
-    reserve=dict(seconds=10,http_attempts=5,inputs=20,requests=20,frames=20,frame_bytes=100)
-    seconds,attempts=100.,30
+    reserve=dict(seconds=10,http_attempts=5,inputs=20,requests=20,frames=20,frame_bytes=100,usd='0.05')
+    seconds,attempts,dollars=100.,30,Decimal('0.0500001')
     mechanical=dict(inputs=100,requests=100,frames=100,frame_bytes=1000)
-    assert ending_trigger(reserve,seconds,attempts,mechanical) is None
+    assert ending_trigger(reserve,seconds,attempts,dollars,mechanical) is None
     if trigger=='seconds':seconds=10
     elif trigger=='http_attempts':attempts=5
+    elif trigger=='usd':dollars=Decimal('0.05')
     else:mechanical[trigger]=reserve[trigger]
-    assert ending_trigger(reserve,seconds,attempts,mechanical)==('host_seconds' if trigger=='seconds' else trigger)
+    assert ending_trigger(reserve,seconds,attempts,dollars,mechanical)==dict(seconds='host_seconds',usd='spend').get(trigger,trigger)
+
+
+def test_the_dollar_reserve_requests_the_orderly_finish(tmp_path):
+    """$0.01 declared, $0.007 kept for the ending: after one $0.004 response $0.006 is left, so the driver asks
+    the player to finish, exactly as it does when requests run low."""
+    profile,route,application=driver_case(tmp_path,'Frozen mission READ_CONTROL')
+    profile['spend_limit_usd']='0.01';profile['ending_reserve'].update(http_attempts=2,usd='0.007')
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert result['outcome']=='player_external_stop_complete_unassessed',result
+    intent=json.loads((tmp_path/'orderly-stop.json').read_text())
+    assert (intent['trigger'],intent['spend_remaining_usd'])==('spend','0.006')
+    assert intent['id']==json.loads((tmp_path/'actors/001/control.json').read_text())['id']==result['actors'][0]['settled']['control_id']
+    assert (result['reported_usd'],result['unpriced_requests'],result['unpriced_request_usd'],result['spent_usd'],
+            result['spend_complete'])==('0.004',0,'0.25','0.004',True)
+
+
+def test_no_successor_is_started_when_no_dollars_remain(tmp_path):
+    profile,route,application=driver_case(tmp_path,'Frozen mission READ_CONTROL HANDOFF_RACE',two_actors=True)
+    profile['spend_limit_usd']='0.004';profile['ending_reserve'].update(http_attempts=2,usd='0.001')
+    with patch('tools.campaign_player._handoff_context',return_value='{"fallible":"unfinished work"}'):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert result['outcome']=='incomplete' and result['reason']=='The dollar limit leaves nothing for another actor',result
+    assert application.runtime.add_actor.call_count==1 and len(result['actors'])==1
+    assert not (tmp_path/'actors/002').exists()
+    assert (result['spent_usd'],result['spend_complete'])==('0.004',True)
 
 
 def test_controller_retains_control_intent_and_checks_direct_finish_identity(tmp_path):
@@ -188,6 +253,10 @@ def test_pending_stop_survives_verified_handoff_before_successor_action(tmp_path
     second=json.loads((tmp_path/'actors/002/control.json').read_text())
     assert first['id']==second['id'] and first['actor_id']!=second['actor_id']
     assert result['attempts_charged']==2 and application.runtime.confirm_quiescent.call_count==1
+    # The successor's route carries the dollars the first actor left, and the totals add both actors' counted cost.
+    limits=[json.loads((tmp_path/f'actors/{n}/route.json').read_text())['spend_limit_usd'] for n in ('001','002')]
+    assert limits==['1','0.996'] and [actor['allocated_usd'] for actor in result['actors']]==limits
+    assert (result['reported_usd'],result['spent_usd'],result['spend_complete'])==('0.008','0.008',True)
     launched=json.loads((tmp_path/'actors/002/host-process.json').read_text())['argv']
     assert launched[launched.index('--pending-control-id')+1]==first['id']
     # Every actor gets the same tool table and system prompt, so their request prefixes are byte-identical;

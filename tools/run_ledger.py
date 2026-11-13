@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/1); see docs/contracts/evaluation.md.
 
-record derives one admission's row from its package (campaign-run/5 manifest and campaign-receipt/3) plus the
-operator's provider reconciliation, and appends it; a package without a receipt gets no row. totals reports a
+record derives one admission's row from its package alone (campaign-run/6 manifest and campaign-receipt/4, whose
+accounting holds the provider-reported cost and the requests counted at the bound) and appends it; a package
+without a receipt, or whose receipt says its spend is incomplete, gets no row. totals reports a
 study's spend against an envelope under the actual-spend admission rule (new spend plus twice the largest
 admission). check validates every row. The ledger is the one numeric record of a run: a dated record presents
 numbers through the generated run tables (tools/evaluate.py evaluate-table) or by citing the ledger.
@@ -74,27 +75,30 @@ def _json(path: Path) -> dict:
     return data
 
 
-def package_row(package: Path, *, study: int, label: str, spend_usd: str, provider_usd: str,
-                unpriced_attempts: int, unpriced_attempt_usd: str) -> dict:
-    """One dev-run/1 row from a finished campaign-run/5 package (receipt campaign-receipt/3)."""
+def package_row(package: Path, *, study: int, label: str) -> dict:
+    """One dev-run/1 row from a finished campaign-run/6 package (receipt campaign-receipt/4). Its spend is the
+    receipt's: the provider-reported cost plus each request with no cost record at the route's bound."""
     manifest, receipt_path = _json(package / 'manifest.json'), package / 'receipt.json'
     if not receipt_path.is_file():
         raise LedgerError(f'{package.name}: no receipt.json; reconcile the admission before recording it')
     receipt = _json(receipt_path)
-    if receipt.get('schema') != 'campaign-receipt/3':
+    if receipt.get('schema') != 'campaign-receipt/4':
         raise LedgerError(f'{package.name}: unsupported receipt {receipt.get("schema")!r}')
-    if manifest.get('schema') != 'campaign-run/5':
+    if manifest.get('schema') != 'campaign-run/6':
         raise LedgerError(f'{package.name}: unsupported manifest {manifest.get("schema")!r}')
     labels = manifest['labels']
     if receipt['session'] != manifest['session'] or receipt['source_commit'] != manifest['source_commit']:
         raise LedgerError(f'{package.name}: receipt and manifest disagree on session or source')
+    spend = receipt['accounting']
+    if spend['spend_complete'] is not True:
+        raise LedgerError(f'{package.name}: the receipt records its spend as incomplete; the lead resolves it before a row is made')
     ended = datetime.fromtimestamp(receipt['ended_wall'], timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     return dict(schema=SCHEMA, study=study, run=package.name, label=label, arm=labels['arm'], start=labels['start'],
         lineage=labels.get('lineage'), admission=labels.get('admission'), session=receipt['session'],
         source_commit=receipt['source_commit'], ended=ended, outcome=receipt['outcome'],
-        attempts=receipt['accounting']['attempts_charged'], wall_seconds=round(receipt['elapsed_seconds']),
-        spend_usd=spend_usd, provider_usd=provider_usd, unpriced_attempts=unpriced_attempts,
-        unpriced_attempt_usd=unpriced_attempt_usd)
+        attempts=spend['attempts_charged'], wall_seconds=round(receipt['elapsed_seconds']),
+        spend_usd=spend['spent_usd'], provider_usd=spend['reported_usd'], unpriced_attempts=spend['unpriced_requests'],
+        unpriced_attempt_usd=spend['unpriced_request_usd'])
 
 
 def decimal_text(value: str, name: str) -> str:
@@ -108,24 +112,15 @@ def decimal_text(value: str, name: str) -> str:
 
 
 def record(arguments: argparse.Namespace) -> dict:
-    provider_usd = decimal_text(arguments.provider_usd, '--provider-usd')
-    charge = decimal_text(arguments.unpriced_attempt_usd, '--unpriced-attempt-usd')
-    if not (arguments.package / 'receipt.json').is_file():
-        raise LedgerError(f'{arguments.package.name}: no receipt.json; reconcile the admission before recording it')
-    attempts = _json(arguments.package / 'receipt.json')['accounting']['attempts_charged']
-    if not 0 <= arguments.provider_records <= attempts:
-        raise LedgerError(f'--provider-records must be between 0 and the {attempts} charged attempts')
-    unpriced = attempts - arguments.provider_records
-    spend = Decimal(provider_usd) + unpriced * Decimal(charge)
-    row = package_row(arguments.package, study=arguments.study, label=arguments.label or arguments.package.name,
-        spend_usd=provider_usd if not unpriced else format(spend, 'f'), provider_usd=provider_usd,
-        unpriced_attempts=unpriced, unpriced_attempt_usd=charge)
+    row = package_row(arguments.package, study=arguments.study, label=arguments.label or arguments.package.name)
     rows = read_ledger(arguments.ledger)
     if any((r['study'], r['run']) == (row['study'], row['run']) for r in rows):
         raise LedgerError(f'{row["run"]} is already recorded for study {row["study"]}')
     errors = list(validator().iter_errors(row))
     if errors:
         raise LedgerError(f'derived row is invalid: {errors[0].message}')
+    if Decimal(row['provider_usd']) + row['unpriced_attempts'] * Decimal(row['unpriced_attempt_usd']) != Decimal(row['spend_usd']):
+        raise LedgerError(f'{row["run"]}: the receipt\'s spent_usd is not its reported_usd plus unpriced requests at the bound')
     with arguments.ledger.open('a') as stream:
         stream.write(json.dumps(row, sort_keys=True) + '\n')
     return row
@@ -153,9 +148,6 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument('package', type=Path)
     add.add_argument('--study', type=int, required=True)
     add.add_argument('--label', help="the run's short name in its study's dated record (default: the package name)")
-    add.add_argument('--provider-records', type=int, required=True, help='charged attempts with a provider record')
-    add.add_argument('--provider-usd', required=True, help='decimal provider-reported cost of those attempts')
-    add.add_argument('--unpriced-attempt-usd', required=True, help='decimal worst-case charge per unpriced attempt')
     total = commands.add_parser('totals', help="a study's spend, optionally against an envelope")
     total.add_argument('--study', type=int, required=True)
     total.add_argument('--envelope', help='decimal envelope in dollars')

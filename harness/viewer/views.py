@@ -16,7 +16,7 @@ from harness.evaluation.core import context as ctx
 from harness.evaluation.core.host import host_facts
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError, loads
-from harness.evaluation.core.sources import read_carry, read_host, read_json_file, read_manifest, read_memory
+from harness.evaluation.core.sources import read_carry, read_host, read_json_file, read_manifest, read_memory, run_archive_entry
 
 from .catalog import Catalog, RunInfo, ViewError
 from . import pause
@@ -275,7 +275,7 @@ def host_events(catalog: Catalog, info: RunInfo, actor: str):
     directory = ctx._actor_directory(run_dir, actor)
     if directory is None or not (directory / 'host.jsonl').is_file():
         raise ViewError(404, 'unknown_actor', actor)
-    return read_host(directory / 'host.jsonl', directory.name)[1]
+    return read_host(directory / 'host.jsonl', directory.name, run_archive_entry(run_dir))[1]
 
 
 def context(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, request_id: str, actor: str | None) -> dict:

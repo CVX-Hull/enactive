@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateConfiguration } from '../host.mjs';
-import { model, route, reply, rateLimit, scenario } from './host-scenario.mjs';
+import { model, route, usageRecord, reply, rateLimit, scenario } from './host-scenario.mjs';
 
 test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.doesNotThrow(()=>validateConfiguration(route(),model.id,'off'));
@@ -10,8 +10,17 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/2'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/2','player-host/3'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
+  // The dollar limit and the bound for a request with no cost record are plain decimal text; a number,
+  // an exponent, a sign, a non-finite word or a limit of zero is refused, and so is leaving either out.
+  for (const value of [undefined,null,1,0.5,'','0','0.0','-1','+1','1e3','1.','.5','01','NaN','Infinity','1,000',' 1']) {
+    assert.throws(()=>validateConfiguration({...route(),spend_limit_usd:value},model.id,'off'),undefined,`limit ${value}`);
+  }
+  for (const value of [undefined,null,0,0.25,'','-0.25','1e-3','NaN','Infinity']) {
+    assert.throws(()=>validateConfiguration({...route(),unpriced_request_usd:value},model.id,'off'),undefined,`bound ${value}`);
+  }
+  assert.doesNotThrow(()=>validateConfiguration({...route(),spend_limit_usd:'0.01',unpriced_request_usd:'0'},model.id,'off'));
   for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
     assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
   }
@@ -63,7 +72,7 @@ test('OpenRouter uses maintained routing and reasoning serializers with explicit
 test('frozen serving tier uses the SDK payload hook and reports only observed stream echoes',async t=>{
   const withTier=tier=>new Response([
     {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{role:'assistant',content:'done'},finish_reason:null}]},
-    {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{},finish_reason:'stop'}]},
+    {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{},finish_reason:'stop'}],usage:usageRecord},
   ].map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});
   const ordinary=await scenario(t,[withTier('default'),reply()]);
   assert.equal(ordinary.result.ok,true);

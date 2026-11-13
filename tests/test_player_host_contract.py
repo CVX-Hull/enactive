@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/3` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/4` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -9,6 +9,7 @@ provider, latency or gameplay outcome.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -24,6 +25,7 @@ from typing import Callable
 import pytest
 
 from harness.computer.launch import close_group
+from tools import campaign_run
 from tools.campaign_player import HostEvents
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,9 +73,15 @@ def adapter(request) -> Adapter:
     return request.param
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/3", max_requests=ALLOWANCE) -> dict:
+#: What a request with no cost record counts for in these routes, and what each reference response reports.
+UNPRICED_REQUEST_USD = "0.25"
+RESPONSE_COST_USD = 0.004
+
+
+def route(adapter: Adapter, base_url: str, *, schema="player-host/4", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
+                spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
                 max_context_images=4, context_image_block=1, context_reserve_tokens=512, request_timeout_seconds=10, model=adapter.model(base_url))
 
 
@@ -87,7 +95,7 @@ def text_response(text: str) -> tuple:
     return ("sse", sse(
         dict(id="ref", model="ref-backend", choices=[dict(index=0, delta=dict(role="assistant", content=text), finish_reason=None)]),
         dict(id="ref", model="ref-backend", choices=[dict(index=0, delta={}, finish_reason="stop")],
-             usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16))))
+             usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16, cost=RESPONSE_COST_USD))))
 
 
 def tool_response(name: str, arguments: dict) -> tuple:
@@ -95,7 +103,7 @@ def tool_response(name: str, arguments: dict) -> tuple:
     return ("sse", sse(
         dict(id="ref", model="ref-backend", choices=[dict(index=0, delta=dict(role="assistant", tool_calls=[call]), finish_reason=None)]),
         dict(id="ref", model="ref-backend", choices=[dict(index=0, delta={}, finish_reason="tool_calls")],
-             usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16))))
+             usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16, cost=RESPONSE_COST_USD))))
 
 
 def http_response(status: int, body: dict) -> tuple:
@@ -164,11 +172,12 @@ class Handler(BaseHTTPRequestHandler):
 class Hosted:
     """One adapter invocation with the driver's launch shape and its own file set."""
 
-    def __init__(self, adapter, directory: Path, provider: Provider, *, enabled_tools=("observe",), effort="off"):
+    def __init__(self, adapter, directory: Path, provider: Provider, *, enabled_tools=("observe",), effort="off", spend_limit_usd="100"):
         self.adapter, self.directory, self.provider, self.effort = adapter, directory, provider, effort
         self.paths = {name: directory / name for name in ("route.json", "mcp.json", "context.txt", "prompt.txt", "final.txt",
                                                           "host.jsonl", "host-stderr.log", "mcp-log", "mcp-pid")}
-        self.paths["route.json"].write_text(json.dumps(route(adapter, provider.base_url)))
+        self.route = route(adapter, provider.base_url, spend_limit_usd=spend_limit_usd)
+        self.paths["route.json"].write_text(json.dumps(self.route))
         self.paths["mcp.json"].write_text(json.dumps(self.mcp(enabled_tools)))
         self.paths["context.txt"].write_text("Frozen player guide")
         self.paths["prompt.txt"].write_text("Offline mission")
@@ -215,7 +224,7 @@ class Hosted:
         return int(self.paths["mcp-pid"].read_text())
 
     def accounted(self) -> dict:
-        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE)
+        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE, Decimal(UNPRICED_REQUEST_USD))
         try:
             return reader.finish()
         finally:
@@ -282,7 +291,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/2"):
+    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -333,15 +342,49 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/3" and events[0]["telemetry_version"] == 3
+    assert events[0]["schema"] == "player-host/4" and events[0]["telemetry_version"] == 4
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
     assert accounting["attempts_charged"] == len(hosted.provider.requests) == 1
+    assert (accounting["reported_usd"], accounting["unpriced_requests"], accounting["spent_usd"]) == ("0.004", 0, "0.004")
     assert accounting["settled"]["reason"] == "task_complete" and accounting["settled"]["ok"] is True
     assert CREDENTIAL in hosted.provider.requests[0]["authorization"]
     assert hosted.provider.requests[0]["path"].endswith("/chat/completions")
     assert process_gone(hosted.mcp_pid())
+
+
+def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow_the_trace(adapter, host_factory):
+    """A run with a $0.01 limit and responses reporting $0.004 each: the third takes the total to $0.012, so the
+    fourth request is never sent. The driver's reading of the trace and the receipt's record agree with it."""
+    hosted = host_factory([tool_response("integer", dict(value=7)) for _ in range(4)], enabled_tools=("integer",), spend_limit_usd="0.01")
+    assert hosted.start().wait() != 0
+    settled = hosted.settled()
+    assert (settled["ok"], settled["reason"], settled["requests"]) == (False, "spend-limit", 3)
+    assert (settled["spent_usd"], settled["unpriced_requests"]) == ("0.012", 0)
+    assert len(hosted.provider.requests) == 3
+    counted = [(e["request_id"], e["counted_cost_usd"], e["cost_counted_as"], e["spent_usd"])
+               for e in hosted.events() if e["type"] == "response-complete"]
+    assert counted == [("request-1", "0.004", "provider-reported", "0.004"), ("request-2", "0.004", "provider-reported", "0.008"),
+                       ("request-3", "0.004", "provider-reported", "0.012")]
+    actor = hosted.accounted()
+    assert (actor["attempts_charged"], actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"],
+            actor["spend_complete"]) == (3, "0.012", 0, "0.012", True)
+    receipt = campaign_run.accounting(dict(spend_limit_usd="0.01", max_http_attempts=ALLOWANCE), hosted.route, actor, True)
+    assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.25",
+                           spent_usd="0.012", attempts_charged=3, allocated_max_attempts=ALLOWANCE, spend_complete=True)
+    # The overshoot is less than one response: the limit was not yet reached when the third request was sent.
+    assert Decimal(receipt["spent_usd"]) - Decimal(receipt["spend_limit_usd"]) < Decimal("0.004")
+
+
+def test_a_successful_response_without_a_cost_stops_the_run_and_counts_at_the_bound(adapter, host_factory):
+    unpriced = ("sse", sse(dict(id="ref", model="ref-backend", choices=[dict(index=0, delta=dict(role="assistant", content="hello"),
+                                                                             finish_reason="stop")])))
+    hosted = host_factory([unpriced, text_response("must never be requested")])
+    assert hosted.start().wait() != 0
+    assert hosted.settled()["reason"] == "cost-unreported" and len(hosted.provider.requests) == 1
+    actor = hosted.accounted()
+    assert (actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"]) == ("0", 1, "0.25")
 
 
 def test_plain_report_requires_a_direct_finish_call(adapter, host_factory):

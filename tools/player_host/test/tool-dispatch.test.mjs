@@ -44,7 +44,7 @@ test('request metadata hashes exact serialized bodies without retaining forwarde
   const trace=events.filter(e=>e.type==='request-start');
   assert.equal(payloads[1].messages.find(m=>m.role==='assistant').reasoning_content,reasoning);
   assert.ok(JSON.stringify(payloads[1]).includes(png));
-  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,3);
+  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,4);
   assert.deepEqual(events.filter(e=>e.type==='assistant-text').map(e=>[e.text,e.omitted_bytes]),[['Visible plan',0],['finished',0]]);
   for(const secret of [reasoning,png,'fixture-key','UNRELATED_HOST_SECRET','Frozen player guide','Offline mission']) {
     assert.ok(!JSON.stringify(events).includes(secret));
