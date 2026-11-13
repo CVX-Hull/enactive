@@ -107,18 +107,20 @@ traces of that lineage (S15): 1,978 requests, every one with usage. Durations ar
 differences of `monotonic_ms` on one host clock. A response runs from `request-start`
 to `response-complete`; its stages end at `response-headers` and at the first
 tool-argument delta in `response_progress`. Prompt tokens are `usage.input +
-usage.cacheRead + usage.cacheWrite`. Percentiles interpolate linearly. The script is
-not a tracked tool ([decision 8](#owner-decisions)); the review of this note reproduced
-the response and prompt-size rows independently.
+usage.cacheRead + usage.cacheWrite`. Percentiles interpolate linearly; the memory
+note's nearest-rank values for the smallest and largest bands are 5.3 s and 14.0 s. The
+script is not a tracked tool ([decision 8](#owner-decisions)). The lead and the
+independent review of this note each recomputed both tables from the same traces and
+matched them, apart from the corrections made since.
 
 | Quantity | n | p50 | p95 | Other |
 | --- | ---: | ---: | ---: | --- |
 | Response, request sent to complete | 1,978 | 7.0 s | 12.2 s | 1.6% within 2 s; 20.5% within 5 s; maximum 21.8 s |
 | Request sent to response headers | 1,978 | 3.0 s | 6.8 s | |
 | Request sent to first tool-argument token | 1,978 | 5.4 s | 10.0 s | |
-| First tool-argument token to complete | 1,978 | 1.4 s | 2.8 s | Arguments stream at a median 94 tokens per second |
+| First tool-argument token to complete | 1,978 | 1.4 s | 2.8 s | Output arrives at about 80 to 130 tokens per second, depending on whether reasoning tokens and the time before the first argument are counted |
 | Responses that used no reasoning tokens | 128 | 4.7 s | 9.8 s | Their median prompt was 70,513 tokens |
-| One capture to the next request's first capture | 1,955 | 7.6 s | 12.9 s | 0.1% within 2 s; 13.9% within 5 s |
+| One request's first tool result to the next request's first tool result, any tool | 1,955 | 7.6 s | 12.9 s | 0.1% within 2 s; 13.9% within 5 s |
 | Input tool call, start to result | 1,923 | 0.44 s | 1.62 s | |
 | Image projection and request preparation in the host | 1,978 | 4.3 ms and 0.5 ms | 15.4 ms and 0.9 ms | |
 
@@ -129,7 +131,7 @@ By prompt size:
 
 | Prompt tokens | Requests | p50 | p95 | Within 5 s | Mean cost per request | Share of spend | Images, median | Request body, median |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Under 20,000 | 160 | 2.7 s | 5.2 s | 93.8% | \$0.0031 | 1.3% | 5 | 0.6 MB |
+| Under 20,000 | 160 | 2.7 s | 5.2 s | 93.8% | \$0.0030 | 1.3% | 5 | 0.6 MB |
 | 20,000–60,000 | 386 | 5.1 s | 8.0 s | 48.2% | \$0.0062 | 6.2% | 24 | 3.3 MB |
 | 60,000–100,000 | 514 | 6.9 s | 11.4 s | 10.3% | \$0.0150 | 20.1% | 35 | 5.7 MB |
 | 100,000–150,000 | 421 | 7.7 s | 11.7 s | 3.3% | \$0.0234 | 25.6% | 35 | 6.6 MB |
@@ -171,15 +173,15 @@ no image workload.
 | Option | Recorded here | Artificial Analysis (third party), read 13 November 2026: all workloads; 100,000-token prompt | Cost per game hour | Against 2 s |
 | --- | --- | --- | --- | --- |
 | **Current diagnostic route:** GPT-6.1 Terra, medium effort, default tier | p50 7.0 s, p95 12.2 s; per actor p95 8.1–13.7 s (S15, S3) | 4.85 s; 9.45 s | \$0.80 measured; \$0.53–1.04 across four lineages (S1, S2) | Misses by four to seven times |
-| **Bound the context:** hand off earlier, [compact the conversation](long-horizon-memory.md#7-compact-the-conversation-instead-of-handing-off) or [rebuild the prompt at each decision](long-horizon-memory.md#6-a-prompt-rebuilt-at-every-decision), the memory note's options 7 and 6 | p50 2.7 s and p95 5.2 s under 20,000 tokens, against 9.0 s and 13.9 s over 150,000; confounded as stated above (S15) | The same model's first token: 4.11 s on a 1,000-token prompt, 5.23 s on 10,000, 9.45 s on 100,000 | With the cache kept, \$0.22 if every request cost what those under 60,000 tokens did. A 20,000-token prompt rebuilt at each decision loses the cache: \$0.83–1.03 (*arithmetic*) | Misses 2 s. It is the only recorded lever that brings most responses inside 5 s |
+| **Bound the context:** hand off earlier, [compact the conversation](long-horizon-memory.md#7-compact-the-conversation-instead-of-handing-off) or [rebuild the prompt at each decision](long-horizon-memory.md#6-a-prompt-rebuilt-at-every-decision), the memory note's options 7 and 6 | p50 2.7 s and p95 5.2 s under 20,000 tokens, against 9.0 s and 13.9 s over 150,000; confounded as stated above (S15) | The same model's first token: 4.11 s on a 1,000-token prompt, 5.23 s on 10,000, 9.45 s on 100,000 | With the cache kept, \$0.22 if every request cost what those under 60,000 tokens did. A 20,000-token prompt rebuilt at each decision loses the cache: \$0.83–1.03 (*arithmetic*) | Misses 2 s. It is the only recorded condition under which most responses were inside 5 s |
 | **Effort setting:** the same model at low or no reasoning. The model accepts none, low, medium (the default), high, xhigh and max (S20) | Reasoning averages 44 of 127 output tokens; responses with none took p50 4.7 s (S15). A test on DeepSeek Flash 1017 with shortened context cut the median from 12.524 s to 1.415 s and did not separate the settings on grounding: 2 of 4 against 1 of 4 (S5) | Low: 2.76 s; 3.14 s. None: 2.20 s; 2.41 s | Same prices. Output is 3.3% of spend, so about \$0.78–0.80 if decisions per game hour do not change (*arithmetic*) | Misses. Not the main lever on this route |
 | **Service tier:** the same model on Fast mode, the provider's priority tier | None | "up to 2.5× faster", stated for another model; prices are twice the standard rate (S20, S22). OpenRouter lists it at \$2.00 input and \$10.00 output per million for Terra and \$0.20 and \$1.00 for Luna (S19) | \$1.60 (*arithmetic*: twice \$0.80) | Misses even if the full multiplier applied: p95 3.2–5.5 s per actor (*arithmetic*) |
 | **Smaller tier:** GPT-6 Luna ([#25](https://github.com/CVX-Hull/enactive/issues/25), whether a smaller tactical model earns its complexity) | None on the current interface | Medium: 6.26 s; 7.87 s. Low: 3.26 s; 4.44 s. None: 1.74 s; 2.32 s. Prices are a tenth of Terra's, cache reads a fifth (S18, S21) | About \$0.10 (*arithmetic*: the recorded token mix at Luna's prices, decisions unchanged) | Misses. At medium effort its first answer token comes later than Terra's on the mixed workloads |
 | **Other provider:** DeepSeek V4.1 Flash 1017, the selected finite configuration (S14) | Medium on Fireworks US: medians 3.8–13.7 s over 56 requests (S5). Medium on BaseTen with 30 images: p50 11.8 s, p95 24.7–27.5 s (S13). No reasoning: median 1.415 s on shortened retained screens (S5) | No reasoning, the earlier listing of this model, median across providers: 0.90 s; 2.63 s. 48 endpoints from \$0.03 to \$0.60 input per million (S19) | About \$0.25 at the Fireworks US endpoint's prices (*arithmetic*; cache writes priced as input, because the endpoint lists no cache-write price) | Medium misses on both recorded providers. No reasoning was under 2 s only on shortened context |
 | **Other provider:** Claude Haiku 5.5 | None on the current interface | Low: 6.99 s; 10.87 s. Medium: 11.03 s; 23.17 s. Prices equal Luna's up to 100,000 prompt tokens and are five times higher above (S19) | \$0.10–0.50 (*arithmetic*); the recorded median prompt is 93,828 tokens and the 90th percentile 197,459 (S6) | Misses |
-| **Other provider:** Gemini 3.5 Flash-Lite | None on the current interface | 4.71 s; 11.61 s. \$0.30 input, \$2.50 output, \$0.03 cache read and \$0.083 cache write per million (S19) | About \$0.17 (*arithmetic* at those prices) | Misses |
+| **Other provider:** Gemini 3.5 Flash-Lite | None on the current interface | 4.71 s; 11.61 s. \$0.30 input, \$2.50 output, \$0.03 cache read and \$0.083 cache write per million (S19) | About \$0.17–0.27 (*arithmetic*: cache writes at the listed \$0.083, or at the \$0.30 input price) | Misses |
 | **Programs on the actor's interface** (the programs and monitor phase of [ADR 009](../decisions/009-curated-player.md#programs)) | A model-free step is a capture and an input: p95 392 ms and 58 ms (S3); an earlier local loop measured 362–379 ms per linked capture (S5). Use so far: one program in the current design, and no organic program run in any #164 recording (S8, line 51; S5) | Not applicable | Each decision moved to a model-free step removes about \$0.02 and 8 s. Supervising turns and model calls inside programs add cost back, unmeasured | The only option whose steps could fit inside 2 s and 500 ms; no program step has been timed in play. It applies only to decisions a program can take |
-| **Required emissions and snapshot diffs** (ADR 009's [emissions](../decisions/009-curated-player.md#actor-emissions-d10) and [diffs](../decisions/009-curated-player.md#reaching-the-actor-without-latency-d2)): a cost, not a lever | One 200-token diff adds \$0.00106–0.00262, 5.5–13.5% of an average request (S6, lines 48–55). Emissions are unmeasured: the tool schema has no such fields and every sealed trace predates them | Not applicable | A 200-token diff on every request: \$0.04–0.11 more. Every 50 tokens of emission text per call: \$0.02–0.04 more (*arithmetic*) | Moves away from it: 50 more argument tokens take about 0.5 s at the recorded 94 tokens per second (*arithmetic*) |
+| **Required emissions and snapshot diffs** (ADR 009's [emissions](../decisions/009-curated-player.md#actor-emissions-d10) and [diffs](../decisions/009-curated-player.md#reaching-the-actor-without-latency-d2)): a cost, not a lever | One 200-token diff adds \$0.00106–0.00262, 5.5–13.5% of an average request (S6, lines 48–55). Emissions are unmeasured: the tool schema has no such fields and every sealed trace predates them | Not applicable | A 200-token diff on every request: \$0.04–0.11 more. Every 50 tokens of emission text per call: \$0.02–0.04 more (*arithmetic*) | Moves away from it: 50 more argument tokens take about 0.4–0.6 s at the recorded 80 to 130 tokens per second (*arithmetic*) |
 
 ## What the comparison shows
 
@@ -219,7 +221,7 @@ in population, and the second is easier to meet on both counts:
 | --- | --- | --- |
 | Interval | From the first actor-visible cue sufficient for a new choice to the first capture that verifies its useful effect, with planning, tool handling, repair, retries and confirmation inside it (S5, cohort feasibility) | From the receipt of one capture to the receipt of the next request's first capture |
 | Spans | As many requests as the decision takes | One request |
-| Population | Useful routine decisions, judged from frames | Every request in routine play |
+| Population | Useful routine decisions, judged from frames | Every request, setup and menus included |
 | The shelter diagnostic | 22.169 s, one decision over three requests | Three intervals that sum to 22.169 s, about 7.4 s each; the first at least 11.6 s |
 | The seven-day development lineage | Not measurable: no decision is labelled useful | p50 7.6 s, p95 12.9 s; 0.1% within 2 s (S15) |
 
@@ -250,7 +252,7 @@ What is added, as diagnostics and not as criteria:
    executed for the observer. A wait for a model response counts toward it unless
    useful execution runs during the wait, the charter's "covers its delay". Nothing
    runs during a model wait today, so every response over 5 s is a stall: 79.5% of the
-   seven-day development lineage's responses (S15).
+   seven-day development lineage's responses, setup and menus included (S15).
 3. **Model response time** per actor trace, as now.
 
 The frozen criterion still needs its own evidence before it can be met: 20 useful
@@ -269,7 +271,7 @@ prompt text and no model call per decision.
 
 | Option | Interaction with memory work |
 | --- | --- |
-| Bound the context | The two works pull against each other here. The memory note sets aside a prompt rebuilt at each decision and compaction as memory designs; the trace evidence makes a bounded context the strongest cadence lever. Handing off earlier multiplies boundaries, and a handoff kept about 0.62 of what the outgoing actor held (memory note). A bounded context is only safe once memory carries what the conversation no longer does |
+| Bound the context | The two works meet here. The memory note keeps a prompt rebuilt at each decision and compaction open as the ways to bound the context once memory works, not as the memory design; the trace evidence makes a bounded context the strongest cadence lever. Handing off earlier multiplies boundaries, and a handoff kept about 0.62 of what the outgoing actor held (memory note). A bounded context is only safe once memory carries what the conversation no longer does |
 | Effort setting | Memory adds context to read on every decision. Whether an actor with little or no reasoning uses delivered memory is untested. The curator memory study scored traces of Terra at medium effort (S3, line 46; S4), so its results would not carry to another setting |
 | Service tier | Independent of the memory design. It doubles the price of every token memory adds |
 | Smaller tier | A second model. Replacing the actor leaves the memory evidence, all on Terra traces, without a subject. Beside the actor, the recorded cost of a curator on Terra is \$0.49 per game hour on the seven-day development lineage (S9, line 73), about five times a Luna actor's \$0.10 |
@@ -322,7 +324,8 @@ in grounding? Five seconds is #164's stall bound; 20.5% of recorded responses me
   \$0.645 per point. The worst case is \$60.85: every request a full cache write at the
   top of its band and every reply running to the 16,384-token output limit. Recorded
   replies averaged 127 tokens and never exceeded 1,051, so the \$65 stop is reachable
-  only if replies run to that limit or a request is priced other than as listed.
+  only if a request is priced other than as listed or a response carries no cost
+  record, which the spend-limit rule counts at \$0.4096.
 - **Stop conditions:**
   - a pilot of one decision point through all five settings comes first; stop if the
     rebuilt reference request does not match its recorded hash, if a reply's prompt
@@ -332,6 +335,8 @@ in grounding? Five seconds is #164's stall bound; 20.5% of recorded responses me
     the one requested (Fast mode can fall back to the default tier; S22);
   - stop at \$65 of provider-reported cost, counted per response as a player run's
     [spend limit](../operations/campaign-run.md#spend-limit) counts it;
+  - decision points run in a seeded order that takes one from each prompt band in
+    turn, so the two stops below see every band;
   - each reference replay is paired with its own recorded duration; stop after five
     decision points if the median ratio of replayed to recorded duration is outside 0.5
     to 2, because the replay then does not reproduce live serving. The factor of two is
@@ -442,7 +447,7 @@ in grounding? Five seconds is #164's stall bound; 20.5% of recorded responses me
 
 ## Sources
 
-Line numbers are at commit `e215da3`.
+Line numbers are at commit `0e10e71`.
 
 **Recorded in this repository**
 
