@@ -336,7 +336,7 @@ def test_short_result_of_a_partial_or_unknown_delivery_names_the_operation_and_t
     assert shown['operation_id'] == raw['operation_id'] and 'computer_result' in shown['reason']
     refused = short_result(actor_result(dict(raw, status='refused', reason='Unsupported basic key')))
     assert refused['status'] == 'refused' and refused['reason'] == 'Unsupported basic key'
-    assert 'operation_id' not in refused
+    assert refused['operation_id'] == raw['operation_id']  # a refusal can follow a part-delivered batch
 
 
 def test_computer_result_returns_the_full_record_and_every_other_result_is_unchanged(service):

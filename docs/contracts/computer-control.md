@@ -163,7 +163,8 @@ do next, for every status but `completed` and `sealed`. Completed with a frame:
 An input with no frame omits those three fields. A partial or unknown delivery adds
 `operation_id` and `reason` ("input is stopped and never replayed; call
 `computer_result` with this `operation_id`"). A refused operation adds its `reason`
-and no identifier. The session, actor, kind, creation time, receipts, source record and
+and its `operation_id` too: a refusal can follow a batch that was delivered in part,
+and `computer_result` shows which actions were. The session, actor, kind, creation time, receipts, source record and
 handoff issuance are not in it. The session database and the canonical operation
 are unchanged; the host reads `source_id` and the full handoff issuance from the
 record. `player-computer-result/1` is retired: the host rejects it as a handoff

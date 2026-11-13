@@ -113,9 +113,6 @@ def reconstruct_context(run_dir: Path, actor: str, events: Sequence[HostEvent], 
                     values.append(json.loads(text))
                 except ValueError:
                     continue
-            structured = (event.fields.get('result') or {}).get('structuredContent')
-            if isinstance(structured, dict):  # a computer result the model read short; its full record holds the frame
-                values.append(structured)
             for value in values:
                 source = value.get('source') if isinstance(value, dict) else None
                 if isinstance(source, dict) and isinstance(source.get('source_id'), str):

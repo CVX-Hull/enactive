@@ -225,8 +225,7 @@ def _project(value):
 def short_result(operation):
     """What the model reads of one operation record from `actor_result`: its status; the frame's `source_id` and
     size where it has a frame (and `image_unavailable` when the pixels were not returned); and, while the operation
-    is pending or its delivery partial or unknown, its `operation_id`; with a `reason` that says what to do next
-    for every status but completed and sealed. Receipts, identities and times stay in `operation`."""
+    is neither completed nor sealed, its `operation_id` and a `reason` that says what to do next. Receipts, identities and times stay in `operation`."""
     if type(operation) is not dict or operation.get('schema') != OPERATION_SCHEMA:
         raise UnsupportedResult('Unsupported operation record')
     status = operation['status']
@@ -236,9 +235,9 @@ def short_result(operation):
         result.update(source_id=frame['source_id'], width=frame['width'], height=frame['height'])
     if operation.get('image_unavailable'):
         result['image_unavailable'] = True
-    if status in ('pending', 'partial', 'unknown'):
-        result['operation_id'] = operation['operation_id']
     if status not in ('completed', 'sealed'):
+        # A refusal can follow a part-delivered batch, so it too names the record that shows what was delivered.
+        result['operation_id'] = operation['operation_id']
         result['reason'] = operation['reason']
     return result
 

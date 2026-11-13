@@ -1887,21 +1887,6 @@ def test_context_is_exact_with_a_manifest_and_reconstructed_without(tmp_path):
         request_context(directory, actor, inputs.host[actor], 'request-99')
 
 
-def test_a_reconstructed_context_takes_the_frame_of_a_short_result_from_its_full_record(tmp_path):
-    from harness.evaluation.core.context import reconstruct_context
-    from harness.evaluation.core.sources import HostEvent
-    frame = 'a' * 32 + '-7'
-    shown = json.dumps(dict(schema='player-computer-result/2', status='completed', source_id=frame, width=4, height=4))
-    result = dict(content=[dict(type='text', text=shown), dict(type='image_reference', bytes=3, sha256='c' * 64, image_index=0)],
-                  structuredContent=dict(schema='player-computer-operation/1', source=dict(source_id=frame)))
-    events = [HostEvent('x', 1, 'tool-result', None, None, dict(tool_call_id='t', tool='computer_observe', result=result)),
-              HostEvent('x', 2, 'request-start', None, None, dict(request_id='r'))]
-    built = reconstruct_context(tmp_path, 'x', events, 'r')
-    parts = {p['kind']: p for p in built['parts'] if p['kind'] in ('tool_result_text', 'image')}
-    assert parts['image']['source_id'] == frame
-    assert parts['tool_result_text']['bytes'] == len(shown.encode())
-
-
 def test_the_evaluation_decoder_rejects_what_it_would_have_to_guess():
     from harness.evaluation.core.records import loads
     assert loads(None) is None and loads(b'{"a": [1, 2.5]}', 'x') == {'a': [1, 2.5]}
