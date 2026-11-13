@@ -296,10 +296,11 @@ alone accepts gameplay. Preserve failures and unrun lanes.
 A development admission is recorded once its receipt exists, with
 `.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL
 --provider-records N --provider-usd X --unpriced-attempt-usd 0.4096`, where `LABEL` is the
-run's name in its hand-scored table (default: the package name). That command appends one
+run's short name in its study's dated record (default: the package name). That command appends one
 [`dev-run/1`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
-`data/evaluation/runs.jsonl`. The provider figures come from the operator's own
-reconciliation. A package without a receipt gets no row, and no further admission
+`data/evaluation/runs.jsonl`, the one numeric record of the run: the study's record cites
+that row or a generated table and keeps no hand-typed copy of attempts, spend or duration.
+The provider figures come from the operator's own reconciliation. A package without a receipt gets no row, and no further admission
 is made until the lead resolves it. `run_ledger totals --study ISSUE --envelope USD`
 applies the [actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),
 with `--forecast-largest USD` standing in for the largest admission before any completes.

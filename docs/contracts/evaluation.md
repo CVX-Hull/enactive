@@ -409,12 +409,12 @@ beside it.
 
 ## Tracked run ledger and metrics snapshot
 
-Development-run quantities live as data in git, and pages render or check against them
+Development-run quantities live as data in git, and pages render them or cite them
 (S-EVIDENCE). Both files hold no local paths, ports or secrets.
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, hand-table label, arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/5` manifest and `campaign-receipt/3` plus the operator's provider reconciliation |
+| `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/5` manifest and `campaign-receipt/3` plus the operator's provider reconciliation |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
 - **Origin.** `record` reads `campaign-run/5` packages only; there is no reader for older
@@ -434,11 +434,15 @@ Development-run quantities live as data in git, and pages render or check agains
   blocks do not nest; mismatched or malformed markers are an error before anything is
   written. `evaluate-table … --write` regenerates the blocks, and the fast checks run
   `--check`, which fails on a stale block.
-- **Hand tables.** ADR008's hand-scored rows are never rewritten. `run_ledger check`, also
-  part of the fast checks, reads the tables with attempt, dollar and wall-second columns in
-  each study's documents. Every hand row must match exactly one ledger row of that study with
-  its label, on attempts, dollars to the cent and wall seconds; every ledger row of the
-  study must have such a hand row. Other tables and prose sums are not checked.
+- **One numeric record.** The ledger is the one numeric record of a run. A dated record
+  presents numbers through generated tables or by citing the ledger, and keeps no second
+  hand-typed copy of attempts, spend or duration. `run_ledger check`, part of the fast
+  checks, validates every ledger row; it reads no document. Four study records keep
+  hand-scored tables (the [development loop](../acceptance/2026-11-06-development-loop.md),
+  the [long-horizon arm](../acceptance/2026-11-07-long-horizon-382.md), the
+  [seven-day lineage](../acceptance/2026-11-07-seven-day-397.md) and the
+  [added held-out lineage](../acceptance/2026-11-09-held-out-lineage-522.md)); those tables
+  are never rewritten (ADR008) and are not checked.
 
 ## Spectator view API (`spectator-view/1`)
 
