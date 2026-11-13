@@ -2,265 +2,278 @@
 owner: lead
 status: proposed
 date: '2026-11-13'
-scope: 'Direction for the player''s memory after the memory screen''s gates (#460, #386): a game-neutral curator and fact format that edit a bounded store, delivery that puts relevant knowledge in front of the player without waiting for it to ask, measurement of whether memory is used and helps, and model judges as the standing measure with few human labels. Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Nothing here is built or approved'
-review_trigger: The owner decides the questions below, or a measurement contradicts a premise marked as one here
+scope: 'Changes proposed to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that consolidates, the briefing''s full items chosen by a model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Nothing here is built or approved'
+review_trigger: The owner decides the questions below, or a measurement contradicts a premise stated here
 ---
 
 # General memory: curation, delivery and judged measurement
 
 ## At a glance
 
+- **Question.** After the gates, how should the curator, the briefing and the measurement
+  change so that memory is general across games, is actually used by the player, and can
+  be shown to help at a price the project can pay?
 - **What the gates showed** ([brief gate](../acceptance/2026-11-13-curator-brief-gate.md),
   [price pilot](../acceptance/2026-11-13-session-price-pilot.md),
   [measure gate](../acceptance/2026-11-13-memory-measure-gate.md)):
-  1. **A curator told what to record stores it.** With a brief for places and goods it
-     stored all four lost facts, against one before.
-  2. **The store grows without bound.** It reached 279 records after about 1,400
-     decisions, about 6,000 bytes for every 20, because the curator only appends.
-  3. **Sessions are cheap and close behind play**: a median of \$0.20 and 99 s for 20
-     decisions.
-  4. **A comparison between arms is too dear to answer "does it help"**: \$165 to \$208
-     of play for two arms at the measured values, \$93 to never across the intervals.
-  5. **The model judges are good enough to lean on.** Where two judges agreed, the
-     owner's checked labels matched them on 26 of 26 pairs.
-- **What is wrong with what we built.** Its code is game-neutral, but its schema and
-  instructions are not ([audit](#where-the-stack-is-coupled-to-one-game)). The
-  `place_with_goods` kind, required places and times, and judge labels about "going to
-  the known place" assume a world of places and goods, and the format was tuned on the
-  four facts the gate then checked.
-- **Proposal, in four parts:**
-  1. **Curation.** The curator edits a store under a fixed budget, in a minimal format:
-     free text plus provenance. The model decides what is worth keeping; no closed kinds.
-  2. **Delivery.** The player does not have to remember to look. A small digest is always
-     in its context, and a recall model watching play pushes short reminders, or nothing,
-     at the moment they are relevant.
-  3. **Measurement.** Whether memory is used is measured on every sealed run by judges.
-     Whether it helps is measured by withholding a random half of what the store knows
-     within each start, so that each start is its own control.
-  4. **Judges.** Two judges and a third on disputes are the standing measure, with
-     prediction-powered inference over a small random audit for valid intervals.
-- **Owner decisions** are [at the end](#owner-decisions): adopting the format, which
-  delivery to build first, the judge protocol, and two later spends.
+  1. **A curator told what to record stores it**: all four lost facts, against one before.
+  2. **The store keeps growing**: 279 records after about 1,900 decisions, about 6,000
+     bytes for every 20. The curator can supersede a fact but cannot retire or merge one,
+     and its brief asks it to record every item.
+  3. **Sessions are fast and not small**: a median of \$0.20 and 99 s for 20 decisions,
+     inferred at two to three times the play they cover when the prompt is bounded.
+  4. **A comparison between arms is dear**: \$165 to \$208 of play for two arms at the
+     measured values, \$93 to never across the intervals.
+  5. **The judges agree with each other** (κ 0.80) and with the owner's blind answers on 18
+     of the random 20. On touched pairs the blind answers differed on 9 of 12 and the
+     checked answers on 2 of 12. Which is nearer the truth on engagement is not known.
+- **What is wrong with what we built.** Its code names no game, but its schema and
+  instructions assume places and goods: required places and game times, a fixed
+  `place_with_goods` kind, judge labels about going to a place. The format was tuned on
+  the four facts the gate then checked. The rows are added to the architecture's
+  [current coupling](../architecture.md#game-family-portability) table.
+- **Proposal.**
+  1. **Format.** Drop the fixed kinds and the required place and time; keep ADR 009's
+     model-proposed types, citations and order of sighting. Add retiring and merging.
+  2. **Curator.** A consolidation session between admissions merges and retires facts.
+     No hard cap until growth after consolidation shows one is needed.
+  3. **Delivery.** The briefing stays as the context design has it. A recall model,
+     not a kind, chooses which facts each actor gets in full. During play it may add a
+     short reminder, or say nothing, as a notice that stays in the history.
+  4. **Measurement.** Use of memory is judged on every sealed run. Benefit is measured by
+     withholding a random half of the store, by subject, within each start, once a
+     simulation has sized it.
+  5. **Judges** stay the standing measure, with the owner's blind labels as truth and
+     prediction-powered inference for intervals.
+- **Not known.** Whether a recall model helps or distracts in this game; the withholding
+  design's power; whether consolidation alone holds the store's size; whether the
+  owner's blind answers or the judges are nearer the truth on engagement.
+- **Owner decisions:** six, [at the end](#owner-decisions). Some change standing
+  decisions, and each says which.
+
+Terms are in the [glossary](../glossary.md).
 
 ## The principle
 
-Two constraints shape every choice here: the charter's
-[portability constraint](../charter.md) and P-GENERALITY, and the owner's instruction
-to follow Sutton's bitter lesson. Prefer general methods that improve as models improve
-over hand-built knowledge of one game. In practice:
+The charter's [portability constraint](../charter.md) and P-GENERALITY, and the owner's
+instruction to follow the bitter lesson: prefer general methods that improve as models
+improve over hand-built knowledge of one game.
 
-- **The model decides what matters**: what to record, how to word it, what to keep when
-  space runs out, and what is relevant now. Software keeps only what no model should
-  decide: provenance, budgets, versions, the gate's structural checks.
-- **No rule names a kind of thing in a game.** A rule like "goods have a place" or "drop
-  facts older than a day" is a guess about one game that a better model would not need.
-- **Measures are written in game-neutral terms, and items are found in the trace**, not
-  listed in advance.
+- **The model decides what matters**: what to record, how to word it, what to merge or
+  retire, and what is relevant now. Software keeps what no model should decide:
+  provenance, order, versions, the gate's structural checks and the cache rule.
+- **No rule names a kind of thing in a game.** "Goods have a place" or "drop facts older
+  than a day" are guesses about one game.
+- **Measures are worded in game-neutral terms**, and the facts they judge come from the
+  trace and the store, not a list written in advance.
 
-## Where the stack is coupled to one game
+## 1. The fact format and the curator
 
-From an audit of the memory and measure code on 13 November 2026. The Python names no
-game. The coupling is in the schema and the prose.
+### The format, `curator-fact/3`
 
-| Where | What | Kind of coupling |
+| Field | Required | Meaning |
 | --- | --- | --- |
-| `harness/curator/gate.py`, `curator-fact/2` | `place` and `game_time` required on every fact; non-empty for `place_with_goods` and `hazard`; four fixed kinds | Hand-built schema; assumes places, goods and an on-screen clock |
-| `tools/curator_host/prompt.md` | Defines the four kinds; asks for a place as "a landmark and a direction, or coordinates" | Survival-genre framing |
-| `tools/memory_screen_checks.py` `brief-gate` | Regex on `subject` and `place`, only for `place_with_goods` | Hand-built rule; returns no match, not an error, in a game without places |
-| `tools/memory_measure.py` | Known items keyed by place; judge labels "went straight to the known place"; packets of 60 frames, stretches of 200 decisions, every third changed frame | Spatial wording; hand-set sizes |
-| `docs/design/long-horizon-memory.md` | A table of what memory "must do for this game" (rations, a roof tank, a fire) | Game examples written as requirements |
+| `schema`, `id` | yes | as now |
+| `type` | yes | a type from the ontology, proposed and kept by the system as [ADR 009](../decisions/009-curated-player.md) decided |
+| `text` | yes | one durable claim, in the curator's words; where and when, when they matter, are in the text as the screen showed them |
+| `citations` | yes | frame source ids inside the session's window, checked by the gate |
+| `subject` | no | a short name for what the fact is about, when it is about one thing |
+| `seen` | written by software | the trace position of the latest cited frame: an order, not an age, since one step can span hours of play |
 
-The frozen patterns of the brief gate name one game's items. They are evidence of one
-run, not a rule, and stay as they are.
+- **Removed:** the four fixed kinds, `place`, `game_time`, and `statement` (renamed
+  `text`). `scope.game` stays.
+- **Operations:** `add_fact`, `supersede_fact` with one or more ids, `retire_fact` with
+  a reason and citations, and `add_type`.
+- **Migration.** One contract with no shim (S-MIGRATION). The brief gate's
+  `brief-gate` check reads only `curator-fact/2`; it served one finished gate and is
+  retired with the migration (R-TECH-DEBT). Sealed stores stay as evidence.
 
-## 1. Curation
+### Consolidation
 
-### The format
-
-A fact becomes free text with provenance:
-
-| Field | Required | Who writes it |
-| --- | --- | --- |
-| `id`, `schema` | yes | the curator; the gate checks them |
-| `text` | yes | the curator: one durable claim a later actor can use, in its own words, including where and when if they matter |
-| `subject` | yes | the curator: a short name for what the fact is about, used to find related facts |
-| `citations` | yes | frame source ids inside the session's window; the gate checks provenance |
-| `seen` | yes | software: the trace step of the latest cited frame |
-| `label` | no | the curator: any short grouping word it chooses |
-| `supersedes` | no | the curator: the fact this one replaces |
-
-- **Removed:** the four fixed kinds, `place`, `game_time` and `type` with its ontology.
-  The gate checks structure and provenance only, never meaning.
-- **Why `subject` stays.** The curator needs to find the facts about one thing before it
-  edits them, and the delivery layer needs a short name to list. It is the model's own
-  word, not a category.
-- **Migration.** One contract, `curator-fact/3`, with no shim (S-MIGRATION). Sealed
-  stores stay as they are; their readers read git objects.
-
-### The curator edits a bounded store
-
-- **Before writing, the curator sees the existing facts about each subject it touches**,
-  and adds, rewrites, merges or retires. Systems that only append grow without bound;
-  those that edit against what exists (Mem0, Memory-R1) do not.
-- **A byte budget for the store.** The gate refuses a version over budget. The curator
-  must decide what to drop or compress to fit. That makes the model do the ranking; no
-  rule about age or kind does it.
-- **A consolidation session between admissions**: one curator session that reads only
-  the store, merges duplicates, retires facts later frames contradict, and rewrites the
-  digest (below). This is the "sleep-time" pattern (Letta).
-- **Facts are hypotheses.** Each shows when it was last seen. The brief tells the curator
-  to retire a fact when a later frame contradicts it. Outside work finds agents follow
-  stale notes into harm, so the player is told to check a fact cheaply, not to obey it.
+- **The curator already sees the published facts** and is told not to repeat them. What
+  it lacks is a way to retire or merge them, and a brief that does not ask for every
+  item.
+- **A consolidation session between admissions** reads only the store and the last
+  admission's citations: it merges facts about one subject, retires facts a later frame
+  contradicts, and ranks facts for the briefing. Outside systems that edit against what
+  exists (Mem0, Memory-R1, Letta's sleep-time agents) keep their stores more compact.
+- **No hard cap.** The owner decided on 13 November that added text has no hard cap until
+  experience shows one is needed. Growth after consolidation is that experience; it is
+  measured before a cap is proposed.
+- **Facts are hypotheses.** Each is shown with its sighting order, and the player is told
+  to check a fact cheaply before relying on it. Outside work finds agents follow stale
+  notes into harm.
 
 ### How the curator improves
 
-- **Scored on sealed replays, not by inspection.** A curator variant (a brief, a budget,
-  a model) runs over a fixed set of sealed admissions, and the judges score its store:
-  recall of what the frames showed, precision against the cited frames, and stale facts.
-  About \$16 a variant at the brief gate's rates.
-- **The four lost facts become one test among many.** Recall is measured against items
-  the annotators find in the frames, so a brief cannot be tuned to four answers.
+- **Scored on sealed replays.** A curator variant runs over a fixed set of sealed
+  admissions, and the judges score its store against what later frames needed: facts the
+  player later acted on or found again, weighted above facts never needed again. The
+  existing probe annotations (`data/evaluation/probes/397`) already mark re-observations.
+- **The four lost facts become one test among many**, so a brief cannot be tuned to them.
+- **Cost** about \$16 a variant at the brief gate's rates; a consolidating curator may
+  cost more, and the first run measures it.
 
 ## 2. Delivery: making the player use memory
 
-The audit of memory reads found 8 reads in 98 traces and none by an admission's first
-actor ([record](../acceptance/2026-11-13-memory-read-audit.md)). Outside work finds the
-same: models under-use memory they must ask for (MemTrack). The fix is not a better
-prompt. It is delivery the player does not have to start.
+The read audit found 8 memory reads in 98 traces and none by an admission's first actor
+([record](../acceptance/2026-11-13-memory-read-audit.md)). Outside work finds the same:
+models under-use memory they must ask for (MemTrack). So the player should not have to
+ask. The [context design](player-context.md#2-a-briefing-from-the-curators-store) already
+puts a briefing in every actor's first message and appends later differences as new
+messages, which keeps the provider's cache: every request extends the previous one byte
+for byte (`tools/player_host/host.mjs`, the notice rule). This note keeps that and
+changes two things.
 
-Ranked by expected effect per cost:
+1. **A recall model chooses the full items.** The context design shows in full "open
+   commitments, known hazards, the places with goods, and what the player has learned
+   about how the game works", by kind, and one index line for every other item. With the
+   kinds gone, a recall model reads the mission, the previous final report and the
+   store's index, and chooses which facts each actor gets in full. Every other fact keeps
+   its index line, readable with `player_memory_read`. Relevance is judged by a model, so
+   it holds for any game.
+2. **Reminders during play.** At a fixed cadence (every N decisions, N set by the first
+   development play), the recall model reads the player's recent tool calls, the latest
+   screen and the index, and answers with up to a few fact ids and a line each, or with
+   nothing. It runs beside the player and never blocks it; its answer is added as a notice
+   to the next request after it finishes, and stays in the history, so the cache holds.
+   A reminder may arrive a decision or two late.
 
-1. **A pinned digest, always in context.** The curator writes a short digest of the
-   facts most likely to matter next, within a token budget, at each consolidation. The
-   host puts it in every request near the end of the context, where models attend most,
-   as a cached block that changes only between sessions. This is how coding agents'
-   always-loaded instruction files work. It needs no choice by the player.
-2. **A recall model that watches play.** Every few decisions, and on signals of no
-   progress (a repeated input, an unchanged screen, an error), a small model reads the
-   player's recent tool calls and stated `intent`, the latest screen, and the store's
-   subjects. It answers with up to a few fact ids and one line each, or with nothing.
-   The host adds the reminder to the next tool result as transient text that leaves the
-   history on the next turn. Relevance is judged by a model, so it is game-neutral; a
-   proactive memory agent of this kind raised task success by 2.5 to 8 points on two
-   agent benchmarks, and an untrained small one lowered it, so its silence rate and use
-   are measured from the start.
-3. **A recall at the start of each actor.** The same model reads the mission and the
-   previous final report and selects facts for the first message. This aims directly at
-   the first actor that never read memory.
-4. **The player cites what it used.** The tool calls already carry `intent` and an
-   optional `cites`. The guide asks the player to cite a fact id when it acts on one.
-   Citations are not trusted as use; the judges check them.
+**What it costs.**
 
-Each delivered fact carries its id and when it was last seen. Every injection and every
-silence is logged, so delivery is measured, not assumed.
+- **Prompt.** Reminders stay, so each adds its tokens to every later request in that
+  actor. The recall model's silence keeps that small; the first development play
+  measures it.
+- **Dollars.** One recall request costs about what a curator request does, about \$0.02 at
+  the pilot's rates (\$2.34 over 112 requests). At one every five decisions that is about
+  \$0.004 a decision, against about \$0.006 a decision of play with a bounded prompt
+  ([context design](player-context.md)): an inferred increase of about two thirds. A
+  smaller model would cost less; which one is good enough is measured.
+- **Risk.** In the closest outside study a proactive memory agent beside an actor raised
+  task success by 2.5 to 8 points, and an untrained small one lowered it. Every reminder
+  and every silence is logged and judged.
 
-**Not proposed:** keyword or embedding rules that decide relevance alone (an embedding
-may pre-filter candidates for the recall model); a whole-store briefing; a required
-"memory checked" field, which models fill without reading.
+**Citations.** The decided `intent` and optional `cites` fields, once built, let the
+player cite a fact id it acted on. Citations are evidence for the judges, not proof of
+use.
 
-**Cost.** The digest adds a fixed, cached block. The recall model is one small request
-every few decisions; at a session's measured price per request it is well under the
-cost of play, and it is measured in the first development play.
+**Not proposed:** the cut, which is a decision of its own below; a whole-store briefing;
+relevance decided by keywords or embeddings alone (an embedding may pre-filter for the
+recall model); triggers built on signs of no progress, which are hand-set and fire on
+ordinary movement in this game; a required "memory checked" field.
 
 ## 3. Measurement
 
-### Is memory used? On every sealed run, at \$0 on the provider
+### Is memory used? On every sealed run
 
-The judges score, in game-neutral terms:
+For each fact delivered in full or by a reminder, and each fact on the index, the judges
+label each stretch in which the fact could matter:
 
-- **Use of each delivered fact**: acted on and helped, relevant but ignored, misled, or
-  never relevant.
-- **Acting on a stale or false fact**: a fact later frames contradict, and whether the
-  player acted on it.
-- **Re-discovery**: the player found again something a fact it held already said.
-- **Silence and precision of the recall model**: injections acted on, and needs the
-  frames show it stayed silent on.
+- **Acted in line with it**: the player did what the fact supports.
+- **Acted against it**: the player did what the fact advises against, or went where the
+  fact says is empty or gone.
+- **Found it again**: the player discovered by looking what the fact already said.
+- **Did not apply**, or **cannot tell**.
+
+These labels fit any fact: a place, a hazard, a rule, a procedure or a commitment. From
+them come the use rate of delivered facts, re-discovery, acting on a stale or false fact,
+and the recall model's precision and silence. Judging is done by host agents, \$0 on the
+provider; the coding host's capacity is its cost.
 
 ### Does memory help? Withholding within each start
 
-- **Design.** In each start, a random half of the store's facts (drawn per start, seed
-  recorded) is withheld from the digest and from recall. The judges label, for each fact
-  that became relevant, whether the player used the source it describes before any
-  alternative. The effect is the difference in that rate between delivered and withheld
-  facts within the same starts, with starts as clusters.
-- **Why.** The between-arm comparison was too dear because starts vary so much. Here
-  each start is its own control, and only one arm is played.
-- **Threats.** A delivered fact can imply a withheld one; the player's own records can
-  hold a withheld fact. Both bias towards no effect.
-- **Before any spend** the protocol's simulation is adapted to this design, with the
+- **Design.** In each start a random half of the store's subjects (drawn per start, seed
+  recorded) is withheld: their facts are left out of the full items, the index and the
+  reminders. Facts about one subject, and supersede chains, are withheld together.
+- **Outcome.** For every fact, over the whole start: was it found again, acted against,
+  or acted in line with? Whether a fact "became relevant" is judged only as a secondary
+  measure, because delivering a fact can create the need for it.
+- **Blind judging.** The judges and the owner see packets with the briefing and reminders
+  removed, so they cannot tell a delivered fact from a withheld one.
+- **What it estimates.** The effect of delivering a fact while half the store is
+  delivered. It cannot see a harm to play as a whole, such as a distracting reminder;
+  that is seen in the use labels and in time spent per decision.
+- **Threats.** Handoff summaries and the previous final report can restate a withheld
+  fact; facts the curator writes during a start are not randomized; the player's own
+  records can hold a withheld fact while that store still exists. These bias towards no
+  effect.
+- **Before any spend** the protocol's simulation is adapted to this design with the
   measure gate's numbers, to give its size and price.
 
-### Game-neutral judge wording
+### Game-neutral judging
 
-- A **known item** becomes any source of something the actor could later use, found by
-  the annotators in the frames.
-- The labels become: **used it first** (used the known source before any alternative
-  for the same need), **missed it** (sought or used an alternative while the known source
-  went unused), **not engaged**, **cannot tell**.
 - Packets are cut to a token budget, not to 200 decisions or 60 frames.
+- The annotators list every fact the frames show a later actor could use, not only
+  places with goods.
 
 ## 4. Judges as the standing measure
 
-- **Two judges on everything**, from different model families where one is available,
-  since judges of one family share blind spots. Each cites frames and labels a window,
-  not a step; judges are weak at finding the one step that went wrong in a long trace
-  (TRAIL).
-- **A third judge on disputes.** The dispute rate is the health signal; it was 6.2% at
-  the measure gate.
-- **Frozen prompts and models, with an anchor set.** About 30 audited pairs are re-run
-  after any change to a judge's prompt or model.
-- **Prediction-powered inference for the numbers that matter.** Every estimate combines
-  all judge labels with a small random audit by the owner, about 30 to 60 pairs a study,
-  stratified by the judges' verdict and by delivered or withheld, on the two-pass page.
-  PPI++ gives valid intervals, clustered by run. If its weight on the judges comes out
-  near zero, the judges are adding nothing, and that is reported.
-- **The audit shows evidence.** The measure gate found that blind labels miss engagement
-  the judges find, so the owner labels with the judges' cited frames and some frames
-  they did not cite, and a small blind subsample measures anchoring.
-- **Known risks**: leniency (judges call failures successes), missing evidence in long
-  contexts, judging differently when a briefing names the item, and errors shared by two
-  judges. The stratified audit and the anchor set are aimed at these.
+- **Two judges on everything and a third on disputes**, all host agents. The dispute rate
+  is the health signal; it was 6.2% at the measure gate. Judges from a second model
+  family would reduce shared blind spots but may need a paid provider; that is not
+  proposed now.
+- **Windows, not steps.** Judges label a window and cite frames; outside work finds them
+  weak at finding the one wrong step in a long trace (TRAIL).
+- **The owner's blind labels are the truth**, as the owner decided on 13 November. The
+  check pass after them stays, reported apart.
+- **Intervals.** Every reported rate combines all judge labels with a small audit of the
+  owner's blind labels by prediction-powered inference. A uniform random audit uses PPI++;
+  an audit weighted towards disputes or rare labels uses known sampling probabilities
+  (active statistical inference, or stratified PPI). Clustering by run is an extension of
+  these papers, by bootstrap over runs. If the estimator's weight on the judges is near
+  zero, the judges add nothing, and that is reported. The audit costs about 30 to 60 pairs
+  of the owner's time per study.
+- **An anchor set.** About 30 audited pairs are re-judged after any change to a judge's
+  prompt or model. Risk R-FALSE-CLAIM: a changed judge silently shifts every later
+  measure; the anchor set shows the shift; it costs one judging pass of 30 pairs.
+- **Known judge risks**: leniency, missing evidence in long contexts, and errors shared by
+  both judges.
 
-## Migration
+## Changes to the context design
 
-| Step | What | Cost |
-| --- | --- | --- |
-| Format and curator | `curator-fact/3`, the budget, editing against existing facts, the consolidation session, the digest; game-neutral brief | \$0 to build |
-| Judged measures | Game-neutral wording, token-budget packets, the standing metrics, PPI++ and the audit protocol in the measure tool | \$0 to build |
-| Simulation | The withholding design's size and price | \$0 |
-| Curator variants | The current brief and the new curator over the same sealed admissions, scored by the judges | about \$16 a variant, owner's approval |
-| Delivery | The digest in the host, the recall model, the start-of-actor recall, logging | \$0 to build |
-| Development play with withholding | Priced by the simulation | owner's approval |
+If the owner decides as recommended, [player-context.md](player-context.md) changes:
 
-The issues that hold this work are #445 (the plan), #460 (the curator), #461 (the
-host's delivery), #386 (the judge) and #388 (the copy tool). The cut stays out: price no
-longer rules it out, but delivery at the moment of need may matter more than holding the
-prompt under 60,000 tokens, and that is measured first.
+- The briefing's full items are chosen by the recall model, not by kind; index lines
+  carry the subject and the sighting order, not a place and a game time.
+- In the curator's table, the rows "one fact per item, with game time and place", the
+  four kinds, and "a brief aimed at places and goods" are replaced by this note's format
+  and consolidation.
+- Reminders during play are added as a new layer between the briefing and the cut.
 
 ## Owner decisions
 
-1. **Adopt the minimal format** (`curator-fact/3`: free text, subject, citations, when
-   seen; no fixed kinds or required place) with a budgeted, editing curator.
-   *Recommended: yes.* Cost: \$0 to build; the brief gate's result was under the old
-   format and is re-checked by the curator-variant scoring.
-2. **Which delivery to build first.** *Recommended: the pinned digest and the
-   start-of-actor recall together, then the recall model.* The first two are cheap and
-   aim at the first actor that never reads memory; the recall model costs more and needs
-   its silence measured.
-3. **Judges as the standing measure** with the protocol above, and the owner's role
-   reduced to a stratified audit of about 30 to 60 pairs per study. *Recommended: yes.*
-4. **Spend, asked later with a price:** the curator-variant scoring, and development
-   play with withholding once the simulation has sized it.
+1. **The fact format.** Drop the fixed kinds and the required place and game time; keep
+   ADR 009's types; add retiring and merging. *Recommended: yes.* Changes the context
+   design's curator rows. Cost: \$0 to build; the curator is re-scored on sealed
+   replays (decision 6).
+2. **Store growth.** Consolidation sessions between admissions, and no hard cap until
+   growth after consolidation shows one is needed. *Recommended: yes*, as the 13 November
+   decision on caps asks. The alternative, a byte budget the gate enforces now, reverses
+   that decision.
+3. **Delivery.** The full items chosen by a recall model at each actor's start, built
+   first; reminders during play built next, behind a measurement of their silence and
+   use. *Recommended: yes.* Cost: \$0 to build; in play, inferred at about two thirds of
+   the cost of play at one recall request every five decisions, less with a smaller model.
+4. **The cut.** The pilot has reported, and the protocol left the cut to be decided then.
+   *Recommended: not yet.* Delivery at the moment of need may matter more than holding the
+   prompt under 60,000 tokens, and it is measured first. Cost: \$0 now.
+5. **What replaces the comparison.** Simulate withholding within each start (\$0) and put
+   its price to the owner, instead of funding the comparison (\$165 to \$208 at the
+   measured values) or only development play without a measure of benefit.
+   *Recommended: simulate withholding.*
+6. **Judges and later spend.** The judge protocol above, with the owner's time limited to
+   about 30 to 60 blind audit labels per study. Spend on curator-variant scoring (about
+   \$16 a variant) and on development play with withholding is asked later, priced.
+   *Recommended: yes.*
 
 ## Limits
 
-- **The outside evidence was read in summaries**, not full papers, and none of it is on
-  games played from screenshots. Figures quoted from it are leads.
-- **No source runs withholding inside long game episodes**; the design is new here, and
-  its power is unknown until simulated.
+- **The outside evidence was read in summaries**, and none of it is on games played from
+  screenshots. Figures quoted from it are leads.
+- **No source runs withholding inside long game episodes**; the design is new here.
 - **The recall model's benefit is shown on other kinds of task**, and an untrained small
   one did harm there.
-- **One game, one lineage** produced every measured number in this note.
+- **One game and one lineage** produced every measured number here.
 
 ## Sources
 
@@ -271,9 +284,7 @@ Read on 13 November 2026, mostly as summaries.
 - Models under-use memory tools: [MemTrack](https://arxiv.org/abs/2510.01353).
 - Editing memory against what exists: [Memory-R1](https://arxiv.org/abs/2508.19828);
   Mem0. Offline consolidation: [Letta sleep-time compute](https://letta.com/blog/sleep-time-compute).
-- Context as a budget, just-in-time retrieval:
-  [Anthropic, effective context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).
-- Position in context: [Lost in the Middle](https://arxiv.org/abs/2307.03172).
+- Context as a budget: [Anthropic, effective context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).
 - Stale memory: [STALE](https://arxiv.org/abs/2605.06527);
   [When Memory Lies](https://arxiv.org/abs/2608.04574).
 - Judges: [AgentRewardBench](https://arxiv.org/abs/2504.08942);
@@ -281,5 +292,5 @@ Read on 13 November 2026, mostly as summaries.
   [TRAIL](https://arxiv.org/abs/2505.08638).
 - Judges with few human labels: [PPI](https://arxiv.org/abs/2301.09633);
   [PPI++](https://arxiv.org/abs/2311.01453);
-  [active statistical inference](https://arxiv.org/abs/2403.03208).
-- Failure taxonomies scored by models: [MAST](https://arxiv.org/abs/2503.13657).
+  [active statistical inference](https://arxiv.org/abs/2403.03208);
+  [stratified PPI](https://arxiv.org/abs/2406.04291).
