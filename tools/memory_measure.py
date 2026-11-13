@@ -78,6 +78,13 @@ APPENDIX_ROWS = ((12, 5, 0.7, 0.1), (12, 5, 0.7, 0.0), (12, 5, 0.7, 0.2), (12, 5
 #: stretch of 200 decisions comes to about 65 frames, so both kinds of packet are the same size.
 FRAMES_PER_PACKET = 60
 NAME = re.compile('[a-z0-9][a-z0-9-]{0,39}')
+#: With fewer sampled pairs than this that the owner or the judges called touched, the judge's error on touched
+#: items is not measured.
+MIN_TOUCHED_SAMPLED = 5
+#: The held-out lineage's evidence directory; the measure gate never reads it.
+HELD_OUT = '522-held-out'
+BOOTSTRAP_NOTE = ('the bootstrap resamples pairs as if they were independent, although a judge reads a whole packet and '
+    'labels every item of a stretch together; the intervals are narrower than the data supports')
 
 
 class MeasureError(ValueError):
@@ -590,6 +597,18 @@ def percentile_interval(values: np.ndarray) -> list[float] | None:
     return None if defined.size == 0 else [float(v) for v in np.percentile(defined, [2.5, 97.5])]
 
 
+def _solve(function, target: float, rising: bool, high: float = 1.0) -> float:
+    """Where a monotone function of one value in 0..high equals `target`, by bisection."""
+    low = 0.0
+    for _ in range(80):
+        middle = (low + high) / 2
+        if (function(middle) < target) == rising:
+            low = middle
+        else:
+            high = middle
+    return (low + high) / 2
+
+
 def binomial_interval(successes: int, trials: int, level: float = 0.95) -> list[float]:
     """The exact (Clopper-Pearson) interval for a binomial share."""
     tail = (1 - level) / 2
@@ -597,19 +616,32 @@ def binomial_interval(successes: int, trials: int, level: float = 0.95) -> list[
     def at_most(count: int, p: float) -> float:
         return sum(math.comb(trials, i) * p ** i * (1 - p) ** (trials - i) for i in range(count + 1))
 
-    def solve(function, rising: bool) -> float:
-        low, high = 0.0, 1.0
-        for _ in range(60):
-            middle = (low + high) / 2
-            if (function(middle) < tail) == rising:
-                low = middle
-            else:
-                high = middle
-        return (low + high) / 2
-
-    lower = 0.0 if successes == 0 else solve(lambda p: 1 - at_most(successes - 1, p), True)
-    upper = 1.0 if successes == trials else solve(lambda p: at_most(successes, p), False)
+    lower = 0.0 if successes == 0 else _solve(lambda p: 1 - at_most(successes - 1, p), tail, True)
+    upper = 1.0 if successes == trials else _solve(lambda p: at_most(successes, p), tail, False)
     return [lower, upper]
+
+
+def poisson_interval(count: int, level: float = 0.95) -> list[float]:
+    """The exact (Garwood) interval for the mean of a Poisson count."""
+    tail = (1 - level) / 2
+
+    def at_most(limit: int, mean: float) -> float:
+        return sum(math.exp(i * math.log(mean) - mean - math.lgamma(i + 1)) for i in range(limit + 1)) if mean > 0 else 1.0
+
+    high = count + 10 * math.sqrt(count + 1) + 30
+    lower = 0.0 if count == 0 else _solve(lambda mean: 1 - at_most(count - 1, mean), tail, True, high)
+    return [lower, _solve(lambda mean: at_most(count, mean), tail, False, high)]
+
+
+def cannot_tell_of_touched(labels) -> dict:
+    """`cannot_tell` among `straight`, `missed` and `cannot_tell`: the share the protocol's decision rule uses."""
+    counts = Counter(labels)
+    of = counts['straight'] + counts['missed'] + counts['cannot_tell']
+    return dict(cannot_tell=counts['cannot_tell'], of=of, value=counts['cannot_tell'] / of if of else None)
+
+
+def owner_match(matched: int, compared: int) -> dict:
+    return dict(compared=compared, matched=matched, interval=binomial_interval(matched, compared) if compared else None)
 
 
 def pair_statistics(first: Sequence[int], second: Sequence[int], seed: int, draws: int) -> dict:
@@ -648,30 +680,44 @@ def agreement(run: Path, judges: Sequence[str], third: str | None = None, seed: 
     for pair in pairs:
         same = first[pair] == second[pair]
         label = first[pair] if same else tie.get(pair)
-        rows.append(dict(start=pair[0], item=pair[1], label=label, by='agreement' if same else 'third' if label else None,
+        # `third_alone`: the third judge chose a label neither of the two gave, so no two judges agree on the pair
+        by = 'agreement' if same else None if label is None else 'third' if label in (first[pair], second[pair]) \
+            else 'third_alone'
+        rows.append(dict(start=pair[0], item=pair[1], label=label, by=by,
             labels={judges[0]: first[pair], judges[1]: second[pair], **({third: tie[pair]} if pair in tie else {})}))
     unresolved = [row for row in rows if row['label'] is None]
     write_json(run / 'adjudicated.json', dict(schema='judge-adjudicated/1', judges=list(judges), third=third,
-        unresolved=len(unresolved), pairs=rows))
+        unresolved=len(unresolved), third_alone=sum(row['by'] == 'third_alone' for row in rows), pairs=rows))
     adjudicated = {(row['start'], row['item']): row['label'] for row in rows}
-    labelled = matched = 0
+    # [matched, compared] over every compared pair, and over those the owner or the judges called straight or missed
+    whole, touched, false_engagement = [0, 0], [0, 0], 0
     if (run / 'labels.json').is_file() and (run / 'sample.json').is_file():
         owner = read_json(run / 'labels.json')['labels']
         for pair in read_json(run / 'sample.json')['pairs']:
             given = owner.get(str(pair['index']))
             verdict = adjudicated[(pair['start'], pair['item'])]
-            if given is not None and verdict is not None:
-                labelled += 1
-                matched += given['label'] == verdict
+            if given is None or verdict is None:
+                continue
+            engaged = given['label'] in judge.TOUCHED or verdict in judge.TOUCHED
+            for tally in (whole, touched) if engaged else (whole,):
+                tally[0] += given['label'] == verdict
+                tally[1] += 1
+            false_engagement += given['label'] == 'not_engaged' and verdict in judge.TOUCHED
+    matched, labelled = whole
     decided = labelled == OWNER_PAIRS
     passes = dict(agreement=report['agreement']['value'] >= MIN_AGREEMENT,
         kappa=report['kappa']['value'] is not None and report['kappa']['value'] >= MIN_KAPPA,
         owner=matched >= MIN_OWNER_MATCH if decided else None)
-    report.update(schema='judge-agreement/1', judges=list(judges), third=third, bootstrap=dict(seed=seed, draws=draws),
-        owner=dict(compared=labelled, matched=matched, of=OWNER_PAIRS,
-            interval=binomial_interval(matched, labelled) if labelled else None),
+    report.update(schema='judge-agreement/1', judges=list(judges), third=third,
+        bootstrap=dict(seed=seed, draws=draws, note=BOOTSTRAP_NOTE),
+        cannot_tell_of_touched={judges[0]: cannot_tell_of_touched(first[pair] for pair in pairs),
+            judges[1]: cannot_tell_of_touched(second[pair] for pair in pairs),
+            'adjudicated': cannot_tell_of_touched(row['label'] for row in rows if row['label'] is not None)},
+        owner=dict(owner_match(matched, labelled), of=OWNER_PAIRS, touched=owner_match(*touched),
+            false_engagement=int(false_engagement)),
         disputed=[dict(start=row['start'], item=row['item'], packet=packets[row['start']], labels=row['labels'],
-            adjudicated=row['label']) for row in rows if row['by'] != 'agreement'],
+            adjudicated=row['label'], by=row['by']) for row in rows if row['by'] != 'agreement'],
+        third_alone=sum(row['by'] == 'third_alone' for row in rows),
         unresolved=len(unresolved),
         third_judge_packets=sorted({packets[row['start']] for row in unresolved}),
         thresholds=dict(agreement=MIN_AGREEMENT, kappa=MIN_KAPPA, owner_match=MIN_OWNER_MATCH, owner_pairs=OWNER_PAIRS),
@@ -682,48 +728,97 @@ def agreement(run: Path, judges: Sequence[str], third: str | None = None, seed: 
 
 
 def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
-    """Known items touched per stretch length and the missed share among touched, from the adjudicated labels,
-    each with a percentile bootstrap interval over stretches."""
+    """Known items touched per stretch length and the missed share among touched, from the adjudicated labels.
+    Items touched carry an exact Poisson interval on the total count over the total decisions. The percentile
+    bootstrap over stretches is rough: a handful of stretches from fewer admissions is all there is to resample.
+    The judge's error for sizing comes from the owner comparison in `agreement.json`, with its interval."""
     adjudicated = read_json(run / 'adjudicated.json')
     if adjudicated['unresolved']:
         raise MeasureError(f"{adjudicated['unresolved']} pairs are not adjudicated; run `agreement` with --third")
     mapping = load_mapping(run)
     seed = secrets.randbits(32) if seed is None else seed
+    per = mapping['stretch']
     by_start: dict[str, Counter] = {packet['start']: Counter() for packet in mapping['packets']}
     for row in adjudicated['pairs']:
         by_start[row['start']][row['label']] += 1
-    rows = [dict(start=packet['start'], decisions=packet['decisions'], short=packet['short'],
+    rows = [dict(start=packet['start'], admission=packet['admission'], decisions=packet['decisions'], short=packet['short'],
         **{label: by_start[packet['start']][label] for label in LABELS}) for packet in mapping['packets']]
 
     def over(selected: list[dict]) -> dict:
         if not selected:
-            return dict(stretches=0)
+            return dict(stretches=0, admissions=0)
         decisions = np.array([row['decisions'] for row in selected], dtype=float)
         missed = np.array([row['missed'] for row in selected], dtype=float)
         touched = missed + np.array([row['straight'] for row in selected], dtype=float)
         index = np.random.default_rng(seed).integers(0, len(selected), (draws, len(selected)))
         with np.errstate(divide='ignore', invalid='ignore'):
-            rate = mapping['stretch'] * touched[index].sum(axis=1) / decisions[index].sum(axis=1)
+            rate = per * touched[index].sum(axis=1) / decisions[index].sum(axis=1)
             share = np.where(touched[index].sum(axis=1) > 0, missed[index].sum(axis=1) / touched[index].sum(axis=1), np.nan)
-        return dict(stretches=len(selected), decisions=int(decisions.sum()), touched=int(touched.sum()), missed=int(missed.sum()),
-            touched_per_stretch=dict(value=float(mapping['stretch'] * touched.sum() / decisions.sum()),
+        return dict(stretches=len(selected), admissions=len({row['admission'] for row in selected}),
+            decisions=int(decisions.sum()), touched=int(touched.sum()), missed=int(missed.sum()),
+            touched_per_stretch=dict(value=float(per * touched.sum() / decisions.sum()),
+                exact_poisson_interval=[float(per * end / decisions.sum()) for end in poisson_interval(int(touched.sum()))],
                 interval=percentile_interval(rate)),
             missed_share=dict(value=float(missed.sum() / touched.sum()) if touched.sum() else None,
                 interval=percentile_interval(share), undefined_draws=int(np.isnan(share).sum())))
 
     labels = Counter(row['label'] for row in adjudicated['pairs'])
-    report = dict(schema='memory-measure/1', per_decisions=mapping['stretch'], bootstrap=dict(seed=seed, draws=draws),
+    calibration = error = None
+    if (run / 'agreement.json').is_file():
+        found = read_json(run / 'agreement.json')
+        owner = found['owner']
+        calibration = {'pass': found['pass'], 'passes': found['passes'], 'agreement': found['agreement']['value'],
+            'kappa': found['kappa']['value'], 'owner_matched': owner['matched'], 'owner_compared': owner['compared'],
+            'third_alone': found['third_alone']}
+
+        def wrong(part: dict) -> dict | None:
+            """The judge's error against the owner over some compared pairs, with the exact interval."""
+            if not part['compared']:
+                return None
+            return dict(compared=part['compared'], differ=part['compared'] - part['matched'],
+                value=1 - part['matched'] / part['compared'], interval=[1 - part['interval'][1], 1 - part['interval'][0]])
+
+        error = dict(all_pairs=wrong(owner), touched_pairs=wrong(owner['touched']),
+            touched_measured=owner['touched']['compared'] >= MIN_TOUCHED_SAMPLED, false_engagement=owner['false_engagement'])
+    report = dict(schema='memory-measure/1', per_decisions=per, bootstrap=dict(seed=seed, draws=draws),
         labels={label: labels[label] for label in LABELS}, pairs=len(adjudicated['pairs']),
         cannot_tell_share=labels['cannot_tell'] / len(adjudicated['pairs']) if adjudicated['pairs'] else None,
+        cannot_tell_of_touched=cannot_tell_of_touched(row['label'] for row in adjudicated['pairs']),
         all_stretches=over(rows), full_stretches=over([row for row in rows if not row['short']]), stretches=rows,
-        judge_error=None)
-    if (run / 'agreement.json').is_file():
-        owner = read_json(run / 'agreement.json')['owner']
-        if owner['compared']:
-            report['judge_error'] = dict(value=1 - owner['matched'] / owner['compared'], compared=owner['compared'],
-                source='one minus the adjudicated labels\' match with the owner\'s labels')
+        calibration=calibration, judge_error=error)
+    report['simulate_commands'] = simulate_commands(report)
     write_json(run / 'measure.json', report)
     return report
+
+
+def simulate_commands(report: dict) -> list[dict]:
+    """The `simulate` command lines for the measured numbers: the point values, the judge's error at its interval's
+    upper bound, and each interval's ends. The judge's error is the one on touched pairs when enough were sampled,
+    otherwise the one over all pairs; with no owner comparison `--wrong` is left as `F`."""
+    whole = report['all_stretches']
+    share = (whole.get('missed_share') or {}).get('value')
+    if not whole.get('touched') or share in (None, 0.0, 1.0):
+        return []
+    error = report['judge_error']
+    source = error and (error['touched_pairs'] if error['touched_measured'] else error['all_pairs'])
+    wrong = f"{source['value']:.3f}" if source else 'F'
+    rate = whole['touched_per_stretch']
+
+    def line(case: str, touched: float, missed: float, flips: str) -> dict:
+        return dict(case=case, command=f'python -m tools.memory_measure simulate --touched {touched:.2f} --missed {missed:.3f} '
+            f'--wrong {flips}')
+
+    commands = [line('point values', rate['value'], share, wrong)]
+    if source:
+        commands.append(line("judge error at its interval's upper bound", rate['value'], share, f"{source['interval'][1]:.3f}"))
+    low, high = rate['exact_poisson_interval']
+    if low > 0:
+        commands.append(line("items touched at the exact interval's lower end", low, share, wrong))
+    commands.append(line("items touched at the exact interval's upper end", high, share, wrong))
+    for name, end in zip(('lower', 'upper'), whole['missed_share']['interval'] or ()):
+        if 0 < end < 1 and f'{end:.3f}' != f'{share:.3f}':
+            commands.append(line(f"missed share at the bootstrap interval's {name} end", rate['value'], end, wrong))
+    return commands
 
 
 # --- the protocol's simulation --------------------------------------------------------------------------------------------
@@ -899,6 +994,9 @@ def label_server(run: Path, port: int = 8765) -> ThreadingHTTPServer:
             # A JSON content type cannot be sent by another site's page without a preflight this server never answers.
             if self.path != '/api/label' or self.headers.get('Content-Type') != 'application/json':
                 return self.json(404, dict(error='not found'))
+            # A page reached under another name (DNS rebinding) still sends that name as Host.
+            if (self.headers.get('Host') or '').rsplit(':', 1)[0] not in ('127.0.0.1', 'localhost'):
+                return self.json(403, dict(error='labels are accepted on 127.0.0.1 or localhost only'))
             try:
                 body = json.loads(self.rfile.read(min(int(self.headers.get('Content-Length') or 0), 4096)))
                 store.record(body.get('index'), body.get('label'))
@@ -1032,6 +1130,10 @@ function showZoom() {
 
 function openZoom(list, index) { zoomed = list; zoomAt = index; showZoom(); }
 
+// Every way of closing the enlarged view comes here. The answer buttons lie under it, so the guard is re-armed:
+// the second click of a double-click on Close, the backdrop or the image must not record a label.
+function closeZoom() { el('zoom').hidden = true; ready = Date.now() + 400; }
+
 function render() {
   const done = at >= state.total;
   el('work').hidden = done;
@@ -1107,12 +1209,12 @@ function step(by) { at = Math.max(0, Math.min(state.total, at + by)); render(); 
 el('back').onclick = () => step(-1);
 el('done-back').onclick = () => step(-1);
 el('forward').onclick = () => step(1);
-el('zoom-close').onclick = () => { el('zoom').hidden = true; };
-el('zoom-image').onclick = () => { el('zoom').hidden = true; };
-el('zoom').onclick = event => { if (event.target === el('zoom')) el('zoom').hidden = true; };
+el('zoom-close').onclick = closeZoom;
+el('zoom-image').onclick = closeZoom;
+el('zoom').onclick = event => { if (event.target === el('zoom')) closeZoom(); };
 el('zoom-previous').onclick = () => { zoomAt -= 1; showZoom(); };
 el('zoom-next').onclick = () => { zoomAt += 1; showZoom(); };
-document.addEventListener('keydown', event => { if (event.key === 'Escape') el('zoom').hidden = true; });
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeZoom(); });
 
 fetch('/api/state').then(response => response.json()).then(value => { state = value; at = firstOpen(); render(); });
 </script>
@@ -1135,40 +1237,88 @@ def _verdict(passed: bool | None) -> str:
 
 def render_agreement(report: dict) -> str:
     owner, passes = report['owner'], report['passes']
-    owner_line = f"{owner['matched']} of {owner['compared']} compared" + (
+    touched = owner['touched']
+    owner_line =f"{owner['matched']} of {owner['compared']} compared" + (
         f" (exact 95% interval {owner['interval'][0]:.3f} to {owner['interval'][1]:.3f})" if owner['interval'] else '')
     lines = [f"{report['pairs']} pairs; judges {report['judges'][0]} and {report['judges'][1]}; third {report['third'] or 'none'}; "
         f"bootstrap over pairs, seed {report['bootstrap']['seed']}, {report['bootstrap']['draws']} draws",
+        f"note: {report['bootstrap']['note']}",
         f"agreement {_range(report['agreement'])}: {_verdict(passes['agreement'])} against at least {MIN_AGREEMENT}",
         f"Cohen's kappa {_range(report['kappa'])}: {_verdict(passes['kappa'])} against at least {MIN_KAPPA}",
         f"share of cannot_tell over both judges' labels {_range(report['cannot_tell'])}",
+        "cannot_tell among straight, missed and cannot_tell (the decision rule's share; no conclusion above 0.30): "
+        + '; '.join(f"{name} {_share(part)}" for name, part in report['cannot_tell_of_touched'].items()),
         f"adjudicated label against the owner's: {owner_line}: {_verdict(passes['owner'])} against at least "
         f"{MIN_OWNER_MATCH} of {OWNER_PAIRS}" + ('' if owner['compared'] == OWNER_PAIRS else
             f" (needs all {OWNER_PAIRS} labelled and adjudicated)"),
+        f"  on pairs the owner or the judges called straight or missed: {touched['matched']} of {touched['compared']} compared"
+        + (f" (exact 95% interval {touched['interval'][0]:.3f} to {touched['interval'][1]:.3f})" if touched['interval'] else ''),
+        f"  pairs the owner called not_engaged that were adjudicated straight or missed (false engagement): "
+        f"{owner['false_engagement']}",
         f"disputed pairs {len(report['disputed'])}, not yet adjudicated {report['unresolved']}"
         + (f"; packets for a third judge: {' '.join(report['third_judge_packets'])}" if report['third_judge_packets'] else ''),
-        f"judge calibration: {_verdict(report['pass'])}"]
+        f"pairs the third judge settled with a label neither judge gave (third_alone): {report['third_alone']}"]
+    lines.extend(f"  {row['start']} / {row['item']}: " + ', '.join(f'{name} {label}' for name, label in row['labels'].items())
+        for row in report['disputed'] if row['by'] == 'third_alone')
+    lines.append(f"judge calibration: {_verdict(report['pass'])}")
     return '\n'.join(lines)
+
+
+def _share(part: dict) -> str:
+    return f"{part['cannot_tell']} of {part['of']}" + ('' if part['value'] is None else f" = {part['value']:.3f}")
+
+
+def _error(part: dict) -> str:
+    return (f"{part['differ']} of {part['compared']} differ, error {part['value']:.3f} (exact 95% interval "
+        f"{part['interval'][0]:.3f} to {part['interval'][1]:.3f})")
 
 
 def render_measure(report: dict) -> str:
     lines = [f"{report['pairs']} adjudicated pairs: " + ', '.join(f'{label} {count}' for label, count in report['labels'].items())
-        + f"; bootstrap over stretches, seed {report['bootstrap']['seed']}, {report['bootstrap']['draws']} draws"]
+        + f"; bootstrap over stretches, seed {report['bootstrap']['seed']}, {report['bootstrap']['draws']} draws",
+        "cannot_tell among straight, missed and cannot_tell (the decision rule's share; no conclusion above 0.30): "
+        + _share(report['cannot_tell_of_touched'])]
+    calibration = report['calibration']
+    if calibration is None:
+        lines.append('judge calibration: not run (no agreement.json)')
+    else:
+        kappa = 'undefined' if calibration['kappa'] is None else f"{calibration['kappa']:.3f}"
+        lines.append(f"judge calibration: {_verdict(calibration['pass'])}; agreement {calibration['agreement']:.3f}, kappa {kappa}, "
+            f"owner match {calibration['owner_matched']} of {calibration['owner_compared']} compared, third judge alone on "
+            f"{calibration['third_alone']} pairs")
     for name, title in (('all_stretches', 'all stretches'), ('full_stretches', 'full stretches only')):
         part = report[name]
         if not part['stretches']:
             lines.append(f'{title}: none')
             continue
-        lines.append(f"{title} ({part['stretches']} stretches, {part['decisions']} decisions, {part['touched']} touched, "
-            f"{part['missed']} missed): known items touched per {report['per_decisions']} decisions "
-            f"{_range(part['touched_per_stretch'], 2)}; missed share among touched {_range(part['missed_share'])}")
+        basis = f"{part['stretches']} stretches from {part['admissions']} admissions"
+        rate, missed = part['touched_per_stretch'], part['missed_share']
+        exact, rough = rate['exact_poisson_interval'], rate['interval']
+        lines.append(f"{title} ({basis}; {part['decisions']} decisions, {part['touched']} touched, {part['missed']} missed):")
+        lines.append(f"  known items touched per {report['per_decisions']} decisions {rate['value']:.2f}; exact Poisson 95% interval "
+            f"{exact[0]:.2f} to {exact[1]:.2f} on {part['touched']} touched in {part['decisions']} decisions; rough percentile "
+            f"bootstrap over {basis}: {rough[0]:.2f} to {rough[1]:.2f}")
+        lines.append('  missed share among touched ' + ('undefined' if missed['value'] is None else f"{missed['value']:.3f}")
+            + (f"; rough percentile bootstrap over {basis}: {missed['interval'][0]:.3f} to {missed['interval'][1]:.3f}"
+                if missed['interval'] else ''))
     lines.extend(f"  {row['start']}{' (short)' if row['short'] else ''}: {row['decisions']} decisions; "
         + ', '.join(f'{label} {row[label]}' for label in LABELS) for row in report['stretches'])
-    whole, error = report['all_stretches'], report['judge_error']
-    if whole.get('touched') and whole['missed_share']['value'] not in (None, 0.0, 1.0):
-        lines.append(f"simulate with: python -m tools.memory_measure simulate --touched {whole['touched_per_stretch']['value']:.2f} "
-            f"--missed {whole['missed_share']['value']:.3f} --wrong "
-            + (f"{error['value']:.3f}" if error else 'F  (no owner comparison yet: run `agreement` first)'))
+    error = report['judge_error']
+    if error is None or error['all_pairs'] is None:
+        lines.append('judge error: no owner comparison yet (run `agreement` after the owner has labelled); --wrong is left as F below')
+    else:
+        lines.append(f"judge against the owner, all compared pairs: {_error(error['all_pairs'])}")
+        if error['touched_pairs']:
+            lines.append("  on pairs the owner or the judges called straight or missed: " + _error(error['touched_pairs']))
+        if not error['touched_measured']:
+            sampled = error['touched_pairs']['compared'] if error['touched_pairs'] else 0
+            lines.append(f"  the judge's error on touched items was not measured: {sampled} touched pairs were sampled, fewer than "
+                f"{MIN_TOUCHED_SAMPLED}. The commands below use the error over all pairs, which agreement on not_engaged lowers.")
+        lines.append("  pairs the owner called not_engaged that were adjudicated straight or missed (false engagement): "
+            f"{error['false_engagement']}")
+    if report['simulate_commands']:
+        lines.append('simulate with:')
+        lines.extend(f"  {entry['case']}: {entry['command']}" for entry in report['simulate_commands'])
     return '\n'.join(lines)
 
 

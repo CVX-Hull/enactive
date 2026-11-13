@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 import io
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import threading
 import urllib.error
 import urllib.request
@@ -80,7 +82,8 @@ MATCHES = [['packet-01#1', 'packet-01#1'], ['packet-02#1', 'packet-01#1'], ['pac
 VERDICTS = {
     'judge-a': {'run-e:1-5': ('straight', 'missed'), 'run-e:6-8': ('not_engaged', 'missed'), 'run-f:1-5': ('missed', 'cannot_tell')},
     'judge-b': {'run-e:1-5': ('straight', 'missed'), 'run-e:6-8': ('not_engaged', 'missed'), 'run-f:1-5': ('straight', 'cannot_tell')},
-    'judge-c': {'run-f:1-5': ('missed', 'cannot_tell')}}
+    'judge-c': {'run-f:1-5': ('missed', 'cannot_tell')},
+    'judge-d': {'run-f:1-5': ('not_engaged', 'cannot_tell')}}  # a third judge who sides with neither
 
 
 def annotated(tmp_path: Path) -> tuple[Path, Path]:
@@ -353,9 +356,9 @@ def test_the_sample_is_drawn_once_with_its_seed_and_reads_no_verdict(tmp_path):
         draw_sample(gate(tmp_path / 'small'), 7)
 
 
-def call(port: int, path: str, body=None, kind='application/json'):
+def call(port: int, path: str, body=None, kind='application/json', host=None):
     request = urllib.request.Request(f'http://127.0.0.1:{port}{path}', data=None if body is None else json.dumps(body).encode(),
-        headers={'Content-Type': kind} if body is not None else {})
+        headers=dict({'Content-Type': kind} if body is not None else {}, **({'Host': host} if host else {})))
     try:
         with urllib.request.urlopen(request, timeout=5) as response:
             return response.status, response.headers.get('Content-Type'), response.read()
@@ -407,10 +410,12 @@ def test_the_label_server_records_a_click_survives_a_reload_and_binds_to_loopbac
         assert call(port, '/api/label', dict(index=2, label='maybe'))[0] == 400
         assert call(port, '/api/label', dict(index=9, label='missed'))[0] == 400
         assert call(port, '/api/label', dict(index=2, label='missed'), kind='text/plain')[0] == 404
+        assert call(port, '/api/label', dict(index=2, label='missed'), host='labels.example:8765')[0] == 403  # another name
+        assert call(port, '/api/label', dict(index=0, label='missed'), host=f'localhost:{port}')[0] == 200
     saved = json.loads((run / 'labels.json').read_text())
     assert {k: (v['start'], v['item'], v['label']) for k, v in saved['labels'].items()} == {
         '0': (sample[0]['start'], sample[0]['item'], 'missed'), '1': (sample[1]['start'], sample[1]['item'], 'cannot_tell')}
-    assert len(saved['history']) == 3 and saved['labels']['0']['time'].endswith('+00:00')
+    assert len(saved['history']) == 4 and saved['labels']['0']['time'].endswith('+00:00')
     with Serving(run) as port:  # a new server, as after a crash: the labels are still there
         assert json.loads(call(port, '/api/state')[2])['labels'] == {'0': 'missed', '1': 'cannot_tell'}
 
@@ -443,7 +448,11 @@ def test_agreement_reports_each_number_with_an_interval_and_the_thresholds(tmp_p
     for name in ('agreement', 'kappa', 'cannot_tell'):
         low, high = report[name]['interval']
         assert low <= report[name]['value'] <= high
-    assert report['bootstrap'] == dict(seed=3, draws=2000) and report['unresolved'] == 1 and report['pass'] is None
+    assert (report['bootstrap']['seed'], report['bootstrap']['draws']) == (3, 2000) and 'independent' in report['bootstrap']['note']
+    assert report['unresolved'] == 1 and report['pass'] is None and report['third_alone'] == 0
+    # the decision rule's share: cannot_tell over straight + missed + cannot_tell; the open pair is not yet adjudicated
+    assert report['cannot_tell_of_touched'] == {'judge-a': dict(cannot_tell=1, of=5, value=0.2),
+        'judge-b': dict(cannot_tell=1, of=5, value=0.2), 'adjudicated': dict(cannot_tell=1, of=4, value=0.25)}
     assert [(d['start'], d['item'], d['adjudicated']) for d in report['disputed']] == [('run-f:1-5', 'item-01', None)]
     assert len(report['third_judge_packets']) == 1
     with pytest.raises(MeasureError, match='not adjudicated'):
@@ -467,6 +476,8 @@ def test_agreement_reports_each_number_with_an_interval_and_the_thresholds(tmp_p
     assert report['passes'] == dict(agreement=True, kappa=True, owner=True) and report['pass'] is True
     out = capsys.readouterr().out
     assert 'agreement 0.833 (95% interval' in out and 'pass against at least 0.8' in out
+    assert 'resamples pairs as if they were independent, although a judge reads a whole packet' in out
+    assert 'judge-a 1 of 5 = 0.200; judge-b 1 of 5 = 0.200; adjudicated 1 of 5 = 0.200' in out
     assert "adjudicated label against the owner's: 3 of 4 compared (exact 95% interval" in out
     assert out.strip().endswith('judge calibration: pass')
     with pytest.raises(MeasureError, match='pairs lack a verdict'):
@@ -487,13 +498,147 @@ def test_measure_counts_touched_and_missed_per_stretch_with_intervals(tmp_path, 
         for name in ('touched_per_stretch', 'missed_share'):
             low, high = part[name]['interval']
             assert low <= part[name]['value'] <= high
-    assert report['bootstrap'] == dict(seed=5, draws=2000) and report['judge_error'] is None
+    assert report['bootstrap'] == dict(seed=5, draws=2000) and report['judge_error']['all_pairs'] is None
     assert [(row['start'], row['short'], row['missed']) for row in report['stretches']] == [
         ('run-e:1-5', False, 1), ('run-e:6-8', True, 1), ('run-f:1-5', False, 1)]
+    # the exact interval for a Poisson count of 4 is 1.0899 to 10.2416, here over 13 decisions and scaled to 5
+    assert whole['touched_per_stretch']['exact_poisson_interval'] == pytest.approx([5 * 1.0899 / 13, 5 * 10.2416 / 13], abs=1e-3)
+    assert (whole['admissions'], full['admissions']) == (2, 2)
+    assert report['cannot_tell_of_touched'] == dict(cannot_tell=1, of=5, value=0.2)
+    assert report['calibration']['pass'] is None and report['calibration']['agreement'] == pytest.approx(5 / 6)
     assert main(['measure', str(run), '--seed', '5']) == 0
     out = capsys.readouterr().out
-    assert 'known items touched per 5 decisions 1.54 (95% interval' in out and 'missed share among touched 0.750' in out
-    assert 'simulate --touched 1.54 --missed 0.750 --wrong F' in out
+    assert ('known items touched per 5 decisions 1.54; exact Poisson 95% interval 0.42 to 3.94 on 4 touched in 13 decisions; '
+        'rough percentile bootstrap over 3 stretches from 2 admissions: ') in out
+    assert 'missed share among touched 0.750; rough percentile bootstrap over 3 stretches from 2 admissions: ' in out
+    assert 'full stretches only (2 stretches from 2 admissions; 10 decisions, 3 touched, 2 missed):' in out
+    assert "cannot_tell among straight, missed and cannot_tell (the decision rule's share; no conclusion above 0.30): 1 of 5 = 0.200" in out
+    assert 'judge calibration: not decided; agreement 0.833, kappa 0.769, owner match 0 of 0 compared' in out
+    assert 'judge error: no owner comparison yet' in out
+    assert 'point values: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong F' in out
+    assert "items touched at the exact interval's lower end: python -m tools.memory_measure simulate --touched 0.42 " in out
+    assert "items touched at the exact interval's upper end: python -m tools.memory_measure simulate --touched 3.94 " in out
+    assert "missed share at the bootstrap interval's lower end: python -m tools.memory_measure simulate --touched 1.54 --missed 0.500" in out
+
+
+def owner_labels(run: Path, labels: list[str]) -> None:
+    """The calibration sample as every pair in order, and the owner's label for each, written as the page writes them."""
+    pairs = memory_measure.all_pairs(run)
+    save(run / 'sample.json', dict(schema='calibration-sample/1', pairs=[dict(index=index, start=start, item=item)
+        for index, (start, item) in enumerate(pairs)]))
+    save(run / 'labels.json', dict(schema='owner-labels/1', labels={str(index): dict(index=index, label=label)
+        for index, label in enumerate(labels)}))
+
+
+def test_the_judge_error_is_reported_for_touched_pairs_with_its_interval(tmp_path, monkeypatch, capsys):
+    run = judged(tmp_path)
+    monkeypatch.setattr(memory_measure, 'OWNER_PAIRS', 6)
+    monkeypatch.setattr(memory_measure, 'MIN_OWNER_MATCH', 5)
+    # adjudicated: straight missed | not_engaged missed | missed cannot_tell. The owner differs on the fourth pair,
+    # calling a missed item not engaged (a false engagement), and on the fifth, straight against missed.
+    owner_labels(run, ['straight', 'missed', 'not_engaged', 'not_engaged', 'straight', 'cannot_tell'])
+    report = agreement(run, ['judge-a', 'judge-b'], 'judge-c', seed=3, draws=500)
+    owner = report['owner']
+    assert (owner['matched'], owner['compared'], owner['interval']) == (4, 6, pytest.approx(binomial_interval(4, 6)))
+    # touched by either side: pairs one, two, four and five; two of those four match
+    assert owner['touched'] == dict(compared=4, matched=2, interval=pytest.approx(binomial_interval(2, 4)))
+    assert owner['false_engagement'] == 1 and report['passes']['owner'] is False and report['pass'] is False
+    out = '\n'.join(memory_measure.render_agreement(report).splitlines())
+    assert 'on pairs the owner or the judges called straight or missed: 2 of 4 compared (exact 95% interval' in out
+    assert 'adjudicated straight or missed (false engagement): 1' in out
+    result = measure(run, seed=5, draws=500)
+    error = result['judge_error']
+    low, high = binomial_interval(4, 6)
+    assert error['all_pairs'] == dict(compared=6, differ=2, value=pytest.approx(1 / 3), interval=pytest.approx([1 - high, 1 - low]))
+    assert error['touched_pairs']['value'] == 0.5 and error['touched_pairs']['compared'] == 4
+    assert error['touched_measured'] is False and error['false_engagement'] == 1
+    out = memory_measure.render_measure(result)
+    assert 'judge calibration: fail; agreement 0.833, kappa 0.769, owner match 4 of 6 compared, third judge alone on 0 pairs' in out
+    assert "the judge's error on touched items was not measured: 4 touched pairs were sampled, fewer than 5" in out
+    assert 'all compared pairs: 2 of 6 differ, error 0.333 (exact 95% interval' in out
+    assert 'point values: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong 0.333' in out
+    assert f"judge error at its interval's upper bound: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong {1 - low:.3f}" in out
+    monkeypatch.setattr(memory_measure, 'MIN_TOUCHED_SAMPLED', 4)  # now enough touched pairs were sampled
+    out = memory_measure.render_measure(measure(run, seed=5, draws=500))
+    assert 'was not measured' not in out and '--wrong 0.333' not in out
+    assert 'point values: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong 0.500' in out
+    assert f"judge error at its interval's upper bound: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong {1 - binomial_interval(2, 4)[0]:.3f}" in out
+
+
+def test_a_third_label_that_matches_neither_judge_is_marked_and_listed(tmp_path):
+    run = judged(tmp_path)
+    report = agreement(run, ['judge-a', 'judge-b'], 'judge-d', seed=3, draws=500)
+    saved = json.loads((run / 'adjudicated.json').read_text())
+    row = next(row for row in saved['pairs'] if (row['start'], row['item']) == ('run-f:1-5', 'item-01'))
+    assert (row['label'], row['by']) == ('not_engaged', 'third_alone') and saved['third_alone'] == 1
+    assert report['third_alone'] == 1 and report['unresolved'] == 0
+    assert json.loads((run / 'agreement.json').read_text())['third_alone'] == 1
+    assert [(d['start'], d['item'], d['by']) for d in report['disputed']] == [('run-f:1-5', 'item-01', 'third_alone')]
+    out = memory_measure.render_agreement(report)
+    assert 'label neither judge gave (third_alone): 1' in out
+    assert 'run-f:1-5 / item-01: judge-a missed, judge-b straight, judge-d not_engaged' in out
+
+
+ZOOM_HARNESS = r'''
+const fs = require('fs'), vm = require('vm');
+const page = fs.readFileSync(process.argv[2], 'utf8');
+const script = page.slice(page.indexOf('<script>') + 8, page.indexOf('</script>'));
+const els = {};
+const make = id => ({id, hidden: false, style: {}, children: [], disabled: false, offsetHeight: 100,
+  replaceChildren() { this.children = []; }, append(...nodes) { this.children.push(...nodes); }});
+let now = 1000;
+Date.now = () => now;
+const state = {total: 2, labels: {}, choices: [['straight', 'Went straight to it'], ['missed', 'Missed it']],
+  pairs: [0, 1].map(index => ({index, place: 'p', what: 'w', image: '/item/' + index + '.png', aspect: '3 / 2', decisions: 5,
+    short: false, frames: [{name: 'f001', image: '/frame/' + index + '/f001.png', decision: 1, inputs: 'k'}]}))};
+const posts = [];
+let keydown = null;
+globalThis.document = {getElementById: id => els[id] || (els[id] = make(id)), createElement: make,
+  querySelector: () => make('main'), addEventListener: (name, handler) => { keydown = handler; }};
+globalThis.window = {scrollTo() {}};
+globalThis.fetch = async (url, options) => {
+  if (options) { const body = JSON.parse(options.body); posts.push(body); state.labels[body.index] = body.label; }
+  return {ok: true, json: async () => JSON.parse(JSON.stringify(state))};
+};
+const settle = () => new Promise(resolve => setImmediate(resolve));
+const answer = () => els.choices.children[0].onclick();
+(async () => {
+  vm.runInThisContext(script);
+  await settle(); await settle();
+  const closers = {close: () => els['zoom-close'].onclick(), image: () => els['zoom-image'].onclick(),
+    backdrop: () => els.zoom.onclick({target: els.zoom}), escape: () => keydown({key: 'Escape'})};
+  const out = {};
+  for (const [name, close] of Object.entries(closers)) {
+    now += 1000;                    // well past the guard set when the pair appeared
+    els['item-image'].onclick();    // enlarge
+    const opened = els.zoom.hidden === false;
+    close();
+    const closed = els.zoom.hidden === true;
+    await answer(); await settle(); // the second click of a double-click lands on an answer button
+    out[name] = {opened, closed, recorded: posts.length};
+  }
+  now += 401;
+  await answer(); await settle();
+  out.after = posts.length;
+  console.log(JSON.stringify(out));
+})();
+'''
+
+
+@pytest.mark.skipif(shutil.which('node') is None, reason='node is not installed')
+def test_closing_the_enlarged_view_rearms_the_click_guard(tmp_path):
+    """The page's own script runs under node against a stub of the few DOM calls it makes. Each way of closing the
+    enlarged view is followed at once by a click on an answer, as the second click of a double-click would be."""
+    (tmp_path / 'page.html').write_text(memory_measure.PAGE)
+    (tmp_path / 'harness.js').write_text(ZOOM_HARNESS)
+    done = subprocess.run([shutil.which('node'), str(tmp_path / 'harness.js'), str(tmp_path / 'page.html')],
+        capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr
+    out = json.loads(done.stdout)
+    assert out == dict({name: dict(opened=True, closed=True, recorded=0) for name in ('close', 'image', 'backdrop', 'escape')},
+        after=1)  # nothing is recorded until 400 ms after the view closed
+    # the view is hidden in two places only: when a pair is drawn, and in the one closing function
+    assert memory_measure.PAGE.count("el('zoom').hidden = true") == 2 and memory_measure.PAGE.count('closeZoom') == 5
 
 
 def test_the_simulation_reproduces_the_appendix_first_row():
