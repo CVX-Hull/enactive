@@ -47,7 +47,7 @@ passed hosted suite locally solely to complete a checklist.
 
 ### Enforcement and upkeep
 
-The local commit hook runs the fast command. Development play need not wait for
+The optional local commit hook runs the fast command. Development play need not wait for
 CI, but formal acceptance/merge requires the actual successful exact-candidate
 check under the [CI profile policy](ci-profiles.md#protected-ci-profiles). It may complete after an unchanged development
 run, before acceptance is granted. C-PORTABLE/C-RELEASE own the mechanical
@@ -77,20 +77,10 @@ evidence keeps its declared conditions and does not become a fresh assessment.
 
 ## Upkeep
 
-At meaningful integration/closeout checkpoints, C-MAINTENANCE reviews time to real
-play, verification/review/waiting effort, useful gameplay reached, recurring failures,
-escaped regressions and user interventions. Use available command/ledger/CI times;
-unmeasured model effort stays unknown. Do not impose a numerical performance quota
-from a single run. Simplify or retire a step whose cost is not justified by defects
-it catches; strengthen a targeted check when evidence warrants it. The lead owns
-this review under existing event/date triggers, without another scheduler or tracker.
-
-For assurance navigation, sample whether the affected component map helps a reader
-find the invariant, actual assertion, evidence lane and remaining gap. Record
-available navigation/selection effort, upkeep, escaped failures and total feedback
-cost in the existing Issue/PR. Missing human-comprehension or timing evidence stays
-unknown; an agent reader challenge is not a user study. Repair or simplify maps
-that obscure decisions. No tag-count target, per-PR benchmark or extra full-suite
-shadow job is required.
+A step in this cadence is a control. Simplify or remove one whose cost is not
+justified by the defects it catches, and strengthen a targeted check when evidence
+warrants it, under the [control rule](../standards/authority.md#control-review).
+Repair or simplify a navigation map that hides the invariant, assertion or gap a
+reader is looking for.
 
 [Workflow index](../project-management.md).

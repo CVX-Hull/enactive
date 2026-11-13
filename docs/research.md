@@ -1,14 +1,13 @@
 ---
 owner: maintainer
-review_trigger: Controller redesign or release; fast-moving evidence older than 90
-  active days
+review_trigger: Controller redesign, or a design that depends on a fast-moving finding below
 status: active
 ---
 
 # Evidence and design consequences
 
-Owner: lead. Evidence reviewed: 2026-10-17. Refresh at controller redesign or
-release if older than 90 days. Sources below distinguish observed findings from
+Owner: lead. Evidence reviewed: 2026-10-17. Recheck a fast-moving finding before a
+design depends on it. Sources below distinguish observed findings from
 our engineering inferences; they are not a claim to exhaust the literature.
 
 ## Curated player (ADR 009)

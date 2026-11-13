@@ -3,12 +3,12 @@
  "slots": [
   {"id": "actor_cadence", "label": "Actor cadence", "state": "measured", "source": "derived", "runs": 2, "decisions": 1480,
    "steps": 5120, "game_hours": 31.5, "decisions_per_game_hour": 46.98, "steps_per_game_hour": 162.54, "dollars": 12.4},
-  {"id": "curator_lag", "label": "Curator lag", "state": "not-yet-measured", "phase": "P1"},
-  {"id": "gate_pass_rate", "label": "Gate pass rate", "state": "not-yet-measured", "phase": "P1"},
-  {"id": "snapshot_freshness", "label": "Snapshot freshness", "state": "not-yet-measured", "phase": "P1"},
-  {"id": "program_delegation_share", "label": "Program delegation share", "state": "not-yet-measured", "phase": "P2"},
-  {"id": "monitor_alerts", "label": "Monitor alerts", "state": "not-yet-measured", "phase": "P2"},
-  {"id": "spend_against_cap", "label": "Spend against cap", "state": "not-yet-measured", "phase": "P1"}
+  {"id": "curator_lag", "label": "Curator lag", "state": "not-yet-measured", "phase": "curator-and-memory"},
+  {"id": "gate_pass_rate", "label": "Gate pass rate", "state": "not-yet-measured", "phase": "curator-and-memory"},
+  {"id": "snapshot_freshness", "label": "Snapshot freshness", "state": "not-yet-measured", "phase": "curator-and-memory"},
+  {"id": "program_delegation_share", "label": "Program delegation share", "state": "not-yet-measured", "phase": "programs-and-monitor"},
+  {"id": "monitor_alerts", "label": "Monitor alerts", "state": "not-yet-measured", "phase": "programs-and-monitor"},
+  {"id": "spend_against_cap", "label": "Spend against cap", "state": "not-yet-measured", "phase": "curator-and-memory"}
  ],
  "containers": 3,
  "runs": 2

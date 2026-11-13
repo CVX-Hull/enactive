@@ -488,8 +488,11 @@ them for tests.
     of the figures.
   - `actor_cadence` is `no-data`, with a `detail`, when no readable run has a game-time
     reading.
-  - Every other slot is `{"state": "not-yet-measured", "phase": "P1" | "P2"}` and carries no
-    number until the phase that delivers it.
+  - Every other slot is
+    `{"state": "not-yet-measured", "phase": "curator-and-memory" | "programs-and-monitor"}`
+    and carries no number until the phase that delivers it. `phase` names the
+    [ADR 009 phase](../decisions/009-curated-player.md#phases); the page shows it as words
+    ("arrives in the curator and memory phase").
 - **Containers.** Every `data/containers/*.json` index (`container-index/1`), each manifest
   checked with `harness.trace.sidecar.validate`. The list pages like the run list: `items`
   (`id`, `kind`, `owner_role`, `lifecycle_state`, `retention_policy`, `evidence_study`,
@@ -521,7 +524,7 @@ them for tests.
       anchor rather than failing the route.
 
   The page opens anchors through the per-run views; frames are served only by that route.
-  Each poll re-checks every anchor's frame digest. That is cheap at P0's dozen anchors, and
+  Each poll re-checks every anchor's frame digest. That is cheap at the current dozen anchors, and
   it is the cost to revisit when lineages grow.
 
 The gateway forwards only the statuses listed in the

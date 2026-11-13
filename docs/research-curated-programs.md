@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: A change to ADR 009's program, slot, monitor, expectation, offline-evaluation, practice-instance or study sections; the P1 or P2 pre-registration; new primary evidence on any area below
+review_trigger: A change to ADR 009's program, slot, monitor, expectation, offline-evaluation, practice-instance or study sections; a pre-registration for the curator and memory phase or the programs and monitor phase; new primary evidence on any area below
 status: active
 date: 2026-11-08
 scope: 'Dated primary-source synthesis for ADR 009 research areas R5-R12 (#448): program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design, with study-design guidance for #178 and #470. R13 (#451) is out of scope. No implementation.'
@@ -16,7 +16,8 @@ supporting source is older is flagged "STALE-FLAG".
 
 **Brief (#448, lead).** Produce the S-EVIDENCE synthesis for R5-R12 of
 [ADR 009](decisions/009-curated-player.md#research-agenda), with recommendations per
-area and study-design guidance for #178 (P1 offline study) and #470 (P2 study).
+area and study-design guidance for #178 (the curator memory study) and #470 (the
+programs and monitor study).
 The brief named only foundational sources (below) and no current source. Questions,
 copied from the ADR's agenda table:
 
@@ -151,9 +152,11 @@ in coding/web settings.
    governed library can improve on one coding slice but is a single-benchmark result
    with a filtered task set.
 2. Make **paired gains and regressions** (situation-level: no-program succeeded and
-   program failed, and the reverse) a required P2 metric beside delegation share, as
-   in the Regression Tax. A matched failure rate hides offsetting gains and losses.
-3. Add a **"library visible, delegation disabled"** control arm to the P2 study. The
+   program failed, and the reverse) a required metric of the programs and monitor phase
+   beside delegation share, as in the Regression Tax. A matched failure rate hides
+   offsetting gains and losses.
+3. Add a **"library visible, delegation disabled"** control arm to the programs and
+   monitor study. The
    evidence says merely having skill text in context can change behaviour (not
    length-controlled in any source read, so this is a hypothesis to test).
 4. Treat model-judged success predicates as noisy: before a judge-based predicate may
@@ -326,7 +329,8 @@ scores need calibration on the deployment representation.
 
 **Recommendation for ADR 009 (R8).**
 1. Do **not** adopt a perceptual-hash threshold from outside sources. The ADR already
-   makes unrecognized screens a yield trigger; add a pre-study (P0, $0 gameplay) that
+   makes unrecognized screens a yield trigger; add a pre-study (baseline and workbench
+   phase, $0 gameplay) that
    builds labelled screen pairs (same screen and different state; different screen)
    from sealed traces, picks the threshold on development lineages and reports
    the hash's false-match and false-miss rates on held-out lineages, separately for
@@ -388,7 +392,7 @@ measured for skills, not expectations).
 1. Keep expectations required (owner decision D10) but state in the ADR that benefit
    to the **actor's** play is unproven; their justified role is as a measurable
    signal for the curator and program predicates. Test the actor-side effect in the
-   P0 emission feasibility run: same-seed short runs with and without required
+   baseline and workbench phase's emission feasibility run: same-seed short runs with and without required
    expectations, matched tokens, reporting pace, survival and variance across repeated
    calls, as development evidence only.
 2. Score expectations automatically wherever the claim can be checked against the
@@ -399,7 +403,7 @@ measured for skills, not expectations).
    probability (consistent with ADR R3 language). Do not use early-episode confidence
    to predict failure.
 4. Before using prediction error as the curator's attention signal, show on
-   P0 development data that low-expectation-match steps are enriched for the
+   the baseline and workbench phase's development data that low-expectation-match steps are enriched for the
    forgetting episodes' retrieval misses; otherwise drop it from the brief.
 5. Evidence level: thin; newest relevant primary text is Aug 2026, but the sources
    are open-weight/deep-research or abstract-only.
@@ -455,9 +459,10 @@ cloning and importance-sampling sources not read).
    (repeated LLM calls), so "agreement" is read against its noise ceiling.
 3. Where program and actor disagree, disagreement is not failure: audit a blind
    sample of disagreements by frames, report the labelled rates.
-4. Keep the P1 offline claim restricted to **what would have been placed in front of
-   the actor** (the ADR's definition); the evidence shows replay misjudges downstream
-   behaviour once actions differ, so no P1 offline result may be phrased as a
+4. Keep the curator memory study's offline claim restricted to **what would have been
+   placed in front of the actor** (the ADR's definition); the evidence shows replay
+   misjudges downstream behaviour once actions differ, so no offline result of that
+   study may be phrased as a
    behavioural or outcome gain.
 
 ## R11 Practice environments
@@ -494,7 +499,7 @@ Whether the target games react to focus loss or are deterministic given a save a
 an input sequence is unmeasured (the ADR already says so).
 
 **Recommendation for ADR 009 (R11).**
-1. Make P3's determinism measurement the first deliverable and specify it as: from one
+1. Make the practice instance phase's determinism measurement the first deliverable and specify it as: from one
    boundary save, run the same input sequence N times and report, by input-prefix
    length, the fraction of runs matching on a pre-registered outcome set and on frame
    hashes (with the R8 hash calibration); include the clock and input-timing path in
@@ -564,7 +569,7 @@ k = 3, 4, 5). Consequences, stated carefully:
   k = 3.** A parametric paired t test with df = 2 can reject (|t| > 4.30 two-sided),
   but only through an untestable distributional assumption at n = 3.
 - The minimum attainable p is **necessary, not sufficient**: at k = 5 one-sided the
-  test rejects only if all five lineages favour B, and at k = 6 two-sided only if all
+  test rejects only if all five lineages favour the treatment arm, and at k = 6 two-sided only if all
   six agree in sign.
 - In a study where arms are **randomized to lineages** (#470), the sign-flip test's
   validity comes from the random assignment. In **#178's offline replay nothing is
@@ -596,11 +601,11 @@ k = 3, 4, 5). Consequences, stated carefully:
 
 ## Study-design guidance
 
-### #178: P1 offline study (arm A root validation plus pushed working set, against arm B curator)
+### #178: curator memory study (the no-curator arm, root validation plus a pushed working set, against the curator arm)
 
 Facts from the ADR and issue: held-out lineages are #382's `lh1`-`lh3`; probes written
-blind and before replay; B is replayed over the same traces; held-out traces predate
-emissions; ablations only where power allows.
+blind and before replay; the curator arm is replayed over the same traces; held-out
+traces predate emissions; ablations only where power allows.
 
 1. **Unit of analysis.** The lineage is the only independent unit: probes and facts
    within a lineage share state. With three lineages no exact randomization test can
@@ -616,10 +621,10 @@ emissions; ablations only where power allows.
    resampling facts (not probes), with the claim scope stated as "these three
    worlds, this actor and these models". Present (b) as descriptive, not as
    generalization (S-EVIDENCE: scope not beyond held-out variation). **State (b)'s
-   false-pass rate:** requiring B to be ahead in all three lineages passes with
-   probability 1/8 under a symmetric null (no true difference, either sign equally
-   likely), so it is weak evidence by itself and needs a minimum effect size and
-   the noise-floor (A-versus-A') checks below. (#178's emission-bearing baseline
+   false-pass rate:** requiring the curator arm to be ahead in all three lineages
+   passes with probability 1/8 under a symmetric null (no true difference, either sign
+   equally likely), so it is weak evidence by itself and needs a minimum effect size and
+   the noise-floor checks below (the no-curator arm compared with itself). (#178's emission-bearing baseline
    answers a different problem, the missing emissions, and is covered in item 7.
    Only new held-out lineages could carry it into the deciding comparison; development
    lineages never can.)
@@ -632,24 +637,26 @@ emissions; ablations only where power allows.
    development episodes only as development fit tests. Two annotators label a stratified
    subset; report Krippendorff's alpha (ADR R4 criterion) and resolve before
    freezing. Group probes by underlying fact and episode; deduplicate in the
-   pre-registration. Record annotation cost per lineage in P0.
+   pre-registration. Record annotation cost per lineage in the baseline and workbench
+   phase.
 3. **Scoring.** Score on what the actor would have received at the decision
    (snapshot or diff content), not each arm's query interface. Hold the **context
    budget** (snapshot tokens) equal across arms, or report both and state the
-   comparison is not budget-matched. **Simulate curator lag**: arm B's snapshot as
-   of time t is the latest published by t under the lag distribution from the P0
-   shadow run; report lag = 0 only as an upper bound. Omitting this gives B a
-   look-ahead arm A does not have.
+   comparison is not budget-matched. **Simulate curator lag**: the curator arm's
+   snapshot as of time t is the latest published by t under the lag distribution from
+   the baseline and workbench phase's shadow run; report lag = 0 only as an upper bound.
+   Omitting this gives the curator arm a look-ahead the no-curator arm does not have.
 4. **Primary metric and paired reporting.** One primary: probe recall at matched
-   budget (or rediscovery rate per ADR). Report per-probe discordance: A-miss/B-hit
-   gains and A-hit/B-miss **regressions** (the Regression Tax lesson) and the false-
-   or wrong-scope fact rate; secondary metrics under Holm control and labelled
-   secondary. Report cost per lineage for B.
-5. **Arm-B repeat variance.** The curator is an LLM; run B several times per lineage
-   (count set by the power simulation) with per-arm replay caches, and report
-   variation across repeats and across host/model pairs. Temperature 0 is not a
-   determinism guarantee (Tamba; the Replay Gap), so single-run B is a deviation to
-   disclose.
+   budget (or rediscovery rate per ADR). Report per-probe discordance: gains (the
+   no-curator arm misses and the curator arm hits) and **regressions** (the no-curator
+   arm hits and the curator arm misses; the Regression Tax lesson) and the false- or
+   wrong-scope fact rate; secondary metrics under Holm control and labelled secondary.
+   Report cost per lineage for the curator arm.
+5. **Curator-arm repeat variance.** The curator is an LLM; run the curator arm several
+   times per lineage (count set by the power simulation) with per-arm replay caches, and
+   report variation across repeats and across host/model pairs. Temperature 0 is not a
+   determinism guarantee (Tamba; the Replay Gap), so a single run of the curator arm is
+   a deviation to disclose.
 6. **Power simulation (pre-registered, before spend).** **Proposed change to
    existing text:** ADR 009 (Evaluation and studies, "Gate before spend") and #178
    say power is simulated "from the variance in development data". Development data
@@ -657,16 +664,17 @@ emissions; ablations only where power allows.
    estimated from it; I propose gridding it (and the fact-level ICC) as a
    sensitivity analysis, with development data bounding only probe/fact-level noise.
    This departs from the ADR/#178 wording and needs the lead's decision. Generative
-   model: per-lineage random effect on the A-versus-B difference in probe-hit
-   probability; probes nested in facts nested in lineages; B-run noise term. Output: for
-   each (k lineages, probes per lineage, B repeats): (i) false-positive rate under the
-   null, including an **A-versus-A' negative control** (arm A replayed with a
-   perturbation that should not change content, e.g. snapshot order or rebuild
-   timing) and a null in which B's content is shuffled across lineages; (ii) power at the
+   model: per-lineage random effect on the difference between the two arms in probe-hit
+   probability; probes nested in facts nested in lineages; a noise term per curator-arm
+   run. Output: for each (k lineages, probes per lineage, curator-arm repeats):
+   (i) false-positive rate under the null, including a **negative control that compares
+   the no-curator arm with itself** (replayed with a perturbation that should not change
+   content, e.g. snapshot order or rebuild timing) and a null in which the curator arm's
+   content is shuffled across lineages; (ii) power at the
    smallest effect of interest; (iii) the minimum attainable p-value of the chosen
    test; (iv) dollar cost. Freeze the simulation code, seeds, inputs and decision
    rule with a hash.
-7. **Limitations to record:** held-out traces lack emissions, so B runs without the
+7. **Limitations to record:** held-out traces lack emissions, so the curator arm runs without the
    expectation attention signal it would have live (consider a separate,
    development-only emission-bearing replay); offline replay does not model behaviour
    change (R10); lineages share an actor model, route and start-state family.
@@ -674,7 +682,7 @@ emissions; ablations only where power allows.
    few lineages state the margin and the minimum lineage count at which the check can
    fail.
 
-### #470: P2 study (delegation share at matched failure rate; monitor detection)
+### #470: programs and monitor study (delegation share at matched failure rate; monitor detection)
 
 1. **Delegation share and failure.** Unit: lineage (each lineage forks its own
    repository, so the library differs). Decisions within a lineage are clustered;
@@ -728,8 +736,8 @@ emissions; ablations only where power allows.
 | R6 | Exact-key replay of recorded outputs; held-out cases for slot swaps; two bindings per slot; closed-loop check; no training | Thin for screens; moderate for routing text |
 | R7 | Monitor stop-only and described as having no guarantee; measure TPR at fixed false-stop rate; measure preemption and risk-class error | Thin |
 | R8 | No imported hash threshold; local labelled calibration; TPR at fixed FPR; compare hash with model flags | Thin |
-| R9 | Expectations justified as a curator signal, actor benefit untested; test burden/effect in P0; confidence as ranking only | Thin |
-| R10 | Agreement is a filter; no IS/DR; compare to noise ceiling; P1 claims limited to surfaced content | Moderate for replay validity; thin for programs |
+| R9 | Expectations justified as a curator signal, actor benefit untested; test burden/effect in the baseline and workbench phase; confidence as ranking only | Thin |
+| R10 | Agreement is a filter; no IS/DR; compare to noise ceiling; curator memory study claims limited to surfaced content | Moderate for replay validity; thin for programs |
 | R11 | Determinism study first with control forks; no transferred timing numbers | Thin for the platform |
 | R12 | Lineage unit; no exact randomization test can reject at 5% with three lineages; paired exact tests where arms are randomized; interim-look rule is an unsupported hypothesis (no source read) | Classical sources all STALE-FLAG (2021 and earlier except two 2025-26 single-author/abstract items); LLM-specific noise evidence moderate |
 

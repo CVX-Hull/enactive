@@ -44,6 +44,6 @@ Host context summaries are fallible working context, not campaign memory or a
 substitute for source-linked retrieval. Requalify the whole configuration after
 changes; a larger window or smaller response is not a latency pass.
 
-Standard and principle/control mapping: [S-AGENT Accountable agent-assisted work](../engineering.md#s-agent-accountable-agent-assisted-work).
+This page is part of [S-AGENT Accountable agent-assisted work](agents.md).
 
 [Standards index](../engineering.md).

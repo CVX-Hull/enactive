@@ -48,8 +48,9 @@ Owner-set envelopes, each within the standing $1,000 cumulative cap:
 - One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397))
   has a $300 new-spend envelope (decisions E1 and F2 in
   [its record](acceptance/2026-11-07-seven-day-397.md)). It is closed: the lineage ended.
-- P1's held-out lineage `lh4` ([#522](https://github.com/CVX-Hull/enactive/issues/522)) has an $80
-  new-spend envelope, approved with [p1-study/2](design/p1-study-3.md#running-lh4) on
+- The curator memory study's fourth held-out lineage, stored as `lh4`
+  ([#522](https://github.com/CVX-Hull/enactive/issues/522)), has an $80 new-spend envelope,
+  approved with the study's [added-lineage protocol](design/p1-study-3.md#running-lh4) on
   9 November 2026 ([its record](acceptance/2026-11-09-held-out-lineage-522.md)). It is closed:
   the lineage ended.
 
@@ -68,8 +69,11 @@ for broad source changes), independent review findings are dispositioned and any
 required native or gameplay evidence is recorded. When only the required check is
 still running, queue auto-merge pinned to the validated head (`gh pr merge --auto
 --squash --match-head-commit SHA`); main protection then merges it only if that
-check passes. Agent review stays evidence, not human approval; say so in the pull
-request rather than waiting for one.
+check passes. The SHA given to `--match-head-commit` is the commit the review named,
+not merely the head the check ran on: an approved text once failed to reach the pushed
+branch, and its first draft merged instead
+([#530](https://github.com/CVX-Hull/enactive/pull/530)). Agent review stays evidence,
+not human approval; say so in the pull request rather than waiting for one.
 
 **Waiting on CI.** The lead waits for PR
 validation with one `gh pr checks --watch`, and may run it in the background

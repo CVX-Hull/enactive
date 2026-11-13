@@ -1,9 +1,8 @@
 """C-DOCUMENTS negative cases on isolated fixtures: acceptance manifests, the data rule, and the
-standard, principle and control identifiers."""
+risk IDs that controls and current pages name."""
 import copy
 import json
 from pathlib import Path
-import re
 import shutil
 
 import pytest
@@ -92,73 +91,26 @@ def test_the_cache_diagnosis_figures_match_their_schema():
     assert documents.schema_errors(ROOT, "curator-cache-diagnosis", json.loads(path.read_text()), str(path)) == []
 
 
-def diagram_page(root, status, *lines):
-    page = root / "docs/page.md"
-    page.parent.mkdir(parents=True, exist_ok=True)
-    page.write_text(f"---\nowner: lead\nstatus: {status}\n---\n\n# Page\n\n```mermaid\nflowchart TB\n"
-                    + "".join(f"  {line}\n" for line in lines) + "  A --> B\n```\n")
+def test_a_control_names_a_risk_and_current_pages_name_only_registered_risks(tmp_path):
+    front = "---\nowner: lead\nstatus: {}\n---\n\n"
+    (tmp_path / "docs").mkdir()
+    risks, controls = tmp_path / "docs/risks.md", tmp_path / "docs/controls.md"
+    risks.write_text(front.format("active") + "| R-KEY-LEAK | The key leaks |\n| R-OVERSPEND | Too much is spent |\n")
+    controls.write_text(front.format("active") + "| C-SECRETS | runtime | R-KEY-LEAK | Keeps the key in one process |\n")
+    assert documents.check_risks(tmp_path) == []
+    controls.write_text(controls.read_text() + "| C-SPARE | manual | none yet | Does something |\n")
+    assert documents.check_risks(tmp_path) == ["docs/controls.md: C-SPARE names no risk"]
+    controls.write_text(controls.read_text().replace("none yet", "R-IMAGINED"))
+    assert documents.check_risks(tmp_path) == ["docs/controls.md: R-IMAGINED is not in the risk register"]
+    (tmp_path / "docs/old.md").write_text(front.format("historical") + "R-RETIRED was a risk once.\n")
+    controls.write_text(controls.read_text().replace("R-IMAGINED", "R-OVERSPEND") + "| C-SECRETS | runtime | R-KEY-LEAK | x |\n")
+    risks.write_text(risks.read_text() + "| R-KEY-LEAK | Again |\n")
+    assert documents.check_risks(tmp_path) == ["docs/risks.md: R-KEY-LEAK is defined more than once",
+                                               "docs/controls.md: C-SECRETS is listed more than once"]
 
 
-def test_a_current_diagram_needs_a_title_and_a_description(tmp_path):
-    title, description = "accTitle: Who decides", "accDescr: The player decides and the user can stop input."
-    diagram_page(tmp_path, "active", title, description)
-    assert documents.check_diagrams(tmp_path) == []
-    diagram_page(tmp_path, "proposed", description)
-    assert "lacks accTitle" in "\n".join(documents.check_diagrams(tmp_path))
-    diagram_page(tmp_path, "active", title)
-    assert "lacks accDescr" in "\n".join(documents.check_diagrams(tmp_path))
-    diagram_page(tmp_path, "active", "accTitle:", "accDescr: ")  # present but empty
-    assert len(documents.check_diagrams(tmp_path)) == 2
-    diagram_page(tmp_path, "active", title, "accDescr {\n}")  # an empty block form
-    assert "lacks accDescr" in "\n".join(documents.check_diagrams(tmp_path))
-    diagram_page(tmp_path, "active", title, "accDescr {\n  Several lines of description.\n}")
-    assert documents.check_diagrams(tmp_path) == []
-
-
-def test_a_historical_diagram_is_not_checked(tmp_path):
-    diagram_page(tmp_path, "historical")
-    diagram_page(tmp_path, "superseded")
-    assert documents.check_diagrams(tmp_path) == []
-
-
-@pytest.fixture
-def identifier_root(tmp_path):
-    copy_files(tmp_path, {"docs/charter.md", "docs/engineering.md", "docs/controls.md"})
-    assert documents.check_identifiers(tmp_path) == []
-    return tmp_path
-
-
-def replace(root, name, before, after):
-    path = root / name
-    assert before in path.read_text()
-    path.write_text(path.read_text().replace(before, after, 1))
-
-
-def test_standards_name_only_known_principles_and_controls(identifier_root):
-    replace(identifier_root, "docs/engineering.md", "Controls: C-BOUNDARY,", "Controls: C-UNKNOWN, C-BOUNDARY,")
-    assert "S-ARCH: unknown control C-UNKNOWN" in documents.check_identifiers(identifier_root)
-    replace(identifier_root, "docs/engineering.md", "Controls: C-UNKNOWN, C-BOUNDARY,", "Controls: C-BOUNDARY,")
-    replace(identifier_root, "docs/engineering.md", "Principles: P-CHANGE,", "Principles: P-NOPE, P-CHANGE,")
-    assert "S-ARCH: unknown principle P-NOPE" in documents.check_identifiers(identifier_root)
-
-
-def test_every_control_serves_a_standard_and_appears_once(identifier_root):
-    text = (identifier_root / "docs/controls.md").read_text()
-    row = next(line for line in text.splitlines() if line.startswith("| C-VISUAL |"))
-    (identifier_root / "docs/controls.md").write_text(text + row.replace("C-VISUAL", "C-SPARE") + "\n" + row + "\n")
-    errors = "\n".join(documents.check_identifiers(identifier_root))
-    assert "duplicate control ID" in errors and "['C-SPARE'] serve no standard" in errors
-
-
-def test_mapping_lines_name_something_once_and_every_principle_is_used(identifier_root):
-    original = (identifier_root / "docs/engineering.md").read_text()
-    cases = (("Controls: C-BOUNDARY, C-REVIEW, C-DOCUMENTS.", "Controls: none yet.", "S-ARCH: its Controls line names none"),
-             ("Principles: P-CHANGE,", "Principles: P-CHANGE, P-CHANGE,", "S-ARCH: its Principles line repeats an ID"))
-    for before, after, expected in cases:
-        (identifier_root / "docs/engineering.md").write_text(original.replace(before, after, 1))
-        assert expected in documents.check_identifiers(identifier_root), expected
-    (identifier_root / "docs/engineering.md").write_text(re.sub(r", P-GENERALITY\b|P-GENERALITY, ", "", original))
-    assert "charter: principles ['P-GENERALITY'] serve no standard" in documents.check_identifiers(identifier_root)
+def test_the_repository_register_and_controls_agree():
+    assert documents.check_risks(ROOT) == []
 
 
 def test_local_references_cannot_escape_through_a_symlink(tmp_path):
@@ -171,12 +123,3 @@ def test_local_references_cannot_escape_through_a_symlink(tmp_path):
     assert documents.local_reference(root, "docs/real.md")
     for reference in ("docs/linked/secret.md", "../outside/secret.md", "/etc/passwd", "docs/missing.md", "a\\b"):
         assert not documents.local_reference(root, reference), reference
-
-
-def test_mandatory_standards_and_single_mapping_lines(identifier_root):
-    replace(identifier_root, "docs/engineering.md", "## S-UX", "## S-UNEXPECTED")
-    assert "mandatory standards differ" in "\n".join(documents.check_identifiers(identifier_root))
-    replace(identifier_root, "docs/engineering.md", "## S-UNEXPECTED", "## S-UX")
-    replace(identifier_root, "docs/engineering.md", "Controls: C-BOUNDARY, C-REVIEW, C-DOCUMENTS.",
-            "Controls: C-BOUNDARY.\nControls: C-REVIEW.")
-    assert "S-ARCH: needs exactly one Controls line" in documents.check_identifiers(identifier_root)

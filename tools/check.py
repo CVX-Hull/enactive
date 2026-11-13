@@ -24,7 +24,7 @@ except ImportError as error:
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_DOCS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md", "docs/project-management.md", "docs/overview.md", "docs/charter.md",
                  "docs/engineering.md", "docs/architecture.md", "docs/protocol.md",
-                 "docs/controls.md", "docs/runbook.md", "docs/work.md",
+                 "docs/controls.md", "docs/risks.md", "docs/runbook.md", "docs/work.md",
                  "docs/environment.md", "docs/research.md", "docs/setup.md")
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))

@@ -1,5 +1,5 @@
-// Request-serialization proof for the actor host (ADR 009 P1.0), with no provider call: every
-// request body is captured at the fetch boundary and compared with the one before it. The prompt
+// Request-serialization proof for the actor host (ADR 009 context-stability readiness stage), with
+// no provider call: every request body is captured at the fetch boundary and compared with the one before it. The prompt
 // cache of any provider can only help if each request extends the last byte for byte, so this
 // asserts the prefix, the tool table, the system prompt and the provider-affinity header.
 import test from 'node:test';

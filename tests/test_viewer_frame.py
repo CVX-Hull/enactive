@@ -139,10 +139,11 @@ def test_health_measures_actor_cadence_and_never_invents_the_rest(frame):
     assert cadence['decisions_per_game_hour'] == pytest.approx(13 / hours)
     assert cadence['steps_per_game_hour'] == pytest.approx(14 / hours)
     phases = {slot_id: slot for slot_id, slot in slots.items() if slot_id != 'actor_cadence'}
+    curator, programs = 'curator-and-memory', 'programs-and-monitor'
     assert {i: (s['state'], s['phase']) for i, s in phases.items()} == {
-        'curator_lag': ('not-yet-measured', 'P1'), 'gate_pass_rate': ('not-yet-measured', 'P1'),
-        'snapshot_freshness': ('not-yet-measured', 'P1'), 'program_delegation_share': ('not-yet-measured', 'P2'),
-        'monitor_alerts': ('not-yet-measured', 'P2'), 'spend_against_cap': ('not-yet-measured', 'P1')}
+        'curator_lag': ('not-yet-measured', curator), 'gate_pass_rate': ('not-yet-measured', curator),
+        'snapshot_freshness': ('not-yet-measured', curator), 'program_delegation_share': ('not-yet-measured', programs),
+        'monitor_alerts': ('not-yet-measured', programs), 'spend_against_cap': ('not-yet-measured', curator)}
     assert all(set(slot) == {'id', 'label', 'state', 'phase'} for slot in phases.values())     # no number rides along
 
 

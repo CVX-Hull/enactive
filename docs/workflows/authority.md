@@ -20,8 +20,8 @@ next-action queues or CI receipts into those pages. A concise evidence checkpoin
 may link a dated report, but detailed attempt chronology and exact costs belong
 in that report, and publication receipts in the PR. At integration review, remove
 mirrored fields, stale “current” claims and repeated narratives rather than append
-another checkpoint. Use the existing C-REVIEW/C-MAINTENANCE process; semantic
-duplication is a review judgment, not a new parser or per-action check.
+another checkpoint. Semantic duplication is a review judgment (C-REVIEW), not a
+parser or per-action check.
 
 Use GitHub's issues, sub-issues, dependencies, milestones, pull requests, fields,
 saved views and built-in workflows. No custom tracker or background scheduler.
@@ -53,9 +53,7 @@ rejected disposition with its reason, next action/acceptance and dependencies.
 Link affected design, principles/standards/controls, procedures and evidence;
 update their authoritative sources when applicable, including the controls page.
 Preserve current-versus-proposed status and unverified lanes.
-C-REVIEW checks this coverage and C-MAINTENANCE revisits drift under existing
-triggers. A review finding is not fixed because it was filed, and a document is
-not accurate merely because it has a recent date. This uses GitHub and the current
-document/control system, without another tracker, parser or per-action ceremony.
+C-REVIEW checks this coverage. A review finding is not fixed because it was filed,
+and a document is not accurate merely because it has a recent date.
 
 [Workflow index](../project-management.md).

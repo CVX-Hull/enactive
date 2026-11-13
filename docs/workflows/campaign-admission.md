@@ -50,19 +50,17 @@ formal acceptance follows reviewed exact-candidate checks under the
 procedural admissions reuse applicable evidence; they do not trigger another suite
 or reviewer. Consolidate publication, review and merged-main CI for the coherent
 outcome. Do not require a new PR per tactical segment. Source/native changes and
-held-out assessments retain their declared verification and freeze requirements. C-REVIEW/C-NATIVE/C-RELEASE/C-MAINTENANCE own these manual
-checks; this is no new automated enforcement claim.
+held-out assessments retain their declared verification and freeze requirements.
+C-REVIEW, C-NATIVE and C-RELEASE own these manual checks.
 
 ## Campaign review and finding disposition
 
 Review at planned segment boundaries, handoffs, material failure/unknown stops and
 campaign closeout. A stopped attempt gets a concise finding/closure disposition even if it cannot
 supply a successful gameplay result; an independent acceptance review waits for
-the integration checkpoint unless a concrete risk requires it earlier. Use a concise finding table in the campaign issue or
-linked dated report: source observation/action references; expected versus observed
-result and user consequence; suspected cause and alternative explanations; affected
-area; disposition; accountable owner; linked follow-up or revisit trigger; and the
-evidence required to accept a change. Diagnose missing observations, memory or
+the integration checkpoint unless a concrete risk requires it earlier. List each
+finding in the campaign issue or its dated report with what was observed, where in
+the evidence, and its disposition. Diagnose missing observations, memory or
 retrieval, planning, execution/authority, outcome monitoring and UI separately;
 one failure may involve several areas. Record what the owner could not understand
 or control, not just what the player failed to accomplish.
@@ -95,11 +93,7 @@ in parallel; shared execution, integration and native validation stay serialized
 Enforce this through the existing Ready/Done and C-REVIEW checks: a campaign cannot
 be Ready without its review plan or Done without its outcome and finding dispositions.
 The lead verifies issue links/dependencies and the exact evidence; GitHub fields do
-not enforce semantic completeness. At campaign closeout, and under C-MAINTENANCE's
-existing event/date triggers, inspect review effort, recurring or reopened defects,
-unresolved finding age, escaped regressions and whether accepted changes helped
-later play. Record unavailable measurements. Simplify, improve or retire ineffective
-steps from evidence; do not add a scheduler, automatically renew dates, or create a
-second findings database.
+not enforce semantic completeness. A step here that cost more than the failures it
+caught is reconsidered under the [control rule](../standards/authority.md#control-review).
 
 [Workflow index](../project-management.md).

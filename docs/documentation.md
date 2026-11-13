@@ -40,6 +40,8 @@ approval stages.
 | Change scope and acceptance | GitHub Issue/PR | Affected parent/component, contract and [review policy](workflows/review.md) |
 | Evidence and remaining work | [Work](work.md) / public Project | Run method in [development runs](development-runs.md); dated records in the [acceptance index](acceptance/index.md) and [change index](changes/index.md) |
 | Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
+| What can go wrong and what is done about it | [Risk register](risks.md) | [Controls](controls.md), then the [control rule](standards/authority.md#control-review) for adding or removing one |
+| What to call something | [Names](standards/documentation.md#names) | [Name mapping](acceptance/2026-11-12-control-review-and-names.md#names) for labels in historical records |
 
 Architecture starts outside a responsibility, then explains owned state,
 interfaces, important flows, failures and limits. Decompose only where a concrete
@@ -87,9 +89,10 @@ GitHub Issues and the linked Project own live priorities, status, owners, blocke
 and exceptions, with [work](work.md) as their navigation page; proposals and designs own
 unadopted scope; ADRs own dated rationale; acceptance reports own original observations;
 research owns external evidence and its limits; setup and the runbook own procedures.
-The [controls page](controls.md)
-owns what each control stops and where it is enforced, not a second contract or work
-tracker. The
+The charter owns the [scope of use](charter.md#scope-of-use-and-what-is-guaranteed);
+the [risk register](risks.md) owns the risks defended against in that scope and the
+ones excluded; the [controls page](controls.md) owns which risks each control serves,
+how, at what cost and with what gap. Neither is a second contract or work tracker. The
 [authority contract](workflows/authority.md) owns which summaries may restate what.
 
 The [evaluation contract](contracts/evaluation.md) owns the spectator view API.
@@ -114,6 +117,5 @@ Update parent/component/contract/callers/storage/operations together when behavi
 changes. Incorporate adopted design into current pages, transfer remaining work
 to GitHub and retain briefs as rationale. Preserve useful bookmarks while routing
 them to the current rule. No extra backlog, registry or source-history database is
-needed. C-USABILITY follows a real reader task; C-REVIEW compares claims with source;
-C-MAINTENANCE checks drift at existing triggers. Valid paths/anchors/render receipts
-support these judgments but cannot replace them.
+needed. C-USABILITY follows a real reader task; C-REVIEW compares claims with source.
+Valid paths and anchors support these judgments but cannot replace them.

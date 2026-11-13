@@ -18,6 +18,27 @@ The user reviews purpose, outcomes and tradeoffs; maintainers need clear contrac
 and evidence; contributors need reproducible entry points; upstream compatibility
 requires a small understood patch and preserved provenance.
 
+## Scope of use and what is guaranteed
+
+Enactive is a local gameplay player. It runs a game on a personal computer that is
+also used for other things, for someone who supplies the game and access to models
+through OpenRouter. It may sit on top of whatever else that person has set up.
+
+Inside that use the project handles what is its own:
+
+- the game process it starts, and the saves and user directory it is given;
+- OpenRouter: the key, the money spent, the route, and failures of the service;
+- the shared computer: files stay in the project, nothing global changes, and the game
+  never opens fullscreen;
+- what the repository publishes: identities, secrets and licences;
+- the integrity of the evidence its claims rest on.
+
+Nothing is guaranteed outside that use. There are no enterprise guarantees: the system
+may be stopped or killed at any time, it does not defend against the person running it
+or against other software on the same computer, and it keeps no records for an outside
+auditor. The [risk register](risks.md) lists the failures that follow from this scope
+and the ones excluded by it; a control exists only for a listed risk.
+
 ## Constraints, assumptions and decisions
 
 User constraints: windowed operation; project-local new dependencies, data and

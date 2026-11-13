@@ -18,8 +18,9 @@ yields baseline rates:
 - **rediscovery rate per game hour**: how often the player re-observes what was known
   before a boundary.
 
-P1 compares memory arms offline by what each would have put in front of the actor at
-these probes ([ADR 009](../decisions/009-curated-player.md#evaluation-and-studies)).
+ADR 009's curator and memory phase compares memory arms offline by what each would have
+put in front of the actor at these probes
+([ADR 009](../decisions/009-curated-player.md#evaluation-and-studies)).
 
 Probes are **evaluation data**. They never reach the playing system or the curator
 (ADR008; ADR 009 "Isolation"). They live in this repository's `data/evaluation/probes/`.
@@ -142,6 +143,12 @@ and not to read the evaluator's derived `events` table. They are not told which
 episodes, facts or outcomes anyone expects. The lead does not edit annotations. A
 correction is a new, recorded line with its reason.
 
+A timeline is one Markdown file per actor, generated from a sealed session: what the
+actor received, each operation in order with its frame path, the memory records it
+wrote, its handoff packet and its final report. The generator that produced the
+recorded annotations is kept at
+[`tools/probe_timeline.py`, commit `08c8f7a`](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tools/probe_timeline.py).
+
 **The protocol's own examples carry no evaluation content.** Annotators read the units
 and labels sections, so no example there may name a fact, record ID, boundary or outcome
 from a lineage under study. A change to those sections is reviewed against this rule; the
@@ -250,7 +257,7 @@ rule checks only that a need falls near the later frame, not what the fact says,
 capture under it does not show that the fact ledger records the re-observation. The
 content-matched check uses the same judge model and question as the query re-check.
 
-**Decision: confirmed re-observations are P1's primary probes.**
+**Decision: confirmed re-observations are the curator memory study's primary probes.**
 - **Source.** The probes come from the fixed candidate rule (steps 1–4). On held-out data,
   every candidate is judged, not a sample.
 - **Confirmation.** A blinded judge confirms each one under a tightened rule: a pair that
@@ -262,14 +269,19 @@ content-matched check uses the same judge model and question as the query re-che
   digest per file. They give descriptive figures: needed-fact recall from the fact
   ledger, and query coverage.
 
-The P1 pre-registration (#491) fixes these rules. #178 writes the held-out ledgers.
+The curator memory study's [power-gate protocol](p1-study.md) (#491) fixes these rules.
+The study (#178) wrote the held-out probes and ledgers under them
+([record](../acceptance/2026-11-09-p1-gate-178.md#held-out-probes)).
 
 ## Cost
 
 Each chunk's annotator tokens and wall time come from the agent host's own task report.
 Cost per lineage is their sum. The protocol stops and is reshaped when one #397
-lineage's annotation would exceed the #178 study's annotation allowance. #178 sets that
-allowance before held-out annotation.
+lineage's annotation would exceed the annotation allowance of the study that uses the
+probes, which that study sets before held-out annotation. The curator memory study's
+estimate is in its [power-gate protocol](p1-study.md#cost-estimate), and what its
+held-out annotation cost is in the
+[power-gate record](../acceptance/2026-11-09-p1-gate-178.md#cost).
 
 ## Annotator brief (chunk)
 

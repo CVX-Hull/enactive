@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Document and record checks (C-DOCUMENTS): stewardship metadata, acceptance manifests, evidence schema ids,
-standard/principle/control identifiers, the Mermaid titles and descriptions of current pages and the dated-record indexes. Structure only, no content-truth claims."""
+the risk IDs that controls and current pages name, and the dated-record indexes. Structure only, no content-truth claims."""
 from __future__ import annotations
 
 from datetime import date
@@ -21,8 +21,6 @@ except ImportError as error:
     raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
 
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")
-STANDARDS = {"S-UX", "S-ARCH", "S-PROTOCOL", "S-CODE", "S-DELIVERY", "S-OPS",
-             "S-AGENT", "S-DOCS", "S-WORK", "S-MIGRATION", "S-EVIDENCE"}
 
 
 def local_reference(root: Path, reference: object, *, exists: bool = True) -> bool:
@@ -45,44 +43,6 @@ def schema_errors(root: Path, name: str, data: object, label: str) -> list[str]:
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     return [f"{label}: schema violation at {error.json_path}: {error.message}"
             for error in sorted(validator.iter_errors(data), key=lambda e: str(e.json_path))]
-
-
-def check_identifiers(root: Path) -> list[str]:
-    """The charter's principles are unique; engineering.md has each mandatory standard once, each with one
-    Principles and one Controls line naming known principles and controls; the controls page lists each
-    control once, and every control serves some standard."""
-    errors = []
-    principles = re.findall(r"^## (P-[A-Z]+)\b", (root / "docs/charter.md").read_text(), re.M)
-    if len(principles) != len(set(principles)):
-        errors.append("charter: duplicate principle ID")
-    controls = re.findall(r"^\| (C-[A-Z]+) \|", (root / "docs/controls.md").read_text(), re.M)
-    if len(controls) != len(set(controls)):
-        errors.append("controls: duplicate control ID")
-    engineering = (root / "docs/engineering.md").read_text()
-    sections = {match.group(1): match.group(2)
-                for match in re.finditer(r"^## (S-[A-Z]+)\b(.*?)(?=^## |\Z)", engineering, re.M | re.S)}
-    if len(re.findall(r"^## (S-[A-Z]+)\b", engineering, re.M)) != len(sections) or set(sections) != STANDARDS:
-        errors.append(f"engineering: mandatory standards differ; missing={sorted(STANDARDS - set(sections))}, "
-                      f"unknown={sorted(set(sections) - STANDARDS)}")
-    used: dict[str, set[str]] = {"Principles": set(), "Controls": set()}
-    for standard, body in sorted(sections.items()):
-        for label, pattern, known in (("Principles", r"P-[A-Z]+", set(principles)), ("Controls", r"C-[A-Z]+", set(controls))):
-            lines = re.findall(rf"^{label}: (.+)$", body, re.M)
-            if len(lines) != 1:
-                errors.append(f"{standard}: needs exactly one {label} line")
-                continue
-            named = re.findall(pattern, lines[0])
-            if not named:
-                errors.append(f"{standard}: its {label} line names none")
-            if len(named) != len(set(named)):
-                errors.append(f"{standard}: its {label} line repeats an ID")
-            errors += [f"{standard}: unknown {label.lower()[:-1]} {name}" for name in named if name not in known]
-            used[label].update(named)
-    if unused := sorted(set(controls) - used["Controls"]):
-        errors.append(f"controls: {unused} serve no standard")
-    if unused := sorted(set(principles) - used["Principles"]):
-        errors.append(f"charter: principles {unused} serve no standard")
-    return errors
 
 
 def check_manifests(root: Path) -> list[str]:
@@ -202,28 +162,29 @@ def check_metadata(root: Path) -> list[str]:
     return errors
 
 
-MERMAID_BLOCK = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.M | re.S)
-ACCESSIBLE = {"accTitle": re.compile(r"^[ \t]*accTitle[ \t]*:[ \t]*\S", re.M),
-              "accDescr": re.compile(r"^[ \t]*accDescr[ \t]*(?::[ \t]*\S|\{\s*[^\s}])", re.M)}
+RISK_ID = re.compile(r"\bR-[A-Z]+(?:-[A-Z]+)*\b")
 
 
-def check_diagrams(root: Path) -> list[str]:
-    """Every Mermaid block in an active or proposed page has an accessible title and description.
-    GitHub renders the block; nothing here renders it or judges what it says."""
-    errors = []
-    paths = [*(root / name for name in ROOT_DOCUMENTS), *sorted((root / "docs").rglob("*.md"))]
-    for path in paths:
-        if not path.is_file():
+def check_risks(root: Path) -> list[str]:
+    """The risk register defines each risk once, every control row names a risk, and a current page names
+    only risks the register defines. Whether a risk is real or a control works is review's judgment."""
+    defined = re.findall(r"^\| (R-[A-Z-]+) \|", (root / "docs/risks.md").read_text(), re.M)
+    rows = re.findall(r"^\| (C-[A-Z-]+) \|(.*)$", (root / "docs/controls.md").read_text(), re.M)
+    controls = [name for name, _ in rows]
+    errors = [f"docs/risks.md: {name} is defined more than once" for name in sorted(set(defined)) if defined.count(name) > 1]
+    errors += [f"docs/controls.md: {name} is listed more than once" for name in sorted(set(controls)) if controls.count(name) > 1]
+    errors += [f"docs/controls.md: {name} names no risk" for name, rest in rows if not RISK_ID.search(rest)]
+    for path in [*(root / name for name in ROOT_DOCUMENTS), *sorted((root / "docs").rglob("*.md"))]:
+        if not path.is_file() or path.name.startswith("research"):  # research pages cite outside terms such as R-CNN
             continue
         try:
-            metadata = frontmatter.loads(path.read_text(), handler=frontmatter.YAMLHandler()).metadata
+            text = path.read_text()
+            metadata = frontmatter.loads(text, handler=frontmatter.YAMLHandler()).metadata
         except (OSError, ValueError, YAMLError):
             continue  # check_metadata reports an unreadable page
-        if metadata.get("status") not in ("active", "proposed"):
-            continue
-        for number, block in enumerate(MERMAID_BLOCK.findall(path.read_text()), 1):
-            errors += [f"{path.relative_to(root)}: Mermaid diagram {number} lacks {name}; GitHub shows it to "
-                       "assistive technology" for name, pattern in ACCESSIBLE.items() if not pattern.search(block)]
+        if metadata.get("status") in ("active", "proposed"):
+            errors += [f"{path.relative_to(root)}: {name} is not in the risk register"
+                       for name in sorted(set(RISK_ID.findall(text)) - set(defined))]
     return errors
 
 
@@ -275,13 +236,13 @@ def main(argv: list[str] | None = None) -> int:
         for index in INDEXES:
             (ROOT / index).write_text(render_index(ROOT, index))
         print("Generated the dated-record indexes.")
-    errors = (check_metadata(ROOT) + check_manifests(ROOT) + check_data(ROOT) + check_identifiers(ROOT)
-              + check_diagrams(ROOT) + check_indexes(ROOT))
+    errors = (check_metadata(ROOT) + check_manifests(ROOT) + check_data(ROOT) + check_risks(ROOT)
+              + check_indexes(ROOT))
     if errors:
         print("Document checks failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("Document metadata, acceptance manifests, the data rule, standard and control identifiers, diagram "
-          "titles and descriptions and record indexes: passed; content truth was not verified.")
+    print("Document metadata, acceptance manifests, the data rule, risk IDs and record indexes: passed; "
+          "content truth was not verified.")
     return 0
 
 

@@ -31,14 +31,17 @@ class FrameSources:
 
 
 # The health strip's slots (D18) and the phase that first delivers each. `actor_cadence` is measured from sealed
-# actor sessions already; the rest need a curator, gate, snapshots or programs that exist only from P1 or P2.
+# actor sessions already; the rest need a curator, gate, snapshots or programs that exist only from ADR 009's curator
+# and memory phase or its programs and monitor phase.
+CURATOR_AND_MEMORY = 'curator-and-memory'
+PROGRAMS_AND_MONITOR = 'programs-and-monitor'
 NOT_YET = (
-    ('curator_lag', 'Curator lag', 'P1'),
-    ('gate_pass_rate', 'Gate pass rate', 'P1'),
-    ('snapshot_freshness', 'Snapshot freshness', 'P1'),
-    ('program_delegation_share', 'Program delegation share', 'P2'),
-    ('monitor_alerts', 'Monitor alerts', 'P2'),
-    ('spend_against_cap', 'Spend against cap', 'P1'),
+    ('curator_lag', 'Curator lag', CURATOR_AND_MEMORY),
+    ('gate_pass_rate', 'Gate pass rate', CURATOR_AND_MEMORY),
+    ('snapshot_freshness', 'Snapshot freshness', CURATOR_AND_MEMORY),
+    ('program_delegation_share', 'Program delegation share', PROGRAMS_AND_MONITOR),
+    ('monitor_alerts', 'Monitor alerts', PROGRAMS_AND_MONITOR),
+    ('spend_against_cap', 'Spend against cap', CURATOR_AND_MEMORY),
 )
 
 

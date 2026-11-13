@@ -47,13 +47,15 @@ tests. Review removals against assertions, failure history and retained coverage
 Preserve fresh mutable state; measure fixture/setup cost before inventing caches.
 Focused checks support development gameplay; full portable regression belongs at
 broad integration, not each attempt. CI selects the reviewed documentation/component/
-full scope under the delivery policy. C-REVIEW checks scope and failure coverage;
-C-MAINTENANCE revisits duplication, flakiness and cost when they obstruct delivery.
+full scope under the delivery policy. C-REVIEW checks scope and failure coverage.
+A test is a control: it protects a behaviour that a [listed risk](../risks.md)
+would break, and it is removed with the code or study it protected
+([control rule](authority.md#control-review)).
 Changed expectations require a contract-grounded reason, not agreement with
 newly generated output. Do not weaken a check to conceal a failure. Syntax and
 behavior checks are automated; style, typing completeness and decomposition
 currently use review. No comprehensive static type/format gate is claimed.
 
-Standard and principle/control mapping: [S-CODE Maintainable implementation](../engineering.md#s-code-maintainable-implementation).
+This page is part of [S-CODE Maintainable implementation](implementation.md).
 
 [Standards index](../engineering.md).

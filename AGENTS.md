@@ -55,4 +55,12 @@ Explorers/reviewers never send game inputs.
   independent review and the appropriate protected CI profile before formal acceptance/merge;
   broad source changes require full regression before merge.
   Freeze each finite run and retain failures. Inspect staged changes before commits.
-  Control coverage and gaps are in [the controls page](docs/controls.md).
+- Enactive is a local player on a personal computer; the charter's
+  [scope of use](docs/charter.md#scope-of-use-and-what-is-guaranteed) says what is and
+  is not guaranteed. Do not add a test, check, guard, gate or procedure step unless it
+  names a risk in the [risk register](docs/risks.md), a realistic way it reduces that
+  risk, and its cost ([control rule](docs/standards/authority.md#control-review));
+  remove a control when what it protected is finished. Existing controls and their
+  gaps are in [the controls page](docs/controls.md).
+- Give everything a [descriptive name](docs/standards/documentation.md#names): no
+  bare ordinals such as "P1" or "study 3" for phases, studies, files, branches or issues.

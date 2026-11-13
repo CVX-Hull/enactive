@@ -44,6 +44,8 @@ test('frame: an episode anchor opens the live view at its step, and a container 
     assert.deepEqual(slots.map(s => s[0]), ['actor_cadence', 'curator_lag', 'gate_pass_rate', 'snapshot_freshness',
       'program_delegation_share', 'monitor_alerts', 'spend_against_cap']);
     assert.deepEqual(slots.slice(1).map(s => s[1]), [true, true, true, true, true, true]);
+    const arrives = await page.$$eval('[data-slot] .sub', nodes => nodes.slice(1).map(n => n.textContent));
+    assert.deepEqual(arrives, [1, 1, 1, 0, 0, 1].map(curator => `arrives in the ${curator ? 'curator and memory' : 'programs and monitor'} phase`));
     assert.match(await page.$eval('#app', n => n.innerText), /frame unavailable/i);   // the text-only anchor and the uncatalogued run
     await page.click('[data-anchor="observed"] button.btn');
     await S.until(page, () => location.hash === '#live');
