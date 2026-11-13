@@ -18,12 +18,14 @@ review_trigger: An owner decision on the list in this note, a measurement of any
      10 of 33 cases and never shown ignored
      ([audit](../acceptance/2026-11-13-memory-read-audit.md)).
   2. **Most of a large prompt is the harness's own receipts, not the game.** In prompts over
-     150,000 tokens, images are about 14% of the tokens. Text is the rest, and 88% of the
-     text is tool results: about 2,000 bytes of identifiers and receipt fields for each
-     input ([what the prompt is made of](#what-the-prompt-is-made-of)).
+     150,000 tokens, images are about 14% of the tokens. Text is the rest, and 81% of the
+     text is tool results as the tool server returned them: a median of 1,827 bytes of
+     identifiers and receipt fields for each input
+     ([what the prompt is made of](#what-the-prompt-is-made-of)).
   3. **Most of the money goes to rewriting the prompt cache when old images are dropped.**
-     7.9% of requests wrote more than 30,000 tokens to the cache. They carry 63.5% of the
-     cost, and 145 of the 157 came straight after the host dropped a block of ten images.
+     Each time the host dropped a block of ten images, the whole conversation after the
+     fixed head was written to the cache again. Those 145 requests are 7.3% of requests
+     and 57.9% of the cost in the seven-day lineage.
 - **Recommendation.** Three changes, in this order:
   1. **Short tool results.** The player gets the few fields it acts on. The full receipt
      stays in the trace.
@@ -31,13 +33,21 @@ review_trigger: An owner decision on the list in this note, a measurement of any
      matter now in full, and one line for each of the others.
   3. **One cut for old turns and old images together**, made only up to the point the
      curator's store already covers, with a fresh briefing in the same request.
-- **Expected effect, estimated and not measured.** A 150-request actor's prompt falls from
-  about 190,000 tokens to about 65,000 with the first change alone, and stays between
-  about 20,000 and 60,000 with all three. Recorded responses under 60,000 tokens had a
-  median of 4.4 s against 7.0 s overall and cost \$0.0052 a request against \$0.0194.
+- **Expected effect, estimated and not measured.**
+  - With the first change alone, a 150-request actor's prompt falls from about 180,000
+    tokens to about 75,000.
+  - With all three, the prompt stays between about 20,000 and 40,000 tokens **only if the
+    curator keeps within about 15 decisions of play**. That is not measured. At the lag
+    computed for the one recorded curator run, 47 decisions, the cut would rarely free
+    anything and the prompt would behave as with the first change alone.
+  - Recorded responses to prompts of 20,000 to 60,000 tokens had a median of 5.1 s and
+    cost \$0.0062 a request, against 7.0 s and \$0.0194 overall (seven-day lineage; 6.1 s
+    and \$0.0056 against 8.3 s and \$0.0157 in the held-out lineage).
 - **Not known.** Whether a player with a short window and a briefing plays as well as one
-  that keeps its whole conversation. No recorded run tests it. The
-  [memory screen](https://github.com/CVX-Hull/enactive/issues/590) is where it is measured.
+  that keeps its whole conversation, and what curator sessions during play cost. No
+  recorded run tests either. The
+  [memory screen](https://github.com/CVX-Hull/enactive/issues/590) is where they are
+  measured.
 - **Owner decisions needed.** Four, listed under [owner decisions](#owner-decisions).
 
 Terms are in the [glossary](../glossary.md). A **request** is one call to the model; it
@@ -75,7 +85,9 @@ From the code and the [player host contract](../contracts/player-host.md), check
 - **A new admission starts with the previous final report only**, 333 to 1,503 bytes.
 - **The curator is not part of play.** It has run only over sealed traces.
 - **The prompt cache is reused only when a request extends the one before it**, byte for
-  byte. Dropping images rewrites everything after the first dropped image.
+  byte. On this route a change anywhere in the conversation loses the cache for all of
+  it: after each image drop the provider read only the fixed head, about 3,900 tokens,
+  from the cache.
 
 ## What the sealed traces show
 
@@ -129,24 +141,35 @@ by least squares.
 | Fitted tokens per text byte; per image | 0.363; 758 | 0.376; 718 |
 | Median absolute error of the fit, tokens | 1,145 | 452 |
 | Prompts over 150,000 tokens: median share that is images | 14% | 14% |
-| Tool results' share of all text bytes in each actor's last request | 88% | 88% |
-| Median tool result, bytes | 2,064 | 2,023 |
+| Tool result parts' share of all text bytes in each actor's last request | 88% | 88% |
+| Median tool result part, bytes | 2,064 | 2,023 |
 | Requests per actor, median | 154 | 109 |
 | Request at which the prompt first passes 60,000 tokens, median | 39 | 38 |
 | Requests that wrote over 30,000 tokens to the cache | 157 (7.9%) | 128 (7.1%) |
 | Their share of cost at configured rates | 63.5% | 59.1% |
 | Of those, straight after images were dropped | 145 | 128 |
 
-- **A tool result is mostly identifiers.** One recorded key press returned 1,460 bytes:
-  two schema names, an operation identifier, the session and actor identifiers three times
-  each, two receipts, a source record with a hash, and the frame's geometry twice. None of
-  it describes the game. By the fit, a 2,064-byte result is about 750 tokens, as much as
-  the frame it comes with.
+- **The 88% includes the host's own markers.** When the host drops an image it adds a
+  276-byte marker to that result. Counted as the tool server returned them, results are
+  81% of the text, and the median `computer_input` result is 1,827 bytes (1,923 results;
+  the independent review of this note computed both from the `tool-result` events).
+- **A tool result is mostly identifiers.** A single key press returns about 1,360 bytes:
+  four schema names, an operation identifier, the session identifier four times and
+  again inside the source identifier, the actor identifier, two receipts, a source record
+  with a hash, and the frame's geometry twice. None of it describes the game. By the
+  fit, a 1,827-byte result is about 660 tokens, close to the 758 of the frame it comes
+  with.
 - **The player needs few of those fields.** It uses the status, the `source_id` (for
   clicks and to read a frame again) and, when delivery is uncertain, the operation
   identifier.
 - **Each drop of ten images rewrites a median of about 120,000 tokens** in the seven-day
-  lineage, because the dropped images sit near the start of a long prompt.
+  lineage. The trace's list of prompt parts shows most of the conversation unchanged at
+  a drop, and the provider still read only the fixed head from its cache (3,865 to 3,999
+  tokens at all 145 drops). Cache expiry is not the cause: no gap before a request
+  exceeds 3.6 s.
+- **Twelve other large writes are not explained by the trace.** The request extended the
+  one before it and the cache was still missed. They are 5.5% of the cost. A cut does
+  not remove them.
 
 ## Outside evidence
 
@@ -158,7 +181,7 @@ documentation pages carry no date.
 | Anthropic, [prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) | Undated | The cached prefix runs tools, then system, then messages; a change invalidates everything after it | A different provider from the route's |
 | OpenAI, [prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching) | Undated | A miss follows any change before the cached point, including a compaction setting | States no latency figure |
 | OpenRouter, [prompt caching](https://openrouter.ai/docs/features/prompt-caching) | Undated | Requests stay on one provider while a session identifier or the first messages match | |
-| Anthropic, [caching announcement](https://claude.com/blog/prompt-caching) | Shown as 14 August 2025 | Time to first token for a 100,000-token prompt: 11.5 s uncached, 2.4 s cached | The vendor's own figures, another model |
+| Anthropic, [caching announcement](https://claude.com/blog/prompt-caching) | The page shows 14 August 2025; the feature was probably announced a year earlier | Time to first token for a 100,000-token prompt: 11.5 s uncached, 2.4 s cached | The vendor's own figures, another model |
 | Anthropic, [context editing](https://platform.claude.com/docs/en/build-with-claude/context-editing) | Undated | Clearing old tool results invalidates the cache, so clear enough at once to be worth it | |
 | Anthropic, [context management](https://claude.com/blog/context-management) | 29 September 2025 | Clearing old tool results with a memory tool scored 39% above the baseline in an internal test | Internal test, not games |
 | Vercel, [agent evaluations](https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals) | 27 January 2026 | An index always in context scored 100%; the same knowledge behind a tool the model had to call scored 53%, and the tool was never called in 56% of cases | One coding task family |
@@ -182,8 +205,9 @@ the sealed traces; "estimate" means arithmetic on them.
 | **Index of stored knowledge kept in the conversation** | Everything stored is one request away, and the player sees that it exists. Outside evidence: an index in context is used where a tool alone is not | A line per item adds little. Re-sent in full only when the cache is rewritten anyway | Small | **Taken, as part of the briefing** |
 | **Working set at each start** | Fixes the admission boundary, where 0.32 of what was held crossed. Bounded by what one text can hold, so over a week old facts need the index | None added per request | One cache write per actor of the briefing's size | **Taken, as the briefing** |
 | **Compaction by a model's summary** | A summary by the playing model is what a handoff carries now, and handoffs kept 0.62. It would make the player the writer of its own memory | Good after each summary; the summary itself is an extra request | A rewrite at each summary plus the summary request | **Not taken.** The curator is the writer |
-| **Removing old turns without a summary** | Loses whatever in those turns the store does not hold. Safe only up to the point the store covers | Recorded: 4.4 s median under 60,000 tokens against 7.0 s overall | One rewrite of a small prompt per cut, against a 120,000-token rewrite every ten requests now | **Taken, tied to the store's coverage** |
-| **Earlier handoff** | Each handoff discards the whole conversation; kept 0.62. Reaching 60,000 tokens at request 39 would mean about four actors where there is one | The best: every actor starts at about 4,500 tokens | One small write per actor; the outgoing actor spends requests writing its packet | **Not the main lever.** Kept as it is for capacity |
+| **Short results and a larger image block only** | Nothing changes: the whole conversation stays, and nothing is delivered | Estimate: about 75,000 tokens at request 150, where recorded medians are 6.9 s | A rewrite of the whole conversation at each image drop, about half as often with a block of 20 | **Taken as the first layer.** It fixes no memory loss, so it is not the design |
+| **Removing old turns without a summary** | Loses whatever in those turns the store does not hold. Safe only up to the point the store covers | Recorded: 5.1 s median at 20,000 to 60,000 tokens against 7.0 s overall | One rewrite of a small prompt per cut, against a 120,000-token rewrite every ten requests now | **Taken, tied to the store's coverage** |
+| **Earlier handoff** | Each handoff discards the whole conversation, the most recent turns included; kept 0.62 without a briefing. With a briefing it would lose less. With short results, about three actors where there is one | The best: every actor starts at about 4,500 tokens plus the briefing | One small write per actor; the outgoing actor spends requests writing its packet, and the host and tool server restart | **Not the main lever.** The cut is a handoff that keeps the latest turns and asks the player to write nothing. Handoff stays for capacity, and is the fallback if the cut cannot be built soundly |
 | **Prompt rebuilt at each decision** | Memory is the only carrier, so nothing can be skipped, and nothing the store lacks survives a single request | Unknown. Only the fixed head can be cached, so each request pays for the rest uncached | Unknown; likely higher per request | **Not now.** It is where the cut leads if the window can be made very short; decided after the screen |
 
 ## The recommended design
@@ -192,16 +216,20 @@ Three layers. Each can be built and judged alone, in this order.
 
 ### 1. Short tool results
 
-- **Mechanism.** The result the model reads holds the status, the `source_id`, the frame's
-  size and, when a delivery is partial or unknown, the operation identifier and what to do
-  next. The full receipt goes to the trace and the session database unchanged, and
-  `computer_result` still returns it by identifier.
+- **Mechanism.** The tool server returns to the model the status, the `source_id`, the
+  frame's size and, when a delivery is partial or unknown, the operation identifier and
+  what to do next. The full receipt goes to the trace and the session database
+  unchanged, and `computer_result` still returns it by identifier. The host reads
+  `source_id` from a result and the full receipt of a handoff; both stay.
 - **What the player loses.** Nothing it has been seen to use. The fields removed are
   identifiers of the session and actor, which are in its first message, and receipt
   internals.
-- **Effect, estimate.** At request 150 the text falls from about 147,000 tokens to about
-  35,000. With 35 images the prompt is about 65,000 tokens where it was about 190,000.
-  Each drop of ten images then rewrites about a third as much.
+- **Effect, estimate.** The recorded median prompt at request 150 is about 180,000
+  tokens. With short results it is about 75,000: 150 results and calls at about 33,000,
+  the host's markers for dropped images at about 11,000, 35 images at about 27,000 and
+  the fixed head. Each image drop then rewrites well under half as much. A block of 20
+  images in place of 10, which the [player host page](../operations/player-host.md)
+  already recommends, halves how often that happens.
 - **Risk.** A field the player does rely on is removed. The serialization tests and one
   short development run before any paid study would show it.
 
@@ -225,6 +253,10 @@ Three layers. Each can be built and judged alone, in this order.
 - **No cap.** The split between full items and index lines is the curator's brief, not a
   byte limit. If briefings grow until they slow play, that is the experience the owner's
   decision asks for.
+- **Size, from the one store that exists.** The shadow run's sealed store for the
+  seven-day lineage holds 71 facts in 36,947 bytes, about 13,000 tokens if every fact
+  were sent in full. That is most of a 20,000-token low mark, which is why the index
+  matters even at two game days.
 - **What it fixes.** The three stored losses of the seven-day lineage were records that
   existed and were not in front of the actor that needed them. A briefing at every start
   puts every stored item, or its index line, there. Whether the curator's store would
@@ -242,14 +274,28 @@ Three layers. Each can be built and judged alone, in this order.
   grows as it does today until the existing capacity handoff. The player never waits for
   the curator, and nothing leaves the prompt before the store has had the chance to keep
   it.
-- **Images.** Images are dropped at the cut and not in separate blocks of ten, so the two
-  kinds of rewrite become one.
-- **Starting marks.** High 60,000 tokens, low 20,000. They are parameters of the route,
-  like the image limits now, and are set from measurement, not by this note.
-- **Effect, estimate.** With short results the window grows by roughly 1,000 tokens a
-  request, so a cut comes about every 40 requests and rewrites about 20,000 tokens plus
-  the briefing. Today a rewrite of about 120,000 tokens comes every ten requests once 39
-  images are held.
+- **Images.** A cut removes the images of the turns it removes. The cut is made when the
+  window passes the high mark or holds the image peak, whichever comes first, so that
+  images are not dropped separately. The peak of 39 is set against the provider's image
+  limit and stays.
+- **Starting marks.** Low 20,000 tokens, which is about 16 turns; high 60,000. With
+  short results a turn is about 950 tokens, so at a peak of 39 images the image peak
+  comes first, near 40,000 tokens. The marks are parameters of the route, like the image
+  limits now, and are set from measurement, not by this note.
+- **Effect when the curator keeps up, estimate.** A cut about every 23 requests, which
+  rewrites about 20,000 tokens plus the briefing. Today a rewrite of about 120,000
+  tokens comes every ten requests once 39 images are held.
+- **Effect when the curator is behind.** The window after a cut is the low mark or the
+  turns not yet covered, whichever is larger. The one recorded curator run gives a lag
+  of 47 decisions, computed from a session's median wall time of 189 s and the player's
+  pace, not observed in play. At that lag, with one session after another, coverage
+  trails by 47 to 94 turns, a cut frees almost nothing, and images are dropped in blocks
+  as today. The prompt then behaves as with short results alone. For the cut to hold
+  the marks, a session must finish within about 15 decisions, roughly two minutes of
+  play. A session that reads 20 new turns should be much shorter than one that reads a
+  whole admission, but that is not measured.
+- **Coverage is not recorded today.** A curator session records the frames of the window
+  it was given, not the last decision its published facts reflect. The stamp is new.
 - **Risk.** The player loses the thread of what it was doing. Two things carry it: the
   low mark keeps the most recent turns verbatim, and the briefing's open commitments.
   Whether that is enough is the main thing the screen measures.
@@ -258,12 +304,12 @@ Three layers. Each can be built and judged alone, in this order.
 
 | Requirement | Why |
 | --- | --- |
-| One fact per item, with game time and place as the player would write them | Compound records cannot be kept current, and the index line needs a subject and a place |
+| One fact per item, with game time and place as the player would write them. The curator's fact format has neither field today | Compound records cannot be kept current, and the index line needs a subject and a place |
 | Kinds: place with goods; hazard; open commitment; how the game works | They go out of date at different rates, and only the first three change which items are shown in full |
 | A coverage stamp on every snapshot: the last decision it has read | The cut rule depends on it |
 | A session at each admission boundary; the next admission waits for it | The game is saved and closed there, so waiting costs no play |
 | A session at each handoff; the successor does not wait | It starts with the latest snapshot and its predecessor's summary as a labelled hint, and gets the difference when the session publishes |
-| A session during play whenever the decisions not yet covered pass a trigger | So that cuts can proceed. In the shadow run the curator was a median of 47 decisions behind; the trigger is set so that it is covered before the high mark |
+| A session during play whenever the decisions not yet covered pass a trigger | So that cuts can proceed. The curator does not run in live play today. How short such a session can be, and what it costs, decide whether the cut holds its marks |
 | A brief aimed at places and goods | The study's curator answered few questions about screens seen again |
 | A failed request charged at zero when the provider refused it | Done ([#556](https://github.com/CVX-Hull/enactive/issues/556)) |
 
@@ -296,9 +342,11 @@ because every field is output the player writes and then re-reads.
   - `cites`: optional. It names the stored items the call relies on, and is the only way
     the trace could show that delivered knowledge was used. The screen cannot rest on an
     optional field, so its use measure must not depend on it.
-  - `expectation`, `goal`, `confidence`, `flags`: not added now. Their consumers
-    (programs, source reliability) are not built, and each costs output on every call.
-    They are added with the work that reads them.
+  - `expectation`, `goal`, `confidence`, `flags`: not added now. ADR 009 makes
+    `expectation` required and names its first reader as the curator, which would attend
+    to a wrong prediction. No curator brief or session reads it yet, and the other
+    readers (programs, source reliability) are not built. Each field costs output on
+    every call, so each is added with the work that reads it.
   - `player_hint`: added. It replaces the player's append as its one way to tell the
     curator something.
 
@@ -310,7 +358,7 @@ alone:
 
 | Area | Change |
 | --- | --- |
-| Tool results (layer 1) | The model-facing form of `player-computer-result`; the [computer control contract](../contracts/computer-control.md); the player guide's table of calls |
+| Tool results (layer 1) | The form of `player-computer-result` the tool server returns to the model; the host's reading of `source_id` and of the handoff receipt, which keep working; the [computer control contract](../contracts/computer-control.md); the player guide's table of calls; the image block in the route |
 | Player host contract | A new version: the briefing in the first message, snapshot differences as tail messages, the cut and its coverage rule, the two marks in the route, image dropping folded into the cut. "No compaction" becomes "no summary; removal only of covered turns" |
 | Tool table | `player_memory_append` and `player_memory_context` removed; `player_memory_read` and `player_memory_query` read the curator's store, with text search; `player_hint` added; `intent` required on every call |
 | Handoff | The packet carries the summary as a labelled hint and no record roots |
@@ -333,9 +381,10 @@ nothing.
 2. **Replay of the stored losses against this delivery.** For each, the first request at
    which a briefing or a difference would have shown the item, against when play needed
    it.
-3. **Replay of the cut.** Over the sealed traces, with the shadow run's coverage stamps:
-   how large the window would have been at each request, how often the cut would have
-   been held back by the curator's lag, and the rewrites it would have made.
+3. **Simulation of the cut.** Over the sealed traces, for assumed curator lags of 10, 20,
+   47 and 94 decisions: how large the window would have been at each request, how often
+   the cut would have been held back, and the rewrites it would have made. It is a
+   simulation because the shadow run recorded no coverage by decision.
 4. **Exact token counts for layer 1.** Rebuild a sample of recorded requests with short
    results and count tokens with the route's tokenizer, to replace the fit above.
 5. **The live screen's arms.** The current player against the player with all three
@@ -352,12 +401,19 @@ nothing.
 2. **Short tool results first, as their own change.** They cost no knowledge, need no
    curator and make every later run cheaper, including the screen's baseline arm.
    *Recommended: build now; \$0 until a run uses it.*
-3. **The player's own memory tools.** Remove append and context at adoption, so the
-   curator is the only writer, or keep them beside the curator's store.
-   *Recommended: remove at adoption; keep until then.*
+3. **Curator sessions during play.** The cut and the snapshot differences need the
+   curator to run while the game is being played, which it does not do today and whose
+   cost is not priced. The alternative is a curator at boundaries only: the briefing
+   still works, and the prompt is bounded by short results and handoff, not by a cut.
+   *Recommended: design for sessions during play, priced in the screen's protocol before
+   anything is spent.*
 4. **Fields on tool calls.** `intent` required and `cites` optional now, the others with
-   the work that reads them; or all of ADR 009's fields now.
+   the work that reads them; or all of ADR 009's fields now, `expectation` required.
    *Recommended: intent and cites now.*
+
+Not a decision: the player stops writing to the store. The owner decided that on
+8 November 2026 and reaffirmed it on 13 November. The migration above carries it out at
+adoption, and the timing is the lead's.
 
 ## Limits
 
@@ -414,6 +470,9 @@ print(f"mean cost per request ${cost / n:.4f}; writes over 30,000 tokens: {len(l
 ```
 
 The estimates in [short tool results](#1-short-tool-results) are arithmetic on its output:
-150 results of about 2,700 bytes at 0.363 tokens a byte are about 147,000 tokens; 150
-short results of about 150 bytes and 150 calls of about 450 bytes are about 33,000; 35
-images at 758 tokens are about 27,000; the fixed head is about 4,500.
+150 short results of about 150 bytes and 150 calls of about 450 bytes at 0.363 tokens a
+byte are about 33,000 tokens; about 112 markers of 276 bytes are about 11,000; 35 images
+at 758 tokens are about 27,000; the fixed head is about 4,500. The independent review
+reran this script and matched every figure in the table, and checked the fit another
+way: from one request to the next, the prompt grows by 0.33 tokens for each byte of text
+added and about 820 for a turn with an image.
