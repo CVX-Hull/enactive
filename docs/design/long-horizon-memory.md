@@ -73,15 +73,18 @@ route.
 - **Admission boundaries lost most.** A handoff kept about 0.62 of what the outgoing
   actor held; an admission boundary, where only the final report crosses, kept 0.32.
   The lineage re-found 210 things it had already seen, 4.39 per game hour.
-- **Four known facts were lost and the loss cost play.** They failed in three different
-  ways:
+- **Four known facts were lost and the loss cost play.** They failed in two ways:
 
 | Known fact | What the trace shows | What happened later | Failure |
 | --- | --- | --- | --- |
 | A roof tank held 18 L of clean water | `sd1a3` tried to record it; the append stayed pending and the fact survived only in a handoff summary | `sd1a4` fetched dirty water from a lake and boiled it | Never stored |
-| 20 ration boxes in a cupboard | Record `5db17f`, written in `sd1a5`; no later actor's trace contains it | `sd1a6` and `sd1a7` worked on 25 kcal stalks | Stored, never delivered |
+| 20 ration boxes in a cupboard | Record `5db17f`, written in `sd1a5` and passed to its second actor; it is in no file of `sd1a6` or `sd1a7` | `sd1a6` and `sd1a7` worked on 25 kcal stalks | Stored, lost at the admission boundary |
 | A fishing rod on the floor nearby | Record `94ce47`, written in `sd1a2`; a query returned it in `sd1a2`, `sd1a3` and `sd1a4`, and never after | `sd1a5` to `sd1a7` tried to craft one | Stored, not delivered to the actors that needed it |
-| Batteries in the locker | Record `f49b80`, written in `sd1a1`; a query returned it to `sd1a3`'s second actor, whose handoff packet said the flashlight was empty | That actor's trace does not mention the flashlight or the batteries again | Delivered, not used |
+| Batteries in the locker | Record `f49b80`, written in `sd1a1`. `sd1a3`'s first actor reported an empty flashlight and a dark basement. Its second actor ran a query at request 128 of 151, which returned the record | The next three inputs of that actor searched the game for "battery" | Stored, delivered late |
+
+- **The one time a needed record was delivered, it was acted on at once.** That is the
+  batteries case. It is a single case, and the frames after it were not viewed, so
+  whether the search succeeded is not known.
 
 - **The death was not a memory loss.** The fire hazard was carried in record `cb18d4`
   and in the handoff summary; the record calls the death a judgment failure.
@@ -90,9 +93,10 @@ Two things were looked for and not found in the records: a store that grew too l
 and a decision made on a stored record that was wrong. Almost nothing was stored, so
 neither had a chance to occur.
 
-So there are three failures, not one: facts that were never stored, stored facts that
-never reached the actor who needed them, and at least one fact that was put in front of
-an actor and not used. A design that fixes only carry leaves the third.
+So the recorded failure is delivery, at both ends: a fact that was never stored, and
+stored facts that did not reach the actor who needed them, or reached it late, because
+delivery depended on the actor choosing to query. No recorded case shows a delivered
+fact being ignored.
 
 ## Why the curator memory study ended in a no-go
 
@@ -180,8 +184,10 @@ Requirements that follow from the evidence:
 - **Writing cannot depend on the model remembering to write.** Twelve appends in 1,969
   tool calls is the measured rate when it is optional.
 - **Recall cannot depend on the model remembering to look.** Seven queries in 83 traces.
-- **A fact must be in view when it matters, not only at a boundary.** The batteries
-  case shows that delivering a record once is not enough.
+- **A fact must arrive before it is needed, not after.** The batteries record arrived
+  only when the actor chose to query, late in its run. Over a week the store will also
+  outgrow any text delivered once at a boundary, so something must keep old facts
+  reachable inside a run.
 - **One fact per record.** Compound records cannot be kept current clause by clause.
 - **Each item carries game time and place, written by the player as text.** The harness
   stores and shows them and never interprets them, so no game knowledge moves into the
@@ -239,10 +245,12 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
     facts, one per record, each with game time and place, and to mark replaced ones;
   - the working set is chosen by kind, not only by recency: places and rules are kept,
     and of state snapshots only the newest.
-- **For.** It addresses "never stored" and "never delivered", three of the four losses.
+- **For.** It addresses both recorded failures: the fact never stored and the stored
+  facts not delivered. In the one recorded case, a delivered record was used at once.
   The study's own-records arm added answers over Reference (7 of 77).
-- **Against.** That arm's items were 72.5% contradicted or outdated. It does nothing
-  for "delivered, not used". It keeps the actor as a writer, which the owner's decision
+- **Against.** That arm's items were 72.5% contradicted or outdated. A working set
+  delivered once holds a bounded amount, so over a week old facts fall out of it. It
+  keeps the actor as a writer, which the owner's decision
   D1 in ADR 009 moved away from ("the actor … does not maintain the banks").
 - **Cost and cadence.** The [snapshot-diff estimate](snapshot-diff-cost.md) prices one
   2,000-token addition at $0.011 to $0.026. No added model call, so no added latency
@@ -255,16 +263,20 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
 
 - **Mechanism.** A short index of what is stored stays in the prompt: one line per
   record, with its place and game time, grouped by place. The actor reads a full
-  record by its line. Query gains search by text. The index changes only when a record
-  is written.
-- **For.** It is the only option aimed at the moment of need inside an admission, which
-  is the owner's premise and the "delivered, not used" failure. Continual Harness does
-  this at every step.
-- **Against.** That source also reports most entries unread. The index grows with the
-  store; over seven days it needs a size limit and a rule for what drops out. Each
-  change to it costs a prompt-cache write.
+  record by its line. Query gains search by text. The index is re-sent as a new
+  message only when a record is written, so the earlier prompt stays cached.
+- **For.** It is the only option aimed at the owner's premise: a days-old fact
+  reachable at the moment of need inside a run, however large the store. A line per
+  record holds far more facts in the same space than whole records. Continual Harness
+  does this at every step.
+- **Against.** No recorded case of ours shows that it is needed beyond option 2; the
+  argument is the premise and the growth of the store. That source also reports most
+  entries unread. Over seven days the index itself needs a size limit and a rule for
+  what drops out.
 - **Cost and cadence.** Not measured. The snapshot-diff estimate recommends at most
-  about 2,000 tokens of such text live. No added model call.
+  about 2,000 tokens of such text live. Placed at the head of the prompt instead, each
+  change would rewrite the cache for everything after it (the median prompt was 93,828
+  tokens). No added model call.
 - **Other games.** Game-neutral.
 - **Falsified by** a live comparison in which stored facts in the index are still
   re-found at the same rate.
@@ -315,27 +327,40 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
   each loses the provider's prompt cache; unmeasured.
 - **Not recommended now**: a rebuild whose benefit rests on one small study.
 
+### 7. Compact the conversation instead of handing off
+
+- **Mechanism.** When the context fills, the host replaces the older conversation with
+  a summary and the same actor continues.
+- **For.** One actor keeps its working context for a whole admission.
+- **Against.** A summary written by the model is what a handoff already carries, and
+  handoffs kept 0.62. It does not help across admissions or days. The host lists
+  compaction as unsupported.
+- **Not recommended as the memory design**; it could be revisited as a replacement for
+  handoffs.
+
 ## Recommendation
 
-**Build options 2 and 3 together as the first step, and decide the next step on play.**
+**Build option 2 first, then option 3, and decide each on play.**
 
-- The recorded losses have three causes, and options 2 and 3 between them address all
-  three with no second model. Neither alone does.
+- **Option 2 addresses every recorded loss** with no second model, and the one
+  recorded delivery was used at once.
+- **Option 3 is what the premise needs** once the store outgrows a text delivered at a
+  boundary. It is tested as its own arm, so that a result can be attributed.
 - Every later option needs their parts: single-fact records with game time and place,
   a working set, an index, search.
 - They are the cheapest to build and to run, and they add no latency per decision.
 
-**The curator (options 4 and 5) stays proposed and is not built further until the first
-step has been measured in play.** The one test of it was negative on recall and over
+**The curator (options 4 and 5) stays proposed and is not built further until options 2
+and 3 have been measured in play.** The one test of it was negative on recall and over
 its cost limit in one of two repeats; its strength, currency, only matters once the
 player is being shown stored facts.
 
 This recommendation departs from the owner's decision D1 in ADR 009, under which the
-actor does not maintain the store. The first step keeps the actor as the writer because
-no tested alternative writes better. If the owner holds to D1, the first step is option
-3 over a curator-written store, at the curator's cost.
+actor does not maintain the store. Option 2 keeps the actor as the writer because no
+tested alternative writes better. If the owner holds to D1, the first step is option 3
+over a curator-written store, at the curator's cost.
 
-Option 6 is recorded and set aside.
+Options 6 and 7 are recorded and set aside.
 
 ## The experiment that could decide it
 
@@ -347,40 +372,53 @@ decision.
 **Free steps first, no model calls:**
 
 1. **Trace audit.** For each of the seven recorded queries, list what was returned and
-   what the actor did in the following decisions. It shows how often a delivered
-   record changed play.
-2. **Replay of the four losses.** For each, compute whether the working set and index
-   of the first step would have held the fact at the point where it was lost.
+   what the actor did in the following decisions. The batteries case is one; the audit
+   shows whether delivery led to use in the others.
+2. **Replay of the three stored losses.** For each, find the first decision at which a
+   working set built by option 2's selection rule and size limit would have shown the
+   record, and compare it with when play needed it. The tank cannot be replayed: it was
+   never stored.
 
 **Then a live screen with many short starts, not a few long ones:**
 
 - **Why short.** Cost per game hour ran from $0.20 to $11.30 between admissions of one
-  lineage, and rediscovery from 0.75 to 4.39 per game hour between lineages. Two long
-  continuations per arm could not separate an effect from that spread.
+  lineage. Things looked at again ran at about 0.54 per game hour in three lineages and
+  2.23 in the fourth (computed from the study's unit counts and the lineages' hours).
+  Two long continuations per arm could not separate an effect from that spread.
 - **Start.** A copy of the sealed saved game of the held-out lineage (#522), which
-  ended alive at 27.76 game hours. Its records are rewritten once, by hand, into
-  single facts with game time and place, the same for both arms. Using it ends that
-  lineage's held-out standing.
-- **Arms.** The current player; the player with the first step. Runs happen one after
-  another, never two games at once.
-- **Size.** Six starts per arm, first actor only, about 150 decisions each: about 1,800
-  decisions, about $36 at the recorded $0.02 per decision. A $60 envelope is proposed.
-- **Measure.** How often the actor goes back to look at something the lineage had
-  already seen, counted mechanically against the lineage's frozen frames and fact
-  ledger, with the threshold fixed in the protocol. The blinded annotation of the probe
+  ended alive at 27.76 game hours, with its store as the player wrote it. Using it ends
+  that lineage's held-out standing.
+- **Arms.** The current player; the player with option 2's delivery; the player with
+  options 2 and 3. Runs happen one after another, never two games at once.
+- **Size.** Six starts per arm, first actor only, about 150 decisions each: about 2,700
+  decisions, about $54 at the recorded $0.02 per decision. An $80 envelope is proposed.
+- **Measure.** How often the actor re-finds something the store already held, against
+  how often it goes straight to it. Candidates are found mechanically, by comparing
+  frames with the lineage's frozen frames; a model judge then confirms each, as the
+  study's method required, and separates re-finding from a correct return to a known
+  place. The judge's cost is not estimated here. The blinded annotation of the probe
   baseline is not used: it reproduced none of the four known losses in full.
+- **Reach.** About five such events per start are expected, so about 30 per arm, all
+  from one game state and so correlated. Only a large effect, of the order of halving,
+  can be detected. The protocol fixes the threshold and shows by simulation that the
+  measure can detect it.
 - **Stop.** The envelope, or a pilot start that fails.
 
 | Outcome | Meaning | Next |
 | --- | --- | --- |
-| Going back falls by the protocol's threshold | Carry and cue work at one to two days | Test the same at the longest horizon available, then decide on long runs |
+| Re-finding falls by the protocol's threshold with delivery | Delivering the player's own records works at one to two days | Check that the write step works in full admissions; test at the longest horizon available; then decide on long runs |
+| It falls further with the index | The index adds to delivery | Keep both |
 | It falls, and the player acts on outdated items | Currency is now the limit | Test the offline correction pass, or the curator |
-| No change, and the check showed the measure could have detected one | The player has the facts in view and does not use them | The problem is use, not memory; a different design is needed before any long run |
+| No change, and the simulation showed the measure could have detected one | Delivered facts are not being used | A different design is needed before any long run |
 
-**What this screen cannot show.** Its oldest fact is about 28 game hours old, and each
-start is one actor. It tests the first step at one to two days, not the week the
-premise speaks of. No sealed saved game is older; a week-old store exists only after a
-longer run.
+**What this screen cannot show.**
+
+- **The week.** Its oldest fact is about 28 game hours old. No sealed saved game is
+  older; a week-old store exists only after a longer run.
+- **Writing.** Each start is one actor and reaches no handoff, so option 2's required
+  write step and the single-fact record format are not exercised. The store is the old
+  format, whose records the study found 72.5% contradicted or outdated.
+- **Generality.** One saved game, one route, one model.
 
 Whether a copy of a sealed saved game may be continued, one game at a time, is an owner
 decision. It is narrower than ADR 009's practice instance, which runs beside live play.
@@ -390,12 +428,12 @@ decision. It is narrower than ADR 009's practice instance, which runs beside liv
 These are proposals. Each is an owner decision.
 
 - **ADR 009.** The curator and memory phase is not adopted and its study is closed.
-  The proposal is to reach working memory by the first step, with the curator held
-  until that is measured. The ADR's belief model and ontology stay open and are not
-  needed for the first step.
+  The proposal is to reach working memory by options 2 and 3, with the curator held
+  until they are measured. The ADR's belief model and ontology stay open and are not
+  needed for them.
 - **[#463](https://github.com/CVX-Hull/enactive/issues/463)**, adopting the curator
-  and memory phase: waits for the screen. Its migration would then cover the first
-  step.
+  and memory phase: waits for the screen. Its migration would then cover options 2
+  and 3.
 - **[#470](https://github.com/CVX-Hull/enactive/issues/470)**, programs and monitor:
   unchanged and after memory.
 - **[#472](https://github.com/CVX-Hull/enactive/issues/472)**, the practice instance:
@@ -408,7 +446,7 @@ These are proposals. Each is an owner decision.
   the whole reservation helped end the study's second repeat. The change would be made
   when curator sessions next run.
 - **Responsiveness** ([#442](https://github.com/CVX-Hull/enactive/issues/442)): the
-  first step adds no model call per decision. It adds prompt text, whose cost the
+  options 2 and 3 add no model call per decision. They add prompt text, whose cost the
   cadence plan's budget for added text should cover.
 
 ## Limits of this note
