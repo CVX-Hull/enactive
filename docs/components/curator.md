@@ -36,7 +36,12 @@ adopted; the baseline and workbench phase's
   prevents gating. Handled failures record an abort where writable; a later close-out error
   cannot undo an earlier atomic publication. Each gate publishes atomically or not at all.
 - **The proxy.** It fails closed: missing usage keeps the whole reservation, and a
-  charge above its reservation revokes the session. Malformed/unrepresentable accounting
+  charge above its reservation revokes the session. The one exception is a request the
+  provider refused: a response with an HTTP error status, read to its end, with no usage
+  counts at zero and releases its reservation. A 200 with no valid usage or cost, a
+  stream cut after it began, a timeout and a transport failure keep the reservation,
+  and a 200 without usage also revokes the session. The gap is that a refused request
+  is trusted to be unbilled; the proxy cannot check it. Malformed/unrepresentable accounting
   cannot release a reservation and leave admission usable. The runner closes admission
   separately from incident revocation, boundedly awaits settlement and ledger receipts,
   and stops on explicit unsettled exposure; a clean host exit alone is insufficient.
