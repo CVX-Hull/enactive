@@ -66,12 +66,11 @@ def share_within(values, limit):
 #: rule (the recorded medians for `o200k_base` were 0.2 and 0.1 tokens), not an owner decision.
 TOKENIZER_SLOPE_TOLERANCE = 0.01
 TOKENIZER_MEDIAN_RESIDUAL = 1.0
-#: The image count is a separate term of the fit only when at least this share of the fitted pairs has a count other
-#: than the most common one. Otherwise the image term cannot be told from the per-turn constant.
+#: A per-image cost and a per-turn constant are reported only when at least this share of the fitted pairs has an image
+#: count other than the most common one. Otherwise the two cannot be told apart and only their sum at that count is.
 IMAGE_VARIATION_SHARE = 0.1
-#: Why a pair of consecutive requests is left out of the fit, in the order the reasons are tried. The last is decided
-#: over a whole group of pairs (`composition`), the others for each pair.
-LEFT_OUT = ("usage_unknown", "projection_unknown", "images_dropped", "notice_added", "not_one_call", "other_image_count")
+#: Why a pair of consecutive requests is left out of the fit, in the order the reasons are tried.
+LEFT_OUT = ("usage_unknown", "projection_unknown", "images_dropped", "notice_added", "not_one_call")
 
 
 def tokenizer_holds(slope, median_residual):
@@ -157,11 +156,14 @@ FIT_NAMES = {"result_bytes": "per_result_byte", "output": "per_output_token", "r
     "visible_output": "per_visible_output_token", "reasoning": "per_reasoning_token"}
 
 
-def _fit(pairs, regressors, images):
-    """Least squares of `growth` on the named regressors, the image count when `images`, and a per-turn constant.
+def _fit(pairs, regressors, withheld_at=None):
+    """Least squares of `growth` on the named regressors, the image count when it varies, and a per-turn constant.
     Returns `(fit, None)`, or `(None, reason)` when there are no more pairs than columns or the columns are not
-    independent (for example when every result has the same length)."""
-    names = [*regressors, *(["images"] if images else []), "constant"]
+    independent (for example when every result has the same length).
+
+    With `withheld_at` (the most common image count) the image coefficient and the constant are not reported: they are
+    not separately supported, so only `per_turn_at_modal_images`, the constant plus that many images, is."""
+    names = [*regressors, *(["images"] if len({pair["images"] for pair in pairs}) > 1 else []), "constant"]
     if len(pairs) <= len(names):
         return None, f"{len(pairs)} pairs for {len(names)} terms"
     table = np.array([[pair[name] if name != "constant" else 1 for name in names] for pair in pairs], float)
@@ -171,8 +173,10 @@ def _fit(pairs, regressors, images):
         return None, f"the terms are not independent (rank {rank} of {len(names)}): a regressor does not vary across the pairs"
     by_name = dict(zip(names, (float(value) for value in coefficients)))
     residuals = sorted(np.abs(growth - table @ coefficients).tolist())
+    withheld = withheld_at is not None
     return {"pairs": len(pairs), **{FIT_NAMES[name]: by_name[name] for name in regressors},
-        "per_image": by_name.get("images"), "per_turn_constant": by_name["constant"],
+        "per_image": None if withheld else by_name.get("images"), "per_turn_constant": None if withheld else by_name["constant"],
+        "per_turn_at_modal_images": by_name["constant"] + withheld_at * by_name.get("images", 0) if withheld else None,
         "residual_abs": {"p50": nearest_rank(residuals, .5), "p95": nearest_rank(residuals, .95),
             "within_5_tokens": share_within(residuals, 5)}}, None
 
@@ -182,26 +186,27 @@ def composition(pairs, left_out, tokenizer=None):
 
     `usage_fit` uses the provider's reported usage and the trace's sizes only, so it holds for any model that reports
     usage: `per_result_byte` is tokens per byte of tool-result text, `per_output_token` tokens per output token of the
-    previous reply (reasoning included) and `per_turn_constant` the per-turn term. `image_counts` is the histogram of images
-    per fitted pair. The image count is a term of the fit (`per_image`) only when at least `IMAGE_VARIATION_SHARE`
-    of the pairs differ from the most common count; otherwise `image_term_separable` is false, `per_image` is
-    null, the constant is the cost of a turn at `images_per_turn` images and the pairs with another count are left out
-    (`other_image_count`). A fit is `None`, with a `usage_fit_reason`, when it is degenerate. With a `tokenizer`,
-    `tokenizer_check` fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and
-    its reasoning tokens: it `holds` by `tokenizer_holds`."""
+    previous reply (reasoning included). `image_counts` is the histogram of images per fitted pair; the image count
+    is a term of the fit whenever it varies, so a turn with another count has its own intercept and the byte slope
+    is not forced through it. The image coefficient and the constant are reported (`per_image`, `per_turn_constant`)
+    only when at least `IMAGE_VARIATION_SHARE` of the pairs differ from the most common count
+    (`image_term_separable`). Otherwise they are null and the supported figure is `per_turn_at_modal_images`, the
+    constant plus `images_per_turn` (the most common count) images. A fit is `None`, with a `usage_fit_reason`, when it
+    is degenerate. With a `tokenizer`, `tokenizer_check` fits the growth on that tokenizer's count of the result text,
+    the reply's visible output tokens and its reasoning tokens in the same way: it `holds` by `tokenizer_holds`."""
     counts = Counter(pair["images"] for pair in pairs)
     modal, top = max(counts.items(), key=lambda item: (item[1], -item[0])) if counts else (None, 0)
     separable = len(pairs) - top >= IMAGE_VARIATION_SHARE * len(pairs)
-    used = pairs if separable else [pair for pair in pairs if pair["images"] == modal]
-    fit, reason = _fit(used, ("result_bytes", "output"), separable)
-    result = {"pairs": len(used), "left_out": {**left_out, "other_image_count": len(pairs) - len(used)},
+    withheld_at = None if separable else modal
+    fit, reason = _fit(pairs, ("result_bytes", "output"), withheld_at)
+    result = {"pairs": len(pairs), "left_out": left_out,
         "image_counts": {str(count): counts[count] for count in sorted(counts)}, "image_term_separable": separable,
         "images_per_turn": None if separable else modal, "usage_fit": fit, "usage_fit_reason": reason, "tokenizer_check": None}
     if tokenizer is not None:
         check = {"tokenizer": tokenizer.name, "available": tokenizer.count is not None, "reason": tokenizer.unavailable}
-        counted = [{**pair, "visible_output": max(pair["output"] - pair["reasoning"], 0)} for pair in used if number(pair["result_tokens"])]
+        counted = [{**pair, "visible_output": max(pair["output"] - pair["reasoning"], 0)} for pair in pairs if number(pair["result_tokens"])]
         if tokenizer.count is not None:
-            fit, reason = _fit(counted, ("result_tokens", "visible_output", "reasoning"), separable)
+            fit, reason = _fit(counted, ("result_tokens", "visible_output", "reasoning"), withheld_at)
             if fit is None:
                 check["reason"] = reason
             else:
@@ -679,8 +684,8 @@ def composition_text(entries) -> list[str]:
             lines.append(f"  No usage fit: {entry['usage_fit_reason']}.")
         else:
             image = (f"{fit['per_image']:.1f} tokens per image, per-turn constant {fit['per_turn_constant']:.1f}" if entry["image_term_separable"]
-                else f"{fit['per_turn_constant']:.1f} tokens per turn at {entry['images_per_turn']} images (the image term is not separable from the "
-                    f"constant: pairs by image count, {histogram or 'none'})")
+                else f"{fit['per_turn_at_modal_images']:.1f} tokens per turn at {entry['images_per_turn']} image{'' if entry['images_per_turn'] == 1 else 's'} (no per-image figure: under "
+                    f"{IMAGE_VARIATION_SHARE:.0%} of pairs differ from that count, so image and constant are not separable; pairs by image count, {histogram or 'none'})")
             lines.append(f"  From usage alone: {fit['per_result_byte']:.4f} tokens per byte of tool-result text, {fit['per_output_token']:.3f} per output "
                 f"token of the previous reply (reasoning included), {image}; residual median {fit['residual_abs']['p50']:.1f}, 95th percentile {fit['residual_abs']['p95']:.1f} tokens.")
         if check is not None:

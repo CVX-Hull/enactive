@@ -454,22 +454,27 @@ class HostAnalysisTests(unittest.TestCase):
 
     def test_the_image_term_is_claimed_only_when_enough_pairs_differ_from_the_usual_image_count(self):
         # True cost 730 per image and 15 a turn, but only 2 of 39 pairs (5%) have no image: the image term and the
-        # constant cannot be told apart, so no per-image cost is claimed and the odd pairs are left out.
+        # constant cannot be told apart, so neither is reported as a cost; their sum at one image is, and the byte
+        # slope is still fitted on every pair (the image column is each odd pair's own intercept).
         few = self.steps(40, images=lambda index: 0 if index in (7, 21) else 1, per_image=730, constant=15)
         composed = analyze_trace(self.chain(few))["prompt_composition"]
         self.assertFalse(composed["image_term_separable"])
-        self.assertIsNone(composed["usage_fit"]["per_image"])
+        fit = composed["usage_fit"]
+        self.assertIsNone(fit["per_image"])
+        self.assertIsNone(fit["per_turn_constant"])
         self.assertEqual((composed["images_per_turn"], composed["image_counts"]), (1, {"0": 2, "1": 37}))
-        self.assertEqual((composed["left_out"]["other_image_count"], composed["pairs"], composed["usage_fit"]["pairs"]), (2, 37, 37))
-        self.assertAlmostEqual(composed["usage_fit"]["per_turn_constant"], 745, delta=2)
-        self.assertAlmostEqual(composed["usage_fit"]["per_result_byte"], 0.4, places=2)
+        self.assertEqual((composed["pairs"], fit["pairs"]), (39, 39))
+        self.assertNotIn("other_image_count", composed["left_out"])
+        self.assertAlmostEqual(fit["per_turn_at_modal_images"], 745, delta=2)
+        self.assertAlmostEqual(fit["per_result_byte"], 0.4, places=2)
+        self.assertIn("no per-image figure", "\n".join(composition_text([{"route": "r", **composed}])))
         # With a third of the pairs different the image term is separable and the true 730 is recovered.
         many = self.steps(40, images=lambda index: 0 if index % 3 == 0 else 1, per_image=730, constant=15)
         composed = analyze_trace(self.chain(many))["prompt_composition"]
         self.assertTrue(composed["image_term_separable"])
         self.assertAlmostEqual(composed["usage_fit"]["per_image"], 730, delta=2)
         self.assertAlmostEqual(composed["usage_fit"]["per_turn_constant"], 15, delta=2)
-        self.assertEqual(composed["left_out"]["other_image_count"], 0)
+        self.assertIsNone(composed["usage_fit"]["per_turn_at_modal_images"])
 
     def test_the_image_term_threshold_is_ten_percent_of_the_fitted_pairs(self):
         def pairs(odd, usual):
@@ -480,7 +485,10 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(ten_percent["pairs"], 20)
         under = composition(pairs(1, 19), dict.fromkeys(LEFT_OUT, 0))        # 1 of 20
         self.assertFalse(under["image_term_separable"])
-        self.assertEqual((under["pairs"], under["left_out"]["other_image_count"], under["images_per_turn"]), (19, 1, 1))
+        self.assertEqual((under["pairs"], under["images_per_turn"], under["usage_fit"]["pairs"]), (20, 1, 20))
+        self.assertIsNone(under["usage_fit"]["per_image"])
+        self.assertIsNotNone(under["usage_fit"]["per_turn_at_modal_images"])
+        self.assertIsNotNone(ten_percent["usage_fit"]["per_image"])
 
     def test_a_fit_with_no_independent_terms_or_no_spare_pair_is_none_with_a_reason(self):
         constant_length = self.steps(images=lambda index: 1, text=lambda index: 50)
@@ -504,7 +512,7 @@ class HostAnalysisTests(unittest.TestCase):
             for b, o, n in zip(bytes_, output, noise)]
         fit = composition(pairs, dict.fromkeys(LEFT_OUT, 0))["usage_fit"]
         self.assertAlmostEqual(fit["per_result_byte"], 0.5)
-        self.assertAlmostEqual(fit["per_turn_constant"], 700)
+        self.assertAlmostEqual(fit["per_turn_at_modal_images"], 700)
         self.assertAlmostEqual(fit["residual_abs"]["p50"], 2)
         self.assertAlmostEqual(fit["residual_abs"]["p95"], 8)
         self.assertEqual(fit["residual_abs"]["within_5_tokens"], 0.5)
