@@ -15,12 +15,21 @@ capabilities and limits; [work items](workflows/work-items.md) own how work flow
 
 | Outcome | Where it is tracked | Governing design |
 | --- | --- | --- |
+| Player-owned campaigns without engineering gameplay assistance, the parent of the two outcomes below | [#136](https://github.com/CVX-Hull/enactive/issues/136) | [Mission ownership](operations/mission-ownership.md) |
 | A fresh seven-day campaign without engineering gameplay assistance, the north star | [#145](https://github.com/CVX-Hull/enactive/issues/145) | [Development runs](development-runs.md) |
 | Useful apparent responsiveness of the complete player | [#164](https://github.com/CVX-Hull/enactive/issues/164) | [Development runs](development-runs.md) |
 | The curated player: actor, curator, ontology and programs, in phases | [#445](https://github.com/CVX-Hull/enactive/issues/445); the curator and memory phase in [#387](https://github.com/CVX-Hull/enactive/issues/387), the programs and monitor phase in [#177](https://github.com/CVX-Hull/enactive/issues/177), the practice instance phase in [#472](https://github.com/CVX-Hull/enactive/issues/472) | [ADR 009](decisions/009-curated-player.md) (proposed); the curator memory study's [completion record](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
 | Evaluation follow-ons: intent visibility, label writing, a cross-run channel, a scenario bank, judges | [#384](https://github.com/CVX-Hull/enactive/issues/384)–[#388](https://github.com/CVX-Hull/enactive/issues/388) | [ADR008](decisions/008-evaluation-and-spectator.md) |
+| Reusable expectation evaluation and read-only outcome monitoring | [#42](https://github.com/CVX-Hull/enactive/issues/42) | [Evaluation contract](contracts/evaluation.md) |
 | Spectator views | [#143](https://github.com/CVX-Hull/enactive/issues/143) | [Observer operations](components/observer-operations.md) |
 | CDDA-class portability | [#191](https://github.com/CVX-Hull/enactive/issues/191) | [ADR006](decisions/006-computer-control-boundary.md) |
+
+Open questions about controls and their cost are tracked in
+[#555](https://github.com/CVX-Hull/enactive/issues/555) (how spend is capped),
+[#556](https://github.com/CVX-Hull/enactive/issues/556) (remaining control candidates)
+and [#557](https://github.com/CVX-Hull/enactive/issues/557) (the cost of the
+pull-request check); the [risk register](risks.md) and [controls](controls.md) own the
+current answers.
 
 Current contracts govern the running system; a proposed ADR changes nothing until a
 phase is adopted on study evidence.
