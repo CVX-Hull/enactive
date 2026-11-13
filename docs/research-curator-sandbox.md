@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: A macOS or coding-agent host update, a change to ADR 009's isolation boundary, an escape-suite failure, or new sandbox evidence
+review_trigger: The design of the submission gate's tests on later trace (issue 459) settles the gate-gaming section, the only one still open; until then a macOS or coding-agent host update, a change to ADR 009's isolation boundary, an escape-suite failure, or new sandbox evidence
 status: active
 date: 2026-11-08
 scope: ADR 009's research area on agent workspaces and verification gates (#451) — project-local sandbox mechanisms on this Mac, coding-agent hosts under them, session cost evidence, and gate gaming
