@@ -127,5 +127,4 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "lane results: $RESULTS"
-          for result in $RESULTS; do test "$result" = success; done
-          test -n "$RESULTS"
+          test "$RESULTS" = "success success success"

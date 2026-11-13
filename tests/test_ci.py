@@ -226,8 +226,16 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertNotIn("if", step)
         self.assertNotIn("uses", step)
         self.assertEqual(step["env"], {"RESULTS": "${{ join(needs.*.result, ' ') }}"})
-        self.assertIn('for result in $RESULTS; do test "$result" = success; done', step["run"])
-        self.assertIn('test -n "$RESULTS"', step["run"])
+        # Run the step itself: it passes only for one success per needed job, and for nothing else.
+        lanes = len(controller["needs"])
+        cases = {" ".join(["success"] * lanes): 0, " ".join(["success"] * (lanes - 1) + ["failure"]): 1,
+                 " ".join(["success"] * (lanes - 1) + ["cancelled"]): 1, " ".join(["success"] * (lanes - 1) + ["skipped"]): 1,
+                 " ".join(["success"] * (lanes - 1)): 1, " ".join(["success"] * (lanes + 1)): 1, "": 1, "   ": 1}
+        for results, expected in cases.items():
+            with self.subTest(results=results):
+                done = subprocess.run(["bash", "-eo", "pipefail", "-c", step["run"]], env={"RESULTS": results, "PATH": os.environ["PATH"]},
+                                      capture_output=True, timeout=30)
+                self.assertEqual(min(done.returncode, 1), expected)
 
     def test_every_lane_job_always_runs_selects_the_profile_and_runs_its_lane(self):
         for lane in ci.LANES:

@@ -107,8 +107,8 @@ reported. Never re-check by hand.
   `controller` included, and exits non-zero unless the run succeeded.
   `gh run list --workflow check.yml --commit <HEAD-SHA>` gives the run. A later push
   cancels that run; watch the new head's run.
-- Or use `gh pr checks <PR> --watch`, started once the checks appear. If it ends
-  without `controller` in its list, the wait is not over: start it again.
+- Do not wait with `gh pr checks <PR> --watch`: it can end on passing lane jobs before
+  `controller` exists.
 - Once nothing but the check is outstanding, queue pinned auto-merge as the
   [standing delegation](../operator-permissions.md#engineering-decision-and-merge-delegation)
   describes. The commit it names is the one the review named, whichever jobs have

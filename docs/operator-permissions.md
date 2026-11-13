@@ -77,8 +77,8 @@ branch, and its first draft merged instead
 not human approval; say so in the pull request rather than waiting for one.
 
 **Waiting on CI.** The lead waits for PR
-validation with one watch command, `gh run watch` on the pull request's run or
-`gh pr checks --watch`, until `controller` has reported
+validation with one watch command, `gh run watch` on the pull request's run, until
+`controller` has reported
 ([procedure](workflows/development.md#minimum-checks-and-escalation)). The lead may
 run it in the background
 ([waiting on CI](operations/coding-agents.md#waiting-on-ci)), instead of re-checking

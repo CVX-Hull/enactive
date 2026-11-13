@@ -88,8 +88,8 @@ generator refuses to overwrite an existing file or leave the checkout.
 ## Waiting on CI
 
 The host-neutral rule is in [minimum checks and escalation](../workflows/development.md#minimum-checks-and-escalation):
-one watch command (`gh run watch <RUN> --exit-status` or `gh pr checks <PR> --watch`)
-that runs until the required `controller` job has reported, and pinned auto-merge.
+one watch command, `gh run watch <RUN> --exit-status`, which runs until the whole run
+has ended, the required `controller` job included, and pinned auto-merge.
 Hosts differ only in how a session runs the wait and what re-invokes it. Host
 permission prompts and refusals still apply.
 
