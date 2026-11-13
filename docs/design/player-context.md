@@ -315,7 +315,7 @@ Three layers. Each can be built and judged alone, in this order.
 - **Coverage is not recorded today.** A curator session records the frames of the window
   it was given, not the last decision its published facts reflect. The stamp is new.
 - **Risk.** The player loses the thread of what it was doing. Two things carry it: the
-  low mark keeps the most recent turns verbatim, and the briefing's open commitments.
+  low mark keeps the most recent turns verbatim, and the briefing's leads.
   Whether that is enough is the main thing the screen measures.
 
 ### What the curator must publish, and when

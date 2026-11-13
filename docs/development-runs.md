@@ -32,8 +32,8 @@ multi-day survival, which differs in model class and boundary
 Five ceiling runs of GPT-6.1 Terra decide the next branch, fixed before any run:
 
 - **Median survival at least 24 in-game hours:** perception and control are
-  adequate for a frontier model. Next is a cost and latency reduction plan
-  (cheaper models, programs), and #164's design resumes.
+  adequate for a frontier model. Next is settling memory (#445) before the seven-day
+  attempt; #164's responsiveness is an aim that does not gate present work.
 - **Median below 24 in-game hours:** grounding is the bottleneck. Test the game-neutral, player-owned
   aids of the [development-loop record](acceptance/2026-11-06-development-loop.md#results) against the ceiling arm.
 
@@ -137,7 +137,7 @@ boundary, day point and death from frames.
 | Arm result | Meaning | Next step |
 | --- | --- | --- |
 | Any continuity failure | Save and reload blocks long play | Diagnose from the player's own reports and frames, with no harness game knowledge |
-| At least 2 of 3 Day-viable | Day-scale survival is viable through this boundary | Design the seven-day attempt for #145 and the cost and latency plan that resumes #164 |
+| At least 2 of 3 Day-viable | Day-scale survival is viable through this boundary | Settle memory (#445), then design the seven-day attempt for #145 |
 | At least 2 of 3 Failed | A day-scale failure class exists | Classify it from frames (needs, combat or shelter) and target that class |
 | Otherwise (Slow or mixed) | Long-horizon pacing limits survival | Report the time-passing behaviour; any intervention is a separate owner decision |
 
