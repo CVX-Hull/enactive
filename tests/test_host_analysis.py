@@ -1,6 +1,8 @@
 """Deterministic diagnostic fixtures; no provider, native or quality qualification."""
+import io
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -9,7 +11,8 @@ from harness.computer.protocol import ControlError
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError
 from harness.evaluation.core.sources import iter_host, read_host
-from tools.host_analysis import analyze_trace, discover, distribution, host_summary, markdown
+from tools.host_analysis import (analyze_trace, composition_text, discover, distribution, host_summary, main, markdown,
+    parse_tokenizer)
 
 
 class HostAnalysisTests(unittest.TestCase):
@@ -395,3 +398,152 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertIn("| All responses | 6 | 3.0 | 9.0 | 33.3% | 66.7% | unknown |", text)
         self.assertIn("| Under 20,000 | 6 | 3.0 | 9.0 | 33.3% | 66.7% | unknown |", text)
         self.assertIn("| runA | 2 | 4 | 2.0 | 9.0 | 50.0% | 75.0% | unknown |", text)
+
+    def chain(self, steps, model="route-a", result=None, name="host.jsonl"):
+        """One actor's requests where each step is a reply followed by one tool call; the next request's prompt
+        grows by `growth(step)`, which is what the reader should recover. A step's keys: `text`, `images`,
+        `visible` and `reasoning` output tokens, and optionally `omitted`, `notice` (on the next request),
+        `calls` and `growth`."""
+        e = self.event
+        events, at, prompt = [e("host-start", 0, model=model)], 0, 1000
+        for index, step in enumerate(steps):
+            request = f"r{index}"
+            events.append(e("request-start", at + 1, request_id=request))
+            if "omitted" in step:
+                events.append(e("context-image-projection", at + 2, request_id=request, omitted_images=step["omitted"]))
+            if step.get("notice_here"):
+                events.append(e("tail-notice", at + 2, request_id=request, kinds=["context-capacity"], tokens=prompt))
+            reasoning, output = step.get("reasoning", 0), step.get("visible", 0) + step.get("reasoning", 0)
+            events.append(e("response-complete", at + 5, request_id=request, stop_reason="toolUse", usage_available=True,
+                usage=dict(input=prompt // 2, cacheRead=prompt - prompt // 2, cacheWrite=0, output=output, reasoning=reasoning)))
+            for call in range(step.get("calls", 1)):
+                events.append(e("tool-start", at + 6, request_id=request, tool_call_id=f"t{call}", tool="computer_input", arguments={}))
+                content = [{"type": "text", "text": step["text"]}, *({"type": "image_reference", "bytes": 9} for _ in range(step.get("images", 0)))]
+                events.append(e("tool-result", at + 7, request_id=request, tool_call_id=f"t{call}", result=result(step) if result else {"content": content}))
+            prompt += step["growth"]
+            at += 10
+        return self.trace([*events, e("settled", at)], name)
+
+    def steps(self, count=24):
+        """Sizes that vary independently, so each of the four terms is identifiable, and growth that follows the
+        model exactly: 0.4 tokens per byte, 1 per output token, 700 per image, 11 a turn."""
+        steps = []
+        for index in range(count):
+            step = dict(text="x" * (20 + index * 37 % 90), images=index % 3, visible=5 + index * 13 % 40, reasoning=index * 7 % 11)
+            step["growth"] = 0.4 * len(step["text"]) + step["visible"] + step["reasoning"] + 700 * step["images"] + 11
+            steps.append(step)
+        return steps
+
+    def test_the_usage_fit_recovers_the_cost_of_each_part_from_reported_usage_alone(self):
+        steps = self.steps()
+        for step in steps:
+            step["growth"] = round(step["growth"])  # reported usage is whole tokens
+        composed = analyze_trace(self.chain(steps))["prompt_composition"]
+        fit = composed["usage_fit"]
+        self.assertEqual((composed["pairs"], composed["left_out"]), (23, dict(usage_unknown=0, images_dropped=0, notice_added=0, not_one_call=0)))
+        self.assertAlmostEqual(fit["per_result_byte"], 0.4, places=2)
+        self.assertAlmostEqual(fit["per_output_token"], 1, places=2)
+        self.assertAlmostEqual(fit["per_image"], 700, delta=2)
+        self.assertAlmostEqual(fit["per_turn_constant"], 11, delta=3)
+        self.assertTrue(fit["image_term_separable"])
+        self.assertLessEqual(fit["residual_abs"]["p95"], 1)
+        self.assertIsNone(composed["tokenizer_check"])
+
+    def test_the_image_term_is_not_claimed_when_every_turn_has_the_same_images(self):
+        steps = [{**step, "images": 1, "growth": 0.4 * len(step["text"]) + step["visible"] + step["reasoning"] + 711} for step in self.steps()]
+        fit = analyze_trace(self.chain(steps))["prompt_composition"]["usage_fit"]
+        self.assertFalse(fit["image_term_separable"])
+        self.assertIsNone(fit["per_image"])
+        self.assertEqual(fit["images_per_turn"], 1)
+        self.assertAlmostEqual(fit["per_turn_constant"], 711, delta=3)
+        self.assertAlmostEqual(fit["per_result_byte"], 0.4, places=2)
+
+    def test_pairs_that_span_an_image_drop_a_notice_or_other_than_one_call_are_left_out(self):
+        steps = self.steps(10)
+        for index, step in enumerate(steps):
+            step["omitted"] = 0 if index < 3 else 4  # pair (r2, r3): images were dropped between them
+        steps[5]["notice_here"] = True               # pair (r4, r5): a notice was added to r5
+        steps[6]["calls"] = 2                        # pair (r6, r7): the reply made two calls
+        pairs = analyze_trace(self.chain(steps))["prompt_composition"]
+        self.assertEqual(pairs["left_out"], dict(usage_unknown=0, images_dropped=1, notice_added=1, not_one_call=1))
+        self.assertEqual(pairs["pairs"], 9 - 3)
+        # A request with no usage leaves out the pairs on both sides of it.
+        e = self.event
+        events = [e("host-start", 0), e("request-start", 1, request_id="a"), e("response-complete", 2, request_id="a", stop_reason="error", usage_available=False),
+            e("request-start", 3, request_id="b"), e("response-complete", 4, request_id="b", stop_reason="stop", usage_available=False), e("settled", 5)]
+        self.assertEqual(analyze_trace(self.trace(events, "none.jsonl"))["prompt_composition"]["left_out"]["usage_unknown"], 1)
+
+    def test_a_short_result_trace_counts_the_text_the_model_reads_not_the_full_record(self):
+        steps = self.steps()
+        def short(step):
+            return {"content": [{"type": "text", "text": step["text"]}, *({"type": "image_reference", "bytes": 9} for _ in range(step["images"]))],
+                "structuredContent": {"schema": "player-computer-operation/1", "receipts": ["y" * 5000]}}
+        sealed = analyze_trace(self.chain(steps))["prompt_composition"]["usage_fit"]
+        short_form = analyze_trace(self.chain(steps, result=short))["prompt_composition"]["usage_fit"]
+        self.assertEqual(short_form["per_result_byte"], sealed["per_result_byte"])
+        self.assertAlmostEqual(short_form["per_result_byte"], 0.4, places=2)
+
+    def test_a_tokenizer_that_matches_the_usage_holds_and_one_that_does_not_fails(self):
+        steps = self.steps()
+        for step in steps:  # the route counts one token per four characters
+            step["growth"] = len(step["text"]) // 4 + step["visible"] + step["reasoning"] + 700 * step["images"] + 11
+        self.chain(steps)
+        def four_chars(text):
+            return len(text) // 4
+        def two_chars(text):
+            return len(text) // 2
+        holds = host_summary([self.root], {"route-a": four_chars})["selection"]["prompt_composition"][0]["tokenizer_check"]
+        self.assertTrue(holds["available"])
+        self.assertAlmostEqual(holds["slope"], 1, places=6)
+        self.assertAlmostEqual(holds["per_reasoning_token"], 1, places=6)
+        self.assertTrue(holds["holds"])
+        fails = host_summary([self.root], {None: two_chars})["selection"]["prompt_composition"][0]["tokenizer_check"]
+        self.assertAlmostEqual(fails["slope"], 0.5, delta=0.05)
+        self.assertFalse(fails["holds"])
+        text = markdown(host_summary([self.root], {None: two_chars}))
+        self.assertIn("From usage alone", text)
+        self.assertIn("does not hold for this route", text)
+        # A tokenizer named for another route is not applied; the usage fit stands alone.
+        other = host_summary([self.root], {"route-b": four_chars})["selection"]["prompt_composition"][0]
+        self.assertIsNone(other["tokenizer_check"])
+        self.assertIsNotNone(other["usage_fit"])
+
+    def test_a_named_tokenizer_that_is_not_installed_is_reported_and_the_usage_fit_continues(self):
+        self.chain(self.steps())
+        with mock.patch.dict(sys.modules, {"tiktoken": None}):  # an import of it fails as when it is not installed
+            entry = host_summary([self.root], {None: "o200k_base"})["selection"]["prompt_composition"][0]
+        self.assertFalse(entry["tokenizer_check"]["available"])
+        self.assertIn("not installed", entry["tokenizer_check"]["reason"])
+        self.assertNotIn("slope", entry["tokenizer_check"])
+        self.assertAlmostEqual(entry["usage_fit"]["per_result_byte"], 0.4, places=1)
+        self.assertIn("the usage fit stands alone", "\n".join(composition_text([entry])))
+
+    def test_composition_is_reported_per_trace_run_and_selection_by_route_without_the_raw_pairs(self):
+        for run, model in (("runA", "route-a"), ("runB", "route-b")):
+            directory = self.root / run / "actors" / "001"
+            directory.mkdir(parents=True)
+            self.chain(self.steps(), model=model).rename(directory / "host.jsonl")
+        report = host_summary([self.root / "runA", self.root / "runB"])
+        self.assertEqual([entry["route"] for entry in report["selection"]["prompt_composition"]], ["route-a", "route-b"])
+        self.assertEqual([run["prompt_composition"][0]["route"] for run in report["runs"]], ["route-a", "route-b"])
+        self.assertTrue(all(entry["pairs"] == 23 for entry in report["selection"]["prompt_composition"]))
+        trace = report["traces"][0]
+        self.assertEqual(trace["prompt_composition"]["pairs"], 23)
+        self.assertNotIn("composition_pairs", trace)
+        self.assertIn("## Prompt composition, 2 selected traces", markdown(report))
+        json.dumps(report, allow_nan=False)
+
+    def test_the_command_prints_the_composition_and_exits_nonzero_on_an_incomplete_selection(self):
+        self.chain(self.steps())
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.assertEqual(main([str(self.root)]), 0)
+        self.assertIn("23 request pairs fitted", out.getvalue())
+        self.assertIn("tokens per byte of tool-result text", out.getvalue())
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.assertEqual(main([str(self.root), "--json", "--tokenizer", "route-a=none"]), 0)
+        self.assertEqual(json.loads(out.getvalue())[0]["pairs"], 23)
+        self.assertEqual(parse_tokenizer("a/b=o200k_base"), ("a/b", "o200k_base"))
+        self.assertEqual(parse_tokenizer("o200k_base"), (None, "o200k_base"))
+        empty = self.trace([], "empty.jsonl")
+        with mock.patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual(main([str(empty)]), 1)
