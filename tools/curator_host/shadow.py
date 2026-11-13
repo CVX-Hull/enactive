@@ -12,7 +12,11 @@ printed or written.
     python -m tools.curator_host.shadow --arm terra --lineage 397 --sessions sd1a1 --cap-usd 2 \
         --out .runtime/curator-shadow/pilot-1
 
-Only the sampled sessions of the two development lineages can be named. The held-out lineages
+    python -m tools.curator_host.shadow --arm terra --lineage 397 --window-plan sd1a1 001 1 20 10 \
+        --cap-usd 20 --session-cap-usd 3 --out .runtime/curator-shadow/windows
+
+runs ten windows of 20 steps of one actor in order against one repository (`--windows-file` takes the same list as
+JSON; see docs/operations/curator-hosts.md). Only the sampled sessions of the two development lineages can be named. The held-out lineages
 (#382's three, stored as `lh1`, `lh2` and `lh3`, and #522's fourth, stored as `lh4`) are refused by name.
 Summaries are `curator-shadow/1`, one per session and one per run. Prices are the frozen `curator-prices/1` file in `data/curator/`.
 """

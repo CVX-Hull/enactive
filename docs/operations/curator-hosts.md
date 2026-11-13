@@ -129,6 +129,21 @@ Node tests: `cd tools/curator_host && npm test`.
   a breach, accounting remains unsettled after shutdown, or host cleanup is unconfirmed.
   `--stop-on-abort` additionally
   stops on other non-sealed sessions.
+- **Windows.** `--windows-file FILE` (a JSON list of `{session, actor, first, last[, game_time]}`) or
+  `--window-plan SESSION ACTOR START SIZE COUNT` (the same list as COUNT consecutive windows) runs one
+  session per window, in the order given, against one repository, each starting from the store the
+  previous one left; it replaces `--sessions`. A window is one actor's steps `first` to `last`
+  ([the design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp)); a unit is
+  labelled `<session>-<actor>-<first>-<last>`, and a window never reads the sealed memory store. The same
+  refusals apply to the session each window names. The run summary records `windows` and
+  `windows_sha256` (of their canonical JSON), and per session the proxy ledger's `charged_usd` and
+  `max_reserved_usd`, `wall_seconds`, `stopped_by_cap`, `cap_usd` and the `coverage` stamp.
+- **A session that reaches its cap** is recorded (`stopped_by_cap`) and stops the run. Nothing retries.
+  `--double-session-cap` (with `--session-cap-usd`, and exactly one named session or window) runs that
+  one session once more at twice the cap; `--knowledge-root DIR` (an earlier run's `knowledge_root`,
+  inside `<runtime>/knowledge/`) continues its repository instead of a fresh one, so the re-run or the
+  windows still to run start from the store as it stood. The summary records
+  `published_before_run`, `session_cap_doubled` and `knowledge_root`.
 - **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,

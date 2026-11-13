@@ -16,7 +16,7 @@ submitted programs. **v0 runs nothing a submission contains**; it validates and 
 data.
 
 Code: [`harness/curator`](../../harness/curator): `knowledge.py`, `containers.py`,
-`session.py`, `gate.py`.
+`session.py`, `gate.py`, `window.py`.
 
 ## Layout
 
@@ -27,7 +27,7 @@ Everything lives under one project-local root, by default
 
 | Path | Holds |
 | --- | --- |
-| `<game>/` | The knowledge repository: a Git repository with `ontology/`, `programs/`, `tests/`, `facts.jsonl` and `knowledge.json`. Only the gate commits. Each publish is one commit on `main`, tagged `v<N>`. |
+| `<game>/` | The knowledge repository: a Git repository with `ontology/`, `programs/`, `tests/`, `facts.jsonl`, `knowledge.json` and, from the first publish, `coverage.json`. Only the gate commits. Each publish is one commit on `main`, tagged `v<N>`. |
 | `<game>.state/sessions/<id>/` | One curator session's record: `manifest.json` (`container-manifest/1`, kind `curator-session`), `brief.md`, the host's output, and the submissions and gate results. Kept after close. |
 | `<game>.state/drafts/<id>/` | One draft: `manifest.json` (kind `draft`) and its files. Persists across sessions until promoted or expired. |
 | `<game>.state/workspaces/<id>/` | The ephemeral workspace, deleted at close. |
@@ -56,10 +56,53 @@ A submission is a directory `submissions/<id>/` with `submission.json`:
              {"op": "add_type", "type": {…}}]}
 ```
 
-- **Fact** (`curator-fact/1`): `id`, `type` (a name in the ontology), `statement`,
-  `scope` (an object; at least `game`), and `citations`. Citations are source IDs of
-  frames, and every one must lie inside the session's trace window.
+- **Fact** (`curator-fact/2`): exactly `schema`, `id`, `type` (a name in the ontology),
+  `statement`, `scope` (an object; at least `game`), `citations`, `subject`, `place`,
+  `game_time` and `kind`. Citations are source IDs of frames, and every one must lie
+  inside the session's trace window. The gate rejects `curator-fact/1`; there is one
+  current fact contract.
+  - `kind` is `place_with_goods`, `hazard`, `open_commitment` or `how_it_works`.
+  - `subject` is a non-empty string: the one thing the fact is about (one fact per item).
+  - `place` and `game_time` are strings. They must not be blank for `place_with_goods` and
+    `hazard`, and may be `""` for the other two kinds. `game_time` is the time as the
+    screen shows it, as text; shared code does not parse it. `place` is written so that a
+    later actor could go there (a landmark and direction, or coordinates, as shown).
+  - The curator's prompt defines each kind and says nothing about any particular game.
+    A store published under `curator-fact/1` is not edited; the readers that open sealed
+    stores (`tools.memory_screen_checks store`) read Git objects, not the gate, and still
+    work on them.
 - **Type** (`curator-type/1`): `name`, `description` and `fields`.
+
+## Windows of decisions and the coverage stamp
+
+A session reads either whole admissions or a **window**: one actor of one sealed
+session and a range of its steps (`seq` in `steps.jsonl`, first and last inclusive).
+Both take one path, [`harness/curator/window.py`](../../harness/curator/window.py): the
+projection is written whole and `restrict` narrows it in place; with the full window
+(`Window()`) it changes nothing, and whole-admission traces and briefs are unchanged.
+
+- **What a window keeps.** The actor's steps in the range, the tool calls that belong to
+  them, the frames those steps returned, the actor's received prompt and guide. A tool
+  call belongs to the step its result names (`operation_id`); a call that names none (a
+  memory or handoff tool, an unanswered call) belongs to the step of the next call that
+  does, and a call after the last such call belongs to the last step.
+- **What it drops**, because each reports beyond the range: the other actors, handoff
+  packets, the sealed memory store and the actor's final report. A runner that passes a
+  memory store with a window still gets none of it.
+- **The manifest says so.** `trace/manifest.json` gains `window` (session, actor, first,
+  last as clamped to the steps that exist, `steps_available`, `game_time`) and lists
+  what was dropped; its file hashes are of the narrowed trace. The brief names the
+  window. A window that starts after the actor's last step aborts the session before the
+  host runs.
+- **Provenance follows.** Frames outside the range are not in `trace/frames/`, so the
+  gate refuses a citation of one.
+- **Coverage stamp.** The runner derives `curator-coverage/1` from the window: `session`,
+  `actor`, `last_step` (the last step read) and `game_time` (optional text the runner
+  supplies in the window). The gate passes it in with every publication and writes it
+  as `coverage.json` beside `facts.jsonl`, so each tagged version records what it covers.
+  A whole-admission session stamps its session names with no actor or last step. The
+  curator never writes it: a submission carrying `coverage` is rejected as an unexpected
+  field, and the gate refuses a stamp that is not exactly those keys.
 
 ## Gate v0
 
