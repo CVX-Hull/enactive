@@ -31,6 +31,12 @@ relevant focused tests. The default `.venv/bin/python tools/check.py` runs full
 portable regression. Use the explicit CI profiles only under the policy; exact
 commands/membership stay in the existing runner and shared manifest. Broad
 source changes require full regression before merge. Checks never install packages.
+The hosted check runs a profile as separate
+[lane jobs](workflows/ci-profiles.md#jobs-of-the-check): the structural checks with the
+Python tests, the player-host adapter suite, and each browser suite. Add `--lane` to
+run one lane's part locally, for example
+`.venv/bin/python tools/check.py --lane browser --suite test_viewer`; a lane run is not
+a full pass.
 Each checker run also writes the full output of every subprocess command (all but the
 short stdin-fed syntax checks) to its own directory under `.runtime/check-logs/`, named
 by UTC start time, and a failed command prints the path of its log, so a failure stays

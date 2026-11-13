@@ -185,8 +185,73 @@ class DevToolTests(unittest.TestCase):
                     self.assertIn("Tests, viewer tests", output)
                 self.assertIn("real gameplay", output)
 
+    def test_a_lane_runs_only_its_part_of_the_profile_and_never_reports_the_whole_profile(self):
+        structure = ("ruff check", "lint-imports", "tools.documents", "tools.evidence verify --full",
+                     "git diff --cached --check")
+        adapter = [sys.executable, "-m", "pytest", "-q", *ci.ADAPTER_TESTS]
+        for profile in ("full", "editorial", "main", *ci.COMPONENT_TESTS):
+            for lane in ci.LANES:
+                with self.subTest(profile=profile, lane=lane):
+                    result, executed, output = self.checker_commands(["--profile", profile, "--lane", lane])
+                    self.assertEqual(result, 0)
+                    self.assertNotIn("checks passed", output)
+                    self.assertNotIn("tests passed", output)
+                    if lane not in ci.PROFILE_LANES[profile]:
+                        self.assertEqual(executed, [])
+                        self.assertIn(f"Lane {lane} has nothing to do in the {profile} profile; nothing was run.",
+                                      output)
+                        continue
+                    self.assertIn(f"Lane {lane} of the {profile} profile passed", output)
+                    self.assertIn("Only this lane's part of the profile ran here", output)
+                    ran = lambda text: any(text in " ".join(command) for command in executed)  # noqa: E731
+                    for common in structure:
+                        self.assertEqual(ran(common), lane == "structure-and-python", common)
+                    tests = [command for command in executed if "pytest" in command]
+                    if lane == "adapter":
+                        self.assertEqual(executed, [adapter])
+                    elif lane == "browser":
+                        self.assertEqual(executed, [["/fixture/node", f"tests/{suite}.cjs"]
+                                                    for suite in ci.BROWSER_SUITES])
+                    elif profile in ("editorial", "main"):
+                        self.assertEqual(tests, [])
+                    else:
+                        targets = ["tests"] if profile == "full" else list(ci.COMPONENT_TESTS[profile])
+                        self.assertEqual(len(tests), 1)
+                        self.assertEqual(tests[0][-len(targets):], targets)
+                        self.assertIn("--max-worker-restart=0", tests[0])
+                        ignored = [f"--ignore={path}" for path in ci.ADAPTER_TESTS]
+                        self.assertEqual([part for part in tests[0] if part.startswith("--ignore")],
+                                         ignored if profile == "full" else [])
+                        self.assertFalse(ran(".cjs"))
+        _, executed, output = self.checker_commands(["--lane", "browser", "--suite", "test_investigation"])
+        self.assertEqual(executed, [["/fixture/node", "tests/test_investigation.cjs"]])
+        self.assertIn("browser suite test_investigation.", output)
+        # Without a lane the full profile keeps the adapter suite in its one pytest command.
+        _, executed, _ = self.checker_commands([])
+        self.assertFalse(any(part.startswith("--ignore") for command in executed for part in command))
+
+    def test_a_failing_lane_command_propagates_without_a_passed_line(self):
+        for lane in ci.LANES:
+            _, expected, _ = self.checker_commands(["--lane", lane])
+            with self.subTest(lane=lane):
+                output = io.StringIO()
+                with self.assertRaises(subprocess.CalledProcessError):
+                    self.checker_commands(["--lane", lane], lambda actual: actual == expected[-1], output=output)
+                self.assertNotIn("profile passed", output.getvalue())
+
+    def test_a_profile_without_a_lane_table_row_is_refused_instead_of_having_nothing_to_do(self):
+        with patch.dict(check.COMPONENT_TESTS, {"other": ("tests/test_cli.py",)}):
+            for lane in ci.LANES:
+                with self.subTest(lane=lane), patch.object(check, "run") as commands, \
+                        redirect_stdout(io.StringIO()), self.assertRaisesRegex(ValueError, "no row in the lane table"):
+                    check.main(["--profile", "other", "--lane", lane])
+                commands.assert_not_called()
+
     def test_profiles_reject_fast_combination_and_unknown_names_before_execution(self):
-        for arguments in (["--fast", "--profile", "full"], ["--profile", "unknown"]):
+        for arguments in (["--fast", "--profile", "full"], ["--profile", "unknown"],
+                          ["--fast", "--lane", "adapter"], ["--lane", "unknown"], ["--lane", "pytest"],
+                          ["--suite", "test_viewer"], ["--lane", "adapter", "--suite", "test_viewer"],
+                          ["--lane", "browser", "--suite", "unknown"]):
             with self.subTest(arguments=arguments), patch.object(check, "run") as commands, \
                     redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()), \
                     self.assertRaises(SystemExit) as error:
@@ -335,6 +400,26 @@ class DevToolTests(unittest.TestCase):
                 check.main(arguments)
             self.assertFalse(any("tools.documents" in call.args[0] for call in commands.call_args_list))
             self.assertNotIn("checks passed", output.getvalue())
+
+
+class LanePartitionTests(unittest.TestCase):
+    """Splitting the full profile over hosted lanes must not drop or repeat a test (R-REGRESSION)."""
+
+    def collected(self, lane=None):
+        # The checker's own command, so its targets and exclusions are what is measured. Collection does
+        # not start the xdist workers the command asks for.
+        result = subprocess.run([*check.pytest_command("full", lane), "--collect-only"], cwd=ROOT,
+                                capture_output=True, text=True, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stdout[-2000:] + result.stderr[-2000:])
+        lines = result.stdout.splitlines()
+        return sorted(lines[:lines.index("")])  # test IDs end at the first blank line
+
+    def test_the_python_and_adapter_lanes_collect_exactly_the_full_profiles_tests(self):
+        whole, python, adapter = self.collected(), self.collected("structure-and-python"), self.collected("adapter")
+        self.assertTrue(adapter)
+        self.assertTrue(all("::" in test for test in whole))
+        self.assertEqual(len(set(whole)), len(whole))
+        self.assertEqual(sorted(python + adapter), whole)
 
 
 if __name__ == "__main__":

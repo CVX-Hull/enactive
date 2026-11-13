@@ -98,11 +98,21 @@ a development gate; a discovered applicable failure stops affected new inputs fo
 repair. Preserve all prior evidence and costs. Never suppress a failed gate or use
 `--no-verify` as the workflow.
 
-**Waiting for PR validation.** Wait with one `gh pr checks <PR> --watch`, started
-once the checks appear. Never re-check by hand.
-- When only the required check is still running, queue pinned auto-merge as the
+**Waiting for PR validation.** The check reports several
+[jobs](ci-profiles.md#jobs-of-the-check). The required one, `controller`, starts only
+after the lane jobs end, so it is not listed as a check before then, and passing lane
+jobs are not yet a passed check. Wait with one command until `controller` has
+reported. Never re-check by hand.
+- Watch the run: `gh run watch <RUN> --exit-status` ends when the whole run has,
+  `controller` included, and exits non-zero unless the run succeeded.
+  `gh run list --workflow check.yml --commit <HEAD-SHA>` gives the run. A later push
+  cancels that run; watch the new head's run.
+- Or use `gh pr checks <PR> --watch`, started once the checks appear. If it ends
+  without `controller` in its list, the wait is not over: start it again.
+- Once nothing but the check is outstanding, queue pinned auto-merge as the
   [standing delegation](../operator-permissions.md#engineering-decision-and-merge-delegation)
-  describes.
+  describes. The commit it names is the one the review named, whichever jobs have
+  finished.
 - The watch's exit is then the only wake-up. Confirm the merge once with
   `gh pr view <PR> --json state`.
 - A failure returns to repair.

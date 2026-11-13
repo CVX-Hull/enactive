@@ -6,7 +6,6 @@ import argparse
 from html.parser import HTMLParser
 import json
 import os
-import frontmatter
 from pathlib import Path
 import shutil
 import subprocess
@@ -16,11 +15,6 @@ import threading
 import time
 from urllib.parse import unquote, urlsplit
 
-try:
-    from markdown_it import MarkdownIt
-except ImportError as error:
-    raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
-
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_DOCS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md", "docs/project-management.md", "docs/overview.md", "docs/charter.md",
                  "docs/engineering.md", "docs/architecture.md", "docs/protocol.md",
@@ -28,7 +22,20 @@ REQUIRED_DOCS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECU
                  "docs/environment.md", "docs/research.md", "docs/setup.md")
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
-from tools.ci import COMPONENT_TESTS
+from tools.ci import ADAPTER_TESTS, BROWSER_SUITES, COMPONENT_TESTS, LANES, PROFILE_LANES
+
+
+def _document_parsers():
+    """The lockfile's Markdown parsers, imported on first use.
+
+    This file then loads on the standard library alone, which the hosted adapter and browser lanes rely on:
+    they run it without the lockfile when they have nothing to do, and the browser lane never installs it."""
+    try:
+        import frontmatter
+        from markdown_it import MarkdownIt
+    except ImportError as error:
+        raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
+    return frontmatter, MarkdownIt
 
 
 class _HTMLAnchors(HTMLParser):
@@ -63,6 +70,7 @@ def _heading_text(children) -> str:
 
 
 def check_documents(root: Path) -> list[str]:
+    frontmatter, MarkdownIt = _document_parsers()
     root = root.resolve()
     errors = [f"Missing required document: {name}" for name in REQUIRED_DOCS
               if not (root / name).is_file()]
@@ -318,6 +326,48 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Checker elapsed: {time.perf_counter() - started:.2f}s", flush=True)
 
 
+def pytest_command(profile: str, lane: str | None = None) -> list[str]:
+    """The pytest command of a profile that runs tests: the whole of it, or the part one hosted lane runs."""
+    if lane == "adapter":
+        return [sys.executable, "-m", "pytest", "-q", *ADAPTER_TESTS]
+    targets = ("tests",) if profile == "full" else COMPONENT_TESTS[profile]
+    # The adapter lane runs these files on its own runner, so the Python lane leaves them out.
+    without = [f"--ignore={path}" for path in ADAPTER_TESTS] if lane and profile == "full" else []
+    return [sys.executable, "-m", "pytest", "-q", "-n", "4", "--dist", "worksteal" if profile == "full" else "loadfile",
+            "--max-worker-restart=0", "--durations=20", *without, *targets]
+
+
+def _lane(profile: str, lane: str, suite: str | None) -> int:
+    """Run one hosted lane's part of a profile, or report that the profile has nothing for it."""
+    if profile not in PROFILE_LANES:
+        raise ValueError(f"Profile {profile} has no row in the lane table of tools/ci.py; refusing to treat "
+                         f"lane {lane} as having nothing to do")
+    if lane not in PROFILE_LANES[profile]:
+        print(f"Lane {lane} has nothing to do in the {profile} profile; nothing was run.", flush=True)
+        return 0
+    if lane == "structure-and-python":
+        _structural(fast=False)
+        ran = "structural checks only"
+        if profile == "full" or profile in COMPONENT_TESTS:
+            run(pytest_command(profile, lane))
+            ran = ("structural checks and the Python tests except " + ", ".join(ADAPTER_TESTS) if profile == "full"
+                   else f"structural checks and the {profile} component and boundary smoke tests")
+    elif lane == "adapter":
+        run(pytest_command(profile, lane))
+        ran = ", ".join(ADAPTER_TESTS)
+    else:
+        node = shutil.which("node")
+        if node is None:
+            raise ValueError("Node.js is required for the browser suites; use an existing/local runtime")
+        suites = (suite,) if suite else BROWSER_SUITES
+        for name in suites:
+            run([node, f"tests/{name}.cjs"])
+        ran = ("browser suite " if suite else "browser suites ") + ", ".join(suites)
+    print(f"Lane {lane} of the {profile} profile passed: {ran}. Only this lane's part of the profile ran "
+          "here; native build and real gameplay were not run.")
+    return 0
+
+
 def _check(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     scope = parser.add_mutually_exclusive_group()
@@ -326,7 +376,39 @@ def _check(argv: list[str] | None = None) -> int:
     scope.add_argument("--profile", choices=("full", "editorial", "main", *COMPONENT_TESTS), default="full",
                        help="Strict validation profile (default: full); main is the structural checks a main "
                             "push runs on the tree its pull request's run already tested")
+    parser.add_argument("--lane", choices=LANES,
+                        help="Run only this hosted lane's part of the profile; without it the whole profile runs")
+    parser.add_argument("--suite", choices=BROWSER_SUITES,
+                        help="With --lane browser: run this one suite instead of all of them in turn")
     args = parser.parse_args(argv)
+    if args.lane and args.fast:
+        parser.error("--lane selects part of a profile and cannot be combined with --fast")
+    if args.suite and args.lane != "browser":
+        parser.error("--suite applies only with --lane browser")
+    if args.lane:
+        return _lane(args.profile, args.lane, args.suite)
+    node = _structural(fast=args.fast)
+    structural = args.fast or args.profile == "main"
+    if not structural and args.profile != "editorial":
+        run_lanes({"browser": [[node, f"tests/{suite}.cjs"] for suite in BROWSER_SUITES],
+                   "pytest": [pytest_command(args.profile)]})
+    if args.fast:
+        print("Fast checkpoint checks passed. Behavioral tests, viewer tests, native build and real gameplay were not run.")
+    elif args.profile == "main":
+        print("Main structural checks passed on the tree its pull request's run tested. Tests, viewer "
+              "tests, native build and real gameplay were not run here.")
+    elif args.profile == "editorial":
+        print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")
+    elif args.profile in COMPONENT_TESTS:
+        print(f"{args.profile.capitalize()} component and boundary smoke tests passed. Full regression, native build and real gameplay were not run.")
+    else:
+        print("Portable checks passed. Native build and real gameplay were not tested.")
+    return 0
+
+
+def _structural(*, fast: bool) -> str:
+    """Run the structural checks every profile runs; return the Node executable they found."""
+    _document_parsers()  # a Python without the lockfile is told so before anything runs
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
         raise ValueError(f"Import Linter is missing beside {sys.executable}; use the project .venv with requirements-dev.lock installed (see docs/setup.md)")
@@ -347,7 +429,7 @@ def _check(argv: list[str] | None = None) -> int:
     print("Required documents, current Markdown fragments and responsibility navigation: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
     run([sys.executable, "-m", "tools.run_ledger", "check"])
-    run([sys.executable, "-m", "tools.evidence", "verify"] + ([] if args.fast else ["--full"]))
+    run([sys.executable, "-m", "tools.evidence", "verify"] + ([] if fast else ["--full"]))
     from tools.evaluate import has_blocks
     generated = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "docs").rglob("*.md")
                        if has_blocks(path.read_text()))
@@ -355,26 +437,7 @@ def _check(argv: list[str] | None = None) -> int:
          "--check", *generated])
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
-    structural = args.fast or args.profile == "main"
-    if not structural and args.profile != "editorial":
-        targets = ("tests",) if args.profile == "full" else COMPONENT_TESTS[args.profile]
-        run_lanes({"browser": [[node, "tests/test_viewer.cjs"], [node, "tests/test_investigation.cjs"],
-                               [node, "tests/test_investigation_session.cjs"]],
-                   "pytest": [[sys.executable, "-m", "pytest", "-q", "-n", "4",
-                               "--dist", "worksteal" if args.profile == "full" else "loadfile",
-                               "--max-worker-restart=0", "--durations=20", *targets]]})
-    if args.fast:
-        print("Fast checkpoint checks passed. Behavioral tests, viewer tests, native build and real gameplay were not run.")
-    elif args.profile == "main":
-        print("Main structural checks passed on the tree its pull request's run tested. Tests, viewer "
-              "tests, native build and real gameplay were not run here.")
-    elif args.profile == "editorial":
-        print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")
-    elif args.profile in COMPONENT_TESTS:
-        print(f"{args.profile.capitalize()} component and boundary smoke tests passed. Full regression, native build and real gameplay were not run.")
-    else:
-        print("Portable checks passed. Native build and real gameplay were not tested.")
-    return 0
+    return node
 
 
 if __name__ == "__main__":

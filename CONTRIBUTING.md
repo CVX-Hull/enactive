@@ -49,7 +49,9 @@ commit hook runs the fast checks ([setup](docs/setup.md#common-checks-and-local-
 independent review and require the appropriate successful exact-candidate protected
 CI profile under [the delivery policy](docs/workflows/ci-profiles.md#protected-ci-profiles).
 Broad source changes require full regression before merge; an existing valid hosted
-full result satisfies that lane without a duplicate local run. The default local
+full result satisfies that lane without a duplicate local run. The hosted check
+reports several jobs; `controller` is the required one and passes only if every other
+job succeeded. The default local
 `.venv/bin/python tools/check.py` remains full. Use [the testing guide](docs/testing.md) to choose focused cases and review overlap.
 Report editorial, viewer component and main results with their
 narrower scope. Portable checks do not establish native build

@@ -1,9 +1,8 @@
 ---
 owner: lead
-status: proposed
+status: historical
 date: '2026-11-12'
-scope: 'Proposed split of the pull-request check into parallel jobs behind the one required controller check, to cut its hosted wall time (#557); nothing is built, and the current CI profiles page governs'
-review_trigger: An owner decision on this proposal, a change to main's ruleset or required check, or a hosted measurement that contradicts the estimates below
+scope: 'Proposal of 12 November 2026 to split the pull-request check into parallel jobs behind the one required controller check, to cut its hosted wall time (#557); it was built with a five-job shape, one job for each browser suite, and the current CI profiles page governs'
 ---
 
 # Parallel jobs behind the required check
