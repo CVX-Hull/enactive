@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Same-character007 daylight discovery, partial practice, failed complete-day fit and normal cleanup
 ---

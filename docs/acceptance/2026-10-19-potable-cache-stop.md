@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Actual 023 finite potable-cache acquisition, resource-gate review and missing-binding stop
 status: historical
+kind: run
 ---
 
 # Potable supplies acquired; strict action-rejection rule stopped the attempt

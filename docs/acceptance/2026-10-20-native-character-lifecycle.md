@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-20
 scope: Engineering qualification006 partial character, memory, item, activity and normal-save results; navigation and reload blockers
 ---

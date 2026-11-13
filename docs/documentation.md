@@ -42,6 +42,7 @@ approval stages.
 | Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
 | What can go wrong and what is done about it | [Risk register](risks.md) | [Controls](controls.md), then the [control rule](standards/authority.md#control-review) for adding or removing one |
 | What the owner decided | [Owner decision log](decisions/owner-decisions.md) | The record or issue its row links |
+| What may be done without asking | [Operator permissions](operator-permissions.md) | [Owner decision log](decisions/owner-decisions.md) |
 | Where a kind of fact belongs | [One authoritative home](#one-authoritative-home-per-kind-of-fact) | [S-DOCS](standards/documentation.md#current-pages-records-and-decisions), [authority and review surfaces](workflows/authority.md) |
 | What a term means | [Glossary](glossary.md) | The owning page each entry links |
 | What to call something | [Names](standards/documentation.md#names) | [Name mapping](acceptance/2026-11-12-control-review-and-names.md#names) for labels in historical records |
@@ -65,11 +66,30 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `web/` | The spectator page (served by the supervised gateway) and independent user Pause. |
 | `tests/` | Scoped behavioral assertions/doubles and compiled fixtures; actual outcomes are separate evidence. |
 | `docs/components/`, `contracts/`, `standards/`, `workflows/`, `operations/` | Explanation, exact rules, mandatory qualities, decisions and supported tasks. |
-| `docs/design/` | Designs for proposed or in-progress work (status `proposed` or `active`), and designs whose owner decisions are made or whose work is finished, kept as dated rationale (`historical`). An adopted design's current rules move into components and contracts. |
+| `docs/design/` | Design notes: `proposed` while their owner decisions are open, `active` while one is the working description of something being built, and `historical` once that is built or the decisions went another way. An adopted design's current rules move into components and contracts. |
 | `docs/research*.md` | External evidence and its limits, with a dated research cutoff; [research](research.md) indexes the current pages, and pages whose question is closed are `historical`. |
 | `docs/decisions/owner-decisions.md` | The one list of the owner's decisions, including the permissions and limits in force. |
 | `docs/acceptance/`, `changes/`, `decisions/` (ADRs) | Dated evidence/rationale under explicit status, not live commands or permission. `changes/` holds the change briefs written before ADRs and issues took that role; it receives no new briefs. |
 | Ignored `.runtime/` | Frozen inputs, owned stores/saves and raw evidence; no private maintained source framework. |
+
+### From code to its documents
+
+Before changing an area, read its row: the page that explains it, the page that states
+its exact rules, and the tests that hold them. A delegated agent with a bounded brief
+needs these and the [glossary](glossary.md), not the whole start-here set.
+
+| Code | Explanation | Exact rules | Tests |
+| --- | --- | --- | --- |
+| `harness/computer/`, the native bridge | [Native control](components/native-control.md) | [Computer control](contracts/computer-control.md) | `tests/test_computer_*.py`, the compiled `tests/computer_*_check.py` |
+| `harness/player/`, `harness/player_tools.py`, `player_view.py`, `player_mcp.py`, `player_client.py` | [Player interface](components/player-interface.md), [memory and learning](components/memory-learning.md) | [Computer control](contracts/computer-control.md), [player guide](player-guide.md) | `tests/test_player_memory.py`, `test_player_programs.py`, `test_player_view.py`, `test_player_context.py`, `test_player_isolation.py`, `test_policy_program.py` |
+| `harness/application.py`, `harness/server.py` | [Execution](components/mission-execution.md) | [Computer control](contracts/computer-control.md) | `tests/test_player_application.py`, `tests/test_server.py` |
+| `tools/player_host/`, `tools/campaign_*.py`, `tools/configure_player_tools.py` | [Player host procedure](operations/player-host.md), [campaign procedure](operations/campaign-run.md), [supervision](operations/campaign-supervision.md) | [Player host](contracts/player-host.md) | `tests/test_player_host_*.py`, `tests/test_campaign_*.py`, `tools/player_host/test/` |
+| `harness/curator/`, `tools/curator_host/` | [Curator](components/curator.md), [curator session design](design/curator-session.md) | [Curator hosts](operations/curator-hosts.md) | `tests/test_curator_*.py`, `tools/curator_host/test/` |
+| `harness/evaluation/`, `harness/trace/`, `tools/evaluate.py`, `host_analysis.py`, `control_analysis.py`, `run_ledger.py`, `probe_baseline.py` | [Development runs](development-runs.md); no component page | [Evaluation](contracts/evaluation.md) | `tests/test_evaluation_*.py`, `test_host_analysis.py`, `test_run_ledger.py`, `test_probes.py`, `test_trace_*.py` |
+| `harness/viewer/`, `web/` | [Observer operations](components/observer-operations.md) | [Evaluation](contracts/evaluation.md) for the view API, [computer control](contracts/computer-control.md#passive-spectator-reads-and-operator-pause) for Pause | `tests/test_viewer_*.py`, the browser suites `tests/test_*.cjs` |
+| `tools/check.py`, `ci.py`, `documents.py`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py` |
+| `tools/setup.py`, `prepare_game.py`, `patch_game.py`, `build_computer.py`, `harness/prepared_app.py`, `native/` | [Setup](setup.md), [environment](environment.md) | [Native acceptance](operations/native-acceptance.md) | `tests/test_setup.py` |
+| `harness/jsonio.py` | A shared helper with no page of its own | The contract of whichever caller is changed | `tests/test_jsonio.py` |
 
 ### Follow a concrete reader task
 
@@ -97,7 +117,8 @@ The charter owns the [scope of use](charter.md#scope-of-use-and-what-is-guarante
 the [risk register](risks.md) owns the risks defended against in that scope and the
 ones excluded; the [controls page](controls.md) owns which risks each control serves,
 how, at what cost and with what gap. Neither is a second contract or work tracker. The
-[authority contract](workflows/authority.md) owns which summaries may restate what.
+[authority contract](workflows/authority.md) owns which summaries may restate what. The
+[evaluation contract](contracts/evaluation.md) owns the spectator view API.
 
 Five kinds of fact are often put in the wrong place:
 
@@ -112,7 +133,35 @@ Five kinds of fact are often put in the wrong place:
 [S-DOCS](standards/documentation.md#current-pages-records-and-decisions) states the
 rules that follow from this table.
 
-The [evaluation contract](contracts/evaluation.md) owns the spectator view API.
+### Before writing or changing a document
+
+1. **Is it true now?** State it in the present tense on the current page that owns it.
+   Do not narrate how it came to be.
+2. **Did the owner decide it?** Add a row to the
+   [owner decision log](decisions/owner-decisions.md), in the change that acts on the
+   decision or in a change of its own when nothing else changes, and link the log from
+   the page that states the resulting rule. The same change marks a design note or a
+   research page the decision settles `historical` (a design note that is now the
+   working description of something being built becomes `active` instead), and moves a
+   research page to the historical table of the [research index](research.md).
+3. **Is it evidence from a run, a measurement, a study or a review?** Write one dated
+   record, `docs/acceptance/YYYY-MM-DD-what-it-is.md`, with front matter `owner`,
+   `status: historical`, `kind`, `date` and `scope`, opening with "At a glance", then
+   run `.venv/bin/python -m tools.documents --write` to regenerate the index. A change
+   whose only evidence is its diff gets no record: say it in the pull request.
+4. **Is it where work stands?** Replace the issue's description; do not add a section
+   to it. Set Status and Priority in the Project.
+5. **Is it a design for a decision?** Write a `proposed` note under `docs/design/`,
+   opening with "At a glance". An architectural decision that will stand for a long
+   time is an ADR under `docs/decisions/` instead.
+6. **Does it use a project term?** Use the [glossary](glossary.md)'s word, or add the
+   term there.
+7. **Does it give a number?** Name the command or reader that produces it.
+
+`.venv/bin/python tools/check.py --fast` checks links and anchors and runs
+`tools.documents`, which checks front matter, record kinds, the opening section and
+the generated indexes. Review applies the rest of this checklist
+([review](workflows/review.md)).
 
 ## Lifecycle and maintenance
 

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-24
 scope: Offline assessment and verified exceptional closeout of failed Fresh024; bounded learning/advice evidence and current-reader donor eligibility, without seven-day or cadence acceptance
 ---

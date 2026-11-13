@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-20
 scope: Failed independent003 fresh-name feasibility and exceptional setup cleanup
 status: historical
+kind: run
 ---
 
 # Third independent attempt: unsupported admitted name

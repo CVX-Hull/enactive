@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: First deciding campaign stopped after 13 game seconds on actual approval rejection; supplies, original evidence and normal cleanup retained
 ---

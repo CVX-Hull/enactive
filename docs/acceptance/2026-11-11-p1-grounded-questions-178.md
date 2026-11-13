@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: '2026-11-11'
 scope: 'P1 grounded development qualification and replacement 89-question freeze for the owner-approved descriptive correction after completed replay (#178)'
 ---

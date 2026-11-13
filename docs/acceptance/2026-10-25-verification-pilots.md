@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Interpreting or repeating the advisory verification pilots
 status: historical
+kind: study
 date: 2026-10-25
 scope: Offline assurance navigation and finite test-impact experiment; PR owns protected publication receipts
 ---

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-23
 scope: Fresh independent development campaign; normal ending after67game seconds, no seven-day or responsiveness acceptance
 ---

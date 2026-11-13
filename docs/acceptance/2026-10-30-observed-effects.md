@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-30
 scope: Prospective unchanged-guide gameplay diagnosis; no readiness, cadence, learning or causal context-benefit qualification
 ---

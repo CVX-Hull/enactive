@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Correction to closed evidence or recovered billing/timing records
 status: historical
+kind: change
 date: 2026-10-25
 scope: Mandatory generic-host source delivery and one failed fresh twenty-call native qualification
 ---

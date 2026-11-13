@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-18
 scope: Failed same-Ned functional continuation002; source86c0708/native9cf1f76
 status: historical
+kind: run
 ---
 
 # Functional continuation stopped at an unsupported nearby-items menu

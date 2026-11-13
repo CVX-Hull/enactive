@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: review
 date: 2026-10-24
 scope: Repository and GitHub architecture/governance audit; source improvements, coverage limits and owned dispositions, without gameplay qualification
 ---

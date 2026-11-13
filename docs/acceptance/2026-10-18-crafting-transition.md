@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Integrated004 unsupported filter transition, stopped investigation, retained costs and normal cleanup
 ---

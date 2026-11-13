@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: review
 date: 2026-10-24
 scope: Source integration review and focused repairs after23cc5e4; no new native or gameplay qualification
 ---

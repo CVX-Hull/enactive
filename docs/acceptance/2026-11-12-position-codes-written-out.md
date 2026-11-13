@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'Keys of ADR 009, of three dated decision records and of the held-out lineages written out as what they refer to wherever a current page or code comment used them outside the page that defines them; the mapping from each key to its phrase; one data file and three unused parameters retired (#556)'
 ---

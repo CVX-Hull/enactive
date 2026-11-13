@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-18
 scope: Round014 final-leg guard repair, gated experiment preparation and scoped hosted workflow maintenance; no comparative efficacy or survival claim
 ---

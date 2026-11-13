@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Same-character day-four acceptance, adaptive rest and subsequent water-frontier stop
 status: historical
+kind: run
 ---
 
 # Four days survived; treatment site rejected and whole-route fit lost

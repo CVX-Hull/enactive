@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-08'
 scope: 'The Enactive Project reduced to four statuses, Priority on leaves and Horizon on outcomes, with every item''s earlier field values exported first (ADR 010 L5, #503)'
 ---

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Same-character006 permission verification, finite useful work, failed first40 feasibility gate and normal cleanup
 ---

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-20
 scope: Windowed wire4 menu and final-preflight component probe; not an independent mission or survival result
 ---

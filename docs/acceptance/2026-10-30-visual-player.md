@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: 2026-10-30
 scope: Qwen visual-player rejection after endpoint diagnosis, fixed visual assessment and organic saved-state continuation
 ---

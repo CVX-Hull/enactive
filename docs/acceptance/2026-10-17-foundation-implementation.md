@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-17
 scope: Issues 29 and 32 native-v2 authority and passive gameplay evidence, on one macOS host; full recovery and gameplay pipeline excluded
 ---

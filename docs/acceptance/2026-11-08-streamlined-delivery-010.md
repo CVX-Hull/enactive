@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-08'
 scope: 'Outcome of ADR 010 (#498): the seven leaves L1-L7, measured CI times before and after, lines removed, deviations and what was deferred'
 ---

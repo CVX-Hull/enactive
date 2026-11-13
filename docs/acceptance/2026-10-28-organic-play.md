@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-28
 scope: Organic cases019–027 and technical recovery028–029; bounded learning and recovery, not useful cadence or seven-day survival
 ---

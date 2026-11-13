@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: 2026-10-18
 scope: Cross-disciplinary memory study, frozen offline simulations, reproduction and research recommendation; no native gameplay or live memory migration
 ---

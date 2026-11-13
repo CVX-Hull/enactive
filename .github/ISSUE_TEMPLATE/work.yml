@@ -6,7 +6,15 @@ body:
     attributes:
       value: |
         Search existing issues and describe one reviewable outcome. Proposals are not commitments.
+        An issue has one current description: when things change, replace it instead of adding a section (docs/workflows/work-items.md). Owner decisions go in docs/decisions/owner-decisions.md.
         Redact secrets and private data; use the security policy for suspected vulnerabilities.
+  - type: textarea
+    id: state
+    attributes:
+      label: Current state
+      description: What is built, what is decided and what is next, in the present tense. When this changes, replace the whole description; do not add a dated section below it.
+    validations:
+      required: true
   - type: textarea
     id: outcome
     attributes:

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-20
 scope: Native003 Resume-only abort qualification, failed character setup and scoped steady-caret repair
 ---

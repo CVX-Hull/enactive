@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-20
 scope: Native011 registered item-menu dismissal and normal ending
 status: historical
+kind: run
 ---
 
 # Registered dismissal and normal ending

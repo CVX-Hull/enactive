@@ -33,6 +33,33 @@ not in this repository.
 | Worker, owned paths | `agent_type` worker with `fork_turns=none`, separate worktree | `subagent_type` worker, fresh agent (not a fork), `isolation: worktree` |
 | Reviewer, clean context | `agent_type` reviewer with `fork_turns=none` | `subagent_type` reviewer, fresh agent |
 
+## Environment facts for agents
+
+These hold in every checkout and worktree, on both hosts.
+
+- **Python** is `.venv/bin/python` of the main checkout. There is no `python` on the
+  path, and a worktree has no `.venv` of its own. From a worktree, run it by its path:
+  `"$(git rev-parse --git-common-dir)/../.venv/bin/python"`.
+- **Checks.** Run `tools/check.py --fast` with that Python before a commit. The commit
+  hook finds the main checkout's `.venv` by itself, runs the same check with `--quiet`
+  and prints one summary line, or the failing command's output. The hook is never
+  bypassed.
+- **Worktrees** are project-local and git-ignored. The lead creates one under
+  `.runtime/worktrees/<leaf>`; Claude Code's worktree isolation creates its own under
+  `.claude/worktrees/`. Either is acceptable. A worktree that runs the adapter tests
+  installs its own Node packages with `npm ci`
+  ([work items](../workflows/work-items.md#ready-brief-and-execution-capacity)). The
+  browser suites look for Chrome under the checkout's `.cache/puppeteer`; from a
+  worktree, set `PUPPETEER_CACHE_DIR` to the main checkout's for that command.
+- **Identity.** Commits use the repository-local identity already configured. An agent
+  does not change it.
+- **Pull requests** use the repository's template, reference issues with `Refs`, and
+  say that agent review is not human approval. A worker does not merge.
+- **Nothing outside the project.** No global installs, no home-directory files. Scratch
+  files go in the host's scratch directory, not in the checkout.
+- **Only the lead, or an operator the lead designates,** launches the game, uses the
+  provider key or spends ([S-AGENT](../standards/agents.md#delegated-campaign-operation)).
+
 ## Owner approvals
 
 [Requesting owner approval](../operator-permissions.md#requesting-owner-approval)

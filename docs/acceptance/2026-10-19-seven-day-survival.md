@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Same-character seven-day functional campaign, continuity, final lifecycle and limitations
 status: historical
+kind: run
 ---
 
 # Seven-day functional survival campaign

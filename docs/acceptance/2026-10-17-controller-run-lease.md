@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-17
 scope: Round 011 controller ownership, portable races and manual real-game acceptance; no autonomous player or live-model evaluation
 ---

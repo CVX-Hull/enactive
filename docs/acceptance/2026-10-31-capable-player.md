@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: 2026-10-31
 scope: Capability-led selection of a complete player configuration, conformance under player-host/1, a fixed visual check and organic gameplay
 ---

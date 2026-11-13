@@ -4,6 +4,7 @@ date: 2026-10-20
 scope: Actual independent deciding001 failure and separate spectator Pause-control qualification
 review_trigger: Reinterpretation of these outcomes or a new deciding admission
 status: historical
+kind: run
 ---
 
 # Independent mission first attempt

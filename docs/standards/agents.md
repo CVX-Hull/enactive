@@ -18,9 +18,8 @@ interfaces. Each checkout has one writer. The lead alone integrates into the mai
 checkout and schedules access to shared mutable resources: game, saves, bridge,
 ports, build outputs, dependency environments and caches. Worktrees isolate source,
 not processes or runtime state. Do not launch another game or share writable test
-outputs merely because a separate checkout exists. Briefs state the issue, base
-revision, worktree, owned paths, fixed decisions, dependencies, acceptance checks
-and handoff evidence. Workers report commits/diffs, checks, risks and unresolved
+outputs merely because a separate checkout exists. Briefs follow the
+[brief template](#brief-template). Workers report commits/diffs, checks, risks and unresolved
 questions; they do not merge to main or change shared contracts independently.
 Reduce concurrency when review or integration queues grow; raise the initial
 limit only after recording evidence and updating this standard. Verify returned evidence against files or
@@ -28,6 +27,32 @@ primary sources. After two unsuccessful repair attempts or ownership drift, the
 lead takes work back. Reports never substitute for inspecting a diff or result.
 
 Read [Structured player tooling and host context](player-tooling.md) for this part of the standard.
+
+## Brief template
+
+A brief is all a delegated agent knows. Fill every line; write "none" where one does
+not apply. The [environment facts](../operations/coding-agents.md#environment-facts-for-agents)
+are part of every worker's brief by reference.
+
+```text
+Role:            explorer | worker | reviewer
+Issue:           the issue this serves, or "none" with the reason
+Goal:            one sentence: what is wanted and why
+Base, worktree:  the commit to start from and the worktree or branch to use
+Depends on:      work that must land first, or interfaces agreed with another worker
+Read first:      the glossary, and the pages the code area routes to
+                 (docs/documentation.md#from-code-to-its-documents)
+Decided already: decisions the agent must not reopen
+Owned paths:     exact files or directories it may write; everything else is read-only
+Must not:        game launches, model calls, spend, GitHub writes, as apply
+Acceptance:      the check it runs and the result that means done
+Stop when:       two failed repairs, drift beyond owned paths, or a named condition
+Hand back:       branch and commit, pull request, commands run and their output,
+                 what was not done, and what it is unsure of
+```
+
+A reviewer's brief gives the diff or page and the claims to test, never the lead's
+conclusion.
 
 ## Agent verification and native fixture review
 

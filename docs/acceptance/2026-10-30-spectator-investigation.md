@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-30
 scope: Source-bound spectator investigation and organic gameplay; not provider superiority, useful-cadence or human-usability qualification
 ---

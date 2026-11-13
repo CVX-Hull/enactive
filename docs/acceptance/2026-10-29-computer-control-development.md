@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Preserved development evidence; append corrections without relabelling failures
 status: historical
+kind: change
 date: 2026-10-29
 scope: Early failed organic attempt, current native fixtures and source integration; product acceptance pending
 ---

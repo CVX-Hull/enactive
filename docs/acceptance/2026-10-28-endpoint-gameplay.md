@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-28
 scope: Bounded OpenRouter screening and organic endpoint cases001–003; diagnostic comparison, not useful-cadence or campaign acceptance
 ---

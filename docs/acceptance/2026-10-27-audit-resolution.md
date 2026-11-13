@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-27
 scope: Source, documentation and workflow resolution of audit274; no new gameplay or game-family qualification
 ---

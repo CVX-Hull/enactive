@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Actual 020 day-three pass, midpoint restart/replacement and partial day four
 status: historical
+kind: run
 ---
 
 # Day three and midpoint result

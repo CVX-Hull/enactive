@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-20
 scope: Coordinated mission ingress, historical observer and continuity reducer source qualification; no game launch or mission admission
 ---

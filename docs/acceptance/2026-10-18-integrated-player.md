@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-18
 scope: Round012 integrated external-chat player, runtime and spectator; portable review and real windowed waypoint/Pause/continuation evidence, not model efficacy or survival
 ---

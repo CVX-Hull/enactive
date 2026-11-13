@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'The repository setting that auto-closes issues on merge turned off, and the manual closing-reference check before each merge removed, on the owner''s decision of 12 November 2026 (#556)'
 ---

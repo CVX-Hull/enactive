@@ -30,8 +30,9 @@ not a claim of accuracy. Review a current page when its own review trigger fires
 
 Choose explanations for understanding, procedures for doing, reference for exact
 contracts and walkthroughs for learning. Add these when a real reader need exists;
-do not create empty categories. Significant change briefs show before/after user
-consequences, affected boundaries, alternatives and evidence. Use capability tables,
+do not create empty categories. A significant change's design note or pull request
+shows before/after user consequences, affected boundaries, alternatives and evidence.
+Use capability tables,
 dated screenshots or demonstrations when they convey more than additional prose.
 
 Component assurance explanations follow the same review hierarchy. Keep one current
@@ -41,10 +42,9 @@ limits with changed behavior/assertions, and simplify low-value mapping detail.
 The [documentation map](../documentation.md) and [testing guide](../testing.md) own the
 navigation and selection method, not a second live backlog or coverage database.
 
-Development notes reference existing admissions, ledgers and artifacts. Consolidate
-acceptance reports and selected public evidence at meaningful integration/acceptance
-checkpoints; a stopped menu attempt needs a concise retained finding, not a new
-report package. Current contracts change with behavior; historical observations
+Development notes reference existing admissions, ledgers and artifacts. Related
+results in one piece of work share one dated record; a stopped menu attempt needs a
+concise retained finding, not a new record. Current contracts change with behavior; historical observations
 stay historical. Follow the workflow's evidence cadence without duplicating its
 procedures here.
 
@@ -73,8 +73,8 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   only where a reader needs it now: beside a measured figure, a pinned version or a
   source. Where a rule rests on a decision or a result, the page links the log row or
   the record once.
-- **A dated record is for evidence a diff cannot hold**: a run, a measurement, a study
-  result, or the evidence that an issue's outcome is met. A change whose only evidence
+- **A dated record is for evidence a diff cannot hold**: a run, a study, a measurement
+  or a review. A change whose only evidence
   is its diff and its checks gets no record: its pull request states what changed, why
   and which checks ran, which is what S-EVIDENCE asks to be recorded. Related results
   in one piece of work share one record.
@@ -83,18 +83,50 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   the change that acts on it, or in a change of its own when it alters nothing else
   (an approval of spend, a limit set outside the repository). An issue or pull request
   may also carry the agreement; the log row is what current pages cite. A later
-  decision that replaces an earlier one marks the earlier row replaced; rows are not
+  decision that replaces an earlier one moves the earlier row to the log's replaced section; rows are not
   deleted.
+- **A dated record names its kind** in its front matter. The generated index shows it,
+  so a reader can find the runs without reading past the reviews, and the document
+  check requires it. A new record is one of four kinds:
+  - `run`: what real play, a campaign, a lineage or a native acceptance session did;
+  - `study`: a designed comparison and its result, gates or stops;
+  - `measurement`: a measurement of the system or its evidence that is not a study;
+  - `review`: an independent assessment of work, a design or evidence, including the
+    evidence that an issue's outcome is met.
+
+  Two more kinds, `decision` and `change`, label records written before
+  14 November 2026; the check refuses them on a later record, because a decision is a
+  log row and a change is a pull request.
+- **A research page is current only while its question is open.** When the decision it
+  informs is made, the page becomes `historical` and its conclusion is stated, with a
+  link, on the page that owns the resulting rule.
 - **An ADR states a decision and its reasons and then stops changing.** It does not
-  track the standing of the work it proposes. A design note is `proposed` until its
-  owner decisions are made and `historical` after; what was adopted moves into
-  components and contracts.
+  track the standing of the work it proposes. A design note is `proposed` while its
+  owner decisions are open. When they are made it becomes `historical`, unless it is
+  the working description of something being built, in which case it is `active` until
+  that is built and described in components and contracts. The change that adds the
+  deciding row to the log changes the note's status.
 - **An issue has one current description**, replaced when things change
   ([work items](../workflows/work-items.md#status-fields-and-dates)). GitHub keeps its
   edit history.
 
 Records and briefs that existed when this rule was adopted, on 13 November 2026, stay
 as they are; they are not edited to fit it. C-REVIEW applies it to changed pages.
+
+## Writing for a reviewer
+
+A person reviewing has little attention to spend and an agent pays for every word it
+reads ([R-UNREADABLE-DOCS](../risks.md#development-risks)).
+
+- **A design note and a dated record open with "At a glance"**: the question, the
+  answer, what is not known, and the owner decisions needed, each in a line or two. A
+  reader who trusts the page stops there; the rest is the evidence.
+- **Define a term where a reader starts.** Terms the project uses throughout are in the
+  [glossary](../glossary.md); a page links it or defines its own terms at first use.
+- **Write sentences.** A rule is stated as a sentence with a subject and a verb, not as
+  a string of nouns. When a change touches a section written in compressed form, it
+  rewrites that section; pages are not rewritten for style alone.
+- **Say where a number comes from** ([S-EVIDENCE](evidence.md)).
 
 ## Names
 

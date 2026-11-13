@@ -31,7 +31,12 @@ rejection tests; no compatibility path or alias. Write "not affected" with the r
 
 ## Documentation and limitations
 
-<!-- Contracts and guidance updated in this change; remaining uncertainty and follow-up issues. -->
+<!-- Contracts and guidance updated in this change; remaining uncertainty and follow-up issues.
+One home per fact (docs/documentation.md#before-writing-or-changing-a-document): current pages
+state what is true in the present tense; an owner decision this change acts on has a row in
+docs/decisions/owner-decisions.md, and the design note or research page it settles is marked
+historical; a dated record is added only for evidence from a run, study, measurement or
+review, with its kind and "At a glance"; issue descriptions are replaced, not appended to. Write "none" if no document changed. -->
 
 ## Review
 

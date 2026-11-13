@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: 2026-10-30
 scope: Research-informed context prototype rejected after retained diagnostics and organic play; no readiness or causal benefit qualification
 ---

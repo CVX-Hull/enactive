@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Closed evidence assessment or follow-up disposition changes
 status: historical
+kind: run
 date: 2026-10-23
 scope: Frozen responsiveness003 setup controls and unsupported lifecycle cancellation; no routine or normal-ending qualification
 ---

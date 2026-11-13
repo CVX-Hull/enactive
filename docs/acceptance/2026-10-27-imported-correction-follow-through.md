@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Imported correction follow-through evidence; supersede with new evidence
 status: historical
+kind: run
 date: 2026-10-27
 scope: Closed015/016 and native014/017/018, rejected017–021 qualifications, and host diagnostics/settlement; no useful corrected-program acceptance
 ---

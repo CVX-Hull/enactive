@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'Removal of the local archive directory and its five items on the owner''s decision of 12 November 2026, after the workspace cleanup of the same day (#553)'
 ---

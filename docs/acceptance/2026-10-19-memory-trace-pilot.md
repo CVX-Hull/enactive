@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: 2026-10-19
 scope: Bounded issue71 development extraction and label-readiness pilot; two correlated episodes and seven questions; no runtime memory implementation or held-out policy result
 ---

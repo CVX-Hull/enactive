@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Same-character first-day continuation, autonomous input, qualified outcome and cleanup deviation
 ---

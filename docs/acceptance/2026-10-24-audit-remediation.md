@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-24
 scope: Post-audit source/documentation/control repairs and offline evidence closeout; no new gameplay, native or complete-campaign qualification
 ---

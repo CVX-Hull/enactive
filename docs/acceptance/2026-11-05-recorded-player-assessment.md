@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: 2026-11-05
 scope: Two recorded-screen cases with proposed controls only; subsequent fresh-world development attempt interrupted during setup
 ---

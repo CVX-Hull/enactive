@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'The evaluator''s two archive lists replaced by one closed index of 54 sealed sessions on the owner''s decision of 12 November 2026 (#555), with the evidence that what the evaluator reads is unchanged'
 ---

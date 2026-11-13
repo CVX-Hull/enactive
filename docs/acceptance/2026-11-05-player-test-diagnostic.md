@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-11-05
 scope: Two finite admissions of the current player after player/test separation; operator truncation, replacement death and remaining qualification gaps
 ---

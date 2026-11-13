@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-20
 scope: Failed native character qualification001, verified normal cleanup, and source repair boundaries
 ---

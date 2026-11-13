@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: '2026-10-18'
 scope: Dated candidate observations and qualification limits; not current instructions
   or live work status

@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Closed evidence assessment or follow-up disposition changes
 status: historical
+kind: run
 date: 2026-10-22
 scope: Frozen responsiveness001 failed setup and closed-host context evidence; no routine performance qualification
 ---

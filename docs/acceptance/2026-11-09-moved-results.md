@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: measurement
 date: '2026-11-09'
 scope: 'Results and incident observations that current pages held until 9 November 2026 and no other record holds, moved here unchanged when ADR 010 kept current pages free of dated results'
 ---

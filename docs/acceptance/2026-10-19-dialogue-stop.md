@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Actual 022 exact reload, NPC dialogue stop and verified native UI cleanup
 status: historical
+kind: run
 ---
 
 # Exact reload verified; ordinary dialogue exposed a coverage gap

@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Historical migration record; supersede with new evidence rather than rewriting outcomes
 status: historical
+kind: change
 date: 2026-10-18
 scope: Main-history sanitization, native Issue and Project preservation, canonical references and replacement publication
 ---

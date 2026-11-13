@@ -15,6 +15,7 @@ not adopted.
 | Actor | One hosted instance of the deciding player in a run. It holds the capability to observe and send input until it finishes or hands off. The curated-player design also uses the word for the playing role. | [Custody contract](contracts/computer-control.md#computer-operations-and-custody) |
 | Admission | The package check that lets a finite run start. Also the run that results, numbered within its lineage. | [Campaign procedure](operations/campaign-run.md) |
 | Arm | One variant in a comparison, named for what differs. A run package freezes it as an operator label. | [Operator labels](operations/campaign-run.md#operator-labels) |
+| Brief | The written instruction a lead gives a delegated agent; it is all that agent knows. An issue's Ready brief is the issue's own description. Older pages also call a change's design summary a change brief. | [Brief template](standards/agents.md#brief-template) |
 | CI profile | The set of checks a pull request gets, chosen from its complete diff. | [CI profiles](workflows/ci-profiles.md) |
 | Claim | Anything the player asserts. It is fallible data and never grants custody or certifies a save. | [Memory and learning](components/memory-learning.md) |
 | Control | A test, check, runtime guard, review or procedure step kept to stop a failure. It is not computer control, the harness's input boundary. | [Controls](controls.md) |

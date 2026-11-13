@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Qualified ordinary menu repair; failed first probe and unexercised direction/reload retained
 ---

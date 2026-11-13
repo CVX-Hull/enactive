@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-22
 scope: Closed local-refusal001 graphical menu recovery, exact normal lifecycle, terminal observer and retained costs
 status: historical
+kind: run
 ---
 
 # Local-refusal001: continuing after a spent local request

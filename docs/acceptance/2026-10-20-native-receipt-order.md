@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-20
 scope: Native004 and005 failures, scoped editor timing, independent receipt-clock correction and observer cadence
 ---

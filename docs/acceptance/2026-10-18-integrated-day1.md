@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Integrated003 stopped before its first day; acquired supplies, planning costs and normal cleanup retained
 ---

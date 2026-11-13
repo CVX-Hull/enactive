@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Pinned native direction-menu rebuild, saved-character reload and bounded no-human pickup probe
 ---

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: '2026-10-29'
 scope: 'Bounded #181 computer-control enabler; failed organic play retained; not the production cutover or game-family qualification'
 ---

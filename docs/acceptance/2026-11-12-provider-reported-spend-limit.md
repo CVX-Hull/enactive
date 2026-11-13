@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'The worst-case spend reservation of player runs replaced by a dollar limit that the player host enforces from provider-reported cost, on the owner''s decision of 12 November 2026 (#555): the four contract versions, the counting rule, the evidence that archived runs read unchanged, and the supervised run still to be made'
 ---

@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Closed evidence assessment or follow-up changes
 status: historical
+kind: run
 date: 2026-10-23
 scope: Failed independent integrated learning attempt; exceptional closure; no useful play or normal ending
 ---

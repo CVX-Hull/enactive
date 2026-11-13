@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'Removal of the acceptance-manifest check and the hand-table cross-check on the owner''s decision of 12 November 2026; the run ledger is the one numeric record of a run (#556)'
 ---

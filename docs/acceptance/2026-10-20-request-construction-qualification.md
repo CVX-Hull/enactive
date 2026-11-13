@@ -4,6 +4,7 @@ date: 2026-10-20
 scope: Native009 creation and rejected identity child before the declared binding probe
 review_trigger: Interpretation of this failed attempt or a new qualification
 status: historical
+kind: run
 ---
 
 # Native009 request-construction failure

@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Correction to closed007 evidence or newly recovered records
 status: historical
+kind: run
 date: 2026-10-25
 scope: Loaded-state useful007; normal ending verified, whole-player readiness unqualified
 ---

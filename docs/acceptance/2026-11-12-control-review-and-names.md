@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'Review of every control against the charter''s scope of use on 12 November 2026: the controls removed or simplified and why, the controls kept after challenge, the owner decisions taken and left open, the workspace cleanup, and the mapping from retired ordinal labels to descriptive names (#553)'
 ---

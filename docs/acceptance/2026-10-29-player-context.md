@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-29
 scope: Three source-bound CDDA admissions refining one player-guide workflow; useful care, food use, quantity reconciliation and normal endings, not causal efficacy or general reliability
 ---

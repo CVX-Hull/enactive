@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-20
 scope: Failed native qualification002, exceptional teardown and bounded follow-up source repair
 ---

@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
+kind: run
 date: 2026-10-25
 scope: Represented-UI source probe, eleven bounded native cases, guidance/baseline authoring screens and canonical program presentation; no responsiveness qualification
 ---

@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Actual 019 acquisition, needs, rest and incomplete day-three endpoint
 status: historical
+kind: run
 ---
 
 # Adaptive survival result
