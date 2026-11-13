@@ -68,8 +68,10 @@ Explorers/reviewers never send game inputs.
   [checklist](docs/documentation.md#before-writing-or-changing-a-document): current
   pages say what is true in the present tense; an owner decision is a row in the
   [owner decision log](docs/decisions/owner-decisions.md), added in the change that
-  acts on it; a dated record is only for evidence from a run, measurement or study; an
-  issue has one description, replaced and not appended to.
+  acts on it or alone when nothing else changes; a dated record is only for evidence
+  from a run, study, measurement or review; an issue has one description, replaced and
+  not appended to. [Operator permissions](docs/operator-permissions.md) says what may
+  be done without asking.
 - A delegated agent reads its brief, the [glossary](docs/glossary.md) and the row for
   its code area in [from code to its documents](docs/documentation.md#from-code-to-its-documents),
   not the whole document set. Briefs follow the

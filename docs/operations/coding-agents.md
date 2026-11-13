@@ -56,7 +56,8 @@ These hold in every checkout and worktree, on both hosts.
   say that agent review is not human approval. A worker does not merge.
 - **Nothing outside the project.** No global installs, no home-directory files. Scratch
   files go in the host's scratch directory, not in the checkout.
-- **Only the lead** launches the game, uses the provider key or spends.
+- **Only the lead, or an operator the lead designates,** launches the game, uses the
+  provider key or spends ([S-AGENT](../standards/agents.md#delegated-campaign-operation)).
 
 ## Owner approvals
 

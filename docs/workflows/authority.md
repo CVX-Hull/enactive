@@ -16,11 +16,11 @@ owns what each summary may restate and the Project's views. Exceptions are issue
 to their affected standard; the [work map](../work.md) is the navigation entry point.
 
 Keep summaries purpose-specific: the overview explains capabilities and limits;
-the work map routes to open outcomes and the evidence index; a change brief records
-design/acceptance decisions. Do not copy Issue status, assignment, estimates,
+the work map routes to open outcomes and the evidence index; a design note or a pull
+request records a change's design. Do not copy Issue status, assignment, estimates,
 next-action queues or CI receipts into those pages. A concise evidence checkpoint
-may link a dated report, but detailed attempt chronology and exact costs belong
-in that report, and publication receipts in the PR. At integration review, remove
+may link a dated record, but detailed attempt chronology belongs in that record, costs
+in the run ledger, and publication receipts in the PR. At integration review, remove
 mirrored fields, stale “current” claims and repeated narratives rather than append
 another checkpoint. Semantic duplication is a review judgment (C-REVIEW), not a
 parser or per-action check.

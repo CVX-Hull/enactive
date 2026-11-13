@@ -24,30 +24,51 @@ def metadata_root(tmp_path: Path) -> Path:
 
 def test_a_dated_record_names_its_kind_and_the_index_shows_it(tmp_path):
     root = metadata_root(tmp_path)
+    name = "docs/acceptance/2026-01-01-kindless.md"
     record(root, "2026-01-01-kindless.md", "2026-01-01", "No kind", "Kindless", kind=None)
     assert documents.check_metadata(root) == [
-        "docs/acceptance/2026-01-01-kindless.md: a dated record names its kind in its front matter"]
+        f"{name}: front matter needs kind: run | study | measurement | review | decision | change ({documents.RECORD_RULE})"]
     record(root, "2026-01-01-kindless.md", "2026-01-01", "Wrong kind", "Kindless", kind="note")
     assert "kind" in "\n".join(documents.check_metadata(root))
-    record(root, "2026-01-01-kindless.md", "2026-01-01", "A study", "Kindless", kind="study")
+    for earlier in ("study", "change", "decision"):  # records written before the rule keep all six kinds
+        record(root, "2026-01-01-kindless.md", "2026-01-01", "A record", "Kindless", kind=earlier)
+        assert documents.check_metadata(root) == []
+    assert "| [Kindless](2026-01-01-kindless.md) | decision | A record |" in documents.render_index(root, "docs/acceptance/index.md")
+    (root / "docs/changes").mkdir()
+    assert "| Kind |" not in documents.render_index(root, "docs/changes/index.md")
+    # A new record is evidence: a decision is a log row and a change is a pull request.
+    glance = "## At a glance\n\nShort."
+    for refused in ("decision", "change"):
+        record(root, "2026-12-01-new.md", "2026-12-01", "New", "New", kind=refused, body=glance)
+        assert documents.check_metadata(root) == [
+            f"docs/acceptance/2026-12-01-new.md: front matter needs kind: run | study | measurement | review ({documents.RECORD_RULE})"]
+    record(root, "2026-12-01-new.md", "2026-12-01", "New", "New", kind="review", body=glance)
     assert documents.check_metadata(root) == []
-    assert "| [Kindless](2026-01-01-kindless.md) | study | A study |" in documents.render_index(root, "docs/acceptance/index.md")
+    page = root / "docs/design/page.md"
+    page.write_text("---\nowner: lead\nstatus: active\nreview_trigger: x\nkind: run\n---\n\n# Page\n")
+    assert documents.check_metadata(root) == ["docs/design/page.md: kind belongs to dated records under docs/acceptance only"]
 
 
 def test_new_records_and_proposed_designs_open_with_at_a_glance(tmp_path):
     root = metadata_root(tmp_path)
     record(root, "2026-11-13-before.md", "2026-11-13", "Before the rule", "Before")
     assert documents.check_metadata(root) == []
-    record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After")
-    assert documents.check_metadata(root) == [
-        "docs/acceptance/2026-11-14-after.md: a dated record opens with '## At a glance'"]
-    record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After", body="## At a glance\n\nThe answer.")
+    missing = f"the first section after the title must be '## At a glance' ({documents.REVIEWER_RULE})"
+    # Not first, a deeper heading, or inside a code fence: none of these opens the page.
+    for body in ("Body.", "## Method\n\nText.\n\n## At a glance\n\nLate.", "### At a glance\n\nDeeper.",
+                 "```text\n## At a glance\n```\n\n## Method\n\nText."):
+        record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After", body=body)
+        assert documents.check_metadata(root) == [f"docs/acceptance/2026-11-14-after.md: {missing}"], body
+    record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After",
+           body="Lead paragraph.\n\n## At a glance\n\nThe answer.\n\n## Method\n\nText.")
     assert documents.check_metadata(root) == []
     design = root / "docs/design/note.md"
     design.write_text("---\nowner: lead\nstatus: proposed\nreview_trigger: x\n---\n\n# Note\n\nBody.\n")
-    assert documents.check_metadata(root) == ["docs/design/note.md: a proposed design note opens with '## At a glance'"]
+    assert documents.check_metadata(root) == [f"docs/design/note.md: {missing}"]
     design.write_text("---\nowner: lead\nstatus: proposed\nreview_trigger: x\n---\n\n# Note\n\n## At a glance\n\nShort.\n")
     assert documents.check_metadata(root) == []
+    design.write_text("---\nowner: lead\nstatus: active\nreview_trigger: x\n---\n\n# Note\n\nBody.\n")
+    assert documents.check_metadata(root) == []  # only a proposed note awaits a reviewer's decision
 
 
 def test_index_lists_records_newest_first_and_detects_staleness(tmp_path):

@@ -46,8 +46,8 @@ reduce optional scope before weakening required quality or evidence.
   opened to merged, an issue opened to closed.
 - **Review and validation** state lives on the PR (draft, checks, review threads) and in
   the issue's description.
-- **An issue has one current description.** It states the current state, the outcome or
-  problem, the acceptance, dependencies and links. When things change the description
+- **An issue has one current description**, in the shape of the
+  [Ready brief](#ready-brief-and-execution-capacity). When things change the description
   is replaced, not added to: no stacked state sections and no history narrative. GitHub
   keeps the edit history, comments record events, and owner decisions go in the
   [owner decision log](../decisions/owner-decisions.md). A description does not repeat
@@ -65,11 +65,22 @@ reduce optional scope before weakening required quality or evidence.
 
 ## Ready brief and execution capacity
 
-A Ready leaf's issue states, in about five lines: the problem; acceptance; the owner and
-owned paths; the stop condition; and any owner decision needed, asked as the
-[approval request requirements](../operator-permissions.md#requesting-owner-approval)
-say. A worker handoff adds the base revision, worktree, fixed decisions, exact checks
-and return evidence, as S-AGENT requires.
+An issue's description has these parts, each a line or a short list; the issue form
+asks for them in this order:
+
+1. **Current state**: what is built, what is decided, what is next.
+2. **Outcome** for an outcome, **Problem** for a leaf.
+3. **Acceptance**.
+4. **Owner and paths**.
+5. **Stop condition**.
+6. **Owner decision needed**, asked as the
+   [approval request requirements](../operator-permissions.md#requesting-owner-approval) say.
+7. **Depends on** and **Revisit when**.
+8. **Links**: parent, design, at most three records.
+
+A leaf is Ready when parts 2 to 6 are complete and the decisions it needs are made. A
+worker handoff is a brief that follows the
+[brief template](../standards/agents.md#brief-template).
 
 Keep one active integration slice and at most two implementation workers, each in its own
 project-local worktree (`.runtime/worktrees/<leaf>`, or where the host's worktree

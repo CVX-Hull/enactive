@@ -10,8 +10,10 @@ The owner's decisions that the project acts on, newest first. This is the one li
 ([one home per fact](../documentation.md#one-authoritative-home-per-kind-of-fact)):
 current pages state the resulting rule and link here, and do not retell the decision.
 
-- **A row is added in the change that acts on the decision.** The answer is quoted where
-  the owner's words were recorded, and marked as a paraphrase where they were not.
+- **A row is added in the change that acts on the decision**, or in a change of its own
+  when the decision alters nothing else. The answer is quoted where the owner's words
+  were recorded, and marked as a paraphrase where they were not. The same change marks
+  the design note or research page the decision settles `historical`.
 - **A later decision that replaces an earlier one** moves the earlier row to
   [replaced](#replaced), with what replaced it. Rows are not deleted.
 - **A one-off approval or a ruling on work that is finished** (a run, a spend, a

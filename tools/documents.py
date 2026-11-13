@@ -124,14 +124,18 @@ def check_metadata(root: Path) -> list[str]:
                     and label not in INDEXES):
                 errors.append(f"{label}: acceptance records must be historical evidence")
             # S-DOCS, "Current pages, records and decisions" and "Writing for a reviewer".
-            if path.parent == root / "docs/acceptance" and label not in INDEXES:
-                if "kind" not in metadata:
-                    errors.append(f"{label}: a dated record names its kind in its front matter")
-                if str(metadata.get("date", "")) >= AT_A_GLANCE_FROM and AT_A_GLANCE not in text:
-                    errors.append(f"{label}: a dated record opens with '{AT_A_GLANCE}'")
+            if path.is_relative_to(root / "docs/acceptance") and label not in INDEXES:
+                new = str(metadata.get("date", "")) >= AT_A_GLANCE_FROM
+                kinds = NEW_RECORD_KINDS if new else NEW_RECORD_KINDS + EARLIER_RECORD_KINDS
+                if metadata.get("kind") not in kinds:
+                    errors.append(f"{label}: front matter needs kind: {' | '.join(kinds)} ({RECORD_RULE})")
+                if new and not opens_at_a_glance(text):
+                    errors.append(f"{label}: the first section after the title must be '{AT_A_GLANCE}' ({REVIEWER_RULE})")
+            elif "kind" in metadata:
+                errors.append(f"{label}: kind belongs to dated records under docs/acceptance only")
             if (path.parent == root / "docs/design" and metadata["status"] == "proposed"
-                    and AT_A_GLANCE not in text):
-                errors.append(f"{label}: a proposed design note opens with '{AT_A_GLANCE}'")
+                    and not opens_at_a_glance(text)):
+                errors.append(f"{label}: the first section after the title must be '{AT_A_GLANCE}' ({REVIEWER_RULE})")
             if metadata["status"] == "superseded":
                 reference = metadata["replacement"]
                 if (not local_reference(root, reference)
@@ -172,6 +176,23 @@ def check_risks(root: Path) -> list[str]:
 #: is required from: records that existed when the rule was adopted are not edited.
 AT_A_GLANCE = "## At a glance"
 AT_A_GLANCE_FROM = "2026-11-14"
+#: A new record holds evidence; a decision is a log row and a change is a pull request, so
+#: those two kinds only label records written before the rule.
+NEW_RECORD_KINDS = ("run", "study", "measurement", "review")
+EARLIER_RECORD_KINDS = ("decision", "change")
+RECORD_RULE = "docs/standards/documentation.md#current-pages-records-and-decisions"
+REVIEWER_RULE = "docs/standards/documentation.md#writing-for-a-reviewer"
+
+
+def opens_at_a_glance(text: str) -> bool:
+    """True when the first second-level heading outside a code fence is the At a glance section."""
+    fenced = False
+    for line in text.splitlines():
+        if line.startswith("```"):
+            fenced = not fenced
+        elif not fenced and line.startswith("## "):
+            return line.rstrip() == AT_A_GLANCE
+    return False
 
 #: Generated indexes of dated records: path -> (title, directory, what the directory holds).
 INDEXES = {
@@ -205,9 +226,15 @@ def render_index(root: Path, index: str) -> str:
              f"All {holds} in this directory, newest first, with the scope their front matter",
              "states. Records are dated evidence, not current instructions; the",
              "[documentation map](../documentation.md) routes to current owners.", "",
-             "| Date | Record | Kind | Scope | Status |", "| --- | --- | --- | --- | --- |"]
-    lines += [f"| {stamp} | [{_cell(heading)}]({name}) | {kind} | {_cell(scope)} | {status} |"
-              for stamp, name, heading, kind, scope, status in rows]
+             ]
+    if directory == "docs/acceptance":  # only acceptance records carry a kind
+        lines += ["| Date | Record | Kind | Scope | Status |", "| --- | --- | --- | --- | --- |"]
+        lines += [f"| {stamp} | [{_cell(heading)}]({name}) | {kind} | {_cell(scope)} | {status} |"
+                  for stamp, name, heading, kind, scope, status in rows]
+    else:
+        lines += ["| Date | Record | Scope | Status |", "| --- | --- | --- | --- |"]
+        lines += [f"| {stamp} | [{_cell(heading)}]({name}) | {_cell(scope)} | {status} |"
+                  for stamp, name, heading, _, scope, status in rows]
     return "\n".join(lines) + "\n"
 
 

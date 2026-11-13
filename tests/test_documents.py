@@ -91,7 +91,7 @@ class DocumentTests(unittest.TestCase):
         for status in ("active", "proposed"):
             path.write_text(self.active.replace("status: active", f"status: {status}"))
             self.assertIn("acceptance records must be historical", "\n".join(documents.check_metadata(self.root)))
-        path.write_text("---\nowner: lead\nstatus: historical\ndate: 2026-10-24\n"
+        path.write_text("---\nowner: lead\nstatus: historical\nkind: run\ndate: 2026-10-24\n"
                         "scope: frozen source outcome, including failure\n---\n# Outcome\n")
         original = path.read_bytes()
         self.assertEqual(documents.check_metadata(self.root), [])

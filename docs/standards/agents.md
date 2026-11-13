@@ -18,9 +18,8 @@ interfaces. Each checkout has one writer. The lead alone integrates into the mai
 checkout and schedules access to shared mutable resources: game, saves, bridge,
 ports, build outputs, dependency environments and caches. Worktrees isolate source,
 not processes or runtime state. Do not launch another game or share writable test
-outputs merely because a separate checkout exists. Briefs state the issue, base
-revision, worktree, owned paths, fixed decisions, dependencies, acceptance checks
-and handoff evidence. Workers report commits/diffs, checks, risks and unresolved
+outputs merely because a separate checkout exists. Briefs follow the
+[brief template](#brief-template). Workers report commits/diffs, checks, risks and unresolved
 questions; they do not merge to main or change shared contracts independently.
 Reduce concurrency when review or integration queues grow; raise the initial
 limit only after recording evidence and updating this standard. Verify returned evidence against files or
@@ -37,7 +36,10 @@ are part of every worker's brief by reference.
 
 ```text
 Role:            explorer | worker | reviewer
+Issue:           the issue this serves, or "none" with the reason
 Goal:            one sentence: what is wanted and why
+Base, worktree:  the commit to start from and the worktree or branch to use
+Depends on:      work that must land first, or interfaces agreed with another worker
 Read first:      the glossary, and the pages the code area routes to
                  (docs/documentation.md#from-code-to-its-documents)
 Decided already: decisions the agent must not reopen
