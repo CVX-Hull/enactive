@@ -118,44 +118,57 @@ a dropped host install, a missing timeout, an ignored failure, a conditional che
 step, a shallow checkout, and a Python lane that kept or dropped a test file.
 
 The `controller` step's shell lines were run locally under `bash -e`: they exit 0 for
-three `success` results and non-zero for a `failure`, `cancelled` or `skipped` result
-and for an empty list. How GitHub fills that list is for the probes.
+three `success` results and non-zero for anything else. An independent review found
+that the first form of the rule, a loop over the results, would have passed a list of
+only spaces; the rule is now an exact match, and its test runs the step itself with
+success, failure, cancelled, skipped, short, long, empty and blank lists.
 
 ## Probes on GitHub
 
-The lead runs these on throwaway pull requests, closed without merging, and fills
-the table. Until then the rows are pending and the built workflow has not been shown
-to behave as intended on GitHub.
+The lead ran these on throwaway draft pull requests, closed without merging. Run
+numbers are GitHub Actions run IDs in this repository.
 
 | Probe | Expected | Run | Result |
 | --- | --- | --- | --- |
-| Failing Python test | `structure-and-python` fails and `controller` is red | pending | pending |
-| Failing adapter test | `adapter` fails and `controller` is red | pending | pending |
-| Failing browser test | That suite's `browser` job fails, the other two finish, and `controller` is red | pending | pending |
-| Run cancelled by hand | `controller` is red on the current head, not skipped | pending | pending |
-| Second push | The first run is cancelled and no green `controller` from it stands on the new head | pending | pending |
-| Documents-only change | Editorial profile; `adapter` and every `browser` job report that they have nothing to do; `controller` is green in about one minute or less | pending | pending |
-| Viewer-only change | Viewer profile; `adapter` reports that it has nothing to do; `controller` is green | pending | pending |
-| Push to main | Main profile; only `structure-and-python` does work; `controller` is green | pending | pending |
+| The change itself, full profile | Every job succeeds | 43355489189, 43357176190 | All six jobs succeeded; 136 s and 112 s from first job start to last job end |
+| Failing Python test | `structure-and-python` fails and `controller` is red | 43355550865 | As expected; the pull request was blocked |
+| Failing adapter test | `adapter` fails and `controller` is red | 43355580032 | As expected; blocked |
+| Failing browser test | That suite's `browser` job fails, the other two finish, and `controller` is red | 43355605266 | As expected; blocked |
+| Second push | The first run is cancelled and no green `controller` from it stands on the new head | 43355625236 | Every lane cancelled and `controller` failed on the old head; the new head carried only its own run's checks |
+| Run cancelled by hand | `controller` is red on the current head, not skipped | 43355730773 | Every lane cancelled and `controller` failed; blocked |
+| Documents-only change | Editorial profile; `adapter` and every `browser` job report that they have nothing to do; `controller` is green in about one minute or less | 43357209574 | As expected, in 47 s; a documents-only check took 55 to 68 s before |
+| Viewer-only change | Viewer profile; `adapter` reports that it has nothing to do; `controller` is green | 43357229684 | As expected, in 74 s |
+| Push to main | Main profile; only `structure-and-python` does work; `controller` is green | not run before merge | The merge of this change is the first such push |
 
-The same runs settle what could not be checked locally about waiting for the check:
+The documents-only and viewer-only probes ran against a throwaway base branch whose
+only differences were a trigger and a selector line that accept that base, because the
+workflow otherwise runs only for pull requests to main.
 
-- whether `gh pr checks <PR> --watch` can end after the lane jobs and before
-  `controller` is listed;
-- that `gh run list --workflow check.yml --commit <HEAD-SHA>` finds a pull request's
-  run by its head commit, and `gh run watch <RUN> --exit-status` ends non-zero for a
-  failed and for a cancelled run;
-- that auto-merge queued while the lane jobs run merges only after `controller`
-  passes;
-- that the runner image provides `python` and Python 3.14 as today, so the browser
-  jobs can run the checker without a project environment.
+Hosted test totals reconcile with the single job: the last single-job run before this
+change passed 987 tests with 50 skipped and 232 subtests; the Python lane and the
+adapter lane together passed 994 with 50 skipped and 283 subtests, the difference
+being the 7 tests and 51 subtests this change adds.
+
+What the runs showed about waiting for the check:
+
+- `controller` is created when the last lane ends, so it is not listed as a check
+  before then, and `gh pr checks <PR> --watch` can end on passing lanes before it
+  exists. The procedure names `gh run watch` only.
+- `gh run list --workflow check.yml --commit <HEAD-SHA>` finds a pull request's run,
+  and `gh run watch <RUN> --exit-status` ends non-zero for a failed and for a
+  cancelled run.
+- The runner image provides `python`, so the browser jobs run the checker without a
+  project environment.
+- Auto-merge queued while lanes run was not exercised.
 
 ## Limits
 
 - `controller` trusts the recorded result of each job. It does not inspect what a
   job ran; the workflow policy tests and the partition test are what tie a green job
   to the work it should have done.
-- The hosted timings are from the measurement workflow, not from the built one, and
-  run times on the hosted runner vary by tens of seconds.
+- The five-run medians are from the measurement workflow. The built workflow has two
+  full-profile runs, and run times on the hosted runner vary by tens of seconds.
+- A push to main is expected to take a few seconds longer than before, because
+  `controller` starts only after the lane ends; nothing waits on that run.
 - The workflow file was parsed as YAML and checked by the policy tests. No
   Actions-specific linter is installed in the project, and none was added.
