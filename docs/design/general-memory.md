@@ -1,9 +1,9 @@
 ---
 owner: lead
-status: proposed
+status: active
 date: '2026-11-13'
-scope: 'Changes proposed to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that consolidates, the briefing''s full items chosen by a model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Nothing here is built or approved'
-review_trigger: The owner decides the questions below, or a measurement contradicts a premise stated here
+scope: 'Changes decided to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that consolidates, the briefing''s full items chosen by a model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Decided by the owner on 13 November 2026; not built'
+review_trigger: The withholding simulation reports, delivery is first measured in play, or a measurement contradicts a premise stated here
 ---
 
 # General memory: curation, delivery and judged measurement
@@ -32,24 +32,24 @@ review_trigger: The owner decides the questions below, or a measurement contradi
   `place_with_goods` kind, judge labels about going to a place. The format was designed
   around places and goods after the four losses, though the brief named none of them. The rows are added to the architecture's
   [current coupling](../architecture.md#game-family-portability) table.
-- **Proposal.**
-  1. **Format.** Drop the fixed kinds and the required place and time; keep ADR 009's
-     model-proposed types, citations and order of sighting. Add retiring and merging.
-  2. **Curator.** A consolidation session between admissions merges and retires facts.
-     No hard cap until growth after consolidation shows one is needed.
+- **Decided by the owner on 13 November 2026** ([decisions](#decisions)):
+  1. **Format.** The fixed kinds and the required place and time go; ADR 009's
+     model-proposed types, citations and order of sighting stay. Retiring and merging are
+     added.
+  2. **Curator.** A grooming session between admissions reorganizes the whole store. No
+     hard cap.
   3. **Delivery.** The briefing stays as the context design has it. A recall model,
-     not a kind, chooses which facts each actor gets in full. During play it may add a
-     short reminder, or say nothing, as a notice that stays in the history.
+     not a kind, chooses which facts each actor gets in full. Then, during play, it may
+     add a short reminder, or say nothing, as a notice that stays in the history.
   4. **Measurement.** Use of memory is judged on every sealed run. Benefit is measured by
-     withholding a random half of the store, by subject, within each start, once a
-     simulation has sized it.
-  5. **Judges** stay the standing measure, with the owner's blind labels as truth and
-     prediction-powered inference for intervals.
+     withholding a random half of the store within each start, once a simulation has
+     sized it.
+  5. **Judges** are the standing measure, without further audits by the owner; the
+     measure gate's 30 owner labels are the anchor set.
+  6. **The cut** is not built yet.
 - **Not known.** Whether a recall model helps or distracts in this game; the withholding
-  design's power; whether consolidation alone holds the store's size; whether the
-  owner's blind answers or the judges are nearer the truth on engagement.
-- **Owner decisions:** six, [at the end](#owner-decisions). Some change standing
-  decisions, and each says which.
+  design's power; whether grooming holds the store's size; whether the owner's blind
+  answers or the judges are nearer the truth on engagement.
 
 Terms are in the [glossary](../glossary.md).
 
@@ -88,18 +88,18 @@ improve over hand-built knowledge of one game.
   `brief-gate` check reads only `curator-fact/2`; it served one finished gate and is
   retired with the migration (R-TECH-DEBT). Sealed stores stay as evidence.
 
-### Consolidation
+### Grooming
 
 - **The curator already sees the published facts** and is told not to repeat them. What
   it lacks is a way to retire or merge them, and a brief that does not ask for every
   item.
-- **A consolidation session between admissions** reads only the store and the last
-  admission's citations: it merges facts about one subject, retires facts a later frame
-  contradicts, and ranks facts for the briefing. Outside systems that edit against what
-  exists (Mem0, Memory-R1, Letta's sleep-time agents) keep their stores more compact.
-- **No hard cap.** The owner decided on 13 November that added text has no hard cap until
-  experience shows one is needed. Growth after consolidation is that experience; it is
-  measured before a cap is proposed.
+- **A grooming session between admissions** reads the whole store and the last
+  admission's citations, and reorganizes it: it merges facts, retires facts a later frame
+  contradicts, revises types as ADR 009 allows, makes subject names consistent, and ranks
+  facts for the briefing. Outside systems that edit against what exists (Mem0,
+  Memory-R1, Letta's sleep-time agents) keep their stores more compact. Cost: one more
+  curator session per admission, inferred at the gate's \$1.16 to \$4.19 a session.
+- **No hard cap**, as the owner decided. The store's size after grooming is measured.
 - **Facts are hypotheses.** Each is shown with its sighting order, and the player is told
   to check a fact cheaply before relying on it. Outside work finds agents follow stale
   notes into harm.
@@ -193,7 +193,7 @@ provider; the coding host's capacity is its cost.
 - **Design.** In each start a random half of the store's units (drawn per start, seed
   recorded) is withheld: their facts are left out of the full items, the index and the
   reminders. A unit is a subject, where facts have one; otherwise a supersede chain, or a
-  single fact. The consolidation before the start merges subject names, so one thing is
+  single fact. The grooming before the start makes subject names consistent, so one thing is
   one unit.
 - **Outcome.** For every fact, over the whole start: was it found again, acted against,
   or acted in line with? Whether a fact "became relevant" is judged only as a secondary
@@ -225,59 +225,44 @@ provider; the coding host's capacity is its cost.
   proposed now.
 - **Windows, not steps.** Judges label a window and cite frames; outside work finds them
   weak at finding the one wrong step in a long trace (TRAIL).
-- **The owner's blind labels are the truth**, as the owner decided on 13 November. The
-  check pass after them stays, reported apart.
-- **Intervals.** Every reported rate combines all judge labels with a small audit of the
-  owner's blind labels by prediction-powered inference. A uniform random audit uses PPI++;
-  an audit weighted towards disputes or rare labels uses known sampling probabilities
-  (active statistical inference, or stratified PPI). Clustering by run is an extension of
-  these papers, by bootstrap over runs. If the estimator's weight on the judges is near
-  zero, the judges add nothing, and that is reported. The audit costs about 30 to 60 pairs
-  of the owner's time per study.
-- **An anchor set.** About 30 audited pairs are re-judged after any change to a judge's
-  prompt or model. Risk R-FALSE-CLAIM: a changed judge silently shifts every later
-  measure; the anchor set shows the shift; it costs one judging pass of 30 pairs.
+- **No further owner audits**, as the owner decided. Reported rates rest on the adjudicated
+  judge labels, with the first two judges' agreement and the dispute rate beside them,
+  and intervals over runs. They are not corrected against a human truth, and a record
+  says so. Prediction-powered inference (PPI++, or active statistical inference for a
+  weighted sample) is how a later audit would be used, if the owner asks for one.
+- **An anchor set.** The measure gate's 30 owner-labelled pairs, with the owner's blind
+  and checked labels, are re-judged after any change to a judge's prompt or model. Risk
+  R-FALSE-CLAIM: a changed judge silently shifts every later measure; the anchor set
+  shows the shift; it costs one judging pass of 30 pairs.
 - **Known judge risks**: leniency, missing evidence in long contexts, and errors shared by
   both judges.
 
 ## Changes to the context design
 
-If the owner decides as recommended, [player-context.md](player-context.md) changes:
+Made in [player-context.md](player-context.md) with this note:
 
 - The briefing's full items are chosen by the recall model, not by kind; index lines
   carry the subject and the sighting order, not a place and a game time.
-- In the curator's table, the rows "one fact per item, with game time and place", the
-  four kinds, and "a brief aimed at places and goods" are replaced by this note's format
-  and consolidation.
-- Reminders during play are added as a new layer between the briefing and the cut.
+- In the curator's table, the rows for game time and place, the four kinds, and a brief
+  aimed at places and goods are replaced by this note's format and grooming.
+- Reminders during play are a new layer between the briefing and the cut.
 
-## Owner decisions
+## Decisions
 
-1. **The fact format.** Drop the fixed kinds and the required place and game time; keep
-   ADR 009's types; add retiring and merging. *Recommended: yes.* Changes the context
-   design's curator rows. Cost: \$0 to build; the curator is re-scored on sealed
-   replays (decision 6).
-2. **Store growth.** Consolidation sessions between admissions, and no hard cap until
-   growth after consolidation shows one is needed. *Recommended: yes*, as the 13 November
-   decision on caps asks. Cost: one more curator session per admission, inferred at the
-   gate's \$1.16 to \$4.19 a session. The alternative, a byte budget the gate enforces now,
-   reverses that decision.
-3. **Delivery.** The full items chosen by a recall model at each actor's start, built
-   first; reminders during play built next, behind a measurement of their silence and
-   use. *Recommended: yes.* Cost: \$0 to build; in play, inferred at about two thirds to
-   about the same as the cost of play at one recall request every five decisions, less
-   with a smaller model.
-4. **The cut.** The pilot has reported, and the protocol left the cut to be decided then.
-   *Recommended: not yet.* Delivery at the moment of need may matter more than holding the
-   prompt under 60,000 tokens, and it is measured first. Cost: \$0 now.
-5. **What replaces the comparison.** Simulate withholding within each start (\$0) and put
-   its price to the owner, instead of funding the comparison (\$165 to \$208 at the
-   measured values) or only development play without a measure of benefit.
-   *Recommended: simulate withholding.*
-6. **Judges and later spend.** The judge protocol above, with the owner's time limited to
-   about 30 to 60 blind audit labels per study. Spend on curator-variant scoring (about
-   \$16 a variant) and on development play with withholding is asked later, priced.
-   *Recommended: yes.*
+Put to the owner on 13 November 2026 with the recommendation first; the answers are rows
+in the [owner decision log](../decisions/owner-decisions.md).
+
+| Question | Recommended | Answer |
+| --- | --- | --- |
+| Adopt `curator-fact/3`: no fixed kinds or required place and time; ADR 009's types kept; retire and merge added (\$0 to build) | Yes | Yes |
+| Store growth: consolidation between admissions and no hard cap (one more session per admission, \$1.16 to \$4.19 inferred), or a byte budget now | Consolidate, no cap | A full grooming and organizing pass by the curator |
+| Delivery: the recall model's choice of full items at each actor's start, then reminders during play (\$0 to build; reminders inferred at two thirds to about the same as the cost of play) | Yes, in that order | Yes, in that order |
+| The cut, now that the pilot has reported | Not yet | Not yet |
+| What replaces the comparison (\$165 to \$208 of play at the measured values) | Simulate withholding (\$0) | Simulate withholding |
+| Judges as the standing measure with a 30 to 60 pair blind audit by the owner per study, or without audits | With audits | Without audits |
+
+Spend on scoring curator variants (about \$16 each) and on development play with
+withholding is asked later, with prices.
 
 ## Limits
 
