@@ -300,6 +300,39 @@ class DevToolTests(unittest.TestCase):
         self.assertIn(f"Full output of the failed command: {logs[0].relative_to(self.root)}", output.getvalue())
         self.assertNotIn("Full output", success.getvalue())
 
+    def test_quiet_success_is_one_line_with_what_ran_what_did_not_and_the_time(self):
+        for arguments, passed in ((["--fast"], "Fast checkpoint checks passed. Behavioral tests, viewer tests,"),
+                                  (["--lane", "adapter"], "Lane adapter of the full profile passed:")):
+            with self.subTest(arguments=arguments):
+                result, executed, output = self.checker_commands([*arguments, "--quiet"])
+                self.assertEqual(result, 0)
+                self.assertTrue(executed)
+                self.assertEqual(output.count("\n"), 1, output)
+                self.assertTrue(output.startswith(passed), output)
+                self.assertRegex(output, r"real gameplay were not run\. Checker elapsed: \d+\.\d\ds\n$")
+                self.assertFalse(check._quiet)  # quiet lasts one run, not the process
+
+    def test_quiet_prints_only_a_failing_command_and_its_whole_output(self):
+        passing, failing = io.StringIO(), io.StringIO()
+        script = "import sys; print('first line'); print('assertion detail', file=sys.stderr); sys.exit(3)"
+        command = [sys.executable, "-c", script]
+        with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
+                patch.object(check, "_quiet", True):
+            with redirect_stdout(passing):
+                check.run([sys.executable, "-c", "print('ok')"])
+            with redirect_stdout(failing), self.assertRaises(subprocess.CalledProcessError):
+                check.run(command)
+        self.assertEqual(passing.getvalue(), "")
+        self.assertEqual(failing.getvalue(), "+ " + " ".join(command) + "\nfirst line\nassertion detail\n")
+        logs = sorted((self.root / check.CHECK_LOGS).rglob("*.log"))
+        self.assertEqual([log.read_text() for log in logs], ["ok\n", "first line\nassertion detail\n"])
+        # The whole checker adds nothing to that on a failure: no closing line, no elapsed time.
+        output = io.StringIO()
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.checker_commands(["--fast", "--quiet"], lambda actual: "ruff" in actual, output=output)
+        self.assertEqual(output.getvalue(), "")
+        self.assertFalse(check._quiet)
+
     def test_a_broken_terminal_fails_the_check_instead_of_hanging_it(self):
         class Broken(io.StringIO):  # like `check.py | head` once head exits: the runner's own lines get through first
             def write(self, text):
@@ -400,6 +433,50 @@ class DevToolTests(unittest.TestCase):
                 check.main(arguments)
             self.assertFalse(any("tools.documents" in call.args[0] for call in commands.call_args_list))
             self.assertNotIn("checks passed", output.getvalue())
+
+
+class CommitHookTests(unittest.TestCase):
+    """The commit hook finds the project environment from a git worktree, which holds no `.venv` of its own."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.main = Path(temporary.name).resolve() / "main"
+        self.worktree = self.main.parent / "worktree"
+        self.main.mkdir()
+        for arguments in (("init", "-q", "-b", "main"), ("commit", "-q", "--allow-empty", "-m", "base"),
+                          ("worktree", "add", "-q", str(self.worktree))):
+            subprocess.run(["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *arguments], cwd=self.main,
+                capture_output=True, check=True, text=True)
+
+    def environment(self, checkout):
+        """A stand-in interpreter that reports the directory it lives in, where it ran and its arguments."""
+        python = checkout / ".venv/bin/python"
+        python.parent.mkdir(parents=True)
+        python.write_text('#!/bin/sh\necho "$(cd "$(dirname "$0")" && pwd -P)|$(pwd -P)|$*"\n')
+        python.chmod(0o755)
+
+    def hook(self, checkout):
+        return subprocess.run(["sh", str(ROOT / ".githooks/pre-commit")], cwd=checkout,
+                              capture_output=True, text=True, timeout=30)
+
+    def test_the_hook_uses_the_checkouts_environment_else_the_main_checkouts_else_names_setup(self):
+        (self.worktree / "below").mkdir()
+        missing = self.hook(self.worktree)
+        self.assertEqual((missing.returncode, missing.stdout), (1, ""))
+        self.assertEqual(missing.stderr.count("\n"), 1, missing.stderr)
+        self.assertIn("python3 tools/setup.py --venv", missing.stderr)
+        fast = "tools/check.py --fast --quiet"
+        self.environment(self.main)
+        for checkout in (self.worktree, self.worktree / "below"):  # the check runs at the worktree's top level
+            shared = self.hook(checkout)
+            self.assertEqual((shared.returncode, shared.stdout, shared.stderr),
+                             (0, f"{self.main}/.venv/bin|{self.worktree}|{fast}\n", ""))
+        self.environment(self.worktree)
+        own = self.hook(self.worktree)
+        self.assertEqual((own.returncode, own.stdout, own.stderr),
+                         (0, f"{self.worktree}/.venv/bin|{self.worktree}|{fast}\n", ""))
 
 
 class LanePartitionTests(unittest.TestCase):
