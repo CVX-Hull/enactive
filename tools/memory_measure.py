@@ -53,6 +53,7 @@ from typing import Sequence
 import uuid
 
 import numpy as np
+from PIL import Image
 
 from harness.evaluation.core import judge
 from harness.evaluation.core.host import frame_source
@@ -190,12 +191,18 @@ def copy_frame(frame: Frame, directory: Path, name: str) -> dict:
 
 def seal_packet(directory: Path, manifest: dict, instructions: str) -> tuple[str, int]:
     """Write the instructions and the manifest, which lists every other file's hash. The packet's hash is the
-    manifest's; the second value is the packet's size in bytes."""
+    manifest's; the second value is the packet's size in bytes. The manifest keeps one frame to a line, so a
+    reader spends its context on the frames and not on indentation."""
     (directory / 'instructions.md').write_text(instructions, encoding='utf-8')
     files = {str(path.relative_to(directory)): file_sha256(path) for path in sorted(directory.rglob('*'))
         if path.is_file() and not path.is_relative_to(directory / 'frames')}
-    sha = write_json(directory / 'manifest.json', dict(manifest, files=files), once=True)
-    return sha, sum(path.stat().st_size for path in directory.rglob('*') if path.is_file())
+    head = json.dumps({key: value for key, value in dict(manifest, files=files).items() if key != 'frames'}, indent=1,
+        ensure_ascii=False, allow_nan=False)
+    rows = ',\n'.join('  ' + json.dumps(row, ensure_ascii=False, allow_nan=False) for row in manifest['frames'])
+    data = (head[:-2] + ',\n "frames": [\n' + rows + '\n ]\n}\n').encode()
+    with (directory / 'manifest.json').open('xb') as stream:
+        stream.write(data)
+    return hashlib.sha256(data).hexdigest(), sum(path.stat().st_size for path in directory.rglob('*') if path.is_file())
 
 
 class Building:
@@ -826,8 +833,11 @@ class LabelStore:
                 self.files[f"/frame/{index}/{row['frame']}.png"] = directory / row['file']
                 frames.append(dict(name=row['frame'], image=f"/frame/{index}/{row['frame']}.png",
                     decision=row['decision'], inputs=describe(row['inputs_before'])))
+            with Image.open(self.files[f'/item/{index}.png']) as shown:  # the page reserves each image's space with it
+                aspect = f'{shown.width} / {shown.height}'
             self.pairs.append(dict(index=index, start=pair['start'], item=pair['item'], decisions=packet['decisions'],
-                short=packet['short'], place=item['place'], what=item['what'], image=f'/item/{index}.png', frames=frames))
+                short=packet['short'], place=item['place'], what=item['what'], image=f'/item/{index}.png', aspect=aspect,
+                frames=frames))
         self.saved = dict(schema='owner-labels/1', sample_sha256=self.sample_sha, labels={}, history=[])
         if self.path.is_file():
             saved = read_json(self.path)
@@ -840,7 +850,7 @@ class LabelStore:
         with self.lock:
             labels = {index: entry['label'] for index, entry in self.saved['labels'].items()}
         return dict(total=len(self.pairs), labels=labels, choices=[[label, LABEL_TEXT[label]] for label in LABELS],
-            pairs=[{key: pair[key] for key in ('index', 'place', 'what', 'image', 'decisions', 'short', 'frames')}
+            pairs=[{key: pair[key] for key in ('index', 'place', 'what', 'image', 'aspect', 'decisions', 'short', 'frames')}
                 for pair in self.pairs])
 
     def record(self, index: object, label: object) -> None:
@@ -937,7 +947,10 @@ button { font: inherit; color: var(--ink); background: var(--chip); border: 1px 
   padding: 8px 14px; cursor: pointer; }
 button:disabled { opacity: .45; cursor: default; }
 button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.answers { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 14px; border-top: 1px solid var(--line); }
+/* The answer bar is fixed to the window, so a button never moves under the pointer while frames load. */
+.answers { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); padding: 10px 16px 14px;
+  border-top: 1px solid var(--line); z-index: 2; }
+.answers > div { max-width: 888px; margin: 0 auto; }
 .answers p { margin: 0 0 8px; font-weight: 600; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .choices button { min-height: 64px; font-size: 17px; font-weight: 600; background: var(--accent); color: var(--on-accent);
@@ -977,11 +990,11 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       <div class="hint" id="hint"></div>
       <div class="strip" id="strip"></div>
     </section>
-    <div class="answers">
+    <div class="answers" id="answers"><div>
       <p>What did the player do about this item?</p>
       <div class="choices" id="choices"></div>
       <div id="error" hidden>Not saved: the label server did not answer. Nothing is lost; click again.</div>
-    </div>
+    </div></div>
   </div>
   <div id="done" hidden>
     <h1 id="done-title"></h1>
@@ -996,7 +1009,7 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </div>
 <script>
 'use strict';
-let state = null, at = 0, zoomed = [], zoomAt = 0;
+let state = null, at = 0, zoomed = [], zoomAt = 0, ready = 0;
 const el = id => document.getElementById(id);
 
 function firstOpen() {
@@ -1032,6 +1045,7 @@ function render() {
   el('what').textContent = pair.what;
   el('place').textContent = pair.place;
   el('item-image').src = pair.image;
+  el('item-image').style.aspectRatio = pair.aspect;
   el('item-image').onclick = () => openZoom([{image: pair.image, text: pair.what + ' \\u2014 ' + pair.place}], 0);
   el('hint').textContent = pair.frames.length + ' screens from ' + pair.decisions + ' decisions, oldest first: every third changed screen. '
     + 'Under each screen is what the player pressed before it. Click a screen to enlarge it.';
@@ -1043,8 +1057,9 @@ function render() {
   pair.frames.forEach((frame, i) => {
     const figure = document.createElement('figure'), image = document.createElement('img'),
       caption = document.createElement('figcaption'), number = document.createElement('b');
-    image.src = frame.image;
+    image.style.aspectRatio = pair.aspect;
     image.loading = 'lazy';
+    image.src = frame.image;
     image.alt = 'Screen ' + (i + 1);
     image.onclick = () => openZoom(shots, i);
     number.textContent = String(i + 1);
@@ -1062,9 +1077,12 @@ function render() {
     button.onclick = () => choose(label);
     choices.append(button);
   }
+  document.querySelector('main').style.paddingBottom = (el('answers').offsetHeight + 16) + 'px';
+  ready = Date.now() + 400;  // a second click of a double-click must not label the pair that has just appeared
 }
 
 async function choose(label) {
+  if (Date.now() < ready) return;
   for (const button of el('choices').children) button.disabled = true;
   try {
     const response = await fetch('/api/label', {method: 'POST', headers: {'Content-Type': 'application/json'},

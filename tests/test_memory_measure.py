@@ -392,7 +392,8 @@ def test_the_label_server_records_a_click_survives_a_reload_and_binds_to_loopbac
         assert state['total'] == 4 and state['labels'] == {} and [c[0] for c in state['choices']] == list(judge.LABELS)
         assert [c[1] for c in state['choices']] == ['Went straight to it', 'Missed it (looked elsewhere or got it another way)',
             'Not engaged', 'Cannot tell']
-        assert set(state['pairs'][0]) == {'index', 'place', 'what', 'image', 'decisions', 'short', 'frames'}
+        assert set(state['pairs'][0]) == {'index', 'place', 'what', 'image', 'aspect', 'decisions', 'short', 'frames'}
+        assert state['pairs'][0]['aspect'] == '8 / 8'
         for hidden in ('judge', 'run-e', 'run-f', 'straight"', 'model-x'):
             assert hidden not in json.dumps(state['pairs'])  # no verdict, judge or admission
         frame = state['pairs'][0]['frames'][0]
