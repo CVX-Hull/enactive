@@ -63,4 +63,4 @@ Explorers/reviewers never send game inputs.
   remove a control when what it protected is finished. Existing controls and their
   gaps are in [the controls page](docs/controls.md).
 - Give everything a [descriptive name](docs/standards/documentation.md#names): no
-  bare ordinals such as "P1" or "study 3" for phases, studies, files, branches or issues.
+  bare ordinals such as `P1` or `study 3` for phases, studies, files, branches or issues.
