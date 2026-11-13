@@ -39,29 +39,17 @@ criteria with their hash before it runs. Run freezing and spend limits follow
 [campaign procedure](../operations/campaign-run.md). Check by simulation that its
 primary metric can detect the effect of interest and does not raise false
 positives across the conditions it compares. Record every deviation; a changed
-rule is a deviation, not a refinement. Research syntheses tag each source's read
-scope (full text, stated sections, abstract, secondary or snippet) and its
-publication date, plus its revision date when that differs. Only primary text
-actually read supports a conclusion. A claim about current methods or results
-rests on a dated search of recent work, including work that cites the
-foundational sources used. The synthesis records the search date, and flags the
-claim when its newest supporting source was published or substantively revised
-more than 18 months before that date. Anything about LLMs (models, systems,
-APIs, providers, limits, methods or results), whether a stated claim or a premise
-of a brief, design or code, rests only on dated primary sources read for the task
-(publication or revision date, or the retrieval date where none is given; the
-recency flag above still applies), because the field changes too fast for
-remembered knowledge. Prior knowledge of the lead or of an agent is a hypothesis
-to verify, never evidence; this includes recalled knowledge of a game's mechanics,
-keys or interface, which a design may not assume and the player tests through play
-(P-GENERALITY). Sources on LLM and agent methods are read critically:
-the synthesis records what each source measured, against which baseline,
-whether the comparison matched budget (compute, calls or tokens), and whether
-its idea restates earlier work from another field. Vendor-reported, synthetic,
-single-run or unreplicated results are flagged and do not alone justify a
-design decision. Briefs for delegated research pose the questions and may name
-foundational sources, but not the current sources to rely on; the synthesis
-records each brief's questions and any sources it named.
+rule is a deviation, not a refinement.
+
+**Claims about models come from dated primary sources.** Anything about LLMs
+(models, systems, APIs, providers, limits, methods or results), whether a stated
+claim or a premise of a brief, design or code, rests only on primary sources read
+for the task, each with its publication, revision or retrieval date. The field
+changes too fast for remembered knowledge
+([R-FALSE-CLAIM](../risks.md#development-risks)). Prior knowledge of the lead or
+of an agent is a hypothesis to verify, never evidence; this includes recalled
+knowledge of a game's mechanics, keys or interface, which a design may not assume
+and the player tests through play (P-GENERALITY).
 
 Claim-deciding experiments on the player (above), and every comparison or
 generalization claim about the player, follow ordinary AI/ML research practice.
