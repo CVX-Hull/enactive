@@ -241,25 +241,26 @@ Three layers. Each can be built and judged alone, in this order.
 
 - **Mechanism.** The first message of every actor, at an admission and at a handoff alike,
   carries a briefing built by software from the latest published snapshot:
-  - **in full**: the facts a recall model chooses for this actor from the mission, the
-    previous final report and the store's index
-    ([general memory](general-memory.md#2-delivery-making-the-player-use-memory));
-  - **as an index**: one line for every other fact, with its identifier, subject and
-    order of sighting;
+  - **leads**: the leads of the articles a recall model chooses for this actor from the
+    mission, the previous final report and the article index
+    ([general memory](general-memory.md#articles-over-facts));
+  - **as an index**: one line for every other article, with its title and the start of
+    its lead;
   - **a stamp**: the decision the snapshot covers.
 - **Reminders during play.** After the briefing is built, a recall model may add short
   reminders as notices that stay in the history
   ([general memory](general-memory.md#2-delivery-making-the-player-use-memory)).
-- **Reading more.** `player_memory_read` returns an item by the identifier on its index
-  line. `player_memory_query` gains search by text. Both read the curator's store.
+- **Reading more.** `player_memory_read` returns an article, or a fact it cites, by id or
+  title, with the article's links. `player_memory_query` searches articles and facts by
+  text. Both read the curator's store.
 - **Between briefings.** When a newer snapshot is published, the next request carries the
   difference as a new message at the end. Earlier messages are untouched, so the cache
   holds.
 - **Marking.** The briefing is labelled as fallible knowledge, not instructions, as
   [ADR 009](../decisions/009-curated-player.md) requires. The current screen wins on
   conflict.
-- **No cap.** The split between full items and index lines is the curator's brief, not a
-  byte limit. If briefings grow until they slow play, that is the experience the owner's
+- **No cap.** Which leads are shown and which articles stay as index lines is the recall
+  model's choice, not a byte limit. If briefings grow until they slow play, that is the experience the owner's
   decision asks for.
 - **Size, from the one store that exists.** The shadow run's sealed store for the
   seven-day lineage holds 71 facts in 36,947 bytes, about 13,000 tokens if every fact
