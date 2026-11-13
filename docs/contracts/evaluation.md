@@ -100,7 +100,9 @@ Its `metadata.state` is `live` or `final`.
   - `reader`: a binding reader;
   - `player_claim`: player text or a player record;
   - `human`.
-- `judge` is reserved for the deferred model judge.
+- `judge` is a model judge's answer to one closed question. A judge event uses this
+  envelope but is never a row of an evaluation record: the `events` table refuses the
+  source. It lives in its own file ([judge events](#judge-events-judge-events1)).
 - `confidence` is 0–1, or null for mechanical facts.
 - `payload` is JSON. Core field names never contain game words; game detail lives in
   `payload.binding`.
@@ -462,6 +464,43 @@ evaluator reads them, and nothing writes them at run time.
 
 Labels enter records as `human` events. A label never changes a derived value; it sits
 beside it.
+
+## Judge events (`judge-events/1`)
+
+A judge event is one model judge's label for one known item over one start, a stretch of
+recorded play ([#386](https://github.com/CVX-Hull/enactive/issues/386)). The
+[memory screen protocol](../design/memory-screen-protocol.md#the-judge) owns the question,
+the labels' meaning and the calibration thresholds. `harness/evaluation/core/judge.py`
+validates the format; `python -m tools.memory_measure` writes and reads it.
+
+- **File.** JSON Lines, one event per line, one judge per file:
+  `.runtime/memory-measure/<run>/events/<judge>.jsonl`. A file is written once and never
+  replaced. Each (`start`, `item`) pair appears at most once in it.
+- **Envelope.** Exactly `schema` (`judge-events/1`), `kind` (`known_item_verdict`),
+  `source` (`judge`), `confidence` (always null: agreement is measured over the file, not
+  claimed per event) and `payload`.
+
+| Payload field | Meaning |
+| --- | --- |
+| `start` | The stretch judged: `<admission>:<first decision>-<last decision>` |
+| `item` | The known item's ID in the frozen item list |
+| `label` | `straight`, `missed`, `not_engaged` or `cannot_tell` |
+| `cited_frames` | Source IDs of the frames the judge cited. `straight` and `missed` cite at least one. |
+| `judge`, `model` | The judge's name and the model the lead pinned for it |
+| `packet`, `packet_sha256` | The shuffled name of the packet the judge was given and the SHA-256 of its manifest, which lists every file's hash |
+
+**Isolation.** The tool writes packets, events and the statistics made from them only
+into its run directory, and it refuses a run directory whose parent is not named
+`memory-measure`; by convention that is `.runtime/memory-measure/<run>/`. It does not
+check where the lead saves a judge's answers, and it does not keep a judge from the
+mapping of shuffled packet names to admissions, which sits in the run directory's
+`private/` folder: the lead gives a judge its packet directory and nothing else. It
+refuses to read the held-out lineage's evidence. An evaluation record holds no judge
+event, so the viewer cannot serve one. The curator's trace is
+projected by allowlist from named session directories, a run package freezes a closed set
+of files, and the import contracts forbid the player, the curator and the trace projection
+from importing evaluation code or tools. The owner's labelling page reads the sample and
+the packets and never opens a judge's answers or events.
 
 ## Tracked run ledger and metrics snapshot
 
