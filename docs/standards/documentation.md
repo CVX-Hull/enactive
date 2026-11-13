@@ -72,11 +72,11 @@ A name says what the thing is, in words a reader can understand without a lookup
 table. This covers everything the project names: phases, studies, protocols, runs and
 their arms, files, modules, schemas, branches, issue titles, Project field values,
 risks and controls. It guards [R-UNREADABLE-DOCS](../risks.md#development-risks): a
-label such as "P1" tells a reader nothing, and the same label came to mean four
+label such as `P1` tells a reader nothing, and the same label came to mean four
 different things.
 
-- **No bare ordinals or position codes.** Not "P1", "phase 2", "study 3", "arm B" or
-  "L4". Name a phase by what it delivers ("curator and memory"), a study by its
+- **No bare ordinals or position codes.** Not `P1`, `phase 2`, `study 3`, `arm B` or
+  `L4`. Name a phase by what it delivers ("curator and memory"), a study by its
   question ("curator memory study"), an arm by what differs ("no-curator arm"), a
   priority by its meaning ("Urgent").
 - **Numbers are for versions, references and dates.** A version follows a descriptive
