@@ -8,6 +8,15 @@ review_trigger: An owner decision on the list in this note, a new cadence measur
 
 # Cadence plan: route options against the responsiveness criteria
 
+**The owner answered this note's nine decisions on 13 November 2026**
+([decisions](../acceptance/2026-11-13-memory-and-cadence-decisions.md)): the 2 s
+criterion stays as the aim and does not gate present work; memory comes first; the
+current route is kept; a bounded context is the first speed lever, designed with memory
+([#591](https://github.com/CVX-Hull/enactive/issues/591)); a smaller playing model is
+deferred; responsiveness is judged on the complete player; no hard cap is set on added
+text; the timing reader is tracked ([#592](https://github.com/CVX-Hull/enactive/issues/592));
+and the replay probe waits. The note below is as reviewed, with its recommendations.
+
 The seven-day development lineage
 ([#397](https://github.com/CVX-Hull/enactive/issues/397)) measured the player's model
 responses at 8.1–13.7 s at the 95th percentile (p95) against a 2 s criterion. This note
