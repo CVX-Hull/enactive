@@ -9,7 +9,7 @@ from harness.computer.protocol import ControlError
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError
 from harness.evaluation.core.sources import iter_host, read_host
-from tools.host_analysis import analyze_trace, discover, distribution, host_summary
+from tools.host_analysis import analyze_trace, discover, distribution, host_summary, markdown
 
 
 class HostAnalysisTests(unittest.TestCase):
@@ -149,7 +149,8 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertIsNone(row["request_share"])
         self.assertIsNone(row["host_ms"])
         self.assertEqual(row["completed_response_ms"]["n"], 0)
-        huge = analyze_trace(self.trace([e("host-start", 10 ** 400)]))
+        self.assertEqual(row["response_by_prompt"]["response_ms"]["n"], 0)
+        huge =analyze_trace(self.trace([e("host-start", 10 ** 400)]))
         self.assertFalse(huge["clock_valid"])
 
     def test_duplicate_fields_and_nonfinite_json_are_invalid(self):
@@ -324,3 +325,73 @@ class HostAnalysisTests(unittest.TestCase):
             self.assertEqual(analyze_trace(loose)["coverage"], "unsupported_version")
             path.write_text(json.dumps(self.event("host-start", 0, session="b" * 32, **old)) + "\n")
             self.assertEqual(analyze_trace(path)["coverage"], "unsupported_version")
+
+    def request_events(self, request_id, start, end, prompt, cost=None, tools=(), stop="toolUse"):
+        """A request whose usage splits `prompt` across input and cache read (`None`: no cache write recorded); `tools` are tool-result times."""
+        e = self.event
+        usage = dict(input=1, cacheRead=2) if prompt is None else dict(input=1, cacheRead=prompt - 1, cacheWrite=0, output=5, reasoning=0)
+        if cost is not None:
+            usage["cost"] = dict(total=cost)
+        events = [e("request-start", start, request_id=request_id),
+            e("response-complete", end, request_id=request_id, stop_reason=stop, usage_available=True, usage=usage)]
+        events += [e("tool-start", end + 1, request_id=request_id, tool_call_id=f"{request_id}-{index}") for index in range(len(tools))]
+        events += [e("tool-result", at, request_id=request_id, tool_call_id=f"{request_id}-{index}") for index, at in enumerate(tools)]
+        return events
+
+    def test_response_time_is_banded_by_prompt_size_with_the_boundaries_pinned(self):
+        r = self.request_events
+        events = [self.event("host-start", 0),
+            *r("r1", 0, 1000, 19_999, cost=.002, tools=[1500]),
+            *r("r2", 2000, 4500, 20_000, cost=.004, tools=[5000, 5200]),  # two tool results: the first one counts
+            *r("r3", 6000, 11_000, 150_000, cost=.010, stop="stop"),  # exactly 5 s is within 5 s
+            *r("r4", 12_000, 12_500, None, stop="stop"),  # no known prompt size: in the whole, in no band
+            *r("r5", 13_000, 20_000, 70_000, stop="error"),  # censored: not a sample
+            *r("r6", 21_000, 22_000, 60_000, tools=[23_000]),  # no reported cost
+            self.event("settled", 30_000)]
+        by_prompt = analyze_trace(self.trace(events))["response_by_prompt"]
+        self.assertEqual(by_prompt["response_ms"]["n"], 5)
+        self.assertEqual((by_prompt["response_ms"]["p50"], by_prompt["response_ms"]["p95"]), (1000, 5000))
+        self.assertEqual((by_prompt["within_2s"], by_prompt["within_5s"]), (.6, 1.0))
+        self.assertEqual(by_prompt["unknown_prompt_responses"], 1)
+        bands = {band["band"]: band for band in by_prompt["bands"]}
+        self.assertEqual(list(bands), ["under 20,000", "20,000 to 60,000", "60,000 to 100,000", "100,000 to 150,000", "over 150,000"])
+        self.assertEqual([band["response_ms"]["n"] for band in bands.values()], [1, 1, 1, 0, 1])
+        self.assertEqual(bands["under 20,000"]["response_ms"]["p50"], 1000)
+        self.assertEqual((bands["20,000 to 60,000"]["within_2s"], bands["20,000 to 60,000"]["within_5s"]), (0.0, 1.0))
+        self.assertEqual(bands["under 20,000"]["mean_cost_usd"], .002)
+        self.assertEqual((bands["60,000 to 100,000"]["mean_cost_usd"], bands["60,000 to 100,000"]["cost_n"]), (None, 0))
+        self.assertEqual((bands["100,000 to 150,000"]["response_ms"]["p50"], bands["100,000 to 150,000"]["within_5s"]), (None, None))
+        self.assertEqual((bands["over 150,000"]["within_5s"], bands["over 150,000"]["mean_cost_usd"]), (1.0, .01))
+        # First tool result to the previous request's first tool result; a request without one neither ends nor starts an interval.
+        wait = by_prompt["first_tool_result_interval_ms"]
+        self.assertEqual((wait["n"], wait["p50"], wait["p95"]), (2, 3500, 18_000))
+        self.assertEqual((wait["within_2s"], wait["within_5s"]), (0.0, .5))
+
+    def test_runs_and_the_selection_pool_responses_instead_of_averaging_trace_percentiles(self):
+        def write(run, actor, durations):
+            directory = self.root / run / "actors" / actor
+            directory.mkdir(parents=True)
+            events, at = [self.event("host-start", 0)], 0
+            for index, duration in enumerate(durations):
+                events += self.request_events(f"r{index}", at, at + duration, 10_000)
+                at += duration + 100
+            (directory / "host.jsonl").write_text("".join(json.dumps(x) + "\n" for x in [*events, self.event("settled", at)]))
+        write("runA", "001", [1000, 3000, 9000])
+        write("runA", "002", [2000])
+        write("runB", "001", [4000, 6000])
+        report = host_summary([self.root / "runA", self.root / "runB"])
+        self.assertEqual([(run["run"].rsplit("/", 1)[-1], run["traces"], run["response_by_prompt"]["response_ms"]["n"],
+            run["response_by_prompt"]["response_ms"]["p50"]) for run in report["runs"]], [("runA", 2, 4, 2000), ("runB", 1, 2, 4000)])
+        selection = report["selection"]["response_by_prompt"]
+        self.assertEqual((report["selection"]["traces"], selection["response_ms"]["n"], selection["response_ms"]["p50"],
+            selection["response_ms"]["p95"]), (3, 6, 3000, 9000))
+        self.assertEqual((selection["within_2s"], selection["within_5s"]), (2 / 6, 4 / 6))
+        self.assertEqual(selection["bands"][0]["response_ms"]["n"], 6)
+        # A trace's own figures are those of its own responses (nearest rank 2 of 3 is 3000, not a mean).
+        first = next(r for r in report["traces"] if r["path"].endswith("runA/actors/001/host.jsonl"))
+        self.assertEqual(first["response_by_prompt"]["response_ms"]["p50"], 3000)
+        text = markdown(report)
+        self.assertIn("## Response time by prompt size, 3 selected traces", text)
+        self.assertIn("| All responses | 6 | 3.0 | 9.0 | 33.3% | 66.7% | unknown |", text)
+        self.assertIn("| Under 20,000 | 6 | 3.0 | 9.0 | 33.3% | 66.7% | unknown |", text)
+        self.assertIn("| runA | 2 | 4 | 2.0 | 9.0 | 50.0% | 75.0% | unknown |", text)

@@ -13,6 +13,12 @@ from harness.evaluation.core.sources import (DRIVER_SCHEMA, MANIFEST_SCHEMA, REC
     HostTraceUnsupported, accepted_versions, iter_host, run_archive_entry)
 
 MAX_REQUESTS = 200_000
+#: Prompt-size bands in tokens, lower bound inclusive and upper bound exclusive: exactly 20,000 tokens is in the
+#: second band and exactly 150,000 in the last. Prompt tokens are `usage.input + usage.cacheRead + usage.cacheWrite`.
+PROMPT_BANDS = ((0, 20_000, "under 20,000"), (20_000, 60_000, "20,000 to 60,000"), (60_000, 100_000, "60,000 to 100,000"),
+    (100_000, 150_000, "100,000 to 150,000"), (150_000, None, "over 150,000"))
+#: A response is "within" a limit when it took at most this many milliseconds.
+RESPONSE_LIMITS_MS = {"within_2s": 2000, "within_5s": 5000}
 #: A `HostTraceUnsupported.kind` is reported as this coverage.
 UNSUPPORTED_COVERAGE = {"empty": "empty", "format": "unsupported_format", "version": "unsupported_version"}
 
@@ -34,6 +40,39 @@ def distribution(values):
 
 def delta(end, start):
     return end - start if number(end) and number(start) and end >= start else None
+
+
+def prompt_tokens(usage):
+    """Input plus cache read plus cache write, or `None` when any of the three is not recorded (unknown, not zero)."""
+    parts = [usage.get(key) for key in ("input", "cacheRead", "cacheWrite")] if isinstance(usage, dict) else []
+    return sum(parts) if parts and all(number(part) for part in parts) else None
+
+
+def share_within(values, limit):
+    """The fraction of `values` at most `limit`, or `None` for no values."""
+    return sum(value <= limit for value in values) / len(values) if values else None
+
+
+def response_by_prompt(samples, intervals):
+    """Response time, by prompt-size band, for completed responses.
+
+    `samples` is a list of `(response_ms, prompt_tokens, cost_usd)`, each part `None` when unknown; `intervals`
+    are the milliseconds between the first tool results of consecutive requests. Percentiles are nearest rank
+    (`distribution`). A response with no known prompt size counts in the whole but in no band; a response
+    with no reported cost counts in the band but not in its mean cost."""
+    timed = [(ms, prompt, cost) for ms, prompt, cost in samples if number(ms)]
+
+    def figures(group):
+        durations = [ms for ms, _, _ in group]
+        costs = [cost for _, _, cost in group if number(cost)]
+        return {"response_ms": distribution(durations), **{key: share_within(durations, limit) for key, limit in RESPONSE_LIMITS_MS.items()},
+            "mean_cost_usd": sum(costs) / len(costs) if costs else None, "cost_n": len(costs)}
+
+    waits = [value for value in intervals if number(value)]
+    return {**figures(timed), "unknown_prompt_responses": sum(not number(prompt) for _, prompt, _ in timed),
+        "bands": [{"band": label, "min_tokens": low, "max_tokens": high, **figures([row for row in timed
+            if number(row[1]) and row[1] >= low and (high is None or row[1] < high)])} for low, high, label in PROMPT_BANDS],
+        "first_tool_result_interval_ms": {**distribution(waits), **{key: share_within(waits, limit) for key, limit in RESPONSE_LIMITS_MS.items()}}}
 
 
 def merged_intervals(intervals):
@@ -66,6 +105,13 @@ def overlap_ms(first, second):
         else:
             j += 1
     return total
+
+
+def response_by_requests(rows):
+    """`response_by_prompt` over request rows: completed responses only; a censored request is not a sample."""
+    rows = list(rows)
+    return response_by_prompt([(row["observed_ms"], row["prompt_tokens"], row["cost_usd"]) for row in rows if not row["censored"]],
+        [row["since_previous_first_tool_result_ms"] for row in rows])
 
 
 def discover(paths: list[Path]) -> list[Path]:
@@ -244,6 +290,7 @@ def analyze_trace(path: Path) -> dict:
                     raise ControlError(f"Unpaired/duplicate tool result: {path}:{line_number}")
                 entry[1] = at
                 tool_intervals.append(tuple(entry))
+                rows[event["request_id"]].setdefault("first_tool_result_ms", at)
             elif kind == "abort":
                 abort = event
             elif kind == "settled":
@@ -302,8 +349,21 @@ def analyze_trace(path: Path) -> dict:
                 rate = usage["output"] * 1000 / post_body
                 row["reported_output_per_post_body_second"] = rate
                 rates.append(rate)
+        cost = usage.get("cost") if isinstance(usage, dict) else None
+        row["prompt_tokens"] = prompt_tokens(usage)
+        row["cost_usd"] = cost.get("total") if isinstance(cost, dict) and number(cost.get("total")) else None
         row["usage"] = {key: usage.get(key) if number(usage.get(key)) else None for key in usage_fields} if isinstance(usage, dict) else None
         row["progress"] = progress
+    # The interval ends at a request's first tool result and starts at the previous request's, in request order;
+    # a request with no tool result neither ends nor starts one.
+    previous_result = None
+    for row in rows.values():
+        row["since_previous_first_tool_result_ms"] = None
+        result = row.get("first_tool_result_ms")
+        if result is not None:
+            if clock_valid:
+                row["since_previous_first_tool_result_ms"] = delta(result, previous_result)
+            previous_result = result
     observed_requests = union_ms(requests_intervals) if clock_valid else None
     observed_tools = union_ms(tool_intervals) if clock_valid else None
     overlaps = overlap_ms(requests_intervals, tool_intervals) if clock_valid else None
@@ -318,7 +378,7 @@ def analyze_trace(path: Path) -> dict:
             and all(end is not None for _, end in tools.values()) else None,
         "counts": dict(counts), "http_attempts_observed": len(rows), "censored_requests": incomplete,
         "unknown_usage_requests": unknown_usage, "pending_tools": sum(end is None for _, end in tools.values()),
-        "completed_response_ms": distribution(durations),
+        "completed_response_ms": distribution(durations), "response_by_prompt": response_by_requests(rows.values()),
         "tool_ms": distribution(delta(b, a) if clock_valid else None for a, b in tool_intervals),
         "timing_ms": {key: distribution(value) for key, value in field_times.items()},
         "usage": {key: distribution(value) for key, value in usage_fields.items()},
@@ -335,20 +395,58 @@ def host_summary(paths: list[Path]) -> dict:
             reports.append(analyze_trace(path))
         except (ControlError, EvaluationError, OSError, ValueError, UnicodeError, RecursionError) as exc:
             reports.append({"path": str(path), "coverage": "invalid", "error": str(exc)})
+    hosts = [r for r in reports if r["coverage"] == "player_host"]
+    by_run = {}
+    for r in hosts:
+        by_run.setdefault(str(run_root(Path(r["path"]))), []).append(r)
     return {"complete": all(r["coverage"] == "player_host" for r in reports),"schema": "host-analysis/1", "scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",
-        "units": "milliseconds unless named otherwise; p50 and p95 are nearest rank; reasoning is a subset of output, not added to it",
+        "units": "milliseconds unless named otherwise; p50 and p95 are nearest rank; reasoning is a subset of output, not added to it; "
+            "prompt-size bands are by input plus cache read plus cache write tokens, lower bound inclusive; "
+            "'within' is at most 2000 or 5000 ms; costs are provider-reported dollars",
         "coverage": dict(Counter(r["coverage"] for r in reports)),
         "duplicate_content": [[r["path"] for r in reports if r.get("sha256") == sha]
             for sha, count in Counter(r.get("sha256") for r in reports if r.get("sha256")).items() if count > 1],
+        # A run is the directory holding `actors/NNN/host.jsonl`; the selection is every selected `player_host` trace.
+        "runs": [{"run": run, "traces": len(group), "response_by_prompt": response_by_requests(row for r in group for row in r["requests"])}
+            for run, group in sorted(by_run.items())],
+        "selection": {"traces": len(hosts), "response_by_prompt": response_by_requests(row for r in hosts for row in r["requests"])},
         "traces": reports}
 
 
 def markdown(report: dict) -> str:
     lines = ["# Retained host diagnostics", "", report["scope"], "", report["units"], "",
-        "| Trace | Coverage | Attempts / censored | Host s | Request share | Median response s | Median tool s |", "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
+        "| Trace | Coverage | Attempts / censored | Host s | Request share | Median response s | Median tool s | Within 2 s | Within 5 s |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
     def fmt(value, scale=1):
         return "unknown" if value is None else f"{value / scale:.3f}"
+    def percent(value):
+        return "unknown" if value is None else f"{100 * value:.1f}%"
     for row in report["traces"]:
         name = str(Path(row["path"]).relative_to(Path.cwd())) if Path(row["path"]).is_relative_to(Path.cwd()) else row["path"]
-        lines.append(f"| {name} | {row['coverage']} | {row.get('http_attempts_observed', 'unknown')} / {row.get('censored_requests', 'unknown')} | {fmt(row.get('host_ms'), 1000)} | {fmt(row.get('request_share'))} | {fmt(row.get('completed_response_ms', {}).get('p50'), 1000)} | {fmt(row.get('tool_ms', {}).get('p50'), 1000)} |")
+        by_prompt = row.get("response_by_prompt", {})
+        lines.append(f"| {name} | {row['coverage']} | {row.get('http_attempts_observed', 'unknown')} / {row.get('censored_requests', 'unknown')} | {fmt(row.get('host_ms'), 1000)} | {fmt(row.get('request_share'))} | {fmt(row.get('completed_response_ms', {}).get('p50'), 1000)} | {fmt(row.get('tool_ms', {}).get('p50'), 1000)} | {percent(by_prompt.get('within_2s'))} | {percent(by_prompt.get('within_5s'))} |")
+
+    def seconds(value):
+        return "unknown" if value is None else f"{value / 1000:.1f}"
+
+    def timing_row(label, figures, traces=None):
+        response = figures["response_ms"]
+        cost = "unknown" if figures["mean_cost_usd"] is None else f"{figures['mean_cost_usd']:.4f}"
+        cells = [label, *([str(traces)] if traces is not None else []), f"{response['n']:,}", seconds(response["p50"]), seconds(response["p95"]),
+            percent(figures["within_2s"]), percent(figures["within_5s"]), cost]
+        return "| " + " | ".join(cells) + " |"
+
+    header = "| {} | Responses | Median s | 95th percentile s | Within 2 s | Within 5 s | Mean cost per request $ |"
+    divider = "| --- | ---: | ---: | ---: | ---: | ---: | ---: |"
+    selection = report["selection"]
+    figures = selection["response_by_prompt"]
+    lines += ["", f"## Response time by prompt size, {selection['traces']} selected traces", "", "Completed responses only; a response whose prompt size is unknown "
+        f"({figures['unknown_prompt_responses']}) is in the first row but in no band.", "", header.format("Prompt tokens"), divider,
+        timing_row("All responses", figures), *(timing_row(band["band"].capitalize(), band) for band in figures["bands"])]
+    wait = figures["first_tool_result_interval_ms"]
+    lines += ["", f"One request's first tool result to the next request's first tool result: {wait['n']:,} intervals, median {seconds(wait['p50'])} s, "
+        f"95th percentile {seconds(wait['p95'])} s, within 2 s {percent(wait['within_2s'])}, within 5 s {percent(wait['within_5s'])}."]
+    lines += ["", "## Response time by run", "", header.format("Run").replace("| Responses", "| Traces | Responses", 1), "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+    for run in report["runs"]:
+        lines.append(timing_row(Path(run["run"]).name, run["response_by_prompt"], run["traces"]))
     return "\n".join(lines) + "\n"
