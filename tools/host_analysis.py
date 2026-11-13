@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import json
 import math
@@ -62,11 +62,20 @@ def share_within(values, limit):
 
 #: A tokenizer check holds on a route when the slope of the recorded growth on the tokenizer's count of the added
 #: result text is within `1 +- TOKENIZER_SLOPE_TOLERANCE` and the median absolute residual of that fit is at most
-#: `TOKENIZER_MEDIAN_RESIDUAL` tokens. Both are the owner-facing definition of "the tokenizer is this route's".
+#: `TOKENIZER_MEDIAN_RESIDUAL` tokens. The slope tolerance is the issue's; the 1-token median is this reader's stated
+#: rule (the recorded medians for `o200k_base` were 0.2 and 0.1 tokens), not an owner decision.
 TOKENIZER_SLOPE_TOLERANCE = 0.01
 TOKENIZER_MEDIAN_RESIDUAL = 1.0
-#: Why a pair of consecutive requests is left out of the fit, in the order the reasons are tried.
-LEFT_OUT = ("usage_unknown", "images_dropped", "notice_added", "not_one_call")
+#: The image count is a separate term of the fit only when at least this share of the fitted pairs has a count other
+#: than the most common one. Otherwise the image term cannot be told from the per-turn constant.
+IMAGE_VARIATION_SHARE = 0.1
+#: Why a pair of consecutive requests is left out of the fit, in the order the reasons are tried. The last is decided
+#: over a whole group of pairs (`composition`), the others for each pair.
+LEFT_OUT = ("usage_unknown", "projection_unknown", "images_dropped", "notice_added", "not_one_call", "other_image_count")
+
+
+def tokenizer_holds(slope, median_residual):
+    return abs(slope - 1) <= TOKENIZER_SLOPE_TOLERANCE and median_residual <= TOKENIZER_MEDIAN_RESIDUAL
 
 
 @dataclass(frozen=True)
@@ -117,8 +126,9 @@ def composition_pairs(rows, omitted, notices, calls, results):
 
     Request `n+1` holds what request `n` held, plus the reply to `n` and the result of the one call that reply made, so
     the growth is the cost of those. A pair is left out (and counted in the second value, by reason) when a prompt size
-    or the reply's output is unknown, when the host dropped images between the two requests, when a notice was added
-    to the second, or when the reply did not make exactly one call with one result. Returns `(pairs, left_out)`."""
+    or the reply's output is unknown, when only one of the two requests has an image projection event, when the host
+    dropped images between the two requests, when a notice was added to the second, or when the reply did not make
+    exactly one call with one result. Returns `(pairs, left_out)`."""
     pairs, left_out = [], Counter()
     ids = list(rows)
     for first, second in zip(ids, ids[1:]):
@@ -126,6 +136,8 @@ def composition_pairs(rows, omitted, notices, calls, results):
         usage = a["usage"] or {}
         if not number(a["prompt_tokens"]) or not number(b["prompt_tokens"]) or not number(usage.get("output")):
             left_out["usage_unknown"] += 1
+        elif (omitted.get(first) is None) != (omitted.get(second) is None):
+            left_out["projection_unknown"] += 1  # one of the two has no `context-image-projection` event (a retry)
         elif omitted.get(first) != omitted.get(second):
             left_out["images_dropped"] += 1
         elif second in notices:
@@ -140,59 +152,61 @@ def composition_pairs(rows, omitted, notices, calls, results):
     return pairs, {reason: left_out[reason] for reason in LEFT_OUT}
 
 
-def _lstsq(pairs, regressors):
-    """Least squares of `growth` on the named regressors, a per-turn constant and, when it varies, the image count.
-    Returns the coefficients by name and the absolute residuals, or `None` with too few pairs for the columns."""
-    images = {pair["images"] for pair in pairs}
-    names = [*regressors, *(["images"] if len(images) > 1 else []), "constant"]
-    if len(pairs) < len(names):
-        return None
-    table = np.array([[pair[name] if name != "constant" else 1 for name in names] for pair in pairs], float)
-    growth = np.array([pair["growth"] for pair in pairs], float)
-    coefficients = np.linalg.lstsq(table, growth, rcond=None)[0]
-    return dict(zip(names, (float(value) for value in coefficients))), np.abs(growth - table @ coefficients).tolist(), images
-
-
 #: The reported name of each regressor.
 FIT_NAMES = {"result_bytes": "per_result_byte", "output": "per_output_token", "result_tokens": "per_result_token",
     "visible_output": "per_visible_output_token", "reasoning": "per_reasoning_token"}
 
 
-def _fit(pairs, regressors):
-    solved = _lstsq(pairs, regressors) if pairs else None
-    if solved is None:
-        return None
-    coefficients, residuals, images = solved
-    residuals.sort()
-    separable = "images" in coefficients
-    return {"pairs": len(pairs), **{FIT_NAMES[name]: coefficients[name] for name in regressors},
-        # When every turn holds the same number of images the image term and the constant are one quantity, so the
-        # constant is that sum and no image cost is claimed.
-        "per_image": coefficients.get("images"), "images_per_turn": None if separable else next(iter(images)),
-        "per_turn_constant": coefficients["constant"], "image_term_separable": separable,
+def _fit(pairs, regressors, images):
+    """Least squares of `growth` on the named regressors, the image count when `images`, and a per-turn constant.
+    Returns `(fit, None)`, or `(None, reason)` when there are no more pairs than columns or the columns are not
+    independent (for example when every result has the same length)."""
+    names = [*regressors, *(["images"] if images else []), "constant"]
+    if len(pairs) <= len(names):
+        return None, f"{len(pairs)} pairs for {len(names)} terms"
+    table = np.array([[pair[name] if name != "constant" else 1 for name in names] for pair in pairs], float)
+    growth = np.array([pair["growth"] for pair in pairs], float)
+    coefficients, _, rank, _ = np.linalg.lstsq(table, growth, rcond=None)
+    if rank < len(names):
+        return None, f"the terms are not independent (rank {rank} of {len(names)}): a regressor does not vary across the pairs"
+    by_name = dict(zip(names, (float(value) for value in coefficients)))
+    residuals = sorted(np.abs(growth - table @ coefficients).tolist())
+    return {"pairs": len(pairs), **{FIT_NAMES[name]: by_name[name] for name in regressors},
+        "per_image": by_name.get("images"), "per_turn_constant": by_name["constant"],
         "residual_abs": {"p50": nearest_rank(residuals, .5), "p95": nearest_rank(residuals, .95),
-            "within_5_tokens": share_within(residuals, 5)}}
+            "within_5_tokens": share_within(residuals, 5)}}, None
 
 
 def composition(pairs, left_out, tokenizer=None):
     """Prompt composition of one route from `composition_pairs`, in tokens of the route's own model.
 
     `usage_fit` uses the provider's reported usage and the trace's sizes only, so it holds for any model that reports
-    usage: `per_result_byte` is tokens per byte of tool-result text, `per_output_token` tokens per output token of the previous reply
-    (reasoning included), `per_image` and `per_turn_constant` the image and per-turn terms. With a `tokenizer`,
+    usage: `per_result_byte` is tokens per byte of tool-result text, `per_output_token` tokens per output token of the
+    previous reply (reasoning included) and `per_turn_constant` the per-turn term. `image_counts` is the histogram of images
+    per fitted pair. The image count is a term of the fit (`per_image`) only when at least `IMAGE_VARIATION_SHARE`
+    of the pairs differ from the most common count; otherwise `image_term_separable` is false, `per_image` is
+    null, the constant is the cost of a turn at `images_per_turn` images and the pairs with another count are left out
+    (`other_image_count`). A fit is `None`, with a `usage_fit_reason`, when it is degenerate. With a `tokenizer`,
     `tokenizer_check` fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and
-    its reasoning tokens: it `holds` when the slope on the result-text tokens is `1 +- TOKENIZER_SLOPE_TOLERANCE` and
-    the median absolute residual is at most `TOKENIZER_MEDIAN_RESIDUAL` tokens."""
-    result = {"pairs": len(pairs), "left_out": left_out, "usage_fit": _fit(pairs, ("result_bytes", "output")), "tokenizer_check": None}
+    its reasoning tokens: it `holds` by `tokenizer_holds`."""
+    counts = Counter(pair["images"] for pair in pairs)
+    modal, top = max(counts.items(), key=lambda item: (item[1], -item[0])) if counts else (None, 0)
+    separable = len(pairs) - top >= IMAGE_VARIATION_SHARE * len(pairs)
+    used = pairs if separable else [pair for pair in pairs if pair["images"] == modal]
+    fit, reason = _fit(used, ("result_bytes", "output"), separable)
+    result = {"pairs": len(used), "left_out": {**left_out, "other_image_count": len(pairs) - len(used)},
+        "image_counts": {str(count): counts[count] for count in sorted(counts)}, "image_term_separable": separable,
+        "images_per_turn": None if separable else modal, "usage_fit": fit, "usage_fit_reason": reason, "tokenizer_check": None}
     if tokenizer is not None:
         check = {"tokenizer": tokenizer.name, "available": tokenizer.count is not None, "reason": tokenizer.unavailable}
-        counted = [{**pair, "visible_output": max(pair["output"] - pair["reasoning"], 0)} for pair in pairs
-            if number(pair["result_tokens"])]
-        fit = _fit(counted, ("result_tokens", "visible_output", "reasoning")) if tokenizer.count is not None else None
-        if fit is not None:
-            slope = fit["per_result_token"]
-            check.update(fit, slope=slope, holds=abs(slope - 1) <= TOKENIZER_SLOPE_TOLERANCE
-                and fit["residual_abs"]["p50"] <= TOKENIZER_MEDIAN_RESIDUAL)
+        counted = [{**pair, "visible_output": max(pair["output"] - pair["reasoning"], 0)} for pair in used if number(pair["result_tokens"])]
+        if tokenizer.count is not None:
+            fit, reason = _fit(counted, ("result_tokens", "visible_output", "reasoning"), separable)
+            if fit is None:
+                check["reason"] = reason
+            else:
+                slope = fit["per_result_token"]
+                check.update(fit, slope=slope, holds=tokenizer_holds(slope, fit["residual_abs"]["p50"]))
         result["tokenizer_check"] = check
     return result
 
@@ -208,11 +222,17 @@ def compositions(reports, tokenizers=None):
     by_route = {}
     for report in reports:
         if report.get("coverage") == "player_host":
-            pairs, left_out = by_route.setdefault(route_of(report), ([], Counter()))
+            pairs, left_out, failures = by_route.setdefault(route_of(report), ([], Counter(), []))
             pairs.extend(report["composition_pairs"])
             left_out.update(report["composition_left_out"])
-    return [{"route": route, **composition(pairs, {reason: left_out[reason] for reason in LEFT_OUT},
-        tokenizers.get(route, tokenizers.get(None)))} for route, (pairs, left_out) in sorted(by_route.items(), key=lambda item: str(item[0]))]
+            failures.extend(filter(None, [report.get("tokenizer_failure")]))
+    entries = []
+    for route, (pairs, left_out, failures) in sorted(by_route.items(), key=lambda item: str(item[0])):
+        tokenizer = tokenizers.get(route, tokenizers.get(None))
+        if tokenizer is not None and failures:  # a counting function that raised: no tokenizer check for the route
+            tokenizer = replace(tokenizer, count=None, unavailable=failures[0])
+        entries.append({"route": route, **composition(pairs, {reason: left_out[reason] for reason in LEFT_OUT}, tokenizer)})
+    return entries
 
 
 def response_by_prompt(samples, intervals):
@@ -381,7 +401,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
     if size > 8 * 1024 ** 3:
         raise ControlError("Select a bounded regular trace file")
     tokenizers = tokenizers or {}
-    tokenizer = None
+    tokenizer = tokenizer_failure = None
     omitted, notices, calls, results = {}, set(), Counter(), {}
     rows, tools, tool_intervals = {}, {}, []
     counts = Counter()
@@ -464,7 +484,12 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 tool_intervals.append(tuple(entry))
                 rows[event["request_id"]].setdefault("first_tool_result_ms", at)
                 text, text_bytes, images = _result_parts(event.get("result"))
-                counted = tokenizer.count(text) if tokenizer is not None and tokenizer.count is not None else None
+                counted = None
+                if tokenizer is not None and tokenizer.count is not None and tokenizer_failure is None:
+                    try:
+                        counted = int(tokenizer.count(text))
+                    except Exception as exc:  # a counting function that raises is reported, never fatal to the usage fit
+                        tokenizer_failure = f"counting with {tokenizer.name} failed: {type(exc).__name__}: {exc}"
                 results.setdefault(event["request_id"], []).append((text_bytes, counted, images))
             elif kind == "abort":
                 abort = event
@@ -555,7 +580,9 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
         "counts": dict(counts), "http_attempts_observed": len(rows), "censored_requests": incomplete,
         "unknown_usage_requests": unknown_usage, "pending_tools": sum(end is None for _, end in tools.values()),
         "completed_response_ms": distribution(durations), "response_by_prompt": response_by_requests(rows.values()),
-        "prompt_composition": composition(pairs, left_out, tokenizer), "composition_pairs": pairs, "composition_left_out": left_out,
+        "prompt_composition": composition(pairs, left_out, tokenizer if tokenizer_failure is None else
+            replace(tokenizer, count=None, unavailable=tokenizer_failure)),
+        "composition_pairs": pairs, "composition_left_out": left_out, "tokenizer_failure": tokenizer_failure,
         "tool_ms": distribution(delta(b, a) if clock_valid else None for a, b in tool_intervals),
         "timing_ms": {key: distribution(value) for key, value in field_times.items()},
         "usage": {key: distribution(value) for key, value in usage_fields.items()},
@@ -585,7 +612,7 @@ def host_summary(paths: list[Path], tokenizers=None) -> dict:
     selection = {"traces": len(hosts), "response_by_prompt": response_by_requests(row for r in hosts for row in r["requests"]),
         "prompt_composition": compositions(hosts, resolved)}
     for r in hosts:
-        del r["composition_pairs"], r["composition_left_out"]
+        del r["composition_pairs"], r["composition_left_out"], r["tokenizer_failure"]
     return {"complete": all(r["coverage"] == "player_host" for r in reports),"schema": "host-analysis/1", "scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",
         "units": "milliseconds unless named otherwise; p50 and p95 are nearest rank; reasoning is a subset of output, not added to it; "
             "prompt-size bands are by input plus cache read plus cache write tokens, lower bound inclusive; "
@@ -647,18 +674,20 @@ def composition_text(entries) -> list[str]:
         fit, check = entry["usage_fit"], entry["tokenizer_check"]
         left = ", ".join(f"{reason.replace('_', ' ')} {count}" for reason, count in entry["left_out"].items() if count)
         lines.append(f"Route {entry['route']}: {entry['pairs']:,} request pairs fitted; left out: {left or 'none'}.")
+        histogram = ", ".join(f"{count} image{'s' if count != '1' else ''}: {pairs:,}" for count, pairs in entry["image_counts"].items())
         if fit is None:
-            lines.append("  Too few pairs to fit.")
+            lines.append(f"  No usage fit: {entry['usage_fit_reason']}.")
         else:
-            image = (f"{fit['per_image']:.1f} tokens per image, per-turn constant {fit['per_turn_constant']:.1f}" if fit["image_term_separable"]
-                else f"{fit['per_turn_constant']:.1f} tokens per turn, images included ({fit['images_per_turn']} per turn; image and constant are not separable)")
+            image = (f"{fit['per_image']:.1f} tokens per image, per-turn constant {fit['per_turn_constant']:.1f}" if entry["image_term_separable"]
+                else f"{fit['per_turn_constant']:.1f} tokens per turn at {entry['images_per_turn']} images (the image term is not separable from the "
+                    f"constant: pairs by image count, {histogram or 'none'})")
             lines.append(f"  From usage alone: {fit['per_result_byte']:.4f} tokens per byte of tool-result text, {fit['per_output_token']:.3f} per output "
                 f"token of the previous reply (reasoning included), {image}; residual median {fit['residual_abs']['p50']:.1f}, 95th percentile {fit['residual_abs']['p95']:.1f} tokens.")
         if check is not None:
             if not check["available"]:
                 lines.append(f"  Tokenizer {check['tokenizer']}: not checked, {check['reason']}; the usage fit stands alone.")
             elif "slope" not in check:
-                lines.append(f"  Tokenizer {check['tokenizer']}: not checked, too few pairs.")
+                lines.append(f"  Tokenizer {check['tokenizer']}: not checked, {check['reason']}.")
             else:
                 lines.append(f"  Tokenizer {check['tokenizer']}: slope {check['slope']:.4f} on result-text tokens (holds within 1 +- {TOKENIZER_SLOPE_TOLERANCE:g}), "
                     f"{check['per_visible_output_token']:.4f} on visible output tokens, {check['per_reasoning_token']:.4f} on reasoning tokens; "
@@ -670,8 +699,8 @@ def composition_text(entries) -> list[str]:
 def parse_tokenizer(value: str):
     """`ENCODING` names a tokenizer for every route; `ROUTE=ENCODING` for one route (a host's `model`)."""
     route, separator, name = value.rpartition("=")
-    if not name:
-        raise argparse.ArgumentTypeError("expected [ROUTE=]ENCODING")
+    if not name or separator and not route:
+        raise argparse.ArgumentTypeError(f"expected [ROUTE=]ENCODING with a route and an encoding when there is an '=': {value!r}")
     return (route if separator else None), name
 
 
@@ -689,6 +718,11 @@ def main(argv=None) -> int:
         print(f"Trace analysis failed: {exc}", file=sys.stderr)
         return 1
     entries = report["selection"]["prompt_composition"]
+    unmatched = sorted(route for route, _ in arguments.tokenizer if route is not None and route not in {entry["route"] for entry in entries})
+    if unmatched:
+        print(f"No selected trace has the route {', '.join(map(repr, unmatched))}; the routes are "
+            f"{', '.join(repr(entry['route']) for entry in entries) or 'none'}", file=sys.stderr)
+        return 2
     print(json.dumps(entries, allow_nan=False, sort_keys=True) if arguments.json else "\n".join(composition_text(entries)))
     return 0 if report["complete"] else 1
 
