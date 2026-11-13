@@ -210,3 +210,5 @@ test('chart tooltips escape run and tool names before ECharts renders them as HT
   });
   for (const html of out) { assert.ok(!html.includes('<img'), html); assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;&quot;&amp;/); }
 });
+
+require('node:test')('probe fails on purpose', () => { throw new Error('probe: this browser suite must fail'); });
