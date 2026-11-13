@@ -45,7 +45,13 @@ reduce optional scope before weakening required quality or evidence.
 - **Dates:** none kept by hand. Cycle time comes from GitHub's own timestamps: a PR
   opened to merged, an issue opened to closed.
 - **Review and validation** state lives on the PR (draft, checks, review threads) and in
-  the issue's current-state block.
+  the issue's description.
+- **An issue has one current description.** It states the current state, the outcome or
+  problem, the acceptance, dependencies and links. When things change the description
+  is replaced, not added to: no stacked state sections and no history narrative. GitHub
+  keeps the edit history, comments record events, and owner decisions go in the
+  [owner decision log](../decisions/owner-decisions.md). A description does not repeat
+  Project fields.
 - **Parking** returns an item to Backlog with its reason and resumption trigger.
   Duplicates and cancellations close as not planned and are excluded from delivery.
 - A merged pull request never closes an issue: the repository's "Auto-close issues with

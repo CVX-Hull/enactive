@@ -32,41 +32,25 @@ missing usage, original failures and retired unused allowances. A failed actor c
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
-**The hard cap** is the credit limit on the OpenRouter key, which the owner set at
-$1,500 on 12 November 2026. It is outside the code, which cannot read it. It is the
-one overall cap: there is no separate cumulative cap across studies and no hand-kept
-running total. Each study still needs its own envelope from the owner, and each run
-its own dollar limit.
+**The hard cap** is the credit limit the owner keeps on the OpenRouter key, $1,500. It
+is outside the code, which cannot read it. It is the one overall cap: there is no
+separate cumulative cap across studies and no hand-kept running total. Each study needs
+its own envelope from the owner, and each run its own dollar limit.
 
-**Actual-spend admission.** For each
-envelope listed below, and for no other spend, the lead admits a run or admission without
-per-run owner approval only while the study's actual provider-reported new spend plus
-twice its largest single admission so far stays within that envelope. The lead records
-each run's spend in its run-ledger row and stops to ask the owner when the envelope is
-reached. `tools/run_ledger.py totals` applies the rule. A new envelope needs its own
-owner decision.
+**Actual-spend admission.** Inside an open envelope, and for no other spend, the lead
+admits a run without per-run owner approval only while the study's actual
+provider-reported new spend plus twice its largest single admission so far stays within
+that envelope. The lead records each run's spend in its run-ledger row and stops to ask
+the owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
+A new envelope needs its own owner decision.
 
-Owner-set envelopes:
-
-- The ceiling benchmark and grounding-aid study ([#372](acceptance/2026-11-06-development-loop.md), the
-  owner's decision of 5 November 2026 on the loop's new spend) and the long-horizon arm
-  ([#382](acceptance/2026-11-07-long-horizon-382.md), the owner's decision of 7 November 2026 on the arm's new
-  envelope) each have a $150 new-spend envelope. Both are closed, and an unspent remainder is not carried to
-  other work.
-- One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397))
-  has a $300 new-spend envelope (the owner's decisions of 7 November 2026 in
-  [its record](acceptance/2026-11-07-seven-day-397.md): a $150 envelope for one lineage, then its raise to
-  $300 after admission 4). It is closed: the lineage ended.
-- The curator memory study's fourth held-out lineage, stored as `lh4`
-  ([#522](https://github.com/CVX-Hull/enactive/issues/522)), has an $80 new-spend envelope,
-  approved with the study's [added-lineage protocol](design/p1-study-3.md#running-lh4) on
-  9 November 2026 ([its record](acceptance/2026-11-09-held-out-lineage-522.md)). It is closed:
-  the lineage ended.
-
-The run ledger, `data/evaluation/runs.jsonl`, holds the #372, #382, #397 and #522
-studies, and `tools/run_ledger.py totals --study` reports one study's spend and envelope
-headroom. Spend outside those studies is stated in the dated record of the work that
-spent it.
+**No envelope is open.** The four that were set, for the development loop, the
+long-horizon arm, the seven-day lineage and the held-out lineage, are closed, and an
+unspent remainder is not carried to other work. Each envelope and the decision that set
+it is a row in the [owner decision log](decisions/owner-decisions.md). The run ledger,
+`data/evaluation/runs.jsonl`, holds those studies' runs, and
+`tools/run_ledger.py totals --study` reports one study's spend against its envelope.
+Spend outside a study is stated in the dated record of the work that spent it.
 
 ## Engineering decision and merge delegation
 

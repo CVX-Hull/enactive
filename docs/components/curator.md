@@ -62,10 +62,9 @@ adopted; the baseline and workbench phase's
   [baseline and workbench phase outcome](../acceptance/2026-11-08-adr009-p0.md) and the
   curator memory study's
   [completion and registered no-go](../acceptance/2026-11-12-p1-descriptive-completion-178.md).
-- **Direction:** on 13 November 2026 the owner kept the dedicated curator as the writer
-  of the store; how its knowledge reaches the player is being designed
-  ([decisions](../acceptance/2026-11-13-memory-and-cadence-decisions.md),
-  [memory note](../design/long-horizon-memory.md)). The curator still does not run in
-  live play.
+- **Standing:** the curator is the writer of the knowledge store and does not run in
+  live play ([owner decision log](../decisions/owner-decisions.md)). How its knowledge
+  reaches the player is tracked in
+  [#591](https://github.com/CVX-Hull/enactive/issues/591).
 - **CI coverage:** Linux CI runs the portable tests. The Seatbelt-lane tests, sandbox
   and real-host sessions, run only on macOS.

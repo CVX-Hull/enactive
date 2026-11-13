@@ -1,6 +1,6 @@
 ---
 owner: lead
-status: proposed
+status: historical
 date: '2026-11-13'
 scope: 'Diagnosis of the player''s memory in recorded long play and of the curator memory study''s result, what memory must do for long-horizon play, six design options with a recommendation, and the shape of an experiment that could decide it (#445, #463, #556); nothing here is adopted'
 review_trigger: An owner decision on the memory direction, or new long-play evidence about memory
@@ -8,14 +8,9 @@ review_trigger: An owner decision on the memory direction, or new long-play evid
 
 # Memory for long-horizon play: diagnosis and options
 
-**Status: proposed; the owner decided the direction on 13 November 2026.** The owner
-kept the dedicated curator as the writer of the store, asked for a better prompt and
-context setup, and chose the \$0 checks and a written protocol as the next step
-([decisions](../acceptance/2026-11-13-memory-and-cadence-decisions.md)). The lead's
-recommendation below, to deliver the player's own notes first, was not taken; the
-diagnosis, the options and the experiment's shape stand as the basis for
-[#590](https://github.com/CVX-Hull/enactive/issues/590) and
-[#591](https://github.com/CVX-Hull/enactive/issues/591). Nothing here is adopted, and no study or
+**Status: decided.** This is the note as reviewed, kept as dated rationale. The owner's
+answers to its questions are in the [owner decision log](../decisions/owner-decisions.md);
+they did not take the recommendation below. Nothing here is adopted, and no study or
 run is started by it. The owner's premise of 13 November 2026
 ([#441](https://github.com/CVX-Hull/enactive/issues/441#issuecomment-6854313488)) is
 that Cataclysm DDA is not a short-memory decision problem: what matters now was often

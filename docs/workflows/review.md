@@ -58,6 +58,12 @@ guard, gate or procedure step) whose change does not name the
 ([control rule](../standards/authority.md#control-review)). It also rejects a name
 that does not say what the thing is ([names](../standards/documentation.md#names)).
 
+**Documents.** Review rejects a current page that narrates how something came to be
+instead of stating what is true, a dated record for a change whose only evidence is
+its diff, and an owner decision recorded anywhere but the
+[owner decision log](../decisions/owner-decisions.md)
+([one home per fact](../standards/documentation.md#current-pages-records-and-decisions)).
+
 ## Risk-based assurance
 
 The lead selects the required assurance when scoping the issue, based on impact,
