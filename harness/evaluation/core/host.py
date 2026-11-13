@@ -113,6 +113,7 @@ class HostFacts:
     settles: dict[str, HostEvent] = field(default_factory=dict)
     manifests: dict[str, list[dict]] = field(default_factory=dict)
     omitted: dict[tuple[str, str], int] = field(default_factory=dict)
+    images: dict[tuple[str, str], int] = field(default_factory=dict)  # images the conversation held, kept or omitted
     _starts: dict[str, list[tuple[float, int]]] = field(default_factory=dict)
     _prefix: dict[int, tuple[int, float]] = field(default_factory=dict)
     _keys: list[int] | None = None
@@ -305,6 +306,8 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
             elif kind == 'context-image-projection':
                 if _number(fields.get('omitted_images')) and isinstance(fields.get('request_id'), str):
                     facts.omitted[(actor, fields['request_id'])] = int(fields['omitted_images'])
+                if _number(fields.get('input_images')) and isinstance(fields.get('request_id'), str):
+                    facts.images[(actor, fields['request_id'])] = int(fields['input_images'])
                 if (_number(fields.get('omitted_images')) and fields['omitted_images'] > 0) or fields.get('blocked'):
                     facts.evictions.append(event)
             elif kind == 'context-estimate':

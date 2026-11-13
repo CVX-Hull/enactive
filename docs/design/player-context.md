@@ -35,7 +35,9 @@ review_trigger: A measurement of any estimate marked as such here, the memory sc
      curator's store already covers, with a fresh briefing in the same request.
 - **Expected effect, estimated and not measured.**
   - With the first change alone, a 150-request actor's prompt falls from about 180,000
-    tokens to about 75,000.
+    tokens to about 75,000. Short results are built: the median `computer_input` result
+    is 135 bytes where it was 1,827, which at the fitted rate puts that prompt nearer
+    66,000 tokens ([free checks](../acceptance/2026-11-13-memory-screen-free-checks.md#with-the-short-results-as-built)).
   - With all three, the prompt stays between about 20,000 and 40,000 tokens **only if the
     curator keeps within about 15 decisions of play**. That is not measured. At the lag
     computed for the one recorded curator run, 47 decisions, the cut would rarely free
@@ -296,6 +298,13 @@ Three layers. Each can be built and judged alone, in this order.
   the marks, a session must finish within about 15 decisions, roughly two minutes of
   play. A session that reads 20 new turns should be much shorter than one that reads a
   whole admission, but that is not measured.
+- **Two additions to the rule**, from the
+  [free checks](../acceptance/2026-11-13-memory-screen-free-checks.md#where-the-cut-stops-working):
+  a cut is made only if it frees at least ten turns, and both marks are counted above
+  the briefing's size. Without the first, a curator about 39 decisions behind makes the
+  host rewrite the window at most requests.
+- **The cut is not in the memory screen's first comparison** and is not built until the
+  session price pilot reports ([protocol](memory-screen-protocol.md#the-cut-and-curator-sessions-during-play)).
 - **Coverage is not recorded today.** A curator session records the frames of the window
   it was given, not the last decision its published facts reflect. The stamp is new.
 - **Risk.** The player loses the thread of what it was doing. Two things carry it: the
