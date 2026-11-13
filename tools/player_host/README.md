@@ -44,6 +44,17 @@ The in-flight tool-deadline case uses a controlled Node timeout clock only after
 observing actual fixture tool start; startup/signal cases and outer watchdogs
 retain real time, and all cases retain actual child-closure assertions.
 
+`node --test` runs each `test/*.test.mjs` file in its own process, several at a
+time, and the cases inside one file one after another. Almost all the time is
+Python MCP child startup, so the `runHost` cases are divided by responsibility
+(route configuration, context projection, tool dispatch, provider requests, MCP
+connection, the three retry files, control and finish, handoff) and share the
+route, provider responses and `scenario` runner in `test/host-scenario.mjs`. Add
+a case to the file that owns its responsibility, or to a new descriptively named
+file, rather than growing one file until it sets the suite's wall time. Each
+host run starts its own child in a fresh temporary directory, so the files share
+no state.
+
 The runner requires a leading mode word. `validate` checks the route and MCP
 table offline and exits zero only if both are accepted, writing nothing to stdout:
 

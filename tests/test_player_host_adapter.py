@@ -10,8 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 # This bounds the whole expanding subprocess suite, not a gameplay latency goal.
 # CI's original 90s watchdog truncated valid later cases; host deadlines have
 # separate controlled-clock assertions and must not depend on Python startup.
-# CI runs this suite about 1.6-2.9x slower than a local run under its parallel test
-# workers; the bound leaves room for that variance while still catching a hang.
+# Nearly all the time is Python MCP child startup, about 0.3s for each of roughly
+# 200 host runs. Node runs each test file in its own process, at most one fewer
+# than the CPU count at a time, so the wall time depends on the machine: about 14s
+# on 16 CPUs, 38s with three files at a time and 90s with one. The hosted runner
+# took 154s beside the other pytest workers while most cases still ran one after
+# another, 2.3x the 68s that layout took locally. The bound covers a one-at-a-time
+# run at that slowdown (about 205s) and still catches a hang.
 CONFORMANCE_TIMEOUT_SECONDS = 360
 
 

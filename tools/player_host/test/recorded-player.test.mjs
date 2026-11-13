@@ -29,7 +29,7 @@ const configuration = () => ({schema:'player-host/3',service_tier:'default',mode
 const finish = ['player_finish',{disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];
 const proposal = ['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}];
 
-// Same maintained SDK mocking pattern as host.test.mjs: scripted Responses,
+// Same maintained SDK mocking pattern as host-scenario.mjs: scripted Responses,
 // injected fetch and real MCP stdio. There is no listener or provider parser.
 function reply(calls) {
   const delta = {role:'assistant',tool_calls:calls.map(([name,args],index)=>({index,id:`recorded-${index}`,
