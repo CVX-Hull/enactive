@@ -48,7 +48,10 @@ A new envelope needs its own owner decision.
 curator sessions only, with no game launch: up to \$45 for the brief gate and up to \$20
 for the session price pilot ([protocol](design/memory-screen-protocol.md#cost-and-stop-rules)).
 Curator spend is not in the run ledger; the gate's record takes it from the curator
-proxy's ledger. The four earlier envelopes, for the development loop (study 372),
+proxy's ledger. Spent: \$15.86 on the [brief gate](acceptance/2026-11-13-curator-brief-gate.md)
+and \$2.34 on the [session price pilot](acceptance/2026-11-13-session-price-pilot.md),
+\$18.20 in all. Both paid steps are done, so the envelope is spent as far as it will be;
+its remainder is not carried to other work. The four earlier envelopes, for the development loop (study 372),
 the long-horizon arm (382), the seven-day lineage (397) and the held-out lineage (522),
 are closed, and an
 unspent remainder is not carried to other work. Each envelope and the decision that set
