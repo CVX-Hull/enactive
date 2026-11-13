@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: 'Knowledge repository, curator sessions, drafts and the submission gate, version 0 (ADR 009 D14, D16 and D17; #453)'
+scope: 'Knowledge repository, curator sessions, drafts and the submission gate, version 0 (ADR 009''s directions for a coding-agent curator, one knowledge repository per game and managed draft containers; #453)'
 review_trigger: A change to the knowledge repository layout, the submission or fact shapes, the gate checks, the draft lifecycle or the session close-out
 ---
 
@@ -20,8 +20,9 @@ Code: [`harness/curator`](../../harness/curator): `knowledge.py`, `containers.py
 
 ## Layout
 
-The knowledge repository's location is set by
-[ADR 009](../decisions/009-curated-player.md) (open decision 5). Everything lives under one project-local root, by default
+The knowledge repository's location is set by ADR 009's
+[owner decision on where the repository lives](../decisions/009-curated-player.md#open-owner-decisions).
+Everything lives under one project-local root, by default
 `.runtime/knowledge/`:
 
 | Path | Holds |

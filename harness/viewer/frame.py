@@ -1,4 +1,5 @@
-"""Payload builders for the spectator's frame: `spectator-frame/1` (ADR 009 D18; docs/contracts/evaluation.md).
+"""Payload builders for the spectator's frame: `spectator-frame/1` (ADR 009's spectator direction;
+docs/contracts/evaluation.md).
 
 The frame is a health strip, the container inventory and the four #397 forgetting episodes over sealed traces. Every
 builder is a pure read: sidecar container indexes (`data/containers/*.json`), tracked probe episodes
@@ -30,7 +31,7 @@ class FrameSources:
     probes: Path = DATA_ROOT / 'evaluation' / 'probes'
 
 
-# The health strip's slots (D18) and the phase that first delivers each. `actor_cadence` is measured from sealed
+# The health strip's slots (ADR 009's spectator direction) and the phase that first delivers each. `actor_cadence` is measured from sealed
 # actor sessions already; the rest need a curator, gate, snapshots or programs that exist only from ADR 009's curator
 # and memory phase or its programs and monitor phase.
 CURATOR_AND_MEMORY = 'curator-and-memory'

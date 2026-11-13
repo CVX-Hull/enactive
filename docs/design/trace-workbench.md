@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: 'Trace projection, sealed-memory evidence reader, workbench commands and sidecar container manifests over sealed traces (ADR 009 D6 and D17; #452)'
+scope: 'Trace projection, sealed-memory evidence reader, workbench commands and sidecar container manifests over sealed traces (ADR 009''s directions for a curator workbench and for managed containers; #452)'
 review_trigger: A change to what a trace projection may contain, to the session or memory store formats, to the workbench commands, or to the container manifest shape
 ---
 
@@ -92,8 +92,9 @@ store is in [the moved results](../acceptance/2026-11-09-moved-results.md#trace-
 | `diff` | Per-cell change between two frames on a grid ([`images.region_diff`](../../harness/trace/images.py)) |
 | `similar` | Nearest frames by 64-bit difference hash |
 
-**Perceptual-hash reliability is measured, not assumed** (ADR 009 research question R8;
-its synthesis is #448).
+**Perceptual-hash reliability is measured, not assumed** (ADR 009's
+[research area](../decisions/009-curated-player.md#research-agenda) on novelty and anomaly
+detection; its synthesis is #448).
 On the sealed #397 frames, consecutive and random pairs' difference-hash distances overlap
 heavily, so a difference hash separates "next frame" from "any frame" only weakly
 ([measurement](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)).
@@ -103,7 +104,8 @@ first, as the research page recommends.
 ## Containers and sidecars
 
 [`sidecar.py`](../../harness/trace/sidecar.py) defines `container-manifest/1`, one shape for
-every container kind (ADR 009 D17). Its fields are identity, kind, owner role, inputs and
+every container kind ([ADR 009's containers](../decisions/009-curated-player.md#containers-d17),
+which start from the owner's direction that drafts be managed containers). Its fields are identity, kind, owner role, inputs and
 pinned versions, budgets, lifecycle state, provenance and retention. The kinds adopted so
 far are actor sessions (sealed) and, for #453, curator sessions, submissions and drafts.
 

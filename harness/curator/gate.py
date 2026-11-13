@@ -1,4 +1,5 @@
-"""Gate v0: validate a curator submission and publish it (ADR 009 D14; docs/design/curator-session.md).
+"""Gate v0: validate a curator submission and publish it (ADR 009's coding-agent curator direction;
+docs/design/curator-session.md).
 
 Checks run in the spec's order and the first failing stage rejects, listing every problem in
 that stage: well formed, base version, scope, provenance. Nothing a submission contains is

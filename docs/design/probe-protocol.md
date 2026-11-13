@@ -31,7 +31,7 @@ The curator's sandbox cannot read the repository.
 | Use | Lineages | Notes |
 | --- | --- | --- |
 | Development (this protocol's first application, #449) | `397-seven-day`: `sd1a1`–`sd1a7`; `372-382-dev-loop`: a seeded sample of #372's short runs (below) | Probes built here fit and debug the system; they decide nothing |
-| Held out (#178) | #382's `lh1`–`lh3` in `372-382-dev-loop` | Not opened, annotated or summarised here |
+| Held out (#178) | #382's three held-out lineages, stored as `lh1`–`lh3`, in `372-382-dev-loop` | Not opened, annotated or summarised here |
 
 **#372 sample.** Eligible runs are those in `data/evaluation/run-metrics.jsonl` whose arm
 is one of `pilot`, `pre-loop`, `ceiling`, `zoom-aid`, `game-help-aid` or

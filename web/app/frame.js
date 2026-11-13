@@ -1,4 +1,4 @@
-// The spectator's frame (ADR 009 D18): a health strip over role views. Actor works on real sealed data and shows
+// The spectator's frame (ADR 009's spectator direction): a health strip over role views. Actor works on real sealed data and shows
 // the forgetting episodes; Curator, Knowledge and Programs say which phase brings them; Containers is the inventory.
 // Read-only: every value comes from /api/view/frame/* (spectator-frame/1); anchors open the existing per-run views.
 import {html, useState, Panel, Pv, Waiting, Table, Insufficient, Callout, fmtMoney, trim, label} from './ui.js';
@@ -48,7 +48,7 @@ function Health() {
 }
 
 /* ---------------------------------------------------------------- placeholders */
-// What each role will show and when, from ADR 009 D18 and its phases. Nothing here is data.
+// What each role will show and when, from ADR 009's spectator direction and its phases. Nothing here is data.
 const PLACEHOLDERS = {
   curator: ['curator-and-memory', 'Curator', 'A session timeline with lag; each session\'s brief, transcript summary, submissions and gate verdicts; submission diffs; open and stale drafts.'],
   knowledge: ['curator-and-memory', 'Knowledge', 'Facts with provenance frames, scope, belief and staleness; what each snapshot showed the actor and when. The ontology browser with versions and grooming history follows the ontology work.'],

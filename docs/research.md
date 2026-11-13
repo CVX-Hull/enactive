@@ -12,16 +12,19 @@ our engineering inferences; they are not a claim to exhaust the literature.
 
 ## Curated player (ADR 009)
 
-Research behind [ADR 009](decisions/009-curated-player.md), dated 2026-11-08:
+Research behind [ADR 009](decisions/009-curated-player.md), dated 2026-11-08. Each page
+answers areas of the ADR's [research agenda](decisions/009-curated-player.md#research-agenda):
 
-- [Curator sandbox](research-curator-sandbox.md) (R13, #451): project-local sandbox
+- [Curator sandbox](research-curator-sandbox.md) (agent workspaces and verification
+  gates, #451): project-local sandbox
   mechanisms on this Mac, coding-agent hosts under them, session cost evidence and
   gate gaming, with the prototype's escape-suite results and residual risks.
-- [Memory, belief, ontology and oversight](research-curated-memory.md) (R1–R4, R14,
-  #447): write and retrieval policies, concurrent consolidation, belief under conflict
-  (open decision 4), ontology evaluation and oversight interfaces.
+- [Memory, belief, ontology and oversight](research-curated-memory.md) (#447): write
+  and retrieval policies, concurrent consolidation, belief under conflict (the ADR's
+  [open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions)),
+  ontology evaluation and oversight interfaces.
 - [Programs, supervision, evaluation and study design](research-curated-programs.md)
-  (R5–R12, #448): program libraries, model slots, supervision, novelty, expectations,
+  (#448): program libraries, model slots, supervision, novelty, expectations,
   offline evaluation, practice environments, and study design for #178 and #470.
 
 ## Engineering

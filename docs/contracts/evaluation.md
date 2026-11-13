@@ -530,8 +530,8 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 
 ### Spectator frame (`spectator-frame/1`)
 
-The `/api/view/frame/*` routes are the spectator's frame ([ADR 009](../decisions/009-curated-player.md)
-D18). They follow the rules above (`GET` only, under 4 MiB, nothing written) but carry
+The `/api/view/frame/*` routes are the spectator's frame
+([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18)). They follow the rules above (`GET` only, under 4 MiB, nothing written) but carry
 `"schema": "spectator-frame/1"`. Errors keep the `spectator-view/1` envelope. They read
 tracked data and the catalog's stores, and nothing they compute reaches the player or the
 curator (ADR008). The container and probe directories default to the repository's

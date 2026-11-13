@@ -69,7 +69,8 @@ allowlist checked against a dated source, and the same probe runs with a stand-i
 
 ## Pi curator host (the shadow-session host)
 
-The shadow host is one host the project controls (ADR 009 open decision 2), run with two models
+The shadow host is one host the project controls (ADR 009's
+[owner decision on the curator's spend cap and model](../decisions/009-curated-player.md#open-owner-decisions)), run with two models
 through OpenRouter ([#454 record](../acceptance/2026-11-08-curator-shadow-454.md)). [`tools/curator_host`](../../tools/curator_host) is a private Node package
 on `@earendil-works/pi-agent-core` and `pi-ai` 1.4.0, the versions the actor's
 [`tools/player_host`](../../tools/player_host/README.md) uses. It has no MCP, no shell and no
@@ -120,7 +121,7 @@ Node tests: `cd tools/curator_host && npm test`.
   runtime's ignored `credentials.json`, and fails if neither resolves. `--upstream`
   accepts only OpenRouter or a local http origin. It selects only the sampled sessions (397:
   `sd1a1`–`sd1a7`; 372: `aidB3 ceil09 ceil07 ceil05 aidB9 aidA5`, in that order) and refuses
-  `lh1`–`lh4` and any other name. A 372 run gets its own sealed memory store; the 397 lineage
+  the four held-out lineages, stored as `lh1`–`lh4`, and any other name. A 372 run gets its own sealed memory store; the 397 lineage
   store is not passed, because it would carry later admissions into earlier sessions.
 - **Run.** One `run_session` per session against `.runtime/knowledge/shadow-454/<arm>/<lineage>/`
   (game `cdda`). Each session has its own proxy and token, sized to what the whole-run cap leaves
