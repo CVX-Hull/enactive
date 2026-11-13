@@ -350,6 +350,12 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     driver record, its host traces with their telemetry version, and its run-ending record
     (`watch-terminal.json`). The entries of `campaign-run/4` sessions also hold the
     operator `labels`, which those manifests predate.
+  - **One indexed session does not evaluate.** `522-held-out/computer-sessions/lh4a1`,
+    a session of the fourth held-out lineage that an infrastructure fault ended early,
+    was sealed with its database in write-ahead-log mode and without its log files, so
+    SQLite cannot open it inside the read-only store. Its manifest, receipt and
+    run-ending record read; its operations do not, and evaluating it is an error. The
+    sealed copy stays as it is, because sealed evidence is never rewritten.
   - **What an entry allows.** An entry does not by itself make an old version readable.
     A record in its current version is read as current for any session, listed or not. A
     record in an older version is read only for a session the index lists with exactly

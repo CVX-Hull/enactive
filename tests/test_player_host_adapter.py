@@ -1,6 +1,7 @@
 """Run the player-host adapter's own SDK and MCP unit lane without provider inference or a game."""
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import unittest
@@ -25,16 +26,24 @@ class PlayerHostAdapterTests(unittest.TestCase):
         package = ROOT / "tools" / "player_host"
         tests = sorted((package / "test").glob("*.test.mjs"))
         self.assertTrue(tests, "Player-host adapter tests are required")
+        # Without the host's Node packages every case waits on a child that cannot start, the suite
+        # runs to its timeout and its Node processes outlive it. Fail at once and say what to install.
+        self.assertTrue((package / "node_modules").is_dir(),
+            "tools/player_host/node_modules is missing; install the host's packages first: "
+            'npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci '
+            "--ignore-scripts --no-audit --no-fund (docs/setup.md)")
         environment = {**os.environ, "ENACTIVE_TEST_PYTHON": sys.executable}
+        # Its own process group, so a timeout stops the per-file Node processes too, not only their parent.
+        suite = subprocess.Popen(["node", "--test", *map(str, tests)], cwd=package, env=environment,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
         try:
-            result = subprocess.run(["node", "--test", *map(str, tests)], cwd=package,
-                env=environment, capture_output=True, text=True, timeout=CONFORMANCE_TIMEOUT_SECONDS)
-        except subprocess.TimeoutExpired as error:
-            def decoded(value):
-                return value.decode(errors="replace") if isinstance(value, bytes) else value or ""
+            output, errors = suite.communicate(timeout=CONFORMANCE_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            os.killpg(suite.pid, signal.SIGKILL)
+            output, errors = suite.communicate()
             self.fail(f"Player-host adapter tests exceeded {CONFORMANCE_TIMEOUT_SECONDS} seconds. Complete partial TAP:\n"
-                + decoded(error.output) + "\nstderr:\n" + decoded(error.stderr))
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                + (output or "") + "\nstderr:\n" + (errors or ""))
+        self.assertEqual(suite.returncode, 0, output + errors)
 
 
 if __name__ == "__main__":

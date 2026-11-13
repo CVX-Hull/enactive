@@ -33,7 +33,10 @@ automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
 **The hard cap** is the credit limit on the OpenRouter key, which the owner set at
-$1,500 on 12 November 2026. It is outside the code, which cannot read it.
+$1,500 on 12 November 2026. It is outside the code, which cannot read it. It is the
+one overall cap: there is no separate cumulative cap across studies and no hand-kept
+running total. Each study still needs its own envelope from the owner, and each run
+its own dollar limit.
 
 **Actual-spend admission.** For each
 envelope listed below, and for no other spend, the lead admits a run or admission without
@@ -43,7 +46,7 @@ each run's spend in its run-ledger row and stops to ask the owner when the envel
 reached. `tools/run_ledger.py totals` applies the rule. A new envelope needs its own
 owner decision.
 
-Owner-set envelopes, each within the standing $1,000 cumulative cap:
+Owner-set envelopes:
 
 - The ceiling benchmark and grounding-aid study ([#372](acceptance/2026-11-06-development-loop.md), the
   owner's decision of 5 November 2026 on the loop's new spend) and the long-horizon arm
@@ -60,10 +63,10 @@ Owner-set envelopes, each within the standing $1,000 cumulative cap:
   9 November 2026 ([its record](acceptance/2026-11-09-held-out-lineage-522.md)). It is closed:
   the lineage ended.
 
-Cumulative actual spend against the $1,000 cap is stated in the latest study record that
-spent (currently the [#522 record's spend line](acceptance/2026-11-09-held-out-lineage-522.md#result));
-the run ledger, `data/evaluation/runs.jsonl`, holds only the #372, #382, #397 and #522 studies,
-and `tools/run_ledger.py totals --study` reports one study's spend and envelope headroom.
+The run ledger, `data/evaluation/runs.jsonl`, holds the #372, #382, #397 and #522
+studies, and `tools/run_ledger.py totals --study` reports one study's spend and envelope
+headroom. Spend outside those studies is stated in the dated record of the work that
+spent it.
 
 ## Engineering decision and merge delegation
 
