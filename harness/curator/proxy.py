@@ -23,8 +23,12 @@ The dollar cap is enforced by reservation:
   output price. A request whose reservation would exceed the cap is refused.
 - **Settle.** Afterwards it settles at the reported usage. The response is read to the end
   even if the client has gone, so usage is not lost.
-- **Fail closed.** A 200 response without usage keeps the whole reservation and revokes the
-  session token. So does a charge above its reservation, recorded as a breach.
+- **Refused requests cost nothing.** A response with an HTTP error status that was read to
+  its end and carries no usage counts at zero and releases its reservation; the provider
+  is trusted not to have billed a request it refused.
+- **Fail closed.** Every other response without usage keeps the whole reservation: a 200, a
+  stream cut after it began, a timeout and a transport failure. A 200 without usage also
+  revokes the session token, as does a charge above its reservation, recorded as a breach.
 
 Every request is appended to the proxy's ledger, without the key or token. Prices are a frozen
 input supplied by the caller (with their source and date), never a default.
@@ -326,7 +330,10 @@ class ModelProxy:
         return worst
 
     def _settle(self, reservation: Decimal, actual: Decimal | None, status: int) -> tuple[Decimal, bool, str | None]:
-        """Charge the actual cost (or the reservation when unknown). Fail closed on surprises."""
+        """Charge the actual cost (or the reservation when unknown). Fail closed on surprises.
+
+        A provider refusal passes an actual cost of zero, so it releases its reservation and revokes nothing.
+        """
         accounting_error = None
         if actual is not None and (not actual.is_finite() or actual < 0):
             actual, accounting_error = None, 'invalid-cost'
@@ -453,16 +460,23 @@ class ModelProxy:
                     status = self.upstream_status or status
                 finally:
                     try:
-                        accounting_error, response_error = None, None
+                        accounting_error, response_error, usage = None, None, None
                         try:
                             usage = usage_of(received) if received else None
                             actual = None if usage is None else proxy.provider.cost(proxy.prices[model], usage, received)
                             response_error = proxy.provider.response_error(received) if received else None
                         except (ValueError, TypeError, AttributeError, RecursionError, OverflowError, DecimalException) as exc:
                             actual, accounting_error = None, type(exc).__name__
-                        charge, breach, settlement_error = proxy._settle(reservation, actual, status)
+                        # The provider answered with an HTTP error status, the response was read to its end
+                        # (no transport failure, timeout or cut stream) and it carried no usage: it refused
+                        # the request before generating and is trusted not to have billed it.
+                        provider_refused = (status >= 400 and error is None and usage is None
+                                            and accounting_error is None)
+                        charge, breach, settlement_error = proxy._settle(
+                            reservation, Decimal(0) if provider_refused else actual, status)
                         proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
                                       usage_missing=actual is None or settlement_error is not None,
+                                      provider_refused=provider_refused,
                                       breach=breach, error=error, dropped_betas=dropped,
                                       **(dict(accounting_error=accounting_error or settlement_error)
                                          if accounting_error or settlement_error else {}),

@@ -34,7 +34,7 @@ def sse(usage):
 
 
 @contextmanager
-def openrouter(tmp_path, usage, cap='1', *, broken=False, entered=None, release=None):
+def openrouter(tmp_path, usage, cap='1', *, broken=False, entered=None, release=None, status=200):
     seen = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -49,7 +49,7 @@ def openrouter(tmp_path, usage, cap='1', *, broken=False, entered=None, release=
             if release is not None:
                 assert release.wait(10), 'local response was never released'
             data = usage if isinstance(usage, bytes) else sse(usage)
-            self.send_response(200)
+            self.send_response(status)
             self.send_header('content-type', 'text/event-stream')
             if broken:
                 self.send_header('transfer-encoding', 'chunked')
@@ -342,6 +342,77 @@ def test_a_truncated_upstream_http200_keeps_its_actual_status_and_conservative_c
         row = json.loads(proxy.ledger.read_text())
         assert row['status'] == 200 and row['error'] == 'IncompleteRead'
         assert row['charged'] == row['reserved'] and row['usage_missing'] and proxy.revoked
+
+
+REFUSAL = json.dumps(dict(error=dict(message='refused', code=429))).encode()
+
+
+@pytest.mark.parametrize('status', [400, 429, 503])
+def test_a_refusal_with_an_error_status_and_no_usage_costs_nothing_and_releases_its_reservation(tmp_path, status):
+    # The cap holds one request's reservation, so charging each refusal in full would stop the second.
+    with openrouter(tmp_path, REFUSAL, cap='0.002', status=status) as (proxy, port, seen):
+        for _ in range(3):
+            assert post(port, body(), proxy.token)[0] == status
+        assert len(seen) == 3  # the proxy admitted and forwarded every request
+        rows = [json.loads(line) for line in proxy.ledger.read_text().splitlines()]
+        assert [r['charged'] for r in rows] == ['0'] * 3 and all(Decimal(r['reserved']) > 0 for r in rows)
+        assert all(r['status'] == status and r['provider_refused'] and not r['breach'] and r['error'] is None for r in rows)
+        assert proxy.spent == 0 and proxy.reserved == 0 and not proxy.revoked and proxy.breaches == 0
+
+
+def test_an_error_status_that_reports_usage_is_charged_what_it_reports(tmp_path):
+    usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=.0001)
+    with openrouter(tmp_path, json.dumps(dict(usage=usage)).encode(), status=500) as (proxy, port, _seen):
+        assert post(port, body(), proxy.token)[0] == 500
+        row = json.loads(proxy.ledger.read_text())
+        assert not row['provider_refused'] and Decimal(row['charged']) == Decimal('.0001')
+        assert proxy.spent == Decimal('.0001') and proxy.reserved == 0 and not proxy.revoked
+
+
+def test_an_error_status_with_unreadable_usage_keeps_its_reservation(tmp_path):
+    with openrouter(tmp_path, b'{"usage":{"prompt_tokens":"invalid","completion_tokens":0}}', status=500) as (proxy, port, _seen):
+        assert post(port, body(), proxy.token)[0] == 500
+        row = json.loads(proxy.ledger.read_text())
+        assert not row['provider_refused'] and row['charged'] == row['reserved'] and row['accounting_error'] == 'ValueError'
+        assert proxy.spent == Decimal(row['reserved']) > 0 and proxy.reserved == 0
+
+
+def test_a_stream_cut_after_an_error_status_began_keeps_its_reservation(tmp_path):
+    with openrouter(tmp_path, b'', broken=True, status=500) as (proxy, port, _seen):
+        with pytest.raises(http.client.IncompleteRead):
+            post(port, body(), proxy.token)
+        row = json.loads(proxy.ledger.read_text())
+        assert row['status'] == 500 and row['error'] == 'IncompleteRead' and not row['provider_refused']
+        assert row['charged'] == row['reserved'] and proxy.spent == Decimal(row['reserved']) > 0 and proxy.reserved == 0
+
+
+def test_a_timeout_keeps_its_reservation_and_is_not_a_refusal(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from harness.curator import proxy as proxy_module
+
+    class TimesOut(http.client.HTTPConnection):
+        def getresponse(self):
+            raise TimeoutError('timed out')
+
+    monkeypatch.setattr(proxy_module, 'http', SimpleNamespace(client=SimpleNamespace(
+        HTTPConnection=TimesOut, HTTPSConnection=TimesOut)))
+    with openrouter(tmp_path, REFUSAL) as (proxy, port, _seen):
+        assert post(port, body(), proxy.token)[0] == 502
+        row = json.loads(proxy.ledger.read_text().splitlines()[0])  # the second row is the 502 sent to the client
+        assert row['error'] == 'TimeoutError' and not row['provider_refused']
+        assert row['charged'] == row['reserved'] and row['usage_missing']
+        assert proxy.spent == Decimal(row['reserved']) > 0 and proxy.reserved == 0
+
+
+def test_a_200_without_usage_keeps_its_reservation_and_revokes_the_session(tmp_path):
+    response = b'data: ' + json.dumps(dict(id='g', choices=[dict(index=0, delta=dict(content='ok'))])).encode() + b'\n\ndata: [DONE]\n\n'
+    with openrouter(tmp_path, response) as (proxy, port, seen):
+        assert post(port, body(), proxy.token)[0] == 200
+        row = json.loads(proxy.ledger.read_text())
+        assert row['status'] == 200 and row['usage_missing'] and not row['provider_refused']
+        assert row['charged'] == row['reserved'] and proxy.spent == Decimal(row['reserved']) > 0 and proxy.reserved == 0
+        assert proxy.revoked
+        assert post(port, body(), proxy.token)[0] == 429 and len(seen) == 1
 
 
 def test_an_oversized_response_stops_with_its_reservation_instead_of_growing_the_buffer(tmp_path, monkeypatch):

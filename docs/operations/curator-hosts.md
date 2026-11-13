@@ -146,6 +146,13 @@ Node tests: `cd tools/curator_host && npm test`.
   is false; reconcile the original ledger and explicit reserved exposure before another
   owner decision. Later settlement never renews the stopped run. Older frozen records
   have their original assurance; missing shutdown metadata is not retroactive success.
+- **Refused requests.** A response with an HTTP error status that was read to its end and
+  carries no usage (a rate limit, for example) counts at zero and releases its reservation;
+  the ledger row has `provider_refused` true and `charged` zero. An error status with
+  readable usage is charged what it reports. A 200 with no valid usage or cost, a stream
+  cut after it began, a timeout and a transport failure keep the whole reservation, and a
+  200 without usage also revokes the session. The gap: a refused request is trusted to be
+  unbilled, and nothing checks the provider's account of it.
 - **Malformed and oversized responses.** Invalid containers, numeric parsing or unrepresentable
   charges retain a conservative reservation and fail closed. Accounting arithmetic is
   validated before a reservation is released. Token fallback requires complete nonnegative
