@@ -10,7 +10,17 @@ scope: 'The brief gate of the memory screen (#460, protocol of 13 November 2026)
 
 ## At a glance
 
-- **Result.** Not run yet. This page holds the inputs frozen before spending.
+- **Result: pass, 4 of 4.** The re-briefed curator stored every lost fact as a
+  `place_with_goods` fact with its place: the roof tank, the twenty ration boxes in the
+  cupboard, the fishing rod on the shelter floor and the battery in a locker. A
+  clean-context reviewer confirmed each against its cited frames. The recorded store
+  had held one of the four.
+- **Cost.** \$15.86 of the \$45 stop, over six sessions and 258 requests. No session
+  reached its cap, aborted or was rejected; nothing was re-run.
+- **The store is large.** After six admissions it holds 195 facts in 102,594 bytes,
+  124 of them places with goods. Delivered whole, that is about 33,500 tokens at the
+  measured 0.327 tokens per byte, against the 13,000-token briefing the protocol's
+  simulation assumed.
 - **Pass rule.** At least three of the four lost facts are stored as `place_with_goods`
   facts whose `subject` and `place` match the frozen patterns, each confirmed by a
   clean-context reviewer who answers the question frozen below. Otherwise the gate
@@ -99,6 +109,60 @@ worktree:
 A re-run is the second command with the one session named, a new `--out`, the same
 `--knowledge-root`, and `--double-session-cap` when the cause was the cap.
 
+## Results
+
+### Sessions
+
+Read from each session's `summary.json` and its proxy ledger under
+`.runtime/curator-shadow/brief-gate-first/` and `brief-gate-rest/`. Every proxy closed
+settled, with no pending reservation. Both runs recorded the brief's hash `c5ca0ce7…`.
+
+| Admission | Requests | Charged | Wall clock | Largest reservation | Frames viewed | Facts after |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `sd1a1` | 55 | \$3.82 | 661 s | \$2.19 | 47 | 64 |
+| `sd1a2` | 38 | \$1.90 | 448 s | \$1.93 | 29 | 106 |
+| `sd1a3` | 39 | \$2.28 | 385 s | \$1.97 | 29 | 134 |
+| `sd1a4` | 25 | \$1.16 | 248 s | \$1.73 | 20 | 153 |
+| `sd1a5` | 44 | \$2.51 | 367 s | \$1.85 | 39 | 173 |
+| `sd1a6` | 57 | \$4.19 | 497 s | \$2.22 | 55 | 195 |
+| **All** | **258** | **\$15.86** | **2,606 s** | | | |
+
+The recorded shadow run, with the earlier brief, spent \$22.32 on the same six
+admissions and published 71 facts by its sixth version.
+
+### The check
+
+`brief-gate` on version `v6`, patterns `c04751ad…`:
+
+| Lost fact | Matching fact | `subject` / `place` | Reviewer |
+| --- | --- | --- | --- |
+| Roof tank | `b19-roof-tank` | standing tank of clean water / Evac shelter B-19 roof, near the roof ladder | Yes. The frame shows the tank's menu, 18 L of 300 L, on the shelter's roof at day 62, 8:51 |
+| Ration boxes | `b19-pantry-boxes`, `b19-pantry-protein` | small cardboard box of rations / cupboard along the east side of the main room | Yes, both. The frames show "20 small cardboard boxes > protein ration" in a cupboard. The third match, `shelter-detergent-box`, is boxes of detergent and does not qualify |
+| Fishing rod | `shelter-rod` | basic fishing rod / main room near the northwestern benches | Yes. The rod lies on the floor between the benches, listed 6 tiles away, not carried |
+| Battery | `shelter-battery` | light battery / southern locker along the east side of the main room | Yes. The battery is listed 1 tile east, on the southernmost of three lockers |
+
+The reviewer saw only the six facts and their cited frames, and was not told the result
+wanted. Its doubts, none of which changes an answer:
+
+- Some place details are not shown by the cited frames: no ladder is visible by the
+  tank, and the rod's and battery's frames do not name the shelter.
+- One ration fact calls the boxes "separate from the locker rations", which its own
+  frames do not show.
+- The detergent fact's cupboard is a different, southern one.
+
+### Reading the first session
+
+- **What was read.** Before the other five ran, the lead read `sd1a1`'s published facts
+  in full (64), its gate verdict, its tool use and its proxy record.
+- **What it showed.** Every place-with-goods fact had a place and a time, or "not
+  shown". The locker's contents and the rod were already stored, and none of the four
+  items was named in the brief.
+- **What was not read.** The curator's own transcript, request by request.
+
 ## Deviations
 
-None so far.
+- **The patterns and caps were revised before spending.** The pre-spend review found
+  honest facts the first patterns would miss, a session cap that a session at the
+  recorded size would likely have reached, and no rule for a non-cap stop. The page
+  was corrected before the first session, as recorded above.
+- **The first session was read by its output, not its transcript**, as stated above.
