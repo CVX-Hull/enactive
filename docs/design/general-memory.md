@@ -125,8 +125,10 @@ where a page's lead gives the point and its references and links give the rest.
   about a game.
 - **Every sentence traces to a screen**: an article cites facts, and a fact cites frames.
 - **The gate checks structure only**: every cited fact id and every link resolves to a
-  current fact or article, and every fact belongs to at least one article. It does not
-  judge what an article says.
+  current fact or article. After a grooming session every current fact belongs to at
+  least one article; between groomings, facts a session added stand alone and have their
+  own index lines until the next grooming files them. It does not judge what an article
+  says.
 - **Reading more.** `player_memory_read` returns an article or a fact by its id or title;
   `player_memory_query` searches articles and facts together.
 - **Format.** Articles are a second record kind in the same knowledge repository, in the
