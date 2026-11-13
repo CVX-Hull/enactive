@@ -254,3 +254,5 @@ details summary { cursor: pointer; }
   .kv.wide { grid-template-columns: 1fr; } .kv.wide dd { text-align: left; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* probe: viewer-only change */
