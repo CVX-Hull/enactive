@@ -1,7 +1,14 @@
 #!/bin/sh
+# Fast check with the project environment: this checkout's .venv, or, from a git worktree
+# (which has none), the main checkout's.
 set -eu
 cd "$(git rev-parse --show-toplevel)"
-if [ -x .venv/bin/python ]; then
-    exec .venv/bin/python tools/check.py --fast
+python=.venv/bin/python
+if [ ! -x "$python" ]; then
+    python="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)/.venv/bin/python"
 fi
-exec python3 tools/check.py --fast
+if [ ! -x "$python" ]; then
+    echo "pre-commit: no .venv in this checkout or the main one; create it with python3 tools/setup.py --venv and install requirements-dev.lock (docs/setup.md)" >&2
+    exit 1
+fi
+exec "$python" tools/check.py --fast --quiet

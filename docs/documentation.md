@@ -43,6 +43,7 @@ approval stages.
 | What can go wrong and what is done about it | [Risk register](risks.md) | [Controls](controls.md), then the [control rule](standards/authority.md#control-review) for adding or removing one |
 | What the owner decided | [Owner decision log](decisions/owner-decisions.md) | The record or issue its row links |
 | Where a kind of fact belongs | [One authoritative home](#one-authoritative-home-per-kind-of-fact) | [S-DOCS](standards/documentation.md#current-pages-records-and-decisions), [authority and review surfaces](workflows/authority.md) |
+| What a term means | [Glossary](glossary.md) | The owning page each entry links |
 | What to call something | [Names](standards/documentation.md#names) | [Name mapping](acceptance/2026-11-12-control-review-and-names.md#names) for labels in historical records |
 
 Architecture starts outside a responsibility, then explains owned state,
