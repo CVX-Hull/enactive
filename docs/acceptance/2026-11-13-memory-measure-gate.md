@@ -135,9 +135,11 @@ Owner's first answers against the adjudicated label, all 30 pairs:
   not engaged; one swaps straight and missed. The supplementary pairs cannot include a
   pair every judge called not engaged, so this is conditional on a judge noticing
   engagement.
-- **After the check pass:** the owner changed 8 of the 30 answers: six from not engaged
-  to engaged, one from missed to straight and one from straight to not engaged. Seven
-  of the eight ended on the adjudicated label and all on some judge's label. On the same
+- **After the check pass:** the owner changed 9 of the 30 answers, eight of them among
+  the nine touched disagreements: six from not engaged to engaged, one from missed to
+  straight and one from straight to not engaged. The ninth was a disputed pair moved
+  from not engaged to missed. Seven of the nine ended on the adjudicated label and all
+  on some judge's label. On the same
   12 touched pairs the checked answers differ from the judges on 2 (exact 0.02 to
   0.48). Checked answers saw the judges' evidence and are not independent of it.
 - **Where checked answers still differ**, all three times the first two judges had
