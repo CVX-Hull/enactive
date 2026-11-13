@@ -379,6 +379,63 @@ function refusalDiagnostic(body, secret) {
   } catch { return {error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null}; }
 }
 
+// The provider's own statement of what one response cost, in US dollars (#555). Evidence
+// only: nothing in the host reads it. The rule is the curator's `reported_cost`
+// (tools/curator_host/providers.py), and both hosts' tests run the usage records in
+// tests/fixtures/provider-usage-cost.json. On a route that is not on the caller's own
+// provider key the cost is the larger of `cost` and `cost_details.upstream_inference_cost`;
+// on an own-key route (`is_byok` true) it is their sum; the largest record of a response
+// wins. Where the curator raises on a malformed record, the cost here is unknown (null),
+// never a guess.
+// Money never passes through floating-point arithmetic. Each JSON number becomes, once, the
+// shortest decimal that reads back as the same number (the provider's own digits for up to
+// 15 significant digits), held as [units, scale] meaning units / 10^scale with BigInt units.
+const MALFORMED_COST = Symbol('malformed-cost');
+function decimalAmount(value) {
+  if (value == null) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return MALFORMED_COST;
+  const [digits, exponent = '0'] = String(value).split('e');
+  const [whole, fraction = ''] = digits.split('.');
+  const scale = fraction.length - Number(exponent);
+  return scale < 0 ? [BigInt(whole + fraction) * 10n ** BigInt(-scale), 0] : [BigInt(whole + fraction), scale];
+}
+function alignedUnits([a, m], [b, n]) {
+  const scale = Math.max(m, n);
+  return [a * 10n ** BigInt(scale - m), b * 10n ** BigInt(scale - n), scale];
+}
+function largerAmount(x, y) {
+  const [a, b] = alignedUnits(x, y);
+  return a >= b ? x : y;
+}
+function usageRecordCost(usage) {
+  const cost = decimalAmount(usage.cost), details = usage.cost_details ?? {};
+  if (cost === MALFORMED_COST || !object(details)) return MALFORMED_COST;
+  const upstream = decimalAmount(details.upstream_inference_cost);
+  if (upstream === MALFORMED_COST || (usage.is_byok != null && typeof usage.is_byok !== 'boolean')) return MALFORMED_COST;
+  if (usage.is_byok === true) {
+    if (!cost || !upstream) return MALFORMED_COST;
+    const [a, b, scale] = alignedUnits(cost, upstream);
+    return [a + b, scale];
+  }
+  return cost || upstream ? largerAmount(cost ?? [0n, 0], upstream ?? [0n, 0]) : null;
+}
+// One more usage record of the same response: null (no cost yet), an amount or MALFORMED_COST.
+function withUsageRecord(soFar, usage) {
+  if (soFar === MALFORMED_COST) return soFar;
+  const cost = usageRecordCost(usage);
+  return cost === MALFORMED_COST || !soFar ? cost : cost ? largerAmount(soFar, cost) : soFar;
+}
+// Plain decimal text: no exponent, no trailing zeros, "0" for zero.
+function reportedCostText(cost) {
+  if (!cost || cost === MALFORMED_COST) return null;
+  const [units, scale] = cost;
+  const digits = units.toString().padStart(scale + 1, '0');
+  const fraction = digits.slice(digits.length - scale).replace(/0+$/, '');
+  return digits.slice(0, digits.length - scale) + (fraction ? `.${fraction}` : '');
+}
+/** Reported cost of one response from its usage records: a decimal string, or null when none is usable. */
+export const reportedCostUsd = usageRecords => reportedCostText(usageRecords.reduce(withUsageRecord, null));
+
 // Preserve the server's retry instruction without logging arbitrary headers or
 // refusal text. The maintained SDK owns delay selection and enforcement.
 // Seconds or an HTTP date, read as the pinned retry helper reads Retry-After.
@@ -539,7 +596,7 @@ export async function runHost(options) {
       if (typeof sink[key] === 'number' && Number.isFinite(sink[key]) && sink[key] >= 0) outputStats[key] = (outputStats[key] ?? 0) + sink[key];
     }
   };
-  let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
+  let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false, requestReportedCost = null;
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
   let releaseInitialControl;
@@ -807,6 +864,7 @@ export async function runHost(options) {
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
           requestUsageAvailable = false;
+          requestReportedCost = null;
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
           const backendModels = new Set(), observedServiceTiers = new Set();
@@ -817,7 +875,7 @@ export async function runHost(options) {
           // End an eligible first attempt and hand its server delay to the SDK
           // helper. Status is omitted so only the host's declared classes decide.
           const retry = (attemptId, retryClass, status, headers) => {
-            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
+            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, reported_cost_usd:null, response_progress:progressSnapshot()});
             requestInFlight = false;
             if (requests >= configuration.max_requests) {
               stop('request-limit');
@@ -956,6 +1014,8 @@ export async function runHost(options) {
             // Pi initializes absent usage to zero. Only publish normalized totals
             // when the provider actually reported both input and output counts.
             if (Number.isFinite(usage?.prompt_tokens) && Number.isFinite(usage?.completion_tokens)) requestUsageAvailable = true;
+            // The SDK discards the provider's cost, so it is read here from the same record.
+            if (object(usage)) requestReportedCost = withUsageRecord(requestReportedCost, usage);
             if (typeof chunk?.model === 'string' && !backendModels.has(chunk.model)) {
               backendModels.add(chunk.model);
               emit('response-backend', {request_id:requestId, backend_model:chunk.model});
@@ -974,7 +1034,7 @@ export async function runHost(options) {
         assistantControls.set(message, requestControlId);
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
-        if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
+        if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? 'configured-rates' : null, reported_cost_usd:reportedCostText(requestReportedCost), response_progress:progressSnapshot()});
         requestInFlight = false;
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
       }

@@ -6,6 +6,7 @@ from decimal import Decimal
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+from pathlib import Path
 import socket
 import struct
 import threading
@@ -232,6 +233,26 @@ def test_a_bring_your_own_key_route_settles_at_the_upstream_charge_too():
     assert reported_cost(routed) == Decimal('0.002')
     with pytest.raises(ValueError, match='invalid reported cost'):
         reported_cost(sse(dict(prompt_tokens=1, cost='free', cost_details=dict(upstream_inference_cost=-1))))
+
+
+# The player host reads reported cost by the same rule in Node, so both suites run one file of usage
+# records (#555, R-OVERSPEND); its other reader is tools/player_host/test/reported-cost.test.mjs.
+SHARED_COSTS = json.loads((Path(__file__).parent/'fixtures'/'provider-usage-cost.json').read_text())['cases']
+
+
+@pytest.mark.parametrize('case', SHARED_COSTS, ids=[case['name'] for case in SHARED_COSTS])
+def test_shared_usage_records_give_the_reported_cost_the_player_host_gives(case):
+    # json.dumps writes each number at its shortest exact text, and infinity as the token the proxy's
+    # reader takes for a non-finite number. (A literal 1e999 on the wire would reach it as a finite Decimal.)
+    response = sse(case['usage'])
+    if case['curator'] == 'error':
+        # Where the curator refuses a record, the player host records no cost; neither guesses one.
+        assert case['player_host'] is None
+        with pytest.raises(ValueError):
+            reported_cost(response)
+    else:
+        assert reported_cost(response) == (None if case['curator'] is None else Decimal(case['curator']))
+        assert case['player_host'] == case['curator']
 
 
 def test_only_image_blocks_are_discounted_as_images():

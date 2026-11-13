@@ -1,0 +1,163 @@
+{
+  "description": [
+    "Usage records as OpenRouter returns them, with the reported cost each host must read from them (#555).",
+    "The player host (Node, tools/player_host/host.mjs reportedCostUsd) and the curator (Python,",
+    "tools/curator_host/providers.py reported_cost) cannot share code, so both test suites run this file.",
+    "player_host: a plain decimal string in US dollars, or null when the record carries no usable cost.",
+    "curator: the same amount as a decimal string, null when it returns None, or \"error\" when it raises ValueError.",
+    "The first six records are the pilot of 12 November 2026, copied from",
+    "docs/acceptance/assets/provider-cost-pilot-555.jsonl."
+  ],
+  "cases": [
+    {
+      "name": "pilot: plain reply, streamed as the host sends it",
+      "usage": {"prompt_tokens": 13, "completion_tokens": 5, "total_tokens": 18, "cost": 3.8e-05, "is_byok": false, "prompt_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0, "audio_tokens": 0, "video_tokens": 0}, "cost_details": {"upstream_inference_cost": 3.8e-05, "upstream_inference_prompt_cost": 1.3e-05, "upstream_inference_completions_cost": 2.5e-05}, "completion_tokens_details": {"reasoning_tokens": 0, "image_tokens": 0, "audio_tokens": 0}},
+      "player_host": "0.000038",
+      "curator": "0.000038"
+    },
+    {
+      "name": "pilot: plain reply, streamed with the usage accounting option",
+      "usage": {"prompt_tokens": 13, "completion_tokens": 5, "total_tokens": 18, "cost": 3.8e-05, "is_byok": false, "prompt_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0, "audio_tokens": 0, "video_tokens": 0}, "cost_details": {"upstream_inference_cost": 3.8e-05, "upstream_inference_prompt_cost": 1.3e-05, "upstream_inference_completions_cost": 2.5e-05}, "completion_tokens_details": {"reasoning_tokens": 0, "image_tokens": 0, "audio_tokens": 0}},
+      "player_host": "0.000038",
+      "curator": "0.000038"
+    },
+    {
+      "name": "pilot: tool call, streamed",
+      "usage": {"prompt_tokens": 48, "completion_tokens": 18, "total_tokens": 66, "cost": 0.000138, "is_byok": false, "prompt_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0, "audio_tokens": 0, "video_tokens": 0}, "cost_details": {"upstream_inference_cost": 0.000138, "upstream_inference_prompt_cost": 4.8e-05, "upstream_inference_completions_cost": 9e-05}, "completion_tokens_details": {"reasoning_tokens": 0, "image_tokens": 0, "audio_tokens": 0}},
+      "player_host": "0.000138",
+      "curator": "0.000138"
+    },
+    {
+      "name": "pilot: long prompt, first time (cache write), streamed",
+      "usage": {"prompt_tokens": 3229, "completion_tokens": 5, "total_tokens": 3234, "cost": 0.0040605, "is_byok": false, "prompt_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 3226, "audio_tokens": 0, "video_tokens": 0}, "cost_details": {"upstream_inference_cost": 0.0040605, "upstream_inference_prompt_cost": 0.0040355, "upstream_inference_completions_cost": 2.5e-05}, "completion_tokens_details": {"reasoning_tokens": 0, "image_tokens": 0, "audio_tokens": 0}},
+      "player_host": "0.0040605",
+      "curator": "0.0040605"
+    },
+    {
+      "name": "pilot: long prompt, second time (cache read), streamed",
+      "usage": {"prompt_tokens": 3229, "completion_tokens": 5, "total_tokens": 3234, "cost": 0.0001893, "is_byok": false, "prompt_tokens_details": {"cached_tokens": 3226, "cache_write_tokens": 0, "audio_tokens": 0, "video_tokens": 0}, "cost_details": {"upstream_inference_cost": 0.0001893, "upstream_inference_prompt_cost": 0.0001643, "upstream_inference_completions_cost": 2.5e-05}, "completion_tokens_details": {"reasoning_tokens": 0, "image_tokens": 0, "audio_tokens": 0}},
+      "player_host": "0.0001893",
+      "curator": "0.0001893"
+    },
+    {
+      "name": "pilot: plain reply, not streamed",
+      "usage": {"prompt_tokens": 13, "completion_tokens": 5, "total_tokens": 18, "cost": 3.8e-05, "is_byok": false, "prompt_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0, "audio_tokens": 0, "video_tokens": 0}, "cost_details": {"upstream_inference_cost": 3.8e-05, "upstream_inference_prompt_cost": 1.3e-05, "upstream_inference_completions_cost": 2.5e-05}, "completion_tokens_details": {"reasoning_tokens": 0, "image_tokens": 0, "audio_tokens": 0}},
+      "player_host": "0.000038",
+      "curator": "0.000038"
+    },
+    {
+      "name": "own key: the fee plus the upstream inference cost",
+      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0.00001, "is_byok": true, "cost_details": {"upstream_inference_cost": 0.5}},
+      "player_host": "0.50001",
+      "curator": "0.50001"
+    },
+    {
+      "name": "own key: the sum is exact where floating-point addition is not",
+      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0.1, "is_byok": true, "cost_details": {"upstream_inference_cost": 0.2}},
+      "player_host": "0.3",
+      "curator": "0.3"
+    },
+    {
+      "name": "own key: a sum that carries drops its trailing zeros",
+      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 9.5e-06, "is_byok": true, "cost_details": {"upstream_inference_cost": 5e-07}},
+      "player_host": "0.00001",
+      "curator": "0.00001"
+    },
+    {
+      "name": "own key without an upstream inference cost is incomplete",
+      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0.00001, "is_byok": true},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "own key without a fee is incomplete",
+      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "is_byok": true, "cost_details": {"upstream_inference_cost": 0.5}},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "not own key: the flag may be absent, and the larger of cost and upstream counts",
+      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0.002, "cost_details": {"upstream_inference_cost": 0.0019}},
+      "player_host": "0.002",
+      "curator": "0.002"
+    },
+    {
+      "name": "not own key: an upstream cost above the cost counts",
+      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0.001, "is_byok": false, "cost_details": {"upstream_inference_cost": 0.003}},
+      "player_host": "0.003",
+      "curator": "0.003"
+    },
+    {
+      "name": "token counts with no cost",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "total_tokens": 16},
+      "player_host": null,
+      "curator": null
+    },
+    {
+      "name": "a null cost is no cost",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": null, "is_byok": false, "cost_details": null},
+      "player_host": null,
+      "curator": null
+    },
+    {
+      "name": "a zero cost is a cost",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": 0, "is_byok": false},
+      "player_host": "0",
+      "curator": "0"
+    },
+    {
+      "name": "a whole-dollar cost has no decimal point",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": 2},
+      "player_host": "2",
+      "curator": "2"
+    },
+    {
+      "name": "a cost below a millionth of a dollar is written without an exponent",
+      "usage": {"prompt_tokens": 1, "completion_tokens": 1, "cost": 3.8e-07},
+      "player_host": "0.00000038",
+      "curator": "0.00000038"
+    },
+    {
+      "name": "a negative cost is malformed",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": -0.000038},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "a non-finite cost is malformed (written as an overflowing literal, which each test's JSON reader turns into infinity)",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": 1e999},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "a cost given as a string is malformed",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": "0.000038"},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "a cost given as a boolean is malformed",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": true},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "a negative upstream inference cost is malformed",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": 0.000038, "is_byok": false, "cost_details": {"upstream_inference_cost": -1}},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "cost details that are not an object are malformed",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": 0.000038, "cost_details": [0.000038]},
+      "player_host": null,
+      "curator": "error"
+    },
+    {
+      "name": "an own-key flag that is not a boolean is malformed",
+      "usage": {"prompt_tokens": 11, "completion_tokens": 5, "cost": 0.000038, "is_byok": "false"},
+      "player_host": null,
+      "curator": "error"
+    }
+  ]
+}

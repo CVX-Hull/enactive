@@ -48,7 +48,9 @@ reads) may be added inside an unchanged telemetry version when it changes no exi
 field and every reader that uses it marks its absence in older traces as not recorded,
 never as a failure or as a value presented as recorded. Today this is `context-manifest`
 in `player-host` telemetry version 3, which the evaluator records as `manifest: absent`
-and the context view rebuilds as `exact: false`. Anything else, including another
+and the context view rebuilds as `exact: false`, and the `reported_cost_usd` field of
+`response-complete` in the same version, which no reader uses yet and whose absence means
+the reported cost was not recorded. Anything else, including another
 archive or a changed existing field, needs a new version and a migration as above.
 
 Every affected PR identifies the old and new contracts, the migrated callers and
