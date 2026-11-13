@@ -145,9 +145,9 @@ correction is a new, recorded line with its reason.
 
 A timeline is one Markdown file per actor, generated from a sealed session: what the
 actor received, each operation in order with its frame path, the memory records it
-wrote, its handoff packet and its final report. The generator that produced the
-recorded annotations is kept at
-[`tools/probe_timeline.py`, commit `08c8f7a`](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tools/probe_timeline.py).
+wrote, its handoff packet and its final report. No current tool generates timelines;
+the [probe-validation record](../acceptance/2026-11-08-probe-validation-490.md) says how
+the recorded annotations were produced.
 
 **The protocol's own examples carry no evaluation content.** Annotators read the units
 and labels sections, so no example there may name a fact, record ID, boundary or outcome
