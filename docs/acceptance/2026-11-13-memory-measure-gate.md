@@ -24,7 +24,7 @@ scope: 'The measure gate of the memory screen (#386, protocol of 13 November 202
   pairs, random and supplementary, that the owner or the judges called straight or
   missed, the judges' label differed from the owner's first answer on 9 (error 0.75,
   exact interval 0.43 to 0.95). After seeing the judges' cited frames the owner changed
-  6 of those answers to the judges' label; the owner's checked answers differ from the
+  six of those answers to an engaged label; the owner's checked answers differ from the
   judges on 3 of the 12 (0.25).
 - **No affordable comparison can detect a halving.** At a judge error of 0.25 none of up
   to 60 starts per arm reaches four chances in five. Even at 0.1 it needs 29 starts per
@@ -118,8 +118,8 @@ Files and hashes: `sample.json` `12048cb0â€¦`, `sample-engaged.json` `2ee5203câ€
 - **Touched pairs, both groups:** 3 of 12 match; error 0.75 (exact 0.43 to 0.95). The
   supplementary pairs cannot include a pair that every judge called not engaged, so
   this is conditional on a judge noticing engagement.
-- **After the check pass:** the owner changed 9 of 30 answers, all towards the judges'
-  label. Checked answers match the judges on all 20 random pairs and 7 of 10
+- **After the check pass:** the owner changed 9 of 30 answers, each to a label at least
+  one judge had given; seven of the nine to the adjudicated label. Checked answers match the judges on all 20 random pairs and 7 of 10
   supplementary pairs; on touched pairs they differ on 3 of 12 (0.25). The checked
   answers saw the judges' evidence and are not independent of it.
 
@@ -127,8 +127,8 @@ Two readings fit this, and the gate cannot tell them apart:
 
 1. **The judges find engagement that a person scanning a strip of 60 frames misses.**
    Six of the nine disagreements on touched pairs are the owner's "not engaged" against
-   the judges' "missed" or "straight", and the owner adopted the judges' label once their
-   cited frames were shown.
+   the judges' "missed" or "straight". Once their cited frames were shown the owner
+   changed all six to an engaged label, five to the adjudicated one.
 2. **The judges over-read engagement.** The owner kept "not engaged" or another label on
    three touched pairs after seeing the evidence.
 
