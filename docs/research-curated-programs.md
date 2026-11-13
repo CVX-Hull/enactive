@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: A change to ADR 009's program, slot, monitor, expectation, offline-evaluation, practice-instance or study sections; a pre-registration for the curator and memory phase or the programs and monitor phase; new primary evidence on any area below
+review_trigger: The adoption decision that ends the programs and monitor study (issue 470) and the owner's decision on the practice instance phase (issue 472, ADR 009's first open owner decision) settle this page; until then a change to ADR 009's program, slot, monitor, expectation, offline-evaluation, practice-instance or study sections, a pre-registration for the curator and memory phase or the programs and monitor phase, or new primary evidence on any area below
 status: active
 date: 2026-11-08
 scope: 'Dated primary-source synthesis for eight ADR 009 research areas (#448): program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design, with study-design guidance for #178 and #470. The area on agent workspaces and verification gates (#451) is out of scope. No implementation.'

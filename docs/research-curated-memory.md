@@ -3,7 +3,7 @@ owner: lead
 status: active
 date: 2026-11-08
 scope: Primary-source synthesis for five ADR 009 research areas (agent memory, concurrent consolidation, belief under conflict, ontology induction and evaluation, oversight interfaces; issue 447); evidence for method choice, not an implementation or a game claim
-review_trigger: Independent S-EVIDENCE review of this page; any ADR 009 memory, belief, ontology or spectator method decision; new evidence on the weakest areas named below; model or benchmark changes
+review_trigger: The owner decisions that end the player-context design (issue 591) and ADR 009's open decision on the belief model (issue 457) settle this page, with the ontology and spectator method choices of the curator and memory phase (issues 458 and 464); until then an independent S-EVIDENCE review of this page, new evidence on the weakest areas named below, or model or benchmark changes
 ---
 
 # Research synthesis for ADR 009: memory, belief, ontology and oversight

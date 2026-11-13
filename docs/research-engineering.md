@@ -1,7 +1,8 @@
 ---
 owner: maintainer
-review_trigger: Requirements or process change, or a decision that depends on a fast-moving source below
-status: active
+status: historical
+date: 2026-10-25
+scope: Primary-source synthesis read from 17 to 25 October 2026 behind the engineering standards, the documentation system, the project-management and review workflows and the test-selection pilot; the standards and workflows state the current rules
 ---
 
 # Engineering research and project consequences

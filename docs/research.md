@@ -1,6 +1,6 @@
 ---
 owner: maintainer
-review_trigger: Controller redesign, or a design that depends on a fast-moving finding below
+review_trigger: A research page is added or its question is settled; controller redesign, or a design that depends on a fast-moving finding below
 status: active
 ---
 
@@ -10,28 +10,39 @@ Owner: lead. Evidence reviewed: 2026-10-17. Recheck a fast-moving finding before
 design depends on it. Sources below distinguish observed findings from
 our engineering inferences; they are not a claim to exhaust the literature.
 
-## Curated player (ADR 009)
+## Research pages
 
-Research behind [ADR 009](decisions/009-curated-player.md), dated 2026-11-08. Each page
-answers areas of the ADR's [research agenda](decisions/009-curated-player.md#research-agenda):
+### Current: the question is open
 
-- [Curator sandbox](research-curator-sandbox.md) (agent workspaces and verification
-  gates, #451): project-local sandbox
-  mechanisms on this Mac, coding-agent hosts under them, session cost evidence and
-  gate gaming, with the prototype's escape-suite results and residual risks.
-- [Memory, belief, ontology and oversight](research-curated-memory.md) (#447): write
-  and retrieval policies, concurrent consolidation, belief under conflict (the ADR's
-  [open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions)),
-  ontology evaluation and oversight interfaces.
-- [Programs, supervision, evaluation and study design](research-curated-programs.md)
-  (#448): program libraries, model slots, supervision, novelty, expectations,
-  offline evaluation, practice environments, and study design for #178 and #470.
+Each page answers areas of [ADR 009](decisions/009-curated-player.md)'s
+[research agenda](decisions/009-curated-player.md#research-agenda), with sources
+retrieved on 2026-11-08. The owner's decisions are in the
+[decision log](decisions/owner-decisions.md).
 
-## Engineering
+| Page | Subject | Still open | Already settled |
+| --- | --- | --- | --- |
+| [Memory, belief, ontology and oversight](research-curated-memory.md) (#447) | Write and retrieval policies, concurrent consolidation, belief under conflict, ontology evaluation and oversight interfaces | How stored knowledge reaches the playing model (#591), the ADR's [open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions) (#457), ontology grooming (#458) and the spectator's views (#464) | Who writes the store: the [curator](components/curator.md) |
+| [Programs, supervision, evaluation and study design](research-curated-programs.md) (#448) | Program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design | Adoption of the programs and monitor phase (#465 to #470) and the owner's decision on the practice instance phase (#472) | Its guidance for the curator memory study (#178), which is [complete](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
+| [Curator sandbox](research-curator-sandbox.md) (#451) | Project-local sandbox mechanisms on this Mac, coding-agent hosts under them, session cost evidence and gate gaming, with the prototype's escape-suite results and residual risks | Gate gaming, until the submission gate's tests on later trace are designed (#459) | The mechanism: the [curator](components/curator.md) runs under a project-owned Seatbelt profile with a supervisor and a proxy that holds the key, and the escape suite is re-run after every macOS or host update ([curator hosts](operations/curator-hosts.md#both-hosts)) |
 
-The authoritative [engineering research synthesis](research-engineering.md) records
-primary sources, read scope, project consequences and limitations for principles,
-standards, controls, progressive documentation and long-term maintenance.
+### Historical: the question is settled
+
+These pages are dated evidence, not current guidance. The last column names where
+the conclusion the project acts on is stated.
+
+| Page | Research cutoff | What it informed | Where the conclusion lives |
+| --- | --- | --- | --- |
+| [Engineering research](research-engineering.md) | 2026-10-17 to 2026-10-25 | Principles, standards, controls, documentation, project management, review and the test-selection pilot | The [standards](engineering.md) ([research basis](standards/authority.md)), [project management](project-management.md), [risk-based assurance](workflows/review.md#risk-based-assurance) and [testing](testing.md) |
+| [Spatial grounding](research-spatial-grounding.md) | 2026-10-30 | The spatial-grounding candidate of #300 | [Tested and rejected](acceptance/2026-10-30-spatial-grounding.md) |
+| [Context, prompt and ergonomics](research-context-engineering.md) | 2026-10-26 | The fast, less flagship model direction, checked against small-model and tool studies, memory and compaction counterexamples, provider contracts and the player host's context growth (#251, closed) | Neither more context nor fewer tokens guarantees useful apparent speed; #164 owns the readiness criteria |
+| [Multi-rate agents](research-multirate-agents.md) | 2026-10-24 | The multi-level player direction | Not adopted; it prescribed no additional model tiers and established no responsiveness or learning benefit |
+| [Executable policies](research-executable-policies.md) | 2026-10-23 | Player-authored scripts, branching strategies and online revision, against procedure memory | The [memory component](components/memory-learning.md) describes current bounded player programs (`player-program/2`); the recommendation itself implemented and qualified nothing |
+| [Responsive gameplay](research-responsive-gameplay.md) | 2026-10-22 | Brief 060: roguelike skills, asynchronous control, context and memory, and tool ergonomics against closed host traces | Its linked proposal is not implemented behavior or a passing responsiveness qualification |
+| [Memory architecture](research-memory-architecture.md) | 2026-10-19 | The implemented memory paths, checked against the seven-day run and recent memory evidence | A proposal; it changed no execution authority |
+| [Memory representations](research-memory-representations.md) | 2026-10-18 | Mathematical, database, control and statistical views of memory, with a reviewed [simulation protocol](design/memory-study-protocol.md) | The [results](acceptance/2026-10-18-memory-representations.md) support a simple replay and query design basis and a bounded visible-trace benchmark; they select no live memory architecture |
+| [Memory and continuous learning](research-memory-learning.md) | 2026-10-18 | Episode memory, revisable beliefs, retrieval, forgetting and evaluated improvement | A discussion proposal; the protocol defines current task memory and action authority |
+| [Tiered gameplay](research-tiered-gameplay.md) | 2026-10-17 | Hierarchical execution, routing, memory and recovery | A discussion proposal, not current runtime behavior |
+| [Outcome monitoring](research-outcome-monitoring.md) | 2026-10-17 | The monitor proposal, which was never implemented | Rationale only; #42 owns the surviving read-only expectation question |
 
 ## Recent agentic coding evidence
 
@@ -64,35 +75,6 @@ fast token benchmarks shortlist candidates but cannot qualify useful gameplay.
 The [follow-through comparison](acceptance/2026-10-28-endpoint-gameplay.md) tests
 fixed OpenRouter endpoints through actual play, distinguishes cache/stream clocks
 from useful effects, and exposes routine and outcome-accounting failures.
-
-*Historical:* the [October26 context, prompt and ergonomics review](research-context-engineering.md)
-examines the user's fast, less flagship model direction against current primary
-small-model/tool studies, memory/compaction counterexamples, provider contracts
-and actual player host context growth. It prioritizes sufficient current context,
-examples and mechanical authoring ergonomics with recoverable evidence; neither
-more context nor fewer tokens guarantees useful apparent speed. #164 owns the readiness
-criteria.
-
-*Historical:* the [October24 multi-rate review](research-multirate-agents.md) checks fresh
-control/skill and contrary memory evidence against Fresh024. It recommends
-improving routine coverage and off-path candidate authoring within the existing
-player/learner/writer split. It does not prescribe additional model tiers or
-establish responsiveness, learning benefit or a resumed campaign.
-
-The [October23 executable-policy review](research-executable-policies.md) starts
-with fresh recent searches and cross-checks player-authored scripts, branching
-strategies, online revision and their failure modes against current procedure
-memory. It recommended a bounded executable-artifact path alongside ordinary
-exploration from an advisory Procedure/2 baseline. Current bounded player programs
-(`player-program/2`) are described in the [memory component](components/memory-learning.md);
-the research recommendation itself did not implement or qualify them.
-
-*Historical:* the [October 22 responsive-gameplay update](research-responsive-gameplay.md)
-cross-checks recent roguelike skills, asynchronous VLA control, context/memory and
-tool ergonomics against prior design and closed host traces. It separates measured
-result/context waste from unknown inference latency, and supports configuration
-admission on useful progress rather than model capability alone. Its linked
-proposal is not implemented behavior or a passing responsiveness qualification.
 
 ### Generality and the Bitter Lesson
 
@@ -128,28 +110,7 @@ reuse stale coordinates or silently replay an uncertain input. Neither passing
 finite perturbation tests nor one seven-day campaign guarantees success against
 an unrestricted adversary. Further concrete gaps belong in the existing backlog.
 
-The [October 19 architecture assessment](research-memory-architecture.md) checks the
-implemented paths against the actual seven-day run and revisits recent primary
-memory evidence. It proposes player-owned mission integration, durable campaign
-views and semantic revision; it does not change current execution authority.
-
-The [cross-disciplinary representation study](research-memory-representations.md)
-compares mathematical, database, control and statistical views of memory. Its
-[simulation protocol](design/memory-study-protocol.md) was independently reviewed
-before implementation, with documented clarifications frozen before final
-collection. The [results and reproduction](acceptance/2026-10-18-memory-representations.md)
-support a simple replay/query design basis and a bounded visible-trace benchmark;
-they do not establish native efficacy or select a new live memory architecture.
-
-The [memory and continuous-learning review](research-memory-learning.md) covers
-episode memory, revisable beliefs, retrieval, forgetting, evaluated improvement
-and mathematical foundations through 2026-10-18, including October 14–15
-preprints. It is a discussion proposal; current task memory and action authority
-remain defined by the protocol.
-
-The [tiered-gameplay research proposal](research-tiered-gameplay.md) reviews
-hierarchical execution, routing, memory and recovery through 2026-10-17, including
-October revisions. It is a discussion proposal, not current runtime behavior.
+### Embodied-control sources
 
 | Primary source / date | Evidence and transfer limit | Consequence |
 | --- | --- | --- |
