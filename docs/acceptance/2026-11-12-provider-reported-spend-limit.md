@@ -190,13 +190,39 @@ asked for the following. Each was resolved in the same pull request.
 
 ## Supervised run with a declared limit
 
-Pending the owner's approval to spend. One short supervised run with a small declared
-limit is to show:
+The owner approved one run at a $0.60 limit with a $0.50 finish reserve ("Approve the
+one run", 12 November 2026, #555). It ran on source
+`fa4e65ec9e380e985ec129e839ea095d68a9ffd9`, the head of this change before this section
+was written, in the change's own worktree with its own copy of the game, a fresh user
+directory and an adapter built from that source. The route was the pinned
+`openai/gpt-6.1-terra` through provider `openai`; the bound for a request with no cost
+record was $0.4096; the request allowance was 80; two hosts were allowed. The
+assignment was the standard new-world Evacuee start.
 
-- the dollar limit binding before the request allowance;
-- the run ending in order through the dollar reserve;
-- an overshoot of at most one request;
-- the receipt's total equal to the sum in the trace;
-- the ratio of estimate to reported cost;
-- no further actor started;
-- the evaluator reading the new run and one archived session of each combination.
+| What the run was to show | What happened |
+| --- | --- |
+| The dollar reserve binds before the request allowance | The finish was requested with trigger `spend` after 31 requests, when $0.49987455 of the limit was left; 49 requests of the allowance were unused |
+| The run ends in order | The player finished after three more requests and reported; the host settled with `external_stop_complete`; the supervisor recorded `custodian_terminal` with terminal coverage and cleanup verified, and no process was left |
+| Counting | 34 requests started and 34 cost records, every one reported by the provider; none counted at the bound |
+| Totals agree | The decimal sum of the 34 counted costs, the host's settled total, the driver's total and the receipt's `spent_usd` are all $0.1135458, with `spend_complete` true |
+| Overshoot | None: the limit of $0.60 was not reached |
+| Estimate against reported cost | The configured-rate estimate for the same requests was $0.113546, equal to the reported total to six decimal places on this route |
+| Cost text | The longest reported cost had 8 fractional digits |
+| Ledger | On a scratch copy of the ledger, `run_ledger record` wrote the row from the receipt with nothing typed (spend $0.1135458, no unpriced requests) and `check` passed. The tracked ledger was not changed: this run belongs to no study |
+| Evaluator | `evaluate-run` read the run and recorded `spend_allowance_usd` 0.6 with no declared ceiling |
+
+What the run did not show:
+
+- **The hard stop.** The limit itself was never reached, so `spend-limit` and the
+  overshoot were not exercised in real play. The offline test with the real host
+  covers them.
+- **No successor started.** Only one actor ran and no handoff happened, so the gate
+  that refuses a successor when no dollars remain was not reached. The offline tests
+  cover it.
+- **A request with no cost record.** Every request reported a cost.
+- **The provider's own figure.** The OpenRouter activity page was not read; reported
+  spend is what each response's usage record said.
+
+The run's package, trace, evaluation record, player store, user directory and the
+adapter's build receipt are sealed as `spend-limit-run-555` in the
+[evidence store](../operations/evidence-cleanup.md).

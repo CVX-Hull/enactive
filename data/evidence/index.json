@@ -551,6 +551,24 @@
       },
       "visibility": "private"
     },
+    "spend-limit-run-555": {
+      "availability": "present",
+      "bytes": 5295241,
+      "cited_by": [
+        "docs/acceptance/2026-11-12-provider-reported-spend-limit.md"
+      ],
+      "files": 180,
+      "manifest_sha256": "8b7ee436a4a4cdf5b7fc3e6d5d96f7f0a4414807ae3a9c2fb5e37a0cfd207c21",
+      "note": "One supervised run with a declared dollar limit of 0.60 and a finish reserve of 0.50 on source fa4e65e (#555). Source is reproducible from that commit; the game app and credential reference were not copied.",
+      "sources": {
+        "computer-builds": ".runtime/worktrees/provider-reported-spend-limit/.runtime/computer-builds@fa4e65e",
+        "computer-sessions": ".runtime/worktrees/provider-reported-spend-limit/.runtime/computer-sessions@fa4e65e",
+        "evaluations": ".runtime/worktrees/provider-reported-spend-limit/.runtime/evaluations@fa4e65e",
+        "player-stores": ".runtime/worktrees/provider-reported-spend-limit/.runtime@fa4e65e",
+        "user": ".runtime/worktrees/provider-reported-spend-limit/.runtime/user@fa4e65e"
+      },
+      "visibility": "private"
+    },
     "supervised-launch-check-558": {
       "availability": "present",
       "bytes": 4627061,
