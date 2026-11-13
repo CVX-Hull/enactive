@@ -91,7 +91,12 @@ def test_a_window_must_fit_the_trace_it_is_given(tmp_path):
     dict(session='s1'), dict(actor='001'), dict(session='s1', actor='001'),
     dict(session='s1', actor='001', first=0, last=3), dict(session='s1', actor='001', first=5, last=4),
     dict(session='s1', actor='001', first=True, last=3), dict(session='s1', actor='001', first=1.5, last=3),
-    dict(session='s1', actor='001', first=1, last=3, game_time=9), dict(first=2), dict(game_time='day 1')])
+    dict(session='s1', actor='001', first=1, last=3, game_time=9), dict(first=2), dict(game_time='day 1'),
+    dict(session='../x', actor='001', first=1, last=3), dict(session='s 1', actor='001', first=1, last=3),
+    dict(session='', actor='001', first=1, last=3), dict(session='s1', actor='a/b', first=1, last=3),
+    dict(session='s1', actor='001\n', first=1, last=3), dict(session=5, actor='001', first=1, last=3),
+    dict(session='s1', actor=['001'], first=1, last=3), dict(session='s1', actor='001', first='1', last=3),
+    dict(session='s1', actor='001', first=1, last=None)])
 def test_a_window_with_a_bad_range_or_half_a_name_is_refused(arguments):
     with pytest.raises(WindowError):
         Window(**arguments)

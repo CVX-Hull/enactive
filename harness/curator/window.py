@@ -21,11 +21,13 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 
 from .gate import COVERAGE
 
 MANIFEST = 'manifest.json'
+NAME = re.compile(r'[A-Za-z0-9_-]+')
 DROPPED = ('every other actor', 'sealed handoff packets', 'the sealed memory store',
            "the actor's final report", 'steps, tool calls and frames outside the window')
 
@@ -53,6 +55,9 @@ class Window:
             if (self.first, self.last, self.game_time) != (1, None, None):
                 raise WindowError('the full window takes no range or game time')
             return
+        for name, value in (('session', self.session), ('actor', self.actor)):
+            if not (isinstance(value, str) and NAME.fullmatch(value)):
+                raise WindowError(f'window {name} must match [A-Za-z0-9_-]+: {value!r}')
         if not (isinstance(self.first, int) and not isinstance(self.first, bool) and self.first >= 1):
             raise WindowError('window first step must be an integer of at least 1')
         if not (isinstance(self.last, int) and not isinstance(self.last, bool) and self.last >= self.first):

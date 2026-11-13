@@ -428,6 +428,7 @@ def host_identity(host: dict, model_config: dict) -> dict:
     package = json.loads((HOST_DIR/'package.json').read_text())
     node_version = subprocess.run([str(host['node']), '--version'], capture_output=True, text=True, check=True).stdout.strip()
     return dict(name=package['name'], version=package['version'], schema=HOST_SCHEMA, node=node_version,
+                prompt_sha256=hashlib.sha256((HOST_DIR/'prompt.md').read_bytes()).hexdigest(),
                 model=model_config['model']['id'], effort=model_config['effort'], max_requests=model_config['max_requests'])
 
 
@@ -458,7 +459,9 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
     cap = Decimal(str(args.cap_usd))
     if cap <= 0:
         raise ShadowError('--cap-usd must be positive')
-    session_cap = Decimal(str(args.session_cap_usd)) if args.session_cap_usd else None
+    session_cap = Decimal(str(args.session_cap_usd)) if args.session_cap_usd is not None else None
+    if session_cap is not None and session_cap <= 0:
+        raise ShadowError('--session-cap-usd must be positive')
     if args.double_session_cap:
         # One named session, once, with twice the cap it reached. Nothing retries by itself.
         if len(units) != 1 or session_cap is None:
@@ -540,6 +543,9 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         if args.stop_on_abort and summary.get('session_state') != 'sealed':
             run['stopped'] = 'session-aborted'
             break
+        if args.stop_on_reject and summary.get('rejected'):
+            run['stopped'] = 'submission-rejected'
+            break
     completed = [s for s in run['sessions']]
     run.update(ended_wall=time.time(), total_cost_usd=str(spent), sessions_run=len(completed),
                published_version=repo.published(), complete=run['stopped'] is None and len(completed) == len(names))
@@ -569,6 +575,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--max-context-images', type=int, default=16)
     p.add_argument('--context-image-block', type=int, default=8)
     p.add_argument('--stop-on-abort', action='store_true')
+    p.add_argument('--stop-on-reject', action='store_true',
+                   help="stop the run when the gate rejects a session's submission (its facts are then lost)")
     p.add_argument('--windows-file', help='JSON list of {session, actor, first, last[, game_time]}: one session over each '
                    'window (one actor, steps first to last inclusive), in this order against one repository, instead of '
                    'whole admissions')

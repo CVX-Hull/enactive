@@ -72,9 +72,11 @@ You may propose two kinds of change, and only these: facts and types.
     could use), never a list. Write its `place` so that a later actor could go there: a landmark
     and a direction, or coordinates, as the screen shows them (for example, "in a building north
     of the start" or "at x 12, y 40"), and `game_time` as the time the screen showed when it was
-    seen, as text. Do not skip an item because it looks minor: a later actor cannot go back to
+    seen, as text. If no frame you cite shows a time, write `not shown` there; never leave it
+    blank and never guess a time. Do not skip an item because it looks minor: a later actor cannot go back to
     look. If the same item was seen again, one fact holds its latest place and says so.
-  - `hazard`: a danger, with its `place` and the `game_time` it was seen.
+  - `hazard`: a danger, with its `place` and the `game_time` it was seen (`not shown` when no
+    cited frame shows a time).
   - `open_commitment`: something an actor said it would do, or a condition it was waiting on,
     that is still open at the end of your window.
 
@@ -109,7 +111,8 @@ may use letters, digits, hyphens and underscores.
       "citations": ["<frame source id>", "<another>"],
       "subject": "the one thing this is about", "place": "", "game_time": "", "kind": "how_it_works"}},
     {"op": "supersede_fact", "id": "f12", "fact": {"schema": "curator-fact/2", "id": "f102",
-      "type": "control", "statement": "…", "scope": {"game": "<game>"}, "citations": ["<frame>"],
+      "type": "<a type name from knowledge/ontology/types.json>", "statement": "…",
+      "scope": {"game": "<game>"}, "citations": ["<frame>"],
       "subject": "…", "place": "…", "game_time": "…", "kind": "place_with_goods"}}
   ]
 }
@@ -125,8 +128,10 @@ may use letters, digits, hyphens and underscores.
 - A fact has exactly `schema`, `id`, `type`, `statement`, `scope`, `citations`, `subject`,
   `place`, `game_time` and `kind`. `id` is new: not any published fact id and not repeated in the
   submission. `scope` is an object with at least `game`, and it must equal the game named in
-  `knowledge/knowledge.json`. `citations` is a non-empty list of frame source ids. `kind` is one
-  of `place_with_goods`, `hazard`, `open_commitment` and `how_it_works`. `subject` is a
+  `knowledge/knowledge.json`. `citations` is a non-empty list of frame source ids. `type` is a
+  name in the ontology (any name, grouping facts as you choose) and is not the same field as
+  `kind`, which is always exactly one of the four fixed values `place_with_goods`, `hazard`,
+  `open_commitment` and `how_it_works`. `subject` is a
   non-empty string, the one thing the fact is about. `place` and `game_time` are strings; they
   must not be blank for `place_with_goods` and `hazard`, and may be `""` for the other two kinds.
 - `knowledge/coverage.json`, when it exists, says what the published version covers. The gate

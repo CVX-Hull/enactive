@@ -8,6 +8,7 @@ native lane and skip off macOS or without the host installed.
 from __future__ import annotations
 
 from decimal import Decimal
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -22,10 +23,12 @@ from harness.curator import sandbox
 from harness.curator.knowledge import Repository
 from harness.curator.proxy import ModelProxy
 from harness.curator.session import SessionConfig, run_session
+from harness.curator.window import FULL, Window, restrict
+from harness.trace.projection import project
 from tests.curator_stand_in import StandIn
 from tests.curator_trace import make_long_session
 from tests.test_curator_sandbox import custodian  # noqa: F401 - the escape suite's real listeners
-from tests.test_trace_projection import make_session
+from tests.test_trace_projection import make_session, make_store
 from tools.curator_host import shadow
 from tools.curator_host.providers import OPENROUTER
 
@@ -333,13 +336,13 @@ def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
                       'terra', 'opus', 'probe set', 'held-out', 'sd1a', 'lh1'):
         assert forbidden not in lowered, forbidden
     # The brief gate is honest only if the prompt names none of the four facts it looks for (#460).
-    assert not re.search(r'\b(tanks?|rations?|rods?|batter(y|ies)|roofs?)\b', lowered)
+    assert not re.search(r'\b(tanks?|rations?|rods?|batter(y|ies)|roofs?|cupboards?|lockers?|floors?)\b', lowered)
 
 
 def test_the_prompt_defines_the_four_fact_kinds_and_the_new_fields():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
     for needed in ('place_with_goods', 'hazard', 'open_commitment', 'how_it_works', '`subject`', '`place`', '`game_time`',
-                   'One fact per item', 'coverage.json'):
+                   'One fact per item', 'coverage.json', '`not shown`', 'is not the same field as', 'a type name from knowledge/ontology/types.json'):
         assert needed in prompt, needed
 
 
@@ -461,16 +464,16 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
     assert [r['status'] for r in shadow._lines(out/'397'/'sd1a1'/'proxy-ledger.jsonl')] == [200, 200, 200]
 
 
-def run_windows(tmp_path, upstream, windows, monkeypatch, *extra, out_name='windows', steps=12):
+def run_windows(tmp_path, upstream, windows, monkeypatch, *extra, out_name='windows', steps=12, lineage='397', session='sd1a1'):
     runtime = tmp_path/'runtime'
     evidence = tmp_path/'evidence'
-    if not (evidence/shadow.LINEAGES['397']['directory']).exists():
-        make_long_session(evidence/shadow.LINEAGES['397']['directory']/'computer-sessions', 'sd1a1', steps=steps)
+    if not (evidence/shadow.LINEAGES[lineage]['directory']).exists():
+        make_long_session(evidence/shadow.LINEAGES[lineage]['directory']/'computer-sessions', session, steps=steps)
     monkeypatch.setenv(shadow.KEY_VARIABLE, KEY)
     listing = tmp_path/'windows.json'
     listing.write_text(json.dumps(windows))
     out = runtime/'curator-shadow'/out_name
-    code = shadow.main(['--arm', 'terra', '--lineage', '397', '--windows-file', str(listing), '--cap-usd', '1',
+    code = shadow.main(['--arm', 'terra', '--lineage', lineage, '--windows-file', str(listing), '--cap-usd', '1',
                         '--upstream', upstream, '--runtime-root', str(runtime), '--evidence-root', str(evidence),
                         '--out', str(out), '--max-output-tokens', '4096', '--wall-seconds', '120', *extra])
     return code, out, runtime
@@ -501,6 +504,11 @@ def test_a_window_run_goes_through_the_stand_in_one_window_after_another_on_one_
     assert [(s['label'], s['cost_usd'], s['ledger_charged_usd'], s['stopped_by_cap']) for s in run['sessions']] == [
         ('sd1a1-001-1-4', '0.0036', '0.0036', False), ('sd1a1-001-5-8', '0.0036', '0.0036', False)]
     assert all(s['wall_seconds'] > 0 for s in run['sessions']) and run['total_cost_usd'] == '0.0072'
+    prompt = hashlib.sha256((shadow.HOST_DIR/'prompt.md').read_bytes()).hexdigest()
+    assert run['host']['prompt_sha256'] == prompt
+    for summary in (first, second):
+        pinned = json.loads((Path(summary['record'])/'manifest.json').read_text())['pinned']
+        assert pinned['host']['prompt_sha256'] == prompt
     repo = Repository(runtime/'knowledge'/'shadow-454'/'windows'/'terra'/'397', 'cdda')
     assert repo.published() == 'v1' and [f['id'] for f in repo.facts()] == ['f1']
 
@@ -559,6 +567,105 @@ def test_a_double_cap_rerun_applies_twice_the_cap_on_the_repository_it_continues
     bad, _, _ = run_windows(tmp_path, 'http://127.0.0.1:9', one, monkeypatch, '--knowledge-root',
                             str(tmp_path/'elsewhere'), out_name='elsewhere')
     assert bad == 2
+
+
+@pytest.mark.parametrize('rows', [
+    [dict(session='sd1a1', actor='../001', first=1, last=4)], [dict(session='sd1a1/x', actor='001', first=1, last=4)],
+    [dict(session='sd1a1', actor='001', first='1', last=4)], [dict(session='sd1a1', actor='001', first=5, last=4)],
+    [dict(session='sd1a1', actor='001', first=1)], [dict(session='sd1a1', actor='001', first=1, last=2.5)]])
+def test_a_malformed_window_is_a_refusal_not_a_traceback(tmp_path, monkeypatch, capsys, rows):
+    code, out, _ = run_windows(tmp_path, 'http://127.0.0.1:9', rows, monkeypatch)
+    assert code == 2 and 'curator_shadow: windows:' in capsys.readouterr().err and not out.exists()
+
+
+@pytest.mark.parametrize('cap', ['0', '-1', '-0.5'])
+def test_a_session_cap_that_is_not_positive_is_refused(tmp_path, monkeypatch, capsys, cap):
+    one = [dict(session='sd1a1', actor='001', first=1, last=4)]
+    code, out, _ = run_windows(tmp_path, 'http://127.0.0.1:9', one, monkeypatch, '--session-cap-usd', cap)
+    assert code == 2 and '--session-cap-usd must be positive' in capsys.readouterr().err and not out.exists()
+
+
+@native
+def test_stop_on_reject_stops_the_run_at_the_first_rejected_submission(tmp_path, monkeypatch):
+    windows = [dict(session='sd1a1', actor='001', first=n, last=n + 3) for n in (1, 5, 9)]
+    with StandIn() as stand_in:  # the stand-in repeats its fact id, so every window after the first is rejected
+        code, out, _ = run_windows(tmp_path, stand_in.url, windows, monkeypatch, '--stop-on-reject', out_name='stopped')
+        again, free, _ = run_windows(tmp_path, stand_in.url, windows, monkeypatch, out_name='free')
+    assert code == again == 0
+    stopped, free_run = (json.loads((path/'summary.json').read_text()) for path in (out, free))
+    assert stopped['stopped'] == 'submission-rejected' and stopped['sessions_run'] == 2 and stopped['complete'] is False
+    assert not (out/'397'/'sd1a1-001-9-12').exists()
+    assert free_run['stopped'] is None and free_run['sessions_run'] == 3 and free_run['complete'] is True
+
+
+@native
+def test_a_sessions_cap_is_bounded_by_what_the_run_cap_leaves(tmp_path, monkeypatch):
+    windows = [dict(session='sd1a1', actor='001', first=2*n + 1, last=2*n + 2) for n in range(6)]
+    with StandIn(cost=0.05) as stand_in:  # three requests of $0.05 make a session $0.15
+        code, out, _ = run_windows(tmp_path, stand_in.url, windows, monkeypatch, '--cap-usd', '0.40',
+                                   '--session-cap-usd', '0.30')
+    assert code == 0
+    run = json.loads((out/'summary.json').read_text())
+    caps, spent = [], Decimal(0)
+    for session in run['sessions']:
+        caps.append(Decimal(session['cap_usd']))
+        assert caps[-1] == min(Decimal('0.40') - spent, Decimal('0.30'))
+        spent += Decimal(session['cost_usd'])
+    assert caps[0] == Decimal('0.30') and caps[1] < Decimal('0.30') and caps == sorted(caps, reverse=True)
+    assert run['stopped'] == 'cap-reached' and run['sessions_run'] < 6 and spent <= Decimal('0.40')
+
+
+@native
+@pytest.mark.parametrize('how', ['outside', 'symlink', 'dotdot'])
+def test_a_continued_repository_outside_the_runtimes_knowledge_directory_is_refused(tmp_path, monkeypatch, capsys, how):
+    one = [dict(session='sd1a1', actor='001', first=1, last=4)]
+    elsewhere = tmp_path/'outside'/'terra'/'397'  # a real repository of the right arm and lineage
+    Repository(elsewhere, 'cdda').ensure()
+    runtime = tmp_path/'runtime'
+    if how == 'outside':
+        root = elsewhere
+    elif how == 'symlink':
+        root = runtime/'knowledge'/'shadow-454'/'linked'/'terra'/'397'
+        root.parent.mkdir(parents=True)
+        root.symlink_to(elsewhere)
+    else:
+        root = runtime/'knowledge'/'..'/'..'/'outside'/'terra'/'397'
+    code, out, _ = run_windows(tmp_path, 'http://127.0.0.1:9', one, monkeypatch, '--knowledge-root', str(root),
+                               out_name='refused')
+    assert code == 2 and 'must be an existing repository root inside' in capsys.readouterr().err and not out.exists()
+
+
+@native
+def test_a_window_never_exposes_the_memory_store_to_the_session(tmp_path, monkeypatch):
+    one = [dict(session='aidB3', actor='001', first=1, last=4)]
+    store = tmp_path/'evidence'/shadow.LINEAGES['372']['directory']/'player-memory-aidB3.sqlite3'
+    make_long_session(store.parent/'computer-sessions', 'aidB3')
+    make_store(store)
+    with StandIn() as stand_in:
+        code, out, _ = run_windows(tmp_path, stand_in.url, one, monkeypatch, lineage='372', session='aidB3',
+                                   out_name='windowed')
+        runtime, evidence = tmp_path/'runtime', tmp_path/'evidence'
+        again = shadow.main(['--arm', 'terra', '--lineage', '372', '--sessions', 'aidB3', '--cap-usd', '1',
+                             '--upstream', stand_in.url, '--runtime-root', str(runtime), '--evidence-root', str(evidence),
+                             '--out', str(runtime/'curator-shadow'/'whole'), '--max-output-tokens', '4096',
+                             '--wall-seconds', '120'])
+    assert code == again == 0
+    windowed = json.loads((out/'372'/'aidB3-001-1-4'/'summary.json').read_text())
+    assert windowed['memory']['passed'] is False and windowed['memory']['note'].startswith('a window never reads')
+    control = json.loads((runtime/'curator-shadow'/'whole'/'372'/'aidB3'/'summary.json').read_text())
+    assert control['memory']['passed'] is True  # the store is there to be read: the window refused it, not its absence
+
+
+def test_restrict_removes_the_memory_store_a_projection_carries(tmp_path):
+    session = make_long_session(tmp_path/'evidence')
+    store = tmp_path/'m.sqlite3'
+    make_store(store)
+    whole = tmp_path/'whole'
+    restrict(whole, project([session], whole, memory=store), FULL)
+    assert (whole/'memory.json').is_file()  # the full window keeps it
+    out = tmp_path/'trace'
+    manifest = restrict(out, project([session], out, memory=store), Window('s1', '001', 1, 3))
+    assert not (out/'memory.json').exists() and 'memory.json' not in manifest['files']
 
 
 def test_a_continued_repository_must_belong_to_the_arm_and_lineage_of_the_run(tmp_path, monkeypatch, capsys):
