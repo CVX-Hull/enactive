@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: '2026-11-13'
-scope: 'Historical: the three gates ran and reported on 13 November 2026, and the owner replaced the comparison described here with the withholding design in general-memory.md. Protocol for testing memory in play (#590): three gates that cost little and are decisive, and a comparison of short starts from a copy of the held-out lineage''s saved game whose size is not requested until the gates have measured what it depends on. Arms, the first store, the start, the measure and its judge, the decision rule, a simulation of what the measure can detect, the interface the build shares, cost and stop rules. Nothing here is approved, built or run'
+scope: 'Historical: the three gates ran and reported on 13 November 2026, and the owner replaced the comparison described here with the withholding design in general-memory.md. Protocol for testing memory in play (#590): three gates that cost little and are decisive, and a comparison of short starts from a copy of the held-out lineage''s saved game whose size is not requested until the gates have measured what it depends on. Arms, the first store, the start, the measure and its judge, the decision rule, a simulation of what the measure can detect, the interface the build shares, cost and stop rules.'
 review_trigger: A gate in this note reports, the comparison is sized, or the context design it tests changes
 ---
 

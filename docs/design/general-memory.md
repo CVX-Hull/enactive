@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: '2026-11-13'
-scope: 'Changes decided to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that consolidates, the briefing''s full items chosen by a model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Decided by the owner on 13 November 2026; not built'
+scope: 'Changes decided to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that grooms the store into articles over facts, the briefing''s leads chosen by a recall model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Decided by the owner on 13 November 2026; not built'
 review_trigger: The withholding simulation reports, delivery is first measured in play, or a measurement contradicts a premise stated here
 ---
 
@@ -97,12 +97,14 @@ improve over hand-built knowledge of one game.
   item.
 - **A grooming session between admissions** reads the whole store and the last
   admission's citations, and reorganizes it: it merges facts, retires facts a later frame
-  contradicts, revises types as ADR 009 allows, makes subject names consistent, and ranks
-  facts for the briefing. Outside systems that edit against what exists (Mem0,
+  contradicts, revises types as ADR 009 allows, makes subject names consistent, and
+  writes and revises the [articles](#articles-over-facts) that file every fact. Outside
+  systems that edit against what exists (Mem0,
   Memory-R1, Letta's sleep-time agents) keep their stores more compact. Cost: one more
   curator session per admission, inferred at the gate's \$1.16 to \$4.19 a session.
-- **No hard cap**, as the owner decided. The store's size after grooming is measured.
-- **Facts are hypotheses.** Each is shown with its sighting order, and the player is told
+- **No hard cap**, as the owner decided. The store's size after grooming is measured in
+  the first paid grooming run, which is asked of the owner with its price.
+- **Facts are hypotheses.** Each article shows when it was last confirmed, and the player is told
   to check a fact cheaply before relying on it. Outside work finds agents follow stale
   notes into harm.
 
@@ -262,9 +264,13 @@ provider; the coding host's capacity is its cost.
   says so. Prediction-powered inference (PPI++, or active statistical inference for a
   weighted sample) is how a later audit would be used, if the owner asks for one.
 - **An anchor set.** The measure gate's 30 owner-labelled pairs, with the owner's blind
-  and checked labels, are re-judged after any change to a judge's prompt or model. Risk
-  R-FALSE-CLAIM: a changed judge silently shifts every later measure; the anchor set
-  shows the shift; it costs one judging pass of 30 pairs.
+  and checked labels, are re-judged with the measure gate's own judge prompt, frozen,
+  whenever a judge's model changes: that shows drift in the model, in the labels the owner
+  gave. The game-neutral labels have no owner labels, by the owner's decision; a change
+  to their prompt is checked by the first two judges' agreement on a frozen set of
+  sealed stretches, re-judged before and after. Risk R-FALSE-CLAIM: a changed judge
+  silently shifts every later measure; both checks show the shift; each costs one
+  judging pass.
 - **Known judge risks**: leniency, missing evidence in long contexts, and errors shared by
   both judges.
 

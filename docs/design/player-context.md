@@ -3,7 +3,7 @@ owner: lead
 status: active
 date: '2026-11-13'
 scope: 'Design of the playing model''s context (#591): what is always in front of the player, what the curator publishes and when it is delivered, and how the context stays small enough to be fast; five options compared on what the player knows, response time and cost, from the sealed traces, the audit of memory reads (#594), the trace reader''s figures (#592) and dated outside sources; the contract question for stated intent on tool calls (#384); the migration that follows; owner decisions. No run, game launch or model call was made'
-review_trigger: A measurement of any estimate marked as such here, the memory screen's result, or the adoption migration that builds the briefing and the cut
+review_trigger: A measurement of any estimate marked as such here, the first measurement of delivery in play, or the adoption migration that builds the briefing
 ---
 
 # The player's context: delivery of curated knowledge and a bounded prompt
@@ -29,8 +29,9 @@ review_trigger: A measurement of any estimate marked as such here, the memory sc
 - **Recommendation.** Three changes, in this order:
   1. **Short tool results.** The player gets the few fields it acts on. The full receipt
      stays in the trace.
-  2. **A briefing from the curator's store** at the start of every actor: the facts that
-     matter now in full, and one line for each of the others.
+  2. **A briefing from the curator's store** at the start of every actor: the leads of the
+     articles a recall model chooses, and one index line for each of the others
+     ([general memory](general-memory.md#articles-over-facts)).
   3. **One cut for old turns and old images together**, made only up to the point the
      curator's store already covers, with a fresh briefing in the same request.
 - **Expected effect, estimated and not measured.**
@@ -46,13 +47,14 @@ review_trigger: A measurement of any estimate marked as such here, the memory sc
     cost \$0.0062 a request, against 7.0 s and \$0.0194 overall (seven-day lineage; 6.1 s
     and \$0.0056 against 8.3 s and \$0.0157 in the held-out lineage).
 - **Not known.** Whether a player with a short window and a briefing plays as well as one
-  that keeps its whole conversation, and what curator sessions during play cost. No
-  recorded run tests either. The
-  [memory screen](https://github.com/CVX-Hull/enactive/issues/590) is where they are
-  measured.
+  that keeps its whole conversation. The session price pilot measured curator sessions
+  over 20 decisions at a median of \$0.20 and 99 s
+  ([record](../acceptance/2026-11-13-session-price-pilot.md)). Use of delivered knowledge
+  is measured by the judges (#386) once delivery is built (#461).
 - **Owner decisions.** The four questions under [owner decisions](#owner-decisions) are
-  answered in the [owner decision log](../decisions/owner-decisions.md). This note is
-  the working description of the design the memory screen tests.
+  answered in the [owner decision log](../decisions/owner-decisions.md). With
+  [general memory](general-memory.md), this note is the working description of the
+  player's context.
 
 Terms are in the [glossary](../glossary.md). A **request** is one call to the model; it
 returns one tool call. A **turn** is a tool call with its result. The **window** is the
@@ -212,7 +214,7 @@ the sealed traces; "estimate" means arithmetic on them.
 | **Short results and a larger image block only** | Nothing changes: the whole conversation stays, and nothing is delivered | Estimate: about 75,000 tokens at request 150, where recorded medians are 6.9 s | A rewrite of the whole conversation at each image drop, about half as often with a block of 20 | **Taken as the first layer.** It fixes no memory loss, so it is not the design |
 | **Removing old turns without a summary** | Loses whatever in those turns the store does not hold. Safe only up to the point the store covers | Recorded: 5.1 s median at 20,000 to 60,000 tokens against 7.0 s overall | One rewrite of a small prompt per cut, against a 120,000-token rewrite every ten requests now | **Taken, tied to the store's coverage** |
 | **Earlier handoff** | Each handoff discards the whole conversation, the most recent turns included; kept 0.62 without a briefing. With a briefing it would lose less. With short results, about three actors where there is one | The best: every actor starts at about 4,500 tokens plus the briefing | One small write per actor; the outgoing actor spends requests writing its packet, and the host and tool server restart | **Not the main lever.** The cut is a handoff that keeps the latest turns and asks the player to write nothing. Handoff stays for capacity, and is the fallback if the cut cannot be built soundly |
-| **Prompt rebuilt at each decision** | Memory is the only carrier, so nothing can be skipped, and nothing the store lacks survives a single request | Unknown. Only the fixed head can be cached, so each request pays for the rest uncached | Unknown; likely higher per request | **Not now.** It is where the cut leads if the window can be made very short; decided after the screen |
+| **Prompt rebuilt at each decision** | Memory is the only carrier, so nothing can be skipped, and nothing the store lacks survives a single request | Unknown. Only the fixed head can be cached, so each request pays for the rest uncached | Unknown; likely higher per request | **Not now.** It is where the cut leads if the window can be made very short; decided with the cut |
 
 ## The recommended design
 
@@ -268,9 +270,8 @@ Three layers. Each can be built and judged alone, in this order.
   matters even at two game days.
 - **What it fixes.** The three stored losses of the seven-day lineage were records that
   existed and were not in front of the actor that needed them. A briefing at every start
-  puts every stored item, or its index line, there. Whether the curator's store would
-  have held those facts is a separate question, checked for free in the
-  [replay](#what-the-memory-screen-should-check).
+  puts every stored article's lead, or its index line, there. The re-briefed curator
+  stored all four lost facts ([brief gate](../acceptance/2026-11-13-curator-brief-gate.md)).
 
 ### 3. One cut, tied to what the store covers
 
@@ -316,7 +317,7 @@ Three layers. Each can be built and judged alone, in this order.
   it was given, not the last decision its published facts reflect. The stamp is new.
 - **Risk.** The player loses the thread of what it was doing. Two things carry it: the
   low mark keeps the most recent turns verbatim, and the briefing's leads.
-  Whether that is enough is the main thing the screen measures.
+  Whether that is enough is measured before the cut is decided.
 
 ### What the curator must publish, and when
 
@@ -324,6 +325,7 @@ Three layers. Each can be built and judged alone, in this order.
 | --- | --- |
 | Facts in the game-neutral format `curator-fact/3`: free text with a type, citations, an optional subject and the order of sighting; retire and merge operations ([general memory](general-memory.md#1-the-fact-format-and-the-curator)) | Compound records cannot be kept current; a fixed set of kinds or a required place assumes one genre of game |
 | A grooming session between admissions that reorganizes the whole store and ranks it | The store otherwise grows without bound: 279 records after about 1,900 decisions |
+| Articles over facts: a lead, a body citing facts and links per subject, written in the grooming session ([general memory](general-memory.md#articles-over-facts)) | The briefing carries leads and an index; the player reads more by link or search |
 | A coverage stamp on every snapshot: the last decision it has read | The cut rule depends on it |
 | A session at each admission boundary; the next admission waits for it | The game is saved and closed there, so waiting costs no play |
 | A session at each handoff; the successor does not wait | It starts with the latest snapshot and its predecessor's summary as a labelled hint, and gets the difference when the session publishes |
@@ -331,14 +333,12 @@ Three layers. Each can be built and judged alone, in this order.
 | A failed request charged at zero when the provider refused it | Done ([#556](https://github.com/CVX-Hull/enactive/issues/556)) |
 
 **A first store for a game already in progress** comes from curator sessions over that
-game's sealed trace, admission by admission, as the shadow runner does now. For the
-screen's start on the held-out lineage's saved game that is a paid step. The shadow run
-cost 0.61 to 0.87 of the actor's spend, which for that lineage's \$28.88 is about \$18 to
-\$25. It is proposed and costed in the screen's protocol and is not approved by this note.
+game's sealed trace, admission by admission, as the shadow runner does now. That is a
+paid step, asked of the owner with its price when a game needs it.
 
-**Cost during play is not measured.** More frequent sessions cost more than one per
-admission. With the player's own cost per request falling to about a third, the curator
-may become the larger part of the bill. The screen's protocol must price it.
+**Cost during play.** The session price pilot measured a median of \$0.20 a session over
+20 decisions, inferred at two to three times the play it covers when the prompt is
+bounded ([record](../acceptance/2026-11-13-session-price-pilot.md)).
 
 ### Stated intent on tool calls
 
@@ -357,8 +357,8 @@ because every field is output the player writes and then re-reads.
 - **Recommendation.**
   - `intent`: required, one line.
   - `cites`: optional. It names the stored items the call relies on, and is the only way
-    the trace could show that delivered knowledge was used. The screen cannot rest on an
-    optional field, so its use measure must not depend on it.
+    the trace could show that delivered knowledge was used. The judges' use measure
+    cannot rest on an optional field, so it does not depend on it.
   - `expectation`, `goal`, `confidence`, `flags`: not added now. ADR 009 makes
     `expectation` required and names its first reader as the curator, which would attend
     to a wrong prediction. No curator brief or session reads it yet, and the other
@@ -386,30 +386,6 @@ alone:
 
 The player's own store and its record format are retired in that change. Until then they
 stay as they are.
-
-## What the memory screen should check
-
-Input to [#590](https://github.com/CVX-Hull/enactive/issues/590). The first four cost
-nothing.
-
-1. **Would the curator's store have held the four lost facts?** The shadow run's sealed
-   store for the seven-day lineage exists. Search it for the roof tank, the rations, the
-   fishing rod and the batteries, and record at which decision each first appears.
-2. **Replay of the stored losses against this delivery.** For each, the first request at
-   which a briefing or a difference would have shown the item, against when play needed
-   it.
-3. **Simulation of the cut.** Over the sealed traces, for assumed curator lags of 10, 20,
-   47 and 94 decisions: how large the window would have been at each request, how often
-   the cut would have been held back, and the rewrites it would have made. It is a
-   simulation because the shadow run recorded no coverage by decision.
-4. **Exact token counts for layer 1.** Rebuild a sample of recorded requests with short
-   results and count tokens with the route's tokenizer, to replace the fit above.
-5. **The live screen's arms.** The current player against the player with all three
-   layers and a curator-written store. Layer 1 belongs in both arms, so that the
-   difference measured is memory and the cut, not shorter receipts.
-6. **A use measure that does not need the model's words.** The audit shows the trace
-   cannot give one. Candidates: time and requests to reach a place or item the store
-   holds, and the count of things found again.
 
 ## Owner decisions
 
