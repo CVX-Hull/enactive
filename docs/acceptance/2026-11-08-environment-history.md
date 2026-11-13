@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-08'
 scope: Environment exceptions and evidence navigation that the environment page held until 8 November 2026, moved here unchanged when ADR 010 kept current pages free of dated narrative
 ---

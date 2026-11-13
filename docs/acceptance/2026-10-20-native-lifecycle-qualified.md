@@ -4,6 +4,7 @@ date: 2026-10-20
 scope: Frozen native007 engineering lifecycle, semantic skills, costs and latency limits
 review_trigger: Reinterpretation of native007 evidence or independent mission admission
 status: historical
+kind: run
 ---
 
 # Native character lifecycle qualification007

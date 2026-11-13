@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Same-character025 first clean-water output, failures and paused source handoff
 status: historical
+kind: run
 ---
 
 # First250mL clean water verified; remaining coverage incomplete

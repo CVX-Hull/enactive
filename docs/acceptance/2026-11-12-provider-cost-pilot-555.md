@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: measurement
 date: '2026-11-12'
 scope: 'Six real requests on the pinned player route on 12 November 2026 to see whether OpenRouter reports the cost of each response, with what request shape and whether the route uses the caller''s own provider key (#555); one route, one day, no failed or cut-off request'
 ---

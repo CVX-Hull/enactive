@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-24
 scope: Fresh development reaches supplies and procedural revision, then loses authority at an expired activity observation root
 ---

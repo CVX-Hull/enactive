@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-07'
 scope: 'Retirement of the old raw run output under .runtime, cited and uncited, on the owner decision of 7 November 2026 (#425)'
 review_trigger: None; dated record

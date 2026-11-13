@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: '2026-11-12'
 scope: 'P1 reader presentation stop, retained candidates and proposed complete-input recovery (#178)'
 ---

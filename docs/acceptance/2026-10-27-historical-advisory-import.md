@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Historical offline import qualification; supersede with new evidence
 status: historical
+kind: change
 date: 2026-10-27
 scope: Original routine lineage through current advisory export, retrieval and synthetic current authoring; no gameplay-model assessment
 ---

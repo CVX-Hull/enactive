@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-12'
 scope: 'Removal of the curator sandbox''s volume-wide free-space guard on the owner''s decision of 12 November 2026 (#556), leaving the bound on the session''s own files as the only disk control; source tests only, no curator session with a model'
 ---

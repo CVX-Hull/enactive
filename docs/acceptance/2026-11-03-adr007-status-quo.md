@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: decision
 date: '2026-11-03'
 scope: Owner decision on the ADR-007 first slice after the offline comparison screen; no runtime qualification
 ---

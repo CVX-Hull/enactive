@@ -4,6 +4,7 @@ date: 2026-10-20
 scope: Actual deciding002 creation/adoption and failed inventory request; exceptional owned teardown
 review_trigger: Reinterpretation of this failure or a new deciding admission
 status: historical
+kind: run
 ---
 
 # Independent mission second attempt

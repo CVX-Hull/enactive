@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: '2026-11-12'
 scope: 'Two short supervised runs with the real game and a real model on main d71ced0, checking launch, the run-ending record, operator Pause from the spectator page, cleanup and evaluator reading after the attention policy was removed (#558, #553); no gameplay quality claim'
 ---

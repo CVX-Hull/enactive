@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Correction to closed pilot evidence or recovered billing/timing records
 status: historical
+kind: run
 date: 2026-10-25
 scope: Four compatibility requests and one failed loaded-state Pi/DeepInfra pilot; no model ranking or campaign qualification
 ---

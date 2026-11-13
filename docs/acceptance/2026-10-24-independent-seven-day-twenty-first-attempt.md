@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-24
 scope: Fresh development creation fails on native text callback assertion; exceptional closure
 ---

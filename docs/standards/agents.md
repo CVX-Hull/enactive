@@ -29,6 +29,29 @@ lead takes work back. Reports never substitute for inspecting a diff or result.
 
 Read [Structured player tooling and host context](player-tooling.md) for this part of the standard.
 
+## Brief template
+
+A brief is all a delegated agent knows. Fill every line; write "none" where one does
+not apply. The [environment facts](../operations/coding-agents.md#environment-facts-for-agents)
+are part of every worker's brief by reference.
+
+```text
+Role:            explorer | worker | reviewer
+Goal:            one sentence: what is wanted and why
+Read first:      the glossary, and the pages the code area routes to
+                 (docs/documentation.md#from-code-to-its-documents)
+Decided already: decisions the agent must not reopen
+Owned paths:     exact files or directories it may write; everything else is read-only
+Must not:        game launches, model calls, spend, GitHub writes, as apply
+Acceptance:      the check it runs and the result that means done
+Stop when:       two failed repairs, drift beyond owned paths, or a named condition
+Hand back:       branch and commit, pull request, commands run and their output,
+                 what was not done, and what it is unsure of
+```
+
+A reviewer's brief gives the diff or page and the claims to test, never the lead's
+conclusion.
+
 ## Agent verification and native fixture review
 
 Inspect actual APIs before coding; bound scope; retain earlier constraints in the

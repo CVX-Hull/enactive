@@ -6,9 +6,48 @@ from pathlib import Path
 from tools import documents
 
 
-def record(root: Path, name: str, date: str, scope: str, title: str) -> None:
+def record(root: Path, name: str, date: str, scope: str, title: str, kind: str | None = "run",
+           body: str = "Body.") -> None:
+    kind_line = f"kind: {kind}\n" if kind else ""
     (root / "docs/acceptance" / name).write_text(
-        f"---\nowner: lead\nstatus: historical\ndate: '{date}'\nscope: '{scope}'\n---\n\n# {title}\n\nBody.\n")
+        f"---\nowner: lead\nstatus: historical\n{kind_line}date: '{date}'\nscope: '{scope}'\n---\n\n# {title}\n\n{body}\n")
+
+
+def metadata_root(tmp_path: Path) -> Path:
+    for directory in ("docs/acceptance", "docs/design", "schemas"):
+        (tmp_path / directory).mkdir(parents=True)
+    (tmp_path / "schemas/document.schema.json").write_text((documents.ROOT / "schemas/document.schema.json").read_text())
+    for name in documents.ROOT_DOCUMENTS:
+        (tmp_path / name).write_text("---\nowner: lead\nstatus: active\nreview_trigger: x\n---\n")
+    return tmp_path
+
+
+def test_a_dated_record_names_its_kind_and_the_index_shows_it(tmp_path):
+    root = metadata_root(tmp_path)
+    record(root, "2026-01-01-kindless.md", "2026-01-01", "No kind", "Kindless", kind=None)
+    assert documents.check_metadata(root) == [
+        "docs/acceptance/2026-01-01-kindless.md: a dated record names its kind in its front matter"]
+    record(root, "2026-01-01-kindless.md", "2026-01-01", "Wrong kind", "Kindless", kind="note")
+    assert "kind" in "\n".join(documents.check_metadata(root))
+    record(root, "2026-01-01-kindless.md", "2026-01-01", "A study", "Kindless", kind="study")
+    assert documents.check_metadata(root) == []
+    assert "| [Kindless](2026-01-01-kindless.md) | study | A study |" in documents.render_index(root, "docs/acceptance/index.md")
+
+
+def test_new_records_and_proposed_designs_open_with_at_a_glance(tmp_path):
+    root = metadata_root(tmp_path)
+    record(root, "2026-11-13-before.md", "2026-11-13", "Before the rule", "Before")
+    assert documents.check_metadata(root) == []
+    record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After")
+    assert documents.check_metadata(root) == [
+        "docs/acceptance/2026-11-14-after.md: a dated record opens with '## At a glance'"]
+    record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After", body="## At a glance\n\nThe answer.")
+    assert documents.check_metadata(root) == []
+    design = root / "docs/design/note.md"
+    design.write_text("---\nowner: lead\nstatus: proposed\nreview_trigger: x\n---\n\n# Note\n\nBody.\n")
+    assert documents.check_metadata(root) == ["docs/design/note.md: a proposed design note opens with '## At a glance'"]
+    design.write_text("---\nowner: lead\nstatus: proposed\nreview_trigger: x\n---\n\n# Note\n\n## At a glance\n\nShort.\n")
+    assert documents.check_metadata(root) == []
 
 
 def test_index_lists_records_newest_first_and_detects_staleness(tmp_path):
@@ -45,6 +84,6 @@ def test_an_unquoted_hash_in_front_matter_is_rejected(tmp_path):
     record(tmp_path, "2026-01-01-quoted.md", "2026-01-01", "Audit #400 of things", "Quoted")
     assert documents.check_metadata(tmp_path) == []
     (tmp_path / "docs/acceptance/2026-01-02-bare.md").write_text(
-        "---\nowner: lead\nstatus: historical\ndate: '2026-01-02'\nscope: Audit #400 of things\n---\n\n# Bare\n")
+        "---\nowner: lead\nstatus: historical\nkind: review\ndate: '2026-01-02'\nscope: Audit #400 of things\n---\n\n# Bare\n")
     assert documents.check_metadata(tmp_path) == [
         "docs/acceptance/2026-01-02-bare.md: quote a front-matter value containing ' #'; YAML reads the rest as a comment"]

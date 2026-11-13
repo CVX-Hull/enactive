@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Rosendo partial22h14m25s rehearsal, autonomous native cleanup, continuity and limits
 review_trigger: Contradicting original evidence or changed acceptance claims

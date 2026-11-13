@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: '2026-11-09'
 scope: 'P1 held-out lineage lh4 (#522) under p1-study/2: the frozen package, one admission lost to infrastructure, seven admissions ending by the 12-boundary size rule, spend, and the held-out handling; aggregates only'
 ---

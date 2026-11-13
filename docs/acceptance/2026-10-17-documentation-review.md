@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-10-17'
 scope: Documentation governance, lifecycle checks and visual-review increment on this Mac
 ---

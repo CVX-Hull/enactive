@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-08'
 scope: 'Removal of stale worktrees, merged branches, second copies of sealed evidence and unused downloads on 8 November 2026, with what was archived first (ADR 010, #501)'
 ---

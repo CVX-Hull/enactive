@@ -72,9 +72,11 @@ say. A worker handoff adds the base revision, worktree, fixed decisions, exact c
 and return evidence, as S-AGENT requires.
 
 Keep one active integration slice and at most two implementation workers, each in its own
-worktree under `.runtime/worktrees/<leaf>` with disjoint named paths and one writer per
-checkout. A worktree installs its own npm dependencies with `npm ci`; it may link the main
-`.venv` only if the leaf leaves the Python lockfile unchanged. Explorers read only;
+project-local worktree (`.runtime/worktrees/<leaf>`, or where the host's worktree
+isolation puts it: [environment facts](../operations/coding-agents.md#environment-facts-for-agents))
+with disjoint named paths and one writer per checkout. A worktree installs its own npm
+dependencies with `npm ci` and uses the main checkout's `.venv`; a leaf that changes the
+Python lockfile builds its own. Explorers read only;
 reviewers get fresh context. The lead alone integrates and serializes the game, saves,
 bridge, ports, builds, dependency environments and caches; workers do not run native
 demonstrations. Pull new work only when implementation, review and validation capacity

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: measurement
 date: 2026-11-05
 scope: Source and retained-context audit of the main player at faca1d099a49bef8894be50b509ca00344f6cfe4 and the closed Alex two-day diagnostic
 ---

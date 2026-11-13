@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-24
 scope: Native ASCII editor overflow, correction, cancellation and menu-only normal ending
 ---

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: decision
 date: '2026-11-13'
 scope: 'The owner''s premise on long-term memory and fourteen owner decisions of 13 November 2026 on the memory direction, the memory screen, the curator''s failed-request charge, the responsiveness criterion, the route, the context, the smaller model, text budgets, the timing reader, the replay probe and the spend limit''s real check (#445, #442, #164, #25, #441, #556, #555)'
 ---

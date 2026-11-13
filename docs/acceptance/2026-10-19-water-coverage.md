@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Same-character026–028 collection, failures and two stored bulk outputs
 status: historical
+kind: run
 ---
 
 # Water collection and treatment — failures and completed batches

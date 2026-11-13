@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-23
 scope: Independent bounded executable learning and normal lifecycle; combined readiness fails responsiveness
 ---

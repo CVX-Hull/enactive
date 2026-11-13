@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Interpreting or repeating the useful-bootstrap trials or selecting the next campaign configuration
 status: historical
+kind: run
 date: 2026-10-24
 scope: Two failed finite independent bootstrap trials; request timing and menu-only cleanup, no useful learning or seven-day acceptance
 ---

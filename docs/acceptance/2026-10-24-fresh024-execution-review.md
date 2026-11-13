@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: measurement
 date: 2026-10-24
 scope: Read-only Fresh024 task-path, program-coverage and timing-evidence review; no resumed gameplay or performance qualification
 ---

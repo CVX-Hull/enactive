@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Historical offline qualification; supersede with new evidence
 status: historical
+kind: change
 date: 2026-10-27
 scope: Bounded provider HTTP429 recovery and attempt accounting; no external inference or native game
 ---

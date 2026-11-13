@@ -71,6 +71,24 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `docs/acceptance/`, `changes/`, `decisions/` (ADRs) | Dated evidence/rationale under explicit status, not live commands or permission. `changes/` holds the change briefs written before ADRs and issues took that role; it receives no new briefs. |
 | Ignored `.runtime/` | Frozen inputs, owned stores/saves and raw evidence; no private maintained source framework. |
 
+### From code to its documents
+
+Before changing an area, read its row: the page that explains it, the page that states
+its exact rules, and the tests that hold them. A delegated agent with a bounded brief
+needs these and the [glossary](glossary.md), not the whole start-here set.
+
+| Code | Explanation | Exact rules | Tests |
+| --- | --- | --- | --- |
+| `harness/computer/`, the native bridge | [Native control](components/native-control.md) | [Computer control](contracts/computer-control.md) | `tests/test_computer_*.py`, the compiled `tests/computer_*_check.py` |
+| `harness/player/`, `harness/player_tools.py`, `player_view.py`, `player_mcp.py` | [Player interface](components/player-interface.md), [memory and learning](components/memory-learning.md) | [Computer control](contracts/computer-control.md), [player guide](player-guide.md) | `tests/test_player_*.py`, `tests/test_policy_program.py` |
+| `harness/application.py`, `harness/server.py` | [Execution](components/mission-execution.md) | [Computer control](contracts/computer-control.md) | `tests/test_player_application.py`, `tests/test_server.py` |
+| `tools/player_host/`, `tools/campaign_*.py` | [Player host procedure](operations/player-host.md), [campaign procedure](operations/campaign-run.md), [supervision](operations/campaign-supervision.md) | [Player host](contracts/player-host.md) | `tests/test_player_host_*.py`, `tests/test_campaign_*.py`, `tools/player_host/test/` |
+| `harness/curator/`, `tools/curator_host/` | [Curator](components/curator.md), [curator session design](design/curator-session.md) | [Curator hosts](operations/curator-hosts.md) | `tests/test_curator_*.py`, `tools/curator_host/test/` |
+| `harness/evaluation/`, `harness/trace/`, `tools/evaluate.py`, `host_analysis.py`, `run_ledger.py`, `probe_baseline.py` | [Development runs](development-runs.md); no component page | [Evaluation](contracts/evaluation.md) | `tests/test_evaluation_*.py`, `test_host_analysis.py`, `test_run_ledger.py`, `test_probes.py`, `test_trace_*.py` |
+| `harness/viewer/`, `web/` | [Observer operations](components/observer-operations.md) | [Evaluation](contracts/evaluation.md) for the view API, [computer control](contracts/computer-control.md#passive-spectator-reads-and-operator-pause) for Pause | `tests/test_viewer_*.py`, the browser suites `tests/test_*.cjs` |
+| `tools/check.py`, `ci.py`, `documents.py`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py` |
+| `tools/setup.py`, `prepare_game.py`, `patch_game.py`, `build_computer.py`, `native/` | [Setup](setup.md), [environment](environment.md) | [Native acceptance](operations/native-acceptance.md) | `tests/test_setup.py`, `tests/test_computer_launch.py` |
+
 ### Follow a concrete reader task
 
 | Task | Current route and consequence |
@@ -111,6 +129,28 @@ Five kinds of fact are often put in the wrong place:
 
 [S-DOCS](standards/documentation.md#current-pages-records-and-decisions) states the
 rules that follow from this table.
+
+### Before writing or changing a document
+
+1. **Is it true now?** State it in the present tense on the current page that owns it.
+   Do not narrate how it came to be.
+2. **Did the owner decide it?** Add a row to the
+   [owner decision log](decisions/owner-decisions.md) in the same change, and link the
+   row from the page.
+3. **Is it evidence from a run, a measurement or a study?** Write one dated record
+   under `docs/acceptance/` with its `kind`, opening with "At a glance". A change whose
+   only evidence is its diff gets no record: say it in the pull request.
+4. **Is it where work stands?** Replace the issue's description; do not add a section
+   to it. Set Status and Priority in the Project.
+5. **Is it a design for a decision?** Write a `proposed` note under `docs/design/`,
+   opening with "At a glance". Mark it `historical` when the decisions are made.
+6. **Does it use a project term?** Use the [glossary](glossary.md)'s word, or add the
+   term there.
+7. **Does it give a number?** Name the command or reader that produces it.
+
+`python -m tools.documents` checks front matter, links, record kinds, the opening
+section and the generated indexes. Review checks the rest
+([review](workflows/review.md)).
 
 The [evaluation contract](contracts/evaluation.md) owns the spectator view API.
 

@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Closed evidence assessment or follow-up disposition changes
 status: historical
+kind: run
 date: 2026-10-23
 scope: Fresh CLI player refuses startup before any owned child or game input
 ---

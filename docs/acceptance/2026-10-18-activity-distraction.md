@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Exact ordinary activity-distraction query support, prior-save reload and normal cleanup
 ---

@@ -4,6 +4,7 @@ date: 2026-10-21
 scope: Frozen campaign002 partial outcomes, failure, exceptional closure and original evidence
 review_trigger: New evidence about campaign002 or its repair and closure
 status: historical
+kind: run
 ---
 
 # Independent seven-day campaign: second attempt

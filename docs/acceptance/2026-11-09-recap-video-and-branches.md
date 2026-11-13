@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-11-09'
 scope: 'The 19 October seven-day recap video export sealed into the evidence store, and three local branches deleted, on the owner decisions of 9 November 2026 (ADR 010 follow-up, #498)'
 ---

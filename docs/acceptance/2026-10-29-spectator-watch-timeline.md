@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-29
 scope: Source-bound Watch/Timeline investigation, passive evidence and current-session Pause; not gameplay reliability or useful-cadence qualification
 ---

@@ -20,7 +20,10 @@ actually occurred. Review against actual outcomes rather than retrofitting succe
 Derive published counts and ranges directly from retained machine-readable
 artifacts using existing analysis tools, stating fields, units and sample scope.
 Verify an agent's numerical summary against those artifacts before publication;
-a plausible live summary is not a substitute. Record corrections without replacing
+a plausible live summary is not a substitute. A number in a record names the command
+or tracked reader that produces it from those artifacts, so that a reviewer re-runs it
+instead of re-deriving it; a figure computed by a one-off script says so and gives the
+method. Record corrections without replacing
 the original evidence. Development-run quantities go in the tracked
 [run ledger and metrics snapshot](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot).
 The run ledger is the one numeric record of a run: a dated record presents numbers

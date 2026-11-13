@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-10-17'
 scope: Native interruption investigation and first gameplay design; no runtime implementation or native demonstration
 ---

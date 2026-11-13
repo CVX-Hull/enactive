@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Preserved acceptance evidence; append corrections without relabelling failures
 status: historical
+kind: change
 date: 2026-10-31
 scope: Host-neutral player-host/1 contract, Pi adapter conformance, offline native driver preflight and Codex/Claude Code fresh-clone setup; no campaign or gameplay effect
 ---

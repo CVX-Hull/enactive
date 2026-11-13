@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-24
 scope: Fresh independent development campaign; failed after11h54m29, exceptional closure
 ---

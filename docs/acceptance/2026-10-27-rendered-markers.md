@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Historical native observation qualification; supersede with new evidence
 status: historical
+kind: run
 date: 2026-10-27
 scope: Literal rendered inventory markers and normal technical lifecycle; no gameplay-model assessment
 ---

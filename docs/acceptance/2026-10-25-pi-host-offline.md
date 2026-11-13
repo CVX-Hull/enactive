@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Historical offline qualification; supersede with new evidence rather than rewriting results
 status: historical
+kind: change
 date: 2026-10-25
 scope: Pinned Pi host request/MCP/process conformance; no inference, native game or cadence qualification
 ---

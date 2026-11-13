@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: '2026-11-11'
 scope: 'P1 recovery-7 completion and the pre-scoring discovery of missing Question image input, refused Audit outputs, bounded image-delivery repair and pending measurement correction (#178)'
 ---

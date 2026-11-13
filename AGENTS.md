@@ -64,3 +64,14 @@ Explorers/reviewers never send game inputs.
   gaps are in [the controls page](docs/controls.md).
 - Give everything a [descriptive name](docs/standards/documentation.md#names): no
   bare ordinals such as `P1` or `study 3` for phases, studies, files, branches or issues.
+- Put each fact in its one home, following the seven-step
+  [checklist](docs/documentation.md#before-writing-or-changing-a-document): current
+  pages say what is true in the present tense; an owner decision is a row in the
+  [owner decision log](docs/decisions/owner-decisions.md), added in the change that
+  acts on it; a dated record is only for evidence from a run, measurement or study; an
+  issue has one description, replaced and not appended to.
+- A delegated agent reads its brief, the [glossary](docs/glossary.md) and the row for
+  its code area in [from code to its documents](docs/documentation.md#from-code-to-its-documents),
+  not the whole document set. Briefs follow the
+  [template](docs/standards/agents.md#brief-template) and the
+  [environment facts](docs/operations/coding-agents.md#environment-facts-for-agents).

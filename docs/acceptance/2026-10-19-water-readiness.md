@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Failed finite018 water-readiness investigation, normal reload and early shutdown
 status: historical
+kind: run
 ---
 
 # Water-readiness result

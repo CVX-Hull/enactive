@@ -85,6 +85,12 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   may also carry the agreement; the log row is what current pages cite. A later
   decision that replaces an earlier one marks the earlier row replaced; rows are not
   deleted.
+- **A dated record names its kind** in its front matter: `run`, `study`, `measurement`,
+  `decision`, `change` or `review`. The generated index shows it, so a reader can find
+  the runs without reading past the reviews. The document check requires it.
+- **A research page is current only while its question is open.** When the decision it
+  informs is made, the page becomes `historical` and its conclusion is stated, with a
+  link, on the page that owns the resulting rule.
 - **An ADR states a decision and its reasons and then stops changing.** It does not
   track the standing of the work it proposes. A design note is `proposed` until its
   owner decisions are made and `historical` after; what was adopted moves into
@@ -95,6 +101,21 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
 
 Records and briefs that existed when this rule was adopted, on 13 November 2026, stay
 as they are; they are not edited to fit it. C-REVIEW applies it to changed pages.
+
+## Writing for a reviewer
+
+A person reviewing has little attention to spend and an agent pays for every word it
+reads ([R-UNREADABLE-DOCS](../risks.md#development-risks)).
+
+- **A design note and a dated record open with "At a glance"**: the question, the
+  answer, what is not known, and the owner decisions needed, each in a line or two. A
+  reader who trusts the page stops there; the rest is the evidence.
+- **Define a term where a reader starts.** Terms the project uses throughout are in the
+  [glossary](../glossary.md); a page links it or defines its own terms at first use.
+- **Write sentences.** A rule is stated as a sentence with a subject and a verb, not as
+  a string of nouns. When a change touches a section written in compressed form, it
+  rewrites that section; pages are not rewritten for style alone.
+- **Say where a number comes from** ([S-EVIDENCE](evidence.md)).
 
 ## Names
 

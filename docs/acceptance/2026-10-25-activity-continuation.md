@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: New native activity continuation evidence
 status: historical
+kind: run
 date: 2026-10-25
 scope: Two finite lead-operated technical cases; no independent-player or cadence claim
 ---

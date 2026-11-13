@@ -3,6 +3,7 @@ date: '2026-10-17'
 owner: lead
 scope: Engineering-system acceptance — 2026-10-17
 status: historical
+kind: change
 ---
 
 # Engineering-system acceptance — 2026-10-17

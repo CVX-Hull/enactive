@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Interpreting or repeating the proportional CI qualification
 status: historical
+kind: measurement
 date: 2026-10-24
 scope: Offline CI and test-maintenance evidence; linked PRs own final publication receipts
 ---

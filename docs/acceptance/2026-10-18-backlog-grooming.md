@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Historical checkpoint; supersede with new evidence rather than rewriting results
 status: historical
+kind: review
 date: 2026-10-18
 scope: Backlog triage, current-work navigation and scoped maintenance cleanup
 ---

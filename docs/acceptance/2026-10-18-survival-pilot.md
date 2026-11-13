@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Historical pilot record; supersede with new evidence rather than rewriting outcomes
 status: historical
+kind: run
 date: 2026-10-18
 scope: Pilot001 ordinary world creation, unknown transition stop, eligible cleanup and first campaign findings review
 ---

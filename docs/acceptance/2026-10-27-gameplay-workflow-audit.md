@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: review
 date: 2026-10-27
 scope: Principles, standards, workflow, repository/documentation ownership and host settlement review; no new gameplay qualification
 ---

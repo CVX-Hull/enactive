@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: review
 date: 2026-10-18
 scope: Reviewed seven-day execution protocol, offline capture boundaries, actual actor access and passive native readiness; no deciding campaign input
 ---

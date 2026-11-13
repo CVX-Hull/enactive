@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: '2026-10-17'
 scope: Public source, project management, hosted portable checks and branch-rule verification
 ---

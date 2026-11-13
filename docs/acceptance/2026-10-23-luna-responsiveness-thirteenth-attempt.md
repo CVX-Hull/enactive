@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Closed evidence assessment or follow-up disposition changes
 status: historical
+kind: run
 date: 2026-10-23
 scope: Independent loaded-world ration pickup and normal Save/exit/Finish; responsiveness unqualified
 ---

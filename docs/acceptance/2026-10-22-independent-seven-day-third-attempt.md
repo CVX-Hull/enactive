@@ -4,6 +4,7 @@ date: 2026-10-22
 scope: Frozen campaign003 partial outcomes, map-cache failure and exceptional closure
 review_trigger: New evidence about campaign003 or its repair and closure
 status: historical
+kind: run
 ---
 
 # Independent seven-day campaign: third attempt

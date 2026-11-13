@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-20
 scope: Registered owned launch/exit source and windowed native qualification; failed attempt retained
 ---

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Two real delegated operator phases and paused lead inspection on saved development character; not seven-day survival
 ---

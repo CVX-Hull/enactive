@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: First direct-player probe stopped before delegated input; permission-invocation finding and normal cleanup
 ---

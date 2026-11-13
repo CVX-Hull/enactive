@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: 2026-10-31
 scope: Diagnostic arms A, C and H on one frozen save, scored by blind frame audit, to decide which lever explains grounded players making no retained gain
 ---

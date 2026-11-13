@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-24
 scope: Grounded player selection, existing-contract preparation and bounded integrated assessment
 ---

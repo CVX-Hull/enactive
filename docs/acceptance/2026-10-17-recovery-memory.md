@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-17
 scope: 'Operator recovery transport #30 and passive gameplay memory #21; portable, native and graphical evidence kept separate'
 ---

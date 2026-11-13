@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: study
 date: '2026-11-12'
 scope: 'Completed owner-amended P1 measurement, descriptive comparison and coding-host robustness (#178)'
 ---

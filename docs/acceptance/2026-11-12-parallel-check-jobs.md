@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: measurement
 date: '2026-11-12'
 scope: 'Hosted measurements of 12 November 2026 for splitting the pull-request check into parallel jobs (#557), the bar they were held to, the five-job shape that was built, the local checks run on it and the GitHub probes still pending; no game was launched and no paid call was made'
 ---

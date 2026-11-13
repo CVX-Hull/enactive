@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: review
 date: '2026-10-17'
 scope: Consolidated goal audit, reuse provenance and fresh planner-loop gameplay timing
 ---

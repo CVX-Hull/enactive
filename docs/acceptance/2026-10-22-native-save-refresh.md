@@ -4,6 +4,7 @@ date: 2026-10-22
 scope: Frozen native001 normal lifecycle, one unit-geometry click, costs and terminal UI finding
 review_trigger: Lifecycle, native input or observer qualification changes
 status: historical
+kind: run
 ---
 
 # Native001: ordinary click and exact normal lifecycle

@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: decision
 date: '2026-11-13'
 scope: 'Four owner decisions on controls left open by the 12 November 2026 control review, and what was changed for each: the research-source rules, the standing cumulative spend cap, one unreadable sealed session, and the adapter test that hung without its packages (#556, #557)'
 ---

@@ -2,6 +2,7 @@
 owner: lead
 review_trigger: Closed trajectory assessment or follow-up changes
 status: historical
+kind: run
 date: 2026-10-23
 scope: Independent loaded-world equipment handling and normal ending; organic learning and responsiveness unqualified
 ---

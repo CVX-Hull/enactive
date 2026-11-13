@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: measurement
 date: '2026-11-08'
 scope: 'Measurements that current design and operations pages held until 8 November 2026 and no other record holds, moved here unchanged when ADR 010 kept current pages free of dated results'
 ---

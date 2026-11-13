@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: run
 date: 2026-10-18
 scope: Repaired public-walk evidence and zero-step stop/reassessment probe; first unexercised load probe retained
 ---

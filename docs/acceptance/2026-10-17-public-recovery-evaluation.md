@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-17
 scope: Public operator recovery, passive evaluation instrumentation and proposed outcome-monitor design; one macOS host
 ---

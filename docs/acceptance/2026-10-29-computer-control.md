@@ -1,6 +1,7 @@
 ---
 owner: lead
 status: historical
+kind: change
 date: 2026-10-29
 scope: Production mechanical control and player-service integration through organic play; bounded functional evidence, not survival or cadence qualification
 ---

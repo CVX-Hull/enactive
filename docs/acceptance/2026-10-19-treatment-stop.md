@@ -3,6 +3,7 @@ owner: lead
 date: 2026-10-19
 scope: Actual 021 treatment investigation, threat retreat, fit stop and normal shutdown
 status: historical
+kind: run
 ---
 
 # Treatment investigation stopped before day four
