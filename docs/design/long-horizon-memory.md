@@ -95,8 +95,9 @@ neither had a chance to occur.
 
 So the recorded failure is delivery, at both ends: a fact that was never stored, and
 stored facts that did not reach the actor who needed them, or reached it late, because
-delivery depended on the actor choosing to query. No recorded case shows a delivered
-fact being ignored.
+delivery depended on the actor choosing to query. The one delivery examined was used.
+The three queries of this lineage returned 17 records in all; what the actors did with
+the others has not been examined.
 
 ## Why the curator memory study ended in a no-go
 
@@ -242,12 +243,17 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
   - every new actor and every new admission starts with a working set of the player's
     current records, so an admission boundary carries as much as a handoff;
   - the handoff and finish steps require the actor to record or confirm its open
-    facts, one per record, each with game time and place, and to mark replaced ones;
-  - the working set is chosen by kind, not only by recency: places and rules are kept,
-    and of state snapshots only the newest.
-- **For.** It addresses both recorded failures: the fact never stored and the stored
-  facts not delivered. In the one recorded case, a delivered record was used at once.
-  The study's own-records arm added answers over Reference (7 of 77).
+    facts, one per record, each with game time and place, and to mark replaced ones,
+    and do not complete until those records are committed;
+  - the working set is chosen by what a record is about, not only by recency: places
+    and rules are kept, and of state snapshots only the newest. Records in today's
+    format do not say what they are about (the rod and ration records are both kind
+    `work`), so for an old store the rule can only be newest first within the size
+    limit.
+- **For.** It is aimed at both recorded failures: the fact never stored and the stored
+  facts not delivered. Whether it would have delivered each lost record in time is
+  what the replay below computes. In the one delivery examined, the record was used at
+  once. The study's own-records arm added answers over Reference (7 of 77).
 - **Against.** That arm's items were 72.5% contradicted or outdated. A working set
   delivered once holds a bounded amount, so over a week old facts fall out of it. It
   keeps the actor as a writer, which the owner's decision
@@ -259,9 +265,9 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
 - **Falsified by** a live comparison in which rediscovery does not fall, or in which
   the player acts on outdated items it was shown.
 
-### 3. A cue in view at every decision
+### 3. An index of what is stored, kept in context
 
-- **Mechanism.** A short index of what is stored stays in the prompt: one line per
+- **Mechanism.** A short index of what is stored stays in the conversation: one line per
   record, with its place and game time, grouped by place. The actor reads a full
   record by its line. Query gains search by text. The index is re-sent as a new
   message only when a record is written, so the earlier prompt stays cached.
@@ -342,8 +348,8 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
 
 **Build option 2 first, then option 3, and decide each on play.**
 
-- **Option 2 addresses every recorded loss** with no second model, and the one
-  recorded delivery was used at once.
+- **Option 2 is aimed at every recorded loss** with no second model, and the one
+  delivery examined was used at once.
 - **Option 3 is what the premise needs** once the store outgrows a text delivered at a
   boundary. It is tested as its own arm, so that a result can be attributed.
 - Every later option needs their parts: single-fact records with game time and place,
@@ -389,19 +395,25 @@ decision.
   ended alive at 27.76 game hours, with its store as the player wrote it. Using it ends
   that lineage's held-out standing.
 - **Arms.** The current player; the player with option 2's delivery; the player with
-  options 2 and 3. Runs happen one after another, never two games at once.
+  options 2 and 3. For this old-format store the working set is newest first within
+  the size limit, as in the study's own-records arm. Runs happen one after another,
+  never two games at once.
 - **Size.** Six starts per arm, first actor only, about 150 decisions each: about 2,700
   decisions, about $54 at the recorded $0.02 per decision. An $80 envelope is proposed.
-- **Measure.** How often the actor re-finds something the store already held, against
-  how often it goes straight to it. Candidates are found mechanically, by comparing
-  frames with the lineage's frozen frames; a model judge then confirms each, as the
-  study's method required, and separates re-finding from a correct return to a known
-  place. The judge's cost is not estimated here. The blinded annotation of the probe
-  baseline is not used: it reproduced none of the four known losses in full.
-- **Reach.** About five such events per start are expected, so about 30 per arm, all
-  from one game state and so correlated. Only a large effect, of the order of halving,
-  can be detected. The protocol fixes the threshold and shows by simulation that the
-  measure can detect it.
+- **Measure.** How often the actor re-finds something the lineage had already seen,
+  against how often it goes straight to it. Candidates are found mechanically, by
+  comparing frames with the lineage's frozen frames; a model judge then confirms each,
+  as the study's method required, and separates re-finding from a correct return to a
+  known place. The subset the store already held is reported beside it. The judge's
+  cost is not estimated here. The blinded annotation of the probe baseline is not
+  used: it reproduced none of the four known losses in full.
+- **Reach.** About five things seen again per start are expected, so about 30 per arm,
+  all from one game state and so correlated. Only about one per start concerns
+  something the store held (the own-records text answered 11 of that lineage's 62
+  questions), which is five or six per arm and too few to decide anything alone. Only
+  a large effect on the wider count, of the order of halving, can be detected. The
+  protocol fixes the threshold and shows by simulation that the measure can detect it;
+  if it cannot, the screen is not run in this form.
 - **Stop.** The envelope, or a pilot start that fails.
 
 | Outcome | Meaning | Next |
