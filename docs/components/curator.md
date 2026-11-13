@@ -71,7 +71,8 @@ adopted; the baseline and workbench phase's
   claim that it benefits play needs a fresh written protocol and an owner decision
   ([completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)). The
   owner kept it as the writer of the knowledge store
-  ([owner decision log](../decisions/owner-decisions.md)); how its knowledge reaches
-  the player is tracked in [#591](https://github.com/CVX-Hull/enactive/issues/591).
+  ([owner decision log](../decisions/owner-decisions.md)); how its knowledge is to
+  reach the player, and what it must publish and when, is in the
+  [context design](../design/player-context.md), which is not built.
 - **CI coverage:** Linux CI runs the portable tests. The Seatbelt-lane tests, sandbox
   and real-host sessions, run only on macOS.
