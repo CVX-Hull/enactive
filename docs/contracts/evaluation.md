@@ -18,11 +18,13 @@ rule still decide acceptance. No value on this page reaches the player.
 The evaluator reads one run directory read-only:
 - `session.sqlite3` (`computer-session/1`);
 - `sources/*.png`;
-- each `actors/NNN/host.jsonl` (`player-host/3`), including its per-request context
-  manifest once the host records one;
+- each `actors/NNN/host.jsonl` (`player-host/4`), including its per-request context
+  manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/1`);
-- `manifest.json` (`campaign-run/5`), including its operator labels, or `campaign-run/4`
-  for the closed set of archived sessions only (see "Implementation rules");
+- `manifest.json` (`campaign-run/6`), including its operator labels;
+- for the closed set of archived sessions only, the older versions of the manifest,
+  host traces, receipt and run-ending record that the archive index lists for each
+  session (see "Implementation rules");
 - the run's `player-memory/2` store.
 
 Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
@@ -40,13 +42,17 @@ input format is an error naming the file and version. Nothing is guessed.
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
   forbid the computer importing evaluation.
-- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/3`), used by
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/4`), used by
   the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
   `tools/campaign_player.py` stays separate because evaluation never gates the control path
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/3` telemetry 3. An unterminated final line that does not
+  `host-start` is not `player-host/4` telemetry 4. The one exception is a trace of an
+  archived session: its caller passes that session's index entry, and the trace is then
+  also read in the version the entry lists, when its `host-start` names that session.
+  `host-summary` finds the entry from the manifest of the run directory the trace sits in,
+  so an older trace outside such a directory is an unsupported version. An unterminated final line that does not
   parse is an error for `host-summary`; the evaluator and the viewer ignore it on every
   pass, live or final, because a trace may still be appending. A newline-terminated
   malformed line is always an error.
@@ -309,7 +315,7 @@ there is no streaming connection.
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
-| `run_facts` | `key`, `value` | From `manifest.json` and frozen inputs: `labels` (arm, start, scenario, lineage, admission), `source_commit`, model id, effort, route, guide and assignment SHA-256 digests, limits, and the declared spend ceiling |
+| `run_facts` | `key`, `value` | From `manifest.json` and frozen inputs: `labels` (arm, start, scenario, lineage, admission), `source_commit`, model id, effort, route, guide and assignment SHA-256 digests, limits, and the spend allowance (`spend_allowance_usd`; `declared_ceiling_usd` and `prior_reserved_usd` are filled for an archived run only, see "Spend allowance" below) |
 | `tool_calls` | `request_id`, `tool_call_id`, `actor`, `decision`, `tool`, `status` (`ok`, `error`, `refused`), `latency_ms`, `result_bytes`, `wall` | One row per tool call, from host `tool-start`, `tool-result` and `tool-refused` |
 | `requests` | `request_id`, `actor`, `wall`, `attempt`, `input_tokens`, `cache_read`, `cache_write`, `output_tokens`, `dollars`, `retry_class`, `omitted_images`, `manifest` | One row per HTTP attempt. `manifest` is `exact` when a `context-manifest` event exists, else `absent`. |
 
@@ -349,23 +355,44 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     record in an older version is read only for a session the index lists with exactly
     that version, beside a manifest in the version the index lists for that session. Any
     other old version is an error naming the file and version. This reads historical
-    evidence; it is not an admission, and admission still requires `campaign-run/5`.
+    evidence; it is not an admission, and admission still requires `campaign-run/6`.
   - **The three combinations.** The index holds exactly three combinations of versions.
-    All three carry `campaign-receipt/3`, `player-driver/3` and `player-host/3` with
-    telemetry version 3, which are current. For each record that is not current, the
-    fields used are fixed:
-    - 30 sessions with a `campaign-run/4` manifest and a `campaign-watch-terminal/2`
-      run-ending record. From the manifest: `schema`, `session`, `player_store`,
-      `source_commit`, `effort`, `files`, `accounting`, `limits`, `ending_reserve`,
-      `wall_seconds`, `host_seconds`, `max_hosts` and `max_http_attempts`; the operator
-      labels come from the index. From the run-ending record: `reason` only (it has no
-      `pause_reason`).
-    - 22 sessions with a `campaign-run/5` manifest and a `campaign-watch-terminal/3`
-      run-ending record. From the run-ending record: `reason` and `pause_reason`, and
-      its `session`, which must be the manifest's.
-    - 2 sessions with a `campaign-run/5` manifest and a `campaign-watch-terminal/4`
-      run-ending record. Every record is current, so nothing is read as an old version.
-  - **Refusals.** `receipt.json` is read only as `campaign-receipt/3`. An index entry
+    All 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
+    `player-driver/3` and `player-host/3` with telemetry version 3, beside a
+    `campaign-run/4` or `campaign-run/5` manifest. For each record that is not current,
+    the fields used are fixed.
+    - **Shared by all three:**
+      - From the receipt: `outcome` and `driver` for the run's ending; `session`,
+        `source_commit`, `normal_save_claimed_by_harness`, `native_absence_verified`,
+        `normal_native_exit_zero`, `deciding_hosts_quiescent` and
+        `input_authority_revoked` for `host-summary`.
+      - From the driver record: `actors` (each one's `settled` and `player_finish`) and
+        `ending_request` for the run's ending; `schema`, `outcome`, `attempts_charged`,
+        `host_seconds_used`, `configured_estimate_usd` and `missing_usage_attempts` for
+        `host-summary`. The driver record's version must be the one the index lists.
+      - From a host trace: every event, as from a current trace. Its `host-start` must
+        carry the listed `schema` and `telemetry_version` and name the session; the
+        evaluator also takes its `actor_id`, `model`, `provider`, `effort` and
+        `provider_routing`. No field the evaluator reads differs between the two trace
+        versions, and an archived trace has no counted cost.
+      - From the manifest: `schema`, `session`, `player_store`, `source_commit`,
+        `effort`, `files`, `accounting`, `limits`, `ending_reserve`, `wall_seconds`,
+        `host_seconds`, `max_hosts` and `max_http_attempts`. `accounting` is the
+        worst-case reservation these packages declared; the spend allowance of an
+        archived run comes from it.
+    - **30 sessions** with a `campaign-run/4` manifest and a `campaign-watch-terminal/2`
+      run-ending record. The operator labels come from the index. From the run-ending
+      record: `reason` only (it has no `pause_reason`).
+    - **22 sessions** with a `campaign-run/5` manifest and a `campaign-watch-terminal/3`
+      run-ending record. The manifest's own `labels` are read. From the run-ending
+      record: `reason` and `pause_reason`, and its `session`, which must be the
+      manifest's.
+    - **2 sessions** with a `campaign-run/5` manifest and a `campaign-watch-terminal/4`
+      run-ending record. The manifest's own `labels` are read, and the run-ending record
+      is current.
+  - **Refusals.** A `campaign-receipt/3`, a `player-driver/3` record or a `player-host/3`
+    trace of a session the index does not list is an error naming the file and
+    version. An index entry
     with any other combination of versions, an index in another version and a missing
     index are each an error naming the index, and nothing is read through it.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
@@ -397,8 +424,16 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   - A death counts if it falls in or after that episode.
 - **Derived events.** `stall`, `ineffective_repeat`, `long_activity`, `episode` and
   `continuity` have source `derived`.
-- **Spend allowance** is the manifest's `ceiling_usd` minus `prior_reserved_usd`. The
-  spend rate uses the last ten minutes of requests.
+- **Spend allowance** (`run_facts.spend_allowance_usd`) is the manifest's declared
+  dollar limit, `spend_limit_usd`. For an archived run it is the manifest's
+  `ceiling_usd` minus `prior_reserved_usd`, which `run_facts` also holds as
+  `declared_ceiling_usd` and `prior_reserved_usd`; both are null for a run that
+  declares a limit. The spend rate uses the last ten minutes of requests.
+- **Dollars** in the record (`requests.dollars`, the cumulative dollars of a step and
+  the cost metrics) are the configured-rate estimate of each response,
+  `usage.cost.total`: the one figure every run, archived or not, carries. The cost the
+  provider reported, which the host counts toward the limit, is not in the record; the
+  run's receipt holds it.
 - **Change baselines.** A change record may name `baseline` arms or run patterns to compare against.
 - **View request rules:**
   - A `limit` outside 1–500 returns `400`.
@@ -427,14 +462,19 @@ Development-run quantities live as data in git, and pages render them or cite th
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/5` manifest and `campaign-receipt/3` plus the operator's provider reconciliation |
+| `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/6` manifest and `campaign-receipt/4` alone |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
-- **Origin.** `record` reads `campaign-run/5` packages only; there is no reader for older
-  manifests. Rows whose packages are `campaign-run/4` take arm and start from the labels
-  in the archive index, `archive-sessions.json`.
+- **Origin.** `record` reads `campaign-run/6` packages with a `campaign-receipt/4` only;
+  there is no reader for older manifests or receipts, and the rows already in the ledger
+  are not rewritten. It takes `provider_usd` from the receipt's `reported_usd`,
+  `unpriced_attempts` from `unpriced_requests`, `unpriced_attempt_usd` from
+  `unpriced_request_usd` and `spend_usd` from `spent_usd`; no figure is typed in. A
+  receipt whose `spend_complete` is false gets no row. Rows whose packages are
+  `campaign-run/4` take arm and start from the labels in the archive index,
+  `archive-sessions.json`.
 - **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is
-  `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. A row with an unknown split
+  `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. An earlier row with an unknown split
   holds null in all three fields and `spend_usd` at the receipt's configured estimate verbatim
   (including its floating-point digits).
 - **Rejection.** A row without `schema: dev-run/1`, a schema violation (a label is required),
@@ -558,7 +598,7 @@ Each has a value, a threshold, `met`, and the dollars per minute that continuing
 | Feed alive | No new operation for 300 s |
 | Custody healthy | Any partial or unknown receipt, or a custody stop |
 | Not looping | 30 or more decisions without `in_play` while game time does not advance |
-| Spend inside allowance | Spend so far, or the one-hour projection, exceeds the manifest's declared ceiling |
+| Spend inside allowance | Spend so far, or the one-hour projection, exceeds the run's spend allowance. Spend here is the configured-rate estimate, so it informs and is not the host's counted total |
 | Not dead and still spending | A death event followed by further requests |
 
 Game state (vitals, threat) is information only and never a Pause condition.

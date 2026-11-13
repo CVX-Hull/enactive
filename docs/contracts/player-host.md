@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/3` is the one current boundary between the
+`player-host/4` is the one current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -20,7 +20,7 @@ its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/5` package freezes `host:{"argv":[...]}` with1–8 strings.
+A `campaign-run/6` package freezes `host:{"argv":[...]}` with1–8 strings.
 The first is an absolute existing executable/interpreter regular file; later
 entries are canonical project-local regular files tracked by the clean source.
 No registry, resumed host, fallback or old `node` alias is supported.
@@ -46,16 +46,23 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/3"`, `model`, `api_key_env`,
-`max_requests`, `max_context_images`, `context_image_block`,
-`context_reserve_tokens`, `request_timeout_seconds` and `service_tier`.
+The closed route has `schema:"player-host/4"`, `model`, `api_key_env`,
+`max_requests`, `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
+`context_image_block`, `context_reserve_tokens`, `request_timeout_seconds` and
+`service_tier`.
 The adapter owns its closed `model` fields. The driver reads only model
-ID/name/cost/context/output fields, credential variable, request maximum and tier.
+ID/name/cost/context/output fields, credential variable, request maximum, the two
+dollar amounts and tier.
 The image block is a positive integer no larger than the image peak.
 `context_reserve_tokens` is a safe integer at least `model.maxTokens` and less
-than `model.contextWindow`. Unsupported routes, including `/2`, do not execute.
+than `model.contextWindow`. Unsupported routes, including `/3`, do not execute.
 
-The driver lowers request maximum to the remaining original allocation. One
+A dollar amount is plain decimal text such as `"0.4096"`: digits with an optional
+fraction, at most twelve whole and eighteen fractional digits. A JSON number, an
+exponent, a sign or a non-finite word is refused. `spend_limit_usd` is above zero.
+
+The driver lowers request maximum to the remaining original allocation, and
+`spend_limit_usd` to the dollars the run has left ([Spend](#spend)). One
 logical request admits at most two charged provider attempts; missing usage is
 unknown and retries never renew limits. The adapter reference defines eligible
 transient refusals. The retry is proven by offline fixtures only; no live 5xx response
@@ -74,6 +81,46 @@ stops before another fetch. Original text, source/omission provenance and tool
 correlations remain without compaction, fabricated summaries, restore or fallback.
 The finite diagnostic must exercise its envelope, including missing usage and
 oversized results, before admission.
+
+### Spend
+
+The host stops a run at a dollar limit, from the cost the provider reports for each
+response ([R-OVERSPEND](../risks.md#operating-risks)).
+
+- **What the route carries.** `spend_limit_usd` is the dollars this actor may still
+  count. `unpriced_request_usd` is what one request with no cost record counts for:
+  the whole context window at the route's most expensive input rate (the largest of
+  the input, cache-read and cache-write rates) plus the output limit at the output
+  rate, in dollars per million tokens. The package check computes it
+  (`tools/campaign_package.py`, `unpriced_request_usd`), and the host and the driver
+  take it from the route and never recompute it.
+- **What counts.** Every HTTP attempt counts once, when it ends. A response whose
+  `reported_cost_usd` is not null counts at that amount. Any other attempt counts at
+  `unpriced_request_usd`: a refusal, a timeout, a stream cut off, an abort at a
+  deadline, or a successful response with no usable cost. A retry is a separate
+  attempt.
+- **The reported cost** is read from the response's usage records. On a route that is
+  not on the caller's own provider key it is the larger of `cost` and
+  `cost_details.upstream_inference_cost`; on an own-key route it is their sum. A
+  malformed record leaves the cost unknown, never estimated. The curator applies the
+  same rule, and both test suites run one shared file of usage records
+  (`tests/fixtures/provider-usage-cost.json`).
+- **Exact sums.** Amounts are summed as decimals, never as floating-point numbers.
+- **Stop at the limit.** Before each HTTP attempt, a retry included, the host stops
+  with reason `spend-limit` when the total has reached `spend_limit_usd`. A request
+  already sent is not cancelled, so the total can pass the limit by at most what one
+  request counts.
+- **Stop on an unpriced success.** After a response that did not fail and whose
+  `reported_cost_usd` is null, the host stops with reason `cost-unreported` and
+  dispatches no tool call from it. This keys on the cost, not on `usage_available`:
+  token counts without a cost stop the run, and a cost without token counts does not.
+- **No notice.** The host sends no tail notice for dollars. The driver's ending
+  reserve asks for an orderly finish before the limit ([External control](#external-control)).
+
+The driver counts the same way from the trace: per `request-start`, the amount on
+that attempt's cost record, else the bound. A request that started and left no
+record, because the host was killed, therefore counts at the bound. The driver's sum
+is the run's record; the host's `spent_usd` is evidence beside it.
 
 ### Request stability and tail notices
 
@@ -118,7 +165,7 @@ handoff successor and a new admission's first actor, with no provider call:
   (when the work deadline is within a tenth of the allowance, at least a minute but
   at most half). Each emission is a `tail-notice` event with `request_id` and
   `kinds`; the notice text itself is not telemetry. Provider errors cannot be warned
-  of before they happen.
+  of before they happen, and the dollar limit has no notice.
 
 ## External control
 
@@ -144,8 +191,11 @@ the pending 32hex command ID. In the latter case the host waits for that matchin
 control before MCP connection or provider fetch; a wrong ID or unexpected EOF
 fails. Neither sealing nor exit erases the admission's stop request.
 
-The test freezes `ending_reserve` for seconds, HTTP attempts, inputs, requests,
-frames and frame bytes. Validators enforce bounded fields; the lead must forecast
+The test freezes `ending_reserve` for seconds, HTTP attempts, dollars (`usd`),
+inputs, requests, frames and frame bytes. The driver sends the stop when any of them
+is at or below its reserve; for dollars that is the run's limit minus the cost
+counted so far, with a request still in flight not yet counted. Validators enforce
+bounded fields; the lead must forecast
 that the reserves cover the largest admitted burst and in-flight inference/tool
 delivery delay before admission. Validation is not proof of adequate ending
 capacity. Hard limits, Pause and uncertainty remain independent.
@@ -187,19 +237,23 @@ before a successor. Pause, uncertainty or failed closure cannot become a handoff
 
 ## Telemetry
 
-Stdout is JSONL telemetry version3. Each line has `type`; the driver ignores event
+Stdout is JSONL telemetry version4. Each line has `type`; the driver ignores event
 kinds it does not account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. It records `session_affinity_id` (additive, absent from earlier traces). |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:4` and `schema:"player-host/4"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
-| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3 under [S-MIGRATION](../standards/migration.md)'s additive-event case: absent from earlier recorded traces, which stay readable, and readers report its absence explicitly. |
-| `response-complete` | `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`. `reported_cost_usd` is the cost the provider itself reported for the response, as a decimal string in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. It is evidence only: no admission, limit or control reads it. Additive within version 3 under [S-MIGRATION](../standards/migration.md)'s additive-event case: a trace without the field has no reported cost recorded. |
+| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). An archived trace recorded before the event existed has none, and readers report its absence explicitly. |
+| `response-complete` | At most one per HTTP attempt. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` is what this attempt counted toward the limit, and `cost_counted_as` says which: `provider-reported` (the reported cost) or `unpriced-bound` (the route's `unpriced_request_usd`). `spent_usd` is the host's running total after it. |
+| `request-unpriced` | An attempt that ended with no `response-complete`, written before `settled` with its `request_id` and the same `counted_cost_usd`, `cost_counted_as:"unpriced-bound"` and `spent_usd`. Every started attempt therefore has one cost record in a trace that reaches `settled`. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
-| `settled` | Last, with `ok`, reason, control identity where applicable and requests matching charged attempt count. |
+| `settled` | Last, with `ok`, reason, control identity where applicable, requests matching charged attempt count, the host's total `spent_usd` and its count of `unpriced_requests`. A settlement written before the host started carries neither. |
+
+Stop reasons this contract adds to a failed settlement: `spend-limit` and
+`cost-unreported` ([Spend](#spend)).
 
 ### Context manifest
 
@@ -246,8 +300,9 @@ bytes or data URLs, so the bodies stay unrecoverable from telemetry.
 
 Pre-start refusal emits only unsuccessful `settled`. A final-file failure may
 append one unsuccessful settlement after the prior settlement and exits nonzero.
-Partial lines, absent/repeated terminal events or incomplete accounting charge
-the whole original host allocation and admit no successor. Telemetry retains
+Partial lines, absent/repeated terminal events, a cost record the driver cannot
+count or incomplete accounting charge the whole original host allocation, mark the
+run's spend incomplete and admit no successor. Telemetry retains
 bounded public narration, claims and original references, never credentials,
 private reasoning or raw request/image histories.
 
@@ -262,7 +317,8 @@ only locale/executable lookup. Game input stays within sequential actor tools.
 
 The contract suite uses scripted local provider/MCP fixtures, the real driver's
 accounting reader, cancellation/EOF/identity cases, direct finish origin,
-pending-call suppression, original attempt charging and actual child closure.
+pending-call suppression, original attempt charging, the dollar limit and actual
+child closure.
 Production HTTP/MCP composition retains a controlled synthetic actor binding.
 These tests establish interfaces, not model quality, actual saving, useful
 cadence, unattended reliability or cross-game support. Real play remains a

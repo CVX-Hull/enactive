@@ -1,9 +1,8 @@
 ---
 owner: lead
-status: proposed
+status: historical
 date: '2026-11-12'
 scope: 'Proposed replacement of worst-case spend reservation for player runs by a dollar limit enforced from provider-reported cost, with the contract changes and the closed archive index that follow (#555); nothing is built, and the current contracts govern'
-review_trigger: An owner decision on this proposal, a finding that OpenRouter does not report cost on the player route, or a change to the run package, receipt or host contracts
 ---
 
 # A dollar limit from provider-reported cost

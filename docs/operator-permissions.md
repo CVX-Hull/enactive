@@ -31,9 +31,13 @@ allocation before admission. Reservation is not an invoice. A failed actor canno
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
+**The hard cap** is the credit limit on the OpenRouter key, which the owner set at
+$1,500 on 12 November 2026. It is outside the code, which cannot read it. Each run
+package also declares its own dollar limit, which the player host enforces from the
+cost the provider reports ([campaign procedure](operations/campaign-run.md#spend-limit)).
+
 **Actual-spend admission.** For each
-envelope listed below, and for no other spend, packages freeze the standing $1,000 as
-their `ceiling_usd` worst-case guard, and the lead admits a run or admission without
+envelope listed below, and for no other spend, the lead admits a run or admission without
 per-run owner approval only while the study's actual provider-reported new spend plus
 twice its largest single admission so far stays within that envelope. The lead records
 each run's spend in its run-ledger row and stops to ask the owner when the envelope is

@@ -42,8 +42,9 @@ session is a new owner decision, recorded in this standard. The decisions are: t
 older development-loop sessions ([#403](https://github.com/CVX-Hull/enactive/issues/403));
 the 22 sessions whose run-ending record is `campaign-watch-terminal/3` (12 November 2026,
 [#553](https://github.com/CVX-Hull/enactive/issues/553)); and the single index, which
-holds those 52 sessions and the two sealed sessions whose record versions are all
-current (12 November 2026, [#555](https://github.com/CVX-Hull/enactive/issues/555)).
+holds those 52 sessions and the two sealed sessions of the supervised launch check
+(12 November 2026, [#555](https://github.com/CVX-Hull/enactive/issues/555)). All 54
+predate the dollar limit, so each is read in the versions the index records for it.
 Every other old version is an error naming the file and version. The evaluator never admits
 or plays from the archive and never modifies it; it only derives evaluation records.
 Second, an evidence-only event (one that no admission, control or player-visible path

@@ -18,12 +18,14 @@ The selected finite configuration is OpenRouter / explicitly pinned provider / D
 Flash1017 medium. Freeze its verified full endpoint tag and supported parameters
 in `route.json`; use no fallback. The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency
-attestation. New live calls remain bounded by the prospective allocation.
+attestation. New live calls remain bounded by the package's dollar limit and request
+allowance.
 
-The package freezes `route.json` (`player-host/3`), `mcp-template.json`,
+The package freezes `route.json` (`player-host/4`), `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
-timeout, request cap, credential environment name, image peak, eviction block and
+timeout, request cap, the dollar limit and the bound a request with no cost record
+counts for, credential environment name, image peak, eviction block and
 required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
 one image at a time (rolling); a larger block keeps the prompt prefix cacheable
@@ -40,7 +42,9 @@ context, ongoing-objective/knowledge prompt and `player-host-inputs/2` hashes.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/5`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/6`.
+Each actor's route carries the requests and the dollars the run has left; no actor
+is started when either is used up.
 Every actor gets the same tool table and the same system prompt, so their request
 prefixes are byte-identical; the per-actor session and actor IDs go in the first user
 message. The final actor's `player_handoff` call is refused by the application with no
@@ -88,7 +92,10 @@ references, not private reasoning or raw request/image histories. Missing usage
 stays unknown. Attempts include failures and permitted provider-only retries: one
 shared retry per logical request for 429, 502/503/504, a pre-header fetch rejection
 or OpenRouter's transient in-flight 402, as the host reference defines. Allocate
-attempts with that retry in mind; unknown accounting charges the allocated bound. Context projection marks older
+attempts with that retry in mind; unknown accounting charges the allocated bound.
+The host stops at the route's dollar limit (`spend-limit`) and on a successful
+response it cannot price (`cost-unreported`); a request with no cost record counts
+at the route's bound ([contract](../contracts/player-host.md#spend)). Context projection marks older
 omitted pixels and preserves text/IDs; no automatic tool reread or replay occurs.
 An oversized protected current image group stops before inference.
 
