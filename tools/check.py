@@ -223,21 +223,26 @@ _print_lock = threading.Lock()
 #: Commands running in lanes; an interrupt of the checker kills them (see run_lanes).
 _lane_processes: set[subprocess.Popen] = set()
 _lane_lock = threading.Lock()
+#: Set by --quiet for one main(): print a failing command with its output and one closing line, nothing else.
+_quiet = False
 
 
 def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
     """Run one command, keeping its full output in a check log.
 
     Without a lane, output streams to the terminal. In a lane (run beside other lanes), the output is
-    printed whole when the command ends, so lanes do not interleave on the terminal."""
+    printed whole when the command ends, so lanes do not interleave on the terminal. In quiet mode a
+    command is printed, whole, only when it fails."""
     label = f"[{lane}] " if lane else ""
-    if not lane:
+    whole = bool(lane) or _quiet  # printed from the log when the command ends, not streamed
+    if not whole:
         print("+ " + " ".join(command), flush=True)
     started = time.perf_counter()
-    path, notes = None, []
+    path, notes, failed = None, [], True
     try:
         if "input" in kwargs:  # stdin-fed syntax checks: short, silent on success
             subprocess.run(command, cwd=ROOT, check=True, **kwargs)
+            failed = False
             return
         path = _log_path(command)
         environment = {**os.environ, "PYTHONUNBUFFERED": "1"}  # keep stdout/stderr order as on a terminal
@@ -247,7 +252,7 @@ def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
             if lane:
                 with _lane_lock:
                     _lane_processes.add(process)
-            output = _Output(process.stdout, log, terminal=lane is None)
+            output = _Output(process.stdout, log, terminal=not whole)
             try:
                 returncode = process.wait()
                 # A descendant that outlived the command (an orphaned fixture server, say) can hold the pipe
@@ -265,22 +270,25 @@ def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
                 note = (f"Output pipe still held by a descendant {DRAIN_SECONDS}s after the command exited "
                         f"(status {returncode}); stopped reading.\n")
                 log.write(note.encode())
-                if not lane:  # a lane prints it with the log below
+                if not whole:  # otherwise printed with the log below
                     print(note, end="", flush=True)
         if returncode:
             notes.append(f"{label}Full output of the failed command: {path.relative_to(ROOT)}")
             raise subprocess.CalledProcessError(returncode, command)
         if output.error:
             raise output.error
+        failed = False
     finally:
         notes.append(f"{label}Command elapsed: {time.perf_counter() - started:.2f}s")
         with _print_lock:
-            if lane:
+            if whole and (failed or not _quiet):
                 print(f"{label}+ " + " ".join(command), flush=True)
                 if path is not None and path.is_file():
                     sys.stdout.write(path.read_bytes().decode(errors="replace"))
-            for note in notes:
-                print(note, flush=True)
+                    sys.stdout.flush()
+            if not _quiet:
+                for note in notes:
+                    print(note, flush=True)
 
 
 def run_lanes(lanes: dict[str, list[list[str]]]) -> None:
@@ -319,11 +327,23 @@ def run_lanes(lanes: dict[str, list[list[str]]]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the selected checks, then print what passed and what was not run, and the elapsed time.
+
+    In quiet mode those two are one line and the only output of a passing run; a failing run prints
+    the failed command with its output (see run) and the error its caller reports."""
+    global _quiet
     started = time.perf_counter()
+    passed = None
     try:
-        return _check(argv)
+        passed = _check(argv)
+        return 0
     finally:
-        print(f"Checker elapsed: {time.perf_counter() - started:.2f}s", flush=True)
+        elapsed = f"Checker elapsed: {time.perf_counter() - started:.2f}s"
+        if not _quiet:
+            print(*filter(None, (passed, elapsed)), sep="\n", flush=True)
+        elif passed:
+            print(passed, elapsed, flush=True)
+        _quiet = False
 
 
 def pytest_command(profile: str, lane: str | None = None) -> list[str]:
@@ -337,14 +357,13 @@ def pytest_command(profile: str, lane: str | None = None) -> list[str]:
             "--max-worker-restart=0", "--durations=20", *without, *targets]
 
 
-def _lane(profile: str, lane: str, suite: str | None) -> int:
-    """Run one hosted lane's part of a profile, or report that the profile has nothing for it."""
+def _lane(profile: str, lane: str, suite: str | None) -> str:
+    """Run one hosted lane's part of a profile; return what ran, or that the profile has nothing for it."""
     if profile not in PROFILE_LANES:
         raise ValueError(f"Profile {profile} has no row in the lane table of tools/ci.py; refusing to treat "
                          f"lane {lane} as having nothing to do")
     if lane not in PROFILE_LANES[profile]:
-        print(f"Lane {lane} has nothing to do in the {profile} profile; nothing was run.", flush=True)
-        return 0
+        return f"Lane {lane} has nothing to do in the {profile} profile; nothing was run."
     if lane == "structure-and-python":
         _structural(fast=False)
         ran = "structural checks only"
@@ -363,12 +382,13 @@ def _lane(profile: str, lane: str, suite: str | None) -> int:
         for name in suites:
             run([node, f"tests/{name}.cjs"])
         ran = ("browser suite " if suite else "browser suites ") + ", ".join(suites)
-    print(f"Lane {lane} of the {profile} profile passed: {ran}. Only this lane's part of the profile ran "
-          "here; native build and real gameplay were not run.")
-    return 0
+    return (f"Lane {lane} of the {profile} profile passed: {ran}. Only this lane's part of the profile ran "
+            "here; native build and real gameplay were not run.")
 
 
-def _check(argv: list[str] | None = None) -> int:
+def _check(argv: list[str] | None = None) -> str:
+    """Run what the arguments select; return the closing line: what passed and what was not run."""
+    global _quiet
     parser = argparse.ArgumentParser(description=__doc__)
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument("--fast", action="store_true",
@@ -380,11 +400,15 @@ def _check(argv: list[str] | None = None) -> int:
                         help="Run only this hosted lane's part of the profile; without it the whole profile runs")
     parser.add_argument("--suite", choices=BROWSER_SUITES,
                         help="With --lane browser: run this one suite instead of all of them in turn")
+    parser.add_argument("--quiet", action="store_true",
+                        help="Print one closing line on success, or the failing command with its full output; "
+                             "the check logs keep everything either way")
     args = parser.parse_args(argv)
     if args.lane and args.fast:
         parser.error("--lane selects part of a profile and cannot be combined with --fast")
     if args.suite and args.lane != "browser":
         parser.error("--suite applies only with --lane browser")
+    _quiet = args.quiet
     if args.lane:
         return _lane(args.profile, args.lane, args.suite)
     node = _structural(fast=args.fast)
@@ -393,17 +417,15 @@ def _check(argv: list[str] | None = None) -> int:
         run_lanes({"browser": [[node, f"tests/{suite}.cjs"] for suite in BROWSER_SUITES],
                    "pytest": [pytest_command(args.profile)]})
     if args.fast:
-        print("Fast checkpoint checks passed. Behavioral tests, viewer tests, native build and real gameplay were not run.")
-    elif args.profile == "main":
-        print("Main structural checks passed on the tree its pull request's run tested. Tests, viewer "
-              "tests, native build and real gameplay were not run here.")
-    elif args.profile == "editorial":
-        print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")
-    elif args.profile in COMPONENT_TESTS:
-        print(f"{args.profile.capitalize()} component and boundary smoke tests passed. Full regression, native build and real gameplay were not run.")
-    else:
-        print("Portable checks passed. Native build and real gameplay were not tested.")
-    return 0
+        return "Fast checkpoint checks passed. Behavioral tests, viewer tests, native build and real gameplay were not run."
+    if args.profile == "main":
+        return ("Main structural checks passed on the tree its pull request's run tested. Tests, viewer "
+                "tests, native build and real gameplay were not run here.")
+    if args.profile == "editorial":
+        return "Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run."
+    if args.profile in COMPONENT_TESTS:
+        return f"{args.profile.capitalize()} component and boundary smoke tests passed. Full regression, native build and real gameplay were not run."
+    return "Portable checks passed. Native build and real gameplay were not tested."
 
 
 def _structural(*, fast: bool) -> str:
@@ -426,7 +448,8 @@ def _structural(*, fast: bool) -> str:
     errors = check_documents(ROOT)
     if errors:
         raise ValueError("\n".join(errors))
-    print("Required documents, current Markdown fragments and responsibility navigation: passed", flush=True)
+    if not _quiet:
+        print("Required documents, current Markdown fragments and responsibility navigation: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
     run([sys.executable, "-m", "tools.run_ledger", "check"])
     run([sys.executable, "-m", "tools.evidence", "verify"] + ([] if fast else ["--full"]))

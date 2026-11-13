@@ -180,7 +180,9 @@ locally and is not a full pass.
 Checks do not compile the adapter or qualify actual game behavior.
 
 The optional `.githooks/pre-commit` runs the fast lane when explicitly enabled
-with `git config --local core.hooksPath .githooks`. It checks the working tree;
+with `git config --local core.hooksPath .githooks`. It runs with the checkout's
+`.venv` or, in a git worktree, which has none, the main checkout's, and prints one
+summary line unless a command fails. It checks the working tree;
 inspect staged paths/diff separately before committing. Do not treat a partial
 working-tree check as evidence about a different staged candidate.
 

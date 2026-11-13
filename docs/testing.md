@@ -41,7 +41,10 @@ Each checker run also writes the full output of every subprocess command (all bu
 short stdin-fed syntax checks) to its own directory under `.runtime/check-logs/`, named
 by UTC start time, and a failed command prints the path of its log, so a failure stays
 diagnosable when terminal output was cut short. Output a surviving descendant still
-holds is cut off 10 seconds after the command exits, with a note in the log. The
+holds is cut off 10 seconds after the command exits, with a note in the log. With
+`--quiet`, which the commit hook passes, a passing run prints one line (what passed,
+what was not run and the elapsed time) and a failing run prints only the failed command
+and its whole output; the logs are written either way. The
 [cleanup procedure](operations/evidence-cleanup.md) says when logs can be pruned and
 how a record cites one.
 
