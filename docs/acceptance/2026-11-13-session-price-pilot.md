@@ -10,7 +10,19 @@ scope: 'The session price pilot of the memory screen (#460, protocol of 13 Novem
 
 ## At a glance
 
-- **Result.** Not run yet. This page holds the inputs frozen before spending.
+- **Result.** A curator session over 20 decisions cost a median of \$0.20 and took a
+  median of 99 s. All ten sessions sealed with an accepted submission; none reached its
+  cap or was re-run. The pilot spent \$2.34 of its \$20 stop.
+- **For a 200-decision start** at those rates, ten sessions cost about \$2.34, against
+  about \$3.30 for the play itself: the curator adds about 70% to the cost of play, not
+  the three or four times the protocol estimated.
+- **For the cut.** Play took 6 to 8 s a decision here, 120 to 170 s for 20. Sessions took
+  57 to 153 s, so a session finishes before the next window fills. Coverage then trails
+  play by the window plus the session's run time: 12 to 20 decisions when a session
+  ends, up to about 40 just before the next one does. That is on either side of the
+  about 24 decisions the cut needs.
+- **The store keeps growing.** It went from 195 facts and 102,594 bytes to 279 facts and
+  161,752 bytes over the ten windows, about 6,000 bytes for every 20 decisions.
 - **Question.** What does a curator session over 20 new decisions cost, in dollars and
   seconds? That settles whether the cut, which needs the curator within about 24
   decisions of play, is affordable.
@@ -86,6 +98,53 @@ Commands, from the main checkout:
 
 `WINDOW_ONE` and `WINDOWS_TWO_TO_TEN` are the frozen list's first entry and the other
 nine, split without change.
+
+## Results
+
+Read from each session's `summary.json` and its proxy ledger under
+`.runtime/curator-shadow/pilot-first/` and `pilot-rest/`. Ledger totals equal the
+summaries' costs; every proxy closed settled with nothing pending. Both runs recorded
+the brief's hash `c5ca0ce7…`, and their `windows_sha256` are `b5fd5c53…` and
+`c4006a23…` as frozen. The two invocations had run caps of \$20 and \$19.88.
+
+| Window (`sd1a7`) | Requests | Charged | Wall clock | Largest reservation | Frames viewed | Version | Facts after | Bytes after |
+| --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |
+| actor 001, 1–20 | 7 | \$0.11 | 80 s | \$1.15 | 4 | v7 | 199 | 105,446 |
+| actor 001, 21–40 | 8 | \$0.20 | 92 s | \$1.12 | 8 | v8 | 214 | 115,654 |
+| actor 001, 41–60 | 20 | \$0.57 | 153 s | \$1.31 | 15 | v9 | 225 | 123,202 |
+| actor 001, 61–80 | 10 | \$0.15 | 64 s | \$1.23 | 6 | v10 | 229 | 125,932 |
+| actor 001, 81–100 | 13 | \$0.20 | 141 s | \$1.31 | 8 | v11 | 242 | 134,995 |
+| actor 001, 101–120 | 10 | \$0.22 | 120 s | \$1.20 | 9 | v12 | 256 | 144,723 |
+| actor 001, 121–140 | 12 | \$0.19 | 107 s | \$1.23 | 7 | v13 | 263 | 149,639 |
+| actor 001, 141–156 | 8 | \$0.14 | 75 s | \$1.24 | 4 | v14 | 271 | 155,629 |
+| actor 002, 1–20 | 8 | \$0.20 | 57 s | \$1.30 | 6 | v15 | 275 | 158,458 |
+| actor 002, 21–40 | 16 | \$0.36 | 119 s | \$1.41 | 11 | v16 | 279 | 161,752 |
+| **All** | **112** | **\$2.34** | **1,007 s** | | | | | |
+
+- **Per session:** mean \$0.23, median \$0.20, largest \$0.57; mean 101 s, median 99 s,
+  longest 153 s.
+- **Play's pace** in the same windows, from the sealed traces' request starts: 8.4 s a
+  decision for the first actor and 5.9 s for the second.
+- **Facts per window:** 4 to 15 added, 84 in all. The lead read the first window's four
+  facts before the other nine ran: a travel control, a recipe, rocks north of the fire
+  and a piglet to the east, each with citations.
+- **Fact counts and bytes** are read with `git show <version>:facts.jsonl`. The
+  `store` subcommand of `tools.memory_screen_checks` listed only the last two versions
+  of this repository; that reader is not used for these figures.
+
+## What this means for the cut
+
+- **Affordable.** At \$0.20 a session, sessions every 20 decisions cost less than the
+  play they serve. The protocol's estimate, about \$12 for ten sessions, was five times
+  the measured \$2.34.
+- **Close to the limit on lag.** The free checks found the cut helps only if the
+  curator trails play by less than about 24 decisions. Measured here, it trails by 12 to
+  40, about 26 on average. Windows of 10 decisions would roughly halve the trail if a
+  session's price falls with its window; the pilot did not measure that.
+- **The briefing the cut relies on is large and growing.** At 0.327 tokens a byte the
+  store was about 33,500 tokens after the gate and 52,900 after these windows. A
+  briefing of the whole store would be most of the 60,000 tokens the cut aims to stay
+  under, so it must be a selection or an index, not the whole store.
 
 ## Deviations
 
