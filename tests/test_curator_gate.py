@@ -26,10 +26,9 @@ def make_repo(tmp_path: Path) -> Repository:
 
 
 def fact(fact_id='f1', type_name='mechanic', game='cdda', citations=('frame-1',), **extra):
-    return {'schema': 'curator-fact/2', 'id': fact_id, 'type': type_name,
-            'statement': f'statement {fact_id}', 'scope': {'game': game},
-            'citations': list(citations), 'subject': 'a thing', 'place': '', 'game_time': '',
-            'kind': 'how_it_works', **extra}
+    return {'schema': 'curator-fact/3', 'record': 'fact', 'id': fact_id, 'type': type_name,
+            'text': f'text {fact_id}', 'scope': {'game': game},
+            'citations': list(citations), 'subject': 'a thing', **extra}
 
 
 def kind(name='mechanic'):
@@ -45,12 +44,14 @@ def submission(tmp_path: Path, changes, name='s1', **top) -> Path:
     return directory
 
 
-COVERAGE = {'schema': 'curator-coverage/1', 'session': 's1', 'actor': '001', 'last_step': 20,
-            'game_time': 'day 2 08:15'}
+COVERAGE = {'schema': 'curator-coverage/2', 'session': 's1', 'actor': '001', 'last_step': 20,}
 
 
-def run(repo, directory, frames=FRAMES, coverage=COVERAGE):
-    return gate(repo, directory, session_id='sess', window_frames=set(frames), coverage=coverage)
+def run(repo, directory, frames=FRAMES, coverage=COVERAGE, session_kind='admission'):
+    positions = {frame: dict(session='s1', actor='001', step=index, order=[1, '001', index])
+                 for index, frame in enumerate(sorted(frames), 1)}
+    return gate(repo, directory, session_id='sess', window_frames=positions, coverage=coverage,
+                session_kind=session_kind)
 
 
 def git(repo, *args):
@@ -146,7 +147,7 @@ def test_unknown_type_rejected_and_accepted_when_added_in_the_submission(tmp_pat
 
 def test_supersede_marks_the_old_fact(tmp_path):
     repo = seeded(tmp_path)
-    directory = submission(tmp_path, [{'op': 'supersede_fact', 'id': 'f1', 'fact': fact('f2')}],
+    directory = submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f2')}],
                            base_version='v1')
     assert run(repo, directory)['version'] == 'v2'
     by_id = {item['id']: item for item in repo.facts()}
@@ -157,18 +158,18 @@ def test_supersede_marks_the_old_fact(tmp_path):
 def test_supersede_unknown_or_already_superseded_is_rejected(tmp_path):
     repo = seeded(tmp_path)
     unknown = run(repo, submission(
-        tmp_path, [{'op': 'supersede_fact', 'id': 'nope', 'fact': fact('f2')}],
+        tmp_path, [{'op': 'supersede_fact', 'ids': ['nope'], 'fact': fact('f2')}],
         base_version='v1'))
     assert not unknown['accepted'] and any('does not exist' in x for x in unknown['diagnostics'])
-    run(repo, submission(tmp_path, [{'op': 'supersede_fact', 'id': 'f1', 'fact': fact('f2')}],
+    run(repo, submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f2')}],
                          name='s3', base_version='v1'))
     again = run(repo, submission(
-        tmp_path, [{'op': 'supersede_fact', 'id': 'f1', 'fact': fact('f3')}], name='s4',
+        tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f3')}], name='s4',
         base_version='v2'))
     assert not again['accepted'] and any('already superseded' in x for x in again['diagnostics'])
     twice = run(repo, submission(
-        tmp_path, [{'op': 'supersede_fact', 'id': 'f2', 'fact': fact('f4')},
-                   {'op': 'supersede_fact', 'id': 'f2', 'fact': fact('f5')}], name='s5',
+        tmp_path, [{'op': 'supersede_fact', 'ids': ['f2'], 'fact': fact('f4')},
+                   {'op': 'supersede_fact', 'ids': ['f2'], 'fact': fact('f5')}], name='s5',
         base_version='v2'))
     assert not twice['accepted']
 
@@ -198,7 +199,7 @@ def malformed_cases():
         'extra fact field': [{'op': 'add_fact', 'fact': fact(note='x')}],
         'extra change field': [{**good, 'more': 1}],
         'unknown op': [{'op': 'delete_fact', 'id': 'f1'}],
-        'wrong fact schema': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/3'}}],
+        'wrong fact schema': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/2'}}],
         'empty citations': [{'op': 'add_fact', 'fact': fact(citations=())}],
         'scope not object': [{'op': 'add_fact', 'fact': {**fact(), 'scope': 'cdda'}}],
         'extra type field': [{'op': 'add_type', 'type': {**kind(), 'x': 1}}],
@@ -518,27 +519,18 @@ def without(item: dict, key: str) -> dict:
 
 
 FACT_RULES = {
-    'no subject': (without(fact(), 'subject'), "missing field 'subject'"),
     'blank subject': (fact(subject='  '), 'subject must be a non-empty string'),
-    'empty subject': (fact(subject=''), 'subject must be a non-empty string'),
     'subject not text': (fact(subject=['a thing']), 'subject must be a non-empty string'),
-    'no kind': (without(fact(), 'kind'), "missing field 'kind'"),
-    'unknown kind': (fact(kind='rumour'), 'kind must be one of place_with_goods, hazard, open_commitment, how_it_works'),
-    'kind not text': (fact(kind=['hazard']), 'kind must be one of'),
-    'the previous fact contract': ({**fact(), 'schema': 'curator-fact/1'}, "schema must be 'curator-fact/2'"),
-    'no place': (without(fact(), 'place'), "missing field 'place'"),
-    'place not text': (fact(place=3), 'place must be a string'),
-    'no game time': (without(fact(), 'game_time'), "missing field 'game_time'"),
-    'game time not text': (fact(game_time=None), 'game_time must be a string'),
-    'goods with no place': (fact(kind='place_with_goods', game_time='day 1'),
-                            "place must not be empty for kind 'place_with_goods'"),
-    'goods with a blank place': (fact(kind='place_with_goods', place='  ', game_time='day 1'),
-                                 "place must not be empty for kind 'place_with_goods'"),
-    'goods with no time': (fact(kind='place_with_goods', place='north of the start'),
-                           "game_time must not be empty for kind 'place_with_goods'"),
-    'hazard with no place': (fact(kind='hazard', game_time='day 1'), "place must not be empty for kind 'hazard'"),
-    'hazard with a blank time': (fact(kind='hazard', place='x', game_time=' '),
-                                 "game_time must not be empty for kind 'hazard'"),
+    'old schema': (fact(schema='curator-fact/2'), "schema must be 'curator-fact/3'"),
+    'missing record': (without(fact(), 'record'), "missing field 'record'"),
+    'wrong record': (fact(record='article'), 'record must be fact'),
+    'missing text': (without(fact(), 'text'), "missing field 'text'"),
+    'blank text': (fact(text=' '), 'text must be a non-empty string'),
+    'duplicate citations': (fact(citations=['frame-1', 'frame-1']), 'citations must be'),
+    'blank scope': (fact(scope={'game': ' '}), 'scope must be'),
+    'model seen': (fact(seen=50), "unexpected field 'seen'"),
+    **{f'removed {key}': (fact(**{key: 'x'}), f"unexpected field '{key}'")
+       for key in ('kind', 'place', 'game_time', 'statement')},
     'a coverage key in a fact': (fact(coverage=COVERAGE), "unexpected field 'coverage'"),
 }
 
@@ -548,26 +540,23 @@ def test_each_fact_rule_rejects_with_its_own_diagnostic_at_the_well_formed_stage
     repo = make_repo(tmp_path)
     before = snapshot(repo)
     bad, expected = FACT_RULES[name]
-    # The type is added in the same submission, so nothing but the rule under test can reject it.
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': bad}]))
     assert not verdict['accepted']
     assert len(verdict['diagnostics']) == 1 and expected in verdict['diagnostics'][0], verdict['diagnostics']
-    assert 'unknown type' not in ' '.join(verdict['diagnostics'])
     assert snapshot(repo) == before
 
 
-@pytest.mark.parametrize('fact_kind', ['how_it_works', 'open_commitment'])
-@pytest.mark.parametrize('place, game_time', [('', ''), ('  ', ' '), ('the north gate', 'day 3 14:00')])
-def test_blank_place_and_game_time_are_accepted_for_the_two_unplaced_kinds(tmp_path, fact_kind, place, game_time):
+def test_subject_is_optional_and_seen_is_the_latest_cited_position(tmp_path):
     repo = make_repo(tmp_path)
-    item = fact(kind=fact_kind, place=place, game_time=game_time)
+    item = without(fact(citations=['frame-2', 'frame-1']), 'subject')
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': item}]))
     assert verdict['accepted'], verdict['diagnostics']
+    assert repo.facts()[0]['seen'] == dict(session='s1', actor='001', step=2, order=[1, '001', 2])
 
 
 def old_contract_repository(tmp_path):
     repo = make_repo(tmp_path)
-    old = {'schema': 'curator-fact/1', 'id': 'old', 'type': 'mechanic', 'statement': 's', 'scope': {'game': 'cdda'},
+    old = {'schema': 'curator-fact/2', 'id': 'old', 'type': 'mechanic', 'statement': 's', 'scope': {'game': 'cdda'},
            'citations': ['frame-1'], 'published_in': 'v1', 'session': 'x'}
     repo.commit({'facts.jsonl': (json.dumps(old) + '\n').encode(),
                  'ontology/types.json': (json.dumps([kind()]) + '\n').encode()}, 'Publish v1')
@@ -575,28 +564,15 @@ def old_contract_repository(tmp_path):
 
 
 @pytest.mark.parametrize('change', [
-    lambda: {'op': 'supersede_fact', 'id': 'old', 'fact': fact('new')},
+    lambda: {'op': 'supersede_fact', 'ids': ['old'], 'fact': fact('new')},
     lambda: {'op': 'add_fact', 'fact': fact('new')}])
 def test_the_gate_does_not_publish_into_a_repository_holding_facts_of_another_contract(tmp_path, change):
     repo = old_contract_repository(tmp_path)
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, [change()], base_version='v1'))
     assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
-    assert "published facts ['old'] are not curator-fact/2" in verdict['diagnostics'][0]
+    assert "published facts ['old'] are not curator-fact/3" in verdict['diagnostics'][0]
     assert snapshot(repo) == before and repo.published() == 'v1'
-
-
-def test_the_gate_accepts_each_fact_kind_with_its_place_rules(tmp_path):
-    repo = make_repo(tmp_path)
-    facts = [fact('f1', kind='how_it_works'), fact('f2', kind='open_commitment'),
-             fact('f3', kind='place_with_goods', place='north of the start', game_time='day 1 09:00'),
-             fact('f4', kind='hazard', place='the bridge', game_time='day 1 10:00')]
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
-                                              *({'op': 'add_fact', 'fact': item} for item in facts)]))
-    assert verdict['accepted'], verdict['diagnostics']
-    stored = {item['id']: item for item in repo.facts()}
-    assert stored['f3']['place'] == 'north of the start' and stored['f3']['subject'] == 'a thing'
-    assert stored['f4']['kind'] == 'hazard'
 
 
 def test_the_coverage_stamp_is_published_with_the_version_and_changes_with_it(tmp_path):
@@ -605,7 +581,7 @@ def test_the_coverage_stamp_is_published_with_the_version_and_changes_with_it(tm
     first = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]))
     assert first['accepted']
     assert json.loads(git(repo, 'show', 'v1:coverage.json')) == COVERAGE
-    later = {**COVERAGE, 'last_step': 40, 'game_time': None}
+    later = {**COVERAGE, 'last_step': 40}
     second = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}], name='s2', base_version='v1'),
                  coverage=later)
     assert second['accepted']
@@ -638,3 +614,209 @@ def test_a_bad_stamp_from_the_runner_publishes_nothing(tmp_path, stamp):
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]), coverage=stamp)
     assert not verdict['accepted'] and any('coverage' in d for d in verdict['diagnostics'])
     assert snapshot(repo) == before
+
+
+def article(identity='a1', title='A subject', facts=('f1',), **extra):
+    return dict(schema='curator-fact/3', record='article', id=identity, title=title,
+                lead='A hypothesis. Check before relying on it.',
+                body=[dict(text='An arbitrary claim, never judged by the gate.', facts=list(facts))], links=[]) | extra
+
+
+def grooming(repo, tmp_path, changes, **kw):
+    return run(repo, submission(tmp_path, changes, base_version=repo.published(), **kw), session_kind='grooming')
+
+
+def test_supersede_merges_several_facts_and_retirement_preserves_evidence(tmp_path):
+    repo = seeded(tmp_path)
+    added = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact('f2')}], base_version='v1'))
+    assert added['accepted']
+    merged = run(repo, submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1', 'f2'], 'fact': fact('merged')}],
+                                  name='merge', base_version='v2'))
+    assert merged['accepted'], merged
+    assert [f['superseded_by'] for f in repo.facts()[:2]] == ['merged', 'merged']
+    retired = run(repo, submission(tmp_path, [dict(op='retire_fact', id='merged', reason='contradicted',
+                                                 citations=['frame-2'])], name='retire', base_version='v3'))
+    assert retired['accepted'], retired
+    assert repo.facts()[-1]['retired']['reason'] == 'contradicted'
+    assert repo.facts()[-1]['retired']['citations'] == ['frame-2']
+    assert 'retired' not in repo.facts('v3')[-1]
+
+
+@pytest.mark.parametrize('changes, expected', [
+    ([dict(op='supersede_fact', ids=[], fact=fact('f2'))], 'ids must be'),
+    ([dict(op='supersede_fact', ids=['f1', 'f1'], fact=fact('f2'))], 'ids must be'),
+    ([dict(op='retire_fact', id='f1', reason='', citations=['frame-1'])], 'reason must be'),
+    ([dict(op='retire_fact', id='f1', reason='x', citations=[])], 'citations must be'),
+    ([dict(op='retire_fact', id='f1', reason='x', citations=['outside'])], 'outside the trace window'),
+    ([dict(op='retire_fact', id='unknown', reason='x', citations=['frame-1'])], 'does not exist'),
+    ([dict(op='retire_fact', id='f1', reason='x', citations=['frame-1'])] * 2, 'already superseded or retired'),
+])
+def test_merge_and_retirement_rules_are_independently_rejected(tmp_path, changes, expected):
+    repo = seeded(tmp_path)
+    before = snapshot(repo)
+    verdict = run(repo, submission(tmp_path, changes, base_version='v1'))
+    assert not verdict['accepted'] and any(expected in d for d in verdict['diagnostics']), verdict
+    assert snapshot(repo) == before
+
+
+ARTICLE_RULES = {
+    'old schema': (dict(article(), schema='curator-fact/2'), 'schema must be'),
+    'wrong record': (dict(article(), record='fact'), 'record must be article'),
+    'missing record': (without(article(), 'record'), "missing field 'record'"),
+    'blank title': (dict(article(), title=' '), 'title must be'),
+    'blank lead': (dict(article(), lead=''), 'lead must be'),
+    'no body': (dict(article(), body=[]), 'body must be'),
+    'uncited claim': (dict(article(), body=[dict(text='x', facts=[])]), 'body must be'),
+    'blank claim': (dict(article(), body=[dict(text=' ', facts=['f1'])]), 'body must be'),
+    'extra claim key': (dict(article(), body=[dict(text='x', facts=['f1'], extra='x')]), 'body must be'),
+    'invalid links': (dict(article(), links='x'), 'links must be'),
+    'duplicate links': (dict(article(), links=['A', 'A']), 'links must be'),
+    'model timestamp': (dict(article(), last_confirmed=99), "unexpected field 'last_confirmed'"),
+}
+
+
+@pytest.mark.parametrize('name', list(ARTICLE_RULES))
+def test_each_article_shape_rule_rejects_on_its_own(tmp_path, name):
+    repo = seeded(tmp_path)
+    value, expected = ARTICLE_RULES[name]
+    verdict = grooming(repo, tmp_path, [dict(op='add_article', article=value)])
+    assert not verdict['accepted']
+    assert len(verdict['diagnostics']) == 1 and expected in verdict['diagnostics'][0], verdict
+
+
+def test_article_citations_links_and_last_confirmed_resolve_the_final_snapshot(tmp_path):
+    repo = seeded(tmp_path)
+    verdict = grooming(repo, tmp_path, [dict(op='add_fact', fact=fact('f2', citations=['frame-2'])),
+                                       dict(op='add_article', article=article(links=['Other'])),
+                                       dict(op='add_article', article=article('a2', 'Other', ['f1', 'f2']))])
+    assert verdict['accepted'], verdict
+    assert repo.articles()[1]['last_confirmed']['step'] == 2
+    assert all(r['schema'] == 'curator-fact/3' for r in repo.records())
+    # Replace both articles together; neither stale citations nor incoming links survive.
+    verdict = grooming(repo, tmp_path, [dict(op='supersede_fact', ids=['f1', 'f2'], fact=fact('merged')),
+                                       dict(op='revise_article', id='a1', article=article('a3', 'Combined', ['merged'])),
+                                       dict(op='retire_article', id='a2', reason='merged')], name='revise')
+    assert verdict['accepted'], verdict
+    assert repo.articles()[0]['superseded_by'] == 'a3'
+    assert repo.articles()[1]['retired']['reason'] == 'merged'
+
+
+@pytest.mark.parametrize('changes, expected', [
+    ([dict(op='add_article', article=article(facts=['unknown']))], 'is not current'),
+    ([dict(op='add_article', article=article(links=['Missing']))], 'does not resolve'),
+    ([dict(op='add_article', article=article()), dict(op='add_article', article=article('a2'))], 'titles must be unique'),
+    ([dict(op='add_article', article=article('f1'))], 'is not new'),
+    ([dict(op='add_type', type=kind('other'))], 'unfiled current facts'),
+])
+def test_each_article_reference_and_filing_rule_rejects(tmp_path, changes, expected):
+    repo = seeded(tmp_path)
+    before = snapshot(repo)
+    verdict = grooming(repo, tmp_path, changes)
+    assert not verdict['accepted'] and any(expected in d for d in verdict['diagnostics']), verdict
+    assert snapshot(repo) == before
+
+
+def test_retired_and_superseded_facts_cannot_support_current_articles(tmp_path):
+    repo = seeded(tmp_path)
+    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())])['accepted']
+    for name, change in [('retire', dict(op='retire_fact', id='f1', reason='x', citations=['frame-1'])),
+                         ('replace', dict(op='supersede_fact', ids=['f1'], fact=fact('f2')))]:
+        verdict = run(repo, submission(tmp_path, [change], name=name, base_version='v2'))
+        assert not verdict['accepted'] and any("fact 'f1' is not current" in d for d in verdict['diagnostics']), verdict
+    # The fact itself stays current because both rejected publications were atomic.
+    assert 'retired' not in repo.facts()[0]
+
+
+def test_removing_a_link_target_requires_repairing_incoming_links(tmp_path):
+    repo = seeded(tmp_path)
+    assert grooming(repo, tmp_path, [dict(op='add_article', article=article(links=['Other'])),
+                                     dict(op='add_article', article=article('a2', 'Other'))])['accepted']
+    verdict = run(repo, submission(tmp_path, [dict(op='retire_article', id='a2', reason='x')],
+                                   name='retire', base_version='v2'))
+    assert not verdict['accepted'] and any('does not resolve' in d for d in verdict['diagnostics'])
+
+
+def test_every_type_revision_publishes_a_new_version_and_keeps_current_types(tmp_path):
+    repo = seeded(tmp_path)
+    revisions = [
+        dict(action='rename', names=['mechanic'], types=[kind('relation')], assignments={'f1': 'relation'}),
+        dict(action='split', names=['relation'], types=[kind('observed'), kind('inferred')], assignments={'f1': 'observed'}),
+        dict(action='merge', names=['observed', 'inferred'], types=[kind('relation')], assignments={'f1': 'relation'}),
+        dict(action='deprecate', names=['relation'], types=[], assignments={}),
+    ]
+    for index, revision in enumerate(revisions):
+        changes = [dict(op='revise_types', **revision)]
+        if index == 0:
+            changes.append(dict(op='add_article', article=article()))
+        if index == 3:
+            changes += [dict(op='retire_fact', id='f1', reason='contradicted', citations=['frame-1']),
+                        dict(op='retire_article', id='a1', reason='no current evidence')]
+        verdict = grooming(repo, tmp_path, changes, name=f'revision-{revision["action"]}')
+        assert verdict['accepted'] and verdict['version'] == f'v{index + 2}', verdict
+    assert repo.types() == [] and repo.types('v1') == [kind()]
+    assert repo.facts('v3')[0]['type'] == 'observed'
+
+
+@pytest.mark.parametrize('revision, expected', [
+    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={}), 'unknown type'),
+    (dict(action='rename', names=['unknown'], types=[kind('renamed')], assignments={}), 'unknown type'),
+    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={'missing': 'renamed'}), 'is not current'),
+    (dict(action='rename', names=[], types=[kind('renamed')], assignments={}), 'names must be'),
+    (dict(action='rename', names=['mechanic'], types='bad', assignments={}), 'types must be'),
+    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments=[]), 'assignments must map'),
+    (dict(action='unknown', names=['mechanic'], types=[], assignments={}), 'unknown type revision action'),
+    (dict(action='merge', names=['mechanic'], types=[kind('renamed')], assignments={}), 'cardinality'),
+    (dict(action='split', names=['mechanic'], types=[kind('renamed')], assignments={}), 'cardinality'),
+    (dict(action='rename', names=['mechanic'], types=[], assignments={}), 'cardinality'),
+    (dict(action='deprecate', names=['mechanic'], types=[kind('renamed')], assignments={}), 'cardinality'),
+])
+def test_each_type_revision_rule_rejects(tmp_path, revision, expected):
+    repo = seeded(tmp_path)
+    verdict = grooming(repo, tmp_path, [dict(op='revise_types', **revision), dict(op='add_article', article=article())])
+    assert not verdict['accepted'] and any(expected in d for d in verdict['diagnostics']), verdict
+
+
+def test_type_revisions_need_grooming_and_separate_versions(tmp_path):
+    repo = seeded(tmp_path)
+    revision = dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('renamed')],
+                    assignments={'f1': 'renamed'})
+    verdict = run(repo, submission(tmp_path, [revision], base_version='v1'))
+    assert not verdict['accepted'] and verdict['diagnostics'] == ['changes[0]: type revisions require a grooming session']
+    verdict = grooming(repo, tmp_path, [revision, revision], name='twice')
+    assert not verdict['accepted'] and verdict['diagnostics'] == ['submission: each type revision needs its own published version']
+
+
+
+def test_bad_frame_provenance_with_an_article_rejects_before_deriving_confirmation(tmp_path):
+    repo = make_repo(tmp_path)
+    changes = [dict(op='add_type', type=kind()), dict(op='add_fact', fact=fact(citations=['outside'])),
+               dict(op='add_article', article=article())]
+    verdict = run(repo, submission(tmp_path, changes))
+    assert not verdict['accepted']
+    assert verdict['diagnostics'] == ["changes[1]: citation 'outside' is outside the trace window"]
+    assert repo.published() == 'v0'
+
+
+@pytest.mark.parametrize('field', ['schema', 'id', 'title', 'lead', 'body', 'links'])
+def test_required_article_fields_are_individually_checked(tmp_path, field):
+    repo = seeded(tmp_path)
+    verdict = grooming(repo, tmp_path, [dict(op='add_article', article=without(article(), field))])
+    assert not verdict['accepted'] and verdict['diagnostics'] == [f"changes[0].article: missing field '{field}'"]
+
+
+@pytest.mark.parametrize('op', ['revise_article', 'retire_article'])
+def test_article_operations_require_a_current_article_target(tmp_path, op):
+    repo = seeded(tmp_path)
+    change = dict(op=op, id='f1')
+    change.update(article=article()) if op == 'revise_article' else change.update(reason='x')
+    verdict = run(repo, submission(tmp_path, [change], base_version='v1'))
+    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[0]: article 'f1' does not exist"]
+
+
+def test_ontology_revision_cannot_reuse_another_current_type_name(tmp_path):
+    repo = seeded(tmp_path)
+    changes = [dict(op='add_type', type=kind('existing')),
+               dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('existing')],
+                    assignments={'f1': 'existing'}), dict(op='add_article', article=article())]
+    verdict = grooming(repo, tmp_path, changes)
+    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[1]: type 'existing' already exists"]

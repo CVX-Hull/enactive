@@ -84,6 +84,15 @@ Node tests: `cd tools/curator_host && npm test`.
 **What a session is.**
 - `run.mjs --config FILE` runs in the workspace. The system prompt is
   [`prompt.md`](../../tools/curator_host/prompt.md); the first user message is `brief.md`.
+  Both admission and grooming use game-neutral instructions and treat facts as hypotheses.
+  `run_session(..., session_kind="grooming")` also supplies
+  [`grooming.md`](../../tools/curator_host/grooming.md) in the workspace, directing the curator
+  to read the whole store, normalize subjects, revise types and file all current facts.
+  Its trace contains only the last admission's cited frames and their steps. The gate
+  publishes `curator-fact/3` facts and articles; the
+  [session design](../design/curator-session.md#submissions) owns the exact format.
+  The shadow CLI continues to run admission sessions; grooming is selected through the
+  session API, between admissions. There is no live trigger.
 - The frozen configuration is `curator-host/1`: model, effort, request and wall limits, image
   limits. It names no endpoint and holds no key.
 - The host reads `CURATOR_PROXY_URL` (must be `http://127.0.0.1:<port>`) and presents
@@ -129,7 +138,7 @@ Node tests: `cd tools/curator_host && npm test`.
   a breach, accounting remains unsettled after shutdown, or host cleanup is unconfirmed.
   `--stop-on-abort` additionally
   stops on other non-sealed sessions.
-- **Windows.** `--windows-file FILE` (a JSON list of `{session, actor, first, last[, game_time]}`) or
+- **Windows.** `--windows-file FILE` (a JSON list of `{session, actor, first, last}`) or
   `--window-plan SESSION ACTOR START SIZE COUNT` (the same list as COUNT consecutive windows) runs one
   session per window, in the order given, against one repository, each starting from the store the
   previous one left; it replaces `--sessions`. A window is one actor's steps `first` to `last`
@@ -153,7 +162,8 @@ Node tests: `cd tools/curator_host && npm test`.
 - **`--stop-on-reject`** stops the run when the gate rejects a session's submission, since a
   rejected submission loses that session's facts (`stopped: submission-rejected`).
 - **The prompt is recorded.** `prompt_sha256` (of `prompt.md`) is in the run summary's `host`
-  and in each session manifest's `pinned.host`.
+  and in each session manifest's `pinned.host`. A grooming session additionally pins
+  `grooming_sha256` in its manifest.
 - **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,
@@ -333,3 +343,13 @@ The kernel also limits each process to 1,800 CPU seconds, 64 MiB per file and 25
   bound it. The session's output log is in the session record, outside the workspace, under
   the per-file limit alone. Between two checks a session can pass the bound by what it
   writes in a tenth of a second.
+
+## Zero-spend grooming verification
+
+`tests/test_curator_host.py::test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact`
+runs the real Node host, proxy, gate and (on macOS) Seatbelt session runner against
+`tests/curator_stand_in.py`. It publishes an admission and then a grooming version,
+checks every current fact is cited by a current article, and checks software-written
+last confirmation. The provider, token counts and charges are synthetic; it uses only
+loopback and no real credentials. Native host unit tests run with `npm test` in
+`tools/curator_host`. No paid run or store-size measurement is implied.

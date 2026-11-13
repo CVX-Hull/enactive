@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: 'Knowledge repository, curator sessions, drafts and the submission gate, version 0 (ADR 009''s directions for a coding-agent curator, one knowledge repository per game and managed draft containers; #453)'
+scope: 'Knowledge repository, admission and grooming sessions, drafts and structural publication of curator-fact/3 (#460)'
 review_trigger: A change to the knowledge repository layout, the submission or fact shapes, the gate checks, the draft lifecycle or the session close-out
 ---
 
@@ -27,7 +27,7 @@ Everything lives under one project-local root, by default
 
 | Path | Holds |
 | --- | --- |
-| `<game>/` | The knowledge repository: a Git repository with `ontology/`, `programs/`, `tests/`, `facts.jsonl`, `knowledge.json` and, from the first publish, `coverage.json`. Only the gate commits. Each publish is one commit on `main`, tagged `v<N>`. |
+| `<game>/` | The knowledge repository: a Git repository with `ontology/`, `programs/`, `tests/`, `facts.jsonl` (facts and articles), `knowledge.json`, `provenance.json` and, from the first publish, `coverage.json`. Only the gate commits. Each publish is one commit on `main`, tagged `v<N>`. |
 | `<game>.state/sessions/<id>/` | One curator session's record: `manifest.json` (`container-manifest/1`, kind `curator-session`), `brief.md`, the host's output, and the submissions and gate results. Kept after close. |
 | `<game>.state/drafts/<id>/` | One draft: `manifest.json` (kind `draft`) and its files. Persists across sessions until promoted or expired. |
 | `<game>.state/workspaces/<id>/` | The ephemeral workspace, deleted at close. |
@@ -52,30 +52,75 @@ A submission is a directory `submissions/<id>/` with `submission.json`:
 
 ```json
 {"schema": "curator-submission/1", "base_version": "v3", "summary": "…",
- "changes": [{"op": "add_fact", "fact": {…}}, {"op": "supersede_fact", "id": "f12", "fact": {…}},
-             {"op": "add_type", "type": {…}}]}
+ "changes": [{"op": "add_fact", "fact": {"schema": "curator-fact/3", "record": "fact", "id": "f12",
+              "type": "relation", "text": "…", "scope": {"game": "example"}, "citations": ["frame-id"]}}]}
 ```
 
-- **Fact** (`curator-fact/2`, the format built today; the owner decided its game-neutral
-  replacement, `curator-fact/3` with articles over facts, in
-  [general memory](general-memory.md#1-the-fact-format-and-the-curator), built in
-  [#460](https://github.com/CVX-Hull/enactive/issues/460)): exactly `schema`, `id`, `type` (a name in the ontology),
-  `statement`, `scope` (an object; at least `game`), `citations`, `subject`, `place`,
-  `game_time` and `kind`. Citations are source IDs of frames, and every one must lie
-  inside the session's trace window. The gate rejects `curator-fact/1`; there is one
-  current fact contract.
-  - `kind` is `place_with_goods`, `hazard`, `open_commitment` or `how_it_works`.
-  - `subject` is a non-empty string: the one thing the fact is about (one fact per item).
-  - `place` and `game_time` are strings. They must not be blank for `place_with_goods` and
-    `hazard`, and may be `""` for the other two kinds. `game_time` is the time as the
-    screen shows it, as text; shared code does not parse it. `place` is written so that a
-    later actor could go there (a landmark and direction, or coordinates, as shown).
-  - The curator's prompt defines each kind and says nothing about any particular game.
-    A store published under `curator-fact/1` is not edited; the readers that open sealed
-    stores (`tools.memory_screen_checks store`) read Git objects, not the gate, and still
-    work on them. The gate also refuses to publish into a repository whose published facts are
-    not all `curator-fact/2` (a supersede of a `/1` fact included): there is no mixed store.
-- **Type** (`curator-type/1`): `name`, `description` and `fields`.
+The [general-memory design](general-memory.md#the-format-curator-fact3) owns the field
+meanings. These are the gate's exact submission shapes:
+
+| Record | Fields |
+| --- | --- |
+| Fact | `schema: curator-fact/3`, `record: fact`, `id`, `type`, `text`, `scope` (at least a non-empty `game`), non-empty distinct `citations`, optional non-empty `subject` |
+| Article | `schema: curator-fact/3`, `record: article`, `id`, `title`, `lead`, `body` (a non-empty list of `{text, facts: [ids]}` claims, each with at least one distinct fact id), `links` (distinct article titles; may be empty) |
+| Type | `schema: curator-type/1`, non-empty `name`, text `description`, `fields` (a list of strings) |
+
+Software adds `published_in` and `session` to each record. It writes a fact's `seen`
+from the latest cited frame's trace position, and an article's `last_confirmed` from
+the latest `seen` of its cited facts. Positions carry `session`, `actor`, `step` and
+`order` (an ordered triple of admission ordinal, actor directory and step); order
+compares sightings, not elapsed time. Replaying earlier windows preserves trace order. Neither timestamp is accepted
+from a submission. Leads are one or two sentences by curator instruction; the gate
+does not parse or judge their prose.
+
+| Operation | Exact fields beyond `op` |
+| --- | --- |
+| `add_fact` | `fact` |
+| `supersede_fact` | `ids` (one or more distinct current fact ids), replacement `fact` |
+| `retire_fact` | current `id`, non-empty `reason`, non-empty distinct `citations` in the session window |
+| `add_type` | `type` |
+| `add_article` | `article` |
+| `revise_article` | current `id`, replacement `article` with a new id |
+| `retire_article` | current `id`, non-empty `reason` |
+| `revise_types` | `action`, `names`, `types`, `assignments` (fact id to new type name) |
+
+`revise_types` is grooming-only. A merge takes at least two existing names and one
+new type; a split takes one name and at least two new types; a rename takes one name
+and one new type; deprecation takes one name and no new types. Every current fact must
+end with a current type. Each revision publishes a new version, so at most one type
+revision is allowed per submission. Git retains the prior ontology at each version.
+
+Superseding or revising marks every target with `superseded_by`; retiring marks it
+with `retired` (reason, citations for facts, publication and session). Historical
+records remain evidence. Only records without either marker are current. Record ids
+are new across both kinds, including history; each target can change once per
+submission. Current article titles are unique (one article per curator-chosen subject).
+Split or merge articles by replacing/retiring predecessors and adding the resulting
+articles, repairing incoming links and fact references in the same submission.
+
+One current contract, no shim: the gate and session runner refuse stores containing
+records outside `curator-fact/3`. Sealed old stores remain evidence and are neither
+migrated nor opened as input to curation. The finished `brief-gate` check is retired
+(R-TECH-DEBT); other historical evidence commands remain unchanged.
+
+## Admission and grooming
+
+`run_session(..., session_kind="admission")` reads the supplied trace window and the
+whole published store. It may leave new facts unfiled. `session_kind="grooming"` runs
+between admissions with the whole published store and only the last admission's cited
+frames and their steps. It receives its own `grooming.md` brief alongside the shared
+instructions. It cannot take a restricted window; the supplied sealed trace sessions
+must match the last published admission's names, and every retained citation must exist.
+
+`provenance.json` keeps software-derived frame positions and the last admission's
+coverage and citations. Citations accumulate across accepted windows of the same
+admission. A grooming publication retains that admission stamp. The curator merges
+and retires facts, normalizes subjects through replacements, revises types, and writes
+articles, leads and links. Every grooming publication must file every current fact in
+at least one current article. There is no hard cap on the store; submission and host
+resource limits still apply. The first paid grooming run measures store size and is
+priced and asked of the owner separately. The stand-in provider covers admission then
+grooming end to end at zero spend.
 
 ## Windows of decisions and the coverage stamp
 
@@ -86,7 +131,7 @@ provider requests, and an actor may make requests that produce no step. The sess
 actor names are `[A-Za-z0-9_-]+`; the steps are integers.
 Both take one path, [`harness/curator/window.py`](../../harness/curator/window.py): the
 projection is written whole and `restrict` narrows it in place; with the full window
-(`Window()`) it changes nothing, and whole-admission traces and briefs are unchanged.
+(`Window()`) it changes nothing.
 
 - **What a window keeps.** The actor's steps in the range, the tool calls that belong to
   them, the frames those steps returned, the actor's received prompt and guide. A tool
@@ -97,15 +142,14 @@ projection is written whole and `restrict` narrows it in place; with the full wi
   packets, the sealed memory store and the actor's final report. A runner that passes a
   memory store with a window still gets none of it.
 - **The manifest says so.** `trace/manifest.json` gains `window` (session, actor, first,
-  last as clamped to the steps that exist, `steps_available`, `game_time`) and lists
+  last as clamped to the steps that exist, `steps_available`) and lists
   what was dropped; its file hashes are of the narrowed trace. The brief names the
   window. A window that starts after the actor's last step aborts the session before the
   host runs.
 - **Provenance follows.** Frames outside the range are not in `trace/frames/`, so the
   gate refuses a citation of one.
-- **Coverage stamp.** The runner derives `curator-coverage/1` from the window: `session`,
-  `actor`, `last_step` (the last step read) and `game_time` (optional text the runner
-  supplies in the window). The session passes the stamp to the gate with every submission it gates, and the gate writes it
+- **Coverage stamp.** The runner derives `curator-coverage/2` from the window: `session`,
+  `actor` and `last_step` (the last step read). The session passes the stamp to the gate with every submission it gates, and the gate writes it
   as `coverage.json` beside `facts.jsonl`, so each tagged version records what it covers.
   A whole-admission session stamps its session names with no actor or last step. The
   curator never writes it: a submission carrying `coverage` is rejected as an unexpected
@@ -118,11 +162,14 @@ The gate applies its checks in this order, and the first failure rejects:
    at most 200 changes and 256 KiB.
 2. **Base version.** `base_version` is the published version. Otherwise the submission
    is stale and is rejected, with the current version in the diagnostics.
-3. **Scope.** Changes touch only facts and types. A fact's `type` exists in the
-   published ontology or is added in the same submission. A superseded fact exists and is
-   not already superseded. Fact IDs are new.
-4. **Provenance.** Every citation is a frame in the session's trace window. A citation
-   shows where a claim came from, not that it is true.
+3. **Candidate snapshot.** Apply operations atomically to a candidate. Types and targets
+   exist, ids are new, scope matches, and fact/retirement citations belong to this
+   window. Software derives sighting positions from the runner's frame map.
+4. **References and filing.** Every article claim cites current facts and every link
+   names a current article in the final candidate. Titles are unique. Grooming files
+   every current fact; admission may leave facts unfiled. This checks structure only,
+   never what an article says. These tests address R-GAME-COUPLING and R-REGRESSION;
+   they require no semantic model calls.
 
 An accepted submission is published atomically: one commit, one new tag, then the
 `published` pointer moves. A rejected one returns its diagnostics in the next session's

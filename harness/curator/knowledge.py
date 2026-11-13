@@ -85,6 +85,7 @@ class Repository:
             'knowledge.json': _dump({'schema': SCHEMA, 'game': self.game}),
             'facts.jsonl': b'',
             'ontology/types.json': b'[]\n',
+            'provenance.json': _dump({'frames': {}}),
             'programs/.keep': b'',
             'tests/.keep': b'',
         }
@@ -122,9 +123,18 @@ class Repository:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(self._show(version, raw))
 
-    def facts(self, version: str | None = None) -> list[dict]:
+    def records(self, version: str | None = None) -> list[dict]:
         text = self._show(self._resolve(version), 'facts.jsonl').decode('utf-8')
         return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+    def facts(self, version: str | None = None) -> list[dict]:
+        return [item for item in self.records(version) if item.get('record') == 'fact']
+
+    def articles(self, version: str | None = None) -> list[dict]:
+        return [item for item in self.records(version) if item.get('record') == 'article']
+
+    def provenance(self, version: str | None = None) -> dict:
+        return json.loads(self._show(self._resolve(version), 'provenance.json'))
 
     def types(self, version: str | None = None) -> list[dict]:
         return json.loads(self._show(self._resolve(version), 'ontology/types.json'))

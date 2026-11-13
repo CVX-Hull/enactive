@@ -88,7 +88,7 @@ def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(
     assert life['state'] == 'sealed' and life['returncode'] == 0 and life['stopped'] is None, (life, (log/'host-output.log').read_text())
     # A valid submission reached the gate and was published; the draft was kept.
     assert [v['accepted'] for v in record['verdicts']] == [True] and record['published_after'] == 'v1'
-    assert [f['statement'] for f in repo.facts('v1')] == ['stand-in statement']
+    assert [f['text'] for f in repo.facts('v1')] == ['stand-in statement']
     assert record['drafts']['created'] == ['notes']
     # Every request passed the proxy's allowlist; the provider saw only the proxy's key.
     ledger = shadow._lines(tmp_path/'proxy-ledger.jsonl')
@@ -327,7 +327,7 @@ def test_the_hosts_node_unit_tests_pass():
 
 def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('curator-submission/1', 'curator-fact/2', 'curator-type/1', 'add_fact', 'supersede_fact', 'add_type', 'base_version',
+    for needed in ('curator-submission/1', 'curator-fact/3', 'curator-type/1', 'add_fact', 'supersede_fact', 'add_type', 'base_version',
                    'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench', 'finish', '256 KiB', '200'):
         assert needed in prompt, needed
     # P-GENERALITY and the blinding of #449 probes: nothing about the game, its items or the recorded runs.
@@ -339,11 +339,12 @@ def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     assert not re.search(r'\b(tanks?|rations?|rods?|batter(y|ies)|roofs?|cupboards?|lockers?|floors?)\b', lowered)
 
 
-def test_the_prompt_defines_the_four_fact_kinds_and_the_new_fields():
+def test_the_prompt_defines_game_neutral_facts_articles_and_grooming():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('place_with_goods', 'hazard', 'open_commitment', 'how_it_works', '`subject`', '`place`', '`game_time`',
-                   'One fact per item', 'coverage.json', '`not shown`', 'is not the same field as', 'a type name from knowledge/ontology/types.json'):
+    for needed in ('`subject`', '`text`', '`seen`', '`last_confirmed`', 'retire_fact', 'revise_types',
+                   'add_article', 'revise_article', 'retire_article', 'grooming.md', 'hypotheses'):
         assert needed in prompt, needed
+    assert not re.search(r'\b(places?|goods|items?|hazards?)\b', prompt.lower())
 
 
 def test_the_frozen_prices_cover_exactly_the_two_arms():
@@ -481,25 +482,24 @@ def run_windows(tmp_path, upstream, windows, monkeypatch, *extra, out_name='wind
 
 @native
 def test_a_window_run_goes_through_the_stand_in_one_window_after_another_on_one_repository(tmp_path, monkeypatch):
-    windows = [dict(session='sd1a1', actor='001', first=1, last=4, game_time='day 1 08:00'),
+    windows = [dict(session='sd1a1', actor='001', first=1, last=4),
                dict(session='sd1a1', actor='001', first=5, last=8)]
     with StandIn() as stand_in:
         code, out, runtime = run_windows(tmp_path, stand_in.url, windows, monkeypatch)
     assert code == 0
     first = json.loads((out/'397'/'sd1a1-001-1-4'/'summary.json').read_text())
     second = json.loads((out/'397'/'sd1a1-001-5-8'/'summary.json').read_text())
-    assert first['window'] == dict(session='sd1a1', actor='001', first=1, last=4, game_time='day 1 08:00')
+    assert first['window'] == dict(session='sd1a1', actor='001', first=1, last=4)
     assert first['session_state'] == 'sealed' and (first['accepted'], first['rejected']) == (1, 0)
-    assert first['coverage'] == dict(schema='curator-coverage/1', session='sd1a1', actor='001', last_step=4,
-                                     game_time='day 1 08:00')
+    assert first['coverage'] == dict(schema='curator-coverage/2', session='sd1a1', actor='001', last_step=4)
     assert first['published_before'] == 'v0' and second['published_before'] == 'v1'  # the store as the last left it
-    assert second['coverage']['last_step'] == 8 and second['coverage']['game_time'] is None
+    assert second['coverage']['last_step'] == 8
     assert (second['accepted'], second['rejected']) == (0, 1)  # the stand-in repeats its fact id: the gate refuses it
     for summary in (first, second):
         assert summary['cost_usd'] == '0.0036' and summary['wall_seconds'] > 0 and summary['memory']['passed'] is False
     run = json.loads((out/'summary.json').read_text())
     assert run['complete'] is True and run['sessions_planned'] == ['sd1a1-001-1-4', 'sd1a1-001-5-8']
-    assert run['windows'] == windows or [dict(w, game_time=w.get('game_time')) for w in windows] == run['windows']
+    assert run['windows'] == windows
     assert run['windows_sha256'] == shadow.windows_digest([shadow.Window.read(w) for w in windows])
     assert [(s['label'], s['cost_usd'], s['ledger_charged_usd'], s['stopped_by_cap']) for s in run['sessions']] == [
         ('sd1a1-001-1-4', '0.0036', '0.0036', False), ('sd1a1-001-5-8', '0.0036', '0.0036', False)]
@@ -757,3 +757,31 @@ def test_a_revoked_proxy_stops_the_run(tmp_path, monkeypatch):
     assert run['stopped'] == 'proxy-revoked' and run['sessions_run'] == 1 and first['proxy']['revoked'] is True
     assert first['proxy']['usage_missing'] == 1 and not (out/'397'/'sd1a2').exists()
     assert os.path.exists(out/'summary.json')
+
+
+@native
+def test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact(tmp_path, world):
+    from harness.curator.gate import current
+
+    repo, trace = world
+    with StandIn() as stand_in:
+        proxy, config = session_config(tmp_path, stand_in.url)
+        try:
+            admission = run_session(repo, trace, config, session_id='admission')
+            assert admission['published_after'] == 'v1', admission
+            grooming = run_session(repo, trace, config, session_id='grooming', session_kind='grooming')
+        finally:
+            proxy.close()
+    assert grooming['manifest']['lifecycle']['state'] == 'sealed', grooming
+    assert [v['accepted'] for v in grooming['verdicts']] == [True], grooming
+    assert grooming['published_after'] == 'v2'
+    stored_brief = repo.state/'sessions'/'grooming'/'grooming.md'
+    assert hashlib.sha256(stored_brief.read_bytes()).hexdigest() == grooming['manifest']['pinned']['grooming_sha256']
+    facts = {f['id']: f for f in repo.facts() if current(f)}
+    articles = [a for a in repo.articles() if current(a)]
+    assert facts.keys() == {f for a in articles for claim in a['body'] for f in claim['facts']}
+    assert articles[0]['last_confirmed'] == facts['f1']['seen']
+    assert repo.provenance()['last_admission']['citations'] == facts['f1']['citations']
+    messages = [m for request in stand_in.requests for m in request['body']['messages']]
+    assert any('Grooming instructions' in str(m) for m in messages if m['role'] == 'tool')
+    assert any('citations_only' in str(m) for m in messages if m['role'] == 'tool')

@@ -154,7 +154,7 @@ def select(lineage: str, sessions: list[str] | None) -> tuple[dict, list[str]]:
 
 def read_windows(args: argparse.Namespace) -> list[Window] | None:
     """The windows to run, in the order given, or None for whole admissions. Two ways to write the same list:
-    a JSON file of `{session, actor, first, last[, game_time]}` rows, or a plan of equal windows of one actor."""
+    a JSON file of `{session, actor, first, last}` rows, or a plan of equal windows of one actor."""
     if args.windows_file and args.window_plan:
         raise ShadowError('--windows-file and --window-plan are two ways to write the same list; give one')
     if not (args.windows_file or args.window_plan):
@@ -577,7 +577,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--stop-on-abort', action='store_true')
     p.add_argument('--stop-on-reject', action='store_true',
                    help="stop the run when the gate rejects a session's submission (its facts are then lost)")
-    p.add_argument('--windows-file', help='JSON list of {session, actor, first, last[, game_time]}: one session over each '
+    p.add_argument('--windows-file', help='JSON list of {session, actor, first, last}: one session over each '
                    'window (one actor, steps first to last inclusive), in this order against one repository, instead of '
                    'whole admissions')
     p.add_argument('--window-plan', nargs=5, metavar=('SESSION', 'ACTOR', 'START', 'SIZE', 'COUNT'),
