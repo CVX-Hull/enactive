@@ -38,7 +38,7 @@ owner's envelopes and the balance check before paid play did not change.
 | Contract | Change |
 | --- | --- |
 | `campaign-run/5` → `/6` | `accounting` is replaced by `spend_limit_usd`; `ending_reserve` gains `usd` |
-| `player-host/3` → `/4`, telemetry 3 → 4 | The route carries `spend_limit_usd` and `unpriced_request_usd`; `host-start` records both; `response-complete` carries `counted_cost_usd`, `cost_counted_as` and `spent_usd`; `request-unpriced` is new; `settled` carries `spent_usd` and `unpriced_requests`; stop reasons `spend-limit` and `cost-unreported` are new |
+| `player-host/3` → `/4`, telemetry 3 → 4 | The route carries `spend_limit_usd` and `unpriced_request_usd`; `host-start` records both; `response-complete` carries `counted_cost_usd`, `cost_counted_as` and `spent_usd`; `settled` carries `spent_usd` and `unpriced_requests`; stop reasons `spend-limit` and `cost-unreported` are new |
 | `player-driver/3` → `/4` | Each actor carries `allocated_usd`, `reported_usd`, `unpriced_requests`, `spent_usd` and `spend_complete`; the totals carry `reported_usd`, `unpriced_requests`, `unpriced_request_usd`, `spent_usd` and `spend_complete`; the ending request carries `spend_remaining_usd` and may have trigger `spend` |
 | `campaign-receipt/3` → `/4` | `accounting` is `spend_limit_usd`, `reported_usd`, `unpriced_requests`, `unpriced_request_usd`, `spent_usd`, `attempts_charged`, `allocated_max_attempts` and `spend_complete` |
 | `dev-run/1` | Unchanged: same fields, same meaning. `record` fills the spend fields from the receipt and no longer takes them as arguments |
@@ -46,6 +46,8 @@ owner's envelopes and the balance check before paid play did not change.
 
 Dollar amounts in the package, the route, the trace's counting fields, the driver record
 and the receipt are plain decimal text. A JSON number is refused where one is declared.
+A declared amount has at most twelve whole and eighteen fractional digits; a counted
+amount in a trace has no cap, because the host writes the provider's own digits.
 
 The live path reads only the current versions: `tools/campaign_package.py`,
 `tools/campaign_player.py`, `tools/campaign_run.py`, `tools/campaign_supervision.py` and
@@ -62,8 +64,8 @@ estimate to reported cost for a run.
 - **The bound.** `unpriced_request_usd` is
   `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6` from
   the route's configured rates. `tools/campaign_package.py` computes it and refuses a
-  package whose route states another value. The host and the driver take it from the
-  route.
+  package whose route states another value, whose bound is zero, or whose dollar
+  reserve is below the bound. The host and the driver take it from the route.
 - **Per HTTP attempt, once.** A response whose `reported_cost_usd` is not null counts at
   that amount. Every other attempt counts at the bound: a refusal, a timeout, a stream
   cut off, an abort at a deadline, a successful response with no usable cost. A retry
@@ -79,9 +81,11 @@ estimate to reported cost for a run.
 - **The driver** counts per `request-start` from the trace: the amount on that
   attempt's cost record, else the bound. It gives each new actor the limit minus what
   is counted, starts none when nothing remains, and when a trace cannot be read to its
-  settlement it records the spend as incomplete and starts no further actor.
+  settlement, or the host's own totals in `settled` differ from the driver's sums, it
+  records the spend as incomplete and starts no further actor.
 - **Exact sums.** The host sums integers scaled from the provider's digits; the driver
-  and the custodian use `Decimal` on the trace's strings.
+  and the custodian use `Decimal` on the trace's strings in a context that raises
+  instead of rounding.
 
 A worked example, from
 `test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow_the_trace`
@@ -129,8 +133,9 @@ The store was not written: it held 54,491 files before and after.
 
 ## Tests
 
-The player-host Node suite went from 230 to 234 tests, all passing. The Python suite
-went from 1,044 to 1,085 tests, all passing with the sealed store present.
+The player-host Node suite went from 230 to 235 tests, all passing. The Python suite
+went from 1,044 to 1,097 tests, all passing with the sealed store present. Both counts
+include the tests added after the review below.
 
 - **Host** (`tools/player_host/test/reported-cost.test.mjs`, `route-configuration.test.mjs`):
   the limit stops the host before the next request, and before a retry; the overshoot is
@@ -138,28 +143,50 @@ went from 1,044 to 1,085 tests, all passing with the sealed store present.
   request through (0.1 + 0.7 against a limit of 0.8); a successful response with no
   usable cost stops with `cost-unreported` whether or not token counts arrived, and a
   cost without token counts does not; a refused request and a request aborted at its
-  deadline each count once at the bound; the route's two amounts are refused as numbers.
+  deadline each count once at the bound; a cost of 19 or 23 fractional digits is written
+  and summed as plain decimal text; the route's two amounts are refused as numbers, and
+  a bound of zero is refused.
 - **Contract** (`tests/test_player_host_contract.py`): the worked example above, and a
   successful unpriced response counted at the bound by the driver's reader.
 - **Driver** (`tests/test_campaign_player.py`): a request that left no cost record
-  counts at the bound; a cost record the driver cannot count, or a trace that cannot be
-  read to its end, marks the spend incomplete and starts no successor; a successor's
-  route carries the remaining dollars; no successor starts when none remain; the dollar
-  reserve sends the orderly stop with trigger `spend`.
+  counts at the bound and leaves the spend incomplete; a cost record the driver cannot
+  count, host totals that differ from the driver's sums, or a trace that cannot be
+  read to its end, marks the spend incomplete and starts no successor; costs of 19 and
+  23 fractional digits are read and summed exactly; a successor's route carries the
+  remaining dollars, cut to the digits a route may carry; no successor starts when none
+  remain; the dollar reserve sends the orderly stop with trigger `spend`.
 - **Package and receipt** (`tests/test_campaign_run.py`): `campaign-run/5` and
   `player-host/3` are refused; a missing, zero, negative, non-finite or numeric limit is
-  refused; a reserve that is not below the limit is refused; the route must repeat the
-  limit and carry the computed bound; the receipt's `spent_usd` is reported cost plus
-  unpriced requests at the bound.
+  refused; a reserve that is not below the limit, or is below the bound, is refused; a
+  zero bound is refused; the route must repeat the limit and carry the computed bound;
+  the receipt's `spent_usd` is reported cost plus unpriced requests at the bound.
 - **Ledger** (`tests/test_run_ledger.py`): a row from a `/4` receipt satisfies the
-  ledger's identity; an incomplete or inconsistent receipt gets no row; older package
-  and receipt versions are refused; the figures cannot be typed in.
+  ledger's identity; an inconsistent receipt gets no row; an incomplete receipt is
+  refused by default and recorded only as its upper bound with the flag, which a
+  complete receipt refuses; older package and receipt versions are refused; the
+  figures cannot be typed in.
 - **Evaluator** (`tests/test_evaluation_core.py`, `tests/test_host_analysis.py`,
   `tests/test_viewer_api.py`): one session of each combination is read in the versions
   the index lists, with the archived spend allowance; the same files under an unlisted
   session, a trace naming another session, and each old version beside a current run are
   refused; a `/6` run's allowance is its declared limit; the index pin and the
   sealed-store check pass.
+
+## Independent review
+
+An independent review of the change found the money path correct and failing closed, and
+asked for the following. Each was resolved in the same pull request.
+
+| Finding | Resolution |
+| --- | --- |
+| The host writes a reported cost with as many digits as the provider gave, but the driver refused more than eighteen fractional digits, so a legal cost such as `0.0034500000000000004` would have made a healthy run's trace unreadable | The driver reads a counted amount in a trace at any length and sums without rounding; declared amounts keep the cap. What a successor is given is cut down to eighteen fractional digits. Tests: 19- and 23-digit costs in the driver and the host, and a successor's limit after a 19-digit cost |
+| A receipt with incomplete spend could not be recorded in the ledger at all | Owner decision of 12 November 2026 (#555): record its upper bound. `run_ledger record --record-upper-bound` records the declared limit plus one request's bound; without the flag the receipt is still refused, and the flag is refused for a complete receipt. A `dev-run/1` row has no field to mark it, so the run's dated record does, with the key's activity figure for the run's time window; no further run of the study is admitted before then |
+| Current pages still described reservations, a cumulative ceiling or telemetry version 3 | The migration standard, operator permissions, the host reference, the documentation standard's example, the development workflow, two component pages and the spectator's spend wording now describe the limit |
+| The `request-unpriced` event could not be reached by any path and was untested | Removed from the host, the driver, the contract and the host reference. Every attempt ends in a `response-complete`; a started request with no cost record, which only a killed host leaves, still counts at the bound in the driver and leaves the spend incomplete |
+| A dollar reserve below one request's bound would let a single failed request end a run abruptly | The package check refuses `ending_reserve.usd` below `unpriced_request_usd`, naming both |
+| A route with zero rates would count failed requests as free | The host's route validation and the package check both require the bound above zero |
+| Nothing compared the host's own totals with the driver's | The driver requires `settled.spent_usd` and `settled.unpriced_requests` to equal its own sums; a difference leaves the spend incomplete |
+| The controls page said a run passes its limit by at most the bound | It now says by at most what one request counts: a reported cost is not capped by the bound |
 
 ## Supervised run with a declared limit
 

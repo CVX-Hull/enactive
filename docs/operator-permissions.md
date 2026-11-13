@@ -11,7 +11,7 @@ the Pi adapter) and its explicit current MCP actor configuration. The user has a
 player-visible screenshots/observations/mission-context export to the selected
 provider, and applicable source/evidence/tracker publication to GitHub. Do not
 request those permissions again for each basic action or clean actor succession.
-The selected frozen package still owns finite scope, ceilings, route and actual
+The selected frozen package still owns finite scope, its dollar limit, route and actual
 resources; prior approval does not create input custody or resume a stopped run.
 
 The owner also authorized bounded endpoint tests using selected retained gameplay
@@ -24,17 +24,16 @@ the owner's specific authorization rather than disguising a test as live play.
 
 ## Finite gameplay budget delegation
 
-The lead may select finite gameplay allocations within the standing approved
-cumulative ceiling. Preserve spent costs, conservative reservations, missing usage,
-original failures and retired unused allowances. Check prospective worst-case
-allocation before admission. Reservation is not an invoice. A failed actor cannot
+The lead may select finite gameplay allocations, and admits a run only inside an
+owner-set envelope below. A run package declares a dollar limit, which the player
+host enforces from the cost the provider reports
+([campaign procedure](operations/campaign-run.md#spend-limit)). Preserve spent costs,
+missing usage, original failures and retired unused allowances. A failed actor cannot
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
 **The hard cap** is the credit limit on the OpenRouter key, which the owner set at
-$1,500 on 12 November 2026. It is outside the code, which cannot read it. Each run
-package also declares its own dollar limit, which the player host enforces from the
-cost the provider reports ([campaign procedure](operations/campaign-run.md#spend-limit)).
+$1,500 on 12 November 2026. It is outside the code, which cannot read it.
 
 **Actual-spend admission.** For each
 envelope listed below, and for no other spend, the lead admits a run or admission without
@@ -169,8 +168,8 @@ FDs. A host owns only its bounded actor tools; all game semantics belong to it.
 ### Preflight for every campaign
 
 Before real input: verify the exact clean source, current package/schema and frozen
-bytes, original finite time/HTTP/input/frame/byte resources, prospective cumulative
-reservation, selected provider authorization, shared target exclusion, owned
+bytes, original finite time/HTTP/input/frame/byte resources, the declared dollar limit
+and finish reserve, selected provider authorization, shared target exclusion, owned
 process lifecycle and independent Stop path. Preserve prior partial markers; never
 reopen them. Use existing fast/focused checks and proportionate independent review
 under [development-first delivery](workflows/development.md#development-first-delivery).

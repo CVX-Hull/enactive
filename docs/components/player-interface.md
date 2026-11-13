@@ -46,8 +46,9 @@ count-only eviction block,
 cost/capacity/effort metadata and default service tier for the current campaign.
 OpenRouter uses exact selected full-tag routing, no fallback and required parameter
 support. Credentials are injected only into the provider host; MCP/native children
-receive no key. Missing usage stays unknown; configured estimates/reservations are
-not invoices. The host reference owns maintained provider-only bounded429 behavior;
+receive no key. Missing usage stays unknown; a request with no cost record counts at
+the route's bound, and neither configured estimates nor provider-reported cost are
+invoices. The host reference owns maintained provider-only bounded429 behavior;
 no tool retry/reconnect/replay follows uncertain transport.
 
 Telemetry version3 keeps bounded visible assistant narration and mechanical

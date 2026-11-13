@@ -470,7 +470,11 @@ Development-run quantities live as data in git, and pages render them or cite th
   are not rewritten. It takes `provider_usd` from the receipt's `reported_usd`,
   `unpriced_attempts` from `unpriced_requests`, `unpriced_attempt_usd` from
   `unpriced_request_usd` and `spend_usd` from `spent_usd`; no figure is typed in. A
-  receipt whose `spend_complete` is false gets no row. Rows whose packages are
+  receipt whose `spend_complete` is false gets a row only with `--record-upper-bound`:
+  `provider_usd` is then the receipt's `spend_limit_usd`, `unpriced_attempts` is 1 and
+  `unpriced_attempt_usd` the receipt's bound, so `spend_usd` is the most the run can
+  have spent. No field marks such a row; its run's dated record does
+  ([campaign procedure](../operations/campaign-run.md#start-and-close)). Rows whose packages are
   `campaign-run/4` take arm and start from the labels in the archive index,
   `archive-sessions.json`.
 - **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is

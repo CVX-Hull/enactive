@@ -58,8 +58,17 @@ The image block is a positive integer no larger than the image peak.
 than `model.contextWindow`. Unsupported routes, including `/3`, do not execute.
 
 A dollar amount is plain decimal text such as `"0.4096"`: digits with an optional
-fraction, at most twelve whole and eighteen fractional digits. A JSON number, an
-exponent, a sign or a non-finite word is refused. `spend_limit_usd` is above zero.
+fraction. A JSON number, an exponent, a sign or a non-finite word is refused. Two
+rules set its length:
+
+- **A declared amount** (the route's `spend_limit_usd` and `unpriced_request_usd`, and
+  the package's limit and dollar reserve) has at most twelve whole and eighteen
+  fractional digits. Both route amounts are above zero.
+- **A counted amount** in a trace (`reported_cost_usd`, `counted_cost_usd`,
+  `spent_usd`) has no cap on its digits, because the host writes the provider's own
+  digits, which can be more than eighteen. The driver reads it at any length and sums
+  without rounding. When it gives a successor what remains, it cuts that to eighteen
+  fractional digits, never up.
 
 The driver lowers request maximum to the remaining original allocation, and
 `spend_limit_usd` to the dollars the run has left ([Spend](#spend)). One
@@ -120,7 +129,9 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
 The driver counts the same way from the trace: per `request-start`, the amount on
 that attempt's cost record, else the bound. A request that started and left no
 record, because the host was killed, therefore counts at the bound. The driver's sum
-is the run's record; the host's `spent_usd` is evidence beside it.
+is the run's record. It is complete only when the host's own `spent_usd` and
+`unpriced_requests` in `settled` equal the driver's sums; a difference, like a trace
+that cannot be read, marks the run's spend incomplete and admits no successor.
 
 ### Request stability and tail notices
 
@@ -246,8 +257,7 @@ kinds it does not account for, and observers project only known kinds.
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
 | `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). An archived trace recorded before the event existed has none, and readers report its absence explicitly. |
-| `response-complete` | At most one per HTTP attempt. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` is what this attempt counted toward the limit, and `cost_counted_as` says which: `provider-reported` (the reported cost) or `unpriced-bound` (the route's `unpriced_request_usd`). `spent_usd` is the host's running total after it. |
-| `request-unpriced` | An attempt that ended with no `response-complete`, written before `settled` with its `request_id` and the same `counted_cost_usd`, `cost_counted_as:"unpriced-bound"` and `spent_usd`. Every started attempt therefore has one cost record in a trace that reaches `settled`. |
+| `response-complete` | One per HTTP attempt, a failed or aborted one included. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` is what this attempt counted toward the limit, and `cost_counted_as` says which: `provider-reported` (the reported cost) or `unpriced-bound` (the route's `unpriced_request_usd`). `spent_usd` is the host's running total after it. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
 | `settled` | Last, with `ok`, reason, control identity where applicable, requests matching charged attempt count, the host's total `spent_usd` and its count of `unpriced_requests`. A settlement written before the host started carries neither. |

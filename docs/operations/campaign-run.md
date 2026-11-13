@@ -137,7 +137,13 @@ Nothing is carried over from earlier packages.
   cost record counts for:
   `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
   from the frozen route's configured dollar rates. The validator computes it and
-  refuses a route that states another value, naming the value it expects.
+  refuses a route that states another value, naming the value it expects. It also
+  refuses a route whose rates give a bound of zero, which would count a failed
+  request as free.
+- **The dollar reserve covers one unpriced request.** `ending_reserve.usd` is at least
+  `unpriced_request_usd`; the validator refuses less, naming both amounts. With less
+  than one request's bound left, a single failed request would end the run abruptly
+  instead of in order. The reserve is below the limit, so the limit exceeds the bound.
 - **What counts.** A response counts at the cost the provider reported for it. A
   request with no cost record (refused, timed out, cut off, aborted at a deadline)
   counts at the bound, because the provider may still bill it.
@@ -170,7 +176,7 @@ wall60–86400s, host/aggregate-host30–86400s, one/two hosts and1–10000 HTTP
 Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
 computer capacity is ≤2^40. The route's per-host request maximum cannot exceed the
 campaign aggregate. `spend_limit_usd` is above zero, and `ending_reserve.usd` is
-above zero and below it. The selected directory must have no prior started marker,
+at least the route's `unpriced_request_usd` and below the limit. The selected directory must have no prior started marker,
 session DB, native-process receipt, actors or contexts. An existing selected player
 store must be current; it never restores computer custody. The maintained
 validator is authoritative and rejects changed bytes/unsupported fields before
@@ -292,7 +298,7 @@ block is closed:
 | `spent_usd` | What counted toward the limit: `reported_usd` plus `unpriced_requests` × `unpriced_request_usd` |
 | `attempts_charged` | HTTP attempts charged against the request allowance |
 | `allocated_max_attempts` | The package's `max_http_attempts` |
-| `spend_complete` | Whether every actor's trace was read to its settlement; when false the spend is unknown |
+| `spend_complete` | Whether every actor's trace was read to its settlement and the host's own totals equal the driver's sums; when false the spend is unknown |
 
 The dollar amounts are decimal text. What the provider reports is what the provider
 says; it is not an invoice. Unknown trace accounting charges the allocated attempts,
@@ -319,9 +325,21 @@ run's short name in its study's dated record (default: the package name). That c
 [`dev-run/1`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
 `data/evaluation/runs.jsonl`, the one numeric record of the run: the study's record cites
 that row or a generated table and keeps no hand-typed copy of attempts, spend or duration.
-The spend figures are the receipt's; none is typed in. A package without a receipt,
-or whose receipt records its spend as incomplete, gets no row, and no further admission
-is made until the lead resolves it. `run_ledger totals --study ISSUE --envelope USD`
+The spend figures are the receipt's; none is typed in. A package without a receipt
+gets no row, and no further admission is made until the lead resolves it.
+
+**When the receipt's `spend_complete` is false,** the run's spend could not be counted,
+and `record` refuses the package. No further run of that study is admitted until the
+lead has done both of these:
+
+1. Recorded the run with `--record-upper-bound` added to the command above. The row
+   then holds the most the run can have spent: `provider_usd` is the receipt's
+   `spend_limit_usd`, `unpriced_attempts` is 1 and `unpriced_attempt_usd` is the
+   receipt's `unpriced_request_usd`, so `spend_usd` is the limit plus one request's
+   bound. The flag is refused for a receipt whose spend is complete.
+2. Noted in the run's dated record that the row is an upper bound, with the OpenRouter
+   key's activity figure for the run's time window. A `dev-run/1` row has no field
+   that marks an upper bound, so the dated record is where that is stated. `run_ledger totals --study ISSUE --envelope USD`
 applies the [actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),
 with `--forecast-largest USD` standing in for the largest admission before any completes.
 This is the only ledger writer.
