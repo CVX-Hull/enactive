@@ -674,7 +674,12 @@ owner's decisions.
   no-curator arm, 18 of 89
   ([completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)).
   The curator stays gated and does not run in live play. Any renewed benefit claim needs
-  a fresh written protocol and an owner decision. The study ran under three protocols:
+  a fresh written protocol and an owner decision. On 13 November 2026 the owner kept
+  the dedicated curator as the writer of the store, asked for a redesigned prompt and
+  context, and chose a \$0 protocol for a live memory screen as the next step
+  ([decisions](../acceptance/2026-11-13-memory-and-cadence-decisions.md),
+  [memory note](../design/long-horizon-memory.md)); the phase is still not adopted.
+  The study ran under three protocols:
   - the [power-gate protocol](../design/p1-study.md), which stopped at its power gate
     before any spend ([record](../acceptance/2026-11-09-p1-gate-178.md));
   - the added-lineage protocol, which added a fourth held-out lineage and passed the

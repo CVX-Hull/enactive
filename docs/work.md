@@ -18,26 +18,14 @@ capabilities and limits; [work items](workflows/work-items.md) own how work flow
 | Player-owned campaigns without engineering gameplay assistance, the parent of the two outcomes below | [#136](https://github.com/CVX-Hull/enactive/issues/136) | [Mission ownership](operations/mission-ownership.md) |
 | A fresh seven-day campaign without engineering gameplay assistance, the north star | [#145](https://github.com/CVX-Hull/enactive/issues/145) | [Development runs](development-runs.md) |
 | Useful apparent responsiveness of the complete player; an aim that does not gate present work | [#164](https://github.com/CVX-Hull/enactive/issues/164) | [Development runs](development-runs.md); the [cadence plan](design/cadence-plan.md) |
-| The curated player: actor, curator, ontology and programs, in phases. Memory comes first: the screen's protocol in [#590](https://github.com/CVX-Hull/enactive/issues/590) and the context design in [#591](https://github.com/CVX-Hull/enactive/issues/591), both Ready | [#445](https://github.com/CVX-Hull/enactive/issues/445); the curator and memory phase in [#387](https://github.com/CVX-Hull/enactive/issues/387), the programs and monitor phase in [#177](https://github.com/CVX-Hull/enactive/issues/177), the practice instance phase in [#472](https://github.com/CVX-Hull/enactive/issues/472) | [ADR 009](decisions/009-curated-player.md) (proposed); the [memory note](design/long-horizon-memory.md) and the owner's [decisions of 13 November 2026](acceptance/2026-11-13-memory-and-cadence-decisions.md) |
+| The curated player: actor, curator, ontology and programs, in phases. Memory comes first: the context design in [#591](https://github.com/CVX-Hull/enactive/issues/591), then the memory screen's protocol in [#590](https://github.com/CVX-Hull/enactive/issues/590) | [#445](https://github.com/CVX-Hull/enactive/issues/445); the curator and memory phase in [#387](https://github.com/CVX-Hull/enactive/issues/387), the programs and monitor phase in [#177](https://github.com/CVX-Hull/enactive/issues/177), the practice instance phase in [#472](https://github.com/CVX-Hull/enactive/issues/472) | [ADR 009](decisions/009-curated-player.md) (proposed); the [memory note](design/long-horizon-memory.md) and the owner's [decisions of 13 November 2026](acceptance/2026-11-13-memory-and-cadence-decisions.md) |
 | Evaluation follow-ons: intent visibility, label writing, a cross-run channel, a scenario bank, judges | [#384](https://github.com/CVX-Hull/enactive/issues/384)–[#388](https://github.com/CVX-Hull/enactive/issues/388) | [ADR008](decisions/008-evaluation-and-spectator.md) |
 | Reusable expectation evaluation and read-only outcome monitoring | [#42](https://github.com/CVX-Hull/enactive/issues/42) | [Evaluation contract](contracts/evaluation.md) |
 | Spectator views | [#143](https://github.com/CVX-Hull/enactive/issues/143) | [Observer operations](components/observer-operations.md) |
 | CDDA-class portability | [#191](https://github.com/CVX-Hull/enactive/issues/191) | [ADR006](decisions/006-computer-control-boundary.md) |
 
-Every other open issue is a sub-issue of one of the outcomes above, with six
-exceptions that have no parent on GitHub:
-
-- [#441](https://github.com/CVX-Hull/enactive/issues/441), the seven-day screen, serves
-  the seven-day campaign (#145) and is parked by the owner until memory is settled.
-- [#556](https://github.com/CVX-Hull/enactive/issues/556) changes how the curator
-  counts a request refused before generating, when curator sessions next run.
-- [#128](https://github.com/CVX-Hull/enactive/issues/128) is a defect: native gameplay
-  should stay responsive when spectator frame publication stalls.
-- [#9](https://github.com/CVX-Hull/enactive/issues/9),
-  [#12](https://github.com/CVX-Hull/enactive/issues/12) and
-  [#26](https://github.com/CVX-Hull/enactive/issues/26) are maintenance questions: an
-  automated native regression runner, broader formatting and type analysis, and the
-  currency of the gameplay research.
+Every other open issue is a sub-issue of one of the outcomes above. The Project's Ready
+column is the queue of work that can start; it is not repeated here.
 
 The [risk register](risks.md) and [controls](controls.md) own the current answers
 about controls.
