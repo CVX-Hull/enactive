@@ -16,9 +16,9 @@ contract changes and merges ([evidence cadence](workflows/evidence-cadence.md)).
 
 | Study | Dated record | Checkpoint |
 | --- | --- | --- |
-| Ceiling benchmark and grounding aids ([#372](https://github.com/CVX-Hull/enactive/issues/372)), 5–6 November 2026 | [Development loop](acceptance/2026-11-06-development-loop.md) | Result and aid decisions in the record |
+| Ceiling benchmark and grounding aids ([#372](https://github.com/CVX-Hull/enactive/issues/372)) | [Development loop](acceptance/2026-11-06-development-loop.md) | Result and aid decisions in the record |
 | Evaluator re-score and power check ([#383](https://github.com/CVX-Hull/enactive/issues/383)) | [Development loop](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383) | Result and pre-registered process metrics in the record |
-| Long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382)), 7 November 2026 | [Long-horizon arm](acceptance/2026-11-07-long-horizon-382.md) | Result in the record |
+| Long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382)) | [Long-horizon arm](acceptance/2026-11-07-long-horizon-382.md) | Result in the record |
 
 ## Question and decision rule
 
@@ -33,8 +33,8 @@ Five ceiling runs of GPT-6.1 Terra decide the next branch, fixed before any run:
 - **Median survival at least 24 in-game hours:** perception and control are
   adequate for a frontier model. Next is a cost and latency reduction plan
   (cheaper models, programs), and #164's design resumes.
-- **Median below 24 in-game hours:** grounding is the bottleneck. Test the
-  game-neutral, player-owned aids below against the ceiling arm.
+- **Median below 24 in-game hours:** grounding is the bottleneck. Test the game-neutral, player-owned
+  aids of the [development-loop record](acceptance/2026-11-06-development-loop.md#results) against the ceiling arm.
 
 A survivor still alive when its allowance ends counts at its observed hours, so
 the rule asks whether the player survives 24 hours *within the allowance*. Using
