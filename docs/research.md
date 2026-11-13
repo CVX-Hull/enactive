@@ -204,3 +204,5 @@ superiority. The [platform decision](decisions/001-native-platform.md) records t
 broader alternatives. Reusing official Tiles/SDL and established controls avoids
 building a new renderer or general policy engine; our bounded bridge fills the
 verified integration gap, without claiming no reusable API exists anywhere.
+
+<!-- probe: documents-only change -->
