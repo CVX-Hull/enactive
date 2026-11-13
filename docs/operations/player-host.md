@@ -79,7 +79,7 @@ Pi's `estimateContextTokens`, reported usage and a text/image heuristic floor
 request existing sealed handoff when context is pressured. Estimates are not a
 provider token guarantee. No compaction, restore or fallback is added.
 
-The host serializes tools. A direct sealed `player-computer-result/1` handoff issuance,
+The host serializes tools. A direct sealed `player_handoff` issuance (its `player-computer-operation/1` record),
 or exact collection of its own pending original handoff, settles that actor.
 The driver verifies canonical context/digest and actual old host/MCP process-group
 quiescence before minting a successor under original time/attempt/input resources.

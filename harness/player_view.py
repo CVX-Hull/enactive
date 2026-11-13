@@ -91,10 +91,17 @@ def _operation_reason(value):
     return {
         'completed': 'Basic operations completed; application effect is not certified',
         'sealed': 'Actor sealed; successor requires actual host/MCP quiescence',
-        'pending': 'Original operation pending; collect this ID without replay',
-        'unknown': 'Delivery unknown; collect original evidence without replay. Further input is stopped.',
-        'partial': 'Delivery partial; collect original evidence without replay. Further input is stopped.',
+        'pending': 'Original operation pending; call computer_result with this operation_id; never replay input',
+        'unknown': 'Delivery unknown; input is stopped and never replayed. Call computer_result with this operation_id for the original evidence.',
+        'partial': 'Delivery partial; input is stopped and never replayed. Call computer_result with this operation_id for the original evidence.',
     }.get(value['status'], _diagnostic(value['reason']))
+
+
+#: The actor's record of one computer operation: the original receipts, source and handoff issuance. The model reads it
+#: from `computer_result`; for the other computer calls the host and the trace hold it and the model reads `short_result`.
+OPERATION_SCHEMA = 'player-computer-operation/1'
+#: What the model reads for `computer_observe`, `computer_input` and `player_handoff`.
+RESULT_SCHEMA = 'player-computer-result/2'
 
 
 def _operation(value):
@@ -103,7 +110,7 @@ def _operation(value):
                      {'image_unavailable', 'image_limit_bytes', 'image_note'})
     result.pop('deadline_monotonic')
     result.pop('remaining')
-    result['schema'] = 'player-computer-result/1'
+    result['schema'] = OPERATION_SCHEMA
     result['reason'] = _operation_reason(result)
     result['receipts'] = [_native(item) for item in result['receipts']]
     if result['source'] is not None:
@@ -213,6 +220,26 @@ def _project(value):
         result['reason'] = 'Input stop requested; application persistence and exit are not certified.'
         return result
     raise UnsupportedResult('Unsupported player result version')
+
+
+def short_result(operation):
+    """What the model reads of one operation record from `actor_result`: its status; the frame's `source_id` and
+    size where it has a frame (and `image_unavailable` when the pixels were not returned); and, while the operation
+    is neither completed nor sealed, its `operation_id` and a `reason` that says what to do next. Receipts, identities and times stay in `operation`."""
+    if type(operation) is not dict or operation.get('schema') != OPERATION_SCHEMA:
+        raise UnsupportedResult('Unsupported operation record')
+    status = operation['status']
+    result = dict(schema=RESULT_SCHEMA, status=status)
+    frame = operation['source']
+    if frame is not None:
+        result.update(source_id=frame['source_id'], width=frame['width'], height=frame['height'])
+    if operation.get('image_unavailable'):
+        result['image_unavailable'] = True
+    if status not in ('completed', 'sealed'):
+        # A refusal can follow a part-delivered batch, so it too names the record that shows what was delivered.
+        result['operation_id'] = operation['operation_id']
+        result['reason'] = operation['reason']
+    return result
 
 
 def actor_result(value):

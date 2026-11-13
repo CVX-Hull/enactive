@@ -33,8 +33,8 @@ route selection and host conformance are separate from model/gameplay qualificat
 
 Initial context consists of the guide, frozen objective and actual selected tool
 schema. The objective is ongoing; experiment countdowns and final-actor policy
-are absent from supplied prompt/tool/program views. Typed MCP projection preserves
-original evidence and uncertainty while excluding global resource accounting;
+are absent from supplied prompt/tool/program views. The typed MCP projection gives the model a
+short result and keeps the original evidence and uncertainty in the operation record while excluding global resource accounting;
 canonical operator records remain unchanged. The player uses optional typed memory/context and exact source reads as
 needed. A program receives actual selected image pixels and optional player
 interpretation, never engine facts. The provider image-history window retains all

@@ -51,7 +51,8 @@ The [player host contract](contracts/player-host.md) owns the substitutable
 
 The player keeps its ongoing user objective. Experiment quotas and final-actor
 policy remain outside its guide, prompt, MCP results and program views. MCP emits
-`player-computer-result/1` without global deadline/remaining data, plus
+`player-computer-result/2` (a short result; the full `player-computer-operation/1`
+record stays with the host and the trace) without global deadline/remaining data, plus
 `player-error/2` and `player-transport/2`; canonical operation/HTTP records remain
 unchanged. Programs require `player-program/2` with `view_schema:"program-view/4"`.
 

@@ -15,7 +15,10 @@ from .computer.protocol import canonical
 from .player_client import PlayerClient
 from .player.contracts import PlayerError
 from .player_tools import tool_specs
-from .player_view import actor_error, actor_result
+from .player_view import OPERATION_SCHEMA, actor_error, actor_result, short_result
+
+#: Calls whose operation record the model reads in short form (`short_result`).
+SHORT_RESULT_TOOLS = frozenset({'computer_observe', 'computer_input', 'player_handoff'})
 
 
 def make_server(client: PlayerClient) -> Server:
@@ -35,10 +38,14 @@ def make_server(client: PlayerClient) -> Server:
             except anyio.get_cancelled_exc_class():
                 client.stop('MCP operation cancelled; original collection only')
                 raise
-            content=[types.TextContent(type='text',text=canonical(actor_result(value)))]
+            view=actor_result(value)
+            # The model reads the short result; the full operation record rides beside it in structured content for the
+            # host and the trace, which never forward it. `computer_result` is the call that returns the full record.
+            record=view if params.name in SHORT_RESULT_TOOLS and view.get('schema') == OPERATION_SCHEMA else None
+            content=[types.TextContent(type='text',text=canonical(view if record is None else short_result(record)))]
             if png is not None:
                 content.append(types.ImageContent(type='image',data=base64.b64encode(png).decode('ascii'),mime_type='image/png'))
-            return types.CallToolResult(is_error=error,content=content)
+            return types.CallToolResult(is_error=error,content=content,structured_content=record)
         except Exception as exc:
             return types.CallToolResult(is_error=True,content=[types.TextContent(type='text',text=canonical(
                 actor_error(exc)))])

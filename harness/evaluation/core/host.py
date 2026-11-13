@@ -171,6 +171,11 @@ class HostFacts:
 
 
 def _text(result: object) -> object | None:
+    """The value a tool result carries: its full operation record where the model read a short result (a computer
+    observe, input or handoff recorded with `structuredContent`), else the JSON of its first text part (every earlier
+    trace, and each result the model reads whole)."""
+    if isinstance(result, dict) and isinstance(result.get('structuredContent'), dict):
+        return result['structuredContent']
     if not isinstance(result, dict) or not isinstance(result.get('content'), list):
         return None
     for part in result['content']:

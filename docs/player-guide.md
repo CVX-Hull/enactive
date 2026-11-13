@@ -42,9 +42,9 @@ harness stop rule or permission to replay uncertain input.
 
 | Tool | Use and consequence |
 | --- | --- |
-| `computer_observe` | Capture actual target PNG and mechanical source metadata. Identical pixels are valid. |
-| `computer_input` | Submit 1..32 basic key/text/click/wait actions. It returns original receipts and a capture when available. |
-| `computer_result` | Collect an original mechanical operation ID; never repeats input. |
+| `computer_observe` | Capture the actual target PNG. It returns the `status`, the frame's `source_id` and its `width` and `height` in pixels, and the PNG. Identical pixels are valid. |
+| `computer_input` | Submit 1..32 basic key/text/click/wait actions. It returns the `status` and, when a capture was made, its `source_id`, `width` and `height` and the PNG. Receipts, session and actor identifiers are not repeated; when the status is anything but `completed` (`pending`, `partial`, `unknown` or `refused`) it also gives the `operation_id` and a `reason` that says what to do next. A refusal can follow a batch delivered in part: read the record with `computer_result` before sending anything again. `image_unavailable` means the frame exists but its pixels were not returned; read them with `player_source`. |
+| `computer_result` | Collect an original mechanical operation ID; never repeats input. It returns the full original record of that operation, with its receipts and frame metadata. |
 | `computer_stop` | Permanently stop further automation. It does not save, quit or permit another actor. |
 | `player_source` | Read exact retained PNG by source ID, including explicitly remembered prior-session evidence. |
 | `player_memory_append/read/query/context` | Store or retrieve fallible claims, Work, decisions, procedures, corrections and candidate advice with sources/support. |
@@ -74,9 +74,10 @@ coordinates, not coordinates in a crop/thumbnail. The tool schema uses
 from that issued source. Inspect the image and choose the target yourself.
 Keys/text need no source, image-age/equality or game-phase condition.
 
-Delivered means SDL event handoff, not application consumption or useful effect.
+Delivered means SDL event handoff, not application consumption or useful effect;
+a `completed` status says the same and nothing more about the game.
 On partial/unknown delivery, retain the original ID and
-collect it; new input stays stopped. Never replay an uncertain action or try to
+collect it with `computer_result`; new input stays stopped. Never replay an uncertain action or try to
 restore authority by changing memory, source, actor or session.
 
 ## Optional knowledge and local programs

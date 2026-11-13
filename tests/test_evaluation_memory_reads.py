@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
-from harness.evaluation.core.host import (ToolCall, host_facts, memory_reads, names_record, record_ids,
+from harness.evaluation.core.host import (ToolCall, frame_source, host_facts, memory_reads, names_record, record_ids,
     returned_records, typed_text)
 from harness.evaluation.core.records import RecordWriter, StepRow
 from harness.evaluation.core.sources import read_carry, read_host
@@ -36,7 +36,8 @@ class Trace:
     def iso(self) -> str:
         return datetime.fromtimestamp(self.wall, timezone.utc).isoformat()
 
-    def call(self, tool: str, arguments: dict, result: dict, *, error: bool = False) -> None:
+    def call(self, tool: str, arguments: dict, result: dict, *, error: bool = False, record: dict | None = None) -> None:
+        """`record` is the full operation record the tool server serves beside a short result."""
         self.requests += 1
         self.wall += 1
         request = f'request-{self.requests}'
@@ -46,7 +47,8 @@ class Trace:
                 response_progress=dict(content_bytes=0, reasoning_bytes=12)),
             dict(common, type='tool-start', tool_call_id='call', tool=tool, arguments=arguments),
             dict(common, type='tool-result', tool_call_id='call', tool=tool,
-                result=dict(content=[dict(type='text', text=json.dumps(result))], isError=error))]
+                result=dict(content=[dict(type='text', text=json.dumps(result))], isError=error,
+                    **({} if record is None else dict(structuredContent=record))))]
 
     def type(self, text: str) -> None:
         frame = f'{SESSION}-{len(self.events)}'
@@ -115,6 +117,21 @@ def test_reads_list_records_held_ids_and_the_calls_around_them(tmp_path):
     assert (read.request, [record['id'] for record in read.records], read.held) == (7, [LOCKER], {LOCKER})
     assert [r.detail for r in read.references] == ['supports']
     assert memory_reads(facts_of(run))[0].held == frozenset()  # without the contexts nothing is known to be carried
+
+
+def test_a_short_computer_result_gives_its_operation_and_frame_from_the_full_record_and_its_text_size_from_the_text(tmp_path):
+    frame = f'{SESSION}-3'
+    shown = dict(schema='player-computer-result/2', status='completed', source_id=frame, width=4, height=4)
+    full = dict(schema='player-computer-operation/1', operation_id='7' * 32, status='completed', source=dict(source_id=frame))
+    trace = Trace(FIRST, BASE)
+    trace.call('computer_input', dict(actions=[]), shown, record=full)
+    trace.call('computer_input', dict(actions=[]), dict(operation_id='8' * 32, source=dict(source_id=f'{SESSION}-4')))  # an earlier trace
+    trace.write(tmp_path / 'actors' / '001')
+    host = dict([read_host(tmp_path / 'actors' / '001' / 'host.jsonl', '001')])
+    short, earlier = host_facts(tuple(host), host).calls
+    assert (short.operation_id, frame_source(short)) == ('7' * 32, frame)
+    assert short.result_bytes == len(json.dumps(shown).encode())  # what the model read, not the record beside it
+    assert (earlier.operation_id, frame_source(earlier)) == ('8' * 32, f'{SESSION}-4')
 
 
 def test_text_and_record_helpers():

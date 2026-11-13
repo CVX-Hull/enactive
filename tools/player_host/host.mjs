@@ -309,13 +309,21 @@ export function projectToolResultForTelemetry(result) {
   return projected;
 }
 
-/** Source identity of a computer/source tool result (`source.source_id` in its JSON text), else null. */
+/** The full record of a result the tool server shortened for the model: its structured content (the operation
+ * record of a computer observe, input or handoff). Null for a result the model reads whole. */
+const resultRecord = result => object(result?.structuredContent) ? result.structuredContent : null;
+
+/** Source identity of a computer/source tool result, else null: `source.source_id` of its full record, or of its
+ * JSON text where the model reads the result whole (`computer_result`, `player_source`). */
 function resultSourceId(result) {
+  const valid = id => typeof id === 'string' && id.length > 0 && id.length <= 128;
+  const record = resultRecord(result);
+  if (record) return object(record.source) && valid(record.source.source_id) ? record.source.source_id : null;
   for (const part of (Array.isArray(result?.content) ? result.content : []).filter(part => part.type === 'text').slice(0, 8)) {
     let value;
     try { value = JSON.parse(part.text); } catch { continue; }
     const id = object(value) && object(value.source) ? value.source.source_id : undefined;
-    if (typeof id === 'string' && id.length > 0 && id.length <= 128) return id;
+    if (valid(id)) return id;
   }
   return null;
 }
@@ -562,7 +570,9 @@ function inspectHandoff(name, args, result, pending, session, actorId) {
   if (result.isError === true) return {};
   let value;
   try {
-    value = JSON.parse(result.content?.find(part => part.type === 'text')?.text);
+    // A direct handoff is shortened for the model; its full record is the structured content. A collection
+    // returns the record whole, and a transport receipt has no record: both are the first text.
+    value = resultRecord(result) ?? JSON.parse(result.content?.find(part => part.type === 'text')?.text);
   } catch {
     throw new HostError('invalid-handoff-receipt');
   }
@@ -576,7 +586,7 @@ function inspectHandoff(name, args, result, pending, session, actorId) {
     valid(value.status === 'unknown' && typeof value.reason === 'string');
     return {pending:origin};
   }
-  valid(value.schema === 'player-computer-result/1');
+  valid(value.schema === 'player-computer-operation/1');
   if (['pending', 'unknown'].includes(value.status)) {
     valid(value.handoff === null);
     return {pending:origin};

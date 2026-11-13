@@ -139,11 +139,40 @@ dispatch. Source/handoff are null unless present. MCP cancellation first request
 independent permanent Pause, then abandons the await. Result/source reads have no effects.
 
 At MCP serialization, [the actor projection](../../harness/player_view.py) returns
-`player-computer-result/1`: the operation identity, status, original receipts,
-source and handoff stay intact, but `deadline_monotonic` and global `remaining`
-are absent. This covers immediate results, exact collection and declared nested
-computer results in `player_result`. Native `computer-receipt/2` contents remain
-original evidence. Model-facing errors and transport uncertainty use
+the operation record `player-computer-operation/1`: the operation identity, status,
+original receipts, source and handoff stay intact, but `deadline_monotonic` and
+global `remaining` are absent. This covers immediate results, exact collection and
+declared nested computer results in `player_result`. Native `computer-receipt/2`
+contents remain original evidence.
+
+**What the model reads of a computer call.** Receipts and identifiers say nothing
+about the game and were most of the player's prompt, so the tool server
+([MCP adapter](../../harness/player_mcp.py)) returns only what the player acts on.
+
+| Call | The model reads | The host and the trace hold |
+| --- | --- | --- |
+| `computer_observe`, `computer_input`, `player_handoff` | `player-computer-result/2`, the short result below | The operation record, as the result's MCP `structuredContent`, which the host never forwards to the model |
+| `computer_result` | The operation record itself: collecting an original operation is how the player sees its receipts, and it is called only after a result that was pending, partial or unknown | The same record as the result text |
+
+The short result is closed JSON: `schema`, `status`; `source_id`, `width` and
+`height` (the frame's size in the image pixels a click uses) when the operation has a
+frame, and `image_unavailable:true` when its pixels were not returned; `operation_id`
+while the status is `pending`, `partial` or `unknown`; and `reason`, which says what to
+do next, for every status but `completed` and `sealed`. Completed with a frame:
+`{"schema":"player-computer-result/2","status":"completed","source_id":"<session>-<n>","width":1280,"height":720}`.
+An input with no frame omits those three fields. A partial or unknown delivery adds
+`operation_id` and `reason` ("input is stopped and never replayed; call
+`computer_result` with this `operation_id`"). A refused operation adds its `reason`
+and its `operation_id` too: a refusal can follow a batch that was delivered in part,
+and `computer_result` shows which actions were. The session, actor, kind, creation time, receipts, source record and
+handoff issuance are not in it. The session database and the canonical operation
+are unchanged; the host reads `source_id` and the full handoff issuance from the
+record. `player-computer-result/1` is retired: the host rejects it as a handoff
+receipt. Sealed traces in the old form stay readable by the evidence readers, which
+take the operation and frame from the record where a result has one and from the
+text otherwise.
+
+Model-facing errors and transport uncertainty use
 `player-error/2` and `player-transport/2`, preserving correction/control facts and
 original collection identity without experiment countdowns. Unknown mechanical
 versions fail with a bounded unsupported-result error, never raw pass-through.

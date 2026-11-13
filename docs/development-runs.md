@@ -71,7 +71,7 @@ player's context:
 | Setting | Value |
 | --- | --- |
 | Route | OpenRouter, `openai/gpt-6.1-terra`, pinned `openai`, no fallback, medium effort, default tier |
-| Context | 262,144-token window, 16,384 output tokens, 32,768 reserve (successor handoff when reached); 39 images, evicted in blocks of 10 |
+| Context | 262,144-token window, 16,384 output tokens, 32,768 reserve (successor handoff when reached); 39 images, evicted in blocks of 20 |
 | Requests | 250 charged HTTP attempts including retries, across at most 2 hosts |
 | Time | 7,200 host seconds; 7,800 custodian seconds |
 | Supervision | [Supervised launch](operations/campaign-supervision.md); nobody is required to watch |

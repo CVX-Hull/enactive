@@ -12,7 +12,7 @@ test('completed handoff fences later batch inputs and ends even after an earlier
   assert.deepEqual(calls.filter(c=>c.tool==='mutate').map(c=>[c.phase,c.index]),[['start',1],['end',1]]);
   assert.equal(events.filter(e=>e.type==='handoff').length,1);
   const receipt=events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result;
-  assert.equal(JSON.parse(receipt.content[0].text).handoff.operation_id,handoffId);
+  assert.equal(receipt.structuredContent.handoff.operation_id,handoffId);
   assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),[['mutate','handoff',false]]);
 });
 test('direct handoff settles without another model turn',async t=>{
@@ -117,7 +117,21 @@ test('isError handoff cannot establish a pending origin even when it carries a s
   assert.equal(result.reason,'task_complete');assert.equal(result.requests,3);
   assert.equal(events.filter(e=>e.type==='handoff').length,0);
 });
-test('first actual MCP text owns the handoff receipt even when extra text follows',async t=>{
+test('the full record owns a direct handoff receipt even when extra text follows the short result',async t=>{
   const {result}=await scenario(t,[reply(null,[['player_handoff',{mode:'extra-text'}]])],{enabledTools:handoffTools});
   assert.equal(result.reason,'handoff');assert.equal(result.requests,1);
+});
+test('the model reads the short handoff result and the trace holds the full record beside it',async t=>{
+  const {events,payloads}=await scenario(t,[reply(null,[['player_handoff',{...handoffArgs,mode:'pending'}]]),reply()],{enabledTools:handoffTools});
+  const result=events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result;
+  assert.equal(result.structuredContent.schema,'player-computer-operation/1');
+  assert.equal(result.structuredContent.operation_id,handoffId);
+  const sent=payloads[1].messages.find(m=>m.role==='tool').content;
+  const text=typeof sent==='string'?sent:sent.map(part=>part.text).join('');
+  assert.equal(JSON.parse(text.replace(/^MCP isError: true/,'')).schema,'player-computer-result/2');
+  assert.ok(!text.includes('actor_id')&&!text.includes('session')&&!text.includes('receipts'));
+});
+test('the retired result name is not a handoff receipt',async t=>{
+  const {result,payloads}=await scenario(t,[reply(null,[['player_handoff',{...handoffArgs,mode:'retired-result'}],['mutate',{mode:'ok'}]])],{enabledTools:handoffTools});
+  assert.equal(result.ok,false);assert.equal(result.reason,'invalid-handoff-receipt');assert.equal(payloads.length,1);
 });

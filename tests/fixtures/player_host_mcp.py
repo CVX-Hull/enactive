@@ -41,10 +41,13 @@ async def observe(fail: bool = False) -> CallToolResult:
 async def observe_source(n: int = 0) -> CallToolResult:
     """Computer-style result: distinct image bytes and a source identity per call."""
     record({"tool": "observe_source", "n": n})
-    value = {"schema": "player-computer-result/1", "status": "completed", "source": {"source_id": f"{'a' * 32}-{n}"}}
+    source_id = f"{'a' * 32}-{n}"
+    # As the tool server serves an observe: the model reads the short result, and the host reads the full record.
+    shown = {"schema": "player-computer-result/2", "status": "completed", "source_id": source_id, "width": 1, "height": 1}
+    full = {"schema": "player-computer-operation/1", "status": "completed", "source": {"source_id": source_id}}
     image = base64.b64encode(f"fixture-image-{n}".encode()).decode()
-    return CallToolResult(content=[TextContent(type="text", text=json.dumps(value)),
-                                   ImageContent(type="image", data=image, mimeType="image/png")], structuredContent=value)
+    return CallToolResult(content=[TextContent(type="text", text=json.dumps(shown)),
+                                   ImageContent(type="image", data=image, mimeType="image/png")], structuredContent=full)
 
 @server.tool()
 async def mutate(mode: str, index: int = 0) -> str:
@@ -106,12 +109,14 @@ def handoff_receipt(mode):
     issued = dict(schema="player-handoff/1", operation_id=OPERATION, session=SESSION,
         actor_id=ACTOR, context_id="4" * 32, context_sha256="5" * 64,
         sealed_wall=123456.0, grants_authority=False)
-    value = dict(schema="player-computer-result/1", operation_id=OPERATION,
+    value = dict(schema="player-computer-operation/1", operation_id=OPERATION,
         session=SESSION, actor_id=ACTOR, kind="handoff", status="sealed",
         created_wall=123450.0, receipts=[], source=None, reason=None, handoff=issued)
     if mode == "refused":
-        return dict(schema="player-computer-result/1", operation_id=OPERATION,
+        return dict(schema="player-computer-operation/1", operation_id=OPERATION,
             session=SESSION, actor_id=ACTOR, kind="handoff", status="refused", handoff=None)
+    if mode == "retired-result":
+        value.update(schema="player-computer-result/1")
     if mode in ("pending", "another-pending"):
         value.update(status="pending", handoff=None)
         if mode == "another-pending":
@@ -149,10 +154,20 @@ def handoff_receipt(mode):
 async def player_handoff(ids: list[str] | None = None, summary: str = "", mode: str = "complete") -> CallToolResult:
     record(dict(tool="player_handoff", mode=mode))
     value = handoff_receipt(mode)
-    content = [TextContent(type="text", text="{" if mode == "malformed" else json.dumps(value))]
+    # As the tool server serves a direct handoff: the model reads a short result and the host reads the full
+    # operation record in the structured content. A transport receipt or an error has no record and is the text.
+    if mode != "malformed" and value.get("kind") == "handoff" and "status" in value and value["schema"].startswith("player-computer-"):
+        shown = dict(schema="player-computer-result/2", status=value["status"])
+        if value["status"] == "pending":
+            shown.update(operation_id=value["operation_id"], reason="Original operation pending")
+        content = [TextContent(type="text", text=json.dumps(shown))]
+        structured = value
+    else:
+        content = [TextContent(type="text", text="{" if mode == "malformed" else json.dumps(value))]
+        structured = None
     if mode == "extra-text":
         content.append(TextContent(type="text", text="Supplemental player-visible context"))
-    return CallToolResult(content=content, isError=mode in ("error", "not-admitted"))
+    return CallToolResult(content=content, structuredContent=structured, isError=mode in ("error", "not-admitted"))
 
 
 @server.tool()

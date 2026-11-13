@@ -100,17 +100,22 @@ def _arguments(tool: str, arguments) -> dict:
 def _result(result) -> dict:
     """The outcome of a tool call: error flag plus allowlisted fields of its JSON text."""
     out = dict(error=bool(isinstance(result, dict) and result.get('isError')))
+    values = []
     for part in (result or {}).get('content', []) if isinstance(result, dict) else []:
         if isinstance(part, dict) and part.get('type') == 'text':
             try:
-                value = json.loads(part['text'])
+                values.append(json.loads(part['text']))
             except (ValueError, TypeError):
                 continue
-            if isinstance(value, dict):
-                out.update(_pick(value, RESULT_FIELDS))
-                source = value.get('source')
-                if isinstance(source, dict) and isinstance(source.get('source_id'), str):
-                    out['source_id'] = source['source_id']
+    # A computer result the model read short carries its full operation record beside the text; that record wins.
+    if isinstance(result, dict) and isinstance(result.get('structuredContent'), dict):
+        values.append(result['structuredContent'])
+    for value in values:
+        if isinstance(value, dict):
+            out.update(_pick(value, RESULT_FIELDS))
+            source = value.get('source')
+            if isinstance(source, dict) and isinstance(source.get('source_id'), str):
+                out['source_id'] = source['source_id']
     return out
 
 

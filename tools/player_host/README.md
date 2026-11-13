@@ -165,7 +165,11 @@ minute and at most half). See the contract's
 Every actor shares one system prompt and tool table. The ongoing user objective
 survives actor turnover; experiment quotas, final-actor policy and ending reserves
 stay in operator accounting. MCP's typed actor projection returns
-`player-computer-result/1`, `player-error/2` and `player-transport/2`, without global
+`player-computer-result/2` (a short result: status, frame `source_id` and size, and for
+a pending, partial or unknown delivery the operation identifier and next step; the full
+`player-computer-operation/1` record rides in `structuredContent`, which the host reads
+for `source_id` and the handoff receipt, records in the trace and never forwards to the
+model), `player-error/2` and `player-transport/2`, without global
 deadline/remaining fields; canonical operator records retain original accounting.
 The host reuses Pi's `estimateContextTokens`, reported usage and a heuristic
 text/image floor to request the existing sealed handoff before critical context
@@ -307,9 +311,11 @@ remaining calls and inference. The bounded provider-only recovery above never
 retries a tool/gameplay submission or grants reconnect, replay, fallback,
 automatic compaction or session restoration.
 
-A sealed `player-computer-result/1` response from `player_handoff`, or collection
+A sealed `player_handoff` response, or collection
 through `computer_result` of this host's one pending original handoff, ends this
-host. The first actual MCP text must bind matching 32-character hex operation/session/actor
+host. The receipt is the operation record `player-computer-operation/1`: the structured
+content of a direct `player_handoff` result (the model reads only its short
+`player-computer-result/2` text) or the first MCP text of a collection. It must bind matching 32-character hex operation/session/actor
 IDs and a current `player-handoff/1` issuance with matching IDs, a 32-character hex context ID,
 64-character hex context digest, positive finite sealing time and `grants_authority:false`.
 There are no game-phase, menu, identity or source-checkpoint requirements.

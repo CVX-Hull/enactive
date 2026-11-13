@@ -240,7 +240,12 @@ native exit and owned absence remain separate facts.
 
 Handoff settles only for the direct sealed actor-view issuance from
 `player_handoff` or exact collection of this host's pending original handoff.
-The host consumes `player-computer-result/1` and `player-transport/2`; underlying
+The host consumes the operation record `player-computer-operation/1` and
+`player-transport/2`: the record is the structured content of a direct `player_handoff`
+result, whose text is the short `player-computer-result/2` the model reads, and the
+text of a `computer_result` collection, which returns it whole
+([computer control](computer-control.md#computer-operations-and-custody)). The retired
+`player-computer-result/1` is not a receipt. Underlying
 `player-handoff/1` identifies this actor/session and grants no authority. After
 handoff it dispatches no further tool and closes its MCP child. The driver checks
 canonical store issuance, context digest and actual old host/MCP group absence
@@ -258,6 +263,7 @@ kinds it does not account for, and observers project only known kinds.
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
 | `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). An archived trace recorded before the event existed has none, and readers report its absence explicitly. |
 | `response-complete` | One per HTTP attempt, a failed or aborted one included. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` is what this attempt counted toward the limit, and `cost_counted_as` says which: `provider-reported` (the reported cost) or `unpriced-bound` (the route's `unpriced_request_usd`). `spent_usd` is the host's running total after it. |
+| `tool-result` | The MCP result as the host received it, with each image replaced by an `image_reference`: `content` is what the model reads, and `structuredContent`, where the tool server supplies one, is the full operation record of a computer observe, input or handoff that the model reads short. Readers take the operation and frame from the record where there is one, else from the text; a trace recorded before the short form holds the full record in the text. `result` is the tool server's payload and is versioned by the `schema` inside it, not by the telemetry version: the short form is `player-computer-result/2` and the record `player-computer-operation/1`. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
 | `settled` | Last, with `ok`, reason, control identity where applicable, requests matching charged attempt count, the host's total `spent_usd` and its count of `unpriced_requests`. A settlement written before the host started carries neither. |
@@ -300,8 +306,9 @@ frozen omission marker inside its tool result's text; listed directly after that
 `tool_result_text`). Its `sha256` equals the `image_reference` digest in `tool-result` and
 the marker's `SHA256=`, and `bytes` is the decoded size. `tool_call_id`/`image_index`
 match `context-image-projection`'s `omissions`, whose preview stays capped at 16; the
-manifest lists every omitted image. `source_id` is present when the tool result's JSON
-text has `source.source_id`. Tool definitions are not parts; `payload_sha256` on
+manifest lists every omitted image. `source_id` is present when the tool result has a
+frame: `source.source_id` of its structured operation record, or of its JSON text where
+the model reads the result whole (`computer_result`, `player_source`). Tool definitions are not parts; `payload_sha256` on
 `request-start` covers the whole body.
 
 Privacy: a manifest holds indexes, roles, kinds, sizes, SHA-256 digests and tool,
