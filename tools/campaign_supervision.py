@@ -86,7 +86,7 @@ def terminal_coverage(receipt: dict, *, session: str, source_commit: str, ready_
     try:
         cleanup = receipt['cleanup']
         native = cleanup['native']
-        if (receipt['schema'] != 'campaign-receipt/3' or receipt['session'] != session
+        if (receipt['schema'] != 'campaign-receipt/4' or receipt['session'] != session
                 or receipt['source_commit'] != source_commit
                 or ready_wall is None
                 or not finite(custody_end)

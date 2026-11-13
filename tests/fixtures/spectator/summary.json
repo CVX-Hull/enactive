@@ -130,7 +130,7 @@
      "projected_one_hour": 15.6565,
      "ceiling": 130.013682
     },
-    "threshold": "met when spend or the one-hour projection exceeds the manifest ceiling",
+    "threshold": "met when the configured-rate estimate of spend, or its one-hour projection, exceeds the run's declared limit; the limit itself is enforced on provider-reported cost, not on this estimate",
     "met": false,
     "detail": "",
     "dollars_per_minute": 0.19463047952755017

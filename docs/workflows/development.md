@@ -64,9 +64,9 @@ scope; this policy itself grants no provider spending or data-export permission.
 Choose models/context/harnesses by observed useful outcomes and apparent time to
 useful progress, including useful local execution while inference is pending.
 Call count, API duration, cache hits and token cost remain diagnostic measures.
-Report known configured API estimates, provider invoices, missing usage and
-conservative worst-case reservations separately; a reservation is not measured
-spending. Include setup/review/rework burden and explicitly unknown labor when
+Report configured API estimates, provider-reported cost, provider invoices and
+requests with no cost record separately; a request counted at its bound is not
+measured spending. Include setup/review/rework burden and explicitly unknown labor when
 judging the whole workflow. No labor database, cost-saving quota or per-action
 approval ceremony is required.
 

@@ -15,15 +15,18 @@ SESSION = 'a' * 32
 COMMIT = 'b' * 40
 
 
-def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, attempts: int = 10) -> Path:
+def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounting) -> Path:
+    """A finished package whose receipt counted $1.0 of reported cost and one request at the $0.4096 bound."""
     directory = root / name
     directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION,
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=SESSION,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
     if receipt:
-        (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/3', session=SESSION,
+        (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/4', session=SESSION,
             source_commit=COMMIT, outcome='player_cannot_continue_unassessed', ended_wall=1794038818.1,
-            elapsed_seconds=99.6, accounting=dict(attempts_charged=attempts))))
+            elapsed_seconds=99.6, accounting=dict(spend_limit_usd='5', reported_usd='1.0', unpriced_requests=1,
+                unpriced_request_usd='0.4096', spent_usd='1.4096', attempts_charged=10, allocated_max_attempts=40,
+                spend_complete=True) | accounting)))
     return directory
 
 
@@ -43,32 +46,54 @@ def write(path: Path, *rows: dict) -> Path:
 def test_record_derives_a_row_from_the_package_and_refuses_repeats_and_missing_receipts(tmp_path, capsys):
     ledger = write(tmp_path / 'runs.jsonl')
     directory = package(tmp_path / 'packages')
-    arguments = ['--ledger', str(ledger), 'record', str(directory), '--study', '999', '--label', 'lh9a1',
-                 '--provider-records', '9', '--provider-usd', '1.0', '--unpriced-attempt-usd', '0.4096']
+    arguments = ['--ledger', str(ledger), 'record', str(directory), '--study', '999', '--label', 'lh9a1']
     assert main(arguments) == 0
     recorded = read_ledger(ledger)
-    assert recorded == [row()]  # rounded wall time, UTC end, labels and the unpriced charge are all derived
+    # Rounded wall time, UTC end and labels are derived; the spend and its split are the receipt's, and the row
+    # passes the ledger's own identity: spend is provider cost plus unpriced attempts at their charge.
+    assert recorded == [row()]
     assert main(arguments) == 1 and 'already recorded' in capsys.readouterr().err
-    assert main(['--ledger', str(ledger), 'record', str(package(tmp_path / 'other', receipt=False)), '--study', '999',
-                 '--provider-records', '0', '--provider-usd', '0', '--unpriced-attempt-usd', '0.4096']) == 1
+    assert main(['--ledger', str(ledger), 'record', str(package(tmp_path / 'other', receipt=False)), '--study', '999']) == 1
     assert 'no receipt.json' in capsys.readouterr().err
-    assert main(arguments[:-6] + ['--provider-records', '11', '--provider-usd', '1', '--unpriced-attempt-usd', '0.4096']) == 1
-    assert 'between 0 and the 10 charged attempts' in capsys.readouterr().err
+    for name, accounting, message in (('lh9a4', dict(spent_usd='1.5'), 'not its reported_usd plus unpriced requests'),
+                                      ('lh9a5', dict(reported_usd=1.0), 'derived row is invalid')):
+        assert main(['--ledger', str(ledger), 'record', str(package(tmp_path / name, name, **accounting)), '--study', '999']) == 1
+        assert message in capsys.readouterr().err
+    with pytest.raises(SystemExit):  # the figures are never typed in
+        main([*arguments, '--provider-usd', '1.0'])
+    capsys.readouterr()
     assert len(read_ledger(ledger)) == 1
 
 
-def test_record_defaults_the_label_keeps_plain_decimals_and_refuses_old_manifests(tmp_path, capsys):
+def test_an_incomplete_receipt_is_recorded_only_as_its_upper_bound(tmp_path, capsys):
+    """Spend that could not be counted is refused by default. With the flag the row holds the most the run can have
+    spent: its declared limit plus one request at the bound."""
     ledger = write(tmp_path / 'runs.jsonl')
-    directory = package(tmp_path / 'packages')
-    assert main(['--ledger', str(ledger), 'record', str(directory), '--study', '999', '--provider-records', '10',
-                 '--provider-usd', '0.0000000', '--unpriced-attempt-usd', '0.4096']) == 0
-    assert read_ledger(ledger)[0] | {} == row(spend_usd='0.0000000', provider_usd='0.0000000', unpriced_attempts=0)
-    other = package(tmp_path / 'more', name='lh9a2')
-    manifest = json.loads((other / 'manifest.json').read_text()) | dict(schema='campaign-run/4', session='c' * 32)
-    (other / 'manifest.json').write_text(json.dumps(manifest))
-    assert main(['--ledger', str(ledger), 'record', str(other), '--study', '999', '--provider-records', '0',
-                 '--provider-usd', '0', '--unpriced-attempt-usd', '0.4096']) == 1
-    assert "unsupported manifest 'campaign-run/4'" in capsys.readouterr().err
+    incomplete = package(tmp_path / 'packages', spend_complete=False, reported_usd='0.3', unpriced_requests=0,
+                         spent_usd='0.3', attempts_charged=40)
+    arguments = ['--ledger', str(ledger), 'record', str(incomplete), '--study', '999']
+    assert main(arguments) == 1
+    assert 'spend as incomplete' in capsys.readouterr().err and read_ledger(ledger) == []
+    assert main([*arguments, '--record-upper-bound']) == 0
+    recorded = read_ledger(ledger)  # reading checks the identity: 5 + 1 x 0.4096
+    assert recorded == [row(attempts=40, provider_usd='5', unpriced_attempts=1, unpriced_attempt_usd='0.4096', spend_usd='5.4096')]
+    assert totals(recorded, 999, None)['spend_usd'] == '5.4096'
+    complete = package(tmp_path / 'more', name='lh9a2')
+    assert main(['--ledger', str(ledger), 'record', str(complete), '--study', '999', '--record-upper-bound']) == 1
+    assert 'spend as complete' in capsys.readouterr().err and len(read_ledger(ledger)) == 1
+
+
+def test_record_defaults_the_label_and_refuses_earlier_package_versions(tmp_path, capsys):
+    ledger = write(tmp_path / 'runs.jsonl')
+    directory = package(tmp_path / 'packages', reported_usd='0', unpriced_requests=0, spent_usd='0')
+    assert main(['--ledger', str(ledger), 'record', str(directory), '--study', '999']) == 0
+    assert read_ledger(ledger)[0] == row(spend_usd='0', provider_usd='0', unpriced_attempts=0)
+    for name, file, schema, message in (('lh9a2', 'manifest.json', 'campaign-run/5', "unsupported manifest 'campaign-run/5'"),
+                                        ('lh9a3', 'receipt.json', 'campaign-receipt/3', "unsupported receipt 'campaign-receipt/3'")):
+        other = package(tmp_path / name, name=name)
+        (other / file).write_text(json.dumps(json.loads((other / file).read_text()) | dict(schema=schema)))
+        assert main(['--ledger', str(ledger), 'record', str(other), '--study', '999']) == 1
+        assert message in capsys.readouterr().err
 
 
 @pytest.mark.parametrize('bad, message', [

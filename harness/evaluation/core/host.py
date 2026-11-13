@@ -1,4 +1,8 @@
-"""Facts from player-host/3 traces: decisions, cost, tool calls and host-side events.
+"""Facts from player-host/4 traces: decisions, cost, tool calls and host-side events.
+
+Dollars here are the configured-rate estimate of each response (`usage.cost.total`), the one figure every run
+carries. The cost the provider reported, which the host counts toward the dollar limit, is not read. An archived
+player-host/3 trace gives the same facts: no field read here differs between the two versions.
 
 Request ordinals are cumulative over the run's actors in directory order. They only index
 the cumulative tokens and dollars of a step (the run's decision count comes from completed

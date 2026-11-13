@@ -25,7 +25,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def event(self, kind, at, **fields):
         if kind == "host-start":
-            fields = {"schema": "player-host/3", "telemetry_version": 3, **fields}
+            fields = {"schema": "player-host/4", "telemetry_version": 4, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
@@ -218,12 +218,14 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(host_summary([path])["coverage"], dict(invalid=1))
 
     def test_only_exact_current_host_version_is_interpreted(self):
+        # A loose trace has no archived session: the version the dollar limit replaced is refused like any other.
         for fields in ({}, {"schema": "pi-player-host/4", "telemetry_version": 2},
                        {"schema": "player-host/1", "telemetry_version": 2},
-                       {"schema": "player-host/3", "telemetry_version": 2},
-                       {"schema": "player-host/2", "telemetry_version": 3},
-                       {"schema": "player-host/3", "telemetry_version": 1},
-                       {"schema": "player-host/3", "telemetry_version": True}):
+                       {"schema": "player-host/3", "telemetry_version": 3},
+                       {"schema": "player-host/3", "telemetry_version": 4},
+                       {"schema": "player-host/4", "telemetry_version": 3},
+                       {"schema": "player-host/4", "telemetry_version": 1},
+                       {"schema": "player-host/4", "telemetry_version": True}):
             row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
             self.assertEqual(row["coverage"], "unsupported_version")
             self.assertNotIn("requests", row)
@@ -275,16 +277,50 @@ class HostAnalysisTests(unittest.TestCase):
         actor.mkdir(parents=True)
         path = actor / "host.jsonl"
         path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
-        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/5", source_commit="abc")))
-        receipt = dict(schema="campaign-receipt/3", outcome="player_task_complete_unassessed",
-            normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/3", attempts_charged=1))
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/6", source_commit="abc")))
+        receipt = dict(schema="campaign-receipt/4", outcome="player_task_complete_unassessed",
+            normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/4", attempts_charged=1,
+                reported_usd="0.004", unpriced_requests=0, unpriced_request_usd="0.25", spent_usd="0.004", spend_complete=True))
         (self.root / "receipt.json").write_text(json.dumps(receipt))
         row = analyze_trace(path)["campaign_evidence"]
         self.assertEqual(row["receipt.json"]["outcome"], "player_task_complete_unassessed")
         self.assertFalse(row["receipt.json"]["normal_save_claimed_by_harness"])
         self.assertEqual(row["receipt.json"]["driver"]["attempts_charged"], 1)
-        receipt["driver"]["schema"] = "player-driver/1"
-        (self.root / "receipt.json").write_text(json.dumps(receipt))
-        row = analyze_trace(path)["campaign_evidence"]
-        self.assertEqual(row["metadata_coverage"]["receipt.json"], "unsupported_driver_version")
-        self.assertNotIn("driver", row["receipt.json"])
+        self.assertEqual((row["receipt.json"]["driver"]["spent_usd"], row["receipt.json"]["driver"]["spend_complete"]), ("0.004", True))
+        # The driver record the dollar limit replaced is refused beside a current receipt, as any other version is.
+        for old in ("player-driver/3", "player-driver/1"):
+            receipt["driver"]["schema"] = old
+            (self.root / "receipt.json").write_text(json.dumps(receipt))
+            row = analyze_trace(path)["campaign_evidence"]
+            self.assertEqual(row["metadata_coverage"]["receipt.json"], "unsupported_driver_version")
+            self.assertNotIn("driver", row["receipt.json"])
+
+    def test_an_archived_session_is_summarised_in_the_versions_the_index_lists(self):
+        """A telemetry-3 trace and its /5 manifest and /3 receipt are read inside the run directory of a session the
+        closed archive index lists, and nowhere else."""
+        session = "a" * 32
+        index = self.root / "archive-sessions.json"
+        index.write_text(json.dumps(dict(schema="archive-sessions/1", sessions={session: dict(study="sealed", run="old01",
+            versions=dict(manifest="campaign-run/5", receipt="campaign-receipt/3", driver="player-driver/3",
+                host="player-host/3", host_telemetry=3, run_ending="campaign-watch-terminal/4"))})))
+        run = self.root / "old01"
+        actor = run / "actors/001"
+        actor.mkdir(parents=True)
+        path = actor / "host.jsonl"
+        old = dict(schema="player-host/3", telemetry_version=3)
+        path.write_text(json.dumps(self.event("host-start", 0, session=session, **old)) + "\n")
+        (run / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/5", session=session, source_commit="abc")))
+        (run / "receipt.json").write_text(json.dumps(dict(schema="campaign-receipt/3", outcome="incomplete",
+            driver=dict(schema="player-driver/3", attempts_charged=2, configured_estimate_usd=0.5))))
+        with mock.patch("harness.evaluation.core.sources.ARCHIVE_INDEX", index):
+            row = analyze_trace(path)
+            self.assertEqual((row["coverage"], row["configuration"]["schema"]), ("player_host", "player-host/3"))
+            evidence = row["campaign_evidence"]
+            self.assertEqual(evidence["metadata_coverage"], {"manifest.json": "recorded", "receipt.json": "recorded"})
+            self.assertEqual(evidence["receipt.json"]["driver"], dict(schema="player-driver/3", outcome=None, attempts_charged=2,
+                host_seconds_used=None, configured_estimate_usd=0.5, missing_usage_attempts=None))
+            # The same trace outside its run directory, or naming another session, is an unsupported version.
+            loose = self.trace([self.event("host-start", 0, session=session, **old)])
+            self.assertEqual(analyze_trace(loose)["coverage"], "unsupported_version")
+            path.write_text(json.dumps(self.event("host-start", 0, session="b" * 32, **old)) + "\n")
+            self.assertEqual(analyze_trace(path)["coverage"], "unsupported_version")

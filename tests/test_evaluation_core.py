@@ -146,7 +146,7 @@ class Run:
         actor = name or f'{len(self.actors) + 1:032x}'
         self.store.add_actor(actor, hashlib.sha256(actor.encode()).hexdigest())
         self.actors.append(actor)
-        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/3', telemetry_version=3, actor_id=actor,
+        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/4', telemetry_version=4, actor_id=actor,
             session=self.session)]
         return actor
 
@@ -252,7 +252,7 @@ class Run:
             (directory / 'actor.json').write_text(json.dumps(dict(schema='player-adapter/1', actor_id=actor)))
             (directory / 'context.txt').write_text('GUIDE')
             (directory / 'prompt.txt').write_text(f'ASSIGNMENT {index}')
-        self.manifest = dict(schema='campaign-run/5', session=self.session, source_commit='fixture', **manifest)
+        self.manifest = dict(schema='campaign-run/6', session=self.session, source_commit='fixture', **manifest)
         if memory is not None:
             self.manifest['player_store'] = str(memory)
         (self.directory / 'manifest.json').write_text(json.dumps(self.manifest))
@@ -1132,11 +1132,16 @@ def test_unsupported_input_versions_are_errors(tmp_path):
     (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/3', session=SESSION)))
     with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/3'):
         evaluate(directory, FakeBinding(), tmp_path / 'e1')
+    # The versions the dollar limit replaced are refused like any other old version: this session is not archived.
     (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION)))
+    with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/5.*not listed'):
+        evaluate(directory, FakeBinding(), tmp_path / 'e1')
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=SESSION)))
     host = directory / 'actors' / '001' / 'host.jsonl'
     original = host.read_text()
-    host.write_text(original.replace('player-host/3', 'player-host/2'))
-    with pytest.raises(EvaluationError, match=r'host\.jsonl.*player-host/2'):
+    host.write_text(original.replace('"schema": "player-host/4", "telemetry_version": 4', '"schema": "player-host/3", "telemetry_version": 3'))
+    assert host.read_text() != original
+    with pytest.raises(EvaluationError, match=r'host\.jsonl.*player-host/3'):
         evaluate(directory, FakeBinding(), tmp_path / 'e2')
     host.write_text(original)
     connection = sqlite3.connect(directory / 'session.sqlite3')
@@ -1371,8 +1376,8 @@ def ended_run(directory: Path, *, finish: list[dict] = (), controls: list[dict] 
         pause_reason='spend')}), 'owner_pause'),
     ('not-paused', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/4', reason='custodian_terminal',
         pause_reason=None)}), None),
-    ('receipt', dict(files={'receipt.json': dict(schema='campaign-receipt/3', outcome='incomplete',
-        driver=dict(ending_request=dict(trigger='http_attempts')))}), 'budget'),
+    ('receipt', dict(files={'receipt.json': dict(schema='campaign-receipt/4', outcome='incomplete',
+        driver=dict(schema='player-driver/4', ending_request=dict(trigger='spend')))}), 'budget'),
     ('live', dict(hosts=False), None)])
 def test_censor_reasons(tmp_path, name, options, reason):
     path = evaluate(ended_run(tmp_path / name, **options), FakeBinding(), tmp_path / 'evals', created_wall=1.0)
@@ -1386,7 +1391,7 @@ def test_censor_reasons(tmp_path, name, options, reason):
 def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path, monkeypatch):
     from harness.evaluation.core.sources import read_end_facts
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
-    current = dict(schema='campaign-run/5', session=SESSION)
+    current = dict(schema='campaign-run/6', session=SESSION)
     archived = dict(schema='campaign-run/4', session=SESSION)
     directory = tmp_path / 'end'
     directory.mkdir()
@@ -1412,16 +1417,37 @@ def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_pat
                 read_end_facts(directory, manifest)
     terminal.unlink()
     receipt = directory / 'receipt.json'
-    receipt.write_text(json.dumps(dict(schema='campaign-receipt/3', outcome='complete')))
-    assert read_end_facts(directory, current).outcome == 'complete'
-    for found in ('campaign-receipt/2', 'campaign-receipt/4', None):
+    actor = dict(settled=dict(ok=True, reason='task_complete'), player_finish=dict(disposition='task_complete'))
+    driver = dict(schema='player-driver/4', actors=[actor], ending_request=dict(trigger='spend'), spent_usd='0.012')
+    receipt.write_text(json.dumps(dict(schema='campaign-receipt/4', outcome='complete', driver=driver)))
+    facts = read_end_facts(directory, current)
+    assert (facts.outcome, facts.ending_trigger, facts.settled, facts.finishes) == (
+        'complete', 'spend', (actor['settled'],), ('task_complete',))
+    # The receipt and driver versions the dollar limit replaced are read for an archived session, and only the
+    # fields its combination lists; every other version, and that one for any other session, is an error.
+    old_driver = dict(driver, schema='player-driver/3', ending_request=dict(trigger='http_attempts'))
+    receipt.write_text(json.dumps(dict(schema='campaign-receipt/3', outcome='complete', driver=old_driver)))
+    facts = read_end_facts(directory, archived)
+    assert (facts.outcome, facts.ending_trigger, facts.finishes) == ('complete', 'http_attempts', ('task_complete',))
+    for manifest in (current, dict(archived, session='f' * 32)):
+        with pytest.raises(EvaluationError, match=r'receipt\.json.*campaign-receipt/3'):
+            read_end_facts(directory, manifest)
+    for found in ('player-driver/2', 'player-driver/5', None):
+        receipt.write_text(json.dumps(dict(schema='campaign-receipt/3', outcome='complete', driver=dict(old_driver, schema=found))))
+        with pytest.raises(EvaluationError, match=rf'receipt\.json: unsupported driver record version.*{found}'):
+            read_end_facts(directory, archived)
+    receipt.write_text(json.dumps(dict(schema='campaign-receipt/4', outcome='complete', driver=old_driver)))
+    with pytest.raises(EvaluationError, match=r'receipt\.json: unsupported driver record version.*player-driver/3'):
+        read_end_facts(directory, current)
+    for found in ('campaign-receipt/2', 'campaign-receipt/5', None):
         receipt.write_text(json.dumps(dict(schema=found, outcome='complete')))
-        with pytest.raises(EvaluationError, match=rf'receipt\.json.*{found}'):
-            read_end_facts(directory, current)
+        for manifest in (current, archived):
+            with pytest.raises(EvaluationError, match=rf'receipt\.json.*{found}'):
+                read_end_facts(directory, manifest)
 
 
 def test_a_run_with_an_unsupported_terminal_or_receipt_version_is_an_error(tmp_path):
-    for name, schema in (('watch-terminal.json', 'campaign-watch-terminal/1'), ('receipt.json', 'campaign-receipt/2')):
+    for name, schema in (('watch-terminal.json', 'campaign-watch-terminal/1'), ('receipt.json', 'campaign-receipt/3')):
         directory = ended_run(tmp_path / name[:5], files={name: dict(schema=schema)})
         with pytest.raises(EvaluationError, match=rf'{name.replace(".", chr(92) + ".")}.*{schema}'):
             evaluate(directory, FakeBinding(), tmp_path / 'evals')
@@ -1457,20 +1483,44 @@ def test_a_listed_sealed_session_reads_its_v3_terminal_and_no_other_session_does
             sources.read_end_facts(directory, listed)
     terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/4', reason='operator_pause', pause_reason='loop')))
     assert sources.read_end_facts(directory, listed).pause_reason == 'loop'
-    # Through the pipeline: the listed run evaluates, the same run unlisted is an error.
-    run = ended_run(tmp_path / 'sealed', files={'watch-terminal.json': dict(
-        schema='campaign-watch-terminal/3', session=SESSION, reason='operator_pause', pause_reason='fault',
-        attention='best-effort')})
+    # Through the pipeline: the listed run evaluates, the same run unlisted is an error, and so is a current run
+    # beside that terminal.
+    files = {'watch-terminal.json': dict(schema='campaign-watch-terminal/3', session=SESSION, reason='operator_pause',
+        pause_reason='fault', attention='best-effort')}
+    run = as_archived(ended_run(tmp_path / 'sealed', files=files), OLD_TERMINAL)
     path = evaluate(run, FakeBinding(), tmp_path / 'evals', created_wall=1.0)
     assert survival_of(path)['censor_reason'] == 'owner_pause'
-    archive_of(tmp_path, monkeypatch, {})
     with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*unsupported version.*campaign-watch-terminal/3'):
+        evaluate(ended_run(tmp_path / 'current', files=files), FakeBinding(), tmp_path / 'current-evals')
+    archive_of(tmp_path, monkeypatch, {})
+    with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/5.*not listed'):
         evaluate(run, FakeBinding(), tmp_path / 'again')
 
 
 OLD_MANIFEST = ('campaign-run/4', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/2')
 OLD_TERMINAL = ('campaign-run/5', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/3')
-ALL_CURRENT = ('campaign-run/5', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/4')
+CURRENT_TERMINAL = ('campaign-run/5', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/4')
+
+
+def as_archived(directory: Path, versions: tuple, *, receipt: bool = False) -> Path:
+    """Rewrite a fixture run's records to the versions of one archived combination, as its sealed files carry them:
+    the manifest and every host trace, and with `receipt` a receipt whose driver record ended the run on its
+    request reserve."""
+    manifest_schema, receipt_schema, driver_schema, host_schema, telemetry, _ = versions
+    path = directory / 'manifest.json'
+    path.write_text(json.dumps(json.loads(path.read_text()) | dict(schema=manifest_schema)))
+    for trace in sorted(directory.glob('actors/*/host.jsonl')):
+        lines = trace.read_text().splitlines()
+        lines[0] = json.dumps(json.loads(lines[0]) | dict(schema=host_schema, telemetry_version=telemetry))
+        trace.write_text(''.join(line + '\n' for line in lines))
+    if receipt:
+        (directory / 'receipt.json').write_text(json.dumps(dict(schema=receipt_schema, outcome='player_external_stop_complete_unassessed',
+            accounting=dict(attempts_charged=3, reservation_is_not_invoice=True),
+            driver=dict(schema=driver_schema, outcome='player_external_stop_complete_unassessed', attempts_charged=3,
+                configured_estimate_usd=0.03, ending_request=dict(trigger='http_attempts'),
+                actors=[dict(settled=dict(ok=True, reason='external_stop_complete'),
+                             player_finish=dict(disposition='external_stop_complete'))]))))
+    return directory
 
 
 def test_the_shipped_archive_index_is_exactly_the_54_sealed_sessions_in_three_version_combinations():
@@ -1482,16 +1532,21 @@ def test_the_shipped_archive_index_is_exactly_the_54_sealed_sessions_in_three_ve
     assert len({(item.study, item.run) for item in sessions.values()}) == 54
     # Exactly the three combinations that exist, each naming every record version.
     assert [tuple(c.versions.items()) for c in sources.ARCHIVE_COMBINATIONS] == [
-        tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (OLD_MANIFEST, OLD_TERMINAL, ALL_CURRENT)]
+        tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL)]
     assert Counter(tuple(item.combination.versions.values()) for item in sessions.values()) == {
-        OLD_MANIFEST: 30, OLD_TERMINAL: 22, ALL_CURRENT: 2}
-    # A combination names the fields read from exactly the records the reader takes in an old version.
-    current = dict(manifest=sources.MANIFEST_SCHEMA, receipt=sources.RECEIPT_SCHEMA, host=sources.HOST_SCHEMA,
-                   run_ending=sources.WATCH_TERMINAL_SCHEMA)
+        OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2}
+    # A combination names the fields read from exactly the records the reader takes in an old version. Every
+    # archived session predates the dollar limit, so its manifest, receipt, driver record and host traces all do.
+    current = dict(manifest=sources.MANIFEST_SCHEMA, receipt=sources.RECEIPT_SCHEMA, driver=sources.DRIVER_SCHEMA,
+                   host=sources.HOST_SCHEMA, run_ending=sources.WATCH_TERMINAL_SCHEMA)
     for combination in sources.ARCHIVE_COMBINATIONS:
         assert set(combination.fields) == {key for key, value in current.items() if combination.versions[key] != value}
+        assert {'manifest', 'receipt', 'driver', 'host'} <= set(combination.fields)
+        assert combination.versions['host_telemetry'] != sources.HOST_TELEMETRY
     assert [c.fields.get('run_ending') for c in sources.ARCHIVE_COMBINATIONS] == [
         ('reason',), ('session', 'reason', 'pause_reason'), None]
+    assert ['labels' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True]
+    assert all('accounting' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS)
     # The operator labels are on the 30 older sessions and nowhere else.
     labelled = {key for key, item in sessions.items() if item.labels is not None}
     assert labelled == {key for key, item in sessions.items() if item.combination.versions['manifest'] == 'campaign-run/4'}
@@ -1559,14 +1614,16 @@ def test_the_archive_index_matches_the_sealed_store():
                        'lh1a1-build1'}
 
 
-def archive_of(tmp_path: Path, monkeypatch, labelled: dict, sealed: dict | None = None) -> Path:
+def archive_of(tmp_path: Path, monkeypatch, labelled: dict, sealed: dict | None = None, launch: dict | None = None) -> Path:
     """Point the reader at an index of its own: `labelled` are campaign-run/4 sessions (`run` and their operator
-    labels), `sealed` campaign-run/5 sessions with a campaign-watch-terminal/3 terminal (`study` and `run`)."""
+    labels), `sealed` campaign-run/5 sessions with a campaign-watch-terminal/3 terminal and `launch` ones with a
+    campaign-watch-terminal/4 terminal (`study` and `run`)."""
     import harness.evaluation.core.sources as sources
     entries = {session: dict(study='sealed', run=item['run'], versions=dict(zip(sources.ARCHIVE_VERSION_KEYS, OLD_MANIFEST)),
         labels={key: value for key, value in item.items() if key != 'run'}) for session, item in labelled.items()}
-    entries.update({session: dict(item, versions=dict(zip(sources.ARCHIVE_VERSION_KEYS, OLD_TERMINAL)))
-        for session, item in (sealed or {}).items()})
+    for versions, group in ((OLD_TERMINAL, sealed), (CURRENT_TERMINAL, launch)):
+        entries.update({session: dict(item, versions=dict(zip(sources.ARCHIVE_VERSION_KEYS, versions)))
+            for session, item in (group or {}).items()})
     path = tmp_path / 'archive-sessions.json'
     path.write_text(json.dumps(dict(schema=sources.ARCHIVE_INDEX_SCHEMA, sessions=entries)))
     monkeypatch.setattr(sources, 'ARCHIVE_INDEX', path)
@@ -1651,14 +1708,62 @@ def test_an_archived_session_reads_its_v2_terminal_for_the_owner_pause(tmp_path,
     assert survival_of(path)['censor_reason'] == 'owner_pause'
 
 
-def test_a_campaign_run_5_run_with_a_v2_terminal_is_an_error(tmp_path, monkeypatch):
+def test_a_current_run_with_a_v2_terminal_is_an_error(tmp_path, monkeypatch):
     # Listing the session does not matter: /2 is for campaign-run/4 manifests only.
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
     directory = ended_run(tmp_path / 'current', files={'watch-terminal.json': dict(
         schema='campaign-watch-terminal/2', reason='operator_pause')})
-    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/5'
+    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/6'
     with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*unsupported version.*campaign-watch-terminal/2'):
         evaluate(directory, FakeBinding(), tmp_path / 'evals')
+
+
+@pytest.mark.parametrize('versions', [OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL])
+def test_an_archived_session_of_each_combination_is_read_in_the_versions_the_index_lists(tmp_path, monkeypatch, versions):
+    """One session of each combination, with every record in its sealed version: a reservation manifest, a /3
+    receipt and driver record, telemetry-3 host traces and the combination's own run-ending record."""
+    import harness.evaluation.core.sources as sources
+    labels = dict(arm='pilot', start='S1', scenario='Evacuee', lineage=None, admission=None)
+    listed = dict(study='sealed', run='old01')
+    archive_of(tmp_path, monkeypatch, *({SESSION: dict(run='old01', **labels)} if versions == OLD_MANIFEST else {},
+        {SESSION: listed} if versions == OLD_TERMINAL else {}, {SESSION: listed} if versions == CURRENT_TERMINAL else {}))
+
+    def build(directory: Path, session: str = SESSION) -> Path:
+        run = Run(directory, session=session)
+        a = run.actor()
+        for index, t in enumerate((3600, 3660, 3720)):
+            run.step(a, 'input', [key('j')], F('in_play', t, identity=1, fill=index))
+        run.finish(accounting=dict(prior_attempts=0, prior_reserved_usd='10', ceiling_usd='25.5', prospective_reserved_usd='12'),
+            limits=LIMITS, **({} if versions == OLD_MANIFEST else dict(labels=labels)))
+        terminal = dict(schema=versions[-1], reason='operator_pause')
+        if versions != OLD_MANIFEST:
+            terminal.update(session=session, pause_reason='spend')
+        (directory / 'watch-terminal.json').write_text(json.dumps(terminal))
+        return as_archived(directory, versions, receipt=True)
+
+    directory = build(tmp_path / 'old01')
+    inputs = sources.read_run(directory)
+    assert inputs.manifest['schema'] == versions[0] and inputs.host[inputs.actors[0]][0].fields['schema'] == 'player-host/3'
+    assert (inputs.end.outcome, inputs.end.ending_trigger, inputs.end.finishes, inputs.end.paused, inputs.end.pause_reason) == (
+        'player_external_stop_complete_unassessed', 'http_attempts', ('external_stop_complete',), True,
+        None if versions == OLD_MANIFEST else 'spend')
+    path = evaluate(directory, FakeBinding(), tmp_path / 'evals', created_wall=1.0)
+    connection = open_readonly(path)
+    facts = read_run_facts(connection)
+    connection.close()
+    # The spend allowance of an archived run is still its ceiling minus what earlier admissions had reserved.
+    assert (facts['manifest_schema'], facts['labels'], facts['declared_ceiling_usd'], facts['prior_reserved_usd'],
+            facts['spend_allowance_usd'], facts['limits']) == (versions[0], labels, 25.5, 10.0, 15.5, LIMITS)
+    assert survival_of(path)['censor_reason'] == 'owner_pause'
+    # The same files under a session the index does not list are refused, and so is a listed session's trace that
+    # names another session.
+    with pytest.raises(EvaluationError, match=rf'manifest\.json.*{versions[0]}.*not listed'):
+        sources.read_run(build(tmp_path / 'other', session='f' * 32))
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    lines = trace.read_text().splitlines()
+    trace.write_text(''.join(line + '\n' for line in [json.dumps(json.loads(lines[0]) | dict(session='f' * 32)), *lines[1:]]))
+    with pytest.raises(EvaluationError, match=r'host\.jsonl: unsupported host trace version.*player-host/3'):
+        sources.read_run(directory)
 
 
 def test_run_end_events_for_finishes_and_orderly_stops(tmp_path):
@@ -1688,10 +1793,7 @@ def test_run_facts_labels_and_host_rows(tmp_path):
         run.host[a].append(run.event(a, 'context-image-projection', iso(BASE + 22), request_id='request-1', omitted_images=2))
         run.finish(labels=dict(arm='X', start='S1', scenario='s', lineage=None, admission=None),
             effort='medium', files={'context.txt': 'g' * 64, 'prompt.txt': 'p' * 64},
-            accounting=dict(prior_reserved_usd='10', ceiling_usd='25.5', prospective_reserved_usd='12'), limits=LIMITS)
-        manifest = json.loads((directory / 'manifest.json').read_text())
-        manifest['schema'] = 'campaign-run/5'
-        (directory / 'manifest.json').write_text(json.dumps(manifest))
+            spend_limit_usd='15.5', limits=LIMITS)
         return directory
     path = run_and_evaluate(tmp_path, build)
     connection = open_readonly(path)
@@ -1699,7 +1801,9 @@ def test_run_facts_labels_and_host_rows(tmp_path):
     assert facts['labels'] == dict(arm='X', start='S1', scenario='s', lineage=None, admission=None)
     assert (facts['model'], facts['provider'], facts['route'], facts['effort']) == ('m/x', 'p', dict(only=['p']), 'medium')
     assert (facts['guide_sha256'], facts['assignment_sha256']) == ('g' * 64, 'p' * 64)
-    assert (facts['declared_ceiling_usd'], facts['spend_allowance_usd'], facts['limits']) == (25.5, 15.5, LIMITS)
+    # A current run's allowance is its declared dollar limit; it has no ceiling and no earlier reservation.
+    assert (facts['manifest_schema'], facts['spend_allowance_usd'], facts['limits']) == ('campaign-run/6', 15.5, LIMITS)
+    assert (facts['declared_ceiling_usd'], facts['prior_reserved_usd']) == (None, None)
     assert read_metadata(connection)['labels']['arm'] == 'X' and read_metadata(connection)['arm'] == 'X'
     calls = read_tool_calls(connection)
     by_status = {c.status: c for c in calls}
@@ -1824,7 +1928,7 @@ def test_input_digests_are_the_sha256_of_each_file(tmp_path):
 
 def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     from harness.evaluation.core.sources import HostTraceUnsupported, read_host
-    start = dict(type='host-start', schema='player-host/3', telemetry_version=3, actor_id='actor-1', monotonic_ms=0,
+    start = dict(type='host-start', schema='player-host/4', telemetry_version=4, actor_id='actor-1', monotonic_ms=0,
         wall_time='2026-11-07T01:02:03.500Z')
     path = tmp_path / 'host.jsonl'
     path.write_text(json.dumps(start) + '\n' + json.dumps(dict(type='settled', monotonic_ms=1, wall_time='not a time')) + '\n')
@@ -1832,7 +1936,8 @@ def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     assert actor == 'actor-1' and events[0].wall == pytest.approx(datetime(2026, 11, 7, 1, 2, 3, 500000, timezone.utc).timestamp())
     assert events[1].wall is None and events[1].line == 2
     for lines, kind in (([], 'empty'), ([dict(type='thread.started')], 'format'),
-            ([dict(start, schema='player-host/2')], 'version'), ([dict(start, telemetry_version=3.0)], 'version')):
+            ([dict(start, schema='player-host/3', telemetry_version=3)], 'version'), ([dict(start, schema='player-host/3')], 'version'),
+            ([dict(start, telemetry_version=3)], 'version'), ([dict(start, telemetry_version=4.0)], 'version')):
         path.write_text(''.join(json.dumps(line) + '\n' for line in lines))
         with pytest.raises(HostTraceUnsupported) as error:
             read_host(path, 'hint')

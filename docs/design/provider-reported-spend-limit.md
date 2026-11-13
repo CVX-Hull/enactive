@@ -1,16 +1,13 @@
 ---
 owner: lead
-status: proposed
+status: historical
 date: '2026-11-12'
-scope: 'Proposed replacement of worst-case spend reservation for player runs by a dollar limit enforced from provider-reported cost, with the contract changes and the closed archive index that follow (#555); nothing is built, and the current contracts govern'
-review_trigger: An owner decision on this proposal, a finding that OpenRouter does not report cost on the player route, or a change to the run package, receipt or host contracts
+scope: 'Design rationale, as reviewed before it was built, for the dollar limit on player runs from provider-reported cost and the closed archive index (#555); the campaign procedure and the player-host and evaluation contracts describe the running system'
 ---
 
 # A dollar limit from provider-reported cost
 
-**Status: proposed, 12 November 2026.** Nothing here is built. The
-[campaign procedure](../operations/campaign-run.md) and the
-[player-host contract](../contracts/player-host.md) describe the running system. The
+**Status: built, 12 November 2026.** This page is the design as reviewed before it was built; the [campaign procedure](../operations/campaign-run.md) and the [player-host contract](../contracts/player-host.md) describe the running system. The
 issue on how spend is capped, [#555](https://github.com/CVX-Hull/enactive/issues/555),
 owns this proposal and records the owner's decisions that set its direction.
 

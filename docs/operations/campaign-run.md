@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/5` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/6` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -27,7 +27,7 @@ It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-memory/2` store, player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 aggregate HTTP-attempt bound, computer input/request/frame/byte capacities,
-`ending_reserve`, cumulative cap accounting and the operator-only
+`ending_reserve`, the dollar limit `spend_limit_usd` and the operator-only
 [`labels`](#operator-labels). Source/directory mismatch refuses
 before launch. Player stores use SQLite `user_version=2`; unsupported old
 libraries are refused without conversion.
@@ -37,9 +37,10 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/3` with text/image input and explicit
+`route.json` uses current `player-host/4` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
-provider's image limit. The selected route is OpenRouter /
+provider's image limit. It repeats the package's `spend_limit_usd` and carries
+`unpriced_request_usd` ([Spend limit](#spend-limit)). The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
 Diagnostic or qualification packages may freeze another conformed route; their
 record names it, and it confers no selection.
@@ -72,7 +73,7 @@ can inform admission, but does not establish useful gameplay latency or quality.
 Include current cache/context conditions and tail/failure behavior when known.
 Price or an earlier completed ending does not justify preferring a slower route.
 Freeze one explicitly selected route per finite admission, with no hidden fallback;
-changed routing requires a fresh package and actual cumulative accounting.
+changed routing requires a fresh package.
 
 This is an engineering preparation step, outside the deciding player's tools.
 Create the five inputs above first. `target.json` is closed:
@@ -98,7 +99,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/5",
+  "schema": "campaign-run/6",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "START", "scenario": "SCENARIO", "lineage": null, "admission": null},
@@ -116,56 +117,56 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "wall_seconds": 9000, "host_seconds": 3600, "total_host_seconds": 7200,
   "max_hosts": 2, "max_http_attempts": 360,
   "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
-  "ending_reserve": {"seconds": 120, "http_attempts": 8, "inputs": 128, "requests": 128, "frames": 128, "frame_bytes": 134217728},
-  "accounting": {
-    "prior_attempts": 0, "prior_reserved_usd": 0,
-    "ceiling_usd": 0, "prospective_reserved_usd": 0
-  }
+  "ending_reserve": {"seconds": 120, "http_attempts": 8, "usd": "0.50", "inputs": 128, "requests": 128, "frames": 128, "frame_bytes": 134217728},
+  "spend_limit_usd": "5"
 }
 ```
 
-Use the actual cumulative accounting rather than the zero placeholders. With
-default tier, worst-case per attempt is
-`(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
-using the frozen route's configured dollar rates. Prospective cumulative
-reservation is the prior baseline plus that amount times `max_http_attempts`; it
-must fit the standing ceiling exactly as frozen.
+### Spend limit
 
-`prior_reserved_usd` is the **actual spend to date**, not the sum of past worst-case reservations. The next package's baseline is
-this baseline plus each settled run's actual cost, taken as follows:
-- Provider usage or an account reading, using the upper end of any range.
-- On a shared account, the whole account delta over the run, never apportioned
-  downward.
-- An attempt missing provider usage counts at its worst case, unless an account
-  reading over the run covers it.
-- A run whose cost neither a trace nor the account isolates counts at its original
-  allocation.
+`spend_limit_usd` is the most this run may count as spent. The player host stops the
+run when the counted total reaches it ([host contract](../contracts/player-host.md#spend)).
+Nothing is carried over from earlier packages.
 
-Only the package being admitted reserves its own attempts at the worst case.
-Record the baseline's sources with each package; the current cumulative actual
-spend is stated in the latest study record that spent, as
-[operator permissions](../operator-permissions.md) describes, not summed from the run ledger.
+- **Amounts are decimal text.** `spend_limit_usd`, `ending_reserve.usd` and the
+  route's two amounts are strings such as `"5"` or `"0.4096"`. A JSON number, an
+  exponent, a sign or a non-finite word refuses the package. The limit is above zero.
+- **The route repeats the limit.** `route.json` has the same `spend_limit_usd`. The
+  driver gives each actor a copy whose value is the dollars the run has left.
+- **The route carries the bound.** `unpriced_request_usd` is what one request with no
+  cost record counts for:
+  `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
+  from the frozen route's configured dollar rates. The validator computes it and
+  refuses a route that states another value, naming the value it expects. It also
+  refuses a route whose rates give a bound of zero, which would count a failed
+  request as free.
+- **The dollar reserve covers one unpriced request.** `ending_reserve.usd` is at least
+  `unpriced_request_usd`; the validator refuses less, naming both amounts. With less
+  than one request's bound left, a single failed request would end the run abruptly
+  instead of in order. The reserve is below the limit, so the limit exceeds the bound.
+- **What counts.** A response counts at the cost the provider reported for it. A
+  request with no cost record (refused, timed out, cut off, aborted at a deadline)
+  counts at the bound, because the provider may still bill it.
+- **Overshoot.** The host checks before each request, so a run can pass its limit by
+  at most what one request counts: at most the bound for a request with no cost
+  record.
+- **A response the host cannot price ends the run.** A successful response with no
+  usable cost stops the host with reason `cost-unreported`.
+- **The hard cap is the key's credit limit**, set by the owner on the OpenRouter key
+  ([operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)).
+  The code cannot read it.
 
-A custodian report's `cumulative_conservative_reservation_usd` is the baseline plus
-the run's charged attempts at the worst case; it is never the next baseline. The
-validator and custodian only add a lead-supplied baseline to the package's own
-worst case. Receipts through #304 record a cumulative worst-case baseline and later
-ones an actual-cost baseline; do not compare the two across that boundary.
-
-The worst-case figure stays a bound on one package, not spend: it charges every
-attempt as if it filled the whole context window and output limit, which can overstate
-actual cost by more than an order of magnitude ([an example](../acceptance/2026-11-08-moved-measurements.md#campaign-runs-the-worst-case-bound-against-billed-cost)).
-Report actual cost first, from provider-reported usage, with missing
-usage counted separately. When host traces carry only configured-rate costs (as on #304's
-OpenRouter routes), use provider usage or account readings, and state when the account
-is shared. Present the reservation only as the cap check it is.
+Choose the limit from the realistic cost of the planned run, inside the owner's
+envelope. The configured-rate estimate in a trace (`usage.cost`) is not what counts;
+the receipt records the counted figures.
 
 Before paid play, the lead reads the provider account balance and confirms that
 the auto top-up threshold stays above the realistic actual cost of the planned
 runs. OpenRouter sizes its in-flight hold from the current balance, so a low
 account produces repeated in-flight 402s that one host retry may not outlast
 (the [#304 record](../acceptance/2026-10-31-capable-player.md) holds an example), and an exhausted one returns terminal credit
-refusals.
+refusals. A key credit limit close to what the key has already spent can cause the
+same refusals, and each refused request counts at the bound.
 
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked
@@ -174,7 +175,8 @@ the frozen adapter's `validate` mode accepting the route and MCP template; port1
 wall60–86400s, host/aggregate-host30–86400s, one/two hosts and1–10000 HTTP attempts.
 Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
 computer capacity is ≤2^40. The route's per-host request maximum cannot exceed the
-campaign aggregate. The selected directory must have no prior started marker,
+campaign aggregate. `spend_limit_usd` is above zero, and `ending_reserve.usd` is
+at least the route's `unpriced_request_usd` and below the limit. The selected directory must have no prior started marker,
 session DB, native-process receipt, actors or contexts. An existing selected player
 store must be current; it never restores computer custody. The maintained
 validator is authoritative and rejects changed bytes/unsupported fields before
@@ -210,10 +212,14 @@ launched argv, environment and every file written for an actor lack the label va
 
 ### Ending reserve and external stop
 
-`ending_reserve` is closed: `seconds,http_attempts,inputs,requests,frames,frame_bytes`.
-Every value is a positive integer strictly below its corresponding original
-host/route/mechanical limit. The driver requests ending at the first threshold
-crossed in host seconds, remaining attempts or mechanical capacities. It retains
+`ending_reserve` is closed: `seconds,http_attempts,usd,inputs,requests,frames,frame_bytes`.
+Every value but `usd` is a positive integer strictly below its corresponding original
+host/route/mechanical limit; `usd` is a decimal string above zero and below
+`spend_limit_usd`. The driver requests ending at the first threshold
+crossed in host seconds, remaining attempts, remaining dollars (trigger `spend`) or
+mechanical capacities. Remaining dollars are the limit minus the cost counted so
+far; a request still in flight is not yet counted, so the reserve should cover what
+one more request can count. It retains
 one command identity for the whole admission. Static validation checks field
 bounds only. Before admission the lead forecasts reserve adequacy for the largest
 already-admitted input/program burst, the current provider attempt, control
@@ -279,29 +285,61 @@ for or adopts unrelated processes. Normal native exit zero is sampled before
 forced cleanup. Save-to-menu, player save/success claims, native exit and absence
 are separate evidence.
 
-`receipt.json` (`campaign-receipt/3`) reports driver disposition, host quiescence,
-native absence, input revocation, cleanup and original accounting. Configured
-estimates and conservative reservations are not invoices. Unknown trace accounting
-charges the allocated attempts. Direct finish yields
+`receipt.json` (`campaign-receipt/4`) reports driver disposition, host quiescence,
+native absence, input revocation, cleanup and the run's spend. Its `accounting`
+block is closed:
+
+| Field | Meaning |
+| --- | --- |
+| `spend_limit_usd` | The package's declared limit |
+| `reported_usd` | The sum of the cost the provider reported, over the responses that reported one |
+| `unpriced_requests` | Requests with no cost record |
+| `unpriced_request_usd` | What each of those counts for: the route's bound |
+| `spent_usd` | What counted toward the limit: `reported_usd` plus `unpriced_requests` × `unpriced_request_usd` |
+| `attempts_charged` | HTTP attempts charged against the request allowance |
+| `allocated_max_attempts` | The package's `max_http_attempts` |
+| `spend_complete` | Whether every actor's trace was read to its settlement and the host's own totals equal the driver's sums; when false the spend is unknown |
+
+The dollar amounts are decimal text. What the provider reports is what the provider
+says; it is not an invoice. Unknown trace accounting charges the allocated attempts,
+marks the spend incomplete and starts no further actor. Direct finish yields
 `player_task_complete_unassessed`, `player_cannot_continue_unassessed` or
 `player_external_stop_complete_unassessed`. An earlier non-cleanup permanent
 fence remains `interrupted`; later expected adapter closure cannot erase it.
 Normal native exit is reported separately; its absence is not a save certificate
 or an automatic failure of generic stop control. Apply any separately frozen
 game-persistence/exit criterion to its own evidence lane.
-The embedded driver result is `player-driver/3`, with the retained ending request,
-per-actor direct player-finish/settlement and original attempt charges. No receipt
+The embedded driver result is `player-driver/4`, with the retained ending request
+(its `trigger`, and the dollars and attempts left when it was sent), per-actor direct
+player-finish/settlement, original attempt charges and each actor's `allocated_usd`,
+`reported_usd`, `unpriced_requests`, `spent_usd` and `spend_complete`. Its totals
+carry `reported_usd`, `unpriced_requests`, `unpriced_request_usd`, `spent_usd` and
+`spend_complete`. `configured_estimate_usd` stays beside them as an estimate from the
+route's configured rates; it is not counted. No receipt
 alone accepts gameplay. Preserve failures and unrun lanes.
 
 A development admission is recorded once its receipt exists, with
-`.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL
---provider-records N --provider-usd X --unpriced-attempt-usd 0.4096`, where `LABEL` is the
+`.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL`,
+where `LABEL` is the
 run's short name in its study's dated record (default: the package name). That command appends one
 [`dev-run/1`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
 `data/evaluation/runs.jsonl`, the one numeric record of the run: the study's record cites
 that row or a generated table and keeps no hand-typed copy of attempts, spend or duration.
-The provider figures come from the operator's own reconciliation. A package without a receipt gets no row, and no further admission
-is made until the lead resolves it. `run_ledger totals --study ISSUE --envelope USD`
+The spend figures are the receipt's; none is typed in. A package without a receipt
+gets no row, and no further admission is made until the lead resolves it.
+
+**When the receipt's `spend_complete` is false,** the run's spend could not be counted,
+and `record` refuses the package. No further run of that study is admitted until the
+lead has done both of these:
+
+1. Recorded the run with `--record-upper-bound` added to the command above. The row
+   then holds the most the run can have spent: `provider_usd` is the receipt's
+   `spend_limit_usd`, `unpriced_attempts` is 1 and `unpriced_attempt_usd` is the
+   receipt's `unpriced_request_usd`, so `spend_usd` is the limit plus one request's
+   bound. The flag is refused for a receipt whose spend is complete.
+2. Noted in the run's dated record that the row is an upper bound, with the OpenRouter
+   key's activity figure for the run's time window. A `dev-run/1` row has no field
+   that marks an upper bound, so the dated record is where that is stated. `run_ledger totals --study ISSUE --envelope USD`
 applies the [actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),
 with `--forecast-largest USD` standing in for the largest admission before any completes.
 This is the only ledger writer.

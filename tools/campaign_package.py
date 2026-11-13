@@ -1,7 +1,7 @@
 """Read one frozen current campaign package; never inspect unrelated history."""
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_DOWN,Context,Decimal,DivisionByZero,Inexact,InvalidOperation,Overflow
 import os
 from pathlib import Path
 import re
@@ -14,10 +14,62 @@ from tools.configure_player_tools import ROOT,configuration
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
-        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','ending_reserve','accounting',
-        'labels'}
+        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','ending_reserve',
+        'spend_limit_usd','labels'}
 LABEL_FIELDS={'arm','start','scenario','lineage','admission'}
 PRINTABLE_ASCII=re.compile('[ -~]+')
+#: A declared dollar amount (a package's limit and reserve, a route's limit and bound): plain decimal text, never a
+#: JSON number, with at most twelve whole and eighteen fractional digits. The player host accepts the same text
+#: (tools/player_host/host.mjs, AMOUNT_TEXT).
+USD_TEXT=re.compile(r'(0|[1-9][0-9]{0,11})(\.[0-9]{1,18})?')
+#: A counted amount (a host trace's cost records and totals, and the driver and receipt figures summed from them):
+#: the same plain text with no cap on digits, because the host writes the provider's own digits, which can be
+#: longer than a declared amount may be.
+COUNTED_USD_TEXT=re.compile(r'(0|[1-9][0-9]*)(\.[0-9]+)?')
+#: Dollar arithmetic never rounds: it runs in this context, which raises instead of dropping a digit.
+EXACT=Context(prec=4000,traps=[Inexact,InvalidOperation,DivisionByZero,Overflow])
+
+
+def usd(value,name: str) -> Decimal:
+    """A declared dollar amount: decimal text, so a number, an exponent, a sign or a non-finite word is refused."""
+    if type(value) is not str or USD_TEXT.fullmatch(value) is None:
+        raise ControlError(f'{name} must be a plain decimal string of dollars')
+    return Decimal(value)
+
+
+def counted_usd(value,name: str) -> Decimal:
+    """A counted dollar amount from a host trace: plain decimal text of any length; nothing else is an amount."""
+    if type(value) is not str or COUNTED_USD_TEXT.fullmatch(value) is None:
+        raise ControlError(f'{name} must be a plain decimal string of dollars')
+    return Decimal(value)
+
+
+def usd_sum(amounts,start: Decimal=Decimal(0)) -> Decimal:
+    """The exact sum of dollar amounts."""
+    total=start
+    for amount in amounts:total=EXACT.add(total,amount)
+    return total
+
+
+def declared_floor(amount: Decimal) -> Decimal:
+    """The largest declarable amount not above `amount`: digits past the eighteenth fractional one are dropped,
+    so a route never gives an actor more than the run has left."""
+    return amount.quantize(Decimal('1E-18'),rounding=ROUND_DOWN,context=Context(prec=4000))
+
+
+def usd_text(amount: Decimal) -> str:
+    """The one written form of an amount: no exponent, no trailing zeros, `0` for zero. No digit is rounded away."""
+    text=format(amount,'f')
+    return (text.rstrip('0').rstrip('.') or '0') if '.' in text else text
+
+
+def unpriced_request_usd(route: dict) -> Decimal:
+    """What one request with no cost record counts for: the whole context window at the route's most expensive
+    input rate plus the output limit at the output rate, from the configured dollars per million tokens. The one
+    place this bound is computed; the route file carries it to the host and the driver."""
+    model=route['model'];costs=model['cost']
+    rate=max(Decimal(str(costs[k])) for k in ('input','cacheRead','cacheWrite'))
+    return (Decimal(model['contextWindow'])*rate+Decimal(model['maxTokens'])*Decimal(str(costs['output'])))/Decimal(10**6)
 
 
 def labels(value) -> None:
@@ -46,7 +98,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/3` adapter selection and return its argv."""
+    """Validate the closed `player-host/4` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -64,7 +116,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/5':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/6':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     labels(profile['labels'])
@@ -107,16 +159,24 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/3':
+    if type(route) is not dict or route.get('schema')!='player-host/4':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
+    # The dollar limit: the most this run may count as spent. The route repeats it, and the driver
+    # narrows it to what remains for each actor, as it narrows the request allowance.
+    limit=usd(profile['spend_limit_usd'],'spend_limit_usd')
+    if limit<=0:raise ControlError('spend_limit_usd must be above zero')
+    if usd(route.get('spend_limit_usd'),'route.json spend_limit_usd')!=limit:
+        raise ControlError(f"route.json spend_limit_usd must be the package's spend_limit_usd, {profile['spend_limit_usd']}")
     reserve=profile['ending_reserve']
-    closed(reserve,{'seconds','http_attempts','inputs','requests','frames','frame_bytes'})
+    closed(reserve,{'seconds','http_attempts','inputs','requests','frames','frame_bytes','usd'})
     bounds=dict(seconds=profile['host_seconds'],http_attempts=route['max_requests'],
                 inputs=profile['limits']['max_inputs'],requests=profile['limits']['max_requests'],
                 frames=profile['limits']['max_frames'],frame_bytes=profile['limits']['max_bytes'])
     for name,maximum in bounds.items():integer(reserve[name],1,maximum-1)
+    if not 0<usd(reserve['usd'],'ending_reserve.usd')<limit:
+        raise ControlError('ending_reserve.usd must be above zero and below spend_limit_usd')
     template=read_json(directory/'mcp-template.json',1048576)
     if template!=configuration('@ACTOR_CONFIG@'):raise ControlError('Only the current explicit actor MCP profile is supported')
     target=read_json(directory/'target.json',1048576)
@@ -130,22 +190,20 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     for key,value in target['env'].items():
         if (key not in {'PATH','LANG','SDL_AUDIODRIVER','SDL_VIDEODRIVER','DYLD_LIBRARY_PATH','DYLD_FRAMEWORK_PATH'}
                 or not isinstance(value,str) or len(value)>8192):raise ControlError('Target environment contains unsupported or credential settings')
-    # Static refusals precede any adapter code; accounting below relies on the
+    # Static refusals precede any adapter code; the bound below relies on the
     # adapter having accepted the route's closed model shape.
     subprocess.run([*profile['host']['argv'],'validate','--config',str(directory/'route.json'),
         '--mcp-config',str(directory/'mcp-template.json'),'--model',route['model']['id'],'--effort',profile['effort']],cwd=ROOT,check=True,
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
         env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
-    budget=profile['accounting']
-    closed(budget,{'prior_attempts','prior_reserved_usd','ceiling_usd','prospective_reserved_usd'})
-    integer(budget['prior_attempts'],0,10**9)
-    for name in ('prior_reserved_usd','ceiling_usd','prospective_reserved_usd'):
-        amount=Decimal(str(budget[name]))
-        if not amount.is_finite() or amount<0:raise ControlError('Accounting amounts must be finite and nonnegative')
-    costs=route['model']['cost']
-    rate=max(Decimal(str(costs[k])) for k in ('input','cacheRead','cacheWrite'))
-    per=(Decimal(route['model']['contextWindow'])*rate+Decimal(route['model']['maxTokens'])*Decimal(str(costs['output'])))/Decimal(10**6)
-    prospective=Decimal(str(budget['prior_reserved_usd']))+per*profile['max_http_attempts']
-    if prospective!=Decimal(str(budget['prospective_reserved_usd'])) or prospective>Decimal(str(budget['ceiling_usd'])):
-        raise ControlError('Original conservative allocation does not fit selected cumulative ceiling')
+    bound=unpriced_request_usd(route)
+    # A route whose rates are all zero would count a failed request as free.
+    if bound<=0:raise ControlError("The route's configured rates give no bound for a request with no cost record")
+    if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:
+        raise ControlError(f"route.json unpriced_request_usd must be {usd_text(bound)} for this route's rates")
+    # With less than one unpriced request's bound left, a single failed request would end the run abruptly instead
+    # of in order. The reserve is below the limit, so the limit exceeds the bound too.
+    if Decimal(reserve['usd'])<bound:
+        raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(bound)}, "
+            'so that one request with no cost record still leaves an orderly finish')
     return profile,route,target

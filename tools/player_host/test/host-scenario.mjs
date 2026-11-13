@@ -17,12 +17,15 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/3',context_reserve_tokens:4096,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+// The dollar limit is far above anything these fixtures count, so only a test that sets its own limit meets it.
+const route = () => ({schema:'player-host/4',context_reserve_tokens:4096,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, spend_limit_usd:'100', unpriced_request_usd:'0.25', max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+// The usage record a fixture response carries unless a test supplies its own: token counts and a reported cost.
+const usageRecord = {prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0.000038};
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   if (!calls.length && content !== null) calls = [['player_finish',{disposition:'task_complete',report:content.slice(0,8192),source_ids:[],control_id:null}]];
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
-    {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:withUsage === true ? {prompt_tokens:11,completion_tokens:5,total_tokens:16} : withUsage} : {})}];
+    {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:withUsage === true ? usageRecord : withUsage} : {})}];
   return new Response(chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n', {headers:{'content-type':'text/event-stream'}});
 }
 function rateLimit(error = {type:'rate_limit_error', message:'Rate limit exceeded'}, headers = {}) {
@@ -99,5 +102,5 @@ const sessionId = '2'.repeat(32);
 const actorId = '3'.repeat(32);
 const collectArgs = {operation_id:handoffId};
 
-export { realDelay, python, fixture, png, model, route, reply, rateLimit, scenario, assertRequestMetadata, eventStream,
+export { realDelay, python, fixture, png, model, route, usageRecord, reply, rateLimit, scenario, assertRequestMetadata, eventStream,
   handoffArgs, handoffTools, handoffId, sessionId, actorId, collectArgs };

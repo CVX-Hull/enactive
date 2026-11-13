@@ -42,18 +42,20 @@ session is a new owner decision, recorded in this standard. The decisions are: t
 older development-loop sessions ([#403](https://github.com/CVX-Hull/enactive/issues/403));
 the 22 sessions whose run-ending record is `campaign-watch-terminal/3` (12 November 2026,
 [#553](https://github.com/CVX-Hull/enactive/issues/553)); and the single index, which
-holds those 52 sessions and the two sealed sessions whose record versions are all
-current (12 November 2026, [#555](https://github.com/CVX-Hull/enactive/issues/555)).
+holds those 52 sessions and the two sealed sessions of the supervised launch check
+(12 November 2026, [#555](https://github.com/CVX-Hull/enactive/issues/555)). All 54
+predate the dollar limit, so each is read in the versions the index records for it.
 Every other old version is an error naming the file and version. The evaluator never admits
 or plays from the archive and never modifies it; it only derives evaluation records.
 Second, an evidence-only event (one that no admission, control or player-visible path
 reads) may be added inside an unchanged telemetry version when it changes no existing
 field and every reader that uses it marks its absence in older traces as not recorded,
-never as a failure or as a value presented as recorded. Today this is `context-manifest`
-in `player-host` telemetry version 3, which the evaluator records as `manifest: absent`
-and the context view rebuilds as `exact: false`, and the `reported_cost_usd` field of
-`response-complete` in the same version, which no reader uses yet and whose absence means
-the reported cost was not recorded. Anything else, including another
+never as a failure or as a value presented as recorded. No event has been added inside
+the current `player-host` telemetry version 4, where `context-manifest` and the reported
+cost belong to the contract. The case still governs the archived telemetry version 3
+traces: `context-manifest` was added inside that version, so the evaluator records its
+absence from an older trace as `manifest: absent` and the context view rebuilds as
+`exact: false`. Anything else, including another
 archive or a changed existing field, needs a new version and a migration as above.
 
 Every affected PR identifies the old and new contracts, the migrated callers and

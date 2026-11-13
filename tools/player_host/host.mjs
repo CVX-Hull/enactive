@@ -81,8 +81,13 @@ function listenControl(input, session, actorId, accept, fail) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens']);
-  requireThat(configuration.schema === 'player-host/3');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd']);
+  requireThat(configuration.schema === 'player-host/4');
+  // Dollars this actor may still spend, and what one request with no cost record counts for.
+  // Both are plain decimal text computed by the driver and above zero; a JSON number is refused.
+  // A zero bound would count a failed request as free.
+  const spendLimit = amountFromText(configuration.spend_limit_usd), bound = amountFromText(configuration.unpriced_request_usd);
+  requireThat(spendLimit !== null && spendLimit[0] > 0n && bound !== null && bound[0] > 0n);
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
@@ -379,8 +384,8 @@ function refusalDiagnostic(body, secret) {
   } catch { return {error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null}; }
 }
 
-// The provider's own statement of what one response cost, in US dollars (#555). Evidence
-// only: nothing in the host reads it. The rule is the curator's `reported_cost`
+// The provider's own statement of what one response cost, in US dollars (#555). The host
+// counts it toward the route's dollar limit. The rule is the curator's `reported_cost`
 // (tools/curator_host/providers.py), and both hosts' tests run the usage records in
 // tests/fixtures/provider-usage-cost.json. On a route that is not on the caller's own
 // provider key the cost is the larger of `cost` and `cost_details.upstream_inference_cost`;
@@ -425,8 +430,19 @@ function withUsageRecord(soFar, usage) {
   const cost = usageRecordCost(usage);
   return cost === MALFORMED_COST || !soFar ? cost : cost ? largerAmount(soFar, cost) : soFar;
 }
+// A dollar amount of the route: plain decimal text, at most twelve whole and eighteen fractional digits.
+const AMOUNT_TEXT = /^(0|[1-9][0-9]{0,11})(\.[0-9]{1,18})?$/;
+function amountFromText(value) {
+  if (typeof value !== 'string' || !AMOUNT_TEXT.test(value)) return null;
+  const [whole, fraction = ''] = value.split('.');
+  return [BigInt(whole + fraction), fraction.length];
+}
+function addAmounts(x, y) {
+  const [a, b, scale] = alignedUnits(x, y);
+  return [a + b, scale];
+}
 // Plain decimal text: no exponent, no trailing zeros, "0" for zero.
-function reportedCostText(cost) {
+function amountText(cost) {
   if (!cost || cost === MALFORMED_COST) return null;
   const [units, scale] = cost;
   const digits = units.toString().padStart(scale + 1, '0');
@@ -434,7 +450,7 @@ function reportedCostText(cost) {
   return digits.slice(0, digits.length - scale) + (fraction ? `.${fraction}` : '');
 }
 /** Reported cost of one response from its usage records: a decimal string, or null when none is usable. */
-export const reportedCostUsd = usageRecords => reportedCostText(usageRecords.reduce(withUsageRecord, null));
+export const reportedCostUsd = usageRecords => amountText(usageRecords.reduce(withUsageRecord, null));
 
 // Preserve the server's retry instruction without logging arbitrary headers or
 // refusal text. The maintained SDK owns delay selection and enforcement.
@@ -597,6 +613,18 @@ export async function runHost(options) {
     }
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false, requestReportedCost = null;
+  // The dollar limit (docs/contracts/player-host.md, Spend). Every HTTP attempt counts once, when it
+  // ends: at the cost the provider reported, else at the route's bound for a request with no cost
+  // record. Every attempt ends in a `response-complete`, which carries its count.
+  let spent = [0n, 0], unpricedRequests = 0, spendLimit, unpricedBound;
+  const countAttempt = reported => {
+    const priced = reported !== null && reported !== MALFORMED_COST;
+    const amount = priced ? reported : unpricedBound;
+    if (!priced) unpricedRequests++;
+    spent = addAmounts(spent, amount);
+    return {counted_cost_usd:amountText(amount), cost_counted_as:priced ? 'provider-reported' : 'unpriced-bound', spent_usd:amountText(spent)};
+  };
+  const spendLimitReached = () => { const [total, limit] = alignedUnits(spent, spendLimit); return total >= limit; };
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
   let releaseInitialControl;
@@ -675,7 +703,9 @@ export async function runHost(options) {
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
     affinityId = sessionAffinityId(options.session);
-    emit('host-start', {telemetry_version:3, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
+    spendLimit = amountFromText(configuration.spend_limit_usd);
+    unpricedBound = amountFromText(configuration.unpriced_request_usd);
+    emit('host-start', {telemetry_version:4, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -860,6 +890,7 @@ export async function runHost(options) {
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
         if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
+        if (spendLimitReached()) { stop('spend-limit'); return failureStream(model, fatal); }
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
@@ -875,10 +906,15 @@ export async function runHost(options) {
           // End an eligible first attempt and hand its server delay to the SDK
           // helper. Status is omitted so only the host's declared classes decide.
           const retry = (attemptId, retryClass, status, headers) => {
-            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, reported_cost_usd:null, response_progress:progressSnapshot()});
+            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, reported_cost_usd:null, ...countAttempt(null), response_progress:progressSnapshot()});
             requestInFlight = false;
             if (requests >= configuration.max_requests) {
               stop('request-limit');
+              throw new HostError(fatal);
+            }
+            // The failed attempt counted at the bound, so the retry is refused once the limit is reached.
+            if (spendLimitReached()) {
+              stop('spend-limit');
               throw new HostError(fatal);
             }
             previousRequestId = attemptId;
@@ -897,6 +933,10 @@ export async function runHost(options) {
             if (fatal) throw new HostError(fatal);
             if (requests >= configuration.max_requests) {
               stop('request-limit');
+              throw new HostError(fatal);
+            }
+            if (spendLimitReached()) {
+              stop('spend-limit');
               throw new HostError(fatal);
             }
             const fetchEntered = performance.now();
@@ -1034,9 +1074,15 @@ export async function runHost(options) {
         assistantControls.set(message, requestControlId);
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
-        if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? 'configured-rates' : null, reported_cost_usd:reportedCostText(requestReportedCost), response_progress:progressSnapshot()});
+        const failed = ['error', 'aborted', 'length', 'deferred'].includes(message.stopReason);
+        if (requestInFlight) {
+          const reported = amountText(requestReportedCost);
+          emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? 'configured-rates' : null, reported_cost_usd:reported, ...countAttempt(requestReportedCost), response_progress:progressSnapshot()});
+          // A run never continues on a successful response it cannot price.
+          if (!failed && reported === null && !fatal) stop('cost-unreported');
+        }
         requestInFlight = false;
-        if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
+        if (failed && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
       }
     });
     if (control) agent.steer({role:'user', timestamp:Date.now(), content:[{type:'text', text:`${STOP_TEXT}\ncontrol_id: ${control.id}`}]});
@@ -1054,7 +1100,7 @@ export async function runHost(options) {
   const finalText = !fatal && finish ? finish.report : '';
   const controlId = !fatal && finish ? finish.control_id : control?.id ?? null;
   const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : finish.disposition), requests, finalText, control_id:controlId};
-  emit('settled', {ok:result.ok, reason:result.reason, requests, control_id:controlId,
+  emit('settled', {ok:result.ok, reason:result.reason, requests, spent_usd:amountText(spent), unpriced_requests:unpricedRequests, control_id:controlId,
     accepted_control_id:control?.id ?? null, event_output:{...outputStats}, native_cleanup_claimed:false});
   return result;
 }

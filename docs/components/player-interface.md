@@ -41,13 +41,14 @@ interpretation, never engine facts. The provider image-history window retains al
 text/IDs, marks omitted older pixels and protects the current result group; an
 oversized protected group stops. Source availability does not prove the actor read it.
 
-Current provider route is closed `player-host/3`, with an explicit image peak and
+Current provider route is closed `player-host/4`, with a dollar limit, an explicit image peak and
 count-only eviction block,
 cost/capacity/effort metadata and default service tier for the current campaign.
 OpenRouter uses exact selected full-tag routing, no fallback and required parameter
 support. Credentials are injected only into the provider host; MCP/native children
-receive no key. Missing usage stays unknown; configured estimates/reservations are
-not invoices. The host reference owns maintained provider-only bounded429 behavior;
+receive no key. Missing usage stays unknown; a request with no cost record counts at
+the route's bound, and neither configured estimates nor provider-reported cost are
+invoices. The host reference owns maintained provider-only bounded429 behavior;
 no tool retry/reconnect/replay follows uncertain transport.
 
 Telemetry version3 keeps bounded visible assistant narration and mechanical
@@ -73,12 +74,12 @@ originating issuance or exact original collection settles host handoff. After th
 host closes its owned MCP child, the driver checks actual old process-group
 quiescence and context digest before minting a successor under original limits.
 No menu/save/identity check is required. User Pause, uncertainty or failed closure
-cannot become resumable handoff. At most two hosts are permitted by `campaign-run/5`.
+cannot become resumable handoff. At most two hosts are permitted by `campaign-run/6`.
 
 ## Assurance and evidence
 
 The [host contract suite](../../tests/test_player_host_contract.py) drives each listed
-adapter only through `player-host/3`. [Adapter](../../tests/test_player_host_adapter.py),
+adapter only through `player-host/4`. [Adapter](../../tests/test_player_host_adapter.py),
 [driver](../../tests/test_campaign_player.py) and [custodian](../../tests/test_campaign_run.py)
 fixtures exercise real maintained libraries with synthetic provider/owned children.
 They add configuration, image, settlement, accounting and cleanup evidence without

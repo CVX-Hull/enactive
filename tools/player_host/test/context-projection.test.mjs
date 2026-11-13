@@ -184,7 +184,8 @@ test('known context overflow prevents fetch and capacity warning has no experime
   assert.equal(second.result.reason,'context-capacity');assert.equal(second.payloads.length,0);
 });
 test('missing or underreported provider usage cannot bypass the context heuristic floor',async t=>{
-  for(const reported of [false,true]) await t.test(String(reported),async sub=>{
+  // The cost is reported in both cases, so the run reaches the next context estimate; only the token counts are missing.
+  for(const reported of [{cost:0.000038},true]) await t.test(String(reported===true),async sub=>{
     const configuration={...route(),model:{...model,contextWindow:9000},context_reserve_tokens:1024};
     const {result,payloads,events}=await scenario(sub,[reply(null,[['observe',{}]],reported),reply()],{configuration});
     assert.equal(result.reason,'context-capacity');assert.equal(payloads.length,1);

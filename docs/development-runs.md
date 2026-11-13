@@ -64,7 +64,7 @@ traits, location, tactic, target item or hint.
 | S2 | The player chooses every setup option, including the scenario. |
 
 Runs alternate S1, S2, S1, S2, S1 within an arm. Each run is frozen as a fresh
-`campaign-run/5` package from merged main, with these limits outside the
+`campaign-run/6` package from merged main, with these limits outside the
 player's context:
 
 | Setting | Value |
@@ -77,10 +77,11 @@ player's context:
 
 The window stays below OpenRouter's 272,000-token long-prompt threshold, so the
 short-prompt rates apply: $1.00/M input, $1.25/M cache write, $0.05/M cache read
-and $5.00/M output (read from the public model list on 5 November 2026). The
-validator's worst case is (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096 per
-attempt, or $102.40 per run. Costs are reconciled against OpenRouter's
-per-generation records.
+and $5.00/M output (read from the public model list on 5 November 2026). A request
+with no cost record counts for (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096,
+the route's `unpriced_request_usd`. Each package declares a dollar limit, and its
+receipt records the cost OpenRouter reported
+([campaign procedure](operations/campaign-run.md#spend-limit)).
 
 **Admission rule.** A run is admitted on actual provider-reported spend under the
 [budget delegation](operator-permissions.md#finite-gameplay-budget-delegation) rule,

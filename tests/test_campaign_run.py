@@ -18,7 +18,9 @@ def package(root):
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     values={
-        'route.json':dict(schema='player-host/3',service_tier='default',max_requests=10,context_reserve_tokens=200,model=dict(id='fixture',
+        # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
+        'route.json':dict(schema='player-host/4',service_tier='default',max_requests=10,context_reserve_tokens=200,
+            spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
@@ -26,7 +28,7 @@ def package(root):
     }
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/5',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/6',session='a'*32,source_commit='f'*40,
         labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
         files={name:artifact(directory/name)['sha256'] for name in values},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
@@ -34,10 +36,15 @@ def package(root):
         player_store=str(root/'player.sqlite3'),host=dict(argv=[str(root/'interpreter'),str(root/'adapter')]),effort='off',port=8766,
         wall_seconds=300,host_seconds=100,total_host_seconds=200,max_hosts=2,max_http_attempts=10,
         limits=dict(max_inputs=100,max_requests=100,max_frames=100,max_bytes=1000000),
-        ending_reserve=dict(seconds=10,http_attempts=2,inputs=10,requests=10,frames=10,frame_bytes=1000),
-        accounting=dict(prior_attempts=0,prior_reserved_usd=0,prospective_reserved_usd=.0063,ceiling_usd=1))
+        ending_reserve=dict(seconds=10,http_attempts=2,inputs=10,requests=10,frames=10,frame_bytes=1000,usd='0.1'),
+        spend_limit_usd='1')
     (directory/'manifest.json').write_text(json.dumps(profile))
     return directory,profile
+
+
+def rewrite_route(directory,profile,**changes):
+    path=directory/'route.json';route=json.loads(path.read_text());route.update(changes)
+    path.write_text(json.dumps(route));profile['files']['route.json']=hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def git(status=b'',untracked=()):
@@ -71,18 +78,21 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
-@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','old_node','old_route','previous_route','untracked_adapter','partial','changed','dirty',
-                                  'credentials','different_lock'])
+@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','reservation_package','old_node','old_route','previous_route',
+                                  'reservation_route','untracked_adapter','partial','changed','dirty','credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     directory,profile=package(tmp_path)
     if fault=='old':profile['schema']='campaign-run/1'
     if fault=='previous_package':profile['schema']='campaign-run/3'
     if fault=='previous_labelless':profile['schema']='campaign-run/4';del profile['labels']
+    if fault=='reservation_package':
+        # The package version that declared a worst-case reservation instead of a dollar limit.
+        profile['schema']='campaign-run/5';del profile['spend_limit_usd'];del profile['ending_reserve']['usd']
+        profile['accounting']=dict(prior_attempts=0,prior_reserved_usd=0,prospective_reserved_usd=.0063,ceiling_usd=1)
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
-    if fault in ('old_route','previous_route'):
-        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='pi-player-host/4' if fault=='old_route' else 'player-host/2'
-        path.write_text(json.dumps(route));profile['files']['route.json']=hashlib.sha256(path.read_bytes()).hexdigest()
+    if fault in ('old_route','previous_route','reservation_route'):
+        rewrite_route(directory,profile,schema=dict(old_route='pi-player-host/4',previous_route='player-host/2',reservation_route='player-host/3')[fault])
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')
     if fault=='different_lock':profile['shared_lock']=str(tmp_path/'another.lock')
@@ -90,7 +100,8 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
         path=directory/'target.json';target=json.loads(path.read_text());target['env']['API_KEY']='fixture'
         path.write_text(json.dumps(target));profile['files']['target.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
-    expected={'old':'inert history','previous_package':'inert history','previous_labelless':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history',
+    expected={'old':'inert history','previous_package':'inert history','previous_labelless':'inert history','reservation_package':'inert history',
+              'old_node':'inert history','old_route':'inert history','previous_route':'inert history','reservation_route':'inert history',
               'untracked_adapter':'tracked by the clean source commit'}.get(fault)
     # Ignored files never appear in porcelain status; only tracking binds them to the commit.
     with patch.object(packages,'ROOT',tmp_path),\
@@ -172,13 +183,80 @@ def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path
             return self.channel
         def wait_target(self):calls.append('wait')
         def close(self):return dict(native_absence_verified=True,normal_native_exit_zero=False)
-    with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY'),{})),\
+    with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY',unpriced_request_usd='0.00063'),{})),\
             patch.object(campaign_run,'OwnedTarget',Owner),patch.object(campaign_run.signal,'signal',side_effect=install),\
             patch.dict(os.environ,{'OFFLINE_KEY':'fixture-secret'}),patch.object(campaign_run,'run_hosts') as host:
         result=campaign_run.run_campaign(directory)
     assert calls==([] if when=='before' else ['start']) and not host.called
-    assert result['accounting']['attempts_charged']==0 and result['deciding_hosts_quiescent']
+    assert result['schema']=='campaign-receipt/4'
+    # No host was started, so nothing was spent and the record is complete.
+    assert result['accounting']==dict(spend_limit_usd='1',reported_usd='0',unpriced_requests=0,unpriced_request_usd='0.00063',
+        spent_usd='0',attempts_charged=0,allocated_max_attempts=10,spend_complete=True)
+    assert result['deciding_hosts_quiescent']
     assert 'Cancelled' in result['reason']
+
+
+def test_receipt_spend_is_reported_cost_plus_unpriced_requests_at_the_bound():
+    profile=dict(spend_limit_usd='5',max_http_attempts=40);route=dict(unpriced_request_usd='0.4096')
+    driver=dict(reported_usd='0.1337',unpriced_requests=2,attempts_charged=31,spend_complete=True)
+    assert campaign_run.accounting(profile,route,driver,True)==dict(spend_limit_usd='5',reported_usd='0.1337',unpriced_requests=2,
+        unpriced_request_usd='0.4096',spent_usd='0.9529',attempts_charged=31,allocated_max_attempts=40,spend_complete=True)
+    # Hosts were started but the driver left no record: the whole allowance is charged and the spend is unknown.
+    lost=campaign_run.accounting(profile,route,None,True)
+    assert (lost['attempts_charged'],lost['spent_usd'],lost['spend_complete'])==(40,'0',False)
+
+
+@pytest.mark.parametrize('limit',[None,'0','0.0','-1',1,0.5,'NaN','Infinity','1e3','+1','1.',''])
+def test_a_missing_or_unusable_dollar_limit_refuses_before_effects(tmp_path,limit):
+    directory,profile=package(tmp_path)
+    if limit is None:del profile['spend_limit_usd']
+    else:profile['spend_limit_usd']=limit
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,pytest.raises(ControlError):
+        packages.preflight(directory)
+    assert not validator.called and not (directory/'started.json').exists()
+
+
+@pytest.mark.parametrize('reserve',[None,'0','1','1.5',0.1,'-0.1','NaN'])
+def test_a_dollar_reserve_that_is_not_below_the_limit_refuses_before_effects(tmp_path,reserve):
+    directory,profile=package(tmp_path)
+    if reserve is None:del profile['ending_reserve']['usd']
+    else:profile['ending_reserve']['usd']=reserve
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,pytest.raises(ControlError):
+        packages.preflight(directory)
+    assert not validator.called
+
+
+def test_a_reserve_below_one_unpriced_request_or_a_zero_bound_refuses_the_package(tmp_path):
+    """With less than one request's bound in reserve, a single failed request would end the run abruptly; with a
+    zero bound a failed request would count as free."""
+    directory,profile=package(tmp_path)
+    profile['ending_reserve']['usd']='0.0006'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run'),\
+            pytest.raises(ControlError,match=r'ending_reserve\.usd 0\.0006 must be at least unpriced_request_usd 0\.00063'):
+        packages.preflight(directory)
+    profile['ending_reserve']['usd']='0.00063'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    validate(directory,tmp_path)
+    model=json.loads((directory/'route.json').read_text())['model']
+    rewrite_route(directory,profile,unpriced_request_usd='0',model=dict(model,cost=dict(input=0,cacheRead=0,cacheWrite=0,output=0)))
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run'),\
+            pytest.raises(ControlError,match='give no bound for a request with no cost record'):
+        packages.preflight(directory)
+
+
+@pytest.mark.parametrize('field,value,message',[('spend_limit_usd','0.5',"must be the package's spend_limit_usd, 1"),
+    ('unpriced_request_usd','0.0006','must be 0.00063 for this route')])
+def test_the_route_repeats_the_limit_and_carries_the_one_computed_bound(tmp_path,field,value,message):
+    directory,profile=package(tmp_path)
+    assert packages.usd_text(packages.unpriced_request_usd(json.loads((directory/'route.json').read_text())))=='0.00063'
+    rewrite_route(directory,profile,**{field:value})
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run'),pytest.raises(ControlError,match=message):
+        packages.preflight(directory)
 
 
 def selected_host(root,host):

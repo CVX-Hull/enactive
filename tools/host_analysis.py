@@ -9,7 +9,8 @@ from pathlib import Path
 from harness.computer.protocol import ControlError, read_json
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError
-from harness.evaluation.core.sources import HostTraceUnsupported, iter_host
+from harness.evaluation.core.sources import (DRIVER_SCHEMA, MANIFEST_SCHEMA, RECEIPT_SCHEMA, ArchiveSession,
+    HostTraceUnsupported, accepted_versions, iter_host, run_archive_entry)
 
 MAX_REQUESTS = 200_000
 #: A `HostTraceUnsupported.kind` is reported as this coverage.
@@ -107,35 +108,46 @@ def discover(paths: list[Path]) -> list[Path]:
     return resolved
 
 
-def campaign_evidence(path: Path) -> dict:
-    """Current selected sidecars only; host completion is never goal acceptance."""
-    root = path.parent.parent.parent if path.parent.parent.name == "actors" else path.parent
+def run_root(path: Path) -> Path:
+    """The run directory a trace file sits in: two levels above `actors/NNN/host.jsonl`, else its own directory."""
+    return path.parent.parent.parent if path.parent.parent.name == "actors" else path.parent
+
+
+#: The driver record's totals. A current record adds the counted spend; `configured_estimate_usd` stays an
+#: estimate from the route's configured rates.
+DRIVER_KEYS = ("schema", "outcome", "attempts_charged", "host_seconds_used", "configured_estimate_usd", "missing_usage_attempts")
+DRIVER_SPEND_KEYS = ("reported_usd", "unpriced_requests", "unpriced_request_usd", "spent_usd", "spend_complete")
+
+
+def campaign_evidence(path: Path, entry: ArchiveSession | None = None) -> dict:
+    """The run's sidecars in their current versions, or in the versions the archive index lists for its session
+    (`entry`); host completion is never goal acceptance."""
+    root = run_root(path)
     result = {"metadata_coverage": {}}
     fields = {
-        "manifest.json": ("campaign-run/5", ("session", "source_commit")),
-        "receipt.json": ("campaign-receipt/3", ("session", "source_commit", "outcome",
+        "manifest.json": (accepted_versions(entry, "manifest", MANIFEST_SCHEMA), ("session", "source_commit")),
+        "receipt.json": (accepted_versions(entry, "receipt", RECEIPT_SCHEMA), ("session", "source_commit", "outcome",
             "normal_save_claimed_by_harness", "native_absence_verified", "normal_native_exit_zero",
             "deciding_hosts_quiescent", "input_authority_revoked")),
     }
-    for relative, (schema, keys) in fields.items():
+    for relative, (schemas, keys) in fields.items():
         artifact = root / relative
         coverage = "missing"
         if artifact.exists():
             try:
                 value = read_json(artifact, 1024 * 1024)
-                if not isinstance(value, dict) or value.get("schema") != schema:
+                if not isinstance(value, dict) or value.get("schema") not in schemas:
                     coverage = "unsupported_version"
                 else:
                     result[relative] = {key: value.get(key) for key in keys}
                     coverage = "recorded"
                     if relative == "receipt.json" and value.get("driver") is not None:
                         driver = value["driver"]
-                        if not isinstance(driver, dict) or driver.get("schema") != "player-driver/3":
+                        if not isinstance(driver, dict) or driver.get("schema") not in accepted_versions(entry, "driver", DRIVER_SCHEMA):
                             coverage = "unsupported_driver_version"
                         else:
                             result[relative]["driver"] = {key: driver.get(key) for key in
-                                ("schema", "outcome", "attempts_charged", "host_seconds_used",
-                                 "configured_estimate_usd", "missing_usage_attempts")}
+                                (DRIVER_KEYS + DRIVER_SPEND_KEYS if driver["schema"] == DRIVER_SCHEMA else DRIVER_KEYS)}
             except (ValueError, OSError, UnicodeError, RecursionError):
                 coverage = "invalid"
         result["metadata_coverage"][relative] = coverage
@@ -166,8 +178,10 @@ def analyze_trace(path: Path) -> dict:
     host_count = 0
     context, config, output_sink = [], {}, None
     abort = None
+    # An older trace is read only inside the run directory of a session the closed archive index lists.
+    archived = run_archive_entry(run_root(path))
     try:
-        for parsed in iter_host(path, path.parent.name):
+        for parsed in iter_host(path, path.parent.name, entry=archived):
             event, line_number = parsed.fields, parsed.line
             kind, at = parsed.type, event.get("monotonic_ms")
             counts[kind] += 1
@@ -311,7 +325,7 @@ def analyze_trace(path: Path) -> dict:
         "reported_output_per_post_body_second": distribution(rates),
         "context": {key: distribution(x.get(key) for x in context) for key in
             ("projection_ms", "input_images", "omitted_images", "retained_images")},
-        "event_output": output_sink, "campaign_evidence": campaign_evidence(path), "requests": list(rows.values())}
+        "event_output": output_sink, "campaign_evidence": campaign_evidence(path, archived), "requests": list(rows.values())}
 
 
 def host_summary(paths: list[Path]) -> dict:

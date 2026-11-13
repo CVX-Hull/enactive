@@ -23,8 +23,8 @@ const model = {id:'recorded-offline-model',name:'Offline fixture',api:'openai-co
   baseUrl:'https://fixture.invalid/v1',reasoning:false,input:['text','image'],
   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:1000000,maxTokens:1024,
   compat:{supportsDeveloperRole:false,supportsStore:false,supportsUsageInStreaming:true}};
-const configuration = () => ({schema:'player-host/3',service_tier:'default',model:structuredClone(model),
-  api_key_env:'OFFLINE_TEST_KEY',max_requests:2,max_context_images:30,context_image_block:1,
+const configuration = () => ({schema:'player-host/4',service_tier:'default',model:structuredClone(model),
+  api_key_env:'OFFLINE_TEST_KEY',max_requests:2,spend_limit_usd:'100',unpriced_request_usd:'0.25',max_context_images:30,context_image_block:1,
   context_reserve_tokens:4096,request_timeout_seconds:2});
 const finish = ['player_finish',{disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];
 const proposal = ['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}];
@@ -37,7 +37,7 @@ function reply(calls) {
   const chunks = [
     {id:'recorded-response',model:'offline-backend',choices:[{index:0,delta,finish_reason:null}]},
     {id:'recorded-response',model:'offline-backend',choices:[{index:0,delta:{},finish_reason:'tool_calls'}],
-      usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}},
+      usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0.000038}},
   ];
   return new Response(chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',
     {headers:{'content-type':'text/event-stream'}});

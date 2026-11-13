@@ -7,7 +7,7 @@ const CONDITION_TEXT = {
   feed_alive: (v, c) => (v === null ? 'no operation recorded yet' : `${trim(v)} s since the last operation`),
   custody_healthy: v => `${v.uncertain_receipts} uncertain receipts · ${v.custody_stops} custody stops`,
   not_looping: v => `out-of-play streak ${v.decisions_out_of_play}, game time ${v.game_time_advancing ? 'advancing' : 'not advancing'}`,
-  spend_inside_allowance: v => `${fmtMoney(v.spent)} spent, on pace for ${fmtMoney(v.projected_one_hour)} in an hour${v.ceiling === null ? ', no ceiling declared' : ` (ceiling ${fmtMoney(v.ceiling)})`}`,
+  spend_inside_allowance: v => `${fmtMoney(v.spent)} estimated from configured rates, on pace for ${fmtMoney(v.projected_one_hour)} in an hour${v.ceiling === null ? ', no limit declared' : ` (declared limit ${fmtMoney(v.ceiling)}, enforced on provider-reported cost, not this estimate)`}`,
   not_dead_and_spending: v => (v.died ? `death read, ${v.requests_after_death} requests since` : 'no death read'),
 };
 export const conditionText = c => (CONDITION_TEXT[c.id] ? CONDITION_TEXT[c.id](c.value, c) : String(c.value));

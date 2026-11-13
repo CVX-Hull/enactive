@@ -27,7 +27,7 @@ spending or new admission. General unattended operation remains unqualified.
 
 ## Freeze, launch and inspect
 
-1. Prepare the exact clean source and fresh `campaign-run/5` package through the
+1. Prepare the exact clean source and fresh `campaign-run/6` package through the
    [campaign procedure](campaign-run.md). Resolve scope, spending, original
    resources, ending reserves and stop rules before admission. Preserve original
    saves and failed chains; old experiment launchers stay historical evidence.
@@ -99,7 +99,7 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 
 Supervision and the gateway refuse watch records of any other version.
 
-Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/3` must match
+Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/4` must match
 the fresh owned custodian/session/source and chronology. A terminal receipt at or
 after the custody deadline, a substituted receipt/manifest or unresolved cleanup
 cannot certify supervision success. No wrapper receipt accepts gameplay or restores

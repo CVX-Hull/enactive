@@ -80,7 +80,7 @@ different things.
   question ("curator memory study"), an arm by what differs ("no-curator arm"), a
   priority by its meaning ("Urgent").
 - **Numbers are for versions, references and dates.** A version follows a descriptive
-  name (`player-host/3`). An issue, pull request or ADR number is a reference; give
+  name (`player-host/4`). An issue, pull request or ADR number is a reference; give
   its title or subject the first time a page uses it. A repeated attempt is numbered
   after its name ("seven-day campaign, attempt 4").
 - **A kind prefix with a descriptive word is a name.** `P-TRUTH`, `S-DOCS`,

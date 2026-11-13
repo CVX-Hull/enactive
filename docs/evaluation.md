@@ -15,8 +15,10 @@ menu Save is not application exit; a local routine's done is not game success.
 
 ## Player host events
 
-Current [`player-host/3`](contracts/player-host.md) uses telemetry version3 (retained
-`player-host/1` and `/2` traces report `unsupported_version`; their summaries stay in the
+Current [`player-host/4`](contracts/player-host.md) uses telemetry version4 (a
+`player-host/3` trace is read only inside the run directory of a session the
+[closed archive index](contracts/evaluation.md#implementation-rules) lists; retained
+`player-host/1` and `/2` traces report `unsupported_version`, and their summaries stay in the
 acceptance records), one JSONL trace per actor at
 `actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
 correlate request construction, fetch, headers, first body, completed response,
@@ -84,7 +86,7 @@ These commands are offline and read-only, writing summaries to stdout:
 .venv/bin/python -m tools.evaluate control-summary .runtime/computer-sessions/SELECTED
 ```
 
-The selected actor traces and current `campaign-run/5` / `campaign-receipt/3`
+The selected actor traces and current `campaign-run/6` / `campaign-receipt/4`
 sidecars supply scoped provenance. The control reader opens a current
 `computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
 it neither migrates data nor reconstructs authority. The browser page produces no
