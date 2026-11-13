@@ -87,6 +87,9 @@ different things.
   `C-RUNTIME` and `R-OVERSPEND` comply: the letter gives the kind (principle,
   standard, control, risk) and the word says which one. A prefix with a number does not.
 - **Abbreviate only what the page defines** where it is first used.
+- **A key defined in the page that uses it is a reference, not a name.** A source
+  list's "S3" or a decision record's own "decision 14" may be cited inside that page.
+  Outside it, write what the key refers to and link the page.
 - **Branches** are named for what they change, optionally after the issue number:
   `552-curator-memory-study-report`, not `p1-552`.
 - **Renaming something persisted** (a schema ID, a stored field, a module other code

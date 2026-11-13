@@ -69,8 +69,11 @@ for broad source changes), independent review findings are dispositioned and any
 required native or gameplay evidence is recorded. When only the required check is
 still running, queue auto-merge pinned to the validated head (`gh pr merge --auto
 --squash --match-head-commit SHA`); main protection then merges it only if that
-check passes. Agent review stays evidence, not human approval; say so in the pull
-request rather than waiting for one.
+check passes. The SHA given to `--match-head-commit` is the commit the review named,
+not merely the head the check ran on: an approved text once failed to reach the pushed
+branch, and its first draft merged instead
+([#530](https://github.com/CVX-Hull/enactive/pull/530)). Agent review stays evidence,
+not human approval; say so in the pull request rather than waiting for one.
 
 **Waiting on CI.** The lead waits for PR
 validation with one `gh pr checks --watch`, and may run it in the background

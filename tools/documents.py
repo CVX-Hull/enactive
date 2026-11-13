@@ -175,7 +175,7 @@ def check_risks(root: Path) -> list[str]:
     errors += [f"docs/controls.md: {name} is listed more than once" for name in sorted(set(controls)) if controls.count(name) > 1]
     errors += [f"docs/controls.md: {name} names no risk" for name, rest in rows if not RISK_ID.search(rest)]
     for path in [*(root / name for name in ROOT_DOCUMENTS), *sorted((root / "docs").rglob("*.md"))]:
-        if not path.is_file():
+        if not path.is_file() or path.name.startswith("research"):  # research pages cite outside terms such as R-CNN
             continue
         try:
             text = path.read_text()

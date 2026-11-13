@@ -31,6 +31,14 @@ verdict against the source and the dated records. Its findings changed the resul
   seconds, so it stays in every full local check.
 - One planned check was narrowed: requiring a control for every risk would have invited
   invented controls.
+- Seven failed pull-request checks from 9 to 12 November 2026 were read from GitHub's
+  run logs (an eighth was not read). Four were the host-name text scan, two were
+  macOS-only calls on the Linux runner and one was a study test. One of the scan
+  failures also showed a failing player-host subtest whose cause was not established.
+
+A second independent review read the finished change. It found the control rule too
+easy to satisfy for a new test, one manual step written only in the controls table,
+and three ratings that broke the register's own rule; all were corrected before merge.
 
 ## Owner decisions
 
@@ -58,7 +66,7 @@ The owner answered four questions on 12 November 2026
 | Five repeated passages asking for review effort, escaped defects and false alarms to be recorded at checkpoints | No measurement was ever recorded under them | One pruning rule with named triggers | The register change under #553 |
 | The eight-column finding table at each campaign segment boundary | No recorded use that changed a decision | Each finding listed with what was observed, where, and its disposition | The register change under #553 |
 | Deployment order and rollback in every migration statement, and the rollback procedure | There is one local install; "deployment" is a checkout | The migration statement keeps contracts, callers, removed paths and rejection tests | The register change under #553 |
-| Repeated statements that agent review is not human approval | One maintainer; separate approvers are out of scope | One sentence in the review page | The register change under #553 |
+| Repeated statements in the review workflow page that agent review is not human approval, with its list of unavailable human approvals | One maintainer; separate approvers are out of scope | One sentence in that page; contributing, operator permissions and the pull-request template each keep theirs | The register change under #553 |
 
 ## Kept after challenge
 

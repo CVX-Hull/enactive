@@ -24,8 +24,8 @@ A one-time offline conversion is a migration operation, never a runtime reader o
 ongoing supported API. Record inputs, outputs, validation and removal of temporary
 conversion tooling. If conversion cannot preserve meaning, archive the old artifact
 and create current state only after resolving its retention and uncertainty duties.
-Rollback deploys a coherent earlier system with its corresponding data migration;
-it never enables mixed versions. Historical reports and archived source remain
+Going back means checking out the earlier source and starting from fresh stores
+([procedure](../operations/migration.md)); it never enables mixed versions. Historical reports and archived source remain
 immutable evidence, not supported execution paths; their content is never edited, but a
 link whose target moved or was removed may be repointed to its new home or to a commit
 permalink of the old file ([ADR 010](../decisions/010-streamlined-delivery.md)). Upstream-owned game saves and

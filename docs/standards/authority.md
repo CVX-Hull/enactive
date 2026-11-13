@@ -39,10 +39,16 @@ states three things in the change that adds it:
 2. how it reduces that risk: what it would catch or prevent, and why that is plausible;
 3. what it costs each time it runs or is followed, and why that is less than the risk.
 
-A control that fits an existing row of the controls page is covered by that row. A new
-kind of control gets a row. Review rejects a control that cannot state all three, and a
-control that defends something the register lists as out of scope. More checking is not
-safer by default: each control is paid for on every change.
+A control that fits an existing row of the controls page needs no new row, but its
+author still states the three things in the pull request. A new kind of control gets a
+row. "It might break" is not a risk statement: a new test names the behaviour it
+protects and what relying on that behaviour while it is broken would cost here, such as
+a wasted paid run, a lost save or a wrong record. A test of something no run, user or
+other code depends on fails that question and is not added.
+
+Review rejects a control that cannot state all three, and a control that defends
+something the register lists as out of scope. More checking is not safer by default:
+each control is paid for on every change.
 
 **The register is pruned on events, not on a calendar.** Reconsider a control, and the
 risk it cites, when:
@@ -57,12 +63,13 @@ risk it cites, when:
 Do this in the issue or pull request that meets the trigger. Keep, narrow, replace or
 remove the control from that evidence, and change the register, the controls page and
 the standards that name the control together. A control whose risk has recorded failure
-evidence is removed only when something cheaper covers the same failure.
+evidence is removed only when something cheaper covers the same failure, or when what
+it protected no longer exists.
 Revisit custom tools and previously rejected reuse options on changed needs, upstream
 support, repeated defects or excessive upkeep, rather than accumulating controls.
 
-`tools/documents.py` fails a control row that names no risk and a risk ID that the
-register does not define. That keeps the two pages from drifting apart
+`tools/documents.py` fails a control row that names no risk, and a risk ID in a current
+page (research pages excepted) that the register does not define. That keeps the two pages from drifting apart
 ([R-STALE-DOCS](../risks.md#development-risks)) and costs seconds. It cannot judge
 whether a risk is real or a mechanism works; that is the reviewer's job
 ([R-CONTROL-BLOAT](../risks.md#development-risks)). A Low risk may have no control.
