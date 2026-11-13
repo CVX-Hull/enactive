@@ -5,8 +5,11 @@ writes only the declared writable directories and the fresh home; no network exc
 port (the model proxy); a short Mach-service allowlist (no pasteboard, Launch Services or
 keychain); signals and process information for its own processes only. Kernel rlimits cap CPU
 time, file size, open files and processes; a supervisor outside the sandbox caps memory, disk
-and wall-clock time, because macOS refuses address-space and data limits. Residual risks are
-recorded in docs/research-curator-sandbox.md, not hidden here.
+and wall-clock time, because macOS refuses address-space and data limits. The disk cap is the
+allocated bytes under the directories the profile lets the session write. The supervisor reads
+nothing about the rest of the volume, so other programs' disk use cannot stop a session and the
+sandbox does not protect the disk from them. Residual risks are recorded in
+docs/research-curator-sandbox.md, not hidden here.
 """
 from __future__ import annotations
 
@@ -48,7 +51,6 @@ class Limits:
     memory_bytes: int = 2 << 30
     disk_bytes: int = 1 << 30
     file_bytes: int = 64 << 20
-    free_space_margin_bytes: int = 1 << 30
     processes: int = 64
     open_files: int = 256
     cpu_seconds: int = 1800
@@ -199,11 +201,6 @@ def _disk(paths) -> int:
     return total
 
 
-def _free_bytes(path: Path) -> int:
-    stats = os.statvfs(path)
-    return stats.f_bavail * stats.f_frsize
-
-
 @dataclass
 class Result:
     returncode: int | None
@@ -212,7 +209,6 @@ class Result:
     peak_disk_bytes: int
     seconds: float
     survivors: list[int]
-    volume_space: dict
 
 
 def _kill(pids, sig):
@@ -235,19 +231,6 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
     env = environment(layout, proxy_port=proxy_port, token=token, extra=extra_env)
     nproc = _user_processes() + limits.processes
     started = time.monotonic()
-    volume = dict(initial_free_bytes=None, minimum_free_bytes=None, last_free_bytes=None,
-                  floor_bytes=None, read_error_phase=None, read_error_type=None)
-    try:
-        free = _free_bytes(layout.workspace)
-    except OSError as error:
-        volume.update(read_error_phase='initial', read_error_type=type(error).__name__)
-        return Result(None, 'disk unmeasurable', 0, 0, time.monotonic() - started, [], volume)
-    floor = free - limits.disk_bytes - limits.free_space_margin_bytes
-    volume.update(initial_free_bytes=free, minimum_free_bytes=free, last_free_bytes=free, floor_bytes=floor)
-    # Keep at least the declared margin available even at the relative floor. A
-    # nonpositive floor would otherwise disable the unlinked-file guard entirely.
-    if floor < limits.free_space_margin_bytes:
-        return Result(None, 'insufficient volume free space', 0, 0, time.monotonic() - started, [], volume)
     # The profile lives beside the workspace in the session's state directory, which the profile neither reads nor
     # writes (only its path is visible as metadata), never in the system temporary directory.
     profile_dir = layout.workspace.parent
@@ -274,21 +257,11 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
                 stopped = 'disk unmeasurable'
                 break
             peak_memory, peak_disk = max(peak_memory, memory), max(peak_disk, disk)
-            try:
-                free = _free_bytes(layout.workspace)
-            except OSError as error:
-                volume.update(read_error_phase='poll', read_error_type=type(error).__name__)
-                stopped = 'disk unmeasurable'
-                break
-            volume.update(last_free_bytes=free, minimum_free_bytes=min(volume['minimum_free_bytes'], free))
             if memory > limits.memory_bytes:
                 stopped = 'memory limit'
             elif disk > limits.disk_bytes:
+                # The only disk control: what the session itself holds under its writable roots.
                 stopped = 'disk limit'
-            elif free < floor:
-                # Space used outside the measured tree (unlinked open files, for example) still
-                # counts: the volume may not lose more than the session's allowance plus a margin.
-                stopped = 'volume free-space floor'
             elif len(tree) > limits.processes:
                 stopped = 'process limit'
             elif time.monotonic() - started > limits.wall_seconds:
@@ -298,7 +271,6 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
             time.sleep(limits.poll_seconds)
     except BaseException as exc:
         pending = exc
-        exc.curator_volume_space = dict(volume)
         raise
     finally:
         # Any supervisor failure still closes the tree before the error propagates.
@@ -314,11 +286,10 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
             failures.append(('profile', exc))
         if failures:
             if pending is None:
-                failures[0][1].curator_volume_space = dict(volume)
                 raise failures[0][1]
             for part, failure in failures:
                 pending.add_note(f'Sandbox cleanup failed: {part}/{type(failure).__name__}')
-    return Result(child.returncode, stopped, peak_memory, peak_disk, time.monotonic() - started, survivors, volume)
+    return Result(child.returncode, stopped, peak_memory, peak_disk, time.monotonic() - started, survivors)
 
 
 def _group_alive(pgid: int) -> bool:

@@ -36,7 +36,6 @@ def test_interruption_seals_abort_and_reraises_before_workspace_and_lock_cleanup
 
     def stop(*args, **kwargs):
         interrupt.add_note('Sandbox cleanup failed: process-tree/OSError')
-        interrupt.curator_volume_space = dict(initial_free_bytes=10 << 30, last_free_bytes=9 << 30)
         raise interrupt
 
     monkeypatch.setattr(session if phase == 'prepare' else session.sandbox, 'project' if phase == 'prepare' else 'run', stop)
@@ -49,8 +48,6 @@ def test_interruption_seals_abort_and_reraises_before_workspace_and_lock_cleanup
     assert any('KeyboardInterrupt' in error for error in life['errors'])
     assert 'Sandbox cleanup failed: process-tree/OSError' in life['errors']
     assert record['verdicts'] == [] and repo.published() == 'v0'
-    if phase == 'run':
-        assert record['manifest']['provenance']['volume_space'] == interrupt.curator_volume_space
     assert not any((repo.state/'workspaces').iterdir())
     with (repo.state/'lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -110,7 +107,7 @@ def test_proxy_listener_is_closed_after_preparation_failure_or_interruption(tmp_
     monkeypatch.setattr(shadow, 'host_identity', fail if phase == 'configure' else lambda *args: {'name': 'fixture'})
     monkeypatch.setattr(shadow, 'run_session', session.run_session if phase == 'success' else stop)
     if phase == 'success':
-        monkeypatch.setattr(session.sandbox, 'run', lambda *args, **kw: session.sandbox.Result(0, None, 0, 0, 0., [], {}))
+        monkeypatch.setattr(session.sandbox, 'run', lambda *args, **kw: session.sandbox.Result(0, None, 0, 0, 0., []))
     if phase == 'prepare':
         monkeypatch.setattr(shadow, '_write', fail)
     try:
@@ -183,7 +180,6 @@ def synthetic_sandbox(tmp_path, monkeypatch):
     child = SimpleNamespace(pid=12345, poll=lambda: None, returncode=0)
     monkeypatch.setattr(session.sandbox.subprocess, 'Popen', lambda *args, **kwargs: child)
     monkeypatch.setattr(session.sandbox, '_user_processes', lambda: 1)
-    monkeypatch.setattr(session.sandbox, '_free_bytes', lambda path: 1 << 40)
     monkeypatch.setattr(session.sandbox, '_tree', lambda pid: {pid: 0})
     monkeypatch.setattr(session.sandbox, '_disk', lambda paths: 0)
     return session.sandbox.Layout(workspace=workspace, home=home, writable=(scratch,)), child

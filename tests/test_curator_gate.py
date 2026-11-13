@@ -390,7 +390,7 @@ def test_surviving_host_processes_stop_collection(tmp_path):
     assert good.parent == workspace / 'submissions'
     record_dir = tmp_path / 'record'
     record_dir.mkdir()
-    result = sandbox.Result(0, None, 0, 0, 0.1, [4242], {})
+    result = sandbox.Result(0, None, 0, 0, 0.1, [4242])
     drafts = Drafts(repo.state)
     record = session._close_out(repo, 'sess', record_dir, workspace, None, result, [], FRAMES, drafts, {})
     life = record['manifest']['lifecycle']
@@ -481,7 +481,7 @@ def test_a_failure_while_collecting_submissions_is_sealed(tmp_path, monkeypatch)
         raise MemoryError
 
     monkeypatch.setattr(session, 'read_tree', exhausted)
-    result = sandbox.Result(0, None, 0, 0, 0.1, [], {})
+    result = sandbox.Result(0, None, 0, 0, 0.1, [])
     record = session._close_out(repo, 'sess', record_dir, workspace, None, result, [], FRAMES,
                                 Drafts(repo.state), {})
     life = record['manifest']['lifecycle']

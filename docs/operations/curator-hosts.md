@@ -268,3 +268,34 @@ byte for byte, so:
   the only enforcement.
 - **Version drift.** Each session records the host version and binary hash. After any
   update, re-run the probe and the escape suite.
+
+## What the sandbox bounds
+
+These bounds apply to every host. The supervisor in
+[`harness/curator/sandbox.py`](../../harness/curator/sandbox.py) checks them ten times a second
+and stops the session's whole process tree when one is passed. The reason is
+`lifecycle.stopped` in the session record and `sandbox.stopped` in a shadow summary.
+
+| Bound | Default | Stop reason |
+| --- | --- | --- |
+| Resident memory of the session's process tree | 2 GiB | `memory limit` |
+| Size of the session's own files: the workspace's `submissions/`, `drafts/` and `scratch/`, and its fresh home | 1 GiB | `disk limit` |
+| Processes in the tree | 64 | `process limit` |
+| Wall-clock time | 600 s for a session; the shadow runner passes `--wall-seconds` (default 1,800) | `wall-clock limit` |
+
+The kernel also limits each process to 1,800 CPU seconds, 64 MiB per file and 256 open files.
+
+**Disk: the session's own files and nothing else.**
+- **Bounded.** The supervisor totals the allocated size of every file under the directories
+  the profile lets the session write, without following links. The largest total seen is
+  `provenance.peak_disk_bytes` in the session record. A tree it cannot measure, such as an
+  unreadable directory or an over-long path, stops the session as `disk unmeasurable`.
+- **Not bounded: the rest of the disk.** The sandbox does not read the volume's free space.
+  Other programs' disk use does not stop a session, and the sandbox does not protect the
+  disk from them. A disk that something else fills reaches a session only as failed writes,
+  its own or the runner's.
+- **Not counted.** A file the session deletes while holding it open keeps its space until
+  the process ends, and the total does not see it; only the per-file and open-file limits
+  bound it. The session's output log is in the session record, outside the workspace, under
+  the per-file limit alone. Between two checks a session can pass the bound by what it
+  writes in a tenth of a second.
