@@ -137,7 +137,7 @@ Keychain retrieval, source/GitHub operations and arbitrary shell code retain the
 own tool policies; do not hide them behind an allowed command.
 
 Project-local coding-agent allowances provide narrow stable CLI allowances for the
-same three prefixes in each supported host: [Codex rules](../.codex/rules/gameplay.rules)
+same three prefixes in each lead host: [Codex rules](../.codex/rules/gameplay.rules)
 and [Claude Code settings](../.claude/settings.json). They do not confine filesystem
 access, pin source, load provider keys, prove active-chat policy loading or grant a
 per-agent sandbox. Use the inspected trusted checkout and freeze source during play.

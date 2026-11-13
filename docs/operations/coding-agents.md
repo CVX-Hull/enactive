@@ -9,8 +9,9 @@ status: active
 The lead's coding agent is engineering tooling. Project instructions, standards
 and gameplay design are host-neutral; this page is the one place that maps them
 to each supported coding agent. Codex and Claude Code are supported as the lead's
-host; Antigravity is supported as a non-interactive reviewer or worker the lead
-starts ([below](#non-interactive-runs-for-a-second-model-family)). None is a
+host; Antigravity is supported only as a non-interactive reviewer the lead starts
+([below](#non-interactive-runs-for-a-second-model-family)), as the owner asked
+([decision log](../decisions/owner-decisions.md)). None is a
 deciding player host or a fallback for one: gameplay runs only through the
 [player host contract](../contracts/player-host.md).
 
@@ -39,26 +40,34 @@ not in this repository.
 ### Non-interactive runs for a second model family
 
 A lead on one host may start a worker or reviewer on another, so that a review comes
-from a second model family. Each run is a fresh, clean-context agent given a brief
-from the [template](../standards/agents.md#brief-template) on standard input or as
-its argument; its final message is the hand-back, verified like any other.
+from a second model family. Each run is given a brief from the
+[template](../standards/agents.md#brief-template); its final message is the
+hand-back, verified like any other. `WORKTREE` is the leaf's worktree, `OUT` a file
+in the lead's scratch directory, and `BRIEF` the brief text.
 
-| Role | Codex (`codex exec`) | Antigravity (`agy`) |
+| Role | Codex (`codex exec`), brief on standard input | Antigravity (`agy`), from the worktree |
 | --- | --- | --- |
-| Reviewer | `codex exec -s read-only -C WORKTREE -o OUT -` | `agy --mode plan -p BRIEF` from the worktree |
-| Worker | `codex exec -s workspace-write -C WORKTREE -o OUT -` | `agy --mode accept-edits --sandbox -p BRIEF` from the worktree |
+| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only -C WORKTREE -o OUT -` | `agy --mode plan -p BRIEF` |
+| Worker | `codex exec --ignore-rules -s workspace-write -C WORKTREE -o OUT -` | not used |
 
-- **Commits.** Codex's `workspace-write` sandbox cannot write the main checkout's
-  `.git`, which a worktree shares, and has no network. A worker on either host
-  leaves its changes uncommitted, and the lead inspects and commits them, as the
-  lead already does before every commit.
-- **Commands.** Antigravity's print mode refuses any shell command it was not
-  granted, so a reviewer's brief carries the diff and the command output it needs.
-- **Credentials.** The shell that starts either tool holds no provider credential
-  ([R-KEY-LEAK](../risks.md)): the tool reads its whole environment, and that would
-  hand a key to a third provider. Cost: none beyond starting it from a clean shell.
-- **Outside the project** each tool keeps its own sessions and logs under its home
-  configuration directory, as it does when used by hand
+- **No gameplay allowance** ([R-DELEGATION-ERROR](../risks.md)): `--ignore-rules`
+  keeps the tracked [gameplay rules](../../.codex/rules/gameplay.rules), which allow
+  `harness run` without a prompt, out of a delegated run, since reviewers and workers
+  never send game inputs. Cost: one flag.
+- **Commits.** A Codex worker leaves its changes uncommitted and the lead inspects and
+  commits them, as the lead does before every commit; the worker's hand-back is the
+  diff and the commands it ran.
+- **Antigravity reviewers.** Print mode refuses any shell command it was not granted,
+  so the brief carries the diff and the command output the review needs; a large diff
+  goes in parts, within the shell's argument limit. Antigravity keeps state between
+  conversations (summaries, a `brain` directory) and whether a later run reads it is
+  not known, so its review is the second family's view, and the clean-context review
+  is still a fresh agent on the lead's host.
+- **Credentials** ([R-KEY-LEAK](../risks.md)): the shell that starts either tool
+  holds no provider key, since the tool reads its whole environment and would hand
+  the key to a third provider. Cost: none beyond starting it from a clean shell.
+- **Outside the project** each tool keeps its own state (sessions, logs, caches)
+  under its home configuration directory, as it does when used by hand
   ([R-HOST-CHANGE](../risks.md)); the project changes no configuration of either.
 
 ## Environment facts for agents
@@ -84,7 +93,7 @@ These hold in every checkout and worktree, on every host.
 - **Pull requests** use the repository's template, reference issues with `Refs`, and
   say that agent review is not human approval. A worker does not merge.
 - **Nothing outside the project.** No global installs, and no home-directory files
-  written by the task (a host's own sessions and logs are the host's). Scratch
+  written by the task (a host's own state is the host's). Scratch
   files go in the host's scratch directory, not in the checkout.
 - **Only the lead, or an operator the lead designates,** launches the game, uses the
   provider key or spends ([S-AGENT](../standards/agents.md#delegated-campaign-operation)).
