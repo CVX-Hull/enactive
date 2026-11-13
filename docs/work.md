@@ -24,6 +24,21 @@ capabilities and limits; [work items](workflows/work-items.md) own how work flow
 | Spectator views | [#143](https://github.com/CVX-Hull/enactive/issues/143) | [Observer operations](components/observer-operations.md) |
 | CDDA-class portability | [#191](https://github.com/CVX-Hull/enactive/issues/191) | [ADR006](decisions/006-computer-control-boundary.md) |
 
+Every other open issue is a sub-issue of one of the outcomes above, with six
+exceptions that have no parent on GitHub:
+
+- [#441](https://github.com/CVX-Hull/enactive/issues/441), the seven-day screen, serves
+  the seven-day campaign (#145) and waits for an owner decision.
+- [#442](https://github.com/CVX-Hull/enactive/issues/442), the cadence plan, serves
+  responsiveness (#164) and is Ready.
+- [#128](https://github.com/CVX-Hull/enactive/issues/128) is a defect: native gameplay
+  should stay responsive when spectator frame publication stalls.
+- [#9](https://github.com/CVX-Hull/enactive/issues/9),
+  [#12](https://github.com/CVX-Hull/enactive/issues/12) and
+  [#26](https://github.com/CVX-Hull/enactive/issues/26) are maintenance questions: an
+  automated native regression runner, broader formatting and type analysis, and the
+  currency of the gameplay research.
+
 Open questions about controls and their cost are tracked in
 [#555](https://github.com/CVX-Hull/enactive/issues/555) (how spend is capped),
 [#556](https://github.com/CVX-Hull/enactive/issues/556) (remaining control candidates)
