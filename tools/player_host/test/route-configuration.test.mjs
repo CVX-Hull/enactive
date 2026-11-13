@@ -17,10 +17,11 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   for (const value of [undefined,null,1,0.5,'','0','0.0','-1','+1','1e3','1.','.5','01','NaN','Infinity','1,000',' 1']) {
     assert.throws(()=>validateConfiguration({...route(),spend_limit_usd:value},model.id,'off'),undefined,`limit ${value}`);
   }
-  for (const value of [undefined,null,0,0.25,'','-0.25','1e-3','NaN','Infinity']) {
+  // The bound is above zero too: a zero bound would count a failed request as free.
+  for (const value of [undefined,null,0,0.25,'','0','0.000','-0.25','1e-3','NaN','Infinity']) {
     assert.throws(()=>validateConfiguration({...route(),unpriced_request_usd:value},model.id,'off'),undefined,`bound ${value}`);
   }
-  assert.doesNotThrow(()=>validateConfiguration({...route(),spend_limit_usd:'0.01',unpriced_request_usd:'0'},model.id,'off'));
+  assert.doesNotThrow(()=>validateConfiguration({...route(),spend_limit_usd:'0.01',unpriced_request_usd:'0.000000000000000001'},model.id,'off'));
   for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
     assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
   }

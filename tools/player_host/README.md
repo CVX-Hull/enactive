@@ -365,7 +365,7 @@ post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
 cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 3 retains request text/UTF8 counts,
+call IDs where applicable. Telemetry version 4 retains request text/UTF8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -401,10 +401,10 @@ In this adapter:
 - **Counting.** Each HTTP attempt counts once, when its `response-complete` is
   written: at `reported_cost_usd` when that is not null, otherwise at the route's
   `unpriced_request_usd`. The event carries `counted_cost_usd`, `cost_counted_as`
-  (`provider-reported` or `unpriced-bound`) and the running `spent_usd`. An attempt
-  that reaches settlement without a `response-complete` gets a `request-unpriced`
-  event with the same three fields. `settled` carries the total `spent_usd` and the
-  count of `unpriced_requests`.
+  (`provider-reported` or `unpriced-bound`) and the running `spent_usd`. Every attempt
+  ends in a `response-complete`, a failed or aborted one included. `settled` carries
+  the total `spent_usd` and the count of `unpriced_requests`, which the driver checks
+  against its own sums from the trace.
 - **`spend-limit`.** The check sits beside the `max_requests` check: on entering a
   logical request, before every fetch, and after a first attempt fails and before its
   retry. When the total has reached the limit the host stops and sends nothing. A
@@ -475,7 +475,7 @@ progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 3 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 4 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings
@@ -486,7 +486,7 @@ settled event; they do not measure disk durability or async drain. Library calle
 without sink instrumentation retain null sink measurements. Observing overhead
 still adds work and must be measured during subsequent play.
 
-`context-manifest` (additive in version 3, absent from traces before 6 November 2026)
+`context-manifest` (absent from archived version 3 traces recorded before 6 November 2026)
 records, once per HTTP attempt before the fetch, the ordered parts of the payload as
 roles, kinds, sizes and SHA-256 digests with tool-call, image and source identities,
 delta-encoded against the previous attempt; it stores no text or pixels. The replay rule

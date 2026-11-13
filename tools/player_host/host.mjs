@@ -84,9 +84,10 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd']);
   requireThat(configuration.schema === 'player-host/4');
   // Dollars this actor may still spend, and what one request with no cost record counts for.
-  // Both are plain decimal text computed by the driver; a JSON number is refused.
-  const spendLimit = amountFromText(configuration.spend_limit_usd);
-  requireThat(spendLimit !== null && spendLimit[0] > 0n && amountFromText(configuration.unpriced_request_usd) !== null);
+  // Both are plain decimal text computed by the driver and above zero; a JSON number is refused.
+  // A zero bound would count a failed request as free.
+  const spendLimit = amountFromText(configuration.spend_limit_usd), bound = amountFromText(configuration.unpriced_request_usd);
+  requireThat(spendLimit !== null && spendLimit[0] > 0n && bound !== null && bound[0] > 0n);
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
@@ -614,10 +615,9 @@ export async function runHost(options) {
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false, requestReportedCost = null;
   // The dollar limit (docs/contracts/player-host.md, Spend). Every HTTP attempt counts once, when it
   // ends: at the cost the provider reported, else at the route's bound for a request with no cost
-  // record. `uncounted` is the started attempt that has not been counted yet.
-  let spent = [0n, 0], unpricedRequests = 0, uncounted, spendLimit, unpricedBound;
+  // record. Every attempt ends in a `response-complete`, which carries its count.
+  let spent = [0n, 0], unpricedRequests = 0, spendLimit, unpricedBound;
   const countAttempt = reported => {
-    uncounted = undefined;
     const priced = reported !== null && reported !== MALFORMED_COST;
     const amount = priced ? reported : unpricedBound;
     if (!priced) unpricedRequests++;
@@ -948,7 +948,7 @@ export async function runHost(options) {
             const sizes = {...payloadSize(payload), payload_bytes:Buffer.byteLength(init.body),
               payload_sha256:createHash('sha256').update(init.body).digest('hex')};
             const inspectionMs = performance.now() - fetchEntered;
-            const attemptId = requestId = uncounted = `request-${++requests}`;
+            const attemptId = requestId = `request-${++requests}`;
             const attemptProgress = responseProgress = {request_id:attemptId, body_bytes:0, body_chunks:0,
               provider_events:0, content_bytes:0, reasoning_bytes:0,
               tool_argument_bytes:0, response_id:null, reported_provider:null, ...progressTimes()};
@@ -1099,8 +1099,6 @@ export async function runHost(options) {
   }
   const finalText = !fatal && finish ? finish.report : '';
   const controlId = !fatal && finish ? finish.control_id : control?.id ?? null;
-  // An attempt that ended with no `response-complete` (aborted at a deadline) still counts, at the bound.
-  if (uncounted !== undefined) emit('request-unpriced', {request_id:uncounted, ...countAttempt(null)});
   const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : finish.disposition), requests, finalText, control_id:controlId};
   emit('settled', {ok:result.ok, reason:result.reason, requests, spent_usd:amountText(spent), unpriced_requests:unpricedRequests, control_id:controlId,
     accepted_control_id:control?.id ?? null, event_output:{...outputStats}, native_cleanup_claimed:false});

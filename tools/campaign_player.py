@@ -16,7 +16,7 @@ import uuid
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
 from harness.player_client import ADAPTER_CLOSE_REASON
-from tools.campaign_package import usd,usd_text
+from tools.campaign_package import EXACT,counted_usd,declared_floor,usd_sum,usd_text
 from tools.configure_player_tools import ROOT,configuration
 
 
@@ -31,7 +31,8 @@ class HostEvents:
 
     Spend is counted per started request (docs/contracts/player-host.md, Spend): at the cost the provider
     reported on its `response-complete`, else at `bound`, the route's `unpriced_request_usd`. A request that
-    started and left no cost record, because the host was killed, counts at the bound too."""
+    started and left no cost record, because the host was killed, counts at the bound too. A trace is complete
+    only when the host's own totals in `settled` equal these sums."""
     def __init__(self,path: Path,allowance: int,bound: Decimal):
         self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance;self.bound=bound
         self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
@@ -41,23 +42,36 @@ class HostEvents:
 
     def counted_usd(self) -> Decimal:
         """Dollars counted by the cost records read so far; a request still in flight is not in it."""
-        return sum((self.bound if amount is None else amount for amount in self.costs.values()),Decimal(0))
+        return usd_sum(self.bound if amount is None else amount for amount in self.costs.values())
 
     def _count(self,value: dict) -> None:
         match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
         identity=int(match.group(1)) if match else None
         if identity not in self.requests or identity in self.costs:raise ControlError('Host cost record lacks its one request')
-        amount=usd(value.get('counted_cost_usd'),'counted_cost_usd')
+        # The host writes the provider's own digits, so a counted amount has no cap on its length.
+        amount=counted_usd(value.get('counted_cost_usd'),'counted_cost_usd')
         if value.get('cost_counted_as')=='provider-reported':self.costs[identity]=amount
         elif value.get('cost_counted_as')=='unpriced-bound' and amount==self.bound:self.costs[identity]=None
         else:raise ControlError('Host cost record differs from the route bound')
 
-    def spend(self,complete: bool) -> dict:
-        """This actor's counted spend, in decimal text. Every started request without a reported cost is unpriced."""
+    def _sums(self) -> tuple[Decimal,int,Decimal]:
+        """(reported, unpriced requests, spent). Every started request without a reported cost is unpriced."""
         reported=[amount for amount in self.costs.values() if amount is not None]
         unpriced=len(self.requests)-len(reported)
-        return dict(reported_usd=usd_text(sum(reported,Decimal(0))),unpriced_requests=unpriced,
-            spent_usd=usd_text(sum(reported,Decimal(0))+unpriced*self.bound),spend_complete=complete)
+        total=usd_sum(reported)
+        return total,unpriced,EXACT.add(total,EXACT.multiply(Decimal(unpriced),self.bound))
+
+    def spend(self,complete: bool) -> dict:
+        """This actor's counted spend, in decimal text."""
+        reported,unpriced,spent=self._sums()
+        return dict(reported_usd=usd_text(reported),unpriced_requests=unpriced,spent_usd=usd_text(spent),spend_complete=complete)
+
+    def _host_agrees(self) -> bool:
+        """The host's own totals in `settled` are the driver's sums from the trace."""
+        _,unpriced,spent=self._sums()
+        try:total=counted_usd(self.settled.get('spent_usd'),'settled spent_usd')
+        except ControlError:return False
+        return total==spent and type(self.settled.get('unpriced_requests')) is int and self.settled['unpriced_requests']==unpriced
 
     def read(self) -> bool:
         if self.error is not None:
@@ -95,7 +109,6 @@ class HostEvents:
                 except (KeyError,ValueError,TypeError):pass
                 if value.get('usage_available') is True:self.usage[value['request_id']]=value['usage']
                 self._count(value)
-            elif kind=='request-unpriced':self._count(value)
             elif kind=='handoff':
                 if self.handoff is not None or self.player_finish is not None:raise ControlError('Conflicting host terminal signal')
                 self.handoff=value
@@ -111,7 +124,7 @@ class HostEvents:
         while self.read():pass
         valid=(not self.buffer and self.started and self.settled is not None
                and self.requests==set(range(1,len(self.requests)+1))
-               and self.settled.get('requests')==len(self.requests))
+               and self.settled.get('requests')==len(self.requests) and self._host_agrees())
         # Uncertain trace accounting reserves the entire original host allocation.
         # `configured_estimate_usd` is an estimate from the route's configured rates; it is not counted spend.
         return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
@@ -180,7 +193,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
     for index in range(1,profile['max_hosts']+1):
         seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
         allowance=min(route['max_requests'],profile['max_http_attempts']-total_attempts)
-        dollars=limit-spent
+        # A route's limit is a declared amount, so what remains is cut to the digits one may carry.
+        dollars=declared_floor(EXACT.subtract(limit,spent))
         if stopped.is_set() or seconds<=30 or allowance<1:
             reason='Original host/campaign resources or cancellation prevent another actor';break
         if dollars<=0:
@@ -244,7 +258,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                         if now>=ending_at:reason='Original final-report grace exhausted';break
                     elif ending_request is None:
                         remaining=application.runtime.remaining()
-                        dollars_left=dollars-events.counted_usd()
+                        dollars_left=EXACT.subtract(dollars,events.counted_usd())
                         trigger=ending_trigger(profile['ending_reserve'],started+seconds-now,
                             min(allowance-len(events.requests),profile['max_http_attempts']-total_attempts-len(events.requests)),
                             dollars_left,remaining)
@@ -318,17 +332,18 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     reported_usd='0',unpriced_requests=0,spent_usd='0',spend_complete=child is None)
             record['elapsed_seconds']=time.monotonic()-started
             total_attempts+=record['attempts_charged'];host_seconds_used+=record['elapsed_seconds']
-            spent+=Decimal(record['spent_usd'])
+            spent=EXACT.add(spent,Decimal(record['spent_usd']))
             records.append(record)
             try:write_new(target/'driver-receipt.json',record)
             except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
         if record.get('orchestration_error'):break
-    reported=sum((Decimal(r['reported_usd']) for r in records),Decimal(0));unpriced=sum(r['unpriced_requests'] for r in records)
+    reported=usd_sum(Decimal(r['reported_usd']) for r in records);unpriced=sum(r['unpriced_requests'] for r in records)
     # `spent_usd` is what counts toward the limit: reported cost plus each unpriced request at the bound.
     # It is complete only when every actor's trace was read to its settlement.
     return dict(schema='player-driver/4',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
                 attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
                 reported_usd=usd_text(reported),unpriced_requests=unpriced,unpriced_request_usd=usd_text(bound),
-                spent_usd=usd_text(reported+unpriced*bound),spend_complete=all(r['spend_complete'] for r in records),
+                spent_usd=usd_text(EXACT.add(reported,EXACT.multiply(Decimal(unpriced),bound))),
+                spend_complete=all(r['spend_complete'] for r in records),
                 configured_estimate_usd=sum(r.get('configured_estimate_usd',0) for r in records),
                 missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged']) for r in records))

@@ -55,8 +55,7 @@ def test_record_derives_a_row_from_the_package_and_refuses_repeats_and_missing_r
     assert main(arguments) == 1 and 'already recorded' in capsys.readouterr().err
     assert main(['--ledger', str(ledger), 'record', str(package(tmp_path / 'other', receipt=False)), '--study', '999']) == 1
     assert 'no receipt.json' in capsys.readouterr().err
-    for name, accounting, message in (('lh9a3', dict(spend_complete=False), 'spend as incomplete'),
-                                      ('lh9a4', dict(spent_usd='1.5'), 'not its reported_usd plus unpriced requests'),
+    for name, accounting, message in (('lh9a4', dict(spent_usd='1.5'), 'not its reported_usd plus unpriced requests'),
                                       ('lh9a5', dict(reported_usd=1.0), 'derived row is invalid')):
         assert main(['--ledger', str(ledger), 'record', str(package(tmp_path / name, name, **accounting)), '--study', '999']) == 1
         assert message in capsys.readouterr().err
@@ -64,6 +63,24 @@ def test_record_derives_a_row_from_the_package_and_refuses_repeats_and_missing_r
         main([*arguments, '--provider-usd', '1.0'])
     capsys.readouterr()
     assert len(read_ledger(ledger)) == 1
+
+
+def test_an_incomplete_receipt_is_recorded_only_as_its_upper_bound(tmp_path, capsys):
+    """Spend that could not be counted is refused by default. With the flag the row holds the most the run can have
+    spent: its declared limit plus one request at the bound."""
+    ledger = write(tmp_path / 'runs.jsonl')
+    incomplete = package(tmp_path / 'packages', spend_complete=False, reported_usd='0.3', unpriced_requests=0,
+                         spent_usd='0.3', attempts_charged=40)
+    arguments = ['--ledger', str(ledger), 'record', str(incomplete), '--study', '999']
+    assert main(arguments) == 1
+    assert 'spend as incomplete' in capsys.readouterr().err and read_ledger(ledger) == []
+    assert main([*arguments, '--record-upper-bound']) == 0
+    recorded = read_ledger(ledger)  # reading checks the identity: 5 + 1 x 0.4096
+    assert recorded == [row(attempts=40, provider_usd='5', unpriced_attempts=1, unpriced_attempt_usd='0.4096', spend_usd='5.4096')]
+    assert totals(recorded, 999, None)['spend_usd'] == '5.4096'
+    complete = package(tmp_path / 'more', name='lh9a2')
+    assert main(['--ledger', str(ledger), 'record', str(complete), '--study', '999', '--record-upper-bound']) == 1
+    assert 'spend as complete' in capsys.readouterr().err and len(read_ledger(ledger)) == 1
 
 
 def test_record_defaults_the_label_and_refuses_earlier_package_versions(tmp_path, capsys):

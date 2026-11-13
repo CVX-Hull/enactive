@@ -80,9 +80,10 @@ def conditions(connection: sqlite3.Connection, facts: dict, now: float) -> dict:
             f'met at {LOOP_DECISIONS} or more decisions without play while game time does not advance',
             streak >= LOOP_DECISIONS and not advanced),
         row('spend_inside_allowance', 'Spend inside allowance', dict(spent=round(spend, 4), projected_one_hour=round(projected, 4),
-            ceiling=ceiling), 'met when spend or the one-hour projection exceeds the manifest ceiling',
+            ceiling=ceiling), "met when the configured-rate estimate of spend, or its one-hour projection, exceeds the run's "
+            'declared limit; the limit itself is enforced on provider-reported cost, not on this estimate',
             ceiling is not None and (spend > ceiling or projected > ceiling),
-            '' if ceiling is not None else 'the manifest declares no spend ceiling'),
+            '' if ceiling is not None else 'the manifest declares no spend limit'),
         row('not_dead_and_spending', 'Not dead and still spending', dict(died=death is not None, requests_after_death=after_death),
             'met at a death followed by further requests', death is not None and after_death > 0)]
     met = [c['name'] for c in result if c['met']]

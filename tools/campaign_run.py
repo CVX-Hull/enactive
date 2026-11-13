@@ -19,7 +19,7 @@ from harness.computer.launch import OwnedTarget
 from harness.computer.runtime import ComputerRuntime
 from harness.player.memory import Memory
 from harness.server import serve
-from tools.campaign_package import preflight,usd_text
+from tools.campaign_package import EXACT,preflight,usd_text
 from tools.campaign_player import run_hosts,write_new
 
 
@@ -31,7 +31,7 @@ def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool
     reported=Decimal(driver['reported_usd']) if driver else Decimal(0)
     unpriced=driver['unpriced_requests'] if driver else 0
     return dict(spend_limit_usd=profile['spend_limit_usd'],reported_usd=usd_text(reported),unpriced_requests=unpriced,
-        unpriced_request_usd=usd_text(bound),spent_usd=usd_text(reported+unpriced*bound),
+        unpriced_request_usd=usd_text(bound),spent_usd=usd_text(EXACT.add(reported,EXACT.multiply(Decimal(unpriced),bound))),
         attempts_charged=driver['attempts_charged'] if driver else (profile['max_http_attempts'] if hosts_started else 0),
         allocated_max_attempts=profile['max_http_attempts'],
         spend_complete=driver['spend_complete'] if driver else not hosts_started)

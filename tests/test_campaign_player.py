@@ -23,29 +23,72 @@ def cost(request,amount,how='provider-reported',kind='response-complete'):
     return dict(type=kind,request_id=request,counted_cost_usd=amount,cost_counted_as=how)
 
 
+def finished(tmp_path,rows,allowance=10):
+    path=tmp_path/'host.jsonl'
+    path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+    events=HostEvents(path,allowance,BOUND)
+    try:return events.finish()
+    finally:events.close()
+
+
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
-    """Three started requests: one priced by the provider, one counted at the bound by the host, and one that
-    left no cost record at all. The last two are unpriced; a trace that cannot be read to its end is incomplete."""
+    """Three requests: two priced by the provider and one counted at the bound. A trace that cannot be read to its
+    end is incomplete."""
     path=tmp_path/'host.jsonl'
     rows=[START,
           dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
           dict(type='request-start',request_id='request-2'),cost('request-2','0.25','unpriced-bound'),
           dict(type='request-start',request_id='request-3'),cost('request-3','0.7'),
-          dict(type='request-start',request_id='request-4'),
-          dict(type='settled',requests=4,ok=False)]
+          dict(type='settled',requests=3,ok=False,spent_usd='1.05',unpriced_requests=1)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
     events=HostEvents(path,10,BOUND)
     try:
         result=events.finish()
-        assert result['attempts_charged']==4 and result['accounting_complete']
+        assert result['attempts_charged']==3 and result['accounting_complete']
         # 0.1 + 0.7 is exactly 0.8 here; the floating-point sum is 0.7999999999999999.
-        assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.8',2,'1.3',True)
+        assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.8',1,'1.05',True)
         assert events.counted_usd()==Decimal('1.05')
         with path.open('a') as stream:stream.write('{"partial":')
         result=events.finish()
         assert not result['accounting_complete'] and result['attempts_charged']==10
-        assert (result['spent_usd'],result['spend_complete'])==('1.3',False)
+        assert (result['spent_usd'],result['spend_complete'])==('1.05',False)
     finally:events.close()
+
+
+def test_a_started_request_with_no_cost_record_counts_at_the_bound_and_leaves_the_spend_incomplete(tmp_path):
+    """A host killed mid-request leaves a request with no cost record and no settlement. The request counts at
+    the bound, and nothing vouches for the total."""
+    rows=[START,dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
+          dict(type='request-start',request_id='request-2')]
+    result=finished(tmp_path,rows)
+    assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.1',1,'0.35',False)
+    assert not result['accounting_complete'] and result['attempts_charged']==10
+
+
+@pytest.mark.parametrize('totals',[dict(spent_usd='0.1',unpriced_requests=1),dict(spent_usd='0.35',unpriced_requests=0),
+    dict(spent_usd='0.35'),dict(unpriced_requests=1),dict(spent_usd=0.35,unpriced_requests=1),dict(spent_usd='0.35',unpriced_requests=True),{}])
+def test_host_totals_that_differ_from_the_drivers_own_sums_leave_the_spend_incomplete(tmp_path,totals):
+    rows=[START,dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
+          dict(type='request-start',request_id='request-2'),cost('request-2','0.25','unpriced-bound')]
+    agreed=finished(tmp_path,[*rows,dict(type='settled',requests=2,ok=True,spent_usd='0.35',unpriced_requests=1)])
+    assert agreed['accounting_complete'] and agreed['spend_complete'] and agreed['attempts_charged']==2
+    (tmp_path/'host.jsonl').unlink()
+    result=finished(tmp_path,[*rows,dict(type='settled',requests=2,ok=True,**totals)])
+    assert not result['accounting_complete'] and not result['spend_complete'] and result['attempts_charged']==10
+    assert result['spent_usd']=='0.35'
+
+
+def test_a_reported_cost_longer_than_a_declared_amount_may_be_is_counted_exactly(tmp_path):
+    """The host writes the provider's own digits: 19 and 23 fractional digits here, more than a declared amount
+    may carry. The trace is read, and no digit is rounded away in the sums."""
+    long19,long23='0.0034500000000000004','0.00000012345678901234567'
+    rows=[START,dict(type='request-start',request_id='request-1'),cost('request-1',long19),
+          dict(type='request-start',request_id='request-2'),cost('request-2',long23),
+          dict(type='request-start',request_id='request-3'),cost('request-3','123456789012.5'),
+          dict(type='settled',requests=3,ok=True,spent_usd='123456789012.50345012345678901274567',unpriced_requests=0)]
+    result=finished(tmp_path,rows)
+    assert result['accounting_complete'] and result['spend_complete']
+    assert result['reported_usd']==result['spent_usd']=='123456789012.50345012345678901274567'
 
 
 @pytest.mark.parametrize('record',[cost('request-2','0.1'),cost('request-1','0.1','estimated'),cost('request-1',0.1),
@@ -113,7 +156,8 @@ def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).is
 route = json.load(open(flags['--config']))
 emit(type='host-start', telemetry_version=4, schema='player-host/4', spend_limit_usd=route['spend_limit_usd'])
 emit(type='request-start', request_id='request-1')
-emit(type='response-complete', request_id='request-1', counted_cost_usd='0.004', cost_counted_as='provider-reported')
+spent = '0.0034500000000000004' if 'LONG_COST' in prompt else '0.004'
+emit(type='response-complete', request_id='request-1', counted_cost_usd=spent, cost_counted_as='provider-reported')
 ending = 'READ_CONTROL' in prompt
 handoff = 'HANDOFF_RACE' in prompt and flags['--actor-id'] == 'a'*32
 control = json.loads(sys.stdin.readline()) if ending else None
@@ -122,14 +166,14 @@ if control:
     assert control['actor_id'] == flags['--actor-id'] and control['session'] == flags['--session']
 if handoff:
     emit(type='handoff',actor_id=flags['--actor-id'],session=flags['--session'],handoff_id='d'*32,context_id='e'*32,context_sha256='f'*64,grants_authority=False)
-    emit(type='settled',ok=True,reason='handoff',requests=1)
+    emit(type='settled',ok=True,reason='handoff',requests=1,spent_usd=spent,unpriced_requests=0)
 else:
     reason = 'external_stop_complete' if ending else 'task_complete'
     control_id = control['id'] if control else None
     if 'WRONG_CONTROL' in prompt: control_id='f'*32
     if 'NO_FINISH' not in prompt:
         emit(type='player-finish',disposition=reason,control_id=control_id,report='report',source_ids=[])
-    emit(type='settled',ok=True,reason=reason,control_id=control_id,requests=1)
+    emit(type='settled',ok=True,reason=reason,control_id=control_id,requests=1,spent_usd=spent,unpriced_requests=0)
 open(flags['-o'], 'w').write('report\\n')
 """
 
@@ -204,6 +248,17 @@ def test_the_dollar_reserve_requests_the_orderly_finish(tmp_path):
     assert intent['id']==json.loads((tmp_path/'actors/001/control.json').read_text())['id']==result['actors'][0]['settled']['control_id']
     assert (result['reported_usd'],result['unpriced_requests'],result['unpriced_request_usd'],result['spent_usd'],
             result['spend_complete'])==('0.004',0,'0.25','0.004',True)
+
+
+def test_a_successors_limit_is_cut_to_the_digits_a_route_may_carry(tmp_path):
+    """The first actor's cost has 19 fractional digits. What remains has 19 too; the successor's route gets it cut
+    down to 18, never rounded up, and the totals keep every digit."""
+    profile,route,application=driver_case(tmp_path,'Frozen mission READ_CONTROL HANDOFF_RACE LONG_COST',two_actors=True)
+    with patch('tools.campaign_player._handoff_context',return_value='{"fallible":"unfinished work"}'):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert result['outcome']=='player_external_stop_complete_unassessed',result
+    assert json.loads((tmp_path/'actors/002/route.json').read_text())['spend_limit_usd']=='0.996549999999999999'
+    assert (result['reported_usd'],result['spent_usd'],result['spend_complete'])==('0.0069000000000000008','0.0069000000000000008',True)
 
 
 def test_no_successor_is_started_when_no_dollars_remain(tmp_path):

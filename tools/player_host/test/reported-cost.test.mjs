@@ -12,7 +12,7 @@ const tokens = {prompt_tokens:11, completion_tokens:5, total_tokens:16};
 const pilot = vectors.cases[0].usage;
 const limited = (spend_limit_usd, unpriced_request_usd = '0.25') => ({...route(), max_requests:8, spend_limit_usd, unpriced_request_usd});
 const look = cost => reply(null, [['observe', {}]], {...tokens, cost});
-const counted = events => events.filter(event => ['response-complete', 'request-unpriced'].includes(event.type))
+const counted = events => events.filter(event => event.type === 'response-complete')
   .map(event => [event.request_id, event.counted_cost_usd, event.cost_counted_as, event.spent_usd]);
 const settled = events => { const {spent_usd, unpriced_requests} = events.at(-1); return {spent_usd, unpriced_requests}; };
 
@@ -61,6 +61,18 @@ test('the total is an exact decimal sum where floating point would let one more 
   const {result, payloads, events} = await scenario(t, [look(0.1), look(0.7), reply()], {configuration:limited('0.8')});
   assert.equal(result.reason, 'spend-limit'); assert.equal(payloads.length, 2);
   assert.deepEqual(settled(events), {spent_usd:'0.8', unpriced_requests:0});
+});
+test('a cost with more digits than a declared amount may have is written and summed as plain decimal text', async t => {
+  // 19 and 23 fractional digits, the second from a number JavaScript prints with an exponent.
+  assert.equal(String(1.2345678901234566e-7), '1.2345678901234566e-7');
+  const {result, events} = await scenario(t, [look(0.0034500000000000004), look(1.2345678901234566e-7), reply('finished', [], {cost:0.25})]);
+  assert.equal(result.ok, true);
+  assert.deepEqual(counted(events), [['request-1', '0.0034500000000000004', 'provider-reported', '0.0034500000000000004'],
+    ['request-2', '0.00000012345678901234566', 'provider-reported', '0.00345012345678901274566'],
+    ['request-3', '0.25', 'provider-reported', '0.25345012345678901274566']]);
+  assert.deepEqual(events.filter(event => event.type === 'response-complete').map(event => event.reported_cost_usd),
+    ['0.0034500000000000004', '0.00000012345678901234566', '0.25']);
+  assert.deepEqual(settled(events), {spent_usd:'0.25345012345678901274566', unpriced_requests:0});
 });
 test('a successful response with no usable cost stops the host, whether or not token counts arrived', async t => {
   for (const usage of [tokens, {...tokens, cost:'0.000038'}, {...tokens, cost:-0.000038}, {...tokens, cost:0.00001, is_byok:true}, false]) {

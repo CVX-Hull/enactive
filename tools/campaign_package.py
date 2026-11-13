@@ -1,7 +1,7 @@
 """Read one frozen current campaign package; never inspect unrelated history."""
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_DOWN,Context,Decimal,DivisionByZero,Inexact,InvalidOperation,Overflow
 import os
 from pathlib import Path
 import re
@@ -18,9 +18,16 @@ FIELDS={'schema','session','source_commit','files','initial_files','native','lib
         'spend_limit_usd','labels'}
 LABEL_FIELDS={'arm','start','scenario','lineage','admission'}
 PRINTABLE_ASCII=re.compile('[ -~]+')
-#: A dollar amount in a package, a route, a driver record or a receipt: plain decimal text, never a JSON number.
-#: The player host accepts the same text (tools/player_host/host.mjs, AMOUNT_TEXT).
+#: A declared dollar amount (a package's limit and reserve, a route's limit and bound): plain decimal text, never a
+#: JSON number, with at most twelve whole and eighteen fractional digits. The player host accepts the same text
+#: (tools/player_host/host.mjs, AMOUNT_TEXT).
 USD_TEXT=re.compile(r'(0|[1-9][0-9]{0,11})(\.[0-9]{1,18})?')
+#: A counted amount (a host trace's cost records and totals, and the driver and receipt figures summed from them):
+#: the same plain text with no cap on digits, because the host writes the provider's own digits, which can be
+#: longer than a declared amount may be.
+COUNTED_USD_TEXT=re.compile(r'(0|[1-9][0-9]*)(\.[0-9]+)?')
+#: Dollar arithmetic never rounds: it runs in this context, which raises instead of dropping a digit.
+EXACT=Context(prec=4000,traps=[Inexact,InvalidOperation,DivisionByZero,Overflow])
 
 
 def usd(value,name: str) -> Decimal:
@@ -30,9 +37,30 @@ def usd(value,name: str) -> Decimal:
     return Decimal(value)
 
 
+def counted_usd(value,name: str) -> Decimal:
+    """A counted dollar amount from a host trace: plain decimal text of any length; nothing else is an amount."""
+    if type(value) is not str or COUNTED_USD_TEXT.fullmatch(value) is None:
+        raise ControlError(f'{name} must be a plain decimal string of dollars')
+    return Decimal(value)
+
+
+def usd_sum(amounts,start: Decimal=Decimal(0)) -> Decimal:
+    """The exact sum of dollar amounts."""
+    total=start
+    for amount in amounts:total=EXACT.add(total,amount)
+    return total
+
+
+def declared_floor(amount: Decimal) -> Decimal:
+    """The largest declarable amount not above `amount`: digits past the eighteenth fractional one are dropped,
+    so a route never gives an actor more than the run has left."""
+    return amount.quantize(Decimal('1E-18'),rounding=ROUND_DOWN,context=Context(prec=4000))
+
+
 def usd_text(amount: Decimal) -> str:
-    """The one written form of an amount: no exponent, no trailing zeros, `0` for zero."""
-    return format(amount.normalize(),'f')
+    """The one written form of an amount: no exponent, no trailing zeros, `0` for zero. No digit is rounded away."""
+    text=format(amount,'f')
+    return (text.rstrip('0').rstrip('.') or '0') if '.' in text else text
 
 
 def unpriced_request_usd(route: dict) -> Decimal:
@@ -169,6 +197,13 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
         env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     bound=unpriced_request_usd(route)
+    # A route whose rates are all zero would count a failed request as free.
+    if bound<=0:raise ControlError("The route's configured rates give no bound for a request with no cost record")
     if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:
         raise ControlError(f"route.json unpriced_request_usd must be {usd_text(bound)} for this route's rates")
+    # With less than one unpriced request's bound left, a single failed request would end the run abruptly instead
+    # of in order. The reserve is below the limit, so the limit exceeds the bound too.
+    if Decimal(reserve['usd'])<bound:
+        raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(bound)}, "
+            'so that one request with no cost record still leaves an orderly finish')
     return profile,route,target
