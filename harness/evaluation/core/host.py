@@ -14,6 +14,9 @@ The same pass builds the `tool_calls` and `requests` rows of the record (one per
 per HTTP attempt) and the host-side events: memory, program, refusal, eviction, handoff-adjacent
 facts, custody stops (partial or unknown delivery only) and `run_end` (an orderly stop or a
 player finish, which is not a custody stop).
+
+`memory_reads` lists each memory read with the records it returned and the reading actor's calls before and
+after it, for a reviewer who judges whether a delivered record was used. It judges nothing itself.
 """
 from __future__ import annotations
 
@@ -21,6 +24,7 @@ from bisect import bisect_right
 from dataclasses import dataclass, field
 import json
 import math
+import re
 from typing import Callable, Sequence
 
 from .records import EventRow, RequestRow, ToolCallRow
@@ -313,14 +317,146 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
     return facts
 
 
-def record_ids(call: ToolCall) -> list[str]:
-    """IDs a memory read returned: one record, a query's records or a context's records."""
+def returned_records(call: ToolCall) -> list[dict]:
+    """Records a memory read returned, in the order returned: a query's or a context's records, or the one record a
+    read named."""
     value = call.result
     if isinstance(value, dict) and isinstance(value.get('records'), list):
-        return [n['id'] for n in value['records'] if isinstance(n, dict) and isinstance(n.get('id'), str)]
+        return [n for n in value['records'] if isinstance(n, dict) and isinstance(n.get('id'), str)]
     if isinstance(value, dict) and isinstance(value.get('id'), str):
-        return [value['id']]
+        return [value]
     return []
+
+
+def record_ids(call: ToolCall) -> list[str]:
+    """IDs a memory read returned: one record, a query's records or a context's records."""
+    return [n['id'] for n in returned_records(call)]
+
+
+def typed_text(call: ToolCall) -> list[str]:
+    """What one input call typed: the `text` actions of `computer_input`, in order. Key presses are not text."""
+    actions = call.arguments.get('actions') if call.tool == 'computer_input' else None
+    return [a['text'] for a in actions if isinstance(a, dict) and a.get('type') == 'text'
+        and isinstance(a.get('text'), str)] if isinstance(actions, list) else []
+
+
+def frame_source(call: ToolCall) -> str | None:
+    """The source ID of the frame a computer call returned, for a reader who goes on to view it."""
+    source = call.result.get('source') if isinstance(call.result, dict) else None
+    return source['source_id'] if isinstance(source, dict) and isinstance(source.get('source_id'), str) else None
+
+
+_WORD = re.compile(r'[^\W\d_]{3,}')
+
+
+def names_record(text: str, record: dict) -> bool:
+    """Whether every word of `text` occurs in the record's text or data. A word is three letters or more; two words
+    match when they are equal or share their first five letters ("battery", "batteries"). It is a lexical pointer
+    that knows nothing of the game: it finds where to look and decides nothing."""
+    def words(value: str) -> set[str]:
+        return set(_WORD.findall(value.casefold()))
+    wanted = words(text)
+    have = words(f"{record.get('text', '')} {json.dumps(record.get('data'), ensure_ascii=False)}")
+    return bool(wanted) and all(any(w == h or len(w) >= 5 and w[:5] == h[:5] for h in have) for w in wanted)
+
+
+@dataclass(frozen=True)
+class RecordReference:
+    """A later call of the reading actor that points at a returned record.
+
+    `how` is `typed` (the call typed text that `names_record` finds in the record; `detail` is the text), `source`
+    (it read a source the record cites; `detail` is the source ID) or `record` (a memory or handoff call named the
+    record; `detail` is `supports`, `supersedes`, `read`, `context` or `handoff`). `repeated` says the actor had
+    already typed that text, or read that source, before the memory read, so the read cannot be what prompted it.
+    A reference is a place to look. It is not a finding that the record was used."""
+
+    call: ToolCall
+    record_id: str
+    how: str
+    detail: str
+    repeated: bool
+
+
+@dataclass(frozen=True)
+class MemoryRead:
+    """One memory read, what it returned and what its actor did around it.
+
+    `request` is the actor's own request number (the N of its trace's `request-N`), of `actor_requests`. `held` holds
+    the returned IDs the actor already had when it read: it wrote them, an earlier read of its own returned them, or
+    the handoff context it started from carried them. `before` and `after` are the actor's other tool calls, in
+    order; `after` runs to the end of its trace."""
+
+    call: ToolCall
+    request: int | None
+    actor_requests: int
+    records: tuple[dict, ...]
+    held: frozenset[str]
+    before: tuple[ToolCall, ...]
+    after: tuple[ToolCall, ...]
+    references: tuple[RecordReference, ...]
+
+
+def _references(records: Sequence[dict], before: Sequence[ToolCall], after: Sequence[ToolCall]) -> list[RecordReference]:
+    typed = {text.casefold() for call in before for text in typed_text(call)}
+    sources = {call.arguments.get('source_id') for call in before if call.tool == 'player_source'}
+    found = []
+    for call in after:
+        arguments = call.arguments
+        written = arguments.get('record') if isinstance(arguments.get('record'), dict) else {}
+        named = {  # how a memory or handoff call can name a record
+            'supports': written.get('supports') if call.tool == 'player_memory_append' else None,
+            'supersedes': [written.get('supersedes')] if call.tool == 'player_memory_append' else None,
+            'read': [arguments.get('record_id')] if call.tool == 'player_memory_read' else None,
+            'context': arguments.get('ids') if call.tool == 'player_memory_context' else None,
+            'handoff': arguments.get('ids') if call.tool == 'player_handoff' else None}
+        for record in records:
+            for text in typed_text(call):
+                if names_record(text, record):
+                    found.append(RecordReference(call, record['id'], 'typed', text, text.casefold() in typed))
+            cited = record.get('sources') if isinstance(record.get('sources'), list) else ()
+            if call.tool == 'player_source' and arguments.get('source_id') in cited:
+                found.append(RecordReference(call, record['id'], 'source', arguments['source_id'],
+                    arguments['source_id'] in sources))
+            for detail, ids in named.items():
+                if isinstance(ids, list) and record['id'] in ids:
+                    found.append(RecordReference(call, record['id'], 'record', detail, False))
+    return found
+
+
+def memory_reads(facts: HostFacts, carry: dict[str, frozenset[str]] | None = None) -> list[MemoryRead]:
+    """Every finished memory read (`MEMORY_READ_TOOLS`) of a run, in actor and call order.
+
+    `carry` is `sources.read_carry`: the IDs each handing-off actor's context carried. An actor starts holding what
+    the actor before it carried. A failed, refused or unfinished read is not listed, as in `host_events`. Nothing
+    here reads a game screen or judges use: it lists what a reviewer needs in order to judge it."""
+    received = {taker: (carry or {}).get(giver, frozenset()) for giver, taker in zip(facts.actors, facts.actors[1:])}
+    spans: dict[str, tuple[int, int]] = {}
+    for request in facts.requests:
+        low, high = spans.get(request.actor, (request.decision, request.decision))
+        spans[request.actor] = (min(low, request.decision), max(high, request.decision))
+    calls: dict[str, list[ToolCall]] = {}
+    for call in facts.calls:
+        calls.setdefault(call.actor, []).append(call)
+    reads = []
+    for actor in facts.actors:
+        held = set(received.get(actor, ()))
+        first, last = spans.get(actor, (1, 0))
+        for position, call in enumerate(calls.get(actor, ())):
+            if not call.finished or call.error or call.refused:
+                continue
+            value = call.result if isinstance(call.result, dict) else {}
+            if call.tool == 'player_memory_append' and isinstance(value.get('id'), str):
+                held.add(value['id'])
+            if call.tool not in MEMORY_READ_TOOLS:
+                continue
+            records = tuple(returned_records(call))
+            ids = {record['id'] for record in records}
+            before, after = tuple(calls[actor][:position]), tuple(calls[actor][position + 1:])
+            reads.append(MemoryRead(call, None if call.decision is None else call.decision - first + 1,
+                last - first + 1, records, frozenset(held & ids), before, after,
+                tuple(_references(records, before, after))))
+            held |= ids
+    return reads
 
 
 def seq_resolver(walls: Sequence[tuple[int, float]]) -> Callable[[float | None], int]:
