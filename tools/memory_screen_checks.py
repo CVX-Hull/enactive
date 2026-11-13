@@ -4,6 +4,12 @@
   python -m tools.memory_screen_checks replay RUNS... --loss LABEL:need=FRAME[,record=ID][,fact=ID] ...
         [--records ROOT] [--knowledge REPOSITORY] [--lags N ...] [--json]
   python -m tools.memory_screen_checks cut RUNS... [--lags N ...] [--turn-tokens N] [model options] [--json]
+  python -m tools.memory_screen_checks brief-gate REPOSITORY --patterns FILE [--json]
+
+`brief-gate` is the brief gate's frozen check. FILE is a JSON list of {label, subject, place}, the two values regular
+expressions. For each label it lists the current `curator-fact/2` facts of kind `place_with_goods` whose `subject` and
+`place` both match (case-insensitively; `statement` is not searched), with their game time and citations, then the
+number of labels with a match, the store's size and the sha256 of FILE. It decides nothing beyond that count.
 
 `store` lists every published version of a curator knowledge repository (its facts and the bytes of `facts.jsonl`)
 and, for each --find pattern, the facts whose ID or statement matches: the version and session that first published
@@ -26,6 +32,7 @@ from __future__ import annotations
 import argparse
 from collections import deque
 from dataclasses import asdict, dataclass
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -208,6 +215,40 @@ def store_report(repositories: Sequence[Path], finds: Sequence[str], runs: Seque
                 found[label].append(history)
         reports.append(dict(repository=str(repository), versions=rows, found=found))
     return reports
+
+
+# --- the brief gate's frozen check ---------------------------------------------------------------------------------
+
+FACT_WITH_PLACES = 'curator-fact/2'
+
+
+def brief_gate(repository: Path, patterns_file: Path) -> dict:
+    """The frozen check of the brief gate (docs/design/memory-screen-protocol.md): for each label, the current
+    `curator-fact/2` facts of kind `place_with_goods` whose `subject` matches the label's subject pattern and whose
+    `place` matches its place pattern, case-insensitively. The statement is not searched. It counts labels with a
+    match and decides nothing else: a reviewer reads each match and says whether it tells where the thing is.
+    Facts of an earlier fact contract carry no subject or place and never match."""
+    raw = Path(patterns_file).read_bytes()
+    rows = json.loads(raw)
+    if not isinstance(rows, list) or not rows or any(not isinstance(row, dict) or set(row) != {'label', 'subject', 'place'}
+            or not all(isinstance(value, str) and value for value in row.values()) for row in rows):
+        raise StoreError(f'{patterns_file}: a non-empty JSON list of {{label, subject, place}} with non-empty text')
+    if len({row['label'] for row in rows}) != len(rows):
+        raise StoreError(f'{patterns_file}: a label can be listed once')
+    version = read_versions(repository)[-1]
+    current = [fact for fact in version['facts'] if 'superseded_by' not in fact and fact.get('schema') == FACT_WITH_PLACES
+        and fact.get('kind') == 'place_with_goods']
+    labels = []
+    for row in rows:
+        subject, place = re.compile(row['subject'], re.IGNORECASE), re.compile(row['place'], re.IGNORECASE)
+        found = [dict(id=fact['id'], subject=fact['subject'], place=fact['place'], game_time=fact['game_time'],
+                citations=fact['citations'])
+            for fact in current if isinstance(fact.get('subject'), str) and isinstance(fact.get('place'), str)
+            and subject.search(fact['subject']) and place.search(fact['place'])]
+        labels.append(dict(label=row['label'], matches=found))
+    return dict(repository=str(repository), version=version['version'], patterns_sha256=hashlib.sha256(raw).hexdigest(),
+        labels=labels, labels_with_a_match=sum(bool(label['matches']) for label in labels), labels_total=len(labels),
+        store=dict(facts=len(version['facts']), current_place_with_goods=len(current), facts_jsonl_bytes=version['bytes']))
 
 
 # --- replay of a loss against the design's delivery ---------------------------------------------------------------
@@ -453,6 +494,20 @@ def render_store(reports: Sequence[dict]) -> str:
     return '\n'.join(lines)
 
 
+def render_brief_gate(report: dict) -> str:
+    lines = [f"== {report['repository']} at {report['version']}; patterns sha256 {report['patterns_sha256']}"]
+    for label in report['labels']:
+        lines.append(f"{label['label']}: {len(label['matches'])} matches")
+        lines.extend(f"  {m['id']}: subject {m['subject']!r}, place {m['place']!r}, game time {m['game_time']!r}; cites "
+            f"{', '.join(m['citations'])}" for m in label['matches'])
+    store = report['store']
+    lines.append(f"labels with at least one match: {report['labels_with_a_match']} of {report['labels_total']} "
+        '(a reviewer confirms each match by reading it; this count decides nothing else)')
+    lines.append(f"store: {store['facts']} facts ({store['current_place_with_goods']} current place_with_goods), "
+        f"{store['facts_jsonl_bytes']} bytes of facts.jsonl")
+    return '\n'.join(lines)
+
+
 def render_replay(rows: Sequence[dict]) -> str:
     lines = []
     for row in rows:
@@ -507,10 +562,16 @@ def main(argv=None) -> int:
     for name, value in asdict(CutModel()).items():
         cut.add_argument(f"--{name.replace('_', '-')}", type=type(value), default=value,
             **(dict(choices=('steady', 'sessions')) if name == 'coverage' else {}))
-    for command in (store, again, cut):
+    gate = commands.add_parser('brief-gate', help='the brief gate\'s frozen check of a curator store against patterns')
+    gate.add_argument('repository', type=Path)
+    gate.add_argument('--patterns', type=Path, required=True, metavar='FILE',
+        help='JSON list of {label, subject: regex, place: regex}, frozen before the run')
+    for command in (store, again, cut, gate):
         command.add_argument('--json', action='store_true')
     args = parser.parse_args(argv)
-    if args.command == 'store':
+    if args.command == 'brief-gate':
+        result, text = brief_gate(args.repository, args.patterns), render_brief_gate
+    elif args.command == 'store':
         result, text = store_report(args.repositories, args.find, run_dirs(args.runs) if args.runs else []), render_store
     elif args.command == 'replay':
         result, text = replay(run_dirs(args.runs), args.loss, args.records, args.knowledge, args.lags), render_replay
