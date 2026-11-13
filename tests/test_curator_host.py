@@ -463,7 +463,7 @@ def test_an_upstream_429_retry_is_counted_and_recovers_through_the_real_proxy_an
     assert life['state'] == 'sealed' and life['survivors'] == [] and record['published_after'] == 'v1'
     ledger = shadow._lines(tmp_path/'proxy-ledger.jsonl')
     assert [r['status'] for r in ledger] == [429, 200, 200, 200]
-    assert ledger[0]['usage_missing'] and Decimal(ledger[0]['charged']) == Decimal(ledger[0]['reserved'])
+    assert ledger[0]['usage_missing'] and ledger[0]['provider_refused'] and Decimal(ledger[0]['charged']) == 0
     assert spent == sum(Decimal(r['charged']) for r in ledger) and not revoked and breaches == 0
     assert stand_in.requests[0]['body'] == stand_in.requests[1]['body']
     log = repo.state/'sessions'/record['manifest']['id']
