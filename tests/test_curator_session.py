@@ -39,9 +39,11 @@ json.dump(dict(schema='curator-submission/1', base_version=version, summary='fir
                from_drafts=[d for d in os.listdir('drafts')],
                changes=[dict(op='add_type', type=dict(schema='curator-type/1', name='container',
                                                     description='a place that holds items', fields=['holds'])),
-                        dict(op='add_fact', fact=dict(schema='curator-fact/1', id='f1', type='container',
+                        dict(op='add_fact', fact=dict(schema='curator-fact/2', id='f1', type='container',
                                                       statement='the cupboard holds bottles',
-                                                      scope=dict(game='testgame'), citations=[cite]))]),
+                                                      scope=dict(game='testgame'), citations=[cite],
+                                                      subject='cupboard', place='the kitchen', game_time='day 1 08:00',
+                                                      kind='place_with_goods'))]),
           open('submissions/s1/submission.json', 'w'))
 '''
 DRAFT = '''

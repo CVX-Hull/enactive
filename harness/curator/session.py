@@ -30,6 +30,7 @@ from harness.trace.sidecar import validate
 from . import sandbox
 from .containers import Drafts, UnsafeTree, read_tree, write_tree
 from .gate import gate
+from .window import FULL, Window, coverage as window_coverage, restrict
 from .knowledge import Repository
 
 TRACE_PACKAGE = Path(__file__).resolve().parents[1]/'trace'
@@ -152,6 +153,13 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
     for session in trace_manifest['sessions']:
         actors = ', '.join(f"{a['directory']} ({a['steps']} steps, {a['frames']} frames)" for a in session['actors'])
         lines.append(f"- `{session['name']}`: {actors}")
+    window = trace_manifest.get('window')
+    if window:
+        lines += ['', f"This trace is a window: steps {window['first']} to {window['last']} of "
+                      f"{window['steps_available']} of actor `{window['actor']}`, and nothing else. Frames outside "
+                      'it are not in the trace and cannot be cited. The step numbers are `seq` in `steps.jsonl`.']
+        if window.get('game_time'):
+            lines.append(f"The window ends at game time {window['game_time']!r} as the runner gave it.")
     lines += ['', 'Frames are in `trace/frames/`; `python -m harness.trace.workbench --help` lists tools '
               '(run from `workbench/`).', '', '## Drafts', '']
     lines += [f"- `{d['id']}` ({d['lifecycle']['state']}, untouched for {d['lifecycle'].get('untouched_sessions', 0)} "
@@ -169,7 +177,7 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
     return '\n'.join(lines)
 
 
-def run_session(repo: Repository, trace_sessions: list[Path], config: SessionConfig, *,
+def run_session(repo: Repository, trace_sessions: list[Path], config: SessionConfig, *, window: Window = FULL,
                 memory: Path | None = None, session_id: str | None = None) -> dict:
     session_id = session_id or uuid.uuid4().hex[:16]
     repo.state.mkdir(parents=True, exist_ok=True)
@@ -183,7 +191,7 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
     cleanup: list[str] = []
     try:
         record_dir.mkdir(parents=True)
-        return _run(repo, trace_sessions, config, memory, session_id, record_dir)
+        return _run(repo, trace_sessions, config, memory, window, session_id, record_dir)
     finally:
         for target in (repo.state/'workspaces'/session_id, repo.state/'workspaces'/f'{session_id}.home'):
             try:
@@ -201,13 +209,14 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
             lock.close()
 
 
-def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, memory: Path | None,
+def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, memory: Path | None, window: Window,
          session_id: str, record_dir: Path) -> dict:
     """Prepare, run and close out one session. Any failure seals the record `aborted` with its error."""
     manifest: dict | None = None
     result: sandbox.Result | None = None
     errors: list[str] = []
-    window: set[str] = set()
+    window_frames: set[str] = set()
+    coverage: dict | None = None
     workspace = repo.state/'workspaces'/session_id
     drafts = before = None
     try:
@@ -220,8 +229,9 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         home = home.resolve()
         version = repo.published()
         repo.export(version, workspace/'knowledge')
-        trace_manifest = project(trace_sessions, workspace/'trace', memory=memory)
-        window = {Path(name).stem for name in trace_manifest['files'] if name.startswith('frames/')}
+        trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory), window)
+        window_frames = {Path(name).stem for name in trace_manifest['files'] if name.startswith('frames/')}
+        coverage = window_coverage(window, [p.name for p in trace_sessions], trace_manifest)
         for name in WRITABLE:
             (workspace/name).mkdir()
         drafts = Drafts(repo.state)
@@ -240,7 +250,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         dependencies = dependency_roots()
         manifest = dict(
             schema='container-manifest/1', id=session_id, kind='curator-session', owner_role='curator',
-            inputs=dict(trace_sessions=[p.name for p in trace_sessions], window_frames=len(window),
+            inputs=dict(trace_sessions=[p.name for p in trace_sessions], window_frames=len(window_frames), window=window.record(), coverage=coverage,
                         drafts=[d['id'] for d in open_drafts]),
             pinned=dict(knowledge_version=version, trace_manifest_sha256=_sha(workspace/'trace'/'manifest.json'),
                         brief_sha256=_sha(workspace/'brief.md'), host=config.host),
@@ -267,7 +277,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         errors.extend(note for note in getattr(interrupt, '__notes__', [])
                       if note.startswith('Sandbox cleanup failed: '))
         try:
-            _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window, drafts, before)
+            _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window_frames, coverage, drafts, before)
         except Exception as exc:  # noqa: BLE001 - the original interruption must remain primary
             interrupt.add_note(f'Interrupted close-out failed: {type(exc).__name__}')
             try:
@@ -277,10 +287,10 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         raise
     except Exception as exc:  # noqa: BLE001 - every failure is sealed into the record
         errors.append(f'session: {_error(exc)}')
-    return _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window, drafts, before)
+    return _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window_frames, coverage, drafts, before)
 
 
-def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window, drafts, before) -> dict:
+def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window_frames, coverage, drafts, before) -> dict:
     """Keep what is safe to keep, gate it after a clean exit, and seal the record."""
     survivors = list(result.survivors) if result is not None else None
     if survivors:
@@ -320,7 +330,7 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         if not aborted and gated.is_dir() and not any(r.startswith('submissions:') for r in refused):
             for submission in sorted(p for p in gated.iterdir() if p.is_dir()):
                 try:
-                    verdict = gate(repo, submission, session_id=session_id, window_frames=window)
+                    verdict = gate(repo, submission, session_id=session_id, window_frames=window_frames, coverage=coverage)
                     verdicts.append(verdict)
                     if verdict['accepted']:
                         drafts.promote(verdict.get('from_drafts', []), session_id)

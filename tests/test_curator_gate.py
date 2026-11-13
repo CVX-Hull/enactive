@@ -25,10 +25,11 @@ def make_repo(tmp_path: Path) -> Repository:
     return repo
 
 
-def fact(fact_id='f1', kind='mechanic', game='cdda', citations=('frame-1',), **extra):
-    return {'schema': 'curator-fact/1', 'id': fact_id, 'type': kind,
+def fact(fact_id='f1', type_name='mechanic', game='cdda', citations=('frame-1',), **extra):
+    return {'schema': 'curator-fact/2', 'id': fact_id, 'type': type_name,
             'statement': f'statement {fact_id}', 'scope': {'game': game},
-            'citations': list(citations), **extra}
+            'citations': list(citations), 'subject': 'a thing', 'place': '', 'game_time': '',
+            'kind': 'how_it_works', **extra}
 
 
 def kind(name='mechanic'):
@@ -44,8 +45,12 @@ def submission(tmp_path: Path, changes, name='s1', **top) -> Path:
     return directory
 
 
-def run(repo, directory, frames=FRAMES):
-    return gate(repo, directory, session_id='sess', window_frames=set(frames))
+COVERAGE = {'schema': 'curator-coverage/1', 'session': 's1', 'actor': '001', 'last_step': 20,
+            'game_time': 'day 2 08:15'}
+
+
+def run(repo, directory, frames=FRAMES, coverage=COVERAGE):
+    return gate(repo, directory, session_id='sess', window_frames=set(frames), coverage=coverage)
 
 
 def git(repo, *args):
@@ -193,7 +198,22 @@ def malformed_cases():
         'extra fact field': [{'op': 'add_fact', 'fact': fact(note='x')}],
         'extra change field': [{**good, 'more': 1}],
         'unknown op': [{'op': 'delete_fact', 'id': 'f1'}],
-        'wrong fact schema': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/2'}}],
+        'wrong fact schema': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/3'}}],
+        'the previous fact contract': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/1'}}],
+        'no subject': [{'op': 'add_fact', 'fact': {k: v for k, v in fact().items() if k != 'subject'}}],
+        'blank subject': [{'op': 'add_fact', 'fact': fact(subject='  ')}],
+        'subject not text': [{'op': 'add_fact', 'fact': fact(subject=['a thing'])}],
+        'no kind': [{'op': 'add_fact', 'fact': {k: v for k, v in fact().items() if k != 'kind'}}],
+        'unknown kind': [{'op': 'add_fact', 'fact': fact(kind='rumour')}],
+        'kind not text': [{'op': 'add_fact', 'fact': fact(kind=['hazard'])}],
+        'no place': [{'op': 'add_fact', 'fact': {k: v for k, v in fact().items() if k != 'place'}}],
+        'place not text': [{'op': 'add_fact', 'fact': fact(place=3)}],
+        'game time not text': [{'op': 'add_fact', 'fact': fact(game_time=None)}],
+        'goods without a place': [{'op': 'add_fact', 'fact': fact(kind='place_with_goods', game_time='day 1')}],
+        'goods without a time': [{'op': 'add_fact', 'fact': fact(kind='place_with_goods', place='north of the start')}],
+        'hazard without a place': [{'op': 'add_fact', 'fact': fact(kind='hazard', game_time='day 1')}],
+        'hazard with a blank time': [{'op': 'add_fact', 'fact': fact(kind='hazard', place='x', game_time=' ')}],
+        'a coverage stamp in a fact': [{'op': 'add_fact', 'fact': fact(coverage=COVERAGE)}],
         'empty citations': [{'op': 'add_fact', 'fact': fact(citations=())}],
         'scope not object': [{'op': 'add_fact', 'fact': {**fact(), 'scope': 'cdda'}}],
         'extra type field': [{'op': 'add_type', 'type': {**kind(), 'x': 1}}],
@@ -392,7 +412,7 @@ def test_surviving_host_processes_stop_collection(tmp_path):
     record_dir.mkdir()
     result = sandbox.Result(0, None, 0, 0, 0.1, [4242])
     drafts = Drafts(repo.state)
-    record = session._close_out(repo, 'sess', record_dir, workspace, None, result, [], FRAMES, drafts, {})
+    record = session._close_out(repo, 'sess', record_dir, workspace, None, result, [], FRAMES, COVERAGE, drafts, {})
     life = record['manifest']['lifecycle']
     assert life['state'] == 'aborted' and life['survivors'] == [4242] and 'survived' in life['errors'][0]
     assert record['verdicts'] == [] and record['drafts'] == {} and repo.published() == 'v0'
@@ -482,7 +502,7 @@ def test_a_failure_while_collecting_submissions_is_sealed(tmp_path, monkeypatch)
 
     monkeypatch.setattr(session, 'read_tree', exhausted)
     result = sandbox.Result(0, None, 0, 0, 0.1, [])
-    record = session._close_out(repo, 'sess', record_dir, workspace, None, result, [], FRAMES,
+    record = session._close_out(repo, 'sess', record_dir, workspace, None, result, [], FRAMES, COVERAGE,
                                 Drafts(repo.state), {})
     life = record['manifest']['lifecycle']
     assert life['state'] == 'aborted' and any('MemoryError' in e for e in life['errors'])
@@ -506,3 +526,57 @@ def test_the_draft_digest_separates_names_from_contents(tmp_path):
     (two / 'a').write_bytes(b'1')
     (two / 'b').write_bytes(b'2')
     assert containers._digest(one) != containers._digest(two)
+
+
+def test_the_gate_accepts_each_fact_kind_with_its_place_rules(tmp_path):
+    repo = make_repo(tmp_path)
+    facts = [fact('f1', kind='how_it_works'), fact('f2', kind='open_commitment'),
+             fact('f3', kind='place_with_goods', place='north of the start', game_time='day 1 09:00'),
+             fact('f4', kind='hazard', place='the bridge', game_time='day 1 10:00')]
+    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
+                                              *({'op': 'add_fact', 'fact': item} for item in facts)]))
+    assert verdict['accepted'], verdict['diagnostics']
+    stored = {item['id']: item for item in repo.facts()}
+    assert stored['f3']['place'] == 'north of the start' and stored['f3']['subject'] == 'a thing'
+    assert stored['f4']['kind'] == 'hazard'
+
+
+def test_the_coverage_stamp_is_published_with_the_version_and_changes_with_it(tmp_path):
+    repo = make_repo(tmp_path)
+    assert not (repo.path / 'coverage.json').exists()
+    first = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]))
+    assert first['accepted']
+    assert json.loads(git(repo, 'show', 'v1:coverage.json')) == COVERAGE
+    later = {**COVERAGE, 'last_step': 40, 'game_time': None}
+    second = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}], name='s2', base_version='v1'),
+                 coverage=later)
+    assert second['accepted']
+    assert json.loads(git(repo, 'show', 'v2:coverage.json')) == later
+    assert json.loads(git(repo, 'show', 'v1:coverage.json')) == COVERAGE  # each version keeps its own
+
+
+@pytest.mark.parametrize('where', ['top', 'change', 'fact'])
+def test_a_submission_cannot_set_the_coverage_stamp(tmp_path, where):
+    repo = make_repo(tmp_path)
+    before = snapshot(repo)
+    changes = [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': fact()}]
+    top = {}
+    if where == 'top':
+        top['coverage'] = {**COVERAGE, 'last_step': 999}
+    elif where == 'change':
+        changes[1]['coverage'] = COVERAGE
+    else:
+        changes[1]['fact']['coverage'] = COVERAGE
+    verdict = run(repo, submission(tmp_path, changes, **top))
+    assert not verdict['accepted'] and any('unexpected field' in d and 'coverage' in d for d in verdict['diagnostics'])
+    assert snapshot(repo) == before
+
+
+@pytest.mark.parametrize('stamp', [None, {}, {**COVERAGE, 'extra': 1}, {**COVERAGE, 'schema': 'curator-coverage/0'},
+                                   {**COVERAGE, 'last_step': '20'}, {**COVERAGE, 'session': ''}])
+def test_a_bad_stamp_from_the_runner_publishes_nothing(tmp_path, stamp):
+    repo = make_repo(tmp_path)
+    before = snapshot(repo)
+    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]), coverage=stamp)
+    assert not verdict['accepted'] and any('coverage' in d for d in verdict['diagnostics'])
+    assert snapshot(repo) == before
