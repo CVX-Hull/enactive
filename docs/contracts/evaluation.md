@@ -502,26 +502,34 @@ of files, and the import contracts forbid the player, the curator and the trace 
 from importing evaluation code or tools. The owner's labelling page serves a pair's
 judge evidence only after the owner's first click on that pair (see below).
 
-**Calibration files.** The owner's labels are made in two steps, so the calibration is
+**Calibration files.** The owner's labels are made in two passes, so the calibration is
 not biased by the judges' evidence and also tests straight against missed
 ([owner decisions of 13 November 2026](../decisions/owner-decisions.md)).
 
 | File | Content |
 | --- | --- |
 | `sample.json` (`calibration-sample/1`) | The random pairs: `seed`, `count`, `population`, `items_sha256`, `verdicts_existed`, and `pairs`, each `{index, start, item}` numbered from 0. Drawn once, from all pairs, "not engaged" included, without reading a verdict. |
-| `sample-engaged.json` (`engaged-sample/1`) | The engaged supplement, drawn once after the judges' events exist (`sample RUN --engaged N`): `seed`, `count`, `population`, `eligible`, `labels`, the `judges` read and their `events_sha256`, `random_sample_sha256`, `items_sha256`, and `pairs` numbered on from the random pairs. It draws at random from the pairs outside the random draw that any judge called `straight`, `missed` or `cannot_tell`. |
-| `labels.json` (`owner-labels/2`) | `sample_sha256`, `engaged_sha256` (null with no supplement), `labels` keyed by pair index, and `history`. Each label is `{index, start, item, blind, blind_time, checked, checked_time}`. `blind` is the owner's first click, made on the item and the stretch's frames alone: it is recorded once and never changed. `checked` is null until the owner has seen the judges' evidence and kept or changed the answer; keeping records `checked` equal to `blind`. `history` lists every recorded click as `{index, start, item, step, label, time}` with `step` `blind`, `keep` or `change`. A format other than `owner-labels/2` is refused. |
+| `sample-engaged.json` (`engaged-sample/1`) | The engaged supplement, drawn once after the judges' events exist (`sample RUN --engaged N`): `seed`, `count`, `population`, `eligible`, `labels`, the `judges` read and their `events_sha256`, `random_sample_sha256`, `items_sha256`, `pairs` numbered on from the random pairs, and `display`: the `seed` and `order`, a random permutation of all pair indices that is the order the owner sees them in. It draws at random from the pairs outside the random draw that any judge called `straight`, `missed` or `cannot_tell`, so it cannot contain a pair every judge called `not_engaged`. It is refused once `labels.json` exists. |
+| `labels.json` (`owner-labels/2`) | `sample_sha256`, `engaged_sha256` (null with no supplement), `labels` keyed by pair index, and `history`. Each label is `{index, start, item, blind, blind_time, checked, checked_time}`. `index` is the pair's index in the samples. `blind` is the owner's first click, made on the item and the stretch's frames alone: it is recorded once and never changed. `checked` is null until pass two, when the owner has seen the judges' evidence and kept or changed the answer; keeping records `checked` equal to `blind`. `history` lists every recorded click as `{index, start, item, step, label, time}` with `step` `blind`, `keep` or `change`. A format other than `owner-labels/2` is refused. |
 
-- **The page.** It serves the random pairs, then the engaged pairs, as one sequence with
-  one progress count, and nothing on it says which group a pair is from. For each pair it
-  first shows the item, its first frame, the stretch's frames and inputs, and the four
-  answers. After the first click it reveals the adjudicated label, each judge's label and
-  note, and the frames any judge cited (outlined in the strip), and offers "Keep my
-  answer" and the four answers again. Back shows a pair as it stands and changes the
-  checked label, never the blind one. The server holds the evidence from `adjudicated.json`,
-  the judges' events and the lead's saved answers (`answers/<judge>/<packet>.json`, for the
-  notes) and puts a pair's evidence into a response only once that pair's blind label is
-  recorded. Every click is saved at once. Start it after `agreement`.
+- **The page.** It serves the random and the engaged pairs interleaved, in the display
+  order, as one sequence with one progress count, and nothing on it says which group a
+  pair is from: the state and every image URL name a pair by its display position, and
+  only the server maps a position to the pair's index.
+  - *Pass 1 of 2: your own answer.* Each pair shows the item, its first frame, the
+    stretch's frames and inputs, and the four answers; each click records the blind label
+    and moves on. Back shows a recorded pair with its answers fixed. No response holds a
+    verdict, note or cited frame, for any pair, until every pair has a blind label.
+  - *Pass 2 of 2: check against the judges.* A start screen opens it when every pair
+    has a blind label. Each pair is then shown again with the adjudicated label, each
+    judge's label and note, and the frames any judge cited (outlined in the strip), with
+    "Keep my answer" and the four answers. Back shows a checked pair and changes its
+    checked label, never the blind one. The server holds the evidence from
+    `adjudicated.json`, the judges' events and the lead's saved answers
+    (`answers/<judge>/<packet>.json`, for the notes). A check before every pair has a
+    blind label is refused.
+  - Every click is saved at once, the new labels written before they replace the held
+    ones. Start the server after `events`, `agreement` and `sample --engaged`.
 - **Calibration.** `agreement` calibrates on the blind labels of the random pairs only:
   agreement, κ and the owner match are computed as the protocol states, against the same
   thresholds. It reports separately the engaged pairs (blind-label match with an exact
@@ -530,7 +538,10 @@ not biased by the judges' evidence and also tests straight against missed
   as not the calibration (`judge-agreement/2`). `measure` takes the judge's error on
   touched items from the blind labels of every labelled pair, random and engaged together,
   that the owner or the judges called straight or missed, with the count and an exact
-  interval; below five such pairs it says the error was not measured.
+  interval, and reports the same error on the random pairs alone beside it; below five
+  such pairs it says the error was not measured. The engaged pairs cannot contain a pair
+  every judge called not engaged, so the pooled error is conditional on a judge noticing
+  engagement and is likely low.
 
 ## Tracked run ledger and metrics snapshot
 

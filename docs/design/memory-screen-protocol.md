@@ -192,15 +192,20 @@ frames show.
 - **Calibration, in the measure gate.** The owner labels 20 pairs of item and
   stretch, drawn at random from all pairs, "not engaged" included, and 10 more drawn at
   random from the pairs any judge labelled straight, missed or cannot tell. The lead
-  presents all 30 on one page, in one sequence that does not say which group a pair is
-  from: each pair shows its frames and the item, and each label is one click. The owner
-  opens no file and types nothing. After the owner's first click the page shows the
-  judges' labels, notes and cited frames, and the owner keeps or changes the label.
-  Only first clicks count below. The judge is used only if the two judges agree on at
-  least 80% with κ of at least 0.6, and the adjudicated label matches the owner's on at
-  least 18 of the random 20. The error on touched items, which the sizing uses, comes
-  from every owner-labelled pair that the owner or the judges called straight or
-  missed.
+  presents all 30 on one page, interleaved in a random order drawn once, which does not
+  say which group a pair is from: each pair shows its frames and the item, and each
+  label is one click. The owner opens no file and types nothing. The owner labels in
+  two passes. In pass one every pair gets a blind label, with nothing of the judges'
+  work anywhere on the page. Pass two starts only when every pair has one: it shows each
+  pair again with the judges' labels, notes and cited frames, and the owner keeps or
+  changes the label. Only blind labels count below. The judge is used only if the two
+  judges agree on at least 80% with κ of at least 0.6, and the adjudicated label
+  matches the owner's blind label on at least 18 of the random 20. The error on touched
+  items, which the sizing uses, comes from the blind labels of every owner-labelled pair
+  that the owner or the judges called straight or missed, random and engaged together,
+  and is reported on the random pairs alone beside it. The engaged pairs cannot contain a
+  pair every judge called not engaged, so the pooled error is conditional on a judge
+  noticing engagement and is likely low.
 
 ### Decision rule
 

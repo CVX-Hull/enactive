@@ -449,9 +449,22 @@ def owner_run(tmp_path: Path) -> Path:
     return run
 
 
-def click(port: int, index: int, step: str, label=None, keep=False):
-    return call(port, '/api/label', dict(index=index, step=step, **({'label': label} if label else {}),
+def click(port: int, position: int, step: str, label=None, keep=False):
+    """One click on the page: the pair is named by its display position, never by its index."""
+    return call(port, '/api/label', dict(position=position, step=step, **({'label': label} if label else {}),
         **({'keep': True} if keep else {})))
+
+
+def order_of(run: Path) -> list:
+    return json.loads((run / 'sample-engaged.json').read_text())['display']['order']
+
+
+BLIND = ['straight', 'missed', 'not_engaged', 'cannot_tell', 'missed']  # by display position
+
+
+def blind_all(port: int, labels=BLIND, stop: int | None = None) -> None:
+    for position, label in enumerate(labels[:stop]):
+        assert click(port, position, 'blind', label)[0] == 200
 
 
 def test_the_engaged_draw_leaves_out_the_random_pairs_and_those_no_judge_called_engaged(tmp_path):
@@ -469,29 +482,46 @@ def test_the_engaged_draw_leaves_out_the_random_pairs_and_those_no_judge_called_
     assert value['judges'] == ['judge-a', 'judge-b', 'judge-c', 'judge-d']
     assert value['random_sample_sha256'] == memory_measure.file_sha256(run / 'sample.json')
     assert json.loads((run / 'sample-engaged.json').read_text()) == value and value['schema'] == 'engaged-sample/1'
+    # the display order is drawn with the supplement, from the recorded seed, over all five pairs
+    assert value['display']['seed'] == 1 and sorted(value['display']['order']) == [0, 1, 2, 3, 4]
     with pytest.raises(MeasureError, match='drawn once'):
         draw_engaged(run, 3, seed=2)
-    # a pair only the third judge called engaged counts: run-f:1-5 / item-01 is judge-d's not_engaged but others' missed
+    # a pair counts when any judge, the third included, called it engaged
     other = judged(tmp_path / 'again')
     sampled(other, [('run-e:1-5', 'item-01'), ('run-e:1-5', 'item-02'), ('run-e:6-8', 'item-02')])
     assert sorted((p['start'], p['item']) for p in draw_engaged(other, 2, seed=4)['pairs']) == [
         ('run-f:1-5', 'item-01'), ('run-f:1-5', 'item-02')]
-    # the seed fixes the draw
-    third = judged(tmp_path / 'third')
+    # the seed fixes the draw and the order
+    third, fourth = judged(tmp_path / 'third'), judged(tmp_path / 'fourth')
     sampled(third, [('run-e:1-5', 'item-01')])
-    fourth = judged(tmp_path / 'fourth')
     sampled(fourth, [('run-e:1-5', 'item-01')])
-    assert draw_engaged(third, 2, seed=8)['pairs'] == draw_engaged(fourth, 2, seed=8)['pairs']
+    again, same = draw_engaged(third, 2, seed=8), draw_engaged(fourth, 2, seed=8)
+    assert again['pairs'] == same['pairs'] and again['display'] == same['display']
     assert main(['sample', str(run), '--engaged', '3']) == 2  # drawn once
 
 
-def test_the_engaged_draw_is_made_by_the_command_and_needs_the_verdicts(tmp_path, capsys):
+def test_the_engaged_pairs_are_among_the_random_ones_in_the_display_order_and_vary_by_seed(tmp_path):
+    positions = set()
+    for seed in range(12):
+        run = judged(tmp_path / f'seed{seed}')
+        sampled(run, [('run-e:1-5', 'item-01'), ('run-f:1-5', 'item-01')])
+        order = draw_engaged(run, 3, seed=seed)['display']['order']
+        assert sorted(order) == [0, 1, 2, 3, 4]
+        positions.add(tuple(position for position, index in enumerate(order) if index >= 2))  # where the engaged pairs sit
+    assert len(positions) > 3 and any(max(p) < 4 for p in positions)  # not always last: the groups are interleaved
+
+
+def test_the_engaged_draw_is_made_by_the_command_and_needs_the_verdicts_and_no_labels(tmp_path, capsys):
     run = gate(tmp_path)
     draw_sample(run, 2, seed=3)
     assert main(['sample', str(run), '--engaged', '1', '--seed', '5']) == 2
     assert 'no judge events' in capsys.readouterr().err and not (run / 'sample-engaged.json').exists()
     for name in VERDICTS:
         judge_events(run, name, 'model-x', answers(run, name))
+    save(run / 'labels.json', dict(schema='owner-labels/2', labels={}))
+    assert main(['sample', str(run), '--engaged', '2', '--seed', '5']) == 2  # the owner has begun labelling
+    assert 'has begun labelling' in capsys.readouterr().err and not (run / 'sample-engaged.json').exists()
+    (run / 'labels.json').unlink()
     assert main(['sample', str(run), '--engaged', '2', '--seed', '5']) == 0
     out = capsys.readouterr().out
     assert 'drawn with seed 5 into' in out and 'judges judge-a, judge-b, judge-c, judge-d' in out
@@ -501,47 +531,76 @@ def test_the_engaged_draw_is_made_by_the_command_and_needs_the_verdicts(tmp_path
     assert not random_pairs & {(p['start'], p['item']) for p in value['pairs']}
 
 
-def test_the_page_holds_no_judge_work_before_the_blind_click_in_any_response(tmp_path):
+def test_no_judge_work_is_in_any_response_until_every_pair_has_a_blind_label(tmp_path):
     run = owner_run(tmp_path)  # judges, notes and cited frames all exist on disk
+    words = (b'judge', b'model-x', b'seen', b'adjudicated', b'cited', b'note')  # the notes say "seen"
     with Serving(run) as port:
         status, _, body = call(port, '/api/state')
         state = json.loads(body)
         assert status == 200 and state['total'] == 5 and state['blind'] == {} and state['checked'] == {}
-        assert state['reveals'] == {} and [pair['index'] for pair in state['pairs']] == [0, 1, 2, 3, 4]
-        for word in (b'judge', b'model-x', b'seen', b'adjudicated', b'cited', b'note'):  # the notes say "seen"
-            assert word not in body
+        assert state['reveals'] == {} and state['pass_two'] is False
+        assert [pair['position'] for pair in state['pairs']] == [0, 1, 2, 3, 4] and not any(word in body for word in words)
         for pair in state['pairs']:  # every image the state names is served, and holds no verdict
             assert call(port, pair['image'])[2].startswith(b'\x89PNG')
             assert all(call(port, frame['image'])[2].startswith(b'\x89PNG') for frame in pair['frames'])
         for path in ('/api/reveal/0', '/api/reveal', '/adjudicated.json', '/events/judge-a.jsonl', '/answers/judge-a/x.json',
                 '/private/judge-mapping.json', '/labels.json', '/sample-engaged.json'):
             assert call(port, path)[0] == 404
-        # a check before the blind label is refused and reveals nothing
-        status, _, body = click(port, 0, 'checked', keep=True)
-        assert status == 409 and b'judge-' not in body and b'seen' not in body
-        assert json.loads(call(port, '/api/state')[2])['reveals'] == {}
-        # the blind click of pair 0 releases pair 0's evidence and nothing of any other pair
-        status, _, body = click(port, 0, 'blind', 'straight')
+        # a check before pass one is complete is refused, and reveals nothing
+        for position in (0, 1):
+            status, _, body = click(port, position, 'checked', keep=True)
+            assert status == 409 and not any(word in body for word in words)
+        # four of five pairs labelled: no response holds a verdict, a note or a cited frame, for any pair
+        for position, label in enumerate(BLIND[:4]):
+            status, _, body = click(port, position, 'blind', label)
+            answer = json.loads(body)
+            assert status == 200 and answer['reveals'] == {} and answer['pass_two'] is False
+            assert not any(word in body for word in words) and set(answer['blind']) == {str(p) for p in range(position + 1)}
+            assert not any(word in call(port, '/api/state')[2] for word in words)
+        assert click(port, 0, 'checked', keep=True)[0] == 409  # still pass one
+        # the fifth blind label opens pass two: now every pair's evidence is sent
+        status, _, body = click(port, 4, 'blind', BLIND[4])
         after = json.loads(body)
-        assert status == 200 and after['blind'] == {'0': 'straight'} and set(after['reveals']) == {'0'}
-        rest = json.dumps({key: value for key, value in after.items() if key != 'reveals'}).encode()
-        assert b'judge-' not in rest and b'seen' not in rest and b'model-x' not in rest
-        shown = after['reveals']['0']
+        assert status == 200 and after['pass_two'] is True and set(after['reveals']) == {'0', '1', '2', '3', '4'}
+        index = order_of(run).index(0)  # the pair run-e:1-5 / item-01 sits at this display position
+        shown = after['reveals'][str(index)]
         assert (shown['adjudicated'], shown['by'], shown['screens']) == ('straight', 'agreement', [1])
         assert [(j['name'], j['label'], j['note'], j['screens']) for j in shown['judges']] == [
             ('judge-a', 'straight', 'seen', [1]), ('judge-b', 'straight', 'seen', [1])]
-        # pair 1 (run-f:1-5 / item-01) has a third judge; its evidence comes only with its own blind label
-        assert json.loads(call(port, '/api/state')[2])['reveals'].keys() == {'0'}
-        again = json.loads(click(port, 1, 'blind', 'missed')[2])
-        assert set(again['reveals']) == {'0', '1'}
-        assert [(j['name'], j['label']) for j in again['reveals']['1']['judges']] == [
+        third = after['reveals'][str(order_of(run).index(1))]  # run-f:1-5 / item-01, settled by the third judge
+        assert [(j['name'], j['label']) for j in third['judges']] == [
             ('judge-a', 'missed'), ('judge-b', 'straight'), ('judge-c', 'missed')]
-        assert (again['reveals']['1']['adjudicated'], again['reveals']['1']['by']) == ('missed', 'third')
+        assert (third['adjudicated'], third['by']) == ('missed', 'third')
 
 
-def test_the_label_server_records_blind_then_checked_and_binds_to_loopback_only(tmp_path):
+def test_the_page_names_pairs_by_display_position_and_the_server_alone_maps_them_to_indexes(tmp_path):
     run = owner_run(tmp_path)
-    sample = json.loads((run / 'sample.json').read_text())['pairs']
+    order = order_of(run)
+    assert order != [0, 1, 2, 3, 4]  # seed 9: otherwise this test would show nothing
+    pairs = {p['index']: p for p in [*json.loads((run / 'sample.json').read_text())['pairs'],
+        *json.loads((run / 'sample-engaged.json').read_text())['pairs']]}
+    with Serving(run) as port:
+        state = json.loads(call(port, '/api/state')[2])
+        for position, pair in enumerate(state['pairs']):
+            assert set(pair) == {'position', 'place', 'what', 'image', 'aspect', 'decisions', 'short', 'frames'}
+            assert pair['position'] == position and pair['image'] == f'/item/{position}.png'
+            assert all(frame['image'].startswith(f'/frame/{position}/') for frame in pair['frames'])
+            assert call(port, f'/item/{position}.png')[0] == 200
+        for word in ('index', 'engaged', 'random', 'run-e', 'run-f', 'item-0'):
+            assert word not in json.dumps(state['pairs'])  # no index, group, stretch or item ID anywhere in a pair
+        for position in range(5):
+            assert click(port, position, 'blind', BLIND[position])[0] == 200
+    saved = json.loads((run / 'labels.json').read_text())['labels']
+    for position in range(5):  # the label of the pair at a position is kept under that pair's index
+        entry = saved[str(order[position])]
+        assert (entry['start'], entry['item'], entry['blind']) == (
+            pairs[order[position]]['start'], pairs[order[position]]['item'], BLIND[position])
+    assert [h['index'] for h in json.loads((run / 'labels.json').read_text())['history']] == order
+
+
+def test_the_label_server_records_two_passes_and_binds_to_loopback_only(tmp_path):
+    run = owner_run(tmp_path)
+    order = order_of(run)
     serving = Serving(run)
     assert serving.server.server_address[0] == '127.0.0.1'
     with serving as port:
@@ -550,70 +609,95 @@ def test_the_label_server_records_blind_then_checked_and_binds_to_loopback_only(
         for outside in (b'http://', b'https://', b'src="//', b'@import', b'url('):
             assert outside not in page  # no external asset
         assert b'prefers-color-scheme: dark' in page and b'<input' not in page and b'<textarea' not in page
+        assert b'Pass 1 of 2: your own answer' in page and b'Pass 2 of 2: check against the judges' in page
         state = json.loads(call(port, '/api/state')[2])
         assert [c[0] for c in state['choices']] == list(judge.LABELS)
         assert [c[1] for c in state['choices']] == ['Went straight to it', 'Missed it (looked elsewhere or got it another way)',
             'Not engaged', 'Cannot tell']
-        assert set(state['pairs'][0]) == {'index', 'place', 'what', 'image', 'aspect', 'decisions', 'short', 'frames'}
         assert state['pairs'][0]['aspect'] == '8 / 8'
-        for hidden in ('judge', 'run-e', 'run-f', 'straight"', 'model-x', 'engaged', 'random'):
-            assert hidden not in json.dumps(state['pairs'])  # no verdict, judge or admission, and no group
+        for hidden in ('judge', 'run-e', 'run-f', 'straight"', 'model-x'):
+            assert hidden not in json.dumps(state['pairs'])  # no verdict, judge or admission
         frame = state['pairs'][0]['frames'][0]
         assert frame['inputs'].startswith('k') and call(port, frame['image'])[2].startswith(b'\x89PNG')
         assert call(port, state['pairs'][0]['image'])[1] == 'image/png'
         assert call(port, '/frame/0/../../private/judge-mapping.json')[0] == 404
-        # pair 0: answer, then keep. pair 1: answer, then change it.
-        assert click(port, 0, 'blind', 'missed')[0] == 200
-        assert click(port, 0, 'checked', keep=True)[0] == 200
-        assert click(port, 1, 'blind', 'straight')[0] == 200
-        answer = json.loads(click(port, 1, 'checked', 'cannot_tell')[2])
-        assert answer['blind'] == {'0': 'missed', '1': 'straight'} and answer['checked'] == {'0': 'missed', '1': 'cannot_tell'}
-        # Back to pair 1: the checked label can change again, the blind one never
-        assert json.loads(click(port, 1, 'checked', 'not_engaged')[2])['checked']['1'] == 'not_engaged'
-        status, _, body = click(port, 1, 'blind', 'missed')
+        # pass one: a blind label once, never changed
+        blind_all(port)
+        status, _, body = click(port, 1, 'blind', 'straight')
         assert status == 409 and b'not changed' in body
-        assert json.loads(call(port, '/api/state')[2])['blind']['1'] == 'straight'
-        assert click(port, 1, 'checked', keep=True)[0] == 200  # keeping goes back to the blind label
-        assert json.loads(call(port, '/api/state')[2])['checked']['1'] == 'straight'
-        for bad in (dict(index=2, step='blind', label='maybe'), dict(index=9, step='blind', label='missed'),
-                dict(index=2, step='first', label='missed'), dict(index=2, label='missed'), dict(index=2, step='blind'),
-                dict(index=2, step='blind', keep=True), dict(index=0, step='checked', keep=True, label='missed'),
-                dict(index=0, step='checked', keep='yes'), dict(index=True, step='blind', label='missed')):
+        assert json.loads(call(port, '/api/state')[2])['blind']['1'] == 'missed'
+        # pass two: position 0 keep; position 1 change, change again, then keep (which goes back to the blind label)
+        assert click(port, 0, 'checked', keep=True)[0] == 200
+        answer = json.loads(click(port, 1, 'checked', 'cannot_tell')[2])
+        assert answer['blind'] == {str(p): BLIND[p] for p in range(5)}
+        assert answer['checked'] == {'0': 'straight', '1': 'cannot_tell'}
+        assert json.loads(click(port, 1, 'checked', 'not_engaged')[2])['checked']['1'] == 'not_engaged'
+        assert click(port, 1, 'checked', keep=True)[0] == 200
+        assert json.loads(call(port, '/api/state')[2])['checked']['1'] == 'missed'
+        for bad in (dict(position=2, step='blind', label='maybe'), dict(position=9, step='blind', label='missed'),
+                dict(position=2, step='first', label='missed'), dict(position=2, label='missed'), dict(position=2, step='blind'),
+                dict(position=2, step='blind', keep=True), dict(position=0, step='checked', keep=True, label='missed'),
+                dict(position=0, step='checked', keep='yes'), dict(position=True, step='blind', label='missed'),
+                dict(index=2, step='blind', label='missed')):
             assert call(port, '/api/label', bad)[0] == 400, bad
-        assert call(port, '/api/label', dict(index=2, step='blind', label='missed'), kind='text/plain')[0] == 404
-        assert call(port, '/api/label', dict(index=2, step='blind', label='missed'), host='labels.example:8765')[0] == 403
-        assert call(port, '/api/label', dict(index=2, step='blind', label='missed'), host=f'localhost:{port}')[0] == 200
+        assert call(port, '/api/label', dict(position=2, step='checked', label='missed'), kind='text/plain')[0] == 404
+        assert call(port, '/api/label', dict(position=2, step='checked', label='missed'), host='labels.example:8765')[0] == 403
+        assert call(port, '/api/label', dict(position=2, step='checked', label='missed'), host=f'localhost:{port}')[0] == 200
     saved = json.loads((run / 'labels.json').read_text())
-    engaged = json.loads((run / 'sample-engaged.json').read_text())['pairs'][0]
+    engaged = json.loads((run / 'sample-engaged.json').read_text())
     assert saved['schema'] == 'owner-labels/2' and saved['sample_sha256'] == memory_measure.file_sha256(run / 'sample.json')
     assert saved['engaged_sha256'] == memory_measure.file_sha256(run / 'sample-engaged.json')
-    assert {k: (v['start'], v['item'], v['blind'], v['checked']) for k, v in saved['labels'].items()} == {
-        '0': (sample[0]['start'], sample[0]['item'], 'missed', 'missed'),
-        '1': (sample[1]['start'], sample[1]['item'], 'straight', 'straight'),
-        '2': (engaged['start'], engaged['item'], 'missed', None)}
-    assert [(h['index'], h['step'], h['label']) for h in saved['history']] == [
-        (0, 'blind', 'missed'), (0, 'keep', 'missed'), (1, 'blind', 'straight'), (1, 'change', 'cannot_tell'),
-        (1, 'change', 'not_engaged'), (1, 'keep', 'straight'), (2, 'blind', 'missed')]  # the refused clicks wrote nothing
-    assert saved['labels']['0']['blind_time'].endswith('+00:00') and saved['labels']['2']['checked_time'] is None
+    assert {k: (v['blind'], v['checked']) for k, v in saved['labels'].items()} == {
+        str(order[0]): ('straight', 'straight'), str(order[1]): ('missed', 'missed'), str(order[2]): ('not_engaged', 'missed'),
+        str(order[3]): ('cannot_tell', None), str(order[4]): ('missed', None)}
+    steps = [(h['index'], h['step'], h['label']) for h in saved['history']]
+    assert steps == [(order[p], 'blind', BLIND[p]) for p in range(5)] + [
+        (order[0], 'keep', 'straight'), (order[1], 'change', 'cannot_tell'), (order[1], 'change', 'not_engaged'),
+        (order[1], 'keep', 'missed'), (order[2], 'change', 'missed')]  # the refused clicks wrote nothing
+    assert saved['labels'][str(order[0])]['blind_time'].endswith('+00:00') and engaged['display']['order'] == order
 
 
-def test_a_reload_resumes_in_the_middle_of_a_pair_and_a_repeated_check_is_one_action(tmp_path):
+def test_a_reload_resumes_mid_pass_and_a_repeated_check_is_one_action(tmp_path):
     run = owner_run(tmp_path)
     with Serving(run) as port:
-        click(port, 0, 'blind', 'straight')
-        click(port, 0, 'checked', keep=True)
-        click(port, 1, 'blind', 'cannot_tell')  # the page is closed here: the blind label is recorded, the check is not
+        blind_all(port, stop=3)  # the page is closed in pass one
     with Serving(run) as port:
         state = json.loads(call(port, '/api/state')[2])
-        assert state['blind'] == {'0': 'straight', '1': 'cannot_tell'} and state['checked'] == {'0': 'straight'}
-        assert set(state['reveals']) == {'0', '1'}  # pair 1 is awaiting its check and shows its evidence again
-        assert click(port, 1, 'checked', 'missed')[0] == 200
-        assert click(port, 1, 'checked', 'missed')[0] == 200  # a repeated click changes nothing
-        assert click(port, 1, 'blind', 'missed')[0] == 409
+        assert set(state['blind']) == {'0', '1', '2'} and state['reveals'] == {} and state['pass_two'] is False
+        for position in (3, 4):
+            assert click(port, position, 'blind', BLIND[position])[0] == 200
+    with Serving(run) as port:  # pass one is complete: a new server shows pass two's evidence, with nothing checked yet
+        state = json.loads(call(port, '/api/state')[2])
+        assert state['pass_two'] is True and state['checked'] == {} and len(state['reveals']) == 5
+        assert click(port, 0, 'checked', keep=True)[0] == 200
+        assert click(port, 1, 'checked', 'cannot_tell')[0] == 200
+        assert click(port, 1, 'checked', 'cannot_tell')[0] == 200  # a repeated click changes nothing
+        assert click(port, 1, 'blind', 'straight')[0] == 409
     saved = json.loads((run / 'labels.json').read_text())
-    assert [(h['index'], h['step'], h['label']) for h in saved['history']] == [
-        (0, 'blind', 'straight'), (0, 'keep', 'straight'), (1, 'blind', 'cannot_tell'), (1, 'change', 'missed')]
-    assert (saved['labels']['1']['blind'], saved['labels']['1']['checked']) == ('cannot_tell', 'missed')
+    order = order_of(run)
+    assert [(h['index'], h['step'], h['label']) for h in saved['history'][5:]] == [
+        (order[0], 'keep', 'straight'), (order[1], 'change', 'cannot_tell')]
+
+
+def test_a_failed_write_leaves_the_held_labels_and_the_file_as_they_were(tmp_path, monkeypatch):
+    run = owner_run(tmp_path)
+    store = memory_measure.LabelStore(run)
+    store.record(0, 'blind', 'straight')
+    held = json.dumps(store.saved, sort_keys=True)
+    on_disk = (run / 'labels.json').read_text()
+    real = memory_measure.write_json
+
+    def failing(path, value, **kwargs):
+        raise OSError('disk full')
+
+    monkeypatch.setattr(memory_measure, 'write_json', failing)
+    with pytest.raises(OSError):
+        store.record(1, 'blind', 'missed')
+    assert json.dumps(store.saved, sort_keys=True) == held and (run / 'labels.json').read_text() == on_disk
+    assert store.state()['blind'] == {'0': 'straight'}
+    monkeypatch.setattr(memory_measure, 'write_json', real)
+    store.record(1, 'blind', 'missed')  # the same click, once the disk has room, is recorded
+    assert store.state()['blind'] == {'0': 'straight', '1': 'missed'}
 
 
 def test_labels_of_another_sample_or_format_are_refused(tmp_path):
@@ -629,9 +713,16 @@ def test_labels_of_another_sample_or_format_are_refused(tmp_path):
         label_server(run, 0)
     save(run / 'labels.json', saved)
     label_server(run, 0).server_close()
+    engaged = json.loads((run / 'sample-engaged.json').read_text())
+    save(run / 'sample-engaged.json', dict(engaged, display=dict(engaged['display'], order=[0, 0, 1, 2, 3])))
+    save(run / 'labels.json', dict(saved, engaged_sha256=memory_measure.file_sha256(run / 'sample-engaged.json')))
+    with pytest.raises(MeasureError, match='not a permutation'):
+        label_server(run, 0)
+    save(run / 'sample-engaged.json', engaged)
     (run / 'adjudicated.json').unlink()
     with pytest.raises(MeasureError, match='run `events` for each judge and `agreement`'):
         label_server(run, 0)
+
 
 
 def test_describe_names_keys_text_and_repeats():
@@ -679,10 +770,12 @@ def test_agreement_reports_each_number_with_an_interval_and_the_thresholds(tmp_p
     assert adjudicated[('run-f:1-5', 'item-01')]['label'] == 'missed' and adjudicated[('run-f:1-5', 'item-01')]['by'] == 'third'
     assert report['unresolved'] == 0 and report['owner']['compared'] == 0 and report['pass'] is None
     with Serving(run) as port:  # the owner agrees with the adjudicated label on three of the four pairs
-        for pair in json.loads((run / 'sample.json').read_text())['pairs']:
+        sample = json.loads((run / 'sample.json').read_text())['pairs']  # no supplement: positions are indexes
+        for pair in sample:
             label = adjudicated[(pair['start'], pair['item'])]['label']
             wrong = next(other for other in judge.LABELS if other != label)
             assert click(port, pair['index'], 'blind', wrong if pair['index'] == 0 else label)[0] == 200
+        for pair in sample:  # pass two opens when every pair has a blind label
             assert click(port, pair['index'], 'checked', keep=True)[0] == 200
     assert main(['agreement', str(run), '--judges', 'judge-a', 'judge-b', '--third', 'judge-c', '--seed', '3']) == 0
     report = json.loads((run / 'agreement.json').read_text())
@@ -775,7 +868,9 @@ def test_the_judge_error_is_reported_for_touched_pairs_with_its_interval(tmp_pat
     out = memory_measure.render_measure(result)
     assert 'judge calibration: fail; agreement 0.833, kappa 0.769, owner match 4 of 6 compared, third judge alone on 0 pairs' in out
     assert "the judge's error on touched items was not measured: 4 touched pairs were sampled, fewer than 5" in out
-    assert 'all compared pairs: 2 of 6 differ, error 0.333 (exact 95% interval' in out
+    assert 'random pairs, blind labels: 2 of 6 differ, error 0.333 (exact 95% interval' in out
+    assert 'the same on the random pairs alone: 2 of 4 differ, error 0.500' in out
+    assert 'cannot contain a pair every judge called not engaged, so the pooled error is conditional on a judge noticing' in out
     assert 'point values: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong 0.333' in out
     assert f"judge error at its interval's upper bound: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong {1 - low:.3f}" in out
     monkeypatch.setattr(memory_measure, 'MIN_TOUCHED_SAMPLED', 4)  # now enough touched pairs were sampled
@@ -824,6 +919,7 @@ def test_agreement_calibrates_on_blind_labels_only_and_reports_engaged_and_check
     assert 'the calibration uses the owner\'s blind labels only' in out
     assert 'engaged pairs, not in the calibration (3 drawn): blind labels against the adjudicated label: 2 of 3 match' in out
     assert 'random and engaged pairs together (blind labels): 2 of 4 match' in out
+    assert 'random pairs alone: 1 of 2 match' in out and 'is conditional on a judge noticing engagement and is likely low' in out
     assert 'checked labels, not the calibration' in out
 
 
@@ -903,8 +999,9 @@ Date.now = () => now;
 const server = Object.assign({blind: {}, checked: {}}, JSON.parse(process.argv[3] || '{}'));
 const reveal = () => ({adjudicated: 'straight', by: 'agreement', screens: [1],
   judges: [{name: 'judge-a', label: 'straight', note: 'seen', screens: [1]}, {name: 'judge-b', label: 'straight', note: null, screens: []}]});
-const snapshot = () => ({total: 3, blind: {...server.blind}, checked: {...server.checked},
-  reveals: Object.fromEntries(Object.keys(server.blind).map(index => [index, reveal()])),
+const passTwo = () => Object.keys(server.blind).length === 3;
+const snapshot = () => ({total: 3, blind: {...server.blind}, checked: {...server.checked}, pass_two: passTwo(),
+  reveals: passTwo() ? Object.fromEntries(Object.keys(server.blind).map(index => [index, reveal()])) : {},
   choices: [['straight', 'Went straight to it'], ['missed', 'Missed it'], ['not_engaged', 'Not engaged'], ['cannot_tell', 'Cannot tell']],
   pairs: [0, 1, 2].map(index => ({index, place: 'p', what: 'w', image: '/item/' + index + '.png', aspect: '3 / 2', decisions: 5,
     short: false, frames: [{name: 'f001', image: '/frame/' + index + '/f001.png', decision: 1, inputs: 'k'},
@@ -918,18 +1015,18 @@ globalThis.fetch = async (url, options) => {
   if (options) {
     const body = JSON.parse(options.body);
     posts.push(body);
-    if (body.step === 'blind' ? body.index in server.blind : !(body.index in server.blind)) {
+    if (body.step === 'blind' ? body.position in server.blind : !passTwo()) {
       return {ok: false, status: 409, json: async () => ({})};
     }
-    if (body.step === 'blind') server.blind[body.index] = body.label;
-    else server.checked[body.index] = body.keep ? server.blind[body.index] : body.label;
+    if (body.step === 'blind') server.blind[body.position] = body.label;
+    else server.checked[body.position] = body.keep ? server.blind[body.position] : body.label;
   }
   return {ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(snapshot()))};
 };
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const click = button => button.disabled ? undefined : button.onclick();  // a disabled button gets no click
 const answer = () => click(els.choices.children[0]);
-const start = async () => { for (const id of ['reveal-verdict', 'reveal-judges', 'reveal-screens']) els[id] = make(id);
+const start = async () => { for (const id of ['reveal-verdict', 'reveal-judges', 'reveal-screens', 'pass', 'count', 'prompt']) els[id] = make(id);
   vm.runInThisContext(script); await settle(); await settle(); };
 '''
 
@@ -957,44 +1054,6 @@ ZOOM_HARNESS = PAGE_STUB + r'''
 '''
 
 
-FLOW_HARNESS = PAGE_STUB + r'''
-const shown = () => ({count: els.count.textContent, prompt: els.prompt.textContent, reveal: !els.reveal.hidden,
-  keep: !els.keep.hidden, keepText: els.keep.textContent, next: !els.forward.hidden, verdict: els['reveal-verdict'].textContent,
-  judges: els['reveal-judges'].children.length, screens: els['reveal-screens'].textContent,
-  cited: els.strip.children.map(figure => figure.className), chosen: els.choices.children.map(button => button.className),
-  progress: els.progress.value});
-(async () => {
-  await start();
-  const out = {start: shown()};
-  now += 1000;
-  // Before the blind click: no evidence on the page, and the blind click is a double-click, the second click arriving
-  // while the first is in flight.
-  const first = click(els.choices.children[1]), second = click(els.choices.children[1]);
-  await first; await settle();
-  out.blind = {posts: posts.slice(), shown: shown(), scrolled: scrolled.slice(), second: second === undefined};
-  // The second click of that double-click lands on the reveal step within the guard: nothing is recorded.
-  await click(els.keep); await settle();
-  out.guarded = posts.length;
-  // A double-click on "Keep my answer", the second click after the first has been answered but inside the guard.
-  now += 401;
-  const kept = click(els.keep);
-  await kept; await settle();
-  await click(els.keep); await settle();
-  out.keep = {posts: posts.slice(), shown: shown()};
-  // Back shows the pair as it stands; its checked label can change.
-  now += 1000;
-  click(els.back);
-  out.back = shown();
-  now += 401;
-  await click(els.choices.children[0]); await settle();
-  out.change = {posts: posts.slice(), shown: shown()};
-  // Back again, and the same label: nothing changes on the server, and the page moves on.
-  now += 1000;
-  click(els.back);
-  out.again = shown();
-  console.log(JSON.stringify(out));
-})();
-'''
 
 
 def run_page(tmp_path: Path, harness: str, server=None) -> dict:
@@ -1007,46 +1066,118 @@ def run_page(tmp_path: Path, harness: str, server=None) -> dict:
     return json.loads(done.stdout)
 
 
+SHOWN = r'''
+const e = id => els[id] || (els[id] = make(id));
+const shown = () => ({pass: e('pass').textContent, count: e('count').textContent, prompt: e('prompt').textContent,
+  intro: !e('intro').hidden, work: !e('work').hidden, done: !e('done').hidden, reveal: !e('reveal').hidden,
+  keep: !e('keep').hidden, next: !e('forward').hidden, back: !e('back').disabled, verdict: e('reveal-verdict').textContent,
+  judges: e('reveal-judges').children.length, screens: e('reveal-screens').textContent,
+  cited: e('strip').children.map(figure => figure.className), chosen: e('choices').children.map(button => button.className),
+  disabled: e('choices').children.map(button => button.disabled), progress: e('progress').value});
+'''
+
+FLOW_HARNESS = PAGE_STUB + SHOWN + r'''
+(async () => {
+  await start();
+  const out = {start: shown()};
+  now += 1000;
+  // Pass one. The first blind click is a double-click, the second arriving while the first is in flight.
+  const first = click(els.choices.children[1]), second = click(els.choices.children[1]);
+  await first; await settle();
+  out.blind = {posts: posts.slice(), shown: shown(), second: second === undefined};
+  await click(els.choices.children[0]); await settle();  // inside the guard: the next pair is not labelled
+  out.guarded = posts.length;
+  // Back within pass one shows the pair as recorded and cannot change it or show anything of the judges.
+  now += 1000;
+  click(els.back);
+  out.recorded = shown();
+  click(els.choices.children[0]);
+  out.recordedClick = posts.length;
+  click(els.forward);
+  now += 1000;
+  await click(els.choices.children[3]); await settle();
+  out.second = {posts: posts.length, shown: shown()};
+  now += 401;
+  await click(els.choices.children[0]); await settle();  // the last blind label
+  out.intro = {posts: posts.length, shown: shown()};
+  click(els['start-pass-two']);                           // the second click of a double-click: inside the guard
+  out.introGuarded = shown().intro;
+  now += 401;
+  click(els['start-pass-two']);
+  out.pass2 = shown();
+  // Pass two. A double-click on Keep: the second click arrives while the first is in flight.
+  now += 401;
+  const kept = click(els.keep);
+  click(els.keep);
+  await kept; await settle();
+  out.keep = {posts: posts.slice(3), shown: shown()};
+  now += 1000;
+  click(els.back);
+  out.back = shown();
+  now += 401;
+  await click(els.choices.children[0]); await settle();
+  out.change = {posts: posts.slice(3), shown: shown()};
+  now += 1000;
+  click(els.back);
+  out.again = shown();
+  console.log(JSON.stringify(out));
+})();
+'''
+
+
 @pytest.mark.skipif(shutil.which('node') is None, reason='node is not installed')
-def test_the_page_walks_blind_reveal_keep_change_back_and_reload(tmp_path):
+def test_the_page_walks_pass_one_the_start_screen_pass_two_keep_change_and_back(tmp_path):
     out = run_page(tmp_path, FLOW_HARNESS)
-    assert out['start']['count'] == 'Pair 1 of 3' and out['start']['reveal'] is False and out['start']['keep'] is False
-    assert out['start']['prompt'] == 'What did the player do about this item?' and out['start']['next'] is False
-    assert out['start']['cited'] == ['', ''] and out['start']['chosen'] == ['', '', '', '']
-    # the first click records the blind label once, shows the evidence and stays on the pair
-    assert out['blind']['posts'] == [dict(index=0, step='blind', label='missed')] and out['blind']['second'] is True
-    blind = out['blind']['shown']
-    assert (blind['count'], blind['reveal'], blind['keep'], blind['next'], blind['progress']) == ('Pair 1 of 3', True, True, False, 0)
-    assert blind['keepText'] == 'Keep my answer: Missed it' and 'Keep your answer, or change it?' in blind['prompt']
-    assert blind['verdict'] == 'Adjudicated label: Went straight to it (both judges agree).' and blind['judges'] == 2
-    assert blind['screens'].startswith('Screens a judge cited: 1.') and blind['cited'][0] == 'cited' and blind['cited'][1] == ''
-    assert blind['chosen'] == ['', 'chosen', '', ''] and out['blind']['scrolled'] == ['reveal']
-    assert out['guarded'] == 1  # a click on the reveal step inside the guard records nothing
-    # one keep, however many clicks: a checked label is recorded once and the page moves on
-    assert out['keep']['posts'][1:] == [dict(index=0, step='checked', keep=True)] and len(out['keep']['posts']) == 2
-    assert out['keep']['shown']['count'] == 'Pair 2 of 3' and out['keep']['shown']['reveal'] is False
-    assert out['keep']['shown']['progress'] == 1
-    # Back: the pair is done and shows its checked label and the evidence; changing it records a change
+    start = out['start']
+    assert start['pass'] == 'Pass 1 of 2: your own answer' and start['count'] == 'Pair 1 of 3' and start['reveal'] is False
+    assert start['prompt'] == 'What did the player do about this item?' and start['keep'] is False and start['next'] is False
+    # a blind click is recorded once and moves on: nothing of the judges is shown
+    assert out['blind']['posts'] == [dict(position=0, step='blind', label='missed')] and out['blind']['second'] is True
+    assert out['blind']['shown']['count'] == 'Pair 2 of 3' and out['blind']['shown']['reveal'] is False
+    assert out['blind']['shown']['progress'] == 1 and out['guarded'] == 1
+    # Back within pass one: the recorded answer, fixed, with no reveal and no judge text
+    recorded = out['recorded']
+    assert recorded['count'] == 'Pair 1 of 3' and recorded['reveal'] is False and recorded['cited'] == ['', '']
+    assert recorded['prompt'] == 'Your answer is “Missed it”. It is saved and is not changed in this pass.'
+    assert recorded['disabled'] == [True] * 4 and recorded['chosen'] == ['', 'chosen', '', ''] and recorded['next'] is True
+    assert recorded['verdict'] == '' and recorded['judges'] == 0 and out['recordedClick'] == 1
+    # the third blind label ends pass one: the start screen, with nothing of pass two behind it yet
+    assert out['second']['posts'] == 2 and out['second']['shown']['reveal'] is False
+    assert out['intro']['posts'] == 3 and out['intro']['shown']['intro'] is True and out['intro']['shown']['work'] is False
+    assert out['introGuarded'] is True  # a stray second click does not start pass two
+    pass2 = out['pass2']
+    assert pass2['pass'] == 'Pass 2 of 2: check against the judges' and pass2['intro'] is False and pass2['count'] == 'Pair 1 of 3'
+    assert pass2['reveal'] is True and pass2['keep'] is True and pass2['back'] is False and pass2['progress'] == 0
+    assert pass2['verdict'] == 'Adjudicated label: Went straight to it (both judges agree).' and pass2['judges'] == 2
+    assert pass2['screens'].startswith('Screens a judge cited: 1.') and pass2['cited'] == ['cited', '']
+    assert pass2['prompt'] == 'You answered “Missed it”. Keep your answer, or change it?'
+    # one keep, however many clicks
+    assert out['keep']['posts'] == [dict(position=0, step='checked', keep=True)]
+    assert out['keep']['shown']['count'] == 'Pair 2 of 3' and out['keep']['shown']['progress'] == 1
+    # Back in pass two: the pair is done and shows its checked label; changing it records a change
     assert out['back']['count'] == 'Pair 1 of 3' and out['back']['next'] is True and out['back']['keep'] is False
     assert out['back']['reveal'] is True and out['back']['chosen'] == ['', 'chosen', '', '']
-    assert out['back']['prompt'].startswith('Your answer is “Missed it”. Click another')
-    assert out['change']['posts'][2:] == [dict(index=0, step='checked', label='straight')]
+    assert out['change']['posts'][1:] == [dict(position=0, step='checked', label='straight')]
     assert out['change']['shown']['count'] == 'Pair 2 of 3'
     assert 'you first answered “Missed it”' in out['again']['prompt'] and out['again']['chosen'] == ['chosen', '', '', '']
 
 
 @pytest.mark.skipif(shutil.which('node') is None, reason='node is not installed')
-def test_the_page_reloaded_mid_pair_shows_the_reveal_and_waits_for_the_check(tmp_path):
-    out = run_page(tmp_path, PAGE_STUB + r'''
-(async () => {
-  await start();
-  console.log(JSON.stringify({count: els.count.textContent, reveal: !els.reveal.hidden, keep: !els.keep.hidden,
-    prompt: els.prompt.textContent, chosen: els.choices.children.map(button => button.className), next: !els.forward.hidden,
-    progress: els.progress.value}));
-})();''', server=dict(blind={'0': 'straight', '1': 'cannot_tell'}, checked={'0': 'straight'}))
-    # pair 0 is done, pair 1 has its blind label and no check: the page opens on pair 1 with the evidence and the choice
-    assert out == dict(count='Pair 2 of 3', reveal=True, keep=True, next=False, progress=1, chosen=['', '', '', 'chosen'],
-        prompt='You answered “Cannot tell”. Keep your answer, or change it?')
+@pytest.mark.parametrize('server, expected', [
+    (dict(blind={'0': 'straight', '1': 'cannot_tell'}),  # closed in pass one: on the next open pair, nothing revealed
+     dict(count='Pair 3 of 3', intro=False, reveal=False, keep=False, pass_='Pass 1 of 2: your own answer', progress=2)),
+    (dict(blind={'0': 'straight', '1': 'cannot_tell', '2': 'missed'}),  # pass one done, pass two not started
+     dict(intro=True)),
+    (dict(blind={'0': 'straight', '1': 'cannot_tell', '2': 'missed'}, checked={'0': 'straight'}),  # mid pass two
+     dict(count='Pair 2 of 3', intro=False, reveal=True, keep=True, pass_='Pass 2 of 2: check against the judges', progress=1))])
+def test_the_page_reloaded_resumes_where_the_labels_stand(tmp_path, server, expected):
+    out = run_page(tmp_path, PAGE_STUB + SHOWN + r'''
+(async () => { await start(); console.log(JSON.stringify(shown())); })();''', server=server)
+    if expected['intro']:  # the start screen draws no pair: the pair's own parts are not touched and are hidden with it
+        assert (out['intro'], out['work'], out['count']) == (True, False, '')
+        return
+    assert dict(count=out['count'], intro=out['intro'], reveal=out['reveal'], keep=out['keep'], pass_=out['pass'],
+        progress=out['progress']) == expected
 
 
 @pytest.mark.skipif(shutil.which('node') is None, reason='node is not installed')
