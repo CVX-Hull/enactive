@@ -32,7 +32,7 @@ import re
 from typing import Sequence
 import zlib
 
-from harness.evaluation.core.host import HostFacts, frame_source, host_facts, memory_reads
+from harness.evaluation.core.host import LARGE_REWRITE_CACHE_TOKENS, HostFacts, frame_source, host_facts, memory_reads
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.sources import read_carry, read_host, run_archive_entry
 from tools.memory_reads import game_clock, run_dirs
@@ -371,19 +371,26 @@ def simulate(images: Sequence[int], model: CutModel, lag: int | None) -> list[di
                     held -= turn[1]
                     tokens -= turn[1] * (model.image_tokens - model.marker_tokens)
         rewrite = bool(freed) or dropped
-        rows.append(dict(prompt=tokens, freed=freed, image_drop=dropped,
+        rows.append(dict(prompt=tokens, freed=freed, image_drop=dropped, rewrite=rewrite,
             write=tokens - model.cached_head_tokens if rewrite else tokens if index == 0 else added))
     return rows
 
 
-def summarise(label: str, rows: Sequence[dict], recorded_write: float) -> dict:
+def summarise(label: str, actors: Sequence[Sequence[dict]], recorded_write: float) -> dict:
+    """One table row over every actor's requests. A cut is held back when it was due and freed nothing;
+    `cuts_held_back` counts each unbroken run of such requests once and `requests_held_back` counts the requests.
+    `rewritten` is the part of `cache_write` written by requests that rewrote the conversation."""
+    rows = [row for actor in actors for row in actor]
     prompts = [row['prompt'] for row in rows]
     write = sum(row['write'] for row in rows)
     return dict(row=label, requests=len(rows), prompt_p50=nearest_rank(prompts, 0.5), prompt_p95=nearest_rank(prompts, 0.95),
         prompt_max=max(prompts, default=None), cuts=sum(bool(row['freed']) for row in rows),
         cuts_under_ten_turns=sum(bool(row['freed']) and row['freed'] < 10 for row in rows),
-        cuts_held_back=sum(row['freed'] == 0 for row in rows), image_drops=sum(row['image_drop'] for row in rows),
-        cache_write=round(write), cache_write_of_recorded=round(write / recorded_write, 3) if recorded_write else None,
+        cuts_held_back=sum(row['freed'] == 0 and (not at or actor[at - 1]['freed'] != 0)
+            for actor in actors for at, row in enumerate(actor)),
+        requests_held_back=sum(row['freed'] == 0 for row in rows), image_drops=sum(row['image_drop'] for row in rows),
+        cache_write=round(write), rewritten=round(sum(row['write'] for row in rows if row['rewrite'])),
+        cache_write_of_recorded=round(write / recorded_write, 3) if recorded_write else None,
         under_40000=round(sum(p < 40000 for p in prompts) / len(prompts), 3) if prompts else None,
         under_60000=round(sum(p < 60000 for p in prompts) / len(prompts), 3) if prompts else None)
 
@@ -404,15 +411,17 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int]) -> di
         for requests in by_actor.values():
             ordered = [requests[key] for key in sorted(requests)]
             sequences.append([row['images'] for row in ordered])
-            was = 0
+            was, actor = 0, []
             for row in ordered:
-                if 'prompt' in row:
-                    recorded.append(dict(prompt=row['prompt'], write=row['write'], freed=None, image_drop=row['omitted'] > was))
+                if 'prompt' in row:  # a response without usage has no recorded prompt; its turn is still simulated
+                    actor.append(dict(prompt=row['prompt'], write=row['write'], freed=None, image_drop=row['omitted'] > was,
+                        rewrite=row['write'] > LARGE_REWRITE_CACHE_TOKENS))
                 was = row['omitted']
-    total = sum(row['write'] for row in recorded)
+            recorded.append(actor)
+    total = sum(row['write'] for actor in recorded for row in actor)
     table = [summarise('recorded', recorded, total)]
     for label, lag in [('no cut', None), *((f'lag {lag}', lag) for lag in lags)]:
-        table.append(summarise(label, [row for images in sequences for row in simulate(images, model, lag)], total))
+        table.append(summarise(label, [simulate(images, model, lag) for images in sequences], total))
     return dict(runs=len(lineage), actors=len(actors), model=asdict(model), rows=table)
 
 
@@ -471,7 +480,8 @@ def render_replay(rows: Sequence[dict]) -> str:
 
 def render_cut(report: dict) -> str:
     keys = ('row', 'requests', 'prompt_p50', 'prompt_p95', 'prompt_max', 'cuts', 'cuts_under_ten_turns', 'cuts_held_back',
-        'image_drops', 'cache_write', 'cache_write_of_recorded', 'under_40000', 'under_60000')
+        'requests_held_back', 'image_drops', 'cache_write', 'rewritten', 'cache_write_of_recorded', 'under_40000',
+        'under_60000')
     lines = [f"{report['runs']} runs, {report['actors']} actors; model {json.dumps(report['model'])}",
         'simulated rows are from the model, not measured; `recorded` is from the traces', ' | '.join(keys)]
     lines.extend(' | '.join(str(row[key]) for key in keys) for row in report['rows'])

@@ -7,7 +7,7 @@ import pytest
 
 from harness.curator.knowledge import Repository
 from tools.memory_screen_checks import (CutModel, StoreError, covered_turns, cut_report, fact_history, main,
-    read_lineage, read_versions, replay, simulate, store_report)
+    read_lineage, read_versions, replay, simulate, store_report, summarise)
 
 SESSION = 'c' * 32
 RECORD = '5' * 32
@@ -137,13 +137,20 @@ def test_cut_frees_only_covered_turns():
     assert [plain[i]['prompt'] for i in (0, 1, 39)] == [4500, 5450, 4500 + 39 * 950]
     assert [plain[i]['write'] for i in (0, 1)] == [4500, 950]
     assert [i for i, row in enumerate(plain) if row['image_drop']] == [40]  # the 40th image: a block of 20 goes
-    assert plain[40] == dict(prompt=42500 - 20 * 658, freed=None, image_drop=True, write=42500 - 20 * 658 - 3900)
+    assert plain[40] == dict(prompt=42500 - 20 * 658, freed=None, image_drop=True, rewrite=True,
+        write=42500 - 20 * 658 - 3900)
     kept_up = simulate(images, model, 10)
-    assert kept_up[40] == dict(prompt=42500 - 24 * 950, freed=24, image_drop=False, write=42500 - 24 * 950 - 3900)
+    assert kept_up[40] == dict(prompt=42500 - 24 * 950, freed=24, image_drop=False, rewrite=True,
+        write=42500 - 24 * 950 - 3900)
     assert not any(row['image_drop'] for row in kept_up)
     behind = simulate(images, model, 47)
     assert (behind[40]['freed'], behind[40]['image_drop'], behind[40]['prompt']) == (0, True, plain[40]['prompt'])
     assert simulate(images, CutModel(min_free=30), 10)[40]['freed'] == 0  # a cut that would free too little is not made
+    waiting = summarise('x', [simulate(list(range(80)), CutModel(high_mark=30000, image_peak=99), 60)], 1.0)
+    # over the mark from request 28: nothing is covered until turn 61, then every request frees the one turn newly covered
+    assert (waiting['cuts_held_back'], waiting['requests_held_back'], waiting['cuts'], waiting['cuts_under_ten_turns']) == (1, 34, 19, 19)
+    assert waiting['rewritten'] == sum(row['write'] for row in simulate(list(range(80)), CutModel(high_mark=30000, image_peak=99), 60)
+        if row['rewrite'])
     assert (covered_turns(45, 10, 'steady'), covered_turns(45, 10, 'sessions'), covered_turns(5, 10, 'sessions')) == (35, 30, 0)
 
 
