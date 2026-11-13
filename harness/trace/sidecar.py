@@ -1,4 +1,5 @@
-"""Container manifests and sidecar indexes over sealed evidence (ADR 009 D17; #452).
+"""Container manifests and sidecar indexes over sealed evidence (ADR 009's managed-containers
+direction; #452).
 
 One manifest shape, `container-manifest/1`, describes every container kind. It records
 identity, kind, owner role, inputs and pinned versions, budgets, lifecycle state, provenance

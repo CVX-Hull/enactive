@@ -45,12 +45,15 @@ owner decision.
 
 Owner-set envelopes, each within the standing $1,000 cumulative cap:
 
-- The ceiling benchmark and grounding-aid study ([#372](acceptance/2026-11-06-development-loop.md), decision D2)
-  and the long-horizon arm ([#382](acceptance/2026-11-07-long-horizon-382.md), decision D1) each have a $150
-  new-spend envelope. Both are closed, and an unspent remainder is not carried to other work.
+- The ceiling benchmark and grounding-aid study ([#372](acceptance/2026-11-06-development-loop.md), the
+  owner's decision of 5 November 2026 on the loop's new spend) and the long-horizon arm
+  ([#382](acceptance/2026-11-07-long-horizon-382.md), the owner's decision of 7 November 2026 on the arm's new
+  envelope) each have a $150 new-spend envelope. Both are closed, and an unspent remainder is not carried to
+  other work.
 - One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397))
-  has a $300 new-spend envelope (decisions E1 and F2 in
-  [its record](acceptance/2026-11-07-seven-day-397.md)). It is closed: the lineage ended.
+  has a $300 new-spend envelope (the owner's decisions of 7 November 2026 in
+  [its record](acceptance/2026-11-07-seven-day-397.md): a $150 envelope for one lineage, then its raise to
+  $300 after admission 4). It is closed: the lineage ended.
 - The curator memory study's fourth held-out lineage, stored as `lh4`
   ([#522](https://github.com/CVX-Hull/enactive/issues/522)), has an $80 new-spend envelope,
   approved with the study's [added-lineage protocol](design/p1-study-3.md#running-lh4) on

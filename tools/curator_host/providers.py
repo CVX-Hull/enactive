@@ -60,7 +60,7 @@ ANTHROPIC = Provider(
 
 
 # -- OpenRouter chat completions ---------------------------------------------------------------
-# (#454; ADR 009 open decision 2). Checked on 8 November 2026 against
+# (#454; ADR 009's owner decision on the curator's spend cap and model). Checked on 8 November 2026 against
 # openrouter.ai/docs/api/reference/overview, /docs/use-cases/usage-accounting and /docs/faq:
 # - usage, including `cost`, is always returned, and the base currency is US dollars;
 # - `plugins` (`web` is live web search), `models` and `route` (fallback models), `prompt`, `debug`

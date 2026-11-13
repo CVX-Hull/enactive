@@ -1,4 +1,5 @@
-"""The curator's knowledge repository: one Git repository per game (ADR 009 D16; #453).
+"""The curator's knowledge repository: one Git repository per game (ADR 009's
+one-repository-per-game direction; #453).
 
 Only the gate commits (see `gate.py`). A publish is one commit on `main` and one tag `v<N>`;
 the highest tag is the published version, so a commit that fails before its tag leaves the

@@ -3,13 +3,15 @@ owner: lead
 review_trigger: A macOS or coding-agent host update, a change to ADR 009's isolation boundary, an escape-suite failure, or new sandbox evidence
 status: active
 date: 2026-11-08
-scope: R13 of ADR 009 (#451) — project-local sandbox mechanisms on this Mac, coding-agent hosts under them, session cost evidence, and gate gaming
+scope: ADR 009's research area on agent workspaces and verification gates (#451) — project-local sandbox mechanisms on this Mac, coding-agent hosts under them, session cost evidence, and gate gaming
 ---
 
-# Curator sandbox (R13)
+# Curator sandbox
 
 Research and prototype for [ADR 009](decisions/009-curated-player.md#isolation)'s
-isolation boundary ([#451](https://github.com/CVX-Hull/enactive/issues/451)). The
+isolation boundary ([#451](https://github.com/CVX-Hull/enactive/issues/451)), answering
+the ADR's [research area](decisions/009-curated-player.md#research-agenda) on agent
+workspaces and verification gates. The
 curator is a coding agent that runs code on the Mac that runs the live game. Today's
 runtime files hold live secrets: the provider key is in the actor host's environment
 and `actor.json` holds each actor's custody token. The custodian's Pause route trusts
@@ -42,7 +44,8 @@ Two caveats:
   process count are enforced by a polling supervisor, not by the kernel (L3, L11).
 
 The [risks table](#residual-risks) lists what stays open. Adopting this mechanism for
-live runs of the curator and memory phase is ADR 009 open decision 6, an owner decision.
+live runs of the curator and memory phase is ADR 009's
+[owner decision on the sandbox mechanism](decisions/009-curated-player.md#open-owner-decisions).
 
 ## Brief and sources named
 

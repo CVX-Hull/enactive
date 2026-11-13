@@ -1,4 +1,4 @@
-"""The spectator's frame (`spectator-frame/1`, ADR 009 D18) over synthetic runs, container indexes and episodes.
+"""The spectator's frame (`spectator-frame/1`, ADR 009's spectator direction) over synthetic runs, container indexes and episodes.
 
 No sealed evidence is read: one synthetic run stands in for an actor session, a synthetic index describes it and a
 synthetic `probe-episodes/1` document anchors episodes in its frames. The tracked #397 index and episodes are

@@ -1,4 +1,5 @@
-"""Shadow runner for the curator host (tools/curator_host) over sealed traces (#454; ADR 009 open decision 2).
+"""Shadow runner for the curator host (tools/curator_host) over sealed traces (#454; ADR 009's owner decision on
+the curator's spend cap and model).
 
 Replays recorded lineages through curator sessions, one `run_session` per admission or run in
 lineage order, against a per-arm, per-lineage knowledge repository. The arm picks the model
@@ -12,8 +13,8 @@ printed or written.
         --out .runtime/curator-shadow/pilot-1
 
 Only the sampled sessions of the two development lineages can be named. The held-out lineages
-(#382's lh1, lh2 and lh3, and #522's lh4) are refused by name. Summaries are `curator-shadow/1`, one per session and one per
-run. Prices are the frozen `curator-prices/1` file in `data/curator/`.
+(#382's three, stored as `lh1`, `lh2` and `lh3`, and #522's fourth, stored as `lh4`) are refused by name.
+Summaries are `curator-shadow/1`, one per session and one per run. Prices are the frozen `curator-prices/1` file in `data/curator/`.
 """
 from __future__ import annotations
 
@@ -291,12 +292,8 @@ def _write(path: Path, value: dict) -> Path:
 
 def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Repository, memory: Path | None,
             memory_note: str, host: dict, config_path: Path, config_dir: Path, model_config: dict, prices: dict[str, Price],
-            key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int,
-            memory_until: float | None = None, expected_brief_sha256: str | None = None,
-            expected_trace_manifest_sha256: str | None = None) -> dict:
-    """One curator session through its own proxy. Returns the `curator-shadow/1` session summary.
-
-    `memory_until` keeps only memory written strictly before it; None passes the whole store."""
+            key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int) -> dict:
+    """One curator session through its own proxy. Returns the `curator-shadow/1` session summary."""
     session_dir = out/lineage/name
     session_dir.mkdir(parents=True)
     arm = ARMS[arm_name]
@@ -320,11 +317,8 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             argv=host_argv(host, session_config),
             tools=(*host['roots'], config_dir.resolve()),
             limits=sandbox.Limits(wall_seconds=wall_seconds), proxy=proxy, proxy_port=port,
-            extra_env=host['env'], host=host_identity(host, model_config),
-            expected_brief_sha256=expected_brief_sha256,
-            expected_trace_manifest_sha256=expected_trace_manifest_sha256)
-        record = run_session(repo, [trace], config, memory=memory, memory_until=memory_until,
-                             session_id=f'{name}-{uuid.uuid4().hex[:8]}')
+            extra_env=host['env'], host=host_identity(host, model_config))
+        record = run_session(repo, [trace], config, memory=memory, session_id=f'{name}-{uuid.uuid4().hex[:8]}')
         state = 'completed'
     except Exception as exc:  # noqa: BLE001 - a failed session is a result, not a crash of the run
         state = f'error: {type(exc).__name__}: {exc}'

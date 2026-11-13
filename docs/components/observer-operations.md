@@ -108,7 +108,7 @@ The gateway forwards `GET /api/view/*` to it on its own connection:
   shows both `502` and `503` as "viewer unavailable".
 
 **Spectator frame.** The page's *Roles and containers* view
-([ADR 009](../decisions/009-curated-player.md) D18, `web/app/frame.js`) is a health strip
+([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18), `web/app/frame.js`) is a health strip
 over role tabs. *Actor* lists the four #397 forgetting episodes from the tracked probe
 episodes, each anchor opening the existing Live view at that step, or saying why its frame
 is unavailable. *Containers* lists the sidecar inventory with each manifest. *Curator*,

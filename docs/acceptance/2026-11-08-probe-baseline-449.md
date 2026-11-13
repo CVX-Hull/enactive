@@ -123,7 +123,7 @@ against a sample of episodes found another way before relying on blinded probe r
 A second annotator, in a fresh context with the same brief and the same incoming ledger,
 re-annotated the chunks drawn by `random.Random(4492).sample` of the #397 order. The lead
 matched new facts by statement; the matching is in
-[`inter-rater-matching.json`](../../data/evaluation/probes/inter-rater-matching.json).
+[`inter-rater-matching.json`](assets/probe-baseline-449/inter-rater-matching.json).
 A one-to-two match counts as one matched cluster.
 
 | Chunk | Carry labels: agreement (κ, n) | Earlier fact needed: agreement (κ) | New facts A / B, matched ÷ distinct |

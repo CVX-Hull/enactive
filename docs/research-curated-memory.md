@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: Primary-source synthesis for ADR 009 research areas R1-R4 and R14 (issue 447); evidence for method choice, not an implementation or a game claim
+scope: Primary-source synthesis for five ADR 009 research areas (agent memory, concurrent consolidation, belief under conflict, ontology induction and evaluation, oversight interfaces; issue 447); evidence for method choice, not an implementation or a game claim
 review_trigger: Independent S-EVIDENCE review of this page; any ADR 009 memory, belief, ontology or spectator method decision; new evidence on the weakest areas named below; model or benchmark changes
 ---
 
@@ -20,17 +20,19 @@ Faulty, MemComposer, StateMem, MemoryArena and others) and the
 cutoff 2026-10-18; Kaelbling et al., Jøsang 2013 read by an agent, BeliefMem,
 provenance semirings, temporal databases, ATMS, information bottleneck). Those
 papers are cited by reference only where this page relies on them; nothing below
-re-reviews them. Neither earlier page covered R2 measured lag, R4 ontology
-induction, or R14 oversight interfaces.
+re-reviews them. Neither earlier page covered measured consolidation lag, ontology
+induction, or oversight interfaces.
 
 ## Brief and method
 
-**Brief questions (recorded verbatim in substance).**
-- R1: agent memory write and retrieval policies; typed versus unified stores; what has been measured about when agents should write, what to retrieve, and whether typed schemas help.
-- R2: concurrent or background memory consolidation (a separate process curating memory while an agent acts): designs and measured effects, including lag and cost.
-- R3: belief under conflicting observations: subjective logic, Bayesian and Dempster-Shafer fusion, source reliability, staleness/temporal decay, opinion pooling, calibration; a recommendation on ADR open decision 4 and how to test the choice offline.
-- R4: ontology/schema induction and evaluation (including by LLMs): ontology quality measures, grooming/merging of similar types, utility versus complexity.
-- R14: oversight interfaces for human supervision of autonomous agents: what operators need to see, measured effects.
+**Brief questions (recorded verbatim in substance).** Each is an area of ADR 009's
+[research agenda](decisions/009-curated-player.md#research-agenda), named here as the ADR
+names it.
+- Agent memory: write and retrieval policies; typed versus unified stores; what has been measured about when agents should write, what to retrieve, and whether typed schemas help.
+- Concurrent consolidation: concurrent or background memory consolidation (a separate process curating memory while an agent acts): designs and measured effects, including lag and cost.
+- Belief under conflict: belief under conflicting observations: subjective logic, Bayesian and Dempster-Shafer fusion, source reliability, staleness/temporal decay, opinion pooling, calibration; a recommendation on the ADR's [open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions) and how to test the choice offline.
+- Ontology induction and evaluation: ontology/schema induction and evaluation (including by LLMs): ontology quality measures, grooming/merging of similar types, utility versus complexity.
+- Oversight interfaces: oversight interfaces for human supervision of autonomous agents: what operators need to see, measured effects.
 
 **Foundational sources the brief named** (ADR 009 research-agenda rows): Soar/ACT-R,
 Tulving, McClelland et al. 1995, Jøsang, Dawid and Skene 1979, Kaplan and Meier 1958,
@@ -76,7 +78,7 @@ unreadable (binary/scan, HTTP 403, or bot wall) and are recorded as not read. Wh
 an arXiv identifier month disagrees with the submission date (S08, S17, S18), the
 abs-page v1 date is used. No game knowledge was used as evidence anywhere in this page.
 
-## R1 Agent memory: write and retrieval policies, typed versus unified stores
+## Agent memory: write and retrieval policies, typed versus unified stores
 
 **What was measured.**
 - *Write policy.* Lesson rewriting is already covered by the earlier page. New: a
@@ -108,7 +110,8 @@ abs-page v1 date is used. No game knowledge was used as evidence anywhere in thi
   ablation, cost and latency not reported. Weak evidence that "write summaries,
   read by index" is learnable; no evidence it beats a plain retrieval policy at
   matched budget.
-- *Memory stale-trust.* Over-trust of stale memory (S10, S11) is covered under R3.
+- *Memory stale-trust.* Over-trust of stale memory (S10, S11) is covered under
+  [belief under conflicting observations](#belief-under-conflicting-observations).
 - *Typed versus unified.* No source found a controlled comparison of a typed store
   against a flat store with the retriever, backbone and token budget held fixed.
   Closest: PlugMem (S08, v1 2026-02-06, first 100k of 187,298 chars) uses episodic, semantic and
@@ -166,7 +169,7 @@ Source: S04 Table 3 (a tenth system, long-context passthrough, is not in this ta
 Paradigm labels follow S04's grouping as extracted. No cross-product ranking beyond
 "expensive consolidators were not better here" is justified.
 
-**Recommendation for ADR 009 (R1).**
+**Recommendation for ADR 009 (agent memory).**
 1. Keep the gate as the write policy and make it **evidence-checked**. S01 shows
    that unfiltered writes (add-all) degraded a pre-populated, already-working bank on
    all four agents, that errors compound, and that judge-filtered writes were mixed
@@ -187,12 +190,13 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
    (it matched the leading accuracies at about 1/40 of the wall time), not as evidence
    it is best. The only
    defensible argument for typing is the epistemic core's explicit supersession and
-   provenance fields (R3), not domain types.
+   provenance fields ([belief under conflicting observations](#belief-under-conflicting-observations)),
+   not domain types.
 4. Budget for **format-failure** in curator-written structure on the model actually
    used (S05), and count it as a gate-reject cause.
 5. Weakness: no source tests memory under partial observability in an action game.
 
-## R2 Concurrent or background consolidation
+## Concurrent or background consolidation
 
 **What was measured.**
 - *Staleness and lag.* The system characterization (S04) defines staleness as the
@@ -202,7 +206,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   latency spans about five orders of magnitude (sub-millisecond to tens of seconds;
   about 10 s for Mem0 and MIRIX, tails over 100 s). Synchronous writes remove staleness
   but add the construction time to the timeline. Measured accuracy was lower for the
-  heavy consolidators on this benchmark (see the R1 table; v1 2026-06-04, v2
+  heavy consolidators on this benchmark (see the agent-memory table above; v1 2026-06-04, v2
   2026-09-22). Caveats: single node and GPU, adapted systems, one run, no seeds or
   intervals; MemoryArena physics split (20 tasks) used for freshness.
 - *Cost of consolidation.* The anatomy study (S05, six memory systems plus LoCoMo
@@ -233,7 +237,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   underpowered. No study measured agent-curator concurrency consistency in a closed
   loop.
 
-**Recommendation for ADR 009 (R2).**
+**Recommendation for ADR 009 (concurrent consolidation).**
 1. The ADR's design (immutable versioned snapshots, labelled "as of decision N",
    actor never blocked) matches what S04 says is necessary when per-session
    consolidation time can exceed arrival intervals. Keep it, and **adopt S04's
@@ -251,7 +255,10 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
    matched cost exists in the sources read; treat the baseline and workbench phase's
    shadow-session lag/cost study as the first real evidence.
 
-## R3 Belief under conflicting observations (ADR open decision 4)
+## Belief under conflicting observations
+
+This section also answers the ADR's
+[open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions).
 
 **Evidence on LLM-agent belief and conflict.**
 - *Bayesian updating with reliability* (S09, Nous; v1 2026-06-20 / v2 2026-07-16;
@@ -306,7 +313,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   but another model scored 0.3362 on one dataset, single runs, no variance, possible
   memorization of public data; the LLM method did not model source reliability
   explicitly. Fusion of web tables, not of agent observations.
-- *Contradiction operators* (S12): see R2; four write-time operators (LWW,
+- *Contradiction operators* (S12): see concurrent consolidation above; four write-time operators (LWW,
   evidence-weighted merge, await-confirmation, per-rule policy) with isolation
   preconditions; evidence thin and underpowered.
 
@@ -350,7 +357,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   (pooled .223 vs scoped .340, scoped better on return) are internal development
   data, not external evidence.
 
-**Recommendation on open decision 4 (belief model).**
+**Recommendation on the ADR's open decision on the belief model.**
 1. **Do not adopt subjective-logic fusion as a decided model.** No source read compares
    subjective logic with Beta counts, last-write-wins or Dempster's rule on agent
    memory, and the only primary operator text (S16) and the one empirical user found by
@@ -435,7 +442,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
 6. Weakest-evidence area overall: decay/staleness estimation, pooling and
    calibration have no primary support in this page.
 
-## R4 Ontology/schema induction and evaluation
+## Ontology/schema induction and evaluation
 
 **What was measured.**
 - *SCION/SCOPE* (S17, v1 2026-05-20, stated sections via extractor, first 100k of 182,621 chars; claims about the remaining appendices are not made): LLM "schema engineer" names,
@@ -467,7 +474,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   schemas was found. No source studied merge/split decisions of induced types as
   their own task, nor induction inside an agent memory loop.
 
-**Recommendation for ADR 009 (R4).**
+**Recommendation for ADR 009 (ontology induction and evaluation).**
 1. Keep **task utility as the primary criterion**, computed by the gate on trace that
    arrived after the submission (as the ADR specifies). The two sources that tie
    schema quality to something downstream (S17 fixed-extractor F1, S19 CQ coverage) do
@@ -487,7 +494,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
 5. Weakest area: no measured evidence on utility versus complexity or on grooming
    (merge/split) for LLM-induced types in agent memory.
 
-## R14 Oversight interfaces
+## Oversight interfaces
 
 **What was measured.**
 - *Oversight strategy experiment* (S20; **v1 2026-04-06 / v2 2026-09-12, results
@@ -506,7 +513,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   lower-consequence tasks: intervention 13.3% vs 30.2% (p=.012), failure 67.7% vs 45.8%,
   confounded with scenario and risk type. *v1 (superseded):* OR 0.25 [0.13, 0.49];
   intervention success p=.407; final attack success p=.162 (not significant); 12.8% vs
-  29.4%. The revision changes the R14 conclusion: strategy did change final failure,
+  29.4%. The revision changes the oversight-interfaces conclusion: strategy did change final failure,
   though not conditional intervention.
   *What Structurally Enriched is* (v2): plan inspection and revision before execution;
   non-blocking display during execution of the agent's current focus, rationale,
@@ -546,7 +553,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   framework stressing time-to-act, and a policy consensus listing oversight modes.
 - Foundational: Sheridan and Endsley were not read.
 
-**Recommendation for ADR 009 (R14).**
+**Recommendation for ADR 009 (oversight interfaces).**
 1. The Spectator's **intent, expectation and outcome side-by-side** view is supported
    by S22 (reasoning/plans are unreliable proxies for action) and S20 (judgment cues
    matter); keep outcomes, not just narration.
@@ -573,12 +580,12 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
 
 | Area | Strength | Why |
 | --- | --- | --- |
-| R3 decay, pooling, calibration, reliability without ground truth | Very thin | No primary text read for the foundations; no LLM-agent source estimates staleness rates; one benchmark with built-in reliability signal |
-| R4 utility versus complexity, grooming | Very thin | Induction papers measure proxies; no merge/split utility study; no MDL source |
-| R14 multi-role supervision | Thin | N=8 to 48 web/coding tasks; no game or multi-role agents |
-| R2 acting-agent outcomes under consolidation | Thin | Lag measured for QA ingestion, outcomes unmatched |
-| R1 typed vs unified | Thin | No matched-budget flat-versus-typed ablation found |
-| R1 write-gate evidence | Moderate (small) | One controlled study, four tasks, includes a synthetic agent |
+| Belief under conflict: decay, pooling, calibration, reliability without ground truth | Very thin | No primary text read for the foundations; no LLM-agent source estimates staleness rates; one benchmark with built-in reliability signal |
+| Ontology: utility versus complexity, grooming | Very thin | Induction papers measure proxies; no merge/split utility study; no MDL source |
+| Oversight interfaces: multi-role supervision | Thin | N=8 to 48 web/coding tasks; no game or multi-role agents |
+| Concurrent consolidation: acting-agent outcomes | Thin | Lag measured for QA ingestion, outcomes unmatched |
+| Agent memory: typed vs unified | Thin | No matched-budget flat-versus-typed ablation found |
+| Agent memory: write-gate evidence | Moderate (small) | One controlled study, four tasks, includes a synthetic agent |
 
 General: nearly all LLM evidence is 2026 preprints, single backbone, often LLM-judged
 and often author-built benchmarks; none involves a CDDA-class partially observable
@@ -629,7 +636,7 @@ Useful Memories Become Faulty, BeliefMem and the other sources listed in the two
 earlier pages above, with their stated dates.
 
 Revision record. A first draft of this page was reviewed independently. This revision
-corrected: S20 (v2 results replaced v1 and the R14 recommendation changed); S04 (nine
+corrected: S20 (v2 results replaced v1 and the oversight-interfaces recommendation changed); S04 (nine
 systems printed, noise statement, "BM25 best" withdrawn); S01 ("fixed" is a populated
 bank, judge-filtered results mixed); S09 (three results separated; adversarial regime
 reported); S11 (pre-resolution is an oracle; metadata helped at 0.6B); S05 (build time

@@ -1,4 +1,4 @@
-"""Draft containers for curator sessions (ADR 009 D17; #453).
+"""Draft containers for curator sessions (ADR 009's managed-draft-containers direction; #453).
 
 A draft is work in progress the curator carries between sessions. Software, not the curator,
 lists drafts, surfaces open and stale ones, renews a draft a session writes to, ages the

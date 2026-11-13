@@ -302,7 +302,7 @@ def secrets_of(sessions) -> set[str]:
     return secrets
 
 
-# Development lineages only: #382's lh1–lh3 are held out and never projected here (owner
+# Development lineages only: #382's three lineages, stored as `lh1`–`lh3`, are held out and never projected here (owner
 # decision, 8 November 2026). The #372 runs are the seeded sample of docs/design/probe-protocol.md.
 SAMPLE_372 = ('aidB3', 'ceil09', 'ceil07', 'ceil05', 'aidB9', 'aidA5')
 DEV_LOOP = EVIDENCE.parent/'372-382-dev-loop'

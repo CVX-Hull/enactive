@@ -3,10 +3,10 @@ owner: lead
 review_trigger: A change to ADR 009's program, slot, monitor, expectation, offline-evaluation, practice-instance or study sections; a pre-registration for the curator and memory phase or the programs and monitor phase; new primary evidence on any area below
 status: active
 date: 2026-11-08
-scope: 'Dated primary-source synthesis for ADR 009 research areas R5-R12 (#448): program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design, with study-design guidance for #178 and #470. R13 (#451) is out of scope. No implementation.'
+scope: 'Dated primary-source synthesis for eight ADR 009 research areas (#448): program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design, with study-design guidance for #178 and #470. The area on agent workspaces and verification gates (#451) is out of scope. No implementation.'
 ---
 
-# Programs, supervision, evaluation and study design: evidence for ADR 009 (R5-R12)
+# Programs, supervision, evaluation and study design: evidence for ADR 009
 
 Search and retrieval date: **2026-11-08** (all sources below were retrieved that day).
 The 18-month recency line is therefore **2025-05-08**; a conclusion whose newest
@@ -14,8 +14,9 @@ supporting source is older is flagged "STALE-FLAG".
 
 ## Brief, questions and method
 
-**Brief (#448, lead).** Produce the S-EVIDENCE synthesis for R5-R12 of
-[ADR 009](decisions/009-curated-player.md#research-agenda), with recommendations per
+**Brief (#448, lead).** Produce the S-EVIDENCE synthesis for eight areas of
+[ADR 009's research agenda](decisions/009-curated-player.md#research-agenda), from program
+induction and libraries to study design, with recommendations per
 area and study-design guidance for #178 (the curator memory study) and #470 (the
 programs and monitor study).
 The brief named only foundational sources (below) and no current source. Questions,
@@ -23,14 +24,14 @@ copied from the ADR's agenda table:
 
 | Area | Questions | Foundational sources the brief named |
 | --- | --- | --- |
-| R5 Program induction and libraries | What makes induced skills help rather than hurt (verification by execution, granularity, retrieval, curation, drift)? | Options framework (Sutton, Precup and Singh 1999); DreamCoder; programming by demonstration |
-| R6 Programs with model calls | Cascades, routing and distillation to replace slow calls with fast or specialized models; caching and replay for evaluation | Model cascades; knowledge distillation (Hinton et al. 2015) |
-| R7 Supervision and interruption | Asynchronous human-on-the-loop supervision, preemption, risk-gated autonomy and runtime shields | Safe interruptibility (Orseau and Armstrong 2016); shielding (Alshiekh et al. 2018); sliding autonomy |
-| R8 Novelty and anomaly detection | Detecting unfamiliar screens and anomalies from pixels for yield and monitor triggers; perceptual hashing reliability | Out-of-distribution detection basics |
-| R9 Expectations and prediction error | Do agents that state expectations act better or learn faster? How are self-predictions calibrated? | Predictive processing; temporal-difference prediction error |
-| R10 Offline evaluation of policies | Evaluating programs from logged play: agreement metrics, off-policy evaluation and their limits | Importance sampling and doubly robust estimators |
-| R11 Practice environments | Forked environments for testing policies; determinism and replay in interactive software | Record and replay debugging |
-| R12 Study design | Power and design for lineage-level process metrics; sequential testing to cap spend | Cluster-randomized design; sequential analysis (Wald) |
+| Program induction and libraries | What makes induced skills help rather than hurt (verification by execution, granularity, retrieval, curation, drift)? | Options framework (Sutton, Precup and Singh 1999); DreamCoder; programming by demonstration |
+| Programs with model calls | Cascades, routing and distillation to replace slow calls with fast or specialized models; caching and replay for evaluation | Model cascades; knowledge distillation (Hinton et al. 2015) |
+| Supervision and interruption | Asynchronous human-on-the-loop supervision, preemption, risk-gated autonomy and runtime shields | Safe interruptibility (Orseau and Armstrong 2016); shielding (Alshiekh et al. 2018); sliding autonomy |
+| Novelty and anomaly detection | Detecting unfamiliar screens and anomalies from pixels for yield and monitor triggers; perceptual hashing reliability | Out-of-distribution detection basics |
+| Expectations and prediction error | Do agents that state expectations act better or learn faster? How are self-predictions calibrated? | Predictive processing; temporal-difference prediction error |
+| Offline evaluation of policies | Evaluating programs from logged play: agreement metrics, off-policy evaluation and their limits | Importance sampling and doubly robust estimators |
+| Practice environments | Forked environments for testing policies; determinism and replay in interactive software | Record and replay debugging |
+| Study design | Power and design for lineage-level process metrics; sequential testing to cap spend | Cluster-randomized design; sequential analysis (Wald) |
 
 Named foundations that I did **not** read (Sutton et al. 1999, DreamCoder, Hinton
 2015, Orseau and Armstrong 2016, sliding autonomy, Wald, predictive processing, TD
@@ -61,7 +62,7 @@ for a real-time, screenshot-only, keyboard-driven game with a text-heavy interfa
 is **thin or absent** in every area; I say so per area. Nothing here relies on
 knowledge of any particular game.
 
-## R5 Program induction and libraries
+## Program induction and libraries
 
 **Evidence read.**
 - *Self-written skills do not help (current revision).* SkillsBench ([2602.12670](https://arxiv.org/html/2602.12670v4),
@@ -111,7 +112,7 @@ knowledge of any particular game.
   reports a 2,900-line solution that memorizes test inputs). Relevance: visible-test
   acceptance of agent-written artifacts can be gamed, which supports the ADR's
   gate-owned tests the curator cannot see. How agents game pass/fail gates is
-  R13's question (#451), which already uses this source; I do not extend it here.
+  a question of the agent-workspaces-and-verification-gates area (#451), which already uses this source; I do not extend it here.
 - *Execution verification of induced programs.* ASI ([2504.06821](https://arxiv.org/html/2504.06821v2),
   v1 Apr 2025, v2 29 Aug 2025; full text extracted): induced Python skills are kept
   only if a re-run from the rewritten trajectory succeeds, a skill is called, and
@@ -140,7 +141,7 @@ of harm (regressions, drift), not the mechanism.
 screenshots. Verification strictness (15.6% pass) and judge noise are measured only
 in coding/web settings.
 
-**Recommendation for ADR 009 (R5).**
+**Recommendation for ADR 009 (program induction and libraries).**
 1. Keep gate-side execution verification, probation, per-program statistics and
    retirement; they match the mitigations the evidence supports. Do not state or
    expect that induced programs help: in the one controlled comparison, self-
@@ -171,7 +172,7 @@ in coding/web settings.
    STALE-FLAG: none for items 1-6 (newest sources Jul-Sep 2026), but all are
    coding/office/web evidence; game transfer unsupported.
 
-## R6 Programs with model calls
+## Programs with model calls
 
 **Evidence read.**
 - *Cascades.* Bouchard ([2605.06350](https://arxiv.org/abs/2605.06350), 7 May 2026,
@@ -197,7 +198,8 @@ in coding/web settings.
   compared baseline, so I treat this as one vendor-built benchmark: guidance resting
   on it is weak, and this recommendation does not rest on it alone.
 - *Replay with swapped outputs is invalid.* The Replay Gap ([2608.08239](https://arxiv.org/html/2608.08239),
-  8 Aug 2026; see R10/R11 for venue and numbers). Swapping a recorded action from
+  8 Aug 2026; see [offline evaluation of policies](#offline-evaluation-of-policies) and
+  [practice environments](#practice-environments) for venue and numbers). Swapping a recorded action from
   another model (upgrade or downgrade) rewrote 61-94% of later actions.
 - *Distillation.* Kang et al. ([2505.17612](https://arxiv.org/abs/2505.17612), v1
   23 May 2025, v2 5 Nov 2025, NeurIPS 2025; **abstract only**): 0.5-3B students
@@ -226,7 +228,7 @@ sources and memoization were not read).** Cascades, router training, knowledge
 distillation and memoization look like older ideas; the agent-specific content is
 step-level substitution effects and nondeterminism.
 
-**Recommendation for ADR 009 (R6).**
+**Recommendation for ADR 009 (programs with model calls).**
 1. Keep the record-and-replay design: store model **outputs with request, binding
    and response metadata** and replay from the record. Do not assume re-querying at
    temperature 0 reproduces an output. Use an **exact** content key for evaluation
@@ -242,7 +244,8 @@ step-level substitution effects and nondeterminism.
    as a step router (one model, one prompt) chose the high tier for 7 of 147
    verified-high steps and passed 0 of 40 trajectories, in one vendor-built benchmark:
    weak support.
-4. Because slot errors compound downstream (R10), add a **closed-loop check** (program
+4. Because slot errors compound downstream
+   ([offline evaluation of policies](#offline-evaluation-of-policies)), add a **closed-loop check** (program
    run with the swapped binding against the same fixture states) before adoption, and
    count variance across repeated live calls on the same input.
 5. Pin binding, route, prompt and (where exposed) serving details in the run package.
@@ -250,7 +253,7 @@ step-level substitution effects and nondeterminism.
    No STALE-FLAG here (Kang v1 23 May 2025 is inside the window). Evidence for game
    screens: absent.
 
-## R7 Supervision and interruption
+## Supervision and interruption
 
 **Evidence read.**
 - Async Control ([2512.13526](https://arxiv.org/abs/2512.13526), 15 Dec 2025;
@@ -282,7 +285,7 @@ safe-interruptibility sources were not read).** Runtime verification, shielding,
 sliding autonomy and safe-point preemption look like the older ideas. No source read evaluates
 preemption of a running policy in a real-time interactive environment.
 
-**Recommendation for ADR 009 (R7).**
+**Recommendation for ADR 009 (supervision and interruption).**
 1. Keep the monitor as a **stop-only asynchronous detector** and describe it as
    such: a model monitor offers no guarantee. The guarantee-bearing parts are the
    deterministic runner checks (budgets, preconditions, risk class, batch-boundary
@@ -300,7 +303,7 @@ preemption of a running policy in a real-time interactive environment.
    evidence; none addresses supervising a keyboard-control policy. STALE-FLAG for
    the shielding-based statements.
 
-## R8 Novelty and anomaly detection
+## Novelty and anomaly detection
 
 **Evidence read.**
 - GEM ([2505.12842](https://arxiv.org/html/2505.12842v4), v4 22 Nov 2025, AAAI 2026;
@@ -327,7 +330,7 @@ sources not read).** Classical OOD and novelty detection and image-forensics
 hashing look like the origin; the representation-dependence results suggest OOD
 scores need calibration on the deployment representation.
 
-**Recommendation for ADR 009 (R8).**
+**Recommendation for ADR 009 (novelty and anomaly detection).**
 1. Do **not** adopt a perceptual-hash threshold from outside sources. The ADR already
    makes unrecognized screens a yield trigger; add a pre-study (baseline and workbench
    phase, $0 gameplay) that
@@ -348,7 +351,7 @@ scores need calibration on the deployment representation.
 4. Evidence level: thin (no source tests screenshot-only novelty detection for
    games from this decade).
 
-## R9 Expectations and prediction error
+## Expectations and prediction error
 
 **Evidence read.**
 - PreAct ([2402.11534](https://arxiv.org/abs/2402.11534), v1 Feb 2024, v2 5 Dec 2024,
@@ -388,8 +391,10 @@ miscalibrated. Expectation as a **side effect on the actor's behaviour** is unte
 (the Regression Tax's displacement mechanisms suggest a possible cost, but it was
 measured for skills, not expectations).
 
-**Recommendation for ADR 009 (R9).**
-1. Keep expectations required (owner decision D10) but state in the ADR that benefit
+**Recommendation for ADR 009 (expectations and prediction error).**
+1. Keep expectations required (the owner's
+   [direction requiring intent and expectation emissions](decisions/009-curated-player.md#actor-emissions-d10))
+   but state in the ADR that benefit
    to the **actor's** play is unproven; their justified role is as a measurable
    signal for the curator and program predicates. Test the actor-side effect in the
    baseline and workbench phase's emission feasibility run: same-seed short runs with and without required
@@ -400,7 +405,8 @@ measured for skills, not expectations).
    after measuring judge agreement and false-pass rate on a labelled set.
 3. Use `confidence` as a **ranking signal**, evaluated by AUROC or rank correlation
    with outcomes; report calibration (Brier, ECE) per bin with counts, and never as
-   probability (consistent with ADR R3 language). Do not use early-episode confidence
+   probability (consistent with the ADR's
+   [belief and disagreement](decisions/009-curated-player.md#belief-and-disagreement) language). Do not use early-episode confidence
    to predict failure.
 4. Before using prediction error as the curator's attention signal, show on
    the baseline and workbench phase's development data that low-expectation-match steps are enriched for the
@@ -408,7 +414,7 @@ measured for skills, not expectations).
 5. Evidence level: thin; newest relevant primary text is Aug 2026, but the sources
    are open-weight/deep-research or abstract-only.
 
-## R10 Offline evaluation of policies
+## Offline evaluation of policies
 
 **Evidence read.**
 - The Replay Gap ([2608.08239](https://arxiv.org/abs/2608.08239), v1 8 Aug 2026;
@@ -445,7 +451,7 @@ degenerate off-policy estimator. That agreement with logged actions is behaviour
 cloning accuracy, and that DR/IS are older tools, are my assessments (behaviour-
 cloning and importance-sampling sources not read).
 
-**Recommendation for ADR 009 (R10).**
+**Recommendation for ADR 009 (offline evaluation of policies).**
 1. Keep "filter, not proof" (the ADR already says it). Add the reasons, both my
    inference rather than a source finding: an LLM actor as run here logs no action
    probabilities, and a deterministic program's actions may often differ from the
@@ -453,7 +459,7 @@ cloning and importance-sampling sources not read).
    Replay Gap's authors name long-horizon effective-sample-size collapse and uncovered
    text actions as obstacles to IS/DR. Do not report IS/DR estimates. Any future
    offline estimator must be validated against **branched live ground truth** (the
-   practice instance, R11) as the Replay Gap does, before use.
+   practice instance; see [practice environments](#practice-environments)) as the Replay Gap does, before use.
 2. Report agreement against baselines: a trivial predictor (repeat last input,
    majority input) and the **actor's own run-to-run agreement on the same frame**
    (repeated LLM calls), so "agreement" is read against its noise ceiling.
@@ -465,7 +471,7 @@ cloning and importance-sampling sources not read).
    study may be phrased as a
    behavioural or outcome gain.
 
-## R11 Practice environments
+## Practice environments
 
 **Evidence read.**
 - The Replay Gap (above): prefix re-execution in containers verified 99.99%
@@ -498,11 +504,12 @@ forking or replaying a native macOS graphical application with real-time input.*
 Whether the target games react to focus loss or are deterministic given a save and
 an input sequence is unmeasured (the ADR already says so).
 
-**Recommendation for ADR 009 (R11).**
+**Recommendation for ADR 009 (practice environments).**
 1. Make the practice instance phase's determinism measurement the first deliverable and specify it as: from one
    boundary save, run the same input sequence N times and report, by input-prefix
    length, the fraction of runs matching on a pre-registered outcome set and on frame
-   hashes (with the R8 hash calibration); include the clock and input-timing path in
+   hashes (with the hash calibration from
+   [novelty and anomaly detection](#novelty-and-anomaly-detection)); include the clock and input-timing path in
    the report, because real-time input relative to frames is a plausible
    nondeterminism source (inference, not a source finding).
 2. Use **same-program control forks** in every practice experiment (the Replay
@@ -514,7 +521,7 @@ an input sequence is unmeasured (the ADR already says so).
    real tools; limit practice use to program trials, slot benchmarks and determinism.
 5. Evidence level: thin for the platform; adequate only for the general design pattern.
 
-## R12 Study design
+## Study design
 
 **Evidence read.**
 - Cluster-count limits: Canay, Santos and Shaikh ([Rev. Econ. Stat. 103(2), 2021](https://home.uchicago.edu/amshaikh/webfiles/wild.pdf);
@@ -578,7 +585,7 @@ k = 3, 4, 5). Consequences, stated carefully:
 - Per the Canay et al. introduction (verified above), the wild bootstrap behaves like a
   sign-change randomization test, so the same granularity limit applies to it.
 
-**Recommendation for ADR 009 (R12).**
+**Recommendation for ADR 009 (study design).**
 1. Say in the ADR that the independent unit is the lineage and compute, before each
    study, the minimum number of lineages at which its pre-registered test can reject
    (necessary, not sufficient).
@@ -603,7 +610,7 @@ k = 3, 4, 5). Consequences, stated carefully:
 
 ### #178: curator memory study (the no-curator arm, root validation plus a pushed working set, against the curator arm)
 
-Facts from the ADR and issue: held-out lineages are #382's `lh1`-`lh3`; probes written
+Facts from the ADR and issue: held-out lineages are #382's three, stored as `lh1`-`lh3`; probes written
 blind and before replay; the curator arm is replayed over the same traces; held-out
 traces predate emissions; ablations only where power allows.
 
@@ -614,7 +621,7 @@ traces predate emissions; ablations only where power allows.
    (a) add held-out lineages: at least 5 for a one-sided test and 6 for a two-sided
    one is only the necessary minimum (all lineages must agree), so more are needed
    for real power. Caveats: new live lineages would **carry emissions, unlike
-   lh1-lh3**, making the held-out set heterogeneous, they are the lineages #441
+   `lh1`-`lh3`**, making the held-out set heterogeneous, they are the lineages #441
    (deferred by the owner on 8 November) was to supply, and the ADR's cost gate
    prices them; or (b) pre-register an **estimation-and-consistency criterion**: per-
    lineage effect, direction in every lineage, and a within-lineage interval from
@@ -635,7 +642,8 @@ traces predate emissions; ablations only where power allows.
    Include: positive probes (fact should be in front of the actor), **negative
    probes** (stale or other-world facts that should not be surfaced), and the four
    development episodes only as development fit tests. Two annotators label a stratified
-   subset; report Krippendorff's alpha (ADR R4 criterion) and resolve before
+   subset; report Krippendorff's alpha (the agreement criterion in the ADR's
+   [ontology evaluation](decisions/009-curated-player.md#fitting-and-evaluating-the-ontology-d4)) and resolve before
    freezing. Group probes by underlying fact and episode; deduplicate in the
    pre-registration. Record annotation cost per lineage in the baseline and workbench
    phase.
@@ -677,7 +685,7 @@ traces predate emissions; ablations only where power allows.
 7. **Limitations to record:** held-out traces lack emissions, so the curator arm runs without the
    expectation attention signal it would have live (consider a separate,
    development-only emission-bearing replay); offline replay does not model behaviour
-   change (R10); lineages share an actor model, route and start-state family.
+   change ([offline evaluation of policies](#offline-evaluation-of-policies)); lineages share an actor model, route and start-state family.
 8. **Live guards afterwards** (survival, pace, cost) stay non-inferiority checks; with
    few lineages state the margin and the minimum lineage count at which the check can
    fail.
@@ -693,8 +701,9 @@ traces predate emissions; ablations only where power allows.
    hours: estimate the expected event count from development data before spend.
 2. **Arms and controls.** Programs-allowed versus actor-only at matched model route,
    prompt and wall/budget, plus the "library visible, delegation disabled" control
-   (R5). Report spend per decision and per game hour, matched or beside the outcome.
-3. **Paired situation-level gains and regressions** for each program (R5), and the
+   ([program induction and libraries](#program-induction-and-libraries)). Report spend per decision and per
+   game hour, matched or beside the outcome.
+3. **Paired situation-level gains and regressions** for each program (same section), and the
    monitor's stop events split into prevented/neutral/harmful where determinable.
 4. **Monitor detection.** Unit: program run (clustered by program and lineage).
    Labels: blind, from frames by an independent reviewer, never by the monitor's own
@@ -703,8 +712,10 @@ traces predate emissions; ablations only where power allows.
    (synthetic; flag and report apart); report anomalies missed because the monitor
    acted after the damaging input. Do not extrapolate beyond the programs observed.
 5. **Slot bindings.** Evaluate each binding swap on held-out recorded cases plus the
-   closed-loop fixture check (R6); keep slot caches per arm; log repeated-call variance.
-6. **Hash/novelty yields.** Report the hash threshold's rates from the R8 pre-study and
+   closed-loop fixture check ([programs with model calls](#programs-with-model-calls)); keep slot caches per
+   arm; log repeated-call variance.
+6. **Hash/novelty yields.** Report the hash threshold's rates from the
+   [novelty and anomaly detection](#novelty-and-anomaly-detection) pre-study and
    the yield rate it produces in play.
 7. **Preemption guards.** Preemption latency distribution and fraction with unknown
    delivery; any permanent stop from unknown delivery is a reported outcome.
@@ -720,7 +731,7 @@ traces predate emissions; ablations only where power allows.
    and at 5 pairs it rejects only if all five favour programs-allowed, so plan more
    (the 6-pair figure is the two-sided minimum and is not used here). State
    cost per lineage from the actor's measured $/game hour (ADR: $0.80 in #397) plus
-   curator and monitor spend. Interim looks: an unsupported hypothesis (R12 item 3);
+   curator and monitor spend. Interim looks: an unsupported hypothesis ([study design](#study-design), item 3);
    the hard dollar cap stands. If the
    gate cannot reach the pre-registered detection rate within the envelope the study
    does not run (ADR rule).
@@ -732,14 +743,14 @@ traces predate emissions; ablations only where power allows.
 
 | Area | Recommendation | Evidence level |
 | --- | --- | --- |
-| R5 | Keep gate verification, probation, retirement; require paired gains/regressions, a library-visible control arm, judge-error measurement, retrieval-conditional reporting; do not assume induced programs help | Moderate for coding/office; thin for games |
-| R6 | Exact-key replay of recorded outputs; held-out cases for slot swaps; two bindings per slot; closed-loop check; no training | Thin for screens; moderate for routing text |
-| R7 | Monitor stop-only and described as having no guarantee; measure TPR at fixed false-stop rate; measure preemption and risk-class error | Thin |
-| R8 | No imported hash threshold; local labelled calibration; TPR at fixed FPR; compare hash with model flags | Thin |
-| R9 | Expectations justified as a curator signal, actor benefit untested; test burden/effect in the baseline and workbench phase; confidence as ranking only | Thin |
-| R10 | Agreement is a filter; no IS/DR; compare to noise ceiling; curator memory study claims limited to surfaced content | Moderate for replay validity; thin for programs |
-| R11 | Determinism study first with control forks; no transferred timing numbers | Thin for the platform |
-| R12 | Lineage unit; no exact randomization test can reject at 5% with three lineages; paired exact tests where arms are randomized; interim-look rule is an unsupported hypothesis (no source read) | Classical sources all STALE-FLAG (2021 and earlier except two 2025-26 single-author/abstract items); LLM-specific noise evidence moderate |
+| Program induction and libraries | Keep gate verification, probation, retirement; require paired gains/regressions, a library-visible control arm, judge-error measurement, retrieval-conditional reporting; do not assume induced programs help | Moderate for coding/office; thin for games |
+| Programs with model calls | Exact-key replay of recorded outputs; held-out cases for slot swaps; two bindings per slot; closed-loop check; no training | Thin for screens; moderate for routing text |
+| Supervision and interruption | Monitor stop-only and described as having no guarantee; measure TPR at fixed false-stop rate; measure preemption and risk-class error | Thin |
+| Novelty and anomaly detection | No imported hash threshold; local labelled calibration; TPR at fixed FPR; compare hash with model flags | Thin |
+| Expectations and prediction error | Expectations justified as a curator signal, actor benefit untested; test burden/effect in the baseline and workbench phase; confidence as ranking only | Thin |
+| Offline evaluation of policies | Agreement is a filter; no IS/DR; compare to noise ceiling; curator memory study claims limited to surfaced content | Moderate for replay validity; thin for programs |
+| Practice environments | Determinism study first with control forks; no transferred timing numbers | Thin for the platform |
+| Study design | Lineage unit; no exact randomization test can reject at 5% with three lineages; paired exact tests where arms are randomized; interim-look rule is an unsupported hypothesis (no source read) | Classical sources all STALE-FLAG (2021 and earlier except two 2025-26 single-author/abstract items); LLM-specific noise evidence moderate |
 
 ## Sources
 
@@ -764,7 +775,7 @@ revision before 2025-05-08).
 | TwinRouterBench 2605.18859 | 2026-05 (v5 10-24) | Full (extr.), 18k unread | Step-level routing; resolved count and API cost | V (one vendor-built benchmark); router diagnostic = Opus 4.6, one prompt; no repeats; 100 locked instances |
 | Replay Gap 2608.08239 | 2026-08-08 (v1) | Body (extr.) + Table 1 from PDF text | Branched live rollouts vs replay; same-model control forks; up and down swaps | W (PDF: Efficient Reasoning Workshop, COLM 2026; page said COLM); quantized models; small n |
 | Kang et al. 2505.17612 | 2025-05-23 (v2 11-05) | Abstract | Agent distillation to 0.5-3B | no numbers; not stale |
-| SpecBench 2605.21384 | 2026-05-20 (v2 09-09) | Abstract | Visible vs held-out test gap, 30 coding tasks | R13 owns gate gaming |
+| SpecBench 2605.21384 | 2026-05-20 (v2 09-09) | Abstract | Visible vs held-out test gap, 30 coding tasks | The agent-workspaces-and-verification-gates area (#451) owns gate gaming |
 | vCache 2502.03771 | 2025-02-06 (v5 2026-02-21) | Abstract | Semantic cache hit/error | authors' numbers |
 | Tamba 2606.26185 | 2026-06-24 (v2 10-24) | Abstract | Judge flips at temp 0 | single author; 7 items |
 | CAR 2606.08275 | 2026-06-06 | Full (extr.) | Counterfactual replay attribution | S; no real tools |
