@@ -550,6 +550,24 @@
         ".": "dist/seven-day-video"
       },
       "visibility": "private"
+    },
+    "supervised-launch-check-558": {
+      "availability": "present",
+      "bytes": 4627061,
+      "cited_by": [
+        "docs/acceptance/2026-11-12-supervised-launch-check-558.md"
+      ],
+      "files": 137,
+      "manifest_sha256": "60acfa04a405ad0eb66fbfe8915fdd3c9d558a08b2310a01f78e7de93f558246",
+      "note": "Two short supervised runs with the real game and model on main d71ced0 checking launch, Pause and cleanup after the attention policy was removed (#558). Source is reproducible from d71ced0; the game app and credential reference were not copied.",
+      "sources": {
+        "computer-builds": ".runtime/worktrees/real-launch-check/.runtime/computer-builds@d71ced0",
+        "computer-sessions": ".runtime/worktrees/real-launch-check/.runtime/computer-sessions@d71ced0",
+        "evaluations": ".runtime/worktrees/real-launch-check/.runtime/evaluations@d71ced0",
+        "player-stores": ".runtime/worktrees/real-launch-check/.runtime@d71ced0",
+        "user": ".runtime/worktrees/real-launch-check/.runtime/user@d71ced0"
+      },
+      "visibility": "private"
     }
   }
 }
