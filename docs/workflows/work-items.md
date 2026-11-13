@@ -48,11 +48,14 @@ reduce optional scope before weakening required quality or evidence.
   the issue's current-state block.
 - **Parking** returns an item to Backlog with its reason and resumption trigger.
   Duplicates and cancellations close as not planned and are excluded from delivery.
-- Do not use automatic close or merge-to-Done rules. Use `Refs #N`, and before merging
-  read `gh pr view <number> --json closingIssuesReferences` and require an empty list;
-  prose negation does not disable GitHub's keyword parsing
-  ([the observed failure](https://github.com/CVX-Hull/enactive/issues/75)). Move an item
-  to Done only after merged-main validation and its outcome evidence.
+- A merged pull request never closes an issue: the repository's "Auto-close issues with
+  merged linked pull requests" setting is off, and no merge-to-Done rule is used. A
+  closing phrase once closed an issue before its validation
+  ([the observed failure](https://github.com/CVX-Hull/enactive/issues/75)); with the
+  setting off there is nothing to check before merging. Reference issues with
+  `Refs #N`, and move an item to Done only after merged-main validation and its outcome
+  evidence. If the setting is ever turned on again, this rule needs its manual check
+  back.
 
 ## Ready brief and execution capacity
 

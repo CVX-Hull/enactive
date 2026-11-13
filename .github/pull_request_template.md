@@ -7,7 +7,7 @@ Scope from the highest changed responsibility down; link the design if a boundar
 
 Refs #
 
-<!-- Use Refs while validation is pending; a closing reference only after acceptance is verified. -->
+<!-- Reference issues with Refs. Merging closes nothing; the lead closes an issue after validation. -->
 
 ## Verification
 
