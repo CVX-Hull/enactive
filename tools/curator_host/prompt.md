@@ -19,8 +19,8 @@ Your working directory is the workspace. All paths are relative to it.
 | Path | Holds | You can |
 | --- | --- | --- |
 | `brief.md` | The session brief | read |
-| `trace/` | The window of recorded sessions | read |
-| `trace/manifest.json` | Sessions, actors, step and frame counts, a digest of every file | read |
+| `trace/` | The window of recorded sessions. The brief says when it is a range of one actor's steps | read |
+| `trace/manifest.json` | Sessions, actors, step and frame counts, a digest of every file, and the range when there is one | read |
 | `trace/frames/<id>.png` | Every recorded frame. `<id>` is the frame's source id | read; `view_frame` shows one |
 | `trace/<session>/<actor>/steps.jsonl` | The actor's operations in order: kind, input actions, status, frame | read |
 | `trace/<session>/<actor>/tools.jsonl` | The actor's tool calls: tool name, arguments, outcome | read |
@@ -63,12 +63,27 @@ unsupported claims. A draft is the place for findings you cannot yet cite.
 
 You may propose two kinds of change, and only these: facts and types.
 
-- A **fact** is one durable claim about how the environment works that a later actor can use:
-  a rule, a control, what a screen or element means, a precondition, or a consequence of an
-  input. State the conditions under which it holds. It is not a log of what an actor did, not a
-  strategy, and not a guess. Prefer a few well-supported facts to many weak ones. Do not repeat
-  a fact already published in `knowledge/facts.jsonl`; if the trace shows a published fact is
-  wrong or incomplete, supersede it.
+- A **fact** is one durable claim that a later actor can use. It has a **kind**:
+  - `how_it_works`: how the environment works: a rule, a control, what a screen or element
+    means, a precondition, or a consequence of an input. State the conditions under which it
+    holds.
+  - `place_with_goods`: where goods and useful things are. One fact per item: the `subject` is
+    that one thing (an object, a supply, a container of supplies or any other item the actors
+    could use), never a list. Write its `place` so that a later actor could go there: a landmark
+    and a direction, or coordinates, as the screen shows them (for example, "in a building north
+    of the start" or "at x 12, y 40"), and `game_time` as the time the screen showed when it was
+    seen, as text. If no frame you cite shows a time, write `not shown` there; never leave it
+    blank and never guess a time. Do not skip an item because it looks minor: a later actor cannot go back to
+    look. If the same item was seen again, one fact holds its latest place and says so.
+  - `hazard`: a danger, with its `place` and the `game_time` it was seen (`not shown` when no
+    cited frame shows a time).
+  - `open_commitment`: something an actor said it would do, or a condition it was waiting on,
+    that is still open at the end of your window.
+
+  A fact is not a log of what an actor did, not a strategy, and not a guess. Prefer facts that a
+  frame shows over many weak ones, but record every item that a frame shows. Do not repeat a
+  fact already published in `knowledge/facts.jsonl`; if the trace shows a published fact is
+  wrong, moved or incomplete, supersede it.
 - A **type** names a kind of fact so facts can be grouped. Every fact has a type that is already
   in `knowledge/ontology/types.json` or is added in the same submission.
 
@@ -91,26 +106,36 @@ may use letters, digits, hyphens and underscores.
   "changes": [
     {"op": "add_type", "type": {"schema": "curator-type/1", "name": "control",
       "description": "what an input does", "fields": ["input", "effect"]}},
-    {"op": "add_fact", "fact": {"schema": "curator-fact/1", "id": "f101", "type": "control",
+    {"op": "add_fact", "fact": {"schema": "curator-fact/2", "id": "f101", "type": "control",
       "statement": "…", "scope": {"game": "<game from knowledge/knowledge.json>"},
-      "citations": ["<frame source id>", "<another>"]}},
-    {"op": "supersede_fact", "id": "f12", "fact": {"schema": "curator-fact/1", "id": "f102",
-      "type": "control", "statement": "…", "scope": {"game": "<game>"}, "citations": ["<frame>"]}}
+      "citations": ["<frame source id>", "<another>"],
+      "subject": "the one thing this is about", "place": "", "game_time": "", "kind": "how_it_works"}},
+    {"op": "supersede_fact", "id": "f12", "fact": {"schema": "curator-fact/2", "id": "f102",
+      "type": "<a type name from knowledge/ontology/types.json>", "statement": "…",
+      "scope": {"game": "<game>"}, "citations": ["<frame>"],
+      "subject": "…", "place": "…", "game_time": "…", "kind": "place_with_goods"}}
   ]
 }
 ```
 
 - Every key shown is required except `from_drafts`, which is optional. No other keys are allowed
-  anywhere. A fact's `id`, `type` and `statement`, and a type's `name`, must not be blank.
+  anywhere. A fact's `id`, `type`, `statement` and `subject`, and a type's `name`, must not be blank.
 - `base_version` is the published version named in the brief, in the form `v<number>`.
 - `changes` has between 1 and 200 entries. The file may not exceed 256 KiB.
 - `from_drafts` lists draft ids (lowercase letters, digits and hyphens, starting with a letter or
   digit, at most 64 characters) whose work this submission completes; those drafts are retired
   when it is accepted.
-- A fact has exactly `schema`, `id`, `type`, `statement`, `scope` and `citations`. `id` is new:
-  not any published fact id and not repeated in the submission. `scope` is an object with at
-  least `game`, and it must equal the game named in `knowledge/knowledge.json`. `citations` is
-  a non-empty list of frame source ids.
+- A fact has exactly `schema`, `id`, `type`, `statement`, `scope`, `citations`, `subject`,
+  `place`, `game_time` and `kind`. `id` is new: not any published fact id and not repeated in the
+  submission. `scope` is an object with at least `game`, and it must equal the game named in
+  `knowledge/knowledge.json`. `citations` is a non-empty list of frame source ids. `type` is a
+  name in the ontology (any name, grouping facts as you choose) and is not the same field as
+  `kind`, which is always exactly one of the four fixed values `place_with_goods`, `hazard`,
+  `open_commitment` and `how_it_works`. `subject` is a
+  non-empty string, the one thing the fact is about. `place` and `game_time` are strings; they
+  must not be blank for `place_with_goods` and `hazard`, and may be `""` for the other two kinds.
+- `knowledge/coverage.json`, when it exists, says what the published version covers. The gate
+  writes it, not you: a submission that carries a `coverage` key is rejected.
 - A type has exactly `schema`, `name`, `description` (a string) and `fields` (a list of strings).
   A type name must not already exist.
 - `supersede_fact` names an existing fact `id` that is not already superseded, and carries its

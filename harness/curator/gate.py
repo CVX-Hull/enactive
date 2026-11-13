@@ -16,18 +16,22 @@ import stat
 from harness.curator.knowledge import KnowledgeError, Repository
 
 SUBMISSION = 'curator-submission/1'
-FACT = 'curator-fact/1'
+FACT = 'curator-fact/2'
+KINDS = ('place_with_goods', 'hazard', 'open_commitment', 'how_it_works')
+PLACED = ('place_with_goods', 'hazard')  # kinds whose `place` and `game_time` must say something
 TYPE = 'curator-type/1'
 VERDICT = 'curator-gate/1'
+COVERAGE = 'curator-coverage/1'
 MAX_CHANGES = 200
 MAX_BYTES = 256 * 1024
 _VERSION = re.compile(r'v(0|[1-9][0-9]*)')
 
-_FACT_KEYS = {'schema', 'id', 'type', 'statement', 'scope', 'citations'}
+_FACT_KEYS = {'schema', 'id', 'type', 'statement', 'scope', 'citations', 'subject', 'place', 'game_time', 'kind'}
 _TYPE_KEYS = {'schema', 'name', 'description', 'fields'}
 _OPS = {'add_fact': {'op', 'fact'}, 'supersede_fact': {'op', 'id', 'fact'},
         'add_type': {'op', 'type'}}
 _TOP_KEYS = {'schema', 'base_version', 'summary', 'changes'}
+_COVERAGE_KEYS = {'schema', 'session', 'actor', 'last_step', 'game_time'}
 
 
 def _text(value: object) -> bool:
@@ -52,6 +56,18 @@ def _check_fact(label: str, fact: object) -> list[str]:
     for key in ('id', 'type', 'statement'):
         if key in fact and not _text(fact[key]):
             found.append(f'{label}: {key} must be a non-empty string')
+    if 'subject' in fact and not _text(fact['subject']):
+        found.append(f'{label}: subject must be a non-empty string')
+    kind = fact.get('kind')
+    if 'kind' in fact and kind not in KINDS:
+        found.append(f'{label}: kind must be one of {", ".join(KINDS)}')
+    for key in ('place', 'game_time'):
+        if key not in fact:
+            continue
+        if not isinstance(fact[key], str):
+            found.append(f'{label}: {key} must be a string')
+        elif kind in PLACED and not fact[key].strip():
+            found.append(f'{label}: {key} must not be empty for kind {kind!r}')
     scope = fact.get('scope')
     if 'scope' in fact and not (isinstance(scope, dict) and isinstance(scope.get('game'), str)):
         found.append(f'{label}: scope must be an object with a string "game"')
@@ -195,8 +211,18 @@ def _provenance(data: dict, window_frames: set[str]) -> list[str]:
     return found
 
 
+def _coverage(coverage: object) -> dict:
+    """The runner's stamp, checked: exactly its keys, text where text is expected."""
+    if not (isinstance(coverage, dict) and set(coverage) == _COVERAGE_KEYS and coverage['schema'] == COVERAGE
+            and _text(coverage['session']) and all(coverage[key] is None or isinstance(coverage[key], str)
+                                                   for key in ('actor', 'game_time'))
+            and (coverage['last_step'] is None or type(coverage['last_step']) is int)):
+        raise KnowledgeError(f'coverage must be a {COVERAGE} stamp from the runner')
+    return coverage
+
+
 def _publication(repo: Repository, data: dict, session_id: str, submission: str,
-                 version: str) -> dict[str, bytes]:
+                 version: str, coverage: dict) -> dict[str, bytes]:
     facts = repo.facts()
     types = repo.types()
     by_id = {fact['id']: fact for fact in facts}
@@ -210,12 +236,15 @@ def _publication(repo: Repository, data: dict, session_id: str, submission: str,
         facts.append(fact)
     lines = ''.join(json.dumps(fact, ensure_ascii=False) + '\n' for fact in facts)
     return {'facts.jsonl': lines.encode('utf-8'),
+            'coverage.json': (json.dumps(_coverage(coverage), indent=2, ensure_ascii=False) + '\n').encode('utf-8'),
             'ontology/types.json':
                 (json.dumps(types, indent=2, ensure_ascii=False) + '\n').encode('utf-8')}
 
 
 def gate(repo: Repository, submission_dir: Path, *, session_id: str,
-         window_frames: set[str]) -> dict:
+         window_frames: set[str], coverage: dict) -> dict:
+    """Check and publish one submission. `coverage` is the runner's stamp of what the session read;
+    it is written beside the facts with the version, and a submission has no way to set it."""
     submission_dir = Path(submission_dir)
     data, diagnostics = _well_formed(submission_dir)
     raw = data
@@ -235,7 +264,12 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
     try:
         if data is not None:
             current = repo.published()
-            if data['base_version'] != current:
+            foreign = sorted(str(item.get('id')) for item in repo.facts() if item.get('schema') != FACT)
+            if foreign:
+                # One current contract: a store that holds facts of another contract is not published into.
+                diagnostics.append(f'publication refused: published facts {foreign[:5]} are not {FACT}; '
+                                   'start a new repository')
+            elif data['base_version'] != current:
                 diagnostics.append(f'stale base: submission is based on {data["base_version"]}'
                                    f' but the published version is {current}')
             else:
@@ -244,7 +278,7 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
                     diagnostics.extend(_provenance(data, window_frames))
             if not diagnostics:
                 version = f'v{int(current[1:]) + 1}'
-                files = _publication(repo, data, session_id, submission_dir.name, version)
+                files = _publication(repo, data, session_id, submission_dir.name, version, coverage)
                 summary = data['summary'].strip().splitlines()[0] if data['summary'].strip() \
                     else 'no summary'
                 message = (f'Publish {version}: {summary!r}\n\nsession: {session_id}\n'

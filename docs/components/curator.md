@@ -26,6 +26,7 @@ adopted; the baseline and workbench phase's
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Providers](../../tools/curator_host/providers.py) (an adapter) | The concrete `Provider` values (Anthropic messages, OpenRouter chat completions): routes, key header, allowlists, extra refusals, forwarded headers and how usage becomes dollars. Provider and model names stay here |
 | [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. Only gate v0 commits to it, and it checks form, base version, scope and provenance. [Design](../design/curator-session.md) |
+| [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | The draft lifecycle (open, stale, abandoned, promoted) and one ephemeral sandboxed session per run, with a close-out that never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the #397 and #372 development lineages (never #382's held-out lineages) under a dollar cap |
@@ -60,7 +61,7 @@ adopted; the baseline and workbench phase's
   - `tests/test_trace_projection.py` and `tests/test_trace_images.py`;
   - `tests/test_curator_sandbox.py`, the escape suite against the real listeners
     (macOS lane);
-  - `tests/test_curator_gate.py` and `tests/test_curator_session.py`;
+  - `tests/test_curator_gate.py`, `tests/test_curator_session.py` and `tests/test_curator_window.py`;
   - `tests/test_curator_openrouter.py` and `tests/test_curator_host.py`.
 - **Records:** the [probe baseline](../acceptance/2026-11-08-probe-baseline-449.md),
   the [shadow sessions](../acceptance/2026-11-08-curator-shadow-454.md), the

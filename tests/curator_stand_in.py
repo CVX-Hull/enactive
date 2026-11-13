@@ -52,9 +52,10 @@ def script(messages: list[dict], attack: str | None = None) -> list[tuple[str, d
         submission = dict(schema='curator-submission/1', base_version=version, summary='stand-in: one control and one fact',
                           changes=[dict(op='add_type', type=dict(schema='curator-type/1', name='control',
                                                                  description='what an input does', fields=['input', 'effect'])),
-                                   dict(op='add_fact', fact=dict(schema='curator-fact/1', id='f1', type='control',
+                                   dict(op='add_fact', fact=dict(schema='curator-fact/2', id='f1', type='control',
                                                                  statement='stand-in statement', scope=dict(game=game),
-                                                                 citations=frames[:1]))])
+                                                                 citations=frames[:1], subject='stand-in subject',
+                                                                 place='', game_time='', kind='how_it_works'))])
         return [('view_frame', {'frames': frames[:2]}), ('run_workbench', {'args': ['--help']}),
                 ('write_file', {'path': 'submissions/stand-in/submission.json', 'content': json.dumps(submission)}),
                 ('write_file', {'path': 'drafts/notes/notes.md', 'content': 'unfinished'}),

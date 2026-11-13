@@ -20,6 +20,8 @@ import pytest
 from harness.curator import sandbox
 from harness.curator.knowledge import Repository
 from harness.curator.session import SessionConfig, SessionError, run_session
+from harness.curator.window import Window
+from tests.curator_trace import frame_id, make_long_session
 from tests.test_trace_projection import make_session
 
 PYTHON = Path(os.path.realpath(sys.executable))
@@ -39,9 +41,11 @@ json.dump(dict(schema='curator-submission/1', base_version=version, summary='fir
                from_drafts=[d for d in os.listdir('drafts')],
                changes=[dict(op='add_type', type=dict(schema='curator-type/1', name='container',
                                                     description='a place that holds items', fields=['holds'])),
-                        dict(op='add_fact', fact=dict(schema='curator-fact/1', id='f1', type='container',
+                        dict(op='add_fact', fact=dict(schema='curator-fact/2', id='f1', type='container',
                                                       statement='the cupboard holds bottles',
-                                                      scope=dict(game='testgame'), citations=[cite]))]),
+                                                      scope=dict(game='testgame'), citations=[cite],
+                                                      subject='cupboard', place='the kitchen', game_time='day 1 08:00',
+                                                      kind='place_with_goods'))]),
           open('submissions/s1/submission.json', 'w'))
 '''
 DRAFT = '''
@@ -319,3 +323,72 @@ run_session(Repository(Path(c['repo']), 'testgame'), [Path(c['trace'])],
     with pytest.raises(ProcessLookupError):
         os.kill(host_pid, 0)
     assert run_session(repo, trace, host(tmp_path, 'after-sigint', IDLE))['manifest']['lifecycle']['state'] == 'sealed'
+
+
+SHOW_TRACE = '''
+import json, os
+manifest = json.load(open('trace/manifest.json'))
+print('WINDOW', json.dumps(manifest.get('window')))
+print('FRAMES', json.dumps(sorted(os.listdir('trace/frames'))))
+print('ACTORS', json.dumps(sorted(os.listdir('trace/s1'))))
+print('STEPS', json.dumps([json.loads(l)['seq'] for l in open('trace/s1/001/steps.jsonl')]))
+'''
+
+
+@pytest.fixture
+def long_world(tmp_path):
+    return Repository(tmp_path/'knowledge', 'testgame'), [make_long_session(tmp_path/'evidence')]
+
+
+def _log(repo, record) -> str:
+    return (repo.state/'sessions'/record['manifest']['id']/'host-output.log').read_text()
+
+
+def test_a_window_session_is_given_only_its_steps_and_frames_and_the_brief_says_so(tmp_path, long_world):
+    repo, trace = long_world
+    window = Window('s1', '001', 4, 6, game_time='day 2 08:15')
+    record = run_session(repo, trace, host(tmp_path, 'show', SHOW_TRACE), window=window)
+    log = _log(repo, record)
+    assert record['manifest']['lifecycle']['state'] == 'sealed', record['manifest']['lifecycle']
+    assert 'STEPS [4, 5, 6]' in log and 'ACTORS ["001"]' in log
+    assert json.loads(log.split('FRAMES ')[1].splitlines()[0]) == [f'{frame_id(1, n)}.png' for n in (4, 5, 6)]
+    assert json.loads(log.split('WINDOW ')[1].splitlines()[0])['last'] == 6
+    brief = (repo.state/'sessions'/record['manifest']['id']/'brief.md').read_text()
+    assert 'steps 4 to 6 of 12 of actor `001`' in brief and "'day 2 08:15'" in brief
+    assert record['manifest']['inputs']['window'] == window.record() and record['manifest']['inputs']['window_frames'] == 3
+
+
+def test_a_window_session_cannot_cite_a_frame_outside_its_range_and_publishes_its_coverage(tmp_path, long_world):
+    repo, trace = long_world
+    window = Window('s1', '001', 4, 6, game_time='day 2 08:15')
+    outside = run_session(repo, trace, host(tmp_path, 'outside', SUBMIT, frame_id(1, 3)), window=window)
+    verdict = outside['verdicts'][0]
+    assert verdict['accepted'] is False and repo.published() == 'v0'
+    assert any(f'citation {frame_id(1, 3)!r} is outside the trace window' in d for d in verdict['diagnostics'])
+    other_actor = run_session(repo, trace, host(tmp_path, 'other', SUBMIT, frame_id(2, 5)), window=window)
+    assert other_actor['verdicts'][0]['accepted'] is False
+    inside = run_session(repo, trace, host(tmp_path, 'inside', SUBMIT), window=window)
+    assert inside['verdicts'][0]['accepted'] is True and repo.published() == 'v1'
+    assert json.loads(subprocess.run(['git', 'show', 'v1:coverage.json'], cwd=repo.path, capture_output=True,
+                                     text=True, check=True).stdout) == dict(
+        schema='curator-coverage/1', session='s1', actor='001', last_step=6, game_time='day 2 08:15')
+    assert inside['manifest']['inputs']['coverage']['last_step'] == 6
+
+
+def test_a_whole_admission_session_is_the_full_window_and_stamps_no_actor(tmp_path, long_world):
+    repo, trace = long_world
+    record = run_session(repo, trace, host(tmp_path, 'whole', SUBMIT))
+    assert record['verdicts'][0]['accepted'] is True
+    stamp = json.loads(subprocess.run(['git', 'show', 'v1:coverage.json'], cwd=repo.path, capture_output=True,
+                                      text=True, check=True).stdout)
+    assert stamp == dict(schema='curator-coverage/1', session='s1', actor=None, last_step=None, game_time=None)
+    assert record['manifest']['inputs']['window'] == {}
+    assert 'This trace is a window' not in (repo.state/'sessions'/record['manifest']['id']/'brief.md').read_text()
+
+
+def test_a_window_that_does_not_fit_its_trace_aborts_the_session_before_the_host_runs(tmp_path, long_world, monkeypatch):
+    repo, trace = long_world
+    monkeypatch.setattr(sandbox, 'run', lambda *a, **k: pytest.fail('the host must not start'))
+    record = run_session(repo, trace, host(tmp_path, 'idle', IDLE), window=Window('s1', '001', 13, 20))
+    life = record['manifest']['lifecycle']
+    assert life['state'] == 'aborted' and any('starts at 13' in e for e in life['errors'])
