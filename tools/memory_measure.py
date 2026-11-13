@@ -1234,7 +1234,7 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   border-color: var(--accent); }
 .choices button.chosen { background: var(--chosen); border-color: var(--chosen); }
 .choices button.chosen::after { content: " \\2713"; }
-#keep { display: block; width: 100%; min-height: 52px; margin: 0 0 10px; font-size: 17px; font-weight: 600;
+#keep { display: block; width: 100%; min-height: 44px; margin: 0 0 8px; font-size: 17px; font-weight: 600;
   background: var(--chosen); color: var(--on-accent); border-color: var(--chosen); }
 #reveal ul { margin: 6px 0; padding-left: 20px; }
 #reveal li { margin-bottom: 4px; overflow-wrap: anywhere; }
