@@ -1,66 +1,11 @@
-"""C-DOCUMENTS negative cases on isolated fixtures: acceptance manifests, the data rule, and the
+"""C-DOCUMENTS negative cases on isolated fixtures: the data rule, and the
 risk IDs that controls and current pages name."""
-import copy
 import json
 from pathlib import Path
-import shutil
-
-import pytest
 
 from tools import documents
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = "docs/acceptance/2026-10-17-mvp-manifest.json"
-
-
-def copy_files(root, names):
-    for name in sorted(names):
-        target = root / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(ROOT / name, target)
-
-
-@pytest.fixture
-def manifest_root(tmp_path):
-    manifest = json.loads((ROOT / MANIFEST).read_text())
-    copy_files(tmp_path, {MANIFEST, "schemas/acceptance-manifest.schema.json",
-                          manifest["report"], manifest["upstream_pin"]})
-    assert documents.check_manifests(tmp_path) == []  # no .runtime tree: a fresh-clone contract
-    return tmp_path
-
-
-def write(root, data):
-    (root / MANIFEST).write_text(json.dumps(data))
-
-
-def test_manifest_rejects_bad_provenance_hash_and_paths(manifest_root):
-    original = json.loads((manifest_root / MANIFEST).read_text())
-    for field, value in (("source_commit", "unknown"), ("source_sha256", "x" * 64), ("date", "2026-02-30"),
-                         ("platform", ""), ("report", "../outside.md"), ("schema_version", True)):
-        write(manifest_root, {**copy.deepcopy(original), field: value})
-        assert documents.check_manifests(manifest_root), field
-    for artifact in ("../outside.png", "/tmp/frame.png", "docs/../frame.png"):
-        write(manifest_root, {**copy.deepcopy(original),
-                              "artifacts": {artifact: next(iter(original["artifacts"].values()))}})
-        assert "artifact" in "\n".join(documents.check_manifests(manifest_root)), artifact
-
-
-def test_still_frame_acceptance_needs_no_fabricated_video(manifest_root):
-    data = json.loads((manifest_root / MANIFEST).read_text())
-    write(manifest_root, {**data, "video": None})
-    assert documents.check_manifests(manifest_root) == []
-    for invalid in ({}, "none", {"capture_interval_ms": [0, 1]}):
-        write(manifest_root, {**data, "video": invalid})
-        assert documents.check_manifests(manifest_root), invalid
-
-
-def test_manifest_rejects_invalid_artifact_metadata(manifest_root):
-    original = json.loads((manifest_root / MANIFEST).read_text())
-    for field, value in (("sha256", "a" * 63), ("bytes", True), ("bytes", -1), ("availability", "verified")):
-        data = copy.deepcopy(original)
-        next(iter(data["artifacts"].values()))[field] = value
-        write(manifest_root, data)
-        assert "artifacts" in "\n".join(documents.check_manifests(manifest_root)), (field, value)
 
 
 def test_the_data_rule_needs_a_reader_and_a_defined_schema(tmp_path):

@@ -144,10 +144,14 @@ With three lineages this is a screen, not a qualification.
 ## Recording a run
 
 Each admission gets one row in the [tracked ledger](../data/evaluation/runs.jsonl),
-written by `tools/run_ledger.py record` ([campaign procedure](operations/campaign-run.md#start-and-close)),
-one issue comment, and its hand-scored row and notes in the study's dated record.
+written by `tools/run_ledger.py record` ([campaign procedure](operations/campaign-run.md#start-and-close)).
+That row is the one numeric record of the run. The study's dated record holds the
+run's notes and presents its numbers through generated tables or by citing the ledger
+(`python -m tools.run_ledger totals --study ISSUE` gives a study's attempts, wall
+seconds and spend); it keeps no second hand-typed copy of attempts, spend or duration.
+A short issue comment may announce the run and link its ledger row.
 Evaluator headlines go into the [metrics snapshot](../data/evaluation/run-metrics.jsonl)
 with `python -m tools.evaluate evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl`,
 and a record's generated tables are regenerated with
 `python -m tools.evaluate evaluate-table data/evaluation/run-metrics.jsonl --write RECORD`. The fast checks
-cross-check hand rows against the ledger and reject stale generated tables.
+validate every ledger row and reject stale generated tables.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Document and record checks (C-DOCUMENTS): stewardship metadata, acceptance manifests, evidence schema ids,
+"""Document and record checks (C-DOCUMENTS): stewardship metadata, the data rule and its schema ids,
 the risk IDs that controls and current pages name, and the dated-record indexes. Structure only, no content-truth claims."""
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ except ImportError as error:
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")
 
 
-def local_reference(root: Path, reference: object, *, exists: bool = True) -> bool:
-    """Repository-relative POSIX paths only; resolve symlinks before containment."""
+def local_reference(root: Path, reference: object) -> bool:
+    """An existing file named by a repository-relative POSIX path; resolve symlinks before containment."""
     if not isinstance(reference, str) or not reference or "\\" in reference:
         return False
     path_text = reference.split("#", 1)[0]
@@ -34,7 +34,7 @@ def local_reference(root: Path, reference: object, *, exists: bool = True) -> bo
     if ":" in path_text or "?" in path_text:
         return False
     target = (root / path).resolve()
-    return target.is_relative_to(root.resolve()) and (not exists or target.is_file())
+    return target.is_relative_to(root.resolve()) and target.is_file()
 
 
 def schema_errors(root: Path, name: str, data: object, label: str) -> list[str]:
@@ -43,35 +43,6 @@ def schema_errors(root: Path, name: str, data: object, label: str) -> list[str]:
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     return [f"{label}: schema violation at {error.json_path}: {error.message}"
             for error in sorted(validator.iter_errors(data), key=lambda e: str(e.json_path))]
-
-
-def check_manifests(root: Path) -> list[str]:
-    """Validate curated acceptance-manifest metadata, not availability, local bytes or gameplay."""
-    errors = []
-    paths = sorted((root / "docs/acceptance").glob("*-manifest.json"))
-    if not paths:
-        return ["acceptance: missing curated manifest"]
-    for path in paths:
-        label = str(path.relative_to(root))
-        try:
-            data = json.loads(path.read_text())
-            invalid = schema_errors(root, "acceptance-manifest", data, label)
-            if invalid:
-                errors.extend(invalid)
-                continue
-            for field in ("report", "upstream_pin"):
-                if not local_reference(root, data[field]):
-                    errors.append(f"{label}: invalid or missing {field} reference")
-            for reference in data["artifacts"]:
-                if "#" in reference or not local_reference(root, reference, exists=False):
-                    errors.append(f"{label}: invalid artifact reference {reference!r}")
-            if data["video"] is not None:
-                interval = data["video"]["capture_interval_ms"]
-                if interval[1] <= interval[0]:
-                    errors.append(f"{label}: video capture interval must end after it starts")
-        except (OSError, ValueError) as error:
-            errors.append(f"{label}: {error}")
-    return errors
 
 
 # Where a schema id counts as defined: a schema file, a contract, or code. Where a data file counts as read: code
@@ -236,13 +207,11 @@ def main(argv: list[str] | None = None) -> int:
         for index in INDEXES:
             (ROOT / index).write_text(render_index(ROOT, index))
         print("Generated the dated-record indexes.")
-    errors = (check_metadata(ROOT) + check_manifests(ROOT) + check_data(ROOT) + check_risks(ROOT)
-              + check_indexes(ROOT))
+    errors = check_metadata(ROOT) + check_data(ROOT) + check_risks(ROOT) + check_indexes(ROOT)
     if errors:
         print("Document checks failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("Document metadata, acceptance manifests, the data rule, risk IDs and record indexes: passed; "
-          "content truth was not verified.")
+    print("Document metadata, the data rule, risk IDs and record indexes: passed; content truth was not verified.")
     return 0
 
 

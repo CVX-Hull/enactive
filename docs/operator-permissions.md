@@ -35,8 +35,8 @@ Changes outside the user's authorized scope still require the applicable decisio
 envelope listed below, and for no other spend, packages freeze the standing $1,000 as
 their `ceiling_usd` worst-case guard, and the lead admits a run or admission without
 per-run owner approval only while the study's actual provider-reported new spend plus
-twice its largest single admission so far stays within that envelope. The lead reports
-each run's spend in its table row and stops to ask the owner when the envelope is
+twice its largest single admission so far stays within that envelope. The lead records
+each run's spend in its run-ledger row and stops to ask the owner when the envelope is
 reached. `tools/run_ledger.py totals` applies the rule. A new envelope needs its own
 owner decision.
 

@@ -6,13 +6,16 @@ status: active
 
 # Evidence and documentation cadence
 
-Use the existing issue, immutable admission, ledger and archive. A development
-run gets exactly one row in the [tracked run ledger](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot),
-one hand-scored row in its study's dated record (method in
-[development runs](../development-runs.md#recording-a-run)),
-and one comment on its owning issue: source and artifacts, outcome on the frozen
-metric, known costs/unknowns, cleanup disposition and the next owned action
-(owner decision D4). Acceptance records and independent review
+Use the existing issue, immutable admission, ledger and archive. The
+[tracked run ledger](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot)
+(`data/evaluation/runs.jsonl`) is the one numeric record of a development run, which
+gets exactly one row there. The study's dated record presents the run's numbers
+through the generated run tables or by citing the ledger, and keeps no second
+hand-typed copy of attempts, spend or duration (method in
+[development runs](../development-runs.md#recording-a-run)). Its notes give what the
+ledger does not hold: artifacts, outcome on the frozen metric, known unknowns,
+cleanup disposition and the next owned action. A short comment on the owning issue
+may announce the run and link its ledger row. Acceptance records and independent review
 are for adoption decisions, contract changes and merges.
 Do not copy the entire contract, write a standalone acceptance report, launch
 another review swarm or publish an amendment for every menu error. Retain the raw

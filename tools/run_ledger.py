@@ -4,8 +4,8 @@
 record derives one admission's row from its package (campaign-run/5 manifest and campaign-receipt/3) plus the
 operator's provider reconciliation, and appends it; a package without a receipt gets no row. totals reports a
 study's spend against an envelope under the actual-spend admission rule (new spend plus twice the largest
-admission). check validates every row and cross-checks the hand-scored run tables' attempts, dollars and wall
-seconds against the ledger (ADR008 keeps those rows hand-written; this only compares them).
+admission). check validates every row. The ledger is the one numeric record of a run: a dated record presents
+numbers through the generated run tables (tools/evaluate.py evaluate-table) or by citing the ledger.
 """
 from __future__ import annotations
 
@@ -14,19 +14,11 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
-import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / 'data' / 'evaluation' / 'runs.jsonl'
 SCHEMA = 'dev-run/1'
-# Documents holding hand-scored run tables that the ledger cross-checks.
-HAND_TABLES = {'docs/acceptance/2026-11-06-development-loop.md': (372,),
-               'docs/acceptance/2026-11-07-long-horizon-382.md': (382,),
-               'docs/acceptance/2026-11-07-seven-day-397.md': (397,),
-               'docs/acceptance/2026-11-09-held-out-lineage-522.md': (522,)}
-ATTEMPT_COLUMNS = ('Attempts', 'Attempts (setup)')
-SPEND_COLUMNS = ('$ upper bound', '$ actual')
 
 
 class LedgerError(ValueError):
@@ -153,60 +145,6 @@ def totals(rows: list[dict], study: int, envelope: Decimal | None, forecast: Dec
     return result
 
 
-def _cells(line: str) -> list[str]:
-    return [cell.strip() for cell in line.strip().strip('|').split('|')]
-
-
-def _integer(text: str) -> int | None:
-    match = re.match(r'[0-9][0-9,]*', text)
-    return int(match.group(0).replace(',', '')) if match else None
-
-
-def hand_rows(text: str) -> list[tuple[str, int, int, str, int]]:
-    """(label, line, attempts, dollars, wall) for every row of a table with attempt, dollar and wall columns."""
-    found, lines = [], text.splitlines()
-    for index, line in enumerate(lines):
-        if not line.startswith('|') or index + 1 >= len(lines) or not re.match(r'^\|[ :|-]+\|$', lines[index + 1]):
-            continue
-        header = _cells(line)
-        attempts = next((header.index(c) for c in ATTEMPT_COLUMNS if c in header), None)
-        spend = next((header.index(c) for c in SPEND_COLUMNS if c in header), None)
-        if attempts is None or spend is None or 'Wall s' not in header:
-            continue
-        wall = header.index('Wall s')
-        for number in range(index + 2, len(lines)):
-            if not lines[number].startswith('|'):
-                break
-            cells = _cells(lines[number])
-            found.append((cells[0].strip('`'), number + 1, _integer(cells[attempts]), cells[spend], _integer(cells[wall])))
-    return found
-
-
-def cross_check(rows: list[dict], documents: dict[str, tuple[int, ...]] = HAND_TABLES, root: Path = ROOT) -> list[str]:
-    """Within each document's studies, every hand row must equal exactly one ledger row with its label (a label
-    repeated in a study is told apart by its values), and every ledger row of those studies must have a hand row."""
-    errors, matched = [], set()
-    for document, studies in documents.items():
-        for label, line, attempts, dollars, wall in hand_rows((root / document).read_text()):
-            candidates = [r for r in rows if r['study'] in studies and r['label'] == label]
-            if not candidates:
-                errors.append(f'{document}:{line}: hand row {label} has no ledger row in study {", ".join(map(str, studies))}')
-                continue
-            hits = [r for r in candidates if r['attempts'] == attempts and r['wall_seconds'] == wall
-                    and dollars == f'{Decimal(r["spend_usd"]):.2f}']
-            if len(hits) != 1:
-                errors.append(f'{document}:{line}: hand row {label} ({attempts} attempts, ${dollars}, {wall} s) '
-                              f'matches {len(hits)} ledger rows')
-            else:
-                matched.add((hits[0]['study'], hits[0]['run']))
-    covered = {study for studies in documents.values() for study in studies}
-    errors.extend(f'{r["run"]}: study {r["study"]} has no hand-table document in HAND_TABLES'
-                  for r in rows if r['study'] not in covered)
-    errors.extend(f'{r["run"]} (study {r["study"]}, label {r["label"]}): no hand-scored row cross-checks it'
-                  for r in rows if r['study'] in covered and (r['study'], r['run']) not in matched)
-    return errors
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--ledger', type=Path, default=LEDGER)
@@ -214,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
     add = commands.add_parser('record', help='append one finished admission')
     add.add_argument('package', type=Path)
     add.add_argument('--study', type=int, required=True)
-    add.add_argument('--label', help="the run's name in its hand-scored table (default: the package name)")
+    add.add_argument('--label', help="the run's short name in its study's dated record (default: the package name)")
     add.add_argument('--provider-records', type=int, required=True, help='charged attempts with a provider record')
     add.add_argument('--provider-usd', required=True, help='decimal provider-reported cost of those attempts')
     add.add_argument('--unpriced-attempt-usd', required=True, help='decimal worst-case charge per unpriced attempt')
@@ -222,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
     total.add_argument('--study', type=int, required=True)
     total.add_argument('--envelope', help='decimal envelope in dollars')
     total.add_argument('--forecast-largest', help='decimal largest admission assumed before the first one completes')
-    commands.add_parser('check', help='validate rows and cross-check the hand-scored tables')
+    commands.add_parser('check', help='validate every row')
     arguments = parser.parse_args(argv)
     try:
         if arguments.command == 'record':
@@ -233,10 +171,7 @@ def main(argv: list[str] | None = None) -> int:
                         if arguments.forecast_largest else None)
             print(json.dumps(totals(read_ledger(arguments.ledger), arguments.study, envelope, forecast), sort_keys=True))
         else:
-            errors = cross_check(read_ledger(arguments.ledger))
-            if errors:
-                raise LedgerError('\n'.join(errors))
-            print('Run ledger rows and hand-scored run tables: consistent.')
+            print(f'Run ledger: {len(read_ledger(arguments.ledger))} rows valid.')
         return 0
     except (LedgerError, OSError, KeyError, TypeError) as error:
         print(f'Run ledger: {error}', file=sys.stderr)

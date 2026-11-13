@@ -9,7 +9,7 @@ import pytest
 
 from tools import run_ledger
 from tools.evaluate import has_blocks, main as evaluate_main, read_snapshot, table
-from tools.run_ledger import LedgerError, cross_check, main, read_ledger, totals
+from tools.run_ledger import LedgerError, main, read_ledger, totals
 
 SESSION = 'a' * 32
 COMMIT = 'b' * 40
@@ -107,29 +107,9 @@ def test_totals_apply_the_actual_spend_admission_rule():
     assert totals(rows, 999, Decimal('30'), Decimal('100'))['largest_usd'] == '7'  # actual admissions replace it
 
 
-def test_hand_rows_are_cross_checked_against_the_ledger(tmp_path):
-    document = tmp_path / 'runs.md'
-    document.write_text('| Run | Attempts (setup) | $ upper bound | Wall s |\n| --- | --- | ---: | ---: |\n'
-                        '| C1 | 233 (23) | 3.58 | 1,856 |\n| C1 | 232 (22) | 4.09 | 1,800 |\n')
-    ledger = [row(run='ceil02', label='C1', attempts=233, spend_usd='3.583', wall_seconds=1856, provider_usd=None,
-                  unpriced_attempts=None, unpriced_attempt_usd=None),
-              row(run='aidC1', label='C1', attempts=232, spend_usd='3.680692', provider_usd='3.680692',
-                  unpriced_attempts=1, wall_seconds=1800) | dict(spend_usd='4.090292')]
-    documents = {'runs.md': (999,)}
-    assert cross_check(ledger, documents, tmp_path) == []  # a repeated label is matched by its values
-    assert cross_check(ledger, {'runs.md': (1,)}, tmp_path)[0].endswith('has no ledger row in study 1')
-    document.write_text(document.read_text().replace('4.09', '4.10') + '| Z9 | 1 (1) | 0.01 | 1 |\n')
-    errors = cross_check(ledger, documents, tmp_path)
-    assert any('hand row C1 (232 attempts, $4.10, 1800 s) matches 0 ledger rows' in e for e in errors)
-    assert any('aidC1 (study 999, label C1): no hand-scored row' in e for e in errors)
-    assert any('hand row Z9 has no ledger row' in e for e in errors)
-    assert cross_check([row(study=397)], {}, tmp_path) == ['lh9a1: study 397 has no hand-table document in HAND_TABLES']
-
-
 def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
     rows = read_ledger()
     assert len(rows) == 52 and {r['study'] for r in rows} == {372, 382, 397, 522}
-    assert cross_check(rows) == []
     assert totals(rows, 382, None)['spend_usd'] == '30.46049960'
     assert totals(rows, 397, None)['spend_usd'] == '38.39958335'
     assert totals(rows, 522, None)['spend_usd'] == '30.11036530'     # the lost lh4a1 ($1.2343105) included

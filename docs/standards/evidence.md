@@ -22,8 +22,10 @@ artifacts using existing analysis tools, stating fields, units and sample scope.
 Verify an agent's numerical summary against those artifacts before publication;
 a plausible live summary is not a substitute. Record corrections without replacing
 the original evidence. Development-run quantities go in the tracked
-[run ledger and metrics snapshot](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot),
-and pages render or check against them rather than copy them. Raw run evidence a
+[run ledger and metrics snapshot](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot).
+The run ledger is the one numeric record of a run: a dated record presents numbers
+through the generated run tables or by citing the ledger, and keeps no second
+hand-typed copy of attempts, spend or duration. Raw run evidence a
 record cites is sealed read-only with tracked hash manifests before the worktree or
 directory holding it is removed ([evidence store](../operations/evidence-cleanup.md)). A tracked file under `data/` is read by code or a test, which names it or lists its
 directory; a `schema` id it declares is defined by a schema file, a contract or code. A file
