@@ -8,7 +8,9 @@ status: active
 
 The lead's coding agent is engineering tooling. Project instructions, standards
 and gameplay design are host-neutral; this page is the one place that maps them
-to each supported coding agent. Codex and Claude Code are supported. Neither is a
+to each supported coding agent. Codex and Claude Code are supported as the lead's
+host; Antigravity is supported as a non-interactive reviewer or worker the lead
+starts ([below](#non-interactive-runs-for-a-second-model-family)). None is a
 deciding player host or a fallback for one: gameplay runs only through the
 [player host contract](../contracts/player-host.md).
 
@@ -18,6 +20,7 @@ deciding player host or a fallback for one: gameplay runs only through the
 | --- | --- | --- |
 | Codex | [`AGENTS.md`](../../AGENTS.md) | Single instruction source. |
 | Claude Code | [`CLAUDE.md`](../../CLAUDE.md) | Imports `@AGENTS.md`; adds no rules. |
+| Antigravity | [`AGENTS.md`](../../AGENTS.md), loaded without being asked | Single instruction source. |
 
 Change instructions only in `AGENTS.md` and the documents it links.
 
@@ -32,6 +35,27 @@ not in this repository.
 | Explorer, read-only | `agent_type` explorer | `subagent_type` `Explore` |
 | Worker, owned paths | `agent_type` worker with `fork_turns=none`, separate worktree | `subagent_type` worker, fresh agent (not a fork), `isolation: worktree` |
 | Reviewer, clean context | `agent_type` reviewer with `fork_turns=none` | `subagent_type` reviewer, fresh agent |
+
+### Non-interactive runs for a second model family
+
+A lead on one host may start a worker or reviewer on another, so that a review comes
+from a second model family. Each run is a fresh, clean-context agent given a brief
+from the [template](../standards/agents.md#brief-template) on standard input or as
+its argument; its final message is the hand-back, verified like any other.
+
+| Role | Codex (`codex exec`) | Antigravity (`agy`) |
+| --- | --- | --- |
+| Reviewer | `codex exec -s read-only -C WORKTREE -o OUT -` | `agy -p BRIEF --mode plan` from the worktree |
+| Worker | `codex exec -s workspace-write -C WORKTREE -o OUT -` | `agy -p BRIEF --mode accept-edits --sandbox` from the worktree |
+
+- **Commits.** Codex's `workspace-write` sandbox cannot write the main checkout's
+  `.git`, which a worktree shares, and has no network. A worker on either host
+  leaves its changes uncommitted; the lead inspects and commits them.
+- **Environment.** Start it from a shell that holds no provider credential or session
+  token. Its brief names the project's paths only.
+- **Outside the project** each tool keeps its own sessions and logs under its home
+  configuration directory, as it does when used by hand. The project changes no
+  configuration of either.
 
 ## Environment facts for agents
 
