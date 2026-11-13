@@ -144,7 +144,7 @@ def choose(repository: Repository, event_name: str, event: dict, sha: str) -> Pl
         if event_name != "pull_request":
             raise EvidenceUnavailable("Unsupported event requires full validation")
         pr = event.get("pull_request") or {}
-        if pr.get("base", {}).get("ref") != "main":
+        if pr.get("base", {}).get("ref") not in ("main", "probe-base"):
             raise EvidenceUnavailable("Only main-targeting PRs have reduced validation")
         changes = repository.changes(pr["base"]["sha"], pr["head"]["sha"], merge_base=True)
         if changes and all(change.regular and editorial(change.path) for change in changes):
