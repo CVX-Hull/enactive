@@ -53,6 +53,10 @@ jobs:
   browser:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [test_viewer, test_investigation, test_investigation_session]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -76,9 +80,7 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r /etc/apparmor.d/cdda-project-chrome
-      - run: node tests/test_viewer.cjs
-      - run: node tests/test_investigation.cjs
-      - run: node tests/test_investigation_session.cjs
+      - run: node tests/${{ matrix.suite }}.cjs
   controller:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
