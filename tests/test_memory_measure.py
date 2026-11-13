@@ -19,8 +19,8 @@ from harness.evaluation.core.records import EvaluationError, EventRow
 from harness.trace.projection import project
 from tools import memory_measure
 from tools.memory_measure import (APPENDIX_ROWS, MeasureError, agreement, annotate_packets, binomial_interval, build_items,
-    cohen_kappa, describe, draw_sample, every_nth_changed, judge_events, judge_packets, label_server, load_items, main,
-    measure, p_values, recorded_frames, simulate)
+    cohen_kappa, describe, draw_engaged, draw_sample, every_nth_changed, judge_events, judge_packets, label_server,
+    load_items, main, measure, p_values, recorded_frames, simulate)
 
 BASE = 4_000_000_000.0
 
@@ -433,9 +433,114 @@ class Serving:
         self.server.server_close()
 
 
-def test_the_label_server_records_a_click_survives_a_reload_and_binds_to_loopback_only(tmp_path):
-    run = judged(tmp_path)  # verdicts exist, and the page must not show them
-    draw_sample(run, 4, seed=11)
+def sampled(run: Path, pairs: list) -> None:
+    """A random sample of exactly these (start, item) pairs, as `draw_sample` writes it."""
+    save(run / 'sample.json', dict(schema='calibration-sample/1', seed=0, count=len(pairs), population=6,
+        pairs=[dict(index=index, start=start, item=item) for index, (start, item) in enumerate(pairs)]))
+
+
+def owner_run(tmp_path: Path) -> Path:
+    """Judged and adjudicated (the third judge settles run-f:1-5 / item-01 as missed), with two random pairs, 0 and 1,
+    and the engaged supplement drawn after them: pairs 2, 3 and 4. The judges' notes are in `answers/`."""
+    run = judged(tmp_path)
+    agreement(run, ['judge-a', 'judge-b'], 'judge-c', seed=3, draws=200)
+    sampled(run, [('run-e:1-5', 'item-01'), ('run-f:1-5', 'item-01')])
+    draw_engaged(run, 3, seed=9)
+    return run
+
+
+def click(port: int, index: int, step: str, label=None, keep=False):
+    return call(port, '/api/label', dict(index=index, step=step, **({'label': label} if label else {}),
+        **({'keep': True} if keep else {})))
+
+
+def test_the_engaged_draw_leaves_out_the_random_pairs_and_those_no_judge_called_engaged(tmp_path):
+    run = judged(tmp_path)
+    sampled(run, [('run-e:1-5', 'item-01'), ('run-f:1-5', 'item-01')])
+    # run-e:6-8 / item-01 is not_engaged for both judges that answered it; the other three pairs outside the random draw
+    # were each called straight, missed or cannot_tell by some judge
+    with pytest.raises(MeasureError, match='Only 3 pairs outside the random draw'):
+        draw_engaged(run, 4, seed=1)
+    value = draw_engaged(run, 3, seed=1)
+    pairs = [(pair['start'], pair['item']) for pair in value['pairs']]
+    assert sorted(pairs) == [('run-e:1-5', 'item-02'), ('run-e:6-8', 'item-02'), ('run-f:1-5', 'item-02')]
+    assert [pair['index'] for pair in value['pairs']] == [2, 3, 4]  # numbered on from the random pairs
+    assert (value['seed'], value['count'], value['eligible'], value['population']) == (1, 3, 3, 6)
+    assert value['judges'] == ['judge-a', 'judge-b', 'judge-c', 'judge-d']
+    assert value['random_sample_sha256'] == memory_measure.file_sha256(run / 'sample.json')
+    assert json.loads((run / 'sample-engaged.json').read_text()) == value and value['schema'] == 'engaged-sample/1'
+    with pytest.raises(MeasureError, match='drawn once'):
+        draw_engaged(run, 3, seed=2)
+    # a pair only the third judge called engaged counts: run-f:1-5 / item-01 is judge-d's not_engaged but others' missed
+    other = judged(tmp_path / 'again')
+    sampled(other, [('run-e:1-5', 'item-01'), ('run-e:1-5', 'item-02'), ('run-e:6-8', 'item-02')])
+    assert sorted((p['start'], p['item']) for p in draw_engaged(other, 2, seed=4)['pairs']) == [
+        ('run-f:1-5', 'item-01'), ('run-f:1-5', 'item-02')]
+    # the seed fixes the draw
+    third = judged(tmp_path / 'third')
+    sampled(third, [('run-e:1-5', 'item-01')])
+    fourth = judged(tmp_path / 'fourth')
+    sampled(fourth, [('run-e:1-5', 'item-01')])
+    assert draw_engaged(third, 2, seed=8)['pairs'] == draw_engaged(fourth, 2, seed=8)['pairs']
+    assert main(['sample', str(run), '--engaged', '3']) == 2  # drawn once
+
+
+def test_the_engaged_draw_is_made_by_the_command_and_needs_the_verdicts(tmp_path, capsys):
+    run = gate(tmp_path)
+    draw_sample(run, 2, seed=3)
+    assert main(['sample', str(run), '--engaged', '1', '--seed', '5']) == 2
+    assert 'no judge events' in capsys.readouterr().err and not (run / 'sample-engaged.json').exists()
+    for name in VERDICTS:
+        judge_events(run, name, 'model-x', answers(run, name))
+    assert main(['sample', str(run), '--engaged', '2', '--seed', '5']) == 0
+    out = capsys.readouterr().out
+    assert 'drawn with seed 5 into' in out and 'judges judge-a, judge-b, judge-c, judge-d' in out
+    value = json.loads((run / 'sample-engaged.json').read_text())
+    assert value['seed'] == 5 and [p['index'] for p in value['pairs']] == [2, 3]
+    random_pairs = {(p['start'], p['item']) for p in json.loads((run / 'sample.json').read_text())['pairs']}
+    assert not random_pairs & {(p['start'], p['item']) for p in value['pairs']}
+
+
+def test_the_page_holds_no_judge_work_before_the_blind_click_in_any_response(tmp_path):
+    run = owner_run(tmp_path)  # judges, notes and cited frames all exist on disk
+    with Serving(run) as port:
+        status, _, body = call(port, '/api/state')
+        state = json.loads(body)
+        assert status == 200 and state['total'] == 5 and state['blind'] == {} and state['checked'] == {}
+        assert state['reveals'] == {} and [pair['index'] for pair in state['pairs']] == [0, 1, 2, 3, 4]
+        for word in (b'judge', b'model-x', b'seen', b'adjudicated', b'cited', b'note'):  # the notes say "seen"
+            assert word not in body
+        for pair in state['pairs']:  # every image the state names is served, and holds no verdict
+            assert call(port, pair['image'])[2].startswith(b'\x89PNG')
+            assert all(call(port, frame['image'])[2].startswith(b'\x89PNG') for frame in pair['frames'])
+        for path in ('/api/reveal/0', '/api/reveal', '/adjudicated.json', '/events/judge-a.jsonl', '/answers/judge-a/x.json',
+                '/private/judge-mapping.json', '/labels.json', '/sample-engaged.json'):
+            assert call(port, path)[0] == 404
+        # a check before the blind label is refused and reveals nothing
+        status, _, body = click(port, 0, 'checked', keep=True)
+        assert status == 409 and b'judge-' not in body and b'seen' not in body
+        assert json.loads(call(port, '/api/state')[2])['reveals'] == {}
+        # the blind click of pair 0 releases pair 0's evidence and nothing of any other pair
+        status, _, body = click(port, 0, 'blind', 'straight')
+        after = json.loads(body)
+        assert status == 200 and after['blind'] == {'0': 'straight'} and set(after['reveals']) == {'0'}
+        rest = json.dumps({key: value for key, value in after.items() if key != 'reveals'}).encode()
+        assert b'judge-' not in rest and b'seen' not in rest and b'model-x' not in rest
+        shown = after['reveals']['0']
+        assert (shown['adjudicated'], shown['by'], shown['screens']) == ('straight', 'agreement', [1])
+        assert [(j['name'], j['label'], j['note'], j['screens']) for j in shown['judges']] == [
+            ('judge-a', 'straight', 'seen', [1]), ('judge-b', 'straight', 'seen', [1])]
+        # pair 1 (run-f:1-5 / item-01) has a third judge; its evidence comes only with its own blind label
+        assert json.loads(call(port, '/api/state')[2])['reveals'].keys() == {'0'}
+        again = json.loads(click(port, 1, 'blind', 'missed')[2])
+        assert set(again['reveals']) == {'0', '1'}
+        assert [(j['name'], j['label']) for j in again['reveals']['1']['judges']] == [
+            ('judge-a', 'missed'), ('judge-b', 'straight'), ('judge-c', 'missed')]
+        assert (again['reveals']['1']['adjudicated'], again['reveals']['1']['by']) == ('missed', 'third')
+
+
+def test_the_label_server_records_blind_then_checked_and_binds_to_loopback_only(tmp_path):
+    run = owner_run(tmp_path)
     sample = json.loads((run / 'sample.json').read_text())['pairs']
     serving = Serving(run)
     assert serving.server.server_address[0] == '127.0.0.1'
@@ -446,32 +551,87 @@ def test_the_label_server_records_a_click_survives_a_reload_and_binds_to_loopbac
             assert outside not in page  # no external asset
         assert b'prefers-color-scheme: dark' in page and b'<input' not in page and b'<textarea' not in page
         state = json.loads(call(port, '/api/state')[2])
-        assert state['total'] == 4 and state['labels'] == {} and [c[0] for c in state['choices']] == list(judge.LABELS)
+        assert [c[0] for c in state['choices']] == list(judge.LABELS)
         assert [c[1] for c in state['choices']] == ['Went straight to it', 'Missed it (looked elsewhere or got it another way)',
             'Not engaged', 'Cannot tell']
         assert set(state['pairs'][0]) == {'index', 'place', 'what', 'image', 'aspect', 'decisions', 'short', 'frames'}
         assert state['pairs'][0]['aspect'] == '8 / 8'
-        for hidden in ('judge', 'run-e', 'run-f', 'straight"', 'model-x'):
-            assert hidden not in json.dumps(state['pairs'])  # no verdict, judge or admission
+        for hidden in ('judge', 'run-e', 'run-f', 'straight"', 'model-x', 'engaged', 'random'):
+            assert hidden not in json.dumps(state['pairs'])  # no verdict, judge or admission, and no group
         frame = state['pairs'][0]['frames'][0]
         assert frame['inputs'].startswith('k') and call(port, frame['image'])[2].startswith(b'\x89PNG')
         assert call(port, state['pairs'][0]['image'])[1] == 'image/png'
         assert call(port, '/frame/0/../../private/judge-mapping.json')[0] == 404
-        assert call(port, '/api/label', dict(index=0, label='missed'))[0] == 200
-        assert call(port, '/api/label', dict(index=1, label='straight'))[0] == 200
-        answer = json.loads(call(port, '/api/label', dict(index=1, label='cannot_tell'))[2])  # Back, then another answer
-        assert answer['labels'] == {'0': 'missed', '1': 'cannot_tell'}
-        assert call(port, '/api/label', dict(index=2, label='maybe'))[0] == 400
-        assert call(port, '/api/label', dict(index=9, label='missed'))[0] == 400
-        assert call(port, '/api/label', dict(index=2, label='missed'), kind='text/plain')[0] == 404
-        assert call(port, '/api/label', dict(index=2, label='missed'), host='labels.example:8765')[0] == 403  # another name
-        assert call(port, '/api/label', dict(index=0, label='missed'), host=f'localhost:{port}')[0] == 200
+        # pair 0: answer, then keep. pair 1: answer, then change it.
+        assert click(port, 0, 'blind', 'missed')[0] == 200
+        assert click(port, 0, 'checked', keep=True)[0] == 200
+        assert click(port, 1, 'blind', 'straight')[0] == 200
+        answer = json.loads(click(port, 1, 'checked', 'cannot_tell')[2])
+        assert answer['blind'] == {'0': 'missed', '1': 'straight'} and answer['checked'] == {'0': 'missed', '1': 'cannot_tell'}
+        # Back to pair 1: the checked label can change again, the blind one never
+        assert json.loads(click(port, 1, 'checked', 'not_engaged')[2])['checked']['1'] == 'not_engaged'
+        status, _, body = click(port, 1, 'blind', 'missed')
+        assert status == 409 and b'not changed' in body
+        assert json.loads(call(port, '/api/state')[2])['blind']['1'] == 'straight'
+        assert click(port, 1, 'checked', keep=True)[0] == 200  # keeping goes back to the blind label
+        assert json.loads(call(port, '/api/state')[2])['checked']['1'] == 'straight'
+        for bad in (dict(index=2, step='blind', label='maybe'), dict(index=9, step='blind', label='missed'),
+                dict(index=2, step='first', label='missed'), dict(index=2, label='missed'), dict(index=2, step='blind'),
+                dict(index=2, step='blind', keep=True), dict(index=0, step='checked', keep=True, label='missed'),
+                dict(index=0, step='checked', keep='yes'), dict(index=True, step='blind', label='missed')):
+            assert call(port, '/api/label', bad)[0] == 400, bad
+        assert call(port, '/api/label', dict(index=2, step='blind', label='missed'), kind='text/plain')[0] == 404
+        assert call(port, '/api/label', dict(index=2, step='blind', label='missed'), host='labels.example:8765')[0] == 403
+        assert call(port, '/api/label', dict(index=2, step='blind', label='missed'), host=f'localhost:{port}')[0] == 200
     saved = json.loads((run / 'labels.json').read_text())
-    assert {k: (v['start'], v['item'], v['label']) for k, v in saved['labels'].items()} == {
-        '0': (sample[0]['start'], sample[0]['item'], 'missed'), '1': (sample[1]['start'], sample[1]['item'], 'cannot_tell')}
-    assert len(saved['history']) == 4 and saved['labels']['0']['time'].endswith('+00:00')
-    with Serving(run) as port:  # a new server, as after a crash: the labels are still there
-        assert json.loads(call(port, '/api/state')[2])['labels'] == {'0': 'missed', '1': 'cannot_tell'}
+    engaged = json.loads((run / 'sample-engaged.json').read_text())['pairs'][0]
+    assert saved['schema'] == 'owner-labels/2' and saved['sample_sha256'] == memory_measure.file_sha256(run / 'sample.json')
+    assert saved['engaged_sha256'] == memory_measure.file_sha256(run / 'sample-engaged.json')
+    assert {k: (v['start'], v['item'], v['blind'], v['checked']) for k, v in saved['labels'].items()} == {
+        '0': (sample[0]['start'], sample[0]['item'], 'missed', 'missed'),
+        '1': (sample[1]['start'], sample[1]['item'], 'straight', 'straight'),
+        '2': (engaged['start'], engaged['item'], 'missed', None)}
+    assert [(h['index'], h['step'], h['label']) for h in saved['history']] == [
+        (0, 'blind', 'missed'), (0, 'keep', 'missed'), (1, 'blind', 'straight'), (1, 'change', 'cannot_tell'),
+        (1, 'change', 'not_engaged'), (1, 'keep', 'straight'), (2, 'blind', 'missed')]  # the refused clicks wrote nothing
+    assert saved['labels']['0']['blind_time'].endswith('+00:00') and saved['labels']['2']['checked_time'] is None
+
+
+def test_a_reload_resumes_in_the_middle_of_a_pair_and_a_repeated_check_is_one_action(tmp_path):
+    run = owner_run(tmp_path)
+    with Serving(run) as port:
+        click(port, 0, 'blind', 'straight')
+        click(port, 0, 'checked', keep=True)
+        click(port, 1, 'blind', 'cannot_tell')  # the page is closed here: the blind label is recorded, the check is not
+    with Serving(run) as port:
+        state = json.loads(call(port, '/api/state')[2])
+        assert state['blind'] == {'0': 'straight', '1': 'cannot_tell'} and state['checked'] == {'0': 'straight'}
+        assert set(state['reveals']) == {'0', '1'}  # pair 1 is awaiting its check and shows its evidence again
+        assert click(port, 1, 'checked', 'missed')[0] == 200
+        assert click(port, 1, 'checked', 'missed')[0] == 200  # a repeated click changes nothing
+        assert click(port, 1, 'blind', 'missed')[0] == 409
+    saved = json.loads((run / 'labels.json').read_text())
+    assert [(h['index'], h['step'], h['label']) for h in saved['history']] == [
+        (0, 'blind', 'straight'), (0, 'keep', 'straight'), (1, 'blind', 'cannot_tell'), (1, 'change', 'missed')]
+    assert (saved['labels']['1']['blind'], saved['labels']['1']['checked']) == ('cannot_tell', 'missed')
+
+
+def test_labels_of_another_sample_or_format_are_refused(tmp_path):
+    run = owner_run(tmp_path)
+    with Serving(run) as port:
+        click(port, 0, 'blind', 'straight')
+    saved = json.loads((run / 'labels.json').read_text())
+    save(run / 'labels.json', dict(saved, schema='owner-labels/1'))
+    with pytest.raises(MeasureError, match='not owner-labels/2'):
+        label_server(run, 0)
+    save(run / 'labels.json', dict(saved, engaged_sha256='0' * 64))
+    with pytest.raises(MeasureError, match='another sample'):
+        label_server(run, 0)
+    save(run / 'labels.json', saved)
+    label_server(run, 0).server_close()
+    (run / 'adjudicated.json').unlink()
+    with pytest.raises(MeasureError, match='run `events` for each judge and `agreement`'):
+        label_server(run, 0)
 
 
 def test_describe_names_keys_text_and_repeats():
@@ -522,7 +682,8 @@ def test_agreement_reports_each_number_with_an_interval_and_the_thresholds(tmp_p
         for pair in json.loads((run / 'sample.json').read_text())['pairs']:
             label = adjudicated[(pair['start'], pair['item'])]['label']
             wrong = next(other for other in judge.LABELS if other != label)
-            assert call(port, '/api/label', dict(index=pair['index'], label=wrong if pair['index'] == 0 else label))[0] == 200
+            assert click(port, pair['index'], 'blind', wrong if pair['index'] == 0 else label)[0] == 200
+            assert click(port, pair['index'], 'checked', keep=True)[0] == 200
     assert main(['agreement', str(run), '--judges', 'judge-a', 'judge-b', '--third', 'judge-c', '--seed', '3']) == 0
     report = json.loads((run / 'agreement.json').read_text())
     assert (report['owner']['matched'], report['owner']['compared']) == (3, 4)
@@ -580,8 +741,13 @@ def owner_labels(run: Path, labels: list[str]) -> None:
     pairs = memory_measure.all_pairs(run)
     save(run / 'sample.json', dict(schema='calibration-sample/1', pairs=[dict(index=index, start=start, item=item)
         for index, (start, item) in enumerate(pairs)]))
-    save(run / 'labels.json', dict(schema='owner-labels/1', labels={str(index): dict(index=index, label=label)
-        for index, label in enumerate(labels)}))
+    write_owner(run, labels, labels)
+
+
+def write_owner(run: Path, blind: list, checked: list) -> None:
+    """The owner's labels for pairs 0, 1, ... as the page writes them; a checked label of None is still to give."""
+    save(run / 'labels.json', dict(schema='owner-labels/2', labels={str(index): dict(index=index, blind=label,
+        checked=checked[index]) for index, label in enumerate(blind)}))
 
 
 def test_the_judge_error_is_reported_for_touched_pairs_with_its_interval(tmp_path, monkeypatch, capsys):
@@ -619,6 +785,94 @@ def test_the_judge_error_is_reported_for_touched_pairs_with_its_interval(tmp_pat
     assert f"judge error at its interval's upper bound: python -m tools.memory_measure simulate --touched 1.54 --missed 0.750 --wrong {1 - binomial_interval(2, 4)[0]:.3f}" in out
 
 
+def test_agreement_calibrates_on_blind_labels_only_and_reports_engaged_and_checked_apart(tmp_path, monkeypatch, capsys):
+    run = owner_run(tmp_path)
+    monkeypatch.setattr(memory_measure, 'OWNER_PAIRS', 2)
+    monkeypatch.setattr(memory_measure, 'MIN_OWNER_MATCH', 2)
+    adjudicated = {(r['start'], r['item']): r['label'] for r in json.loads((run / 'adjudicated.json').read_text())['pairs']}
+    pairs = [(p['start'], p['item']) for p in [*json.loads((run / 'sample.json').read_text())['pairs'],
+        *json.loads((run / 'sample-engaged.json').read_text())['pairs']]]
+    truth = [adjudicated[pair] for pair in pairs]
+    assert truth[:2] == ['straight', 'missed']
+    # The owner's blind labels: pair 1 (random) wrong, and the first engaged pair that was adjudicated missed called
+    # not_engaged. Then every wrong one is changed to the adjudicated label at the check.
+    missed = next(at for at in range(2, 5) if truth[at] == 'missed')
+    blind, checked = list(truth), list(truth)
+    blind[1], blind[missed] = 'cannot_tell', 'not_engaged'
+    write_owner(run, blind, checked)
+    report = agreement(run, ['judge-a', 'judge-b'], 'judge-c', seed=3, draws=200)
+    owner = report['owner']
+    assert (owner['matched'], owner['compared']) == (1, 2)  # the calibration: blind labels, random pairs only
+    assert report['passes']['owner'] is False and report['pass'] is False  # the checked labels do not rescue it
+    # touched among the random pairs: both (adjudicated straight and missed); one matches
+    assert owner['touched'] == dict(compared=2, matched=1, interval=pytest.approx(binomial_interval(1, 2)))
+    engaged = owner['engaged']
+    assert (engaged['of'], engaged['compared'], engaged['matched']) == (3, 3, 2)
+    assert engaged['interval'] == pytest.approx(binomial_interval(2, 3))
+    # touched in the engaged pairs: the two adjudicated missed (one matched); the cannot_tell pair is not touched
+    assert (engaged['touched']['compared'], engaged['touched']['matched'], engaged['false_engagement']) == (2, 1, 1)
+    assert (owner['touched_all']['compared'], owner['touched_all']['matched']) == (4, 2)
+    assert owner['touched_all']['interval'] == pytest.approx(binomial_interval(2, 4))
+    # checked labels: both changed ones now match; reported apart and labelled
+    checked_part = owner['checked']
+    assert (checked_part['changed'], checked_part['checked_pairs'], checked_part['labelled']) == (2, 5, 5)
+    assert checked_part['random'] == dict(compared=2, matched=2, interval=pytest.approx(binomial_interval(2, 2)))
+    assert checked_part['engaged'] == dict(compared=3, matched=3, interval=pytest.approx(binomial_interval(3, 3)))
+    assert 'not the calibration' in checked_part['note']
+    out = memory_measure.render_agreement(report)
+    assert "adjudicated label against the owner's: 1 of 2 compared (exact 95% interval" in out
+    assert 'the calibration uses the owner\'s blind labels only' in out
+    assert 'engaged pairs, not in the calibration (3 drawn): blind labels against the adjudicated label: 2 of 3 match' in out
+    assert 'random and engaged pairs together (blind labels): 2 of 4 match' in out
+    assert 'checked labels, not the calibration' in out
+
+
+def test_changed_checked_labels_are_counted_and_a_pair_still_to_check_is_left_out_of_the_checked_match(tmp_path, monkeypatch):
+    run = owner_run(tmp_path)
+    monkeypatch.setattr(memory_measure, 'OWNER_PAIRS', 2)
+    adjudicated = {(r['start'], r['item']): r['label'] for r in json.loads((run / 'adjudicated.json').read_text())['pairs']}
+    pairs = [(p['start'], p['item']) for p in [*json.loads((run / 'sample.json').read_text())['pairs'],
+        *json.loads((run / 'sample-engaged.json').read_text())['pairs']]]
+    truth = [adjudicated[pair] for pair in pairs]
+    wrong = ['not_engaged' if label != 'not_engaged' else 'cannot_tell' for label in truth]
+    # blind labels all match; the owner changes pairs 0 and 3 to wrong ones at the check; pair 4 is not yet checked
+    write_owner(run, truth, [wrong[0], truth[1], truth[2], wrong[3], None])
+    owner = agreement(run, ['judge-a', 'judge-b'], 'judge-c', seed=3, draws=200)['owner']
+    assert (owner['matched'], owner['compared']) == (2, 2) and owner['engaged']['matched'] == 3  # blind: all match
+    assert (owner['checked']['changed'], owner['checked']['checked_pairs'], owner['checked']['labelled']) == (2, 4, 5)
+    assert owner['checked']['random']['matched'] == 1 and owner['checked']['engaged']['compared'] == 2
+    save(run / 'labels.json', dict(schema='owner-labels/1', labels={}))
+    with pytest.raises(MeasureError, match='not owner-labels/2'):
+        agreement(run, ['judge-a', 'judge-b'], 'judge-c', seed=3, draws=200)
+
+
+def test_measure_sizes_the_judge_error_on_touched_pairs_random_and_engaged_together(tmp_path, monkeypatch):
+    run = owner_run(tmp_path)
+    monkeypatch.setattr(memory_measure, 'OWNER_PAIRS', 2)
+    adjudicated = {(r['start'], r['item']): r['label'] for r in json.loads((run / 'adjudicated.json').read_text())['pairs']}
+    pairs = [(p['start'], p['item']) for p in [*json.loads((run / 'sample.json').read_text())['pairs'],
+        *json.loads((run / 'sample-engaged.json').read_text())['pairs']]]
+    truth = [adjudicated[pair] for pair in pairs]
+    blind = list(truth)
+    blind[0] = 'missed'  # a straight pair called missed
+    write_owner(run, blind, list(truth))  # the check puts it right; the calibration does not see that
+    agreement(run, ['judge-a', 'judge-b'], 'judge-c', seed=3, draws=200)
+    error = measure(run, seed=5, draws=200)['judge_error']
+    # touched by the owner or the judges: both random pairs and the two engaged pairs adjudicated missed: 4, one differs
+    assert error['touched_pairs'] == dict(compared=4, differ=1, value=0.25, interval=pytest.approx(
+        [1 - binomial_interval(3, 4)[1], 1 - binomial_interval(3, 4)[0]]))
+    assert error['all_pairs']['compared'] == 2 and error['touched_measured'] is False
+    out = memory_measure.render_measure(measure(run, seed=5, draws=200))
+    assert 'random and engaged pairs together, blind labels: 1 of 4 differ, error 0.250' in out
+    assert "the judge's error on touched items was not measured: 4 touched pairs were sampled, fewer than 5" in out
+    monkeypatch.setattr(memory_measure, 'MIN_TOUCHED_SAMPLED', 4)
+    assert measure(run, seed=5, draws=200)['judge_error']['touched_measured'] is True
+    old = json.loads((run / 'agreement.json').read_text())
+    save(run / 'agreement.json', dict(old, schema='judge-agreement/1'))
+    with pytest.raises(MeasureError, match='run `agreement` again'):
+        measure(run)
+
+
 def test_a_third_label_that_matches_neither_judge_is_marked_and_listed(tmp_path):
     run = judged(tmp_path)
     report = agreement(run, ['judge-a', 'judge-b'], 'judge-d', seed=3, draws=500)
@@ -633,32 +887,55 @@ def test_a_third_label_that_matches_neither_judge_is_marked_and_listed(tmp_path)
     assert 'run-f:1-5 / item-01: judge-a missed, judge-b straight, judge-d not_engaged' in out
 
 
-ZOOM_HARNESS = r'''
+#: The page's own script under node, against a stub of the few DOM calls it makes and a stub of the server that keeps
+#: the same rules: a pair's evidence is in the state only after its blind label, a second blind label is a 409 and a
+#: check before the blind label is a 409. `process.argv[3]` is the server's labels at load time (a reload).
+PAGE_STUB = r'''
 const fs = require('fs'), vm = require('vm');
 const page = fs.readFileSync(process.argv[2], 'utf8');
 const script = page.slice(page.indexOf('<script>') + 8, page.indexOf('</script>'));
-const els = {};
-const make = id => ({id, hidden: false, style: {}, children: [], disabled: false, offsetHeight: 100,
-  replaceChildren() { this.children = []; }, append(...nodes) { this.children.push(...nodes); }});
+const els = {}, scrolled = [];
+const make = id => ({id, hidden: false, style: {}, children: [], disabled: false, offsetHeight: 100, className: '',
+  textContent: '', replaceChildren() { this.children = []; }, append(...nodes) { this.children.push(...nodes); },
+  scrollIntoView() { scrolled.push(this.id); }});
 let now = 1000;
 Date.now = () => now;
-const state = {total: 2, labels: {}, choices: [['straight', 'Went straight to it'], ['missed', 'Missed it']],
-  pairs: [0, 1].map(index => ({index, place: 'p', what: 'w', image: '/item/' + index + '.png', aspect: '3 / 2', decisions: 5,
-    short: false, frames: [{name: 'f001', image: '/frame/' + index + '/f001.png', decision: 1, inputs: 'k'}]}))};
+const server = Object.assign({blind: {}, checked: {}}, JSON.parse(process.argv[3] || '{}'));
+const reveal = () => ({adjudicated: 'straight', by: 'agreement', screens: [1],
+  judges: [{name: 'judge-a', label: 'straight', note: 'seen', screens: [1]}, {name: 'judge-b', label: 'straight', note: null, screens: []}]});
+const snapshot = () => ({total: 3, blind: {...server.blind}, checked: {...server.checked},
+  reveals: Object.fromEntries(Object.keys(server.blind).map(index => [index, reveal()])),
+  choices: [['straight', 'Went straight to it'], ['missed', 'Missed it'], ['not_engaged', 'Not engaged'], ['cannot_tell', 'Cannot tell']],
+  pairs: [0, 1, 2].map(index => ({index, place: 'p', what: 'w', image: '/item/' + index + '.png', aspect: '3 / 2', decisions: 5,
+    short: false, frames: [{name: 'f001', image: '/frame/' + index + '/f001.png', decision: 1, inputs: 'k'},
+      {name: 'f002', image: '/frame/' + index + '/f002.png', decision: 3, inputs: ''}]}))});
 const posts = [];
 let keydown = null;
 globalThis.document = {getElementById: id => els[id] || (els[id] = make(id)), createElement: make,
   querySelector: () => make('main'), addEventListener: (name, handler) => { keydown = handler; }};
 globalThis.window = {scrollTo() {}};
 globalThis.fetch = async (url, options) => {
-  if (options) { const body = JSON.parse(options.body); posts.push(body); state.labels[body.index] = body.label; }
-  return {ok: true, json: async () => JSON.parse(JSON.stringify(state))};
+  if (options) {
+    const body = JSON.parse(options.body);
+    posts.push(body);
+    if (body.step === 'blind' ? body.index in server.blind : !(body.index in server.blind)) {
+      return {ok: false, status: 409, json: async () => ({})};
+    }
+    if (body.step === 'blind') server.blind[body.index] = body.label;
+    else server.checked[body.index] = body.keep ? server.blind[body.index] : body.label;
+  }
+  return {ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(snapshot()))};
 };
 const settle = () => new Promise(resolve => setImmediate(resolve));
-const answer = () => els.choices.children[0].onclick();
+const click = button => button.disabled ? undefined : button.onclick();  // a disabled button gets no click
+const answer = () => click(els.choices.children[0]);
+const start = async () => { for (const id of ['reveal-verdict', 'reveal-judges', 'reveal-screens']) els[id] = make(id);
+  vm.runInThisContext(script); await settle(); await settle(); };
+'''
+
+ZOOM_HARNESS = PAGE_STUB + r'''
 (async () => {
-  vm.runInThisContext(script);
-  await settle(); await settle();
+  await start();
   const closers = {close: () => els['zoom-close'].onclick(), image: () => els['zoom-image'].onclick(),
     backdrop: () => els.zoom.onclick({target: els.zoom}), escape: () => keydown({key: 'Escape'})};
   const out = {};
@@ -680,16 +957,103 @@ const answer = () => els.choices.children[0].onclick();
 '''
 
 
+FLOW_HARNESS = PAGE_STUB + r'''
+const shown = () => ({count: els.count.textContent, prompt: els.prompt.textContent, reveal: !els.reveal.hidden,
+  keep: !els.keep.hidden, keepText: els.keep.textContent, next: !els.forward.hidden, verdict: els['reveal-verdict'].textContent,
+  judges: els['reveal-judges'].children.length, screens: els['reveal-screens'].textContent,
+  cited: els.strip.children.map(figure => figure.className), chosen: els.choices.children.map(button => button.className),
+  progress: els.progress.value});
+(async () => {
+  await start();
+  const out = {start: shown()};
+  now += 1000;
+  // Before the blind click: no evidence on the page, and the blind click is a double-click, the second click arriving
+  // while the first is in flight.
+  const first = click(els.choices.children[1]), second = click(els.choices.children[1]);
+  await first; await settle();
+  out.blind = {posts: posts.slice(), shown: shown(), scrolled: scrolled.slice(), second: second === undefined};
+  // The second click of that double-click lands on the reveal step within the guard: nothing is recorded.
+  await click(els.keep); await settle();
+  out.guarded = posts.length;
+  // A double-click on "Keep my answer", the second click after the first has been answered but inside the guard.
+  now += 401;
+  const kept = click(els.keep);
+  await kept; await settle();
+  await click(els.keep); await settle();
+  out.keep = {posts: posts.slice(), shown: shown()};
+  // Back shows the pair as it stands; its checked label can change.
+  now += 1000;
+  click(els.back);
+  out.back = shown();
+  now += 401;
+  await click(els.choices.children[0]); await settle();
+  out.change = {posts: posts.slice(), shown: shown()};
+  // Back again, and the same label: nothing changes on the server, and the page moves on.
+  now += 1000;
+  click(els.back);
+  out.again = shown();
+  console.log(JSON.stringify(out));
+})();
+'''
+
+
+def run_page(tmp_path: Path, harness: str, server=None) -> dict:
+    """Run the page's script under node with `harness` and return the JSON it prints."""
+    (tmp_path / 'page.html').write_text(memory_measure.PAGE)
+    (tmp_path / 'harness.js').write_text(harness)
+    done = subprocess.run([shutil.which('node'), str(tmp_path / 'harness.js'), str(tmp_path / 'page.html'),
+        json.dumps(server or {})], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
+@pytest.mark.skipif(shutil.which('node') is None, reason='node is not installed')
+def test_the_page_walks_blind_reveal_keep_change_back_and_reload(tmp_path):
+    out = run_page(tmp_path, FLOW_HARNESS)
+    assert out['start']['count'] == 'Pair 1 of 3' and out['start']['reveal'] is False and out['start']['keep'] is False
+    assert out['start']['prompt'] == 'What did the player do about this item?' and out['start']['next'] is False
+    assert out['start']['cited'] == ['', ''] and out['start']['chosen'] == ['', '', '', '']
+    # the first click records the blind label once, shows the evidence and stays on the pair
+    assert out['blind']['posts'] == [dict(index=0, step='blind', label='missed')] and out['blind']['second'] is True
+    blind = out['blind']['shown']
+    assert (blind['count'], blind['reveal'], blind['keep'], blind['next'], blind['progress']) == ('Pair 1 of 3', True, True, False, 0)
+    assert blind['keepText'] == 'Keep my answer: Missed it' and 'Keep your answer, or change it?' in blind['prompt']
+    assert blind['verdict'] == 'Adjudicated label: Went straight to it (both judges agree).' and blind['judges'] == 2
+    assert blind['screens'].startswith('Screens a judge cited: 1.') and blind['cited'][0] == 'cited' and blind['cited'][1] == ''
+    assert blind['chosen'] == ['', 'chosen', '', ''] and out['blind']['scrolled'] == ['reveal']
+    assert out['guarded'] == 1  # a click on the reveal step inside the guard records nothing
+    # one keep, however many clicks: a checked label is recorded once and the page moves on
+    assert out['keep']['posts'][1:] == [dict(index=0, step='checked', keep=True)] and len(out['keep']['posts']) == 2
+    assert out['keep']['shown']['count'] == 'Pair 2 of 3' and out['keep']['shown']['reveal'] is False
+    assert out['keep']['shown']['progress'] == 1
+    # Back: the pair is done and shows its checked label and the evidence; changing it records a change
+    assert out['back']['count'] == 'Pair 1 of 3' and out['back']['next'] is True and out['back']['keep'] is False
+    assert out['back']['reveal'] is True and out['back']['chosen'] == ['', 'chosen', '', '']
+    assert out['back']['prompt'].startswith('Your answer is “Missed it”. Click another')
+    assert out['change']['posts'][2:] == [dict(index=0, step='checked', label='straight')]
+    assert out['change']['shown']['count'] == 'Pair 2 of 3'
+    assert 'you first answered “Missed it”' in out['again']['prompt'] and out['again']['chosen'] == ['chosen', '', '', '']
+
+
+@pytest.mark.skipif(shutil.which('node') is None, reason='node is not installed')
+def test_the_page_reloaded_mid_pair_shows_the_reveal_and_waits_for_the_check(tmp_path):
+    out = run_page(tmp_path, PAGE_STUB + r'''
+(async () => {
+  await start();
+  console.log(JSON.stringify({count: els.count.textContent, reveal: !els.reveal.hidden, keep: !els.keep.hidden,
+    prompt: els.prompt.textContent, chosen: els.choices.children.map(button => button.className), next: !els.forward.hidden,
+    progress: els.progress.value}));
+})();''', server=dict(blind={'0': 'straight', '1': 'cannot_tell'}, checked={'0': 'straight'}))
+    # pair 0 is done, pair 1 has its blind label and no check: the page opens on pair 1 with the evidence and the choice
+    assert out == dict(count='Pair 2 of 3', reveal=True, keep=True, next=False, progress=1, chosen=['', '', '', 'chosen'],
+        prompt='You answered “Cannot tell”. Keep your answer, or change it?')
+
+
 @pytest.mark.skipif(shutil.which('node') is None, reason='node is not installed')
 def test_closing_the_enlarged_view_rearms_the_click_guard(tmp_path):
     """The page's own script runs under node against a stub of the few DOM calls it makes. Each way of closing the
     enlarged view is followed at once by a click on an answer, as the second click of a double-click would be."""
-    (tmp_path / 'page.html').write_text(memory_measure.PAGE)
-    (tmp_path / 'harness.js').write_text(ZOOM_HARNESS)
-    done = subprocess.run([shutil.which('node'), str(tmp_path / 'harness.js'), str(tmp_path / 'page.html')],
-        capture_output=True, text=True, timeout=60)
-    assert done.returncode == 0, done.stderr
-    out = json.loads(done.stdout)
+    out = run_page(tmp_path, ZOOM_HARNESS)
     assert out == dict({name: dict(opened=True, closed=True, recorded=0, reopened=False)
         for name in ('close', 'image', 'backdrop', 'escape')}, after=1)  # nothing is recorded until 400 ms after the view closed
     # the view is hidden in two places only: when a pair is drawn, and in the one closing function
