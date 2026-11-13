@@ -56,7 +56,10 @@ A submission is a directory `submissions/<id>/` with `submission.json`:
              {"op": "add_type", "type": {…}}]}
 ```
 
-- **Fact** (`curator-fact/2`): exactly `schema`, `id`, `type` (a name in the ontology),
+- **Fact** (`curator-fact/2`, the format built today; the owner decided its game-neutral
+  replacement, `curator-fact/3` with articles over facts, in
+  [general memory](general-memory.md#1-the-fact-format-and-the-curator), built in
+  [#460](https://github.com/CVX-Hull/enactive/issues/460)): exactly `schema`, `id`, `type` (a name in the ontology),
   `statement`, `scope` (an object; at least `game`), `citations`, `subject`, `place`,
   `game_time` and `kind`. Citations are source IDs of frames, and every one must lie
   inside the session's trace window. The gate rejects `curator-fact/1`; there is one

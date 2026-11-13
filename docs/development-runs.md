@@ -37,6 +37,11 @@ Five ceiling runs of GPT-6.1 Terra decide the next branch, fixed before any run:
 - **Median below 24 in-game hours:** grounding is the bottleneck. Test the game-neutral, player-owned
   aids of the [development-loop record](acceptance/2026-11-06-development-loop.md#results) against the ceiling arm.
 
+These branches were fixed before the runs. What follows them now is set by the owner's
+decisions of 13 November 2026: memory is settled first (#445), before any seven-day or
+other long run, and #164's responsiveness is an aim that does not gate present work
+([owner decision log](decisions/owner-decisions.md)).
+
 A survivor still alive when its allowance ends counts at its observed hours, so
 the rule asks whether the player survives 24 hours *within the allowance*. Using
 time well (resting, waiting out the night) is part of the tested competence, not

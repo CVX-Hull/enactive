@@ -469,8 +469,10 @@ beside it.
 
 A judge event is one model judge's label for one known item over one start, a stretch of
 recorded play ([#386](https://github.com/CVX-Hull/enactive/issues/386)). The
-[memory screen protocol](../design/memory-screen-protocol.md#the-judge) owns the question,
-the labels' meaning and the calibration thresholds. `harness/evaluation/core/judge.py`
+[memory screen protocol](../design/memory-screen-protocol.md#the-judge), now historical,
+gives the question, the labels' meaning and the calibration thresholds of the format built
+today. Their game-neutral replacement is decided in
+[general memory](../design/general-memory.md#3-measurement) and built in #386. `harness/evaluation/core/judge.py`
 validates the format; `python -m tools.memory_measure` writes and reads it.
 
 - **File.** JSON Lines, one event per line, one judge per file:

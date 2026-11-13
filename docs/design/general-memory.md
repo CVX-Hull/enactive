@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: '2026-11-13'
-scope: 'Changes decided to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that consolidates, the briefing''s full items chosen by a model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Decided by the owner on 13 November 2026; not built'
+scope: 'Changes decided to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that grooms the store into articles over facts, the briefing''s leads chosen by a recall model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Decided by the owner on 13 November 2026; not built'
 review_trigger: The withholding simulation reports, delivery is first measured in play, or a measurement contradicts a premise stated here
 ---
 
@@ -36,11 +36,13 @@ review_trigger: The withholding simulation reports, delivery is first measured i
   1. **Format.** The fixed kinds and the required place and time go; ADR 009's
      model-proposed types, citations and order of sighting stay. Retiring and merging are
      added.
-  2. **Curator.** A grooming session between admissions reorganizes the whole store. No
-     hard cap.
-  3. **Delivery.** The briefing stays as the context design has it. A recall model,
-     not a kind, chooses which facts each actor gets in full. Then, during play, it may
-     add a short reminder, or say nothing, as a notice that stays in the history.
+  2. **Curator.** A grooming session between admissions reorganizes the whole store into
+     [articles over facts](#articles-over-facts): a lead, a body citing facts, and links,
+     as in an encyclopedia. No hard cap.
+  3. **Delivery.** The briefing stays where the context design has it. A recall model,
+     not a kind, chooses which articles' leads each actor gets; every other article has
+     an index line, and the player follows links or searches for more. Then, during play,
+     it may add a short reminder, or say nothing, as a notice that stays in the history.
   4. **Measurement.** Use of memory is judged on every sealed run. Benefit is measured by
      withholding a random half of the store within each start, once a simulation has
      sized it.
@@ -95,14 +97,44 @@ improve over hand-built knowledge of one game.
   item.
 - **A grooming session between admissions** reads the whole store and the last
   admission's citations, and reorganizes it: it merges facts, retires facts a later frame
-  contradicts, revises types as ADR 009 allows, makes subject names consistent, and ranks
-  facts for the briefing. Outside systems that edit against what exists (Mem0,
+  contradicts, revises types as ADR 009 allows, makes subject names consistent, and
+  writes and revises the [articles](#articles-over-facts) that file every fact. Outside
+  systems that edit against what exists (Mem0,
   Memory-R1, Letta's sleep-time agents) keep their stores more compact. Cost: one more
   curator session per admission, inferred at the gate's \$1.16 to \$4.19 a session.
-- **No hard cap**, as the owner decided. The store's size after grooming is measured.
-- **Facts are hypotheses.** Each is shown with its sighting order, and the player is told
+- **No hard cap**, as the owner decided. The store's size after grooming is measured in
+  the first paid grooming run, which is asked of the owner with its price.
+- **Facts are hypotheses.** Each article shows when it was last confirmed, and the player is told
   to check a fact cheaply before relying on it. Outside work finds agents follow stale
   notes into harm.
+
+### Articles over facts
+
+Facts stay the unit of evidence; articles are the unit of reading, as in an encyclopedia
+where a page's lead gives the point and its references and links give the rest.
+
+| Part | What it holds | Who writes it |
+| --- | --- | --- |
+| Title | the subject, in the curator's words | the curator |
+| Lead | one or two sentences a player can act on without reading further | the curator |
+| Body | the claims, each citing the fact ids it rests on | the curator |
+| Links | other articles a reader may want next, by title | the curator |
+| Last confirmed | the latest sighting among the facts it cites | software |
+
+- **Written in the grooming session.** The curator groups facts into articles, writes and
+  revises leads, splits or merges articles, and links related ones. Which subjects get
+  an article, and what links to what, are its choices, so the structure assumes nothing
+  about a game.
+- **Every sentence traces to a screen**: an article cites facts, and a fact cites frames.
+- **The gate checks structure only**: every cited fact id and every link resolves to a
+  current fact or article. After a grooming session every current fact belongs to at
+  least one article; between groomings, facts a session added stand alone and have their
+  own index lines until the next grooming files them. It does not judge what an article
+  says.
+- **Reading more.** `player_memory_read` returns an article or a fact by its id or title;
+  `player_memory_query` searches articles and facts together.
+- **Format.** Articles are a second record kind in the same knowledge repository, in the
+  same contract version as facts (`curator-fact/3` gains its article record); no shim.
 
 ### How the curator improves
 
@@ -125,17 +157,16 @@ messages, which keeps the provider's cache: every request extends the previous o
 for byte (`tools/player_host/host.mjs`, the notice rule). This note keeps that and
 changes two things.
 
-1. **A recall model chooses the full items.** The context design shows in full "open
-   commitments, known hazards, the places with goods, and what the player has learned
-   about how the game works", by kind, and one index line for every other item. With the
-   kinds gone, a recall model reads the mission, the previous final report and the
-   store's index, and chooses which facts each actor gets in full. Every other fact keeps
-   its index line, readable with `player_memory_read`. Relevance is judged by a model, so
-   it holds for any game.
+1. **A recall model chooses the leads.** The briefing carries the
+   [articles](#articles-over-facts): the leads of the articles a recall model chooses for
+   this actor from the mission, the previous final report and the article index, and one
+   index line (title and lead's first clause) for every other article. The player follows
+   a link or searches only when it wants more. Relevance is judged by a model, so it
+   holds for any game.
 2. **Reminders during play.** At a fixed cadence (every N decisions, N set by the first
    development play), the recall model reads the player's recent tool calls, the latest
-   screen and the index, and answers with up to a few fact ids and a line each, or with
-   nothing. It runs beside the player and never blocks it; its answer is added as a notice
+   screen and the article index, and answers with up to a few article titles and their
+   leads, or with nothing. It runs beside the player and never blocks it; its answer is added as a notice
    to the next request after it finishes, and stays in the history, so the cache holds.
    A reminder may arrive a decision or two late. Like the briefing, it is labelled as
    fallible knowledge, not instructions, as ADR 009 requires.
@@ -174,7 +205,8 @@ ordinary movement in this game; a required "memory checked" field.
 
 ### Is memory used? On every sealed run
 
-For each fact delivered in full or by a reminder, and each fact on the index, the judges
+For each fact whose article's lead was delivered in the briefing or a reminder, each fact
+the player read through a link or a search, and each fact only on the index, the judges
 label each stretch in which the fact could matter:
 
 - **Acted in line with it**: the player did what the fact supports.
@@ -185,16 +217,17 @@ label each stretch in which the fact could matter:
 
 These labels fit any fact: a place, a hazard, a rule, a procedure or a commitment. From
 them come the use rate of delivered facts, re-discovery, acting on a stale or false fact,
-and the recall model's precision and silence. Judging is done by host agents, \$0 on the
+the recall model's precision and silence, and how often the player follows a link or
+searches and then acts on what it read. Judging is done by host agents, \$0 on the
 provider; the coding host's capacity is its cost.
 
 ### Does memory help? Withholding within each start
 
 - **Design.** In each start a random half of the store's units (drawn per start, seed
-  recorded) is withheld: their facts are left out of the full items, the index and the
-  reminders. A unit is a subject, where facts have one; otherwise a supersede chain, or a
-  single fact. The grooming before the start makes subject names consistent, so one thing is
-  one unit.
+  recorded) is withheld: their articles and facts are left out of the leads, the index,
+  the reminders and search. A unit is an article with the facts only it cites; a fact
+  cited by a delivered and a withheld article counts as delivered. The grooming before
+  the start makes one article per subject, so one thing is one unit.
 - **Outcome.** For every fact, over the whole start: was it found again, acted against,
   or acted in line with? Whether a fact "became relevant" is judged only as a secondary
   measure, because delivering a fact can create the need for it.
@@ -231,9 +264,13 @@ provider; the coding host's capacity is its cost.
   says so. Prediction-powered inference (PPI++, or active statistical inference for a
   weighted sample) is how a later audit would be used, if the owner asks for one.
 - **An anchor set.** The measure gate's 30 owner-labelled pairs, with the owner's blind
-  and checked labels, are re-judged after any change to a judge's prompt or model. Risk
-  R-FALSE-CLAIM: a changed judge silently shifts every later measure; the anchor set
-  shows the shift; it costs one judging pass of 30 pairs.
+  and checked labels, are re-judged with the measure gate's own judge prompt, frozen,
+  whenever a judge's model changes: that shows drift in the model, in the labels the owner
+  gave. The game-neutral labels have no owner labels, by the owner's decision; a change
+  to their prompt is checked by the first two judges' agreement on a frozen set of
+  sealed stretches, re-judged before and after. Risk R-FALSE-CLAIM: a changed judge
+  silently shifts every later measure; both checks show the shift; each costs one
+  judging pass.
 - **Known judge risks**: leniency, missing evidence in long contexts, and errors shared by
   both judges.
 
@@ -241,8 +278,9 @@ provider; the coding host's capacity is its cost.
 
 Made in [player-context.md](player-context.md) with this note:
 
-- The briefing's full items are chosen by the recall model, not by kind; index lines
-  carry the subject and the sighting order, not a place and a game time.
+- The briefing carries the leads of the articles the recall model chooses, not items by
+  kind, and an index line per other article; `player_memory_read` and
+  `player_memory_query` read articles and facts.
 - In the curator's table, the rows for game time and place, the four kinds, and a brief
   aimed at places and goods are replaced by this note's format and grooming.
 - Reminders during play are a new layer between the briefing and the cut.
@@ -258,6 +296,7 @@ in the [owner decision log](../decisions/owner-decisions.md).
 | Store growth: consolidation between admissions and no hard cap (one more session per admission, \$1.16 to \$4.19 inferred), or a byte budget now | Consolidate, no cap | A full grooming and organizing pass by the curator |
 | Delivery: the recall model's choice of full items at each actor's start, then reminders during play (\$0 to build; reminders inferred at two thirds to about the same as the cost of play) | Yes, in that order | Yes, in that order |
 | The cut, now that the pilot has reported | Not yet | Not yet |
+| Articles over facts: an article per subject with a lead, a body citing facts, and links; the briefing carries leads; the player follows links or searches for more (\$0 to build, in the same contract) | Yes | Yes |
 | What replaces the comparison (\$165 to \$208 of play at the measured values) | Simulate withholding (\$0) | Simulate withholding |
 | Judges as the standing measure with a 30 to 60 pair blind audit by the owner per study, or without audits | With audits | Without audits |
 

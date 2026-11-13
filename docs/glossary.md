@@ -15,6 +15,7 @@ not adopted.
 | Actor | One hosted instance of the deciding player in a run. It holds the capability to observe and send input until it finishes or hands off. The curated-player design also uses the word for the playing role. | [Custody contract](contracts/computer-control.md#computer-operations-and-custody) |
 | Admission | The package check that lets a finite run start. Also the run that results, numbered within its lineage. | [Campaign procedure](operations/campaign-run.md) |
 | Arm | One variant in a comparison, named for what differs. A run package freezes it as an operator label. | [Operator labels](operations/campaign-run.md#operator-labels) |
+| Article | A page of the knowledge repository about one subject: a lead a player can act on, a body whose claims cite facts, and links to other articles. The curator writes articles over facts; the briefing carries leads. An article's lead is its opening sentences, not the lead role. | [General memory](design/general-memory.md#articles-over-facts) |
 | Brief | The written instruction a lead gives a delegated agent; it is all that agent knows. An issue's Ready brief is the issue's own description. Older pages also call a change's design summary a change brief. | [Brief template](standards/agents.md#brief-template) |
 | CI profile | The set of checks a pull request gets, chosen from its complete diff. | [CI profiles](workflows/ci-profiles.md) |
 | Claim | Anything the player asserts. It is fallible data and never grants custody or certifies a save. | [Memory and learning](components/memory-learning.md) |
@@ -58,5 +59,5 @@ not adopted.
 | Source | One captured game image, kept with an ID and a hash. A click names a source issued to that actor. | [Custody contract](contracts/computer-control.md#computer-operations-and-custody) |
 | Spectator | What a person watches a run through: a control path with the frame, status and Pause, and a read-only viewer of evaluator views. | [Observer operations](components/observer-operations.md) |
 | Spend limit | The most dollars one run may count as spent, declared in its package. The player host stops the run at it. | [Spend limit](operations/campaign-run.md#spend-limit) |
-| Unit | In a study, the coarsest thing that shares no state: a run, or a lineage when runs share memory. It is the sample size. The curator memory study also counts smaller scoring units. | [S-EVIDENCE](standards/evidence.md) |
+| Unit | In a study, the coarsest thing that shares no state: a run, or a lineage when runs share memory. It is the sample size. The curator memory study also counts smaller scoring units. In the withholding design, a unit is also what is withheld together: an article with the facts only it cites. | [S-EVIDENCE](standards/evidence.md) |
 | Working set | Proposed. The part of curated knowledge put in front of the actor: open commitments, relevant facts and hazards. | [ADR 009](decisions/009-curated-player.md#reaching-the-actor-without-latency-d2) |
