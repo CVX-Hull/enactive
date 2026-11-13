@@ -10,6 +10,7 @@ written there and nowhere else. ADMISSION is a sealed run directory (it holds `a
   python -m tools.memory_measure items RUN --annotators A B --matches FILE
   python -m tools.memory_measure packets judge RUN --runs ADMISSION... [--stretch 200] [--every 3] [--seed N] [--no-item-frames]
   python -m tools.memory_measure sample RUN [--count 20] [--seed N]
+  python -m tools.memory_measure sample RUN --engaged 10 [--seed N]
   python -m tools.memory_measure label-server RUN [--port 8765]
   python -m tools.memory_measure events RUN --judge NAME --model MODEL ANSWER.json...
   python -m tools.memory_measure agreement RUN --judges A B [--third C] [--seed N] [--draws N] [--json]
@@ -23,7 +24,8 @@ What RUN holds:
   judge-packets/<shuffled name>/                one stretch for a judge: manifest.json, instructions.md, items.json,
                                                 frames/ and items/ (each item's first frame, unless --no-item-frames)
   private/judge-mapping.json                    shuffled name -> admission, decisions and source IDs; never in a packet
-  sample.json, labels.json                      the calibration pairs and the owner's labels
+  sample.json, sample-engaged.json, labels.json the random calibration pairs, the engaged supplement (drawn after the
+                                                judges have answered) and the owner's labels: a blind label and a checked one
   events/<judge>.jsonl                          judge-events/1 (harness/evaluation/core/judge.py)
   agreement.json, adjudicated.json, measure.json
 
@@ -37,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import copy
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
@@ -72,6 +75,12 @@ LABEL_TEXT = dict(straight='Went straight to it', missed='Missed it (looked else
     not_engaged='Not engaged', cannot_tell='Cannot tell')
 #: The protocol's thresholds for using the judge (docs/design/memory-screen-protocol.md#the-judge).
 MIN_AGREEMENT, MIN_KAPPA, MIN_OWNER_MATCH, OWNER_PAIRS = 0.80, 0.6, 18, 20
+#: The engaged supplement: pairs outside the random draw that a judge called straight, missed or cannot_tell.
+ENGAGED_PAIRS = 10
+ENGAGED_LABELS = (*judge.TOUCHED, 'cannot_tell')
+ENGAGED_FILE = 'sample-engaged.json'
+OWNER_LABELS_SCHEMA = 'owner-labels/2'
+AGREEMENT_SCHEMA = 'judge-agreement/2'
 #: The appendix's rows: starts per arm, items touched per start, the current player's missed share, judge error.
 APPENDIX_ROWS = ((12, 5, 0.7, 0.1), (12, 5, 0.7, 0.0), (12, 5, 0.7, 0.2), (12, 5, 0.6, 0.1), (12, 3, 0.7, 0.1),
     (12, 8, 0.7, 0.1), (16, 5, 0.7, 0.1), (8, 5, 0.7, 0.1))
@@ -593,6 +602,45 @@ def draw_sample(run: Path, count: int = OWNER_PAIRS, seed: int | None = None) ->
     return value
 
 
+def draw_engaged(run: Path, count: int = ENGAGED_PAIRS, seed: int | None = None) -> dict:
+    """Draw `count` further pairs for the owner: pairs outside the random draw that any judge called straight, missed
+    or cannot_tell. This reads every judge's events, so it is made after the judges have answered; the random draw
+    never reads one. The owner's page serves these pairs after the random ones and does not say which is which."""
+    target = run / ENGAGED_FILE
+    if target.exists():
+        raise MeasureError(f'{target}: already drawn; the engaged supplement is drawn once')
+    if (run / 'labels.json').exists():
+        raise MeasureError(f"{run / 'labels.json'}: the owner has begun labelling; a supplement drawn now would change "
+            'what the labels belong to')
+    drawn = read_json(run / 'sample.json')['pairs']
+    names = sorted(path.stem for path in (run / 'events').glob('*.jsonl')) if (run / 'events').is_dir() else []
+    if not names:
+        raise MeasureError(f"{run / 'events'}: no judge events; the engaged supplement needs the judges' verdicts")
+    called: dict[tuple[str, str], set[str]] = {}
+    for name in names:
+        for event in judge.read_events(run / 'events' / f'{name}.jsonl'):
+            called.setdefault(event.pair, set()).add(event.label)
+    random_pairs = {(pair['start'], pair['item']) for pair in drawn}
+    population = all_pairs(run)
+    pool = [pair for pair in population if pair not in random_pairs and called.get(pair, set()) & set(ENGAGED_LABELS)]
+    if len(pool) < count:
+        raise MeasureError(f'Only {len(pool)} pairs outside the random draw were called {", ".join(ENGAGED_LABELS)} by a '
+            f'judge; cannot draw {count}')
+    seed = secrets.randbits(32) if seed is None else seed
+    chosen = random.Random(seed).sample(pool, count)
+    # The order the owner sees all pairs in, drawn here once: the engaged pairs are among the random ones, not after them.
+    order = random.Random(f'display order {seed}').sample(range(len(drawn) + count), len(drawn) + count)
+    value = dict(schema='engaged-sample/1', seed=seed, count=count, population=len(population), eligible=len(pool),
+        display=dict(seed=seed, rule='a random permutation of the pair indices, seeded with "display order <seed>"',
+            order=order),
+        labels=list(ENGAGED_LABELS), judges=names,
+        events_sha256={name: file_sha256(run / 'events' / f'{name}.jsonl') for name in names},
+        random_sample_sha256=file_sha256(run / 'sample.json'), items_sha256=load_items(run)[1],
+        pairs=[dict(index=len(drawn) + number, start=start, item=item) for number, (start, item) in enumerate(chosen)])
+    write_json(target, value, once=True)
+    return value
+
+
 # --- statistics -------------------------------------------------------------------------------------------------------
 
 def cohen_kappa(first: Sequence[int], second: Sequence[int], categories: int = len(LABELS)) -> float | None:
@@ -676,6 +724,43 @@ def pair_statistics(first: Sequence[int], second: Sequence[int], seed: int, draw
         cannot_tell=dict(value=float(((a == cannot).mean() + (b == cannot).mean()) / 2), interval=percentile_interval(share)))
 
 
+ENGAGED_CAVEAT = ('The engaged pairs cannot contain a pair every judge called not engaged, so the pooled error is '
+    'conditional on a judge noticing engagement and is likely low.')
+CHECKED_NOTE = ('not the calibration: the owner gave these after the judges\' evidence was shown, so they are not '
+    'independent of it')
+
+
+def read_owner(run: Path) -> tuple[list[dict], list[dict], dict[int, dict]]:
+    """The random pairs, the engaged pairs and the owner's entry for each labelled pair, by index. Each entry holds
+    `blind` and `checked` (null until the owner has checked the pair). With no labels file there are no entries."""
+    random_pairs = read_json(run / 'sample.json')['pairs'] if (run / 'sample.json').is_file() else []
+    engaged_pairs = read_json(run / ENGAGED_FILE)['pairs'] if (run / ENGAGED_FILE).is_file() else []
+    entries: dict[int, dict] = {}
+    if (run / 'labels.json').is_file():
+        saved = read_json(run / 'labels.json')
+        if saved.get('schema') != OWNER_LABELS_SCHEMA:
+            raise MeasureError(f"{run / 'labels.json'}: not {OWNER_LABELS_SCHEMA}; labels of another format are not read")
+        entries = {int(index): entry for index, entry in saved['labels'].items()}
+    return random_pairs, engaged_pairs, entries
+
+
+def tally_owner(pairs: Sequence[dict], entries: dict[int, dict], adjudicated: dict, which: str) -> tuple:
+    """The owner's `which` label ('blind' or 'checked') against the adjudicated label over `pairs`:
+    [matched, compared] over every compared pair, [matched, compared] over those the owner or the judges called
+    straight or missed, and the count of pairs the owner called not_engaged that were adjudicated straight or missed."""
+    whole, touched, false_engagement = [0, 0], [0, 0], 0
+    for pair in pairs:
+        given = (entries.get(pair['index']) or {}).get(which)
+        verdict = adjudicated[(pair['start'], pair['item'])]
+        if given is None or verdict is None:
+            continue
+        for part in (whole, touched) if given in judge.TOUCHED or verdict in judge.TOUCHED else (whole,):
+            part[0] += given == verdict
+            part[1] += 1
+        false_engagement += given == 'not_engaged' and verdict in judge.TOUCHED
+    return whole, touched, false_engagement
+
+
 def agreement(run: Path, judges: Sequence[str], third: str | None = None, seed: int | None = None,
               draws: int = 10000) -> dict:
     """The two judges' agreement, the adjudicated labels and their match with the owner's labels."""
@@ -703,32 +788,34 @@ def agreement(run: Path, judges: Sequence[str], third: str | None = None, seed: 
     write_json(run / 'adjudicated.json', dict(schema='judge-adjudicated/1', judges=list(judges), third=third,
         unresolved=len(unresolved), third_alone=sum(row['by'] == 'third_alone' for row in rows), pairs=rows))
     adjudicated = {(row['start'], row['item']): row['label'] for row in rows}
-    # [matched, compared] over every compared pair, and over those the owner or the judges called straight or missed
-    whole, touched, false_engagement = [0, 0], [0, 0], 0
-    if (run / 'labels.json').is_file() and (run / 'sample.json').is_file():
-        owner = read_json(run / 'labels.json')['labels']
-        for pair in read_json(run / 'sample.json')['pairs']:
-            given = owner.get(str(pair['index']))
-            verdict = adjudicated[(pair['start'], pair['item'])]
-            if given is None or verdict is None:
-                continue
-            engaged = given['label'] in judge.TOUCHED or verdict in judge.TOUCHED
-            for tally in (whole, touched) if engaged else (whole,):
-                tally[0] += given['label'] == verdict
-                tally[1] += 1
-            false_engagement += given['label'] == 'not_engaged' and verdict in judge.TOUCHED
+    random_pairs, engaged_pairs, owner_entries = read_owner(run)
+    # The calibration is the owner's blind labels over the random pairs. The engaged pairs, and the owner's checked
+    # labels (given after seeing the judges' evidence), are reported beside it and never counted in it.
+    whole, touched, false_engagement = tally_owner(random_pairs, owner_entries, adjudicated, 'blind')
+    engaged_whole, engaged_touched, engaged_false = tally_owner(engaged_pairs, owner_entries, adjudicated, 'blind')
+    checked_random = tally_owner(random_pairs, owner_entries, adjudicated, 'checked')[0]
+    checked_engaged = tally_owner(engaged_pairs, owner_entries, adjudicated, 'checked')[0]
+    both = [owner_entries[pair['index']] for pair in random_pairs + engaged_pairs if pair['index'] in owner_entries]
     matched, labelled = whole
     decided = labelled == OWNER_PAIRS
     passes = dict(agreement=report['agreement']['value'] >= MIN_AGREEMENT,
         kappa=report['kappa']['value'] is not None and report['kappa']['value'] >= MIN_KAPPA,
         owner=matched >= MIN_OWNER_MATCH if decided else None)
-    report.update(schema='judge-agreement/1', judges=list(judges), third=third,
+    report.update(schema=AGREEMENT_SCHEMA, judges=list(judges), third=third,
         bootstrap=dict(seed=seed, draws=draws, note=BOOTSTRAP_NOTE),
         cannot_tell_of_touched={judges[0]: cannot_tell_of_touched(first[pair] for pair in pairs),
             judges[1]: cannot_tell_of_touched(second[pair] for pair in pairs),
             'adjudicated': cannot_tell_of_touched(row['label'] for row in rows if row['label'] is not None)},
         owner=dict(owner_match(matched, labelled), of=OWNER_PAIRS, touched=owner_match(*touched),
-            false_engagement=int(false_engagement)),
+            false_engagement=int(false_engagement), basis='blind labels, the first click of each pair',
+            engaged=dict(owner_match(*engaged_whole), of=len(engaged_pairs), touched=owner_match(*engaged_touched),
+                false_engagement=int(engaged_false)),
+            # the error `measure` sizes the comparison with: random and engaged pairs together
+            touched_all=owner_match(touched[0] + engaged_touched[0], touched[1] + engaged_touched[1]),
+            checked=dict(note=CHECKED_NOTE, labelled=len(both),
+                changed=sum(entry.get('checked') not in (None, entry['blind']) for entry in both),
+                checked_pairs=sum(entry.get('checked') is not None for entry in both),
+                random=owner_match(*checked_random), engaged=owner_match(*checked_engaged))),
         disputed=[dict(start=row['start'], item=row['item'], packet=packets[row['start']], labels=row['labels'],
             adjudicated=row['label'], by=row['by']) for row in rows if row['by'] != 'agreement'],
         third_alone=sum(row['by'] == 'third_alone' for row in rows),
@@ -745,7 +832,8 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
     """Known items touched per stretch length and the missed share among touched, from the adjudicated labels.
     Items touched carry an exact Poisson interval on the total count over the total decisions. The percentile
     bootstrap over stretches is rough: a handful of stretches from fewer admissions is all there is to resample.
-    The judge's error for sizing comes from the owner comparison in `agreement.json`, with its interval."""
+    The judge's error for sizing comes from the owner comparison in `agreement.json`, with its interval: the owner's
+    blind labels over every labelled pair, random and engaged, that the owner or the judges called straight or missed."""
     adjudicated = read_json(run / 'adjudicated.json')
     if adjudicated['unresolved']:
         raise MeasureError(f"{adjudicated['unresolved']} pairs are not adjudicated; run `agreement` with --third")
@@ -780,6 +868,8 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
     calibration = error = None
     if (run / 'agreement.json').is_file():
         found = read_json(run / 'agreement.json')
+        if found.get('schema') != AGREEMENT_SCHEMA:
+            raise MeasureError(f"{run / 'agreement.json'}: not {AGREEMENT_SCHEMA}; run `agreement` again")
         owner = found['owner']
         calibration = {'pass': found['pass'], 'passes': found['passes'], 'agreement': found['agreement']['value'],
             'kappa': found['kappa']['value'], 'owner_matched': owner['matched'], 'owner_compared': owner['compared'],
@@ -792,8 +882,10 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
             return dict(compared=part['compared'], differ=part['compared'] - part['matched'],
                 value=1 - part['matched'] / part['compared'], interval=[1 - part['interval'][1], 1 - part['interval'][0]])
 
-        error = dict(all_pairs=wrong(owner), touched_pairs=wrong(owner['touched']),
-            touched_measured=owner['touched']['compared'] >= MIN_TOUCHED_SAMPLED, false_engagement=owner['false_engagement'])
+        # all_pairs is the random draw's blind labels; touched_pairs adds the engaged pairs, also on blind labels
+        error = dict(all_pairs=wrong(owner), touched_pairs=wrong(owner['touched_all']), touched_random=wrong(owner['touched']),
+            touched_measured=owner['touched_all']['compared'] >= MIN_TOUCHED_SAMPLED,
+            false_engagement=owner['false_engagement'])
     report = dict(schema='memory-measure/1', per_decisions=per, bootstrap=dict(seed=seed, draws=draws),
         labels={label: labels[label] for label in LABELS}, pairs=len(adjudicated['pairs']),
         cannot_tell_share=labels['cannot_tell'] / len(adjudicated['pairs']) if adjudicated['pairs'] else None,
@@ -924,57 +1016,154 @@ def describe(batches: Sequence[Sequence[dict]]) -> str:
     return ' '.join(word if count == 1 else f'{word} ×{count}' for word, count in words)
 
 
+class LabelConflict(MeasureError):
+    """A label step out of order: a second blind label for a pair, or a check before the blind label."""
+
+
 class LabelStore:
     """The sampled pairs with their frames, and the owner's labels in one JSON file rewritten at every click.
-    It reads the sample, the item list and the packets; it never opens a judge's answers or events."""
+
+    The owner labels in two passes. Pass one: a blind label for every pair, made on the item and the stretch's
+    frames alone, recorded once and never changed, with nothing of the judges' work anywhere. Pass two starts only
+    when every pair has a blind label: the owner sees each pair's judge evidence and keeps the answer or changes it,
+    which is the checked label. The judges' verdicts, notes and cited frames are read when the server starts and are
+    held here; `state` releases them only once every pair has a blind label.
+
+    The page names a pair by its position in a display order drawn once with the engaged supplement (the random and
+    the engaged pairs are interleaved), and every URL carries the position; only the server maps a position to the
+    pair's index. Labels are keyed by index."""
 
     def __init__(self, run: Path) -> None:
         self.run, self.path, self.lock = run, run / 'labels.json', threading.Lock()
         sample = read_json(run / 'sample.json')
         self.sample_sha = file_sha256(run / 'sample.json')
+        sampled, self.engaged_sha, order = list(sample['pairs']), None, None
+        if (run / ENGAGED_FILE).is_file():
+            engaged = read_json(run / ENGAGED_FILE)
+            self.engaged_sha = file_sha256(run / ENGAGED_FILE)
+            if engaged.get('random_sample_sha256') != self.sample_sha:
+                raise MeasureError(f'{run / ENGAGED_FILE}: drawn against another random sample')
+            sampled += engaged['pairs']
+            order = engaged['display']['order']
+        if [pair['index'] for pair in sampled] != list(range(len(sampled))):
+            raise MeasureError(f'{run}: the sampled pairs must be numbered 0, 1, 2, ... in order')
+        #: Position on the page -> pair index. With no supplement the random pairs are shown in their order.
+        self.order = list(range(len(sampled))) if order is None else order
+        if sorted(self.order) != list(range(len(sampled))):
+            raise MeasureError(f'{run / ENGAGED_FILE}: the display order is not a permutation of the {len(sampled)} pairs')
+        position_of = {index: position for position, index in enumerate(self.order)}
         items = {item['id']: item for item in load_items(run)[0]}
         packets = {packet['start']: packet for packet in load_mapping(run)['packets']}
         self.pairs, self.files = [], {}
-        for pair in sample['pairs']:
+        for pair in sampled:
             item, packet = items[pair['item']], packets[pair['start']]
             directory = run / 'judge-packets' / packet['packet']
-            index = pair['index']
-            self.files[f'/item/{index}.png'] = run / item['first_frame_file']
+            index, position = pair['index'], position_of[pair['index']]
+            self.files[f'/item/{position}.png'] = run / item['first_frame_file']
             frames = []
             for row in read_json(directory / 'manifest.json')['frames']:
-                self.files[f"/frame/{index}/{row['frame']}.png"] = directory / row['file']
-                frames.append(dict(name=row['frame'], image=f"/frame/{index}/{row['frame']}.png",
+                self.files[f"/frame/{position}/{row['frame']}.png"] = directory / row['file']
+                frames.append(dict(name=row['frame'], image=f"/frame/{position}/{row['frame']}.png",
                     decision=row['decision'], inputs=' · '.join(row['inputs_before'])))
-            with Image.open(self.files[f'/item/{index}.png']) as shown:  # the page reserves each image's space with it
+            with Image.open(self.files[f'/item/{position}.png']) as shown:  # the page reserves each image's space with it
                 aspect = f'{shown.width} / {shown.height}'
-            self.pairs.append(dict(index=index, start=pair['start'], item=pair['item'], decisions=packet['decisions'],
-                short=packet['short'], place=item['place'], what=item['what'], image=f'/item/{index}.png', aspect=aspect,
-                frames=frames))
-        self.saved = dict(schema='owner-labels/1', sample_sha256=self.sample_sha, labels={}, history=[])
+            self.pairs.append(dict(index=index, position=position, start=pair['start'], item=pair['item'],
+                decisions=packet['decisions'], short=packet['short'], place=item['place'], what=item['what'],
+                image=f'/item/{position}.png', aspect=aspect, frames=frames))
+        self.evidence = self.load_evidence(packets)
+        self.saved = dict(schema=OWNER_LABELS_SCHEMA, sample_sha256=self.sample_sha, engaged_sha256=self.engaged_sha,
+            labels={}, history=[])
         if self.path.is_file():
             saved = read_json(self.path)
-            if not isinstance(saved, dict) or saved.get('sample_sha256') != self.sample_sha:
+            if not isinstance(saved, dict) or saved.get('schema') != OWNER_LABELS_SCHEMA:
+                raise MeasureError(f'{self.path}: not {OWNER_LABELS_SCHEMA}; labels of another format are not read')
+            if saved.get('sample_sha256') != self.sample_sha or saved.get('engaged_sha256') != self.engaged_sha:
                 raise MeasureError(f'{self.path}: holds labels for another sample')
             self.saved = saved
 
-    def state(self) -> dict:
-        """What the page shows: no admission, packet name or verdict."""
-        with self.lock:
-            labels = {index: entry['label'] for index, entry in self.saved['labels'].items()}
-        return dict(total=len(self.pairs), labels=labels, choices=[[label, LABEL_TEXT[label]] for label in LABELS],
-            pairs=[{key: pair[key] for key in ('index', 'place', 'what', 'image', 'aspect', 'decisions', 'short', 'frames')}
-                for pair in self.pairs])
+    def load_evidence(self, packets: dict) -> dict[int, dict]:
+        """What each pair shows after its blind label: the adjudicated label and each judge's label, note and
+        cited screens, by the number the page gives the screen. It comes from the `agreement` command's
+        `adjudicated.json`, the judges' events (label and cited frames) and, for the note, the lead's saved answers."""
+        path = self.run / 'adjudicated.json'
+        if not path.is_file():
+            raise MeasureError(f'{path}: missing; run `events` for each judge and `agreement` before the labelling page, '
+                'which shows the judges\' evidence after the owner\'s first click on each pair')
+        adjudicated = read_json(path)
+        if adjudicated.get('schema') != 'judge-adjudicated/1':
+            raise MeasureError(f'{path}: not a judge-adjudicated/1 file')
+        names = [*adjudicated['judges'], *([adjudicated['third']] if adjudicated.get('third') else [])]
+        events = {name: {event.pair: event for event in judge.read_events(self.run / 'events' / f'{name}.jsonl')}
+            for name in names}
+        rows = {(row['start'], row['item']): row for row in adjudicated['pairs']}
+        notes: dict[Path, dict] = {}
 
-    def record(self, index: object, label: object) -> None:
-        if type(index) is not int or not 0 <= index < len(self.pairs) or label not in LABELS:
-            raise MeasureError('Unknown pair or label')
-        pair = self.pairs[index]
-        entry = dict(index=index, start=pair['start'], item=pair['item'], label=label,
-            time=datetime.now(timezone.utc).isoformat(timespec='seconds'))
+        def note(name: str, packet: str, item: str) -> str | None:
+            answer = self.run / 'answers' / name / f'{packet}.json'
+            if answer not in notes:
+                given = read_json(answer)['answers'] if answer.is_file() else []
+                notes[answer] = {row['item']: row.get('note') for row in given if isinstance(row, dict)}
+            value = notes[answer].get(item)
+            return value.strip() if isinstance(value, str) and value.strip() else None
+
+        shown = {}
+        for pair in self.pairs:
+            key, packet = (pair['start'], pair['item']), packets[pair['start']]
+            screen = {packet['frames'][frame['name']]: at for at, frame in enumerate(pair['frames'], 1)}
+            judges = [dict(name=name, label=events[name][key].label, note=note(name, packet['packet'], pair['item']),
+                screens=sorted(screen[source] for source in events[name][key].cited_frames if source in screen))
+                for name in names if key in events[name]]
+            shown[pair['index']] = dict(adjudicated=rows[key]['label'], by=rows[key]['by'], judges=judges,
+                screens=sorted({number for entry in judges for number in entry['screens']}))
+        return shown
+
+    def state(self) -> dict:
+        """What the page shows, by display position. The judges' evidence is in it only once every pair has a blind
+        label (`pass_two`); until then no response holds a verdict, a note or a cited frame, for any pair."""
         with self.lock:
-            self.saved['labels'][str(index)] = entry
-            self.saved['history'].append(entry)
-            write_json(self.path, self.saved)
+            labels = {index: entry for index, entry in self.saved['labels'].items()}
+        order = [str(index) for index in self.order]
+        blind = {str(position): labels[index]['blind'] for position, index in enumerate(order) if index in labels}
+        checked = {str(position): labels[index]['checked'] for position, index in enumerate(order)
+            if index in labels and labels[index]['checked']}
+        pass_two = len(blind) == len(self.pairs)
+        return dict(total=len(self.pairs), blind=blind, checked=checked, pass_two=pass_two,
+            reveals={str(position): self.evidence[index] for position, index in enumerate(self.order)} if pass_two else {},
+            choices=[[label, LABEL_TEXT[label]] for label in LABELS],
+            pairs=[{key: self.pairs[index][key] for key in ('position', 'place', 'what', 'image', 'aspect', 'decisions',
+                'short', 'frames')} for index in self.order])
+
+    def record(self, position: object, step: object, label: object = None, keep: object = False) -> None:
+        """Record the blind label (once) or the checked label of the pair at display `position`. `keep` checks the pair
+        with its blind label. A checked label equal to the one already recorded changes nothing, so a repeated click
+        is one action. The new labels are built and written before they replace the held ones, so a write that fails
+        leaves both as they were."""
+        if type(position) is not int or not 0 <= position < len(self.pairs) or step not in ('blind', 'checked') \
+                or type(keep) is not bool or keep and (step != 'checked' or label is not None) \
+                or not keep and label not in LABELS:
+            raise MeasureError('Unknown pair, step or label')
+        index = self.order[position]
+        pair, now = self.pairs[index], datetime.now(timezone.utc).isoformat(timespec='seconds')
+        where = dict(index=index, start=pair['start'], item=pair['item'])
+        with self.lock:
+            saved = copy.deepcopy(self.saved)
+            entry = saved['labels'].get(str(index))
+            if step == 'blind':
+                if entry is not None:
+                    raise LabelConflict('The first answer is recorded and is not changed')
+                saved['labels'][str(index)] = dict(where, blind=label, blind_time=now, checked=None, checked_time=None)
+                saved['history'].append(dict(where, step='blind', label=label, time=now))
+            else:
+                if len(saved['labels']) < len(self.pairs):
+                    raise LabelConflict('The second pass starts when every pair has a blind label')
+                label = entry['blind'] if keep else label
+                if entry['checked'] == label:
+                    return
+                entry.update(checked=label, checked_time=now)
+                saved['history'].append(dict(where, step='keep' if label == entry['blind'] else 'change', label=label,
+                    time=now))
+            write_json(self.path, saved)
+            self.saved = saved
 
 
 def label_server(run: Path, port: int = 8765) -> ThreadingHTTPServer:
@@ -1013,9 +1202,11 @@ def label_server(run: Path, port: int = 8765) -> ThreadingHTTPServer:
                 return self.json(403, dict(error='labels are accepted on 127.0.0.1 or localhost only'))
             try:
                 body = json.loads(self.rfile.read(min(int(self.headers.get('Content-Length') or 0), 4096)))
-                store.record(body.get('index'), body.get('label'))
+                store.record(body.get('position'), body.get('step'), body.get('label'), body.get('keep', False))
+            except LabelConflict as error:
+                return self.json(409, dict(error=str(error)))
             except (ValueError, AttributeError):
-                return self.json(400, dict(error='unknown pair or label'))
+                return self.json(400, dict(error='unknown pair, step or label'))
             self.json(200, store.state())
 
         def log_message(self, *_) -> None:
@@ -1072,9 +1263,20 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   border-color: var(--accent); }
 .choices button.chosen { background: var(--chosen); border-color: var(--chosen); }
 .choices button.chosen::after { content: " \\2713"; }
+#keep { display: block; width: 100%; min-height: 44px; margin: 0 0 8px; font-size: 17px; font-weight: 600;
+  background: var(--chosen); color: var(--on-accent); border-color: var(--chosen); }
+#reveal ul { margin: 6px 0; padding-left: 20px; }
+#reveal li { margin-bottom: 4px; overflow-wrap: anywhere; }
+#reveal .note { color: var(--muted); }
+.strip figure.cited img { outline: 4px solid var(--chosen); outline-offset: -2px; }
+.strip figure.cited figcaption { color: var(--chosen); font-weight: 600; }
 #error { color: var(--warn); font-weight: 600; margin: 8px 0 0; }
-#done { text-align: center; padding: 18vh 0; }
-#done h1 { font-size: 34px; margin: 0 0 8px; }
+#done, #intro { text-align: center; padding: 14vh 0; }
+#done h1, #intro h1 { font-size: 34px; margin: 0 0 8px; }
+#intro h2 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--ink); margin: 20px 0 8px; }
+#intro button { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-size: 18px;
+  font-weight: 600; min-height: 56px; padding: 8px 28px; }
+#pass { margin: 0 0 6px; font-weight: 700; color: var(--accent); }
 #zoom { position: fixed; inset: 0; background: rgba(0, 0, 0, .86); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px; padding: 12px; z-index: 5; }
 #zoom img { width: auto; max-width: 100%; max-height: 78vh; cursor: zoom-out; }
@@ -1090,9 +1292,10 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     <header>
       <button id="back" type="button">&larr; Back</button>
       <h1 id="count"></h1>
-      <button id="forward" type="button">Keep answer &rarr;</button>
+      <button id="forward" type="button">Next &rarr;</button>
     </header>
     <progress id="progress" value="0" max="1"></progress>
+    <div id="pass"></div>
     <section>
       <h2>The known item</h2>
       <div class="item">
@@ -1100,16 +1303,30 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
         <figure><img id="item-image" alt="The frame that first shows the item"><figcaption>The frame that first shows it. Click to enlarge.</figcaption></figure>
       </div>
     </section>
+    <section id="reveal" hidden>
+      <h2>What the judges said</h2>
+      <p id="reveal-verdict"></p>
+      <ul id="reveal-judges"></ul>
+      <div class="hint" id="reveal-screens"></div>
+    </section>
     <section>
       <h2>What the player did in this stretch</h2>
       <div class="hint" id="hint"></div>
       <div class="strip" id="strip"></div>
     </section>
     <div class="answers" id="answers"><div>
-      <p>What did the player do about this item?</p>
+      <p id="prompt"></p>
+      <button id="keep" type="button" hidden></button>
       <div class="choices" id="choices"></div>
       <div id="error" hidden>Not saved: the label server did not answer. Nothing is lost; click again.</div>
     </div></div>
+  </div>
+  <div id="intro" hidden>
+    <h1>Pass 1 of 2 is done</h1>
+    <p>Every pair has your own answer, and all of them are saved.</p>
+    <h2>Pass 2 of 2: check against the judges</h2>
+    <p>You will see each pair again with what the judges said, and keep your answer or change it.</p>
+    <button id="start-pass-two" type="button">Start pass 2</button>
   </div>
   <div id="done" hidden>
     <h1 id="done-title"></h1>
@@ -1124,12 +1341,45 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </div>
 <script>
 'use strict';
-let state = null, at = 0, zoomed = [], zoomAt = 0, ready = 0;
+let state = null, at = 0, zoomed = [], zoomAt = 0, ready = 0, sending = false, started = false;
 const el = id => document.getElementById(id);
 
+// Two passes. Pass one: a blind label for every pair, and no judge evidence anywhere on the page (the server sends
+// none until every pair has a blind label). Pass two starts when the owner presses Start: each pair again with the
+// evidence, kept or changed. A pair is in one phase: 'blind' (pass one, to answer), 'recorded' (pass one, answered
+// and fixed), 'check' (pass two, to keep or change) or 'done' (pass two, checked). `at` is a display position.
+function phaseOf(i) {
+  if (!state.pass_two) return i in state.blind ? 'recorded' : 'blind';
+  return i in state.checked ? 'done' : 'check';
+}
+
 function firstOpen() {
-  for (let i = 0; i < state.total; i++) if (!(i in state.labels)) return i;
+  for (let i = 0; i < state.total; i++) if (phaseOf(i) === 'blind' || phaseOf(i) === 'check') return i;
   return state.total;
+}
+
+function wordsOf(label) { return state.choices.find(choice => choice[0] === label)[1]; }
+
+const BY = {agreement: 'both judges agree', third: 'settled by the third judge',
+  third_alone: 'the third judge chose a label neither of the others gave'};
+
+function showReveal(reveal) {
+  el('reveal-verdict').textContent = reveal.adjudicated
+    ? 'Adjudicated label: ' + wordsOf(reveal.adjudicated) + ' (' + BY[reveal.by] + ').'
+    : 'Not settled: the two judges differ and no third verdict is saved for this pair.';
+  const list = el('reveal-judges');
+  list.replaceChildren();
+  for (const entry of reveal.judges) {
+    const item = document.createElement('li'), name = document.createElement('b'), note = document.createElement('span');
+    name.textContent = entry.name;
+    note.className = 'note';
+    note.textContent = entry.note ? ' \\u2014 \\u201c' + entry.note + '\\u201d' : '';
+    item.append(name, ': ' + wordsOf(entry.label) + (entry.screens.length ? ', cited screens ' + entry.screens.join(', ') : ''), note);
+    list.append(item);
+  }
+  el('reveal-screens').textContent = reveal.screens.length
+    ? 'Screens a judge cited: ' + reveal.screens.join(', ') + '. They are outlined in the strip below.'
+    : 'No judge cited a screen for this pair.';
 }
 
 function showZoom() {
@@ -1150,18 +1400,35 @@ function openZoom(list, index) { if (Date.now() < ready) return; zoomed = list; 
 function closeZoom() { el('zoom').hidden = true; ready = Date.now() + 400; }
 
 function render() {
-  const done = at >= state.total;
-  el('work').hidden = done;
+  const intro = state.pass_two && !started, done = state.pass_two && started && at >= state.total;
+  el('work').hidden = intro || done;
+  el('intro').hidden = !intro;
   el('done').hidden = !done;
   el('zoom').hidden = true;
   el('error').hidden = true;
-  if (done) { el('done-title').textContent = 'All ' + state.total + ' done'; return; }
+  ready = Date.now() + 400;  // a second click of a double-click must not land on what has just appeared
+  if (intro || done) { el('done-title').textContent = 'All ' + state.total + ' done'; return; }
   const pair = state.pairs[at];
   el('count').textContent = 'Pair ' + (at + 1) + ' of ' + state.total;
+  el('pass').textContent = state.pass_two ? 'Pass 2 of 2: check against the judges' : 'Pass 1 of 2: your own answer';
   el('progress').max = state.total;
-  el('progress').value = Object.keys(state.labels).length;
+  el('progress').value = Object.keys(state.pass_two ? state.checked : state.blind).length;
+  const phase = phaseOf(at), reveal = state.reveals[at];
   el('back').disabled = at === 0;
-  el('forward').hidden = !(at in state.labels);
+  el('forward').hidden = phase !== 'done' && phase !== 'recorded';
+  el('keep').hidden = phase !== 'check';
+  el('keep').disabled = false;
+  el('reveal').hidden = !reveal;
+  if (reveal) showReveal(reveal);
+  const citedBy = number => reveal ? reveal.judges.filter(entry => entry.screens.includes(number)).map(entry => entry.name) : [];
+  const first = state.blind[at], last = state.checked[at];
+  el('prompt').textContent = phase === 'blind' ? 'What did the player do about this item?'
+    : phase === 'recorded' ? 'Your answer is \\u201c' + wordsOf(first) + '\\u201d. It is saved and is not changed in this pass.'
+    : phase === 'check' ? 'You answered \\u201c' + wordsOf(first) + '\\u201d. Keep your answer, or change it?'
+    : 'Your answer is \\u201c' + wordsOf(last) + '\\u201d' + (last === first ? '' : ' (you first answered \\u201c' + wordsOf(first) + '\\u201d)')
+      + '. Click another to change it.';
+  el('keep').textContent = phase === 'check' ? 'Keep my answer: ' + wordsOf(first) : '';
+  el('keep').onclick = () => submit({position: at, step: 'checked', keep: true});
   el('what').textContent = pair.what;
   el('place').textContent = pair.place;
   el('item-image').src = pair.image;
@@ -1170,7 +1437,8 @@ function render() {
   el('hint').textContent = pair.frames.length + ' screens from ' + pair.decisions + ' decisions, oldest first: every third changed screen. '
     + 'Under each screen is what the player pressed before it. Click a screen to enlarge it.';
   const shots = pair.frames.map((frame, i) => ({image: frame.image,
-    text: 'Screen ' + (i + 1) + ' of ' + pair.frames.length + (frame.inputs ? ' \\u2014 before it: ' + frame.inputs : '')}));
+    text: 'Screen ' + (i + 1) + ' of ' + pair.frames.length + (citedBy(i + 1).length ? ' \\u2014 cited by ' + citedBy(i + 1).join(', ') : '')
+      + (frame.inputs ? ' \\u2014 before it: ' + frame.inputs : '')}));
   const strip = el('strip');
   strip.replaceChildren();
   strip.scrollTop = 0;
@@ -1183,7 +1451,9 @@ function render() {
     image.alt = 'Screen ' + (i + 1);
     image.onclick = () => openZoom(shots, i);
     number.textContent = String(i + 1);
-    caption.append(number, frame.inputs ? ' \\u00b7 ' + frame.inputs : '');
+    const by = citedBy(i + 1);
+    figure.className = by.length ? 'cited' : '';
+    caption.append(number, (by.length ? ' \\u00b7 cited by ' + by.join(', ') : '') + (frame.inputs ? ' \\u00b7 ' + frame.inputs : ''));
     figure.append(image, caption);
     strip.append(figure);
   });
@@ -1193,37 +1463,64 @@ function render() {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = words;
-    button.className = state.labels[at] === label ? 'chosen' : '';
-    button.onclick = () => choose(label);
+    button.className = (phase === 'done' ? last : phase === 'blind' ? null : first) === label ? 'chosen' : '';
+    button.disabled = phase === 'recorded';
+    button.onclick = () => submit({position: at, step: phase === 'blind' ? 'blind' : 'checked', label: label});
     choices.append(button);
   }
   document.querySelector('main').style.paddingBottom = (el('answers').offsetHeight + 16) + 'px';
   ready = Date.now() + 400;  // a second click of a double-click must not label the pair that has just appeared
 }
 
-async function choose(label) {
-  if (Date.now() < ready) return;
-  for (const button of el('choices').children) button.disabled = true;
+function busy(on) {
+  for (const button of [...el('choices').children, el('keep')]) button.disabled = on;
+}
+
+// One click is one request: the guard drops the second click of a double-click, and the buttons stay disabled until the
+// server has answered. Either label moves on to the next pair; after the last blind label the page shows pass two's start.
+async function submit(body) {
+  if (sending || Date.now() < ready) return;
+  sending = true;
+  busy(true);
   try {
     const response = await fetch('/api/label', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({index: at, label: label})});
+      body: JSON.stringify(body)});
+    if (response.status === 409) {  // another request got there first: show what the server holds
+      state = await (await fetch('/api/state')).json();
+      at = firstOpen();
+      render();
+      return;
+    }
     if (!response.ok) throw new Error('refused');
     state = await response.json();
   } catch (error) {
-    for (const button of el('choices').children) button.disabled = false;
+    busy(false);
     el('error').hidden = false;
     return;
+  } finally {
+    sending = false;
   }
   at += 1;
   render();
   window.scrollTo(0, 0);
 }
 
-function step(by) { at = Math.max(0, Math.min(state.total, at + by)); render(); window.scrollTo(0, 0); }
+function step(by) {
+  at = Math.max(0, Math.min(state.total, at + by));
+  if (at >= state.total && !state.pass_two) at = firstOpen();  // past the end in pass one: the first unanswered pair
+  render(); window.scrollTo(0, 0);
+}
 
 el('back').onclick = () => step(-1);
 el('done-back').onclick = () => step(-1);
 el('forward').onclick = () => step(1);
+el('start-pass-two').onclick = () => {
+  if (Date.now() < ready) return;
+  started = true;
+  at = firstOpen();
+  render();
+  window.scrollTo(0, 0);
+};
 el('zoom-close').onclick = closeZoom;
 el('zoom-image').onclick = closeZoom;
 el('zoom').onclick = event => { if (event.target === el('zoom')) closeZoom(); };
@@ -1231,7 +1528,12 @@ el('zoom-previous').onclick = () => { zoomAt -= 1; showZoom(); };
 el('zoom-next').onclick = () => { zoomAt += 1; showZoom(); };
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeZoom(); });
 
-fetch('/api/state').then(response => response.json()).then(value => { state = value; at = firstOpen(); render(); });
+fetch('/api/state').then(response => response.json()).then(value => {
+  state = value;
+  started = Object.keys(state.checked).length > 0;  // a reload in pass two goes on; one before it shows pass two's start
+  at = firstOpen();
+  render();
+});
 </script>
 </body>
 </html>
@@ -1270,6 +1572,15 @@ def render_agreement(report: dict) -> str:
         + (f" (exact 95% interval {touched['interval'][0]:.3f} to {touched['interval'][1]:.3f})" if touched['interval'] else ''),
         f"  pairs the owner called not_engaged that were adjudicated straight or missed (false engagement): "
         f"{owner['false_engagement']}",
+        f"  (the calibration uses the owner's blind labels only: the first click on each pair, before any judge's work is shown)",
+        f"engaged pairs, not in the calibration ({owner['engaged']['of']} drawn): blind labels against the adjudicated label: "
+        f"{_matched(owner['engaged'])}; on pairs the owner or the judges called straight or missed: "
+        f"{_matched(owner['engaged']['touched'])}; false engagement {owner['engaged']['false_engagement']}",
+        f"touched-items error that `measure` uses, random and engaged pairs together (blind labels): "
+        f"{_matched(owner['touched_all'])}; random pairs alone: {_matched(owner['touched'])}. {ENGAGED_CAVEAT}",
+        f"checked labels, {owner['checked']['note']}: {owner['checked']['changed']} of {owner['checked']['checked_pairs']} "
+        f"checked pairs differ from the blind label; checked labels against the adjudicated label: random pairs "
+        f"{_matched(owner['checked']['random'])}; engaged pairs {_matched(owner['checked']['engaged'])}",
         f"disputed pairs {len(report['disputed'])}, not yet adjudicated {report['unresolved']}"
         + (f"; packets for a third judge: {' '.join(report['third_judge_packets'])}" if report['third_judge_packets'] else ''),
         f"pairs the third judge settled with a label neither judge gave (third_alone): {report['third_alone']}"]
@@ -1277,6 +1588,11 @@ def render_agreement(report: dict) -> str:
         for row in report['disputed'] if row['by'] == 'third_alone')
     lines.append(f"judge calibration: {_verdict(report['pass'])}")
     return '\n'.join(lines)
+
+
+def _matched(part: dict) -> str:
+    return f"{part['matched']} of {part['compared']} match" + (
+        f" (exact 95% interval {part['interval'][0]:.3f} to {part['interval'][1]:.3f})" if part['interval'] else '')
 
 
 def _share(part: dict) -> str:
@@ -1322,13 +1638,16 @@ def render_measure(report: dict) -> str:
     if error is None or error['all_pairs'] is None:
         lines.append('judge error: no owner comparison yet (run `agreement` after the owner has labelled); --wrong is left as F below')
     else:
-        lines.append(f"judge against the owner, all compared pairs: {_error(error['all_pairs'])}")
+        lines.append(f"judge against the owner, random pairs, blind labels: {_error(error['all_pairs'])}")
         if error['touched_pairs']:
-            lines.append("  on pairs the owner or the judges called straight or missed: " + _error(error['touched_pairs']))
+            lines.append("  on pairs the owner or the judges called straight or missed, random and engaged pairs together, "
+                "blind labels: " + _error(error['touched_pairs']))
+            lines.append("  the same on the random pairs alone: " + (_error(error['touched_random'])
+                if error['touched_random'] else 'none compared') + f". {ENGAGED_CAVEAT}")
         if not error['touched_measured']:
             sampled = error['touched_pairs']['compared'] if error['touched_pairs'] else 0
             lines.append(f"  the judge's error on touched items was not measured: {sampled} touched pairs were sampled, fewer than "
-                f"{MIN_TOUCHED_SAMPLED}. The commands below use the error over all pairs, which agreement on not_engaged lowers.")
+                f"{MIN_TOUCHED_SAMPLED}. The commands below use the error over the random pairs, which agreement on not_engaged lowers.")
         lines.append("  pairs the owner called not_engaged that were adjudicated straight or missed (false engagement): "
             f"{error['false_engagement']}")
     if report['simulate_commands']:
@@ -1391,9 +1710,11 @@ def main(argv=None) -> int:
     events.add_argument('--judge', required=True)
     events.add_argument('--model', required=True)
     events.add_argument('answers', nargs='+', type=Path)
-    sample = commands.add_parser('sample', help='draw the calibration pairs')
+    sample = commands.add_parser('sample', help='draw the calibration pairs, or with --engaged the supplement')
     sample.add_argument('run', type=Path)
     sample.add_argument('--count', type=int, default=OWNER_PAIRS)
+    sample.add_argument('--engaged', type=int, metavar='N', help='instead of the random draw, draw N further pairs that a '
+        'judge called straight, missed or cannot_tell, outside the random draw, into sample-engaged.json; after `events`')
     sample.add_argument('--seed', type=int)
     server = commands.add_parser('label-server', help='the owner\'s labelling page on 127.0.0.1')
     server.add_argument('run', type=Path)
@@ -1471,6 +1792,10 @@ def main(argv=None) -> int:
             counts = Counter(event.label for event in written)
             print(f"{len(written)} judge events in {run / 'events' / (args.judge + '.jsonl')}: "
                 + ', '.join(f'{label} {counts[label]}' for label in LABELS))
+        elif args.command == 'sample' and args.engaged is not None:
+            value = draw_engaged(run, args.engaged, args.seed)
+            print(f"{value['count']} of {value['eligible']} eligible pairs drawn with seed {value['seed']} into "
+                f"{run / ENGAGED_FILE}; judges {', '.join(value['judges'])}")
         elif args.command == 'sample':
             value = draw_sample(run, args.count, args.seed)
             print(f"{value['count']} of {value['population']} pairs drawn with seed {value['seed']} into {run / 'sample.json'}")
