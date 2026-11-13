@@ -60,9 +60,9 @@ that does not say what the thing is ([names](../standards/documentation.md#names
 
 **Documents.** Review rejects a current page that narrates how something came to be
 instead of stating what is true, a dated record for a change whose only evidence is
-its diff, and an owner decision recorded anywhere but the
+its diff, and an owner decision that has no row in the
 [owner decision log](../decisions/owner-decisions.md)
-([one home per fact](../standards/documentation.md#current-pages-records-and-decisions)).
+([one home per fact](../documentation.md#one-authoritative-home-per-kind-of-fact)).
 
 ## Risk-based assurance
 

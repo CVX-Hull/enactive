@@ -3,14 +3,15 @@ owner: lead
 status: historical
 date: '2026-11-13'
 scope: 'Cadence plan of 13 November 2026 (#442): route options compared on latency and cost per game hour against the responsiveness criteria of #164, from recorded evidence, an offline reading of the sealed traces and published figures read that day; whether the 2 s criterion should stand; owner decisions and costed measurements. No run, game launch or model call was made'
-review_trigger: An owner decision on the list in this note, a new cadence measurement, or a change to the player route, to the memory design or to the phases of ADR 009
 ---
 
 # Cadence plan: route options against the responsiveness criteria
 
 **Status: decided.** This is the note as reviewed, kept as dated rationale. The owner's
 answers to its nine questions are in the
-[owner decision log](../decisions/owner-decisions.md).
+[owner decision log](../decisions/owner-decisions.md). Work continues in the context
+design ([#591](https://github.com/CVX-Hull/enactive/issues/591)) and the timing reader
+([#592](https://github.com/CVX-Hull/enactive/issues/592)).
 
 The seven-day development lineage
 ([#397](https://github.com/CVX-Hull/enactive/issues/397)) measured the player's model

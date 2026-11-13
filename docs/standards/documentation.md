@@ -63,28 +63,28 @@ proposals identify their remaining proposal scope.
 
 ## Current pages, records and decisions
 
-Each kind of fact has one home, so that a reader finds the current rule without
-reading history ([R-UNREADABLE-DOCS and R-STALE-DOCS](../risks.md#development-risks)).
-
-| Fact | Home | Not |
-| --- | --- | --- |
-| What is true now and how to do it | A current page, in the present tense | A dated account of how it came to be |
-| What the owner decided | One row in the [owner decision log](../decisions/owner-decisions.md) | A sentence in a current page, a banner on a design, or a record of its own |
-| What a run, measurement or study showed | A dated record under `docs/acceptance/` | A current page |
-| What a change did and why | Its pull request and commit message | A dated record |
-| Where a piece of work stands | Its issue and the Project | An ADR, a design note or a current page |
+Each kind of fact has one home, listed in the
+[documentation map](../documentation.md#one-authoritative-home-per-kind-of-fact), so
+that a reader finds the current rule without reading history
+([R-UNREADABLE-DOCS and R-STALE-DOCS](../risks.md#development-risks)). The cost is one
+log row per owner decision and a reviewer's attention to tense; no check enforces it.
 
 - **Current pages** state rules, contracts and procedures as they are. A date appears
   only where a reader needs it now: beside a measured figure, a pinned version or a
   source. Where a rule rests on a decision or a result, the page links the log row or
   the record once.
 - **A dated record is for evidence a diff cannot hold**: a run, a measurement, a study
-  result or an acceptance checkpoint. A change whose only evidence is its diff and its
-  check gets no record. Related results in one piece of work share one record.
+  result, or the evidence that an issue's outcome is met. A change whose only evidence
+  is its diff and its checks gets no record: its pull request states what changed, why
+  and which checks ran, which is what S-EVIDENCE asks to be recorded. Related results
+  in one piece of work share one record.
 - **The owner decision log** is the one list of owner decisions: date, question, the
   owner's words, what it settles, and a link to the evidence. A decision is added in
-  the change that acts on it. A later decision that replaces an earlier one marks the
-  earlier row replaced; rows are not deleted.
+  the change that acts on it, or in a change of its own when it alters nothing else
+  (an approval of spend, a limit set outside the repository). An issue or pull request
+  may also carry the agreement; the log row is what current pages cite. A later
+  decision that replaces an earlier one marks the earlier row replaced; rows are not
+  deleted.
 - **An ADR states a decision and its reasons and then stops changing.** It does not
   track the standing of the work it proposes. A design note is `proposed` until its
   owner decisions are made and `historical` after; what was adopted moves into
@@ -93,8 +93,8 @@ reading history ([R-UNREADABLE-DOCS and R-STALE-DOCS](../risks.md#development-ri
   ([work items](../workflows/work-items.md#status-fields-and-dates)). GitHub keeps its
   edit history.
 
-Records and briefs written before 13 November 2026 stay as they are; they are not
-edited to fit this rule. C-REVIEW applies it to changed pages.
+Records and briefs that existed when this rule was adopted, on 13 November 2026, stay
+as they are; they are not edited to fit it. C-REVIEW applies it to changed pages.
 
 ## Names
 

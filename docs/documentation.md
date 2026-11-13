@@ -42,7 +42,7 @@ approval stages.
 | Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
 | What can go wrong and what is done about it | [Risk register](risks.md) | [Controls](controls.md), then the [control rule](standards/authority.md#control-review) for adding or removing one |
 | What the owner decided | [Owner decision log](decisions/owner-decisions.md) | The record or issue its row links |
-| Where a kind of fact belongs | [One home per fact](standards/documentation.md#current-pages-records-and-decisions) | [Authority and review surfaces](workflows/authority.md) |
+| Where a kind of fact belongs | [One authoritative home](#one-authoritative-home-per-kind-of-fact) | [S-DOCS](standards/documentation.md#current-pages-records-and-decisions), [authority and review surfaces](workflows/authority.md) |
 | What to call something | [Names](standards/documentation.md#names) | [Name mapping](acceptance/2026-11-12-control-review-and-names.md#names) for labels in historical records |
 
 Architecture starts outside a responsibility, then explains owned state,
@@ -64,9 +64,10 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `web/` | The spectator page (served by the supervised gateway) and independent user Pause. |
 | `tests/` | Scoped behavioral assertions/doubles and compiled fixtures; actual outcomes are separate evidence. |
 | `docs/components/`, `contracts/`, `standards/`, `workflows/`, `operations/` | Explanation, exact rules, mandatory qualities, decisions and supported tasks. |
-| `docs/design/` | Designs for proposed or in-progress work (status `proposed` or `active`), and finished designs kept as dated evidence (`historical`). An adopted design's current rules move into components and contracts. |
+| `docs/design/` | Designs for proposed or in-progress work (status `proposed` or `active`), and designs whose owner decisions are made or whose work is finished, kept as dated rationale (`historical`). An adopted design's current rules move into components and contracts. |
 | `docs/research*.md` | External evidence and its limits, with a dated research cutoff; [research](research.md) indexes the current pages, and pages whose question is closed are `historical`. |
-| `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence/rationale under explicit status, not live commands or permission. `changes/` holds the change briefs written before ADRs and issues took that role; it receives no new briefs. |
+| `docs/decisions/owner-decisions.md` | The one list of the owner's decisions, including the permissions and limits in force. |
+| `docs/acceptance/`, `changes/`, `decisions/` (ADRs) | Dated evidence/rationale under explicit status, not live commands or permission. `changes/` holds the change briefs written before ADRs and issues took that role; it receives no new briefs. |
 | Ignored `.runtime/` | Frozen inputs, owned stores/saves and raw evidence; no private maintained source framework. |
 
 ### Follow a concrete reader task
@@ -97,6 +98,19 @@ ones excluded; the [controls page](controls.md) owns which risks each control se
 how, at what cost and with what gap. Neither is a second contract or work tracker. The
 [authority contract](workflows/authority.md) owns which summaries may restate what.
 
+Five kinds of fact are often put in the wrong place:
+
+| Fact | Home | Not |
+| --- | --- | --- |
+| What is true now and how to do it | A current page, in the present tense | A dated account of how it came to be |
+| What the owner decided | One row in the [owner decision log](decisions/owner-decisions.md) | Only a sentence in a current page, a banner on a design, or a record of its own |
+| What a run, measurement or study showed | A dated record under `docs/acceptance/` | A current page |
+| What a change did, why, and what was checked | Its pull request and commit message | A dated record |
+| Where a piece of work stands | Its issue and the Project | An ADR, a design note or a current page |
+
+[S-DOCS](standards/documentation.md#current-pages-records-and-decisions) states the
+rules that follow from this table.
+
 The [evaluation contract](contracts/evaluation.md) owns the spectator view API.
 
 ## Lifecycle and maintenance
@@ -113,7 +127,8 @@ removed, only the link is repointed, to the new home or to a commit permalink of
 old file. A replaced current page is deleted rather than kept as a superseded copy:
 Git keeps it. Historical records carry no `review_trigger`. Current pages describe the
 current system and are not changelogs: what changed, when and what it replaced belongs
-in Git, PRs and dated records, not in an active page.
+in Git and pull requests, what was observed belongs in dated records, and what the
+owner decided belongs in the owner decision log, not in an active page.
 
 Update parent/component/contract/callers/storage/operations together when behavior
 changes. Incorporate adopted design into current pages, transfer remaining work

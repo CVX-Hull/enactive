@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: A phase's study result, an owner decision on an open question below, or a change to the host, memory, program, computer-control, evaluation or spectator contracts
+review_trigger: A change to the direction this ADR proposes, or the adoption of one of its phases
 status: proposed
 date: '2026-11-08'
 scope: Proposed direction for an acting player with a coding-agent curator in ephemeral sessions, a player-fitted ontology in one knowledge repository per game, programs on the actor's interface, managed containers and a spectator native to the design; nothing adopted, and current contracts govern the running system
@@ -658,10 +658,11 @@ contracts govern the running system. Where each phase stands is in
 decisions are in the [owner decision log](owner-decisions.md). Evidence recorded for
 the phases:
 
-- **Baseline and workbench:** the [phase record](../acceptance/2026-11-08-adr009-p0.md),
-  [context stability](../acceptance/2026-11-08-context-stability-489.md) and
-  [probe validation](../acceptance/2026-11-08-probe-validation-490.md).
-- **Curator and memory:** the curator memory study's protocols
+- **Baseline and workbench:** the [phase record](../acceptance/2026-11-08-adr009-p0.md).
+- **Curator and memory:** its preparation
+  ([context stability](../acceptance/2026-11-08-context-stability-489.md),
+  [probe validation](../acceptance/2026-11-08-probe-validation-490.md)); the curator
+  memory study's protocols
   ([power gate](../design/p1-study.md), [answer key](../design/p1-study-3.md)), its
   gate records ([first](../acceptance/2026-11-09-p1-gate-178.md),
   [with the added lineage](../acceptance/2026-11-10-p1-gate-study-2-178.md)) and its

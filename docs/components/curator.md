@@ -62,9 +62,11 @@ adopted; the baseline and workbench phase's
   [baseline and workbench phase outcome](../acceptance/2026-11-08-adr009-p0.md) and the
   curator memory study's
   [completion and registered no-go](../acceptance/2026-11-12-p1-descriptive-completion-178.md).
-- **Standing:** the curator is the writer of the knowledge store and does not run in
-  live play ([owner decision log](../decisions/owner-decisions.md)). How its knowledge
-  reaches the player is tracked in
-  [#591](https://github.com/CVX-Hull/enactive/issues/591).
+- **Standing:** the curator stays gated and does not run in live play. Any renewed
+  claim that it benefits play needs a fresh written protocol and an owner decision
+  ([completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)). The
+  owner kept it as the writer of the knowledge store
+  ([owner decision log](../decisions/owner-decisions.md)); how its knowledge reaches
+  the player is tracked in [#591](https://github.com/CVX-Hull/enactive/issues/591).
 - **CI coverage:** Linux CI runs the portable tests. The Seatbelt-lane tests, sandbox
   and real-host sessions, run only on macOS.

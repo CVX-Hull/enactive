@@ -7,9 +7,10 @@ status: active
 # Development runs: method
 
 This page owns the method of development runs: the ceiling benchmark, its metric,
-the admission rule and the long-horizon classification. Dated owner decisions,
-admissions and results are not kept here (S-DOCS); they are in dated records,
-listed in the [acceptance index](acceptance/index.md). Per-run attempts, dollars
+the admission rule and the long-horizon classification. Owner decisions are in the
+[owner decision log](decisions/owner-decisions.md), and admissions and results are in
+dated records, listed in the [acceptance index](acceptance/index.md); none are kept
+here (S-DOCS). Per-run attempts, dollars
 and wall seconds are data in the [tracked run ledger](contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot).
 Acceptance records and independent review are reserved for adoption decisions,
 contract changes and merges ([evidence cadence](workflows/evidence-cadence.md)).

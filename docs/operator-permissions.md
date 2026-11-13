@@ -38,14 +38,15 @@ separate cumulative cap across studies and no hand-kept running total. Each stud
 its own envelope from the owner, and each run its own dollar limit.
 
 **Actual-spend admission.** Inside an open envelope, and for no other spend, the lead
-admits a run without per-run owner approval only while the study's actual
+admits a run or admission without per-run owner approval only while the study's actual
 provider-reported new spend plus twice its largest single admission so far stays within
 that envelope. The lead records each run's spend in its run-ledger row and stops to ask
 the owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
 A new envelope needs its own owner decision.
 
-**No envelope is open.** The four that were set, for the development loop, the
-long-horizon arm, the seven-day lineage and the held-out lineage, are closed, and an
+**No envelope is open.** The four that were set, for the development loop (study 372),
+the long-horizon arm (382), the seven-day lineage (397) and the held-out lineage (522),
+are closed, and an
 unspent remainder is not carried to other work. Each envelope and the decision that set
 it is a row in the [owner decision log](decisions/owner-decisions.md). The run ledger,
 `data/evaluation/runs.jsonl`, holds those studies' runs, and
@@ -117,8 +118,9 @@ Ask once per decision and continue independent authorized work. Put every
 approval request through the host's structured question tool where the host has
 one, not only in prose, with the recommended option first
 ([coding-agent hosts](operations/coding-agents.md#owner-approvals) names the tool per
-host). Record the agreement and its scope on the
-owning issue or pull request. Respect host or tool
+host). Record the agreement and its scope as a row in the
+[owner decision log](decisions/owner-decisions.md), and note it on the owning issue or
+pull request. Respect host or tool
 permission refusals and report the exact action and stated reason.
 
 ## Command permissions
