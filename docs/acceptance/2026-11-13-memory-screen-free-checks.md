@@ -40,9 +40,10 @@ losses of the seven-day lineage, and can its cut work at the curator's speed?
 
 **Not known.**
 
-- The exact tokens of a turn with short results; the simulation takes it as a parameter
-  (950 by default) until [#606](https://github.com/CVX-Hull/enactive/issues/606) reports
-  it.
+- The exact tokens of a turn with short results. The simulation takes it as a parameter,
+  950 by default. The short results as built give a fitted 857, not a count
+  ([the re-run](#with-the-short-results-as-built)): with it, short results and a larger
+  image block alone keep 94.9% of requests under 60,000 tokens, and the cut adds little.
 - The curator's lag during play, and whether a session at a handoff or during play
   would write the facts a whole-admission session wrote. No such session has been run.
 - Whether a player acts on a fact that a briefing puts in front of it. The replay shows
@@ -359,6 +360,32 @@ unchanged (seven-day lineage, steady coverage):
 With both marks raised by the briefing's size (`--low-mark 33000 --high-mark 73000`), the
 rows return to the shape of the main table, 13,000 tokens higher: a median of 41,442 at
 a lag of 10, and 0.226 and 0.345 of the recorded cache writes at 47 and 94.
+
+### With the short results as built
+
+The lead re-ran the simulation when the short results were built
+([pull request 608](https://github.com/CVX-Hull/enactive/pull/608)). Over the lineage's
+1,915 recorded `computer_input` results the median result falls from 1,827 bytes to
+135, and the median call is 139 bytes. At the design's fitted 0.363 tokens a byte that
+is about 99 tokens of text a turn, so a turn with its image is about 857 tokens where
+the tables above assume 950. No tokenizer for the route's model is installed, so this
+is still a fitted figure and not a count. The command adds `--turn-tokens 857
+--min-free 10` (seven-day lineage, steady coverage; simulated):
+
+| Row | Prompt median; 95th percentile | Cuts | Held back | Image blocks dropped | Cache writes, share of recorded | Requests under 40,000; under 60,000 |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Recorded | 93,808; 214,025 | – | – | 145 | 1.000 | 17.3%; 27.6% |
+| No cut | 38,516; 60,089 | – | – | 76 | 0.188 | 53.7%; 94.9% |
+| Lag 10 | 26,782; 37,066 | 69 | 0 | 0 | 0.123 | 100%; 100% |
+| Lag 20 | 27,738; 37,165 | 76 | 0 | 0 | 0.134 | 100%; 100% |
+| Lag 47 | 32,155; 42,439 | 62 | 14 | 76 | 0.152 | 87.3%; 100% |
+| Lag 94 | 37,659; 50,935 | 30 | 46 | 76 | 0.173 | 61.1%; 100% |
+
+- **Short results and a larger image block do most of the work.** With no cut, 94.9% of
+  requests stay under 60,000 tokens and the cache writes are 0.188 of the recorded
+  total.
+- **The cut adds little on top.** At a lag of 10 it lowers the median prompt by about
+  12,000 tokens and the cache writes from 0.188 to 0.123 of the recorded total.
 
 ## What this means for the screen's protocol
 
