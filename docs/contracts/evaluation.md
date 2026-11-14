@@ -271,6 +271,7 @@ their numbers for latency and delivery counts.
 | `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. Per trace, per run directory and for the whole selection, `response_by_prompt`: response time (count, p50, p95), the share within 2 s and within 5 s and the mean provider-reported cost per request, for all responses and by prompt-size band (input plus cache read plus cache write tokens: under 20,000; 20,000 to 60,000; 60,000 to 100,000; 100,000 to 150,000; over 150,000), and the interval from one request's first tool result to the next. `prompt_composition`: per trace one object, per run directory and for the whole selection a list with one object per route (the host's `model`). It says what the prompt is made of, fitted by least squares on the growth in prompt tokens between consecutive requests of an actor against what was added, from the provider's reported `usage` and the trace's own sizes alone, so it holds for any model that reports usage. An object has `pairs` (fitted), `left_out`, `image_counts` (histogram of images per fitted pair), `image_term_separable`, `images_per_turn`, `usage_fit`, `usage_fit_reason` and `tokenizer_check`. `usage_fit` has `per_result_byte` (tokens per byte of tool-result text: the `content` text the model reads, in the short form or the full one, never `structuredContent`), `per_output_token` (per output token of the previous reply, reasoning included), `per_image`, `per_turn_constant`, `per_turn_at_modal_images`, `residual_abs` (p50, p95, share within 5 tokens) and `pairs`. Every eligible pair is fitted; the image count is a term of the fit whenever it varies, so a turn with another count has its own intercept and does not bend the byte slope. `per_image` and `per_turn_constant` are numbers only when at least 10% of the fitted pairs have a count other than the most common one (`image_term_separable` true). Otherwise (`image_term_separable` false) they are null, because the image term cannot be told from the constant, and the supported figure is `per_turn_at_modal_images`, the constant plus `images_per_turn` (the most common count) images; it is null when they are separable. `left_out` counts the pairs not fitted, by `usage_unknown` (a prompt size or the reply's output is unknown), `projection_unknown` (only one of the two requests has an image projection event), `images_dropped` (the host dropped images between the two requests), `notice_added` (a `tail-notice` or delivered knowledge reminder on the second) and `not_one_call` (the reply did not make exactly one call with one result). `usage_fit` is null, with `usage_fit_reason`, when there are no more pairs than terms or the terms are not independent (for example every result has the same length). A tokenizer is only an optional check: `python -m tools.host_analysis PATH... --tokenizer [ROUTE=]ENCODING` (or `host_summary(paths, tokenizers)`) fills `tokenizer_check`, otherwise null; it fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and its reasoning tokens (with the same image treatment) and reports `slope` (`per_result_token`) and `holds`: the slope is within 1 ± 0.01 and the median absolute residual is at most 1 token (this reader's stated limit; the recorded medians for `o200k_base` were 0.2 and 0.1). A tokenizer that is not installed, cannot be loaded or whose counting function raises gives `available: false` and a `reason`, and a degenerate fit gives a `reason` and no `slope`; the usage fit is unaffected. The command exits 2 when a `ROUTE` names no selected trace. `--format markdown` prints the tables. |
 | `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
 | `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`); `pilot` writes the withholding pilot's unit-level analysis (`withholding-pilot/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
+| `python -m tools.process_measures` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The game-neutral process measures: `milestones packets` and `milestones events` freeze each admission's milestones; `packets`, `events`, `agreement` and `measure` judge windows and report `process-measures/1`. It calls no model and spends nothing; see [process measures](#process-measures-process-measures1). |
 | `python -m tools.memory_reads` | text, or `--json` | Per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
 | `python -m tools.memory_screen_checks` | text, or `--json` | Three subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options. Its `recorded` row is from the traces; every other row is simulated, not measured. |
 
@@ -713,6 +714,86 @@ rule below is fixed before any pilot start is played
   `missed` (the withheld arm's missed share and its ends, the simulation's "missed when
   withheld"), `rho` (the spread's point value) and `wrong` (the point value, used as the
   judge error at the interval ends too), in the form `simulate-withholding --pilot` reads.
+
+### Process measures (`process-measures/1`)
+
+`python -m tools.process_measures` measures how play went beyond memory, in game-neutral
+terms ([#620](https://github.com/CVX-Hull/enactive/issues/620)): windows stuck or looping,
+the same failed approach tried again, progress against milestones frozen before scoring,
+and success claims the frames do not support. It reuses this section's packets, budget,
+hashing, agreement and bootstrap, calls no model, launches no game and spends nothing.
+
+| Kind | Pair | Labels (those that must cite a frame first) |
+| --- | --- | --- |
+| `stuck_verdict` | a window | `stuck`, `looping`, `progressing`, `cannot_tell` |
+| `retry_verdict` | a window | `repeated_failed_approach` (at least two frames: the failure and the repeat), `no_repeat`, `cannot_tell` |
+| `milestone_verdict` | a packet and a milestone | `reached`, `not_reached`, `cannot_tell` |
+| `claim_verdict` | a window and a candidate | `supported`, `unsupported`, `not_a_success_claim`, `cannot_tell` |
+
+Each is a `judge-events/2` event with the payload fields `label`, `cited_frames` (original
+source IDs, translated from the packet's frame names), `judge`, `model`, `packet` and
+`packet_sha256`, plus the pair's fields. Files are written once, one judge and kind each.
+
+- **Milestones, frozen first.** `milestones packets RUN --runs ADMISSION...` gives one judge
+  only the admission's mission (its `prompt.txt`, which may hold the previous admission's
+  fallible report), no actor's message, handoff, player memory or frame, so no milestone is
+  picked from what the scored admission went on to do, and asks for 3 to 8 observable
+  milestones. `milestones events` writes
+  `milestones/<admission>.json` (`process-milestones/1`) once; the private mapping records
+  its SHA-256. Scoring packets are refused until every admission has a frozen list, and a
+  changed list is refused.
+- **Window packets.** `packets RUN --runs ADMISSION...` cuts each actor's decisions into
+  windows within the token budget (never one decision), holding frames, the inputs between
+  them, the player's own response text and final or handoff report, and claim candidates:
+  every sentence of that text, with stable IDs, the first 12 kept (`--claims-per-window`),
+  the cut recorded. No game-binding finding, memory fact or briefing is included. A claim is
+  `unsupported` only when the window's frames contradict it; a claim about something these
+  frames do not show is `cannot_tell`, and the report gives that share.
+- **The repeat filter, first.** A window is flagged when it holds three or more identical
+  input batches in a row whose frames did not change. Every flagged window is judged, with a
+  seeded sample of the others (`--sample-unflagged`, by default as many as are flagged and at
+  least 10, within what there is); the
+  flags and sampling fractions are in the private mapping only.
+- **Milestone packets** hold the frozen list and the admission's frames in a seeded shuffled
+  order with new names, without inputs, actors or decision numbers. A milestone is reached
+  when any of its admission's packets is adjudicated `reached`.
+- **Agreement.** `agreement` writes `process-adjudicated.json` (`process-adjudicated/1`) as
+  `agreement` above does for use labels: the first two judges' label, else a third's
+  (`by`). Per kind it reports agreement, κ and dispute rate over all pairs and over the
+  pairs driving the measure (either first judge gave `stuck` or `looping`,
+  `repeated_failed_approach`, `reached`, or `unsupported`), chosen before adjudication.
+
+`measure RUN [--records ROOT]` writes `process.json` (`process-measures/1`):
+
+| Measure | Definition |
+| --- | --- |
+| `stuck` | Windows judged stuck or looping over judged windows, also for flagged and sampled windows apart, and weighted back to all windows by the sampling fraction |
+| `retry` | Windows judged a repeated failed approach over judged windows, weighted the same way |
+| `milestone` | Frozen milestones reached over frozen milestones, overall and per admission |
+| `claim` | Unsupported over supported plus unsupported success claims, among the kept candidates |
+
+Each rate has a 95% interval from a cluster bootstrap over admissions, given only when at
+least two admissions have a positive denominator for it, and the judges' figures beside it;
+the claim rate is over kept candidates only and is not weighted by window sampling.
+`events` refuses, before writing anything, answers that do not cover every packet (for a
+third judge, every packet the agreement lists) and any answer field not allowed for its
+kind; one judge and model derive every admission's milestones. Whether a measure is `kept` is decided on its driving outcome as a
+binary (the driving labels against all others, `cannot_tell` included), over all its pairs:
+the first two judges' Cohen's κ, with their agreement and positive specific agreement
+beside it. `kept` is false, with the reason, when that κ is undefined or below 0.845, the
+memory measures' κ computed the same way (applied or not) over all 1,911 first-two-judge
+pairs of the [curator scoring](../acceptance/2026-11-13-curator-scoring.md) run: such a
+measure is reported, not tuned. (A κ over the driving pairs alone cannot exceed 0 for a
+measure with one driving label, so it is reported but decides nothing.) The report compares
+the filter's flags with the adjudicated `stuck` and `looping` windows and, with
+`--records`, the game binding's `stall` findings with the stuck or looping windows and its
+`ineffective_repeat` findings with those and with the repeated-failed-approach windows,
+unweighted. A finding touches a window when one of the evaluation steps it spans, of that
+window's actor, holds a frame source ID the window holds (the record counts decisions as
+completed inputs and the windows count player requests, so decision numbers are not joined) (`binding`; a record of another core version is skipped and
+listed with its reason, and `binding` is null with the reason when none is readable). `not_corrected` states that the labels are not corrected against a human
+truth. Isolation is as below: judges get one packet directory each, and nothing a judge
+produces reaches the player, the curator or an evaluation record.
 
 **Isolation.** The tool writes packets, events and statistics only into its run
 directory, and refuses a run directory whose parent is not named `memory-measure`; by
