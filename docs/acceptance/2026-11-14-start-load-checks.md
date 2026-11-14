@@ -28,8 +28,10 @@ scope: 'Load checks of the reusable starts (#388) through the campaign custodian
   chose a free port.
 - **Fresh starts.** A check uses a start up, so six new starts, `seven-day-end-08` to
   `-13`, were made from the same sealed save for the pilot.
-- **Spend.** The run ledger (`data/evaluation/runs.jsonl`, study 388, seven rows) holds
-  each run's attempts and spend: \$0.0949 of player play in all.
+- **Spend.** \$0.0949 of player play in all, from the seven sealed receipts. Like the
+  spend-limit check, these are diagnostic qualification packages, not study admissions,
+  so they have no run-ledger rows; the receipts in `start-load-checks` are the numeric
+  record.
 - **Not known.** Whether the fresh starts `-08` to `-13` load: loading uses a start up,
   so they rest on being byte-identical to six copies that did.
 - **Owner decisions needed.** None.
@@ -56,17 +58,17 @@ scope: 'Load checks of the reusable starts (#388) through the campaign custodian
 
 ## Result
 
-In run order; attempts and spend per run are in the ledger rows labelled by start.
+In run order; attempts and spend from each sealed `receipt.json`.
 
-| Start | Outcome | Reported by the player |
-| --- | --- | --- |
-| `seven-day-end-01` | completed | Morgan Hale, Whitethorn, Spring day 63, 7:43:20 AM |
-| `seven-day-end-02` | completed | Morgan Hale, Spring day 63, 7:43:20 AM (Whitethorn in its load-menu frame) |
-| `seven-day-end-03` | incomplete: port in use, no play | none |
-| `seven-day-end-07` | completed | Morgan Hale, Whitethorn, Spring day 63, 7:43:20 AM |
-| `seven-day-end-04` | completed | the same |
-| `seven-day-end-05` | completed | the same |
-| `seven-day-end-06` | completed | the same |
+| Start | Outcome | Attempts | Spend | Reported by the player |
+| --- | --- | ---: | ---: | --- |
+| `seven-day-end-01` | completed | 7 | \$0.0161 | Morgan Hale, Whitethorn, Spring day 63, 7:43:20 AM |
+| `seven-day-end-02` | completed | 7 | \$0.0161 | Morgan Hale, Spring day 63, 7:43:20 AM (Whitethorn in its load-menu frame) |
+| `seven-day-end-03` | incomplete: port in use, no play | 0 | \$0 | none |
+| `seven-day-end-07` | completed | 7 | \$0.0161 | Morgan Hale, Whitethorn, Spring day 63, 7:43:20 AM |
+| `seven-day-end-04` | completed | 6 | \$0.0146 | the same |
+| `seven-day-end-05` | completed | 7 | \$0.0160 | the same |
+| `seven-day-end-06` | completed | 7 | \$0.0159 | the same |
 
 The saved-game files are identical across the seven working copies after their runs:
 no check saved the game.
