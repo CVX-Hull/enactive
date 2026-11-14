@@ -45,8 +45,9 @@ scope: 'The recall fix (#642) checked in real play before merge: a real-model re
 - **Not known.** Whether the leads and reminders changed play (nothing here compares);
   whether repeating one article matters; what `N` below 10 would lose in a full-length
   start.
-- **Owner decision needed.** What the pilot does with the lower price: put to the owner
-  with this record.
+- **Owner decision.** Asked what the pilot does with the lower price, the owner kept it
+  as decided, "Keep six starts, \$70 cap"
+  ([decision log](../decisions/owner-decisions.md)).
 
 ## What was run
 
