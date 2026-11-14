@@ -20,12 +20,13 @@ export function knowledgeIndex(knowledge) {
 export function selection(message, knowledge) {
   const value = JSON.parse(message.content.filter(p => p.type === 'text').map(p => p.text).join(''));
   if (!value || Object.keys(value).join() !== 'articles' || !Array.isArray(value.articles)
-) throw new Error('invalid-recall-selection');
+      || new Set(value.articles).size !== value.articles.length) throw new Error('invalid-recall-selection');
+  const index = knowledgeIndex(knowledge);
   const selected = new Map();
   for (const id of value.articles) {
-    const item = knowledge.articles.find(a => a.id === id || a.title === id)
-      ?? knowledge.facts.find(f => f.id === id);
-    if (!item) throw new Error('invalid-recall-selection');
+    const row = index.find(item => item.id === id || item.title === id);
+    if (!row) throw new Error('invalid-recall-selection');
+    const item = knowledge.articles.find(a => a.id === row.id) ?? knowledge.facts.find(f => f.id === row.id);
     selected.set(item.id, item);
   }
   return [...selected.values()];

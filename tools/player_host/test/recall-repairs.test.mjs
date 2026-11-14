@@ -4,8 +4,10 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import OpenAI from 'openai';
 import { recallRefusal } from '../host.mjs';
-import { deliveryScenario, recallReply } from './delivery-scenario.mjs';
+import { knowledgeIndex, selection } from '../knowledge.mjs';
+import { deliveryScenario, knowledge, recallReply } from './delivery-scenario.mjs';
 import { model, reply } from './host-scenario.mjs';
 
 async function scenario(t, options) {
@@ -22,6 +24,37 @@ test('both admission phases include the player in-flight bound in the finish res
     assert.equal(recallRefusal({...state,playerInFlight:false}),null,phase);
     assert.equal(recallRefusal({...state,limit:[6000000000000000001n,19]}),null,phase);
   }
+});
+
+test('reminder fetch refuses the finish reserve while a player request is in flight',async t=>{
+  let releaseReminder, completeReminder, prepared=0;
+  const reminderGate=new Promise(resolve=>{releaseReminder=resolve;});
+  const reminderComplete=new Promise(resolve=>{completeReminder=resolve;});
+  const prepareRequest=OpenAI.prototype.prepareRequest;
+  // Delay SDK preparation, before the host fetch wrapper checks fresh admission
+  // state. Let the next player fetch start, then release the reminder to fetch.
+  t.mock.method(OpenAI.prototype,'prepareRequest',async function(request,context) {
+    await prepareRequest.call(this,request,context);
+    if(context.options.body.model==='recall-fixture' && ++prepared===2) await reminderGate;
+  });
+  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.8'},finishReserveUsd:'0.5',
+    recallFetch:()=>recallReply(['article-a'],0),
+    playerFetch:async n=>{
+      if(n===1) return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]],
+        {prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0.1});
+      assert.equal(prepared,2,'the reminder passed its pre-check and reached SDK preparation');
+      releaseReminder();
+      await reminderComplete;
+      return reply('Done');
+    },onEvent:e=>{if(e.type==='knowledge-recall' && e.kind==='reminder')completeReminder();}});
+  assert.equal(result.reason,'task_complete');
+  const refusal=events.find(e=>e.type==='knowledge-recall' && e.kind==='reminder');
+  assert.equal(refusal.status,'not-made');assert.equal(refusal.reason,'finish-reserve');
+  assert.ok(!Object.hasOwn(refusal,'request_id'));
+  assert.ok(events.every(e=>!(e.type==='request-start' && e.request_id==='recall-2')));
+  const index=events.indexOf(refusal);
+  assert.ok(events.slice(0,index).some(e=>e.type==='request-start' && e.request_id==='request-2'));
+  assert.ok(events.slice(index+1).some(e=>e.type==='response-complete' && e.request_id==='request-2'));
 });
 
 test('attempt-limit pre-check refuses before preparing the recall model and reserves the last attempt',async t=>{
@@ -87,6 +120,7 @@ test('normal finish aborts and counts an in-flight recall without a stop event',
   assert.ok(events.every(e=>e.type!=='abort'));
   const cost=events.find(e=>e.type==='response-complete'&&e.request_id==='recall-2');
   assert.equal(cost.counted_cost_usd,'0.2');assert.equal(events.at(-1).unpriced_recall_requests,1);
+  assert.equal(events.find(e=>e.type==='knowledge-recall'&&e.request_id==='recall-2').reason,'actor-ended');
 });
 
 test('handoff also aborts and counts the actor\'s in-flight recall',async t=>{
@@ -99,6 +133,7 @@ test('handoff also aborts and counts the actor\'s in-flight recall',async t=>{
     })});
   assert.equal(result.reason,'handoff');assert.equal(aborted,true);
   assert.equal(events.find(e=>e.type==='response-complete'&&e.request_id==='recall-2').counted_cost_usd,'0.2');
+  assert.equal(events.find(e=>e.type==='knowledge-recall'&&e.request_id==='recall-2').reason,'actor-ended');
 });
 
 for (const kind of ['unknown-selection','length']) test(`valid provider cost survives ${kind}`,async t=>{
@@ -120,4 +155,21 @@ test('selection deduplicates article id/title and delivers standalone fact text 
   const data=JSON.parse(briefing.text.split('\n')[1]);
   assert.equal(data.leads.length,2);assert.equal(data.leads[1].lead,'An unfiled claim.');
   assert.deepEqual(briefing.index_ids,['article-b']);
+});
+
+test('recall accepts exactly the delivered index ids and titles',()=>{
+  const value=knowledge();
+  const message=ids=>({content:[{type:'text',text:JSON.stringify({articles:ids})}]});
+  for(const row of knowledgeIndex(value)) for(const name of [row.id,row.title]) {
+    assert.deepEqual(selection(message([name]),value).map(item=>item.id),[row.id]);
+  }
+  for(const name of ['fact-a','fact-b','unknown-id','Unknown title']) {
+    assert.throws(()=>selection(message([name]),value),/invalid-recall-selection/,name);
+  }
+  assert.deepEqual(selection(message(['article-a','A subject']),value).map(item=>item.id),['article-a']);
+});
+
+for(const id of ['article-a','fact-alone','A subject','Unfiled subject']) test(`recall refuses a repeated selection entry: ${id}`,()=>{
+  const message={content:[{type:'text',text:JSON.stringify({articles:[id,id]})}]};
+  assert.throws(()=>selection(message,knowledge()),/invalid-recall-selection/);
 });

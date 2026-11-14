@@ -145,9 +145,9 @@ Recall uses the player's provider and credential variable, with the pinned `reca
 
 No new recall begins with an orderly stop pending or accepted, or when `spent + in-flight player bound + finish reserve >= limit`. The pre-check and fetch check both apply this rule. A spend refusal, failure or unpriced recall ends recall for that actor alone; a valid provider cost is counted at that cost even if selection is invalid or the response stopped for length, and only a response without a valid cost counts at the recall bound. Every recall in flight at actor end is aborted and counted, including normal finish and handoff. Player requests retain the unpriced-success stop. Settlement, driver and receipt report `unpriced_requests`/`unpriced_request_usd` for the player and `unpriced_recall_requests`/`unpriced_recall_request_usd` for recall; provider-reported costs from both roles are summed.
 
-An article named by both ID and title is selected once. A standalone fact ID from the index is accepted as a lead carrying its text; unknown IDs/titles are refused.
+Recall accepts only IDs and titles on the delivered index (articles and standalone facts). An article named by both ID and title is selected once; a repeated selection entry is invalid. A standalone fact is accepted as a lead carrying its text; IDs/titles absent from the index are refused, including facts filed under articles.
 
-Telemetry records `knowledge-delivery` with kind, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. `knowledge-recall` records selections, silence, failures and opportunities not made; `knowledge-undelivered` records text still unsent at actor end. Recall requests are never player decisions.
+Telemetry records `knowledge-delivery` with kind, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. `knowledge-recall` records selections, silence, failures and opportunities not made; a recall aborted because the actor ended has reason `actor-ended`. `knowledge-undelivered` records text still unsent at actor end. Recall requests are never player decisions.
 
 ### Request stability and tail notices
 
