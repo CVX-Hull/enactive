@@ -123,7 +123,7 @@ def test_the_command_prints_the_report_as_json_and_renders_a_saved_one(tmp_path,
     assert list(tmp_path.iterdir()) == [saved]  # the command writes no file
 
 
-def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=False):
+def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=False, same_seed=False):
     """Real packets, judge events and adjudication over two packages, multiple actors/windows and a frameless actor.
     article-a owns two exclusive facts; article-b owns an untouched fact; both cite shared. Lone and idle are
     unfiled facts. The default independently drawn arms put article-a withheld and the lone fact delivered."""
@@ -135,7 +135,8 @@ def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=Fa
             dict(id='article-b', body=[dict(facts=['quiet', 'shared'])])])
     admissions = {}
     for package in packages:
-        record = dict(schema='knowledge-units/1', version=knowledge['version'], seed=73,
+        record = dict(schema='knowledge-units/1', version=knowledge['version'],
+            seed=73 if same_seed else 73 + packages.index(package),
             units=[dict(unit, withheld=(unit['id'] == 'article-a') if withheld is None else withheld)
                 for unit in units(knowledge)['units']], shared=units(knowledge)['shared'])
         path = save(package / 'private' / 'units.json', record)
@@ -199,7 +200,7 @@ def test_pilot_aggregates_mixed_windows_actors_and_exclusive_units(tmp_path):
     assert report['simulation'] == dict(touched=dict(value=2.0, interval=[2.0, 2.0]),
         missed=dict(value=0.5, interval=[0.0, 1.0]), rho=1.0, wrong=report['judges']['wrong']['value'])
     assert 'descriptive' in report['not_a_claim'] and 'adjudicated' in report['not_corrected']
-    assert 'four game minutes' in ' '.join(report['threats']) and 'Six starts.' in report['threats']
+    assert 'four game minutes' in ' '.join(report['threats']) and '2 starts.' in report['threats']
     text = memory_measure.render_pilot(report)
     assert 'exact p=0.75' in text and 'shared facts (outside test)' in text
     with pytest.raises(FileExistsError):
@@ -229,7 +230,10 @@ def test_pilot_judges_use_the_first_two_labels_before_third_adjudication(tmp_pat
     for selected, key in ((rows, 'all_pairs'), (driving, 'driving_pairs')):
         expected = memory_measure.judges_beside(boot, selected, adjudicated['judges'])
         assert {key: value for key, value in report['judges'][key].items() if key != 'agreement_interval'} == expected
-    dispute = 1 / len(driving)
+    first, second = adjudicated['judges']
+    missed = memory_measure.PILOT_MISSED
+    dispute = sum((row['labels'][first] in missed) != (row['labels'][second] in missed) for row in driving) / len(driving)
+    assert report['judges']['wrong']['missed_dispute_rate'] == pytest.approx(dispute)
     assert report['judges']['wrong']['value'] == pytest.approx((1 - math.sqrt(1 - 2 * dispute)) / 2)
     assert report['judges']['all_pairs']['pairs'] > report['judges']['driving_pairs']['pairs']
 
@@ -314,7 +318,12 @@ def test_pilot_cli_and_simulation_round_trip(tmp_path, capsys, monkeypatch):
         return actual_simulate(rows, **dict(options, sims=30, ceiling=3))
 
     monkeypatch.setattr(memory_measure, 'simulate_withholding', bounded_simulation)
-    assert main(['simulate-withholding', '--pilot', str(run / 'pilot.json'), '--json']) == 0
+    assert main(['simulate-withholding', '--pilot', str(run / 'pilot.json'), '--json']) == 2
+    assert '--pilot needs --price' in capsys.readouterr().err
+    assert main(['simulate-withholding', '--pilot', str(run / 'pilot.json'), '--render', str(run / 'pilot.json'),
+        '--price', '1']) == 2
+    assert 'cannot be combined with --render' in capsys.readouterr().err
+    assert main(['simulate-withholding', '--pilot', str(run / 'pilot.json'), '--price', '3.58', '--json']) == 0
     result = json.loads(capsys.readouterr().out)
     assert called[0][0] == expected_rows
     assert called[0][1] == dict(rho=simulation['rho'], sims=10000, seed=386, target=0.8, alpha=0.05,
@@ -324,7 +333,7 @@ def test_pilot_cli_and_simulation_round_trip(tmp_path, capsys, monkeypatch):
         assert all(case[key] == value for key, value in row.items())
     for flag, values in [('--touched', ['2']), ('--touched-ends', ['1', '3']), ('--missed', ['0.5']),
             ('--missed-ends', ['0', '1']), ('--wrong', ['0.1']), ('--base-wrong', ['0.1']), ('--rho', ['0.2'])]:
-        assert main(['simulate-withholding', '--pilot', str(run / 'pilot.json'), flag, *values]) == 2
+        assert main(['simulate-withholding', '--pilot', str(run / 'pilot.json'), '--price', '3.58', flag, *values]) == 2
         assert 'an input it measures' in capsys.readouterr().err
     assert len(called) == 1
     # The price per start and the search settings stay flags: the re-priced study uses the pilot's own price.
@@ -332,7 +341,7 @@ def test_pilot_cli_and_simulation_round_trip(tmp_path, capsys, monkeypatch):
     capsys.readouterr()
     assert called[1][0] == expected_rows and called[1][1]['price'] == 7.5 and called[1][1]['seed'] == 5
     save(run / 'unsupported.json', dict(schema='withholding-pilot/0'))
-    assert main(['simulate-withholding', '--pilot', str(run / 'unsupported.json')]) == 2
+    assert main(['simulate-withholding', '--pilot', str(run / 'unsupported.json'), '--price', '1']) == 2
     assert 'not a withholding-pilot/1' in capsys.readouterr().err
 
 
@@ -343,6 +352,27 @@ def test_simulation_handles_measured_boundary_values_without_perturbing_them():
         assert result.shape == (30,) and result.dtype == bool
         if values == dict(touched=0) or values == dict(missed=0):
             assert not result.any()
+    # The boundary draws are the Beta's limits: rho 0 gives every start the mean, rho 1 gives each start 0 or 1.
+    recorded = []
+    original = np.random.Generator.binomial
+
+    class Recording:
+        def __init__(self, rng):
+            self.rng = rng
+
+        def __getattr__(self, name):
+            return getattr(self.rng, name)
+
+        def binomial(self, n, p, size=None):
+            recorded.append(np.asarray(p))
+            return original(self.rng, n, p, size)
+
+    for rho, check in ((0, lambda shares: np.allclose(shares, 0.3)), (1, lambda shares: set(np.unique(shares)) <= {0, 1})):
+        recorded.clear()
+        withholding_rejections(Recording(np.random.default_rng(2)), starts=3, sims=40, touched=4, missed=0.3,
+            ratio=0.5, wrong=0, rho=rho)
+        shares = next(p for p in recorded if p.shape == (40, 3))  # the first per-start probability: the share
+        assert check(shares)
 
 
 def test_pilot_preserves_zero_touched_starts_in_the_bootstrap(tmp_path):
@@ -366,7 +396,7 @@ def test_pilot_one_start_has_no_intervals_and_cannot_supply_simulation_ends(tmp_
         memory_measure.simulation_from_pilot(run / 'pilot.json')
 
 
-def test_pilot_clips_driving_disputes_for_implied_judge_error(tmp_path):
+def test_pilot_judge_error_counts_only_disputes_on_the_missed_outcome(tmp_path):
     run, packages = pilot_fixture(tmp_path)
     path = run / 'adjudicated.json'
     adjudicated = json.loads(path.read_text())
@@ -374,5 +404,30 @@ def test_pilot_clips_driving_disputes_for_implied_judge_error(tmp_path):
         row['labels']['judge-a'], row['labels']['judge-b'] = 'against', 'found_again'
     save(path, adjudicated)
     report = memory_measure.pilot(run, packages, seed=2, draws=100)
+    # Every pair is disputed on the label, but both labels mean missed: no judge error on the outcome.
     assert report['judges']['driving_pairs']['dispute_rate']['value'] == 1
-    assert report['judges']['wrong'] == dict(value=0.5, interval=[0.5, 0.5])
+    assert report['judges']['wrong'] == dict(missed_dispute_rate=0.0, value=0.0, interval=[0.0, 0.0])
+
+
+def test_pilot_clips_missed_disputes_for_implied_judge_error(tmp_path):
+    run, packages = pilot_fixture(tmp_path)
+    path = run / 'adjudicated.json'
+    adjudicated = json.loads(path.read_text())
+    for row in adjudicated['rows']:
+        row['labels']['judge-a'], row['labels']['judge-b'] = 'against', 'in_line'
+    save(path, adjudicated)
+    report = memory_measure.pilot(run, packages, seed=2, draws=100)
+    assert report['judges']['wrong'] == dict(missed_dispute_rate=1.0, value=0.5, interval=[0.5, 0.5])
+
+
+def test_pilot_refuses_a_seed_repeated_across_starts(tmp_path):
+    run, packages = pilot_fixture(tmp_path, same_seed=True)
+    with pytest.raises(MeasureError, match='its own seed'):
+        memory_measure.pilot(run, packages, seed=2, draws=100)
+
+
+def test_pilot_defaults_to_the_frozen_bootstrap_seed_and_counts_its_starts(tmp_path):
+    run, packages = pilot_fixture(tmp_path)
+    report = memory_measure.pilot(run, packages, draws=50)
+    assert report['bootstrap']['seed'] == memory_measure.PILOT_SEED == 619
+    assert report['not_a_claim'].startswith('2 starts') and '2 starts.' in report['threats']

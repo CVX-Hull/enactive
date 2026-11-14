@@ -1353,6 +1353,10 @@ def pilot_units(package: Path) -> dict:
     return value
 
 
+#: The labels that make a touched fact missed, and the bootstrap seed frozen with the rule before any pilot play.
+PILOT_MISSED, PILOT_SEED = frozenset({'against', 'found_again'}), 619
+
+
 def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int = 10000) -> dict:
     """withholding-pilot/1: one outcome per fact and start, then per independently drawn unit.
     This is descriptive analysis of adjudicated blind labels, never a correction against human truth."""
@@ -1398,13 +1402,18 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
         applied = [row for identity in identities for row in windows.get((start, identity), [])
             if row['label'] in judge.APPLIED]
         labels = {row['label'] for row in applied}
-        return dict(touched=bool(applied), missed=bool(labels & {'against', 'found_again'}),
+        return dict(touched=bool(applied), missed=bool(labels & PILOT_MISSED),
             against='against' in labels, found_again='found_again' in labels,
             stale_or_false=any(row['holds'] == 'stale_or_false' for row in applied))
 
     units, shared, fact_outcomes = [], [], []
+    draws_by_start = {package.name: pilot_units(package) for package in runs}
+    seeds = [drawn['seed'] for drawn in draws_by_start.values()]
+    if len(set(seeds)) != len(seeds):
+        raise MeasureError('pilot requires each start\'s draw to have its own seed: a repeated seed repeats the arms, '
+            'and the pooled test assumes independent draws')
     for package in runs:
-        drawn, start = pilot_units(package), package.name
+        drawn, start = draws_by_start[package.name], package.name
         known = {identity for unit in drawn['units'] for identity in unit['fact_ids']} | {
             item['fact_id'] for item in drawn['shared']}
         judged_ids = {fact['id'] for (admission, _), entry in facts.items() if admission == start for fact in entry['facts']}
@@ -1419,7 +1428,7 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
             shared.append(dict(start=start, fact=item['fact_id'],
                 arm='delivered' if delivered_articles.intersection(item['article_ids']) else 'withheld',
                 **outcome([item['fact_id']], start)))
-    seed = secrets.randbits(32) if seed is None else seed
+    seed = PILOT_SEED if seed is None else seed
     boot = StartBootstrap([path.name for path in runs], seed, draws)
     touched = boot.sums(units, lambda unit: float(unit['touched']))
     missed = boot.sums(units, lambda unit: float(unit['missed']))
@@ -1455,10 +1464,16 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
     def wrong(dispute: np.ndarray) -> np.ndarray:
         return (1 - np.sqrt(1 - 2 * np.clip(dispute, 0, 0.5))) / 2
 
-    dispute = judges['driving_pairs']['dispute_rate']
-    driving_disputes = boot.sums(driving, lambda row: float(row['labels'][names[0]] != row['labels'][names[1]]))
+    # The simulation flips the binary missed outcome, so the judge error comes from disputes on that outcome
+    # alone: against and found_again, or in_line and did_not_apply, disagree on the label but not on it.
+    def missed_dispute(row: dict) -> float:
+        return float((row['labels'][names[0]] in PILOT_MISSED) != (row['labels'][names[1]] in PILOT_MISSED))
+
+    driving_disputes = boot.sums(driving, missed_dispute)
     driving_counts = boot.sums(driving, lambda row: 1.0)
-    judges['wrong'] = dict(value=float(wrong(np.asarray(dispute['value']))) if dispute['value'] is not None else None,
+    binary = float(_ratio(driving_disputes.sum(), driving_counts.sum())) if driving_counts.sum() else None
+    judges['wrong'] = dict(missed_dispute_rate=_number(binary) if binary is not None else None,
+        value=float(wrong(np.asarray(binary))) if binary is not None else None,
         interval=boot.interval(lambda d, n: wrong(_ratio(d, n)), driving_disputes, driving_counts))
 
     def counts(selected: Sequence[dict]) -> dict:
@@ -1472,7 +1487,8 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
 
     shares = dict(pooled=missed_share(units), **{arm: missed_share([unit for unit in units if unit['arm'] == arm])
         for arm in ('withheld', 'delivered')})
-    report = dict(schema='withholding-pilot/1', not_a_claim='Six starts make no claim of benefit; this comparison is descriptive only.',
+    report = dict(schema='withholding-pilot/1',
+        not_a_claim=f'{len(runs)} starts make no claim of benefit; this comparison is descriptive only.',
         not_corrected=NOT_CORRECTED, bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), note=BOOTSTRAP_NOTE),
         touched_per_start=touched_estimate, missed_share=shares, spread=spread, judges=dict(names=names, **judges),
         comparison=dict(per_start={name: comparison([unit for unit in units if unit['start'] == name]) for name in boot.names},
@@ -1486,7 +1502,8 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
             stale_or_false=sum(unit['stale_or_false'] for unit in units if unit['arm'] == arm))
             for arm in ('withheld', 'delivered')}, no_frames=mapping['no_frames']),
         threats=['Every start copies one saved game, about four game minutes before the lineage\'s recorded death.',
-            'One lineage of one game.', 'Six starts.'],
+            'One lineage of one game.', f'{len(runs)} starts.',
+            'The spread pools both arms, so an effect of delivery that differs between starts can show as spread.'],
         simulation=dict(touched={key: touched_estimate[key] for key in ('value', 'interval')},
             missed={key: shares['withheld'][key] for key in ('value', 'interval')}, rho=spread['value'], wrong=judges['wrong']['value']))
     write_json(run / 'pilot.json', report, once=True)
@@ -2178,6 +2195,9 @@ def main(argv=None) -> int:
                 if args.render or any(getattr(args, name) is not None for name in MEASURED_INPUTS):
                     raise MeasureError('--pilot cannot be combined with --render or with an input it measures: '
                         + ', '.join('--' + name.replace('_', '-') for name in MEASURED_INPUTS))
+                if args.price is None:
+                    raise MeasureError('--pilot needs --price: the pilot\'s own dollars per start, play and recall, '
+                        'from its record; the gate\'s price is not used')
                 inputs = simulation_from_pilot(args.pilot)
             for name, default in numeric_defaults.items():
                 if getattr(args, name) is None:

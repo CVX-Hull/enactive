@@ -647,8 +647,9 @@ and one grooming session (\$1.16 to \$4.19). The defaults are the measure gate's
 It is seeded (each rate has its own stream), prints JSON or a table, and writes no file.
 `simulate-withholding --pilot REPORT` takes its inputs from a pilot report (below) in place
 of the gate's numbers and refuses a flag for any of them (`--touched`, `--touched-ends`,
-`--missed`, `--missed-ends`, `--wrong`, `--base-wrong`, `--rho`); the search settings and
-`--price`, which the pilot's own cost per start sets, stay flags.
+`--missed`, `--missed-ends`, `--wrong`, `--base-wrong`, `--rho`). It requires `--price`, the
+pilot's own dollars per start (play and recall) from its record; the search settings stay
+flags.
 
 ### The withholding pilot's analysis (`withholding-pilot/1`)
 
@@ -660,9 +661,10 @@ rule below is fixed before any pilot start is played
 - **Inputs.** The run's `adjudicated.json` (`judge-adjudicated/2`, every pair resolved),
   `private/judge-mapping.json` and `judged-facts.json`, and each package's
   `private/units.json` (`knowledge-units/1` with a recorded seed). A start is one package,
-  over all its actors and windows. It refuses a run of use packets, a package whose unit
-  record has no seed or does not match its manifest, and a judged fact that is in no unit
-  and not shared.
+  over all its actors and windows. Each start's draw has its own seed, so the arms of
+  different starts are independent, as the pooled test assumes. It refuses a run of use
+  packets, a package whose unit record has no seed or does not match its manifest, a seed
+  repeated across packages, and a judged fact that is in no unit and not shared.
 - **A fact's outcome in a start.** The fact is **touched** when any of its windows in that
   start has an applied adjudicated label (`in_line`, `against` or `found_again`); otherwise
   it is untouched, whatever its `did_not_apply` and `cannot_tell` windows. A touched fact is
@@ -676,7 +678,9 @@ rule below is fixed before any pilot start is played
 - **Shared facts** (cited by more than one article) are not drawn on their own, so they
   stay out of the units and the test. Their touched and missed counts are reported apart,
   as delivered when any citing article was delivered.
-- **Estimates**, each with a 95% interval from a cluster bootstrap over starts (seeded):
+- **Estimates**, each with a 95% interval from a cluster bootstrap over starts (seed 619
+  unless `--seed` is given, so the simulation's interval ends are fixed with the rule; a
+  draw in which an estimate is undefined is left out of its interval):
   - `touched_per_start`: touched units per start, its mean and the counts per start, and
     the ratio of its variance to its mean (1 for a Poisson count);
   - `missed_share`: missed over touched units, pooled, and per arm;
@@ -684,21 +688,27 @@ rule below is fixed before any pilot start is played
     analysis-of-variance estimator for a binary outcome, truncated at 0);
   - `judges`: the first two judges' agreement, Cohen's κ and dispute rate on the label,
     over all pairs and over the pairs driving the outcome (either of the first two gave an
-    applied label), as `measure` reports them; and the per-judge error those imply for the
-    simulation, `wrong = (1 − √(1 − 2d)) / 2` from the dispute rate `d` on the driving
-    pairs (two judges each wrong independently with probability `wrong` disagree with
-    probability `2·wrong·(1 − wrong)`).
+    applied label), as `measure` reports them; and the per-judge error they imply for the
+    simulation, `wrong = (1 − √(1 − 2d)) / 2`, where `d` is the share of driving pairs on
+    which the first two judges disagree about the missed outcome itself (one gave
+    `against` or `found_again` and the other did not), since the simulation flips that
+    binary outcome (two judges each wrong independently with probability `wrong` disagree
+    with probability `2·wrong·(1 − wrong)`). The measured missed share already carries
+    judge noise, so applying `wrong` on top errs toward more starts.
 - **The comparison, descriptive only.** Per start and pooled: touched and missed units by
   arm, the statistic missed withheld minus missed delivered, and the one-sided
   randomization p-value of the simulation's test (given a start's `M` missed units, the
-  number withheld is Binomial(`M`, 1/2)). The report's `not_a_claim` field states that six
-  starts make no claim of benefit, and `not_corrected` that the outcome rests on
+  number withheld is Binomial(`M`, 1/2); independent draws pool to Binomial of the summed
+  `M`). The report's `not_a_claim` field states that the pilot's starts, however many were
+  analysed, make no claim of benefit, and `not_corrected` that the outcome rests on
   adjudicated model-judge labels.
 - **Secondary counts.** Touched units missed only by `against`, only by `found_again`, and
   by both, per arm; touched units with an applied window whose `holds` is
   `stale_or_false`; actors listed under `no_frames`.
 - **Threats** stated in the report: every start copies one saved game, about four game
-  minutes before the lineage's recorded death; one lineage of one game; six starts.
+  minutes before the lineage's recorded death; one lineage of one game; the number of
+  starts analysed; and that the spread pools both arms, so an effect of delivery that
+  differs between starts can show as spread.
 - **The simulation inputs.** `simulation` holds `touched` (mean and interval ends),
   `missed` (the withheld arm's missed share and its ends, the simulation's "missed when
   withheld"), `rho` (the spread's point value) and `wrong` (the point value, used as the
