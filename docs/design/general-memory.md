@@ -131,8 +131,9 @@ where a page's lead gives the point and its references and links give the rest.
   least one article; between groomings, facts a session added stand alone and have their
   own index lines until the next grooming files them. It does not judge what an article
   says.
-- **Reading more.** `player_memory_read` returns an article or a fact by its id or title;
-  `player_memory_query` searches articles and facts together.
+- **Reading more.** `player_knowledge_read` returns an article or a fact by its id or
+  title; `player_knowledge_query` searches articles and facts together
+  ([the delivery boundary](player-context.md#the-delivery-boundary)).
 - **Format.** Articles are a second record kind in the same knowledge repository, in the
   same contract version as facts (`curator-fact/3` gains its article record); no shim.
 
@@ -280,8 +281,8 @@ provider; the coding host's capacity is its cost.
 Made in [player-context.md](player-context.md) with this note:
 
 - The briefing carries the leads of the articles the recall model chooses, not items by
-  kind, and an index line per other article; `player_memory_read` and
-  `player_memory_query` read articles and facts.
+  kind, and an index line per other article; the knowledge tools
+  `player_knowledge_read` and `player_knowledge_query` read articles and facts.
 - In the curator's table, the rows for game time and place, the four kinds, and a brief
   aimed at places and goods are replaced by this note's format and grooming.
 - Reminders during play are a new layer between the briefing and the cut.
