@@ -134,10 +134,18 @@ def test_record_defaults_the_label_and_refuses_earlier_package_versions(tmp_path
     (dict(attempts=-1), 'attempts'),
     (dict(unpriced_attempts=11, spend_usd='5.5056'), 'more unpriced attempts'),
     (dict(label=None), 'label'),
+    (dict(start='S0'), 'S0'),
+    (dict(start='S01'), 'S01'),
+    (dict(start='S100'), 'S100'),
 ])
 def test_unversioned_inconsistent_or_invalid_rows_are_rejected(tmp_path, bad, message):
     with pytest.raises(LedgerError, match=message):
         read_ledger(write(tmp_path / 'runs.jsonl', row(**bad)))
+
+
+def test_start_labels_run_from_s1_to_s99(tmp_path):
+    rows = [row(start='S3', run='lh9a3', session='a' * 32), row(start='S99', run='lh9a4', session='b' * 32)]
+    assert [r['start'] for r in read_ledger(write(tmp_path / 'runs.jsonl', *rows))] == ['S3', 'S99']
 
 
 def test_a_repeated_run_is_rejected(tmp_path):

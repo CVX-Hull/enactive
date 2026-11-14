@@ -23,12 +23,12 @@ scope: 'The withholding pilot (#619): six short starts from copies of one sealed
 - **The inputs, each with a 95% interval over starts** (the frozen analysis of #638 at
   `caffedd7`, blind labels):
   - units touched per start **8.8** (7.0 to 10.3), variance over mean 0.61;
-  - missed share **0.40** pooled (21 of 53; 0.26 to 0.58): **0.32** withheld (8 of 25;
+  - missed share **0.40** pooled (21 of 53; 0.25 to 0.58): **0.32** withheld (8 of 25;
     0.09 to 0.54) and 0.46 delivered (13 of 28; 0.28 to 0.70);
   - spread, the intra-start correlation of the missed outcome, **0.09** (0 to 0.19);
   - judges: the first two agree on 95.2% of 1,155 pairs (κ 0.79), but on the 148 pairs
-    that drive the outcome on 67.6% (κ **0.45**, 0.34 to 0.56), an implied per-judge
-    error of **0.10** (0.05 to 0.17), as low as the curator scoring's 0.45 to 0.49.
+    that drive the outcome on 67.6% (κ **0.45**, 0.34 to 0.56, as low as the curator
+    scoring's 0.45 to 0.49), an implied per-judge error of **0.10** (0.05 to 0.17).
 - **Descriptively, withheld units were missed less often than delivered ones** (−5 in
   the pooled statistic; one-sided p 0.91). Six starts support no claim either way; the
   analysis states it (`not_a_claim`).
@@ -38,19 +38,27 @@ scope: 'The withholding pilot (#619): six short starts from copies of one sealed
   reported \$8.04.
 - **The full study, re-priced.** At the measured point values it needs **53 starts**
   for 80% power to detect a halving of the missed share: about **\$78** at the counted
-  \$1.48 a start (\$71 at the reported price). At the favourable ends of the intervals 23 starts (\$34); with more
+  \$1.48 a start (\$71 at the reported price). These are play and recall only: they
+  reuse the store `v18`, already paid for (the simulation's totals add a new store and
+  grooming, \$24 to \$27), and the judges are host agents at no provider spend. With
+  both the units touched and the missed share at their favourable ends 23 starts (\$34); with more
   units touched 46 (\$68); with a higher missed share 27 (\$40). With the missed share
   at its lower end, or fewer units touched, no size up to 60 reaches the target.
 - **Use, judged separately** (use packets, briefing and reminders shown): when a fact
   whose lead was delivered applied, the player acted in line with it in **79%** of the
-  windows (46 of 58; 0.58 to 0.94) and found it again by looking in 21%; it never acted
-  on a fact the frames showed stale or false; it acted on 2 of the 15 facts it read.
-  Recall precision was 0.16 (376 of 2,329 judged fact windows after a delivered
-  selection applied).
+  windows (46 of 58; 0.58 to 0.94) and found it again by looking in 21%; of the 49
+  windows in which it acted in line with a fact it had, none acted on a fact the frames
+  showed stale or false; it acted on 2 of the 15 facts it read. Recall precision was
+  0.16: of 2,329 judged fact windows following a delivered recall selection, the fact
+  applied in 376. Five facts of S5's second actor had no frame in its window to judge
+  (`not_shown`) and are outside these rates.
+- **Threats**, as the analysis names them: every start copies one saved game, about four
+  game minutes before the lineage's recorded death; one lineage of one game; six starts;
+  and the spread pools both arms, so an effect of delivery that differs between starts
+  can show as spread.
 - **Not known.** Whether delivered memory helps (the comparison here is descriptive and
   points the other way); how much of the judges' disagreement on the driving pairs is
-  the packets' frames rather than the judges; whether one save four game minutes before
-  a recorded death stands for play in general.
+  the packets' frames rather than the judges.
 - **Owner decision.** The owner approved the spending the pilot required
   ([decision log](../decisions/owner-decisions.md)). The full study is put to the owner
   with its price.
@@ -66,11 +74,12 @@ scope: 'The withholding pilot (#619): six short starts from copies of one sealed
 | S5 | `withholding-pilot-619-15` | 61915 | 18 | 14, 10 | 19 | 232 | \$1.626 | 2.21 |
 | S6 | `withholding-pilot-619-16` | 61916 | 18 | 9, 14 | 19 | 233 | \$1.539 | 2.06 |
 
-Reminders made counts selections and silences, not those not made at the orderly stop.
-S2's survivor passed most of a day in the shelter; in S3 a fight with a zombie dog left
-the survivor bitten. Spend is the counted figure; in S4 and S5 it includes one player
-request each with no cost record (the rate-limited request below), counted at its
-\$0.4096 bound, so S4 reported \$1.502 and S5 \$1.216.
+Every start handed off once, so each has two actors and two briefings. Reminders made
+counts selections and silences (the one silence was in S3), not the two not made at the
+orderly stop (S3 and S6). S2's survivor passed most of a day in the shelter; in S3 a
+fight with a zombie dog left the survivor bitten. Spend is the counted figure, which in
+S4 and S5 includes one unpriced request each (below); the run ledger labels the starts
+`withholding-pilot-S1` to `-S6`.
 
 ## Results
 
@@ -85,10 +94,13 @@ request each with no cost record (the rate-limited request below), counted at it
 | withholding-pilot-619-16 | withholding-pilot | S6 | budget | 2.06 | 200 | 4 | 4.7 | 1 · 1.58 h | 70% | 16 | 0.0077 | 34% |
 <!-- /evaluate-table -->
 
+The table's \$ / decision is from provider-reported cost, so S4 and S5 read lower than
+their counted spend.
+
 **Time per response (#164).** 1,269 player responses: median 6.1 s, 95th percentile
 11.2 s (by start, medians 5.5 to 6.6 s). By prompt size: under 20,000 tokens 3.6 s
-(175 responses), 20,000 to 60,000 6.0 s (722), 60,000 to 100,000 7.3 s (371). One
-request's first tool result to the next request's: median 6.9 s.
+(175 responses), 20,000 to 60,000 6.0 s (722), 60,000 to 100,000 7.3 s (371), and one
+over 100,000. One request's first tool result to the next request's: median 6.9 s.
 
 **Provider retries (#309).** Two, in S4 and S5: each a rate-limit refusal of a player
 request, retried once by the host ten seconds later, which succeeded. The refused
@@ -98,8 +110,10 @@ attempt carried no cost record and counted at the \$0.4096 bound. No 5xx occurre
 derived from the mission alone and frozen before scoring (the world loaded, the
 survivor's identity shown and kept, needs tended, time passing alive, no death screen,
 and so on). Reached: 31 of 42 (0.74; 0.64 to 0.83); by start 4, 6, 4, 6, 5 and 6 of 7.
-On these starts the measure **fails its own keep rule**: the first two judges agree on
-87% of 126 pairs, κ 0.75 against the floor of 0.845 (it was 0.975 in #620), and 66 of
+Each start's milestones were judged in three packets of shuffled frames, 126
+milestone-packet pairs in all, and a milestone counts as reached when any of its packets
+shows it. On these starts the measure **fails its own keep rule**: the first two judges
+agree on 87% of the 126 pairs, κ 0.75 against the floor of 0.845 (it was 0.975 in #620), and 66 of
 the 126 adjudicated labels are `cannot_tell`. The figure is not a reading of progress.
 
 ## Method
