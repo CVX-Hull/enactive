@@ -3,7 +3,7 @@ owner: lead
 status: historical
 kind: study
 date: '2026-11-14'
-scope: 'The withholding measure revision (#653): the judge codebook (a miss is acting against a fact or an active lookup), re-judged on the pilot''s sealed blind packets by three host Opus judges as development evidence; a frozen known-groups set; the prompt check; binary agreement with specific agreement and AC1; the misses left by arm and unit; and the full study re-sized with the blocked within-unit design and its simulation. No play, no provider spend'
+scope: 'The withholding measure revision (#653): the judge codebook (a miss is acting against a fact or an active lookup), re-judged on the pilot''s sealed blind packets by three host Opus judges as development evidence; a frozen known-groups set; the prompt check; binary agreement with specific agreement and AC1; the misses left by arm and unit; the anchor re-judged; and the full study re-sized with the blocked within-unit design and its simulation, with its sensitivity to the anchored rate. No play, no provider spend'
 ---
 
 # The withholding measure, validated and re-sized (#653)
@@ -159,8 +159,8 @@ simulated study is analysed with the primary test (2,000 re-draws).
 With slope SD 1 the "none" row is null only on average: each unit has its own effect, so
 its 0.08 cell (2.5 standard errors above 0.05) is not a pure false-alarm rate. The pure
 null (slope SD 0) rejected 0.07 and 0.05 with one block and 0.04 and 0.04 with two, at 20
-and 40 starts. Slope SD 0.5 gives the same sizes as 1 within simulation error; slope SD 0
-was run only for a halving at 20 starts or more, where power is already 0.96 or above. Blocking by saved moment
+and 40 starts. Slope SD 0.5 gives the same sizes as 1 within simulation error; of the effects, slope SD
+0 was run only for a halving at 20 starts or more, where power is already 0.96 or above. Blocking by saved moment
 costs no power here, because the simulation draws no block effect; its value is that
 the result is not one saved game's.
 
@@ -214,8 +214,8 @@ custodian run).
 - **Blocks of an odd number of starts** cannot withhold each unit in exactly half: with
   two blocks the halving needs 12 starts, not 10 (0.78 at 10). A second saved moment may
   also change which units are touched at all, which the simulation does not model.
-- **Judging is not free in time.** 48 to 52 starts mean about 350 to 430 clean-context
-  host judgings; no provider spend, but host capacity and hours.
+- **Judging is not free in time.** At the pilot's 43 judgings over 6 starts, 48 to 52
+  starts mean about 345 to 375 clean-context host judgings; no provider spend, but host capacity and hours.
 - **Some misses may be habits delivery does not change** (the recipe looked up in four
   delivered starts), which would dilute any effect over the store's units.
 - **The examples name a companion and eating.** They pass the game-neutral word test
