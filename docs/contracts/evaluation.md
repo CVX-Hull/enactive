@@ -514,7 +514,10 @@ Facts come from the store and the trace, not from a list written in advance. Del
 
 - A fact has one route for an actor; an id listed twice is refused.
 - `from_decision` is optional: the admission's decision from which the route holds (a
-  reminder's, a read's). A use packet leaves the fact out of windows that end before it.
+  reminder's, a read's). A use packet leaves the fact out of windows that end before it,
+  and names its `available_from` frame: an applied label (`in_line`, `against`,
+  `found_again`) must cite a frame from there on, or `events` refuses it, so an action
+  before a read or a reminder cannot count as using it.
 - `briefing` and `reminders` are optional and are shown only in use packets.
 - An actor without an entry is not judged. Any other version or key is refused.
 
@@ -525,21 +528,29 @@ Facts come from the store and the trace, not from a list written in advance. Del
 which maps each shuffled name to its admission, actor, decisions, source IDs and each
 fact's route and is never given to a judge. A run directory holds one kind.
 
-- **Token budget.** A window ends where the next decision's frames would pass the budget
-  (`--budget`, default 60,000 estimated tokens for everything a judge reads); cuts fall
-  between decisions and within one actor. An image is estimated at width × height / 750
-  tokens after a long edge over 1568 px is scaled down to it, text at one token per three
-  characters. The manifest (`judge-packet/2`) records
-  `budget: {tokens, estimated: {images, text, total}, over}`. Facts that would take more
-  than half the budget are split over several packets of the same window.
+- **Token budget.** Windows are cut so that everything a judge reads stays within the
+  budget (`--budget`, default 60,000 estimated tokens), evened across the windows of an
+  actor where decisions allow; cuts fall between decisions and within one actor. An image
+  is estimated at width × height / 750 tokens after a long edge over 1568 px is scaled
+  down to it, text at one token per three characters, counted on the files as written.
+  The manifest (`judge-packet/2`) records `budget: {tokens, estimated: {images, text,
+  total}, over}`; `over` is true when a written packet passes the budget, which a single
+  decision larger than the budget can. Facts are split over several packets of the same
+  window when they would take more than half of what the briefing, reminders and
+  instructions leave; when those leave less than a quarter of the budget, the tool refuses.
+- An actor with facts but no kept frame is listed under `no_frames` in the mapping and
+  the report.
 - **Use packets** hold `manifest.json`, `instructions.md`, `facts.json` (id, text, route),
   `delivered.json` (the briefing and the reminders up to the window's end) and `frames/`;
   a frame's row may carry `stated_before`, the `intent` and `cites` of the player's calls
   since the previous frame. Withheld facts are left out.
 - **Blind packets**, for the benefit measure, hold `manifest.json`, `instructions.md`,
-  `facts.json` (id and text only, in id order) and `frames/`: frames and inputs only. The
-  briefing, the reminders, `intent`, `cites` and the route are absent, and every fact of
-  the actor is in every window, so a judge cannot tell a delivered fact from a withheld one.
+  `facts.json` (text under an opaque id drawn per packet, in an order and grouping that do
+  not depend on the route) and `frames/`: frames and inputs only. The briefing, the
+  reminders, `intent`, `cites`, the route, the facts' own ids and decision numbers are
+  absent (frames are numbered by position, so a gap cannot show a memory read), and every
+  fact of the actor is in every window, so a judge cannot tell a delivered fact from a
+  withheld one. The mapping translates the opaque ids back.
 - Frames and directories carry shuffled names; a packet holds no admission name, source
   ID, player record or report. The held-out lineage's evidence is refused.
 - **Annotators.** `packets annotate` cuts frames to the same budget for two annotators,
@@ -552,9 +563,14 @@ fact's route and is never given to a judge. A run directory holds one kind.
 `agreement` writes `adjudicated.json` (`judge-adjudicated/2`): per pair the label both of
 the first two judges gave, else the third judge's (`by`: `agreement`, `third`, or
 `third_alone` when the third gave a label neither did); `holds` is the value both gave,
-else the third's when it sides with one of them, else `cannot_tell`. It reports the first
-two judges' agreement, Cohen's κ and the dispute rate, and the packets a third judge
-must answer.
+else the third's when it sides with one of them, else `cannot_tell`. A pair on which the
+first two differ in the label or in `holds` needs a third judge. It reports the first two
+judges' agreement, Cohen's κ and the dispute rate, for the label and for `holds`
+separately, and the packets a third judge must answer.
+
+Every answer import (`events`, `anchor events`) and `prompt-check report` checks each
+file of the packet against its manifest, and refuses a packet with an unlisted or changed
+file.
 
 `measure` writes `measure.json` (`memory-use/1`) from the adjudicated labels of a run of
 use packets:
@@ -566,10 +582,13 @@ use packets:
 | `stale_or_false_acted` | Of the windows in which the player acted in line with a fact it had (lead, read or index), the share whose `holds` is `stale_or_false` |
 | `read_then_in_line` | Of the facts the player read through a link or a search, the share it acted in line with in some window; the denominator is how many it read |
 
-- Each rate carries, beside it, the first two judges' agreement, κ and dispute rate over
-  the pairs it is taken from (`stale_or_false_acted` on `holds`, the others on the label),
-  and a 95% interval from a cluster bootstrap over starts (admissions). One start gives no
-  interval.
+- Each rate carries, beside it, the first two judges' agreement, κ and dispute rate
+  (`stale_or_false_acted` on `holds`, the others on the label) twice: over every pair of
+  its routes (`judges_route`), and over the pairs that drive it (`judges_rate_pairs`:
+  either of the first two judges gave an applied label, or for the stale rate `in_line`),
+  chosen before adjudication so the set does not depend on the outcome. Easy agreement on
+  "did not apply" lifts the first; the second is the health signal. Each rate has a 95%
+  interval from a cluster bootstrap over starts (admissions); one start gives none.
 - The report's `not_corrected` field states that the rates rest on adjudicated model-judge
   labels and are not corrected against a human truth
   ([owner decisions](../decisions/owner-decisions.md)).
@@ -582,8 +601,11 @@ use packets:
   unchanged, the measure gate's judge packets that hold one of its owner-labelled pairs
   into `RUN/anchor/packets/`, after checking every file against the hashes the gate
   recorded and every `instructions.md` against the frozen prompt's SHA-256
-  (`14c7d593…6af24`, also pinned by a test). The gate is only read; `--dry-run` writes
-  nothing. `private/anchor.json` (`anchor-set/1`) holds the pairs with the owner's blind
+  (`14c7d593…6af24`, also pinned by a test), and every gate file it reads (the mapping,
+  `labels.json`, `adjudicated.json` and the packets) against the sealed evidence manifest
+  `data/evidence/memory-screen-gates-460-386.sha256`, so a gate rewritten consistently
+  with its own mapping is still refused. `anchor events` rechecks the frozen prompt. The
+  gate is only read; `--dry-run` writes nothing. `private/anchor.json` (`anchor-set/1`) holds the pairs with the owner's blind
   and checked labels (read from the gate's `labels.json`, `owner-labels/2`) and the gate
   judges' labels. `anchor events` writes the new judge's `anchor_verdict` events;
   `anchor report` writes `anchor/report-<judge>.json` (`anchor-report/1`): the new judge's
@@ -597,8 +619,10 @@ use packets:
   frames, inputs, facts and names with the tool's current instructions, after checking
   every file of `BEFORE`. `prompt-check report RUN --before BEFORE --judges A B` writes
   `prompt-check.json` (`prompt-check/1`): the first two judges' agreement, κ and dispute
-  rate before and after, the difference with an interval over starts, and the share of its
-  own labels each judge changed.
+  rate before and after, the difference with an interval over starts, the share of its
+  own labels each judge changed, and each judge's model on both sides; it refuses a run
+  whose models differ, so a model change is not credited to the prompt. Each event file
+  holds one model.
 
 ### Withholding simulation (`withholding-simulation/1`)
 

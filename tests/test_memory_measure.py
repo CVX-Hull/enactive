@@ -78,7 +78,7 @@ def save(path: Path, value) -> Path:
 
 
 def fact(identity: str, **more) -> dict:
-    return dict(id=identity, text=f'TEXT of {identity}', **more)
+    return dict(id=identity, text='A useful observed fact.', **more)
 
 
 #: What was delivered to each actor of three admissions, as delivery would write it. Every marker in capitals is
@@ -128,10 +128,10 @@ def answers(run: Path, name: str, verdicts=None, change=None) -> list[Path]:
     for packet in mapping_of(run)['packets']:
         if not any(start == packet['start'] for start, _ in verdicts):
             continue
-        value = dict(packet=packet['packet'], answers=[dict(fact=identity, label=verdicts[(packet['start'], identity)][0],
+        value = dict(packet=packet['packet'], answers=[dict(fact=opaque, label=verdicts[(packet['start'], identity)][0],
             holds=verdicts[(packet['start'], identity)][1],
-            frames=['f001'] if verdicts[(packet['start'], identity)][0] in judge.APPLIED else [], note='seen')
-            for identity in packet['facts']])
+            frames=[packet['available_from'].get(identity, 'f001')] if verdicts[(packet['start'], identity)][0] in judge.APPLIED else [], note='seen')
+            for opaque, identity in packet['fact_ids'].items()])
         if change:
             change(value)
         files.append(save(run / 'answers' / name / f"{packet['packet']}.json", value))
@@ -343,7 +343,7 @@ def test_use_packets_show_route_briefing_reminders_and_what_the_player_stated(tm
         'facts.json', 'delivered.json', *(f'frames/f{number:03d}.png' for number in range(1, 8))])
     assert (first / 'instructions.md').read_text() == JUDGE_INSTRUCTIONS['use']
     shown = json.loads((first / 'facts.json').read_text())['facts']
-    assert shown[1] == dict(id='lead-1', text='TEXT of lead-1', route='lead') and 'held-1' not in json.dumps(shown)  # withheld: never shown
+    assert shown[1] == dict(id='lead-1', text='A useful observed fact.', route='lead', available_from='f001') and 'held-1' not in json.dumps(shown)  # withheld: never shown
     assert json.loads((first / 'delivered.json').read_text()) == dict(briefing='BRIEFING-MARK lead-1 lead-2',
         reminders=[dict(text='REMINDER-MARK', decision=3)])
     manifest = json.loads((first / 'manifest.json').read_text())
@@ -385,14 +385,14 @@ def test_a_blind_packet_holds_frames_inputs_and_fact_text_only(tmp_path):
     for packet in mapping['packets']:
         directory = blind / 'judge-packets' / packet['packet']
         words = packet_text(directory)
-        for leak in leaks:
+        for leak in (*leaks, b'decision', *(identity.encode() for identity in packet['facts'])):
             assert leak not in words, leak
         assert sorted(p.name for p in directory.iterdir()) == ['facts.json', 'frames', 'instructions.md', 'manifest.json']
         assert (directory / 'instructions.md').read_text() == JUDGE_INSTRUCTIONS['blind']
         shown = json.loads((directory / 'facts.json').read_text())['facts']
-        assert all(set(row) == {'id', 'text'} for row in shown) and [row['id'] for row in shown] == sorted(packet['facts'])
+        assert all(set(row) == {'id', 'text'} for row in shown) and {row['id'] for row in shown} == set(packet['fact_ids'])
         rows = json.loads((directory / 'manifest.json').read_text())['frames']
-        assert all(set(row) == {'frame', 'file', 'sha256', 'inputs_before', 'decision'} for row in rows) and rows[0]['inputs_before'] == ['k1']
+        assert all(set(row) == {'frame', 'file', 'sha256', 'inputs_before'} for row in rows) and rows[0]['inputs_before'] == ['k1']
     # the route is known to the tooling alone, withheld facts included
     assert mapping['packets'][0]['facts'] == {'held-1': 'withheld', 'index-1': 'index', 'lead-1': 'lead', 'lead-2': 'lead', 'read-1': 'read'}
 
@@ -658,12 +658,12 @@ def test_agreement_adjudicates_labels_and_holds_with_a_third_judge_on_disputes(t
     for name in ('judge-a', 'judge-b', 'judge-c', 'judge-d'):
         judge_events(run, name, 'model-x', answers(run, name))
     value = agreement(run, ['judge-a', 'judge-b'])
-    assert (value['pairs'], value['disputed'], value['unresolved'], value['dispute_rate']) == (10, 1, 1, 0.1)
+    assert (value['pairs'], value['disputed'], value['unresolved'], value['dispute_rate']) == (10, 1, 2, 0.1)
     disputed = next(packet['packet'] for packet in mapping_of(run)['packets'] if packet['start'] == 'run-f')
     assert value['third_judge_packets'] == [disputed]
     # the first two judges differ on `holds` of one pair whose label they share: with no third verdict it is cannot_tell
     assert next(row['holds'] for row in value['rows'] if (row['start'], row['fact']) == ('run-f', 'lead-2')) == 'cannot_tell'
-    with pytest.raises(MeasureError, match='1 pairs are not adjudicated'):
+    with pytest.raises(MeasureError, match='2 pairs are not adjudicated'):
         measure(run)
     value = agreement(run, ['judge-a', 'judge-b'], 'judge-c')
     rows = {(row['start'], row['fact']): row for row in value['rows']}
@@ -711,13 +711,13 @@ def test_the_use_measures_carry_the_judges_agreement_dispute_rate_and_an_interva
     # beside each rate: the first two judges on the pairs it is taken from
     lead = [key for key in VERDICTS['judge-a'] if key[1].startswith('lead')]
     codes = [[judge.USE_LABELS.index(VERDICTS[name][key][0]) for key in lead] for name in ('judge-a', 'judge-b')]
-    beside = use['judges']
+    beside = use['judges_route']
     assert (beside['pairs'], beside['on'], beside['agreement'], beside['dispute_rate']['value']) == (5, 'label', 0.8, 0.2)
     assert beside['kappa']['value'] == pytest.approx(cohen_kappa(*codes, 5))
-    assert measures['rediscovery']['judges'] == beside
-    assert (read['judges']['pairs'], read['judges']['dispute_rate']['value'], read['judges']['kappa']['value']) == (3, 0.0, 1.0)
+    assert measures['rediscovery']['judges_route'] == beside
+    assert (read['judges_route']['pairs'], read['judges_route']['dispute_rate']['value'], read['judges_route']['kappa']['value']) == (3, 0.0, 1.0)
     # the stale rate rests on `holds`: the two judges gave it differently once in ten pairs
-    assert (stale['judges']['pairs'], stale['judges']['on'], stale['judges']['agreement']) == (10, 'holds', 0.9)
+    assert (stale['judges_route']['pairs'], stale['judges_route']['on'], stale['judges_route']['agreement']) == (10, 'holds', 0.9)
     assert report['judges_overall']['pairs'] == 10 and report['judges_overall']['dispute_rate']['value'] == 0.1
     # an interval over the three starts. The use rate is one half in each start that has an applied lead fact, so
     # resampling starts cannot move it; the other rates differ between starts.
@@ -725,7 +725,7 @@ def test_the_use_measures_carry_the_judges_agreement_dispute_rate_and_an_interva
     for part in (measures['rediscovery'], stale, read):
         low, high = part['interval']
         assert 0 <= low <= part['value'] <= high <= 1 and low < high
-        assert part['judges']['dispute_rate']['interval'] is not None and part['definition']
+        assert part['judges_route']['dispute_rate']['interval'] is not None and part['definition']
     assert measure(run, seed=5, draws=2000) == report  # the seed fixes it
     assert main(['measure', str(run), '--seed', '5', '--draws', '200']) == 0
     out = capsys.readouterr().out
@@ -744,7 +744,7 @@ def test_one_start_gives_rates_without_intervals_and_a_blind_run_gives_no_use_me
     agreement(run, ['judge-a', 'judge-b'])
     report = measure(run, seed=1, draws=100)
     read = report['measures']['read_then_in_line']
-    assert (read['value'], read['interval'], read['judges']['kappa']['interval'], report['bootstrap']['starts']) == (1.0, None, None, 1)
+    assert (read['value'], read['interval'], read['judges_route']['kappa']['interval'], report['bootstrap']['starts']) == (1.0, None, None, 1)
     use = report['measures']['use_rate_delivered']  # the one lead pair is cannot_tell: nothing applied, so no rate
     assert (use['numerator'], use['denominator'], use['value'], use['interval']) == (0, 0, None, None)
     blind = judged(tmp_path / 'blind', 'blind')
@@ -754,3 +754,174 @@ def test_one_start_gives_rates_without_intervals_and_a_blind_run_gives_no_use_me
     assert report['measures'] is None and report['labels_by_route']['withheld'] == dict(pairs=3, in_line=0, against=0,
         found_again=3, did_not_apply=0, cannot_tell=0)
     assert 'not taken from blind packets' in memory_measure.render_measure(report)
+
+
+# Review regressions for R-FALSE-CLAIM: a small fixture per claim; no provider or gameplay cost.
+@pytest.mark.parametrize('route', ['lead', 'read'])
+@pytest.mark.parametrize('label', judge.APPLIED)
+def test_action_before_delivery_or_read_cannot_count(tmp_path, route, label):
+    run = tmp_path / 'memory-measure' / 'timed'
+    facts = dict(schema='judged-facts/1', admissions={'run-e': {'001': {route: [fact('late', from_decision=6)]}}})
+    fact_packets(run, evidence(tmp_path)[:1], save(tmp_path / 'late.json', facts), 'use', every=1, seed=3)
+    packet = mapping_of(run)['packets'][0]
+    directory = run / 'judge-packets' / packet['packet']
+    listed = json.loads((directory / 'facts.json').read_text())['facts'][0]
+    assert listed['available_from'] == 'f005'
+    assert 'Earlier action does' in (directory / 'instructions.md').read_text()
+    answer = save(run / 'answer.json', dict(packet=packet['packet'], answers=[dict(fact='late', label=label,
+        holds='held', frames=['f001'])]))
+    with pytest.raises(MeasureError, match='before available_from f005'):
+        judge_events(run, 'judge-a', 'model-x', [answer])
+    assert not (run / 'events').exists()
+    # Evidence only of action before the read gets no credit in the standing measure.
+    value = json.loads(answer.read_text())
+    value['answers'][0].update(label='did_not_apply')
+    save(answer, value)
+    for name in ('judge-a', 'judge-b'):
+        judge_events(run, name, 'model-x', [answer])
+    agreement(run, ['judge-a', 'judge-b'])
+    report = measure(run, seed=3, draws=20)
+    if route == 'read':
+        assert (report['measures']['read_then_in_line']['numerator'],
+            report['measures']['read_then_in_line']['denominator']) == (0, 1)
+    # The first available frame is accepted as evidence, as are later frames.
+    value['answers'][0].update(label=label, frames=['f001', 'f005'])
+    save(answer, value)
+    assert judge_events(run, 'judge-c', 'model-x', [answer])[0].label == label
+
+
+def test_blind_ids_and_grouping_are_independent_of_routes_and_unique_per_packet(tmp_path):
+    runs = evidence(tmp_path, size=(750, 400))[:1]
+    entries = [dict(id='canonical-secret-a', text='A door is open.'), dict(id='canonical-secret-b', text='A tool is useful.')]
+    mappings, payloads = [], []
+    for number, (lead, withheld) in enumerate((entries, entries[::-1])):
+        run = tmp_path / 'memory-measure' / f'blind-{number}'
+        facts = dict(schema='judged-facts/1', admissions={'run-e': {'001': dict(lead=[lead], withheld=[withheld])}})
+        mapping = fact_packets(run, runs, save(tmp_path / f'facts-{number}.json', facts), 'blind', budget=3600, every=1, seed=7)
+        mappings.append(mapping)
+        payloads.append([packet_text(run / 'judge-packets' / packet['packet']) for packet in mapping['packets']])
+    assert payloads[0] == payloads[1]
+    assert len(payloads[0]) > 1
+    for payload in payloads[0]:
+        assert b'canonical-secret' not in payload and b'decision' not in payload
+    ids = [set(packet['fact_ids']) for packet in mappings[0]['packets']]
+    assert len(set.union(*ids)) == sum(map(len, ids))
+
+
+@pytest.mark.parametrize('kind', ['use', 'blind', 'annotate'])
+def test_token_accounting_matches_every_serialized_file_and_flags_oversize(tmp_path, kind):
+    run = tmp_path / 'memory-measure' / 'sized'
+    runs = [admission(tmp_path / 'evidence', 'run-g', 'g', [1, 2], (1500, 1500))]
+    if kind == 'annotate':
+        mapping = annotate_packets(run, runs, every=1, budget=3600)
+        root = run / 'annotate'
+    else:
+        mapping = fact_packets(run, runs, save(tmp_path / 'facts.json', dict(FACTS,
+            admissions={'run-g': FACTS['admissions']['run-g']})), kind, every=1, budget=3600)
+        root = run / 'judge-packets'
+    assert len(mapping['packets']) == 2  # an oversized decision is retained and declared
+    for packet in mapping['packets']:
+        directory = root / packet['packet']
+        manifest = json.loads((directory / 'manifest.json').read_text())
+        actual_text = sum(text_tokens(path.read_text()) for path in directory.rglob('*') if path.is_file() and path.suffix != '.png')
+        estimate = manifest['budget']
+        assert estimate['estimated']['text'] == actual_text
+        assert estimate['estimated']['total'] == actual_text + 3000
+        assert estimate['over'] == packet['over_budget'] == (actual_text + 3000 > 3600)
+        assert packet['estimated_tokens'] == actual_text + 3000
+
+
+def test_fixed_delivery_payload_must_leave_a_quarter_of_the_budget_for_facts(tmp_path):
+    run = tmp_path / 'memory-measure' / 'fixed'
+    facts = dict(schema='judged-facts/1', admissions={'run-g': {'001': dict(
+        lead=[fact(f'fact-{number}') for number in range(20)], briefing='x' * 10500)}})
+    with pytest.raises(MeasureError, match='less than a quarter for facts'):
+        fact_packets(run, evidence(tmp_path)[2:], save(tmp_path / 'facts.json', facts), 'use', budget=6000)
+    assert not (run / 'judge-packets').exists()
+
+
+def test_holds_only_dispute_requires_a_third_judge_and_uses_its_own_dispute_rate(tmp_path):
+    run = packed(tmp_path)
+    for name in ('judge-a', 'judge-b'):
+        verdicts = dict(VERDICTS['judge-a'])
+        if name == 'judge-b':
+            verdicts[('run-f', 'lead-2')] = ('in_line', 'stale_or_false')
+        judge_events(run, name, 'model-x', answers(run, name, verdicts))
+    unresolved = agreement(run, ['judge-a', 'judge-b'])
+    packet = next(packet for packet in mapping_of(run)['packets'] if packet['start'] == 'run-f')
+    assert (unresolved['disputed'], unresolved['dispute_rate'], unresolved['holds_disputed'],
+        unresolved['holds_dispute_rate'], unresolved['unresolved']) == (0, 0, 1, 0.1, 1)
+    assert unresolved['third_judge_packets'] == [packet['packet']]
+    with pytest.raises(MeasureError, match='1 pairs are not adjudicated'):
+        measure(run)
+    judge_events(run, 'judge-c', 'model-x', answers(run, 'judge-c'))
+    assert agreement(run, ['judge-a', 'judge-b'], 'judge-c')['unresolved'] == 0
+    report = measure(run, seed=1, draws=20)
+    assert report['judges_overall']['dispute_rate']['value'] == 0
+    assert report['measures']['stale_or_false_acted']['judges_route']['dispute_rate']['value'] == 0.1
+
+
+def test_rate_agreement_selects_pairs_from_either_initial_judge_before_adjudication(tmp_path):
+    run = packed(tmp_path)
+    for name in ('judge-a', 'judge-b', 'judge-c'):
+        verdicts = dict(VERDICTS[name])
+        if name == 'judge-c':
+            verdicts[('run-f', 'lead-1')] = ('cannot_tell', 'held')
+        judge_events(run, name, 'model-x', answers(run, name, verdicts))
+    agreement(run, ['judge-a', 'judge-b'], 'judge-c')
+    rates = measure(run, seed=1, draws=100)['measures']
+    use = rates['use_rate_delivered']
+    assert (use['denominator'], use['judges_route']['pairs'], use['judges_rate_pairs']['pairs']) == (3, 5, 4)
+    assert use['judges_rate_pairs']['agreement'] == 0.75
+    assert use['judges_rate_pairs']['dispute_rate']['value'] == 0.25
+    assert use['judges_rate_pairs']['kappa']['value'] is not None
+    stale = rates['stale_or_false_acted']
+    assert (stale['denominator'], stale['judges_route']['pairs'], stale['judges_rate_pairs']['pairs']) == (4, 10, 5)
+    assert stale['judges_rate_pairs']['dispute_rate']['value'] == 0.2
+
+
+@pytest.mark.parametrize('target', ['instructions.md', 'frame'])
+def test_answer_import_checks_packet_contents_not_just_manifest(tmp_path, target):
+    run = packed(tmp_path)
+    files = answers(run, 'judge-a')
+    packet = mapping_of(run)['packets'][0]
+    directory = run / 'judge-packets' / packet['packet']
+    path = next((directory / 'frames').iterdir()) if target == 'frame' else directory / target
+    path.write_bytes(path.read_bytes() + b'tampered')
+    with pytest.raises(MeasureError, match='changed since the packet was made'):
+        judge_events(run, 'judge-a', 'model-x', files)
+    assert not (run / 'events').exists()
+
+
+def test_actors_with_facts_and_no_kept_frames_are_listed_in_mapping_and_report(tmp_path):
+    runs = [admission(tmp_path / 'evidence', 'run-g', 'g', [None, None])]
+    run = tmp_path / 'memory-measure' / 'no-frames'
+    mapping = fact_packets(run, runs, save(tmp_path / 'facts.json', dict(FACTS,
+        admissions={'run-g': FACTS['admissions']['run-g']})), 'use')
+    assert mapping['no_frames'] == ['run-g/001'] and mapping['packets'] == []
+    (run / 'events').mkdir()
+    for name in ('judge-a', 'judge-b'):
+        judge.write_events(run / 'events' / f'{name}.jsonl', [])
+    agreement(run, ['judge-a', 'judge-b'])
+    assert measure(run, seed=1, draws=20)['no_frames'] == ['run-g/001']
+    assert main(['agreement', str(run), '--judges', 'judge-a', 'judge-b']) == 0
+    assert main(['measure', str(run), '--seed', '1', '--draws', '20']) == 0
+
+
+def test_manifest_sizes_itself_exactly_at_budget_and_rounding_boundaries():
+    for extra in range(4):
+        contents = {'instructions.md': 'x' * (300 + extra)}
+        for budget in range(190, 230):
+            manifest = dict(schema='judge-packet/2', packet='packet', budget=memory_measure.budget_entry(budget, 0, []), frames=[])
+            serialized = memory_measure.manifest_text(manifest, contents)
+            actual = text_tokens(serialized) + sum(text_tokens(value) for value in contents.values())
+            assert manifest['budget']['estimated']['total'] == actual
+            assert manifest['budget']['over'] == (actual > budget)
+
+
+def test_each_judge_event_file_pins_one_model(tmp_path):
+    event = judge.FactUseVerdict('w', 'f', 'lead', 'in_line', 'held', ('frame',), 'judge-a', 'model-x', 'p', '0' * 64)
+    other = judge.FactUseVerdict('other', 'f', 'lead', 'in_line', 'held', ('frame',), 'judge-a', 'model-y', 'p', '0' * 64)
+    with pytest.raises(EvaluationError, match='more than one model'):
+        judge.write_events(tmp_path / 'mixed.jsonl', [event, other])
+    assert not (tmp_path / 'mixed.jsonl').exists()

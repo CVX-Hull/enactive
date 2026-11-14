@@ -16,7 +16,8 @@ scope: 'The withholding simulation (#386): the size and price of measuring wheth
 - **At the measured values** (8.3 units touched per start, 45% of them missed, a judge
   that swaps a label one time in ten): **37 starts** detect a halving of misses four times
   in five. That is \$132 of play at \$3.58 a start, \$221 to \$265 with the recall model's
-  inferred overhead, and \$157 to \$292 in all, with a store and one grooming session.
+  inferred overhead, and \$245 to \$292 in all with that overhead, a store and one
+  grooming session (\$157 without the recall model, which the decided delivery runs).
 - **Against the comparison it replaces**: two arms needed 29 starts each (58 starts,
   \$208 of play) at the same values ([measure gate](2026-11-13-memory-measure-gate.md#sizing)).
   Withholding needs about two thirds of the starts. Every start yields a comparison, but
@@ -108,6 +109,10 @@ within one start (36 to 37 at the 0.1 row, 55 to 56 at 0.167).
   main disagreement with the owner was whether the player engaged at all; that is not
   priced.
 - **The correlation of 0.2 is assumed.** A larger one raises the size.
+- **The outcome per start is not yet defined for real play.** The design judges each
+  fact over the whole start, but blind packets are labelled per window; which of the five
+  labels count as missed, and how windows combine into one outcome per fact and start, is
+  left to the analysis of real play (#619), and is fixed before any start is played.
 - **One lineage of one game** produced every input.
 
 ## Deviations

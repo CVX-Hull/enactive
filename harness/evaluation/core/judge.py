@@ -149,6 +149,8 @@ def check(events: Sequence[JudgeEvent], where: str, kind: str | None = None) -> 
     """One file holds one judge and one kind (`kind`, when given), and each pair once."""
     if len({event.judge for event in events}) > 1:
         raise EvaluationError(f'{where}: events of more than one judge')
+    if len({event.model for event in events}) > 1:
+        raise EvaluationError(f'{where}: events of more than one model')
     kinds = {event.kind for event in events}
     if len(kinds) > 1 or kind is not None and kinds - {kind}:
         raise EvaluationError(f'{where}: a file holds events of one kind' + (f', here {kind}' if kind else ''))

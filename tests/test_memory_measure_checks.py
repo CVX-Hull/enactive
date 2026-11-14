@@ -24,6 +24,17 @@ NEW = {('run-e:1-5', 'item-01'): 'straight', ('run-e:1-5', 'item-02'): 'not_enga
     ('run-f:1-5', 'item-02'): 'straight'}
 
 
+@pytest.fixture(autouse=True)
+def fixture_evidence_manifest(tmp_path, monkeypatch):
+    monkeypatch.setattr(memory_measure, 'GATE_EVIDENCE_MANIFEST', tmp_path / 'sealed-evidence.sha256')
+
+
+def seal_gate_evidence(gate: Path) -> None:
+    memory_measure.GATE_EVIDENCE_MANIFEST.write_text(''.join(
+        f'{memory_measure.file_sha256(path)}  memory-measure/{path.relative_to(gate)}\n'
+        for path in sorted(gate.rglob('*')) if path.is_file()))
+
+
 def sealed_gate(tmp_path: Path, instructions: str = ANCHOR_INSTRUCTIONS) -> Path:
     """A finished measure gate in the formats the sealed one holds: judge-packet/1 packets with their mapping, the
     two samples, the owner's labels (owner-labels/2) and the adjudicated labels (judge-adjudicated/1). The third
@@ -55,6 +66,7 @@ def sealed_gate(tmp_path: Path, instructions: str = ANCHOR_INSTRUCTIONS) -> Path
     rows += [dict(start='run-g:1-3', item=item['id'], label='not_engaged', by='agreement',
         labels={'judge-a': 'not_engaged', 'judge-b': 'not_engaged'}) for item in ITEMS]
     save(gate / 'adjudicated.json', dict(schema='judge-adjudicated/1', judges=['judge-a', 'judge-b'], third='judge-c', unresolved=0, pairs=rows))
+    seal_gate_evidence(gate)
     return gate
 
 
@@ -281,7 +293,7 @@ def test_the_prompt_check_reports_the_first_two_judges_agreement_before_and_afte
     facts = after / 'judge-packets' / packet / 'facts.json'
     manifest = after / 'judge-packets' / packet / 'manifest.json'
     manifest.write_text(manifest.read_text().replace(memory_measure.file_sha256(facts), '0' * 64))
-    with pytest.raises(MeasureError, match='not the frozen stretch'):
+    with pytest.raises(MeasureError, match='not the packet that was made'):
         prompt_report(after, before, ['judge-a', 'judge-b'])
 
 
@@ -302,3 +314,92 @@ def test_the_stretch_hash_leaves_out_the_instructions_and_nothing_else(tmp_path)
         change(edited)
         save(tmp_path / 'edited' / 'manifest.json', edited)
         assert memory_measure.stretch_sha256(tmp_path / 'edited') == packet['stretch_sha256']
+
+
+# R-EVIDENCE-LOSS/R-FALSE-CLAIM: reject changed inputs before any imported answer or report is written.
+@pytest.mark.parametrize('target', ['private/judge-mapping.json', 'labels.json', 'adjudicated.json', 'packet'])
+def test_anchor_trusts_the_independent_sealed_inventory(tmp_path, target):
+    gate = sealed_gate(tmp_path)
+    run = tmp_path / 'memory-measure' / 'new-model'
+    if target == 'packet':
+        directory = gate / 'judge-packets' / 's00000000aa'
+        frame = directory / 'frames' / 'f001.png'
+        frame.write_bytes(png(88))
+        manifest = json.loads((directory / 'manifest.json').read_text())
+        manifest['frames'][0]['sha256'] = memory_measure.file_sha256(frame)
+        save(directory / 'manifest.json', manifest)
+        mapping = json.loads((gate / 'private' / 'judge-mapping.json').read_text())
+        mapping['packets'][0]['sha256'] = memory_measure.file_sha256(directory / 'manifest.json')
+        save(gate / 'private' / 'judge-mapping.json', mapping)
+    else:
+        path = gate / target
+        path.write_text(path.read_text() + ' ')
+    with pytest.raises(MeasureError, match='sealed evidence manifest'):
+        anchor_packets(run, gate, dry_run=True)
+    assert not run.exists()
+
+
+@pytest.mark.parametrize('target', ['instructions.md', 'frame'])
+def test_anchor_import_verifies_every_packet_file(tmp_path, target):
+    run = tmp_path / 'memory-measure' / 'new-model'
+    anchor_packets(run, sealed_gate(tmp_path))
+    answers = anchor_answers(run)
+    packet = json.loads((run / 'private' / 'anchor.json').read_text())['packets'][0]
+    directory = run / 'anchor' / 'packets' / packet['packet']
+    path = next((directory / 'frames').iterdir()) if target == 'frame' else directory / target
+    path.write_bytes(path.read_bytes() + b'tampered')
+    with pytest.raises(MeasureError, match='changed since the packet was made'):
+        anchor_events(run, 'judge-n', 'model-y', answers)
+    assert not (run / 'anchor' / 'events').exists()
+
+
+def test_anchor_import_rechecks_frozen_prompt_even_if_local_packet_was_resealed(tmp_path):
+    run = tmp_path / 'memory-measure' / 'new-model'
+    anchor_packets(run, sealed_gate(tmp_path))
+    answers = anchor_answers(run)
+    anchor = json.loads((run / 'private' / 'anchor.json').read_text())
+    packet = anchor['packets'][0]
+    directory = run / 'anchor' / 'packets' / packet['packet']
+    instructions = directory / 'instructions.md'
+    instructions.write_text(instructions.read_text() + ' ')
+    manifest = json.loads((directory / 'manifest.json').read_text())
+    manifest['files']['instructions.md'] = memory_measure.file_sha256(instructions)
+    save(directory / 'manifest.json', manifest)
+    packet['sha256'] = memory_measure.file_sha256(directory / 'manifest.json')
+    save(run / 'private' / 'anchor.json', anchor)
+    with pytest.raises(MeasureError, match='not the frozen prompt'):
+        anchor_events(run, 'judge-n', 'model-y', answers)
+
+
+@pytest.mark.parametrize('side', ['before', 'after'])
+@pytest.mark.parametrize('target', ['instructions.md', 'frame'])
+def test_prompt_report_verifies_packet_files_on_both_sides(tmp_path, monkeypatch, side, target):
+    before = judged(tmp_path)
+    changed_prompt(monkeypatch)
+    after = tmp_path / 'memory-measure' / 'after'
+    prompt_packets(after, before)
+    for name in ('judge-a', 'judge-b'):
+        judge_events(after, name, 'model-x', answers(after, name))
+    run = before if side == 'before' else after
+    directory = run / 'judge-packets' / mapping_of(run)['packets'][0]['packet']
+    path = next((directory / 'frames').iterdir()) if target == 'frame' else directory / target
+    path.write_bytes(path.read_bytes() + b'tampered')
+    with pytest.raises(MeasureError, match='changed since the packet was made'):
+        prompt_report(after, before, ['judge-a', 'judge-b'])
+    assert not (after / 'prompt-check.json').exists()
+
+
+def test_prompt_check_refuses_changed_models_and_records_both_model_sets(tmp_path, monkeypatch):
+    before = judged(tmp_path)
+    changed_prompt(monkeypatch)
+    after = tmp_path / 'memory-measure' / 'after'
+    prompt_packets(after, before)
+    for name in ('judge-a', 'judge-b'):
+        judge_events(after, name, 'model-changed' if name == 'judge-b' else 'model-x', answers(after, name))
+    with pytest.raises(MeasureError, match='same model for each judge before and after'):
+        prompt_report(after, before, ['judge-a', 'judge-b'])
+    assert not (after / 'prompt-check.json').exists()
+    (after / 'events' / 'judge-b.jsonl').unlink()
+    judge_events(after, 'judge-b', 'model-x', answers(after, 'judge-b'))
+    report = prompt_report(after, before, ['judge-a', 'judge-b'], seed=1, draws=20)
+    assert report['before']['models'] == report['after']['models'] == {'judge-a': 'model-x', 'judge-b': 'model-x'}
