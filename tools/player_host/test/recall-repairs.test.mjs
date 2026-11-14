@@ -26,8 +26,8 @@ test('both admission phases include the player in-flight bound in the finish res
   }
 });
 
-test('reminder fetch refuses the finish reserve in flight and later recall remains enabled',async t=>{
-  let releaseReminder, completeReminder, startLaterReminder, prepared=0, playerPrepared=0;
+test('reminder fetch refuses the finish reserve in flight and later recall remains enabled',{timeout:30000},async t=>{
+  let releaseReminder, completeReminder, startLaterReminder, prepared=0, playerPrepared=0, reminderResults=0;
   const reminderGate=new Promise(resolve=>{releaseReminder=resolve;});
   const reminderComplete=new Promise(resolve=>{completeReminder=resolve;});
   const laterReminderStarted=new Promise(resolve=>{startLaterReminder=resolve;});
@@ -52,7 +52,10 @@ test('reminder fetch refuses the finish reserve in flight and later recall remai
       return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]],
         {prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0});
     },onEvent:e=>{
-      if(e.type==='knowledge-recall' && e.kind==='reminder')completeReminder();
+      if(e.type==='knowledge-recall' && e.kind==='reminder') {
+        completeReminder();
+        if(++reminderResults>1 && e.status==='not-made')startLaterReminder();
+      }
       if(e.type==='request-start' && e.request_id==='recall-2')startLaterReminder();
     }});
   assert.equal(result.reason,'task_complete');
@@ -66,6 +69,30 @@ test('reminder fetch refuses the finish reserve in flight and later recall remai
   const index=events.indexOf(refusal);
   assert.ok(events.slice(0,index).some(e=>e.type==='request-start' && e.request_id==='request-2'));
   assert.ok(events.slice(index+1).some(e=>e.type==='response-complete' && e.request_id==='request-2'));
+});
+
+test('provider failure before recall fetch disables later reminders without starting an attempt',async t=>{
+  let prepared=0;
+  const prepareRequest=OpenAI.prototype.prepareRequest;
+  t.mock.method(OpenAI.prototype,'prepareRequest',async function(request,context) {
+    if(context.options.body.model==='recall-fixture') {
+      prepared++;
+      throw new Error('fixture SDK preparation failure');
+    }
+    return prepareRequest.call(this,request,context);
+  });
+  const {result,events}=await scenario(t,{recallFetch:()=>assert.fail('recall fetch must not start')});
+  assert.equal(result.reason,'task_complete');
+  const briefing=events.find(e=>e.type==='knowledge-recall' && e.kind==='briefing');
+  assert.equal(briefing.status,'not-made');assert.equal(briefing.reason,'provider-failure');
+  assert.ok(!Object.hasOwn(briefing,'request_id'));
+  assert.ok(!Object.hasOwn(briefing,'reply_text'));
+  assert.ok(!Object.hasOwn(briefing,'reply_omitted_bytes'));
+  const reminders=events.filter(e=>e.type==='knowledge-recall' && e.kind==='reminder');
+  assert.ok(reminders.length>0);
+  assert.ok(reminders.every(e=>e.status==='not-made' && e.reason==='disabled'));
+  assert.equal(prepared,1);
+  assert.equal(events.filter(e=>e.type==='request-start' && e.request_role==='recall').length,0);
 });
 
 test('attempt-limit pre-check refuses before preparing the recall model and reserves the last attempt',async t=>{

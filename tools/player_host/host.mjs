@@ -745,7 +745,7 @@ export async function runHost(options) {
         : ['actor-ended','allowance','attempt-limit','orderly-stop','finish-reserve','spend-refused','cost-unreported','provider-failure','invalid-recall-selection'].includes(error.message)
         ? error.message : 'recall-failed';
       recallDisabled ||= attemptStarted ? failure !== 'invalid-recall-selection' || amountText(reported) === null
-        : failure === 'spend-refused' || failure === 'recall-failed';
+        : failure === 'spend-refused' || failure === 'recall-failed' || failure === 'provider-failure';
       completeAttempt();
       emit('knowledge-recall', {kind:mode, status:attemptStarted ? 'failure' : 'not-made', ...(id ? {request_id:id} : {}),
         reason:failure, version:knowledge.version, ...replyFields(),

@@ -383,7 +383,8 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   that actor, since it may cost its bound again: it is counted at the cost the provider
   reported when that cost is valid, and otherwise at its bound, and later reminders are
   logged as not made. A recall refused before its attempt starts for any reason but
-  spend (the finish reserve while a player request is in flight, say) ends nothing; the
+  spend or a provider failure (the finish reserve while a player request is in flight,
+  say) ends nothing; the
   next opportunity is checked afresh. The player plays on. The player-host contract's rule
   that an unpriced success stops the actor is scoped to player requests in the same
   change.
