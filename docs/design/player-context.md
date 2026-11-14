@@ -310,9 +310,11 @@ import contracts and one contract version
   that switches behaviour); with no units the host makes no recall request and the
   recall bound in the finish reserve is zero. The run package, its manifest, the route
   and the host's telemetry get new versions, and the old ones are refused for running.
-  Every sealed run before them then holds old versions, which the evaluator reads only
-  for the sessions in the closed archive index (S-MIGRATION); how those runs stay
-  readable for the judges and the evaluator is an owner decision, asked with #461.
+  The evaluator reads old versions only for the sessions in the closed archive index
+  (S-MIGRATION). The lineages before the dollar limit are already there; the one sealed
+  session in today's versions, `spend-limit-run-555`, joins the index in #461's change,
+  read-only in the versions it was recorded in
+  ([owner decision log](../decisions/owner-decisions.md)).
 - **Units and the draw.** A unit is an article with the facts only it cites; a fact that
   no article files is a unit of its own; a fact cited by a delivered and a withheld
   article counts as delivered. With `--withhold-seed`, each unit, in id order, is
