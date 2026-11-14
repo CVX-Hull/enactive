@@ -60,7 +60,7 @@ def session_config(tmp_path, upstream, *, cap='1', arm='terra', argv=None, **ove
     port = proxy.start()
     return proxy, SessionConfig(argv=argv or shadow.host_argv(tools, path), tools=(*tools['roots'], directory), limits=sandbox.Limits(wall_seconds=90),
                                 proxy=proxy, proxy_port=port, extra_env=tools['env'],
-                                host=shadow.host_identity(tools, config))
+                                host=shadow.host_identity(tools, config), grooming_brief=shadow.HOST_DIR/'grooming.md')
 
 
 @pytest.fixture
@@ -344,7 +344,10 @@ def test_the_prompt_defines_game_neutral_facts_articles_and_grooming():
     for needed in ('`subject`', '`text`', '`seen`', '`last_confirmed`', 'retire_fact', 'revise_types',
                    'add_article', 'revise_article', 'retire_article', 'grooming.md', 'hypotheses'):
         assert needed in prompt, needed
-    assert not re.search(r'\b(places?|goods|items?|hazards?)\b', prompt.lower())
+    for path in ('knowledge/coverage.json', 'knowledge/provenance.json', 'grooming.md'):
+        assert f'| `{path}` |' in prompt, path
+    for brief in ('prompt.md', 'grooming.md'):
+        assert not re.search(r'\b(places?|goods|items?|hazards?)\b', (shadow.HOST_DIR/brief).read_text().lower()), brief
 
 
 def test_the_frozen_prices_cover_exactly_the_two_arms():
@@ -760,22 +763,33 @@ def test_a_revoked_proxy_stops_the_run(tmp_path, monkeypatch):
 
 
 @native
-def test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact(tmp_path, world):
+@pytest.mark.parametrize('file_all', [True, False], ids=['files-every-fact', 'rejects-unfiled-fact'])
+def test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact(tmp_path, world, file_all):
     from harness.curator.gate import current
 
     repo, trace = world
-    with StandIn() as stand_in:
+    with StandIn(mode='good' if file_all else 'grooming-unfiled') as stand_in:
         proxy, config = session_config(tmp_path, stand_in.url)
         try:
+            from dataclasses import replace
+            custom_brief = tmp_path/'configured-grooming.md'
+            custom_brief.write_text((shadow.HOST_DIR/'grooming.md').read_text() + '\nConfigured brief marker.\n')
+            config = replace(config, grooming_brief=custom_brief)
             admission = run_session(repo, trace, config, session_id='admission')
             assert admission['published_after'] == 'v1', admission
             grooming = run_session(repo, trace, config, session_id='grooming', session_kind='grooming')
         finally:
             proxy.close()
     assert grooming['manifest']['lifecycle']['state'] == 'sealed', grooming
+    if not file_all:
+        assert [v['accepted'] for v in grooming['verdicts']] == [False], grooming
+        assert grooming['published_after'] == 'v1'
+        assert grooming['verdicts'][0]['diagnostics'] == ["grooming: unfiled current facts ['f1']"]
+        return
     assert [v['accepted'] for v in grooming['verdicts']] == [True], grooming
     assert grooming['published_after'] == 'v2'
     stored_brief = repo.state/'sessions'/'grooming'/'grooming.md'
+    assert 'Configured brief marker.' in stored_brief.read_text()
     assert hashlib.sha256(stored_brief.read_bytes()).hexdigest() == grooming['manifest']['pinned']['grooming_sha256']
     facts = {f['id']: f for f in repo.facts() if current(f)}
     articles = [a for a in repo.articles() if current(a)]

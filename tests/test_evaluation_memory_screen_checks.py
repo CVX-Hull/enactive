@@ -14,8 +14,8 @@ RECORD = '5' * 32
 BASE = 4_000_000_000.0
 
 
-def fact(identity: str, statement: str, version: str, session: str, citations: list[str]) -> dict:
-    return dict(schema='curator-fact/1', id=identity, type='resource', statement=statement, scope=dict(game='cdda'),
+def fact(identity: str, text: str, version: str, session: str, citations: list[str]) -> dict:
+    return dict(schema='curator-fact/3', record='fact', id=identity, type='resource', text=text, scope=dict(game='cdda'),
         citations=citations, published_in=version, session=session)
 
 
@@ -29,7 +29,7 @@ def knowledge(root: Path, tank_frame: str) -> Path:
     repository.ensure()
     recipe = fact('rod-recipe', 'A rod needs a stick.', 'v1', 'run-a-1', ['x-1'])
     repository.commit({'facts.jsonl': lines(recipe)}, 'Publish v1')
-    repository.commit({'facts.jsonl': lines(dict(recipe, statement='A rod needs a stick and a hook.'),
+    repository.commit({'facts.jsonl': lines(dict(recipe, text='A rod needs a stick and a hook.'),
         fact('roof-tank', 'The roof tank holds 18 L of clean water.', 'v2', 'run-a-2', [tank_frame]))}, 'Publish v2')
     for session in ('run-a-1', 'run-a-2'):
         directory = repository.state / 'sessions' / session
@@ -98,7 +98,7 @@ def test_store_reads_each_version_and_changes_nothing(tmp_path):
         ('v1', 1, len(lines(fact('rod-recipe', 'A rod needs a stick.', 'v1', 'run-a-1', ['x-1'])))), ('v2', 2, versions[2]['bytes'])]
     history = fact_history(versions, 'rod-recipe')
     assert (history['version'], history['changed_in'], history['dropped_in']) == ('v1', ['v2'], None)
-    assert history['statement'] == 'A rod needs a stick.' and history['latest_statement'].endswith('a hook.')
+    assert history['text'] == 'A rod needs a stick.' and history['latest_text'].endswith('a hook.')
     assert fact_history(versions, 'cupboard') is None
     report, = store_report([repository], ['tank=tank|roof', 'rations=ration'], [])
     assert [(row['version'], row['covers'], row['added'], row['changed']) for row in report['versions'][1:]] == [
@@ -171,3 +171,76 @@ def test_cut_report_and_the_command(tmp_path, capsys):
     assert 'sessions at admission boundaries only: briefing at run-b/001 request 1 of 4' in capsys.readouterr().out
     assert main(['cut', *map(str, runs), '--lags', '10', '--json']) == 0
     assert json.loads(capsys.readouterr().out)['model']['turn_tokens'] == 950
+
+
+def article(identity='article', title='A subject', **extra):
+    return dict(schema='curator-fact/3', record='article', id=identity, title=title, lead='A hypothesis.',
+                body=[dict(text='A claim.', facts=['roof-tank'])], links=[], published_in='v3', session='groom', **extra)
+
+
+def test_store_reports_fact_and_article_totals_current_counts_and_bytes_per_version(tmp_path, capsys):
+    path = knowledge(tmp_path/'knowledge', 'aaaa-2')
+    repo = Repository(path.parent, path.name)
+    old = repo.facts()
+    groomed = [dict(old[0], retired=dict(reason='contradicted')), old[1], article()]
+    repo.commit({'facts.jsonl': lines(*groomed)}, 'grooming')
+    versions = read_versions(path)
+    assert len(versions[-1]['facts']) == 2 and len(versions[-1]['articles']) == 1
+    assert fact_history(versions, 'article') is None
+    report, = store_report([path], ['found=18 L', 'article=A subject'], [])
+    assert [(r['facts'], r['articles'], r['current_facts'], r['current_articles'], r['bytes'])
+            for r in report['versions']] == [(0, 0, 0, 0, 0),
+                (1, 0, 1, 0, versions[1]['bytes']), (2, 0, 2, 0, versions[2]['bytes']),
+                (2, 1, 1, 1, len(lines(*groomed)))]
+    assert report['versions'][-1]['session'] == 'groom'  # article-only publication has a session
+    assert report['found']['found'][0]['text'] == 'The roof tank holds 18 L of clean water.'
+    assert report['found']['article'] == []
+    assert main(['store', str(path), '--find', 'found=18 L']) == 0
+    text = capsys.readouterr().out
+    assert '2 facts (1 current), 1 articles (1 current)' in text and '18 L of clean water.' in text
+    assert main(['store', str(path), '--json']) == 0
+    assert json.loads(capsys.readouterr().out)[0]['versions'][-1]['articles'] == 1
+
+
+@pytest.mark.parametrize('schema', ['curator-fact/1', 'curator-fact/2', 'curator-fact/4', None])
+@pytest.mark.parametrize('command', ['store', 'replay'])
+def test_memory_readers_refuse_other_record_schemas(tmp_path, schema, command):
+    runs, tank, need = lineage(tmp_path)
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    invalid = dict(fact('f', 'x', 'v1', 's', [tank]), schema=schema)
+    repo.commit({'facts.jsonl': lines(invalid)}, 'unsupported record')
+    with pytest.raises(StoreError, match='unsupported record schema; expected curator-fact/3'):
+        if command == 'store':
+            store_report([repo.path], [], [])
+        else:
+            replay(runs, [f'x:need={need},fact=f'], None, repo.path, [])
+
+
+@pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/3', None])
+def test_memory_reader_refuses_other_repository_layouts(tmp_path, schema):
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    repo.commit({'knowledge.json': json.dumps(dict(schema=schema, game='cdda')).encode()}, 'unsupported layout')
+    with pytest.raises(StoreError, match='expected curator-knowledge/2; start a new repository'):
+        read_versions(repo.path)
+
+
+def test_replay_uses_fact_text_and_does_not_treat_an_article_as_a_fact(tmp_path):
+    runs, tank, need = lineage(tmp_path)
+    path = knowledge(tmp_path/'knowledge', tank)
+    repo = Repository(path.parent, path.name)
+    repo.commit({'facts.jsonl': lines(*repo.facts(), article())}, 'article')
+    row, = replay(runs, [f'x:need={need},fact=roof-tank'], None, path, [])
+    assert row['fact']['text'] == 'The roof tank holds 18 L of clean water.'
+    with pytest.raises(ValueError, match='fact article is in no version'):
+        replay(runs, [f'x:need={need},fact=article'], None, path, [])
+
+
+@pytest.mark.parametrize('record', [None, 'type', ''])
+def test_memory_reader_refuses_unknown_record_discriminators(tmp_path, record):
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    repo.commit({'facts.jsonl': lines(dict(article(), record=record))}, 'unknown discriminator')
+    with pytest.raises(StoreError, match='unsupported record kind; expected fact or article'):
+        read_versions(repo.path)

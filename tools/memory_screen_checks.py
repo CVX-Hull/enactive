@@ -5,8 +5,8 @@
         [--records ROOT] [--knowledge REPOSITORY] [--lags N ...] [--json]
   python -m tools.memory_screen_checks cut RUNS... [--lags N ...] [--turn-tokens N] [model options] [--json]
 
-`store` lists every published version of a curator knowledge repository (its facts and the bytes of `facts.jsonl`)
-and, for each --find pattern, the facts whose ID or statement matches: the version and session that first published
+`store` lists every published version of a curator knowledge repository (its facts, articles and the bytes of `facts.jsonl`)
+and, for each --find pattern, the facts whose ID or text matches: the version and session that first published
 each, the frames it cites and whether a later version changed or dropped it. It reads the repository's loose
 objects itself, so nothing is written into a sealed directory; a packed repository is refused.
 
@@ -134,7 +134,7 @@ def _entries(objects: Path, tree: str) -> dict[str, str]:
 
 
 def read_versions(repository: Path) -> list[dict]:
-    """Every published version `v<N>` in order: its commit, the bytes of `facts.jsonl` and the facts."""
+    """Every published /3 snapshot: facts and articles separately, with its byte size."""
     objects, tags = repository / '.git' / 'objects', repository / '.git' / 'refs' / 'tags'
     if not tags.is_dir():
         raise StoreError(f'{repository}: no loose version tags')
@@ -145,9 +145,19 @@ def read_versions(repository: Path) -> list[dict]:
         if kind != 'commit':
             raise StoreError(f'{repository}: {tag.name} is a {kind}, not a commit')
         files = _entries(objects, body.split(b'\n', 1)[0].split()[1].decode())
+        metadata = json.loads(_object(objects, files['knowledge.json'])[1])
+        if not isinstance(metadata, dict) or metadata.get('schema') != 'curator-knowledge/2':
+            raise StoreError(f'{repository} {tag.name}: expected curator-knowledge/2; start a new repository')
         data = _object(objects, files['facts.jsonl'])[1]
+        records = [json.loads(line) for line in data.decode('utf-8').splitlines() if line.strip()]
+        for record in records:
+            if not isinstance(record, dict) or record.get('schema') != 'curator-fact/3':
+                raise StoreError(f'{repository} {tag.name}: unsupported record schema; expected curator-fact/3')
+            if record.get('record') not in ('fact', 'article'):
+                raise StoreError(f'{repository} {tag.name}: unsupported record kind; expected fact or article')
         versions.append(dict(version=tag.name, commit=commit, bytes=len(data),
-            facts=[json.loads(line) for line in data.decode('utf-8').splitlines() if line.strip()]))
+                             facts=[r for r in records if r['record'] == 'fact'],
+                             articles=[r for r in records if r['record'] == 'article']))
     return versions
 
 
@@ -175,8 +185,8 @@ def fact_history(versions: Sequence[dict], identity: str) -> dict | None:
             changed.append(version['version'])
         last = fact
     return None if first is None else dict(id=identity, version=first['version'], session=first.get('session'),
-        type=first.get('type'), statement=first.get('statement'), citations=first.get('citations') or [],
-        changed_in=changed, dropped_in=dropped, latest_statement=last.get('statement'))
+        type=first.get('type'), text=first.get('text'), citations=first.get('citations') or [],
+        changed_in=changed, dropped_in=dropped, latest_text=last.get('text'))
 
 
 def store_report(repositories: Sequence[Path], finds: Sequence[str], runs: Sequence[Path]) -> list[dict]:
@@ -188,9 +198,13 @@ def store_report(repositories: Sequence[Path], finds: Sequence[str], runs: Seque
         rows, previous = [], {}
         for version in versions:
             facts = {fact['id']: fact for fact in version['facts']}
-            session = next((f.get('session') for f in version['facts'] if f.get('published_in') == version['version']), None)
+            session = next((r.get('session') for r in [*version['facts'], *version['articles']]
+                            if r.get('published_in') == version['version']), None)
             rows.append(dict(version=version['version'], session=session, covers=sessions.get(session, []),
-                facts=len(facts), bytes=version['bytes'], added=sum(i not in previous for i in facts),
+                facts=len(facts), articles=len(version['articles']),
+                current_facts=sum('superseded_by' not in f and 'retired' not in f for f in facts.values()),
+                current_articles=sum('superseded_by' not in a and 'retired' not in a for a in version['articles']),
+                bytes=version['bytes'], added=sum(i not in previous for i in facts),
                 changed=sorted(i for i in facts if i in previous and facts[i] != previous[i]),
                 dropped=sorted(i for i in previous if i not in facts)))
             previous = facts
@@ -199,7 +213,7 @@ def store_report(repositories: Sequence[Path], finds: Sequence[str], runs: Seque
             label, _, pattern = find.partition('=')
             match = re.compile(pattern, re.IGNORECASE)
             ids = dict.fromkeys(fact['id'] for version in versions for fact in version['facts']
-                if match.search(f"{fact['id']} {fact.get('statement', '')}"))
+                if match.search(f"{fact['id']} {fact.get('text', '')}"))
             found[label] = []
             for identity in ids:
                 history = fact_history(versions, identity)
@@ -270,7 +284,7 @@ def replay(runs: Sequence[Path], losses: Sequence[str], records: Path | None, kn
                 raise ValueError(f'{label}: fact {spec["fact"]} is in no version of {knowledge}')
             covered = sessions.get(history['session'], [])
             cited = sorted(frames[frame] for frame in history['citations'] if frame in frames)
-            entry = dict(id=history['id'], version=history['version'], session=history['session'], covers=covered,
+            entry = dict(id=history['id'], text=history['text'], version=history['version'], session=history['session'], covers=covered,
                 first_cited=moment(*cited[0]) if cited else None)
             order = [run.name for run in lineage]
             last = max((order.index(name) for name in covered if name in order), default=None)
@@ -440,7 +454,8 @@ def render_store(reports: Sequence[dict]) -> str:
         lines.append(f"== {report['repository']}")
         for row in report['versions']:
             lines.append(f"{row['version']} session {row['session']} covers {','.join(row['covers']) or '-'}: {row['facts']} "
-                f"facts, {row['bytes']} bytes; added {row['added']}, changed {row['changed'] or 'none'}, dropped "
+                f"facts ({row['current_facts']} current), {row['articles']} articles ({row['current_articles']} current), "
+                f"{row['bytes']} bytes; added {row['added']}, changed {row['changed'] or 'none'}, dropped "
                 f"{row['dropped'] or 'none'}")
         for label, found in report['found'].items():
             lines.append(f"find {label}: {len(found)} facts")
@@ -448,7 +463,7 @@ def render_store(reports: Sequence[dict]) -> str:
                 cited = '; '.join(f"{c['frame']} = {_where(c)}" for c in fact['cited']) or ', '.join(fact['citations'])
                 lines.append(f"  {fact['id']} ({fact['type']}) first in {fact['version']} by {fact['session']}; changed in "
                     f"{fact['changed_in'] or 'none'}; dropped in {fact['dropped_in'] or 'none'}; cites {cited}\n"
-                    f"    {fact['statement']}")
+                    f"    {fact['text']}")
     return '\n'.join(lines)
 
 

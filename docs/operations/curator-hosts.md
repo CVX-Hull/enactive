@@ -85,14 +85,11 @@ Node tests: `cd tools/curator_host && npm test`.
 - `run.mjs --config FILE` runs in the workspace. The system prompt is
   [`prompt.md`](../../tools/curator_host/prompt.md); the first user message is `brief.md`.
   Both admission and grooming use game-neutral instructions and treat facts as hypotheses.
-  `run_session(..., session_kind="grooming")` also supplies
-  [`grooming.md`](../../tools/curator_host/grooming.md) in the workspace, directing the curator
-  to read the whole store, normalize subjects, revise types and file all current facts.
-  Its trace contains only the last admission's cited frames and their steps. The gate
-  publishes `curator-fact/3` facts and articles; the
-  [session design](../design/curator-session.md#submissions) owns the exact format.
-  The shadow CLI continues to run admission sessions; grooming is selected through the
-  session API, between admissions. There is no live trigger.
+  The host selects the grooming instructions with `SessionConfig.grooming_brief`, pointing
+  to [`grooming.md`](../../tools/curator_host/grooming.md). The
+  [session design](../design/curator-session.md#admission-and-grooming) owns session
+  inputs, responsibilities and publication rules. The shadow CLI runs admission sessions;
+  the session API selects grooming. There is no live trigger.
 - The frozen configuration is `curator-host/1`: model, effort, request and wall limits, image
   limits. It names no endpoint and holds no key.
 - The host reads `CURATOR_PROXY_URL` (must be `http://127.0.0.1:<port>`) and presents
@@ -348,8 +345,8 @@ The kernel also limits each process to 1,800 CPU seconds, 64 MiB per file and 25
 
 `tests/test_curator_host.py::test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact`
 runs the real Node host, proxy, gate and (on macOS) Seatbelt session runner against
-`tests/curator_stand_in.py`. It publishes an admission and then a grooming version,
-checks every current fact is cited by a current article, and checks software-written
-last confirmation. The provider, token counts and charges are synthetic; it uses only
+`tests/curator_stand_in.py`. Its positive and negative cases cover the
+[session publication contract](../design/curator-session.md#admission-and-grooming).
+The provider, token counts and charges are synthetic; it uses only
 loopback and no real credentials. Native host unit tests run with `npm test` in
 `tools/curator_host`. No paid run or store-size measurement is implied.

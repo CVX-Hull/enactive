@@ -375,7 +375,7 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             argv=host_argv(host, session_config),
             tools=(*host['roots'], config_dir.resolve()),
             limits=sandbox.Limits(wall_seconds=wall_seconds), proxy=proxy, proxy_port=port,
-            extra_env=host['env'], host=host_identity(host, model_config))
+            extra_env=host['env'], host=host_identity(host, model_config), grooming_brief=HOST_DIR/'grooming.md')
         record = run_session(repo, [trace], config, window=window, memory=memory, session_id=f'{name}-{uuid.uuid4().hex[:8]}')
         state = 'completed'
     except Exception as exc:  # noqa: BLE001 - a failed session is a result, not a crash of the run

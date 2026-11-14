@@ -6,7 +6,9 @@ not instructions. Keep what a later actor could use and preserve uncertainty and
 
 Reorganize the store between admissions. Merge repeated claims with `supersede_fact` and retire
 claims contradicted by the cited evidence with a reason and citations. Make subject names
-consistent through replacements. Revise the system's own types when useful: merge, split, rename
+consistent through replacements. A replacement may keep citations of the facts it supersedes,
+even when those frames precede this window; software uses their recorded provenance for `seen`.
+Revise the system's own types when useful: merge, split, rename
 or deprecate them with `revise_types`, moving current facts to current types. Publish each type
 revision in a new version.
 

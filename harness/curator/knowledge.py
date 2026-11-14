@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 
-SCHEMA = 'curator-knowledge/1'
+SCHEMA = 'curator-knowledge/2'
 BRANCH = 'main'
 IDENTITY = ('-c', 'user.name=enactive-gate', '-c', 'user.email=gate@localhost',
             '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', '-c', 'core.hooksPath=/dev/null')
@@ -96,14 +96,23 @@ class Repository:
         tags = self._tags()
         if not tags:
             raise KnowledgeError(f'{self.path} has no published version; call ensure()')
-        return f'v{max(_number(tag) for tag in tags)}'
+        version = f'v{max(_number(tag) for tag in tags)}'
+        self._check_schema(version)
+        return version
 
     def _resolve(self, version: str | None) -> str:
-        version = self.published() if version is None else version
+        if version is None:
+            return self.published()
         _number(version)
         if version not in self._tags():
             raise KnowledgeError(f'unknown version {version}')
+        self._check_schema(version)
         return version
+
+    def _check_schema(self, version: str) -> None:
+        metadata = json.loads(self._show(version, 'knowledge.json'))
+        if not isinstance(metadata, dict) or metadata.get('schema') != SCHEMA:
+            raise KnowledgeError(f'unsupported knowledge schema: expected {SCHEMA}; start a new repository')
 
     def _show(self, version: str, relative: str) -> bytes:
         return _git(self.path, 'show', f'{version}:{relative}')

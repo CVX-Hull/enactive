@@ -30,7 +30,7 @@ not adopted.
 | Envelope | A dollar amount the owner sets for one study; the lead admits runs only inside it. Also: a route envelope is a host's frozen route settings, and a result or error envelope is a message wrapper. | [Budget delegation](operator-permissions.md#finite-gameplay-budget-delegation) |
 | Evaluator | Offline code that scores a run from its recorded frames and traces. Its values never reach the player and accept nothing. | [Evaluation contract](contracts/evaluation.md) |
 | Finish-up (orderly stop) | An optional, bounded request for the player to wrap up. It never delays Pause or a hard limit. | [External control](contracts/player-host.md#external-control) |
-| Grooming | A curator session between admissions that reads the whole published store and the last admission's cited frames, revises facts and types, and files every current fact into articles. | [Curator sessions](design/curator-session.md#admission-and-grooming) |
+| Grooming | A kind of curator session; the session design owns its inputs and responsibilities. | [Curator sessions](design/curator-session.md#admission-and-grooming) |
 | Handoff | An actor's transfer to a fresh successor within one run. The actor saves a bounded context and is sealed; the driver verifies this before a successor starts. | [Architecture](architecture.md#run-ownership-and-operator-takeover) |
 | Held-out lineage | A lineage kept out of design and tuning so that it can test a claim. | [S-EVIDENCE](standards/evidence.md) |
 | Knowledge repository (knowledge store) | The curator's Git repository of facts, articles and system-maintained types, one per game. It is not the player store, the player's own memory database. | [Curator](components/curator.md) |

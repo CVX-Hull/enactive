@@ -48,6 +48,7 @@ class SessionConfig:
     """How to run the host. `argv` runs with the workspace as its working directory."""
     argv: tuple[str, ...]
     tools: tuple[Path, ...] = ()
+    grooming_brief: Path | None = None
     limits: sandbox.Limits = field(default_factory=lambda: sandbox.Limits(wall_seconds=600))
     proxy: object | None = None  # a started harness.curator.proxy.ModelProxy, or None for scripted hosts
     proxy_port: int | None = None
@@ -256,7 +257,9 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         open_drafts = drafts.list()
         (workspace/'brief.md').write_text(brief(repo, version, trace_manifest, open_drafts, session_kind))
         if session_kind == 'grooming':
-            shutil.copyfile(Path(__file__).resolve().parents[2]/'tools'/'curator_host'/'grooming.md', workspace/'grooming.md')
+            if config.grooming_brief is None:
+                raise SessionError('grooming needs a configured grooming brief')
+            shutil.copyfile(config.grooming_brief, workspace/'grooming.md')
         if (config.expected_brief_sha256 is not None
                 and _sha(workspace/'brief.md') != config.expected_brief_sha256):
             raise SessionError('retained-prefix next brief differs from its frozen input')

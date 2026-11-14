@@ -82,7 +82,7 @@ def test_ensure_is_idempotent_and_starts_at_v0(tmp_path):
     assert repo.published() == 'v0'
     assert repo.facts() == [] and repo.types() == []
     assert json.loads((repo.path / 'knowledge.json').read_text()) == {
-        'schema': 'curator-knowledge/1', 'game': 'cdda'}
+        'schema': 'curator-knowledge/2', 'game': 'cdda'}
     assert (repo.path / 'programs' / '.keep').exists() and (repo.path / 'tests' / '.keep').exists()
     assert repo.state == tmp_path / 'knowledge' / 'cdda.state'
 
@@ -647,6 +647,8 @@ def test_supersede_merges_several_facts_and_retirement_preserves_evidence(tmp_pa
     ([dict(op='supersede_fact', ids=['f1', 'f1'], fact=fact('f2'))], 'ids must be'),
     ([dict(op='retire_fact', id='f1', reason='', citations=['frame-1'])], 'reason must be'),
     ([dict(op='retire_fact', id='f1', reason='x', citations=[])], 'citations must be'),
+    ([dict(op='retire_fact', id='f1', reason='x', citations=['frame-1', 'frame-1'])], 'citations must be'),
+    ([dict(op='retire_article', id='a1', reason=' ')], 'reason must be'),
     ([dict(op='retire_fact', id='f1', reason='x', citations=['outside'])], 'outside the trace window'),
     ([dict(op='retire_fact', id='unknown', reason='x', citations=['frame-1'])], 'does not exist'),
     ([dict(op='retire_fact', id='f1', reason='x', citations=['frame-1'])] * 2, 'already superseded or retired'),
@@ -660,6 +662,10 @@ def test_merge_and_retirement_rules_are_independently_rejected(tmp_path, changes
 
 
 ARTICLE_RULES = {
+    'non-object': ([], 'must be an object'),
+    'blank id': (dict(article(), id=' '), 'id must be'),
+    'blank link': (dict(article(), links=[' ']), 'links must be'),
+    'duplicate claim facts': (dict(article(), body=[dict(text='x', facts=['f1', 'f1'])]), 'body must be'),
     'old schema': (dict(article(), schema='curator-fact/2'), 'schema must be'),
     'wrong record': (dict(article(), record='fact'), 'record must be article'),
     'missing record': (without(article(), 'record'), "missing field 'record'"),
@@ -761,6 +767,10 @@ def test_every_type_revision_publishes_a_new_version_and_keeps_current_types(tmp
     (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={}), 'unknown type'),
     (dict(action='rename', names=['unknown'], types=[kind('renamed')], assignments={}), 'unknown type'),
     (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={'missing': 'renamed'}), 'is not current'),
+    (dict(action='merge', names=['mechanic', 'mechanic'], types=[kind('renamed')], assignments={}), 'names must be'),
+    (dict(action='rename', names=['mechanic'], types=[None], assignments={}), 'must be an object'),
+    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={'': 'renamed'}), 'assignments must map'),
+    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={'f1': ' '}), 'assignments must map'),
     (dict(action='rename', names=[], types=[kind('renamed')], assignments={}), 'names must be'),
     (dict(action='rename', names=['mechanic'], types='bad', assignments={}), 'types must be'),
     (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments=[]), 'assignments must map'),
@@ -820,3 +830,177 @@ def test_ontology_revision_cannot_reuse_another_current_type_name(tmp_path):
                     assignments={'f1': 'existing'}), dict(op='add_article', article=article())]
     verdict = grooming(repo, tmp_path, changes)
     assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[1]: type 'existing' already exists"]
+
+
+@pytest.mark.parametrize('citations', [['frame-1', 'frame-2'], ['frame-1', 'frame-2', 'current']])
+def test_grooming_merge_inherits_older_evidence_and_uses_its_recorded_seen(tmp_path, citations):
+    repo = make_repo(tmp_path)
+    changes = [dict(op='add_type', type=kind()),
+               dict(op='add_fact', fact=fact('f1')),
+               dict(op='add_fact', fact=fact('f2', citations=['frame-2']))]
+    assert run(repo, submission(tmp_path, changes, name='older'))['accepted']
+    positions = {'current': dict(session='s2', actor='001', step=1, order=[2, '001', 1])}
+    stamp = {**COVERAGE, 'session': 's2'}
+    assert gate(repo, submission(tmp_path, [dict(op='add_type', type=kind('new'))], name='latest', base_version='v1'),
+                session_id='latest', window_frames=positions, coverage=stamp, session_kind='admission')['accepted']
+    changes = [dict(op='supersede_fact', ids=['f1', 'f2'], fact=fact('merged', citations=citations)),
+               dict(op='add_article', article=article(facts=['merged']))]
+    verdict = gate(repo, submission(tmp_path, changes, name='merge', base_version='v2'), session_id='groom',
+                   window_frames=positions, coverage=stamp, session_kind='grooming')
+    assert verdict['accepted'], verdict
+    expected = positions['current'] if 'current' in citations else repo.provenance()['frames']['frame-2']
+    assert repo.facts()[-1]['seen'] == expected
+    assert repo.articles()[0]['last_confirmed'] == expected
+
+
+@pytest.mark.parametrize('session_kind, citation', [('admission', 'frame-1'), ('grooming', 'unrelated'), ('grooming', 'unknown')])
+def test_replacement_cannot_inherit_unrelated_citations_or_inherit_during_admission(tmp_path, session_kind, citation):
+    repo = make_repo(tmp_path)
+    assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind()), dict(op='add_fact', fact=fact()),
+                                          dict(op='add_fact', fact=fact('other', citations=['unrelated']))], name='seed'),
+               frames={'frame-1', 'unrelated'})['accepted']
+    changes = [dict(op='supersede_fact', ids=['f1'], fact=fact('replacement', citations=[citation])),
+               dict(op='add_article', article=article(facts=['replacement', 'other']))]
+    verdict = run(repo, submission(tmp_path, changes, base_version='v1'), frames={'current'}, session_kind=session_kind)
+    assert not verdict['accepted']
+    assert len(verdict['diagnostics']) == 1 and f"citation {citation!r} is outside" in verdict['diagnostics'][0]
+
+
+@pytest.mark.parametrize('removal', ['unrelated-type', 'retire_fact', 'supersede_fact'])
+def test_retype_assignments_require_a_source_type_and_a_surviving_fact(tmp_path, removal):
+    repo = seeded(tmp_path)
+    if removal == 'unrelated-type':
+        assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind('other')),
+                                              dict(op='add_fact', fact=fact('f2', type_name='other'))],
+                                   name='extra', base_version='v1'))['accepted']
+        assignments, facts = {'f1': 'renamed', 'f2': 'renamed'}, ['f1', 'f2']
+        changes, expected = [], 'type outside names before the revision'
+    else:
+        assignments = {'f1': 'renamed'}
+        if removal == 'retire_fact':
+            changes, facts = [dict(op=removal, id='f1', reason='contradicted', citations=['frame-1'])], []
+        else:
+            changes, facts = [dict(op=removal, ids=['f1'], fact=fact('f2', type_name='renamed'))], ['f2']
+        expected = 'retired or superseded in this submission'
+    changes.insert(0, dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('renamed')],
+                           assignments=assignments))
+    if facts:
+        changes.append(dict(op='add_article', article=article(facts=facts)))
+    verdict = grooming(repo, tmp_path, changes)
+    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
+    assert expected in verdict['diagnostics'][0], verdict
+
+
+def test_retyping_records_software_history_and_preserves_prior_versions(tmp_path):
+    repo = seeded(tmp_path)
+    for old, new, version in [('mechanic', 'relation', 'v2'), ('relation', 'observed', 'v3')]:
+        changes = [dict(op='revise_types', action='rename', names=[old], types=[kind(new)], assignments={'f1': new})]
+        if version == 'v2':
+            changes.append(dict(op='add_article', article=article()))
+        assert grooming(repo, tmp_path, changes, name=new)['version'] == version
+    assert [
+        {'from': 'mechanic', 'to': 'relation', 'version': 'v2'},
+        {'from': 'relation', 'to': 'observed', 'version': 'v3'}] == repo.facts()[0]['retyped']
+    assert 'retyped' not in repo.facts('v1')[0]
+    assert len(repo.facts('v2')[0]['retyped']) == 1
+    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('forged', type_name='observed', retyped=[]))],
+                                   name='forged', base_version='v3'))
+    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[0].fact: unexpected field 'retyped'"]
+
+
+def test_article_cannot_link_to_itself(tmp_path):
+    repo = seeded(tmp_path)
+    verdict = grooming(repo, tmp_path, [dict(op='add_article', article=article(links=['A subject']))])
+    assert not verdict['accepted'] and verdict['diagnostics'] == ["article 'a1': link to itself is not allowed"]
+
+
+@pytest.mark.parametrize('first, second', [('retire_article', 'retire_article'), ('retire_article', 'revise_article'),
+                                          ('revise_article', 'retire_article'), ('revise_article', 'revise_article')])
+@pytest.mark.parametrize('same_submission', [True, False])
+def test_article_target_cannot_be_changed_twice_or_after_retirement(tmp_path, first, second, same_submission):
+    repo = seeded(tmp_path)
+    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['accepted']
+    def change(op, identity):
+        return dict(op=op, id='a1', **(dict(reason='no longer useful') if op == 'retire_article' else
+                                      dict(article=article(identity, title=identity))))
+    changes = [change(first, 'a2'), change(second, 'a3')]
+    if not same_submission:
+        assert run(repo, submission(tmp_path, changes[:1], name='first', base_version='v2'))['accepted']
+        changes = changes[1:]
+    verdict = run(repo, submission(tmp_path, changes, name='again', base_version=repo.published()))
+    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
+    assert 'already superseded or retired' in verdict['diagnostics'][0]
+
+
+@pytest.mark.parametrize('op', ['retire_fact', 'supersede_fact'])
+def test_fact_operations_cannot_target_articles(tmp_path, op):
+    repo = seeded(tmp_path)
+    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['accepted']
+    change = dict(op=op, **(dict(id='a1', reason='x', citations=['frame-1']) if op == 'retire_fact' else
+                            dict(ids=['a1'], fact=fact('f2'))))
+    verdict = run(repo, submission(tmp_path, [change], base_version='v2'))
+    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[0]: fact 'a1' does not exist"]
+
+
+@pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/3', None])
+def test_repository_refuses_other_layout_schemas_for_every_reader_and_writer(tmp_path, schema):
+    repo = make_repo(tmp_path)
+    repo.commit({'knowledge.json': json.dumps(dict(schema=schema, game='cdda')).encode()}, 'foreign layout')
+    before = snapshot(repo)
+    for action in [repo.ensure, repo.published, repo.records, repo.types, repo.provenance,
+                   lambda: repo.export('v1', tmp_path/'export'), lambda: repo.commit({}, 'forbidden')]:
+        with pytest.raises(KnowledgeError, match='expected curator-knowledge/2; start a new repository'):
+            action()
+    verdict = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())], base_version='v1'))
+    assert not verdict['accepted'] and 'start a new repository' in verdict['diagnostics'][0]
+    assert snapshot(repo) == before
+
+
+def test_gate_requires_an_explicit_session_kind():
+    import inspect
+    assert inspect.signature(gate).parameters['session_kind'].default is inspect.Parameter.empty
+
+
+@pytest.mark.parametrize('options, expected', [
+    ({'session_kind': 'unknown'}, 'unknown session kind'),
+    ({'session_kind': 'grooming', 'window': session.Window('s1', '001', 1, 2)}, 'not a window'),
+])
+def test_run_session_refuses_invalid_session_selection(tmp_path, options, expected):
+    with pytest.raises(session.SessionError, match=expected):
+        session.run_session(make_repo(tmp_path), [], session.SessionConfig(argv=('unused',)), **options)
+
+
+@pytest.mark.parametrize('problem, expected', [
+    ('no-admission', 'grooming needs a published admission'),
+    ('wrong-trace', 'grooming trace must be the last admission'),
+    ('old-record', 'published store is not curator-fact/3'),
+    ('old-layout', 'expected curator-knowledge/2; start a new repository'),
+])
+def test_session_preparation_refuses_invalid_grooming_inputs_before_starting_a_host(tmp_path, monkeypatch, problem, expected):
+    from tests.curator_trace import make_long_session
+
+    repo = make_repo(tmp_path) if problem == 'no-admission' else seeded(tmp_path)
+    if problem == 'old-record':
+        repo.commit({'facts.jsonl': (json.dumps(fact(schema='curator-fact/2'))+'\n').encode()}, 'old record')
+    if problem == 'old-layout':
+        repo.commit({'knowledge.json': json.dumps(dict(schema='curator-knowledge/1', game='cdda')).encode()}, 'old layout')
+    trace = make_long_session(tmp_path/'evidence', name='other' if problem == 'wrong-trace' else 's1')
+    def forbidden(*args, **kwargs):
+        pytest.fail('invalid session inputs must not start a host')
+    monkeypatch.setattr(sandbox, 'run', forbidden)
+    record = session.run_session(repo, [trace], session.SessionConfig(argv=('unused',)), session_kind='grooming')
+    assert record['manifest']['lifecycle']['state'] == 'aborted'
+    assert any(expected in e for e in record['manifest']['lifecycle']['errors']), record
+    assert record['verdicts'] == []
+
+
+def test_inherited_citations_require_recorded_frame_positions(tmp_path):
+    repo = seeded(tmp_path)
+    provenance = repo.provenance()
+    provenance['frames'].pop('frame-1')
+    repo.commit({'provenance.json': json.dumps(provenance).encode()}, 'missing recorded position')
+    verdict = run(repo, submission(tmp_path, [dict(op='supersede_fact', ids=['f1'], fact=fact('replacement')),
+                                             dict(op='add_article', article=article(facts=['replacement']))],
+                                   base_version='v2'), frames=set(), session_kind='grooming')
+    assert not verdict['accepted'] and verdict['diagnostics'] == [
+        "changes[0]: inherited citation 'frame-1' has no recorded provenance"]

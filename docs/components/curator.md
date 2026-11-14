@@ -25,7 +25,7 @@ adopted; the baseline and workbench phase's
 | [Sandbox](../../harness/curator/sandbox.py) | Default-deny Seatbelt profile and polling supervisor: writes only in the workspace's writable directories, one loopback port, and bounded memory, processes, time and size of the session's own files. It does not watch or protect the rest of the disk ([what is bounded](../operations/curator-hosts.md#what-the-sandbox-bounds)). [Research and residual risks](../research-curator-sandbox.md) |
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Providers](../../tools/curator_host/providers.py) (an adapter) | The concrete `Provider` values (Anthropic messages, OpenRouter chat completions): routes, key header, allowlists, extra refusals, forwarded headers and how usage becomes dollars. Provider and model names stay here |
-| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. Only gate v0 commits to it, and it checks form, base version, scope, provenance and article references; grooming publications file every current fact. [Design](../design/curator-session.md) |
+| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. Only gate v0 commits to it, and it checks form, base version, scope, provenance and article references under the [session publication rules](../design/curator-session.md#gate-v0). [Design](../design/curator-session.md) |
 | [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | The draft lifecycle (open, stale, abandoned, promoted) and one ephemeral sandboxed session per run, with a close-out that never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
@@ -85,10 +85,7 @@ types and optional subjects, and articles whose claims cite facts and whose link
 articles. Software writes sighting order and last confirmation. The gate checks
 structure only and refuses earlier contracts; sealed stores remain evidence.
 
-Admission sessions may add unfiled facts. Between admissions, grooming reads the whole
-published store and the last admission's cited frames, merges and retires facts,
-revises types, normalizes subjects and organizes every current fact into articles.
-The [session design](../design/curator-session.md#submissions) owns exact operations,
-reference checks and persistence; [host operations](../operations/curator-hosts.md)
-own the shared and grooming briefs and the zero-spend stand-in lane. No store size cap,
-player delivery, live trigger or paid qualification is supplied by this change.
+The [session design](../design/curator-session.md#admission-and-grooming) owns what
+admission and grooming sessions read and do, their briefs, and publication rules.
+[Host operations](../operations/curator-hosts.md) owns adapter configuration and the
+zero-spend stand-in lane. Player delivery and live triggers are not implemented.

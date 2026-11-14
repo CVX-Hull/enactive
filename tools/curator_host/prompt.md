@@ -18,6 +18,9 @@ Your working directory is the workspace. All paths are relative to it.
 
 | Path | Holds | You can |
 | --- | --- | --- |
+| `knowledge/coverage.json` | Software-owned coverage of the published version, when present | read |
+| `knowledge/provenance.json` | Software-owned frame positions and admission citations | read |
+| `grooming.md` | The configured instructions, present in grooming sessions | read |
 | `brief.md` | The session brief | read |
 | `trace/` | The window of recorded sessions. The brief says when it is a range of one actor's steps | read |
 | `trace/manifest.json` | Sessions, actors, step and frame counts, a digest of every file, and the range when there is one | read |
@@ -87,13 +90,14 @@ These are the only record shapes you may submit:
   `knowledge/ontology/types.json` or added in this submission. Propose and maintain types from
   what the evidence calls for; no predefined categories apply. `text` is one durable claim in
   your words, including where and when if those matter as shown by the screen. Citations are
-  distinct, non-empty, and inside this session's trace window. A subject is a short consistent
-  name when the fact concerns one thing. Software writes `seen`: the latest cited frame's trace
+  distinct, non-empty, and inside this session's trace window. In grooming, a replacement may
+  also cite any frame cited by the facts it supersedes; software reads those earlier positions
+  from stored provenance. A subject is a short consistent name when the fact concerns one thing. Software writes `seen`: the latest cited frame's trace
   position (session, actor, step and order), which is an order of sighting, never an age.
 - Article: `schema`, `record`: `article`, `id`, `title`, `lead`, `body`, `links`.
   The title names its subject. The lead is one or two sentences a later actor can act on.
   The body is a non-empty list of {`text`: a non-empty claim, `facts`: [distinct fact ids]}.
-  Every claim cites at least one current fact. Links are distinct titles of current articles,
+  Every claim cites at least one current fact. Links are distinct titles of other current articles,
   or an empty list. Current article titles are unique: one article per subject. Software writes
   `last_confirmed`, the latest `seen` among the facts the body cites. Do not supply it or `seen`.
 
@@ -114,8 +118,10 @@ Operations (exact fields):
   Actions: `merge` (two or more existing names, one new type), `split` (one name, two or more
   new types), `rename` (one name, one new type), `deprecate` (one name, no new types).
   `types` uses the type shape above. `assignments` maps current fact ids to their new type names.
-  Reassign or retire every fact whose type goes away. Each revision needs its own published
-  version: at most one `revise_types` operation per submission.
+  Assignments name current facts whose type before the revision is in `names`. Do not assign
+  facts this submission retires or supersedes. Software appends `{from, to, version}` to their
+  `retyped` history; do not supply `retyped`. Reassign, replace or retire every fact whose type
+  goes away. Each revision needs its own published version: at most one `revise_types` operation per submission.
 
 Every new record id must be unused across facts and articles, including historical records.
 Targets must be current and changed only once per submission. Every fact's scope must name this

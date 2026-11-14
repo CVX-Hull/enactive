@@ -227,6 +227,11 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
     records = repo.records()
     types = {item['name']: item for item in repo.types()}
     by_id = {item['id']: item for item in records}
+    original = {item['id']: dict(item) for item in records}
+    recorded_frames = repo.provenance()['frames']
+    removed = {identity for change in data['changes'] for identity in
+               (change['ids'] if change['op'] == 'supersede_fact' else
+                [change['id']] if change['op'] == 'retire_fact' else [])}
     found = []
     touched: set[str] = set()
     for index, change in enumerate(data['changes']):
@@ -252,7 +257,13 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
                 target = by_id.get(identity)
                 if target is None or target.get('record') != 'fact' or not current(target):
                     found.append(f'{label}: assignment fact {identity!r} is not current')
+                elif original[identity]['type'] not in change['names']:
+                    found.append(f'{label}: assignment fact {identity!r} has a type outside names before the revision')
+                elif identity in removed:
+                    found.append(f'{label}: assignment fact {identity!r} is retired or superseded in this submission')
                 else:
+                    target['retyped'] = [*target.get('retyped', []),
+                                         {'from': target['type'], 'to': name, 'version': version}]
                     target['type'] = name
     for index, change in enumerate(data['changes']):
         op = change['op']
@@ -269,9 +280,22 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
                 found.append(f'{label}: {expected} {identity!r} is already superseded or retired')
             touched.add(identity)
         citations = change.get('citations', change.get('fact', {}).get('citations', []))
+        inherited = set()
+        if session_kind == 'grooming' and op == 'supersede_fact':
+            inherited = {citation for identity in targets for citation in
+                         original.get(identity, {}).get('citations', [])}
+        cited_positions = {}
         for citation in citations:
-            if citation not in frames:
-                found.append(f'{label}: citation {citation!r} is outside the trace window')
+            if citation in frames:
+                cited_positions[citation] = frames[citation]
+            elif citation in inherited:
+                if citation in recorded_frames:
+                    cited_positions[citation] = recorded_frames[citation]
+                else:
+                    found.append(f'{label}: inherited citation {citation!r} has no recorded provenance')
+            else:
+                found.append(f'{label}: citation {citation!r} is outside the trace window'
+                             + (' and the replaced facts' if session_kind == 'grooming' else ''))
         if op.startswith('retire_'):
             if change['id'] in by_id:
                 by_id[change['id']]['retired'] = dict(reason=change['reason'], citations=citations,
@@ -284,8 +308,8 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
         if expected == 'fact':
             if item['scope']['game'] != repo.game:
                 found.append(f'{label}: scope game {item["scope"]["game"]!r} is not {repo.game!r}')
-            if all(citation in frames for citation in citations):
-                item['seen'] = max((frames[c] for c in citations), key=lambda p: p['order'])
+            if len(cited_positions) == len(citations):
+                item['seen'] = max(cited_positions.values(), key=lambda p: p['order'])
         for target in targets:
             if target in by_id:
                 by_id[target]['superseded_by'] = identity
@@ -308,7 +332,9 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
             if identity not in facts:
                 found.append(f'article {article["id"]!r}: fact {identity!r} is not current')
         for title in article['links']:
-            if title not in titles:
+            if title == article['title']:
+                found.append(f'article {article["id"]!r}: link to itself is not allowed')
+            elif title not in titles:
                 found.append(f'article {article["id"]!r}: link {title!r} does not resolve')
         filed.update(cited)
         if cited <= facts.keys():
@@ -345,7 +371,7 @@ def _publication(repo: Repository, records: list[dict], types: list[dict], cover
 
 
 def gate(repo: Repository, submission_dir: Path, *, session_id: str,
-         window_frames: dict[str, dict], coverage: dict, session_kind: str = 'admission') -> dict:
+         window_frames: dict[str, dict], coverage: dict, session_kind: str) -> dict:
     """Check and publish one submission. `coverage` is the runner's stamp of what the session read;
     it is written beside the facts with the version, and a submission has no way to set it."""
     if session_kind not in ('admission', 'grooming'):

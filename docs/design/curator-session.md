@@ -20,7 +20,9 @@ Code: [`harness/curator`](../../harness/curator): `knowledge.py`, `containers.py
 
 ## Layout
 
-The knowledge repository's location is set by ADR 009's
+The repository layout is `curator-knowledge/2`, recorded in `knowledge.json`. Readers and
+writers refuse other repository schemas with “start a new repository”; there is no
+layout migration. The knowledge repository's location is set by ADR 009's
 [owner decision on where the repository lives](../decisions/009-curated-player.md#open-owner-decisions).
 Everything lives under one project-local root, by default
 `.runtime/knowledge/`:
@@ -88,20 +90,29 @@ does not parse or judge their prose.
 new type; a split takes one name and at least two new types; a rename takes one name
 and one new type; deprecation takes one name and no new types. Every current fact must
 end with a current type. Each revision publishes a new version, so at most one type
-revision is allowed per submission. Git retains the prior ontology at each version.
+revision is allowed per submission. An assignment's fact must be current, have a type
+in `names` before the revision, and survive the submission (neither retired nor
+superseded). Software appends `{from, to, version}` to that fact's `retyped` list;
+submissions cannot supply it. Git retains the prior ontology and fact history at each
+version.
 
 Superseding or revising marks every target with `superseded_by`; retiring marks it
 with `retired` (reason, citations for facts, publication and session). Historical
 records remain evidence. Only records without either marker are current. Record ids
 are new across both kinds, including history; each target can change once per
-submission. Current article titles are unique (one article per curator-chosen subject).
+submission. Articles cannot link to themselves. Current article titles are unique
+(one article per curator-chosen subject).
 Split or merge articles by replacing/retiring predecessors and adding the resulting
 articles, repairing incoming links and fact references in the same submission.
 
 One current contract, no shim: the gate and session runner refuse stores containing
-records outside `curator-fact/3`. Sealed old stores remain evidence and are neither
+records outside `curator-fact/3`. The read-only `store` and `replay` commands also accept
+only this record contract and the `/2` repository layout. They read fact `text` and
+separate facts from articles. `store` reports total and current counts for each kind
+and the bytes of `facts.jsonl` per version, so grooming size is measurable. Sealed old
+stores remain evidence and are neither
 migrated nor opened as input to curation. The finished `brief-gate` check is retired
-(R-TECH-DEBT); other historical evidence commands remain unchanged.
+(R-TECH-DEBT).
 
 ## Admission and grooming
 
@@ -109,12 +120,20 @@ migrated nor opened as input to curation. The finished `brief-gate` check is ret
 whole published store. It may leave new facts unfiled. `session_kind="grooming"` runs
 between admissions with the whole published store and only the last admission's cited
 frames and their steps. It receives its own `grooming.md` brief alongside the shared
-instructions. It cannot take a restricted window; the supplied sealed trace sessions
+instructions. The host passes its path through `SessionConfig.grooming_brief`; the
+runner copies it to the workspace and retains its contents and SHA-256 in the session
+record. A grooming session without that configured path aborts before the host starts.
+It cannot take a restricted window; the supplied sealed trace sessions
 must match the last published admission's names, and every retained citation must exist.
 
 `provenance.json` keeps software-derived frame positions and the last admission's
 coverage and citations. Citations accumulate across accepted windows of the same
-admission. A grooming publication retains that admission stamp. The curator merges
+admission. A grooming publication retains that admission stamp. Grooming replacement
+facts may cite the union of the superseded facts' citations and the current window's
+frames; other fact operations and retirements require window citations. Software
+looks up inherited frame positions in recorded provenance and writes `seen` from the
+latest cited position. Citations of unrelated facts do not qualify, even if recorded
+provenance contains them. The curator merges
 and retires facts, normalizes subjects through replacements, revises types, and writes
 articles, leads and links. Every grooming publication must file every current fact in
 at least one current article. There is no hard cap on the store; submission and host
@@ -163,8 +182,9 @@ The gate applies its checks in this order, and the first failure rejects:
 2. **Base version.** `base_version` is the published version. Otherwise the submission
    is stale and is rejected, with the current version in the diagnostics.
 3. **Candidate snapshot.** Apply operations atomically to a candidate. Types and targets
-   exist, ids are new, scope matches, and fact/retirement citations belong to this
-   window. Software derives sighting positions from the runner's frame map.
+   exist, ids are new, scope matches, and citations belong to the window or, for a
+   grooming replacement, to the facts it supersedes. Software derives sighting positions
+   from the trace projection and recorded provenance.
 4. **References and filing.** Every article claim cites current facts and every link
    names a current article in the final candidate. Titles are unique. Grooming files
    every current fact; admission may leave facts unfiled. This checks structure only,

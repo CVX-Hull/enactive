@@ -150,7 +150,7 @@ export function budgetNote({ requests, maxRequests, spent, budget, elapsedSecond
   const clock = time >= FINISH_AT ? ' The time is nearly up: the host stops the session when it runs out. Write your submission or draft with write_file now, then call finish.'
     : time >= WRITE_AT ? ' More than half the time is used. Start writing what you have found.' : '';
   if (share >= FINISH_AT) return { share, text: `${status} The budget is nearly spent. Reading tools are now refused: write your submission or draft with write_file now, then call finish.${clock}` };
-  if (share >= WRITE_AT) return { share, text: `${status} More than half is spent. Start writing what you have found: a submission for facts you can cite, a draft for the rest.${clock}` };
+  if (share >= WRITE_AT) return { share, text: `${status} More than half is spent. Start writing what you have found: a submission for changes you can support, a draft for the rest.${clock}` };
   return { share, text: status + clock };
 }
 

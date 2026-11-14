@@ -28,7 +28,7 @@ def _text(message: dict) -> str:
     return ''.join(part.get('text', '') for part in content or [] if isinstance(part, dict))
 
 
-def script(messages: list[dict], attack: str | None = None) -> list[tuple[str, dict]] | None:
+def script(messages: list[dict], attack: str | None = None, *, unfiled: bool = False) -> list[tuple[str, dict]] | None:
     """The tool calls for the next turn, or None for a plain-text turn.
 
     With `attack` (the path of a planted secret), the session instead tries to read it, write
@@ -55,7 +55,9 @@ def script(messages: list[dict], attack: str | None = None) -> list[tuple[str, d
                            lead='A useful observed relation. Check before relying on it.',
                            body=[dict(text='An observed relation.', facts=['f1'])], links=[])
             submission = dict(schema='curator-submission/1', base_version=version, summary='stand-in grooming',
-                              changes=[dict(op='add_article', article=article)])
+                              changes=([dict(op='add_type', type=dict(schema='curator-type/1', name='unfiled',
+                                                                    description='a valid change with no filing', fields=[]))]
+                                       if unfiled else [dict(op='add_article', article=article)]))
             return [('write_file', {'path': 'submissions/grooming/submission.json', 'content': json.dumps(submission)})]
         return [('finish', {'summary': 'stand-in grooming done'})] if turns == 2 else None
     if turns == 0:
@@ -103,6 +105,8 @@ class StandIn:
 
     `rate-limit-veto` adds the server's no-retry instruction to that refusal.
 
+    `grooming-unfiled` submits a valid type addition without filing the admission fact.
+
     `no-usage` omits usage (the proxy then fails closed).
     """
 
@@ -140,7 +144,7 @@ class StandIn:
                     prompt_tokens=1000 + 100 * turn, completion_tokens=40, total_tokens=1040 + 100 * turn, cost=outer.cost,
                     prompt_tokens_details=dict(cached_tokens=800 if turn else 0, cache_write_tokens=0),
                     completion_tokens_details=dict(reasoning_tokens=10))
-                data = stream(script(body['messages'], outer.attack), usage, turn)
+                data = stream(script(body['messages'], outer.attack, unfiled=outer.mode == 'grooming-unfiled'), usage, turn)
                 self.send_response(200)
                 self.send_header('content-type', 'text/event-stream')
                 self.send_header('content-length', str(len(data)))

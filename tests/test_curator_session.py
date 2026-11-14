@@ -391,3 +391,21 @@ def test_a_window_that_does_not_fit_its_trace_aborts_the_session_before_the_host
     record = run_session(repo, trace, host(tmp_path, 'idle', IDLE), window=Window('s1', '001', 13, 20))
     life = record['manifest']['lifecycle']
     assert life['state'] == 'aborted' and any('starts at 13' in e for e in life['errors'])
+
+
+def test_citations_accumulate_across_windows_of_one_admission(tmp_path, long_world):
+    repo, trace = long_world
+    first = run_session(repo, trace, host(tmp_path, 'first', SUBMIT), window=Window('s1', '001', 1, 2))
+    assert first['verdicts'][0]['accepted'], first
+    # The next window proposes a distinct fact using the already-published type.
+    second_code = SUBMIT + '''
+p = 'submissions/s1/submission.json'
+data = json.load(open(p))
+data['changes'] = [c for c in data['changes'] if c['op'] != 'add_type']
+data['changes'][0]['fact']['id'] = 'f2'
+json.dump(data, open(p, 'w'))
+'''
+    second = run_session(repo, trace, host(tmp_path, 'second', second_code), window=Window('s1', '001', 3, 4))
+    assert second['verdicts'][0]['accepted'], second
+    assert repo.provenance()['last_admission']['citations'] == [frame_id(1, 1), frame_id(1, 3)]
+    assert repo.provenance()['last_admission']['coverage']['last_step'] == 4
