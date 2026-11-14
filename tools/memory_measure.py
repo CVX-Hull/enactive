@@ -1358,6 +1358,9 @@ def pilot_units(package: Path, *, independent: bool = True) -> dict:
             or any(not isinstance(u, dict) or not required <= u.keys()
                    or not isinstance(u['fact_ids'], list) for u in value['units'])):
         raise MeasureError(f'{path}: units must be a list of dicts with id, article_id, fact_ids and withheld')
+    if (not isinstance(value.get('shared'), list)
+            or any(not isinstance(s, dict) or not {'fact_id', 'article_ids'} <= s.keys() for s in value['shared'])):
+        raise MeasureError(f'{path}: shared must be a list of dicts with fact_id and article_ids')
     if value['schema'] == 'knowledge-units/2' and (
             type(value.get('start_index')) is not int or value['start_index'] < 0
             or not isinstance(value.get('block'), str) or not value['block']
@@ -1676,7 +1679,7 @@ def crossed_mixed_model(units: Sequence[dict]) -> dict:
 def study(run: Path, runs: Sequence[Path], draw: Path, seed: int = 653, draws: int = 10000) -> dict:
     try:
         design = read_study_draw(draw)
-    except (ValueError, KeyError) as error:
+    except (ValueError, KeyError, TypeError) as error:
         raise MeasureError(f'{draw}: invalid study draw: {error}') from error
     digest = file_sha256(draw)
     data = unit_outcomes(run, runs, independent=False)

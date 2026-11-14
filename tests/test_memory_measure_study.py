@@ -252,7 +252,9 @@ def test_study_unit_records_refuse_malformed_units(tmp_path, units):
         mm.pilot_units(packages[0], independent=False)
 
 
-@pytest.mark.parametrize('contents', ['{', '{}', '{"schema": "withholding-study-draw/1"}'])
+@pytest.mark.parametrize('contents', ['{', '{}', '{"schema": "withholding-study-draw/1"}',
+    '{"schema": "withholding-study-draw/1", "version": "v1", "layout": {}, "seed": 1, "blocks": ["a"], '
+    '"starts": 3, "placebo": [], "assignment": []}'])
 def test_study_wraps_malformed_draw_as_measure_error(tmp_path, contents):
     path = tmp_path / 'malformed-draw.json'
     path.write_text(contents)

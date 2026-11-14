@@ -816,7 +816,9 @@ pilot's rule above stays as it was for the sealed pilot.
   `log_or` plus a per-unit normal slope with the given SD. `log_or` is solved so that the
   pooled delivered missed share is `effect` times the withheld one (0.5: delivery halves
   misses). Each simulated study gets a fresh blocked draw and is analysed with the primary
-  test (2,000 re-draws). It reports power at 0.05 per grid point, the smallest number of
+  test (2,000 re-draws). It refuses a block count above half the smallest number of
+  starts (every block holds at least 2), and an effect whose `log_or` it cannot solve to
+  within 1e-6 for |`log_or`| up to 10⁴. It reports power at 0.05 per grid point, the smallest number of
   starts reaching 0.8 for each block count and slope SD, and the price at `--price` per
   start. It is seeded and writes no file.
 
