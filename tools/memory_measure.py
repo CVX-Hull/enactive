@@ -24,7 +24,7 @@ everything is written there and nowhere else. ADMISSION is a sealed run director
   python -m tools.memory_measure prompt-check packets RUN --before BEFORE
   python -m tools.memory_measure prompt-check report RUN --before BEFORE --judges A B [--seed N] [--draws N] [--json]
 
-  python -m tools.memory_measure simulate-withholding [--pilot REPORT | --seed N] [--json | --render REPORT.json]
+  python -m tools.memory_measure simulate-withholding [--pilot REPORT --price USD] [--seed N] [--sims N] [--json | --render REPORT.json]
 
 What RUN holds:
   judge-packets/<shuffled name>/      one window for a judge: manifest.json, instructions.md, facts.json, frames/
@@ -78,6 +78,7 @@ from harness.evaluation.core.records import EvaluationError, dumps, loads
 from harness.jsonio import file_sha256
 from harness.trace import images
 from harness.trace.projection import ACTION_FIELDS
+from tools.knowledge_export import delivered_fact_ids
 from tools.memory_reads import run_dirs
 from tools.memory_screen_checks import read_lineage
 
@@ -1315,12 +1316,14 @@ def unit_icc(touched: np.ndarray, missed: np.ndarray) -> np.ndarray:
 
 def pilot_units(package: Path) -> dict:
     """Read the package's frozen independent draw, including the shared-fact layout."""
+    if HELD_OUT in package.resolve().parts:
+        raise MeasureError(f'{package}: the held-out lineage is not read for the memory measure')
     manifest = read_json(package / 'manifest.json')
-    if manifest.get('schema') != 'campaign-run/7':
+    if not isinstance(manifest, dict) or manifest.get('schema') != 'campaign-run/7':
         raise MeasureError(f'{package}: pilot requires campaign-run/7')
     path = package / 'private' / 'units.json'
     value = read_json(path)
-    if value.get('schema') != 'knowledge-units/1':
+    if not isinstance(value, dict) or value.get('schema') != 'knowledge-units/1':
         raise MeasureError(f'{path}: expected knowledge-units/1; no other version is read')
     if type(value.get('seed')) is not int:
         raise MeasureError(f'{path}: pilot requires a recorded seed')
@@ -1363,22 +1366,28 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
     if not runs or len({path.name for path in runs}) != len(runs) or draws < 1:
         raise MeasureError('pilot needs distinct package names and at least one bootstrap draw')
     mapping, adjudicated = load_mapping(run), read_json(run / 'adjudicated.json')
-    if adjudicated.get('schema') != 'judge-adjudicated/2':
+    if not isinstance(adjudicated, dict) or adjudicated.get('schema') != 'judge-adjudicated/2':
         raise MeasureError(f'{run / "adjudicated.json"}: expected judge-adjudicated/2; no other version is read')
     if mapping['kind'] != 'blind' or adjudicated['kind'] != 'blind':
         raise MeasureError('pilot requires blind packets')
     rows, names = adjudicated['rows'], adjudicated['judges']
     if adjudicated['unresolved'] or any(row['unresolved'] or row['label'] not in USE_LABELS for row in rows):
         raise MeasureError('pilot requires every pair resolved; run agreement with --third')
+    if any(row['holds'] not in HOLDS for row in rows):
+        raise MeasureError('pilot requires holds values from the known set: ' + ', '.join(HOLDS))
     facts_path = run / 'judged-facts.json'
     facts_file = read_json(facts_path)
-    if facts_file.get('schema') != FACTS_SCHEMA:
+    if not isinstance(facts_file, dict) or facts_file.get('schema') != FACTS_SCHEMA:
         raise MeasureError(f'{facts_path}: expected {FACTS_SCHEMA}; no other version is read')
     if set(facts_file['admissions']) != {path.name for path in runs}:
         raise MeasureError('pilot packages must match the judged-facts admissions')
     if file_sha256(facts_path) != mapping['facts_sha256']:
         raise MeasureError(f'{facts_path}: differs from the judge mapping hash')
-    facts = read_facts(facts_path, facts_file['admissions'])
+    frames, spans = recorded_frames(runs)
+    facts = read_facts(facts_path, spans)
+    if mapping.get('not_judged') or any((start, frame.actor) not in facts
+            for start, recorded in frames.items() for frame in recorded):
+        raise MeasureError('judged facts do not cover the draw: an actor was not judged')
     expected = {}
     for packet in mapping['packets']:
         entry = facts.get((packet['start'], packet['actor']))
@@ -1418,7 +1427,16 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
             item['fact_id'] for item in drawn['shared']}
         judged_ids = {fact['id'] for (admission, _), entry in facts.items() if admission == start for fact in entry['facts']}
         if judged_ids - known:
-            raise MeasureError(f'{package}: judged fact in no unit and not shared: {sorted(judged_ids - known)[0]}')
+            raise MeasureError(f'{package}: judged facts do not cover the draw: judged fact in no unit and not shared: '
+                f'{sorted(judged_ids - known)[0]}')
+        withheld = known - delivered_fact_ids(drawn)
+        for (admission, actor), entry in facts.items():
+            if admission != start:
+                continue
+            if {fact['id'] for fact in entry['facts']} != known:
+                raise MeasureError(f'{package}/{actor}: judged facts do not cover the draw')
+            if {fact['id'] for fact in entry['facts'] if fact['route'] == 'withheld'} != withheld:
+                raise MeasureError(f'{package}/{actor}: judged routes do not match the package\'s draw')
         fact_outcomes.extend(dict(start=start, fact=identity, **outcome([identity], start)) for identity in sorted(judged_ids))
         for unit in drawn['units']:
             units.append(dict(start=start, id=unit['id'], fact_ids=unit['fact_ids'],
@@ -2285,7 +2303,7 @@ def main(argv=None) -> int:
         else:
             report = prompt_report(run, args.before, args.judges, args.seed, args.draws)
             print(json.dumps(report, indent=1) if args.json else render_prompt_check(report))
-    except (MeasureError, EvaluationError, FileExistsError) as error:
+    except (ValueError, EvaluationError, FileExistsError) as error:
         print(f'memory_measure: {error}', file=sys.stderr)
         return 2
     except (KeyError, TypeError, AttributeError, IndexError) as error:

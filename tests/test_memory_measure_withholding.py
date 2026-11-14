@@ -123,7 +123,8 @@ def test_the_command_prints_the_report_as_json_and_renders_a_saved_one(tmp_path,
     assert list(tmp_path.iterdir()) == [saved]  # the command writes no file
 
 
-def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=False, same_seed=False):
+def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=False, same_seed=False,
+                  facts_edit=None, third_label='against'):
     """Real packets, judge events and adjudication over two packages, multiple actors/windows and a frameless actor.
     article-a owns two exclusive facts; article-b owns an untouched fact; both cite shared. Lone and idle are
     unfiled facts. The default independently drawn arms put article-a withheld and the lone fact delivered."""
@@ -146,6 +147,8 @@ def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=Fa
         entry = dict(index=[fact for fact in knowledge['facts'] if fact['id'] in available],
             withheld=[fact for fact in knowledge['facts'] if fact['id'] not in available])
         admissions[package.name] = {'001': entry, '002': entry}
+    if facts_edit is not None:
+        facts_edit(admissions)
     run = tmp_path / 'memory-measure' / 'pilot'
     facts = save(run / 'judged-facts.json', dict(schema='judged-facts/1', admissions=admissions))
     mapping = memory_measure.fact_packets(run, packages, facts, kind, budget=3600, every=1, seed=8)
@@ -162,7 +165,7 @@ def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=Fa
                     straight='in_line', quiet='cannot_tell', lone='found_again' if east else 'in_line',
                     idle='did_not_apply', shared='found_again')[identity]
                 if identity == 'mixed' and packet['packet'] == disputed:
-                    label = {'judge-a': 'in_line', 'judge-b': 'did_not_apply', 'judge-c': 'against'}[name]
+                    label = {'judge-a': 'in_line', 'judge-b': 'did_not_apply', 'judge-c': third_label}[name]
                 if quiet_west and not east:
                     label = 'did_not_apply'
                 verdicts.append(dict(fact=opaque, label=label, holds='stale_or_false' if identity == 'straight' else 'held',
@@ -244,6 +247,8 @@ def test_pilot_exact_randomization_and_unbalanced_binary_anova_icc():
     assert memory_measure.withholding_pvalue(0, 0) == 1
     # Sizes 2,4; missed 0,2: MSB=1/3, MSW=1/4, n0=8/3; ICC=(1/12)/(3/4)=1/9.
     assert float(memory_measure.unit_icc(np.array([2, 4]), np.array([0, 2]))) == pytest.approx(1 / 9)
+    # Repeating the size-2 start makes three clusters: MSB=1/4, MSW=1/5, n0=5/2; ICC=1/11.
+    assert float(memory_measure.unit_icc(np.array([2, 2, 4]), np.array([0, 0, 2]))) == pytest.approx(1 / 11)
     assert float(memory_measure.unit_icc(np.array([4, 4]), np.array([1, 3]))) == pytest.approx(0.2)
     assert float(memory_measure.unit_icc(np.array([4, 4]), np.array([2, 2]))) == 0
     assert np.isnan(memory_measure.unit_icc(np.array([2]), np.array([1])))
@@ -431,3 +436,157 @@ def test_pilot_defaults_to_the_frozen_bootstrap_seed_and_counts_its_starts(tmp_p
     report = memory_measure.pilot(run, packages, draws=50)
     assert report['bootstrap']['seed'] == memory_measure.PILOT_SEED == 619
     assert report['not_a_claim'].startswith('2 starts') and '2 starts.' in report['threats']
+
+
+def test_pilot_keeps_a_driving_pair_adjudicated_did_not_apply(tmp_path):
+    run, packages = pilot_fixture(tmp_path, third_label='did_not_apply')
+    adjudicated = json.loads((run / 'adjudicated.json').read_text())
+    rows = adjudicated['rows']
+    disputed = [row for row in rows if row['labels']['judge-a'] != row['labels']['judge-b']]
+    assert len(disputed) == 1
+    assert disputed[0]['labels'] == {'judge-a': 'in_line', 'judge-b': 'did_not_apply', 'judge-c': 'did_not_apply'}
+    assert disputed[0]['label'] == 'did_not_apply'
+    report = memory_measure.pilot(run, packages, draws=50)
+    applied_after_adjudication = sum(row['label'] in memory_measure.judge.APPLIED for row in rows)
+    pairs = report['judges']['driving_pairs']['pairs']
+    assert pairs == applied_after_adjudication + 1
+    assert report['judges']['driving_pairs']['dispute_rate']['value'] == pytest.approx(1 / pairs)
+
+
+def test_pilot_pools_missed_units_from_both_starts_for_its_pvalue(tmp_path):
+    run, packages = pilot_fixture(tmp_path)
+    path = run / 'adjudicated.json'
+    adjudicated = json.loads(path.read_text())
+    for row in adjudicated['rows']:
+        if row['start'] == 'pilot-west' and row['fact'] == 'lone':
+            row['label'] = 'found_again'
+            row['labels'] = dict.fromkeys(adjudicated['judges'], 'found_again')
+    save(path, adjudicated)
+    report = memory_measure.pilot(run, packages, draws=50)
+    starts = list(report['comparison']['per_start'].values())
+    assert all(sum(arm['missed'] for arm in start['arms'].values()) > 0 for start in starts)
+    withheld = sum(start['arms']['withheld']['missed'] for start in starts)
+    delivered = sum(start['arms']['delivered']['missed'] for start in starts)
+    pooled = report['comparison']['pooled']['p']
+    assert (withheld, delivered) == (1, 2)
+    assert pooled == memory_measure.withholding_pvalue(withheld, delivered) == 7 / 8
+    assert all(pooled != start['p'] for start in starts)
+
+
+@pytest.mark.parametrize('start, actor', [('pilot-east', '002'), ('pilot-west', '002')])
+def test_pilot_requires_every_fact_for_each_judged_actor_including_no_frames(tmp_path, start, actor):
+    def omit_fact(admissions):
+        entry = admissions[start][actor]
+        admissions[start][actor] = dict(entry, index=[fact for fact in entry['index'] if fact['id'] != 'idle'])
+
+    run, packages = pilot_fixture(tmp_path, facts_edit=omit_fact)
+    with pytest.raises(MeasureError, match='judged facts do not cover the draw'):
+        memory_measure.pilot(run, packages)
+    assert not (run / 'pilot.json').exists()
+
+
+@pytest.mark.parametrize('keep_not_judged', [True, False])
+def test_pilot_refuses_an_actor_with_frames_but_no_judged_entry(tmp_path, keep_not_judged):
+    def omit_actor(admissions):
+        del admissions['pilot-west']['001']
+
+    run, packages = pilot_fixture(tmp_path, facts_edit=omit_actor)
+    path = run / 'private' / 'judge-mapping.json'
+    mapping = json.loads(path.read_text())
+    assert mapping['not_judged'] == ['pilot-west/001']
+    if not keep_not_judged:
+        del mapping['not_judged']
+        save(path, mapping)
+    with pytest.raises(MeasureError, match='judged facts do not cover the draw'):
+        memory_measure.pilot(run, packages)
+
+
+def test_pilot_refuses_an_actor_listed_as_not_judged(tmp_path):
+    run, packages = pilot_fixture(tmp_path)
+    path = run / 'private' / 'judge-mapping.json'
+    mapping = json.loads(path.read_text())
+    mapping['not_judged'] = mapping['no_frames']
+    save(path, mapping)
+    with pytest.raises(MeasureError, match='judged facts do not cover the draw'):
+        memory_measure.pilot(run, packages)
+
+
+@pytest.mark.parametrize('identity, source, target', [
+    ('mixed', 'withheld', 'index'), ('lone', 'index', 'withheld'), ('shared', 'index', 'withheld')])
+def test_pilot_requires_judged_routes_to_match_the_draw_including_shared_facts(tmp_path, identity, source, target):
+    def reroute(admissions):
+        entry = admissions['pilot-east']['002']
+        moved = next(fact for fact in entry[source] if fact['id'] == identity)
+        admissions['pilot-east']['002'] = dict(entry,
+            **{source: [fact for fact in entry[source] if fact != moved], target: [*entry[target], moved]})
+
+    run, packages = pilot_fixture(tmp_path, facts_edit=reroute)
+    with pytest.raises(MeasureError, match="judged routes do not match the package's draw"):
+        memory_measure.pilot(run, packages)
+
+
+def test_pilot_refuses_a_resolved_package_path_under_the_held_out_lineage(tmp_path):
+    run, packages = pilot_fixture(tmp_path)
+    held_out = tmp_path / memory_measure.HELD_OUT
+    held_out.mkdir()
+    moved = held_out / packages[0].name
+    packages[0].rename(moved)
+    alias = tmp_path / packages[0].name
+    alias.symlink_to(moved, target_is_directory=True)
+    with pytest.raises(MeasureError, match='held-out lineage'):
+        memory_measure.pilot(run, [alias, *packages[1:]])
+
+
+@pytest.mark.parametrize('fault, message', [
+    ('campaign-schema', 'requires campaign-run/7'), ('facts-hash', 'differs from the judge mapping hash'),
+    ('tampered-pair', 'adjudicated pairs differ'), ('shared-in-unit', 'shared facts must be separate'),
+    ('holds', 'holds values from the known set')])
+def test_pilot_refuses_invalid_provenance_units_and_holds(tmp_path, fault, message):
+    run, packages = pilot_fixture(tmp_path)
+    if fault == 'campaign-schema':
+        save(packages[0] / 'manifest.json', dict(schema='campaign-run/6'))
+    elif fault == 'facts-hash':
+        path = run / 'judged-facts.json'
+        path.write_text(path.read_text() + '\n')
+    elif fault == 'shared-in-unit':
+        path = packages[0] / 'private' / 'units.json'
+        record = json.loads(path.read_text())
+        next(unit for unit in record['units'] if unit['id'] == 'article-a')['fact_ids'].append('shared')
+        save(path, record)
+        save(packages[0] / 'manifest.json', dict(schema='campaign-run/7',
+            private_files={'units.json': memory_measure.file_sha256(path)}))
+    else:
+        path = run / 'adjudicated.json'
+        adjudicated = json.loads(path.read_text())
+        adjudicated['rows'][0]['actor' if fault == 'tampered-pair' else 'holds'] = 'unknown'
+        save(path, adjudicated)
+    with pytest.raises(MeasureError, match=message):
+        memory_measure.pilot(run, packages)
+    assert not (run / 'pilot.json').exists()
+
+
+@pytest.mark.parametrize('filename, message', [
+    ('units.json', 'expected knowledge-units/1'), ('adjudicated.json', 'expected judge-adjudicated/2'),
+    ('judged-facts.json', 'expected judged-facts/1')])
+@pytest.mark.parametrize('root', [[], None, 'unexpected'])
+def test_pilot_non_object_json_roots_raise_measure_error(tmp_path, filename, message, root):
+    run, packages = pilot_fixture(tmp_path)
+    path = packages[0] / 'private' / filename if filename == 'units.json' else run / filename
+    save(path, root)
+    with pytest.raises(MeasureError, match=message):
+        memory_measure.pilot(run, packages)
+
+
+def test_simulation_from_pilot_refuses_undefined_rho_with_defined_intervals(tmp_path):
+    path = save(tmp_path / 'pilot.json', dict(schema='withholding-pilot/1', simulation=dict(
+        touched=dict(value=2, interval=[1, 3]), missed=dict(value=0.5, interval=[0, 1]), rho=None, wrong=0.1)))
+    with pytest.raises(MeasureError, match='defined finite numbers'):
+        memory_measure.simulation_from_pilot(path)
+
+
+def test_pilot_cli_refuses_a_missing_runs_directory_without_a_traceback(tmp_path, capsys):
+    run, missing = tmp_path / 'memory-measure' / 'pilot', tmp_path / 'missing-package'
+    assert main(['pilot', str(run), '--runs', str(missing)]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert captured.err == f'memory_measure: {missing}: not a run directory or a directory of run directories\n'
