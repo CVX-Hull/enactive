@@ -1197,7 +1197,8 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
 # --- the anchor: the measure gate's owner-labelled pairs, re-judged ---------------------------------------------------------
 
 #: The measure gate's judge prompt, frozen: the text of `instructions.md` in every sealed judge packet of
-#: `.runtime/memory-measure/seven-day-measure-gate`. It is worded for one kind of fact in one game, as the gate was;
+#: the measure gate, sealed as `memory-measure/` of the `memory-screen-gates-460-386` study
+#: (`.runtime/evidence/memory-screen-gates-460-386/memory-measure`). It is worded for one kind of fact in one game, as the gate was;
 #: it is kept only because the owner's 30 labels answer this question. It is never edited: `anchor packets` refuses
 #: a gate whose packets do not hold exactly this text, and a test pins its hash.
 ANCHOR_PROMPT_SHA256 = '14c7d5932c044f2ac3e6b6e0a60bbb45ece3598d87a3e60aea4f94ad68c6af24'

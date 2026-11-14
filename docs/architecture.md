@@ -179,6 +179,7 @@ Current coupling. None of it is in the shared player code. The entries inside
 | macOS SDL adapter loaded into the game process | [`harness/computer/native/`](../harness/computer/native) | [Native control](components/native-control.md) |
 | Adapter injection through `DYLD_INSERT_LIBRARIES` | [`harness/computer/launch.py`](../harness/computer/launch.py) | [Native control](components/native-control.md) |
 | CDDA-specific play guidance | [Player guide](player-guide.md) | Player guide |
+| Curator: one knowledge repository per game, and the shadow runner over sealed lineages names the game `cdda`; the fact format, articles and briefs name no kind of thing in a game | [`harness/curator/knowledge.py`](../harness/curator/knowledge.py), [`tools/curator_host/shadow.py`](../tools/curator_host/shadow.py) | [Curator](components/curator.md) |
 | Memory measure: the anchor check's frozen prompt and `anchor_verdict` labels are worded for going to a known place with goods, kept only to re-judge the measure gate's 30 owner-labelled pairs; the standing packets, labels and measures name no kind of thing in a game | [`tools/memory_measure.py`](../tools/memory_measure.py), [`harness/evaluation/core/judge.py`](../harness/evaluation/core/judge.py) | [Evaluation contract](contracts/evaluation.md) |
 
 ## Separate recovery and memory boundaries
