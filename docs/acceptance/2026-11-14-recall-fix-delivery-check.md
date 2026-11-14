@@ -63,7 +63,8 @@ before spend.
 - **Recall model.** The same pinned route, declaring a 32,768-token window and 4,096
   output tokens, so its bound for a request without a cost record is \$0.06144 (#635
   declared the player's 262,144-token window, \$0.4096). A recall request was 1,200 to
-  5,200 prompt tokens before images in these runs and #635.
+  5,200 prompt tokens in these runs and #635, including the one image a reminder
+  carries; the largest is actor 002's handoff briefing, which has none.
 - **The recall check** (`recall-check-642`, session `ad4c2d86f4014c1da755d21b33c18c1e`,
   start `seven-day-end-09`): recall at every completed input, up to 16 recall requests,
   30 attempts in all, 8 images in blocks of 4, one host, limit \$1, finish reserve \$0.48.
@@ -129,14 +130,15 @@ refused (not dispatched). 233 of the 240 attempts were used.
   #635); player response median 6.1 s, 95th percentile 9.6 s (6.4 s and 9.8 s in
   #635).
 - **Burden.** Actor 001's prompts: median 60,271 tokens (58,349 in #635), last
-  103,172; cache share 94.7% (the same in #635); \$0.00732 per player request (\$0.00697). The
+  103,172; cache share 94.749% (94.752% in #635); \$0.00732 per player request (\$0.00697). The
   reminders stay where they were first sent, so the cache holds.
 
-**Method.** The results table is `tools/evaluate evaluate-table` over the evaluation
-records; spend is from the receipts and the [run ledger](../../data/evaluation/runs.jsonl).
+**Method.** The results table is `python -m tools.evaluate evaluate-table` over the
+evaluation records; spend is from the receipts and the [run ledger](../../data/evaluation/runs.jsonl).
 The other readings are from the sealed `host.jsonl` events, read by a one-off script:
 response time is `response-complete` minus `request-start` per request, split by
-`request_role`, with nearest-rank percentiles as in `tools/host_analysis.py`; prompt
+`request_role`, with nearest-rank percentiles (`tools.host_analysis` reproduces the
+player figures); prompt
 tokens are input plus cache read plus cache write from each player response's usage, and
 the cache share is cache read over that sum; cost per request is the counted cost.
 
