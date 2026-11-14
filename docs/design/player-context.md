@@ -365,10 +365,23 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   by the package check from that model's rates as for the player. The model and `N` are
   pinned per run; for the pilot the lead chooses both and states them before anything
   is spent.
-- **Failures.** A recall request that fails ends recall for that actor; it is counted at
-  the cost the provider reported when that cost is valid (even if its selection is then
-  rejected), and otherwise at its bound: a briefing then holds the index lines only, and later
-  reminders are logged as not made. The player plays on. The player-host contract's rule
+- **Replies.** The model is asked for one JSON object (structured output where the route
+  supports it, today OpenRouter), and the host accepts one object, bare or in one code
+  fence, and nothing else. The request puts the index first, so its stable part can be
+  cached across actors and reminders. The trace keeps each reply's text, bounded as the
+  player's is, and the precise reason a reply was refused, so a failure is seen rather
+  than inferred: the delivery development start
+  ([#635](https://github.com/CVX-Hull/enactive/issues/635)) lost every lead and reminder
+  to replies whose text it never kept.
+- **Failures.** A reply with a valid provider cost whose selection is invalid fails that
+  opportunity only: a briefing then holds the index lines only, a reminder delivers
+  nothing, and later reminders are still asked for within the recall allowance and every
+  spend check. One formatting slip should not remove an actor's reminders, and the
+  allowance already bounds what repeated slips cost. Every other failed request (no
+  valid cost, a provider failure, a spend refusal, an unexpected error) ends recall for
+  that actor, since it may cost its bound again: it is counted at the cost the provider
+  reported when that cost is valid, and otherwise at its bound, and later reminders are
+  logged as not made. The player plays on. The player-host contract's rule
   that an unpriced success stops the actor is scoped to player requests in the same
   change.
 
