@@ -766,11 +766,11 @@ def test_action_before_delivery_or_read_cannot_count(tmp_path, route, label):
     packet = mapping_of(run)['packets'][0]
     directory = run / 'judge-packets' / packet['packet']
     listed = json.loads((directory / 'facts.json').read_text())['facts'][0]
-    assert listed['available_from'] == 'f005'
+    assert listed['available_from'] == 'f006'
     assert 'Earlier action does' in (directory / 'instructions.md').read_text()
     answer = save(run / 'answer.json', dict(packet=packet['packet'], answers=[dict(fact='late', label=label,
-        holds='held', frames=['f001'])]))
-    with pytest.raises(MeasureError, match='before available_from f005'):
+        holds='held', frames=['f005'])]))
+    with pytest.raises(MeasureError, match='before available_from f006'):
         judge_events(run, 'judge-a', 'model-x', [answer])
     assert not (run / 'events').exists()
     # Evidence only of action before the read gets no credit in the standing measure.
@@ -785,7 +785,7 @@ def test_action_before_delivery_or_read_cannot_count(tmp_path, route, label):
         assert (report['measures']['read_then_in_line']['numerator'],
             report['measures']['read_then_in_line']['denominator']) == (0, 1)
     # The first available frame is accepted as evidence, as are later frames.
-    value['answers'][0].update(label=label, frames=['f001', 'f005'])
+    value['answers'][0].update(label=label, frames=['f001', 'f006'])
     save(answer, value)
     assert judge_events(run, 'judge-c', 'model-x', [answer])[0].label == label
 
@@ -925,3 +925,132 @@ def test_each_judge_event_file_pins_one_model(tmp_path):
     with pytest.raises(EvaluationError, match='more than one model'):
         judge.write_events(tmp_path / 'mixed.jsonl', [event, other])
     assert not (tmp_path / 'mixed.jsonl').exists()
+
+
+# Round-two regressions for R-FALSE-CLAIM: sampled input provenance, honest coverage and comparable windows.
+@pytest.mark.parametrize('route', ['lead', 'read'])
+@pytest.mark.parametrize('read_decision', [5, 6])
+@pytest.mark.parametrize('label', judge.APPLIED)
+def test_sampled_inputs_from_before_or_during_a_read_cannot_count(tmp_path, route, read_decision, label):
+    admission_dir = admission(tmp_path / 'evidence', 'run-timed', 't', [None, None, 1, 2, 3, 4, 5, 6, 7])
+    frames, _ = recorded_frames([admission_dir])
+    kept = every_nth_changed(frames['run-timed'], every=3)
+    assert [frame.decision for frame in kept] == [3, 6, 9]
+    assert [frame.input_decisions for frame in kept] == [(3,), (4, 5, 6), (7, 8, 9)]
+    run = tmp_path / 'memory-measure' / 'sampled-timing'
+    facts = dict(schema='judged-facts/1', admissions={'run-timed': {'001': {route: [fact('timed', from_decision=read_decision)]}}})
+    mapping = fact_packets(run, [admission_dir], save(tmp_path / 'facts.json', facts), 'use', every=3, seed=4)
+    packet = mapping['packets'][0]
+    assert packet['available_from']['timed'] == 'f003'
+    directory = run / 'judge-packets' / packet['packet']
+    manifest = json.loads((directory / 'manifest.json').read_text())
+    assert [row['decision'] for row in manifest['frames']] == [3, 6, 9]
+    assert manifest['frames'][1]['inputs_before'] == ['k4', 'k5', 'k6']
+    assert manifest['frames'][2]['inputs_before'] == ['k7', 'k8', 'k9']
+    assert json.loads((directory / 'facts.json').read_text())['facts'][0]['available_from'] == 'f003'
+    answer = save(run / 'answer.json', dict(packet=packet['packet'], answers=[dict(fact='timed', label=label,
+        holds='held', frames=['f002'])]))
+    with pytest.raises(MeasureError, match='before available_from f003'):
+        judge_events(run, 'judge-a', 'model-x', [answer])
+    value = json.loads(answer.read_text())
+    value['answers'][0]['frames'] = ['f003']
+    save(answer, value)
+    event = judge_events(run, 'judge-a', 'model-x', [answer])[0]
+    assert event.cited_frames == ('tttttttt-9',)
+
+
+def test_input_decisions_survive_missing_and_unchanged_frames(tmp_path):
+    directory = admission(tmp_path, 'run-inputs', 'i', [1, 'lost', 2, 2, 3, 4, 5])
+    frames, _ = recorded_frames([directory])
+    kept = every_nth_changed(frames['run-inputs'], every=2)
+    assert [frame.decision for frame in kept] == [1, 5, 7]
+    assert [frame.input_decisions for frame in kept] == [(1,), (2, 3, 4, 5), (6, 7)]
+    assert not memory_measure.available_after(kept[1], 2)
+    assert memory_measure.available_after(kept[2], 2)
+
+
+def test_serialized_packet_cost_evens_windows_and_preserves_decision_groups():
+    frames = [Frame('run', '001', f's{number}', number, Path('x'), ()) for number in range(1, 7)]
+    parts = cut(frames, lambda frame: 0, 60, packet_cost=lambda part, first, last: 10 + len(part) * 10)
+    assert [len(part) for part in parts] == [3, 3]  # greedy fitting alone gives five and a short tail of one
+    repeated = [Frame('run', '001', f's{number}', decision, Path('x'), ()) for number, decision in
+        enumerate([1, 2, 2, 3, 4, 5, 6, 6, 6, 7])]
+    parts = cut(repeated, lambda frame: 0, 45, packet_cost=lambda part, first, last: 10 + len(part) * 10)
+    assert all(10 + len(part) * 10 <= 45 for part in parts)
+    assert all(a[-1].decision != b[0].decision for a, b in zip(parts, parts[1:]))
+    oversize = cut(repeated[5:9], lambda frame: 0, 35, packet_cost=lambda part, first, last: 10 + len(part) * 10)
+    assert [len(part) for part in oversize] == [1, 3]
+
+
+def test_actor_windows_are_evened_and_priced_with_the_bounds_actually_written(tmp_path, monkeypatch):
+    runs = [admission(tmp_path / 'evidence', 'run-windowed', 'w', [1] * 12 + ['handoff', 2, 3, 4, 5, 6, 7], (750, 400))]
+    facts = save(tmp_path / 'facts.json', dict(schema='judged-facts/1', admissions={'run-windowed': {'002': dict(
+        lead=[fact('known')], reminders=[dict(decision=16, text='Remember the observation.')])}}))
+    wide = tmp_path / 'memory-measure' / 'wide'
+    full = fact_packets(wide, runs, facts, 'use', every=1, seed=2)['packets'][0]
+    budget = full['estimated_tokens'] - 200  # five frames fit; six do not
+    priced = {}
+    real = memory_measure.manifest_text
+
+    def stamp(manifest):
+        return manifest['decisions'], json.dumps([{key: value for key, value in row.items() if key != 'sha256'}
+            for row in manifest['frames']], sort_keys=True)
+
+    def capture(manifest, contents, image_files=None):
+        serialized = real(manifest, contents, image_files)
+        if manifest.get('packet') == 's0000000000' and manifest['frames']:
+            priced[stamp(manifest)] = manifest['budget']['estimated']['total']
+        return serialized
+
+    monkeypatch.setattr(memory_measure, 'manifest_text', capture)
+    run = tmp_path / 'memory-measure' / 'evened'
+    mapping = fact_packets(run, runs, facts, 'use', every=1, seed=2, budget=budget)
+    assert [len(packet['frames']) for packet in mapping['packets']] == [3, 3]
+    assert [(packet['first'], packet['last']) for packet in mapping['packets']] == [(13, 15), (16, 18)]
+    for packet in mapping['packets']:
+        manifest = json.loads((run / 'judge-packets' / packet['packet'] / 'manifest.json').read_text())
+        assert priced[stamp(manifest)] == packet['estimated_tokens']
+        assert packet['estimated_tokens'] <= budget and not packet['over_budget']
+
+
+@pytest.mark.parametrize('only_late', [False, True])
+def test_facts_without_any_eligible_frame_are_listed_in_mapping_and_report(tmp_path, only_late):
+    runs = [admission(tmp_path / 'evidence', 'run-late', 'l', [None, None, 1, 2, 3, 4, 5, 6, 7, None])]
+    read = [fact('too-late', from_decision=8), fact('after-last-frame', from_decision=10)]
+    if not only_late:
+        read.append(fact('shown', from_decision=5))
+    facts = save(tmp_path / 'facts.json', dict(schema='judged-facts/1', admissions={'run-late': {'001': dict(read=read)}}))
+    run = tmp_path / 'memory-measure' / 'late'
+    mapping = fact_packets(run, runs, facts, 'use', every=3)
+    expected = [dict(actor='run-late/001', fact='after-last-frame'), dict(actor='run-late/001', fact='too-late')]
+    assert mapping['not_shown'] == expected
+    assert mapping['no_frames'] == []
+    assert {identity for packet in mapping['packets'] for identity in packet['facts']} == (set() if only_late else {'shown'})
+    (run / 'events').mkdir()
+    for name in ('judge-a', 'judge-b'):
+        if only_late:
+            judge.write_events(run / 'events' / f'{name}.jsonl', [])
+        else:
+            judge_events(run, name, 'model-x', answers(run, name, {('run-late', 'shown'): ('in_line', 'held')}))
+    agreement(run, ['judge-a', 'judge-b'])
+    report = measure(run, seed=1, draws=20)
+    assert report['not_shown'] == expected
+    rendered = memory_measure.render_measure(report)
+    assert 'run-late/001 / too-late' in rendered and 'run-late/001 / after-last-frame' in rendered
+    blind = tmp_path / 'memory-measure' / 'blind'
+    blind_mapping = fact_packets(blind, runs, facts, 'blind', every=3)
+    assert blind_mapping['not_shown'] == []
+    assert {identity for packet in blind_mapping['packets'] for identity in packet['facts']} == {row['id'] for row in read}
+
+
+def test_agreement_reports_holds_agreement_and_kappa_beside_the_labels(tmp_path, capsys):
+    run = judged(tmp_path)
+    result = agreement(run, ['judge-a', 'judge-b'], 'judge-c')
+    assert (result['holds_agreement'], result['holds_dispute_rate']) == (0.9, 0.1)
+    # Holds marginals: (held, stale, cannot tell) = (6, 1, 3) vs (5, 1, 4); chance = .43, observed = .9.
+    assert result['holds_kappa'] == pytest.approx(47 / 57)
+    assert result == json.loads((run / 'adjudicated.json').read_text())
+    assert main(['agreement', str(run), '--judges', 'judge-a', 'judge-b', '--third', 'judge-c']) == 0
+    rendered = capsys.readouterr().out
+    assert 'label agreement 0.900, Cohen\'s kappa' in rendered
+    assert 'holds agreement 0.900, Cohen\'s kappa 0.825, dispute rate 0.100' in rendered

@@ -514,10 +514,12 @@ Facts come from the store and the trace, not from a list written in advance. Del
 
 - A fact has one route for an actor; an id listed twice is refused.
 - `from_decision` is optional: the admission's decision from which the route holds (a
-  reminder's, a read's). A use packet leaves the fact out of windows that end before it,
-  and names its `available_from` frame: an applied label (`in_line`, `against`,
-  `found_again`) must cite a frame from there on, or `events` refuses it, so an action
-  before a read or a reminder cannot count as using it.
+  reminder's, a read's). Its `available_from` frame is the first kept frame whose carried
+  inputs all come from decisions strictly after it; a use packet leaves the fact out of
+  windows with no such frame, and an applied label (`in_line`, `against`, `found_again`)
+  must cite a frame from there on, or `events` refuses it, so an action before or during a
+  read or a reminder cannot count as using it. A fact with no such frame in any window is
+  listed under `not_shown` (actor and fact) in the mapping and the report.
 - `briefing` and `reminders` are optional and are shown only in use packets.
 - An actor without an entry is not judged. Any other version or key is refused.
 
@@ -529,8 +531,9 @@ which maps each shuffled name to its admission, actor, decisions, source IDs and
 fact's route and is never given to a judge. A run directory holds one kind.
 
 - **Token budget.** Windows are cut so that everything a judge reads stays within the
-  budget (`--budget`, default 60,000 estimated tokens), evened across the windows of an
-  actor where decisions allow; cuts fall between decisions and within one actor. An image
+  budget (`--budget`, default 60,000 estimated tokens), evened toward an average packet
+  across the windows of an actor where decisions allow, each priced with its real bounds;
+  cuts fall between decisions and within one actor. An image
   is estimated at width × height / 750 tokens after a long edge over 1568 px is scaled
   down to it, text at one token per three characters, counted on the files as written.
   The manifest (`judge-packet/2`) records `budget: {tokens, estimated: {images, text,
@@ -540,7 +543,8 @@ fact's route and is never given to a judge. A run directory holds one kind.
   instructions leave; when those leave less than a quarter of the budget, the tool refuses.
 - An actor with facts but no kept frame is listed under `no_frames` in the mapping and
   the report.
-- **Use packets** hold `manifest.json`, `instructions.md`, `facts.json` (id, text, route),
+- **Use packets** hold `manifest.json`, `instructions.md`, `facts.json` (id, text, route,
+  and `available_from` where the fact arrived during play),
   `delivered.json` (the briefing and the reminders up to the window's end) and `frames/`;
   a frame's row may carry `stated_before`, the `intent` and `cites` of the player's calls
   since the previous frame. Withheld facts are left out.

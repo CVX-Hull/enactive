@@ -177,7 +177,8 @@ def text_tokens(value: str) -> int:
 @dataclass(frozen=True)
 class Frame:
     """One recorded frame. `inputs` are the input batches sent since the frame before it, oldest first; `stated`
-    is what the player said with its calls over the same span (`intent`, `cites`); `tokens` estimates the image."""
+    is what the player said with its calls over the same span (`intent`, `cites`); `tokens` estimates the image.
+    `input_decisions` keeps each batch's decision through sampling, privately, so a pre-read input cannot count."""
 
     run: str
     actor: str
@@ -188,6 +189,7 @@ class Frame:
     stated: tuple = ()
     tokens: int = 0
     changed: bool = True
+    input_decisions: tuple[int | None, ...] = ()
 
 
 def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dict[str, list[Frame]], dict[str, dict]]:
@@ -207,15 +209,16 @@ def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dic
             raise MeasureError(f'{run.name}: selected twice')
         spans[run.name] = {actor.name: (actor.first - offsets[run.name], actor.first - offsets[run.name] + actor.requests - 1)
             for actor in actors if actor.run == run.name}
-        found, seen, pending, stated, previous, owner = [], set(), [], [], None, None
+        found, seen, pending, pending_decisions, stated, previous, owner = [], set(), [], [], [], None, None
         for call in run.facts.calls:
             if call.actor != owner:  # what one actor sent or said is never carried into the next actor's frames
-                pending, stated, owner = [], [], call.actor
+                pending, pending_decisions, stated, owner = [], [], [], call.actor
             arguments = call.arguments if isinstance(call.arguments, dict) else {}
             if call.tool == 'computer_input':
                 actions = arguments.get('actions')
                 pending.append([{key: action[key] for key in ACTION_FIELDS if key in action}
                     for action in (actions if isinstance(actions, list) else []) if isinstance(action, dict)])
+                pending_decisions.append(call.decision)
             said = {key: arguments[key] for key in ('intent', 'cites') if key in arguments}
             if said:
                 stated.append(dict(tool=call.tool, **said))
@@ -230,8 +233,8 @@ def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dic
                 images.region_diff(previous, image, grid=(1, 1))[0]['changed_fraction'] > min_changed
             seen.add(source)
             found.append(Frame(run.name, names[(run.name, call.actor)], source, call.decision, path, tuple(pending),
-                tuple(stated), image_tokens(image.shape[1], image.shape[0]), bool(changed)))
-            pending, stated, previous = [], [], image
+                tuple(stated), image_tokens(image.shape[1], image.shape[0]), bool(changed), tuple(pending_decisions)))
+            pending, pending_decisions, stated, previous = [], [], [], image
         frames[run.name] = found
     return frames, spans
 
@@ -239,15 +242,16 @@ def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dic
 def every_nth_changed(frames: Sequence[Frame], every: int) -> list[Frame]:
     """Every `every`-th changed frame, the first included. Each kept frame carries every input, and everything
     the player stated, since the kept one before it, so nothing is lost with the frames that are left out."""
-    kept, inputs, stated, count = [], [], [], 0
+    kept, inputs, input_decisions, stated, count = [], [], [], [], 0
     for frame in frames:
         inputs.extend(frame.inputs)
+        input_decisions.extend(frame.input_decisions)
         stated.extend(frame.stated)
         if not frame.changed:
             continue
         if count % every == 0:
-            kept.append(replace(frame, inputs=tuple(inputs), stated=tuple(stated)))
-            inputs, stated = [], []
+            kept.append(replace(frame, inputs=tuple(inputs), input_decisions=tuple(input_decisions), stated=tuple(stated)))
+            inputs, input_decisions, stated = [], [], []
         count += 1
     return kept
 
@@ -285,29 +289,61 @@ def frame_row(frame: Frame, name: str, blind: bool) -> dict:
 
 
 def cut(frames: Sequence[Frame], cost: Callable[[Frame], int], budget: int, *,
-        packet_cost: Callable[[Sequence[Frame]], int] | None = None) -> list[list[Frame]]:
-    """Consecutive frames in parts of at most `budget` estimated tokens, cut only between decisions. A part is
-    closed once it reaches the even share (the total over the fewest parts that could hold it), so where the
-    decisions allow, the last part is not a short tail. With `packet_cost`, the complete serialized candidate
-    sets the cut instead. One decision larger than the budget is a part by itself."""
+        packet_cost: Callable[[Sequence[Frame], int, int], int] | None = None,
+        first_decision: int | None = None, last_decision: int | None = None) -> list[list[Frame]]:
+    """Cut between decisions, retaining an oversized decision by itself. Additive costs use the even share
+    over the fewest possible parts. Complete serialized costs receive the actual inclusive window bounds;
+    their greedy fit supplies an average packet target, then a second pass evens the windows toward it where
+    decisions and the budget allow, without increasing the number of windows."""
     groups: list[list[Frame]] = []
     for frame in frames:
         if groups and groups[-1][0].decision == frame.decision:
             groups[-1].append(frame)
         else:
             groups.append([frame])
+    if not groups:
+        return []
     costs = [sum(cost(frame) for frame in group) for group in groups]
-    target = math.inf if packet_cost else sum(costs) / max(1, math.ceil(sum(costs) / budget))
-    parts: list[list[Frame]] = []
-    spent = 0
-    for group, price in zip(groups, costs):
-        exceeds = packet_cost(parts[-1] + group) > budget if packet_cost and parts else spent + price > budget
-        if not parts or exceeds or spent >= target:
-            parts.append([])
-            spent = 0
-        parts[-1].extend(group)
-        spent += price
-    return parts
+    cached: dict[tuple[int, int], int] = {}
+
+    def price(start: int, end: int) -> int:
+        key = start, end
+        if key not in cached:
+            if packet_cost:
+                first = (frames[0].decision if first_decision is None else first_decision) if start == 0 else \
+                    groups[start - 1][-1].decision + 1
+                last = (frames[-1].decision if last_decision is None else last_decision) if end == len(groups) else \
+                    groups[end - 1][-1].decision
+                cached[key] = packet_cost([frame for group in groups[start:end] for frame in group], first, last)
+            else:
+                cached[key] = sum(costs[start:end])
+        return cached[key]
+
+    def split(target: float) -> list[tuple[int, int]]:
+        parts, start = [], 0
+        for end in range(2, len(groups) + 1):
+            current, extended = price(start, end - 1), price(start, end)
+            nearer = packet_cost is not None and target != math.inf and abs(current - target) < abs(extended - target)
+            if extended > budget or current >= target or nearer:
+                parts.append((start, end - 1))
+                start = end - 1
+        return [*parts, (start, len(groups))]
+
+    if packet_cost:
+        fitted = split(math.inf)
+        target = sum(price(start, end) for start, end in fitted) / len(fitted)
+        evened = split(target)
+        parts = evened if len(evened) <= len(fitted) else fitted
+    else:
+        target = sum(costs) / max(1, math.ceil(sum(costs) / budget))
+        parts = split(target)
+    return [[frame for group in groups[start:end] for frame in group] for start, end in parts]
+
+
+def available_after(frame: Frame, decision: int) -> bool:
+    """A sampled frame whose carried inputs were all chosen after the delivery/read result was available."""
+    return frame.decision > decision and len(frame.input_decisions) == len(frame.inputs) and all(
+        at is not None and at > decision for at in frame.input_decisions)
 
 
 def copy_frame(frame: Frame, directory: Path, name: str, blind: bool) -> dict:
@@ -474,7 +510,7 @@ def annotate_packets(run: Path, runs: Sequence[Path], every: int = 3, budget: in
         for admission, found in frames.items():
             kept = every_nth_changed(found, every)
             totals.update(recorded=len(found), changed=sum(frame.changed for frame in found), kept=len(kept))
-            for chunk in cut(kept, lambda frame: 0, budget, packet_cost=lambda part: candidate(part)['budget']['estimated']['total']):
+            for chunk in cut(kept, lambda frame: 0, budget, packet_cost=lambda part, first, last: candidate(part)['budget']['estimated']['total']):
                 name = f'packet-{len(packets) + 1:02d}'
                 rows = [copy_frame(frame, out / name, frame.source, True) for frame in chunk]
                 estimate = budget_entry(budget, 0, chunk)
@@ -601,10 +637,11 @@ def read_facts(path: Path, spans: dict[str, dict]) -> dict[tuple[str, str], dict
                 for fact in listed:
                     if not isinstance(fact, dict) or set(fact) - {'id', 'text', 'from_decision'}:
                         raise MeasureError(f'{where}: a fact is {{"id", "text"}} with an optional "from_decision"')
-                    identity, start = text(fact.get('id'), f'{where} fact id'), fact.get('from_decision', 1)
+                    # Without timing the fact was already available before the actor's first request.
+                    identity, start = text(fact.get('id'), f'{where} fact id'), fact.get('from_decision', 0)
                     if identity in seen:
                         raise MeasureError(f'{where}: fact {identity} is listed more than once; a fact has one route for an actor')
-                    if type(start) is not int or start < 1:
+                    if type(start) is not int or start < (1 if 'from_decision' in fact else 0):
                         raise MeasureError(f'{where}: fact {identity}: from_decision is a decision number from 1')
                     seen.add(identity)
                     facts.append(dict(id=identity, text=text(fact.get('text'), f'{where} fact {identity} text'), route=route,
@@ -693,7 +730,9 @@ _USE_PARTS = dict(
     FACTS='''Each also has a `route`: how it reached
   the player. `lead`: its text was put in front of the player. `read`: the player asked for it and read it.
   `index`: only a one-line title of it was listed. Any fact may be out of date or wrong.
-  `available_from` names the first frame from which this fact was available. Count `in_line`, `against` or
+  `available_from` names the first kept frame whose carried inputs were all chosen strictly after the
+  decision that returned this fact. The inputs of that decision were chosen before its result was seen.
+  Count `in_line`, `against` or
   `found_again` only for action from that frame onward, and cite at least one such frame. Earlier action does
   not count, even when it matches the fact.''',
     DELIVERED='''- `delivered.json` holds what was put in front of the player: the `briefing` it began with and the `reminders`
@@ -718,7 +757,7 @@ def _instructions(parts: dict) -> str:
 
 
 #: The judge's instructions by packet kind. Neither names any kind of thing in a game. The blind one names
-#: nothing that was delivered: it is the use one without the three parts above.
+#: neither delivery nor decision counts; it shows only frames by position, inputs and facts under opaque IDs.
 JUDGE_INSTRUCTIONS = dict(use=_instructions(_USE_PARTS), blind=_instructions(_BLIND_PARTS))
 
 
@@ -728,7 +767,7 @@ def fact_packets(run: Path, runs: Sequence[Path], facts: Path, kind: str, budget
 
     `use` packets carry each fact's route, the briefing, the reminders and what the player stated with its calls,
     and leave out withheld facts, which were never in front of the player. `blind` packets, for the benefit
-    measure, carry every fact of the actor without its route, in ID order and in every window, and nothing of
+    measure, carry every fact of the actor under opaque per-packet IDs, in shuffled order and in every window, and nothing of
     what was delivered or stated: a judge of a blind packet cannot tell a delivered fact from a withheld one."""
     if kind not in JUDGE_INSTRUCTIONS or every < 1:
         raise MeasureError('The packet kind is use or blind, and --every must be at least 1')
@@ -742,13 +781,17 @@ def fact_packets(run: Path, runs: Sequence[Path], facts: Path, kind: str, budget
     judged = read_facts(facts, spans)
     instructions = JUDGE_INSTRUCTIONS[kind]
     planned: dict[str, dict] = {}
-    no_frames = []
+    no_frames, not_shown = [], []
     for (admission, actor), entry in judged.items():
         shown = [fact for fact in entry['facts'] if blind or fact['route'] != 'withheld']
         kept = every_nth_changed([frame for frame in frames[admission] if frame.actor == actor], every)
         if entry['facts'] and not kept:
             no_frames.append(f'{admission}/{actor}')
-        if not shown or not kept:
+        missing = [fact for fact in shown if not kept or not blind and not any(
+            available_after(frame, fact['from_decision']) for frame in kept)]
+        not_shown.extend(dict(actor=f'{admission}/{actor}', fact=fact['id']) for fact in missing)
+        shown = [fact for fact in shown if fact not in missing]
+        if not shown:
             continue
         low, high = spans[admission][actor]
         if blind:
@@ -762,7 +805,7 @@ def fact_packets(run: Path, runs: Sequence[Path], facts: Path, kind: str, budget
                 **({} if blind else dict(decision=frame.decision - first + 1))) for number, frame in enumerate(part, 1)]
             listed, available = [], {}
             for fact in group:
-                at = next((number for number, frame in enumerate(part, 1) if frame.decision >= fact['from_decision']), None)
+                at = next((number for number, frame in enumerate(part, 1) if available_after(frame, fact['from_decision'])), None)
                 if not blind and at is None:
                     continue
                 item = dict(id=identities[fact['id']], text=fact['text'])
@@ -793,10 +836,10 @@ def fact_packets(run: Path, runs: Sequence[Path], facts: Path, kind: str, budget
         by_id = {identities[fact['id']]: fact for fact in shown}
         groups = [[by_id[fact['id']] for fact in group] for group in groups]
 
-        def cost(part: Sequence[Frame]) -> int:
-            return max(candidate(part, group, low, high, 's0000000000')[0]['budget']['estimated']['total'] for group in groups)
+        def cost(part: Sequence[Frame], first: int, last: int) -> int:
+            return max(candidate(part, group, first, last, 's0000000000')[0]['budget']['estimated']['total'] for group in groups)
 
-        parts = cut(kept, lambda frame: 0, budget, packet_cost=cost)
+        parts = cut(kept, lambda frame: 0, budget, packet_cost=cost, first_decision=low, last_decision=high)
         for number, part in enumerate(parts):
             first = low if number == 0 else parts[number - 1][-1].decision + 1
             last = high if number == len(parts) - 1 else part[-1].decision
@@ -816,7 +859,7 @@ def fact_packets(run: Path, runs: Sequence[Path], facts: Path, kind: str, budget
                     manifest=manifest, available_from=available, from_decision={fact['id']: fact['from_decision'] for fact in canonical},
                     fact_ids={identities[fact['id']]: fact['id'] for fact in canonical},
                     routes={fact['id']: fact['route'] for fact in canonical}, delivered=delivered)
-    if not planned and not no_frames:
+    if not planned and not no_frames and not not_shown:
         raise MeasureError(f'{facts}: no actor it names has both a fact to show and a frame')
     packets = {}
     with Building(run / 'judge-packets') as out:
@@ -842,7 +885,7 @@ def fact_packets(run: Path, runs: Sequence[Path], facts: Path, kind: str, budget
                 available_from=plan['available_from'], from_decision=plan['from_decision'], fact_ids=plan['fact_ids'],
                 facts=plan['routes'])
         mapping = dict(schema=MAPPING_SCHEMA, kind=kind, seed=seed, budget_tokens=budget, every=every, min_changed=min_changed,
-            facts_sha256=file_sha256(facts), instructions_sha256=sha256_text(instructions), no_frames=no_frames,
+            facts_sha256=file_sha256(facts), instructions_sha256=sha256_text(instructions), no_frames=no_frames, not_shown=not_shown,
             not_judged=[f'{admission}/{actor}' for admission in spans for actor in spans[admission]
                 if (admission, actor) not in judged], packets=[packets[name] for name in planned])
         write_json(mapping_path, mapping, once=True)
@@ -1079,9 +1122,11 @@ def agreement(run: Path, judges: Sequence[str], third: str | None = None) -> dic
     disputed = [row for row in rows if row['labels'][judges[0]] != row['labels'][judges[1]]]
     holds_disputed = sum(row['holds_by'][judges[0]] != row['holds_by'][judges[1]] for row in rows)
     codes = [[USE_LABELS.index(row['labels'][name]) for row in rows] for name in judges]
+    holds_codes = [[HOLDS.index(row['holds_by'][name]) for row in rows] for name in judges]
     value = dict(schema='judge-adjudicated/2', kind=mapping['kind'], judges=list(judges), third=third, pairs=len(rows),
         agreement=1 - len(disputed) / len(rows) if rows else None, kappa=cohen_kappa(*codes, len(USE_LABELS)),
         disputed=len(disputed), dispute_rate=len(disputed) / len(rows) if rows else None,
+        holds_agreement=1 - holds_disputed / len(rows) if rows else None, holds_kappa=cohen_kappa(*holds_codes, len(HOLDS)),
         holds_disputed=holds_disputed, holds_dispute_rate=holds_disputed / len(rows) if rows else None,
         unresolved=sum(row['unresolved'] for row in rows), third_alone=sum(row['by'] == 'third_alone' for row in rows),
         third_judge_packets=sorted({row['packet'] for row in rows if row['unresolved']}), rows=rows)
@@ -1138,9 +1183,10 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
             read_then_in_line=rate('of the facts the player read through a link or a search, the share it then acted in line '
                 'with in some window; the denominator is how many facts it read', list(reads.values()), lambda unit: True,
                 lambda unit: unit['acted'], read))
+    mapping = load_mapping(run)
     report = dict(schema='memory-use/1', kind=adjudicated['kind'], judges=judges, third=adjudicated['third'],
         not_corrected=NOT_CORRECTED, bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), note=BOOTSTRAP_NOTE),
-        pairs=len(rows), third_alone=adjudicated['third_alone'], no_frames=load_mapping(run)['no_frames'],
+        pairs=len(rows), third_alone=adjudicated['third_alone'], no_frames=mapping['no_frames'], not_shown=mapping['not_shown'],
         labels_by_route={route: dict(pairs=sum(row['route'] == route for row in rows),
             **{label: sum(row['route'] == route and row['label'] == label for row in rows) for label in USE_LABELS})
             for route in ROUTES}, judges_overall=judges_beside(boot, rows, judges), measures=measures)
@@ -1389,15 +1435,12 @@ def prompt_packets(run: Path, before: Path) -> dict:
             source, manifest = before / 'judge-packets' / packet['packet'], manifests[packet['packet']]
             target = out / packet['packet']
             shutil.copytree(source, target, ignore=shutil.ignore_patterns('manifest.json', 'instructions.md'))
-            estimated = dict(manifest['budget']['estimated'])
-            estimated['text'] += text_tokens(instructions) - text_tokens((source / 'instructions.md').read_text(encoding='utf-8'))
-            estimated['total'] = estimated['images'] + estimated['text']
-            budget = dict(tokens=manifest['budget']['tokens'], estimated=estimated, over=estimated['total'] > manifest['budget']['tokens'])
+            budget = dict(manifest['budget'], estimated=dict(manifest['budget']['estimated']))
             sha, size = seal_packet(target, {**{key: value for key, value in manifest.items() if key != 'files'}, 'budget': budget},
                 instructions)
             if stretch_sha256(target) != packet['stretch_sha256']:
                 raise MeasureError(f'{target}: the copy is not the frozen stretch')
-            packets[packet['packet']] = dict(packet, sha256=sha, bytes=size, estimated_tokens=estimated['total'], over_budget=budget['over'])
+            packets[packet['packet']] = dict(packet, sha256=sha, bytes=size, estimated_tokens=budget['estimated']['total'], over_budget=budget['over'])
         mapping = dict(old, instructions_sha256=sha256_text(instructions),
             packets=[packets[packet['packet']] for packet in old['packets']],
             before=dict(run=before.name, mapping_sha256=file_sha256(before / 'private' / 'judge-mapping.json'),
@@ -1605,7 +1648,9 @@ def render_agreement(value: dict) -> str:
     lines = [f"{value['pairs']} pairs of {value['kind']} packets; judges {value['judges'][0]} and {value['judges'][1]}; third "
         f"{value['third'] or 'none'}",
         f"label agreement {_value(value['agreement'])}, Cohen's kappa {_value(value['kappa'])}, dispute rate {_value(value['dispute_rate'])} "
-        f"({value['disputed']} pairs); holds dispute rate {_value(value['holds_dispute_rate'])} ({value['holds_disputed']} pairs)",
+        f"({value['disputed']} pairs)",
+        f"holds agreement {_value(value['holds_agreement'])}, Cohen's kappa {_value(value['holds_kappa'])}, "
+        f"dispute rate {_value(value['holds_dispute_rate'])} ({value['holds_disputed']} pairs)",
         f"not yet adjudicated {value['unresolved']}" + (f"; packets for a third judge: {' '.join(value['third_judge_packets'])}"
             if value['third_judge_packets'] else ''),
         f"pairs the third judge settled with a label neither judge gave (third_alone): {value['third_alone']}"]
@@ -1620,7 +1665,9 @@ def render_measure(report: dict) -> str:
         f"{' and '.join(report['judges'])}, third {report['third'] or 'none'}; bootstrap seed {report['bootstrap']['seed']}, "
         f"{report['bootstrap']['draws']} draws ({report['bootstrap']['note']})",
         'all pairs: ' + _beside(report['judges_overall']),
-        'actors with facts but no kept frames: ' + (', '.join(report['no_frames']) or 'none')]
+        'actors with facts but no kept frames: ' + (', '.join(report['no_frames']) or 'none'),
+        'facts without an eligible kept frame: ' + (', '.join(f"{row['actor']} / {row['fact']}"
+            for row in report['not_shown']) or 'none')]
     for route, counts in report['labels_by_route'].items():
         if counts['pairs']:
             lines.append(f"  {route}: {counts['pairs']} pairs: " + ', '.join(f'{label} {counts[label]}' for label in USE_LABELS))

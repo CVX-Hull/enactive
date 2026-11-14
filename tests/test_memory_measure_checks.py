@@ -248,8 +248,11 @@ def test_prompt_check_packets_are_the_same_frozen_stretches_with_the_new_instruc
         mine_files, their_files = tree(here), tree(there)
         assert {name for name in mine_files if mine_files[name] != their_files[name]} == {'instructions.md', 'manifest.json'}
         memory_measure.verify_packet(here, mine['sha256'])
-        added = memory_measure.text_tokens(new_text) - memory_measure.text_tokens((there / 'instructions.md').read_text())
-        assert mine['estimated_tokens'] == theirs['estimated_tokens'] + added
+        manifest = json.loads((here / 'manifest.json').read_text())
+        text_size = sum(memory_measure.text_tokens(path.read_text()) for path in here.rglob('*')
+            if path.is_file() and path.suffix != '.png')
+        assert manifest['budget']['estimated']['text'] == text_size
+        assert mine['estimated_tokens'] == text_size + manifest['budget']['estimated']['images']
     with pytest.raises(MeasureError, match='made once'):
         prompt_packets(after, before)
     with pytest.raises(MeasureError, match='must differ'):
