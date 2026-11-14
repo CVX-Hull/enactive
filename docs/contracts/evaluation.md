@@ -772,8 +772,12 @@ source IDs, translated from the packet's frame names), `judge`, `model`, `packet
 | `milestone` | Frozen milestones reached over frozen milestones, overall and per admission |
 | `claim` | Unsupported over supported plus unsupported success claims, among the kept candidates |
 
-Each rate has a 95% interval from a cluster bootstrap over admissions and the judges'
-figures beside it. Whether a measure is `kept` is decided on its driving outcome as a
+Each rate has a 95% interval from a cluster bootstrap over admissions, given only when at
+least two admissions have a positive denominator for it, and the judges' figures beside it;
+the claim rate is over kept candidates only and is not weighted by window sampling.
+`events` refuses, before writing anything, answers that do not cover every packet (for a
+third judge, every packet the agreement lists) and any answer field not allowed for its
+kind; one judge and model derive every admission's milestones. Whether a measure is `kept` is decided on its driving outcome as a
 binary (the driving labels against all others, `cannot_tell` included), over all its pairs:
 the first two judges' Cohen's κ, with their agreement and positive specific agreement
 beside it. `kept` is false, with the reason, when that κ is undefined or below 0.845, the
@@ -783,8 +787,10 @@ measure is reported, not tuned. (A κ over the driving pairs alone cannot exceed
 measure with one driving label, so it is reported but decides nothing.) The report compares
 the filter's flags with the adjudicated `stuck` and `looping` windows and, with
 `--records`, the game binding's `stall` findings with the stuck or looping windows and its
-`ineffective_repeat` findings with those and with the repeated-failed-approach windows, over
-the same decisions, unweighted (`binding`; a record of another core version is skipped and
+`ineffective_repeat` findings with those and with the repeated-failed-approach windows,
+unweighted. A finding touches a window when one of the evaluation steps it spans, of that
+window's actor, holds a frame source ID the window holds (the record counts decisions as
+completed inputs and the windows count player requests, so decision numbers are not joined) (`binding`; a record of another core version is skipped and
 listed with its reason, and `binding` is null with the reason when none is readable). `not_corrected` states that the labels are not corrected against a human
 truth. Isolation is as below: judges get one packet directory each, and nothing a judge
 produces reaches the player, the curator or an evaluation record.

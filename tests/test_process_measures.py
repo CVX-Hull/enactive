@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import replace
 import json
 
+import numpy as np
 import pytest
 
 from harness.evaluation.core import judge, records
@@ -190,7 +191,7 @@ def test_repeat_filter_uses_identical_inputs_and_changed_marks(tmp_path):
     assert not pm.repeat_flag(differing)
 
 
-def test_packets_hide_filter_memory_and_frame_order_and_cap_claims(tmp_path):
+def test_packets_hide_filter_shuffle_frame_order_and_cap_claims(tmp_path):
     run, mapping = packed(tmp_path, claims_per_window=2, sample_unflagged=1)
     assert mapping['sampling'] == dict(flagged=1, unflagged=3, sampled_unflagged=1, unflagged_fraction=1 / 3)
     assert sum(row['judged'] for row in mapping['windows']) == 2
@@ -200,12 +201,11 @@ def test_packets_hide_filter_memory_and_frame_order_and_cap_claims(tmp_path):
         directory = run / 'process-packets' / packet['packet']
         manifest = verify_packet(directory, packet['sha256'])
         content = '\n'.join(p.read_text() for p in directory.iterdir() if p.is_file())
-        for secret in ('admission-a', 'INTENT-MARK', 'CITES-MARK', 'SECRET RECORD', 'SECRET REPORT', 'FALLIBLE HANDOFF GOAL',
-                       'sampling_fraction', 'claims_cut', '"flag"', 'decision', 'aaaaaaa-'):
-            if secret == 'decision':  # the instructions describe windows, but JSON carries no original decisions
-                assert secret not in json.dumps(manifest)
-            else:
-                assert secret not in content
+        for secret in ('admission-a', 'INTENT-MARK', 'CITES-MARK', 'FALLIBLE HANDOFF GOAL',
+                       'sampling_fraction', 'claims_cut', '"flag"', '"decision"', 'aaaaaaa-'):
+            assert secret not in content
+        for path in directory.glob('*.json'):
+            assert 'decision' not in path.read_text()
         assert manifest['budget']['estimated']['total'] <= mapping['budget_tokens']
         assert not manifest['budget']['over']
         if packet['mode'] == 'milestones':
@@ -217,7 +217,8 @@ def test_packets_hide_filter_memory_and_frame_order_and_cap_claims(tmp_path):
             claims = json.loads((directory / 'claims.json').read_text())
             assert claims == [dict(id='claim-0001', text='I reached shelter.'), dict(id='claim-0002', text='Next, get supplies!')]
             assert 'I obtained supplies.' in (directory / 'player-text.json').read_text()
-            assert all(set(row) == {'position', 'text'} for row in json.loads((directory / 'player-text.json').read_text()))
+            assert all(set(row) == {'position', 'text', 'after_frame'}
+                for row in json.loads((directory / 'player-text.json').read_text()))
     for packet in (run / 'milestone-packets').iterdir():
         assert not (packet / 'frames').exists()
         assert set(json.loads((packet / 'goals.json').read_text())) == {'mission'}
@@ -228,7 +229,7 @@ def test_window_budget_counts_serialized_text_and_never_splits_decisions(tmp_pat
     run = frozen(tmp_path, [source])
     frames = recorded_frames([source])[0][source.name]
     own = pm.player_text([source])[0][source.name, '001']
-    contents = pm.window_contents(own, 1, 4, 12)
+    contents = pm.window_contents(own, 1, 4, 12, {f.source: f'{i:016x}' for i, f in enumerate(frames[:4])})
     budget = pm.candidate(frames[:4], 60000, contents, pm.WINDOW_INSTRUCTIONS)['budget']['estimated']['total'] + 2
     mapping = pm.packets(run, [source], budget=budget, sample_unflagged=100)
     spans = [(row['first'], row['last']) for row in mapping['windows']]
@@ -247,7 +248,7 @@ def test_window_budget_counts_serialized_text_and_never_splits_decisions(tmp_pat
 
 
 @pytest.mark.parametrize('kind', pm.KINDS)
-@pytest.mark.parametrize('bad', ['label', 'citations', 'pair_twice', 'hash'])
+@pytest.mark.parametrize('bad', ['label', 'citations', 'foreign_frame', 'pair_twice', 'omitted', 'hash', 'row_hash'])
 def test_answer_ingress_rejects_each_malformed_kind(tmp_path, kind, bad):
     run, mapping = packed(tmp_path)
     paths = answer_files(tmp_path, mapping, 'judge-a')
@@ -261,6 +262,12 @@ def test_answer_ingress_rejects_each_malformed_kind(tmp_path, kind, bad):
         row['frames'] = []
     elif bad == 'pair_twice':
         value['answers'].append(deepcopy(row))
+    elif bad == 'omitted':
+        value['answers'].remove(row)
+    elif bad == 'foreign_frame':
+        row['frames'] = ['foreign-frame']
+    elif bad == 'row_hash':
+        row['packet_sha256'] = '0' * 64
     else:
         value['packet_sha256'] = '0' * 64
     save(path, value)
@@ -276,7 +283,7 @@ def test_events_verify_all_packet_files_and_translate_citations(tmp_path):
     assert set(event.kind for event in events) == set(pm.KINDS)
     for event in events:
         packet = next(p for p in mapping['packets'] if p['packet'] == event.packet)
-        assert set(event.cited_frames) <= set(packet['frames'].values())
+        assert event.cited_frames == tuple(packet['frames'][f] for f in list(packet['frames'])[:2])
     packet = mapping['packets'][0]
     (run / 'process-packets' / packet['packet'] / 'added.json').write_text('{}')
     with pytest.raises(MeasureError, match='files changed'):
@@ -322,6 +329,8 @@ def test_sampling_weighting_cap_counts_and_unestimable_unsampled_stratum(tmp_pat
     assert stuck['value'] == 1 / 2
     assert stuck['flagged']['value'] == 1
     assert stuck['sampled_unflagged']['value'] == 0
+    assert stuck['flagged']['interval'] is None
+    assert stuck['sampled_unflagged']['interval'] is None
     assert stuck['weighted']['value'] == 1 / 4
     assert stuck['weighted']['denominator'] == 4
     assert report['measures']['retry']['weighted']['value'] == 1 / 4
@@ -396,38 +405,42 @@ def test_single_driving_label_can_pass_binary_floor_or_drop_below_it(tmp_path, k
         assert value['judges']['driving_pairs']['kappa']['value'] is None
 
 
-def test_binding_comparison_joins_decisions_and_has_null_reason(tmp_path):
-    run, mapping = packed(tmp_path)
-    def labels(packet, kind, item, default):
-        return 'no_repeat' if kind == judge.RETRY else default
-    for name in ('judge-a', 'judge-b'):
-        pm.judge_events(run, name, 'host-model', answer_files(tmp_path, mapping, name, labels))
-    pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
+def test_binding_comparison_aligns_sources_and_actor_across_different_counters(tmp_path):
+    packets = [dict(packet=f'packet-{i}', admission='admission', actor_id='actor', actor='001',
+        first=2 * i + 1, last=2 * i + 2, frames={f'local-{i}': f'source-{i}'}) for i in range(4)]
+    mapping = dict(admissions=['admission'], sessions=dict(admission='session'), packets=packets)
+    rows = [dict(kind=kind, start='admission', packet=p['packet'],
+        label=pm.DRIVING[kind][0] if i < 2 else 'cannot_tell')
+        for i, p in enumerate(packets) for kind in (judge.STUCK, judge.RETRY)]
+    assert pm.binding_comparison(mapping, rows, None)[0] is None
     root = tmp_path / 'evaluation'
-    assert pm.measure(run, draws=20, records_root=root)['binding'] is None
-    session = mapping['sessions']['admission-a']
-    with records.RecordWriter.create(root / session / '2-fixture-1.sqlite3',
-            dict(session=session, core_version=records.CORE_VERSION)) as writer:
+    assert pm.binding_comparison(mapping, rows, root)[0] is None
+    # Request ordinals span 1..8; the evaluator counts four completed inputs instead.
+    # The first finding covers only an observe before the first input, at decision zero.
+    steps = [records.StepRow(100, 'observe', 'actor', 'observe', 0.0, 0,
+        0, 0.0, None, 'unknown', 'source-0', 'a' * 64, False)]
+    steps += [records.StepRow(101 + i, f'input-{i}', 'actor', 'input', float(i + 1), i + 1,
+        0, 0.0, None, 'unknown', f'source-{i}', 'a' * 64, False) for i in range(4)]
+    # This same source on another actor must not create an overlap for packet-1.
+    steps.append(replace(steps[2], seq=105, operation_id='foreign', actor='other-actor'))
+    with records.RecordWriter.create(root / 'session' / 'fixture.sqlite3',
+            dict(session='session', core_version=records.CORE_VERSION)) as writer:
         with writer.transaction():
-            writer.append_steps([records.StepRow(100 + i, f'op-{i}', 'actor', 'input', float(i), i,
-                0, 0.0, None, 'unknown', f'source-{i}', 'a' * 64, False) for i in range(1, 7)], [])
+            writer.append_steps(steps, [])
             writer.connection.executemany('INSERT INTO events(seq_start,seq_end,kind,source,confidence,payload) VALUES(?,?,?,?,?,?)',
-                [(102, 104, kind, 'derived', None, '{}') for kind in ('stall', 'ineffective_repeat')])
-    result = pm.measure(run, draws=20, records_root=root)
-    assert result['binding_reason'] is None
-    binding = result['binding']
-    assert len(binding['missing']) == 3
-    assert result['binding_skipped'] == []
-    assert 'unweighted' in binding['note']
-    findings = binding['records'][0]['findings']
+                [(seq, seq, kind, 'derived', None, '{}') for kind in ('stall', 'ineffective_repeat')
+                    for seq in (100, 103, 105)])
+    comparison, reason, skipped = pm.binding_comparison(mapping, rows, root)
+    assert reason is None and skipped == [] and comparison['missing'] == []
+    assert 'unweighted' in comparison['note']
+    findings = comparison['records'][0]['findings']
     assert set(findings['stall']['measures']) == {'stuck'}
     assert set(findings['ineffective_repeat']['measures']) == {'stuck', 'retry'}
     for finding in findings.values():
-        assert finding['events'] == 1
-        assert finding['measures']['stuck'] == dict(windows=dict(both=1, judge_only=0, binding_only=0, neither=0),
-            overlapping_decisions=3)
-    assert findings['ineffective_repeat']['measures']['retry'] == dict(
-        windows=dict(both=0, judge_only=0, binding_only=1, neither=0), overlapping_decisions=0)
+        assert finding['events'] == 3
+        for result in finding['measures'].values():
+            assert result == dict(windows=dict(both=1, judge_only=1, binding_only=1, neither=1),
+                overlapping_decisions=1)
 
 
 def test_binding_skips_unreadable_records_and_retains_reasons_when_none_readable(tmp_path):
@@ -470,6 +483,7 @@ def test_success_claim_denominator_excludes_nonclaims_and_cannot_tell(tmp_path):
     assert result['numerator'] == 4 and result['denominator'] == 8
     assert result['cannot_tell']['numerator'] == 4 and result['cannot_tell']['denominator'] == 12
     assert result['cannot_tell']['value'] == 1 / 3
+    assert not {'weighted', 'flagged', 'sampled_unflagged'} & result.keys()
 
 
 def test_isolation_and_held_out_refusal_before_reading(tmp_path):
@@ -513,7 +527,8 @@ def test_actor_windows_keep_text_attribution_and_no_frame_tails(tmp_path):
     for packet in mapping['packets']:
         if packet['mode'] == 'window':
             own = json.loads((run / 'process-packets' / packet['packet'] / 'player-text.json').read_text())
-            assert own == [dict(position=1, text=f'Actor {packet["actor"]} finished.')]
+            assert own == [dict(position=1, text=f'Actor {packet["actor"]} finished.',
+                after_frame=list(packet['frames'])[-1])]
 
 
 def test_milestone_reach_is_union_over_all_shuffled_packets(tmp_path):
@@ -521,7 +536,8 @@ def test_milestone_reach_is_union_over_all_shuffled_packets(tmp_path):
     run = frozen(tmp_path, [source])
     frames = recorded_frames([source])[0][source.name]
     own = pm.player_text([source])[0][source.name, '001']
-    budget = pm.candidate(frames[:4], 60000, pm.window_contents(own, 1, 4, 12),
+    contents = pm.window_contents(own, 1, 4, 12, {f.source: f'{i:016x}' for i, f in enumerate(frames[:4])})
+    budget = pm.candidate(frames[:4], 60000, contents,
         pm.WINDOW_INSTRUCTIONS)['budget']['estimated']['total'] + 2
     mapping = pm.packets(run, [source], budget=budget, sample_unflagged=20)
     milestones = [p for p in mapping['packets'] if p['mode'] == 'milestones']
@@ -536,3 +552,160 @@ def test_milestone_reach_is_union_over_all_shuffled_packets(tmp_path):
     result = pm.measure(run, draws=20)['measures']['milestone']
     assert result['numerator'] == 1 and result['denominator'] == 3
     assert result['per_admission'][source.name]['reached'] == ['milestone-1']
+
+
+@pytest.mark.parametrize('name,model', [('different-judge', 'host'), ('goals', 'different-model')])
+def test_milestone_derivation_freezes_one_judge_and_model_for_the_run(tmp_path, name, model):
+    sources = [evidence(tmp_path, 'admission-a'), evidence(tmp_path, 'admission-b')]
+    run = tmp_path / 'memory-measure' / 'process'
+    index = pm.milestones_packets(run, sources)
+    paths = [save(tmp_path / f'goal-{i}.json', dict(packet=p['packet'], packet_sha256=p['sha256'],
+        milestones=MILESTONES)) for i, p in enumerate(index['packets'])]
+    pm.milestones_events(run, 'goals', 'host', paths[:1])
+    before = (run / 'private' / 'process-milestone-packets.json').read_bytes()
+    with pytest.raises(MeasureError, match='One judge and one model'):
+        pm.milestones_events(run, name, model, paths[1:])
+    assert (run / 'private' / 'process-milestone-packets.json').read_bytes() == before
+    assert not (run / 'milestones' / 'admission-b.json').exists()
+    pm.milestones_events(run, 'goals', 'host', paths[1:])
+    assert set(pm.milestone_index(run)['frozen']) == {'admission-a', 'admission-b'}
+
+
+@pytest.mark.parametrize('empty', [False, True])
+def test_incomplete_packet_coverage_writes_nothing_and_does_not_burn_judge(tmp_path, empty):
+    run, mapping = packed(tmp_path)
+    paths = answer_files(tmp_path, mapping, 'judge-a')
+    with pytest.raises(MeasureError, match='No answer|every required packet'):
+        pm.judge_events(run, 'judge-a', 'host', [] if empty else paths[:-1])
+    assert not (run / 'process-events').exists()
+    pm.judge_events(run, 'judge-a', 'host', paths)
+    assert all((run / 'process-events' / kind / 'judge-a.jsonl').stat().st_size for kind in pm.KINDS)
+
+
+def test_third_must_cover_all_disputed_packets_without_writing_empty_kind_files(tmp_path):
+    def disagree(packet, kind, item, default):
+        return 'looping' if kind == judge.STUCK else default
+    run, mapping = judged(tmp_path, disagree)
+    report = pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
+    assert len(report['third_judge_packets']) == 4
+    paths = answer_files(tmp_path, mapping, 'judge-c', selected=report['third_judge_packets'])
+    with pytest.raises(MeasureError, match='every required packet'):
+        pm.judge_events(run, 'judge-c', 'host', paths[:-1])
+    assert not list((run / 'process-events').rglob('judge-c.jsonl'))
+    pm.judge_events(run, 'judge-c', 'host', paths)
+    assert not (run / 'process-events' / judge.MILESTONE / 'judge-c.jsonl').exists()
+    assert all(path.stat().st_size for path in (run / 'process-events').rglob('judge-c.jsonl'))
+    assert pm.agreement(run, ['judge-a', 'judge-b'], 'judge-c', draws=20)['unresolved'] == 0
+
+
+@pytest.mark.parametrize('forgery', ['claim_with_milestone', 'unknown_kind', 'retry_one_frame'])
+def test_forged_answer_keys_and_one_frame_retry_fail_before_writing(tmp_path, forgery):
+    run, mapping = packed(tmp_path)
+    paths = answer_files(tmp_path, mapping, 'judge-a')
+    path = next(p for p in paths if any(r['kind'] == judge.CLAIM for r in json.loads(p.read_text())['answers']))
+    value = json.loads(path.read_text())
+    row = next(r for r in value['answers'] if r['kind'] == (judge.RETRY if forgery == 'retry_one_frame' else judge.CLAIM))
+    if forgery == 'claim_with_milestone':
+        # The old key extractor accepted the milestone as the requested claim while emitting a forged claim.
+        row['milestone'], row['claim'] = row['claim'], 'forged-claim'
+    elif forgery == 'unknown_kind':
+        row['kind'] = 'invented_verdict'
+    else:
+        row['label'], row['frames'] = 'repeated_failed_approach', row['frames'][:1]
+    save(path, value)
+    with pytest.raises((MeasureError, records.EvaluationError)):
+        pm.judge_events(run, 'judge-a', 'host', paths)
+    assert not (run / 'process-events').exists()
+
+
+@pytest.mark.parametrize('with_request_report', [False, True])
+def test_report_whitespace_deduplication_and_requestless_finish_fallback(tmp_path, with_request_report):
+    source = evidence(tmp_path)
+    actor = source / 'actors' / '001'
+    path = actor / 'host.jsonl'
+    events = [json.loads(line) for line in path.read_text().splitlines()]
+    if with_request_report:
+        events.append(dict(events[-1], type='tool-start', tool='player_finish', tool_call_id='finish-call',
+            arguments=dict(report='I reached the destination. \n\t')))
+    events.append(dict(type='player-finish', report='I reached the destination.  \n'))
+    path.write_text(''.join(json.dumps(row) + '\n' for row in events))
+    (actor / 'player-final.txt').write_text('I reached the destination.\n')
+    run = frozen(tmp_path, [source])
+    mapping = pm.packets(run, [source])
+    packet = next(p for p in mapping['packets'] if p['mode'] == 'window')
+    rows = json.loads((run / 'process-packets' / packet['packet'] / 'player-text.json').read_text())
+    reports = [r for r in rows if r['text'] == 'I reached the destination.']
+    assert len(reports) == 1
+    assert reports[0]['after_frame'] == list(packet['frames'])[-1]
+    # Narration precedes the current request's tool result, so the first has no preceding frame.
+    assert rows[0]['after_frame'] is None
+    assert rows[1]['after_frame'] == list(packet['frames'])[0]
+
+
+def test_rate_intervals_require_two_admissions_with_a_positive_denominator():
+    boot = pm.StartBootstrap(['a', 'b', 'c'], 620, 100)
+    rows = [dict(start='a', numerator=1, denominator=2), dict(start='a', numerator=0, denominator=1),
+        dict(start='b', numerator=0, denominator=0)]
+    assert pm.rate(boot, rows)['value'] == 1 / 3
+    assert pm.rate(boot, rows)['interval'] is None
+    assert pm.rate(boot, rows + [dict(start='b', numerator=1, denominator=2)])['interval'] is not None
+
+
+def test_weighted_bootstrap_drops_replicates_without_sampled_unflagged_windows():
+    boot = pm.StartBootstrap(['a', 'b', 'c', 'd'], 620, 5)
+    boot.index = np.array([[0, 0, 0, 0], [0, 0, 0, 3], [0, 1, 2, 3], [1, 1, 1, 1], [2, 2, 2, 2]])
+    rows = [dict(start='a', numerator=1, denominator=1, flag=True),
+        dict(start='b', numerator=0, denominator=2, flag=False),
+        dict(start='c', numerator=1, denominator=2, flag=False)]
+    result = pm.rate(boot, rows, require_unflagged=True)
+    assert result['value'] == 2 / 5
+    assert result['interval'] == pytest.approx(np.percentile([2 / 5, 0, 1 / 2], [2.5, 97.5]))
+    assert result['interval'] != pm.rate(boot, rows)['interval']
+
+
+def test_every_admission_packet_excludes_real_forbidden_fixture_inputs(tmp_path):
+    secrets = ('SECRET RECORD', 'DELIVERED KNOWLEDGE', 'BRIEFING SECRET', 'REMINDER SECRET',
+        'HANDOFF CARRY', 'ACTOR KNOWLEDGE', 'BINDING FINDING', 'INTENT-MARK', 'CITES-MARK', 'SECRET REPORT')
+    sources = []
+    for name, tag in [('admission-a', 'a'), ('admission-b', 'b')]:
+        source = admission(tmp_path / 'evidence', name, tag, [1, 2, None, 'handoff', 3, 4, None])
+        (source / 'prompt.txt').write_text('Reach the destination.')
+        save(source / 'delivered-knowledge.json', dict(schema='delivered-knowledge/1', facts=['DELIVERED KNOWLEDGE']))
+        for actor in (source / 'actors').iterdir():
+            (actor / 'prompt.txt').write_text('Continue. <player-context>{"carry":"HANDOFF CARRY"}</player-context>'
+                '<knowledge>ACTOR KNOWLEDGE</knowledge> SECRET REPORT')
+            path = actor / 'host.jsonl'
+            events = [json.loads(line) for line in path.read_text().splitlines()]
+            assert any(e.get('tool') == 'player_memory_append' and 'SECRET RECORD' in json.dumps(e) for e in events)
+            events += [dict(type='knowledge-delivery', kind=route, text=secret)
+                for route, secret in [('briefing', 'BRIEFING SECRET'), ('reminder', 'REMINDER SECRET')]]
+            path.write_text(''.join(json.dumps(e) + '\n' for e in events))
+            (actor / 'player-final.txt').write_text('I reached shelter.')
+        # A real binding event is present in each admission's private evaluator record.
+        with records.RecordWriter.create(source / 'evaluation.sqlite3',
+                dict(session=tag * 32, core_version=records.CORE_VERSION)) as writer:
+            with writer.transaction():
+                writer.connection.execute('INSERT INTO events(seq_start,seq_end,kind,source,confidence,payload) VALUES(?,?,?,?,?,?)',
+                    (1, 2, 'stall', 'derived', None, json.dumps(dict(reason='BINDING FINDING'))))
+        assert b'BINDING FINDING' in (source / 'evaluation.sqlite3').read_bytes()
+        assert 'HANDOFF CARRY' in (source / 'actors' / '002' / 'prompt.txt').read_text()
+        fixture_bytes = b'\n'.join(p.read_bytes() for p in source.rglob('*') if p.is_file())
+        assert all(secret.encode() in fixture_bytes for secret in secrets)
+        sources.append(source)
+    run = frozen(tmp_path, sources)
+    mapping = pm.packets(run, sources, sample_unflagged=100)
+    goals = pm.milestone_index(run)['packets']
+    for source in sources:
+        selected = [(run / 'milestone-packets' / p['packet']) for p in goals if p['admission'] == source.name]
+        scoring = [p for p in mapping['packets'] if p['admission'] == source.name]
+        assert {p['actor'] for p in scoring if p['mode'] == 'window'} == {'001', '002'}
+        assert {p['mode'] for p in scoring} == {'window', 'milestones'}
+        selected += [run / 'process-packets' / p['packet'] for p in scoring]
+        for directory in selected:
+            for path in directory.rglob('*'):
+                if path.is_file():
+                    content = path.read_bytes()
+                    assert all(secret.encode() not in content for secret in secrets)
+                    assert b'"decision"' not in content
+                    if path.suffix == '.json':
+                        assert b'decision' not in content
