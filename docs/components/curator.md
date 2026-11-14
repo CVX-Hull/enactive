@@ -74,7 +74,9 @@ adopted; the baseline and workbench phase's
   owner kept it as the writer of the knowledge store
   ([owner decision log](../decisions/owner-decisions.md)); how its knowledge is to
   reach the player, and what it must publish and when, is in the
-  [context design](../design/player-context.md), which is not built.
+  [context design](../design/player-context.md), whose
+  [delivery boundary](../design/player-context.md#the-delivery-boundary) says what of
+  it is built.
 - **CI coverage:** Linux CI runs the portable tests. The Seatbelt-lane tests, sandbox
   and real-host sessions, run only on macOS.
 
@@ -88,4 +90,5 @@ structure only and refuses earlier contracts; sealed stores remain evidence.
 The [session design](../design/curator-session.md#admission-and-grooming) owns what
 admission and grooming sessions read and do, their briefs, and publication rules.
 [Host operations](../operations/curator-hosts.md) owns adapter configuration and the
-zero-spend stand-in lane. Player delivery and live triggers are not implemented.
+zero-spend stand-in lane. Curator sessions triggered during live play are not
+implemented.

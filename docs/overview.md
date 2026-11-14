@@ -85,9 +85,9 @@ for failed gameplay. Keep every failed or abandoned chain and its original limit
 
 [ADR006](decisions/006-computer-control-boundary.md) explains the selected boundary;
 [#164](https://github.com/CVX-Hull/enactive/issues/164),
-[#177](https://github.com/CVX-Hull/enactive/issues/177) and
-[#145](https://github.com/CVX-Hull/enactive/issues/145) own cadence, learning and
-independent survival outcomes, which the boundary does not imply.
+[#445](https://github.com/CVX-Hull/enactive/issues/445) and
+[#145](https://github.com/CVX-Hull/enactive/issues/145) own cadence, curated memory and
+programs, and independent survival outcomes, which the boundary does not imply.
 
 Development runs use a diagnostic route that confers no player selection, under the
 [development-run method](development-runs.md). The [run evaluator and
