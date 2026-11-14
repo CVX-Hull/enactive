@@ -26,32 +26,43 @@ test('both admission phases include the player in-flight bound in the finish res
   }
 });
 
-test('reminder fetch refuses the finish reserve while a player request is in flight',async t=>{
-  let releaseReminder, completeReminder, prepared=0;
+test('reminder fetch refuses the finish reserve in flight and later recall remains enabled',async t=>{
+  let releaseReminder, completeReminder, startLaterReminder, prepared=0, playerPrepared=0;
   const reminderGate=new Promise(resolve=>{releaseReminder=resolve;});
   const reminderComplete=new Promise(resolve=>{completeReminder=resolve;});
+  const laterReminderStarted=new Promise(resolve=>{startLaterReminder=resolve;});
   const prepareRequest=OpenAI.prototype.prepareRequest;
   // Delay SDK preparation, before the host fetch wrapper checks fresh admission
   // state. Let the next player fetch start, then release the reminder to fetch.
   t.mock.method(OpenAI.prototype,'prepareRequest',async function(request,context) {
     await prepareRequest.call(this,request,context);
     if(context.options.body.model==='recall-fixture' && ++prepared===2) await reminderGate;
+    // Let the later reminder fetch while no player bound is in flight.
+    if(context.options.body.model==='fixture-model' && ++playerPrepared===3) await laterReminderStarted;
   });
   const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.8'},finishReserveUsd:'0.5',
     recallFetch:()=>recallReply(['article-a'],0),
     playerFetch:async n=>{
       if(n===1) return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]],
         {prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0.1});
+      if(n===3) return reply('Done');
       assert.equal(prepared,2,'the reminder passed its pre-check and reached SDK preparation');
       releaseReminder();
       await reminderComplete;
-      return reply('Done');
-    },onEvent:e=>{if(e.type==='knowledge-recall' && e.kind==='reminder')completeReminder();}});
+      return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]],
+        {prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0});
+    },onEvent:e=>{
+      if(e.type==='knowledge-recall' && e.kind==='reminder')completeReminder();
+      if(e.type==='request-start' && e.request_id==='recall-2')startLaterReminder();
+    }});
   assert.equal(result.reason,'task_complete');
   const refusal=events.find(e=>e.type==='knowledge-recall' && e.kind==='reminder');
   assert.equal(refusal.status,'not-made');assert.equal(refusal.reason,'finish-reserve');
   assert.ok(!Object.hasOwn(refusal,'request_id'));
-  assert.ok(events.every(e=>!(e.type==='request-start' && e.request_id==='recall-2')));
+  assert.ok(!Object.hasOwn(refusal,'reply_text'));
+  assert.ok(!Object.hasOwn(refusal,'reply_omitted_bytes'));
+  assert.equal(events.filter(e=>e.type==='request-start' && e.request_role==='recall').length,2);
+  assert.ok(events.some(e=>e.type==='knowledge-recall' && e.request_id==='recall-2' && e.status==='selected'));
   const index=events.indexOf(refusal);
   assert.ok(events.slice(0,index).some(e=>e.type==='request-start' && e.request_id==='request-2'));
   assert.ok(events.slice(index+1).some(e=>e.type==='response-complete' && e.request_id==='request-2'));
@@ -145,6 +156,10 @@ for (const kind of ['unknown-selection','length']) test(`valid provider cost sur
   assert.equal(cost.cost_counted_as,'provider-reported');assert.equal(events.at(-1).unpriced_recall_requests,0);
   assert.equal(cost.usage_available,true);assert.equal(cost.usage.input,11);
   assert.equal(cost.stop_reason,kind==='length'?'length':'stop');
+  if(kind==='length') {
+    assert.equal(events.filter(e=>e.type==='request-start' && e.request_role==='recall').length,1);
+    assert.ok(events.some(e=>e.type==='knowledge-recall' && e.reason==='disabled'));
+  }
 });
 
 test('selection deduplicates article id/title and delivers standalone fact text as a lead',async t=>{

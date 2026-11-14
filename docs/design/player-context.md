@@ -366,7 +366,8 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   pinned per run; for the pilot the lead chooses both and states them before anything
   is spent.
 - **Replies.** The model is asked for one JSON object (structured output where the route
-  supports it, today OpenRouter), and the host accepts one object, bare or in one code
+  supports it: on OpenRouter, whose pinned upstream must then accept a strict JSON schema),
+  and the host accepts one object, bare or in one code
   fence, and nothing else. The request puts the index first, so its stable part can be
   cached across actors and reminders. The trace keeps each reply's text, bounded as the
   player's is, and the precise reason a reply was refused, so a failure is seen rather
@@ -381,7 +382,9 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   valid cost, a provider failure, a spend refusal, an unexpected error) ends recall for
   that actor, since it may cost its bound again: it is counted at the cost the provider
   reported when that cost is valid, and otherwise at its bound, and later reminders are
-  logged as not made. The player plays on. The player-host contract's rule
+  logged as not made. A recall refused before its attempt starts for any reason but
+  spend (the finish reserve while a player request is in flight, say) ends nothing; the
+  next opportunity is checked afresh. The player plays on. The player-host contract's rule
   that an unpriced success stops the actor is scoped to player requests in the same
   change.
 

@@ -676,7 +676,7 @@ export async function runHost(options) {
   const recall = async mode => {
     const unavailable = recallUnavailable();
     if (unavailable) {
-      if (unavailable === 'spend-refused') recallDisabled = true;
+      recallDisabled ||= unavailable === 'spend-refused';
       emit('knowledge-recall', {kind:mode, status:'not-made', reason:unavailable, version:knowledge.version});
       return mode === 'briefing' ? delivery(knowledge, [], mode, null) : null;
     }
@@ -694,7 +694,7 @@ export async function runHost(options) {
         reported_cost_usd:amountText(reported), ...countAttempt(reported, 'recall')});
     };
     const replyFields = () => {
-      if (!message) return {};
+      if (!attemptStarted || !message || ['error','aborted'].includes(message.stopReason)) return {};
       const narration = assistantNarration(message.content);
       return {reply_text:narration.text, reply_omitted_bytes:narration.omitted_bytes};
     };
@@ -735,15 +735,17 @@ export async function runHost(options) {
       if (['error','aborted','length','deferred'].includes(message.stopReason)) throw new Error(refusalReason ?? 'provider-failure');
       if (amountText(reported) === null) throw new Error('cost-unreported');
       const articles = selection(message, knowledge);
+      const selectedDelivery = delivery(knowledge, articles, mode, id);
       emit('knowledge-recall', {kind:mode, status:articles.length ? 'selected' : 'silence', request_id:id,
-        article_ids:articles.filter(a => a.body).map(a => a.id), fact_ids:delivery(knowledge, articles, mode, id).fact_ids,
+        article_ids:articles.filter(a => a.body).map(a => a.id), fact_ids:selectedDelivery.fact_ids,
         version:knowledge.version, ...replyFields()});
-      return mode === 'reminder' && !articles.length ? null : delivery(knowledge, articles, mode, id);
+      return mode === 'reminder' && !articles.length ? null : selectedDelivery;
     } catch (error) {
       failure = recallController.signal.aborted ? 'actor-ended'
         : ['actor-ended','allowance','attempt-limit','orderly-stop','finish-reserve','spend-refused','cost-unreported','provider-failure','invalid-recall-selection'].includes(error.message)
         ? error.message : 'recall-failed';
-      recallDisabled = failure !== 'invalid-recall-selection' || amountText(reported) === null;
+      recallDisabled ||= attemptStarted ? failure !== 'invalid-recall-selection' || amountText(reported) === null
+        : failure === 'spend-refused' || failure === 'recall-failed';
       completeAttempt();
       emit('knowledge-recall', {kind:mode, status:attemptStarted ? 'failure' : 'not-made', ...(id ? {request_id:id} : {}),
         reason:failure, version:knowledge.version, ...replyFields(),
