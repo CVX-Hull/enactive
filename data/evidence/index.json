@@ -852,6 +852,23 @@
       },
       "visibility": "private"
     },
+    "withholding-measure-653": {
+      "availability": "present",
+      "bytes": 53900874,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-measure-validation.md"
+      ],
+      "files": 500,
+      "manifest_sha256": "928d4ba363127e5ab44dddb36761ef4ca894fdf102c1d2141091a1117706a035",
+      "note": "Codebook re-judging of the withholding pilot's sealed blind packets, known groups and the re-sized study's simulations (#653); development evidence",
+      "sources": {
+        "answers": "host Opus judges' answer files, scratch (#653)",
+        "known-groups": "frozen known-groups set, posted on #653",
+        "memory-measure/codebook-653": ".runtime/memory-measure/codebook-653@d64128b6",
+        "scripts/validate_653.py": "lead's validation script (#653)"
+      },
+      "visibility": "private"
+    },
     "withholding-pilot-619": {
       "availability": "present",
       "bytes": 509122803,

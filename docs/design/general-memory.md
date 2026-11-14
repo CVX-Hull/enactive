@@ -262,7 +262,9 @@ provider; the coding host's capacity is its cost.
   effect.
 - **Before any spend** the protocol's simulation is adapted to this design with the
   measure gate's numbers, to give its size and price: the
-  [withholding simulation](../acceptance/2026-11-13-withholding-simulation.md).
+  [withholding simulation](../acceptance/2026-11-13-withholding-simulation.md). The
+  blocked within-unit study is sized from the pilot's units under the codebook in the
+  [measure validation](../acceptance/2026-11-14-withholding-measure-validation.md).
 
 ### Game-neutral judging
 
