@@ -92,10 +92,13 @@ recall choice: a choice of nothing is logged `silence`, and these were logged `f
 completed inputs, so the cadence counter itself ran as designed. Actor 002 made 7 player
 requests (8 with its recall) and ended before its first opportunity.
 
-**Recall requests and their cost.** Two, one per actor's briefing: \$0.0019 and
-\$0.0040, provider-reported; neither read from the cache, and the second prompt was larger
-(11,040 against 5,158 text bytes) because actor 002's first message carries the handoff.
-Neither counted at the \$0.4096 bound.
+**Recall requests and their cost.** Two, one per actor's briefing: \$0.001873 and
+\$0.003962 (\$0.005835 together), provider-reported; neither read from the cache, and the
+second prompt was larger (11,040 against 5,158 text bytes) because actor 002's first
+message carries the handoff. The recall prompt puts the actor's first message before the
+index, so a cache could not reuse the index across actors; at two requests this costs
+nothing worth counting, but reminders reuse the same layout. Neither request counted at
+the \$0.4096 bound.
 
 **Time per decision.** Over 229 player responses, p50 6.3 s and p95 9.8 s; 2% within 2 s
 and 21% within 5 s. Prompts stayed under 100,000 tokens (24 under 20,000, 99 from 20,000
