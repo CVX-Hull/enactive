@@ -601,7 +601,8 @@ use packets:
 
 ### Checks of a changed judge
 
-- **Anchor, when a judge's model changes.** `anchor packets RUN --gate GATE` copies,
+- **Anchor, when a judge's model changes.** `anchor packets RUN --gate GATE` (the gate
+  is the sealed `.runtime/evidence/memory-screen-gates-460-386/memory-measure`) copies,
   unchanged, the measure gate's judge packets that hold one of its owner-labelled pairs
   into `RUN/anchor/packets/`, after checking every file against the hashes the gate
   recorded and every `instructions.md` against the frozen prompt's SHA-256
