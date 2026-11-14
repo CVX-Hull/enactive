@@ -605,6 +605,131 @@
       },
       "visibility": "private"
     },
+    "start-load-check-01": {
+      "availability": "present",
+      "bytes": 18986821,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "bd43278243263147c89a0f362cb5b15af08d18b011b05bb4106f505bce68474f",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-01; manifest b525e39150f869048760b8b0b27d8c3ec3e2ef319c29b89871815402f5c559bd. Load check of seven-day-end-01: one custodian run, the save loaded to Morgan Hale, Whitethorn, Spring day 63 7:43:20 AM.",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-01",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "start-load-check-02": {
+      "availability": "present",
+      "bytes": 18986736,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "b70c8819aa4b93eb075d20293fed63d50e12724bd61d14fa50ad1050d3ebf17a",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-02; manifest f4737f43334c547587c7967112c342504a041becacd1085079f9e03d92e5f133. Load check of seven-day-end-02: one custodian run. Loaded Morgan Hale. The in-play display shows Date: Spring, day 63; Time: 7:43:20 AM. No in-game action or save was initiated after loading.",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-02",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "start-load-check-03": {
+      "availability": "present",
+      "bytes": 18986487,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "112d90ccf620020025013c0f948e05b97cbd6277e837c9784d0be1fb57f805d1",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-03; manifest c6102c7d2ae7800a4a589fac00594ea897974c6d09bf894dd8f707bded8ebbb9. Invalid load check of seven-day-end-03: the custodian could not bind its loopback port (address in use from the previous run); no play, $0. Replaced by seven-day-end-07.",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-03",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "start-load-check-04": {
+      "availability": "present",
+      "bytes": 18986736,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "651c25f2690fa61bc13ce3766b521dfe0f7196620c65d2e6817b586876452e8c",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-04; manifest e555f58dfbdcef5a8abac46f29e1fac608ed78a271ac4cb4f8f0446a96585ca3. Load check of seven-day-end-04: one custodian run. Loaded Morgan Hale from Whitethorn. The in-play display shows Date: Spring, day 63 and Time: 7:43:20 AM. No in-game action or save was initiated after loading.",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-04",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "start-load-check-05": {
+      "availability": "present",
+      "bytes": 18986736,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "fc0315b1cace02c6bb9d480c3dce30339113560c29d31b68e691d8019be6f329",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-05; manifest 1291cb880588162c8543e2471bc931f17980689daa29cc5c2910b5e7c45948d2. Load check of seven-day-end-05: one custodian run. Loaded Morgan Hale in Whitet horn (Whitet horn is actually displayed as Whitethorn). The in-play screen shows Date: Spring, day 63; Time: 7:43:20 AM. No in-game action or save was initiated after loading.",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-05",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "start-load-check-06": {
+      "availability": "present",
+      "bytes": 18986736,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "e3470a907f79b6fd660923d57fff7c8b6a6eea1de39e58639fd64f8bc7b33fe1",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-06; manifest f74233f1e2d514904683978eb1fb0d1c50821a4af5fb51a9254672c48d34dbed. Load check of seven-day-end-06: one custodian run. Loaded Morgan Hale in Whitethorn. The in-play display reads Date: Spring, day 63; Time: 7:43:20 AM. No in-game action or save was initiated after loading.",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-06",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "start-load-check-07": {
+      "availability": "present",
+      "bytes": 18986736,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "f3d2ea85a796c22d6a2e7722b5550a56c9a65a8be8cb575d4ccbfb897c7ffc63",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-07; manifest 18873278f228d63f12c2a923a2a4825e3144b3416d1d8a71d3a59f2ecb1452d2. Load check of seven-day-end-07: one custodian run. Loaded Morgan Hale in Whitethorn. The play screen shows Date: Spring, day 63 and Time: 7:43:20 AM. No in-game action or save was initiated after loading.",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-07",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "start-load-checks": {
+      "availability": "present",
+      "bytes": 7391564,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-start-load-checks.md"
+      ],
+      "files": 253,
+      "manifest_sha256": "6fe2c4f8b79a950253cce8ffbd643a0ee05ccda278637412738e17a98531020a",
+      "note": "The seven campaign-run/7 load-check packages of the reusable starts (#388): six loaded Morgan Hale, Whitethorn, Spring day 63 7:43:20 AM; seven-day-end-03 failed on a port collision before play and was replaced by seven-day-end-07.",
+      "sources": {
+        "seven-day-end-01": ".runtime/computer-sessions/load-check-seven-day-end-01@77758ff1",
+        "seven-day-end-02": ".runtime/computer-sessions/load-check-seven-day-end-02@77758ff1",
+        "seven-day-end-03": ".runtime/computer-sessions/load-check-seven-day-end-03@77758ff1",
+        "seven-day-end-04": ".runtime/computer-sessions/load-check-seven-day-end-04@77758ff1",
+        "seven-day-end-05": ".runtime/computer-sessions/load-check-seven-day-end-05@77758ff1",
+        "seven-day-end-06": ".runtime/computer-sessions/load-check-seven-day-end-06@77758ff1",
+        "seven-day-end-07": ".runtime/computer-sessions/load-check-seven-day-end-07@77758ff1"
+      },
+      "visibility": "private"
+    },
     "supervised-launch-check-558": {
       "availability": "present",
       "bytes": 4627061,
