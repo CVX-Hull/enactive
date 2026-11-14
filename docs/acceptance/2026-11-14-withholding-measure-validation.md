@@ -31,31 +31,43 @@ scope: 'The withholding measure revision (#653): the judge codebook (a miss is a
   +0.071, 95% interval over starts −0.018 to 0.147). On missed vs not missed, positive
   specific agreement **0.705 → 0.889**, negative 0.988 → 0.997, and Gwet's AC1 on the
   pairs that drive the outcome **0.698 → 0.900**.
-- **Misses left: 15 of 50 touched units** (0.30), all lookups, one `against` label in
-  the whole set: withheld 6 of 22, delivered 9 of 28 (before: 8 of 25 and 13 of 28). Nine
-  distinct units are missed at least once (before: eleven). Enough to size a study.
+- **Misses left: 15 of 50 touched units** (0.30), all lookups (the one `against` label
+  is on a shared fact, outside the units): withheld 6 of 22, delivered 9 of 28 (before: 8
+  of 25 and 13 of 28). This is not only misses removed: 11 unit misses went and 5 came,
+  and the touched counts of 8 of the 12 units below changed. Nine distinct units are
+  missed at least once (before: eleven). Enough to size a study.
 - **Known groups: 20 of 20** under the codebook, 13 of 20 under the pilot's
   instructions. All seven passive-message windows moved from a miss to not missed; the
   three active lookups, five in-line and five did-not-apply windows were right both
-  times. The set was picked from the same pilot data that shaped the codebook, so it
-  shows the rules are applied as written, not that they generalize.
-- **The anchor does not test this change.** The anchor re-judges the measure gate's
-  owner-labelled pairs under that gate's frozen prompt (pinned by hash, a different
-  question about places with goods) to detect a change of judge *model*. The judges here
-  are the same Opus model; the fact codebook is not in that prompt, so re-judging the
-  anchor would measure nothing about it. It was not run.
+  times. The set was picked from the same pilot data that shaped the codebook, and the
+  codebook's companion and terrain examples describe the very passive-message windows in
+  it, so 7 of 7 there is close to automatic: it shows the rules are applied as written,
+  not that they generalize.
+- **The anchor, re-judged: no shift.** One clean-context Opus judge re-judged the
+  measure gate's 30 owner-labelled pairs (`anchor packets`, the gate's six packets): 20 of
+  30 match the owner's blind labels against the gate's adjudicated 21 (shift −1; exact
+  interval 0.47 to 0.83), 18 of 20 on the random draw as the gate, and 27 of 30 match the
+  owner's checked labels as the gate (shift 0); agreement with the gate's adjudicated
+  labels 0.910 (κ 0.711) over 210 pairs. The anchor's prompt is the gate's frozen one, a
+  different question, and does not contain the codebook: this shows the judges are as
+  the gate's, not that the codebook is right.
 - **The study, re-sized.** Each unit withheld in half of the starts of each block,
   analysed within units. At the pilot's price of \$1.476 a start (play and recall):
   - a halving of misses (withheld 0.65 vs delivered 0.33): 80% power at **10 to 12
     starts** (\$15 to \$18);
   - a cut of one third (0.49 vs 0.33): 80% power at **48 to 52 starts** (\$71 to \$77):
     at slope SD 1, 0.80 with one block and 0.79 with two at 48, 0.82 and 0.84 at 52;
-  - a cut of one fifth (0.41 vs 0.33): 0.55 at 100 starts, out of reach;
-  - with no effect the test rejected in 3.5% to 7.7% of 400 simulated studies at 0.05
-    (standard error about 1.1 points).
-- **The pilot's sizing (53 starts for a halving) is superseded.** The within-unit
-  comparison removes the between-unit spread that the pilot's pooled test carried, and
-  the full study's size is put to the owner with its price.
+  - a cut of one fifth (0.41 vs 0.33): 0.53 to 0.55 at 100 starts, out of reach;
+  - with no effect and no unit slope the test rejected in 3.5% to 6.8% of 400 simulated
+    studies at 0.05 (standard error about 1.1 points).
+- **Why these are smaller than the pilot's 53 starts for a halving.** Three things
+  changed at once: the within-unit comparison removes the between-unit spread the
+  pilot's pooled test carried; the pilot's sizing started from its observed withheld rate
+  (0.32) and halved it, while this one takes the pooled rate as the *delivered* rate, so
+  a halving means withheld 0.65, about twice any rate the pilot saw; and the pilot added
+  a judge error of 0.10, this one none. The last two favour a small study. With the
+  delivered rate anchored lower ([sensitivity](#sensitivity-to-the-anchored-rate)), a
+  halving needs about 27 starts and a cut of a third about 95.
 
 ## What was run
 
@@ -70,6 +82,7 @@ scope: 'The withholding measure revision (#653): the judge codebook (a miss is a
 | Binary agreement, known groups, units | `validate_653.py` (sealed with the evidence), using the tool's `binary_agreement` | `validation.json` |
 | Study inputs | `study-inputs` over the same packages | `study-inputs.json`: 32 units, spread 0.161 |
 | Sizing | `simulate-study --price 1.476`, seed 653 unless stated | `simulation-*.json`, `sim-*.json` |
+| Anchor | `anchor packets anchor-653 --gate …/memory-screen-gates-460-386/memory-measure`, one host Opus judge, `anchor events`, `anchor report` | `anchor/report-opus-anchor.json` |
 
 `judged-facts.json` was copied unchanged from the sealed pilot run (SHA-256 `b34f569f…`,
 as the pilot's evidence manifest records). The known-groups set
@@ -96,9 +109,11 @@ no `against` case, so that group is empty.
 | Judge A, B: share of own labels changed | | 6.1%, 6.6% |
 
 The improvement is in the positive side: under the pilot's instructions the second
-judge called 21 windows a miss that the first did not; under the codebook, 2. κ is
-reported beside AC1 because misses are rare (33 of 1,155 pairs), where κ falls even when
-the judges agree.
+judge called 21 windows a miss that the first did not; under the codebook, 2. On the 116
+pairs that drive the outcome, the five-label κ is 0.680 with 18 disputes, 11 of them
+between labels that are not misses but decide whether a unit counts as touched. κ is
+reported beside AC1 because misses are rare (the first judge called 33 of the 1,155
+pairs a miss; 30 adjudicated labels are), where κ falls even when the judges agree.
 
 ## Misses by unit
 
@@ -120,7 +135,8 @@ the judges agree.
 The misses the codebook removed are the companion's help and terrain messages shown by
 the game, and recipe screens opened in order to make the thing. The unit missed most is
 one recipe looked up in all five starts that touched it, four of them with its article
-delivered: a habit of looking up that delivery does not stop. Six starts make no claim
+delivered: a habit of looking up that delivery did not stop in these starts (the arm
+says the article was delivered, not that the player read it). Six starts make no claim
 about benefit; the arm comparison above is descriptive.
 
 ## The re-sized study
@@ -138,15 +154,37 @@ simulated study is analysed with the primary test (2,000 re-draws).
 | Halving | 0.651 vs 0.326 | 2.15 | 10: 0.83; 0.78 · 12: 0.85; 0.86 · 16: 0.93; 0.93 | 10 to 12 |
 | One third | 0.488 vs 0.326 | 1.04 | 40: 0.77; 0.75 · 48: 0.80; 0.79 · 52: 0.82; 0.84 · 60: 0.86; 0.86 | 48 to 52 |
 | One fifth | 0.407 vs 0.326 | 0.49 | 100: 0.53 (1 block) | over 100 |
-| None | 0.326 vs 0.326 | −0.10 | 20: 0.05; 0.06 · 40: 0.05; 0.08 (false alarms) | |
+| None | 0.326 vs 0.326 | −0.10 | 20: 0.05; 0.06 · 40: 0.05; 0.08 | |
 
-Slope SD 0 and 0.5 give the same sizes within simulation error. Blocking by saved moment
+With slope SD 1 the "none" row is null only on average: each unit has its own effect, so
+its 0.08 cell (2.5 standard errors above 0.05) is not a pure false-alarm rate. The pure
+null (slope SD 0) rejected 0.07 and 0.05 with one block and 0.04 and 0.04 with two, at 20
+and 40 starts. Slope SD 0.5 gives the same sizes as 1 within simulation error; slope SD 0
+was run only for a halving at 20 starts or more, where power is already 0.96 or above. Blocking by saved moment
 costs no power here, because the simulation draws no block effect; its value is that
 the result is not one saved game's.
 
+### Sensitivity to the anchored rate
+
+The study inputs were copied with every unit's shrunk missed share scaled down (by 0.5
+for a halving and 0.667 for a third; `scale_inputs.py`, sealed), so that the withheld
+rate under each effect comes nearer the pilot's 0.27 to 0.32. The start effect lifts the
+delivered rate above the scaled pooled value, so it lands at 0.19 and 0.24, and the
+withheld rate at 0.39 and 0.36: still above the pilot's, so this too leans small. One
+block, slope SD 1, 400 simulated studies each, seed 653.
+
+| Effect | Withheld vs delivered | log_or | Power by starts | Starts for 80% |
+| --- | --- | ---: | --- | --- |
+| Halving | 0.386 vs 0.193 | 1.31 | 10: 0.47 · 20: 0.74 · 30: 0.84 · 40: 0.90 · 60: 0.96 | about 27 |
+| One third | 0.356 vs 0.238 | 0.75 | 40: 0.54 · 60: 0.70 · 80: 0.75 · 100: 0.82 · 140: 0.94 | about 95 |
+
+So the size rests mostly on how many misses delivery can remove, which six starts
+cannot say: a halving needs 10 to 30 starts across the two anchorings, a cut of a third
+48 to 100.
+
 **Price** at \$1.476 a start, play and recall only, reusing store `v18`; judges are host
-agents at no provider spend: 12 starts \$17.71, 48 starts \$70.85, 52 starts \$76.75,
-60 starts \$88.56. The 44 to 52 start points (600 simulated studies each, seed 6531) are
+agents at no provider spend: 12 starts \$17.71, 30 starts \$44.28, 48 starts \$70.85,
+52 starts \$76.75, 60 starts \$88.56, 100 starts \$147.60. The 44 to 52 start points (600 simulated studies each, seed 6531) are
 in `sim-e0.667-fine.json`. A second saved moment needs a load check first (one short
 custodian run).
 
@@ -166,8 +204,20 @@ custodian run).
   out-of-sample use.
 - **The effect sizes are assumptions.** The pilot's codebook labels show no effect
   (withheld 0.27, delivered 0.32 missed), and six starts cannot say how large one is.
-- **Some misses are habits delivery cannot change** (the recipe looked up in four
-  delivered starts), which dilutes any effect over the store's units.
+- **The sizing favours a small study**: the delivered rate is anchored at the pilot's
+  pooled rate and no judge error is added (above and the sensitivity). Judge error in
+  the study itself also pulls the arms' judged rates together, so a true effect shows
+  smaller than it is.
+- **Delivery may change what is touched.** The simulation draws touch independently of
+  arm; in the pilot delivered units were touched 28 times and withheld ones 22. The
+  primary estimand conditions on touch, so the study reports touch balance beside it.
+- **Blocks of an odd number of starts** cannot withhold each unit in exactly half: with
+  two blocks the halving needs 12 starts, not 10 (0.78 at 10). A second saved moment may
+  also change which units are touched at all, which the simulation does not model.
+- **Judging is not free in time.** 48 to 52 starts mean about 350 to 430 clean-context
+  host judgings; no provider spend, but host capacity and hours.
+- **Some misses may be habits delivery does not change** (the recipe looked up in four
+  delivered starts), which would dilute any effect over the store's units.
 - **The examples name a companion and eating.** They pass the game-neutral word test
   and name kinds of action general to games of this class, but they lean on this game's
   vocabulary; changing them now would void this validation.
@@ -176,10 +226,15 @@ custodian run).
 
 ## Deviations
 
-- The anchor re-judging the goal names was not run: it tests a judge model change, not
-  this prompt change (above).
+- The anchor was re-judged with one judge, as the contract's
+  [check of a changed judge](../contracts/evaluation.md#checks-of-a-changed-judge)
+  compares one new judge with the gate's. The contract and the controls page's
+  judge-shift control call for it on a model change; the owner decision "Judges without
+  audits" on a change of "prompt or model", so it was run for this prompt change.
 - The simulation grid was narrowed from the tool's defaults (sims 400 to 600, chosen
-  starts and blocks) to fit the time; the seeds and every output are sealed.
+  starts and blocks) to fit the time, unevenly: one and three blocks for the first
+  halving grid, one and two for the smaller sizes and the cut of a third, one only for a
+  fifth. The seeds and every output are sealed.
 - The lead made the review repairs' smallest edits (label text, two error types, a
   lineage check) instead of sending them to the code worker.
 
@@ -189,4 +244,8 @@ Sealed as `withholding-measure-653`
 ([manifest](../../data/evidence/withholding-measure-653.sha256)): the codebook run
 (`memory-measure/codebook-653`: packets, the three judges' events, adjudication, prompt
 check, unit outcomes, validation, study inputs and every simulation output), the judges'
-answer files, the known-groups set and the validation script.
+answer files, the known-groups set and the validation script. Sealed after the reviews
+as `withholding-measure-653-checks`
+([manifest](../../data/evidence/withholding-measure-653-checks.sha256)): the anchor run
+(`memory-measure/anchor-653`: the gate's six packets, the judge's events and report),
+the anchor judge's answers, and the sensitivity inputs, script and outputs.

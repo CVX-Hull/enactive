@@ -260,11 +260,11 @@ provider; the coding host's capacity is its cost.
   fact; a delivered article's prose can name a withheld subject; facts the curator writes during a start are not randomized; the player's own
   records can hold a withheld fact while that store still exists. These bias towards no
   effect.
-- **Before any spend** the protocol's simulation is adapted to this design with the
-  measure gate's numbers, to give its size and price: the
-  [withholding simulation](../acceptance/2026-11-13-withholding-simulation.md). The
-  blocked within-unit study is sized from the pilot's units under the codebook in the
-  [measure validation](../acceptance/2026-11-14-withholding-measure-validation.md).
+- **Before any spend** a simulation gives the study its size and price. The blocked
+  within-unit study is sized from the pilot's units under the codebook, with the planned
+  test, in the [measure validation](../acceptance/2026-11-14-withholding-measure-validation.md);
+  the first sizing, from the measure gate's numbers for the earlier per-start design, is
+  the [withholding simulation](../acceptance/2026-11-13-withholding-simulation.md).
 
 ### Game-neutral judging
 

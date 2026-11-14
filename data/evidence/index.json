@@ -869,6 +869,22 @@
       },
       "visibility": "private"
     },
+    "withholding-measure-653-checks": {
+      "availability": "present",
+      "bytes": 63594480,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-measure-validation.md"
+      ],
+      "files": 480,
+      "manifest_sha256": "b40a460363364ededf297a7a9af6292672ffb9c9991c99101647ce4aebbac4a5",
+      "note": "The anchor re-judged for the codebook prompt change and the sizing's sensitivity to the anchored rate (#653); development evidence",
+      "sources": {
+        "answers/anchor": "host Opus anchor judge's answers, scratch (#653)",
+        "memory-measure/anchor-653": ".runtime/memory-measure/anchor-653@d64128b6",
+        "sensitivity": "sizing sensitivity inputs, script and outputs (#653)"
+      },
+      "visibility": "private"
+    },
     "withholding-pilot-619": {
       "availability": "present",
       "bytes": 509122803,
