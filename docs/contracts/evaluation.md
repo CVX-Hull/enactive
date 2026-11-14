@@ -270,7 +270,7 @@ their numbers for latency and delivery counts.
 | --- | --- | --- |
 | `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. Per trace, per run directory and for the whole selection, `response_by_prompt`: response time (count, p50, p95), the share within 2 s and within 5 s and the mean provider-reported cost per request, for all responses and by prompt-size band (input plus cache read plus cache write tokens: under 20,000; 20,000 to 60,000; 60,000 to 100,000; 100,000 to 150,000; over 150,000), and the interval from one request's first tool result to the next. `prompt_composition`: per trace one object, per run directory and for the whole selection a list with one object per route (the host's `model`). It says what the prompt is made of, fitted by least squares on the growth in prompt tokens between consecutive requests of an actor against what was added, from the provider's reported `usage` and the trace's own sizes alone, so it holds for any model that reports usage. An object has `pairs` (fitted), `left_out`, `image_counts` (histogram of images per fitted pair), `image_term_separable`, `images_per_turn`, `usage_fit`, `usage_fit_reason` and `tokenizer_check`. `usage_fit` has `per_result_byte` (tokens per byte of tool-result text: the `content` text the model reads, in the short form or the full one, never `structuredContent`), `per_output_token` (per output token of the previous reply, reasoning included), `per_image`, `per_turn_constant`, `per_turn_at_modal_images`, `residual_abs` (p50, p95, share within 5 tokens) and `pairs`. Every eligible pair is fitted; the image count is a term of the fit whenever it varies, so a turn with another count has its own intercept and does not bend the byte slope. `per_image` and `per_turn_constant` are numbers only when at least 10% of the fitted pairs have a count other than the most common one (`image_term_separable` true). Otherwise (`image_term_separable` false) they are null, because the image term cannot be told from the constant, and the supported figure is `per_turn_at_modal_images`, the constant plus `images_per_turn` (the most common count) images; it is null when they are separable. `left_out` counts the pairs not fitted, by `usage_unknown` (a prompt size or the reply's output is unknown), `projection_unknown` (only one of the two requests has an image projection event), `images_dropped` (the host dropped images between the two requests), `notice_added` (a `tail-notice` or delivered knowledge reminder on the second) and `not_one_call` (the reply did not make exactly one call with one result). `usage_fit` is null, with `usage_fit_reason`, when there are no more pairs than terms or the terms are not independent (for example every result has the same length). A tokenizer is only an optional check: `python -m tools.host_analysis PATH... --tokenizer [ROUTE=]ENCODING` (or `host_summary(paths, tokenizers)`) fills `tokenizer_check`, otherwise null; it fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and its reasoning tokens (with the same image treatment) and reports `slope` (`per_result_token`) and `holds`: the slope is within 1 ± 0.01 and the median absolute residual is at most 1 token (this reader's stated limit; the recorded medians for `o200k_base` were 0.2 and 0.1). A tokenizer that is not installed, cannot be loaded or whose counting function raises gives `available: false` and a `reason`, and a degenerate fit gives a `reason` and no `slope`; the usage fit is unaffected. The command exits 2 when a `ROUTE` names no selected trace. `--format markdown` prints the tables. |
 | `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
-| `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
+| `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`); `pilot` writes the withholding pilot's unit-level analysis (`withholding-pilot/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
 | `python -m tools.memory_reads` | text, or `--json` | Per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
 | `python -m tools.memory_screen_checks` | text, or `--json` | Three subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options. Its `recorded` row is from the traces; every other row is simulated, not measured. |
 
@@ -645,6 +645,74 @@ one third and the false-alarm rate at that size, and the price: play per start, 
 with the recall model's inferred overhead (×1.67 and ×2.0), and once a store (about \$23)
 and one grooming session (\$1.16 to \$4.19). The defaults are the measure gate's numbers.
 It is seeded (each rate has its own stream), prints JSON or a table, and writes no file.
+`simulate-withholding --pilot REPORT` takes its inputs from a pilot report (below) in place
+of the gate's numbers and refuses a flag for any of them (`--touched`, `--touched-ends`,
+`--missed`, `--missed-ends`, `--wrong`, `--base-wrong`, `--rho`). It requires `--price`, the
+pilot's own dollars per start (play and recall) from its record; the search settings stay
+flags.
+
+### The withholding pilot's analysis (`withholding-pilot/1`)
+
+`pilot RUN --runs PACKAGE...` reads a judged run of blind packets over the pilot's starts
+and writes `RUN/pilot.json` ([#638](https://github.com/CVX-Hull/enactive/issues/638)). The
+rule below is fixed before any pilot start is played
+([#619](https://github.com/CVX-Hull/enactive/issues/619)); a change to it is a new version.
+
+- **Inputs.** The run's `adjudicated.json` (`judge-adjudicated/2`, every pair resolved),
+  `private/judge-mapping.json` and `judged-facts.json`, and each package's
+  `private/units.json` (`knowledge-units/1` with a recorded seed). A start is one package,
+  over all its actors and windows. Each start's draw has its own seed, so the arms of
+  different starts are independent, as the pooled test assumes. It refuses a run of use
+  packets, a package whose unit record has no seed or does not match its manifest, a seed
+  repeated across packages, and a judged fact that is in no unit and not shared.
+- **A fact's outcome in a start.** The fact is **touched** when any of its windows in that
+  start has an applied adjudicated label (`in_line`, `against` or `found_again`); otherwise
+  it is untouched, whatever its `did_not_apply` and `cannot_tell` windows. A touched fact is
+  **missed** when any of its windows is labelled `against` or `found_again`: the player
+  acted against it or had to find it again, so it did not have the fact when it mattered.
+  A touched fact whose applied labels are all `in_line` is **straight**. `holds` does not
+  enter the outcome.
+- **A unit's outcome.** A unit (an article with the facts only it cites, or a fact no
+  article files) is touched when any of its facts is touched, and missed when any touched
+  fact of it is missed. Its arm is its draw in `private/units.json`: withheld or delivered.
+- **Shared facts** (cited by more than one article) are not drawn on their own, so they
+  stay out of the units and the test. Their touched and missed counts are reported apart,
+  as delivered when any citing article was delivered.
+- **Estimates**, each with a 95% interval from a cluster bootstrap over starts (seed 619
+  unless `--seed` is given, so the simulation's interval ends are fixed with the rule; a
+  draw in which an estimate is undefined is left out of its interval):
+  - `touched_per_start`: touched units per start, its mean and the counts per start, and
+    the ratio of its variance to its mean (1 for a Poisson count);
+  - `missed_share`: missed over touched units, pooled, and per arm;
+  - `spread`: the intra-start correlation of the unit-level missed outcome (the one-way
+    analysis-of-variance estimator for a binary outcome, truncated at 0);
+  - `judges`: the first two judges' agreement, Cohen's κ and dispute rate on the label,
+    over all pairs and over the pairs driving the outcome (either of the first two gave an
+    applied label), as `measure` reports them; and the per-judge error they imply for the
+    simulation, `wrong = (1 − √(1 − 2d)) / 2`, where `d` is the share of driving pairs on
+    which the first two judges disagree about the missed outcome itself (one gave
+    `against` or `found_again` and the other did not), since the simulation flips that
+    binary outcome (two judges each wrong independently with probability `wrong` disagree
+    with probability `2·wrong·(1 − wrong)`). The measured missed share already carries
+    judge noise, so applying `wrong` on top errs toward more starts.
+- **The comparison, descriptive only.** Per start and pooled: touched and missed units by
+  arm, the statistic missed withheld minus missed delivered, and the one-sided
+  randomization p-value of the simulation's test (given a start's `M` missed units, the
+  number withheld is Binomial(`M`, 1/2); independent draws pool to Binomial of the summed
+  `M`). The report's `not_a_claim` field states that the pilot's starts, however many were
+  analysed, make no claim of benefit, and `not_corrected` that the outcome rests on
+  adjudicated model-judge labels.
+- **Secondary counts.** Touched units missed only by `against`, only by `found_again`, and
+  by both, per arm; touched units with an applied window whose `holds` is
+  `stale_or_false`; actors listed under `no_frames`.
+- **Threats** stated in the report: every start copies one saved game, about four game
+  minutes before the lineage's recorded death; one lineage of one game; the number of
+  starts analysed; and that the spread pools both arms, so an effect of delivery that
+  differs between starts can show as spread.
+- **The simulation inputs.** `simulation` holds `touched` (mean and interval ends),
+  `missed` (the withheld arm's missed share and its ends, the simulation's "missed when
+  withheld"), `rho` (the spread's point value) and `wrong` (the point value, used as the
+  judge error at the interval ends too), in the form `simulate-withholding --pilot` reads.
 
 **Isolation.** The tool writes packets, events and statistics only into its run
 directory, and refuses a run directory whose parent is not named `memory-measure`; by
