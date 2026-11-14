@@ -60,14 +60,19 @@ test('briefing, standalone index, concurrent reminder, silence, read and exact s
   assert.ok(reminderParts.some(p => p.type === 'text' && p.text.includes('recent_calls') && p.text.includes('computer_input')));
 });
 
-for (const failure of ['failed','unpriced']) test(`${failure} recall counts its bound and ends recall only`,async t => {
+// R-OVERSPEND / R-REGRESSION: offline provider failures preserve accounting and response provenance.
+for (const failure of ['failed','rejected-fetch','unpriced']) test(`${failure} recall counts its bound and ends recall only`,async t => {
   const {result,events} = await scenario(t,{recallFetch:() => failure === 'unpriced' ? recallReply([],null)
+    : failure === 'rejected-fetch' ? Promise.reject(new Error('fixture fetch rejection'))
     : new Response('{}',{status:403,headers:{'content-type':'application/json'}})});
   assert.equal(result.ok,true);
   assert.equal(events.filter(e => e.type === 'request-start' && e.request_role === 'recall').length,1);
   const cost = events.find(e => e.type === 'response-complete' && e.request_role === 'recall');
   assert.equal(cost.counted_cost_usd,'0.2');assert.equal(cost.cost_counted_as,'unpriced-bound');
   assert.equal(events.at(-1).unpriced_recall_requests,1);
+  const recall=events.find(e => e.type === 'knowledge-recall' && e.request_id === 'recall-1');
+  assert.equal(Object.hasOwn(recall,'reply_text'),failure === 'unpriced');
+  assert.equal(Object.hasOwn(recall,'reply_omitted_bytes'),failure === 'unpriced');
   assert.ok(events.some(e => e.type === 'knowledge-recall' && e.reason === 'disabled'));
   assert.deepEqual(events.find(e => e.type === 'knowledge-delivery').index_ids,['article-a','article-b','fact-alone']);
 });
