@@ -49,6 +49,7 @@ TOOL_ARGUMENTS = {
     'computer_input': ('actions', 'source_id'),
     'computer_observe': (),
     'computer_result': ('operation_id',),
+    'computer_stop': (),
     'player_source': ('source_id',),
     'player_result': ('operation_id',),
     'player_handoff': ('ids', 'summary'),
@@ -57,7 +58,7 @@ TOOL_ARGUMENTS = {
     'player_memory_query': ('kind', 'limit', 'include_superseded'),
     'player_memory_context': ('ids', 'max_bytes'),
     'player_program_read': ('program_id',),
-    'player_program_run': ('program_id', 'max_steps', 'max_seconds'),
+    'player_program_run': ('program_id', 'initial_state', 'interpretation', 'selection', 'max_steps', 'max_seconds'),
     'player_program_save': ('program',),
 }
 RESULT_FIELDS = ('schema', 'operation_id', 'kind', 'status', 'reason', 'id', 'error', 'submission')
