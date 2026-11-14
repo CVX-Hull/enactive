@@ -18,9 +18,12 @@ scope: 'The delivery development start (#635): one start of about 200 decisions 
   `recall-failed`. Each briefing therefore carried the index alone (32 lines) and **no
   leads**, recall was disabled for the actor, and **no reminder was ever made**: actor
   001 logged 21 reminders as `not-made` (`disabled`). The reply text is not in the trace,
-  so the cause is inferred: the host's parser accepts only a bare JSON object, and any
-  other reply (most likely a fenced one) fails without its text or a precise reason being
-  recorded. The fault is its own issue, [#642](https://github.com/CVX-Hull/enactive/issues/642).
+  but the code narrows the cause: a reply that parses as JSON of the wrong shape is logged
+  `invalid-recall-selection`, and only a reply that is not parseable JSON at all gives the
+  generic `recall-failed`. Both replies stopped normally with their cost reported (72
+  output tokens for actor 001's, 21 of them reasoning), which fits a fenced or annotated
+  JSON reply; the text itself is not recorded. The fault is its own issue,
+  [#642](https://github.com/CVX-Hull/enactive/issues/642).
 - **`N` is not chosen.** No reminder was requested, so the run says nothing about the
   cadence. The provisional `N = 10` stated before spend stands unmeasured; the pilot does
   not freeze it from this run.
@@ -35,12 +38,13 @@ scope: 'The delivery development start (#635): one start of about 200 decisions 
   of benefit.
 - **Play.** The survivor (Morgan Hale, Whitethorn) was alive when the run stopped, **4.05
   game hours** after the load, past the lineage's recorded death; censored by the attempt
-  allowance (the orderly stop at 231 of 240 attempts). The last frame shows the fire
-  burning inside the ring beside evac shelter B-19, with the companion nearby.
-- **Spend.** \$1.5705 counted of the \$10 cap, all provider-reported (no unpriced
-  request): play \$1.5647 and recall \$0.0058 (two briefing requests), from the sealed
-  host traces; the [run ledger](../../data/evaluation/runs.jsonl) row is the numeric
-  record.
+  allowance (the orderly stop was requested when 10 attempts, the finish reserve,
+  remained). The last frame shows the fire burning inside the ring beside evac shelter
+  B-19, with the companion nearby.
+- **Spend.** Well inside the \$10 cap and all provider-reported (no request counted at the
+  bound); the total and the attempts are the [run ledger](../../data/evaluation/runs.jsonl)
+  row (study 635). The ledger does not split play from recall: from the sealed host
+  traces, recall was \$0.0058 (two briefing requests) and the rest was play.
 - **Owner decision needed.** Whether delivery is checked in play again after #642 is
   fixed, before the pilot, and at what price (asked with this record).
 
@@ -85,12 +89,13 @@ recall choice: a choice of nothing is logged `silence`, and these were logged `f
 
 **Reminders and silences.** None made. Actor 001 (222 player requests, 215 inputs) logged
 21 reminder opportunities as `not-made` with the reason `disabled`, about one per ten
-completed inputs, so the cadence counter itself ran as designed. Actor 002 ran 8 requests
-and ended before its first opportunity.
+completed inputs, so the cadence counter itself ran as designed. Actor 002 made 7 player
+requests (8 with its recall) and ended before its first opportunity.
 
 **Recall requests and their cost.** Two, one per actor's briefing: \$0.0019 and
-\$0.0040, provider-reported (the second request's prompt was not cached). Neither
-counted at the \$0.4096 bound.
+\$0.0040, provider-reported; neither read from the cache, and the second prompt was larger
+(11,040 against 5,158 text bytes) because actor 002's first message carries the handoff.
+Neither counted at the \$0.4096 bound.
 
 **Time per decision.** Over 229 player responses, p50 6.3 s and p95 9.8 s; 2% within 2 s
 and 21% within 5 s. Prompts stayed under 100,000 tokens (24 under 20,000, 99 from 20,000
@@ -99,24 +104,25 @@ lineage's median was 7.0 s ([cadence plan](../design/cadence-plan.md#what-the-se
 The interval from one request's first tool result to the next was p50 7.0 s.
 
 **Burden on the player.** Small, because almost nothing was pushed: the index block added
-about 3 KB to each actor's first message, and seven reads returned whole articles. No
+about 5 KB (4,900 bytes) to each actor's first message, and seven reads returned whole articles. No
 reminder entered the context. Whether reminders burden play is unmeasured.
 
 **The player's own memory tools.** Actor 001 wrote one `work` record just before its
 handoff (identity, the fire ring, supplies, threats last seen) and handed off with it;
 actor 002 read three articles by id and stopped on the ending request without saving.
-The evaluator counts 66% of decisions out of play (menus: crafting, cooking, consuming),
-the stretch the lineage's last admissions also spent on food and fire.
+Two thirds of the decisions were out of play (the table's "Out of play"): menus for
+crafting, construction, cooking and eating.
 
 **Anything that looked wrong.**
-- The recall fault (#642): a generic failure reason and no reply text, so the cause cannot
-  be confirmed from the evidence; one failed briefing request silences every reminder.
+- The recall fault (#642): the reply text is not recorded, so the inference above cannot be
+  confirmed from the evidence; one failed briefing request silences every reminder.
 - The custodian's `ready.json` gives the viewer URL on the run's own port (53894), which
-  answers only the computer API; the page was on the supervisor's gateway port (53912),
-  which `watch-start.json` names. Watching works through the gateway; the field is only
-  misleading.
-- The native game was ended by the cleanup's SIGTERM after the orderly stop, without a
-  save, as the player reported; the start's saved game is unchanged from the copy.
+  answered a page request with `{"error":"Unknown current route"}` during the run; the page
+  was served on the supervisor's gateway port, 53912 (`gateway_url` in
+  `watch-terminal.json`; the viewer behind it is on 53911, `viewer_port` in
+  `watch-start.json`). Watching works through the gateway; the field is only misleading.
+- The native game was ended by the cleanup's SIGTERM after the orderly stop; the player
+  reported no save. The start's final userdir is sealed in `delivery-dev-635-start`.
 
 ## Deviations
 
