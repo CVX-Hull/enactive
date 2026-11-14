@@ -254,11 +254,12 @@ Three layers. Each can be built and judged alone, in this order.
   ([general memory](general-memory.md#2-delivery-making-the-player-use-memory)).
 - **Reading more.** `player_knowledge_read` returns an article, or a fact it cites, by id
   or title, with the article's links. `player_knowledge_query` searches articles and facts
-  by text. Both read the run's frozen snapshot of the curator's store
+  by text. Both read the run's delivered knowledge, a frozen export of the curator's store
   ([the delivery boundary](#the-delivery-boundary)).
-- **Between briefings.** When a newer snapshot is published, the next request carries the
-  difference as a new message at the end. Earlier messages are untouched, so the cache
-  holds.
+- **Between briefings, once the curator runs during play.** When a newer snapshot is
+  published, the next request carries the difference as a new message at the end.
+  Earlier messages are untouched, so the cache holds. Not built: delivery as first built
+  freezes one snapshot per run ([the delivery boundary](#the-delivery-boundary)).
 - **Marking.** The briefing is labelled as fallible knowledge, not instructions, as
   [ADR 009](../decisions/009-curated-player.md) requires. The current screen wins on
   conflict.
@@ -276,62 +277,106 @@ Three layers. Each can be built and judged alone, in this order.
 
 ### The delivery boundary
 
-Where each part of layer 2 runs, so that it keeps the import contracts and one contract
-version ([#461](https://github.com/CVX-Hull/enactive/issues/461)). Decided by the lead on
-13 November 2026; nothing here is built.
+Where each part of layer 2 runs and what crosses each seam, so that delivery keeps the
+import contracts and one contract version
+([#461](https://github.com/CVX-Hull/enactive/issues/461)). Decided by the lead on
+13 November 2026 and reviewed against the code; nothing here is built.
 
 | Part | Where it runs | Why there |
 | --- | --- | --- |
-| Snapshot export | A project tool, at package freeze | Only `tools/` may read the curator's repository: the player, its adapters and the application may not import `harness.curator`, and the player may not run subprocesses (`pyproject.toml` import contracts) |
-| Withheld draw | The same tool, at package freeze | The player can never reach what it never receives |
+| Export of delivered knowledge, and the withheld draw | `tools/knowledge_export.py`, at package freeze | Only `tools/` may read the curator's repository: the player, its adapters and the application may not import `harness.curator`, and the player may not run subprocesses (`pyproject.toml` import contracts). The player can never reach what it never receives |
 | Recall model: briefing leads and reminders | The player host | The host alone holds provider access and counts spend against the run's dollar limit |
-| Knowledge read and query tools | The application, from the frozen snapshot file | A data file needs no import of the curator |
-| Delivery telemetry | The host's trace (`host.jsonl`) | Every briefing, reminder and silence is logged where the evaluator already reads |
-| `judged-facts/1` and the withheld-unit record for the judges | An evaluation tool after the run | The player may not import evaluation code; the judges' input is built from the trace, the snapshot and the draw |
+| Knowledge read and query tools | The application, from the delivered-knowledge file | A data file needs no import of the curator |
+| Delivery telemetry | The host's trace (`host.jsonl`) | The evaluator already reads it |
+| `judged-facts/1` and the unit record for the judges | `tools/memory_measure.py`, after the run | The player may not import evaluation code |
 
-- **The snapshot.** At package freeze, a tool exports one published version of the
-  game's knowledge repository to a frozen file, `knowledge-snapshot/1`: the version, its
-  coverage stamp, the articles (id, title, lead, body with cited fact ids, links, last
-  confirmed) and the current facts (id, type, text, subject, seen). It is hashed into the
-  package like every frozen input. The snapshot is fixed for the run: no curator session
-  runs during play, so there are no snapshot differences to append yet.
-- **Withholding.** For a withholding start the same tool draws, with a recorded seed,
-  exactly half of the snapshot's units (an article with the facts only it cites; a fact
-  that no article files is a unit of its own; a fact cited by a delivered and a withheld
-  article counts as delivered). The exported snapshot leaves the withheld units out
-  entirely, so they are absent from the leads, the index, the reminders and search. The
-  full snapshot and the draw stay in the package's private part, which no actor reads.
-- **The briefing and the reminders.** Before an actor's first request, the host asks the
-  recall model which articles' leads this actor gets, from the mission, the previous
-  final report and the snapshot's index, and appends the briefing (leads, one index line
-  per other article, the coverage stamp) to the actor's first message, labelled as
-  fallible knowledge. Every `N` decisions it asks again, from the actor's recent calls,
-  the latest frame and the index, and adds the answer, or nothing, as a notice that
-  stays in the history where it was first sent, as the host's other notices do. The
-  recall model never blocks the player: a reminder that is not ready waits for the next
-  request.
-- **The recall route.** The route names the recall model and `N`. The recall model's
-  requests are counted against the run's dollar limit with the player's, and bounded by
-  their own request allowance. The model is pinned per run and recorded; for the pilot
-  the lead chooses it and `N` before anything is spent, and development play may later
-  set `N` from measurement.
-- **One contract, chosen per run.** Delivery is a new version of the player-host route,
-  the package and the player tool table, used by every run. A package with no knowledge
-  snapshot gives no briefing, no reminders and knowledge tools that report an empty
-  store: the same code, given nothing. Older routes and packages are refused, as now.
+**Delivered knowledge and the package.**
+
+- `python -m tools.knowledge_export REPOSITORY --version vN --package DIR [--withhold-seed S]`
+  reads one published version of the game's knowledge repository and writes:
+  - `knowledge.json` (`delivered-knowledge/1`) among the package's frozen files: the
+    version, the coverage stamp the gate already writes (`coverage.json`,
+    `curator-coverage/2`), the delivered articles (id, title, lead, body with cited fact
+    ids, links, last confirmed) and the delivered current facts (id, type, text,
+    subject, seen). Facts that no article files are listed too, and have their own
+    index lines, as [general memory](general-memory.md#articles-over-facts) requires
+    between groomings.
+  - `private/knowledge-full.json` and `private/units.json`: the whole version, and every
+    unit with its facts, the seed and the draw. Their hashes are a closed field of the
+    package manifest. Neither the host nor the application is given them.
+- **Every package carries `knowledge.json`.** A run without knowledge carries one with no
+  units, so every run takes the same path (S-MIGRATION: no optional input that switches
+  behaviour). The run package, its manifest and the route get new versions; the old
+  ones are refused for running and stay readable by the evaluator as archived versions.
+- **Units and the draw.** A unit is an article with the facts only it cites; a fact that
+  no article files is a unit of its own; a fact cited by a delivered and a withheld
+  article counts as delivered. With `--withhold-seed`, each unit, in id order, is
+  withheld independently with probability one half: the design the
+  [simulation](../acceptance/2026-11-13-withholding-simulation.md) and the analysis
+  assume. Withheld units are left out of `knowledge.json` entirely, and links to a
+  withheld article are removed from the delivered articles, so neither the leads, the
+  index, the reminders, search nor a link names one. A read of an absent id or title
+  answers as any miss does. The unit rule lives in that one module, which the judges'
+  tooling imports.
+
+**The recall model in the host.**
+
+- **Inputs.** The host is given `knowledge.json` by a new argument, recorded in the
+  actor's frozen inputs. The briefing request reads the actor's first message (the
+  mission and any predecessor's handoff context) and the index; a reminder request reads
+  the actor's recent calls, the latest frame and the index.
+- **The briefing.** Before the actor's first request the host appends to the first
+  message the leads the recall model chose, one index line for every other article and
+  standalone fact, and the coverage stamp, labelled as fallible knowledge that grants no
+  authority. The system prompt and tool table stay identical across actors, so request
+  prefixes stay byte-identical.
+- **Reminders.** `N` counts the actor's completed input operations (`computer_input`
+  and `player_program_run` results), which the host sees. Every `N` of them the host
+  asks for a reminder and keeps playing. The answer, or nothing, goes into the next
+  request as its own delimited message labelled as fallible knowledge, never joined to a
+  control or limit notice, and stays in the history where it was first sent, so the
+  cache holds.
+- **Accounting.** Recall attempts are their own request role: `request-start`,
+  `response-complete` and cost events under `recall-N`, with their own allowance, summed
+  into the same `spent` as the player's. Before any attempt the host checks the limit
+  against what is spent plus the bound of every attempt in flight, so the run can pass
+  its limit by at most one player request and one recall request, and the package's
+  finish reserve covers both bounds. A recall request still in flight when the actor
+  ends is aborted and counted. The driver's event reader (`tools/campaign_player.py`)
+  and the evaluator's host reader (`harness/evaluation/core/host.py`) learn the role;
+  recall requests are never player decisions.
+- **The route.** A closed `recall` object: `model` (same provider and key as the
+  player), `every` (`N`), `max_requests` and `unpriced_request_usd`, the bound computed
+  by the package check from that model's rates as for the player. The model and `N` are
+  pinned per run; for the pilot the lead chooses both and states them before anything
+  is spent.
+- **Failures.** A recall request that fails or returns no cost is counted at its bound
+  and ends recall for that actor: a briefing then holds the index lines only, and later
+  reminders are logged as not made. The player plays on; only the player's own unpriced
+  success stops the actor, as the contract says now.
+
+**The tools, the trace and the judges.**
+
 - **New tools, not changed ones.** `player_knowledge_read` and `player_knowledge_query`
-  read the snapshot. The player's own memory tools stay as they are until adoption
-  ([#463](https://github.com/CVX-Hull/enactive/issues/463)), which removes them and makes
-  the snapshot required. No tool reads two stores, and no tool changes meaning.
-- **Telemetry.** The host records each briefing (the snapshot version, the article ids
-  chosen as leads and as index lines, the recall request's cost) and each reminder or
-  silence (the decision, the article ids, the cost). The trace projection's allowlist
-  keeps the knowledge tools' arguments.
-- **The judges' input.** After a run, an evaluation tool builds `judged-facts/1` from the
-  trace's delivery events and knowledge reads, the full snapshot and the draw: routes
-  `lead`, `read` (with the decision of the read), `index` and `withheld`, and the
-  briefing and reminders as delivered. It also writes the withheld-unit record that the
-  benefit analysis re-draws. It lives with the judge tooling.
+  read `knowledge.json`, which the driver passes to the application. Their results carry
+  `grants_authority: false`. The player's own memory tools stay as they are until
+  adoption ([#463](https://github.com/CVX-Hull/enactive/issues/463)), which removes
+  them; no tool reads two stores, and no tool changes meaning.
+- **Telemetry.** The host records each briefing and each reminder with its full text,
+  the article and fact ids it named, the version of delivered knowledge, the recall
+  request it came from, and the player request it was first sent with; and each silence,
+  failure or reminder not delivered before the actor ended. The trace projection's
+  allowlist keeps the knowledge tools' arguments.
+- **The judges' input.** After the run, `tools/memory_measure.py` builds `judged-facts/1`
+  from those events, the knowledge tools' results, `private/knowledge-full.json` and
+  `private/units.json`, mapping each player request to the evaluator's decision. A fact
+  has one route per actor, its first exposure in this order: `lead` (in the briefing or a
+  reminder), `read` (a read or a query result), `index`; `from_decision` is when that
+  exposure first reached the player. Withheld facts have the route `withheld`. The unit
+  record the benefit analysis re-draws is `private/units.json`.
+- **Readers that move with the versions**: the evaluator's sources and facts readers,
+  the run ledger, the driver's event reader, the viewer and the memory-read audit's tool
+  list; #461 names them in its paths.
 
 ### 3. One cut, tied to what the store covers
 
@@ -373,8 +418,9 @@ version ([#461](https://github.com/CVX-Hull/enactive/issues/461)). Decided by th
   for 20 decisions, with coverage trailing play by about 23 decisions; the owner decided
   on 13 November 2026 to build delivery first and decide the cut after it is measured
   ([record](../acceptance/2026-11-13-session-price-pilot.md)).
-- **Coverage is not recorded today.** A curator session records the frames of the window
-  it was given, not the last decision its published facts reflect. The stamp is new.
+- **Coverage.** Each published version carries the gate's coverage stamp
+  (`coverage.json`, `curator-coverage/2`: the session, the actor and the last step its
+  window read), which delivered knowledge repeats.
 - **Risk.** The player loses the thread of what it was doing. Two things carry it: the
   low mark keeps the most recent turns verbatim, and the briefing's leads.
   Whether that is enough is measured before the cut is decided.
@@ -436,10 +482,10 @@ alone:
 | Area | Change |
 | --- | --- |
 | Tool results (layer 1) | The form of `player-computer-result` the tool server returns to the model; the host's reading of `source_id` and of the handoff receipt, which keep working; the [computer control contract](../contracts/computer-control.md); the player guide's table of calls; the image block in the route |
-| Player host contract | A new version: the briefing in the first message, snapshot differences as tail messages, the cut and its coverage rule, the two marks in the route, image dropping folded into the cut. "No compaction" becomes "no summary; removal only of covered turns" |
-| Tool table | The player's own memory tools (`player_memory_append`, `player_memory_context`, `player_memory_read`, `player_memory_query`) removed; the knowledge tools that delivery adds stay; `player_hint` added; `intent` required on every call; the knowledge snapshot becomes required in every package |
+| Player host contract | A new version: snapshot differences as tail messages once the curator runs during play, the cut and its coverage rule, the two marks in the route, image dropping folded into the cut. "No compaction" becomes "no summary; removal only of covered turns" |
+| Tool table | The player's own memory tools (`player_memory_append`, `player_memory_context`, `player_memory_read`, `player_memory_query`) removed; the knowledge tools that delivery adds stay; `player_hint` added; `intent` required on every call |
 | Handoff | The packet carries the summary as a labelled hint and no record roots |
-| Driver and package | More than two actors in an admission are no longer needed for capacity; the driver passes the snapshot to each actor and waits for the boundary session |
+| Driver and package | More than two actors in an admission are no longer needed for capacity; the driver waits for the boundary session |
 | Player guide | Memory is no longer optional reading: what the briefing is, that it is fallible, how to read an index line, when to hint |
 | Curator | Live triggers and snapshot differences during play |
 | Tests | The host's serialization and prefix tests, the player-host contract suite, the memory and handoff tests |

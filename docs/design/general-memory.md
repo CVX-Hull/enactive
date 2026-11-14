@@ -164,8 +164,8 @@ changes two things.
    index line (title and lead's first clause) for every other article. The player follows
    a link or searches only when it wants more. Relevance is judged by a model, so it
    holds for any game.
-2. **Reminders during play.** At a fixed cadence (every N decisions, N set by the first
-   development play), the recall model reads the player's recent tool calls, the latest
+2. **Reminders during play.** At a fixed cadence (every N completed inputs, N pinned per
+   run: by the lead for the withholding pilot, then from development play's measurement), the recall model reads the player's recent tool calls, the latest
    screen and the article index, and answers with up to a few article titles and their
    leads, or with nothing. It runs beside the player and never blocks it; its answer is added as a notice
    to the next request after it finishes, and stays in the history, so the cache holds.
@@ -224,9 +224,10 @@ provider; the coding host's capacity is its cost.
 
 ### Does memory help? Withholding within each start
 
-- **Design.** In each start a random half of the store's units (drawn per start, seed
-  recorded) is withheld: their articles and facts are left out of the leads, the index,
-  the reminders and search. A unit is an article with the facts only it cites; a fact
+- **Design.** In each start each of the store's units is withheld independently with
+  probability one half (drawn per start, seed recorded): their articles and facts are
+  left out of the leads, the index, the reminders and search, and links to them are
+  removed ([the delivery boundary](player-context.md#the-delivery-boundary)). A unit is an article with the facts only it cites; a fact
   cited by a delivered and a withheld article counts as delivered. The grooming before
   the start makes one article per subject, so one thing is one unit.
 - **Outcome.** For every fact, over the whole start: was it found again, acted against,
@@ -239,7 +240,7 @@ provider; the coding host's capacity is its cost.
   delivered. It cannot see a harm to play as a whole, such as a distracting reminder;
   that is seen in the use labels and in time spent per decision.
 - **Threats.** Handoff summaries and the previous final report can restate a withheld
-  fact; facts the curator writes during a start are not randomized; the player's own
+  fact; a delivered article's prose can name a withheld subject; facts the curator writes during a start are not randomized; the player's own
   records can hold a withheld fact while that store still exists. These bias towards no
   effect.
 - **Before any spend** the protocol's simulation is adapted to this design with the
