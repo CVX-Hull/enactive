@@ -50,10 +50,9 @@
       "minLength": 1
     },
     "start": {
-      "enum": [
-        "S1",
-        "S2"
-      ]
+      "description": "The manifest's start label: S1 to S99.",
+      "type": "string",
+      "pattern": "^S[1-9][0-9]?$"
     },
     "lineage": {
       "description": "The manifest's lineage label (e.g. L1), or null for a single-run admission.",

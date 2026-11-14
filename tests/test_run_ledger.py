@@ -165,9 +165,11 @@ def test_totals_apply_the_actual_spend_admission_rule():
 
 def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
     rows = read_ledger()
-    assert len(rows) == 54 and {r['study'] for r in rows} == {372, 382, 397, 522, 635, 642}
+    assert len(rows) == 60 and {r['study'] for r in rows} == {372, 382, 397, 522, 635, 642, 619}
     assert totals(rows, 635, None)['spend_usd'] == '1.57054305'      # the delivery development start
     assert totals(rows, 642, None)['spend_usd'] == '1.5896732'       # the delivery check start of the recall fix
+    assert totals(rows, 619, None)['spend_usd'] == '8.85651610'      # the withholding pilot's six starts
+    assert {r['start'] for r in rows if r['study'] == 619} == {'S1', 'S2', 'S3', 'S4', 'S5', 'S6'}
     assert totals(rows, 382, None)['spend_usd'] == '30.46049960'
     assert totals(rows, 397, None)['spend_usd'] == '38.39958335'
     assert totals(rows, 522, None)['spend_usd'] == '30.11036530'     # the lost lh4a1 ($1.2343105) included
