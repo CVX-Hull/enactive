@@ -148,6 +148,47 @@ boundary, day point and death from frames.
 
 With three lineages this is a screen, not a qualification.
 
+## Reusable starts
+
+`python -m tools.starts create seven-day-end-01` copies the sealed #397 study's
+`user/` and `player-memory-sd1.sqlite3` without editing their contents. The tool
+checks every copied path and hash against `data/evidence/397-seven-day.sha256`,
+refuses missing, changed or extra files, and prints the start manifest's SHA-256.
+Starts live in the main checkout's `.runtime/starts/<name>/`; `list` reports their
+hashes and player-store paths. A run using a start cites its manifest hash and says
+that the copied lineage is no longer held out. These copies do not establish a
+held-out comparison. Every start of one source is a byte-identical, hash-verified copy,
+so one load through the custodian stands for all of them: the first start a study plays
+is read for its recorded character and time before the rest
+([owner decision](decisions/owner-decisions.md)). The record citing a start lists its disposal
+study and the userdir archive path.
+
+With the game closed, `python -m tools.starts install NAME` stages the start, then
+copies the current `.runtime/user/` into `.runtime/archive/userdir-<timestamp>/`
+and verifies every file by hash before installing the staged userdir. It prints
+the archive location and `player_store`: the run package points that field at the reported absolute
+path, `.runtime/starts/NAME/work/player-memory-sd1.sqlite3` in the main checkout.
+The tool holds the shared game lock and checks `ps` for any executable whose
+basename starts with `cataclysm`, ignoring case, before install, restore or
+disposal (R-SAVE-LOSS). Dispose the installed start before installing another.
+
+Keep the run's traces and evaluation record under the start's `work/` directory
+(or copy them there after all writers stop). After the game saves and closes,
+`python -m tools.starts dispose NAME --seal STUDY --cited-by RECORD --note TEXT`
+uses `tools.evidence.seal` to retain the start, working outputs, player store and
+installed final userdir. It verifies that every working file is present by path
+and hash in the sealed copy before removing the working start and installed
+userdir (R-EVIDENCE-LOSS). Excluded files are refused before sealing; mismatched
+files prevent removal. A seal receipt makes disposal resumable: retry with the
+same study to verify the seal and finish removal, with the installed marker
+removed last. If a seal fails verification, the lifecycle refuses removal and the
+lead investigates the evidence store before any manual recovery step.
+Restore also finishes a pending sealed disposal. An unused start
+can be disposed of the same way. Archives remain outside the save tree.
+`python -m tools.starts restore-userdir ARCHIVE` restores a reported archive path
+or archive basename, verifies its hashes and archives any current userdir first.
+No command opens the sealed source for writing or launches the game.
+
 ## Recording a run
 
 Each admission gets one row in the [tracked ledger](../data/evaluation/runs.jsonl),

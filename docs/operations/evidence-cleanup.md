@@ -42,6 +42,9 @@ object storage is the researched option if a backup is chosen). A source checkou
 a sealed folder is reproducible from the commit the study's note names, so only its
 `.runtime` evidence is copied; symbolic links are never copied.
 
+The [reusable-start lifecycle](../development-runs.md#reusable-starts) applies the
+removing-an-original rule below to starts and their working outputs.
+
 **Removing an original.** Once every file of an original has been found, by path and
 hash, in a sealed study and `verify --full` passes, the original is a second copy and is
 removed; the study's `sources` and note stay its tracked provenance. Removal of anything
