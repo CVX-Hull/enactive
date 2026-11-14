@@ -44,8 +44,8 @@ review_trigger: The withholding simulation reports, delivery is first measured i
      an index line, and the player follows links or searches for more. Then, during play,
      it may add a short reminder, or say nothing, as a notice that stays in the history.
   4. **Measurement.** Use of memory is judged on every sealed run. Benefit is measured by
-     withholding a random half of the store within each start, once a simulation has
-     sized it.
+     withholding each unit of the store in half of a study's starts, once a simulation
+     has sized it.
   5. **Judges** are the standing measure, without further audits by the owner; the
      measure gate's 30 owner labels are the anchor set.
   6. **The cut** is not built yet.
@@ -225,15 +225,31 @@ provider; the coding host's capacity is its cost.
 
 ### Does memory help? Withholding within each start
 
-- **Design.** In each start each of the store's units is withheld independently with
-  probability one half (drawn per start, seed recorded): their articles and facts are
-  left out of the leads, the index, the reminders and search, and links to them are
-  removed ([the delivery boundary](player-context.md#the-delivery-boundary)). A unit is an article with the facts only it cites; a fact
+- **Design.** A withheld unit's articles and facts are left out of the leads, the index,
+  the reminders and search, and links to them are removed
+  ([the delivery boundary](player-context.md#the-delivery-boundary)). A unit is an article with the facts only it cites; a fact
   cited by a delivered and a withheld article counts as delivered. The grooming before
-  the start makes one article per subject, so one thing is one unit.
-- **Outcome.** For every fact, over the whole start: was it found again, acted against,
-  or acted in line with? Whether a fact "became relevant" is judged only as a secondary
-  measure, because delivering a fact can create the need for it.
+  the start makes one article per subject, so one thing is one unit. The pilot
+  ([record](../acceptance/2026-11-14-withholding-pilot.md)) showed that misses follow the
+  unit, not the arm, and that every start copied one saved game. So a study draws all its
+  starts at once: each unit is withheld in exactly half of the starts of each block, a
+  block being the starts copied from one sealed saved moment, and each unit is compared
+  with itself across arms. Placebo units, true facts of the store that cannot matter in
+  the study's saved moments, are drawn like the others and analysed apart as a negative
+  control ([study design](../contracts/evaluation.md#the-withholding-studys-design-withholding-study-draw1)).
+- **Outcome.** For every fact, over the whole start: was it looked up again, acted
+  against, or acted in line with? A miss is acting against the fact or an active lookup,
+  an action spent only to learn what the fact says. Seeing the fact on a screen opened to
+  do something else, or in a message the game showed on its own, is not a miss: in the
+  pilot, most misses were such passive re-exposure, which delivery cannot prevent. The
+  judges' instructions carry ordered decision rules with worked examples. Whether a fact
+  "became relevant" is judged only as a secondary measure, because delivering a fact can
+  create the need for it.
+- **Analysis.** The primary test is a randomization test within units over this store's
+  units; a crossed mixed model (unit, start, and a unit-by-delivery slope) is secondary;
+  intention to treat, touch balance and the placebo units are reported beside them
+  ([study analysis](../contracts/evaluation.md#the-withholding-studys-analysis-withholding-study1)).
+  It estimates the effect for this store's units, not for facts in general.
 - **Blind judging.** For this measure the judges and the owner see frames and inputs
   only: the briefing, the reminders and the player's own `intent` and `cites`, which can
   name delivered facts, are removed. Only the use labels read them.

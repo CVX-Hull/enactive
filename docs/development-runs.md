@@ -158,6 +158,12 @@ Starts live in the main checkout's `.runtime/starts/<name>/`; `list` reports the
 hashes and player-store paths. A run using a start cites its manifest hash and says
 that the copied lineage is no longer held out. These copies do not establish a
 held-out comparison. Every start of one source is a byte-identical, hash-verified copy.
+`create NAME --from STUDY` takes another sealed study as the source: one whose files
+hold a saved game under `user/save/` and the player store, laid out as a lineage
+(`user/` and the store at the root) or as a disposed start (`start/`, `user/`, and the
+store under `start/work/` or `start/`). The start manifest records `source_study` and
+`source_manifest_sha256`; the default source stays `397-seven-day`. A new source's
+copies are not known to load until a load check has used one of them.
 A load check is a minimal custodian run that loads the save and reads the character and
 time; it uses the start up, so the starts a study plays are fresh copies of a source
 whose copies have loaded ([load checks](acceptance/2026-11-14-start-load-checks.md)). The record citing a start lists its disposal

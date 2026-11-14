@@ -326,6 +326,13 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   index, the reminders, search nor a link names one. A read of an absent id or title
   answers as any miss does. The unit rule lives in that one module, which the judges'
   tooling imports.
+- **A study's draw.** A withholding study fixes all its starts' draws at once:
+  `python -m tools.knowledge_export draw-study REPOSITORY --version vN --starts N
+  --blocks LABEL:COUNT... --seed S [--placebo UNIT_ID...] --out FILE` writes
+  `withholding-study-draw/1` (the [study's design](../contracts/evaluation.md#the-withholding-studys-design-withholding-study-draw1)),
+  and `--study-draw FILE --start-index I` in place of `--withhold-seed` exports start
+  `I`'s package from it, with `private/units.json` as `knowledge-units/2`. The
+  withheld units leave the delivered files exactly as above.
 
 **The recall model in the host.**
 
