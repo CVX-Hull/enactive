@@ -88,8 +88,9 @@ Node tests: `cd tools/curator_host && npm test`.
   The host selects the grooming instructions with `SessionConfig.grooming_brief`, pointing
   to [`grooming.md`](../../tools/curator_host/grooming.md). The
   [session design](../design/curator-session.md#admission-and-grooming) owns session
-  inputs, responsibilities and publication rules. The shadow CLI runs admission sessions;
-  the session API selects grooming. There is no live trigger.
+  inputs, responsibilities and publication rules. The shadow CLI runs admission sessions,
+  and with `--groom` a grooming session after each whole admission that publishes, on the
+  same repository and under the same caps (not with windows). There is no live trigger.
 - The frozen configuration is `curator-host/1`: model, effort, request and wall limits, image
   limits. It names no endpoint and holds no key.
 - The host reads `CURATOR_PROXY_URL` (must be `http://127.0.0.1:<port>`) and presents
@@ -151,7 +152,11 @@ Node tests: `cd tools/curator_host && npm test`.
   windows still to run start from the store as it stood. The summary records
   `published_before_run`, `session_cap_doubled` and `knowledge_root`. The repository must lie
   under `<runtime>/knowledge/` (after links and `..` are resolved) and be of the same arm and
-  lineage as the run (its path ends `<arm>/<lineage>`).
+  lineage as the run (its path ends `<arm>/<lineage>`). With grooming, the re-run is of one
+  session only: an admission is re-run without `--groom`, and a grooming session with
+  `--groom-only` (exactly one named admission, already the repository's last admission, in
+  `--knowledge-root`), so the admission is not paid for twice; `--groom` and
+  `--double-session-cap` together are refused.
 - **The cap flags hold per invocation.** `--cap-usd` limits one invocation, and `--session-cap-usd`
   must be positive. A step that takes several invocations (a re-run, then the sessions still to
   run) passes `--cap-usd` as the step's stop minus the proxy ledger's total so far across its
@@ -165,7 +170,12 @@ Node tests: `cd tools/curator_host && npm test`.
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,
   proxy-settled cost, requests, tool calls, submissions, verdicts with diagnostics, drafts, the
-  record path, the proxy's `revoked` and breaches, and whether the cap stopped it.
+  record path, the proxy's `revoked` and breaches, and whether the cap stopped it, its
+  `session_kind` (`admission` or `grooming`) and the trace session it read. The run summary
+  lists each session with its kind and published versions before and after, records `groom`,
+  `groom_only` and `grooming_skipped` (an admission that published nothing is not groomed),
+  counts every session in `sessions_run`, and is `complete` when every planned admission (or,
+  with `--groom-only`, the grooming session) ran.
 - **Shutdown and uncertain accounting.** Preparation precedes listener startup; a `finally`
   closes the proxy after execution or interruption. Closing admission is distinct from
   an incident revocation. Shutdown waits at most five seconds for admitted requests to
