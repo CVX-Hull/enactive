@@ -12,6 +12,7 @@ everything is written there and nowhere else. ADMISSION is a sealed run director
   python -m tools.memory_measure events RUN --judge NAME --model MODEL ANSWER.json...
   python -m tools.memory_measure agreement RUN --judges A B [--third C] [--json]
   python -m tools.memory_measure measure RUN [--seed N] [--draws N] [--json]
+  python -m tools.memory_measure pilot RUN --runs PACKAGE... [--seed N] [--draws N] [--json]
 
   python -m tools.memory_measure packets annotate RUN --runs ADMISSION... [--budget TOKENS] [--every 3]
   python -m tools.memory_measure items RUN --annotators A B --list
@@ -23,7 +24,7 @@ everything is written there and nowhere else. ADMISSION is a sealed run director
   python -m tools.memory_measure prompt-check packets RUN --before BEFORE
   python -m tools.memory_measure prompt-check report RUN --before BEFORE --judges A B [--seed N] [--draws N] [--json]
 
-  python -m tools.memory_measure simulate-withholding [--seed N] [--sims N] [--json | --render REPORT.json]
+  python -m tools.memory_measure simulate-withholding [--pilot REPORT | --seed N] [--json | --render REPORT.json]
 
 What RUN holds:
   judge-packets/<shuffled name>/      one window for a judge: manifest.json, instructions.md, facts.json, frames/
@@ -1287,6 +1288,211 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
     return report
 
 
+# --- the frozen withholding pilot --------------------------------------------------------------------------------------
+
+def withholding_pvalue(withheld: int, delivered: int) -> float:
+    """Exact upper tail for missed withheld minus missed delivered. Independent Binomial(M, 1/2)
+    draws within starts convolve to Binomial(sum(M), 1/2), so the same calculation pools starts."""
+    missed = withheld + delivered
+    return sum(math.comb(missed, count) for count in range(withheld, missed + 1)) / 2 ** missed
+
+
+def unit_icc(touched: np.ndarray, missed: np.ndarray) -> np.ndarray:
+    """One-way ANOVA ICC(1) on touched units' binary missed outcome, with unequal cluster sizes.
+    The last axis contains starts; empty starts carry no binary observations. Undefined ANOVA estimates
+    (fewer than two nonempty starts, no residual degrees of freedom or no variation) stay NaN."""
+    touched, missed = np.asarray(touched, dtype=float), np.asarray(missed, dtype=float)
+    groups, total = (touched > 0).sum(axis=-1), touched.sum(axis=-1)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        squares = np.where(touched > 0, missed ** 2 / touched, 0).sum(axis=-1)
+        between = (squares - missed.sum(axis=-1) ** 2 / total) / (groups - 1)
+        within = (missed.sum(axis=-1) - squares) / (total - groups)
+        size = (total - (touched ** 2).sum(axis=-1) / total) / (groups - 1)
+        denominator = between + (size - 1) * within
+        return np.where((groups > 1) & (total > groups) & (denominator > 0),
+            np.maximum(0, (between - within) / denominator), np.nan)
+
+
+def pilot_units(package: Path) -> dict:
+    """Read the package's frozen independent draw, including the shared-fact layout."""
+    manifest = read_json(package / 'manifest.json')
+    if manifest.get('schema') != 'campaign-run/7':
+        raise MeasureError(f'{package}: pilot requires campaign-run/7')
+    path = package / 'private' / 'units.json'
+    value = read_json(path)
+    if value.get('schema') != 'knowledge-units/1':
+        raise MeasureError(f'{path}: expected knowledge-units/1; no other version is read')
+    if type(value.get('seed')) is not int:
+        raise MeasureError(f'{path}: pilot requires a recorded seed')
+    if manifest['private_files'].get('units.json') != file_sha256(path):
+        raise MeasureError(f'{path}: unit record does not match its manifest')
+    units, facts, articles = set(), set(), set()
+    for unit in value['units']:
+        identity = text(unit['id'], f'{path}: unit id')
+        if identity in units or type(unit['withheld']) is not bool:
+            raise MeasureError(f'{path}: units must be unique with a boolean withheld draw')
+        units.add(identity)
+        if unit['article_id'] is None:
+            if unit['fact_ids'] != [identity]:
+                raise MeasureError(f'{path}: a lone-fact unit must contain only its own fact')
+        elif unit['article_id'] != identity:
+            raise MeasureError(f'{path}: an article unit must have its article id')
+        else:
+            articles.add(identity)
+        for fact in unit['fact_ids']:
+            text(fact, f'{path}: fact id')
+            if fact in facts:
+                raise MeasureError(f'{path}: unit facts must be exclusive')
+            facts.add(fact)
+    for shared in value['shared']:
+        identity, citing = shared['fact_id'], shared['article_ids']
+        text(identity, f'{path}: shared fact id')
+        if identity in facts or len(set(citing)) < 2 or len(set(citing)) != len(citing) or set(citing) - articles:
+            raise MeasureError(f'{path}: shared facts must be separate and cite at least two article units')
+        facts.add(identity)
+    return value
+
+
+def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int = 10000) -> dict:
+    """withholding-pilot/1: one outcome per fact and start, then per independently drawn unit.
+    This is descriptive analysis of adjudicated blind labels, never a correction against human truth."""
+    if not runs or len({path.name for path in runs}) != len(runs) or draws < 1:
+        raise MeasureError('pilot needs distinct package names and at least one bootstrap draw')
+    mapping, adjudicated = load_mapping(run), read_json(run / 'adjudicated.json')
+    if adjudicated.get('schema') != 'judge-adjudicated/2':
+        raise MeasureError(f'{run / "adjudicated.json"}: expected judge-adjudicated/2; no other version is read')
+    if mapping['kind'] != 'blind' or adjudicated['kind'] != 'blind':
+        raise MeasureError('pilot requires blind packets')
+    rows, names = adjudicated['rows'], adjudicated['judges']
+    if adjudicated['unresolved'] or any(row['unresolved'] or row['label'] not in USE_LABELS for row in rows):
+        raise MeasureError('pilot requires every pair resolved; run agreement with --third')
+    facts_path = run / 'judged-facts.json'
+    facts_file = read_json(facts_path)
+    if facts_file.get('schema') != FACTS_SCHEMA:
+        raise MeasureError(f'{facts_path}: expected {FACTS_SCHEMA}; no other version is read')
+    if set(facts_file['admissions']) != {path.name for path in runs}:
+        raise MeasureError('pilot packages must match the judged-facts admissions')
+    if file_sha256(facts_path) != mapping['facts_sha256']:
+        raise MeasureError(f'{facts_path}: differs from the judge mapping hash')
+    facts = read_facts(facts_path, facts_file['admissions'])
+    expected = {}
+    for packet in mapping['packets']:
+        entry = facts.get((packet['start'], packet['actor']))
+        routes = {fact['id']: fact['route'] for fact in entry['facts']} if entry else {}
+        for identity, route in packet['facts'].items():
+            key = (packet['window'], identity)
+            if key in expected or routes.get(identity) != route:
+                raise MeasureError('pilot mapping has duplicate pairs or facts inconsistent with judged-facts')
+            expected[key] = (packet['start'], packet['actor'], packet['packet'], route)
+    seen, windows = set(), {}
+    for row in rows:
+        key = (row['window'], row['fact'])
+        if key in seen or expected.get(key) != (row['start'], row['actor'], row['packet'], row['route']):
+            raise MeasureError('pilot adjudicated pairs differ from the judge mapping')
+        seen.add(key)
+        windows.setdefault((row['start'], row['fact']), []).append(row)
+    if seen != set(expected):
+        raise MeasureError('pilot requires every mapped pair adjudicated')
+
+    def outcome(identities: Sequence[str], start: str) -> dict:
+        applied = [row for identity in identities for row in windows.get((start, identity), [])
+            if row['label'] in judge.APPLIED]
+        labels = {row['label'] for row in applied}
+        return dict(touched=bool(applied), missed=bool(labels & {'against', 'found_again'}),
+            against='against' in labels, found_again='found_again' in labels,
+            stale_or_false=any(row['holds'] == 'stale_or_false' for row in applied))
+
+    units, shared, fact_outcomes = [], [], []
+    for package in runs:
+        drawn, start = pilot_units(package), package.name
+        known = {identity for unit in drawn['units'] for identity in unit['fact_ids']} | {
+            item['fact_id'] for item in drawn['shared']}
+        judged_ids = {fact['id'] for (admission, _), entry in facts.items() if admission == start for fact in entry['facts']}
+        if judged_ids - known:
+            raise MeasureError(f'{package}: judged fact in no unit and not shared: {sorted(judged_ids - known)[0]}')
+        fact_outcomes.extend(dict(start=start, fact=identity, **outcome([identity], start)) for identity in sorted(judged_ids))
+        for unit in drawn['units']:
+            units.append(dict(start=start, id=unit['id'], fact_ids=unit['fact_ids'],
+                arm='withheld' if unit['withheld'] else 'delivered', **outcome(unit['fact_ids'], start)))
+        delivered_articles = {unit['article_id'] for unit in drawn['units'] if not unit['withheld']}
+        for item in drawn['shared']:
+            shared.append(dict(start=start, fact=item['fact_id'],
+                arm='delivered' if delivered_articles.intersection(item['article_ids']) else 'withheld',
+                **outcome([item['fact_id']], start)))
+    seed = secrets.randbits(32) if seed is None else seed
+    boot = StartBootstrap([path.name for path in runs], seed, draws)
+    touched = boot.sums(units, lambda unit: float(unit['touched']))
+    missed = boot.sums(units, lambda unit: float(unit['missed']))
+
+    def estimate(value: float, samples: np.ndarray | None) -> dict:
+        return dict(value=_number(float(value)), interval=percentile_interval(samples) if samples is not None else None)
+
+    def dispersion(counts: np.ndarray) -> np.ndarray:
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return counts.var(axis=-1, ddof=1) / counts.mean(axis=-1)
+
+    sampled = touched[boot.index] if boot.index is not None else None
+    touched_estimate = estimate(touched.mean(), sampled.mean(axis=1) if sampled is not None else None)
+    touched_estimate['per_start'] = {name: int(count) for name, count in zip(boot.names, touched)}
+    touched_estimate['variance_over_mean'] = estimate(float(dispersion(touched)) if len(touched) > 1 else math.nan,
+        dispersion(sampled) if sampled is not None else None)
+
+    def missed_share(selected: Sequence[dict]) -> dict:
+        numerator = boot.sums(selected, lambda unit: float(unit['missed']))
+        denominator = boot.sums(selected, lambda unit: float(unit['touched']))
+        return dict(numerator=int(numerator.sum()), denominator=int(denominator.sum()),
+            value=_number(float(_ratio(numerator.sum(), denominator.sum()))), interval=boot.interval(_ratio, numerator, denominator))
+
+    spread = estimate(float(unit_icc(touched, missed)),
+        unit_icc(sampled, missed[boot.index]) if sampled is not None else None)
+    driving = [row for row in rows if any(row['labels'][name] in judge.APPLIED for name in names)]
+    judges = dict(all_pairs=judges_beside(boot, rows, names), driving_pairs=judges_beside(boot, driving, names))
+    for selected, figures in ((rows, judges['all_pairs']), (driving, judges['driving_pairs'])):
+        disputes = boot.sums(selected, lambda row: float(row['labels'][names[0]] != row['labels'][names[1]]))
+        counts = boot.sums(selected, lambda row: 1.0)
+        figures['agreement_interval'] = boot.interval(lambda d, n: 1 - _ratio(d, n), disputes, counts)
+
+    def wrong(dispute: np.ndarray) -> np.ndarray:
+        return (1 - np.sqrt(1 - 2 * np.clip(dispute, 0, 0.5))) / 2
+
+    dispute = judges['driving_pairs']['dispute_rate']
+    driving_disputes = boot.sums(driving, lambda row: float(row['labels'][names[0]] != row['labels'][names[1]]))
+    driving_counts = boot.sums(driving, lambda row: 1.0)
+    judges['wrong'] = dict(value=float(wrong(np.asarray(dispute['value']))) if dispute['value'] is not None else None,
+        interval=boot.interval(lambda d, n: wrong(_ratio(d, n)), driving_disputes, driving_counts))
+
+    def counts(selected: Sequence[dict]) -> dict:
+        return {arm: dict(touched=sum(unit['touched'] for unit in selected if unit['arm'] == arm),
+            missed=sum(unit['missed'] for unit in selected if unit['arm'] == arm)) for arm in ('withheld', 'delivered')}
+
+    def comparison(selected: Sequence[dict]) -> dict:
+        arms = counts(selected)
+        a, b = arms['withheld']['missed'], arms['delivered']['missed']
+        return dict(arms=arms, statistic=a - b, p=withholding_pvalue(a, b))
+
+    shares = dict(pooled=missed_share(units), **{arm: missed_share([unit for unit in units if unit['arm'] == arm])
+        for arm in ('withheld', 'delivered')})
+    report = dict(schema='withholding-pilot/1', not_a_claim='Six starts make no claim of benefit; this comparison is descriptive only.',
+        not_corrected=NOT_CORRECTED, bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), note=BOOTSTRAP_NOTE),
+        touched_per_start=touched_estimate, missed_share=shares, spread=spread, judges=dict(names=names, **judges),
+        comparison=dict(per_start={name: comparison([unit for unit in units if unit['start'] == name]) for name in boot.names},
+            pooled=comparison(units)),
+        shared=dict(arms=counts(shared), per_start={name: counts([fact for fact in shared if fact['start'] == name])
+            for name in boot.names}, facts=shared), units=units, facts=fact_outcomes,
+        secondary=dict(by_arm={arm: dict(
+            against_only=sum(unit['against'] and not unit['found_again'] for unit in units if unit['arm'] == arm),
+            found_again_only=sum(unit['found_again'] and not unit['against'] for unit in units if unit['arm'] == arm),
+            both=sum(unit['against'] and unit['found_again'] for unit in units if unit['arm'] == arm),
+            stale_or_false=sum(unit['stale_or_false'] for unit in units if unit['arm'] == arm))
+            for arm in ('withheld', 'delivered')}, no_frames=mapping['no_frames']),
+        threats=['Every start copies one saved game, about four game minutes before the lineage\'s recorded death.',
+            'One lineage of one game.', 'Six starts.'],
+        simulation=dict(touched={key: touched_estimate[key] for key in ('value', 'interval')},
+            missed={key: shares['withheld'][key] for key in ('value', 'interval')}, rho=spread['value'], wrong=judges['wrong']['value']))
+    write_json(run / 'pilot.json', report, once=True)
+    return report
+
+
 # --- the anchor: the measure gate's owner-labelled pairs, re-judged ---------------------------------------------------------
 
 #: The measure gate's judge prompt, frozen: the text of `instructions.md` in every sealed judge packet of
@@ -1647,12 +1853,19 @@ def withholding_rejections(rng: np.random.Generator, starts: int, touched: float
     A start has its own miss probability, Beta with mean `missed` and intra-start correlation `rho`; a withheld
     unit is missed (found again, or looked for elsewhere) with it and a delivered one with `ratio` times it.
     The judge flips each label with probability `wrong`. The test is `critical_counts`."""
-    if not (touched > 0 and 0 < missed < 1 and 0 < ratio <= 1 and 0 < rho < 1 and 0 <= wrong < 0.5 and starts >= 1):
-        raise MeasureError('The simulation needs units touched above 0, a missed share and a correlation strictly between 0 '
-            'and 1, a ratio above 0 and at most 1, a judge error from 0 to below 0.5 and at least one start')
+    if not (math.isfinite(touched) and touched >= 0 and 0 <= missed <= 1 and 0 < ratio <= 1
+            and 0 <= rho <= 1 and 0 <= wrong <= 0.5 and starts >= 1):
+        raise MeasureError('The simulation needs nonnegative finite units touched, a missed share and correlation from 0 '
+            'to 1, a ratio above 0 and at most 1, a judge error from 0 to 0.5 and at least one start')
     units = rng.poisson(touched, (sims, starts))
     withheld = rng.binomial(units, 0.5)
-    share = rng.beta(missed * (1 - rho) / rho, (1 - missed) * (1 - rho) / rho, (sims, starts))
+    # Measured pilot inputs can reach the boundary: these are the exact limiting distributions of the Beta.
+    if rho == 0 or missed in (0, 1):
+        share = np.full((sims, starts), missed)
+    elif rho == 1:
+        share = rng.binomial(1, missed, (sims, starts))
+    else:
+        share = rng.beta(missed * (1 - rho) / rho, (1 - missed) * (1 - rho) / rho, (sims, starts))
 
     def seen_missed(count: np.ndarray, probability: np.ndarray) -> np.ndarray:
         lost = rng.binomial(count, probability)
@@ -1775,6 +1988,46 @@ def render_measure(report: dict) -> str:
     return '\n'.join(lines)
 
 
+def render_pilot(report: dict) -> str:
+    lines = [report['not_a_claim'], report['not_corrected'],
+        f"{report['bootstrap']['starts']} starts; bootstrap seed {report['bootstrap']['seed']}, "
+        f"{report['bootstrap']['draws']} draws ({report['bootstrap']['note']})",
+        'touched units per start: ' + _range(report['touched_per_start']),
+        'variance / mean: ' + _range(report['touched_per_start']['variance_over_mean']),
+        'intra-start correlation: ' + _range(report['spread'])]
+    for arm, figures in report['missed_share'].items():
+        lines.append(f"missed share, {arm}: {figures['numerator']} / {figures['denominator']} = {_range(figures)}")
+    lines += ['judges, all pairs: ' + _beside(report['judges']['all_pairs']),
+        'judges, driving pairs: ' + _beside(report['judges']['driving_pairs']),
+        'implied judge error: ' + _range(report['judges']['wrong'])]
+    for start, figures in [*report['comparison']['per_start'].items(), ('pooled', report['comparison']['pooled'])]:
+        lines.append(f"{start}: {figures['arms']}; missed withheld minus delivered {figures['statistic']}; exact p={figures['p']:.4g}")
+    lines += [f"shared facts (outside test): {report['shared']['arms']}", f"secondary counts: {report['secondary']}",
+        *('Threat: ' + threat for threat in report['threats'])]
+    return '\n'.join(lines)
+
+
+#: The simulation inputs a pilot report supplies; the search settings and the price per start stay flags.
+MEASURED_INPUTS = ('touched', 'touched_ends', 'missed', 'missed_ends', 'wrong', 'base_wrong', 'rho')
+
+
+def simulation_from_pilot(path: Path) -> dict:
+    """Read measured inputs without filling undefined estimates with gate proxies."""
+    report = read_json(path)
+    if not isinstance(report, dict) or report.get('schema') != 'withholding-pilot/1':
+        raise MeasureError(f'{path}: not a withholding-pilot/1 report; no other version is read')
+    inputs = report['simulation']
+    for field in ('touched', 'missed'):
+        part = inputs[field]
+        if not isinstance(part.get('interval'), list) or len(part['interval']) != 2:
+            raise MeasureError(f'{path}: simulation {field} needs defined interval ends')
+    numbers = [inputs['touched']['value'], *inputs['touched']['interval'], inputs['missed']['value'],
+        *inputs['missed']['interval'], inputs['rho'], inputs['wrong']]
+    if any(type(value) not in (int, float) or not math.isfinite(value) for value in numbers):
+        raise MeasureError(f'{path}: simulation inputs must be defined finite numbers')
+    return inputs
+
+
 def _matched(part: dict) -> str:
     return f"{part['matched']} of {part['compared']} (exact 95% interval {part['interval'][0]:.3f} to {part['interval'][1]:.3f})"
 
@@ -1866,6 +2119,9 @@ def main(argv=None) -> int:
     agree.add_argument('--json', action='store_true')
     stats = commands.add_parser('measure', help='the standing use measures, from adjudicated labels')
     stats.add_argument('run', type=Path)
+    pilot_command = commands.add_parser('pilot', help='the frozen unit-level analysis of the withholding pilot')
+    pilot_command.add_argument('run', type=Path)
+    pilot_command.add_argument('--runs', nargs='+', type=Path, required=True, help='sealed pilot packages, one per start')
     anchor = commands.add_parser('anchor', help='the measure gate\'s owner-labelled pairs, re-judged').add_subparsers(dest='step', required=True)
     anchor_make = anchor.add_parser('packets')
     anchor_make.add_argument('run', type=Path)
@@ -1889,30 +2145,47 @@ def main(argv=None) -> int:
         command.add_argument('run', type=Path)
         command.add_argument('--before', type=Path, required=True, help='the run directory judged with the earlier instructions')
     prompt_report_command.add_argument('--judges', nargs=2, required=True, metavar=('A', 'B'))
-    for command in (stats, prompt_report_command):
+    for command in (stats, pilot_command, prompt_report_command):
         command.add_argument('--seed', type=int)
         command.add_argument('--draws', type=int, default=10000)
         command.add_argument('--json', action='store_true')
     sim = commands.add_parser('simulate-withholding', help='starts needed, and their price, to see delivery halve the missed share')
-    sim.add_argument('--touched', type=float, default=GATE_TOUCHED, help='units touched per start')
-    sim.add_argument('--touched-ends', type=float, nargs=2, default=GATE_TOUCHED_ENDS, metavar=('LOW', 'HIGH'))
-    sim.add_argument('--missed', type=float, default=GATE_MISSED, help='the share of touched units missed when withheld')
-    sim.add_argument('--missed-ends', type=float, nargs=2, default=GATE_MISSED_ENDS, metavar=('LOW', 'HIGH'))
-    sim.add_argument('--wrong', type=float, nargs='+', default=GATE_WRONG, help='the shares of labels the judge gets wrong')
-    sim.add_argument('--base-wrong', type=float, default=GATE_BASE_WRONG, help='the judge error at the interval ends')
-    sim.add_argument('--rho', type=float, default=0.2)
-    sim.add_argument('--sims', type=int, default=10000)
-    sim.add_argument('--seed', type=int, default=386)
-    sim.add_argument('--target', type=float, default=0.8)
-    sim.add_argument('--alpha', type=float, default=0.05)
-    sim.add_argument('--min-starts', type=int, default=2)
-    sim.add_argument('--ceiling', type=int, default=60, help='the most starts the search tries')
-    sim.add_argument('--price', type=float, default=GATE_PRICE_USD, help='dollars of play per start')
+    sim.add_argument('--touched', type=float, help='units touched per start')
+    sim.add_argument('--touched-ends', type=float, nargs=2, metavar=('LOW', 'HIGH'))
+    sim.add_argument('--missed', type=float, help='the share of touched units missed when withheld')
+    sim.add_argument('--missed-ends', type=float, nargs=2, metavar=('LOW', 'HIGH'))
+    sim.add_argument('--wrong', type=float, nargs='+', help='the shares of labels the judge gets wrong')
+    sim.add_argument('--base-wrong', type=float, help='the judge error at the interval ends')
+    sim.add_argument('--rho', type=float)
+    sim.add_argument('--sims', type=int)
+    sim.add_argument('--seed', type=int)
+    sim.add_argument('--target', type=float)
+    sim.add_argument('--alpha', type=float)
+    sim.add_argument('--min-starts', type=int)
+    sim.add_argument('--ceiling', type=int, help='the most starts the search tries')
+    sim.add_argument('--price', type=float, help='dollars of play per start')
     sim.add_argument('--json', action='store_true')
     sim.add_argument('--render', type=Path, metavar='REPORT.json', help='print the table of a saved report and simulate nothing')
+    sim.add_argument('--pilot', type=Path, metavar='REPORT', help='use the measured inputs of a withholding-pilot/1 report')
+    # Apply defaults after checking --pilot, preserving whether a number was explicitly supplied.
+    numeric_defaults = dict(touched=GATE_TOUCHED, touched_ends=GATE_TOUCHED_ENDS, missed=GATE_MISSED,
+        missed_ends=GATE_MISSED_ENDS, wrong=GATE_WRONG, base_wrong=GATE_BASE_WRONG, rho=0.2,
+        sims=10000, seed=386, target=0.8, alpha=0.05, min_starts=2, ceiling=60, price=GATE_PRICE_USD)
     args = parser.parse_args(argv)
     try:
         if args.command == 'simulate-withholding':
+            if args.pilot:
+                if args.render or any(getattr(args, name) is not None for name in MEASURED_INPUTS):
+                    raise MeasureError('--pilot cannot be combined with --render or with an input it measures: '
+                        + ', '.join('--' + name.replace('_', '-') for name in MEASURED_INPUTS))
+                inputs = simulation_from_pilot(args.pilot)
+            for name, default in numeric_defaults.items():
+                if getattr(args, name) is None:
+                    setattr(args, name, default)
+            if args.pilot:
+                args.touched, args.touched_ends = inputs['touched']['value'], inputs['touched']['interval']
+                args.missed, args.missed_ends = inputs['missed']['value'], inputs['missed']['interval']
+                args.rho, args.base_wrong, args.wrong = inputs['rho'], inputs['wrong'], [inputs['wrong']]
             if args.render:
                 report = read_json(args.render)
                 if not isinstance(report, dict) or report.get('schema') != 'withholding-simulation/1':
@@ -1968,6 +2241,9 @@ def main(argv=None) -> int:
         elif args.command == 'measure':
             report = measure(run, args.seed, args.draws)
             print(json.dumps(report, indent=1) if args.json else render_measure(report))
+        elif args.command == 'pilot':
+            report = pilot(run, run_dirs(args.runs), args.seed, args.draws)
+            print(json.dumps(report, indent=1) if args.json else render_pilot(report))
         elif args.command == 'anchor' and args.step == 'packets':
             value = anchor_packets(run, args.gate, args.dry_run)
             print(f"{len(value['packets'])} packets of {value['gate']} hold its {len(value['pairs'])} owner-labelled pairs; every "
