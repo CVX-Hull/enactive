@@ -157,10 +157,10 @@ refuses missing, changed or extra files, and prints the start manifest's SHA-256
 Starts live in the main checkout's `.runtime/starts/<name>/`; `list` reports their
 hashes and player-store paths. A run using a start cites its manifest hash and says
 that the copied lineage is no longer held out. These copies do not establish a
-held-out comparison. Every start of one source is a byte-identical, hash-verified copy,
-so one load through the custodian stands for all of them: the first start a study plays
-is read for its recorded character and time before the rest
-([owner decision](decisions/owner-decisions.md)). The record citing a start lists its disposal
+held-out comparison. Every start of one source is a byte-identical, hash-verified copy.
+A load check is a minimal custodian run that loads the save and reads the character and
+time; it uses the start up, so the starts a study plays are fresh copies of a source
+whose copies have loaded ([load checks](acceptance/2026-11-14-start-load-checks.md)). The record citing a start lists its disposal
 study and the userdir archive path.
 
 With the game closed, `python -m tools.starts install NAME` stages the start, then
