@@ -147,15 +147,26 @@ class StuckVerdict:
 
 
 @dataclass(frozen=True)
-class RetryVerdict(StuckVerdict):
+class RetryVerdict:
     """A failed approach followed by the same approach without an observable revision."""
 
     kind: ClassVar[str] = RETRY
+    window: str
+    label: str
+    cited_frames: tuple[str, ...]
+    judge: str
+    model: str
+    packet: str
+    packet_sha256: str
 
     def __post_init__(self) -> None:
         _common(self, ('window',), RETRY_LABELS, ('repeated_failed_approach',))
         if self.label == 'repeated_failed_approach' and len(self.cited_frames) < 2:
             raise EvaluationError('judge event: repeated_failed_approach must cite at least two frames')
+
+    @property
+    def pair(self) -> tuple[str, str]:
+        return self.window, self.kind
 
 
 @dataclass(frozen=True)
@@ -180,10 +191,17 @@ class MilestoneVerdict:
 
 
 @dataclass(frozen=True)
-class ClaimVerdict(StuckVerdict):
+class ClaimVerdict:
     """One candidate sentence, classified as a success claim and checked against frames."""
 
     kind: ClassVar[str] = CLAIM
+    window: str
+    label: str
+    cited_frames: tuple[str, ...]
+    judge: str
+    model: str
+    packet: str
+    packet_sha256: str
     claim: str
 
     def __post_init__(self) -> None:

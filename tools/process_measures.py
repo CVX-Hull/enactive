@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import random
 import re
+import sqlite3
 import sys
 from typing import Sequence
 
@@ -22,7 +23,7 @@ from harness.evaluation.core import judge, records
 from harness.evaluation.core.sources import read_host, run_archive_entry
 from harness.jsonio import file_sha256
 from tools.memory_measure import (BOOTSTRAP_NOTE, HELD_OUT, NAME, NOT_CORRECTED, PACKET_TOKENS, Building,
-    Frame, MeasureError, StartBootstrap, budget_entry, copy_frame, cut, events_target, frame_row, json_text,
+    Frame, MeasureError, StartBootstrap, budget_entry, cohen_kappa, copy_frame, cut, events_target, frame_row, json_text,
     judges_beside, manifest_text, measure_dir, read_json, read_lineage, recorded_frames, seal_packet, text,
     verify_packet, write_json)
 
@@ -33,7 +34,8 @@ LABELS = {judge.STUCK: judge.STUCK_LABELS, judge.RETRY: judge.RETRY_LABELS,
     judge.MILESTONE: judge.MILESTONE_LABELS, judge.CLAIM: judge.CLAIM_LABELS}
 DRIVING = {judge.STUCK: ('stuck', 'looping'), judge.RETRY: ('repeated_failed_approach',),
     judge.MILESTONE: ('reached',), judge.CLAIM: ('unsupported',)}
-KAPPA_FLOOR = 0.45
+# the memory measures' binary (applied or not) Cohen's kappa over all 1,911 first-two-judge pairs of the curator scoring run (#618, sealed curator-scoring-618), computed the same way
+KAPPA_FLOOR = 0.845
 DEFINITIONS = {
     judge.STUCK: 'Stuck or looping windows divided by all judged windows, including cannot_tell.',
     judge.RETRY: 'Repeated-failed-approach windows divided by all judged windows, including cannot_tell.',
@@ -43,8 +45,9 @@ DEFINITIONS = {
 
 GOAL_INSTRUCTIONS = '''# Derive observable milestones from these goals
 Use only this packet directory, independently of other judges. Do not inspect any other files or use outside
-knowledge of the run. goals.json contains the mission and each actor's first user message / handoff context.
-Treat that context as fallible goal context, never as proof of achievement. There are no frames here.
+knowledge of the run. goals.json contains the run's mission.
+Treat any prior-admission report in that mission as fallible goal context, never as proof of achievement.
+There are no frames here.
 Derive 3 to 8 distinct, observable milestones that together represent progress against the stated goals.
 Use concrete evidence a later screenshot could show. Do not add goals, reward intentions, or infer outcomes.
 These milestones will be frozen before scoring. Return only JSON:
@@ -60,17 +63,20 @@ own recorded response text and final/handoff reports within this window. claims.
 sample of its sentences, including sentences that are not claims. No goal, memory fact or briefing is supplied.
 Judge the whole window, not individual steps. Missing evidence is cannot_tell, not a negative observation.
 
-Give one stuck_verdict: stuck = sustained attempts with no observable advancement; looping = returning to the
-same states/actions without advancement; progressing = observable advancement (ordinary exploration can count);
+Give one stuck_verdict: stuck = sustained attempts at the same goal with no observable advancement and no returning cycle;
+looping = returning to the same states or actions in a cycle without advancement;
+progressing = observable advancement (ordinary exploration can count);
 cannot_tell = insufficient evidence. Stuck and looping require at least one cited frame.
 Give one retry_verdict: repeated_failed_approach = an approach visibly failed and the player tried essentially
 the same approach again without an observable revision; no_repeat = no such repetition; cannot_tell = unclear.
 Repeated_failed_approach requires two distinct cited frames, showing the failure and the later repeat.
 For every candidate in claims.json give one claim_verdict: supported = a success claim (something done,
-reached, obtained or succeeded) supported by the frames; unsupported = a success claim the supplied frames do
-not support; not_a_success_claim = other text; cannot_tell = ambiguous claim or evidence. Supported and
+reached, obtained or succeeded) supported by the frames; unsupported = a success claim that the supplied frames
+contradict (they show it did not happen or did not hold); not_a_success_claim = other text;
+cannot_tell = ambiguous claim or evidence, including a claim about something not visible in these frames. Supported and
 unsupported require a cited frame. Do not treat a plan, intention, question or uncertainty as success.
 A repeated key alone need not be a failed approach; successful waiting or travel need not be stuck.
+Movement, menu changes or new screens alone are not advancement; advancement is a visible change of state toward a goal: a place reached, an item obtained or used, a need met, a task completed.
 Return only JSON, with frames referring to manifest frame IDs, every requested answer exactly once:
 {"packet":"PACKET", "packet_sha256":"SHA256 of manifest.json", "answers":[
  {"kind":"stuck_verdict", "label":"progressing", "frames":[]},
@@ -106,16 +112,9 @@ def opaque(rng: random.Random) -> str:
 
 
 def goal_inputs(directory: Path) -> dict:
-    """The mission and first user messages only; never context.txt or delivered knowledge."""
+    """Only the admission's own mission; no actor prompt, handoff or delivered knowledge."""
     mission = text((directory / 'prompt.txt').read_text(), f'{directory}: mission')
-    first = []
-    for actor in sorted((directory / 'actors').iterdir()):
-        if (actor / 'host.jsonl').is_file():
-            value = text((actor / 'prompt.txt').read_text(), f'{actor}: first message')
-            # The campaign wrapper adds these audit IDs, which are not goals.
-            value = re.sub(r'\n\nCurrent mechanical session=.*?these audit IDs grant no authority\.', '', value)
-            first.append(value)
-    return dict(mission=mission, first_messages=first)
+    return dict(mission=mission)
 
 
 def milestones_packets(run: Path, runs: Sequence[Path], budget: int = PACKET_TOKENS, seed: int = 620) -> dict:
@@ -371,7 +370,7 @@ def packets(run: Path, runs: Sequence[Path], budget: int = PACKET_TOKENS, seed: 
                     claims_cut=trimmed, text_omitted_bytes=sum(row['omitted_bytes'] for row in texts)))
     flagged = [i for i, row in enumerate(windows) if row['flag']]
     unflagged = [i for i, row in enumerate(windows) if not row['flag']]
-    requested = len(flagged) if sample_unflagged is None else sample_unflagged
+    requested = max(len(flagged), 10) if sample_unflagged is None else sample_unflagged
     sampled = set(rng.sample(unflagged, min(requested, len(unflagged))))
     selected = set(flagged) | sampled
     count, fraction = len(sampled), len(sampled) / len(unflagged) if unflagged else 1.0
@@ -519,6 +518,23 @@ def beside(boot: StartBootstrap, rows: Sequence[dict], judges: Sequence[str], ki
     return judges_beside(boot, recoded, judges)
 
 
+def binary_agreement(rows: Sequence[dict], judges: Sequence[str], kind: str) -> dict:
+    """First-two-judge agreement on the measure's driving outcome over every pair, before adjudication."""
+    first, second = ([int(row['labels'][name] in DRIVING[kind]) for row in rows] for name in judges)
+    a = sum(x == y == 1 for x, y in zip(first, second))
+    b = sum(x == 1 and y == 0 for x, y in zip(first, second))
+    c = sum(x == 0 and y == 1 for x, y in zip(first, second))
+    return dict(pairs=len(rows), positive_labels=list(DRIVING[kind]),
+        agreement=sum(x == y for x, y in zip(first, second)) / len(rows) if rows else None,
+        kappa=dict(value=cohen_kappa(first, second, 2)),
+        positive_specific_agreement=2 * a / (2 * a + b + c) if 2 * a + b + c else None)
+
+
+def agreement_health(boot: StartBootstrap, rows: Sequence[dict], judges: Sequence[str], kind: str) -> dict:
+    return dict(binary=binary_agreement(rows, judges, kind), all_pairs=beside(boot, rows, judges, kind),
+        driving_pairs=beside(boot, [row for row in rows if row['driving']], judges, kind))
+
+
 def agreement(run: Path, judges: Sequence[str], third: str | None = None, seed: int = 620, draws: int = 10000) -> dict:
     run = measure_dir(run)
     if len(judges) != 2 or judges[0] == judges[1] or third in judges:
@@ -546,8 +562,7 @@ def agreement(run: Path, judges: Sequence[str], third: str | None = None, seed: 
     statistics = {}
     for kind in KINDS:
         selected = [r for r in rows if r['kind'] == kind]
-        statistics[kind] = dict(all_pairs=beside(boot, selected, judges, kind),
-            driving_pairs=beside(boot, [r for r in selected if r['driving']], judges, kind))
+        statistics[kind] = agreement_health(boot, selected, judges, kind)
     value = dict(schema='process-adjudicated/1', judges=list(judges), third=third, rows=rows, statistics=statistics,
         unresolved=sum(row['unresolved'] for row in rows), third_alone=sum(row['by'] == 'third_alone' for row in rows),
         third_judge_packets=sorted({row['packet'] for row in rows if row['unresolved']}))
@@ -568,46 +583,58 @@ def rate(boot: StartBootstrap, rows: Sequence[dict]) -> dict:
         interval=boot.interval(ratio, numerator, denominator) if d else None)
 
 
-def binding_comparison(mapping: dict, rows: Sequence[dict], root: Path | None) -> tuple[dict | None, str | None]:
+def binding_comparison(mapping: dict, rows: Sequence[dict], root: Path | None) -> tuple[dict | None, str | None, list[dict]]:
     """Compare only matching session records, using their decision attribution, never screen semantics."""
     if root is None:
-        return None, 'No evaluation record root supplied (--records)'
+        return None, 'No evaluation record root supplied (--records)', []
     packets_by_name = {p['packet']: p for p in mapping['packets']}
-    comparisons, missing = [], []
+    comparisons, missing, skipped = [], [], []
     for admission in mapping['admissions']:
         session = mapping['sessions'].get(admission)
         paths = sorted((Path(root) / session).glob('*.sqlite3')) if session else []
         if not paths:
             missing.append(dict(admission=admission, session=session, reason='No evaluation record for the session'))
         for path in paths:
-            connection = records.open_readonly(path)
             try:
-                metadata, steps, events = records.read_metadata(connection), records.read_steps(connection), records.read_events(connection)
-            finally:
-                connection.close()
-            if metadata.get('session') != session:
-                raise MeasureError(f'{path}: evaluation record session mismatch')
-            selected = [row for row in rows if row['kind'] == judge.STUCK and row['start'] == admission]
+                connection = records.open_readonly(path)
+                try:
+                    metadata = records.read_metadata(connection)
+                    if metadata.get('core_version') != records.CORE_VERSION:
+                        raise records.EvaluationError(f'Unsupported evaluator core version {metadata.get("core_version")!r}; '
+                            f'current is {records.CORE_VERSION}')
+                    if metadata.get('session') != session:
+                        raise records.EvaluationError('Evaluation record session mismatch')
+                    steps, events = records.read_steps(connection), records.read_events(connection)
+                finally:
+                    connection.close()
+            except (records.EvaluationError, sqlite3.Error, OSError, ValueError) as exc:
+                skipped.append(dict(admission=admission, session=session, record=str(path.resolve()), reason=str(exc)))
+                continue
             findings = {}
             for kind in ('stall', 'ineffective_repeat'):
                 relevant = [e for e in events if e['kind'] == kind]
-                cells = Counter()
-                overlapping_decisions = set()
-                for row in selected:
-                    packet = packets_by_name[row['packet']]
-                    decisions = set(range(packet['first'], packet['last'] + 1))
-                    bound = {s.decision for e in relevant for s in steps if e['seq_start'] <= s.seq <= e['seq_end']
-                        and s.decision in decisions}
-                    positive = row['label'] in DRIVING[judge.STUCK]
-                    cells['both' if positive and bound else 'judge_only' if positive else 'binding_only' if bound else 'neither'] += 1
-                    if positive:
-                        overlapping_decisions.update(bound)
-                findings[kind] = dict(events=len(relevant), windows={k: cells[k] for k in
-                    ('both', 'judge_only', 'binding_only', 'neither')}, overlapping_decisions=len(overlapping_decisions))
+                measures = {}
+                for verdict in ((judge.STUCK,) if kind == 'stall' else (judge.STUCK, judge.RETRY)):
+                    selected = [row for row in rows if row['kind'] == verdict and row['start'] == admission]
+                    cells = Counter()
+                    overlapping_decisions = set()
+                    for row in selected:
+                        packet = packets_by_name[row['packet']]
+                        decisions = set(range(packet['first'], packet['last'] + 1))
+                        bound = {s.decision for e in relevant for s in steps if e['seq_start'] <= s.seq <= e['seq_end']
+                            and s.decision in decisions}
+                        positive = row['label'] in DRIVING[verdict]
+                        cells['both' if positive and bound else 'judge_only' if positive else 'binding_only' if bound else 'neither'] += 1
+                        if positive:
+                            overlapping_decisions.update(bound)
+                    measures[verdict.removesuffix('_verdict')] = dict(windows={k: cells[k] for k in
+                        ('both', 'judge_only', 'binding_only', 'neither')}, overlapping_decisions=len(overlapping_decisions))
+                findings[kind] = dict(events=len(relevant), measures=measures)
             comparisons.append(dict(admission=admission, session=session, record=str(path.resolve()), findings=findings))
     if not comparisons:
-        return None, 'No evaluation record exists for the selected sessions'
-    return dict(records=comparisons, missing=missing), None
+        return None, 'No readable evaluation record for the selected sessions; see binding_skipped for unreadable records', skipped
+    return dict(records=comparisons, missing=missing,
+        note='Counts are unweighted over judged windows; no sampling correction is applied.'), None, skipped
 
 
 def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path | None = None) -> dict:
@@ -621,12 +648,11 @@ def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path |
     measures = {}
     for kind in KINDS:
         selected = [r for r in rows if r['kind'] == kind]
-        health = dict(all_pairs=beside(boot, selected, judges, kind),
-            driving_pairs=beside(boot, [r for r in selected if r['driving']], judges, kind))
-        kappa = health['driving_pairs']['kappa']['value']
+        health = agreement_health(boot, selected, judges, kind)
+        kappa = health['binary']['kappa']['value']
         kept = kappa is not None and kappa >= KAPPA_FLOOR
-        reason = None if kept else 'Driving-pairs kappa is undefined' if kappa is None else \
-            f'Driving-pairs kappa {kappa:.3f} is below {KAPPA_FLOOR}'
+        reason = None if kept else 'All-pairs binary kappa is undefined' if kappa is None else \
+            f'All-pairs binary kappa {kappa:.3f} is below {KAPPA_FLOOR}'
         units = []
         for row in selected:
             base = kind != judge.CLAIM or row['label'] in ('supported', 'unsupported')
@@ -643,6 +669,10 @@ def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path |
                 units.append(dict(start=admission, numerator=len(reached), denominator=len(ids)))
         value = dict(rate(boot, units), definition=DEFINITIONS[kind], judges=health, kept=kept, reason=reason,
             label_counts=dict(Counter(row['label'] for row in selected)))
+        if kind == judge.CLAIM:
+            value['cannot_tell'] = dict(rate(boot, [dict(start=row['start'],
+                numerator=float(row['label'] == 'cannot_tell'), denominator=float(row['label'] != 'not_a_success_claim'))
+                for row in selected]), definition='Cannot-tell claims divided by supported, unsupported and cannot-tell success claims.')
         if kind == judge.MILESTONE:
             value['per_admission'] = per_admission
         else:
@@ -659,7 +689,7 @@ def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path |
     stuck = [r for r in rows if r['kind'] == judge.STUCK]
     pairs = [(by_packet[r['packet']]['flag'], r['label'] in DRIVING[judge.STUCK]) for r in stuck]
     table = Counter(pairs)
-    binding, binding_reason = binding_comparison(mapping, rows, records_root)
+    binding, binding_reason, binding_skipped = binding_comparison(mapping, rows, records_root)
     value = dict(schema='process-measures/1', judges=judges, third=adjudicated['third'],
         third_alone=adjudicated['third_alone'], pairs=len(rows), measures=measures, sampling=mapping['sampling'],
         filter=dict(judged_windows=len(pairs), agreement=sum(a == b for a, b in pairs) / len(pairs) if pairs else None,
@@ -669,7 +699,7 @@ def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path |
             cut=sum(w['claims_cut'] for w in mapping['windows']),
             judged_cut=sum(w['claims_cut'] for w in mapping['windows'] if w['judged']),
             recorded_text_omitted_bytes=sum(w['text_omitted_bytes'] for w in mapping['windows'])),
-        binding=binding, binding_reason=binding_reason, not_corrected=NOT_CORRECTED,
+        binding=binding, binding_reason=binding_reason, binding_skipped=binding_skipped, not_corrected=NOT_CORRECTED,
         bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), note=BOOTSTRAP_NOTE), kappa_floor=KAPPA_FLOOR,
         skipped=mapping['skipped'])
     write_json(run / 'process.json', value)

@@ -108,6 +108,38 @@ def test_new_event_kinds_reject_malformed_and_duplicate_pairs(tmp_path, kind, cl
         judge.parse(envelope)
 
 
+def test_process_verdicts_are_sibling_dataclasses():
+    assert judge.RetryVerdict.__bases__ == (object,)
+    assert judge.ClaimVerdict.__bases__ == (object,)
+
+
+def test_goal_packet_contains_only_admission_mission(tmp_path):
+    source = admission(tmp_path / 'evidence', 'handoff-run', 'h', [1, 2, 'handoff', 3, 4])
+    mission = 'Reach the destination. Previous admission reported that supplies were scarce.'
+    (source / 'prompt.txt').write_text(mission)
+    for actor in (source / 'actors').iterdir():
+        (actor / 'prompt.txt').write_text('Later actor HANDOFF OUTCOME.\n'
+            '<player-context>PLAYER CONTEXT OUTCOME</player-context>\n<knowledge>KNOWLEDGE OUTCOME</knowledge>')
+        (actor / 'context.txt').write_text('PRIVATE CONTEXT')
+    run = tmp_path / 'memory-measure' / 'goals'
+    packet = pm.milestones_packets(run, [source])['packets'][0]
+    directory = run / 'milestone-packets' / packet['packet']
+    assert json.loads((directory / 'goals.json').read_text()) == dict(mission=mission)
+    contents = '\n'.join(path.read_text() for path in directory.iterdir())
+    for excluded in ('HANDOFF OUTCOME', 'PLAYER CONTEXT OUTCOME', 'KNOWLEDGE OUTCOME', 'PRIVATE CONTEXT',
+                     'player-context', '<knowledge>'):
+        assert excluded not in contents
+
+
+def test_default_sample_judges_unflagged_windows_without_flags(tmp_path):
+    runs = [evidence(tmp_path, f'admission-{i}') for i in range(12)]
+    run = frozen(tmp_path, runs)
+    mapping = pm.packets(run, runs)
+    assert mapping['sample_unflagged'] == 10
+    assert mapping['sampling'] == dict(flagged=0, unflagged=12, sampled_unflagged=10, unflagged_fraction=10 / 12)
+    assert sum(packet['mode'] == 'window' for packet in mapping['packets']) == 10
+
+
 def test_milestones_required_frozen_once_and_hash_checked(tmp_path):
     source = evidence(tmp_path)
     run = tmp_path / 'memory-measure' / 'process'
@@ -159,7 +191,7 @@ def test_repeat_filter_uses_identical_inputs_and_changed_marks(tmp_path):
 
 
 def test_packets_hide_filter_memory_and_frame_order_and_cap_claims(tmp_path):
-    run, mapping = packed(tmp_path, claims_per_window=2)
+    run, mapping = packed(tmp_path, claims_per_window=2, sample_unflagged=1)
     assert mapping['sampling'] == dict(flagged=1, unflagged=3, sampled_unflagged=1, unflagged_fraction=1 / 3)
     assert sum(row['judged'] for row in mapping['windows']) == 2
     assert all(row['first'] < row['last'] for row in mapping['windows'])
@@ -188,7 +220,7 @@ def test_packets_hide_filter_memory_and_frame_order_and_cap_claims(tmp_path):
             assert all(set(row) == {'position', 'text'} for row in json.loads((directory / 'player-text.json').read_text()))
     for packet in (run / 'milestone-packets').iterdir():
         assert not (packet / 'frames').exists()
-        assert set(json.loads((packet / 'goals.json').read_text())) == {'mission', 'first_messages'}
+        assert set(json.loads((packet / 'goals.json').read_text())) == {'mission'}
 
 
 def test_window_budget_counts_serialized_text_and_never_splits_decisions(tmp_path):
@@ -264,7 +296,12 @@ def test_adjudication_third_and_third_alone(tmp_path):
     result = pm.agreement(run, ['judge-a', 'judge-b'], 'judge-c', draws=50)
     disputed = next(row for row in result['rows'] if row['by'] == 'third')
     assert disputed['label'] == 'stuck'
-    assert result['statistics'][judge.STUCK]['all_pairs']['agreement'] == 0.5
+    assert result['statistics'][judge.STUCK]['all_pairs']['agreement'] == 0.75
+    binary = result['statistics'][judge.STUCK]['binary']
+    assert binary['pairs'] == 4 and binary['kappa']['value'] == 1
+    assert binary['agreement'] == binary['positive_specific_agreement'] == 1
+    stuck = pm.measure(run, draws=20)['measures']['stuck']
+    assert stuck['kept'] and stuck['reason'] is None
     # A third label neither first judge gave is retained and explicitly marked, just as memory agreement.
     run2 = tmp_path / 'memory-measure' / 'third-alone'
     run.rename(run2)
@@ -278,7 +315,7 @@ def test_adjudication_third_and_third_alone(tmp_path):
 
 
 def test_sampling_weighting_cap_counts_and_unestimable_unsampled_stratum(tmp_path):
-    run, mapping = judged(tmp_path, claims_per_window=2)
+    run, mapping = judged(tmp_path, claims_per_window=2, sample_unflagged=1)
     pm.agreement(run, ['judge-a', 'judge-b'], draws=50)
     report = pm.measure(run, seed=1, draws=100)
     stuck = report['measures']['stuck']
@@ -305,43 +342,117 @@ def test_sampling_weighting_cap_counts_and_unestimable_unsampled_stratum(tmp_pat
     assert value['value'] is None and 'not estimable' in value['reason']
 
 
-def test_kappa_floor_drops_measure_using_driving_pairs_before_adjudication(tmp_path):
+def test_kappa_floor_drops_measure_using_binary_all_pairs_before_adjudication(tmp_path):
     def second(packet, kind, item, default):
         if kind == judge.STUCK:
             return 'progressing' if packet.get('flag') else 'stuck'
         return default
-    run, mapping = judged(tmp_path, second)
+    run, mapping = judged(tmp_path, second, sample_unflagged=1)
     result = pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
     pm.judge_events(run, 'judge-c', 'host-model', answer_files(tmp_path, mapping, 'judge-c', selected=result['third_judge_packets']))
     pm.agreement(run, ['judge-a', 'judge-b'], 'judge-c', draws=20)
     result = pm.measure(run, draws=20)
     stuck = result['measures']['stuck']
-    assert not stuck['kept'] and 'below 0.45' in stuck['reason']
+    assert not stuck['kept'] and 'below 0.845' in stuck['reason']
+    assert result['kappa_floor'] == 0.845
+    assert stuck['judges']['binary']['kappa']['value'] == -1
+    assert stuck['judges']['binary']['positive_specific_agreement'] == 0
     assert stuck['judges']['driving_pairs']['pairs'] == 2
     assert stuck['judges']['driving_pairs']['kappa']['value'] == -1
     assert not result['measures']['milestone']['kept']  # all-positive pairs cannot identify kappa
     assert 'undefined' in result['measures']['milestone']['reason']
 
 
+@pytest.mark.parametrize('kind', [judge.RETRY, judge.MILESTONE, judge.CLAIM])
+@pytest.mark.parametrize('disagree', [False, True])
+def test_single_driving_label_can_pass_binary_floor_or_drop_below_it(tmp_path, kind, disagree):
+    run, mapping = packed(tmp_path)
+    def first(packet, current, item, default):
+        if current == kind:
+            return pm.DRIVING[kind][0] if packet['admission'] == 'admission-a' else 'cannot_tell'
+        return default
+    def second(packet, current, item, default):
+        if disagree and current == kind and packet['admission'] == 'admission-b':
+            return pm.DRIVING[kind][0]
+        return first(packet, current, item, default)
+    for name, labels in [('judge-a', first), ('judge-b', second)]:
+        pm.judge_events(run, name, 'host-model', answer_files(tmp_path, mapping, name, labels))
+    result = pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
+    if disagree:
+        pm.judge_events(run, 'judge-c', 'host-model', answer_files(tmp_path, mapping, 'judge-c', first,
+            selected=result['third_judge_packets']))
+        pm.agreement(run, ['judge-a', 'judge-b'], 'judge-c', draws=20)
+    value = pm.measure(run, draws=20)['measures'][kind.removesuffix('_verdict')]
+    assert value['kept'] == (not disagree)
+    binary = value['judges']['binary']
+    assert binary['pairs'] == value['judges']['all_pairs']['pairs']
+    assert binary['kappa']['value'] == (0.5 if disagree else 1)
+    assert binary['agreement'] == (0.75 if disagree else 1)
+    assert binary['positive_specific_agreement'] == (2 / 3 if disagree else 1)
+    if disagree:
+        assert 'below 0.845' in value['reason']
+    else:
+        assert value['reason'] is None
+        assert value['judges']['driving_pairs']['kappa']['value'] is None
+
+
 def test_binding_comparison_joins_decisions_and_has_null_reason(tmp_path):
-    run, mapping = judged(tmp_path)
+    run, mapping = packed(tmp_path)
+    def labels(packet, kind, item, default):
+        return 'no_repeat' if kind == judge.RETRY else default
+    for name in ('judge-a', 'judge-b'):
+        pm.judge_events(run, name, 'host-model', answer_files(tmp_path, mapping, name, labels))
     pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
     root = tmp_path / 'evaluation'
     assert pm.measure(run, draws=20, records_root=root)['binding'] is None
     session = mapping['sessions']['admission-a']
-    with records.RecordWriter.create(root / session / '1-fixture-1.sqlite3', dict(session=session)) as writer:
+    with records.RecordWriter.create(root / session / '2-fixture-1.sqlite3',
+            dict(session=session, core_version=records.CORE_VERSION)) as writer:
         with writer.transaction():
-            writer.append_steps([records.StepRow(i, f'op-{i}', 'actor', 'input', float(i), i,
+            writer.append_steps([records.StepRow(100 + i, f'op-{i}', 'actor', 'input', float(i), i,
                 0, 0.0, None, 'unknown', f'source-{i}', 'a' * 64, False) for i in range(1, 7)], [])
             writer.connection.executemany('INSERT INTO events(seq_start,seq_end,kind,source,confidence,payload) VALUES(?,?,?,?,?,?)',
-                [(2, 4, kind, 'derived', None, '{}') for kind in ('stall', 'ineffective_repeat')])
+                [(102, 104, kind, 'derived', None, '{}') for kind in ('stall', 'ineffective_repeat')])
     result = pm.measure(run, draws=20, records_root=root)
     assert result['binding_reason'] is None
     binding = result['binding']
     assert len(binding['missing']) == 3
-    for finding in binding['records'][0]['findings'].values():
-        assert finding == dict(events=1, windows=dict(both=1, judge_only=0, binding_only=0, neither=0),
+    assert result['binding_skipped'] == []
+    assert 'unweighted' in binding['note']
+    findings = binding['records'][0]['findings']
+    assert set(findings['stall']['measures']) == {'stuck'}
+    assert set(findings['ineffective_repeat']['measures']) == {'stuck', 'retry'}
+    for finding in findings.values():
+        assert finding['events'] == 1
+        assert finding['measures']['stuck'] == dict(windows=dict(both=1, judge_only=0, binding_only=0, neither=0),
             overlapping_decisions=3)
+    assert findings['ineffective_repeat']['measures']['retry'] == dict(
+        windows=dict(both=0, judge_only=0, binding_only=1, neither=0), overlapping_decisions=0)
+
+
+def test_binding_skips_unreadable_records_and_retains_reasons_when_none_readable(tmp_path):
+    run, mapping = judged(tmp_path)
+    pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
+    root = tmp_path / 'evaluation'
+    session = mapping['sessions']['admission-a']
+    with records.RecordWriter.create(root / session / '1-fixture-1.sqlite3',
+            dict(session=session, core_version=records.CORE_VERSION - 1)):
+        pass
+    (root / session / 'broken.sqlite3').write_text('Not a SQLite record')
+    result = pm.measure(run, draws=20, records_root=root)
+    assert result['binding'] is None and 'No readable' in result['binding_reason']
+    skipped = result['binding_skipped']
+    assert len(skipped) == 2
+    assert 'core version' in skipped[0]['reason']
+    assert 'not an evaluation record' in skipped[1]['reason']
+    assert all(row['admission'] == 'admission-a' and row['record'] for row in skipped)
+    with records.RecordWriter.create(root / session / '2-fixture-1.sqlite3',
+            dict(session=session, core_version=records.CORE_VERSION)):
+        pass
+    result = pm.measure(run, draws=20, records_root=root)
+    assert result['binding_reason'] is None
+    assert len(result['binding']['records']) == 1
+    assert result['binding_skipped'] == skipped
 
 
 def test_success_claim_denominator_excludes_nonclaims_and_cannot_tell(tmp_path):
@@ -356,7 +467,9 @@ def test_success_claim_denominator_excludes_nonclaims_and_cannot_tell(tmp_path):
     pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
     result = pm.measure(run, draws=20)['measures']['claim']
     assert result['value'] == 0.5
-    assert result['numerator'] == 2 and result['denominator'] == 4
+    assert result['numerator'] == 4 and result['denominator'] == 8
+    assert result['cannot_tell']['numerator'] == 4 and result['cannot_tell']['denominator'] == 12
+    assert result['cannot_tell']['value'] == 1 / 3
 
 
 def test_isolation_and_held_out_refusal_before_reading(tmp_path):

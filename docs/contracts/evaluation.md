@@ -735,8 +735,10 @@ source IDs, translated from the packet's frame names), `judge`, `model`, `packet
 `packet_sha256`, plus the pair's fields. Files are written once, one judge and kind each.
 
 - **Milestones, frozen first.** `milestones packets RUN --runs ADMISSION...` gives one judge
-  only the admission's mission and each actor's first message (with any handoff context),
-  no frames, and asks for 3 to 8 observable milestones. `milestones events` writes
+  only the admission's mission (its `prompt.txt`, which may hold the previous admission's
+  fallible report), no actor's message, handoff, player memory or frame, so no milestone is
+  picked from what the scored admission went on to do, and asks for 3 to 8 observable
+  milestones. `milestones events` writes
   `milestones/<admission>.json` (`process-milestones/1`) once; the private mapping records
   its SHA-256. Scoring packets are refused until every admission has a frozen list, and a
   changed list is refused.
@@ -744,10 +746,13 @@ source IDs, translated from the packet's frame names), `judge`, `model`, `packet
   windows within the token budget (never one decision), holding frames, the inputs between
   them, the player's own response text and final or handoff report, and claim candidates:
   every sentence of that text, with stable IDs, the first 12 kept (`--claims-per-window`),
-  the cut recorded. No game-binding finding, memory fact or briefing is included.
+  the cut recorded. No game-binding finding, memory fact or briefing is included. A claim is
+  `unsupported` only when the window's frames contradict it; a claim about something these
+  frames do not show is `cannot_tell`, and the report gives that share.
 - **The repeat filter, first.** A window is flagged when it holds three or more identical
   input batches in a row whose frames did not change. Every flagged window is judged, with a
-  seeded sample of the others (`--sample-unflagged`, by default as many as are flagged); the
+  seeded sample of the others (`--sample-unflagged`, by default as many as are flagged and at
+  least 10, within what there is); the
   flags and sampling fractions are in the private mapping only.
 - **Milestone packets** hold the frozen list and the admission's frames in a seeded shuffled
   order with new names, without inputs, actors or decision numbers. A milestone is reached
@@ -768,13 +773,19 @@ source IDs, translated from the packet's frame names), `judge`, `model`, `packet
 | `claim` | Unsupported over supported plus unsupported success claims, among the kept candidates |
 
 Each rate has a 95% interval from a cluster bootstrap over admissions and the judges'
-figures beside it. `kept` is false, with the reason, when the κ on the driving pairs is
-below 0.45, the lowest driving-pairs κ of the memory measures in the
-[curator scoring](../acceptance/2026-11-13-curator-scoring.md): such a measure is reported,
-not tuned. The report compares the filter's flags with the adjudicated `stuck` and
-`looping` windows and, with `--records`, those windows with the game binding's `stall` and
-`ineffective_repeat` findings over the same decisions (`binding`, null with a reason when no
-record matches). `not_corrected` states that the labels are not corrected against a human
+figures beside it. Whether a measure is `kept` is decided on its driving outcome as a
+binary (the driving labels against all others, `cannot_tell` included), over all its pairs:
+the first two judges' Cohen's κ, with their agreement and positive specific agreement
+beside it. `kept` is false, with the reason, when that κ is undefined or below 0.845, the
+memory measures' κ computed the same way (applied or not) over all 1,911 first-two-judge
+pairs of the [curator scoring](../acceptance/2026-11-13-curator-scoring.md) run: such a
+measure is reported, not tuned. (A κ over the driving pairs alone cannot exceed 0 for a
+measure with one driving label, so it is reported but decides nothing.) The report compares
+the filter's flags with the adjudicated `stuck` and `looping` windows and, with
+`--records`, the game binding's `stall` findings with the stuck or looping windows and its
+`ineffective_repeat` findings with those and with the repeated-failed-approach windows, over
+the same decisions, unweighted (`binding`; a record of another core version is skipped and
+listed with its reason, and `binding` is null with the reason when none is readable). `not_corrected` states that the labels are not corrected against a human
 truth. Isolation is as below: judges get one packet directory each, and nothing a judge
 produces reaches the player, the curator or an evaluation record.
 
