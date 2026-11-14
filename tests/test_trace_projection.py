@@ -381,3 +381,16 @@ def test_tracked_397_sidecar_index_matches_the_sealed_sessions():
     assert tracked['containers'] == sidecar.actor_sessions(EVIDENCE, '397-seven-day')
     text = json.dumps(tracked)
     assert 'actor.json' not in text and 'route.json' not in text
+
+
+def test_the_projection_keeps_only_arguments_each_tool_takes():
+    """R-REGRESSION (#626): an allowlisted argument the tool does not take silently drops what the player
+    actually sent (the read's record id was lost this way). The allowlist is checked against the live tool table."""
+    from harness.player_tools import tool_specs
+    from harness.trace.projection import TOOL_ARGUMENTS
+    specs = tool_specs()
+    for tool, kept in TOOL_ARGUMENTS.items():
+        assert tool in specs, f'{tool} is not a current tool'
+        properties = set(specs[tool][1].get('properties', {}))
+        assert set(kept) <= properties, f'{tool}: {sorted(set(kept) - properties)} are not arguments of the tool'
+    assert TOOL_ARGUMENTS['player_memory_read'] == ('record_id',)
