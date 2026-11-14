@@ -406,3 +406,66 @@ def test_prompt_check_refuses_changed_models_and_records_both_model_sets(tmp_pat
     judge_events(after, 'judge-b', 'model-x', answers(after, 'judge-b'))
     report = prompt_report(after, before, ['judge-a', 'judge-b'], seed=1, draws=20)
     assert report['before']['models'] == report['after']['models'] == {'judge-a': 'model-x', 'judge-b': 'model-x'}
+
+
+def test_new_codebook_is_verbatim_in_both_instruction_kinds():
+    bullet = '''- `found_again`: looked it up. The player spent an action to get information the fact already gave: it
+  searched for it, or opened a screen or examined something whose only purpose then was to learn what the fact
+  says, or tried several screens to find it. Seeing the fact on a screen the player opened to do something
+  else, or in a message the game showed on its own, is not `found_again`.'''
+    decision = '''Choose in this order, and stop at the first that holds:
+
+1. Nothing in the window could have made the fact matter to what the player was doing: `did_not_apply`.
+2. The player did what the fact advises against, or went for something the fact says is empty or gone:
+   `against`.
+3. The player spent an action only to learn what the fact says (a search, a description or help screen opened
+   and then left without doing anything else with it, the same screen opened again to read the same thing, or
+   several screens tried to find it), before acting: `found_again`.
+4. The player did what the fact supports: `in_line`. This includes using a screen it opened to do something
+   (to make, use, eat or move something) that also shows what the fact says.
+5. Otherwise: `cannot_tell`.
+
+Examples:
+- The player opens the list of things it can make in order to make one, the list shows the requirements the
+  fact states, and it makes it that way: `in_line`, not `found_again`.
+- The player types the thing's name into a search, reads its description and closes it before acting:
+  `found_again`.
+- The game's messages say a companion is helping, as the fact says, while the player does something
+  unrelated: `did_not_apply` (or `in_line` if the player relied on the help), never `found_again`.
+- The game warns of something the fact already says (that some ground is slow to cross) while the player
+  walks on: not `found_again`; judge what the player did.
+- The player opens the same screen twice in a row to read the same figures, then acts: `found_again`.'''
+    for instructions in JUDGE_INSTRUCTIONS.values():
+        assert bullet in instructions and decision in instructions
+        assert instructions.index(decision) < instructions.index('Then say whether')
+
+
+def test_prompt_check_accepts_old_text_in_sealed_pilot_blind_run(tmp_path):
+    from tools import evidence
+    before = evidence.default_store() / 'withholding-pilot-619/memory-measure/pilot-619-blind'
+    if not before.is_dir():
+        pytest.skip('sealed pilot evidence is not present in this checkout')
+    after = tmp_path / 'memory-measure' / 'updated-pilot-codebook'
+    old = mapping_of(before)
+    mapping = prompt_packets(after, before)
+    assert mapping['instructions_sha256'] != old['instructions_sha256']
+    for mine, theirs in zip(mapping['packets'], old['packets']):
+        assert mine['stretch_sha256'] == theirs['stretch_sha256']
+        assert (mine['window'], mine['frames'], mine['facts']) == (theirs['window'], theirs['frames'], theirs['facts'])
+        assert (after / 'judge-packets' / mine['packet'] / 'instructions.md').read_text() == JUDGE_INSTRUCTIONS['blind']
+    for name in ('opus-a', 'opus-b'):
+        old_events = memory_measure.read_judge(before / 'events', name, judge.FACT_USE)
+        paths = []
+        for packet in mapping['packets']:
+            verdicts = []
+            inverse_frames = {source: frame for frame, source in packet['frames'].items()}
+            for opaque, identity in packet['fact_ids'].items():
+                event = old_events[(packet['window'], identity)]
+                verdicts.append(dict(fact=opaque, label=event.label, holds=event.holds,
+                    frames=[inverse_frames[source] for source in event.cited_frames]))
+            paths.append(save(after / 'answers' / name / f"{packet['packet']}.json",
+                              dict(packet=packet['packet'], answers=verdicts)))
+        judge_events(after, name, next(iter(old_events.values())).model, paths)
+    report = prompt_report(after, before, ['opus-a', 'opus-b'], seed=653, draws=20)
+    assert report['prompt_changed'] and report['relabelled'] == {'opus-a': 0, 'opus-b': 0}
+    assert report['before']['label']['pairs'] == report['after']['label']['pairs']

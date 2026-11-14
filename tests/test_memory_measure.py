@@ -280,7 +280,7 @@ def test_the_instructions_name_no_kind_of_thing_in_a_game_and_give_the_five_labe
         for label in judge.USE_LABELS:
             assert f'`{label}`' in words
         for label, phrase in judge.USE_LABEL_TEXT.items():
-            if label != 'cannot_tell':
+            if label not in ('cannot_tell', 'found_again'):
                 assert phrase in words.lower()
         assert all(f'`{value}`' in words for value in judge.HOLDS) and 'not one step' in words
     assert judge.USE_LABELS == ('in_line', 'against', 'found_again', 'did_not_apply', 'cannot_tell')

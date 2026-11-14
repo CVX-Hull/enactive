@@ -86,3 +86,64 @@ def test_published_export_reads_the_selected_version_and_excludes_retired_record
     monkeypatch.setattr(knowledge,'_git',lambda *args:b'coverage.json\nfacts.jsonl\n')
     monkeypatch.setattr(knowledge.Repository,'_show',lambda self,version,name:json.dumps(value['coverage']).encode())
     assert knowledge_export.published(tmp_path/'game','v8')==value
+
+
+def test_study_draw_block_balance_determinism_placebos_and_export(tmp_path, monkeypatch, capsys):
+    from tools import knowledge_export as ke
+    from tools import memory_measure as mm
+    value = store()
+    design = ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 653, ['fact-4'])
+    assert design == ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 653, ['fact-4'])
+    assert design != ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 654, ['fact-4'])
+    assert design['layout'] == units(value)
+    for row in design['assignment']:
+        indices = {s['index'] for s in design['starts'] if s['block'] == row['block']}
+        assert set(row['withheld']) <= indices
+        assert row['half_size'] == len(row['withheld'])
+        assert row['half_size'] in ({2} if row['block'] == 'save-a' else {2, 3})
+    # Odd-block floor and ceil really are drawn, independently of unit.
+    sizes = {r['half_size'] for seed in range(10) for r in ke.study_draw(value, 3, ['odd:3'], seed)['assignment']}
+    assert sizes == {1, 2}
+    path = tmp_path / 'draw.json'
+    monkeypatch.setattr(ke, 'published', lambda *args: value)
+    main(['draw-study', 'repository', '--version', 'v8', '--starts', '9', '--blocks', 'save-a:4', 'save-b:5',
+          '--seed', '653', '--placebo', 'fact-4', '--out', str(path)])
+    assert ke.read_study_draw(path) == design
+    package = tmp_path / 'package'
+    main(['repository', '--version', 'v8', '--package', str(package), '--study-draw', str(path), '--start-index', '4'])
+    capsys.readouterr()
+    record = json.loads((package / 'private/units.json').read_text())
+    assert record['schema'] == 'knowledge-units/2'
+    assert record['start_index'] == 4 and record['block'] == 'save-b' and record['seed'] == 653
+    assert record['draw_sha256'] == mm.file_sha256(path)
+    assert [u['id'] for u in record['units'] if u['placebo']] == ['fact-4']
+    delivered = json.loads((package / 'delivered-knowledge.json').read_text())
+    assert {f['id'] for f in delivered['facts']} == ke.delivered_fact_ids(record)
+    assert delivered == ke.filter_delivery(value, record)
+
+
+@pytest.mark.parametrize('n,blocks,placebo', [
+    (1, ['save:1'], []), (4, ['save:3'], []), (4, ['save:4'], ['unknown']),
+    (4, ['save:4'], ['fact-4', 'fact-4']), (4, ['save:2', 'save:2'], []), (4, ['save:0', 'other:4'], [])])
+def test_study_draw_refusals(n, blocks, placebo):
+    from tools.knowledge_export import study_draw
+    with pytest.raises(ValueError):
+        study_draw(store(), n, blocks, 653, placebo)
+
+
+def test_study_export_refuses_wrong_version_index_seed_and_changed_draw(tmp_path):
+    from tools import knowledge_export as ke
+    path = tmp_path / 'draw.json'
+    value = store()
+    path.write_text(json.dumps(ke.study_draw(value, 4, ['save:4'], 653)))
+    for kwargs in (dict(seed=1, study=path, start_index=0), dict(study=path),
+                   dict(study=path, start_index=-1), dict(study=path, start_index=4), dict(start_index=0)):
+        with pytest.raises(ValueError):
+            export(tmp_path / 'invalid', value, **kwargs)
+    with pytest.raises(ValueError, match='version or layout'):
+        export(tmp_path / 'invalid', dict(value, version='other'), study=path, start_index=0)
+    changed = json.loads(path.read_text())
+    changed['assignment'][0]['half_size'] = 0
+    path.write_text(json.dumps(changed))
+    with pytest.raises(ValueError, match='seeded blocked assignment'):
+        ke.read_study_draw(path)
