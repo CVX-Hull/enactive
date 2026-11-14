@@ -148,6 +148,39 @@ boundary, day point and death from frames.
 
 With three lineages this is a screen, not a qualification.
 
+## Reusable starts
+
+`python -m tools.starts create seven-day-end-01` copies the sealed #397 study's
+`user/` and `player-memory-sd1.sqlite3` without editing their contents. The tool
+checks every copied path and hash against `data/evidence/397-seven-day.sha256`,
+refuses missing, changed or extra files, and prints the start manifest's SHA-256.
+Starts live in the main checkout's `.runtime/starts/<name>/`; `list` reports their
+hashes and player-store paths. A run using a start cites its manifest hash and says
+that the copied lineage is no longer held out. These copies do not establish a
+held-out comparison. The lead checks that each start loads to its recorded
+character and time before using it.
+
+With the game closed, `python -m tools.starts install NAME` first copies the current
+`.runtime/user/` into `.runtime/archive/userdir-<timestamp>/` and verifies every
+file by hash, then installs the start's userdir. It prints the archive location
+and `player_store`: the run package points that field at the reported absolute
+path, `.runtime/starts/NAME/work/player-memory-sd1.sqlite3` in the main checkout.
+The tool holds the shared game lock and checks `ps` for a game using that exact
+userdir before install, restore or disposal (R-SAVE-LOSS). Dispose the installed
+start before installing another.
+
+Keep the run's traces and evaluation record under the start's `work/` directory
+(or copy them there after all writers stop). After the game saves and closes,
+`python -m tools.starts dispose NAME --seal STUDY --cited-by RECORD --note TEXT`
+uses `tools.evidence.seal` to retain the start, working outputs, player store and
+installed final userdir. It verifies that every working file is present by path
+and hash in the sealed copy before removing the working start and installed
+userdir (R-EVIDENCE-LOSS); skipped or mismatched files prevent removal. An unused
+start can be disposed of the same way. Archives remain outside the save tree.
+`python -m tools.starts restore-userdir ARCHIVE` restores a reported archive path
+or archive basename, verifies its hashes and archives any current userdir first.
+No command opens the sealed source for writing or launches the game.
+
 ## Recording a run
 
 Each admission gets one row in the [tracked ledger](../data/evaluation/runs.jsonl),
