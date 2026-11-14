@@ -5,13 +5,15 @@ A judge event uses the contract's event envelope (`kind`, `source`, `confidence`
 list `judge`, so a record refuses one, and the viewer, which reads records only, cannot serve one. This module
 validates and reads or writes that file. It reads no frame and calls no model; it is game-neutral.
 
-Two kinds, one per file:
+One kind per file:
 
 - `fact_use_verdict`: what the player did about one fact over one window, a stretch of decisions and never a
   single step, and whether the frames show the fact still holding. The fact's route is set by the tooling that
   made the packet, never by the judge.
 - `anchor_verdict`: the measure gate's frozen question about one known item over one stretch. It exists only so a
   new judge model can be compared with the owner's labels of the measure gate (the anchor check).
+- `stuck_verdict`, `retry_verdict`, `milestone_verdict`, `claim_verdict`: game-neutral process questions over
+  recorded windows or shuffled admission frames, cut by tools/process_measures.py.
 
 `judge-events/1` is not read.
 """
@@ -48,7 +50,7 @@ _SHA256 = re.compile('[0-9a-f]{64}')
 
 
 def _common(event: object, names: Sequence[str], labels: Sequence[str], citing: Sequence[str]) -> None:
-    """The rules both kinds share: named strings, a closed label, distinct cited frames and the packet's hash."""
+    """The shared rules: named strings, a closed label, distinct cited frames and the packet's hash."""
     for name in (*names, 'judge', 'model', 'packet'):
         value = getattr(event, name)
         if not isinstance(value, str) or not value.strip():
@@ -116,8 +118,85 @@ class AnchorVerdict:
         return self.start, self.item
 
 
-JudgeEvent = FactUseVerdict | AnchorVerdict
-KINDS: dict[str, type] = {FACT_USE: FactUseVerdict, ANCHOR: AnchorVerdict}
+STUCK, RETRY, MILESTONE, CLAIM = 'stuck_verdict', 'retry_verdict', 'milestone_verdict', 'claim_verdict'
+STUCK_LABELS = ('stuck', 'looping', 'progressing', 'cannot_tell')
+RETRY_LABELS = ('repeated_failed_approach', 'no_repeat', 'cannot_tell')
+MILESTONE_LABELS = ('reached', 'not_reached', 'cannot_tell')
+CLAIM_LABELS = ('supported', 'unsupported', 'not_a_success_claim', 'cannot_tell')
+
+
+@dataclass(frozen=True)
+class StuckVerdict:
+    """One actor's window: no observable progress, a returning cycle, progress, or insufficient evidence."""
+
+    kind: ClassVar[str] = STUCK
+    window: str
+    label: str
+    cited_frames: tuple[str, ...]
+    judge: str
+    model: str
+    packet: str
+    packet_sha256: str
+
+    def __post_init__(self) -> None:
+        _common(self, ('window',), STUCK_LABELS, ('stuck', 'looping'))
+
+    @property
+    def pair(self) -> tuple[str, str]:
+        return self.window, self.kind
+
+
+@dataclass(frozen=True)
+class RetryVerdict(StuckVerdict):
+    """A failed approach followed by the same approach without an observable revision."""
+
+    kind: ClassVar[str] = RETRY
+
+    def __post_init__(self) -> None:
+        _common(self, ('window',), RETRY_LABELS, ('repeated_failed_approach',))
+        if self.label == 'repeated_failed_approach' and len(self.cited_frames) < 2:
+            raise EvaluationError('judge event: repeated_failed_approach must cite at least two frames')
+
+
+@dataclass(frozen=True)
+class MilestoneVerdict:
+    """One frozen milestone in one shuffled frame packet."""
+
+    kind: ClassVar[str] = MILESTONE
+    milestone: str
+    label: str
+    cited_frames: tuple[str, ...]
+    judge: str
+    model: str
+    packet: str
+    packet_sha256: str
+
+    def __post_init__(self) -> None:
+        _common(self, ('milestone',), MILESTONE_LABELS, ('reached',))
+
+    @property
+    def pair(self) -> tuple[str, str]:
+        return self.packet, self.milestone
+
+
+@dataclass(frozen=True)
+class ClaimVerdict(StuckVerdict):
+    """One candidate sentence, classified as a success claim and checked against frames."""
+
+    kind: ClassVar[str] = CLAIM
+    claim: str
+
+    def __post_init__(self) -> None:
+        _common(self, ('window', 'claim'), CLAIM_LABELS, ('supported', 'unsupported'))
+
+    @property
+    def pair(self) -> tuple[str, str]:
+        return self.window, self.claim
+
+
+JudgeEvent = FactUseVerdict | AnchorVerdict | StuckVerdict | RetryVerdict | MilestoneVerdict | ClaimVerdict
+KINDS: dict[str, type] = {event.kind: event for event in
+    (FactUseVerdict, AnchorVerdict, StuckVerdict, RetryVerdict, MilestoneVerdict, ClaimVerdict)}
 
 
 def envelope(event: JudgeEvent) -> dict:
