@@ -242,7 +242,8 @@ provider; the coding host's capacity is its cost.
   records can hold a withheld fact while that store still exists. These bias towards no
   effect.
 - **Before any spend** the protocol's simulation is adapted to this design with the
-  measure gate's numbers, to give its size and price.
+  measure gate's numbers, to give its size and price: the
+  [withholding simulation](../acceptance/2026-11-13-withholding-simulation.md).
 
 ### Game-neutral judging
 
