@@ -478,6 +478,24 @@
       },
       "visibility": "private"
     },
+    "curator-scoring-618": {
+      "availability": "present",
+      "bytes": 35613417,
+      "cited_by": [
+        "docs/acceptance/2026-11-13-curator-scoring.md"
+      ],
+      "files": 562,
+      "manifest_sha256": "b1375eea768f301e31a1393627c38bfecad76b86dae318849ad02d1eed0a7bd2",
+      "note": "The #618 scoring run: the game-neutral curator with grooming over sd1a1-sd1a7 ($16.62), its knowledge repository (final v18 = #619's store), and the blind judging of both stores on sd1a5-sd1a7 with its inputs.",
+      "sources": {
+        "curator-shadow-first": ".runtime/curator-shadow/scoring-618-first@47e01e9c",
+        "curator-shadow-rest": ".runtime/curator-shadow/scoring-618-rest@47e01e9c",
+        "judging-inputs": ".runtime/memory-measure/scoring-618-inputs@4157eb0d",
+        "knowledge": ".runtime/knowledge/shadow-454/scoring-618-first@47e01e9c",
+        "memory-measure": ".runtime/memory-measure/scoring-618@4157eb0d"
+      },
+      "visibility": "private"
+    },
     "curator-shadow-454": {
       "availability": "present",
       "bytes": 1548018,
