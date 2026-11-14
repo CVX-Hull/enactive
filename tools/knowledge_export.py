@@ -15,31 +15,42 @@ from harness.player.knowledge import empty
 PRIVATE_FILES = {'knowledge-full.json', 'units.json'}
 
 
-def units(knowledge: dict) -> list[dict]:
-    """The one unit rule, shared with judge tooling. Shared facts follow any delivered article."""
-    filed = set()
-    result = []
+def units(knowledge: dict) -> dict:
+    """The one unit rule: exclusive facts in units; multiply cited facts in shared."""
+    cited = {}
     for article in knowledge['articles']:
-        facts = sorted({f for claim in article['body'] for f in claim['facts']})
-        filed.update(facts)
-        result.append(dict(id=article['id'], article_id=article['id'], fact_ids=facts))
+        for identity in {f for claim in article['body'] for f in claim['facts']}:
+            cited.setdefault(identity, set()).add(article['id'])
+    result = [dict(id=a['id'], article_id=a['id'],
+                   fact_ids=sorted(f for f, owners in cited.items() if owners == {a['id']}))
+              for a in knowledge['articles']]
     result.extend(dict(id=f['id'], article_id=None, fact_ids=[f['id']])
-                  for f in knowledge['facts'] if f['id'] not in filed)
-    return sorted(result, key=lambda u: u['id'])
+                  for f in knowledge['facts'] if f['id'] not in cited)
+    return dict(units=sorted(result, key=lambda u: u['id']),
+                shared=[dict(fact_id=f, article_ids=sorted(owners)) for f, owners in sorted(cited.items()) if len(owners)>1])
+
+
+def delivered_fact_ids(record: dict) -> set[str]:
+    """Resolve the recorded draw, including shared facts, for export and the judges."""
+    articles = {u['article_id'] for u in record['units'] if not u['withheld'] and u['article_id'] is not None}
+    return ({f for u in record['units'] if not u['withheld'] for f in u['fact_ids']}
+            | {row['fact_id'] for row in record['shared'] if articles.intersection(row['article_ids'])})
 
 
 def draw(knowledge: dict, seed: int | None) -> tuple[dict, dict]:
     rng = random.Random(seed)
-    drawn = [dict(u, withheld=seed is not None and rng.random() < .5) for u in units(knowledge)]
+    layout = units(knowledge)
+    drawn = [dict(u, withheld=seed is not None and rng.random() < .5) for u in layout['units']]
+    record = dict(schema='knowledge-units/1', version=knowledge['version'], seed=seed, units=drawn, shared=layout['shared'])
     article_ids = {u['article_id'] for u in drawn if not u['withheld'] and u['article_id'] is not None}
-    fact_ids = {f for u in drawn if not u['withheld'] for f in u['fact_ids']}
+    fact_ids = delivered_fact_ids(record)
     delivered = copy.deepcopy(knowledge)
     delivered['articles'] = [a for a in delivered['articles'] if a['id'] in article_ids]
     titles = {a['title'] for a in delivered['articles']}
     for article in delivered['articles']:
         article['links'] = [title for title in article['links'] if title in titles]
     delivered['facts'] = [f for f in delivered['facts'] if f['id'] in fact_ids]
-    return delivered, dict(schema='knowledge-units/1', version=knowledge['version'], seed=seed, units=drawn)
+    return delivered, record
 
 
 def published(path: Path, version: str) -> dict:

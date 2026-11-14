@@ -26,7 +26,7 @@ def cost(request,amount,how='provider-reported',kind='response-complete'):
 def finished(tmp_path,rows,allowance=10):
     path=tmp_path/'host.jsonl'
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,allowance,BOUND)
+    events=HostEvents(path,allowance,BOUND,Decimal('0.2'))
     try:return events.finish()
     finally:events.close()
 
@@ -41,7 +41,7 @@ def test_original_attempts_and_partial_trace_reservation(tmp_path):
           dict(type='request-start',request_id='request-3'),cost('request-3','0.7'),
           dict(type='settled',unpriced_recall_requests=0,requests=3,ok=False,spent_usd='1.05',unpriced_requests=1)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,10,BOUND)
+    events=HostEvents(path,10,BOUND,Decimal('0.2'))
     try:
         result=events.finish()
         assert result['attempts_charged']==3 and result['accounting_complete']
@@ -64,6 +64,7 @@ def test_recall_attempts_share_allowance_but_keep_their_own_bound(tmp_path):
     events=HostEvents(path,2,BOUND,Decimal('0.2'))
     try:
         value=events.finish()
+        assert events.counted_usd()==Decimal('0.3')
         assert value['accounting_complete'] and value['attempts_charged']==2
         assert value['unpriced_requests']==0 and value['unpriced_recall_requests']==1 and value['spent_usd']=='0.3'
     finally:events.close()
@@ -116,7 +117,7 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
     path=tmp_path/'host.jsonl'
     rows=[START,dict(type='request-start',request_id='request-1'),record,dict(type='settled',unpriced_recall_requests=0,requests=1,ok=True)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,10,BOUND)
+    events=HostEvents(path,10,BOUND,Decimal('0.2'))
     try:
         with pytest.raises(ControlError):events.finish()
         assert events.spend(False)==dict(reported_usd='0',unpriced_requests=1,unpriced_recall_requests=0,spent_usd='0.25',spend_complete=False)
@@ -127,7 +128,7 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
-    events=HostEvents(path,10,BOUND)
+    events=HostEvents(path,10,BOUND,Decimal('0.2'))
     try:
         with pytest.raises(ControlError,match='Unsupported'):events.finish()
     finally:events.close()
@@ -137,7 +138,7 @@ def test_known_prelaunch_failure_has_zero_attempts_and_no_successor(tmp_path):
     application=SimpleNamespace(runtime=SimpleNamespace(add_actor=Mock(side_effect=OSError('fixture store refusal')),stop=Mock()))
     profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=30,spend_limit_usd='1')
     with patch('tools.campaign_player.subprocess.Popen') as launch:
-        result=run_hosts(tmp_path,profile,dict(max_requests=20,unpriced_request_usd='0.25',recall=dict(unpriced_request_usd='0.2')),application,'fixture-secret',
+        result=run_hosts(tmp_path,profile,dict(max_requests=20,unpriced_request_usd='0.25',recall=dict(unpriced_request_usd='0.2',max_requests=5)),application,'fixture-secret',
             threading.Event(),time.monotonic()+300)
     assert result['outcome']=='incomplete' and result['attempts_charged']==0
     assert (result['spent_usd'],result['spend_complete'])==('0',True)
@@ -154,7 +155,7 @@ def test_invalid_consumed_trace_cannot_become_valid_during_cleanup(tmp_path):
           dict(type='player-finish',disposition='task_complete'),
           dict(type='handoff')]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,20,BOUND)
+    events=HostEvents(path,20,BOUND,Decimal('0.2'))
     try:
         with pytest.raises(ControlError,match='Conflicting'):events.read()
         with pytest.raises(ControlError,match='trace failed validation'):events.finish()
@@ -174,6 +175,10 @@ assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
 emit(type='host-start', telemetry_version=5, schema='player-host/5', spend_limit_usd=route['spend_limit_usd'])
+recall_made = int('WITH_RECALL' in prompt and route['recall']['max_requests']>0)
+if recall_made:
+    emit(type='request-start',request_id='recall-1',request_role='recall')
+    emit(type='response-complete',request_id='recall-1',counted_cost_usd='0',cost_counted_as='provider-reported')
 emit(type='request-start', request_id='request-1')
 spent = '0.0034500000000000004' if 'LONG_COST' in prompt else '0.004'
 emit(type='response-complete', request_id='request-1', counted_cost_usd=spent, cost_counted_as='provider-reported')
@@ -185,14 +190,14 @@ if control:
     assert control['actor_id'] == flags['--actor-id'] and control['session'] == flags['--session']
 if handoff:
     emit(type='handoff',actor_id=flags['--actor-id'],session=flags['--session'],handoff_id='d'*32,context_id='e'*32,context_sha256='f'*64,grants_authority=False)
-    emit(type='settled',unpriced_recall_requests=0,ok=True,reason='handoff',requests=1,spent_usd=spent,unpriced_requests=0)
+    emit(type='settled',unpriced_recall_requests=0,ok=True,reason='handoff',requests=1+recall_made,spent_usd=spent,unpriced_requests=0)
 else:
     reason = 'external_stop_complete' if ending else 'task_complete'
     control_id = control['id'] if control else None
     if 'WRONG_CONTROL' in prompt: control_id='f'*32
     if 'NO_FINISH' not in prompt:
         emit(type='player-finish',disposition=reason,control_id=control_id,report='report',source_ids=[])
-    emit(type='settled',unpriced_recall_requests=0,ok=True,reason=reason,control_id=control_id,requests=1,spent_usd=spent,unpriced_requests=0)
+    emit(type='settled',unpriced_recall_requests=0,ok=True,reason=reason,control_id=control_id,requests=1+recall_made,spent_usd=spent,unpriced_requests=0)
 open(flags['-o'], 'w').write('report\\n')
 """
 
@@ -306,6 +311,45 @@ def test_driver_narrows_recall_allowance_and_freezes_only_delivered_knowledge(tm
         assert frozen['schema']=='player-host-inputs/3'
         assert 'delivered-knowledge.json' in frozen['files']
         assert not any('private' in key for key in frozen['files'])
+
+
+def test_recall_allowance_is_consumed_across_actors(tmp_path):
+    profile,route,application=driver_case(tmp_path,'Frozen mission READ_CONTROL HANDOFF_RACE WITH_RECALL',two_actors=True)
+    route['recall']['max_requests']=1
+    with patch('tools.campaign_player._handoff_context',return_value='{}'):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert len(result['actors'])==2,result
+    assert [a['allocated_recall_attempts'] for a in result['actors']]==[1,0]
+    assert [a['observed_recall_attempts'] for a in result['actors']]==[1,0]
+    assert result['recall_attempts_charged']==1
+    assert json.loads((tmp_path/'actors/002/route.json').read_text())['recall']['max_requests']==0
+
+
+def test_incomplete_actor_consumes_its_whole_recall_allowance(tmp_path):
+    profile,route,application=driver_case(tmp_path,two_actors=True)
+    (tmp_path/'adapter.py').write_text(FAKE_HOST+"\nemit(type='handoff')\n")
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert not result['actors'][0]['accounting_complete']
+    assert result['actors'][0]['recall_attempts_charged']==result['recall_attempts_charged']==route['recall']['max_requests']
+
+
+def test_driver_copies_delivered_knowledge_as_exact_bytes(tmp_path):
+    import hashlib
+    profile,route,application=driver_case(tmp_path)
+    source=tmp_path/'delivered-knowledge.json'
+    data=source.read_bytes()+b'\r\n'
+    source.write_bytes(data)
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert result['actors'][0]['accounting_complete']
+    target=tmp_path/'actors/001/delivered-knowledge.json'
+    assert target.read_bytes()==data
+    frozen=json.loads((target.parent/'frozen.json').read_text())
+    assert frozen['files']['delivered-knowledge.json']==hashlib.sha256(data).hexdigest()
+
+
+def test_host_events_requires_the_recall_bound(tmp_path):
+    with pytest.raises(TypeError,match='recall_bound'):
+        HostEvents(tmp_path/'unused.jsonl',10,BOUND)
 
 
 def test_controller_retains_control_intent_and_checks_direct_finish_identity(tmp_path):

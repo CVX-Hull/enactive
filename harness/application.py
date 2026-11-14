@@ -61,10 +61,10 @@ def _program_projection(value, request_id):
 
 class Application:
     """One serialized playing-service caller; operator Pause bypasses this lock."""
-    def __init__(self, runtime: ComputerRuntime, memory: Memory, context_directory: Path, *, knowledge: Path | None = None) -> None:
+    def __init__(self, runtime: ComputerRuntime, memory: Memory, context_directory: Path, *, knowledge: Path) -> None:
         self.runtime, self.memory = runtime, memory
         self.programs = ProgramRepository(memory)
-        self.knowledge = Knowledge(knowledge) if knowledge is not None else None
+        self.knowledge = Knowledge(knowledge)
         self.context_directory = context_directory
         context_directory.mkdir(mode=0o700)
         self.serial = threading.RLock()
@@ -175,8 +175,6 @@ class Application:
                 closed(args, {key})
                 if not isinstance(args[key], str):
                     raise PlayerError('Knowledge argument must be text')
-                if self.knowledge is None:
-                    raise PlayerError('No delivered knowledge file supplied to this application')
                 return (self.knowledge.read(args[key]) if key == 'id_or_title' else self.knowledge.query(args[key])), None
             if name == 'player_memory_read':
                 closed(args, {'record_id'})

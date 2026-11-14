@@ -13,8 +13,8 @@ export const knowledge = () => ({schema:'delivered-knowledge/1',version:'v2',
     {id:'fact-b',type:'observation',text:'Second claim.',seen:{order:2}},
     {id:'fact-alone',subject:'Unfiled subject',type:'observation',text:'An unfiled claim.',seen:{order:3}}]});
 
-export function recallReply(ids, cost = .002) {
-  const chunks = [{id:'recall',model:'recall-fixture',choices:[{index:0,delta:{role:'assistant',content:JSON.stringify({articles:ids})},finish_reason:'stop'}],
+export function recallReply(ids, cost = .002, finishReason = 'stop') {
+  const chunks = [{id:'recall',model:'recall-fixture',choices:[{index:0,delta:{role:'assistant',content:JSON.stringify({articles:ids})},finish_reason:finishReason}],
     usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16,...(cost === null ? {} : {cost})}}];
   return new Response(chunks.map(c => 'data: '+JSON.stringify(c)+'\n\n').join('')+'data: [DONE]\n\n',
     {headers:{'content-type':'text/event-stream'}});
@@ -55,7 +55,7 @@ export async function deliveryScenario(directory, overrides = {}) {
       if (player === 2) return reply(null,[['player_knowledge_read',{id_or_title:'article-b'}]]);
       if (player <= 4) return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]]);
       return reply('Stand-in finished');
-    },onEvent:event => {events.push(event);overrides.onEvent?.(event,control);}});
+    },onEvent:event => {events.push(event);overrides.onEvent?.(event,control,configuration);}});
   await writeFile(actor+'/host.jsonl',events.map(e => JSON.stringify(e)+'\n').join(''));
   return {result,events,payloads,configuration};
 }

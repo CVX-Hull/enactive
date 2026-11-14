@@ -471,7 +471,7 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
 
 
 def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
-    """`receipt.json` (campaign-receipt/4, with its player-driver/4 record) and `watch-terminal.json`
+    """`receipt.json` (campaign-receipt/5, with its player-driver/5 record) and `watch-terminal.json`
     (campaign-watch-terminal/4), when the run has ended. An older receipt, driver record or terminal is read only
     for a session the archive index lists with this manifest's version and that record's version, and then only
     the fields its combination names: a terminal's `session`, when named, must be the manifest's. The owner Pause

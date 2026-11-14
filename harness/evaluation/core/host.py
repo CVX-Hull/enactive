@@ -45,7 +45,7 @@ class Request:
     key: str
     logical: str
     actor: str
-    decision: int
+    decision: int | None
     start_ms: float | None
     wall: float | None = None
     attempt: int = 1
@@ -139,17 +139,15 @@ class HostFacts:
         tokens, dollars = self.cumulative(decision)
         return decision, tokens, dollars
 
-    def cumulative(self, decision: int) -> tuple[int, float]:
+    def cumulative(self, decision: int | None) -> tuple[int, float]:
+        if decision is None:return 0, 0.0
         if not self._prefix:
-            per: dict[int, tuple[int, float]] = {}
-            for request in self.requests:
-                tokens, dollars = per.get(request.decision, (0, 0.0))
-                per[request.decision] = (tokens + (request.tokens or 0), dollars + (request.dollars or 0.0))
             total_tokens, total_dollars = 0, 0.0
-            for key in sorted(per):
-                total_tokens += per[key][0]
-                total_dollars += per[key][1]
-                self._prefix[key] = (total_tokens, total_dollars)
+            for request in self.requests:
+                total_tokens += request.tokens or 0
+                total_dollars += request.dollars or 0.0
+                if request.decision is not None:
+                    self._prefix[request.decision] = (total_tokens, total_dollars)
         keys = sorted(self._prefix) if self._keys is None else self._keys
         self._keys = keys
         at = bisect_right(keys, decision) - 1
@@ -230,7 +228,7 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                 if not key.startswith('recall-') and logical not in ordinals:
                     ordinals[logical] = len(ordinals) + 1
                 attempts[logical] = attempts.get(logical, 0) + 1
-                request = Request(key, logical, actor, offset + ordinals.get(logical, len(ordinals)), event.monotonic_ms, event.wall,
+                request = Request(key, logical, actor, None if key.startswith('recall-') else offset + ordinals[logical], event.monotonic_ms, event.wall,
                     attempts[logical], retry=key in retries, retry_class=classes.get(key))
                 by_key[key] = by_logical[logical] = request
                 facts.requests.append(request)

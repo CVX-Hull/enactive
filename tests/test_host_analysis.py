@@ -16,6 +16,22 @@ from tools.host_analysis import (LEFT_OUT, TOKENIZER_SLOPE_TOLERANCE as TOLERANC
     markdown, parse_tokenizer, tokenizer_holds)
 
 
+def test_delivered_reminder_is_a_notice_for_prompt_composition_pairs(tmp_path):
+    def event(type_,at,**fields):return dict(type=type_,monotonic_ms=at,**fields)
+    def request(key,at):
+        return [event('request-start',at,request_id=key),
+            event('response-complete',at+1,request_id=key,stop_reason='toolUse',usage_available=True,
+                  usage=dict(input=10,output=1,cacheRead=0,cacheWrite=0)),
+            event('tool-start',at+2,request_id=key,tool_call_id='call',tool='x',arguments={}),
+            event('tool-result',at+3,request_id=key,tool_call_id='call',result={'content':[{'type':'text','text':'x'}]})]
+    events=[event('host-start',0,schema='player-host/5',telemetry_version=5),*request('request-1',1),
+        event('knowledge-delivery',5,kind='reminder',receiving_player_request_id='request-2'),
+        *request('request-2',6),event('settled',10)]
+    path=tmp_path/'host.jsonl';path.write_text(''.join(json.dumps(e)+'\n' for e in events))
+    value=analyze_trace(path)['prompt_composition']
+    assert value['left_out']['notice_added']==1 and value['pairs']==0
+
+
 class HostAnalysisTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

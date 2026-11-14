@@ -1,4 +1,5 @@
 """Actor serialization over real service records; no native/game/provider calls."""
+from pathlib import Path
 import copy
 import json
 import sqlite3
@@ -30,7 +31,7 @@ OPAQUE = dict(remaining={'requests': 987654}, deadline_monotonic=123456,
 def service(tmp_path):
     runtime, channel, actor = make_runtime(tmp_path)
     memory = Memory(tmp_path / 'player.sqlite3')
-    app = Application(runtime, memory, tmp_path / 'contexts')
+    app = Application(runtime, memory, tmp_path / 'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     try:
         yield app, runtime, channel, actor
     finally:

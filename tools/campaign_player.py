@@ -33,7 +33,7 @@ class HostEvents:
     reported on its `response-complete`, else at `bound`, the route's `unpriced_request_usd`. A request that
     started and left no cost record, because the host was killed, counts at the bound too. A trace is complete
     only when the host's own totals in `settled` equal these sums."""
-    def __init__(self,path: Path,allowance: int,bound: Decimal,recall_bound: Decimal=Decimal(0)):
+    def __init__(self,path: Path,allowance: int,bound: Decimal,recall_bound: Decimal):
         self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance;self.bound=bound;self.recall_bound=recall_bound
         self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
@@ -130,7 +130,7 @@ class HostEvents:
                and self.settled.get('requests')==len(self.requests) and self._host_agrees())
         # Uncertain trace accounting reserves the entire original host allocation.
         # `configured_estimate_usd` is an estimate from the route's configured rates; it is not counted spend.
-        return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
+        return dict(observed_attempts=len(self.requests),observed_recall_attempts=sum(k.startswith('recall-') for k in self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
             accounting_complete=valid,settled=self.settled,handoff=self.handoff,player_finish=self.player_finish,
             **self.spend(valid),
             configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
@@ -189,7 +189,7 @@ def finish_interruption(channel):
 def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
               stopped: threading.Event,deadline: float) -> dict:
     actors=directory/'actors';actors.mkdir(mode=0o700)
-    total_attempts=0;host_seconds_used=0.;records=[];context=None;ending_request=None
+    total_attempts=0;total_recall_attempts=0;host_seconds_used=0.;records=[];context=None;ending_request=None
     # The dollar limit: each actor gets what the actors before it left, counted from their traces.
     limit=Decimal(profile['spend_limit_usd']);bound=Decimal(route['unpriced_request_usd']);recall_bound=Decimal(route['recall']['unpriced_request_usd']);spent=Decimal(0)
     outcome='incomplete';reason='Original actor allowance exhausted'
@@ -204,7 +204,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             reason='The dollar limit leaves nothing for another actor';break
         target=actors/f'{index:03d}'
         child=None;events=None
-        record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance,allocated_usd=usd_text(dollars))
+        recall_allowance=min(max(0,route['recall']['max_requests']-total_recall_attempts),allowance)
+        record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance,allocated_recall_attempts=recall_allowance,allocated_usd=usd_text(dollars))
         started=time.monotonic();ending_at=None
         try:
             actor=application.runtime.add_actor()
@@ -214,7 +215,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             write_new(actor_file,dict(schema='player-adapter/1',base_url=f"http://127.0.0.1:{profile['port']}",
                                      session=profile['session'],**actor))
             selected_route=dict(route,max_requests=allowance,spend_limit_usd=usd_text(dollars),
-                recall=dict(route['recall'],max_requests=min(route['recall']['max_requests'],allowance)))
+                recall=dict(route['recall'],max_requests=recall_allowance))
             write_new(target/'route.json',selected_route)
             # Every actor gets the same tool table and system prompt, so their request prefixes are
             # byte-identical. The final actor learns it has no successor only when it calls the
@@ -233,7 +234,9 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                          'its session and actor_id fields name the previous actor that sealed it, not you):\n'+context)
             write_new(target/'prompt.txt',prompt,text=True)
             write_new(target/'player-final.txt','',text=True)
-            write_new(target/'delivered-knowledge.json',(directory/'delivered-knowledge.json').read_text(),text=True)
+            with (target/'delivered-knowledge.json').open('xb') as stream:
+                stream.write((directory/'delivered-knowledge.json').read_bytes())
+            (target/'delivered-knowledge.json').chmod(0o600)
             write_new(target/'frozen.json',dict(schema='player-host-inputs/3',actor_id=actor['actor_id'],session=profile['session'],
                 finish_reserve_usd=profile['ending_reserve']['usd'],
                 files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt','delivered-knowledge.json')}))
@@ -338,6 +341,9 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 record.update(accounting_complete=False,attempts_charged=allowance if child else 0,
                     reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,spent_usd='0',spend_complete=child is None)
             record['elapsed_seconds']=time.monotonic()-started
+            record['recall_attempts_charged']=(record['observed_recall_attempts'] if record['accounting_complete']
+                else recall_allowance if child is not None else 0)
+            total_recall_attempts+=record['recall_attempts_charged']
             total_attempts+=record['attempts_charged'];host_seconds_used+=record['elapsed_seconds']
             spent=EXACT.add(spent,Decimal(record['spent_usd']))
             records.append(record)
@@ -349,7 +355,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
     # `spent_usd` is what counts toward the limit: reported cost plus each unpriced request at the bound.
     # It is complete only when every actor's trace was read to its settlement.
     return dict(schema='player-driver/5',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
-                attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
+                attempts_charged=total_attempts,recall_attempts_charged=total_recall_attempts,host_seconds_used=host_seconds_used,
                 reported_usd=usd_text(reported),unpriced_requests=unpriced,unpriced_request_usd=usd_text(bound),
                 unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),
                 spent_usd=usd_text(usd_sum([reported,EXACT.multiply(Decimal(unpriced),bound),EXACT.multiply(Decimal(recall_unpriced),recall_bound)])),

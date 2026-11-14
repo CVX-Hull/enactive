@@ -811,6 +811,23 @@ def test_survival_pace_and_cost_metrics(tmp_path):
     assert retry.value['value'] == 0 and retry.count == 0 and retry.denominator == 14
 
 
+def test_recall_does_not_enter_player_latency_or_retry_share(tmp_path):
+    run=Run(tmp_path/'run');actor=run.actor()
+    run.step(actor,'input',[key('j')],F('in_play',3600))
+    run.host[actor].extend([run.event(actor,'request-start',request_id='recall-1'),
+        run.event(actor,'request-fetch-start',request_id='recall-1'),
+        run.event(actor,'response-first-chunk',request_id='recall-1'),
+        run.event(actor,'response-complete',request_id='recall-1',stop_reason='error',usage_available=True,usage=Run.usage()),
+        run.event(actor,'abort',request_id='recall-1')])
+    run.finish()
+    metrics=metrics_of(evaluate(run.directory,FakeBinding(),tmp_path/'records'))
+    for key_,expected in (('response.p50',200),('first_chunk.p50',100)):
+        row=metrics['host.latency',key_]
+        assert row.count==row.denominator==1 and row.value==expected
+    retry=metrics['host.retry_share']
+    assert retry.denominator==1 and retry.value==dict(value=0,retries=0,aborts=0,non_tool_stops=0)
+
+
 def test_pace_routine_is_missing_with_fewer_than_five_intervals(tmp_path):
     def build(directory):
         run = Run(directory)

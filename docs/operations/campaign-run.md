@@ -126,7 +126,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ### Freeze delivered knowledge
 
-Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order; shared facts follow any delivered article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
+Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order. An article's unit lists only the facts exclusive to it; `private/units.json` records other cited facts under `shared` with their citing article IDs. Shared facts follow any delivered citing article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
 
 The route has a closed `recall` object: the selected model on the player's provider/key, `every` completed inputs per reminder, `max_requests`, and `unpriced_request_usd` computed from that model's rates. The package's attempt limit includes both player and recall HTTP attempts. The model and cadence are pinned before spending.
 
@@ -158,7 +158,7 @@ Nothing is carried over from earlier packages.
 - **Overshoot.** The host checks before each request, so a run can pass its limit by
   at most what one player request and one recall request count; each unpriced request counts at its own bound.
 - **A player response the host cannot price ends the run.** A successful player response with no
-  usable cost stops the host with reason `cost-unreported`. A failed or unpriced recall ends recall for that actor only and counts at its bound.
+  usable cost stops the host with reason `cost-unreported`. A failed or unpriced recall ends recall for that actor only. A valid provider cost is counted even on a rejected selection or a length stop; only missing/invalid cost counts at the recall bound.
 - **The hard cap is the key's credit limit**, set by the owner on the OpenRouter key
   ([operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)).
   The code cannot read it.
@@ -341,9 +341,7 @@ lead has done both of these:
 
 1. Recorded the run with `--record-upper-bound` added to the command above. The row
    then holds the most the run can have spent: `provider_usd` is the receipt's
-   `spend_limit_usd`, `unpriced_attempts` is 1 and `unpriced_attempt_usd` is the
-   receipt's `unpriced_request_usd`, so `spend_usd` is the limit plus one request's
-   bound. The flag is refused for a receipt whose spend is complete.
+   `spend_limit_usd`; the player unpriced count is `min(1, attempts)`, and the recall unpriced count is 1 only when delivered knowledge has units and at least two attempts were charged. The two bounds come from the receipt. Thus `spend_usd` is the limit plus the possible in-flight bounds, and combined unpriced counts never exceed attempts. The flag is refused for a receipt whose spend is complete.
 2. Noted in the run's dated record that the row is an upper bound, with the OpenRouter
    key's activity figure for the run's time window. A `dev-run/2` row has no field
    that marks an upper bound, so the dated record is where that is stated. `run_ledger totals --study ISSUE --envelope USD`

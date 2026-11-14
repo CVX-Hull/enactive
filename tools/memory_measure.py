@@ -613,7 +613,7 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     """Build judged-facts from delivered data and the order of actual player exposures."""
     from harness.evaluation.core.host import host_facts, returned_records
     from harness.evaluation.core.sources import read_host, read_manifest
-    from tools.knowledge_export import units
+    from tools.knowledge_export import units, delivered_fact_ids
     admissions, recall_events = {}, []
     for directory in runs:
         manifest = read_manifest(directory)
@@ -628,9 +628,10 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
                 or drawn.get('schema') != 'knowledge-units/1' or drawn['version'] != full['version']:
             raise MeasureError(f'{directory}: unsupported frozen knowledge')
         expected = units(full)
-        if [{k:v for k,v in u.items() if k != 'withheld'} for u in drawn['units']] != expected:
+        if ([{k:v for k,v in u.items() if k != 'withheld'} for u in drawn['units']] != expected['units']
+                or drawn['shared'] != expected['shared']):
             raise MeasureError(f'{directory}: unit record differs from the exported unit rule')
-        available = {f for u in drawn['units'] if not u['withheld'] for f in u['fact_ids']}
+        available = delivered_fact_ids(drawn)
         if available != {f['id'] for f in delivered['facts']}:
             raise MeasureError(f'{directory}: delivered facts differ from the private draw')
         articles = {a['id']:a for a in full['articles']}
@@ -669,8 +670,8 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
                                 for identity in identities & available:
                                     exposed.setdefault(identity,('read',last or None))
                 elif event.type == 'knowledge-recall':
-                    selected={f for aid in fields.get('article_ids',[]) for claim in articles[aid]['body'] for f in claim['facts']}
-                    record=dict(start=directory.name,actor=names[actor],decision=last,fact_ids=sorted(selected & available),delivered=False,**fields)
+                    selected={f for aid in fields.get('article_ids',[]) for claim in articles[aid]['body'] for f in claim['facts']} | set(fields.get('fact_ids',[]))
+                    record=dict(start=directory.name,actor=names[actor],decision=last,delivered=False,**{k:v for k,v in fields.items() if k != 'fact_ids'},fact_ids=sorted(selected & available))
                     recall_events.append(record)
                     if fields.get('request_id'):recalls[fields['request_id']]=record
             for fact in full['facts']:

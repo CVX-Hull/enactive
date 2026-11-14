@@ -75,7 +75,7 @@ def main(argv=None) -> int:
     runtime = ComputerRuntime(directory, SESSION, channel, Process(), mono+180,
         dict(max_inputs=20, max_requests=30, max_frames=40, max_bytes=2**30))
     memory = Memory(directory/'player.sqlite3')
-    app = Application(runtime, memory, directory/'contexts')
+    app = Application(runtime, memory, directory/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     actor = runtime.add_actor(); runtime.observe(actor['actor_id'])
     server, server_thread = serve(app, 0)
     write('ready.json', dict(schema='computer-ready/1', session=SESSION, pid=123,

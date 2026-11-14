@@ -107,6 +107,15 @@ def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both
     with pytest.raises(ControlError,match='Freeze every'):validate(directory,tmp_path)
 
 
+@pytest.mark.parametrize('name',['knowledge-full.json','units.json'])
+def test_private_knowledge_hash_mismatch_refuses_preflight(tmp_path,name):
+    directory,profile=package(tmp_path)
+    path=directory/'private'/name
+    path.write_bytes(path.read_bytes()+b'\n')
+    with pytest.raises(ControlError,match='Frozen private knowledge differs'):
+        validate(directory,tmp_path)
+
+
 @pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','reservation_package','pre_delivery_package','old_node','old_route','previous_route',
                                   'reservation_route','untracked_adapter','partial','changed','dirty','credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):

@@ -19,11 +19,15 @@ def store():
 
 def test_draw_is_independent_half_in_id_order_and_shared_facts_follow_either_article():
     value=store()
+    layout=units(value)
+    assert layout['shared']==[dict(fact_id='fact-3',article_ids=['article-0','article-1'])]
+    assert all('fact-3' not in unit['fact_ids'] for unit in layout['units'])
+    assert layout['units'][0]['fact_ids']==['fact-0']
     # Four independent coins: two articles and the two unfiled facts.
     for seed in range(100):
         delivered,record=draw(value,seed)
         rng=random.Random(seed)
-        assert [u['withheld'] for u in record['units']]==[rng.random()<.5 for _ in units(value)]
+        assert [u['withheld'] for u in record['units']]==[rng.random()<.5 for _ in units(value)['units']]
         assert [u['id'] for u in record['units']]==sorted(u['id'] for u in record['units'])
         kept={u['id'] for u in record['units'] if not u['withheld']}
         assert ('fact-3' in {f['id'] for f in delivered['facts']})==bool(kept & {'article-0','article-1'})

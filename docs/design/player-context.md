@@ -365,8 +365,9 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   by the package check from that model's rates as for the player. The model and `N` are
   pinned per run; for the pilot the lead chooses both and states them before anything
   is spent.
-- **Failures.** A recall request that fails or returns no cost is counted at its bound
-  and ends recall for that actor: a briefing then holds the index lines only, and later
+- **Failures.** A recall request that fails ends recall for that actor; it is counted at
+  the cost the provider reported when that cost is valid (even if its selection is then
+  rejected), and otherwise at its bound: a briefing then holds the index lines only, and later
   reminders are logged as not made. The player plays on. The player-host contract's rule
   that an unpriced success stops the actor is scoped to player requests in the same
   change.

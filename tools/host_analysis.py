@@ -446,6 +446,8 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 context.append({key: event.get(key) for key in ("projection_ms", "input_images", "omitted_images", "retained_images")})
                 if isinstance(event.get("request_id"), str):
                     omitted[event["request_id"]] = event.get("omitted_images") if number(event.get("omitted_images")) else None
+            elif kind == 'knowledge-delivery' and event.get('kind') == 'reminder':
+                notices.add(event.get('receiving_player_request_id'))
             elif kind == "tail-notice":
                 notices.add(event.get("request_id"))
             elif kind == "request-start":

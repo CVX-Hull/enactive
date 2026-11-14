@@ -80,10 +80,10 @@ test('empty knowledge never requests recall and reserve suppresses nonempty reca
   assert.ok(reserved.events.some(e => e.reason === 'finish-reserve'));
 });
 
-test('recall consumes the package attempt allowance before any player request',async t => {
-  const {result,events} = await scenario(t,{configuration:{max_requests:1}});
-  assert.equal(result.reason,'request-limit');assert.equal(result.requests,1);
-  assert.deepEqual(events.filter(e => e.type === 'request-start').map(e => e.request_id),['recall-1']);
+test('recall preserves the last package attempt and respects its own allowance',async t => {
+  const {result,events} = await scenario(t,{configuration:{max_requests:1},playerFetch:()=>reply('Finished')});
+  assert.equal(result.reason,'task_complete');assert.equal(result.requests,1);
+  assert.deepEqual(events.filter(e => e.type === 'request-start').map(e => e.request_id),['request-1']);
   const capped=await scenario(t,{configuration:{recall:{model:{...structuredClone(model),id:'recall-fixture'},every:1,max_requests:1,unpriced_request_usd:'0.2'}}});
   assert.equal(capped.result.ok,true);
   assert.equal(capped.events.filter(e => e.type === 'request-start' && e.request_role === 'recall').length,1);

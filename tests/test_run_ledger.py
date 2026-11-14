@@ -21,6 +21,7 @@ def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounti
     directory.mkdir(parents=True)
     (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', session=SESSION,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
+    (directory/'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/1',version=None,coverage=None,articles=[],facts=[])))
     if receipt:
         (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/5', session=SESSION,
             source_commit=COMMIT, outcome='player_cannot_continue_unassessed', ended_wall=1794038818.1,
@@ -90,11 +91,27 @@ def test_an_incomplete_receipt_is_recorded_only_as_its_upper_bound(tmp_path, cap
     assert 'spend as incomplete' in capsys.readouterr().err and read_ledger(ledger) == []
     assert main([*arguments, '--record-upper-bound']) == 0
     recorded = read_ledger(ledger)  # reading checks the identity: 5 + 1 x 0.4096
-    assert recorded == [row(attempts=40, provider_usd='5', unpriced_recall_attempts=1, unpriced_attempts=1, unpriced_attempt_usd='0.4096', spend_usd='5.4096')]
+    assert recorded == [row(attempts=40, provider_usd='5', unpriced_recall_attempts=0, unpriced_attempts=1, unpriced_attempt_usd='0.4096', spend_usd='5.4096')]
     assert totals(recorded, 999, None)['spend_usd'] == '5.4096'
     complete = package(tmp_path / 'more', name='lh9a2')
     assert main(['--ledger', str(ledger), 'record', str(complete), '--study', '999', '--record-upper-bound']) == 1
     assert 'spend as complete' in capsys.readouterr().err and len(read_ledger(ledger)) == 1
+
+
+@pytest.mark.parametrize('attempts',[0,1,2])
+@pytest.mark.parametrize('has_units',[False,True])
+def test_upper_bound_counts_fit_attempts_and_recall_requires_delivered_units(tmp_path,attempts,has_units):
+    from tools.run_ledger import package_row
+    directory=package(tmp_path/'packages',spend_complete=False,attempts_charged=attempts,unpriced_recall_request_usd='0.2')
+    if has_units:
+        path=directory/'delivered-knowledge.json';value=json.loads(path.read_text())
+        value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(order=1))]
+        path.write_text(json.dumps(value))
+    value=package_row(directory,study=999,label='upper-bound',upper_bound=True)
+    assert value['unpriced_attempts']==min(1,attempts)
+    assert value['unpriced_recall_attempts']==int(has_units and attempts==2)
+    assert value['unpriced_attempts']+value['unpriced_recall_attempts']<=attempts
+    assert read_ledger(write(tmp_path/'ledger.jsonl',value))==[value]
 
 
 def test_record_defaults_the_label_and_refuses_earlier_package_versions(tmp_path, capsys):

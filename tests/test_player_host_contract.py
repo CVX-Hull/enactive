@@ -225,7 +225,7 @@ class Hosted:
         return int(self.paths["mcp-pid"].read_text())
 
     def accounted(self) -> dict:
-        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE, Decimal(UNPRICED_REQUEST_USD))
+        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE, Decimal(UNPRICED_REQUEST_USD), Decimal(UNPRICED_REQUEST_USD))
         try:
             return reader.finish()
         finally:

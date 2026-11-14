@@ -7,5 +7,5 @@ from tests import player_service_fixture as fixture
 
 knowledge = Path(sys.argv.pop(1))
 application = fixture.Application
-fixture.Application = lambda *args, **kwargs: application(*args, knowledge=knowledge, **kwargs)
+fixture.Application = lambda *args, **kwargs: application(*args, **dict(kwargs, knowledge=knowledge))
 fixture.main()
