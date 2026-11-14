@@ -432,7 +432,7 @@ SUMMARY_FIELDS = {'window', 'coverage', 'schema', 'kind', 'arm', 'model', 'effor
                   'run_state', 'wall_seconds', 'cost_usd', 'proxy', 'stopped_by_cap', 'session_id', 'record', 'session_state',
                   'sandbox', 'errors', 'refused', 'submissions', 'accepted', 'rejected', 'verdicts', 'drafts', 'published_after',
                   'requests', 'time_to_first_request_seconds', 'first_request_prompt_tokens', 'tokens', 'host_reported_cost_usd',
-                  'tool_calls', 'host_end', 'model_status', 'host_budget_usd', 'published_before'}
+                  'tool_calls', 'host_end', 'model_status', 'host_budget_usd', 'published_before', 'session_kind'}
 
 
 @native
@@ -721,6 +721,41 @@ def test_an_upstream_retry_veto_survives_the_real_proxy(tmp_path, world):
     assert len(ledger) == 1 and ledger[0]['status'] == 429 and ledger[0]['usage_missing']
     log = repo.state/'sessions'/record['manifest']['id']
     assert not [e for e in events(log) if e.get('retry')]
+
+
+@native
+def test_the_shadow_runner_grooms_after_each_admission_that_publishes(tmp_path, monkeypatch):
+    # #618: the paid scoring run needs a grooming session after each admission; without --groom the runner
+    # makes admissions only, and grooming would never run over a sealed lineage.
+    from harness.curator.gate import current
+    from harness.curator.knowledge import Repository
+
+    with StandIn() as stand_in:
+        code, out, runtime = run_cli(tmp_path, stand_in.url, '--groom', names=('sd1a1', 'sd1a2'), monkeypatch=monkeypatch)
+    assert code == 0
+    run = json.loads((out/'summary.json').read_text())
+    kinds = [(s['label'], s['session_kind'], s['trace_session']) for s in run['sessions']]
+    # The stand-in's second admission repeats its fact id, is rejected and publishes nothing, so no grooming follows it.
+    assert kinds == [('sd1a1', 'admission', 'sd1a1'), ('sd1a1-grooming', 'grooming', 'sd1a1'),
+                     ('sd1a2', 'admission', 'sd1a2')], kinds
+    assert run['grooming_skipped'] == [dict(after='sd1a2', reason='the admission published nothing')]
+    assert run['groom'] is True and run['complete'] is True and run['stopped'] is None
+    groomed = json.loads((out/'397'/'sd1a1-grooming'/'summary.json').read_text())
+    assert groomed['session_kind'] == 'grooming' and groomed['session_state'] == 'sealed' and groomed['accepted'] == 1
+    repo = Repository(runtime/'knowledge'/'shadow-454'/'dry-run'/'terra'/'397', shadow.GAME)
+    facts = {f['id'] for f in repo.facts() if current(f)}
+    filed = {f for a in repo.articles() if current(a) for claim in a['body'] for f in claim['facts']}
+    assert facts and facts <= filed
+
+
+def test_grooming_cannot_follow_windows(tmp_path, monkeypatch, capsys):
+    listing = tmp_path/'windows.json'
+    listing.write_text(json.dumps([dict(session='sd1a1', actor='001', first=1, last=20)]))
+    monkeypatch.setenv(shadow.KEY_VARIABLE, KEY)
+    code = shadow.main(['--arm', 'terra', '--lineage', '397', '--windows-file', str(listing), '--groom', '--cap-usd', '1',
+                        '--runtime-root', str(tmp_path/'rt'), '--evidence-root', str(synthetic_evidence(tmp_path)),
+                        '--out', str(tmp_path/'rt'/'curator-shadow'/'w')])
+    assert code == 2 and 'not a window' in capsys.readouterr().err
 
 
 @native

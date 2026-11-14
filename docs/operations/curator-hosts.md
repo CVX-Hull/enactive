@@ -88,8 +88,9 @@ Node tests: `cd tools/curator_host && npm test`.
   The host selects the grooming instructions with `SessionConfig.grooming_brief`, pointing
   to [`grooming.md`](../../tools/curator_host/grooming.md). The
   [session design](../design/curator-session.md#admission-and-grooming) owns session
-  inputs, responsibilities and publication rules. The shadow CLI runs admission sessions;
-  the session API selects grooming. There is no live trigger.
+  inputs, responsibilities and publication rules. The shadow CLI runs admission sessions,
+  and with `--groom` a grooming session after each whole admission that publishes, on the
+  same repository and under the same caps (not with windows). There is no live trigger.
 - The frozen configuration is `curator-host/1`: model, effort, request and wall limits, image
   limits. It names no endpoint and holds no key.
 - The host reads `CURATOR_PROXY_URL` (must be `http://127.0.0.1:<port>`) and presents
