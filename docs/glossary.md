@@ -24,6 +24,7 @@ not adopted.
 | Custodian | The one process that owns a run's game process, socket, lock, store and single input writer. | [Custody contract](contracts/computer-control.md#computer-operations-and-custody) |
 | Custody | Exclusive ownership of the game target and of the right to send it input. | [Run ownership](operations/mission-ownership.md) |
 | Deciding player | The model that reads the screen and chooses every game action. | [Player interface](components/player-interface.md) |
+| Delivered knowledge | The frozen file a run's player reads from the curator's store (`delivered-knowledge.json`, `delivered-knowledge/1`): one published version less any withheld units, with its index and coverage stamp. | [Context design](design/player-context.md#the-delivery-boundary) |
 | Development run | A finite run on a committed development checkpoint, made to learn about the implementation. It supports no acceptance claim. | [Development runs](development-runs.md) |
 | Driver | The program that starts a player host for each actor, keeps the run's limits and verifies a handoff before it starts a successor. | [Player host contract](contracts/player-host.md) |
 | Ending reserve (finish reserve) | The part of each run limit held back so that play can end in order. When a limit falls to its reserve, the driver asks the player to finish up. | [Ending reserve](operations/campaign-run.md#ending-reserve-and-external-stop) |

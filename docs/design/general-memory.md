@@ -131,8 +131,9 @@ where a page's lead gives the point and its references and links give the rest.
   least one article; between groomings, facts a session added stand alone and have their
   own index lines until the next grooming files them. It does not judge what an article
   says.
-- **Reading more.** `player_memory_read` returns an article or a fact by its id or title;
-  `player_memory_query` searches articles and facts together.
+- **Reading more.** `player_knowledge_read` returns an article or a fact by its id or
+  title; `player_knowledge_query` searches articles and facts together
+  ([the delivery boundary](player-context.md#the-delivery-boundary)).
 - **Format.** Articles are a second record kind in the same knowledge repository, in the
   same contract version as facts (`curator-fact/3` gains its article record); no shim.
 
@@ -159,12 +160,13 @@ changes two things.
 
 1. **A recall model chooses the leads.** The briefing carries the
    [articles](#articles-over-facts): the leads of the articles a recall model chooses for
-   this actor from the mission, the previous final report and the article index, and one
+   this actor from its first message (the mission and any handoff context) and the
+   article index, and one
    index line (title and lead's first clause) for every other article. The player follows
    a link or searches only when it wants more. Relevance is judged by a model, so it
    holds for any game.
-2. **Reminders during play.** At a fixed cadence (every N decisions, N set by the first
-   development play), the recall model reads the player's recent tool calls, the latest
+2. **Reminders during play.** At a fixed cadence (every N completed inputs, N pinned per
+   run: by the lead for the withholding pilot, then from development play's measurement), the recall model reads the player's recent tool calls, the latest
    screen and the article index, and answers with up to a few article titles and their
    leads, or with nothing. It runs beside the player and never blocks it; its answer is added as a notice
    to the next request after it finishes, and stays in the history, so the cache holds.
@@ -223,9 +225,10 @@ provider; the coding host's capacity is its cost.
 
 ### Does memory help? Withholding within each start
 
-- **Design.** In each start a random half of the store's units (drawn per start, seed
-  recorded) is withheld: their articles and facts are left out of the leads, the index,
-  the reminders and search. A unit is an article with the facts only it cites; a fact
+- **Design.** In each start each of the store's units is withheld independently with
+  probability one half (drawn per start, seed recorded): their articles and facts are
+  left out of the leads, the index, the reminders and search, and links to them are
+  removed ([the delivery boundary](player-context.md#the-delivery-boundary)). A unit is an article with the facts only it cites; a fact
   cited by a delivered and a withheld article counts as delivered. The grooming before
   the start makes one article per subject, so one thing is one unit.
 - **Outcome.** For every fact, over the whole start: was it found again, acted against,
@@ -238,7 +241,7 @@ provider; the coding host's capacity is its cost.
   delivered. It cannot see a harm to play as a whole, such as a distracting reminder;
   that is seen in the use labels and in time spent per decision.
 - **Threats.** Handoff summaries and the previous final report can restate a withheld
-  fact; facts the curator writes during a start are not randomized; the player's own
+  fact; a delivered article's prose can name a withheld subject; facts the curator writes during a start are not randomized; the player's own
   records can hold a withheld fact while that store still exists. These bias towards no
   effect.
 - **Before any spend** the protocol's simulation is adapted to this design with the
@@ -280,8 +283,8 @@ provider; the coding host's capacity is its cost.
 Made in [player-context.md](player-context.md) with this note:
 
 - The briefing carries the leads of the articles the recall model chooses, not items by
-  kind, and an index line per other article; `player_memory_read` and
-  `player_memory_query` read articles and facts.
+  kind, and an index line per other article; the knowledge tools
+  `player_knowledge_read` and `player_knowledge_query` read articles and facts.
 - In the curator's table, the rows for game time and place, the four kinds, and a brief
   aimed at places and goods are replaced by this note's format and grooming.
 - Reminders during play are a new layer between the briefing and the cut.
