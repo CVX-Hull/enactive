@@ -18,12 +18,14 @@ scope: 'The recall fix (#642) checked in real play before merge: a real-model re
   the check start every briefing carried leads (22 articles for actor 001, 12 for
   actor 002) and all 19 reminder opportunities at `N = 10` were made and delivered. In
   the delivery development start (#635) no lead and no reminder reached the player.
-- **`N = 10` is frozen for the pilot.** At that cadence no opportunity was lost to a
-  recall still in flight (at `N = 1` six of sixteen were), the recall model cost
-  \$0.073 against \$1.486 of play for actor 001 (5%), the delivered text was 35,760
-  characters over 203 player requests, and the median prompt grew by 3% against #635
-  with no change in response time. A shorter cadence would double the cost and the
-  repetition below; a longer one would follow play less closely.
+- **`N = 10` is frozen for the pilot**, the lead's choice on this evidence. Observed: at
+  that cadence no opportunity was lost to a recall still in flight (in the recall check
+  at `N = 1`, six of fifteen were, at a faster pace than a full start's: 2.7 s median
+  player response on smaller prompts), the recall model cost \$0.073 against \$1.486 of play for actor 001
+  (5%), the delivered text was 35,760 characters over 203 player requests, and the
+  median prompt was 3% larger than in #635 with response time no slower. Not measured,
+  only expected: a shorter cadence would cost more recall requests (the run's allowance
+  is 30) and repeat more; a longer one would follow play less closely.
 - **What the recall model does.** It selects generously and repeats itself. A briefing
   names most of the index (22 of 32 articles), and the reminders follow the phases of
   play (travel and safe mode early and late; fire, tinder and cooking while the player
@@ -31,8 +33,20 @@ scope: 'The recall fix (#642) checked in real play before merge: a real-model re
 - **Spend.** \$1.70 in all: \$0.111 for the recall check (\$0.030 recall, \$0.081 play)
   and \$1.590 for the check start (\$0.080 recall, \$1.509 play). Every attempt
   carried a provider-reported cost.
-- **For the pilot.** Nothing here changes its design or its price: recall costs about
-  \$0.08 per start of 200 decisions.
+- **For the pilot: its price is far below what the simulation assumed.** The
+  [withholding simulation](2026-11-13-withholding-simulation.md) priced a 200-decision
+  start at \$3.58 of play, and ×1.67 to ×2.0 of that with recall (\$6.0 to \$7.2). This
+  start of 197 decisions cost \$1.51 of play and \$0.08 of recall, \$1.59 in all. The
+  pilot's six starts would cost about \$10 against its \$70 cap, and the full study's
+  price falls with them. Nothing found calls for a change to the pilot's design.
+  Neither run withheld anything, so neither shows recall or its cost when half the
+  units are withheld. Because briefings name most of the index, "delivered" in the
+  pilot will mostly mean "named in the briefing".
+- **Not known.** Whether the leads and reminders changed play (nothing here compares);
+  whether repeating one article matters; what `N` below 10 would lose in a full-length
+  start.
+- **Owner decision needed.** What the pilot does with the lower price: put to the owner
+  with this record.
 
 ## What was run
 
@@ -47,8 +61,8 @@ before spend.
   tier, as in #635.
 - **Recall model.** The same pinned route, declaring a 32,768-token window and 4,096
   output tokens, so its bound for a request without a cost record is \$0.06144 (#635
-  declared the player's 262,144-token window, \$0.4096). A recall request is 1,000 to
-  3,000 tokens before images.
+  declared the player's 262,144-token window, \$0.4096). A recall request was 1,200 to
+  5,200 prompt tokens before images in these runs and #635.
 - **The recall check** (`recall-check-642`, session `ad4c2d86f4014c1da755d21b33c18c1e`,
   start `seven-day-end-09`): recall at every completed input, up to 16 recall requests,
   30 attempts in all, 8 images in blocks of 4, one host, limit \$1, finish reserve \$0.48.
@@ -58,7 +72,10 @@ before spend.
 
 ## The recall check
 
-It ended at its 30-attempt allowance: 20 player requests and 10 recall requests.
+It ended in an orderly stop on the attempt reserve, with all 30 attempts charged: 20
+player requests and 10 recall requests. Of the 15 reminder opportunities before the stop,
+9 were requested and 6 were not made because another recall was in flight. A
+`player_knowledge_read` the player called during the stop was refused (not dispatched).
 
 | Recall | Count | Detail |
 | --- | ---: | --- |
@@ -76,9 +93,10 @@ It ended at its 30-attempt allowance: 20 player requests and 10 recall requests.
 | delivery-check-642 | recall-fix-start | S1 | budget | 2.86 | 197 | 4 | 5.7 | 3 · 1.85 h | 72% | 14 | 0.0081 | 33% |
 <!-- /evaluate-table -->
 
-The survivor was alive when the attempt allowance ended the run (censored, `budget`).
-Actor 001 played 203 requests and handed off; actor 002 played 9 before the allowance
-ran out.
+The survivor was alive when the run ended (censored, `budget`). Actor 001 played 203
+requests and handed off. Actor 002 played 9; the attempt reserve's orderly stop was
+requested with ten attempts left, and a `computer_input` it called during the stop was
+refused (not dispatched). 233 of the 240 attempts were used.
 
 ## The check start, read end to end
 
@@ -95,15 +113,31 @@ ran out.
   tinder, the bow drill, open-fire safety and cooking cattails through the middle,
   while the player made a fire. Articles repeat: "Open-fire safety" in 13 reminders,
   "Cooking cattails" in 10, "Safe mode" and "Tinder" in 9 each.
-- **The player's own reads.** Seven `player_knowledge_read` calls and one
-  `player_knowledge_query`, as many as in #635 without leads.
+- **The player's own reads.** Actor 001 made seven `player_knowledge_read` calls (#635:
+  seven over its two actors, without leads, and no query) and one `player_knowledge_query`, "brazier fire containment
+  fireplace" (`request-178`), which found no record: the store has no article on
+  containing a fire.
+- **Fire, and what the handoff carried.** The player lit an outdoor fire on a road and
+  recorded it as dangerous, then planned a stone fire ring (and noted that a brazier
+  needs a bucket it had not found); its handoff to actor 002 names "dangerous outdoor fire, and
+  tentative contained-fire plan". The reminders sent "Open-fire safety" through that
+  stretch. Whether that helped is for the judges, not for this record.
 - **Recall cost.** Actor 001: 20 recall requests, \$0.0731 (\$0.0037 each), median
-  3.8 s; play \$1.486. Actor 002: 1 request, \$0.0072.
+  3.7 s; play \$1.486. Actor 002: 1 request, \$0.0072.
 - **Time per decision.** 7.1 s of wall time per player request for actor 001 (7.2 s in
-  #635); response median 6.1 s, 95th percentile 9.3 s (6.4 s and 9.7 s in #635).
+  #635); player response median 6.1 s, 95th percentile 9.6 s (6.4 s and 9.8 s in
+  #635).
 - **Burden.** Actor 001's prompts: median 60,271 tokens (58,349 in #635), last
-  103,172; cache share 94.7% (94.8%); \$0.00732 per player request (\$0.00697). The
+  103,172; cache share 94.7% (the same in #635); \$0.00732 per player request (\$0.00697). The
   reminders stay where they were first sent, so the cache holds.
+
+**Method.** The results table is `tools/evaluate evaluate-table` over the evaluation
+records; spend is from the receipts and the [run ledger](../../data/evaluation/runs.jsonl).
+The other readings are from the sealed `host.jsonl` events, read by a one-off script:
+response time is `response-complete` minus `request-start` per request, split by
+`request_role`, with nearest-rank percentiles as in `tools/host_analysis.py`; prompt
+tokens are input plus cache read plus cache write from each player response's usage, and
+the cache share is cache read over that sum; cost per request is the counted cost.
 
 ## Deviations
 
@@ -115,7 +149,12 @@ ran out.
   [start load checks](2026-11-14-start-load-checks.md); its spend is stated here. The
   check start is study 642's one row.
 - **The check start was capped by attempts, not by decisions.** 197 decisions against
-  about 200 asked; the allowance ended actor 002 after 9 player requests.
+  about 200 asked; the attempt reserve stopped actor 002 after 9 player requests. Recall
+  requests count against the same 240 attempts (21 here, 2 in #635), which is most of the
+  difference from #635's 218 decisions; pilot starts under the same allowance will land
+  near 200.
+- **The recall model's output limit is 4,096 tokens**, against the player's 16,384; the
+  largest recall reply used 299, and every reply stopped normally.
 - **Replacement starts are not load-checked.** `seven-day-end-15` and `-16` were made
   from the same sealed save as the starts the load checks loaded, byte for byte.
 - **The provider balance was not read before spend**, as in #635; the key's credit
