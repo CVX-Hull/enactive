@@ -684,10 +684,23 @@ export async function runHost(options) {
     recallFlight = true;
     recallController = new AbortController();
     const signal = AbortSignal.any([stopped.signal, recallController.signal, AbortSignal.timeout(options.configuration.request_timeout_seconds * 1000)]);
-    let reported = null, usageAvailable = false, message, failure, refusalReason, attemptStarted = false;
+    let reported = null, usageAvailable = false, message, failure, refusalReason, attemptStarted = false, attemptCompleted = false;
+    const completeAttempt = () => {
+      if (!attemptStarted || attemptCompleted) return;
+      attemptCompleted = true;
+      const knownUsage = usageAvailable && object(message?.usage);
+      emit('response-complete', {request_id:id, request_role:'recall', stop_reason:message?.stopReason ?? 'error',
+        usage_available:knownUsage, usage:knownUsage ? message.usage : null,
+        reported_cost_usd:amountText(reported), ...countAttempt(reported, 'recall')});
+    };
+    const replyFields = () => {
+      if (!message) return {};
+      const narration = assistantNarration(message.content);
+      return {reply_text:narration.text, reply_omitted_bytes:narration.omitted_bytes};
+    };
     try {
-      const content = [{type:'text', text:JSON.stringify({kind:mode, first_message:mode === 'briefing' ? options.prompt : undefined,
-        recent_calls:mode === 'reminder' ? recentCalls : undefined, index:knowledgeIndex(knowledge)})}];
+      const content = [{type:'text', text:JSON.stringify({index:knowledgeIndex(knowledge), kind:mode,
+        first_message:mode === 'briefing' ? options.prompt : undefined, recent_calls:mode === 'reminder' ? recentCalls : undefined})}];
       if (mode === 'reminder') for (const part of latestResult ?? [])
         if (part.type === 'image') content.push({...part});
       const model = recallConfiguration.model;
@@ -708,34 +721,34 @@ export async function runHost(options) {
           emit('request-fetch-start', {request_id:id, request_role:'recall'});
           return (options.fetch ?? globalThis.fetch)(url, init);
         },
-        onPayload:payload => model.provider === 'openrouter' ? {...payload, service_tier:'default'} : undefined,
+        onPayload:payload => model.provider === 'openrouter' ? {...payload, service_tier:'default',
+          response_format:{type:'json_schema', json_schema:{name:'recall_selection', strict:true,
+            schema:{type:'object', properties:{articles:{type:'array', items:{type:'string'}}},
+              required:['articles'], additionalProperties:false}}}} : undefined,
         onProviderStreamEvent:chunk => {
           const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
           if (object(usage)) reported = withUsageRecord(reported, usage);
           if (Number.isFinite(usage?.prompt_tokens) && Number.isFinite(usage?.completion_tokens)) usageAvailable = true;
         }});
       message = await response.result();
+      completeAttempt();
       if (['error','aborted','length','deferred'].includes(message.stopReason)) throw new Error(refusalReason ?? 'provider-failure');
       if (amountText(reported) === null) throw new Error('cost-unreported');
       const articles = selection(message, knowledge);
-      emit('response-complete', {request_id:id, request_role:'recall', stop_reason:message.stopReason,
-        usage_available:usageAvailable, usage:usageAvailable ? message.usage : null,
-        reported_cost_usd:amountText(reported), ...countAttempt(reported, 'recall')});
       emit('knowledge-recall', {kind:mode, status:articles.length ? 'selected' : 'silence', request_id:id,
-        article_ids:articles.filter(a => a.body).map(a => a.id), fact_ids:delivery(knowledge, articles, mode, id).fact_ids, version:knowledge.version});
+        article_ids:articles.filter(a => a.body).map(a => a.id), fact_ids:delivery(knowledge, articles, mode, id).fact_ids,
+        version:knowledge.version, ...replyFields()});
       return mode === 'reminder' && !articles.length ? null : delivery(knowledge, articles, mode, id);
     } catch (error) {
       failure = recallController.signal.aborted ? 'actor-ended'
         : ['actor-ended','allowance','attempt-limit','orderly-stop','finish-reserve','spend-refused','cost-unreported','provider-failure','invalid-recall-selection'].includes(error.message)
         ? error.message : 'recall-failed';
-      recallDisabled = true;
-      if (attemptStarted) {
-        const knownUsage = usageAvailable && object(message?.usage);
-        emit('response-complete', {request_id:id, request_role:'recall', stop_reason:message?.stopReason ?? 'error',
-          usage_available:knownUsage, usage:knownUsage ? message.usage : null,
-          reported_cost_usd:amountText(reported), ...countAttempt(reported, 'recall')});
-      }
-      emit('knowledge-recall', {kind:mode, status:attemptStarted ? 'failure' : 'not-made', ...(id ? {request_id:id} : {}), reason:failure, version:knowledge.version});
+      recallDisabled = failure !== 'invalid-recall-selection' || amountText(reported) === null;
+      completeAttempt();
+      emit('knowledge-recall', {kind:mode, status:attemptStarted ? 'failure' : 'not-made', ...(id ? {request_id:id} : {}),
+        reason:failure, version:knowledge.version, ...replyFields(),
+        ...(failure === 'invalid-recall-selection' ? {selection_error:error.detail} : {}),
+        ...(failure === 'recall-failed' ? {error_name:error.name} : {})});
       return mode === 'briefing' ? delivery(knowledge, [], mode, id ?? null) : null;
     } finally { recallFlight = null; recallAttemptInFlight = false; }
   };

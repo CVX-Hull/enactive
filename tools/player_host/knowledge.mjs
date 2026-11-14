@@ -18,14 +18,23 @@ export function knowledgeIndex(knowledge) {
 }
 
 export function selection(message, knowledge) {
-  const value = JSON.parse(message.content.filter(p => p.type === 'text').map(p => p.text).join(''));
-  if (!value || Object.keys(value).join() !== 'articles' || !Array.isArray(value.articles)
-      || new Set(value.articles).size !== value.articles.length) throw new Error('invalid-recall-selection');
+  const invalid = detail => { throw Object.assign(new Error('invalid-recall-selection'), {detail}); };
+  let text = message.content.filter(p => p.type === 'text').map(p => p.text).join('').trim();
+  if (text.startsWith('```')) {
+    const fence = /^```(?:json)?[\t ]*\r?\n([\s\S]*?)\r?\n```$/u.exec(text);
+    if (!fence) invalid('not-json');
+    text = fence[1];
+  }
+  let value;
+  try { value = JSON.parse(text); } catch { invalid('not-json'); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) invalid('not-one-object');
+  if (Object.keys(value).join() !== 'articles' || !Array.isArray(value.articles)) invalid('wrong-keys');
+  if (new Set(value.articles).size !== value.articles.length) invalid('repeated-entry');
   const index = knowledgeIndex(knowledge);
   const selected = new Map();
   for (const id of value.articles) {
     const row = index.find(item => item.id === id || item.title === id);
-    if (!row) throw new Error('invalid-recall-selection');
+    if (!row) invalid('unknown-entry');
     const item = knowledge.articles.find(a => a.id === row.id) ?? knowledge.facts.find(f => f.id === row.id);
     selected.set(item.id, item);
   }
