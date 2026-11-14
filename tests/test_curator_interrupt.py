@@ -228,3 +228,96 @@ def test_a_callers_handled_exception_does_not_hide_a_new_cleanup_failure(synthet
     except ValueError:
         with pytest.raises(OSError, match='tree cleanup failure'):
             session.sandbox.run(['never-run'], layout)
+
+
+@pytest.mark.parametrize('grooming_fails', [False, True], ids=['all-groomed', 'grooming-failure-stops'])
+def test_grooming_alternates_with_admissions_and_shares_the_run_cap(tmp_path, monkeypatch, grooming_fails):
+    # #618: --groom runs a grooming session after each admission that publishes, each session's cap is what the run
+    # has left, every session's cost counts toward the run, and a grooming that stops the run stops later admissions.
+    evidence = synthetic_evidence(tmp_path, names=('sd1a1', 'sd1a2', 'sd1a3'))
+    runtime = tmp_path/'runtime'
+    out = runtime/'curator-shadow/groomed'
+    calls = []
+    versions = iter(range(1, 100))
+
+    def fake(**kwargs):
+        calls.append((kwargs['name'], kwargs['session_kind'], kwargs['cap']))
+        kind = kwargs['session_kind']
+        published = kwargs['name'] != 'sd1a2'  # the second admission publishes nothing
+        before = 'v0'
+        after = f'v{next(versions)}' if published else before
+        survivors = [99] if grooming_fails and kind == 'grooming' else []
+        return dict(run_state='completed', session_state='sealed', cost_usd='0.25', requests=1, accepted=int(published),
+                    rejected=0, stopped_by_cap=False, published_before=before, published_after=after,
+                    proxy=dict(revoked=False, breaches=0, settled=True), sandbox=dict(survivors=survivors))
+
+    monkeypatch.setattr(shadow, 'host_tools', lambda: {})
+    monkeypatch.setattr(shadow, 'host_identity', lambda *args: {'name': 'fixture'})
+    monkeypatch.setattr(shadow, 'run_one', fake)
+    args = shadow.parser().parse_args(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', 'sd1a3', '--groom',
+                                      '--cap-usd', '2', '--runtime-root', str(runtime), '--out', str(out),
+                                      '--evidence-root', str(evidence)])
+    run = shadow.run_shadow(args, KEY)
+    if grooming_fails:
+        assert [(n, k) for n, k, _ in calls] == [('sd1a1', 'admission'), ('sd1a1-grooming', 'grooming')]
+        assert run['stopped'] == 'cleanup-unconfirmed' and not run['complete']
+        return
+    assert [(n, k, str(c)) for n, k, c in calls] == [
+        ('sd1a1', 'admission', '2.0'), ('sd1a1-grooming', 'grooming', '1.75'), ('sd1a2', 'admission', '1.50'),
+        ('sd1a3', 'admission', '1.25'), ('sd1a3-grooming', 'grooming', '1.00')]
+    assert run['grooming_skipped'] == [dict(after='sd1a2', reason='the admission published nothing')]
+    assert run['total_cost_usd'] == '1.25' and run['sessions_run'] == 5 and run['complete'] is True
+
+
+def test_a_capped_grooming_is_rerun_alone_with_twice_the_cap(tmp_path, monkeypatch):
+    # #618's stop rule: a session that reaches its cap is re-run once with twice the cap. For a grooming session that
+    # is --groom-only on the existing repository; the admission is not paid for again.
+    evidence = synthetic_evidence(tmp_path, names=('sd1a1',))
+    runtime = tmp_path/'runtime'
+    knowledge = runtime/'knowledge'/'shadow-454'/'first'/'terra'/'397'
+    (knowledge/shadow.GAME/'.git').mkdir(parents=True)
+    calls = []
+
+    def fake(**kwargs):
+        calls.append((kwargs['name'], kwargs['session_kind'], str(kwargs['cap'])))
+        return dict(run_state='completed', session_state='sealed', cost_usd='0.1', requests=1, accepted=1, rejected=0,
+                    stopped_by_cap=False, published_before='v1', published_after='v2',
+                    proxy=dict(revoked=False, breaches=0, settled=True), sandbox=dict(survivors=[]))
+
+    monkeypatch.setattr(shadow, 'host_tools', lambda: {})
+    monkeypatch.setattr(shadow, 'host_identity', lambda *args: {'name': 'fixture'})
+    monkeypatch.setattr(shadow, 'run_one', fake)
+    monkeypatch.setattr(shadow, 'Repository', lambda path, game: SimpleNamespace(ensure=lambda: None, published=lambda: 'v1',
+                                                                                 path=path/game))
+    base = ['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', '--cap-usd', '5', '--session-cap-usd', '1',
+            '--runtime-root', str(runtime), '--evidence-root', str(evidence)]
+    args = shadow.parser().parse_args([*base, '--groom-only', '--double-session-cap', '--knowledge-root', str(knowledge),
+                                      '--out', str(runtime/'curator-shadow'/'regroom')])
+    run = shadow.run_shadow(args, KEY)
+    assert calls == [('sd1a1-grooming', 'grooming', '2.0')] and run['complete'] is True and run['groom_only'] is True
+    for extra, out in ((['--groom', '--double-session-cap'], 'a'), (['--groom-only'], 'b'),
+                       (['--groom-only', '--groom', '--knowledge-root', str(knowledge)], 'c')):
+        with pytest.raises(shadow.ShadowError):
+            shadow.run_shadow(shadow.parser().parse_args([*base, *extra, '--out', str(runtime/'curator-shadow'/out)]), KEY)
+
+
+def test_a_grooming_that_reaches_its_cap_stops_the_run(tmp_path, monkeypatch):
+    evidence = synthetic_evidence(tmp_path, names=('sd1a1', 'sd1a2'))
+    runtime = tmp_path/'runtime'
+    calls = []
+
+    def fake(**kwargs):
+        calls.append(kwargs['name'])
+        grooming = kwargs['session_kind'] == 'grooming'
+        return dict(run_state='completed', session_state='sealed', cost_usd='0.1', requests=1, accepted=1, rejected=0,
+                    stopped_by_cap=grooming, published_before='v0', published_after='v1',
+                    proxy=dict(revoked=False, breaches=0, settled=True), sandbox=dict(survivors=[]))
+
+    monkeypatch.setattr(shadow, 'host_tools', lambda: {})
+    monkeypatch.setattr(shadow, 'host_identity', lambda *args: {'name': 'fixture'})
+    monkeypatch.setattr(shadow, 'run_one', fake)
+    args = shadow.parser().parse_args(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', '--groom',
+                                      '--cap-usd', '5', '--runtime-root', str(runtime), '--evidence-root', str(evidence),
+                                      '--out', str(runtime/'curator-shadow'/'capped')])
+    run = shadow.run_shadow(args, KEY)
+    assert calls == ['sd1a1', 'sd1a1-grooming'] and run['stopped'] == 'cap-reached' and run['complete'] is False

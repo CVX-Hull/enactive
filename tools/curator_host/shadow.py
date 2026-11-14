@@ -463,8 +463,14 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
     session_cap = Decimal(str(args.session_cap_usd)) if args.session_cap_usd is not None else None
     if session_cap is not None and session_cap <= 0:
         raise ShadowError('--session-cap-usd must be positive')
-    if args.groom and windows:
+    if (args.groom or args.groom_only) and windows:
         raise ShadowError('--groom follows whole admissions; grooming takes the last admission, not a window')
+    if args.groom and args.double_session_cap:
+        raise ShadowError('--double-session-cap re-runs one session: the admission without --groom, or its grooming '
+                          'with --groom-only')
+    if args.groom_only and (args.groom or len(units) != 1 or not args.knowledge_root):
+        raise ShadowError('--groom-only grooms after exactly one named admission of an existing --knowledge-root '
+                          'whose last admission it is')
     if args.double_session_cap:
         # One named session, once, with twice the cap it reached. Nothing retries by itself.
         if len(units) != 1 or session_cap is None:
@@ -498,7 +504,8 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
     repo.ensure()
     run = dict(schema=SCHEMA, kind='run', arm=args.arm, model=arm.model, effort=model_config['effort'],
                lineage=args.lineage, sessions_planned=names, cap_usd=str(cap), session_cap_usd=str(session_cap) if session_cap else None,
-               session_cap_doubled=bool(args.double_session_cap), groom=bool(args.groom), knowledge_root=str(knowledge),
+               session_cap_doubled=bool(args.double_session_cap), groom=bool(args.groom), groom_only=bool(args.groom_only),
+               knowledge_root=str(knowledge),
                published_before_run=repo.published(),
                windows=[w.record() for w in windows] if windows else None,
                windows_sha256=windows_digest(windows) if windows else None,
@@ -507,12 +514,12 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
                started_wall=time.time(), sessions=[], stopped=None)
     spent = Decimal(0)
 
-    def session(label: str, session_name: str, window: Window, memory: Path | None, note: str, kind: str) -> str | None:
-        """Run one session and record it; return why the run stops, or None."""
+    def session(label: str, session_name: str, window: Window, memory: Path | None, note: str, kind: str) -> tuple[str | None, dict]:
+        """Run one session and record it; return why the run stops (or None) and the session summary."""
         nonlocal spent
         remaining = cap - spent
         if remaining <= 0:
-            return 'cap-reached'
+            return 'cap-reached', {}
         summary = run_one(arm_name=args.arm, lineage=args.lineage, name=label, trace=traces[session_name], repo=repo, memory=memory,
                           memory_note=note, host=host, config_path=config_path, config_dir=config_dir, model_config=model_config,
                           prices=prices, key=key, upstream=upstream, cap=min(remaining, session_cap or remaining), out=out,
@@ -524,24 +531,25 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
                                     ledger_charged_usd=summary['proxy'].get('charged_usd'), wall_seconds=summary.get('wall_seconds'),
                                     stopped_by_cap=summary['stopped_by_cap'], cap_usd=summary.get('cap_usd'),
                                     accepted=summary.get('accepted'), rejected=summary.get('rejected'),
-                                    published_before=summary['published_before'], published_after=summary.get('published_after')))
+                                    published_before=summary.get('published_before'), published_after=summary.get('published_after')))
         print(f'{args.arm} {args.lineage} {label}: {summary.get("session_state", summary["run_state"])}, '
               f'{summary.get("requests")} requests, ${summary["cost_usd"]}, {summary.get("wall_seconds")} s, '
               f'accepted {summary.get("accepted")}, '
               f'rejected {summary.get("rejected")}', flush=True)
+        reason = None
         if summary['proxy']['revoked'] or summary['proxy']['breaches']:
-            return 'proxy-revoked'
-        if summary['stopped_by_cap'] or cap - spent <= 0:
-            return 'cap-reached'
-        if not summary['proxy']['settled']:
-            return 'proxy-unsettled'
-        if summary.get('sandbox', {}).get('survivors') != []:
-            return 'cleanup-unconfirmed'
-        if args.stop_on_abort and summary.get('session_state') != 'sealed':
-            return 'session-aborted'
-        if args.stop_on_reject and summary.get('rejected'):
-            return 'submission-rejected'
-        return None
+            reason = 'proxy-revoked'
+        elif summary['stopped_by_cap'] or cap - spent <= 0:
+            reason = 'cap-reached'
+        elif not summary['proxy']['settled']:
+            reason = 'proxy-unsettled'
+        elif summary.get('sandbox', {}).get('survivors') != []:
+            reason = 'cleanup-unconfirmed'
+        elif args.stop_on_abort and summary.get('session_state') != 'sealed':
+            reason = 'session-aborted'
+        elif args.stop_on_reject and summary.get('rejected'):
+            reason = 'submission-rejected'
+        return reason, summary
 
     for name, session_name, window in units:
         memory, note = None, 'no sealed per-session memory store for this lineage (the lineage store would carry later sessions)'
@@ -550,23 +558,29 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         elif spec['memory']:
             candidate = evidence/spec['directory']/spec['memory'].format(name=name)
             memory, note = (candidate, 'per-run sealed player-memory/2 store') if candidate.is_file() else (None, 'store absent')
-        before = repo.published()
-        run['stopped'] = session(name, session_name, window, memory, note, 'admission')
+        if args.groom_only:
+            # The one re-run of a grooming session that reached its cap: the admission is already published
+            # (the session API refuses a trace that is not the store's last admission).
+            run['stopped'], _ = session(f'{name}-grooming', session_name, FULL, None,
+                                        'grooming reads the published store, not the player store', 'grooming')
+            break
+        run['stopped'], admitted = session(name, session_name, window, memory, note, 'admission')
         if run['stopped']:
             break
         if args.groom:
             # Grooming reads the store and the last admission's citations; an admission that published nothing
             # leaves nothing new to file, and the session API refuses a store with no published admission.
-            if repo.published() == before:
+            if admitted.get('published_after') in (None, admitted.get('published_before')):
                 run.setdefault('grooming_skipped', []).append(dict(after=name, reason='the admission published nothing'))
                 continue
-            run['stopped'] = session(f'{name}-grooming', session_name, FULL, None,
-                                     'grooming reads the published store, not the player store', 'grooming')
+            run['stopped'], _ = session(f'{name}-grooming', session_name, FULL, None,
+                                        'grooming reads the published store, not the player store', 'grooming')
             if run['stopped']:
                 break
-    admissions = [s for s in run['sessions'] if s['session_kind'] == 'admission']
+    planned = 'grooming' if args.groom_only else 'admission'
+    done = [s for s in run['sessions'] if s['session_kind'] == planned]
     run.update(ended_wall=time.time(), total_cost_usd=str(spent), sessions_run=len(run['sessions']),
-               published_version=repo.published(), complete=run['stopped'] is None and len(admissions) == len(names))
+               published_version=repo.published(), complete=run['stopped'] is None and len(done) == len(names))
     _write(out/'summary.json', run)
     return run
 
@@ -605,6 +619,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--groom', action='store_true',
                    help='after each whole admission that publishes, run a grooming session on the same repository '
                    'under the same caps (not with windows)')
+    p.add_argument('--groom-only', action='store_true',
+                   help='run only the grooming session after one named admission already published in --knowledge-root; '
+                   'for the single re-run of a grooming session that reached its cap (with --double-session-cap)')
     p.add_argument('--double-session-cap', action='store_true',
                    help='run the one named session or window once more with twice --session-cap-usd')
     return p
