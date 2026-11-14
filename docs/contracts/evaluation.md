@@ -491,7 +491,7 @@ the [measure gate](../acceptance/2026-11-13-memory-measure-gate.md), is not read
 | `window` | `<admission>/<actor>:<first decision>-<last decision>`: a stretch of one actor's decisions, never a single step |
 | `fact` | The fact's id in the facts file |
 | `route` | How the fact reached the player: `lead` (its article's lead was delivered), `read` (the player read it through a link or a search), `index` (only on the index) or `withheld` (the benefit measure). The tool sets it from the facts file; a judge's answer cannot |
-| `label` | `in_line` (acted in line with it), `against` (acted against it), `found_again` (found it again), `did_not_apply` or `cannot_tell` |
+| `label` | `in_line` (acted in line with it), `against` (acted against it), `found_again` (looked it up: an action spent only to learn what the fact says), `did_not_apply` or `cannot_tell` |
 | `holds` | Whether the frames show the fact still holding: `held`, `stale_or_false` or `cannot_tell` |
 | `cited_frames` | Source IDs of the frames the judge cited. `in_line`, `against` and `found_again` cite at least one |
 | `judge`, `model` | The judge's name and the model the lead pinned for it |
@@ -737,7 +737,12 @@ of the starts and delivered in the other half.
   the study's saved moments, named before the draw. They are drawn like any unit and
   analysed apart; no fact is invented for them.
 - A reader rebuilds the draw from its seed and refuses a file that differs, repeated or
-  unknown placebo IDs, blocks that do not sum to `N`, or `N < 2`.
+  unknown placebo IDs, blocks that do not sum to `N`, or `N < 2`. The rebuild uses numpy's
+  generator, whose stream is reproducible only under the pinned numpy, so the pin does not
+  change while a study's draw is in use.
+- A block's label is asserted, not checked: the analysis checks each package's block
+  against the draw but not which saved moment the start copied. The study's record lists
+  each start's source study and start manifest hash.
 - `--study-draw FILE --start-index I` exports start `I`'s package. Its
   `private/units.json` is `knowledge-units/2`: the `knowledge-units/1` fields with the
   draw's seed, plus `draw_sha256`, `start_index`, `block` and each unit's `placebo`. The

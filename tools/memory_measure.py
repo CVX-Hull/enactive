@@ -1296,7 +1296,7 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
                 'found again), the share in which the player acted in line with it', delivered, applied,
                 lambda row: row['label'] == 'in_line', delivered),
             rediscovery=rate('of the windows in which a fact whose lead was delivered applied, the share in which the '
-                'player found it again by looking', delivered, applied, lambda row: row['label'] == 'found_again', delivered),
+                'player looked it up again', delivered, applied, lambda row: row['label'] == 'found_again', delivered),
             stale_or_false_acted=rate('of the windows in which the player acted in line with a fact it had (lead, read or '
                 'index), the share in which the frames show the fact no longer held or never did', known,
                 lambda row: row['label'] == 'in_line', lambda row: row['holds'] == 'stale_or_false', known, 'holds_by'),

@@ -189,7 +189,7 @@ class Starts:
         path = directory / 'manifest.json'
         manifest = read_json(path, root=self.root)
         expected, source_hash = self.source_manifest(manifest['source_study'])
-        if (manifest['schema'] != SCHEMA or manifest['name'] != name or (manifest['source_study'] == STUDY and manifest['lineage'] != 397)
+        if (manifest['schema'] != SCHEMA or manifest['name'] != name or manifest['lineage'] != (397 if manifest['source_study'] == STUDY else None)
                 or manifest['source_manifest_sha256'] != source_hash
                 or manifest['files'] != expected or manifest['player_store'] != self.player_store(name)
                 or manifest['held_out'] is not False):

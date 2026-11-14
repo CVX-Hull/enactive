@@ -33,7 +33,7 @@ SOURCE = 'judge'
 FACT_USE, ANCHOR = 'fact_use_verdict', 'anchor_verdict'
 #: The closed answers about a fact, with the words docs/design/general-memory.md#3-measurement gives them.
 USE_LABELS = ('in_line', 'against', 'found_again', 'did_not_apply', 'cannot_tell')
-USE_LABEL_TEXT = dict(in_line='acted in line with it', against='acted against it', found_again='found it again',
+USE_LABEL_TEXT = dict(in_line='acted in line with it', against='acted against it', found_again='looked it up',
     did_not_apply='did not apply', cannot_tell='cannot tell')
 #: The answers that say the fact mattered to what the player did; each must cite a frame.
 APPLIED = ('in_line', 'against', 'found_again')
