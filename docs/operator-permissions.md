@@ -50,7 +50,8 @@ handful of real requests on the pinned route before it merges, run by the lead a
 short campaign package whose dollar limit is at most \$1 and recorded in the pull request
 ([owner decision](decisions/owner-decisions.md); control `C-MODEL-CHECK` on the
 [controls page](controls.md)). It counts against the key's credit limit and opens no
-study envelope; anything larger is asked with its price.
+study envelope: it is the one standing approval for spend outside an envelope, and
+anything larger is asked with its price.
 
 **No envelope is open.** The five envelopes, for the development loop (study 372),
 the long-horizon arm (382), the seven-day lineage (397), the held-out lineage (522)
