@@ -491,7 +491,7 @@ the [measure gate](../acceptance/2026-11-13-memory-measure-gate.md), is not read
 | `window` | `<admission>/<actor>:<first decision>-<last decision>`: a stretch of one actor's decisions, never a single step |
 | `fact` | The fact's id in the facts file |
 | `route` | How the fact reached the player: `lead` (its article's lead was delivered), `read` (the player read it through a link or a search), `index` (only on the index) or `withheld` (the benefit measure). The tool sets it from the facts file; a judge's answer cannot |
-| `label` | `in_line` (acted in line with it), `against` (acted against it), `found_again` (found it again), `did_not_apply` or `cannot_tell` |
+| `label` | `in_line` (acted in line with it), `against` (acted against it), `found_again` (looked it up: an action spent only to learn what the fact says), `did_not_apply` or `cannot_tell` |
 | `holds` | Whether the frames show the fact still holding: `held`, `stale_or_false` or `cannot_tell` |
 | `cited_frames` | Source IDs of the frames the judge cited. `in_line`, `against` and `found_again` cite at least one |
 | `judge`, `model` | The judge's name and the model the lead pinned for it |
@@ -714,6 +714,113 @@ rule below is fixed before any pilot start is played
   `missed` (the withheld arm's missed share and its ends, the simulation's "missed when
   withheld"), `rho` (the spread's point value) and `wrong` (the point value, used as the
   judge error at the interval ends too), in the form `simulate-withholding --pilot` reads.
+
+### The withholding study's design (`withholding-study-draw/1`)
+
+A withholding study draws every start's arm at once, before any start is played
+([#653](https://github.com/CVX-Hull/enactive/issues/653)). The pilot showed that misses
+follow the unit, not the arm, so each unit is its own comparison: it is withheld in half
+of the starts and delivered in the other half.
+
+- `knowledge_export draw-study REPOSITORY --version V --starts N --blocks LABEL:COUNT...
+  --seed S [--placebo UNIT_ID...] --out FILE` writes the draw: the store version, the unit
+  layout (units and shared facts, as the [unit rule](../design/player-context.md) builds
+  it), the seed, the starts in order (index `0`…`N−1`, each with its block), the blocks,
+  the placebo unit IDs, and per unit and block the half size and the withheld start
+  indices.
+- **Blocks** are the saved moments the starts copy: a block's label names the source
+  study (`starts create --from`), and the counts, each at least 2, sum to `N`. Within each block, each unit
+  takes its own random permutation that withholds it in exactly half of the block's
+  starts; for an odd count a fair coin per unit sets the half to the floor or the ceiling,
+  and the draw records it.
+- **Placebo units** are units of the store's own layout, true facts that cannot matter in
+  the study's saved moments, named before the draw. They are drawn like any unit and
+  analysed apart; no fact is invented for them.
+- A reader rebuilds the draw from its seed and refuses a file that differs, repeated or
+  unknown placebo IDs, a block of fewer than 2 starts, or blocks that do not sum to `N`. The rebuild uses numpy's
+  generator, whose stream is reproducible only under the pinned numpy, so the pin does not
+  change while a study's draw is in use.
+- A block's label is asserted, not checked: the analysis checks each package's block
+  against the draw but not which saved moment the start copied. The study's record lists
+  each start's source study and start manifest hash.
+- `--study-draw FILE --start-index I` exports start `I`'s package. Its
+  `private/units.json` is `knowledge-units/2`: the `knowledge-units/1` fields with the
+  draw's seed, plus `draw_sha256`, `start_index`, `block` and each unit's `placebo`. The
+  facts builder, `study` and `study-inputs` read `knowledge-units/1` (the sealed pilot's
+  packages) and `knowledge-units/2`; the pilot analysis reads only `knowledge-units/1`.
+  Any other version is refused.
+
+### The withholding study's analysis (`withholding-study/1`)
+
+`study RUN --runs PACKAGE... --draw FILE [--seed N] [--draws N] [--json]` reads a judged
+run of blind packets over the study's starts and writes `RUN/study.json`. The rule below
+is fixed before any start of a study is played; a change to it is a new version. The
+pilot's rule above stays as it was for the sealed pilot.
+
+- **Inputs** are the pilot's, with every package's units record as `knowledge-units/2`
+  carrying this draw's hash, version, seed and block, and the arms the draw gives. It
+  refuses a run of use packets, a repeated or missing start index, and a package whose
+  units or arms differ from the draw.
+- **Outcome.** Touched and missed per unit and start as in the
+  [pilot's rule](#the-withholding-pilots-analysis-withholding-pilot1), under the judge
+  instructions' decision rules: a miss is `against`, or `found_again` for an active
+  lookup; information the player saw on a screen opened for another purpose, or in a
+  message the game showed on its own, is not a miss. Shared facts are reported apart, as
+  in the pilot.
+- **Primary.** Over non-placebo units touched at least once in each arm: the mean over
+  units of the unit's missed share when withheld minus its missed share when delivered,
+  each over the starts where it was touched. The test is one-sided (withheld misses
+  more): a Monte Carlo randomization test that re-draws the assignment as the draw makes
+  it (per unit and block, a fresh permutation with the recorded half sizes), with the
+  outcomes fixed and the eligible units recomputed on every re-draw; a re-draw with no
+  eligible unit scores 0. `p = (1 + re-draws at or above the observed) / (1 + draws)`,
+  10,000 draws and seed 653 unless given. It reports the value, the units counted, and
+  the units excluded as never touched or touched in one arm only.
+- **Intention to treat.** The same statistic and test over every non-placebo unit, with
+  missed per unit and start and an untouched unit counted as not missed.
+- **Touch balance.** Over non-placebo units, the touched share per arm, and the same test, two-sided, on touched:
+  withholding must not change what the player gets to.
+- **Placebo.** The primary statistic and test over placebo units only. Delivery of facts
+  that cannot matter should show no effect; one would point to a bias in the judges or
+  the outcome.
+- **Secondary, a crossed mixed model.** On touched non-placebo (unit, start) rows, statsmodels'
+  `BinomialBayesMixedGLM` (variational fit): missed on withheld, with variance components
+  for unit, start, and a withheld-by-unit slope. It reports the withheld coefficient's
+  posterior mean and SD and each component's (log SD and implied variance). A failed or
+  non-converged fit is reported as `failed` with its reason, and the rest of the report
+  stands.
+- **Judges.** As in the pilot, the first two judges' agreement, κ and dispute rate over
+  all pairs and over driving pairs, with a start-bootstrap interval on agreement, and on
+  the binary missed outcome (`against` or `found_again` against any other label) the 2×2
+  table of the two judges' answers, positive and negative specific agreement and Gwet's AC1. κ falls when
+  misses are rare even with high agreement; the specific agreements and AC1 show which
+  side the disagreement is on.
+- `not_corrected` states that the outcome rests on adjudicated model-judge labels;
+  `threats` lists the blocks and their sources, the number of units counted, and that
+  judge reliance.
+
+### The withholding study's sizing (`withholding-study-simulation/1`)
+
+- `study-inputs RUN --runs PACKAGE... --out FILE` writes `withholding-study-inputs/1`
+  from a judged blind run (it reads the sealed pilot's packages): per unit the starts,
+  touched and missed counts, the raw touched share and missed share when touched (pooled
+  over arms), the same shrunk toward the pooled values with a beta prior of strength 2
+  (`(k + 2·pooled) / (n + 2)`), the pooled values, and the start-level spread as the
+  pilot computes it. It refuses packages whose unit sets differ.
+- `simulate-study --inputs FILE --price USD [--starts …] [--blocks …] [--effect 0.5]
+  [--slope-sd …] [--sims 1000] [--seed 653] [--json]` simulates studies with the inputs'
+  units (defaults: starts 10 to 100 by 10, blocks 1, 2, 3, slope SD 0, 0.5, 1). Each unit
+  is touched with its shrunk probability; a start effect on the log-odds, normal with the
+  SD that reproduces the inputs' spread, is shared by every unit of a start; a delivered
+  touched unit is missed at its baseline log-odds, a withheld one at the baseline plus
+  `log_or` plus a per-unit normal slope with the given SD. `log_or` is solved so that the
+  pooled delivered missed share is `effect` times the withheld one (0.5: delivery halves
+  misses). Each simulated study gets a fresh blocked draw and is analysed with the primary
+  test (2,000 re-draws). It refuses a block count above half the smallest number of
+  starts (every block holds at least 2), and an effect whose `log_or` it cannot solve to
+  within 1e-6 for |`log_or`| up to 10⁴. It reports power at 0.05 per grid point, the smallest number of
+  starts reaching 0.8 for each block count and slope SD, and the price at `--price` per
+  start. It is seeded and writes no file.
 
 ### Process measures (`process-measures/1`)
 

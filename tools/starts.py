@@ -145,17 +145,28 @@ class Starts:
                 if path.is_dir():
                     evidence.listing(path)
 
-    def source_manifest(self) -> tuple[dict[str, str], str]:
-        path = self.manifests / f'{STUDY}.sha256'
-        entry = evidence.read_index(self.manifests)['studies'][STUDY]
+    def source_manifest(self, study: str = STUDY) -> tuple[dict[str, str], str]:
+        descriptive_name(study)
+        path = self.manifests / f'{study}.sha256'
+        entry = evidence.read_index(self.manifests)['studies'][study]
         digest = evidence.file_sha256(path)
         if entry['availability'] != 'present' or digest != entry['manifest_sha256']:
             raise ValueError('source study is unavailable or its manifest has changed')
         entries = evidence.read_manifest(path)
-        selected = {p: h for p, h in entries.items() if p.startswith('user/') or p == PLAYER_STORE}
+        user_prefix, store_path = self.source_paths(entries)
+        selected = {('user/' + p[len(user_prefix):] if p.startswith(user_prefix) else PLAYER_STORE): h
+                    for p, h in entries.items() if p.startswith(user_prefix) or p == store_path}
         if PLAYER_STORE not in selected or not any(p.startswith('user/save/') for p in selected):
             raise ValueError('source study does not contain its saved game and player store')
         return selected, digest
+
+    @staticmethod
+    def source_paths(entries: dict[str, str]) -> tuple[str, str]:
+        if not any(p.startswith('user/save/') for p in entries):
+            raise ValueError('source study does not contain its saved game under user/save/')
+        store = next((p for p in ('start/work/' + PLAYER_STORE, PLAYER_STORE, 'start/' + PLAYER_STORE)
+                      if p in entries), PLAYER_STORE)
+        return 'user/', store
 
     def payload(self, directory: Path) -> dict[str, str]:
         actual = {'user/' + p: h for p, h in inventory(directory / 'user').items()}
@@ -178,9 +189,9 @@ class Starts:
         directory = self.starts / descriptive_name(name)
         path = directory / 'manifest.json'
         manifest = read_json(path, root=self.root)
-        expected, source_hash = self.source_manifest()
-        if (manifest['schema'] != SCHEMA or manifest['name'] != name or manifest['lineage'] != 397
-                or manifest['source_study'] != STUDY or manifest['source_manifest_sha256'] != source_hash
+        expected, source_hash = self.source_manifest(manifest['source_study'])
+        if (manifest['schema'] != SCHEMA or manifest['name'] != name or manifest['lineage'] != (397 if manifest['source_study'] == STUDY else None)
+                or manifest['source_manifest_sha256'] != source_hash
                 or manifest['files'] != expected or manifest['player_store'] != self.player_store(name)
                 or manifest['held_out'] is not False):
             raise ValueError(f'{path}: unsupported or changed start manifest')
@@ -191,23 +202,33 @@ class Starts:
     def player_store(self, name: str) -> str:
         return f'.runtime/starts/{name}/work/{PLAYER_STORE}'
 
-    def create(self, name: str) -> dict:
+    def create(self, name: str, study: str = STUDY) -> dict:
         self.preflight(name)
         directory = self.starts / descriptive_name(name)
         if directory.exists():
             raise ValueError(f'{name}: start already exists')
-        expected, source_hash = self.source_manifest()
-        source = self.store / STUDY
-        self.check_payload(source, expected)
+        expected, source_hash = self.source_manifest(study)
+        source = self.store / study
+        entries = evidence.read_manifest(self.manifests / f'{study}.sha256')
+        user_prefix, store_path = self.source_paths(entries)
+        if user_prefix == 'user/' and store_path == PLAYER_STORE:
+            self.check_payload(source, expected)
+        else:
+            check_files(source / user_prefix, {p[5:]: h for p, h in expected.items() if p.startswith('user/')})
+            for p in (source / store_path).parent.glob(PLAYER_STORE + '*'):
+                if p.is_symlink() or not p.is_file() or p.name != PLAYER_STORE:
+                    raise ValueError(f'{p}: unexpected player store sidecar')
+            if evidence.file_sha256(source / store_path) != expected[PLAYER_STORE]:
+                raise ValueError('source player store changed')
         self.starts.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='.creating-', dir=self.starts) as temporary:
             target = Path(temporary) / name
             target.mkdir()
-            copy_tree(source / 'user', target / 'user')
-            shutil.copyfile(source / PLAYER_STORE, target / PLAYER_STORE)
+            copy_tree(source / user_prefix, target / 'user')
+            shutil.copyfile(source / store_path, target / PLAYER_STORE)
             self.check_payload(target, expected)
-            write_json(target / 'manifest.json', dict(schema=SCHEMA, name=name, lineage=397,
-                       source_study=STUDY, source_manifest_sha256=source_hash, files=expected,
+            write_json(target / 'manifest.json', dict(schema=SCHEMA, name=name, lineage=397 if study == STUDY else None,
+                       source_study=study, source_manifest_sha256=source_hash, files=expected,
                        created=timestamp(), player_store=self.player_store(name), held_out=False), root=self.root)
             target.rename(directory)
         return self.describe(name)
@@ -419,8 +440,11 @@ class Starts:
                 if not resuming or entry['sources'] != pending['sources']:
                     raise ValueError('study already sealed and does not match the pending start')
             else:
+                source_study = read_json(directory / 'manifest.json', root=self.root)['source_study']
+                provenance = ('Copied lineage 397 is no longer held out.' if source_study == STUDY
+                              else f'Copied source {source_study} is no longer held out.')
                 entry = evidence.seal(study, sources, cited_by,
-                                  f'Copied lineage 397 is no longer held out. Start {name}; '
+                                  f'{provenance} Start {name}; '
                                   f'manifest {description["manifest_sha256"]}. {note}',
                                   store=self.store, manifests=self.manifests)
             receipt = dict(schema='start-disposal/1', study=study, manifest_sha256=entry['manifest_sha256'])
@@ -438,7 +462,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     for command in ('create', 'install'):
-        commands.add_parser(command).add_argument('name')
+        command_parser = commands.add_parser(command)
+        command_parser.add_argument('name')
+        if command == 'create':
+            command_parser.add_argument('--from', dest='source_study', default=STUDY)
     commands.add_parser('restore-userdir').add_argument('archive')
     disposing = commands.add_parser('dispose')
     disposing.add_argument('name')
@@ -451,7 +478,7 @@ def main(argv: list[str] | None = None) -> int:
         store = evidence.default_store()
         manager = Starts(root=store.parent.parent, store=store, manifests=evidence.MANIFESTS)
         if args.command == 'create':
-            result = manager.create(args.name)
+            result = manager.create(args.name, args.source_study)
         elif args.command == 'install':
             result = manager.install(args.name)
         elif args.command == 'restore-userdir':

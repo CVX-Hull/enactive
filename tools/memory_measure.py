@@ -78,7 +78,7 @@ from harness.evaluation.core.records import EvaluationError, dumps, loads
 from harness.jsonio import file_sha256
 from harness.trace import images
 from harness.trace.projection import ACTION_FIELDS
-from tools.knowledge_export import delivered_fact_ids
+from tools.knowledge_export import delivered_fact_ids, blocked_assignment, read_study_draw
 from tools.memory_reads import run_dirs
 from tools.memory_screen_checks import read_lineage
 
@@ -627,10 +627,10 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
         full, drawn = read_json(directory/'private/knowledge-full.json'), read_json(directory/'private/units.json')
         delivered = read_json(directory/'delivered-knowledge.json')
         if full.get('schema') != 'delivered-knowledge/1' or delivered.get('schema') != full['schema'] \
-                or drawn.get('schema') != 'knowledge-units/1' or drawn['version'] != full['version']:
+                or drawn.get('schema') not in ('knowledge-units/1', 'knowledge-units/2') or drawn['version'] != full['version']:
             raise MeasureError(f'{directory}: unsupported frozen knowledge')
         expected = units(full)
-        if ([{k:v for k,v in u.items() if k != 'withheld'} for u in drawn['units']] != expected['units']
+        if ([{k:v for k,v in u.items() if k not in (('withheld', 'placebo') if drawn['schema'] == 'knowledge-units/2' else ('withheld',))} for u in drawn['units']] != expected['units']
                 or drawn['shared'] != expected['shared']):
             raise MeasureError(f'{directory}: unit record differs from the exported unit rule')
         available = delivered_fact_ids(drawn)
@@ -791,10 +791,36 @@ Answer with exactly one label:
 - `in_line`: acted in line with it. The player did what the fact supports.
 - `against`: acted against it. The player did what the fact advises against, or went for something the fact
   says is empty or gone.
-- `found_again`: found it again. The player discovered by looking what the fact already said.
+- `found_again`: looked it up. The player spent an action to get information the fact already gave: it
+  searched for it, or opened a screen or examined something whose only purpose then was to learn what the fact
+  says, or tried several screens to find it. Seeing the fact on a screen the player opened to do something
+  else, or in a message the game showed on its own, is not `found_again`.
 - `did_not_apply`: did not apply. Nothing in the window shows that the fact could have mattered to what the
   player was doing.
 - `cannot_tell`: the frames do not show enough to choose among the four above.
+
+Choose in this order, and stop at the first that holds:
+
+1. Nothing in the window could have made the fact matter to what the player was doing: `did_not_apply`.
+2. The player did what the fact advises against, or went for something the fact says is empty or gone:
+   `against`.
+3. The player spent an action only to learn what the fact says (a search, a description or help screen opened
+   and then left without doing anything else with it, the same screen opened again to read the same thing, or
+   several screens tried to find it), before acting: `found_again`.
+4. The player did what the fact supports: `in_line`. This includes using a screen it opened to do something
+   (to make, use, eat or move something) that also shows what the fact says.
+5. Otherwise: `cannot_tell`.
+
+Examples:
+- The player opens the list of things it can make in order to make one, the list shows the requirements the
+  fact states, and it makes it that way: `in_line`, not `found_again`.
+- The player types the thing's name into a search, reads its description and closes it before acting:
+  `found_again`.
+- The game's messages say a companion is helping, as the fact says, while the player does something
+  unrelated: `did_not_apply` (or `in_line` if the player relied on the help), never `found_again`.
+- The game warns of something the fact already says (that some ground is slow to cross) while the player
+  walks on: not `found_again`; judge what the player did.
+- The player opens the same screen twice in a row to read the same figures, then acts: `found_again`.
 
 Then say whether the frames show the fact still holding (`holds`):
 
@@ -1270,7 +1296,7 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
                 'found again), the share in which the player acted in line with it', delivered, applied,
                 lambda row: row['label'] == 'in_line', delivered),
             rediscovery=rate('of the windows in which a fact whose lead was delivered applied, the share in which the '
-                'player found it again by looking', delivered, applied, lambda row: row['label'] == 'found_again', delivered),
+                'player looked it up again', delivered, applied, lambda row: row['label'] == 'found_again', delivered),
             stale_or_false_acted=rate('of the windows in which the player acted in line with a fact it had (lead, read or '
                 'index), the share in which the frames show the fact no longer held or never did', known,
                 lambda row: row['label'] == 'in_line', lambda row: row['holds'] == 'stale_or_false', known, 'holds_by'),
@@ -1314,8 +1340,8 @@ def unit_icc(touched: np.ndarray, missed: np.ndarray) -> np.ndarray:
             np.maximum(0, (between - within) / denominator), np.nan)
 
 
-def pilot_units(package: Path) -> dict:
-    """Read the package's frozen independent draw, including the shared-fact layout."""
+def pilot_units(package: Path, *, independent: bool = True) -> dict:
+    """Read a frozen draw; blocked study records require the study path."""
     if HELD_OUT in package.resolve().parts:
         raise MeasureError(f'{package}: the held-out lineage is not read for the memory measure')
     manifest = read_json(package / 'manifest.json')
@@ -1323,8 +1349,24 @@ def pilot_units(package: Path) -> dict:
         raise MeasureError(f'{package}: pilot requires campaign-run/7')
     path = package / 'private' / 'units.json'
     value = read_json(path)
-    if not isinstance(value, dict) or value.get('schema') != 'knowledge-units/1':
-        raise MeasureError(f'{path}: expected knowledge-units/1; no other version is read')
+    if not isinstance(value, dict) or value.get('schema') not in ('knowledge-units/1', 'knowledge-units/2'):
+        raise MeasureError(f'{path}: expected knowledge-units/1 or knowledge-units/2; no other version is read')
+    if independent and value['schema'] != 'knowledge-units/1':
+        raise MeasureError(f'{path}: pilot requires knowledge-units/1 independent draws; knowledge-units/2 is study-only')
+    required = {'id', 'article_id', 'fact_ids', 'withheld'}
+    if (not isinstance(value.get('units'), list)
+            or any(not isinstance(u, dict) or not required <= u.keys()
+                   or not isinstance(u['fact_ids'], list) for u in value['units'])):
+        raise MeasureError(f'{path}: units must be a list of dicts with id, article_id, fact_ids and withheld')
+    if (not isinstance(value.get('shared'), list)
+            or any(not isinstance(s, dict) or not {'fact_id', 'article_ids'} <= s.keys() for s in value['shared'])):
+        raise MeasureError(f'{path}: shared must be a list of dicts with fact_id and article_ids')
+    if value['schema'] == 'knowledge-units/2' and (
+            type(value.get('start_index')) is not int or value['start_index'] < 0
+            or not isinstance(value.get('block'), str) or not value['block']
+            or not isinstance(value.get('draw_sha256'), str) or not re.fullmatch('[0-9a-f]{64}', value['draw_sha256'])
+            or any(type(u.get('placebo')) is not bool for u in value['units'])):
+        raise MeasureError(f'{path}: invalid knowledge-units/2 study metadata')
     if type(value.get('seed')) is not int:
         raise MeasureError(f'{path}: pilot requires a recorded seed')
     if manifest['private_files'].get('units.json') != file_sha256(path):
@@ -1360,10 +1402,10 @@ def pilot_units(package: Path) -> dict:
 PILOT_MISSED, PILOT_SEED = frozenset({'against', 'found_again'}), 619
 
 
-def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int = 10000) -> dict:
+def unit_outcomes(run: Path, runs: Sequence[Path], *, independent: bool = True) -> dict:
     """withholding-pilot/1: one outcome per fact and start, then per independently drawn unit.
     This is descriptive analysis of adjudicated blind labels, never a correction against human truth."""
-    if not runs or len({path.name for path in runs}) != len(runs) or draws < 1:
+    if not runs or len({path.name for path in runs}) != len(runs):
         raise MeasureError('pilot needs distinct package names and at least one bootstrap draw')
     mapping, adjudicated = load_mapping(run), read_json(run / 'adjudicated.json')
     if not isinstance(adjudicated, dict) or adjudicated.get('schema') != 'judge-adjudicated/2':
@@ -1416,9 +1458,9 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
             stale_or_false=any(row['holds'] == 'stale_or_false' for row in applied))
 
     units, shared, fact_outcomes = [], [], []
-    draws_by_start = {package.name: pilot_units(package) for package in runs}
+    draws_by_start = {package.name: pilot_units(package, independent=independent) for package in runs}
     seeds = [drawn['seed'] for drawn in draws_by_start.values()]
-    if len(set(seeds)) != len(seeds):
+    if independent and len(set(seeds)) != len(seeds):
         raise MeasureError('pilot requires each start\'s draw to have its own seed: a repeated seed repeats the arms, '
             'and the pooled test assumes independent draws')
     for package in runs:
@@ -1446,6 +1488,17 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
             shared.append(dict(start=start, fact=item['fact_id'],
                 arm='delivered' if delivered_articles.intersection(item['article_ids']) else 'withheld',
                 **outcome([item['fact_id']], start)))
+    return dict(units=units, shared=shared, facts=fact_outcomes, rows=rows, names=names,
+                mapping=mapping, records=draws_by_start)
+
+
+def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int = 10000) -> dict:
+    """The frozen withholding-pilot/1 report and independent-coin test."""
+    if draws < 1:
+        raise MeasureError('pilot needs distinct package names and at least one bootstrap draw')
+    data = unit_outcomes(run, runs)
+    units, shared, fact_outcomes = data['units'], data['shared'], data['facts']
+    rows, names, mapping = data['rows'], data['names'], data['mapping']
     seed = PILOT_SEED if seed is None else seed
     boot = StartBootstrap([path.name for path in runs], seed, draws)
     touched = boot.sums(units, lambda unit: float(unit['touched']))
@@ -1526,6 +1579,292 @@ def pilot(run: Path, runs: Sequence[Path], seed: int | None = None, draws: int =
             missed={key: shares['withheld'][key] for key in ('value', 'interval')}, rho=spread['value'], wrong=judges['wrong']['value']))
     write_json(run / 'pilot.json', report, once=True)
     return report
+
+
+# --- blocked withholding studies ---------------------------------------------------------------------------------------
+
+def binary_agreement(rows: Sequence[dict], names: Sequence[str]) -> dict:
+    """Specific agreement and AC1 for the binary missed label of the first two judges."""
+    table = np.zeros((2, 2), dtype=int)
+    for row in rows:
+        table[int(row['labels'][names[0]] in PILOT_MISSED), int(row['labels'][names[1]] in PILOT_MISSED)] += 1
+    n = int(table.sum())
+    negative, positive = int(table[0, 0]), int(table[1, 1])
+    discordant = int(table[0, 1] + table[1, 0])
+    prevalence = (2 * positive + discordant) / (2 * n) if n else None
+    chance = 2 * prevalence * (1 - prevalence) if n else None
+    return dict(pairs=n, table=table.tolist(),
+        positive_specific=2 * positive / (2 * positive + discordant) if 2 * positive + discordant else None,
+        negative_specific=2 * negative / (2 * negative + discordant) if 2 * negative + discordant else None,
+        ac1=((positive + negative) / n - chance) / (1 - chance) if n else None)
+
+
+def study_statistic(assignment: np.ndarray, touched: np.ndarray, missed: np.ndarray,
+                    mode: str = 'primary') -> np.ndarray:
+    """Mean within-unit arm difference, re-evaluating touched-in-both eligibility on every draw.
+    An empty eligible set contributes zero in the randomization distribution.
+    """
+    outcome = touched if mode == 'touch' else missed
+    eligible = touched if mode == 'primary' else np.ones_like(touched, dtype=bool)
+    a = (assignment * eligible).sum(axis=-1)
+    b = ((~assignment) * eligible).sum(axis=-1)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        delta = (assignment * outcome).sum(axis=-1) / a - ((~assignment) * outcome).sum(axis=-1) / b
+    valid = (a > 0) & (b > 0)
+    return np.divide(np.where(valid, delta, 0).sum(axis=-1), valid.sum(axis=-1),
+                     out=np.zeros(valid.shape[:-1], dtype=float), where=valid.sum(axis=-1) > 0)
+
+
+def study_test(assignment: np.ndarray, touched: np.ndarray, missed: np.ndarray, sizes: list[int],
+               halves: np.ndarray, *, draws: int, seed: int, mode: str = 'primary') -> dict:
+    if draws < 1:
+        raise MeasureError('study needs at least one randomization draw')
+    a = (assignment * touched).sum(axis=-1)
+    b = ((~assignment) * touched).sum(axis=-1)
+    eligible = (a > 0) & (b > 0) if mode == 'primary' else np.ones(len(touched), dtype=bool)
+    defined = bool(eligible.any()) and (mode == 'primary' or bool(np.all(assignment.any(axis=-1) & (~assignment).any(axis=-1))))
+    observed = float(study_statistic(assignment, touched, missed, mode))
+    extreme, rng = 0, np.random.default_rng(seed)
+    for offset in range(0, draws, 256):
+        redrawn, _ = blocked_assignment(rng, sizes, len(touched), halves, min(256, draws - offset))
+        values = study_statistic(redrawn, touched, missed, mode)
+        extreme += int(np.count_nonzero(np.abs(values) >= abs(observed) - 1e-12) if mode == 'touch'
+                       else np.count_nonzero(values >= observed - 1e-12))
+    return dict(value=observed if defined else None, units_counted=int(eligible.sum()),
+        p=(1 + extreme) / (1 + draws) if defined else None, extreme=extreme, draws=draws, seed=seed,
+        alternative='two-sided' if mode == 'touch' else 'withheld misses more',
+        empty_redraw_statistic=0)
+
+
+def crossed_mixed_model(units: Sequence[dict]) -> dict:
+    """Secondary only: failure of this model cannot suppress the primary analysis."""
+    try:
+        from scipy.sparse import coo_matrix
+        from statsmodels.genmod.bayes_mixed_glm import BinomialBayesMixedGLM
+        selected = [u for u in units if u['touched']]
+        ids, starts = sorted({u['id'] for u in selected}), sorted({u['start'] for u in selected})
+        if not selected:
+            raise ValueError('no touched rows')
+        withheld = np.array([u['arm'] == 'withheld' for u in selected], dtype=float)
+        unit_index = {identity: i for i, identity in enumerate(ids)}
+        start_index = {name: i for i, name in enumerate(starts)}
+        columns, values, row_indices = [], [], []
+        for r, u in enumerate(selected):
+            columns.extend([unit_index[u['id']], len(ids) + start_index[u['start']],
+                            len(ids) + len(starts) + unit_index[u['id']]])
+            values.extend([1., 1., withheld[r]])
+            row_indices.extend([r] * 3)
+        vc = coo_matrix((values, (row_indices, columns)), shape=(len(selected), 2 * len(ids) + len(starts))).tocsr()
+        ident = np.array([0] * len(ids) + [1] * len(starts) + [2] * len(ids))
+        model = BinomialBayesMixedGLM(np.array([u['missed'] for u in selected], dtype=int),
+            np.column_stack([np.ones(len(selected)), withheld]), vc, ident)
+        fitted = model.fit_vb(rng=np.random.default_rng(653))
+        if not fitted.optim_retvals.get('success', False):
+            raise ValueError('did not converge: ' + str(fitted.optim_retvals.get('message')))
+        if not np.isfinite(np.r_[fitted.fe_mean, fitted.fe_sd, fitted.vcp_mean, fitted.vcp_sd]).all():
+            raise ValueError('nonfinite posterior estimates')
+        with np.errstate(over='ignore', invalid='ignore'):
+            components = {name: dict(log_sd_mean=float(mean), log_sd_sd=float(sd),
+                    variance_mean=float(np.exp(2 * mean + 2 * sd ** 2)),
+                    variance_sd=float(np.sqrt(np.expm1(4 * sd ** 2)) * np.exp(2 * mean + 2 * sd ** 2)))
+                    for name, mean, sd in zip(('unit', 'start', 'withheld_by_unit'), fitted.vcp_mean, fitted.vcp_sd)}
+        if not all(math.isfinite(number) for component in components.values() for number in component.values()):
+            raise ValueError('nonfinite reported variance components')
+        return dict(status='ok', rows=len(selected), withheld=dict(mean=float(fitted.fe_mean[1]), sd=float(fitted.fe_sd[1])),
+            variance_components=components)
+    except Exception as error:
+        return dict(status='failed', failure=f'{type(error).__name__}: {error}')
+
+
+def study(run: Path, runs: Sequence[Path], draw: Path, seed: int = 653, draws: int = 10000) -> dict:
+    try:
+        design = read_study_draw(draw)
+    except (ValueError, KeyError, TypeError) as error:
+        raise MeasureError(f'{draw}: invalid study draw: {error}') from error
+    digest = file_sha256(draw)
+    data = unit_outcomes(run, runs, independent=False)
+    n, layout = len(design['starts']), design['layout']
+    records = data['records']
+    indices = [r.get('start_index') for r in records.values()]
+    if any(type(i) is not int for i in indices) or sorted(indices) != list(range(n)):
+        raise MeasureError('study needs every start index exactly once; repeated or missing start index')
+    order = {r['start_index']: name for name, r in records.items()}
+    for index, name in order.items():
+        r = records[name]
+        if r['schema'] != 'knowledge-units/2' or r.get('draw_sha256') != digest:
+            raise MeasureError('study requires knowledge-units/2 with this draw_sha256')
+        if r['version'] != design['version'] or r['seed'] != design['seed'] or r['block'] != design['starts'][index]['block']:
+            raise MeasureError('package differs from study draw')
+        expected = [dict(u, placebo=u['id'] in design['placebo'], withheld=index in next(
+            a['withheld'] for a in design['assignment'] if a['unit_id'] == u['id'] and a['block'] == r['block']))
+            for u in layout['units']]
+        if r['units'] != expected or r['shared'] != layout['shared']:
+            raise MeasureError('package unit layout or assignment differs from study draw')
+    identities = [u['id'] for u in layout['units']]
+    lookup = {(u['id'], u['start']): u for u in data['units']}
+    touched = np.array([[lookup[(u, order[i])]['touched'] for i in range(n)] for u in identities], dtype=bool).reshape(len(identities), n)
+    missed = np.array([[lookup[(u, order[i])]['missed'] for i in range(n)] for u in identities], dtype=bool).reshape(len(identities), n)
+    assigned = np.array([[lookup[(u, order[i])]['arm'] == 'withheld' for i in range(n)] for u in identities], dtype=bool).reshape(len(identities), n)
+    sizes = [b['count'] for b in design['blocks']]
+    halves = np.array([[next(a['half_size'] for a in design['assignment'] if a['unit_id'] == u and a['block'] == b['label'])
+                        for b in design['blocks']] for u in identities], dtype=int).reshape(len(identities), len(sizes))
+    placebo = np.array([u in design['placebo'] for u in identities], dtype=bool)
+
+    def analysis(mask, mode):
+        report = study_test(assigned[mask], touched[mask], missed[mask], sizes, halves[mask],
+                            draws=draws, seed=seed, mode=mode)
+        ids = np.asarray(identities)[mask]
+        a, b = (assigned[mask] * touched[mask]).sum(axis=1), ((~assigned[mask]) * touched[mask]).sum(axis=1)
+        counted = (a > 0) & (b > 0) if mode == 'primary' else np.ones(len(ids), dtype=bool)
+        report.update(units=ids[counted].tolist(), undefined_arm_units=ids[~(assigned[mask].any(axis=1) & (~assigned[mask]).any(axis=1))].tolist(), excluded=dict(
+            never_touched=ids[(a + b) == 0].tolist() if mode == 'primary' else [],
+            one_arm_only=ids[((a > 0) ^ (b > 0))].tolist() if mode == 'primary' else []))
+        return report
+
+    boot = StartBootstrap([p.name for p in runs], seed, draws)
+    names, rows = data['names'], data['rows']
+    driving = [r for r in rows if any(r['labels'][name] in judge.APPLIED for name in names[:2])]
+    judges = {key: dict(judges_beside(boot, selected, names), binary_missed=binary_agreement(selected, names))
+              for key, selected in (('all_pairs', rows), ('driving_pairs', driving))}
+    for key, selected in (('all_pairs', rows), ('driving_pairs', driving)):
+        disputes = boot.sums(selected, lambda r: float(r['labels'][names[0]] != r['labels'][names[1]]))
+        counts = boot.sums(selected, lambda r: 1.)
+        judges[key]['agreement_interval'] = boot.interval(lambda d, n: 1 - _ratio(d, n), disputes, counts)
+
+    def shared_counts(selected):
+        return {arm: dict(touched=sum(u['touched'] for u in selected if u['arm'] == arm),
+                          missed=sum(u['missed'] for u in selected if u['arm'] == arm))
+                for arm in ('withheld', 'delivered')}
+
+    shared = dict(arms=shared_counts(data['shared']), facts=data['shared'],
+                  per_start={p.name: shared_counts([u for u in data['shared'] if u['start'] == p.name]) for p in runs})
+    balance = analysis(~placebo, 'touch')
+    balance['arms'] = {arm: dict(touched=int(touched[~placebo][assigned[~placebo] == withheld].sum()),
+        total=int((assigned[~placebo] == withheld).sum()),
+        share=_number(float(np.mean(touched[~placebo][assigned[~placebo] == withheld])))
+              if np.any(assigned[~placebo] == withheld) else None)
+        for arm, withheld in (('withheld', True), ('delivered', False))}
+    primary = analysis(~placebo, 'primary')
+    report = dict(schema='withholding-study/1', draw_sha256=digest, starts=n, blocks=design['blocks'],
+        primary=primary, intention_to_treat=analysis(~placebo, 'itt'), touch_balance=balance,
+        placebo=analysis(placebo, 'primary'), mixed_model=crossed_mixed_model([u for u in data['units'] if u['id'] not in design['placebo']]),
+        judges=dict(names=names, **judges), units=data['units'], shared=shared,
+        not_corrected=NOT_CORRECTED, threats=[f"Blocks and saved moments: {design['blocks']}.",
+            f"{primary['units_counted']} non-placebo units counted in the primary estimand.",
+            'The outcome rests on model-judge labels.'])
+    write_json(run / 'study.json', report, once=True)
+    return report
+
+
+def study_inputs(run: Path, runs: Sequence[Path], out: Path) -> dict:
+    data = unit_outcomes(run, runs, independent=False)
+    identities = sorted({u['id'] for u in data['units']})
+    by_start = {p.name: [u for u in data['units'] if u['start'] == p.name] for p in runs}
+    if any({u['id'] for u in selected} != set(identities) for selected in by_start.values()):
+        raise MeasureError('study inputs require the same units in every start')
+    total_touched = sum(u['touched'] for u in data['units'])
+    pooled_touch = total_touched / len(data['units']) if data['units'] else 0
+    pooled_miss = sum(u['missed'] for u in data['units']) / total_touched if total_touched else 0
+    units = []
+    for identity in identities:
+        selected = [u for u in data['units'] if u['id'] == identity]
+        touched, missed = sum(u['touched'] for u in selected), sum(u['missed'] for u in selected)
+        units.append(dict(id=identity, starts=len(runs), touched=touched, missed=missed,
+            raw=dict(touch=touched / len(runs), missed_when_touched=missed / touched if touched else None),
+            shrunk=dict(touch=(touched + 2 * pooled_touch) / (len(runs) + 2),
+                        missed_when_touched=(missed + 2 * pooled_miss) / (touched + 2))))
+    spread = _number(float(unit_icc(np.array([sum(u['touched'] for u in us) for us in by_start.values()]),
+                                  np.array([sum(u['missed'] for u in us) for us in by_start.values()]))))
+    report = dict(schema='withholding-study-inputs/1', starts=len(runs), prior_strength=2,
+        pooled=dict(touch=pooled_touch, missed_when_touched=pooled_miss), units=units, spread=spread,
+        not_corrected=NOT_CORRECTED)
+    write_json(out, report, once=True)
+    return report
+
+
+def _logistic(value):
+    return 1 / (1 + np.exp(-np.clip(value, -700, 700)))
+
+
+def simulate_study(inputs: Path, price: float, starts: Sequence[int] = tuple(range(10, 101, 10)),
+                   blocks: Sequence[int] = (1, 2, 3), effect: float = .5,
+                   slope_sd: Sequence[float] = (0., .5, 1.), sims: int = 1000, seed: int = 653) -> dict:
+    value = read_json(inputs)
+    if not isinstance(value, dict) or value.get('schema') != 'withholding-study-inputs/1':
+        raise MeasureError('expected withholding-study-inputs/1')
+    touch = np.array([u['shrunk']['touch'] for u in value['units']], dtype=float)
+    baseline = np.array([u['shrunk']['missed_when_touched'] for u in value['units']], dtype=float)
+    rho = value['spread']
+    if (not len(touch) or not np.isfinite(touch).all() or not np.isfinite(baseline).all()
+            or np.any((touch < 0) | (touch > 1)) or np.any((baseline <= 0) | (baseline >= 1))
+            or touch.sum() == 0 or rho is None or not math.isfinite(rho) or not 0 <= rho < 1):
+        raise MeasureError('simulation needs finite probabilities, interior miss probabilities, and spread in [0, 1)')
+    if (sims < 1 or not math.isfinite(price) or price < 0 or not 0 < effect <= 1 or not starts or not blocks
+            or any(n < 2 for n in starts) or any(b < 1 or b > min(starts) // 2 for b in blocks)
+            or any(not math.isfinite(sd) or sd < 0 for sd in slope_sd) or not slope_sd):
+        raise MeasureError('invalid study simulation grid, effect, price or sims')
+    logits = np.log(baseline / (1 - baseline))
+    nodes, weights = np.polynomial.hermite.hermgauss(40)
+    nodes, weights = nodes * math.sqrt(2), weights / math.sqrt(math.pi)
+    # Match the binary start-level ICC of the pooled unit outcome by quadrature.
+    def binary_spread(sd):
+        ps = np.average(_logistic(logits[:, None] + sd * nodes), axis=0, weights=touch)
+        mean = float(ps @ weights)
+        return float(((ps - mean) ** 2 @ weights) / (mean * (1 - mean)))
+    upper_sd = 1.
+    while binary_spread(upper_sd) < rho and upper_sd < 1024:
+        upper_sd *= 2
+    if binary_spread(upper_sd) < rho:
+        raise MeasureError('start spread cannot be matched by the simulation inputs')
+    start_sd = _solve(binary_spread, rho, True, upper_sd) if rho else 0.
+    delivered = float(np.average(_logistic(logits[:, None] + start_sd * nodes) @ weights, weights=touch))
+    if delivered / effect >= 1:
+        raise MeasureError('requested effect is impossible at these baseline miss probabilities')
+    rng, rows = np.random.default_rng(seed), []
+    for sd in slope_sd:
+        def withheld_mean(shift):
+            return float(np.average(_logistic(logits[:, None] + shift + math.hypot(start_sd, sd) * nodes) @ weights, weights=touch))
+        # A heterogeneous slope can require a negative shift even when effect=1.
+        bound = 100.
+        while True:
+            low, high = -bound, bound
+            for _ in range(80):
+                mid = (low + high) / 2
+                if withheld_mean(mid) < delivered / effect:
+                    low = mid
+                else:
+                    high = mid
+            log_or = (low + high) / 2
+            if abs(withheld_mean(log_or) - delivered / effect) <= 1e-6:
+                break
+            if bound >= 1e4:
+                raise MeasureError('withheld missed share cannot match the requested effect within 1e-6 at |log_or| <= 1e4')
+            bound = min(2 * bound, 1e4)
+        for block_count in blocks:
+            for n in starts:
+                sizes = [n // block_count + (b < n % block_count) for b in range(block_count)]
+                rejected = 0
+                for _ in range(sims):
+                    assigned, halves = blocked_assignment(rng, sizes, len(touch))
+                    assigned, halves = assigned[0], halves[0]
+                    touched = rng.random((len(touch), n)) < touch[:, None]
+                    eta = logits[:, None] + rng.normal(0, start_sd, n)[None, :]
+                    eta = eta + assigned * (log_or + rng.normal(0, sd, len(touch))[:, None])
+                    missed = (rng.random((len(touch), n)) < _logistic(eta)) & touched
+                    result = study_test(assigned, touched, missed, sizes, halves, draws=2000,
+                                        seed=int(rng.integers(0, 2 ** 32)))
+                    rejected += result['p'] is not None and result['p'] <= .05
+                rows.append(dict(starts=n, blocks=block_count, slope_sd=sd, log_or=log_or,
+                                 power=rejected / sims, price_usd=n * price, withheld_missed_share=withheld_mean(log_or)))
+    minimum = []
+    for b in blocks:
+        for sd in slope_sd:
+            passing = [r for r in rows if r['blocks'] == b and r['slope_sd'] == sd and r['power'] >= .8]
+            n = min((r['starts'] for r in passing), default=None)
+            minimum.append(dict(blocks=b, slope_sd=sd, starts=n, price_usd=n * price if n else None))
+    return dict(schema='withholding-study-simulation/1', inputs_sha256=file_sha256(inputs), seed=seed, sims=sims,
+        draws=2000, effect=effect, price_per_start_usd=price, start_sd=start_sd, spread=rho,
+        delivered_missed_share=delivered, rows=rows, minimum_starts=minimum)
 
 
 # --- the anchor: the measure gate's owner-labelled pairs, re-judged ---------------------------------------------------------
@@ -1770,6 +2109,9 @@ def prompt_packets(run: Path, before: Path) -> dict:
             source, manifest = before / 'judge-packets' / packet['packet'], manifests[packet['packet']]
             target = out / packet['packet']
             shutil.copytree(source, target, ignore=shutil.ignore_patterns('manifest.json', 'instructions.md'))
+            # Sealed source directories are read-only; only the new copy is made writable.
+            for directory in (target, *(p for p in target.rglob('*') if p.is_dir())):
+                directory.chmod(directory.stat().st_mode | 0o700)
             budget = dict(manifest['budget'], estimated=dict(manifest['budget']['estimated']))
             sha, size = seal_packet(target, {**{key: value for key, value in manifest.items() if key != 'files'}, 'budget': budget},
                 instructions)
@@ -2157,6 +2499,27 @@ def main(argv=None) -> int:
     pilot_command = commands.add_parser('pilot', help='the frozen unit-level analysis of the withholding pilot')
     pilot_command.add_argument('run', type=Path)
     pilot_command.add_argument('--runs', nargs='+', type=Path, required=True, help='sealed pilot packages, one per start')
+    study_command = commands.add_parser('study', help='blocked withholding study analysis')
+    study_command.add_argument('run', type=Path)
+    study_command.add_argument('--runs', nargs='+', type=Path, required=True)
+    study_command.add_argument('--draw', type=Path, required=True)
+    study_command.add_argument('--seed', type=int, default=653)
+    study_command.add_argument('--draws', type=int, default=10000)
+    study_command.add_argument('--json', action='store_true')
+    inputs_command = commands.add_parser('study-inputs', help='derive unit-level simulation inputs')
+    inputs_command.add_argument('run', type=Path)
+    inputs_command.add_argument('--runs', nargs='+', type=Path, required=True)
+    inputs_command.add_argument('--out', type=Path, required=True)
+    sim_study = commands.add_parser('simulate-study', help='simulate the blocked study design')
+    sim_study.add_argument('--inputs', type=Path, required=True)
+    sim_study.add_argument('--price', type=float, required=True)
+    sim_study.add_argument('--starts', type=int, nargs='+', default=list(range(10, 101, 10)))
+    sim_study.add_argument('--blocks', type=int, nargs='+', default=[1, 2, 3])
+    sim_study.add_argument('--effect', type=float, default=.5)
+    sim_study.add_argument('--slope-sd', type=float, nargs='+', default=[0., .5, 1.])
+    sim_study.add_argument('--sims', type=int, default=1000)
+    sim_study.add_argument('--seed', type=int, default=653)
+    sim_study.add_argument('--json', action='store_true')
     anchor = commands.add_parser('anchor', help='the measure gate\'s owner-labelled pairs, re-judged').add_subparsers(dest='step', required=True)
     anchor_make = anchor.add_parser('packets')
     anchor_make.add_argument('run', type=Path)
@@ -2208,6 +2571,13 @@ def main(argv=None) -> int:
         sims=10000, seed=386, target=0.8, alpha=0.05, min_starts=2, ceiling=60, price=GATE_PRICE_USD)
     args = parser.parse_args(argv)
     try:
+        if args.command == 'simulate-study':
+            report = simulate_study(args.inputs, args.price, args.starts, args.blocks, args.effect,
+                                    args.slope_sd, args.sims, args.seed)
+            print(json_text(report) if args.json else '\n'.join(
+                f"{r['starts']} starts, {r['blocks']} blocks, slope SD {r['slope_sd']}: "
+                f"power {r['power']:.3f}, ${r['price_usd']:.2f}" for r in report['rows']))
+            return 0
         if args.command == 'simulate-withholding':
             if args.pilot:
                 if args.render or any(getattr(args, name) is not None for name in MEASURED_INPUTS):
@@ -2279,6 +2649,14 @@ def main(argv=None) -> int:
         elif args.command == 'measure':
             report = measure(run, args.seed, args.draws)
             print(json.dumps(report, indent=1) if args.json else render_measure(report))
+        elif args.command == 'study':
+            report = study(run, run_dirs(args.runs), args.draw, args.seed, args.draws)
+            print(json_text(report) if args.json else
+                  f"Primary: {report['primary']['value']}, p={report['primary']['p']}; "
+                  f"{report['primary']['units_counted']} units; {run / 'study.json'}")
+        elif args.command == 'study-inputs':
+            report = study_inputs(run, run_dirs(args.runs), args.out)
+            print(f"{len(report['units'])} units in {args.out}")
         elif args.command == 'pilot':
             report = pilot(run, run_dirs(args.runs), args.seed, args.draws)
             print(json.dumps(report, indent=1) if args.json else render_pilot(report))

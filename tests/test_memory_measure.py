@@ -285,7 +285,7 @@ def test_the_instructions_name_no_kind_of_thing_in_a_game_and_give_the_five_labe
         assert all(f'`{value}`' in words for value in judge.HOLDS) and 'not one step' in words
     assert judge.USE_LABELS == ('in_line', 'against', 'found_again', 'did_not_apply', 'cannot_tell')
     assert judge.USE_LABEL_TEXT == dict(in_line='acted in line with it', against='acted against it',
-        found_again='found it again', did_not_apply='did not apply', cannot_tell='cannot tell')
+        found_again='looked it up', did_not_apply='did not apply', cannot_tell='cannot tell')
 
 
 def test_annotated_facts_are_matched_from_two_lists_and_frozen(tmp_path, capsys):
