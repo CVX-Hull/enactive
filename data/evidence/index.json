@@ -603,6 +603,20 @@
       },
       "visibility": "private"
     },
+    "process-measures-620": {
+      "availability": "present",
+      "bytes": 161736263,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-process-measures.md"
+      ],
+      "files": 1426,
+      "manifest_sha256": "cb00c48753d9bdc4952a9c5735a1613b14824adc668142e5725747004596d58b",
+      "note": "The game-neutral process measures (#620) on sd1a5 to sd1a7: packets, frozen milestones, every judge's answers and events, the adjudication and process.json",
+      "sources": {
+        "memory-measure/process-lineage-620": ".runtime/memory-measure/process-lineage-620"
+      },
+      "visibility": "private"
+    },
     "seven-day-recap-video": {
       "availability": "present",
       "bytes": 2722183,
