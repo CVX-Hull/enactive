@@ -102,7 +102,7 @@ Its `metadata.state` is `live` or `final`.
   - `human`.
 - `judge` is a model judge's answer to one closed question. A judge event uses this
   envelope but is never a row of an evaluation record: the `events` table refuses the
-  source. It lives in its own file ([judge events](#judge-events-judge-events1)).
+  source. It lives in its own file ([judge events](#judge-events-judge-events2)).
 - `confidence` is 0–1, or null for mechanical facts.
 - `payload` is JSON. Core field names never contain game words; game detail lives in
   `payload.binding`.
@@ -270,6 +270,7 @@ their numbers for latency and delivery counts.
 | --- | --- | --- |
 | `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. Per trace, per run directory and for the whole selection, `response_by_prompt`: response time (count, p50, p95), the share within 2 s and within 5 s and the mean provider-reported cost per request, for all responses and by prompt-size band (input plus cache read plus cache write tokens: under 20,000; 20,000 to 60,000; 60,000 to 100,000; 100,000 to 150,000; over 150,000), and the interval from one request's first tool result to the next. `prompt_composition`: per trace one object, per run directory and for the whole selection a list with one object per route (the host's `model`). It says what the prompt is made of, fitted by least squares on the growth in prompt tokens between consecutive requests of an actor against what was added, from the provider's reported `usage` and the trace's own sizes alone, so it holds for any model that reports usage. An object has `pairs` (fitted), `left_out`, `image_counts` (histogram of images per fitted pair), `image_term_separable`, `images_per_turn`, `usage_fit`, `usage_fit_reason` and `tokenizer_check`. `usage_fit` has `per_result_byte` (tokens per byte of tool-result text: the `content` text the model reads, in the short form or the full one, never `structuredContent`), `per_output_token` (per output token of the previous reply, reasoning included), `per_image`, `per_turn_constant`, `per_turn_at_modal_images`, `residual_abs` (p50, p95, share within 5 tokens) and `pairs`. Every eligible pair is fitted; the image count is a term of the fit whenever it varies, so a turn with another count has its own intercept and does not bend the byte slope. `per_image` and `per_turn_constant` are numbers only when at least 10% of the fitted pairs have a count other than the most common one (`image_term_separable` true). Otherwise (`image_term_separable` false) they are null, because the image term cannot be told from the constant, and the supported figure is `per_turn_at_modal_images`, the constant plus `images_per_turn` (the most common count) images; it is null when they are separable. `left_out` counts the pairs not fitted, by `usage_unknown` (a prompt size or the reply's output is unknown), `projection_unknown` (only one of the two requests has an image projection event), `images_dropped` (the host dropped images between the two requests), `notice_added` (a `tail-notice` on the second) and `not_one_call` (the reply did not make exactly one call with one result). `usage_fit` is null, with `usage_fit_reason`, when there are no more pairs than terms or the terms are not independent (for example every result has the same length). A tokenizer is only an optional check: `python -m tools.host_analysis PATH... --tokenizer [ROUTE=]ENCODING` (or `host_summary(paths, tokenizers)`) fills `tokenizer_check`, otherwise null; it fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and its reasoning tokens (with the same image treatment) and reports `slope` (`per_result_token`) and `holds`: the slope is within 1 ± 0.01 and the median absolute residual is at most 1 token (this reader's stated limit; the recorded medians for `o200k_base` were 0.2 and 0.1). A tokenizer that is not installed, cannot be loaded or whose counting function raises gives `available: false` and a `reason`, and a degenerate fit gives a `reason` and no `slope`; the usage fit is unaffected. The command exits 2 when a `ROUTE` names no selected trace. `--format markdown` prints the tables. |
 | `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
+| `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
 | `python -m tools.memory_reads` | text, or `--json` | Per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
 | `python -m tools.memory_screen_checks` | text, or `--json` | Four subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository (facts and bytes) and the facts that match a pattern, read from the repository's loose objects without a Git process. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options. Its `recorded` row is from the traces; every other row is simulated, not measured. `brief-gate REPOSITORY --patterns FILE [--version vN]`: the brief gate's frozen check; for each `{label, subject, place}` pattern pair in FILE, the current `curator-fact/2` facts of kind `place_with_goods` whose `subject` and `place` both match (case-insensitive; `statement` is not searched; a pattern that matches the empty string is refused), with game time and citations; a fact that matches more than one label is listed as shared and counts for none. It prints the version read (default the newest), the labels with a match, the store's size and the sha256 of FILE, and decides nothing beyond that count. |
 
@@ -465,85 +466,199 @@ evaluator reads them, and nothing writes them at run time.
 Labels enter records as `human` events. A label never changes a derived value; it sits
 beside it.
 
-## Judge events (`judge-events/1`)
+## Judge events (`judge-events/2`)
 
-A judge event is one model judge's label for one known item over one start, a stretch of
-recorded play ([#386](https://github.com/CVX-Hull/enactive/issues/386)). The
-[memory screen protocol](../design/memory-screen-protocol.md#the-judge), now historical,
-gives the question, the labels' meaning and the calibration thresholds of the format built
-today. Their game-neutral replacement is decided in
-[general memory](../design/general-memory.md#3-measurement) and built in #386. `harness/evaluation/core/judge.py`
-validates the format; `python -m tools.memory_measure` writes and reads it.
+A judge event is one model judge's answer to one closed question about recorded play
+([#386](https://github.com/CVX-Hull/enactive/issues/386)). Judges are host agents the lead
+starts; `python -m tools.memory_measure` builds what they read and counts what they answer,
+and calls no model. `harness/evaluation/core/judge.py` validates the format. The design is
+[general memory](../design/general-memory.md#3-measurement). `judge-events/1`, the format of
+the [measure gate](../acceptance/2026-11-13-memory-measure-gate.md), is not read.
 
-- **File.** JSON Lines, one event per line, one judge per file:
-  `.runtime/memory-measure/<run>/events/<judge>.jsonl`. A file is written once and never
-  replaced. Each (`start`, `item`) pair appears at most once in it.
-- **Envelope.** Exactly `schema` (`judge-events/1`), `kind` (`known_item_verdict`),
-  `source` (`judge`), `confidence` (always null: agreement is measured over the file, not
-  claimed per event) and `payload`.
+- **File.** JSON Lines, one event per line, one judge and one kind per file, written once
+  and never replaced. Each pair appears at most once. Use verdicts are in
+  `.runtime/memory-measure/<run>/events/<judge>.jsonl`; anchor verdicts in
+  `.runtime/memory-measure/<run>/anchor/events/<judge>.jsonl`.
+- **Envelope.** Exactly `schema` (`judge-events/2`), `kind`, `source` (`judge`),
+  `confidence` (always null: agreement is measured over the file) and `payload`.
+
+**`fact_use_verdict`**: one judge's label for one fact over one window.
 
 | Payload field | Meaning |
 | --- | --- |
-| `start` | The stretch judged: `<admission>:<first decision>-<last decision>` |
-| `item` | The known item's ID in the frozen item list |
-| `label` | `straight`, `missed`, `not_engaged` or `cannot_tell` |
-| `cited_frames` | Source IDs of the frames the judge cited. `straight` and `missed` cite at least one. |
+| `window` | `<admission>/<actor>:<first decision>-<last decision>`: a stretch of one actor's decisions, never a single step |
+| `fact` | The fact's id in the facts file |
+| `route` | How the fact reached the player: `lead` (its article's lead was delivered), `read` (the player read it through a link or a search), `index` (only on the index) or `withheld` (the benefit measure). The tool sets it from the facts file; a judge's answer cannot |
+| `label` | `in_line` (acted in line with it), `against` (acted against it), `found_again` (found it again), `did_not_apply` or `cannot_tell` |
+| `holds` | Whether the frames show the fact still holding: `held`, `stale_or_false` or `cannot_tell` |
+| `cited_frames` | Source IDs of the frames the judge cited. `in_line`, `against` and `found_again` cite at least one |
 | `judge`, `model` | The judge's name and the model the lead pinned for it |
 | `packet`, `packet_sha256` | The shuffled name of the packet the judge was given and the SHA-256 of its manifest, which lists every file's hash |
 
-**Isolation.** The tool writes packets, events and the statistics made from them only
-into its run directory, and it refuses a run directory whose parent is not named
-`memory-measure`; by convention that is `.runtime/memory-measure/<run>/`. It does not
-check where the lead saves a judge's answers, and it does not keep a judge from the
-mapping of shuffled packet names to admissions, which sits in the run directory's
-`private/` folder: the lead gives a judge its packet directory and nothing else. It
-refuses to read the held-out lineage's evidence. An evaluation record holds no judge
-event, so the viewer cannot serve one. The curator's trace is
-projected by allowlist from named session directories, a run package freezes a closed set
-of files, and the import contracts forbid the player, the curator and the trace projection
-from importing evaluation code or tools. The owner's labelling page serves a pair's
-judge evidence only after the owner's first click on that pair (see below).
+**`anchor_verdict`**: the measure gate's frozen question, used only by the anchor check.
+Payload: `start` (`<admission>:<first>-<last>`), `item`, `label` (`straight`, `missed`,
+`not_engaged`, `cannot_tell`; the first two cite a frame), `cited_frames`, `judge`, `model`,
+`packet`, `packet_sha256`.
 
-**Calibration files.** The owner's labels are made in two passes, so the calibration is
-not biased by the judges' evidence and also tests straight against missed
-([owner decisions of 13 November 2026](../decisions/owner-decisions.md)).
+### The facts to judge (`judged-facts/1`)
 
-| File | Content |
+Facts come from the store and the trace, not from a list written in advance. Delivery
+(#461) writes this file for a run; until then the lead writes it.
+
+    {"schema": "judged-facts/1",
+     "admissions": {"<admission directory name>": {"<actor directory name>": {
+       "lead": [{"id": "...", "text": "...", "from_decision": 40}],
+       "read": [...], "index": [...], "withheld": [...],
+       "briefing": "the briefing as delivered",
+       "reminders": [{"decision": 40, "text": "..."}]}}}}
+
+- A fact has one route for an actor; an id listed twice is refused.
+- `from_decision` is optional: the admission's decision from which the route holds (a
+  reminder's, a read's). Its `available_from` frame is the first kept frame whose carried
+  inputs all come from decisions strictly after it; a use packet leaves the fact out of
+  windows with no such frame, and an applied label (`in_line`, `against`, `found_again`)
+  must cite a frame from there on, or `events` refuses it, so an action before or during a
+  read or a reminder cannot count as using it. A fact with no such frame in any window is
+  listed under `not_shown` (actor and fact) in the mapping and the report.
+- `briefing` and `reminders` are optional and are shown only in use packets.
+- An actor without an entry is not judged. Any other version or key is refused.
+
+### Packets
+
+`packets use` and `packets blind` write one packet per window and group of facts under
+`judge-packets/<shuffled name>/`, and `private/judge-mapping.json` (`judge-mapping/2`),
+which maps each shuffled name to its admission, actor, decisions, source IDs and each
+fact's route and is never given to a judge. A run directory holds one kind.
+
+- **Token budget.** Windows are cut so that everything a judge reads stays within the
+  budget (`--budget`, default 60,000 estimated tokens), evened toward an average packet
+  across the windows of an actor where decisions allow, each priced with its real bounds;
+  cuts fall between decisions and within one actor. An image
+  is estimated at width × height / 750 tokens after a long edge over 1568 px is scaled
+  down to it, text at one token per three characters, counted on the files as written.
+  The manifest (`judge-packet/2`) records `budget: {tokens, estimated: {images, text,
+  total}, over}`; `over` is true when a written packet passes the budget, which a single
+  decision larger than the budget can. Facts are split over several packets of the same
+  window when they would take more than half of what the briefing, reminders and
+  instructions leave; when those leave less than a quarter of the budget, the tool refuses.
+- An actor with facts but no kept frame is listed under `no_frames` in the mapping and
+  the report.
+- **Use packets** hold `manifest.json`, `instructions.md`, `facts.json` (id, text, route,
+  and `available_from` where the fact arrived during play),
+  `delivered.json` (the briefing and the reminders up to the window's end) and `frames/`;
+  a frame's row may carry `stated_before`, the `intent` and `cites` of the player's calls
+  since the previous frame. Withheld facts are left out.
+- **Blind packets**, for the benefit measure, hold `manifest.json`, `instructions.md`,
+  `facts.json` (text under an opaque id drawn per packet, in an order and grouping that do
+  not depend on the route) and `frames/`: frames and inputs only. The briefing, the
+  reminders, `intent`, `cites`, the route, the facts' own ids and decision numbers are
+  absent (frames are numbered by position, so a gap cannot show a memory read), and every
+  fact of the actor is in every window, so a judge cannot tell a delivered fact from a
+  withheld one. The mapping translates the opaque ids back.
+- Frames and directories carry shuffled names; a packet holds no admission name, source
+  ID, player record or report. The held-out lineage's evidence is refused.
+- **Annotators.** `packets annotate` cuts frames to the same budget for two annotators,
+  who list every fact the frames show a later player could use (`{fact, frames}`); `items`
+  joins their lists by the lead's matches into `annotated-facts.json`
+  (`annotated-facts/1`), frozen with its hash. An entry only one annotator listed is left out.
+
+### Adjudication and the standing use measures
+
+`agreement` writes `adjudicated.json` (`judge-adjudicated/2`): per pair the label both of
+the first two judges gave, else the third judge's (`by`: `agreement`, `third`, or
+`third_alone` when the third gave a label neither did); `holds` is the value both gave,
+else the third's when it sides with one of them, else `cannot_tell`. A pair on which the
+first two differ in the label or in `holds` needs a third judge. It reports the first two
+judges' agreement, Cohen's κ and the dispute rate, for the label and for `holds`
+separately, and the packets a third judge must answer.
+
+Every answer import (`events`, `anchor events`) and `prompt-check report` checks each
+file of the packet against its manifest, and refuses a packet with an unlisted or changed
+file.
+
+`measure` writes `measure.json` (`memory-use/1`) from the adjudicated labels of a run of
+use packets:
+
+| Measure | Definition |
 | --- | --- |
-| `sample.json` (`calibration-sample/1`) | The random pairs: `seed`, `count`, `population`, `items_sha256`, `verdicts_existed`, and `pairs`, each `{index, start, item}` numbered from 0. Drawn once, from all pairs, "not engaged" included, without reading a verdict. |
-| `sample-engaged.json` (`engaged-sample/1`) | The engaged supplement, drawn once after the judges' events exist (`sample RUN --engaged N`): `seed`, `count`, `population`, `eligible`, `labels`, the `judges` read and their `events_sha256`, `random_sample_sha256`, `items_sha256`, `pairs` numbered on from the random pairs, and `display`: the `seed` and `order`, a random permutation of all pair indices that is the order the owner sees them in. It draws at random from the pairs outside the random draw that any judge called `straight`, `missed` or `cannot_tell`, so it cannot contain a pair every judge called `not_engaged`. It is refused once `labels.json` exists. |
-| `labels.json` (`owner-labels/2`) | `sample_sha256`, `engaged_sha256` (null with no supplement), `labels` keyed by pair index, and `history`. Each label is `{index, start, item, blind, blind_time, checked, checked_time}`. `index` is the pair's index in the samples. `blind` is the owner's first click, made on the item and the stretch's frames alone: it is recorded once and never changed. `checked` is null until pass two, when the owner has seen the judges' evidence and kept or changed the answer; keeping records `checked` equal to `blind`. `history` lists every recorded click as `{index, start, item, step, label, time}` with `step` `blind`, `keep` or `change`. A format other than `owner-labels/2` is refused. |
+| `use_rate_delivered` | Of the windows in which a fact whose lead was delivered applied (`in_line`, `against` or `found_again`), the share labelled `in_line` |
+| `rediscovery` | Of the same windows, the share labelled `found_again` |
+| `stale_or_false_acted` | Of the windows in which the player acted in line with a fact it had (lead, read or index), the share whose `holds` is `stale_or_false` |
+| `read_then_in_line` | Of the facts the player read through a link or a search, the share it acted in line with in some window; the denominator is how many it read |
 
-- **The page.** It serves the random and the engaged pairs interleaved, in the display
-  order, as one sequence with one progress count, and nothing on it says which group a
-  pair is from: the state and every image URL name a pair by its display position, and
-  only the server maps a position to the pair's index.
-  - *Pass 1 of 2: your own answer.* Each pair shows the item, its first frame, the
-    stretch's frames and inputs, and the four answers; each click records the blind label
-    and moves on. Back shows a recorded pair with its answers fixed. No response holds a
-    verdict, note or cited frame, for any pair, until every pair has a blind label.
-  - *Pass 2 of 2: check against the judges.* A start screen opens it when every pair
-    has a blind label. Each pair is then shown again with the adjudicated label, each
-    judge's label and note, and the frames any judge cited (outlined in the strip), with
-    "Keep my answer" and the four answers. Back shows a checked pair and changes its
-    checked label, never the blind one. The server holds the evidence from
-    `adjudicated.json`, the judges' events and the lead's saved answers
-    (`answers/<judge>/<packet>.json`, for the notes). A check before every pair has a
-    blind label is refused.
-  - Every click is saved at once, the new labels written before they replace the held
-    ones. Start the server after `events`, `agreement` and `sample --engaged`.
-- **Calibration.** `agreement` calibrates on the blind labels of the random pairs only:
-  agreement, κ and the owner match are computed as the protocol states, against the same
-  thresholds. It reports separately the engaged pairs (blind-label match with an exact
-  interval, and the error on pairs the owner or the judges called straight or missed), and
-  how many checked labels differ from blind ones with the checked labels' match, labelled
-  as not the calibration (`judge-agreement/2`). `measure` takes the judge's error on
-  touched items from the blind labels of every labelled pair, random and engaged together,
-  that the owner or the judges called straight or missed, with the count and an exact
-  interval, and reports the same error on the random pairs alone beside it; below five
-  such pairs it says the error was not measured. The engaged pairs cannot contain a pair
-  every judge called not engaged, so the pooled error is conditional on a judge noticing
-  engagement and is likely low.
+- Each rate carries, beside it, the first two judges' agreement, κ and dispute rate
+  (`stale_or_false_acted` on `holds`, the others on the label) twice: over every pair of
+  its routes (`judges_route`), and over the pairs that drive it (`judges_rate_pairs`:
+  either of the first two judges gave an applied label, or for the stale rate `in_line`),
+  chosen before adjudication so the set does not depend on the outcome. Easy agreement on
+  "did not apply" lifts the first; the second is the health signal. Each rate has a 95%
+  interval from a cluster bootstrap over starts (admissions); one start gives none.
+- The report's `not_corrected` field states that the rates rest on adjudicated model-judge
+  labels and are not corrected against a human truth
+  ([owner decisions](../decisions/owner-decisions.md)).
+- A run of blind packets gets label counts by route and the judges' agreement only.
+- The recall model's precision and silence are not built; they wait for #461.
+
+### Checks of a changed judge
+
+- **Anchor, when a judge's model changes.** `anchor packets RUN --gate GATE` copies,
+  unchanged, the measure gate's judge packets that hold one of its owner-labelled pairs
+  into `RUN/anchor/packets/`, after checking every file against the hashes the gate
+  recorded and every `instructions.md` against the frozen prompt's SHA-256
+  (`14c7d593…6af24`, also pinned by a test), and every gate file it reads (the mapping,
+  `labels.json`, `adjudicated.json` and the packets) against the sealed evidence manifest
+  `data/evidence/memory-screen-gates-460-386.sha256`, so a gate rewritten consistently
+  with its own mapping is still refused. `anchor events` rechecks the frozen prompt. The
+  gate is only read; `--dry-run` writes nothing. `private/anchor.json` (`anchor-set/1`) holds the pairs with the owner's blind
+  and checked labels (read from the gate's `labels.json`, `owner-labels/2`) and the gate
+  judges' labels. `anchor events` writes the new judge's `anchor_verdict` events;
+  `anchor report` writes `anchor/report-<judge>.json` (`anchor-report/1`): the new judge's
+  matches with the owner's blind and checked labels, over all pairs and over the random
+  draw, with exact intervals, beside the same figures for each gate judge and the gate's
+  adjudicated label, the shift (new minus adjudicated, in pairs), and agreement and κ
+  with the gate's labels over every re-judged pair.
+- **Prompt change.** The frozen set is a judged run's packets: its mapping records for
+  each packet a `stretch_sha256` over the manifest without the instructions' hash and the
+  token estimate. `prompt-check packets RUN --before BEFORE` rebuilds the same windows,
+  frames, inputs, facts and names with the tool's current instructions, after checking
+  every file of `BEFORE`. `prompt-check report RUN --before BEFORE --judges A B` writes
+  `prompt-check.json` (`prompt-check/1`): the first two judges' agreement, κ and dispute
+  rate before and after, the difference with an interval over starts, the share of its
+  own labels each judge changed, and each judge's model on both sides; it refuses a run
+  whose models differ, so a model change is not credited to the prompt. Each event file
+  holds one model.
+
+### Withholding simulation (`withholding-simulation/1`)
+
+`simulate-withholding` sizes the benefit measure before any play. Per start: a Poisson
+number of touched units; each withheld with probability one half; a start-level miss
+probability, Beta with the given mean and intra-start correlation (default 0.2); a
+withheld unit missed with it and a delivered one with `ratio` times it; each label flipped
+by the judge with the given probability. The statistic is missed withheld minus missed
+delivered, pooled over starts; the test is the one-sided randomization test that re-draws
+delivery within each start, computed exactly (given M missed units, the number withheld is
+Binomial(M, 1/2)) at 0.05. For each case (the point values at each judge error, each input
+at each end of its interval, and both corners) it reports the smallest number of starts
+from 2 to 60 that detects a halving with probability 0.8, the chance of detecting a cut of
+one third and the false-alarm rate at that size, and the price: play per start, the same
+with the recall model's inferred overhead (×1.67 and ×2.0), and once a store (about \$23)
+and one grooming session (\$1.16 to \$4.19). The defaults are the measure gate's numbers.
+It is seeded (each rate has its own stream), prints JSON or a table, and writes no file.
+
+**Isolation.** The tool writes packets, events and statistics only into its run
+directory, and refuses a run directory whose parent is not named `memory-measure`; by
+convention that is `.runtime/memory-measure/<run>/`. The anchor never writes into the gate
+it reads. It does not check where the lead saves a judge's answers, and it does not keep a
+judge from the mappings in the run directory's `private/` folder: the lead gives a judge
+its packet directory and nothing else. An evaluation record holds no judge event, so the
+viewer cannot serve one. The curator's trace is projected by allowlist from named session
+directories, a run package freezes a closed set of files, and the import contracts forbid
+the player, the curator and the trace projection from importing evaluation code or tools.
+
+The owner's labels of the anchor set are the measure gate's sealed `labels.json`
+(`owner-labels/2`, described in the [measure gate](../acceptance/2026-11-13-memory-measure-gate.md)
+and its commit); the anchor reads only that format. No owner labels are made after it, by
+the owner's decision.
 
 ## Tracked run ledger and metrics snapshot
 

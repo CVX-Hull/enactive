@@ -1,49 +1,62 @@
-"""The memory screen's measure gate (#386): packets, the known-item list, `judge` events and the statistics.
+"""The memory measure (#386): packets for model judges, `judge` events, the standing use measures, the two
+checks of a changed judge, and the simulation that sizes withholding.
 
-No game runs, no model is called and nothing is spent. The protocol is docs/design/memory-screen-protocol.md.
-RUN is a directory whose parent is named `memory-measure` (`.runtime/memory-measure/<run>`); everything is
-written there and nowhere else. ADMISSION is a sealed run directory (it holds `actors/NNN/host.jsonl` and
-`sources/`). In the order the lead runs them:
+No game runs, no model is called and nothing is spent: judging is done by host agents the lead starts, and this
+tool only builds what they read and counts what they answer. The design is docs/design/general-memory.md,
+sections 3 and 4. RUN is a directory whose parent is named `memory-measure` (`.runtime/memory-measure/<run>`);
+everything is written there and nowhere else. ADMISSION is a sealed run directory (it holds
+`actors/NNN/host.jsonl` and `sources/`). In the order the lead runs them:
 
-  python -m tools.memory_measure packets annotate RUN --runs ADMISSION... [--every 3] [--frames-per-packet 60]
+  python -m tools.memory_measure packets use RUN --runs ADMISSION... --facts FILE [--budget TOKENS] [--every 3] [--seed N]
+  python -m tools.memory_measure packets blind RUN --runs ADMISSION... --facts FILE [--budget TOKENS] [--every 3] [--seed N]
+  python -m tools.memory_measure events RUN --judge NAME --model MODEL ANSWER.json...
+  python -m tools.memory_measure agreement RUN --judges A B [--third C] [--json]
+  python -m tools.memory_measure measure RUN [--seed N] [--draws N] [--json]
+
+  python -m tools.memory_measure packets annotate RUN --runs ADMISSION... [--budget TOKENS] [--every 3]
   python -m tools.memory_measure items RUN --annotators A B --list
   python -m tools.memory_measure items RUN --annotators A B --matches FILE
-  python -m tools.memory_measure packets judge RUN --runs ADMISSION... [--stretch 200] [--every 3] [--seed N] [--no-item-frames]
-  python -m tools.memory_measure sample RUN [--count 20] [--seed N]
-  python -m tools.memory_measure sample RUN --engaged 10 [--seed N]
-  python -m tools.memory_measure label-server RUN [--port 8765]
-  python -m tools.memory_measure events RUN --judge NAME --model MODEL ANSWER.json...
-  python -m tools.memory_measure agreement RUN --judges A B [--third C] [--seed N] [--draws N] [--json]
-  python -m tools.memory_measure measure RUN [--seed N] [--draws N] [--json]
-  python -m tools.memory_measure simulate [--touched F] [--missed F] [--wrong F] [--ceiling N] [--price USD] [--json]
+
+  python -m tools.memory_measure anchor packets RUN --gate GATE [--dry-run]
+  python -m tools.memory_measure anchor events RUN --judge NAME --model MODEL ANSWER.json...
+  python -m tools.memory_measure anchor report RUN --judge NAME [--json]
+  python -m tools.memory_measure prompt-check packets RUN --before BEFORE
+  python -m tools.memory_measure prompt-check report RUN --before BEFORE --judges A B [--seed N] [--draws N] [--json]
+
+  python -m tools.memory_measure simulate-withholding [--seed N] [--sims N] [--json | --render REPORT.json]
 
 What RUN holds:
-  annotate/packets.json, annotate/<packet>/     frames for the two annotators: manifest.json, instructions.md, frames/
-  annotations/<annotator>/<packet>.json         each annotator's answer per packet (the lead saves them)
-  items.json, items.json.sha256                 the known-item list, frozen: never overwritten
-  judge-packets/<shuffled name>/                one stretch for a judge: manifest.json, instructions.md, items.json,
-                                                frames/ and items/ (each item's first frame, unless --no-item-frames)
-  private/judge-mapping.json                    shuffled name -> admission, decisions and source IDs; never in a packet
-  sample.json, sample-engaged.json, labels.json the random calibration pairs, the engaged supplement (drawn after the
-                                                judges have answered) and the owner's labels: a blind label and a checked one
-  events/<judge>.jsonl                          judge-events/1 (harness/evaluation/core/judge.py)
-  agreement.json, adjudicated.json, measure.json
+  judge-packets/<shuffled name>/      one window for a judge: manifest.json, instructions.md, facts.json, frames/
+                                      and, in a use packet only, delivered.json
+  private/judge-mapping.json          shuffled name -> admission, actor, decisions, source IDs and each fact's
+                                      route; never in a packet
+  events/<judge>.jsonl                judge-events/2 (harness/evaluation/core/judge.py)
+  adjudicated.json, measure.json      the adjudicated labels and the standing use measures
+  annotate/, annotations/, annotated-facts.json[.sha256]
+                                      packets for two annotators, their answers and the matched list, frozen
+  anchor/packets/, private/anchor.json, anchor/events/<judge>.jsonl, anchor/report-<judge>.json
+                                      the measure gate's packets re-judged with its frozen prompt
+  prompt-check.json                   the first two judges' agreement before and after a prompt change
+
+FILE is the facts to judge, `judged-facts/1`: for each admission and actor, the facts by route (`lead`, `read`,
+`index`, `withheld`), each with its id and text, and what was delivered (`briefing`, `reminders`). Delivery
+writes it; until then the lead does. A use packet shows the routes, the briefing, the reminders and what the
+player stated with its calls (`intent`, `cites`). A blind packet, for the benefit measure, shows frames, inputs
+and the facts' text only.
 
 A frame is "changed" when `harness.trace.images.region_diff` over the whole image finds a pixel whose largest
-channel difference from the frame before it exceeds 16 of 255, that function's threshold; a fainter change does not
-count. A packet takes every third changed frame, the first included, with every input sent since the packet's
-previous frame. `--runs` refuses a path under the held-out lineage's evidence, `522-held-out`. Packets hold frames and inputs only: no store, no player record, no report, no
-briefing and no arm name. A judge packet's frames and directory carry shuffled names.
+channel difference from the frame before it exceeds 16 of 255, that function's threshold. A packet takes every
+third changed frame of its window, the first included, with every input sent since the packet's previous frame.
+Windows are cut to a token budget, between decisions. `--runs` refuses a path under the held-out lineage's
+evidence, `522-held-out`. A judge packet's frames and directory carry shuffled names.
 """
 from __future__ import annotations
 
 import argparse
 from collections import Counter
-import copy
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from fractions import Fraction
 import hashlib
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 import os
@@ -53,53 +66,51 @@ import re
 import secrets
 import shutil
 import sys
-import threading
-from typing import Sequence
+from typing import Callable, Sequence
 import uuid
 
 import numpy as np
-from PIL import Image
 
 from harness.evaluation.core import judge
 from harness.evaluation.core.host import frame_source
-from harness.evaluation.core.records import EvaluationError, loads
+from harness.evaluation.core.records import EvaluationError, dumps, loads
 from harness.jsonio import file_sha256
 from harness.trace import images
 from harness.trace.projection import ACTION_FIELDS
 from tools.memory_reads import run_dirs
 from tools.memory_screen_checks import read_lineage
 
-LABELS = judge.LABELS
-#: What the owner's page shows for each label; the page records the label, not this text.
-LABEL_TEXT = dict(straight='Went straight to it', missed='Missed it (looked elsewhere or got it another way)',
-    not_engaged='Not engaged', cannot_tell='Cannot tell')
-#: The protocol's thresholds for using the judge (docs/design/memory-screen-protocol.md#the-judge).
-MIN_AGREEMENT, MIN_KAPPA, MIN_OWNER_MATCH, OWNER_PAIRS = 0.80, 0.6, 18, 20
-#: The engaged supplement: pairs outside the random draw that a judge called straight, missed or cannot_tell.
-ENGAGED_PAIRS = 10
-ENGAGED_LABELS = (*judge.TOUCHED, 'cannot_tell')
-ENGAGED_FILE = 'sample-engaged.json'
+USE_LABELS, HOLDS, ROUTES = judge.USE_LABELS, judge.HOLDS, judge.ROUTES
+ANCHOR_LABELS = judge.ANCHOR_LABELS
+FACTS_SCHEMA = 'judged-facts/1'
+MAPPING_SCHEMA = 'judge-mapping/2'
 OWNER_LABELS_SCHEMA = 'owner-labels/2'
-AGREEMENT_SCHEMA = 'judge-agreement/2'
-#: The appendix's rows: starts per arm, items touched per start, the current player's missed share, judge error.
-APPENDIX_ROWS = ((12, 5, 0.7, 0.1), (12, 5, 0.7, 0.0), (12, 5, 0.7, 0.2), (12, 5, 0.6, 0.1), (12, 3, 0.7, 0.1),
-    (12, 8, 0.7, 0.1), (16, 5, 0.7, 0.1), (8, 5, 0.7, 0.1))
-#: A packet of 60 frames is about 50,000 image tokens at 960x640 (about 820 tokens a frame): a quarter of a
-#: 200,000-token agent context, which leaves room for the manifest, the instructions and the answer. A judge
-#: stretch of 200 decisions comes to about 65 frames, so both kinds of packet are the same size.
-FRAMES_PER_PACKET = 60
+ENGAGED_FILE = 'sample-engaged.json'
 NAME = re.compile('[a-z0-9][a-z0-9-]{0,39}')
-#: With fewer sampled pairs than this that the owner or the judges called touched, the judge's error on touched
-#: items is not measured.
-MIN_TOUCHED_SAMPLED = 5
-#: The held-out lineage's evidence directory; the measure gate never reads it.
+#: The held-out lineage's evidence directory; the measure never reads it.
 HELD_OUT = '522-held-out'
-BOOTSTRAP_NOTE = ('the bootstrap resamples pairs as if they were independent, although a judge reads a whole packet and '
-    'labels every item of a stretch together; the intervals are narrower than the data supports')
+#: The default size of one packet, in estimated tokens, for everything a judge reads: instructions, facts, what
+#: was delivered, the manifest and the frames. It is 30% of a 200,000-token host agent context, which leaves the
+#: rest for the host's own prompt and tools, the files as the agent re-reads them, and the answer. At 960x640 a
+#: frame is about 820 tokens, so with a short fact list a packet holds about 65 frames: every third changed frame
+#: of about 200 decisions, the stretch the measure gate's rates were measured on. A window is as long as the
+#: budget allows and no longer; a long fact list takes its share from the frames, or is split over packets.
+PACKET_TOKENS = 60_000
+#: Text is counted at three characters a token. Four is the usual figure for prose; a packet's text is mostly
+#: JSON and IDs, which take more tokens per character, and an estimate that runs high only shortens a window.
+CHARS_PER_TOKEN = 3
+#: The keys, schema line and file hashes of a manifest, beyond its frame rows.
+MANIFEST_HEAD_TOKENS = 300
+NOT_CORRECTED = ('These rates rest on the adjudicated labels of model judges: two judges on every pair and a third '
+    'on the pairs they dispute. They are not corrected against a human truth; by the owner\'s decision of '
+    '13 November 2026 the judges stand without owner audits. Read each rate with the first two judges\' agreement '
+    'and dispute rate beside it.')
+BOOTSTRAP_NOTE = ('a cluster bootstrap over starts: whole starts are drawn with replacement, so the labels of one '
+    'start stay together; with few starts the interval is rough, and with one start there is none')
 
 
 class MeasureError(ValueError):
-    """An input that does not fit the measure gate's files, or a write the gate refuses."""
+    """An input that does not fit the measure's files, or a write the measure refuses."""
 
 
 # --- files ------------------------------------------------------------------------------------------------------------
@@ -119,9 +130,13 @@ def read_json(path: Path) -> object:
     return loads(Path(path).read_bytes(), str(path))
 
 
+def json_text(value: object) -> str:
+    return json.dumps(value, indent=1, ensure_ascii=False, allow_nan=False) + '\n'
+
+
 def write_json(path: Path, value: object, *, once: bool = False) -> str:
     """Write indented JSON and return its SHA-256. `once` refuses an existing file."""
-    data = (json.dumps(value, indent=1, ensure_ascii=False, allow_nan=False) + '\n').encode()
+    data = json_text(value).encode()
     path.parent.mkdir(parents=True, exist_ok=True)
     if once:
         with path.open('xb') as stream:
@@ -139,38 +154,74 @@ def text(value: object, where: str) -> str:
     return value.strip()
 
 
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+# --- token estimates --------------------------------------------------------------------------------------------------
+
+def image_tokens(width: int, height: int) -> int:
+    """An image's tokens from its pixel size: width x height / 750, after an image whose long edge exceeds
+    1568 px is scaled down to it. That is the published rule of thumb for the vision models the host agents
+    run on; this tool calls no model, so it is an estimate and nothing checks it."""
+    scale = min(1.0, 1568 / max(width, height, 1))
+    return math.ceil(width * scale * height * scale / 750)
+
+
+def text_tokens(value: str) -> int:
+    return math.ceil(len(value) / CHARS_PER_TOKEN)
+
+
 # --- frames -----------------------------------------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class Frame:
-    """One recorded frame. `inputs` are the input batches sent since the frame before it, oldest first."""
+    """One recorded frame. `inputs` are the input batches sent since the frame before it, oldest first; `stated`
+    is what the player said with its calls over the same span (`intent`, `cites`); `tokens` estimates the image.
+    `input_decisions` keeps each batch's decision through sampling, privately, so a pre-read input cannot count."""
 
     run: str
+    actor: str
     source: str
     decision: int
     path: Path
     inputs: tuple
+    stated: tuple = ()
+    tokens: int = 0
     changed: bool = True
+    input_decisions: tuple[int | None, ...] = ()
 
 
-def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dict[str, list[Frame]], dict[str, int]]:
-    """Each admission's frames in the order its calls returned them, marked changed or not, and its decision count.
-    Only tool calls are read: a frame's source ID, the request that returned it and the inputs of `computer_input`."""
+def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dict[str, list[Frame]], dict[str, dict]]:
+    """Each admission's frames in the order its calls returned them, marked changed or not, and each of its
+    actors' first and last decision. Only tool calls are read: a frame's source ID, the request that returned it,
+    the inputs of `computer_input`, and the `intent` and `cites` a call's arguments carry."""
     for directory in runs:
         if HELD_OUT in Path(directory).resolve().parts:
-            raise MeasureError(f'{directory}: the held-out lineage is not read for the measure gate')
-    lineage, _ = read_lineage(runs)
+            raise MeasureError(f'{directory}: the held-out lineage is not read for the memory measure')
+    lineage, actors = read_lineage(runs)
+    offsets = {run.name: run.offset for run in lineage}
+    names = {(actor.run, actor.actor): actor.name for actor in actors}
     frames: dict[str, list[Frame]] = {}
-    decisions: dict[str, int] = {}
+    spans: dict[str, dict[str, tuple[int, int]]] = {}
     for directory, run in zip(runs, lineage):
         if run.name in frames:
             raise MeasureError(f'{run.name}: selected twice')
-        found, seen, pending, previous = [], set(), [], None
+        spans[run.name] = {actor.name: (actor.first - offsets[run.name], actor.first - offsets[run.name] + actor.requests - 1)
+            for actor in actors if actor.run == run.name}
+        found, seen, pending, pending_decisions, stated, previous, owner = [], set(), [], [], [], None, None
         for call in run.facts.calls:
+            if call.actor != owner:  # what one actor sent or said is never carried into the next actor's frames
+                pending, pending_decisions, stated, owner = [], [], [], call.actor
+            arguments = call.arguments if isinstance(call.arguments, dict) else {}
             if call.tool == 'computer_input':
-                actions = call.arguments.get('actions') if isinstance(call.arguments, dict) else None
+                actions = arguments.get('actions')
                 pending.append([{key: action[key] for key in ACTION_FIELDS if key in action}
                     for action in (actions if isinstance(actions, list) else []) if isinstance(action, dict)])
+                pending_decisions.append(call.decision)
+            said = {key: arguments[key] for key in ('intent', 'cites') if key in arguments}
+            if said:
+                stated.append(dict(tool=call.tool, **said))
             source = frame_source(call)
             if source is None or call.decision is None or source in seen:
                 continue
@@ -181,50 +232,199 @@ def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dic
             changed = previous is None or previous.shape != image.shape or \
                 images.region_diff(previous, image, grid=(1, 1))[0]['changed_fraction'] > min_changed
             seen.add(source)
-            found.append(Frame(run.name, source, call.decision, path, tuple(pending), bool(changed)))
-            pending, previous = [], image
+            found.append(Frame(run.name, names[(run.name, call.actor)], source, call.decision, path, tuple(pending),
+                tuple(stated), image_tokens(image.shape[1], image.shape[0]), bool(changed), tuple(pending_decisions)))
+            pending, pending_decisions, stated, previous = [], [], [], image
         frames[run.name] = found
-        decisions[run.name] = max((request.decision for request in run.facts.requests), default=0)
-    return frames, decisions
+    return frames, spans
 
 
 def every_nth_changed(frames: Sequence[Frame], every: int) -> list[Frame]:
-    """Every `every`-th changed frame, the first included. Each kept frame carries every input since the kept one
-    before it, so no input is lost with the frames that are left out."""
-    kept, pending, count = [], [], 0
+    """Every `every`-th changed frame, the first included. Each kept frame carries every input, and everything
+    the player stated, since the kept one before it, so nothing is lost with the frames that are left out."""
+    kept, inputs, input_decisions, stated, count = [], [], [], [], 0
     for frame in frames:
-        pending.extend(frame.inputs)
+        inputs.extend(frame.inputs)
+        input_decisions.extend(frame.input_decisions)
+        stated.extend(frame.stated)
         if not frame.changed:
             continue
         if count % every == 0:
-            kept.append(replace(frame, inputs=tuple(pending)))
-            pending = []
+            kept.append(replace(frame, inputs=tuple(inputs), input_decisions=tuple(input_decisions), stated=tuple(stated)))
+            inputs, input_decisions, stated = [], [], []
         count += 1
     return kept
 
 
-def copy_frame(frame: Frame, directory: Path, name: str) -> dict:
+def describe(batches: Sequence[Sequence[dict]]) -> str:
+    """Input batches as one line: keys by name, typed text quoted, repeats counted."""
+    words = []
+    for batch in batches:
+        for action in batch:
+            kind = action.get('type')
+            if kind == 'key':
+                word = '+'.join([*(action.get('modifiers') or []), str(action.get('key'))])
+            elif kind == 'text':
+                word = json.dumps(action.get('text'), ensure_ascii=False)
+            elif kind == 'wait':
+                word = f"wait {action.get('seconds')}s"
+            elif 'x' in action and 'y' in action:
+                word = f"{kind} at {action['x']},{action['y']}"
+            else:
+                word = str(kind)
+            if words and words[-1][0] == word:
+                words[-1][1] += 1
+            else:
+                words.append([word, 1])
+    return ' '.join(word if count == 1 else f'{word} ×{count}' for word, count in words)
+
+
+def frame_row(frame: Frame, name: str, blind: bool) -> dict:
+    """A frame's manifest row before its file is copied. A blind row holds the frame and the inputs only: what
+    the player stated can name a fact it was given, so it is left out."""
+    row = dict(frame=name, file=f'frames/{name}.png', inputs_before=[describe([batch]) for batch in frame.inputs])
+    if not blind and frame.stated:
+        row['stated_before'] = list(frame.stated)
+    return row
+
+
+def cut(frames: Sequence[Frame], cost: Callable[[Frame], int], budget: int, *,
+        packet_cost: Callable[[Sequence[Frame], int, int], int] | None = None,
+        first_decision: int | None = None, last_decision: int | None = None) -> list[list[Frame]]:
+    """Cut between decisions, retaining an oversized decision by itself. Additive costs use the even share
+    over the fewest possible parts. Complete serialized costs receive the actual inclusive window bounds;
+    their greedy fit supplies an average packet target, then a second pass evens the windows toward it where
+    decisions and the budget allow, without increasing the number of windows."""
+    groups: list[list[Frame]] = []
+    for frame in frames:
+        if groups and groups[-1][0].decision == frame.decision:
+            groups[-1].append(frame)
+        else:
+            groups.append([frame])
+    if not groups:
+        return []
+    costs = [sum(cost(frame) for frame in group) for group in groups]
+    cached: dict[tuple[int, int], int] = {}
+
+    def price(start: int, end: int) -> int:
+        key = start, end
+        if key not in cached:
+            if packet_cost:
+                first = (frames[0].decision if first_decision is None else first_decision) if start == 0 else \
+                    groups[start - 1][-1].decision + 1
+                last = (frames[-1].decision if last_decision is None else last_decision) if end == len(groups) else \
+                    groups[end - 1][-1].decision
+                cached[key] = packet_cost([frame for group in groups[start:end] for frame in group], first, last)
+            else:
+                cached[key] = sum(costs[start:end])
+        return cached[key]
+
+    def split(target: float) -> list[tuple[int, int]]:
+        parts, start = [], 0
+        for end in range(2, len(groups) + 1):
+            current, extended = price(start, end - 1), price(start, end)
+            nearer = packet_cost is not None and target != math.inf and abs(current - target) < abs(extended - target)
+            if extended > budget or current >= target or nearer:
+                parts.append((start, end - 1))
+                start = end - 1
+        return [*parts, (start, len(groups))]
+
+    if packet_cost:
+        fitted = split(math.inf)
+        target = sum(price(start, end) for start, end in fitted) / len(fitted)
+        evened = split(target)
+        parts = evened if len(evened) <= len(fitted) else fitted
+    else:
+        target = sum(costs) / max(1, math.ceil(sum(costs) / budget))
+        parts = split(target)
+    return [[frame for group in groups[start:end] for frame in group] for start, end in parts]
+
+
+def available_after(frame: Frame, decision: int) -> bool:
+    """A sampled frame whose carried inputs were all chosen after the delivery/read result was available."""
+    return frame.decision > decision and len(frame.input_decisions) == len(frame.inputs) and all(
+        at is not None and at > decision for at in frame.input_decisions)
+
+
+def copy_frame(frame: Frame, directory: Path, name: str, blind: bool) -> dict:
     target = directory / 'frames' / f'{name}.png'
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(frame.path, target)
-    return dict(frame=name, file=f'frames/{name}.png', sha256=file_sha256(target),
-        inputs_before=[describe([batch]) for batch in frame.inputs])
+    return dict(frame_row(frame, name, blind), sha256=file_sha256(target))
+
+
+def budget_entry(budget: int, text_estimate: int, frames: Sequence[Frame]) -> dict:
+    image_estimate = sum(frame.tokens for frame in frames)
+    return dict(tokens=budget, estimated=dict(images=image_estimate, text=text_estimate, total=image_estimate + text_estimate),
+        over=image_estimate + text_estimate > budget)
+
+
+def manifest_text(manifest: dict, contents: dict[str, str], image_files: dict | None = None) -> str:
+    """Serialize exactly the text a judge reads, including the estimate's own printed size."""
+    manifest['files'] = {**{name: sha256_text(value) for name, value in contents.items()}, **(image_files or {})}
+
+    def render() -> str:
+        head = json.dumps({key: value for key, value in manifest.items() if key != 'frames'}, indent=1,
+            ensure_ascii=False, allow_nan=False)
+        rows = ',\n'.join('  ' + json.dumps(row, ensure_ascii=False, allow_nan=False) for row in manifest['frames'])
+        # Keep the boolean's printed width constant: crossing the budget must not shorten the text
+        # and flip its own over flag back at a rounding boundary. Both forms are ordinary JSON.
+        head = head.replace('"over": true\n', '"over": true \n')
+        return head[:-2] + ',\n "frames": [\n' + rows + '\n ]\n}\n'
+
+    if 'budget' in manifest:
+        estimate = manifest['budget']
+        # Increasing from zero reaches a fixed point even at a printed digit boundary.
+        estimate['estimated']['text'] = 0
+        estimate['estimated']['total'] = estimate['estimated']['images']
+        estimate['over'] = False
+        while True:
+            before = render()
+            estimate['estimated']['text'] = sum(text_tokens(value) for value in contents.values()) + text_tokens(before)
+            estimate['estimated']['total'] = estimate['estimated']['images'] + estimate['estimated']['text']
+            estimate['over'] = estimate['estimated']['total'] > estimate['tokens']
+            if render() == before:
+                break
+    return render()
 
 
 def seal_packet(directory: Path, manifest: dict, instructions: str) -> tuple[str, int]:
-    """Write the instructions and the manifest, which lists every other file's hash. The packet's hash is the
-    manifest's; the second value is the packet's size in bytes. The manifest keeps one frame to a line, so a
-    reader spends its context on the frames and not on indentation."""
+    """Seal every file and count the actual serialized text plus images before writing the manifest."""
     (directory / 'instructions.md').write_text(instructions, encoding='utf-8')
-    files = {str(path.relative_to(directory)): file_sha256(path) for path in sorted(directory.rglob('*'))
-        if path.is_file() and not path.is_relative_to(directory / 'frames')}
-    head = json.dumps({key: value for key, value in dict(manifest, files=files).items() if key != 'frames'}, indent=1,
-        ensure_ascii=False, allow_nan=False)
-    rows = ',\n'.join('  ' + json.dumps(row, ensure_ascii=False, allow_nan=False) for row in manifest['frames'])
-    data = (head[:-2] + ',\n "frames": [\n' + rows + '\n ]\n}\n').encode()
+    contents = {str(path.relative_to(directory)): path.read_text(encoding='utf-8') for path in sorted(directory.rglob('*'))
+        if path.is_file() and path.suffix != '.png' and path.name != 'manifest.json'}
+    image_files = {str(path.relative_to(directory)): file_sha256(path) for path in sorted(directory.rglob('*.png'))
+        if not path.is_relative_to(directory / 'frames')}
+    data = manifest_text(manifest, contents, image_files).encode()
     with (directory / 'manifest.json').open('xb') as stream:
         stream.write(data)
     return hashlib.sha256(data).hexdigest(), sum(path.stat().st_size for path in directory.rglob('*') if path.is_file())
+
+
+def verify_packet(directory: Path, sha256: str) -> dict:
+    """The manifest of a packet that is still, file for file, the packet that was made."""
+    path = directory / 'manifest.json'
+    if not path.is_file() or file_sha256(path) != sha256:
+        raise MeasureError(f'{directory}: not the packet that was made')
+    manifest = read_json(path)
+    expected = {**manifest['files'], **{row['file']: row['sha256'] for row in manifest['frames']}}
+    actual = {str(path.relative_to(directory)) for path in directory.rglob('*') if path.is_file()}
+    if actual != {*expected, 'manifest.json'}:
+        raise MeasureError(f'{directory}: files changed since the packet was made')
+    for name, recorded in expected.items():
+        if not (directory / name).is_file() or file_sha256(directory / name) != recorded:
+            raise MeasureError(f'{directory / name}: changed since the packet was made')
+    return manifest
+
+
+def stretch_sha256(directory: Path) -> str:
+    """What a packet puts before a judge apart from its instructions: its manifest without the instructions'
+    hash and without the token estimate, which counts the instructions' length. Two packets with the same value
+    hold the same window, frames, inputs, facts and delivered text."""
+    manifest = read_json(directory / 'manifest.json')
+    kept = {key: value for key, value in manifest.items() if key != 'budget'}
+    kept['files'] = {name: value for name, value in manifest['files'].items() if name != 'instructions.md'}
+    return sha256_text(dumps(kept))
 
 
 class Building:
@@ -248,76 +448,83 @@ class Building:
 
 # --- packets for the annotators -----------------------------------------------------------------------------------------
 
-ANNOTATE_INSTRUCTIONS = '''# Listing the places with goods that these frames show
+ANNOTATE_INSTRUCTIONS = '''# Listing the facts these frames show
 
 You are one of two independent annotators. Use only the files in this directory: no other file, no notes from
-another session and nothing you may know about this game session from elsewhere.
+another session and nothing you may know about this session from elsewhere.
 
 ## What you have
 
 - `manifest.json` lists this packet's frames in the order they were recorded. Each entry has the frame's ID
-  (`frame`), its image (`file`) and `inputs_before`: the inputs sent to the game between this packet's previous
-  frame and this one, oldest first. Each entry is one batch of inputs: keys by name, typed text in quotes and
-  `×N` for a repeat.
+  (`frame`), its image (`file`) and `inputs_before`: the inputs sent between this packet's previous frame and
+  this one, oldest first. Each entry is one batch of inputs: keys by name, typed text in quotes and `×N` for a
+  repeat.
 - `frames/<frame ID>.png` is the screen as it was captured.
 
-The frames are every third changed screen of one recorded stretch of play, so steps between them are missing.
+The frames are a regular sample of the changed screens of one recorded stretch of play, so steps between them
+are missing.
 
 ## What to do
 
-Look at every frame. List every place with goods or useful things that the frames show: anywhere the screen shows
-things a player could later come back for, or a source of something useful. One entry per place:
+Look at every frame. List every fact the frames show that a later player of the same session could use:
+anything that would let that player skip finding it out again, avoid a mistake or choose better. A fact can be
+of any kind: where something is, what something does, a danger, a rule of how things work, a way of doing
+something that worked or failed, a state that will still matter later, or something the player set out to do
+and has not finished. One entry per fact:
 
-- `place`: the place as the screen shows it. Use the name on the screen when there is one; otherwise the words a
-  person looking at the screen would use, with whatever tells it apart from similar places (what it is next to,
-  where on the map or in the building it is).
-- `what`: what is there, in the screen's own words where you can.
+- `fact`: one or two sentences that state it so that a reader who has not seen the frames could act on it. Use
+  the screen's own words where it has them, and say what tells this thing apart from similar ones.
 - `frames`: the IDs of the frames that show it. At least one, and only IDs from this packet.
 
-When several frames show the same place, write one entry and list all of those frames. List only what a frame
-shows; do not add what you would expect to be there. When you are unsure whether something counts, list it.
+When several frames show the same fact, write one entry and list all of those frames. List only what a frame
+shows; do not add what you would expect to be true. When you are unsure whether something counts, list it.
 
 ## Your answer
 
 One JSON document of this shape, and nothing else:
 
 ```json
-{"packet": "PACKET", "entries": [{"place": "...", "what": "...", "frames": ["FRAME ID", "FRAME ID"]}]}
+{"packet": "PACKET", "entries": [{"fact": "...", "frames": ["FRAME ID", "FRAME ID"]}]}
 ```
 
 `packet` is this packet's name from `manifest.json`. An empty `entries` list is a valid answer.
 '''
 
 
-def annotate_packets(run: Path, runs: Sequence[Path], every: int = 3, per_packet: int = FRAMES_PER_PACKET,
+def annotate_packets(run: Path, runs: Sequence[Path], every: int = 3, budget: int = PACKET_TOKENS,
                      min_changed: float = 0.0) -> dict:
-    if every < 1 or per_packet < 1:
-        raise MeasureError('--every and --frames-per-packet must be at least 1')
+    if every < 1:
+        raise MeasureError('--every must be at least 1')
+    def candidate(part: Sequence[Frame]) -> dict:
+        manifest = dict(schema='annotate-packet/2', packet='packet-00', budget=budget_entry(budget, 0, part),
+            frames=[dict(frame_row(frame, frame.source, True), sha256='0' * 64) for frame in part])
+        manifest_text(manifest, {'instructions.md': ANNOTATE_INSTRUCTIONS})
+        return manifest
+
+    fixed = candidate([])['budget']['estimated']['total']
+    if budget <= fixed:
+        raise MeasureError(f'--budget {budget} leaves no room for frames beside {fixed} tokens of text')
     frames, _ = recorded_frames(runs, min_changed)
     packets, totals = [], Counter()
     with Building(run / 'annotate') as out:
         for admission, found in frames.items():
             kept = every_nth_changed(found, every)
             totals.update(recorded=len(found), changed=sum(frame.changed for frame in found), kept=len(kept))
-            parts = max(1, math.ceil(len(kept) / per_packet))
-            size, extra = divmod(len(kept), parts)
-            at = 0
-            for part in range(parts):
-                chunk = kept[at:at + size + (part < extra)]
-                at += len(chunk)
+            for chunk in cut(kept, lambda frame: 0, budget, packet_cost=lambda part, first, last: candidate(part)['budget']['estimated']['total']):
                 name = f'packet-{len(packets) + 1:02d}'
-                rows = [copy_frame(frame, out / name, frame.source) for frame in chunk]
-                sha, size_bytes = seal_packet(out / name, dict(schema='annotate-packet/1', packet=name, frames=rows),
-                    ANNOTATE_INSTRUCTIONS)
+                rows = [copy_frame(frame, out / name, frame.source, True) for frame in chunk]
+                estimate = budget_entry(budget, 0, chunk)
+                sha, size_bytes = seal_packet(out / name, dict(schema='annotate-packet/2', packet=name, budget=estimate,
+                    frames=rows), ANNOTATE_INSTRUCTIONS)
                 packets.append(dict(packet=name, admission=admission, frames=[frame.source for frame in chunk],
-                    bytes=size_bytes, sha256=sha))
-        index = dict(schema='annotate-packets/1', admissions=list(frames), every=every, min_changed=min_changed,
-            frames_per_packet=per_packet, frames=dict(totals), packets=packets)
+                    estimated_tokens=estimate['estimated']['total'], over_budget=estimate['over'], bytes=size_bytes, sha256=sha))
+        index = dict(schema='annotate-packets/2', admissions=list(frames), every=every, min_changed=min_changed,
+            budget_tokens=budget, frames=dict(totals), packets=packets)
         write_json(out / 'packets.json', index, once=True)
     return index
 
 
-# --- the known-item list ------------------------------------------------------------------------------------------------
+# --- the annotated facts ------------------------------------------------------------------------------------------------
 
 def read_annotations(run: Path, annotator: str, index: dict) -> dict[str, dict]:
     """One annotator's entries over every packet, keyed `<packet>#<number>` with numbers from 1."""
@@ -333,21 +540,21 @@ def read_annotations(run: Path, annotator: str, index: dict) -> dict[str, dict]:
         for number, entry in enumerate(value['entries'], 1):
             where = f'{path}: entry {number}'
             if not isinstance(entry, dict) or not isinstance(entry.get('frames'), list) or not entry['frames']:
-                raise MeasureError(f'{where}: needs place, what and a non-empty frames list')
+                raise MeasureError(f'{where}: needs fact and a non-empty frames list')
             outside = [frame for frame in entry['frames'] if not isinstance(frame, str) or frame not in inside]
             if outside:
                 raise MeasureError(f'{where}: cites frames outside its packet: {outside}')
-            entries[f"{packet['packet']}#{number}"] = dict(place=text(entry.get('place'), f'{where} place'),
-                what=text(entry.get('what'), f'{where} what'), frames=list(dict.fromkeys(entry['frames'])))
+            entries[f"{packet['packet']}#{number}"] = dict(fact=text(entry.get('fact'), f'{where} fact'),
+                frames=list(dict.fromkeys(entry['frames'])))
     return entries
 
 
 def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
-    """The known-item list: an item is a group of entries joined by the lead's matches, and every match pairs an
-    entry of the first annotator with one of the second, so an entry only one of them listed is in no item."""
-    target = run / 'items.json'
-    if target.exists() or (run / 'items.json.sha256').exists():
-        raise MeasureError(f'{target}: the known-item list is frozen and is never overwritten')
+    """The annotated facts: one is a group of entries joined by the lead's matches, and every match pairs an
+    entry of the first annotator with one of the second, so an entry only one of them listed is in no fact."""
+    target = run / 'annotated-facts.json'
+    if target.exists() or (run / 'annotated-facts.json.sha256').exists():
+        raise MeasureError(f'{target}: the annotated facts are frozen and are never overwritten')
     first, second = annotators
     if first == second:
         raise MeasureError('The two annotators must differ')
@@ -382,192 +589,386 @@ def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
             key=lambda identity: min(position[frame] for frame in listed[name][identity]['frames'])) for name in annotators}
         frames = sorted({frame for name in annotators for identity in by[name] for frame in listed[name][identity]['frames']},
             key=position.__getitem__)
-        lead = listed[first][by[first][0]]
-        items.append(dict(place=lead['place'], what=lead['what'], first_frame=frames[0], first_frame_file=file_of[frames[0]],
-            frames=frames, listed={name: [dict(entry=identity, place=listed[name][identity]['place'],
-                what=listed[name][identity]['what']) for identity in by[name]] for name in annotators}))
+        items.append(dict(text=listed[first][by[first][0]]['fact'], first_frame=frames[0], first_frame_file=file_of[frames[0]],
+            frames=frames, listed={name: [dict(entry=identity, fact=listed[name][identity]['fact'])
+                for identity in by[name]] for name in annotators}))
     items.sort(key=lambda item: position[item['first_frame']])
-    items = [dict(id=f'item-{number:02d}', **item) for number, item in enumerate(items, 1)]
+    items = [dict(id=f'seen-{number:02d}', **item) for number, item in enumerate(items, 1)]
     matched = {name: {entry['entry'] for item in items for entry in item['listed'][name]} for name in annotators}
-    value = dict(schema='known-items/1', annotators=list(annotators),
-        counts={name: dict(entries=len(listed[name]), in_an_item=len(matched[name]),
+    value = dict(schema='annotated-facts/1', annotators=list(annotators),
+        counts={name: dict(entries=len(listed[name]), in_a_fact=len(matched[name]),
             dropped=len(listed[name]) - len(matched[name])) for name in annotators},
         sources=dict(annotate_packets=file_sha256(run / 'annotate' / 'packets.json'), matches=file_sha256(matches),
             annotations={name: {packet['packet']: file_sha256(run / 'annotations' / name / f"{packet['packet']}.json")
                 for packet in index['packets']} for name in annotators}),
-        items=items)
+        facts=items)
     sha = write_json(target, value, once=True)
-    (run / 'items.json.sha256').write_text(sha + '\n')
+    (run / 'annotated-facts.json.sha256').write_text(sha + '\n')
     return dict(value, sha256=sha)
 
 
-def load_items(run: Path) -> tuple[list[dict], str]:
-    """The frozen list and its hash; a list that no longer matches its recorded hash is refused."""
-    path = run / 'items.json'
+# --- the facts to judge -------------------------------------------------------------------------------------------------
+
+def read_facts(path: Path, spans: dict[str, dict]) -> dict[tuple[str, str], dict]:
+    """The `judged-facts/1` input as {(admission, actor): {facts, briefing, reminders}}, in the order of the
+    selected admissions. Each fact is {id, text, route, from_decision}; an ID names one fact once per actor."""
     value = read_json(path)
-    sha = file_sha256(path)
-    recorded = (run / 'items.json.sha256').read_text().strip() if (run / 'items.json.sha256').is_file() else None
-    if not isinstance(value, dict) or value.get('schema') != 'known-items/1' or sha != recorded:
-        raise MeasureError(f'{path}: not the frozen known-items/1 list its recorded hash names')
-    return value['items'], sha
+    if not isinstance(value, dict) or value.get('schema') != FACTS_SCHEMA or not isinstance(value.get('admissions'), dict):
+        raise MeasureError(f'{path}: expected {{"schema": "{FACTS_SCHEMA}", "admissions": {{...}}}}; no other version is read')
+    unknown = [name for name in value['admissions'] if name not in spans]
+    if unknown:
+        raise MeasureError(f'{path}: names admissions that --runs does not select: {", ".join(unknown)}')
+    judged = {}
+    for admission in spans:
+        actors = value['admissions'].get(admission, {})
+        if not isinstance(actors, dict) or set(actors) - set(spans[admission]):
+            raise MeasureError(f'{path}: {admission} must map its actors ({", ".join(spans[admission])}) to their facts')
+        for actor in spans[admission]:
+            entry, where = actors.get(actor), f'{path}: {admission}/{actor}'
+            if entry is None:
+                continue
+            if not isinstance(entry, dict) or set(entry) - {*ROUTES, 'briefing', 'reminders'}:
+                raise MeasureError(f'{where}: expected the keys {", ".join(ROUTES)}, briefing and reminders only')
+            facts, seen = [], set()
+            for route in ROUTES:
+                listed = entry.get(route, [])
+                if not isinstance(listed, list):
+                    raise MeasureError(f'{where}: {route} must be a list of facts')
+                for fact in listed:
+                    if not isinstance(fact, dict) or set(fact) - {'id', 'text', 'from_decision'}:
+                        raise MeasureError(f'{where}: a fact is {{"id", "text"}} with an optional "from_decision"')
+                    # Without timing the fact was already available before the actor's first request.
+                    identity, start = text(fact.get('id'), f'{where} fact id'), fact.get('from_decision', 0)
+                    if identity in seen:
+                        raise MeasureError(f'{where}: fact {identity} is listed more than once; a fact has one route for an actor')
+                    if type(start) is not int or start < (1 if 'from_decision' in fact else 0):
+                        raise MeasureError(f'{where}: fact {identity}: from_decision is a decision number from 1')
+                    seen.add(identity)
+                    facts.append(dict(id=identity, text=text(fact.get('text'), f'{where} fact {identity} text'), route=route,
+                        from_decision=start))
+            briefing, reminders = entry.get('briefing'), entry.get('reminders', [])
+            if briefing is not None and not isinstance(briefing, str) or not isinstance(reminders, list) or any(
+                    not isinstance(row, dict) or set(row) != {'decision', 'text'} or type(row['decision']) is not int
+                    or not isinstance(row['text'], str) for row in reminders):
+                raise MeasureError(f'{where}: briefing is text and reminders are [{{"decision": N, "text": "..."}}]')
+            judged[(admission, actor)] = dict(facts=sorted(facts, key=lambda fact: fact['id']), briefing=briefing,
+                reminders=sorted(reminders, key=lambda row: row['decision']))
+    if not any(entry['facts'] for entry in judged.values()):
+        raise MeasureError(f'{path}: names no fact for any selected actor')
+    return judged
+
+
+def fact_groups(facts: Sequence[dict], limit: int) -> list[list[dict]]:
+    """The facts in consecutive groups of at most `limit` estimated tokens; a longer single fact is a group."""
+    groups: list[list[dict]] = []
+    spent = 0
+    for fact in facts:
+        cost = text_tokens(json.dumps(fact, ensure_ascii=False))
+        if not groups or spent + cost > limit:
+            groups.append([])
+            spent = 0
+        groups[-1].append(fact)
+        spent += cost
+    return groups
 
 
 # --- packets for the judges -----------------------------------------------------------------------------------------------
 
-JUDGE_INSTRUCTIONS = '''# One closed question for each known item
+_JUDGE_TEMPLATE = '''# One closed question for each fact
 
 Use only the files in this directory: no other file and nothing you may know about this stretch from elsewhere.
 
 ## What you have
 
-- `manifest.json` lists the frames of one stretch of recorded play, in order. Each entry has the frame's ID
-  (`frame`), its image (`file`), `decision` (which of the stretch's decisions returned it, counted from 1) and
+- `manifest.json` lists the frames of one window of recorded play, in order. Each entry has the frame's ID
+  (`frame`), its image (`file`), `decision` (which of the window's decisions returned it, counted from 1) and
   `inputs_before`: the inputs the player sent between this packet's previous frame and this one, oldest first.
   Each entry is one batch of inputs: keys by name, typed text in quotes and `×N` for a repeat. `decisions` is how
-  many decisions the stretch has.
-- `frames/<frame ID>.png` is the screen as it was captured. The frames are every third changed screen, so steps
-  between them are missing.
-- `items.json` lists the known items: places with goods that the player's earlier play had already shown, each
-  with an `id`, the `place` as the screen showed it and `what` was there. Nothing in the list is from this stretch.
-ITEM_FRAMES
+  many decisions the window has.
+STATED- `frames/<frame ID>.png` is the screen as it was captured. The frames are a regular sample of the changed
+  screens, so steps between them are missing.
+- `facts.json` lists the facts to judge, each with an `id` and its `text`. FACTS
+DELIVERED
 ## The question
 
-For each known item, what did the player do about it in this stretch? Answer with exactly one label:
+For each fact, what did the player do about it in this window? Judge the window as a whole, not one step.
+Answer with exactly one label:
 
-- `straight`: the player went to the known place without first looking elsewhere.
-- `missed`: the player looked for the same kind of thing elsewhere, or got it by another route, while the known
-  source stayed unused.
-- `not_engaged`: the stretch shows the player neither going to the place nor looking for or getting that kind of
-  thing.
-- `cannot_tell`: the frames do not show enough to choose among the three above.
+- `in_line`: acted in line with it. The player did what the fact supports.
+- `against`: acted against it. The player did what the fact advises against, or went for something the fact
+  says is empty or gone.
+- `found_again`: found it again. The player discovered by looking what the fact already said.
+- `did_not_apply`: did not apply. Nothing in the window shows that the fact could have mattered to what the
+  player was doing.
+- `cannot_tell`: the frames do not show enough to choose among the four above.
 
-Cite the frames that show it, by ID, from this packet only. `straight` and `missed` need at least one frame;
-the other two may cite none.
+Then say whether the frames show the fact still holding (`holds`):
+
+- `held`: the frames show that what the fact says was true in this window.
+- `stale_or_false`: the frames show that what the fact says was no longer true, or never was.
+- `cannot_tell`: the frames show neither.
+
+Cite the frames that show it, by ID, from this packet only. `in_line`, `against` and `found_again` need at least
+one frame; the other two labels may cite none.
 
 ## Your answer
 
-One JSON document of this shape, and nothing else. Answer every item in `items.json` exactly once:
+One JSON document of this shape, and nothing else. Answer every fact in `facts.json` exactly once:
 
 ```json
-{"packet": "PACKET", "answers": [{"item": "ITEM ID", "label": "straight", "frames": ["FRAME ID"], "note": "one sentence"}]}
+{"packet": "PACKET", "answers": [{"fact": "FACT ID", "label": "in_line", "holds": "held", "frames": ["FRAME ID"], "note": "one sentence"}]}
 ```
 
 `packet` is this packet's name from `manifest.json`. `note` is optional.
 '''
 
+_USE_PARTS = dict(
+    STATED='''- Some entries also have `stated_before`: what the player itself said with its calls since the previous frame,
+  as `intent` and, when it gave them, `cites`: the IDs of the stored facts it said it relied on. What the player
+  states is evidence of what it meant, not proof of what it did.
+''',
+    FACTS='''Each also has a `route`: how it reached
+  the player. `lead`: its text was put in front of the player. `read`: the player asked for it and read it.
+  `index`: only a one-line title of it was listed. Any fact may be out of date or wrong.
+  `available_from` names the first kept frame whose carried inputs were all chosen strictly after the
+  decision that returned this fact. The inputs of that decision were chosen before its result was seen.
+  Count `in_line`, `against` or
+  `found_again` only for action from that frame onward, and cite at least one such frame. Earlier action does
+  not count, even when it matches the fact.''',
+    DELIVERED='''- `delivered.json` holds what was put in front of the player: the `briefing` it began with and the `reminders`
+  added during play, each with the decision of this window at which it arrived (null when it arrived earlier).
+''')
+_BLIND_PARTS = dict(STATED='', DELIVERED='',
+    FACTS='''They were known before this
+  window. The player may or may not have had each one in front of it, and you are not told which. Any fact may
+  be out of date or wrong.''')
 
-def judge_packets(run: Path, runs: Sequence[Path], stretch: int = 200, every: int = 3, min_changed: float = 0.0,
-                  seed: int | None = None, item_frames: bool = True) -> dict:
-    """One packet per stretch. Each item's first frame is in the packet unless `item_frames` is off, so the judge
-    sees the same evidence for an item as the owner's page shows."""
-    if stretch < 1 or every < 1:
-        raise MeasureError('--stretch and --every must be at least 1')
-    items, items_sha = load_items(run)
+
+def _instructions(parts: dict) -> str:
+    value = _JUDGE_TEMPLATE
+    for key in ('STATED', 'FACTS'):
+        value = value.replace(key, parts[key])
+    value = value.replace('DELIVERED\n', parts['DELIVERED'] + '\n')
+    if not parts['STATED']:
+        value = value.replace('(`frame`), its image (`file`), `decision` (which of the window\'s decisions returned it, counted from 1) and',
+            '(`frame`), numbered by position in this packet, its image (`file`) and')
+        value = value.replace(' `decisions` is how\n  many decisions the window has.', '')
+    return value
+
+
+#: The judge's instructions by packet kind. Neither names any kind of thing in a game. The blind one names
+#: neither delivery nor decision counts; it shows only frames by position, inputs and facts under opaque IDs.
+JUDGE_INSTRUCTIONS = dict(use=_instructions(_USE_PARTS), blind=_instructions(_BLIND_PARTS))
+
+
+def fact_packets(run: Path, runs: Sequence[Path], facts: Path, kind: str, budget: int = PACKET_TOKENS, every: int = 3,
+                 min_changed: float = 0.0, seed: int | None = None) -> dict:
+    """One packet per window and group of facts, for each actor the facts file names.
+
+    `use` packets carry each fact's route, the briefing, the reminders and what the player stated with its calls,
+    and leave out withheld facts, which were never in front of the player. `blind` packets, for the benefit
+    measure, carry every fact of the actor under opaque per-packet IDs, in shuffled order and in every window, and nothing of
+    what was delivered or stated: a judge of a blind packet cannot tell a delivered fact from a withheld one."""
+    if kind not in JUDGE_INSTRUCTIONS or every < 1:
+        raise MeasureError('The packet kind is use or blind, and --every must be at least 1')
+    blind = kind == 'blind'
     mapping_path = run / 'private' / 'judge-mapping.json'
     if mapping_path.exists():
         raise MeasureError(f'{mapping_path}: already written; judge packets are made once')
     seed = secrets.randbits(32) if seed is None else seed
     rng = random.Random(seed)
-    frames, decisions = recorded_frames(runs, min_changed)
-    shown = dict(schema='known-items/1', sha256=items_sha,
-        items=[dict(id=item['id'], place=item['place'], what=item['what']) for item in items])
-    instructions = JUDGE_INSTRUCTIONS.replace('ITEM_FRAMES\n', '- `items/<item id>.png` is the earlier frame that '
-        'first showed each item.\n\n' if item_frames else '\n')
-    stretches: dict[str, tuple] = {}  # shuffled name -> admission, first and last decision, frames; in lineage order
-    for admission, found in frames.items():
-        for first in range(1, decisions[admission] + 1, stretch):
-            last = min(first + stretch - 1, decisions[admission])
-            name = f's{rng.getrandbits(40):010x}'
-            while name in stretches:
+    frames, spans = recorded_frames(runs, min_changed)
+    judged = read_facts(facts, spans)
+    instructions = JUDGE_INSTRUCTIONS[kind]
+    planned: dict[str, dict] = {}
+    no_frames, not_shown = [], []
+    for (admission, actor), entry in judged.items():
+        shown = [fact for fact in entry['facts'] if blind or fact['route'] != 'withheld']
+        kept = every_nth_changed([frame for frame in frames[admission] if frame.actor == actor], every)
+        if entry['facts'] and not kept:
+            no_frames.append(f'{admission}/{actor}')
+        missing = [fact for fact in shown if not kept or not blind and not any(
+            available_after(frame, fact['from_decision']) for frame in kept)]
+        not_shown.extend(dict(actor=f'{admission}/{actor}', fact=fact['id']) for fact in missing)
+        shown = [fact for fact in shown if fact not in missing]
+        if not shown:
+            continue
+        low, high = spans[admission][actor]
+        if blind:
+            rng.shuffle(shown)
+        # Use equal-length opaque names even while planning, so the final serialization has the same cost.
+        identities = {fact['id']: f'q{number:010x}' for number, fact in enumerate(shown)} if blind else {
+            fact['id']: fact['id'] for fact in shown}
+
+        def candidate(part: Sequence[Frame], group: Sequence[dict], first: int, last: int, name: str) -> tuple:
+            rows = [dict(frame_row(frame, f'f{number:03d}', blind), sha256='0' * 64,
+                **({} if blind else dict(decision=frame.decision - first + 1))) for number, frame in enumerate(part, 1)]
+            listed, available = [], {}
+            for fact in group:
+                at = next((number for number, frame in enumerate(part, 1) if available_after(frame, fact['from_decision'])), None)
+                if not blind and at is None:
+                    continue
+                item = dict(id=identities[fact['id']], text=fact['text'])
+                if not blind:
+                    available[fact['id']] = f'f{at:03d}'
+                    item.update(route=fact['route'], available_from=available[fact['id']])
+                listed.append(item)
+            contents = {'facts.json': json_text(dict(schema='packet-facts/1', facts=listed)), 'instructions.md': instructions}
+            delivered = None if blind else dict(briefing=entry['briefing'], reminders=[dict(text=row['text'],
+                decision=row['decision'] - first + 1 if row['decision'] >= first else None)
+                for row in entry['reminders'] if row['decision'] <= last])
+            if delivered is not None:
+                contents['delivered.json'] = json_text(delivered)
+            estimate = budget_entry(budget, 0, part)
+            manifest = dict(schema='judge-packet/2', packet=name, **({} if blind else dict(decisions=last - first + 1)),
+                labels=list(USE_LABELS), holds=list(HOLDS), budget=estimate, frames=rows)
+            manifest_text(manifest, contents)
+            return manifest, listed, available, delivered
+
+        # The fixed payload uses all reminders, including those later omitted from an earlier window.
+        fixed = candidate([], [], low, high, 's0000000000')[0]['budget']['estimated']['total']
+        remaining = budget - fixed
+        if remaining < budget / 4:
+            raise MeasureError(f'--budget {budget} leaves less than a quarter for facts after {fixed} fixed tokens; '
+                'leaves no room for frames; increase the budget or reduce briefing/reminders')
+        groups = fact_groups([dict(id=identities[fact['id']], text=fact['text'],
+            **({} if blind else dict(route=fact['route'], available_from='f000'))) for fact in shown], remaining // 2)
+        by_id = {identities[fact['id']]: fact for fact in shown}
+        groups = [[by_id[fact['id']] for fact in group] for group in groups]
+
+        def cost(part: Sequence[Frame], first: int, last: int) -> int:
+            return max(candidate(part, group, first, last, 's0000000000')[0]['budget']['estimated']['total'] for group in groups)
+
+        parts = cut(kept, lambda frame: 0, budget, packet_cost=cost, first_decision=low, last_decision=high)
+        for number, part in enumerate(parts):
+            first = low if number == 0 else parts[number - 1][-1].decision + 1
+            last = high if number == len(parts) - 1 else part[-1].decision
+            for group in groups:
                 name = f's{rng.getrandbits(40):010x}'
-            stretches[name] = (admission, first, last,
-                every_nth_changed([frame for frame in found if first <= frame.decision <= last], every))
+                while name in planned:
+                    name = f's{rng.getrandbits(40):010x}'
+                if blind:
+                    # Names are per packet, shuffled independently of routes and canonical ordering.
+                    opaque = rng.sample(range(16 ** 10), len(group))
+                    identities.update({fact['id']: f'q{number:010x}' for fact, number in zip(group, opaque)})
+                manifest, listed, available, delivered = candidate(part, group, first, last, name)
+                if not listed:
+                    continue
+                canonical = [fact for fact in group if blind or fact['id'] in available]
+                planned[name] = dict(admission=admission, actor=actor, first=first, last=last, frames=part, facts=listed,
+                    manifest=manifest, available_from=available, from_decision={fact['id']: fact['from_decision'] for fact in canonical},
+                    fact_ids={identities[fact['id']]: fact['id'] for fact in canonical},
+                    routes={fact['id']: fact['route'] for fact in canonical}, delivered=delivered)
+    if not planned and not no_frames and not not_shown:
+        raise MeasureError(f'{facts}: no actor it names has both a fact to show and a frame')
     packets = {}
     with Building(run / 'judge-packets') as out:
-        # Written in the order of the shuffled names, so creation times and directory order say nothing of the lineage.
-        for name in sorted(stretches):
-            admission, first, last, kept = stretches[name]
-            directory = out / name
+        for name in sorted(planned):
+            plan, directory = planned[name], out / name
             directory.mkdir()
             rows, sources = [], {}
-            for number, frame in enumerate(kept, 1):
-                row = copy_frame(frame, directory, f'f{number:03d}')
-                rows.append(dict(row, decision=frame.decision - first + 1))
+            for number, frame in enumerate(plan['frames'], 1):
+                row = copy_frame(frame, directory, f'f{number:03d}', blind)
+                rows.append(dict(row, **({} if blind else dict(decision=frame.decision - plan['first'] + 1))))
                 sources[row['frame']] = frame.source
-            write_json(directory / 'items.json', shown, once=True)
-            for item in items if item_frames else ():
-                (directory / 'items').mkdir(exist_ok=True)
-                shutil.copyfile(run / item['first_frame_file'], directory / 'items' / f"{item['id']}.png")
-            count = last - first + 1
-            sha, size = seal_packet(directory, dict(schema='judge-packet/1', packet=name, decisions=count,
-                short=count < stretch, labels=list(LABELS), items_sha256=items_sha, frames=rows), instructions)
-            packets[name] = dict(packet=name, start=f'{admission}:{first}-{last}', admission=admission, first=first,
-                last=last, decisions=count, short=count < stretch, sha256=sha, bytes=size, frames=sources)
-        mapping = dict(schema='judge-mapping/1', seed=seed, stretch=stretch, every=every, min_changed=min_changed,
-            item_frames=item_frames, items_sha256=items_sha, packets=[packets[name] for name in stretches])
+            write_json(directory / 'facts.json', dict(schema='packet-facts/1', facts=plan['facts']), once=True)
+            if plan['delivered'] is not None:
+                write_json(directory / 'delivered.json', plan['delivered'], once=True)
+            manifest = dict(plan['manifest'], frames=rows)
+            sha, size = seal_packet(directory, manifest, instructions)
+            estimate = manifest['budget']
+            count = plan['last'] - plan['first'] + 1
+            packets[name] = dict(packet=name, window=f"{plan['admission']}/{plan['actor']}:{plan['first']}-{plan['last']}",
+                start=plan['admission'], actor=plan['actor'], first=plan['first'], last=plan['last'], decisions=count,
+                sha256=sha, stretch_sha256=stretch_sha256(directory), bytes=size,
+                estimated_tokens=estimate['estimated']['total'], over_budget=estimate['over'], frames=sources,
+                available_from=plan['available_from'], from_decision=plan['from_decision'], fact_ids=plan['fact_ids'],
+                facts=plan['routes'])
+        mapping = dict(schema=MAPPING_SCHEMA, kind=kind, seed=seed, budget_tokens=budget, every=every, min_changed=min_changed,
+            facts_sha256=file_sha256(facts), instructions_sha256=sha256_text(instructions), no_frames=no_frames, not_shown=not_shown,
+            not_judged=[f'{admission}/{actor}' for admission in spans for actor in spans[admission]
+                if (admission, actor) not in judged], packets=[packets[name] for name in planned])
         write_json(mapping_path, mapping, once=True)
     return mapping
 
 
 def load_mapping(run: Path) -> dict:
     value = read_json(run / 'private' / 'judge-mapping.json')
-    if not isinstance(value, dict) or value.get('schema') != 'judge-mapping/1':
-        raise MeasureError(f"{run / 'private' / 'judge-mapping.json'}: not a judge-mapping/1 file")
+    if not isinstance(value, dict) or value.get('schema') != MAPPING_SCHEMA:
+        raise MeasureError(f"{run / 'private' / 'judge-mapping.json'}: not a {MAPPING_SCHEMA} file; no other version is read")
     return value
-
-
-def all_pairs(run: Path) -> list[tuple[str, str]]:
-    """Every (stretch, item) pair, in stretch then item order."""
-    items, _ = load_items(run)
-    return [(packet['start'], item['id']) for packet in load_mapping(run)['packets'] for item in items]
 
 
 # --- judge events -----------------------------------------------------------------------------------------------------
 
-def judge_events(run: Path, name: str, model: str, answers: Sequence[Path]) -> list[judge.JudgeEvent]:
-    """Validate one judge's answer files against their packets and write its events once."""
+def checked_answers(path: Path, packets: dict[str, dict], done: set, directory: Path, key: str,
+                    wanted: Callable[[dict], Sequence[str]], labels: Sequence[str], citing: Sequence[str],
+                    also: Callable[[dict], str | None] | None = None) -> tuple:
+    """One answer file against its packet: every `key` the packet wants answered once, a closed label, cited
+    frames from the packet, and a frame for every label in `citing`. It returns the packet and the answers."""
+    value = read_json(path)
+    named = value.get('packet') if isinstance(value, dict) else None
+    packet = packets.get(named) if isinstance(named, str) else None
+    if packet is None or not isinstance(value.get('answers'), list):
+        raise MeasureError(f'{path}: expected {{"packet": "<a packet of this run>", "answers": [...]}}')
+    if packet['packet'] in done:
+        raise MeasureError(f"{path}: packet {packet['packet']} is answered by more than one file")
+    done.add(packet['packet'])
+    verify_packet(directory / packet['packet'], packet['sha256'])
+    rows = value['answers']
+    if any(not isinstance(row, dict) or not isinstance(row.get(key), str) for row in rows):
+        raise MeasureError(f'{path}: every answer is an object that names its {key}')
+    wanted = wanted(packet)
+    counts = Counter(row[key] for row in rows)
+    problems = [f'no answer for {identity}' for identity in wanted if not counts[identity]]
+    problems += [f'{identity} answered {count} times' for identity, count in counts.items() if count > 1]
+    problems += [f'{identity!r} is not a {key} of the packet' for identity in counts if identity not in wanted]
+    for row in rows:
+        frames = row.get('frames', [])
+        if row.get('label') not in labels:
+            problems.append(f"{row[key]}: label {row.get('label')!r} is not one of {', '.join(labels)}")
+        elif not isinstance(frames, list) or any(not isinstance(frame, str) or frame not in packet['frames'] for frame in frames):
+            problems.append(f"{row[key]}: cites a frame outside the packet: {frames!r}")
+        elif row['label'] in citing and not frames:
+            problems.append(f"{row[key]}: a {row['label']} label must cite a frame")
+        elif also and also(row):
+            problems.append(f'{row[key]}: {also(row)}')
+    if problems:
+        raise MeasureError(f'{path}: ' + '; '.join(problems))
+    return packet, rows
+
+
+def events_target(directory: Path, name: str) -> Path:
     if NAME.fullmatch(name) is None:
         raise MeasureError(f'{name!r}: a judge name is lowercase letters, digits and hyphens')
-    target = run / 'events' / f'{name}.jsonl'
+    target = directory / f'{name}.jsonl'
     if target.exists():
         raise MeasureError(f'{target}: already written; a judge\'s events are written once')
-    items, _ = load_items(run)
-    wanted = [item['id'] for item in items]
+    return target
+
+
+def judge_events(run: Path, name: str, model: str, answers: Sequence[Path]) -> list[judge.FactUseVerdict]:
+    """Validate one judge's answer files against their packets and write its events once. The route of each
+    fact comes from the mapping the packets were made with, never from the answer."""
+    target = events_target(run / 'events', name)
     packets = {packet['packet']: packet for packet in load_mapping(run)['packets']}
     events, done = [], set()
     for path in answers:
-        value = read_json(path)
-        named = value.get('packet') if isinstance(value, dict) else None
-        packet = packets.get(named) if isinstance(named, str) else None
-        if packet is None or not isinstance(value.get('answers'), list):
-            raise MeasureError(f'{path}: expected {{"packet": "<a packet of this run>", "answers": [...]}}')
-        if packet['packet'] in done:
-            raise MeasureError(f"{path}: packet {packet['packet']} is answered by more than one file")
-        done.add(packet['packet'])
-        manifest = run / 'judge-packets' / packet['packet'] / 'manifest.json'
-        if not manifest.is_file() or file_sha256(manifest) != packet['sha256']:
-            raise MeasureError(f"{path}: packet {packet['packet']} is not the packet that was made")
-        rows = value['answers']
-        if any(not isinstance(row, dict) or not isinstance(row.get('item'), str) for row in rows):
-            raise MeasureError(f'{path}: every answer is an object that names its item')
-        counts = Counter(row.get('item') for row in rows)
-        problems = [f'no answer for {identity}' for identity in wanted if not counts[identity]]
-        problems += [f'{identity} answered {count} times' for identity, count in counts.items() if count > 1]
-        problems += [f'{identity!r} is not a known item' for identity in counts if identity not in wanted]
+        packet, rows = checked_answers(path, packets, done, run / 'judge-packets', 'fact', lambda packet: list(packet['fact_ids']),
+            USE_LABELS, judge.APPLIED, lambda row: None if row.get('holds') in HOLDS
+                else f"holds {row.get('holds')!r} is not one of {', '.join(HOLDS)}")
+        positions = {frame: number for number, frame in enumerate(packet['frames'])}
         for row in rows:
-            frames = row.get('frames', [])
-            if row.get('label') not in LABELS:
-                problems.append(f"{row.get('item')}: label {row.get('label')!r} is not one of {', '.join(LABELS)}")
-            elif not isinstance(frames, list) or any(not isinstance(frame, str) or frame not in packet['frames']
-                    for frame in frames):
-                problems.append(f"{row.get('item')}: cites a frame outside the packet: {frames!r}")
-            elif row['label'] in judge.TOUCHED and not frames:
-                problems.append(f"{row.get('item')}: a {row['label']} label must cite a frame")
-        if problems:
-            raise MeasureError(f'{path}: ' + '; '.join(problems))
-        events.extend(judge.JudgeEvent(start=packet['start'], item=row['item'], label=row['label'],
-            cited_frames=tuple(packet['frames'][frame] for frame in dict.fromkeys(row.get('frames', []))), judge=name,
-            model=text(model, '--model'), packet=packet['packet'], packet_sha256=packet['sha256']) for row in rows)
+            canonical = packet['fact_ids'][row['fact']]
+            available = packet['available_from'].get(canonical)
+            if row['label'] in judge.APPLIED and available is not None and not any(
+                    positions[frame] >= positions[available] for frame in row['frames']):
+                raise MeasureError(f"{path}: {row['fact']}: applied label cites only frames before available_from {available}")
+            events.append(judge.FactUseVerdict(window=packet['window'], fact=canonical, route=packet['facts'][canonical],
+                label=row['label'], holds=row['holds'],
+                cited_frames=tuple(packet['frames'][frame] for frame in dict.fromkeys(row.get('frames', []))), judge=name,
+                model=text(model, '--model'), packet=packet['packet'], packet_sha256=packet['sha256']))
+
     if not events:
         raise MeasureError('No answer file selected')
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -575,82 +976,35 @@ def judge_events(run: Path, name: str, model: str, answers: Sequence[Path]) -> l
     return events
 
 
-def read_judge(run: Path, name: str) -> dict[tuple[str, str], str]:
-    path = run / 'events' / f'{name}.jsonl'
+def read_judge(directory: Path, name: str, kind: str) -> dict[tuple[str, str], judge.JudgeEvent]:
+    path = directory / f'{name}.jsonl'
     if not path.is_file():
         raise MeasureError(f'{path}: missing; run `events` for {name} first')
-    return {event.pair: event.label for event in judge.read_events(path)}
-
-
-# --- the calibration sample -------------------------------------------------------------------------------------------------
-
-def draw_sample(run: Path, count: int = OWNER_PAIRS, seed: int | None = None) -> dict:
-    """Draw `count` pairs from all pairs. It reads the stretches and the items only, never a verdict."""
-    pairs = all_pairs(run)
-    if len(pairs) < count:
-        raise MeasureError(f'Only {len(pairs)} pairs exist; cannot draw {count}')
-    seed = secrets.randbits(32) if seed is None else seed
-    chosen = random.Random(seed).sample(pairs, count)
-    events = run / 'events'
-    value = dict(schema='calibration-sample/1', seed=seed, count=count, population=len(pairs),
-        items_sha256=load_items(run)[1], verdicts_existed=events.is_dir() and any(events.iterdir()),
-        pairs=[dict(index=index, start=start, item=item) for index, (start, item) in enumerate(chosen)])
-    try:
-        write_json(run / 'sample.json', value, once=True)
-    except FileExistsError:
-        raise MeasureError(f"{run / 'sample.json'}: already drawn; the sample is drawn once") from None
-    return value
-
-
-def draw_engaged(run: Path, count: int = ENGAGED_PAIRS, seed: int | None = None) -> dict:
-    """Draw `count` further pairs for the owner: pairs outside the random draw that any judge called straight, missed
-    or cannot_tell. This reads every judge's events, so it is made after the judges have answered; the random draw
-    never reads one. The owner's page serves these pairs after the random ones and does not say which is which."""
-    target = run / ENGAGED_FILE
-    if target.exists():
-        raise MeasureError(f'{target}: already drawn; the engaged supplement is drawn once')
-    if (run / 'labels.json').exists():
-        raise MeasureError(f"{run / 'labels.json'}: the owner has begun labelling; a supplement drawn now would change "
-            'what the labels belong to')
-    drawn = read_json(run / 'sample.json')['pairs']
-    names = sorted(path.stem for path in (run / 'events').glob('*.jsonl')) if (run / 'events').is_dir() else []
-    if not names:
-        raise MeasureError(f"{run / 'events'}: no judge events; the engaged supplement needs the judges' verdicts")
-    called: dict[tuple[str, str], set[str]] = {}
-    for name in names:
-        for event in judge.read_events(run / 'events' / f'{name}.jsonl'):
-            called.setdefault(event.pair, set()).add(event.label)
-    random_pairs = {(pair['start'], pair['item']) for pair in drawn}
-    population = all_pairs(run)
-    pool = [pair for pair in population if pair not in random_pairs and called.get(pair, set()) & set(ENGAGED_LABELS)]
-    if len(pool) < count:
-        raise MeasureError(f'Only {len(pool)} pairs outside the random draw were called {", ".join(ENGAGED_LABELS)} by a '
-            f'judge; cannot draw {count}')
-    seed = secrets.randbits(32) if seed is None else seed
-    chosen = random.Random(seed).sample(pool, count)
-    # The order the owner sees all pairs in, drawn here once: the engaged pairs are among the random ones, not after them.
-    order = random.Random(f'display order {seed}').sample(range(len(drawn) + count), len(drawn) + count)
-    value = dict(schema='engaged-sample/1', seed=seed, count=count, population=len(population), eligible=len(pool),
-        display=dict(seed=seed, rule='a random permutation of the pair indices, seeded with "display order <seed>"',
-            order=order),
-        labels=list(ENGAGED_LABELS), judges=names,
-        events_sha256={name: file_sha256(run / 'events' / f'{name}.jsonl') for name in names},
-        random_sample_sha256=file_sha256(run / 'sample.json'), items_sha256=load_items(run)[1],
-        pairs=[dict(index=len(drawn) + number, start=start, item=item) for number, (start, item) in enumerate(chosen)])
-    write_json(target, value, once=True)
-    return value
+    return {event.pair: event for event in judge.read_events(path, kind)}
 
 
 # --- statistics -------------------------------------------------------------------------------------------------------
 
-def cohen_kappa(first: Sequence[int], second: Sequence[int], categories: int = len(LABELS)) -> float | None:
-    """Cohen's kappa of two raters' category codes; None when chance agreement is certain."""
-    a, b = np.asarray(first), np.asarray(second)
-    if a.size == 0:
-        return None
-    observed = float((a == b).mean())
-    chance = float(sum((a == k).mean() * (b == k).mean() for k in range(categories)))
-    return None if chance >= 1 else (observed - chance) / (1 - chance)
+def confusion(first: Sequence[int], second: Sequence[int], categories: int) -> np.ndarray:
+    table = np.zeros((categories, categories))
+    np.add.at(table, (np.asarray(first, dtype=int), np.asarray(second, dtype=int)), 1)
+    return table
+
+
+def kappa_of(table: np.ndarray) -> np.ndarray:
+    """Cohen's kappa of the confusion tables on the last two axes; nan for an empty table and where chance
+    agreement is certain."""
+    total = table.sum(axis=(-2, -1))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        observed = np.trace(table, axis1=-2, axis2=-1) / total
+        chance = (table.sum(axis=-1) * table.sum(axis=-2)).sum(axis=-1) / total ** 2
+        return np.where(chance < 1, (observed - chance) / (1 - chance), np.nan)
+
+
+def cohen_kappa(first: Sequence[int], second: Sequence[int], categories: int) -> float | None:
+    """Cohen's kappa of two raters' category codes; None when chance agreement is certain or nothing is rated."""
+    value = float(kappa_of(confusion(first, second, categories)))
+    return None if math.isnan(value) else value
 
 
 def percentile_interval(values: np.ndarray) -> list[float] | None:
@@ -683,1001 +1037,707 @@ def binomial_interval(successes: int, trials: int, level: float = 0.95) -> list[
     return [lower, upper]
 
 
-def poisson_interval(count: int, level: float = 0.95) -> list[float]:
-    """The exact (Garwood) interval for the mean of a Poisson count."""
-    tail = (1 - level) / 2
-
-    def at_most(limit: int, mean: float) -> float:
-        return sum(math.exp(i * math.log(mean) - mean - math.lgamma(i + 1)) for i in range(limit + 1)) if mean > 0 else 1.0
-
-    high = count + 10 * math.sqrt(count + 1) + 30
-    lower = 0.0 if count == 0 else _solve(lambda mean: 1 - at_most(count - 1, mean), tail, True, high)
-    return [lower, _solve(lambda mean: at_most(count, mean), tail, False, high)]
-
-
-def cannot_tell_of_touched(labels) -> dict:
-    """`cannot_tell` among `straight`, `missed` and `cannot_tell`: the share the protocol's decision rule uses."""
-    counts = Counter(labels)
-    of = counts['straight'] + counts['missed'] + counts['cannot_tell']
-    return dict(cannot_tell=counts['cannot_tell'], of=of, value=counts['cannot_tell'] / of if of else None)
-
-
-def owner_match(matched: int, compared: int) -> dict:
-    return dict(compared=compared, matched=matched, interval=binomial_interval(matched, compared) if compared else None)
-
-
-def pair_statistics(first: Sequence[int], second: Sequence[int], seed: int, draws: int) -> dict:
-    """Agreement, kappa and the share of `cannot_tell` over both judges' labels, each with a percentile bootstrap
-    interval over pairs."""
-    a, b = np.asarray(first), np.asarray(second)
-    cannot = LABELS.index('cannot_tell')
-    index = np.random.default_rng(seed).integers(0, a.size, (draws, a.size))
-    x, y = a[index], b[index]
-    observed = (x == y).mean(axis=1)
-    chance = sum((x == k).mean(axis=1) * (y == k).mean(axis=1) for k in range(len(LABELS)))
+def _ratio(numerator: np.ndarray, denominator: np.ndarray) -> np.ndarray:
     with np.errstate(divide='ignore', invalid='ignore'):
-        kappa = np.where(chance < 1, (observed - chance) / (1 - chance), np.nan)
-    share = ((x == cannot).mean(axis=1) + (y == cannot).mean(axis=1)) / 2
-    return dict(pairs=int(a.size),
-        agreement=dict(value=float((a == b).mean()), interval=percentile_interval(observed)),
-        kappa=dict(value=cohen_kappa(a, b), interval=percentile_interval(kappa), undefined_draws=int(np.isnan(kappa).sum())),
-        cannot_tell=dict(value=float(((a == cannot).mean() + (b == cannot).mean()) / 2), interval=percentile_interval(share)))
+        return np.where(denominator > 0, numerator / denominator, np.nan)
 
 
-ENGAGED_CAVEAT = ('The engaged pairs cannot contain a pair every judge called not engaged, so the pooled error is '
-    'conditional on a judge noticing engagement and is likely low.')
-CHECKED_NOTE = ('not the calibration: the owner gave these after the judges\' evidence was shown, so they are not '
-    'independent of it')
+class StartBootstrap:
+    """A cluster bootstrap over starts (admissions). Whole starts are drawn with replacement and a statistic is
+    recomputed from the drawn starts' sums, so pairs a judge labelled together stay together. With one start
+    there is nothing to resample and every interval is None."""
+
+    def __init__(self, starts: Sequence[str], seed: int, draws: int) -> None:
+        self.names = list(dict.fromkeys(starts))
+        self.at = {name: number for number, name in enumerate(self.names)}
+        self.index = np.random.default_rng(seed).integers(0, len(self.names), (draws, len(self.names))) \
+            if len(self.names) > 1 else None
+
+    def sums(self, rows: Sequence[dict], value: Callable[[dict], object], shape: tuple = ()) -> np.ndarray:
+        """Per start, the sum of `value(row)` over its rows."""
+        total = np.zeros((len(self.names), *shape))
+        for row in rows:
+            total[self.at[row['start']]] += value(row)
+        return total
+
+    def interval(self, function: Callable[..., np.ndarray], *per_start: np.ndarray) -> list[float] | None:
+        if self.index is None:
+            return None
+        return percentile_interval(np.asarray(function(*(part[self.index].sum(axis=1) for part in per_start)), dtype=float))
 
 
-def read_owner(run: Path) -> tuple[list[dict], list[dict], dict[int, dict]]:
-    """The random pairs, the engaged pairs and the owner's entry for each labelled pair, by index. Each entry holds
-    `blind` and `checked` (null until the owner has checked the pair). With no labels file there are no entries."""
-    random_pairs = read_json(run / 'sample.json')['pairs'] if (run / 'sample.json').is_file() else []
-    engaged_pairs = read_json(run / ENGAGED_FILE)['pairs'] if (run / ENGAGED_FILE).is_file() else []
-    entries: dict[int, dict] = {}
-    if (run / 'labels.json').is_file():
-        saved = read_json(run / 'labels.json')
-        if saved.get('schema') != OWNER_LABELS_SCHEMA:
-            raise MeasureError(f"{run / 'labels.json'}: not {OWNER_LABELS_SCHEMA}; labels of another format are not read")
-        entries = {int(index): entry for index, entry in saved['labels'].items()}
-    return random_pairs, engaged_pairs, entries
+def _number(value: float) -> float | None:
+    return None if math.isnan(value) else float(value)
 
 
-def tally_owner(pairs: Sequence[dict], entries: dict[int, dict], adjudicated: dict, which: str) -> tuple:
-    """The owner's `which` label ('blind' or 'checked') against the adjudicated label over `pairs`:
-    [matched, compared] over every compared pair, [matched, compared] over those the owner or the judges called
-    straight or missed, and the count of pairs the owner called not_engaged that were adjudicated straight or missed."""
-    whole, touched, false_engagement = [0, 0], [0, 0], 0
-    for pair in pairs:
-        given = (entries.get(pair['index']) or {}).get(which)
-        verdict = adjudicated[(pair['start'], pair['item'])]
-        if given is None or verdict is None:
-            continue
-        for part in (whole, touched) if given in judge.TOUCHED or verdict in judge.TOUCHED else (whole,):
-            part[0] += given == verdict
-            part[1] += 1
-        false_engagement += given == 'not_engaged' and verdict in judge.TOUCHED
-    return whole, touched, false_engagement
+def judges_beside(boot: StartBootstrap, rows: Sequence[dict], judges: Sequence[str], field: str = 'labels') -> dict:
+    """The first two judges on `rows`: their agreement and Cohen's kappa on `field` (the labels, or `holds_by`),
+    and the dispute rate, the share of rows on which that field differs before adjudication."""
+    categories = USE_LABELS if field == 'labels' else HOLDS
+    first, second = judges
+
+    def table(row: dict) -> np.ndarray:
+        return confusion([categories.index(row[field][first])], [categories.index(row[field][second])], len(categories))
+
+    tables = boot.sums(rows, table, (len(categories), len(categories)))
+    disputes = boot.sums(rows, lambda row: float(row[field][first] != row[field][second]))
+    count = boot.sums(rows, lambda row: 1.0)
+    whole = tables.sum(axis=0)
+    return dict(pairs=len(rows), on='label' if field == 'labels' else 'holds',
+        agreement=_number(float(_ratio(np.trace(whole), whole.sum()))),
+        kappa=dict(value=_number(float(kappa_of(whole))), interval=boot.interval(kappa_of, tables)),
+        dispute_rate=dict(value=_number(float(_ratio(disputes.sum(), count.sum()))), interval=boot.interval(_ratio, disputes, count)))
 
 
-def agreement(run: Path, judges: Sequence[str], third: str | None = None, seed: int | None = None,
-              draws: int = 10000) -> dict:
-    """The two judges' agreement, the adjudicated labels and their match with the owner's labels."""
-    pairs = all_pairs(run)
-    first, second = (read_judge(run, name) for name in judges)
-    missing = [f'{name}: {start} / {item}' for name, labels in zip(judges, (first, second)) for start, item in pairs
-        if (start, item) not in labels]
+def agreement(run: Path, judges: Sequence[str], third: str | None = None) -> dict:
+    """The adjudicated labels: the label both of the first two judges gave, else the third judge's. `by` says
+    which: `agreement`, `third` (the third sided with one of them) or `third_alone` (it gave a label neither
+    did, so no two judges agree). `holds` is the value both gave, else the third's when it sides with one of
+    them, else `cannot_tell`."""
+    if judges[0] == judges[1] or third in judges:
+        raise MeasureError('The judges must differ')
+    mapping = load_mapping(run)
+    first, second = (read_judge(run / 'events', name, judge.FACT_USE) for name in judges)
+    tie = read_judge(run / 'events', third, judge.FACT_USE) if third else {}
+    rows, missing = [], []
+    for packet in mapping['packets']:
+        for fact, route in packet['facts'].items():
+            pair = (packet['window'], fact)
+            missing += [f'{name}: {pair[0]} / {fact}' for name, events in zip(judges, (first, second)) if pair not in events]
+            if missing:
+                continue
+            a, b, c = first[pair], second[pair], tie.get(pair)
+            same = a.label == b.label
+            label = a.label if same else c.label if c else None
+            by = 'agreement' if same else None if c is None else 'third' if c.label in (a.label, b.label) else 'third_alone'
+            holds = a.holds if a.holds == b.holds else c.holds if c and c.holds in (a.holds, b.holds) else 'cannot_tell'
+            rows.append(dict(window=pair[0], fact=fact, route=route, start=packet['start'], actor=packet['actor'],
+                packet=packet['packet'], label=label, by=by, holds=holds,
+                from_decision=packet['from_decision'][fact], last=packet['last'],
+                unresolved=c is None and (not same or a.holds != b.holds),
+                labels={judges[0]: a.label, judges[1]: b.label, **({third: c.label} if c else {})},
+                holds_by={judges[0]: a.holds, judges[1]: b.holds, **({third: c.holds} if c else {})}))
     if missing:
         raise MeasureError(f'{len(missing)} pairs lack a verdict, the first: {missing[0]}')
-    tie = read_judge(run, third) if third else {}
-    seed = secrets.randbits(32) if seed is None else seed
-    code = LABELS.index
-    report = pair_statistics([code(first[pair]) for pair in pairs], [code(second[pair]) for pair in pairs], seed, draws)
-    packets = {packet['start']: packet['packet'] for packet in load_mapping(run)['packets']}
-    rows = []
-    for pair in pairs:
-        same = first[pair] == second[pair]
-        label = first[pair] if same else tie.get(pair)
-        # `third_alone`: the third judge chose a label neither of the two gave, so no two judges agree on the pair
-        by = 'agreement' if same else None if label is None else 'third' if label in (first[pair], second[pair]) \
-            else 'third_alone'
-        rows.append(dict(start=pair[0], item=pair[1], label=label, by=by,
-            labels={judges[0]: first[pair], judges[1]: second[pair], **({third: tie[pair]} if pair in tie else {})}))
-    unresolved = [row for row in rows if row['label'] is None]
-    write_json(run / 'adjudicated.json', dict(schema='judge-adjudicated/1', judges=list(judges), third=third,
-        unresolved=len(unresolved), third_alone=sum(row['by'] == 'third_alone' for row in rows), pairs=rows))
-    adjudicated = {(row['start'], row['item']): row['label'] for row in rows}
-    random_pairs, engaged_pairs, owner_entries = read_owner(run)
-    # The calibration is the owner's blind labels over the random pairs. The engaged pairs, and the owner's checked
-    # labels (given after seeing the judges' evidence), are reported beside it and never counted in it.
-    whole, touched, false_engagement = tally_owner(random_pairs, owner_entries, adjudicated, 'blind')
-    engaged_whole, engaged_touched, engaged_false = tally_owner(engaged_pairs, owner_entries, adjudicated, 'blind')
-    checked_random = tally_owner(random_pairs, owner_entries, adjudicated, 'checked')[0]
-    checked_engaged = tally_owner(engaged_pairs, owner_entries, adjudicated, 'checked')[0]
-    both = [owner_entries[pair['index']] for pair in random_pairs + engaged_pairs if pair['index'] in owner_entries]
-    matched, labelled = whole
-    decided = labelled == OWNER_PAIRS
-    passes = dict(agreement=report['agreement']['value'] >= MIN_AGREEMENT,
-        kappa=report['kappa']['value'] is not None and report['kappa']['value'] >= MIN_KAPPA,
-        owner=matched >= MIN_OWNER_MATCH if decided else None)
-    report.update(schema=AGREEMENT_SCHEMA, judges=list(judges), third=third,
-        bootstrap=dict(seed=seed, draws=draws, note=BOOTSTRAP_NOTE),
-        cannot_tell_of_touched={judges[0]: cannot_tell_of_touched(first[pair] for pair in pairs),
-            judges[1]: cannot_tell_of_touched(second[pair] for pair in pairs),
-            'adjudicated': cannot_tell_of_touched(row['label'] for row in rows if row['label'] is not None)},
-        owner=dict(owner_match(matched, labelled), of=OWNER_PAIRS, touched=owner_match(*touched),
-            false_engagement=int(false_engagement), basis='blind labels, the first click of each pair',
-            engaged=dict(owner_match(*engaged_whole), of=len(engaged_pairs), touched=owner_match(*engaged_touched),
-                false_engagement=int(engaged_false)),
-            # the error `measure` sizes the comparison with: random and engaged pairs together
-            touched_all=owner_match(touched[0] + engaged_touched[0], touched[1] + engaged_touched[1]),
-            checked=dict(note=CHECKED_NOTE, labelled=len(both),
-                changed=sum(entry.get('checked') not in (None, entry['blind']) for entry in both),
-                checked_pairs=sum(entry.get('checked') is not None for entry in both),
-                random=owner_match(*checked_random), engaged=owner_match(*checked_engaged))),
-        disputed=[dict(start=row['start'], item=row['item'], packet=packets[row['start']], labels=row['labels'],
-            adjudicated=row['label'], by=row['by']) for row in rows if row['by'] != 'agreement'],
-        third_alone=sum(row['by'] == 'third_alone' for row in rows),
-        unresolved=len(unresolved),
-        third_judge_packets=sorted({packets[row['start']] for row in unresolved}),
-        thresholds=dict(agreement=MIN_AGREEMENT, kappa=MIN_KAPPA, owner_match=MIN_OWNER_MATCH, owner_pairs=OWNER_PAIRS),
-        passes=passes, **{'pass': None if passes['owner'] is None and all((passes['agreement'], passes['kappa']))
-            else all(passes.values())})
-    write_json(run / 'agreement.json', report)
-    return report
+    disputed = [row for row in rows if row['labels'][judges[0]] != row['labels'][judges[1]]]
+    holds_disputed = sum(row['holds_by'][judges[0]] != row['holds_by'][judges[1]] for row in rows)
+    codes = [[USE_LABELS.index(row['labels'][name]) for row in rows] for name in judges]
+    holds_codes = [[HOLDS.index(row['holds_by'][name]) for row in rows] for name in judges]
+    value = dict(schema='judge-adjudicated/2', kind=mapping['kind'], judges=list(judges), third=third, pairs=len(rows),
+        agreement=1 - len(disputed) / len(rows) if rows else None, kappa=cohen_kappa(*codes, len(USE_LABELS)),
+        disputed=len(disputed), dispute_rate=len(disputed) / len(rows) if rows else None,
+        holds_agreement=1 - holds_disputed / len(rows) if rows else None, holds_kappa=cohen_kappa(*holds_codes, len(HOLDS)),
+        holds_disputed=holds_disputed, holds_dispute_rate=holds_disputed / len(rows) if rows else None,
+        unresolved=sum(row['unresolved'] for row in rows), third_alone=sum(row['by'] == 'third_alone' for row in rows),
+        third_judge_packets=sorted({row['packet'] for row in rows if row['unresolved']}), rows=rows)
+    write_json(run / 'adjudicated.json', value)
+    return value
 
 
 def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
-    """Known items touched per stretch length and the missed share among touched, from the adjudicated labels.
-    Items touched carry an exact Poisson interval on the total count over the total decisions. The percentile
-    bootstrap over stretches is rough: a handful of stretches from fewer admissions is all there is to resample.
-    The judge's error for sizing comes from the owner comparison in `agreement.json`, with its interval: the owner's
-    blind labels over every labelled pair, random and engaged, that the owner or the judges called straight or missed."""
+    """The standing use measures of one judged run, from its adjudicated labels. Every rate carries the first
+    two judges' agreement and dispute rate over the pairs it is taken from, and an interval over starts. A run
+    of blind packets gets the label counts and the judges' agreement only: the use measures read what was
+    delivered, which a blind packet leaves out."""
     adjudicated = read_json(run / 'adjudicated.json')
+    if adjudicated.get('schema') != 'judge-adjudicated/2':
+        raise MeasureError(f"{run / 'adjudicated.json'}: not judge-adjudicated/2; run `agreement` again")
     if adjudicated['unresolved']:
         raise MeasureError(f"{adjudicated['unresolved']} pairs are not adjudicated; run `agreement` with --third")
-    mapping = load_mapping(run)
+    rows, judges = adjudicated['rows'], adjudicated['judges']
     seed = secrets.randbits(32) if seed is None else seed
-    per = mapping['stretch']
-    by_start: dict[str, Counter] = {packet['start']: Counter() for packet in mapping['packets']}
-    for row in adjudicated['pairs']:
-        by_start[row['start']][row['label']] += 1
-    rows = [dict(start=packet['start'], admission=packet['admission'], decisions=packet['decisions'], short=packet['short'],
-        **{label: by_start[packet['start']][label] for label in LABELS}) for packet in mapping['packets']]
+    boot = StartBootstrap([row['start'] for row in rows], seed, draws)
 
-    def over(selected: list[dict]) -> dict:
-        if not selected:
-            return dict(stretches=0, admissions=0)
-        decisions = np.array([row['decisions'] for row in selected], dtype=float)
-        missed = np.array([row['missed'] for row in selected], dtype=float)
-        touched = missed + np.array([row['straight'] for row in selected], dtype=float)
-        index = np.random.default_rng(seed).integers(0, len(selected), (draws, len(selected)))
-        with np.errstate(divide='ignore', invalid='ignore'):
-            rate = per * touched[index].sum(axis=1) / decisions[index].sum(axis=1)
-            share = np.where(touched[index].sum(axis=1) > 0, missed[index].sum(axis=1) / touched[index].sum(axis=1), np.nan)
-        return dict(stretches=len(selected), admissions=len({row['admission'] for row in selected}),
-            decisions=int(decisions.sum()), touched=int(touched.sum()), missed=int(missed.sum()),
-            touched_per_stretch=dict(value=float(per * touched.sum() / decisions.sum()),
-                exact_poisson_interval=[float(per * end / decisions.sum()) for end in poisson_interval(int(touched.sum()))],
-                interval=percentile_interval(rate)),
-            missed_share=dict(value=float(missed.sum() / touched.sum()) if touched.sum() else None,
-                interval=percentile_interval(share), undefined_draws=int(np.isnan(share).sum())))
+    def rate(definition: str, units: Sequence[dict], base: Callable[[dict], bool], hit: Callable[[dict], bool],
+             beside: Sequence[dict], field: str = 'labels') -> dict:
+        numerator = boot.sums(units, lambda unit: float(base(unit) and hit(unit)))
+        denominator = boot.sums(units, lambda unit: float(base(unit)))
+        return dict(definition=definition, numerator=int(numerator.sum()), denominator=int(denominator.sum()),
+            value=_number(float(_ratio(numerator.sum(), denominator.sum()))),
+            interval=boot.interval(_ratio, numerator, denominator) if denominator.sum() else None,
+            judges_route=judges_beside(boot, beside, judges, field),
+            judges_rate_pairs=judges_beside(boot, [row for row in beside if any(row['labels'][name] in
+                (('in_line',) if field == 'holds_by' else judge.APPLIED) for name in judges)], judges, field))
 
-    labels = Counter(row['label'] for row in adjudicated['pairs'])
-    calibration = error = None
-    if (run / 'agreement.json').is_file():
-        found = read_json(run / 'agreement.json')
-        if found.get('schema') != AGREEMENT_SCHEMA:
-            raise MeasureError(f"{run / 'agreement.json'}: not {AGREEMENT_SCHEMA}; run `agreement` again")
-        owner = found['owner']
-        calibration = {'pass': found['pass'], 'passes': found['passes'], 'agreement': found['agreement']['value'],
-            'kappa': found['kappa']['value'], 'owner_matched': owner['matched'], 'owner_compared': owner['compared'],
-            'third_alone': found['third_alone']}
+    def applied(row: dict) -> bool:
+        return row['label'] in judge.APPLIED
 
-        def wrong(part: dict) -> dict | None:
-            """The judge's error against the owner over some compared pairs, with the exact interval."""
-            if not part['compared']:
-                return None
-            return dict(compared=part['compared'], differ=part['compared'] - part['matched'],
-                value=1 - part['matched'] / part['compared'], interval=[1 - part['interval'][1], 1 - part['interval'][0]])
-
-        # all_pairs is the random draw's blind labels; touched_pairs adds the engaged pairs, also on blind labels
-        error = dict(all_pairs=wrong(owner), touched_pairs=wrong(owner['touched_all']), touched_random=wrong(owner['touched']),
-            touched_measured=owner['touched_all']['compared'] >= MIN_TOUCHED_SAMPLED,
-            false_engagement=owner['false_engagement'])
-    report = dict(schema='memory-measure/1', per_decisions=per, bootstrap=dict(seed=seed, draws=draws),
-        labels={label: labels[label] for label in LABELS}, pairs=len(adjudicated['pairs']),
-        cannot_tell_share=labels['cannot_tell'] / len(adjudicated['pairs']) if adjudicated['pairs'] else None,
-        cannot_tell_of_touched=cannot_tell_of_touched(row['label'] for row in adjudicated['pairs']),
-        all_stretches=over(rows), full_stretches=over([row for row in rows if not row['short']]), stretches=rows,
-        calibration=calibration, judge_error=error)
-    report['simulate_commands'] = simulate_commands(report)
+    measures = None
+    if adjudicated['kind'] == 'use':
+        delivered = [row for row in rows if row['route'] == 'lead']
+        known = [row for row in rows if row['route'] != 'withheld']
+        read = [row for row in rows if row['route'] == 'read' and row['last'] >= row['from_decision']]
+        reads: dict[tuple, dict] = {}
+        for row in read:
+            unit = reads.setdefault((row['start'], row['actor'], row['fact']), dict(start=row['start'], acted=False))
+            unit['acted'] = unit['acted'] or row['label'] == 'in_line'
+        measures = dict(
+            use_rate_delivered=rate('of the windows in which a fact whose lead was delivered applied (in line, against or '
+                'found again), the share in which the player acted in line with it', delivered, applied,
+                lambda row: row['label'] == 'in_line', delivered),
+            rediscovery=rate('of the windows in which a fact whose lead was delivered applied, the share in which the '
+                'player found it again by looking', delivered, applied, lambda row: row['label'] == 'found_again', delivered),
+            stale_or_false_acted=rate('of the windows in which the player acted in line with a fact it had (lead, read or '
+                'index), the share in which the frames show the fact no longer held or never did', known,
+                lambda row: row['label'] == 'in_line', lambda row: row['holds'] == 'stale_or_false', known, 'holds_by'),
+            read_then_in_line=rate('of the facts the player read through a link or a search, the share it then acted in line '
+                'with in some window; the denominator is how many facts it read', list(reads.values()), lambda unit: True,
+                lambda unit: unit['acted'], read))
+    mapping = load_mapping(run)
+    report = dict(schema='memory-use/1', kind=adjudicated['kind'], judges=judges, third=adjudicated['third'],
+        not_corrected=NOT_CORRECTED, bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), note=BOOTSTRAP_NOTE),
+        pairs=len(rows), third_alone=adjudicated['third_alone'], no_frames=mapping['no_frames'], not_shown=mapping['not_shown'],
+        labels_by_route={route: dict(pairs=sum(row['route'] == route for row in rows),
+            **{label: sum(row['route'] == route and row['label'] == label for row in rows) for label in USE_LABELS})
+            for route in ROUTES}, judges_overall=judges_beside(boot, rows, judges), measures=measures)
     write_json(run / 'measure.json', report)
     return report
 
 
-def simulate_commands(report: dict) -> list[dict]:
-    """The `simulate` command lines for the measured numbers: the point values, the judge's error at its interval's
-    upper bound, and each interval's ends. The judge's error is the one on touched pairs when enough were sampled,
-    otherwise the one over all pairs; with no owner comparison `--wrong` is left as `F`."""
-    whole = report['all_stretches']
-    share = (whole.get('missed_share') or {}).get('value')
-    if not whole.get('touched') or share in (None, 0.0, 1.0):
-        return []
-    error = report['judge_error']
-    source = error and (error['touched_pairs'] if error['touched_measured'] else error['all_pairs'])
-    wrong = f"{source['value']:.3f}" if source else 'F'
-    rate = whole['touched_per_stretch']
+# --- the anchor: the measure gate's owner-labelled pairs, re-judged ---------------------------------------------------------
 
-    def line(case: str, touched: float, missed: float, flips: str) -> dict:
-        return dict(case=case, command=f'python -m tools.memory_measure simulate --touched {touched:.2f} --missed {missed:.3f} '
-            f'--wrong {flips}')
+#: The measure gate's judge prompt, frozen: the text of `instructions.md` in every sealed judge packet of
+#: `.runtime/memory-measure/seven-day-measure-gate`. It is worded for one kind of fact in one game, as the gate was;
+#: it is kept only because the owner's 30 labels answer this question. It is never edited: `anchor packets` refuses
+#: a gate whose packets do not hold exactly this text, and a test pins its hash.
+ANCHOR_PROMPT_SHA256 = '14c7d5932c044f2ac3e6b6e0a60bbb45ece3598d87a3e60aea4f94ad68c6af24'
+ANCHOR_INSTRUCTIONS = '''# One closed question for each known item
 
-    commands = [line('point values', rate['value'], share, wrong)]
-    if source:
-        commands.append(line("judge error at its interval's upper bound", rate['value'], share, f"{source['interval'][1]:.3f}"))
-    low, high = rate['exact_poisson_interval']
-    if low > 0:
-        commands.append(line("items touched at the exact interval's lower end", low, share, wrong))
-    commands.append(line("items touched at the exact interval's upper end", high, share, wrong))
-    for name, end in zip(('lower', 'upper'), whole['missed_share']['interval'] or ()):
-        if 0 < end < 1 and f'{end:.3f}' != f'{share:.3f}':
-            commands.append(line(f"missed share at the bootstrap interval's {name} end", rate['value'], end, wrong))
-    return commands
+Use only the files in this directory: no other file and nothing you may know about this stretch from elsewhere.
 
+## What you have
 
-# --- the protocol's simulation --------------------------------------------------------------------------------------------
+- `manifest.json` lists the frames of one stretch of recorded play, in order. Each entry has the frame's ID
+  (`frame`), its image (`file`), `decision` (which of the stretch's decisions returned it, counted from 1) and
+  `inputs_before`: the inputs the player sent between this packet's previous frame and this one, oldest first.
+  Each entry is one batch of inputs: keys by name, typed text in quotes and `×N` for a repeat. `decisions` is how
+  many decisions the stretch has.
+- `frames/<frame ID>.png` is the screen as it was captured. The frames are every third changed screen, so steps
+  between them are missing.
+- `items.json` lists the known items: places with goods that the player's earlier play had already shown, each
+  with an `id`, the `place` as the screen showed it and `what` was there. Nothing in the list is from this stretch.
+- `items/<item id>.png` is the earlier frame that first showed each item.
 
-def p_values(rng: np.random.Generator, starts: int, touched: float, missed: float, ratio: float, wrong: float,
-             rho: float = 0.2, sims: int = 1500, draws: int = 400) -> np.ndarray:
-    """One-sided permutation p-values of the appendix's model, `sims` comparisons at once: each start touches a
-    Poisson number of known items, each missed with a probability that varies by start (correlation `rho`); the
-    judge flips each label with probability `wrong`; the second arm's missed share is `ratio` times the first's.
-    The statistic is the difference in missed items per start, compared as integer sums."""
-    if not 0 < missed < 1 or not 0 < missed * ratio < 1 or not 0 < rho < 1 or not 0 <= wrong <= 1 or touched <= 0:
-        raise MeasureError('The simulation needs items touched above 0, a missed share strictly between 0 and 1, '
-            'a judge error within 0..1 and a correlation strictly between 0 and 1')
+## The question
 
-    def arm(share: float) -> np.ndarray:
-        engaged = rng.poisson(touched, (sims, starts))
-        lost = rng.binomial(engaged, rng.beta(share * (1 - rho) / rho, (1 - share) * (1 - rho) / rho, (sims, starts)))
-        return lost - rng.binomial(lost, wrong) + rng.binomial(engaged - lost, wrong)
+For each known item, what did the player do about it in this stretch? Answer with exactly one label:
 
-    current, treated = arm(missed), arm(missed * ratio)
-    both = np.concatenate([current, treated], axis=1)
-    seen = current.sum(axis=1) - treated.sum(axis=1)
-    total = both.sum(axis=1)
-    hits = np.empty(sims, dtype=np.int64)
-    batch = max(1, 2_000_000 // (draws * 2 * starts))
-    for low in range(0, sims, batch):
-        part = both[low:low + batch]
-        shuffled = rng.permuted(np.repeat(part[:, None, :], draws, axis=1), axis=2)
-        difference = 2 * shuffled[:, :, :starts].sum(axis=2) - total[low:low + batch, None]
-        hits[low:low + batch] = (difference >= seen[low:low + batch, None]).sum(axis=1)
-    return (hits + 1) / (draws + 1)
+- `straight`: the player went to the known place without first looking elsewhere.
+- `missed`: the player looked for the same kind of thing elsewhere, or got it by another route, while the known
+  source stayed unused.
+- `not_engaged`: the stretch shows the player neither going to the place nor looking for or getting that kind of
+  thing.
+- `cannot_tell`: the frames do not show enough to choose among the three above.
+
+Cite the frames that show it, by ID, from this packet only. `straight` and `missed` need at least one frame;
+the other two may cite none.
+
+## Your answer
+
+One JSON document of this shape, and nothing else. Answer every item in `items.json` exactly once:
+
+```json
+{"packet": "PACKET", "answers": [{"item": "ITEM ID", "label": "straight", "frames": ["FRAME ID"], "note": "one sentence"}]}
+```
+
+`packet` is this packet's name from `manifest.json`. `note` is optional.
+'''
+SHIFT_NOTE = ('The shift is the new judge\'s matches with the owner minus the gate\'s adjudicated label\'s, in pairs. '
+    'The gate\'s adjudicated label is two judges and a third on disputes; one new judge is compared with it and with '
+    'each gate judge. Checked labels were given after the owner saw the gate judges\' evidence and are not independent '
+    'of them. Thirty pairs give a wide interval: read the shift with the agreement over all re-judged pairs.')
 
 
-def simulate(rows: Sequence[tuple[int, float, float, float]], touched: float, missed: float, wrong: float, *,
-             rho: float = 0.2, sims: int = 1500, draws: int = 400, seed: int = 590, target: float = 0.8,
-             minimum: int = 4, ceiling: int = 60, price: float = 3.58) -> dict:
-    """The appendix's table for `rows`, then the smallest number of starts per arm, from `minimum` to `ceiling`,
-    whose simulated chance of detecting a halving reaches `target` at 0.05 and at Holm's first step, 0.025."""
+def read_owner_labels(gate: Path) -> list[dict]:
+    """The sealed measure gate's owner-labelled pairs: the random draw then the engaged supplement, each with the
+    owner's blind label (the first click, before any judge's work was shown) and checked label (after it)."""
+    saved = read_json(gate / 'labels.json')
+    if not isinstance(saved, dict) or saved.get('schema') != OWNER_LABELS_SCHEMA:
+        raise MeasureError(f"{gate / 'labels.json'}: not {OWNER_LABELS_SCHEMA}; labels of another format are not read")
+    if saved['sample_sha256'] != file_sha256(gate / 'sample.json') or saved['engaged_sha256'] != file_sha256(gate / ENGAGED_FILE):
+        raise MeasureError(f"{gate / 'labels.json'}: holds labels for another sample")
+    pairs = []
+    for group, name in (('random', 'sample.json'), ('engaged', ENGAGED_FILE)):
+        for pair in read_json(gate / name)['pairs']:
+            entry = saved['labels'].get(str(pair['index']))
+            if entry is None or (entry['start'], entry['item']) != (pair['start'], pair['item']) \
+                    or entry['blind'] not in ANCHOR_LABELS or entry['checked'] not in ANCHOR_LABELS:
+                raise MeasureError(f"{gate / 'labels.json'}: pair {pair['index']} lacks the owner's blind and checked labels")
+            pairs.append(dict(index=pair['index'], group=group, start=pair['start'], item=pair['item'], blind=entry['blind'],
+                checked=entry['checked']))
+    return pairs
+
+
+GATE_EVIDENCE_MANIFEST = Path(__file__).resolve().parents[1] / 'data/evidence/memory-screen-gates-460-386.sha256'
+
+
+def verify_gate_files(gate: Path, paths: Sequence[Path]) -> None:
+    """Check gate inputs against the independent sealed evidence inventory, not self-reported hashes."""
+    recorded = dict(line.split('  ', 1)[::-1] for line in GATE_EVIDENCE_MANIFEST.read_text().splitlines() if line)
+    for path in paths:
+        name = 'memory-measure/' + str(path.relative_to(gate))
+        if name not in recorded or not path.is_file() or file_sha256(path) != recorded[name]:
+            raise MeasureError(f'{path}: differs from the sealed evidence manifest')
+
+
+def anchor_packets(run: Path, gate: Path, dry_run: bool = False) -> dict:
+    """Copy the gate's judge packets that hold an owner-labelled pair, unchanged, for a new judge. Every packet is
+    first checked against the hash the gate recorded for it, file by file, and its instructions against the frozen
+    prompt. `gate` is only read. With `dry_run` the checks are made and nothing is written."""
+    gate = Path(gate).resolve()
+    if gate == run or run.is_relative_to(gate):
+        raise MeasureError(f'{run}: the anchor is written to a run directory of its own, never into the gate')
+    if sha256_text(ANCHOR_INSTRUCTIONS) != ANCHOR_PROMPT_SHA256:
+        raise MeasureError('The frozen anchor prompt in this tool was edited: its hash is no longer the recorded one')
+    verify_gate_files(gate, [gate / name for name in ('private/judge-mapping.json', 'labels.json', 'adjudicated.json',
+        'sample.json', ENGAGED_FILE)])
+    mapping = read_json(gate / 'private' / 'judge-mapping.json')
+    adjudicated = read_json(gate / 'adjudicated.json')
+    if mapping.get('schema') != 'judge-mapping/1' or adjudicated.get('schema') != 'judge-adjudicated/1' or adjudicated['unresolved']:
+        raise MeasureError(f'{gate}: not a finished measure gate (judge-mapping/1 and judge-adjudicated/1, all pairs adjudicated)')
+    pairs = read_owner_labels(gate)
+    wanted = {pair['start'] for pair in pairs}
+    packets = []
+    for packet in mapping['packets']:
+        if packet['start'] not in wanted:
+            continue
+        directory = gate / 'judge-packets' / packet['packet']
+        manifest = verify_packet(directory, packet['sha256'])
+        verify_gate_files(gate, [path for path in directory.rglob('*') if path.is_file()])
+        found = file_sha256(directory / 'instructions.md')
+        if found != ANCHOR_PROMPT_SHA256 or manifest['files'].get('instructions.md') != found:
+            raise MeasureError(f"{directory / 'instructions.md'}: sha256 {found} is not the frozen prompt's {ANCHOR_PROMPT_SHA256}")
+        packets.append(dict(packet=packet['packet'], start=packet['start'], sha256=packet['sha256'], frames=packet['frames'],
+            items=[item['id'] for item in read_json(directory / 'items.json')['items']]))
+    if wanted - {packet['start'] for packet in packets}:
+        raise MeasureError(f'{gate}: no packet for {", ".join(sorted(wanted - {packet["start"] for packet in packets}))}')
+    starts = {packet['start'] for packet in packets}
+    value = dict(schema='anchor-set/1', gate=gate.name, prompt_sha256=ANCHOR_PROMPT_SHA256, gate_judges=adjudicated['judges'],
+        sources={name: file_sha256(gate / name) for name in ('labels.json', 'sample.json', ENGAGED_FILE, 'adjudicated.json',
+            'private/judge-mapping.json')},
+        packets=packets, pairs=pairs,
+        gate_labels=[dict(start=row['start'], item=row['item'], adjudicated=row['label'],
+            labels={name: row['labels'][name] for name in adjudicated['judges']}) for row in adjudicated['pairs']
+            if row['start'] in starts])
+    if dry_run:
+        return value
+    if (run / 'private' / 'anchor.json').exists():
+        raise MeasureError(f"{run / 'private' / 'anchor.json'}: already written; anchor packets are made once")
+    with Building(run / 'anchor') as out:
+        for packet in packets:
+            shutil.copytree(gate / 'judge-packets' / packet['packet'], out / 'packets' / packet['packet'])
+            verify_packet(out / 'packets' / packet['packet'], packet['sha256'])
+        write_json(run / 'private' / 'anchor.json', value, once=True)
+    return value
+
+
+def load_anchor(run: Path) -> dict:
+    value = read_json(run / 'private' / 'anchor.json')
+    if not isinstance(value, dict) or value.get('schema') != 'anchor-set/1':
+        raise MeasureError(f"{run / 'private' / 'anchor.json'}: not an anchor-set/1 file")
+    return value
+
+
+def anchor_events(run: Path, name: str, model: str, answers: Sequence[Path]) -> list[judge.AnchorVerdict]:
+    """Validate a new judge's answers to the anchor packets and write its `anchor_verdict` events once."""
+    target = events_target(run / 'anchor' / 'events', name)
+    anchor = load_anchor(run)
+    if anchor['prompt_sha256'] != ANCHOR_PROMPT_SHA256 or sha256_text(ANCHOR_INSTRUCTIONS) != ANCHOR_PROMPT_SHA256:
+        raise MeasureError('The frozen anchor prompt was edited')
+    packets = {packet['packet']: packet for packet in anchor['packets']}
+    for packet in packets.values():
+        directory = run / 'anchor' / 'packets' / packet['packet']
+        verify_packet(directory, packet['sha256'])
+        if file_sha256(directory / 'instructions.md') != ANCHOR_PROMPT_SHA256:
+            raise MeasureError(f'{directory}: instructions are not the frozen prompt')
+    events, done = [], set()
+    for path in answers:
+        packet, rows = checked_answers(path, packets, done, run / 'anchor' / 'packets', 'item', lambda packet: packet['items'],
+            ANCHOR_LABELS, judge.ANCHOR_TOUCHED)
+        events.extend(judge.AnchorVerdict(start=packet['start'], item=row['item'], label=row['label'],
+            cited_frames=tuple(packet['frames'][frame] for frame in dict.fromkeys(row.get('frames', []))), judge=name,
+            model=text(model, '--model'), packet=packet['packet'], packet_sha256=packet['sha256']) for row in rows)
+    if not events:
+        raise MeasureError('No answer file selected')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    judge.write_events(target, events)
+    return events
+
+
+def anchor_report(run: Path, name: str) -> dict:
+    """A new judge against the owner's blind and checked labels on the gate's owner-labelled pairs, beside the
+    same figures for the gate's judges and its adjudicated label, and the shift."""
+    anchor = load_anchor(run)
+    events = read_judge(run / 'anchor' / 'events', name, judge.ANCHOR)
+    pairs = anchor['pairs']
+    lacking = [f"{pair['start']} / {pair['item']}" for pair in pairs if (pair['start'], pair['item']) not in events]
+    if lacking:
+        raise MeasureError(f'{len(lacking)} owner-labelled pairs lack a verdict of {name}, the first: {lacking[0]}')
+    gate = {(row['start'], row['item']): row for row in anchor['gate_labels']}
+
+    def against_owner(label_of: Callable[[tuple], str]) -> dict:
+        figures = {}
+        for which in ('blind', 'checked'):
+            for group, chosen in (('all', pairs), ('random', [pair for pair in pairs if pair['group'] == 'random'])):
+                matched = sum(label_of((pair['start'], pair['item'])) == pair[which] for pair in chosen)
+                figures.setdefault(which, {})[group] = dict(matched=matched, compared=len(chosen),
+                    interval=binomial_interval(matched, len(chosen)))
+        return figures
+
+    def together(first: Callable[[tuple], str], second: Callable[[tuple], str], keys: Sequence[tuple]) -> dict:
+        codes = [[ANCHOR_LABELS.index(label(key)) for key in keys] for label in (first, second)]
+        return dict(pairs=len(keys), agreement=sum(a == b for a, b in zip(*codes)) / len(keys),
+            kappa=cohen_kappa(*codes, len(ANCHOR_LABELS)))
+
+    new = against_owner(lambda key: events[key].label)
+    was = dict(adjudicated=against_owner(lambda key: gate[key]['adjudicated']),
+        **{judge_name: against_owner(lambda key, judge_name=judge_name: gate[key]['labels'][judge_name])
+            for judge_name in anchor['gate_judges']})
+    judged = [key for key in gate if key in events]
+    first, second = anchor['gate_judges']
+    report = dict(schema='anchor-report/1', judge=name, model=next(iter(events.values())).model, gate=anchor['gate'],
+        prompt_sha256=anchor['prompt_sha256'], owner_pairs=len(pairs), against_owner=dict(new=new, gate=was),
+        shift={which: {group: new[which][group]['matched'] - was['adjudicated'][which][group]['matched']
+            for group in ('all', 'random')} for which in ('blind', 'checked')},
+        all_pairs=dict(new_with_adjudicated=together(lambda key: events[key].label, lambda key: gate[key]['adjudicated'], judged),
+            **{f'new_with_{judge_name}': together(lambda key: events[key].label,
+                lambda key, judge_name=judge_name: gate[key]['labels'][judge_name], judged) for judge_name in anchor['gate_judges']},
+            gate_first_two=together(lambda key: gate[key]['labels'][first], lambda key: gate[key]['labels'][second], judged)),
+        differing=[dict(start=pair['start'], item=pair['item'], group=pair['group'], new=events[(pair['start'], pair['item'])].label,
+            adjudicated=gate[(pair['start'], pair['item'])]['adjudicated'], blind=pair['blind'], checked=pair['checked'])
+            for pair in pairs if events[(pair['start'], pair['item'])].label != gate[(pair['start'], pair['item'])]['adjudicated']],
+        note=SHIFT_NOTE)
+    write_json(run / 'anchor' / f'report-{name}.json', report)
+    return report
+
+
+# --- the prompt-change check ------------------------------------------------------------------------------------------------
+
+def prompt_packets(run: Path, before: Path) -> dict:
+    """The packets of `before`, a judged run, again with this tool's current instructions: the same windows,
+    frames, inputs, facts and shuffled names, checked file by file against the hashes `before` recorded. The
+    frozen set of stretches is `before`'s mapping, whose `stretch_sha256` values leave the instructions out."""
+    before = measure_dir(before)
+    if before == run:
+        raise MeasureError('prompt-check packets writes a second run directory; RUN and --before must differ')
+    old = load_mapping(before)
+    if (run / 'private' / 'judge-mapping.json').exists():
+        raise MeasureError(f"{run / 'private' / 'judge-mapping.json'}: already written; judge packets are made once")
+    instructions = JUDGE_INSTRUCTIONS[old['kind']]
+    packets, manifests = {}, {}
+    for packet in old['packets']:  # every stretch is checked before anything is written
+        source = before / 'judge-packets' / packet['packet']
+        manifests[packet['packet']] = verify_packet(source, packet['sha256'])
+        if stretch_sha256(source) != packet['stretch_sha256']:
+            raise MeasureError(f'{source}: not the stretch its mapping froze')
+    with Building(run / 'judge-packets') as out:
+        for packet in sorted(old['packets'], key=lambda packet: packet['packet']):
+            source, manifest = before / 'judge-packets' / packet['packet'], manifests[packet['packet']]
+            target = out / packet['packet']
+            shutil.copytree(source, target, ignore=shutil.ignore_patterns('manifest.json', 'instructions.md'))
+            budget = dict(manifest['budget'], estimated=dict(manifest['budget']['estimated']))
+            sha, size = seal_packet(target, {**{key: value for key, value in manifest.items() if key != 'files'}, 'budget': budget},
+                instructions)
+            if stretch_sha256(target) != packet['stretch_sha256']:
+                raise MeasureError(f'{target}: the copy is not the frozen stretch')
+            packets[packet['packet']] = dict(packet, sha256=sha, bytes=size, estimated_tokens=budget['estimated']['total'], over_budget=budget['over'])
+        mapping = dict(old, instructions_sha256=sha256_text(instructions),
+            packets=[packets[packet['packet']] for packet in old['packets']],
+            before=dict(run=before.name, mapping_sha256=file_sha256(before / 'private' / 'judge-mapping.json'),
+                instructions_sha256=old['instructions_sha256']))
+        write_json(run / 'private' / 'judge-mapping.json', mapping, once=True)
+    return mapping
+
+
+def prompt_report(run: Path, before: Path, judges: Sequence[str], seed: int | None = None, draws: int = 10000) -> dict:
+    """The first two judges' agreement on one frozen set of stretches, judged with the instructions of `before`
+    and again with those of `run`, and the difference. `run` must be the output of `prompt-check packets` from
+    `before`; every packet's stretch hash is recomputed on both sides."""
+    before = measure_dir(before)
+    new, old = load_mapping(run), load_mapping(before)
+    link = new.get('before')
+    if not link or link['mapping_sha256'] != file_sha256(before / 'private' / 'judge-mapping.json'):
+        raise MeasureError(f'{run}: not made from {before} by `prompt-check packets`')
+    if len(new['packets']) != len(old['packets']):
+        raise MeasureError(f'{run}: not the frozen packet set')
+    for mine, theirs in zip(new['packets'], old['packets']):
+        if (mine['packet'], mine['window'], mine['facts']) != (theirs['packet'], theirs['window'], theirs['facts']):
+            raise MeasureError(f'{run}: not the frozen packet set')
+        for directory, packet in ((run, mine), (before, theirs)):
+            verify_packet(directory / 'judge-packets' / packet['packet'], packet['sha256'])
+            if stretch_sha256(directory / 'judge-packets' / packet['packet']) != theirs['stretch_sha256']:
+                raise MeasureError(f"{directory / 'judge-packets' / packet['packet']}: not the frozen stretch")
+    seed = secrets.randbits(32) if seed is None else seed
+    keys = [(packet['window'], fact, packet['start']) for packet in old['packets'] for fact in packet['facts']]
+    boot = StartBootstrap([start for _, _, start in keys], seed, draws)
+    sides, tables, events = {}, {}, {}
+    for side, directory in (('before', before), ('after', run)):
+        first, second = (read_judge(directory / 'events', name, judge.FACT_USE) for name in judges)
+        lacking = [f'{window} / {fact}' for window, fact, _ in keys if (window, fact) not in first or (window, fact) not in second]
+        if lacking:
+            raise MeasureError(f'{directory}: {len(lacking)} pairs lack a verdict of {judges[0]} or {judges[1]}, the first: {lacking[0]}')
+        rows = [dict(start=start, labels={judges[0]: first[(window, fact)].label, judges[1]: second[(window, fact)].label},
+            holds_by={judges[0]: first[(window, fact)].holds, judges[1]: second[(window, fact)].holds}) for window, fact, start in keys]
+        sides[side] = dict(models={name: next(iter(events.values())).model for name, events in zip(judges, (first, second))},
+            instructions_sha256=(old if side == 'before' else new)['instructions_sha256'],
+            label=judges_beside(boot, rows, judges), holds=judges_beside(boot, rows, judges, 'holds_by'))
+        tables[side] = boot.sums(rows, lambda row: confusion([USE_LABELS.index(row['labels'][judges[0]])],
+            [USE_LABELS.index(row['labels'][judges[1]])], len(USE_LABELS)), (len(USE_LABELS), len(USE_LABELS)))
+        events[side] = (first, second)
+
+    if sides['before']['models'] != sides['after']['models']:
+        raise MeasureError('prompt-check requires the same model for each judge before and after')
+
+    def difference(name: str) -> float | None:
+        values = [sides[side]['label'][name] for side in ('before', 'after')]
+        values = [value['value'] if isinstance(value, dict) else value for value in values]
+        return None if None in values else values[1] - values[0]
+
+    report = dict(schema='prompt-check/1', kind=old['kind'], judges=list(judges), before_run=before.name, pairs=len(keys),
+        stretches=len(old['packets']), prompt_changed=old['instructions_sha256'] != new['instructions_sha256'],
+        bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), note=BOOTSTRAP_NOTE), before=sides['before'], after=sides['after'],
+        shift=dict(agreement=difference('agreement'), dispute_rate=difference('dispute_rate'),
+            kappa=dict(value=difference('kappa'), interval=boot.interval(lambda was, now: kappa_of(now) - kappa_of(was),
+                tables['before'], tables['after']))),
+        # how many of its own labels each judge changed between the two prompts
+        relabelled={name: sum(events['before'][number][(window, fact)].label != events['after'][number][(window, fact)].label
+            for window, fact, _ in keys) / len(keys) for number, name in enumerate(judges)})
+    write_json(run / 'prompt-check.json', report)
+    return report
+
+
+# --- the withholding simulation -------------------------------------------------------------------------------------------
+
+#: The measure gate's numbers (docs/acceptance/2026-11-13-memory-measure-gate.md): known items touched per start
+#: of 200 decisions with its exact Poisson interval, the missed share among touched with its bootstrap interval,
+#: the judge errors the gate's sizing used, and the price of a start's play.
+GATE_TOUCHED, GATE_TOUCHED_ENDS = 8.30, (5.64, 11.78)
+GATE_MISSED, GATE_MISSED_ENDS = 0.452, (0.115, 0.690)
+GATE_WRONG, GATE_BASE_WRONG = (0.0, 0.1, 0.167, 0.25), 0.1
+GATE_PRICE_USD = 3.58
+#: docs/design/general-memory.md, "What it costs": the recall model is inferred to add two thirds to about the
+#: same again to the cost of play. One first store and one grooming session are bought once.
+RECALL_OVERHEAD = (1.67, 2.0)
+STORE_USD, GROOMING_USD = 23.0, (1.16, 4.19)
+_CRITICAL: dict[Fraction, list[int]] = {}
+
+
+def critical_counts(limit: int, alpha: float) -> np.ndarray:
+    """For each count M of missed units from 0 to `limit`, the smallest number of them that must be withheld
+    for the one-sided randomization test to reject at `alpha`; M + 1 when no number does.
+
+    The design withholds each unit with probability one half, by itself, within each start. Re-drawing that
+    delivery leaves which units were missed as it is and makes the number of missed units that are withheld
+    Binomial(M, 1/2), whatever the starts are. So the randomization distribution of the statistic, missed
+    withheld minus missed delivered pooled over starts, is known exactly and no re-draws are sampled. The tail
+    is summed in whole numbers."""
+    level = Fraction(alpha).limit_denominator(1_000_000)
+    known = _CRITICAL.setdefault(level, [])
+    for missed in range(len(known), limit + 1):
+        term, tail, least = 1, 0, missed + 1  # term is C(missed, count), from count = missed downwards
+        for count in range(missed, -1, -1):
+            tail += term
+            if tail * level.denominator > level.numerator * 2 ** missed:
+                break
+            least = count
+            term = term * count // (missed - count + 1)
+        known.append(least)
+    return np.asarray(known[:limit + 1])
+
+
+def withholding_rejections(rng: np.random.Generator, starts: int, touched: float, missed: float, ratio: float, wrong: float,
+                           rho: float = 0.2, sims: int = 10000, alpha: float = 0.05) -> np.ndarray:
+    """Whether each of `sims` simulated studies of `starts` starts rejects "delivery changes nothing".
+
+    Each start touches a Poisson(`touched`) number of units. Each unit is withheld with probability one half.
+    A start has its own miss probability, Beta with mean `missed` and intra-start correlation `rho`; a withheld
+    unit is missed (found again, or looked for elsewhere) with it and a delivered one with `ratio` times it.
+    The judge flips each label with probability `wrong`. The test is `critical_counts`."""
+    if not (touched > 0 and 0 < missed < 1 and 0 < ratio <= 1 and 0 < rho < 1 and 0 <= wrong < 0.5 and starts >= 1):
+        raise MeasureError('The simulation needs units touched above 0, a missed share and a correlation strictly between 0 '
+            'and 1, a ratio above 0 and at most 1, a judge error from 0 to below 0.5 and at least one start')
+    units = rng.poisson(touched, (sims, starts))
+    withheld = rng.binomial(units, 0.5)
+    share = rng.beta(missed * (1 - rho) / rho, (1 - missed) * (1 - rho) / rho, (sims, starts))
+
+    def seen_missed(count: np.ndarray, probability: np.ndarray) -> np.ndarray:
+        lost = rng.binomial(count, probability)
+        return (lost - rng.binomial(lost, wrong) + rng.binomial(count - lost, wrong)).sum(axis=1)
+
+    missed_withheld = seen_missed(withheld, share)
+    total = missed_withheld + seen_missed(units - withheld, ratio * share)
+    return missed_withheld >= critical_counts(int(total.max()), alpha)[total]
+
+
+def withholding_rows(touched: float = GATE_TOUCHED, touched_ends: Sequence[float] = GATE_TOUCHED_ENDS, missed: float = GATE_MISSED,
+                     missed_ends: Sequence[float] = GATE_MISSED_ENDS, wrong: Sequence[float] = GATE_WRONG,
+                     base_wrong: float = GATE_BASE_WRONG) -> list[dict]:
+    """The cases to size: the point values at each judge error, then each input at each end of its interval and
+    the two corners where both are at their favourable or unfavourable end, at the base judge error."""
+    rows = [dict(case=f'point values, judge error {error:g}', touched=touched, missed=missed, wrong=error) for error in wrong]
+    rows += [dict(case=f"units touched at the interval's {name} end", touched=end, missed=missed, wrong=base_wrong)
+        for name, end in zip(('lower', 'upper'), touched_ends)]
+    rows += [dict(case=f"missed share at the interval's {name} end", touched=touched, missed=end, wrong=base_wrong)
+        for name, end in zip(('lower', 'upper'), missed_ends)]
+    rows += [dict(case=f'both at the {name} ends', touched=a, missed=b, wrong=base_wrong)
+        for name, a, b in (('unfavourable', touched_ends[0], missed_ends[0]), ('favourable', touched_ends[1], missed_ends[1]))]
+    return rows
+
+
+def simulate_withholding(rows: Sequence[dict], *, rho: float = 0.2, sims: int = 10000, seed: int = 386, target: float = 0.8,
+                         alpha: float = 0.05, minimum: int = 2, ceiling: int = 60, price: float = GATE_PRICE_USD) -> dict:
+    """For each case, the smallest number of starts, from `minimum` to `ceiling`, at which a halving of the missed
+    share by delivery is detected with probability `target`; at that size (the ceiling when none reaches it), the
+    chance of detecting a cut of one third and the false-alarm rate when delivery changes nothing; and the price.
+
+    Every rate has its own random stream, seeded by (`seed`, case, starts, effect), so a case's numbers do not
+    depend on which other cases are run."""
     if not 1 <= minimum <= ceiling:
         raise MeasureError('The search needs 1 <= --min-starts <= --ceiling')
-    rng = np.random.default_rng(seed)
-    table = []
-    for starts, lam, share, error in rows:
-        halving = p_values(rng, starts, lam, share, 0.5, error, rho, sims, draws)
-        third = p_values(rng, starts, lam, share, 2 / 3, error, rho, sims, draws)
-        null = p_values(rng, starts, lam, share, 1.0, error, rho, sims, draws)
-        table.append(dict(starts=starts, touched=lam, missed=share, wrong=error, halving=float((halving <= 0.05).mean()),
-            halving_holm=float((halving <= 0.025).mean()), third_cut=float((third <= 0.05).mean()),
-            false_alarm=float((null <= 0.05).mean())))
-    found: dict[str, dict | None] = dict(at_0_05=None, at_0_025=None)
-    scanned = []
-    for starts in range(minimum, ceiling + 1):
-        values = p_values(rng, starts, touched, missed, 0.5, wrong, rho, sims, draws)
-        row = dict(starts=starts, at_0_05=float((values <= 0.05).mean()), at_0_025=float((values <= 0.025).mean()))
-        scanned.append(row)
-        for level in found:
-            if found[level] is None and row[level] >= target:
-                found[level] = dict(starts=starts, rate=row[level], two_arms_usd=round(2 * starts * price, 2),
-                    three_arms_usd=round(3 * starts * price, 2))
-        if all(found.values()):
-            break
-    return dict(schema='memory-measure-simulation/1', seed=seed, sims=sims, draws=draws, rho=rho, table=table,
-        search=dict(touched=touched, missed=missed, wrong=wrong, target=target, minimum=minimum, ceiling=ceiling,
-            price_per_start_usd=price, smallest=found, scanned=scanned))
+    cases = []
+    for number, row in enumerate(rows):
+        def rate(starts: int, effect: int, ratio: float) -> float:
+            rng = np.random.default_rng([seed, number, starts, effect])
+            return float(withholding_rejections(rng, starts, row['touched'], row['missed'], ratio, row['wrong'], rho, sims, alpha).mean())
 
-
-# --- the owner's labelling page ---------------------------------------------------------------------------------------------
-
-def describe(batches: Sequence[Sequence[dict]]) -> str:
-    """Input batches as one line: keys by name, typed text quoted, repeats counted."""
-    words = []
-    for batch in batches:
-        for action in batch:
-            kind = action.get('type')
-            if kind == 'key':
-                word = '+'.join([*(action.get('modifiers') or []), str(action.get('key'))])
-            elif kind == 'text':
-                word = json.dumps(action.get('text'), ensure_ascii=False)
-            elif kind == 'wait':
-                word = f"wait {action.get('seconds')}s"
-            elif 'x' in action and 'y' in action:
-                word = f"{kind} at {action['x']},{action['y']}"
-            else:
-                word = str(kind)
-            if words and words[-1][0] == word:
-                words[-1][1] += 1
-            else:
-                words.append([word, 1])
-    return ' '.join(word if count == 1 else f'{word} ×{count}' for word, count in words)
-
-
-class LabelConflict(MeasureError):
-    """A label step out of order: a second blind label for a pair, or a check before the blind label."""
-
-
-class LabelStore:
-    """The sampled pairs with their frames, and the owner's labels in one JSON file rewritten at every click.
-
-    The owner labels in two passes. Pass one: a blind label for every pair, made on the item and the stretch's
-    frames alone, recorded once and never changed, with nothing of the judges' work anywhere. Pass two starts only
-    when every pair has a blind label: the owner sees each pair's judge evidence and keeps the answer or changes it,
-    which is the checked label. The judges' verdicts, notes and cited frames are read when the server starts and are
-    held here; `state` releases them only once every pair has a blind label.
-
-    The page names a pair by its position in a display order drawn once with the engaged supplement (the random and
-    the engaged pairs are interleaved), and every URL carries the position; only the server maps a position to the
-    pair's index. Labels are keyed by index."""
-
-    def __init__(self, run: Path) -> None:
-        self.run, self.path, self.lock = run, run / 'labels.json', threading.Lock()
-        sample = read_json(run / 'sample.json')
-        self.sample_sha = file_sha256(run / 'sample.json')
-        sampled, self.engaged_sha, order = list(sample['pairs']), None, None
-        if (run / ENGAGED_FILE).is_file():
-            engaged = read_json(run / ENGAGED_FILE)
-            self.engaged_sha = file_sha256(run / ENGAGED_FILE)
-            if engaged.get('random_sample_sha256') != self.sample_sha:
-                raise MeasureError(f'{run / ENGAGED_FILE}: drawn against another random sample')
-            sampled += engaged['pairs']
-            order = engaged['display']['order']
-        if [pair['index'] for pair in sampled] != list(range(len(sampled))):
-            raise MeasureError(f'{run}: the sampled pairs must be numbered 0, 1, 2, ... in order')
-        #: Position on the page -> pair index. With no supplement the random pairs are shown in their order.
-        self.order = list(range(len(sampled))) if order is None else order
-        if sorted(self.order) != list(range(len(sampled))):
-            raise MeasureError(f'{run / ENGAGED_FILE}: the display order is not a permutation of the {len(sampled)} pairs')
-        position_of = {index: position for position, index in enumerate(self.order)}
-        items = {item['id']: item for item in load_items(run)[0]}
-        packets = {packet['start']: packet for packet in load_mapping(run)['packets']}
-        self.pairs, self.files = [], {}
-        for pair in sampled:
-            item, packet = items[pair['item']], packets[pair['start']]
-            directory = run / 'judge-packets' / packet['packet']
-            index, position = pair['index'], position_of[pair['index']]
-            self.files[f'/item/{position}.png'] = run / item['first_frame_file']
-            frames = []
-            for row in read_json(directory / 'manifest.json')['frames']:
-                self.files[f"/frame/{position}/{row['frame']}.png"] = directory / row['file']
-                frames.append(dict(name=row['frame'], image=f"/frame/{position}/{row['frame']}.png",
-                    decision=row['decision'], inputs=' · '.join(row['inputs_before'])))
-            with Image.open(self.files[f'/item/{position}.png']) as shown:  # the page reserves each image's space with it
-                aspect = f'{shown.width} / {shown.height}'
-            self.pairs.append(dict(index=index, position=position, start=pair['start'], item=pair['item'],
-                decisions=packet['decisions'], short=packet['short'], place=item['place'], what=item['what'],
-                image=f'/item/{position}.png', aspect=aspect, frames=frames))
-        self.evidence = self.load_evidence(packets)
-        self.saved = dict(schema=OWNER_LABELS_SCHEMA, sample_sha256=self.sample_sha, engaged_sha256=self.engaged_sha,
-            labels={}, history=[])
-        if self.path.is_file():
-            saved = read_json(self.path)
-            if not isinstance(saved, dict) or saved.get('schema') != OWNER_LABELS_SCHEMA:
-                raise MeasureError(f'{self.path}: not {OWNER_LABELS_SCHEMA}; labels of another format are not read')
-            if saved.get('sample_sha256') != self.sample_sha or saved.get('engaged_sha256') != self.engaged_sha:
-                raise MeasureError(f'{self.path}: holds labels for another sample')
-            self.saved = saved
-
-    def load_evidence(self, packets: dict) -> dict[int, dict]:
-        """What each pair shows after its blind label: the adjudicated label and each judge's label, note and
-        cited screens, by the number the page gives the screen. It comes from the `agreement` command's
-        `adjudicated.json`, the judges' events (label and cited frames) and, for the note, the lead's saved answers."""
-        path = self.run / 'adjudicated.json'
-        if not path.is_file():
-            raise MeasureError(f'{path}: missing; run `events` for each judge and `agreement` before the labelling page, '
-                'which shows the judges\' evidence after the owner\'s first click on each pair')
-        adjudicated = read_json(path)
-        if adjudicated.get('schema') != 'judge-adjudicated/1':
-            raise MeasureError(f'{path}: not a judge-adjudicated/1 file')
-        names = [*adjudicated['judges'], *([adjudicated['third']] if adjudicated.get('third') else [])]
-        events = {name: {event.pair: event for event in judge.read_events(self.run / 'events' / f'{name}.jsonl')}
-            for name in names}
-        rows = {(row['start'], row['item']): row for row in adjudicated['pairs']}
-        notes: dict[Path, dict] = {}
-
-        def note(name: str, packet: str, item: str) -> str | None:
-            answer = self.run / 'answers' / name / f'{packet}.json'
-            if answer not in notes:
-                given = read_json(answer)['answers'] if answer.is_file() else []
-                notes[answer] = {row['item']: row.get('note') for row in given if isinstance(row, dict)}
-            value = notes[answer].get(item)
-            return value.strip() if isinstance(value, str) and value.strip() else None
-
-        shown = {}
-        for pair in self.pairs:
-            key, packet = (pair['start'], pair['item']), packets[pair['start']]
-            screen = {packet['frames'][frame['name']]: at for at, frame in enumerate(pair['frames'], 1)}
-            judges = [dict(name=name, label=events[name][key].label, note=note(name, packet['packet'], pair['item']),
-                screens=sorted(screen[source] for source in events[name][key].cited_frames if source in screen))
-                for name in names if key in events[name]]
-            shown[pair['index']] = dict(adjudicated=rows[key]['label'], by=rows[key]['by'], judges=judges,
-                screens=sorted({number for entry in judges for number in entry['screens']}))
-        return shown
-
-    def state(self) -> dict:
-        """What the page shows, by display position. The judges' evidence is in it only once every pair has a blind
-        label (`pass_two`); until then no response holds a verdict, a note or a cited frame, for any pair."""
-        with self.lock:
-            labels = {index: entry for index, entry in self.saved['labels'].items()}
-        order = [str(index) for index in self.order]
-        blind = {str(position): labels[index]['blind'] for position, index in enumerate(order) if index in labels}
-        checked = {str(position): labels[index]['checked'] for position, index in enumerate(order)
-            if index in labels and labels[index]['checked']}
-        pass_two = len(blind) == len(self.pairs)
-        return dict(total=len(self.pairs), blind=blind, checked=checked, pass_two=pass_two,
-            reveals={str(position): self.evidence[index] for position, index in enumerate(self.order)} if pass_two else {},
-            choices=[[label, LABEL_TEXT[label]] for label in LABELS],
-            pairs=[{key: self.pairs[index][key] for key in ('position', 'place', 'what', 'image', 'aspect', 'decisions',
-                'short', 'frames')} for index in self.order])
-
-    def record(self, position: object, step: object, label: object = None, keep: object = False) -> None:
-        """Record the blind label (once) or the checked label of the pair at display `position`. `keep` checks the pair
-        with its blind label. A checked label equal to the one already recorded changes nothing, so a repeated click
-        is one action. The new labels are built and written before they replace the held ones, so a write that fails
-        leaves both as they were."""
-        if type(position) is not int or not 0 <= position < len(self.pairs) or step not in ('blind', 'checked') \
-                or type(keep) is not bool or keep and (step != 'checked' or label is not None) \
-                or not keep and label not in LABELS:
-            raise MeasureError('Unknown pair, step or label')
-        index = self.order[position]
-        pair, now = self.pairs[index], datetime.now(timezone.utc).isoformat(timespec='seconds')
-        where = dict(index=index, start=pair['start'], item=pair['item'])
-        with self.lock:
-            saved = copy.deepcopy(self.saved)
-            entry = saved['labels'].get(str(index))
-            if step == 'blind':
-                if entry is not None:
-                    raise LabelConflict('The first answer is recorded and is not changed')
-                saved['labels'][str(index)] = dict(where, blind=label, blind_time=now, checked=None, checked_time=None)
-                saved['history'].append(dict(where, step='blind', label=label, time=now))
-            else:
-                if len(saved['labels']) < len(self.pairs):
-                    raise LabelConflict('The second pass starts when every pair has a blind label')
-                label = entry['blind'] if keep else label
-                if entry['checked'] == label:
-                    return
-                entry.update(checked=label, checked_time=now)
-                saved['history'].append(dict(where, step='keep' if label == entry['blind'] else 'change', label=label,
-                    time=now))
-            write_json(self.path, saved)
-            self.saved = saved
-
-
-def label_server(run: Path, port: int = 8765) -> ThreadingHTTPServer:
-    """The labelling page's server, bound to the loopback address only."""
-    store = LabelStore(run)
-
-    class Handler(BaseHTTPRequestHandler):
-        def send(self, status: int, kind: str, body: bytes) -> None:
-            self.send_response(status)
-            self.send_header('Content-Type', kind)
-            self.send_header('Content-Length', str(len(body)))
-            self.send_header('Cache-Control', 'no-store')
-            self.end_headers()
-            self.wfile.write(body)
-
-        def json(self, status: int, value: object) -> None:
-            self.send(status, 'application/json', json.dumps(value).encode())
-
-        def do_GET(self) -> None:  # noqa: N802 (the base class names it)
-            path = self.path.split('?', 1)[0]
-            if path == '/':
-                self.send(200, 'text/html; charset=utf-8', PAGE.encode())
-            elif path == '/api/state':
-                self.json(200, store.state())
-            elif path in store.files:
-                self.send(200, 'image/png', store.files[path].read_bytes())
-            else:
-                self.json(404, dict(error='not found'))
-
-        def do_POST(self) -> None:  # noqa: N802
-            # A JSON content type cannot be sent by another site's page without a preflight this server never answers.
-            if self.path != '/api/label' or self.headers.get('Content-Type') != 'application/json':
-                return self.json(404, dict(error='not found'))
-            # A page reached under another name (DNS rebinding) still sends that name as Host.
-            if (self.headers.get('Host') or '').rsplit(':', 1)[0] not in ('127.0.0.1', 'localhost'):
-                return self.json(403, dict(error='labels are accepted on 127.0.0.1 or localhost only'))
-            try:
-                body = json.loads(self.rfile.read(min(int(self.headers.get('Content-Length') or 0), 4096)))
-                store.record(body.get('position'), body.get('step'), body.get('label'), body.get('keep', False))
-            except LabelConflict as error:
-                return self.json(409, dict(error=str(error)))
-            except (ValueError, AttributeError):
-                return self.json(400, dict(error='unknown pair, step or label'))
-            self.json(200, store.state())
-
-        def log_message(self, *_) -> None:
-            pass
-
-    return ThreadingHTTPServer(('127.0.0.1', port), Handler)
-
-
-PAGE = '''<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calibration labels</title>
-<style>
-:root { color-scheme: light dark; --bg: #f5f4f0; --panel: #ffffff; --ink: #1b1a18; --muted: #5c5953; --line: #d5d2ca;
-  --accent: #1d5ca6; --on-accent: #ffffff; --chip: #eae8e1; --chosen: #0b6a3d; --warn: #a3260f; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #151617; --panel: #202224; --ink: #eceae5; --muted: #aaa69f; --line: #3b3e41; --accent: #86b7f0;
-    --on-accent: #0c1a29; --chip: #2b2e31; --chosen: #74d6a4; --warn: #ff9d87; }
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; }
-body { background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 920px; margin: 0 auto; padding: 12px 16px 0; }
-header { display: flex; align-items: center; gap: 12px; }
-header h1 { font-size: 18px; margin: 0; flex: 1; font-variant-numeric: tabular-nums; }
-progress { width: 100%; height: 8px; margin: 10px 0 14px; accent-color: var(--accent); }
-h2 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
-section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
-.item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 220px); gap: 12px; align-items: start; }
-.item dl { margin: 0; }
-.item dt { color: var(--muted); font-size: 13px; }
-.item dd { margin: 0 0 8px; font-size: 18px; overflow-wrap: anywhere; }
-figure { margin: 0; }
-figcaption, .hint { color: var(--muted); font-size: 13px; }
-img { display: block; width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--line); cursor: zoom-in;
-  background: var(--chip); }
-.strip { max-height: 52vh; min-height: 180px; overflow-y: auto; display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; padding-right: 4px; margin-top: 8px; }
-.strip figcaption { overflow-wrap: anywhere; }
-.strip b { color: var(--ink); font-variant-numeric: tabular-nums; }
-button { font: inherit; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 10px;
-  padding: 8px 14px; cursor: pointer; }
-button:disabled { opacity: .45; cursor: default; }
-button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-/* The answer bar is fixed to the window, so a button never moves under the pointer while frames load. */
-.answers { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); padding: 10px 16px 14px;
-  border-top: 1px solid var(--line); z-index: 2; }
-.answers > div { max-width: 888px; margin: 0 auto; }
-.answers p { margin: 0 0 8px; font-weight: 600; }
-.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.choices button { min-height: 64px; font-size: 17px; font-weight: 600; background: var(--accent); color: var(--on-accent);
-  border-color: var(--accent); }
-.choices button.chosen { background: var(--chosen); border-color: var(--chosen); }
-.choices button.chosen::after { content: " \\2713"; }
-#keep { display: block; width: 100%; min-height: 44px; margin: 0 0 8px; font-size: 17px; font-weight: 600;
-  background: var(--chosen); color: var(--on-accent); border-color: var(--chosen); }
-#reveal ul { margin: 6px 0; padding-left: 20px; }
-#reveal li { margin-bottom: 4px; overflow-wrap: anywhere; }
-#reveal .note { color: var(--muted); }
-.strip figure.cited img { outline: 4px solid var(--chosen); outline-offset: -2px; }
-.strip figure.cited figcaption { color: var(--chosen); font-weight: 600; }
-#error { color: var(--warn); font-weight: 600; margin: 8px 0 0; }
-#done, #intro { text-align: center; padding: 14vh 0; }
-#done h1, #intro h1 { font-size: 34px; margin: 0 0 8px; }
-#intro h2 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--ink); margin: 20px 0 8px; }
-#intro button { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-size: 18px;
-  font-weight: 600; min-height: 56px; padding: 8px 28px; }
-#pass { margin: 0 0 6px; font-weight: 700; color: var(--accent); }
-#zoom { position: fixed; inset: 0; background: rgba(0, 0, 0, .86); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px; padding: 12px; z-index: 5; }
-#zoom img { width: auto; max-width: 100%; max-height: 78vh; cursor: zoom-out; }
-#zoom p { color: #f1efea; margin: 0; text-align: center; overflow-wrap: anywhere; max-width: 100%; }
-#zoom div { display: flex; gap: 10px; }
-[hidden] { display: none !important; }
-@media (max-width: 520px) { .item { grid-template-columns: 1fr; } .choices button { font-size: 15px; } }
-</style>
-</head>
-<body>
-<main>
-  <div id="work" hidden>
-    <header>
-      <button id="back" type="button">&larr; Back</button>
-      <h1 id="count"></h1>
-      <button id="forward" type="button">Next &rarr;</button>
-    </header>
-    <progress id="progress" value="0" max="1"></progress>
-    <div id="pass"></div>
-    <section>
-      <h2>The known item</h2>
-      <div class="item">
-        <dl><dt>What</dt><dd id="what"></dd><dt>Where</dt><dd id="place"></dd></dl>
-        <figure><img id="item-image" alt="The frame that first shows the item"><figcaption>The frame that first shows it. Click to enlarge.</figcaption></figure>
-      </div>
-    </section>
-    <section id="reveal" hidden>
-      <h2>What the judges said</h2>
-      <p id="reveal-verdict"></p>
-      <ul id="reveal-judges"></ul>
-      <div class="hint" id="reveal-screens"></div>
-    </section>
-    <section>
-      <h2>What the player did in this stretch</h2>
-      <div class="hint" id="hint"></div>
-      <div class="strip" id="strip"></div>
-    </section>
-    <div class="answers" id="answers"><div>
-      <p id="prompt"></p>
-      <button id="keep" type="button" hidden></button>
-      <div class="choices" id="choices"></div>
-      <div id="error" hidden>Not saved: the label server did not answer. Nothing is lost; click again.</div>
-    </div></div>
-  </div>
-  <div id="intro" hidden>
-    <h1>Pass 1 of 2 is done</h1>
-    <p>Every pair has your own answer, and all of them are saved.</p>
-    <h2>Pass 2 of 2: check against the judges</h2>
-    <p>You will see each pair again with what the judges said, and keep your answer or change it.</p>
-    <button id="start-pass-two" type="button">Start pass 2</button>
-  </div>
-  <div id="done" hidden>
-    <h1 id="done-title"></h1>
-    <p>Every label is saved. You can close this page.</p>
-    <button id="done-back" type="button">&larr; Back to the last pair</button>
-  </div>
-</main>
-<div id="zoom" hidden>
-  <img id="zoom-image" alt="">
-  <p id="zoom-text"></p>
-  <div><button id="zoom-previous" type="button">&larr; Earlier</button><button id="zoom-close" type="button">Close</button><button id="zoom-next" type="button">Later &rarr;</button></div>
-</div>
-<script>
-'use strict';
-let state = null, at = 0, zoomed = [], zoomAt = 0, ready = 0, sending = false, started = false;
-const el = id => document.getElementById(id);
-
-// Two passes. Pass one: a blind label for every pair, and no judge evidence anywhere on the page (the server sends
-// none until every pair has a blind label). Pass two starts when the owner presses Start: each pair again with the
-// evidence, kept or changed. A pair is in one phase: 'blind' (pass one, to answer), 'recorded' (pass one, answered
-// and fixed), 'check' (pass two, to keep or change) or 'done' (pass two, checked). `at` is a display position.
-function phaseOf(i) {
-  if (!state.pass_two) return i in state.blind ? 'recorded' : 'blind';
-  return i in state.checked ? 'done' : 'check';
-}
-
-function firstOpen() {
-  for (let i = 0; i < state.total; i++) if (phaseOf(i) === 'blind' || phaseOf(i) === 'check') return i;
-  return state.total;
-}
-
-function wordsOf(label) { return state.choices.find(choice => choice[0] === label)[1]; }
-
-const BY = {agreement: 'both judges agree', third: 'settled by the third judge',
-  third_alone: 'the third judge chose a label neither of the others gave'};
-
-function showReveal(reveal) {
-  el('reveal-verdict').textContent = reveal.adjudicated
-    ? 'Adjudicated label: ' + wordsOf(reveal.adjudicated) + ' (' + BY[reveal.by] + ').'
-    : 'Not settled: the two judges differ and no third verdict is saved for this pair.';
-  const list = el('reveal-judges');
-  list.replaceChildren();
-  for (const entry of reveal.judges) {
-    const item = document.createElement('li'), name = document.createElement('b'), note = document.createElement('span');
-    name.textContent = entry.name;
-    note.className = 'note';
-    note.textContent = entry.note ? ' \\u2014 \\u201c' + entry.note + '\\u201d' : '';
-    item.append(name, ': ' + wordsOf(entry.label) + (entry.screens.length ? ', cited screens ' + entry.screens.join(', ') : ''), note);
-    list.append(item);
-  }
-  el('reveal-screens').textContent = reveal.screens.length
-    ? 'Screens a judge cited: ' + reveal.screens.join(', ') + '. They are outlined in the strip below.'
-    : 'No judge cited a screen for this pair.';
-}
-
-function showZoom() {
-  const shot = zoomed[zoomAt];
-  el('zoom-image').src = shot.image;
-  el('zoom-text').textContent = shot.text;
-  el('zoom-previous').disabled = zoomAt === 0;
-  el('zoom-next').disabled = zoomAt === zoomed.length - 1;
-  el('zoom-previous').hidden = el('zoom-next').hidden = zoomed.length < 2;
-  el('zoom').hidden = false;
-}
-
-// Guarded like the answers: the second click of a double-click on Close lands on a screen beneath and must not reopen the view.
-function openZoom(list, index) { if (Date.now() < ready) return; zoomed = list; zoomAt = index; showZoom(); }
-
-// Every way of closing the enlarged view comes here. The answer buttons lie under it, so the guard is re-armed:
-// the second click of a double-click on Close, the backdrop or the image must not record a label.
-function closeZoom() { el('zoom').hidden = true; ready = Date.now() + 400; }
-
-function render() {
-  const intro = state.pass_two && !started, done = state.pass_two && started && at >= state.total;
-  el('work').hidden = intro || done;
-  el('intro').hidden = !intro;
-  el('done').hidden = !done;
-  el('zoom').hidden = true;
-  el('error').hidden = true;
-  ready = Date.now() + 400;  // a second click of a double-click must not land on what has just appeared
-  if (intro || done) { el('done-title').textContent = 'All ' + state.total + ' done'; return; }
-  const pair = state.pairs[at];
-  el('count').textContent = 'Pair ' + (at + 1) + ' of ' + state.total;
-  el('pass').textContent = state.pass_two ? 'Pass 2 of 2: check against the judges' : 'Pass 1 of 2: your own answer';
-  el('progress').max = state.total;
-  el('progress').value = Object.keys(state.pass_two ? state.checked : state.blind).length;
-  const phase = phaseOf(at), reveal = state.reveals[at];
-  el('back').disabled = at === 0;
-  el('forward').hidden = phase !== 'done' && phase !== 'recorded';
-  el('keep').hidden = phase !== 'check';
-  el('keep').disabled = false;
-  el('reveal').hidden = !reveal;
-  if (reveal) showReveal(reveal);
-  const citedBy = number => reveal ? reveal.judges.filter(entry => entry.screens.includes(number)).map(entry => entry.name) : [];
-  const first = state.blind[at], last = state.checked[at];
-  el('prompt').textContent = phase === 'blind' ? 'What did the player do about this item?'
-    : phase === 'recorded' ? 'Your answer is \\u201c' + wordsOf(first) + '\\u201d. It is saved and is not changed in this pass.'
-    : phase === 'check' ? 'You answered \\u201c' + wordsOf(first) + '\\u201d. Keep your answer, or change it?'
-    : 'Your answer is \\u201c' + wordsOf(last) + '\\u201d' + (last === first ? '' : ' (you first answered \\u201c' + wordsOf(first) + '\\u201d)')
-      + '. Click another to change it.';
-  el('keep').textContent = phase === 'check' ? 'Keep my answer: ' + wordsOf(first) : '';
-  el('keep').onclick = () => submit({position: at, step: 'checked', keep: true});
-  el('what').textContent = pair.what;
-  el('place').textContent = pair.place;
-  el('item-image').src = pair.image;
-  el('item-image').style.aspectRatio = pair.aspect;
-  el('item-image').onclick = () => openZoom([{image: pair.image, text: pair.what + ' \\u2014 ' + pair.place}], 0);
-  el('hint').textContent = pair.frames.length + ' screens from ' + pair.decisions + ' decisions, oldest first: every third changed screen. '
-    + 'Under each screen is what the player pressed before it. Click a screen to enlarge it.';
-  const shots = pair.frames.map((frame, i) => ({image: frame.image,
-    text: 'Screen ' + (i + 1) + ' of ' + pair.frames.length + (citedBy(i + 1).length ? ' \\u2014 cited by ' + citedBy(i + 1).join(', ') : '')
-      + (frame.inputs ? ' \\u2014 before it: ' + frame.inputs : '')}));
-  const strip = el('strip');
-  strip.replaceChildren();
-  strip.scrollTop = 0;
-  pair.frames.forEach((frame, i) => {
-    const figure = document.createElement('figure'), image = document.createElement('img'),
-      caption = document.createElement('figcaption'), number = document.createElement('b');
-    image.style.aspectRatio = pair.aspect;
-    image.loading = 'lazy';
-    image.src = frame.image;
-    image.alt = 'Screen ' + (i + 1);
-    image.onclick = () => openZoom(shots, i);
-    number.textContent = String(i + 1);
-    const by = citedBy(i + 1);
-    figure.className = by.length ? 'cited' : '';
-    caption.append(number, (by.length ? ' \\u00b7 cited by ' + by.join(', ') : '') + (frame.inputs ? ' \\u00b7 ' + frame.inputs : ''));
-    figure.append(image, caption);
-    strip.append(figure);
-  });
-  const choices = el('choices');
-  choices.replaceChildren();
-  for (const [label, words] of state.choices) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = words;
-    button.className = (phase === 'done' ? last : phase === 'blind' ? null : first) === label ? 'chosen' : '';
-    button.disabled = phase === 'recorded';
-    button.onclick = () => submit({position: at, step: phase === 'blind' ? 'blind' : 'checked', label: label});
-    choices.append(button);
-  }
-  document.querySelector('main').style.paddingBottom = (el('answers').offsetHeight + 16) + 'px';
-  ready = Date.now() + 400;  // a second click of a double-click must not label the pair that has just appeared
-}
-
-function busy(on) {
-  for (const button of [...el('choices').children, el('keep')]) button.disabled = on;
-}
-
-// One click is one request: the guard drops the second click of a double-click, and the buttons stay disabled until the
-// server has answered. Either label moves on to the next pair; after the last blind label the page shows pass two's start.
-async function submit(body) {
-  if (sending || Date.now() < ready) return;
-  sending = true;
-  busy(true);
-  try {
-    const response = await fetch('/api/label', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)});
-    if (response.status === 409) {  // another request got there first: show what the server holds
-      state = await (await fetch('/api/state')).json();
-      at = firstOpen();
-      render();
-      return;
-    }
-    if (!response.ok) throw new Error('refused');
-    state = await response.json();
-  } catch (error) {
-    busy(false);
-    el('error').hidden = false;
-    return;
-  } finally {
-    sending = false;
-  }
-  at += 1;
-  render();
-  window.scrollTo(0, 0);
-}
-
-function step(by) {
-  at = Math.max(0, Math.min(state.total, at + by));
-  if (at >= state.total && !state.pass_two) at = firstOpen();  // past the end in pass one: the first unanswered pair
-  render(); window.scrollTo(0, 0);
-}
-
-el('back').onclick = () => step(-1);
-el('done-back').onclick = () => step(-1);
-el('forward').onclick = () => step(1);
-el('start-pass-two').onclick = () => {
-  if (Date.now() < ready) return;
-  started = true;
-  at = firstOpen();
-  render();
-  window.scrollTo(0, 0);
-};
-el('zoom-close').onclick = closeZoom;
-el('zoom-image').onclick = closeZoom;
-el('zoom').onclick = event => { if (event.target === el('zoom')) closeZoom(); };
-el('zoom-previous').onclick = () => { zoomAt -= 1; showZoom(); };
-el('zoom-next').onclick = () => { zoomAt += 1; showZoom(); };
-document.addEventListener('keydown', event => { if (event.key === 'Escape') closeZoom(); });
-
-fetch('/api/state').then(response => response.json()).then(value => {
-  state = value;
-  started = Object.keys(state.checked).length > 0;  // a reload in pass two goes on; one before it shows pass two's start
-  at = firstOpen();
-  render();
-});
-</script>
-</body>
-</html>
-'''
+        scanned, found = [], None
+        for starts in range(minimum, ceiling + 1):
+            scanned.append([starts, rate(starts, 0, 0.5)])
+            if scanned[-1][1] >= target:
+                found = starts
+                break
+        at = found or ceiling
+        play = at * price
+        cases.append(dict(row, starts=found, at=at, halving=scanned[-1][1], third_cut=rate(at, 1, 2 / 3), false_alarm=rate(at, 2, 1.0),
+            best=max(scanned, key=lambda entry: entry[1]), scanned=scanned,
+            price=dict(reached=found is not None, play_usd=round(play, 2),
+                play_with_recall_usd=[round(play * factor, 2) for factor in RECALL_OVERHEAD],
+                total_usd=[round(play + STORE_USD + GROOMING_USD[0], 2), round(play * RECALL_OVERHEAD[1] + STORE_USD + GROOMING_USD[1], 2)])))
+    return dict(schema='withholding-simulation/1', seed=seed, sims=sims, rho=rho, alpha=alpha, target=target, minimum=minimum,
+        ceiling=ceiling, withheld_probability=0.5,
+        model=('per start: Poisson units touched; each unit withheld with probability 1/2; a start-level miss probability, Beta '
+            'with the given mean and intra-start correlation rho; a withheld unit missed with it and a delivered one with ratio '
+            'times it; each label flipped by the judge with the given probability'),
+        test=('one-sided randomization test that re-draws delivery within each start, exact: given M missed units, the number '
+            'withheld is Binomial(M, 1/2); statistic: missed withheld minus missed delivered, pooled over starts'),
+        effects=dict(halving=0.5, third_cut=2 / 3, false_alarm=1.0),
+        prices=dict(per_start_usd=price, recall_overhead=list(RECALL_OVERHEAD), store_usd=STORE_USD, grooming_usd=list(GROOMING_USD),
+            total_usd='play without recall, plus the store and the cheaper grooming session; to play at the higher recall '
+                'overhead, plus the store and the dearer grooming session'),
+        cases=cases)
 
 
 # --- rendering and the command line -------------------------------------------------------------------------------------
 
+def _value(value: float | None, digits: int = 3) -> str:
+    return 'undefined' if value is None else f'{value:.{digits}f}'
+
+
 def _range(entry: dict, digits: int = 3) -> str:
-    value, interval = entry.get('value'), entry.get('interval')
-    shown = 'undefined' if value is None else f'{value:.{digits}f}'
-    return shown + (f' (95% interval {interval[0]:.{digits}f} to {interval[1]:.{digits}f})' if interval else '')
+    interval = entry.get('interval')
+    return _value(entry.get('value'), digits) + (f' (95% interval over starts {interval[0]:.{digits}f} to {interval[1]:.{digits}f})'
+        if interval else ' (no interval)')
 
 
-def _verdict(passed: bool | None) -> str:
-    return 'not decided' if passed is None else 'pass' if passed else 'fail'
+def _beside(part: dict) -> str:
+    return (f"first two judges on {part['pairs']} pairs ({part['on']}): agreement {_value(part['agreement'])}, kappa "
+        f"{_range(part['kappa'])}, dispute rate {_range(part['dispute_rate'])}")
 
 
-def render_agreement(report: dict) -> str:
-    owner, passes = report['owner'], report['passes']
-    touched = owner['touched']
-    owner_line =f"{owner['matched']} of {owner['compared']} compared" + (
-        f" (exact 95% interval {owner['interval'][0]:.3f} to {owner['interval'][1]:.3f})" if owner['interval'] else '')
-    lines = [f"{report['pairs']} pairs; judges {report['judges'][0]} and {report['judges'][1]}; third {report['third'] or 'none'}; "
-        f"bootstrap over pairs, seed {report['bootstrap']['seed']}, {report['bootstrap']['draws']} draws",
-        f"note: {report['bootstrap']['note']}",
-        f"agreement {_range(report['agreement'])}: {_verdict(passes['agreement'])} against at least {MIN_AGREEMENT}",
-        f"Cohen's kappa {_range(report['kappa'])}: {_verdict(passes['kappa'])} against at least {MIN_KAPPA}",
-        f"share of cannot_tell over both judges' labels {_range(report['cannot_tell'])}",
-        "cannot_tell among straight, missed and cannot_tell (the decision rule's share; no conclusion above 0.30): "
-        + '; '.join(f"{name} {_share(part)}" for name, part in report['cannot_tell_of_touched'].items()),
-        f"adjudicated label against the owner's: {owner_line}: {_verdict(passes['owner'])} against at least "
-        f"{MIN_OWNER_MATCH} of {OWNER_PAIRS}" + ('' if owner['compared'] == OWNER_PAIRS else
-            f" (needs all {OWNER_PAIRS} labelled and adjudicated)"),
-        f"  on pairs the owner or the judges called straight or missed: {touched['matched']} of {touched['compared']} compared"
-        + (f" (exact 95% interval {touched['interval'][0]:.3f} to {touched['interval'][1]:.3f})" if touched['interval'] else ''),
-        f"  pairs the owner called not_engaged that were adjudicated straight or missed (false engagement): "
-        f"{owner['false_engagement']}",
-        f"  (the calibration uses the owner's blind labels only: the first click on each pair, before any judge's work is shown)",
-        f"engaged pairs, not in the calibration ({owner['engaged']['of']} drawn): blind labels against the adjudicated label: "
-        f"{_matched(owner['engaged'])}; on pairs the owner or the judges called straight or missed: "
-        f"{_matched(owner['engaged']['touched'])}; false engagement {owner['engaged']['false_engagement']}",
-        f"touched-items error that `measure` uses, random and engaged pairs together (blind labels): "
-        f"{_matched(owner['touched_all'])}; random pairs alone: {_matched(owner['touched'])}. {ENGAGED_CAVEAT}",
-        f"checked labels, {owner['checked']['note']}: {owner['checked']['changed']} of {owner['checked']['checked_pairs']} "
-        f"checked pairs differ from the blind label; checked labels against the adjudicated label: random pairs "
-        f"{_matched(owner['checked']['random'])}; engaged pairs {_matched(owner['checked']['engaged'])}",
-        f"disputed pairs {len(report['disputed'])}, not yet adjudicated {report['unresolved']}"
-        + (f"; packets for a third judge: {' '.join(report['third_judge_packets'])}" if report['third_judge_packets'] else ''),
-        f"pairs the third judge settled with a label neither judge gave (third_alone): {report['third_alone']}"]
-    lines.extend(f"  {row['start']} / {row['item']}: " + ', '.join(f'{name} {label}' for name, label in row['labels'].items())
-        for row in report['disputed'] if row['by'] == 'third_alone')
-    lines.append(f"judge calibration: {_verdict(report['pass'])}")
+def render_agreement(value: dict) -> str:
+    lines = [f"{value['pairs']} pairs of {value['kind']} packets; judges {value['judges'][0]} and {value['judges'][1]}; third "
+        f"{value['third'] or 'none'}",
+        f"label agreement {_value(value['agreement'])}, Cohen's kappa {_value(value['kappa'])}, dispute rate {_value(value['dispute_rate'])} "
+        f"({value['disputed']} pairs)",
+        f"holds agreement {_value(value['holds_agreement'])}, Cohen's kappa {_value(value['holds_kappa'])}, "
+        f"dispute rate {_value(value['holds_dispute_rate'])} ({value['holds_disputed']} pairs)",
+        f"not yet adjudicated {value['unresolved']}" + (f"; packets for a third judge: {' '.join(value['third_judge_packets'])}"
+            if value['third_judge_packets'] else ''),
+        f"pairs the third judge settled with a label neither judge gave (third_alone): {value['third_alone']}"]
+    lines.extend(f"  {row['window']} / {row['fact']}: " + ', '.join(f'{name} {label}' for name, label in row['labels'].items())
+        for row in value['rows'] if row['by'] == 'third_alone')
+    return '\n'.join(lines)
+
+
+def render_measure(report: dict) -> str:
+    lines = [report['not_corrected'],
+        f"{report['pairs']} adjudicated pairs of {report['kind']} packets over {report['bootstrap']['starts']} starts; judges "
+        f"{' and '.join(report['judges'])}, third {report['third'] or 'none'}; bootstrap seed {report['bootstrap']['seed']}, "
+        f"{report['bootstrap']['draws']} draws ({report['bootstrap']['note']})",
+        'all pairs: ' + _beside(report['judges_overall']),
+        'actors with facts but no kept frames: ' + (', '.join(report['no_frames']) or 'none'),
+        'facts without an eligible kept frame: ' + (', '.join(f"{row['actor']} / {row['fact']}"
+            for row in report['not_shown']) or 'none')]
+    for route, counts in report['labels_by_route'].items():
+        if counts['pairs']:
+            lines.append(f"  {route}: {counts['pairs']} pairs: " + ', '.join(f'{label} {counts[label]}' for label in USE_LABELS))
+    if report['measures'] is None:
+        lines.append('the use measures are not taken from blind packets, which leave out what was delivered')
+    for name, part in (report['measures'] or {}).items():
+        lines.append(f"{name}: {part['numerator']} of {part['denominator']} = {_range(part)}")
+        lines.append(f"  {part['definition']}")
+        lines.append('  route-wide: ' + _beside(part['judges_route']))
+        lines.append('  rate-driving pairs: ' + _beside(part['judges_rate_pairs']))
     return '\n'.join(lines)
 
 
 def _matched(part: dict) -> str:
-    return f"{part['matched']} of {part['compared']} match" + (
-        f" (exact 95% interval {part['interval'][0]:.3f} to {part['interval'][1]:.3f})" if part['interval'] else '')
+    return f"{part['matched']} of {part['compared']} (exact 95% interval {part['interval'][0]:.3f} to {part['interval'][1]:.3f})"
 
 
-def _share(part: dict) -> str:
-    return f"{part['cannot_tell']} of {part['of']}" + ('' if part['value'] is None else f" = {part['value']:.3f}")
-
-
-def _error(part: dict) -> str:
-    return (f"{part['differ']} of {part['compared']} differ, error {part['value']:.3f} (exact 95% interval "
-        f"{part['interval'][0]:.3f} to {part['interval'][1]:.3f})")
-
-
-def render_measure(report: dict) -> str:
-    lines = [f"{report['pairs']} adjudicated pairs: " + ', '.join(f'{label} {count}' for label, count in report['labels'].items())
-        + f"; bootstrap over stretches, seed {report['bootstrap']['seed']}, {report['bootstrap']['draws']} draws",
-        "cannot_tell among straight, missed and cannot_tell (the decision rule's share; no conclusion above 0.30): "
-        + _share(report['cannot_tell_of_touched'])]
-    calibration = report['calibration']
-    if calibration is None:
-        lines.append('judge calibration: not run (no agreement.json)')
-    else:
-        kappa = 'undefined' if calibration['kappa'] is None else f"{calibration['kappa']:.3f}"
-        lines.append(f"judge calibration: {_verdict(calibration['pass'])}; agreement {calibration['agreement']:.3f}, kappa {kappa}, "
-            f"owner match {calibration['owner_matched']} of {calibration['owner_compared']} compared, third judge alone on "
-            f"{calibration['third_alone']} pairs")
-    for name, title in (('all_stretches', 'all stretches'), ('full_stretches', 'full stretches only')):
-        part = report[name]
-        if not part['stretches']:
-            lines.append(f'{title}: none')
-            continue
-        basis = f"{part['stretches']} stretches from {part['admissions']} admissions"
-        rate, missed = part['touched_per_stretch'], part['missed_share']
-        exact, rough = rate['exact_poisson_interval'], rate['interval']
-        lines.append(f"{title} ({basis}; {part['decisions']} decisions, {part['touched']} touched, {part['missed']} missed):")
-        lines.append(f"  known items touched per {report['per_decisions']} decisions {rate['value']:.2f}; exact Poisson 95% interval "
-            f"{exact[0]:.2f} to {exact[1]:.2f} on {part['touched']} touched in {part['decisions']} decisions; rough percentile "
-            f"bootstrap over {basis}: {rough[0]:.2f} to {rough[1]:.2f}")
-        lines.append('  missed share among touched ' + ('undefined' if missed['value'] is None else f"{missed['value']:.3f}")
-            + (f"; rough percentile bootstrap over {basis}: {missed['interval'][0]:.3f} to {missed['interval'][1]:.3f}"
-                if missed['interval'] else ''))
-    lines.extend(f"  {row['start']}{' (short)' if row['short'] else ''}: {row['decisions']} decisions; "
-        + ', '.join(f'{label} {row[label]}' for label in LABELS) for row in report['stretches'])
-    error = report['judge_error']
-    if error is None or error['all_pairs'] is None:
-        lines.append('judge error: no owner comparison yet (run `agreement` after the owner has labelled); --wrong is left as F below')
-    else:
-        lines.append(f"judge against the owner, random pairs, blind labels: {_error(error['all_pairs'])}")
-        if error['touched_pairs']:
-            lines.append("  on pairs the owner or the judges called straight or missed, random and engaged pairs together, "
-                "blind labels: " + _error(error['touched_pairs']))
-            lines.append("  the same on the random pairs alone: " + (_error(error['touched_random'])
-                if error['touched_random'] else 'none compared') + f". {ENGAGED_CAVEAT}")
-        if not error['touched_measured']:
-            sampled = error['touched_pairs']['compared'] if error['touched_pairs'] else 0
-            lines.append(f"  the judge's error on touched items was not measured: {sampled} touched pairs were sampled, fewer than "
-                f"{MIN_TOUCHED_SAMPLED}. The commands below use the error over the random pairs, which agreement on not_engaged lowers.")
-        lines.append("  pairs the owner called not_engaged that were adjudicated straight or missed (false engagement): "
-            f"{error['false_engagement']}")
-    if report['simulate_commands']:
-        lines.append('simulate with:')
-        lines.extend(f"  {entry['case']}: {entry['command']}" for entry in report['simulate_commands'])
+def render_anchor(report: dict) -> str:
+    lines = [f"anchor: judge {report['judge']} ({report['model']}) on the {report['owner_pairs']} owner-labelled pairs of "
+        f"{report['gate']}, with the gate's prompt, sha256 {report['prompt_sha256']}"]
+    for which, title in (('blind', "owner's blind labels"), ('checked', "owner's checked labels")):
+        for group, words in (('all', 'all pairs'), ('random', 'the random draw')):
+            lines.append(f"matches with the {title}, {words}: new judge {_matched(report['against_owner']['new'][which][group])}; "
+                + '; '.join(f"gate {name} {_matched(figures[which][group])}" for name, figures in report['against_owner']['gate'].items())
+                + f"; shift {report['shift'][which][group]:+d}")
+    for name, part in report['all_pairs'].items():
+        lines.append(f"{name.replace('_', ' ')}, {part['pairs']} pairs: agreement {part['agreement']:.3f}, kappa {_value(part['kappa'])}")
+    lines.append(f"owner-labelled pairs where the new judge differs from the gate's adjudicated label: {len(report['differing'])}")
+    lines.extend(f"  {row['start']} / {row['item']} ({row['group']}): new {row['new']}, adjudicated {row['adjudicated']}, owner blind "
+        f"{row['blind']}, checked {row['checked']}" for row in report['differing'])
+    lines.append(report['note'])
     return '\n'.join(lines)
 
 
-def render_simulation(report: dict) -> str:
-    lines = [f"seed {report['seed']}, {report['sims']} simulated comparisons, {report['draws']} permutations each, "
-        f"correlation {report['rho']}",
-        'starts | touched | baseline missed | judge wrong | halving at 0.05 | halving at 0.025 (Holm, first step) | '
-        'one-third cut at 0.05 | false alarm']
-    lines.extend(f"{row['starts']} | {row['touched']:g} | {row['missed']:g} | {row['wrong']:g} | {row['halving']:.2f} | "
-        f"{row['halving_holm']:.2f} | {row['third_cut']:.2f} | {row['false_alarm']:.3f}" for row in report['table'])
-    search = report['search']
-    lines.append(f"smallest starts per arm that detect a halving with probability at least {search['target']}, for "
-        f"{search['touched']:g} items touched, missed share {search['missed']:g}, judge error {search['wrong']:g}; scanned "
-        f"{search['minimum']} to {search['scanned'][-1]['starts']} of a ceiling of {search['ceiling']}; "
-        f"${search['price_per_start_usd']:.2f} a start, curator sessions not included; a rate near the target has a "
-        f"standard error of about {math.sqrt(search['target'] * (1 - search['target']) / report['sims']):.3f}, and the "
-        "first size to reach it can be a start or two early (raise --sims to tighten):")
-    for level, title in (('at_0_05', 'at 0.05'), ('at_0_025', "at Holm's first step, 0.025")):
-        found = search['smallest'][level]
-        if found is None:
-            best = max(search['scanned'], key=lambda row: row[level])
-            lines.append(f"  {title}: none up to {search['ceiling']} starts per arm (the best was {best[level]:.2f} at {best['starts']})")
-        else:
-            lines.append(f"  {title}: {found['starts']} starts per arm (rate {found['rate']:.2f}); ${found['two_arms_usd']:.2f} "
-                f"for two arms, ${found['three_arms_usd']:.2f} for three")
+def render_prompt_check(report: dict) -> str:
+    lines = [f"prompt check on {report['stretches']} frozen stretches, {report['pairs']} pairs, {report['bootstrap']['starts']} starts; "
+        f"judges {' and '.join(report['judges'])}; the instructions {'changed' if report['prompt_changed'] else 'did not change'}"]
+    for side in ('before', 'after'):
+        lines.append(f"{side} (instructions sha256 {report[side]['instructions_sha256'][:12]}): " + _beside(report[side]['label']))
+        lines.append('  ' + _beside(report[side]['holds']))
+    shift = report['shift']
+    lines.append(f"shift, after minus before: agreement {_value(shift['agreement'])}, kappa {_range(shift['kappa'])}, dispute rate "
+        f"{_value(shift['dispute_rate'])}")
+    lines.append('share of its own labels each judge changed: ' + ', '.join(f'{name} {share:.3f}'
+        for name, share in report['relabelled'].items()))
+    return '\n'.join(lines)
+
+
+def render_withholding(report: dict) -> str:
+    prices = report['prices']
+    lines = ['# Withholding within each start: starts needed and their price', '',
+        f"Seed {report['seed']}, {report['sims']} simulated studies a size, intra-start correlation {report['rho']}, "
+        f"one-sided test at {report['alpha']}, target power {report['target']}, sizes {report['minimum']} to {report['ceiling']} starts.",
+        f"Model: {report['model']}.", f"Test: {report['test']}.",
+        f"Play is ${prices['per_start_usd']:.2f} a start; the recall model is inferred to multiply it by "
+        f"{prices['recall_overhead'][0]} to {prices['recall_overhead'][1]}; bought once: a store of about ${prices['store_usd']:.0f} and "
+        f"one grooming session, ${prices['grooming_usd'][0]:.2f} to ${prices['grooming_usd'][1]:.2f}. Total: {prices['total_usd']}.",
+        f"A rate near the target has a standard error of about {math.sqrt(report['target'] * (1 - report['target']) / report['sims']):.3f}, "
+        'so the first size to reach it can be a start early.', '',
+        '| Case | Touched | Missed | Judge error | Starts | Halving | One-third cut | False alarm | Play | Play with recall | Total |',
+        '| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | --- | --- |']
+    for case in report['cases']:
+        price, over = case['price'], '' if case['price']['reached'] else 'over '
+        starts = str(case['starts']) if case['starts'] else f"none up to {report['ceiling']} (best {case['best'][1]:.2f} at {case['best'][0]})"
+        lines.append(f"| {case['case']} | {case['touched']:g} | {case['missed']:g} | {case['wrong']:g} | {starts} | {case['halving']:.2f} | "
+            f"{case['third_cut']:.2f} | {case['false_alarm']:.3f} | {over}${price['play_usd']:.0f} | "
+            f"{over}${price['play_with_recall_usd'][0]:.0f} to ${price['play_with_recall_usd'][1]:.0f} | "
+            f"{over}${price['total_usd'][0]:.0f} to ${price['total_usd'][1]:.0f} |")
+    lines += ['', 'Halving, one-third cut and false alarm are the chances that the test rejects when delivery halves the missed '
+        'share, cuts it by a third, or changes nothing, at the size in the Starts column (the ceiling where none is reached).']
     return '\n'.join(lines)
 
 
@@ -1685,136 +1745,150 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True)
     packets = commands.add_parser('packets', help='packets for the annotators or the judges').add_subparsers(dest='kind', required=True)
-    for kind in ('annotate', 'judge'):
+    for kind in ('annotate', 'use', 'blind'):
         command = packets.add_parser(kind)
         command.add_argument('run', type=Path)
         command.add_argument('--runs', nargs='+', type=Path, required=True, help='sealed admission run directories, in order')
         command.add_argument('--every', type=int, default=3)
+        command.add_argument('--budget', type=int, default=PACKET_TOKENS, help='estimated tokens one packet may hold')
         command.add_argument('--min-changed', type=float, default=0.0, help='changed-pixel share above which a frame is changed')
-        if kind == 'annotate':
-            command.add_argument('--frames-per-packet', type=int, default=FRAMES_PER_PACKET)
-        else:
-            command.add_argument('--stretch', type=int, default=200, help='decisions per stretch')
+        if kind != 'annotate':
+            command.add_argument('--facts', type=Path, required=True, help=f'the facts to judge, {FACTS_SCHEMA}')
             command.add_argument('--seed', type=int)
-            command.add_argument('--no-item-frames', dest='item_frames', action='store_false',
-                help='leave each item\'s first frame out of the packet (by default the judge gets it, as the owner does)')
-    items = commands.add_parser('items', help='the known-item list from two annotators and the lead\'s matches')
+    items = commands.add_parser('items', help='the annotated facts from two annotators and the lead\'s matches')
     items.add_argument('run', type=Path)
     items.add_argument('--annotators', nargs=2, required=True, metavar=('A', 'B'))
     items.add_argument('--matches', type=Path, help='{"matches": [["<A entry>", "<B entry>"], ...]}: at least one match; '
-        'an entry may appear in several matches (one place seen in several packets); any other top-level key, such as '
-        'the lead\'s own "groups", is accepted and ignored')
+        'an entry may appear in several matches (one fact seen in several packets); any other top-level key is ignored')
     items.add_argument('--list', action='store_true', help='print every entry with its ID and write nothing')
     events = commands.add_parser('events', help='validate one judge\'s answers and write its judge events')
-    events.add_argument('run', type=Path)
-    events.add_argument('--judge', required=True)
-    events.add_argument('--model', required=True)
-    events.add_argument('answers', nargs='+', type=Path)
-    sample = commands.add_parser('sample', help='draw the calibration pairs, or with --engaged the supplement')
-    sample.add_argument('run', type=Path)
-    sample.add_argument('--count', type=int, default=OWNER_PAIRS)
-    sample.add_argument('--engaged', type=int, metavar='N', help='instead of the random draw, draw N further pairs that a '
-        'judge called straight, missed or cannot_tell, outside the random draw, into sample-engaged.json; after `events`')
-    sample.add_argument('--seed', type=int)
-    server = commands.add_parser('label-server', help='the owner\'s labelling page on 127.0.0.1')
-    server.add_argument('run', type=Path)
-    server.add_argument('--port', type=int, default=8765)
-    agree = commands.add_parser('agreement', help='the judges\' agreement and the owner comparison')
+    agree = commands.add_parser('agreement', help='the first two judges\' agreement and the adjudicated labels')
     agree.add_argument('run', type=Path)
     agree.add_argument('--judges', nargs=2, required=True, metavar=('A', 'B'))
     agree.add_argument('--third')
-    stats = commands.add_parser('measure', help='items touched and the missed share, from adjudicated labels')
+    agree.add_argument('--json', action='store_true')
+    stats = commands.add_parser('measure', help='the standing use measures, from adjudicated labels')
     stats.add_argument('run', type=Path)
-    for command in (agree, stats):
+    anchor = commands.add_parser('anchor', help='the measure gate\'s owner-labelled pairs, re-judged').add_subparsers(dest='step', required=True)
+    anchor_make = anchor.add_parser('packets')
+    anchor_make.add_argument('run', type=Path)
+    anchor_make.add_argument('--gate', type=Path, required=True, help='the sealed measure gate\'s run directory; only read')
+    anchor_make.add_argument('--dry-run', action='store_true', help='check the gate\'s hashes and write nothing')
+    anchor_events_command = anchor.add_parser('events')
+    for command in (events, anchor_events_command):
+        command.add_argument('run', type=Path)
+        command.add_argument('--judge', required=True)
+        command.add_argument('--model', required=True)
+        command.add_argument('answers', nargs='+', type=Path)
+    anchor_report_command = anchor.add_parser('report')
+    anchor_report_command.add_argument('run', type=Path)
+    anchor_report_command.add_argument('--judge', required=True)
+    anchor_report_command.add_argument('--json', action='store_true')
+    prompt = commands.add_parser('prompt-check', help='the first two judges\' agreement before and after a prompt change') \
+        .add_subparsers(dest='step', required=True)
+    prompt_make = prompt.add_parser('packets')
+    prompt_report_command = prompt.add_parser('report')
+    for command in (prompt_make, prompt_report_command):
+        command.add_argument('run', type=Path)
+        command.add_argument('--before', type=Path, required=True, help='the run directory judged with the earlier instructions')
+    prompt_report_command.add_argument('--judges', nargs=2, required=True, metavar=('A', 'B'))
+    for command in (stats, prompt_report_command):
         command.add_argument('--seed', type=int)
         command.add_argument('--draws', type=int, default=10000)
         command.add_argument('--json', action='store_true')
-    sim = commands.add_parser('simulate', help='the protocol appendix\'s simulation')
-    sim.add_argument('--touched', type=float, help='known items touched per start')
-    sim.add_argument('--missed', type=float, help='the current player\'s missed share among touched')
-    sim.add_argument('--wrong', type=float, help='the share of labels the judge gets wrong')
-    sim.add_argument('--starts', type=int, default=12, help='starts per arm of the table row for given numbers')
+    sim = commands.add_parser('simulate-withholding', help='starts needed, and their price, to see delivery halve the missed share')
+    sim.add_argument('--touched', type=float, default=GATE_TOUCHED, help='units touched per start')
+    sim.add_argument('--touched-ends', type=float, nargs=2, default=GATE_TOUCHED_ENDS, metavar=('LOW', 'HIGH'))
+    sim.add_argument('--missed', type=float, default=GATE_MISSED, help='the share of touched units missed when withheld')
+    sim.add_argument('--missed-ends', type=float, nargs=2, default=GATE_MISSED_ENDS, metavar=('LOW', 'HIGH'))
+    sim.add_argument('--wrong', type=float, nargs='+', default=GATE_WRONG, help='the shares of labels the judge gets wrong')
+    sim.add_argument('--base-wrong', type=float, default=GATE_BASE_WRONG, help='the judge error at the interval ends')
     sim.add_argument('--rho', type=float, default=0.2)
-    sim.add_argument('--sims', type=int, default=1500)
-    sim.add_argument('--draws', type=int, default=400)
-    sim.add_argument('--seed', type=int, default=590)
+    sim.add_argument('--sims', type=int, default=10000)
+    sim.add_argument('--seed', type=int, default=386)
     sim.add_argument('--target', type=float, default=0.8)
-    sim.add_argument('--min-starts', type=int, default=4)
-    sim.add_argument('--ceiling', type=int, default=60, help='the most starts per arm the search tries')
-    sim.add_argument('--price', type=float, default=3.58, help='dollars per start')
+    sim.add_argument('--alpha', type=float, default=0.05)
+    sim.add_argument('--min-starts', type=int, default=2)
+    sim.add_argument('--ceiling', type=int, default=60, help='the most starts the search tries')
+    sim.add_argument('--price', type=float, default=GATE_PRICE_USD, help='dollars of play per start')
     sim.add_argument('--json', action='store_true')
+    sim.add_argument('--render', type=Path, metavar='REPORT.json', help='print the table of a saved report and simulate nothing')
     args = parser.parse_args(argv)
     try:
-        if args.command == 'simulate':
-            given = [value is not None for value in (args.touched, args.missed, args.wrong)]
-            _, touched, missed, wrong = APPENDIX_ROWS[0]
-            touched, missed, wrong = (default if value is None else value
-                for value, default in ((args.touched, touched), (args.missed, missed), (args.wrong, wrong)))
-            rows = [(args.starts, touched, missed, wrong)] if any(given) else APPENDIX_ROWS
-            report = simulate(rows, touched, missed, wrong, rho=args.rho, sims=args.sims, draws=args.draws, seed=args.seed,
-                target=args.target, minimum=args.min_starts, ceiling=args.ceiling, price=args.price)
-            print(json.dumps(report, indent=1) if args.json else render_simulation(report))
+        if args.command == 'simulate-withholding':
+            if args.render:
+                report = read_json(args.render)
+                if not isinstance(report, dict) or report.get('schema') != 'withholding-simulation/1':
+                    raise MeasureError(f'{args.render}: not a withholding-simulation/1 report')
+            else:
+                report = simulate_withholding(withholding_rows(args.touched, args.touched_ends, args.missed, args.missed_ends,
+                    args.wrong, args.base_wrong), rho=args.rho, sims=args.sims, seed=args.seed, target=args.target, alpha=args.alpha,
+                    minimum=args.min_starts, ceiling=args.ceiling, price=args.price)
+            print(json.dumps(report, indent=1) if args.json and not args.render else render_withholding(report))
             return 0
         run = measure_dir(args.run)
         if args.command == 'packets' and args.kind == 'annotate':
-            index = annotate_packets(run, run_dirs(args.runs), args.every, args.frames_per_packet, args.min_changed)
+            index = annotate_packets(run, run_dirs(args.runs), args.every, args.budget, args.min_changed)
             print(f"{len(index['packets'])} packets in {run / 'annotate'}; frames recorded {index['frames']['recorded']}, "
-                f"changed {index['frames']['changed']}, kept {index['frames']['kept']}")
+                f"changed {index['frames']['changed']}, kept {index['frames']['kept']}; budget {index['budget_tokens']} tokens")
             for packet in index['packets']:
-                print(f"  {packet['packet']}: {packet['admission']}, {len(packet['frames'])} frames, {packet['bytes']} bytes")
+                print(f"  {packet['packet']}: {packet['admission']}, {len(packet['frames'])} frames, about "
+                    f"{packet['estimated_tokens']} tokens{' (over the budget)' if packet['over_budget'] else ''}, {packet['bytes']} bytes")
         elif args.command == 'packets':
-            mapping = judge_packets(run, run_dirs(args.runs), args.stretch, args.every, args.min_changed, args.seed,
-                args.item_frames)
-            print(f"{len(mapping['packets'])} packets in {run / 'judge-packets'}; seed {mapping['seed']}; the mapping is "
-                f"{run / 'private' / 'judge-mapping.json'} and is not for a judge")
+            mapping = fact_packets(run, run_dirs(args.runs), args.facts, args.kind, args.budget, args.every, args.min_changed, args.seed)
+            print(f"{len(mapping['packets'])} {mapping['kind']} packets in {run / 'judge-packets'}; seed {mapping['seed']}; budget "
+                f"{mapping['budget_tokens']} tokens; the mapping is {run / 'private' / 'judge-mapping.json'} and is not for a judge")
             for packet in mapping['packets']:
-                print(f"  {packet['packet']}: {packet['start']}{' (short)' if packet['short'] else ''}, "
-                    f"{len(packet['frames'])} frames, {packet['bytes']} bytes")
+                print(f"  {packet['packet']}: {packet['window']}, {len(packet['frames'])} frames, {len(packet['facts'])} facts, about "
+                    f"{packet['estimated_tokens']} tokens{' (over the budget)' if packet['over_budget'] else ''}")
         elif args.command == 'items' and args.list:
             index = read_json(run / 'annotate' / 'packets.json')
             for name in args.annotators:
                 for identity, entry in read_annotations(run, name, index).items():
-                    print(f"{name} {identity}: {entry['place']} | {entry['what']} | {' '.join(entry['frames'])}")
+                    print(f"{name} {identity}: {entry['fact']} | {' '.join(entry['frames'])}")
         elif args.command == 'items':
             if args.matches is None:
                 raise MeasureError('items needs --matches FILE, or --list')
             value = build_items(run, args.annotators, args.matches)
-            print(f"{len(value['items'])} known items in {run / 'items.json'}, sha256 {value['sha256']}")
+            print(f"{len(value['facts'])} annotated facts in {run / 'annotated-facts.json'}, sha256 {value['sha256']}")
             for name, count in value['counts'].items():
-                print(f"  {name}: {count['entries']} entries, {count['in_an_item']} in an item, {count['dropped']} dropped")
-            for item in value['items']:  # allowed: one place seen in several packets; printed so that it is seen
+                print(f"  {name}: {count['entries']} entries, {count['in_a_fact']} in a fact, {count['dropped']} dropped")
+            for item in value['facts']:  # allowed: one fact seen in several packets; printed so that it is seen
                 for name, entries in item['listed'].items():
                     if len(entries) > 1:
-                        print(f"  {item['id']} holds {len(entries)} entries of {name}: "
-                            + ' '.join(entry['entry'] for entry in entries))
+                        print(f"  {item['id']} holds {len(entries)} entries of {name}: " + ' '.join(entry['entry'] for entry in entries))
         elif args.command == 'events':
             written = judge_events(run, args.judge, args.model, args.answers)
             counts = Counter(event.label for event in written)
             print(f"{len(written)} judge events in {run / 'events' / (args.judge + '.jsonl')}: "
-                + ', '.join(f'{label} {counts[label]}' for label in LABELS))
-        elif args.command == 'sample' and args.engaged is not None:
-            value = draw_engaged(run, args.engaged, args.seed)
-            print(f"{value['count']} of {value['eligible']} eligible pairs drawn with seed {value['seed']} into "
-                f"{run / ENGAGED_FILE}; judges {', '.join(value['judges'])}")
-        elif args.command == 'sample':
-            value = draw_sample(run, args.count, args.seed)
-            print(f"{value['count']} of {value['population']} pairs drawn with seed {value['seed']} into {run / 'sample.json'}")
-        elif args.command == 'label-server':
-            httpd = label_server(run, args.port)
-            print(f'Labelling page: http://127.0.0.1:{httpd.server_address[1]}/  (Ctrl-C stops it; labels are in '
-                f"{run / 'labels.json'})", flush=True)
-            try:
-                httpd.serve_forever()
-            except KeyboardInterrupt:
-                pass
-            finally:
-                httpd.server_close()
+                + ', '.join(f'{label} {counts[label]}' for label in USE_LABELS))
         elif args.command == 'agreement':
-            report = agreement(run, args.judges, args.third, args.seed, args.draws)
-            print(json.dumps(report, indent=1) if args.json else render_agreement(report))
-        else:
+            value = agreement(run, args.judges, args.third)
+            print(json.dumps(value, indent=1) if args.json else render_agreement(value))
+        elif args.command == 'measure':
             report = measure(run, args.seed, args.draws)
             print(json.dumps(report, indent=1) if args.json else render_measure(report))
+        elif args.command == 'anchor' and args.step == 'packets':
+            value = anchor_packets(run, args.gate, args.dry_run)
+            print(f"{len(value['packets'])} packets of {value['gate']} hold its {len(value['pairs'])} owner-labelled pairs; every "
+                f"file matches the hash the gate recorded, and every instructions.md is the frozen prompt, sha256 {value['prompt_sha256']}")
+            print('dry run: nothing written' if args.dry_run else f"copied to {run / 'anchor' / 'packets'}; the mapping is "
+                f"{run / 'private' / 'anchor.json'} and is not for a judge")
+        elif args.command == 'anchor' and args.step == 'events':
+            written = anchor_events(run, args.judge, args.model, args.answers)
+            counts = Counter(event.label for event in written)
+            print(f"{len(written)} anchor events in {run / 'anchor' / 'events' / (args.judge + '.jsonl')}: "
+                + ', '.join(f'{label} {counts[label]}' for label in ANCHOR_LABELS))
+        elif args.command == 'anchor':
+            report = anchor_report(run, args.judge)
+            print(json.dumps(report, indent=1) if args.json else render_anchor(report))
+        elif args.step == 'packets':
+            mapping = prompt_packets(run, args.before)
+            print(f"{len(mapping['packets'])} packets in {run / 'judge-packets'}: the frozen stretches of {mapping['before']['run']} "
+                f"with instructions sha256 {mapping['instructions_sha256']} (before: {mapping['before']['instructions_sha256']})")
+        else:
+            report = prompt_report(run, args.before, args.judges, args.seed, args.draws)
+            print(json.dumps(report, indent=1) if args.json else render_prompt_check(report))
     except (MeasureError, EvaluationError, FileExistsError) as error:
         print(f'memory_measure: {error}', file=sys.stderr)
         return 2
