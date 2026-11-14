@@ -513,6 +513,36 @@
       },
       "visibility": "private"
     },
+    "delivery-check-642": {
+      "availability": "present",
+      "bytes": 30406381,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-recall-fix-delivery-check.md"
+      ],
+      "files": 247,
+      "manifest_sha256": "50f3dea4ae53d9621ee70a433c90b40fd73c2b74ce87629272c46b1b63e356b8",
+      "note": "The delivery check start of #642: the frozen package with both actors' host traces, frames, receipt and session store, and its evaluation record",
+      "sources": {
+        "computer-sessions/delivery-check-642": ".runtime/computer-sessions/delivery-check-642",
+        "evaluations/d073e0e4acac4303841bf92e0e3155c8": ".runtime/evaluations/d073e0e4acac4303841bf92e0e3155c8"
+      },
+      "visibility": "private"
+    },
+    "delivery-check-642-start": {
+      "availability": "present",
+      "bytes": 20650125,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-recall-fix-delivery-check.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "3feff074ce4244a565a8767eef1a522b10d99198c3702327950fa64351f7f04a",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-10; manifest a2be7aeb45e53f01e17c356b405c63b65eb625f0a6e23316e5e5a93e11c712fd. Final userdir of seven-day-end-10 after the delivery check start of #642 (package delivery-check-642, session d073e0e4acac4303841bf92e0e3155c8).",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-10",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
     "delivery-dev-635": {
       "availability": "present",
       "bytes": 34883589,
@@ -614,6 +644,36 @@
       "note": "The game-neutral process measures (#620) on sd1a5 to sd1a7: packets, frozen milestones, every judge's answers and events, the adjudication and process.json",
       "sources": {
         "memory-measure/process-lineage-620": ".runtime/memory-measure/process-lineage-620"
+      },
+      "visibility": "private"
+    },
+    "recall-check-642": {
+      "availability": "present",
+      "bytes": 2565029,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-recall-fix-delivery-check.md"
+      ],
+      "files": 56,
+      "manifest_sha256": "1ae1af6b1f58221181b73b1965df425defe8b63f6849b41672042806013f9869",
+      "note": "The real-model recall check of #642: the frozen package with the host trace, frames, receipt and session store, and its evaluation record",
+      "sources": {
+        "computer-sessions/recall-check-642": ".runtime/computer-sessions/recall-check-642",
+        "evaluations/ad4c2d86f4014c1da755d21b33c18c1e": ".runtime/evaluations/ad4c2d86f4014c1da755d21b33c18c1e"
+      },
+      "visibility": "private"
+    },
+    "recall-check-642-start": {
+      "availability": "present",
+      "bytes": 18905282,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-recall-fix-delivery-check.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "422e77b0a793dcedcf337507cae808a40317dfa97d85f17e40e170833839ff75",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-09; manifest 2d6612c68dce0cbdc5af3ba8dd099772faf6afdbe2dd5c613bfeb48cade666a0. Final userdir of seven-day-end-09 after the real-model recall check of #642 (package recall-check-642, session ad4c2d86f4014c1da755d21b33c18c1e).",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-09",
+        "user": ".runtime/user"
       },
       "visibility": "private"
     },
