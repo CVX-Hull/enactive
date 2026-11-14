@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/6` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/7` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -37,7 +37,7 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/4` with text/image input and explicit
+`route.json` uses current `player-host/5` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. It repeats the package's `spend_limit_usd` and carries
 `unpriced_request_usd` ([Spend limit](#spend-limit)). The selected route is OpenRouter /
@@ -99,14 +99,16 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/6",
+  "schema": "campaign-run/7",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "START", "scenario": "SCENARIO", "lineage": null, "admission": null},
   "files": {
     "route.json": "SHA256", "mcp-template.json": "SHA256",
-    "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256"
+    "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256",
+    "delivered-knowledge.json": "SHA256"
   },
+  "private_files": {"knowledge-full.json": "SHA256", "units.json": "SHA256"},
   "initial_files": {"ABSOLUTE_PREPARED_WRAPPER": "SHA256", "ABSOLUTE_OPTIONS_FILE": "SHA256"},
   "native": {"path": "ABSOLUTE_INSTALLED_GAME_BINARY", "sha256": "SHA256"},
   "library": {"path": "ABSOLUTE_QUALIFIED_BRIDGE", "sha256": "SHA256"},
@@ -121,6 +123,12 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "spend_limit_usd": "5"
 }
 ```
+
+### Freeze delivered knowledge
+
+Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order. An article's unit lists only the facts exclusive to it; `private/units.json` records other cited facts under `shared` with their citing article IDs. Shared facts follow any delivered citing article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
+
+The route has a closed `recall` object: the selected model on the player's provider/key, `every` completed inputs per reminder, `max_requests`, and `unpriced_request_usd` computed from that model's rates. The package's attempt limit includes both player and recall HTTP attempts. The model and cadence are pinned before spending.
 
 ### Spend limit
 
@@ -140,18 +148,17 @@ Nothing is carried over from earlier packages.
   refuses a route that states another value, naming the value it expects. It also
   refuses a route whose rates give a bound of zero, which would count a failed
   request as free.
-- **The dollar reserve covers one unpriced request.** `ending_reserve.usd` is at least
-  `unpriced_request_usd`; the validator refuses less, naming both amounts. With less
+- **The dollar reserve covers both in-flight bounds.** `ending_reserve.usd` is at least
+  the player bound plus the recall bound (the latter contributes zero with empty knowledge); the validator refuses less, naming both amounts. With less
   than one request's bound left, a single failed request would end the run abruptly
   instead of in order. The reserve is below the limit, so the limit exceeds the bound.
 - **What counts.** A response counts at the cost the provider reported for it. A
   request with no cost record (refused, timed out, cut off, aborted at a deadline)
   counts at the bound, because the provider may still bill it.
 - **Overshoot.** The host checks before each request, so a run can pass its limit by
-  at most what one request counts: at most the bound for a request with no cost
-  record.
-- **A response the host cannot price ends the run.** A successful response with no
-  usable cost stops the host with reason `cost-unreported`.
+  at most what one player request and one recall request count; each unpriced request counts at its own bound.
+- **A player response the host cannot price ends the run.** A successful player response with no
+  usable cost stops the host with reason `cost-unreported`. A failed or unpriced recall ends recall for that actor only. A valid provider cost is counted even on a rejected selection or a length stop; only missing/invalid cost counts at the recall bound.
 - **The hard cap is the key's credit limit**, set by the owner on the OpenRouter key
   ([operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)).
   The code cannot read it.
@@ -261,7 +268,7 @@ The custodian takes shared exclusion and writes `started.json` before native/DB
 creation. Native inherits the exact shared-lock descriptor/socket, retaining
 exclusion for its own lifetime. `ready.json` gives the loopback viewer URL. The
 driver creates exclusive per-actor inputs/host traces and operator-only resource
-notes; `frozen.json` is `player-host-inputs/2`.
+notes; `frozen.json` is `player-host-inputs/3`.
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
@@ -285,7 +292,7 @@ for or adopts unrelated processes. Normal native exit zero is sampled before
 forced cleanup. Save-to-menu, player save/success claims, native exit and absence
 are separate evidence.
 
-`receipt.json` (`campaign-receipt/4`) reports driver disposition, host quiescence,
+`receipt.json` (`campaign-receipt/5`) reports driver disposition, host quiescence,
 native absence, input revocation, cleanup and the run's spend. Its `accounting`
 block is closed:
 
@@ -309,7 +316,7 @@ fence remains `interrupted`; later expected adapter closure cannot erase it.
 Normal native exit is reported separately; its absence is not a save certificate
 or an automatic failure of generic stop control. Apply any separately frozen
 game-persistence/exit criterion to its own evidence lane.
-The embedded driver result is `player-driver/4`, with the retained ending request
+The embedded driver result is `player-driver/5`, with the retained ending request
 (its `trigger`, and the dollars and attempts left when it was sent), per-actor direct
 player-finish/settlement, original attempt charges and each actor's `allocated_usd`,
 `reported_usd`, `unpriced_requests`, `spent_usd` and `spend_complete`. Its totals
@@ -322,7 +329,7 @@ A development admission is recorded once its receipt exists, with
 `.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL`,
 where `LABEL` is the
 run's short name in its study's dated record (default: the package name). That command appends one
-[`dev-run/1`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
+[`dev-run/2`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
 `data/evaluation/runs.jsonl`, the one numeric record of the run: the study's record cites
 that row or a generated table and keeps no hand-typed copy of attempts, spend or duration.
 The spend figures are the receipt's; none is typed in. A package without a receipt
@@ -334,11 +341,9 @@ lead has done both of these:
 
 1. Recorded the run with `--record-upper-bound` added to the command above. The row
    then holds the most the run can have spent: `provider_usd` is the receipt's
-   `spend_limit_usd`, `unpriced_attempts` is 1 and `unpriced_attempt_usd` is the
-   receipt's `unpriced_request_usd`, so `spend_usd` is the limit plus one request's
-   bound. The flag is refused for a receipt whose spend is complete.
+   `spend_limit_usd`; the player unpriced count is `min(1, attempts)`, and the recall unpriced count is 1 only when delivered knowledge has units and at least two attempts were charged. The two bounds come from the receipt. Thus `spend_usd` is the limit plus the possible in-flight bounds, and combined unpriced counts never exceed attempts. The flag is refused for a receipt whose spend is complete.
 2. Noted in the run's dated record that the row is an upper bound, with the OpenRouter
-   key's activity figure for the run's time window. A `dev-run/1` row has no field
+   key's activity figure for the run's time window. A `dev-run/2` row has no field
    that marks an upper bound, so the dated record is where that is stated. `run_ledger totals --study ISSUE --envelope USD`
 applies the [actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),
 with `--forecast-largest USD` standing in for the largest admission before any completes.

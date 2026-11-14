@@ -7,7 +7,7 @@ docs/contracts/evaluation.md): each value carries its source and confidence, and
 evaluator still accepts no run or claim. Acceptance stays with frames, receipts, review
 and the issue's decision rule.
 
-host-summary selects current player-host/4 (telemetry version 4) files, actor directories or campaign
+host-summary selects current player-host/5 (telemetry version 5) files, actor directories or campaign
 folders (4096 files / 8 GiB; 64 MiB per line; two million lines per trace); an older trace is read only inside
 the run directory of a session the closed archive index lists.
 control-summary selects 1..32 computer-session/1 databases/directories (512 MiB
@@ -27,7 +27,7 @@ evaluate-table prints a Markdown table of headline metrics from evaluation recor
 roots holding <session>/<versions>.sqlite3) or run-metrics/1 snapshots (.jsonl) for the development-run
 log. --snapshot merges the selected records into the tracked data/evaluation/run-metrics.jsonl;
 --write and --check regenerate or verify the `<!-- evaluate-table study=N [lineage=L] core=C
-binding=ID:V -->` blocks in documents from that snapshot joined to the dev-run/1 ledger on session.
+binding=ID:V -->` blocks in documents from that snapshot joined to the dev-run/2 ledger on session.
 It never edits a record or a hand-scored table.
 Unsupported historical formats remain inert evidence, available in Git history.
 """
@@ -302,7 +302,7 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
     table_output.add_argument('--snapshot', type=Path, help='evaluate-table: merge the selected records into this run-metrics/1 file')
     table_output.add_argument('--write', type=Path, nargs='+', help='evaluate-table: regenerate the marked blocks in these documents')
     table_output.add_argument('--check', type=Path, nargs='+', help='evaluate-table: fail if the marked blocks in these documents are stale')
-    parser.add_argument('--ledger', type=Path, help='evaluate-table --write/--check: the dev-run/1 ledger (default data/evaluation/runs.jsonl)')
+    parser.add_argument('--ledger', type=Path, help='evaluate-table --write/--check: the dev-run/2 ledger (default data/evaluation/runs.jsonl)')
     arguments = parser.parse_args(argv)
     if arguments.command != 'evaluate-table' and any(
             value is not None for value in (arguments.snapshot, arguments.write, arguments.check, arguments.ledger)):

@@ -1,30 +1,145 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "dev-run/1: one development-run admission in data/evaluation/runs.jsonl",
-  "description": "Derived from the admission package's receipt and manifest. A row recorded today takes its spend from the receipt (campaign-receipt/4): provider-reported cost plus each request with no cost record at the route's bound. Earlier rows took the same split from the operator's provider reconciliation. Spend is an actual-spend upper bound for the admission rule, not an invoice. Holds no local paths, ports or secrets.",
+  "title": "dev-run/2: one development-run admission in data/evaluation/runs.jsonl",
+  "description": "Derived from a campaign-run/7 manifest and campaign-receipt/5 receipt. Player and recall attempts have separate unpriced bounds. Spend is provider-reported cost plus both unpriced charges; no local paths, ports or secrets.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "study", "run", "label", "arm", "start", "lineage", "admission", "session",
-               "source_commit", "ended", "outcome", "attempts", "wall_seconds", "spend_usd",
-               "provider_usd", "unpriced_attempts", "unpriced_attempt_usd"],
+  "required": [
+    "schema",
+    "study",
+    "run",
+    "label",
+    "arm",
+    "start",
+    "lineage",
+    "admission",
+    "session",
+    "source_commit",
+    "ended",
+    "outcome",
+    "attempts",
+    "wall_seconds",
+    "spend_usd",
+    "provider_usd",
+    "unpriced_attempts",
+    "unpriced_attempt_usd",
+    "unpriced_recall_attempts",
+    "unpriced_recall_attempt_usd"
+  ],
   "properties": {
-    "schema": {"const": "dev-run/1"},
-    "study": {"description": "The GitHub issue that owns the study, e.g. 372 or 382.", "type": "integer", "minimum": 1},
-    "run": {"description": "The package directory name.", "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]*$"},
-    "label": {"description": "The run's short name in its study's dated record (e.g. T1, or the run name).", "type": "string", "minLength": 1},
-    "arm": {"type": "string", "minLength": 1},
-    "start": {"enum": ["S1", "S2"]},
-    "lineage": {"description": "The manifest's lineage label (e.g. L1), or null for a single-run admission.", "type": ["string", "null"], "minLength": 1},
-    "admission": {"type": ["integer", "null"], "minimum": 1},
-    "session": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
-    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-    "ended": {"description": "The receipt's ended_wall as a UTC timestamp.", "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
-    "outcome": {"description": "The receipt's outcome, verbatim.", "type": "string", "minLength": 1},
-    "attempts": {"description": "The receipt's accounting.attempts_charged.", "type": "integer", "minimum": 0},
-    "wall_seconds": {"description": "The receipt's elapsed_seconds, rounded to the second.", "type": "integer", "minimum": 0},
-    "spend_usd": {"description": "Decimal string: provider_usd plus unpriced_attempts times unpriced_attempt_usd when those are recorded; otherwise the receipt's configured usage estimate for an admission whose every attempt reported usage.", "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"},
-    "provider_usd": {"description": "Decimal string of provider-reported cost over the attempts that have a provider record, or null when the split was not recorded.", "type": ["string", "null"], "pattern": "^[0-9]+(\\.[0-9]+)?$"},
-    "unpriced_attempts": {"description": "Charged attempts without a provider record, or null when not recorded.", "type": ["integer", "null"], "minimum": 0},
-    "unpriced_attempt_usd": {"description": "Decimal string: the worst-case charge per unpriced attempt, or null when not recorded.", "type": ["string", "null"], "pattern": "^[0-9]+(\\.[0-9]+)?$"}
+    "schema": {
+      "const": "dev-run/2"
+    },
+    "study": {
+      "description": "The GitHub issue that owns the study, e.g. 372 or 382.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "run": {
+      "description": "The package directory name.",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9-]*$"
+    },
+    "label": {
+      "description": "The run's short name in its study's dated record (e.g. T1, or the run name).",
+      "type": "string",
+      "minLength": 1
+    },
+    "arm": {
+      "type": "string",
+      "minLength": 1
+    },
+    "start": {
+      "enum": [
+        "S1",
+        "S2"
+      ]
+    },
+    "lineage": {
+      "description": "The manifest's lineage label (e.g. L1), or null for a single-run admission.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "admission": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "session": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "ended": {
+      "description": "The receipt's ended_wall as a UTC timestamp.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "outcome": {
+      "description": "The receipt's outcome, verbatim.",
+      "type": "string",
+      "minLength": 1
+    },
+    "attempts": {
+      "description": "The receipt's accounting.attempts_charged.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "wall_seconds": {
+      "description": "The receipt's elapsed_seconds, rounded to the second.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "spend_usd": {
+      "description": "Decimal string: provider_usd plus player and recall unpriced counts times their respective bounds when recorded.",
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)?$"
+    },
+    "provider_usd": {
+      "description": "Decimal string of provider-reported cost over the attempts that have a provider record, or null when the split was not recorded.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+(\\.[0-9]+)?$"
+    },
+    "unpriced_attempts": {
+      "description": "Charged attempts without a provider record, or null when not recorded.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "unpriced_attempt_usd": {
+      "description": "Decimal string: the worst-case charge per unpriced attempt, or null when not recorded.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+(\\.[0-9]+)?$"
+    },
+    "unpriced_recall_attempts": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "unpriced_recall_attempt_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+(\\.[0-9]+)?$"
+    }
   }
 }

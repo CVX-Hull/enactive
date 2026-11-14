@@ -280,7 +280,8 @@ Three layers. Each can be built and judged alone, in this order.
 Where each part of layer 2 runs and what crosses each seam, so that delivery keeps the
 import contracts and one contract version
 ([#461](https://github.com/CVX-Hull/enactive/issues/461)). Decided by the lead on
-13 November 2026 and reviewed against the code; nothing here is built.
+13 November 2026 and reviewed against the code; built by #461. The contracts state the
+formats ([player host](../contracts/player-host.md), [evaluation](../contracts/evaluation.md)).
 
 | Part | Where it runs | Why there |
 | --- | --- | --- |
@@ -364,8 +365,9 @@ import contracts and one contract version
   by the package check from that model's rates as for the player. The model and `N` are
   pinned per run; for the pilot the lead chooses both and states them before anything
   is spent.
-- **Failures.** A recall request that fails or returns no cost is counted at its bound
-  and ends recall for that actor: a briefing then holds the index lines only, and later
+- **Failures.** A recall request that fails ends recall for that actor; it is counted at
+  the cost the provider reported when that cost is valid (even if its selection is then
+  rejected), and otherwise at its bound: a briefing then holds the index lines only, and later
   reminders are logged as not made. The player plays on. The player-host contract's rule
   that an unpriced success stops the actor is scoped to player requests in the same
   change.

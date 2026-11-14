@@ -24,7 +24,7 @@ def markers(directory, *, deadline=200):
 
 
 def receipt(**changes):
-    value = dict(schema='campaign-receipt/4', session=SESSION, source_commit=COMMIT,
+    value = dict(schema='campaign-receipt/5', session=SESSION, source_commit=COMMIT,
         started_wall=1000, ended_wall=1010, elapsed_seconds=10,
         native_absence_verified=True, deciding_hosts_quiescent=True, input_authority_revoked=True,
         cleanup=dict(schema='computer-cleanup/1', session=SESSION, native_absence_verified=True,

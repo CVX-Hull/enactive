@@ -39,17 +39,16 @@ First, the evaluator reads, read-only, old record versions only for the sealed s
 in one closed index, `data/evaluation/archive-sessions.json`, and for each session only
 the versions the index records for it. The index is closed and never grows. Adding a
 session is a new owner decision, a row in the
-[owner decision log](../decisions/owner-decisions.md). The index holds 54 sessions: 30
+[owner decision log](../decisions/owner-decisions.md). The index holds 55 sessions: 30
 older development-loop sessions, 22 whose run-ending record is
-`campaign-watch-terminal/3`, and the two of the supervised launch check. All 54
-predate the dollar limit, so each is read in the versions the index records for it.
+`campaign-watch-terminal/3`, the two of the supervised launch check, and `spend-limit-run-555`, added by the owner decision of 13 November 2026. The first 54 predate the dollar limit; the spend-limit run carries `campaign-run/6`, `campaign-receipt/4`, `player-driver/4` and `player-host/4` telemetry 4. Each is read only in its recorded versions.
 Every other old version is an error naming the file and version. The evaluator never admits
 or plays from the archive and never modifies it; it only derives evaluation records.
 Second, an evidence-only event (one that no admission, control or player-visible path
 reads) may be added inside an unchanged telemetry version when it changes no existing
 field and every reader that uses it marks its absence in older traces as not recorded,
 never as a failure or as a value presented as recorded. No event has been added inside
-the current `player-host` telemetry version 4, where `context-manifest` and the reported
+the current `player-host` telemetry version 5, where `context-manifest` and the reported
 cost belong to the contract. The case still governs the archived telemetry version 3
 traces: `context-manifest` was added inside that version, so the evaluator records its
 absence from an older trace as `manifest: absent` and the context view rebuilds as

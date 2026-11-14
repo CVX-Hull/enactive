@@ -19,7 +19,7 @@ const openRouterModel = { id: 'vendor/fixture', name: 'OpenRouter fixture', api:
   contextWindow: 100000, maxTokens: 1024,
   compat: { supportsDeveloperRole: false, supportsStore: false, supportsUsageInStreaming: true,
     openRouterRouting: { only: ['fixture-backend'], order: ['fixture-backend'], allow_fallbacks: false, require_parameters: true } } };
-const route = (overrides = {}) => ({ schema: 'player-host/4', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),
+const route = (overrides = {}) => ({ schema: 'player-host/5', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,max_requests:4,unpriced_request_usd:'0.25'},
   api_key_env: 'OFFLINE_TEST_KEY', max_requests: 40, spend_limit_usd: '100', unpriced_request_usd: '0.25', max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
 
 function reply(content, calls = [], prefix = 'call') {
@@ -50,7 +50,7 @@ async function host(t, replies, { session = '2'.repeat(32), actorId = '3'.repeat
   };
   const mcpConfig = { command: resolve(python), args: [fixture, join(dir, 'calls.jsonl'), join(dir, 'pid')], cwd: dir, enabled: true, required: true,
     enabled_tools: enabledTools, startup_timeout_sec: 5, tool_timeout_sec: 2, default_tools_approval_mode: 'never', tools: {} };
-  const result = await runHost({ session, actorId, pendingControlId: null, control: new PassThrough(), configuration, mcpConfig, context, prompt,
+  const result = await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0', session, actorId, pendingControlId: null, control: new PassThrough(), configuration, mcpConfig, context, prompt,
     model: configuration.model.id, effort: 'off', timeoutSeconds, env: { OFFLINE_TEST_KEY: 'fixture-key' }, fetch, onEvent: event => events.push(event) });
   return { result, captured, events, payloads: captured.map(item => item.payload) };
 }

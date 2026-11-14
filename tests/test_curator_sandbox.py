@@ -484,7 +484,7 @@ def custodian(tmp_path):
     runtime = ComputerRuntime(directory, 'a'*32, Channel(), Process(), time.monotonic()+90,
                               dict(max_inputs=10, max_requests=20, max_frames=20, max_bytes=2**20))
     memory = Memory(directory/'player.sqlite3')
-    server, thread = serve(Application(runtime, memory, directory/'contexts'), 0)
+    server, thread = serve(Application(runtime, memory, directory/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json'), 0)
     actor = runtime.add_actor()
     (directory/'actor.json').write_text(json.dumps(dict(schema='player-adapter/1', session=runtime.session,
                                                         base_url=f'http://127.0.0.1:{server.server_port}', **actor)))

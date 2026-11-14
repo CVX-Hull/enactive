@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/1); see docs/contracts/evaluation.md.
+"""The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/2); see docs/contracts/evaluation.md.
 
-record derives one admission's row from its package alone (campaign-run/6 manifest and campaign-receipt/4, whose
+record derives one admission's row from its package alone (campaign-run/7 manifest and campaign-receipt/5, whose
 accounting holds the provider-reported cost and the requests counted at the bound) and appends it; a package
 without a receipt gets no row, and one whose receipt says its spend is incomplete gets a row only with
---record-upper-bound, at its declared limit plus one request at the bound. totals reports a
+--record-upper-bound, at its declared limit plus possible in-flight bounds, limited by charged attempts and delivered units. totals reports a
 study's spend against an envelope under the actual-spend admission rule (new spend plus twice the largest
 admission). check validates every row. The ledger is the one numeric record of a run: a dated record presents
 numbers through the generated run tables (tools/evaluate.py evaluate-table) or by citing the ledger.
@@ -22,7 +22,7 @@ import sys
 EXACT = Context(prec=4000, traps=[Inexact, InvalidOperation, DivisionByZero, Overflow])
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / 'data' / 'evaluation' / 'runs.jsonl'
-SCHEMA = 'dev-run/1'
+SCHEMA = 'dev-run/2'
 
 
 class LedgerError(ValueError):
@@ -56,13 +56,13 @@ def read_ledger(path: Path = LEDGER) -> list[dict]:
         if (row['study'], row['run']) in seen:
             raise LedgerError(f'{path.name}:{number}: duplicate run {row["run"]} in study {row["study"]}')
         seen.add((row['study'], row['run']))
-        parts = (row['provider_usd'], row['unpriced_attempts'], row['unpriced_attempt_usd'])
+        parts = (row['provider_usd'], row['unpriced_attempts'], row['unpriced_attempt_usd'], row['unpriced_recall_attempts'], row['unpriced_recall_attempt_usd'])
         if all(part is not None for part in parts):
             if spend_of(*parts) != Decimal(row['spend_usd']):
                 raise LedgerError(f'{path.name}:{number}: spend_usd is not provider_usd plus unpriced attempts at their charge')
         elif any(part is not None for part in parts):
             raise LedgerError(f'{path.name}:{number}: provider_usd, unpriced_attempts and unpriced_attempt_usd are recorded together or not at all')
-        if row['unpriced_attempts'] is not None and row['unpriced_attempts'] > row['attempts']:
+        if row['unpriced_attempts'] is not None and row['unpriced_attempts'] + row['unpriced_recall_attempts'] > row['attempts']:
             raise LedgerError(f'{path.name}:{number}: more unpriced attempts than charged attempts')
         if row['session'] in sessions:
             raise LedgerError(f'{path.name}:{number}: session {row["session"]} is already recorded')
@@ -78,9 +78,10 @@ def _json(path: Path) -> dict:
     return data
 
 
-def spend_of(provider_usd: str, unpriced_attempts: int, unpriced_attempt_usd: str) -> Decimal:
+def spend_of(provider_usd: str, unpriced_attempts: int, unpriced_attempt_usd: str, unpriced_recall_attempts: int = 0, unpriced_recall_attempt_usd: str = "0") -> Decimal:
     """A row's spend: provider cost plus unpriced attempts at their charge, summed without rounding."""
-    return EXACT.add(Decimal(provider_usd), EXACT.multiply(Decimal(unpriced_attempts), Decimal(unpriced_attempt_usd)))
+    return EXACT.add(EXACT.add(Decimal(provider_usd), EXACT.multiply(Decimal(unpriced_attempts), Decimal(unpriced_attempt_usd))),
+                     EXACT.multiply(Decimal(unpriced_recall_attempts), Decimal(unpriced_recall_attempt_usd)))
 
 
 def plain(amount: Decimal) -> str:
@@ -89,19 +90,19 @@ def plain(amount: Decimal) -> str:
 
 
 def package_row(package: Path, *, study: int, label: str, upper_bound: bool = False) -> dict:
-    """One dev-run/1 row from a finished campaign-run/6 package (receipt campaign-receipt/4). Its spend is the
+    """One dev-run/2 row from a finished campaign-run/7 package (receipt campaign-receipt/5). Its spend is the
     receipt's: the provider-reported cost plus each request with no cost record at the route's bound.
 
     A receipt whose spend is incomplete gets a row only with `upper_bound`, which records the most the run can have
-    spent: its declared limit plus one request at the bound, since the host stops at the limit and at most one
-    request is in flight then. The row has no field that marks it; the run's dated record says so."""
+    spent: its declared limit plus the bounds of the possible in-flight player and recall attempts,
+    limited by charged attempts; recall contributes only with delivered units. The row has no field that marks it; the run's dated record says so."""
     manifest, receipt_path = _json(package / 'manifest.json'), package / 'receipt.json'
     if not receipt_path.is_file():
         raise LedgerError(f'{package.name}: no receipt.json; reconcile the admission before recording it')
     receipt = _json(receipt_path)
-    if receipt.get('schema') != 'campaign-receipt/4':
+    if receipt.get('schema') != 'campaign-receipt/5':
         raise LedgerError(f'{package.name}: unsupported receipt {receipt.get("schema")!r}')
-    if manifest.get('schema') != 'campaign-run/6':
+    if manifest.get('schema') != 'campaign-run/7':
         raise LedgerError(f'{package.name}: unsupported manifest {manifest.get("schema")!r}')
     labels = manifest['labels']
     if receipt['session'] != manifest['session'] or receipt['source_commit'] != manifest['source_commit']:
@@ -114,15 +115,20 @@ def package_row(package: Path, *, study: int, label: str, upper_bound: bool = Fa
         raise LedgerError(f'{package.name}: the receipt records its spend as complete; --record-upper-bound is only for '
             'a receipt whose spend is incomplete')
     if upper_bound:
-        spend = dict(spend, reported_usd=spend['spend_limit_usd'], unpriced_requests=1,
-            spent_usd=plain(spend_of(spend['spend_limit_usd'], 1, spend['unpriced_request_usd'])))
+        from harness.player.knowledge import Knowledge
+        attempts=spend['attempts_charged']
+        player_count=min(1,attempts)
+        recall_count=int(bool(Knowledge(package/'delivered-knowledge.json').records) and attempts>player_count)
+        spend = dict(spend, reported_usd=spend['spend_limit_usd'], unpriced_requests=player_count, unpriced_recall_requests=recall_count,
+            spent_usd=plain(spend_of(spend['spend_limit_usd'], player_count, spend['unpriced_request_usd'], recall_count, spend['unpriced_recall_request_usd'])))
     ended = datetime.fromtimestamp(receipt['ended_wall'], timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     return dict(schema=SCHEMA, study=study, run=package.name, label=label, arm=labels['arm'], start=labels['start'],
         lineage=labels.get('lineage'), admission=labels.get('admission'), session=receipt['session'],
         source_commit=receipt['source_commit'], ended=ended, outcome=receipt['outcome'],
         attempts=spend['attempts_charged'], wall_seconds=round(receipt['elapsed_seconds']),
         spend_usd=spend['spent_usd'], provider_usd=spend['reported_usd'], unpriced_attempts=spend['unpriced_requests'],
-        unpriced_attempt_usd=spend['unpriced_request_usd'])
+        unpriced_attempt_usd=spend['unpriced_request_usd'], unpriced_recall_attempts=spend['unpriced_recall_requests'],
+        unpriced_recall_attempt_usd=spend['unpriced_recall_request_usd'])
 
 
 def decimal_text(value: str, name: str) -> str:
@@ -144,7 +150,7 @@ def record(arguments: argparse.Namespace) -> dict:
     errors = list(validator().iter_errors(row))
     if errors:
         raise LedgerError(f'derived row is invalid: {errors[0].message}')
-    if spend_of(row['provider_usd'], row['unpriced_attempts'], row['unpriced_attempt_usd']) != Decimal(row['spend_usd']):
+    if spend_of(row['provider_usd'], row['unpriced_attempts'], row['unpriced_attempt_usd'], row['unpriced_recall_attempts'], row['unpriced_recall_attempt_usd']) != Decimal(row['spend_usd']):
         raise LedgerError(f'{row["run"]}: the receipt\'s spent_usd is not its reported_usd plus unpriced requests at the bound')
     with arguments.ledger.open('a') as stream:
         stream.write(json.dumps(row, sort_keys=True) + '\n')
@@ -174,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument('--study', type=int, required=True)
     add.add_argument('--label', help="the run's short name in its study's dated record (default: the package name)")
     add.add_argument('--record-upper-bound', action='store_true', help='for a receipt whose spend is incomplete only: '
-                     'record the most the run can have spent, its declared limit plus one request at the bound')
+                     'record the limit plus possible player/recall bounds, limited by charged attempts and delivered units')
     total = commands.add_parser('totals', help="a study's spend, optionally against an envelope")
     total.add_argument('--study', type=int, required=True)
     total.add_argument('--envelope', help='decimal envelope in dollars')

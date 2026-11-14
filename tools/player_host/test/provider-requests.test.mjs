@@ -102,7 +102,7 @@ test('diagnostic reasoning bytes follow first nonempty alias without counting du
 });
 test('abort diagnostics remain unavailable before any actual HTTP attempt',async()=>{
   const events=[];
-  const result=await runHost({configuration:{},model:'fixture',effort:'off',timeoutSeconds:5,
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',configuration:{},model:'fixture',effort:'off',timeoutSeconds:5,
     onEvent:event=>events.push(event),fetch:()=>{throw new Error('No provider call allowed');}});
   assert.equal(result.ok,false);assert.equal(result.requests,0);
   assert.equal(events.find(event=>event.type==='abort').response_progress,null);

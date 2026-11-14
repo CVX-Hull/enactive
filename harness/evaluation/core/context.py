@@ -131,6 +131,9 @@ def reconstruct_context(run_dir: Path, actor: str, events: Sequence[HostEvent], 
 
 def request_context(run_dir: Path, actor: str, events: Sequence[HostEvent], request_id: str) -> dict:
     """The exact replayed parts if the host recorded a manifest for `request_id`, else a reconstruction."""
+    if request_id.startswith('recall-'):
+        return dict(exact=False, actor=actor, request_id=request_id, parts=[], part_count=0,
+                    omitted_image_indexes=[], missing=['recall_context_not_recorded'], request_role='recall')
     manifests = replay_manifests(events)
     if request_id in manifests:
         value = manifests[request_id]

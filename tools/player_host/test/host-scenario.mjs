@@ -18,7 +18,7 @@ const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.p
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
 // The dollar limit is far above anything these fixtures count, so only a test that sets its own limit meets it.
-const route = () => ({schema:'player-host/4',context_reserve_tokens:4096,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, spend_limit_usd:'100', unpriced_request_usd:'0.25', max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const route = () => ({schema:'player-host/5',context_reserve_tokens:4096,service_tier:'default', model:structuredClone(model), recall:{model:structuredClone(model),every:5,max_requests:4,unpriced_request_usd:'0.25'}, api_key_env:'OFFLINE_TEST_KEY', max_requests:4, spend_limit_usd:'100', unpriced_request_usd:'0.25', max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 // The usage record a fixture response carries unless a test supplies its own: token counts and a reported cost.
 const usageRecord = {prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0.000038};
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
@@ -46,7 +46,7 @@ async function scenario(t, sequence, overrides = {}) {
     return typeof item === 'function' ? item(init) : item;
   };
   const mcpConfig = {command:resolve(python),args:[fixture,log,pid],cwd:dir,enabled:true,required:true,enabled_tools:['observe','mutate','integer'],startup_timeout_sec:5,tool_timeout_sec:2,default_tools_approval_mode:'never',tools:{}};
-  const options = {session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
+  const options = {knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
     onEvent:event=>{events.push(event);overrides.onEvent?.(event);}};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;

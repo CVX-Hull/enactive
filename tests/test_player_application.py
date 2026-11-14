@@ -1,4 +1,5 @@
 """Actual composition/SQLite/V8; receiver remains an explicit test double."""
+from pathlib import Path
 import uuid
 import pytest
 
@@ -20,7 +21,7 @@ def program(code):
 def test_local_program_click_refusal_leaves_basic_input_available(tmp_path):
     runtime,channel,actor=make_runtime(tmp_path)
     memory=Memory(tmp_path/'player.sqlite3')
-    app=Application(runtime,memory,tmp_path/'contexts')
+    app=Application(runtime,memory,tmp_path/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     try:
         saved,_=app.call(actor['token'],'player_program_save',{'program':program('''function step(v,s){
             return {status:'act',state:s,actions:[{type:'click',x:10,y:10,button:'left'}],reason:'wrong geometry'};
@@ -43,7 +44,7 @@ def test_local_program_click_refusal_leaves_basic_input_available(tmp_path):
 def test_authoring_same_request_id_collects_one_immutable_record(tmp_path):
     runtime,channel,actor=make_runtime(tmp_path)
     memory=Memory(tmp_path/'player.sqlite3')
-    app=Application(runtime,memory,tmp_path/'contexts')
+    app=Application(runtime,memory,tmp_path/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     try:
         frame,_=runtime.observe(actor['actor_id'])
         value=dict(schema='player-record/1',kind='claim',text='fallible fixture claim',data={'quantity':1},
@@ -61,7 +62,7 @@ def test_authoring_same_request_id_collects_one_immutable_record(tmp_path):
 
 def test_public_identity_cannot_be_reused_across_player_and_computer(tmp_path):
     runtime,channel,actor=make_runtime(tmp_path)
-    memory=Memory(tmp_path/'player.sqlite3');app=Application(runtime,memory,tmp_path/'contexts')
+    memory=Memory(tmp_path/'player.sqlite3');app=Application(runtime,memory,tmp_path/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     try:
         saved,_=app.call(actor['token'],'player_program_save',dict(program=program('''function step(v,s){
           return {status:'act',state:s,actions:[{type:'key',key:'x',modifiers:[]}],reason:'fixture'};
@@ -77,3 +78,8 @@ def test_public_identity_cannot_be_reused_across_player_and_computer(tmp_path):
         with pytest.raises(ControlError):app.call(actor['token'],'player_program_save',dict(program=program('function step(v,s){}')),other)
         assert not channel.stopped.is_set()
     finally:runtime.close();memory.close()
+
+
+def test_application_requires_a_delivered_knowledge_file(tmp_path):
+    with pytest.raises(TypeError,match='knowledge'):
+        Application(None,None,tmp_path/'contexts')

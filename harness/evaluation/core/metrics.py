@@ -256,23 +256,24 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     large = [r for r in priced if (r.cache_write_tokens or 0) > LARGE_REWRITE_CACHE_TOKENS]
     rows.append(_row('host.large_rewrite_share', sum(r.dollars for r in large) / dollars if dollars else None,
         len(large), dollars, None if dollars else (no_host or 'zero_dollars')))
+    player_requests = [r for r in facts.requests if r.role == 'player']
     response = external.get('response_ms')
     if response is None:
-        response = [r.end_ms - r.start_ms for r in facts.requests if r.completed and r.start_ms is not None and r.end_ms >= r.start_ms]
+        response = [r.end_ms - r.start_ms for r in player_requests if r.completed and r.start_ms is not None and r.end_ms >= r.start_ms]
     first = external.get('first_chunk_ms')
     if first is None:
-        first = [r.first_ms - r.fetch_ms for r in facts.requests if r.first_ms is not None and r.fetch_ms is not None
+        first = [r.first_ms - r.fetch_ms for r in player_requests if r.first_ms is not None and r.fetch_ms is not None
             and r.first_ms >= r.fetch_ms]
     figures = lambda values: dict(n=len(values), p50=nearest_rank(values, .5), p95=nearest_rank(values, .95))  # noqa: E731
     for series, values in (('response', response), ('first_chunk', first)):
         stats = figures(values)
         for percentile in ('p50', 'p95'):
-            rows.append(_row('host.latency', stats[percentile], len(values), len(facts.requests),
+            rows.append(_row('host.latency', stats[percentile], len(values), len(player_requests),
                 None if values else (no_host or 'no_samples'), key=f'{series}.{percentile}'))
-    flagged = [r for r in facts.requests if r.retry or r.aborted or r.non_tool_stop]
-    rows.append(_row('host.retry_share', dict(value=len(flagged) / len(facts.requests) if facts.requests else None,
-        retries=sum(r.retry for r in facts.requests), aborts=sum(r.aborted for r in facts.requests),
-        non_tool_stops=sum(r.non_tool_stop for r in facts.requests)), len(flagged), len(facts.requests), no_host))
+    flagged = [r for r in player_requests if r.retry or r.aborted or r.non_tool_stop]
+    rows.append(_row('host.retry_share', dict(value=len(flagged) / len(player_requests) if player_requests else None,
+        retries=sum(r.retry for r in player_requests), aborts=sum(r.aborted for r in player_requests),
+        non_tool_stops=sum(r.non_tool_stop for r in player_requests)), len(flagged), len(player_requests), no_host))
 
     # needs.*
     in_play = [i for i in play if frames[i].mode == 'in_play']

@@ -38,7 +38,7 @@ def main():
         runtime=ComputerRuntime(directory,'a'*32,channel,Process(),time.monotonic()+90,
             dict(max_inputs=100,max_requests=200,max_frames=200,max_bytes=2**30))
         memory=Memory(directory/'player.sqlite3')
-        application=Application(runtime,memory,directory/'contexts')
+        application=Application(runtime,memory,directory/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
         server,thread=serve(application,0)
         if args.actor_id is None:
             actor=runtime.add_actor()

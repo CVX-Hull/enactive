@@ -129,7 +129,7 @@ def composition_pairs(rows, omitted, notices, calls, results):
     dropped images between the two requests, when a notice was added to the second, or when the reply did not make
     exactly one call with one result. Returns `(pairs, left_out)`."""
     pairs, left_out = [], Counter()
-    ids = list(rows)
+    ids = [key for key in rows if not key.startswith("recall-")]
     for first, second in zip(ids, ids[1:]):
         a, b = rows[first], rows[second]
         usage = a["usage"] or {}
@@ -296,7 +296,7 @@ def overlap_ms(first, second):
 
 def response_by_requests(rows):
     """`response_by_prompt` over request rows: completed responses only; a censored request is not a sample."""
-    rows = list(rows)
+    rows = [row for row in rows if not row["request_id"].startswith("recall-")]
     return response_by_prompt([(row["observed_ms"], row["prompt_tokens"], row["cost_usd"]) for row in rows if not row["censored"]],
         [row["since_previous_first_tool_result_ms"] for row in rows])
 
@@ -349,7 +349,7 @@ def run_root(path: Path) -> Path:
 #: The driver record's totals. A current record adds the counted spend; `configured_estimate_usd` stays an
 #: estimate from the route's configured rates.
 DRIVER_KEYS = ("schema", "outcome", "attempts_charged", "host_seconds_used", "configured_estimate_usd", "missing_usage_attempts")
-DRIVER_SPEND_KEYS = ("reported_usd", "unpriced_requests", "unpriced_request_usd", "spent_usd", "spend_complete")
+DRIVER_SPEND_KEYS = ("reported_usd", "unpriced_requests", "unpriced_request_usd", "unpriced_recall_requests", "unpriced_recall_request_usd", "spent_usd", "spend_complete")
 
 
 def campaign_evidence(path: Path, entry: ArchiveSession | None = None) -> dict:
@@ -380,7 +380,8 @@ def campaign_evidence(path: Path, entry: ArchiveSession | None = None) -> dict:
                             coverage = "unsupported_driver_version"
                         else:
                             result[relative]["driver"] = {key: driver.get(key) for key in
-                                (DRIVER_KEYS + DRIVER_SPEND_KEYS if driver["schema"] == DRIVER_SCHEMA else DRIVER_KEYS)}
+                                (DRIVER_KEYS + DRIVER_SPEND_KEYS if driver["schema"] == DRIVER_SCHEMA else
+                                 DRIVER_KEYS + tuple(key for key in DRIVER_SPEND_KEYS if key in entry.combination.fields["driver"]))}
             except (ValueError, OSError, UnicodeError, RecursionError):
                 coverage = "invalid"
         result["metadata_coverage"][relative] = coverage
@@ -445,6 +446,8 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 context.append({key: event.get(key) for key in ("projection_ms", "input_images", "omitted_images", "retained_images")})
                 if isinstance(event.get("request_id"), str):
                     omitted[event["request_id"]] = event.get("omitted_images") if number(event.get("omitted_images")) else None
+            elif kind == 'knowledge-delivery' and event.get('kind') == 'reminder':
+                notices.add(event.get('receiving_player_request_id'))
             elif kind == "tail-notice":
                 notices.add(event.get("request_id"))
             elif kind == "request-start":
@@ -452,7 +455,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 if not isinstance(identity, str) or not identity or identity in rows or len(rows) >= MAX_REQUESTS:
                     raise ControlError(f"Invalid/duplicate request identity or request bound: {path}:{line_number}")
                 rows[identity] = {"request_id": identity, "start_ms": at,
-                    **{key: event.get(key) for key in ("logical_request_id", "payload_bytes", "text_bytes", "image_parts",
+                    **{key: event.get(key) for key in ("request_role", "logical_request_id", "payload_bytes", "text_bytes", "image_parts",
                         "image_bytes", "host_inspection_ms", "sdk_after_payload_ms")}}
             elif kind in ("request-fetch-start", "response-headers", "response-first-chunk", "response-complete", "provider-refusal"):
                 row = rows.get(event.get("request_id"))

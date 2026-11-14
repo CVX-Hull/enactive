@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/4` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/5` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -78,11 +78,11 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/4", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/5", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
-                max_context_images=4, context_image_block=1, context_reserve_tokens=512, request_timeout_seconds=10, model=adapter.model(base_url))
+                max_context_images=4, context_image_block=1, context_reserve_tokens=512, request_timeout_seconds=10, model=adapter.model(base_url),recall=dict(model=adapter.model(base_url),every=5,max_requests=max_requests,unpriced_request_usd=UNPRICED_REQUEST_USD))
 
 
 # ---------------------------------------------------------------- reference provider
@@ -174,11 +174,12 @@ class Hosted:
 
     def __init__(self, adapter, directory: Path, provider: Provider, *, enabled_tools=("observe",), effort="off", spend_limit_usd="100"):
         self.adapter, self.directory, self.provider, self.effort = adapter, directory, provider, effort
-        self.paths = {name: directory / name for name in ("route.json", "mcp.json", "context.txt", "prompt.txt", "final.txt",
+        self.paths = {name: directory / name for name in ("route.json", "delivered-knowledge.json", "mcp.json", "context.txt", "prompt.txt", "final.txt",
                                                           "host.jsonl", "host-stderr.log", "mcp-log", "mcp-pid")}
         self.route = route(adapter, provider.base_url, spend_limit_usd=spend_limit_usd)
         self.paths["route.json"].write_text(json.dumps(self.route))
         self.paths["mcp.json"].write_text(json.dumps(self.mcp(enabled_tools)))
+        self.paths["delivered-knowledge.json"].write_text(json.dumps(dict(schema="delivered-knowledge/1",version=None,coverage=None,articles=[],facts=[])))
         self.paths["context.txt"].write_text("Frozen player guide")
         self.paths["prompt.txt"].write_text("Offline mission")
         self.paths["final.txt"].write_text("reserved")
@@ -192,7 +193,7 @@ class Hosted:
     def flags(self, timeout_seconds="30") -> list[str]:
         return ["--config", str(self.paths["route.json"]), "--mcp-config", str(self.paths["mcp.json"]),
                 "--context", str(self.paths["context.txt"]), "--prompt", str(self.paths["prompt.txt"]),
-                "--session", "2" * 32, "--actor-id", "3" * 32, "--pending-control-id", "none", "--model", "fixture", "--effort", self.effort,
+                "--session", "2" * 32, "--actor-id", "3" * 32, "--pending-control-id", "none", "--delivered-knowledge", str(self.paths["delivered-knowledge.json"]), "--finish-reserve-usd", "0", "--model", "fixture", "--effort", self.effort,
                 "--timeout-seconds", timeout_seconds, "-o", str(self.paths["final.txt"])]
 
     def start(self, arguments: list[str] | None = None, *, timeout_seconds="30") -> "Hosted":
@@ -224,7 +225,7 @@ class Hosted:
         return int(self.paths["mcp-pid"].read_text())
 
     def accounted(self) -> dict:
-        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE, Decimal(UNPRICED_REQUEST_USD))
+        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE, Decimal(UNPRICED_REQUEST_USD), Decimal(UNPRICED_REQUEST_USD))
         try:
             return reader.finish()
         finally:
@@ -291,7 +292,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
+    for schema in ("pi-player-host/5", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -342,7 +343,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/4" and events[0]["telemetry_version"] == 4
+    assert events[0]["schema"] == "player-host/5" and events[0]["telemetry_version"] == 5
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
@@ -371,7 +372,7 @@ def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow
     assert (actor["attempts_charged"], actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"],
             actor["spend_complete"]) == (3, "0.012", 0, "0.012", True)
     receipt = campaign_run.accounting(dict(spend_limit_usd="0.01", max_http_attempts=ALLOWANCE), hosted.route, actor, True)
-    assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.25",
+    assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.25", unpriced_recall_requests=0,unpriced_recall_request_usd="0.25",
                            spent_usd="0.012", attempts_charged=3, allocated_max_attempts=ALLOWANCE, spend_complete=True)
     # The overshoot is less than one response: the limit was not yet reached when the third request was sent.
     assert Decimal(receipt["spent_usd"]) - Decimal(receipt["spend_limit_usd"]) < Decimal("0.004")

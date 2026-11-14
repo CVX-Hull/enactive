@@ -1,4 +1,5 @@
 """Actual loopback service over a receiver double; no native/game acceptance."""
+from pathlib import Path
 from http.client import HTTPConnection
 import json
 import threading
@@ -19,7 +20,7 @@ from test_computer_runtime import make_runtime,key
 def service(tmp_path):
     runtime,channel,actor=make_runtime(tmp_path)
     memory=Memory(tmp_path/'player.sqlite3')
-    app=Application(runtime,memory,tmp_path/'contexts')
+    app=Application(runtime,memory,tmp_path/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     server,thread=serve(app,0)
     config=tmp_path/'actor.json';config.write_text(json.dumps(dict(schema='player-adapter/1',
         base_url=f'http://127.0.0.1:{server.server_port}',session=runtime.session,**actor)))

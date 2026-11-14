@@ -47,7 +47,7 @@ issuance seals its actor. The player host settles only its direct originating ha
 or exact original collection; the driver verifies context digest and actual
 old host/MCP group quiescence before a successor. Original limits persist.
 The [player host contract](contracts/player-host.md) owns the substitutable
-`player-host/4` invocation, telemetry, settlement and isolation rules.
+`player-host/5` invocation, telemetry, settlement and isolation rules.
 
 The player keeps its ongoing user objective. Experiment quotas and final-actor
 policy remain outside its guide, prompt, MCP results and program views. MCP emits

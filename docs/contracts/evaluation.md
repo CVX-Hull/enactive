@@ -18,10 +18,10 @@ rule still decide acceptance. No value on this page reaches the player.
 The evaluator reads one run directory read-only:
 - `session.sqlite3` (`computer-session/1`);
 - `sources/*.png`;
-- each `actors/NNN/host.jsonl` (`player-host/4`), including its per-request context
+- each `actors/NNN/host.jsonl` (`player-host/5`), including its per-request context
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/1`);
-- `manifest.json` (`campaign-run/6`), including its operator labels;
+- `manifest.json` (`campaign-run/7`), including its operator labels;
 - for the closed set of archived sessions only, the older versions of the manifest,
   host traces, receipt and run-ending record that the archive index lists for each
   session (see "Implementation rules");
@@ -42,13 +42,13 @@ input format is an error naming the file and version. Nothing is guessed.
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
   forbid the computer importing evaluation.
-- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/4`), used by
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/5`), used by
   the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
   `tools/campaign_player.py` stays separate because evaluation never gates the control path
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/4` telemetry 4. The one exception is a trace of an
+  `host-start` is not `player-host/5` telemetry 5. The one exception is a trace of an
   archived session: its caller passes that session's index entry, and the trace is then
   also read in the version the entry lists, when its `host-start` names that session.
   `host-summary` finds the entry from the manifest of the run directory the trace sits in,
@@ -268,7 +268,7 @@ their numbers for latency and delivery counts.
 
 | Command | Output format | Reports |
 | --- | --- | --- |
-| `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. Per trace, per run directory and for the whole selection, `response_by_prompt`: response time (count, p50, p95), the share within 2 s and within 5 s and the mean provider-reported cost per request, for all responses and by prompt-size band (input plus cache read plus cache write tokens: under 20,000; 20,000 to 60,000; 60,000 to 100,000; 100,000 to 150,000; over 150,000), and the interval from one request's first tool result to the next. `prompt_composition`: per trace one object, per run directory and for the whole selection a list with one object per route (the host's `model`). It says what the prompt is made of, fitted by least squares on the growth in prompt tokens between consecutive requests of an actor against what was added, from the provider's reported `usage` and the trace's own sizes alone, so it holds for any model that reports usage. An object has `pairs` (fitted), `left_out`, `image_counts` (histogram of images per fitted pair), `image_term_separable`, `images_per_turn`, `usage_fit`, `usage_fit_reason` and `tokenizer_check`. `usage_fit` has `per_result_byte` (tokens per byte of tool-result text: the `content` text the model reads, in the short form or the full one, never `structuredContent`), `per_output_token` (per output token of the previous reply, reasoning included), `per_image`, `per_turn_constant`, `per_turn_at_modal_images`, `residual_abs` (p50, p95, share within 5 tokens) and `pairs`. Every eligible pair is fitted; the image count is a term of the fit whenever it varies, so a turn with another count has its own intercept and does not bend the byte slope. `per_image` and `per_turn_constant` are numbers only when at least 10% of the fitted pairs have a count other than the most common one (`image_term_separable` true). Otherwise (`image_term_separable` false) they are null, because the image term cannot be told from the constant, and the supported figure is `per_turn_at_modal_images`, the constant plus `images_per_turn` (the most common count) images; it is null when they are separable. `left_out` counts the pairs not fitted, by `usage_unknown` (a prompt size or the reply's output is unknown), `projection_unknown` (only one of the two requests has an image projection event), `images_dropped` (the host dropped images between the two requests), `notice_added` (a `tail-notice` on the second) and `not_one_call` (the reply did not make exactly one call with one result). `usage_fit` is null, with `usage_fit_reason`, when there are no more pairs than terms or the terms are not independent (for example every result has the same length). A tokenizer is only an optional check: `python -m tools.host_analysis PATH... --tokenizer [ROUTE=]ENCODING` (or `host_summary(paths, tokenizers)`) fills `tokenizer_check`, otherwise null; it fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and its reasoning tokens (with the same image treatment) and reports `slope` (`per_result_token`) and `holds`: the slope is within 1 ± 0.01 and the median absolute residual is at most 1 token (this reader's stated limit; the recorded medians for `o200k_base` were 0.2 and 0.1). A tokenizer that is not installed, cannot be loaded or whose counting function raises gives `available: false` and a `reason`, and a degenerate fit gives a `reason` and no `slope`; the usage fit is unaffected. The command exits 2 when a `ROUTE` names no selected trace. `--format markdown` prints the tables. |
+| `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. Per trace, per run directory and for the whole selection, `response_by_prompt`: response time (count, p50, p95), the share within 2 s and within 5 s and the mean provider-reported cost per request, for all responses and by prompt-size band (input plus cache read plus cache write tokens: under 20,000; 20,000 to 60,000; 60,000 to 100,000; 100,000 to 150,000; over 150,000), and the interval from one request's first tool result to the next. `prompt_composition`: per trace one object, per run directory and for the whole selection a list with one object per route (the host's `model`). It says what the prompt is made of, fitted by least squares on the growth in prompt tokens between consecutive requests of an actor against what was added, from the provider's reported `usage` and the trace's own sizes alone, so it holds for any model that reports usage. An object has `pairs` (fitted), `left_out`, `image_counts` (histogram of images per fitted pair), `image_term_separable`, `images_per_turn`, `usage_fit`, `usage_fit_reason` and `tokenizer_check`. `usage_fit` has `per_result_byte` (tokens per byte of tool-result text: the `content` text the model reads, in the short form or the full one, never `structuredContent`), `per_output_token` (per output token of the previous reply, reasoning included), `per_image`, `per_turn_constant`, `per_turn_at_modal_images`, `residual_abs` (p50, p95, share within 5 tokens) and `pairs`. Every eligible pair is fitted; the image count is a term of the fit whenever it varies, so a turn with another count has its own intercept and does not bend the byte slope. `per_image` and `per_turn_constant` are numbers only when at least 10% of the fitted pairs have a count other than the most common one (`image_term_separable` true). Otherwise (`image_term_separable` false) they are null, because the image term cannot be told from the constant, and the supported figure is `per_turn_at_modal_images`, the constant plus `images_per_turn` (the most common count) images; it is null when they are separable. `left_out` counts the pairs not fitted, by `usage_unknown` (a prompt size or the reply's output is unknown), `projection_unknown` (only one of the two requests has an image projection event), `images_dropped` (the host dropped images between the two requests), `notice_added` (a `tail-notice` or delivered knowledge reminder on the second) and `not_one_call` (the reply did not make exactly one call with one result). `usage_fit` is null, with `usage_fit_reason`, when there are no more pairs than terms or the terms are not independent (for example every result has the same length). A tokenizer is only an optional check: `python -m tools.host_analysis PATH... --tokenizer [ROUTE=]ENCODING` (or `host_summary(paths, tokenizers)`) fills `tokenizer_check`, otherwise null; it fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and its reasoning tokens (with the same image treatment) and reports `slope` (`per_result_token`) and `holds`: the slope is within 1 ± 0.01 and the median absolute residual is at most 1 token (this reader's stated limit; the recorded medians for `o200k_base` were 0.2 and 0.1). A tokenizer that is not installed, cannot be loaded or whose counting function raises gives `available: false` and a `reason`, and a degenerate fit gives a `reason` and no `slope`; the usage fit is unaffected. The command exits 2 when a `ROUTE` names no selected trace. `--format markdown` prints the tables. |
 | `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
 | `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
 | `python -m tools.memory_reads` | text, or `--json` | Per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
@@ -366,13 +366,14 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     record in an older version is read only for a session the index lists with exactly
     that version, beside a manifest in the version the index lists for that session. Any
     other old version is an error naming the file and version. This reads historical
-    evidence; it is not an admission, and admission still requires `campaign-run/6`.
-  - **The three combinations.** The index holds exactly three combinations of versions.
-    All 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
+    evidence; it is not an admission, and admission still requires `campaign-run/7`.
+  - **The spend-limit session.** The owner added `spend-limit-run-555` on 13 November 2026: `campaign-run/6`, `campaign-receipt/4`, `player-driver/4`, `player-host/4` telemetry 4 and `campaign-watch-terminal/4`. It is read-only in those versions. Its manifest supplies `spend_limit_usd` rather than the earlier reservation; receipt/driver ending fields and host evidence are read as recorded. No archive is admitted for play.
+  - **The four combinations.** The index holds 55 sessions in four combinations of versions.
+    The original 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
     `player-driver/3` and `player-host/3` with telemetry version 3, beside a
     `campaign-run/4` or `campaign-run/5` manifest. For each record that is not current,
     the fields used are fixed.
-    - **Shared by all three:**
+    - **Shared by the original three combinations:**
       - From the receipt: `outcome` and `driver` for the run's ending; `session`,
         `source_commit`, `normal_save_claimed_by_harness`, `native_absence_verified`,
         `normal_native_exit_zero`, `deciding_hosts_quiescent` and
@@ -385,7 +386,7 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
         carry the listed `schema` and `telemetry_version` and name the session; the
         evaluator also takes its `actor_id`, `model`, `provider`, `effort` and
         `provider_routing`. No field the evaluator reads differs between the two trace
-        versions, and an archived trace has no counted cost.
+        versions, and these original archived traces have no counted cost.
       - From the manifest: `schema`, `session`, `player_store`, `source_commit`,
         `effort`, `files`, `accounting`, `limits`, `ending_reserve`, `wall_seconds`,
         `host_seconds`, `max_hosts` and `max_http_attempts`. `accounting` is the
@@ -502,8 +503,7 @@ Payload: `start` (`<admission>:<first>-<last>`), `item`, `label` (`straight`, `m
 
 ### The facts to judge (`judged-facts/1`)
 
-Facts come from the store and the trace, not from a list written in advance. Delivery
-(#461) writes this file for a run; until then the lead writes it.
+Facts come from the store and the trace, not from a list written in advance. `python -m tools.memory_measure facts RUN --runs PACKAGE...` builds `RUN/judged-facts.json` from the frozen delivered/full knowledge, private unit record, knowledge-tool results and delivery telemetry. It verifies the frozen knowledge hashes and the exporter's unit rule: a unit's fact list is exclusive, and `private/units.json.shared` records multiply cited facts with their citing article IDs; any delivered citing article delivers the shared fact; the player never sees the private inputs.
 
     {"schema": "judged-facts/1",
      "admissions": {"<admission directory name>": {"<actor directory name>": {
@@ -513,8 +513,8 @@ Facts come from the store and the trace, not from a list written in advance. Del
        "reminders": [{"decision": 40, "text": "..."}]}}}}
 
 - A fact has one route for an actor; an id listed twice is refused.
-- `from_decision` is optional: the admission's decision from which the route holds (a
-  reminder's, a read's). Its `available_from` frame is the first kept frame whose carried
+- The route is the first lead or read exposure in time, with `index` only if neither occurs. Withheld facts come from `private/units.json`.
+- `from_decision` is optional: the last player decision completed before that same exposure; briefing leads and index lines have none. Recall requests have `decision: null` and never advance this numbering. Cumulative player-decision cost includes recall only with the next player request, so a successor's briefing is never charged to the preceding actor. Player latency and retry-share denominators exclude recall. A delivered reminder is a notice when fitting prompt-composition pairs. Its `available_from` frame is the first kept frame whose carried
   inputs all come from decisions strictly after it; a use packet leaves the fact out of
   windows with no such frame, and an applied label (`in_line`, `against`, `found_again`)
   must cite a frame from there on, or `events` refuses it, so an action before or during a
@@ -597,7 +597,7 @@ use packets:
   labels and are not corrected against a human truth
   ([owner decisions](../decisions/owner-decisions.md)).
 - A run of blind packets gets label counts by route and the judges' agreement only.
-- The recall model's precision and silence are not built; they wait for #461.
+- `recall` records precision and silence when the facts builder recorded recall inputs (`private/recall.json`); older judge runs report `recorded:false`. Precision is the applied share (`in_line`, `against`, `found_again`) of judged fact windows after an actually delivered recall selection, excluding `cannot_tell`. A selection counts even if the fact's first route was an earlier read. Silence is explicit empty reminder selections divided by successful reminder selections; failures and opportunities not made are reported separately. A reminder still unsent at actor end contributes no precision exposure.
 
 ### Checks of a changed judge
 
@@ -668,27 +668,25 @@ Development-run quantities live as data in git, and pages render them or cite th
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/6` manifest and `campaign-receipt/4` alone |
+| `runs.jsonl` | One [`dev-run/2`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/7` manifest and `campaign-receipt/5` alone |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
-- **Origin.** `record` reads `campaign-run/6` packages with a `campaign-receipt/4` only;
+- **Origin.** `record` reads `campaign-run/7` packages with a `campaign-receipt/5` only;
   there is no reader for older manifests or receipts, and the rows already in the ledger
-  are not rewritten. It takes `provider_usd` from the receipt's `reported_usd`,
+  were migrated once from `dev-run/1` to `dev-run/2`: recall counts/bounds are zero/`"0"` for recorded splits and null/null for unknown splits. There is no runtime converter. It takes `provider_usd` from the receipt's `reported_usd`,
   `unpriced_attempts` from `unpriced_requests`, `unpriced_attempt_usd` from
-  `unpriced_request_usd` and `spend_usd` from `spent_usd`; no figure is typed in. A
+  `unpriced_request_usd`, the recall fields from `unpriced_recall_requests` and `unpriced_recall_request_usd`, and `spend_usd` from `spent_usd`; no figure is typed in. A
   receipt whose `spend_complete` is false gets a row only with `--record-upper-bound`:
-  `provider_usd` is then the receipt's `spend_limit_usd`, `unpriced_attempts` is 1 and
-  `unpriced_attempt_usd` the receipt's bound, so `spend_usd` is the most the run can
-  have spent. No field marks such a row; its run's dated record does
+  `provider_usd` is then the receipt's `spend_limit_usd`. The player unpriced count is `min(1, attempts)`; the recall unpriced count is 1 only when delivered knowledge has units and at least two attempts were charged. Their bounds come from the receipt, and the combined unpriced count never exceeds attempts, so `spend_usd` is the most the run can have spent. No field marks such a row; its run's dated record does
   ([campaign procedure](../operations/campaign-run.md#start-and-close)). Rows whose packages are
   `campaign-run/4` take arm and start from the labels in the archive index,
   `archive-sessions.json`.
 - **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is
-  `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. An earlier row with an unknown split
-  holds null in all three fields and `spend_usd` at the receipt's configured estimate verbatim
+  `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd` plus `unpriced_recall_attempts` × `unpriced_recall_attempt_usd`. An earlier row with an unknown split
+  holds null in all five fields and `spend_usd` at the receipt's configured estimate verbatim
   (including its floating-point digits).
-- **Rejection.** A row without `schema: dev-run/1`, a schema violation (a label is required),
-  a repeated study and run, a repeated session, more unpriced than charged attempts, or an
+- **Rejection.** A row without `schema: dev-run/2`, a schema violation (a label is required),
+  a repeated study and run, a repeated session, more combined player and recall unpriced attempts than charged attempts, or an
   inconsistent spend split is an error naming the line. Snapshot rows are validated against
   their schema when read and before they are written.
 - **Generated tables.** A `<!-- evaluate-table study=N [lineage=L] core=C binding=ID:V -->` …

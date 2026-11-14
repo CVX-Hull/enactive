@@ -1,8 +1,8 @@
 """The `run_facts` table: what the run was configured to do (docs/contracts/evaluation.md).
 
-From `manifest.json` (campaign-run/6, or an archived campaign-run/4 or /5) and the first host-start event.
+From `manifest.json` (campaign-run/7, or an archived campaign-run/4 or /5) and the first host-start event.
 Operator labels come from the manifest; an archived campaign-run/4 run has none, so the caller may supply them.
-The spend allowance of a campaign-run/6 run is its declared dollar limit, `spend_limit_usd`. An archived run
+The spend allowance of a campaign-run/7 run is its declared dollar limit, `spend_limit_usd`. An archived run
 declared a worst-case reservation instead: its allowance is the manifest's ceiling minus what earlier admissions
 had reserved, and only an archived run has `declared_ceiling_usd` and `prior_reserved_usd`.
 """
