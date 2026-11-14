@@ -385,11 +385,12 @@ import contracts and one contract version
 - **The judges' input.** After the run, `tools/memory_measure.py` builds `judged-facts/1`
   from those events, the knowledge tools' results, `private/knowledge-full.json` and
   `private/units.json`, mapping each player request to the evaluator's decision. A fact
-  has one route per actor, the strongest way it reached the player: `lead` (in the
-  briefing or a reminder), then `read` (its text in a read or a query result), then
-  `index`. `from_decision` is the last decision completed before the fact first reached
-  the player by a lead after the briefing or by a read, so the inputs of the next
-  decision, the first that could use it, count; a fact in the briefing has none.
+  has one route per actor: the first way, in time, that its text reached the player,
+  `lead` (in the briefing or a reminder) or `read` (its text in a read or a query
+  result); `index` only if neither ever happened. `from_decision` belongs to that same
+  exposure: the last decision completed before it, so the inputs of the next decision,
+  the first that could use it, count; a lead in the briefing, and an index line, have
+  none.
   Withheld facts have the route `withheld`. The unit record the benefit analysis
   re-draws is `private/units.json`.
 - **Readers that move with the versions**: the evaluator's sources and facts readers,
