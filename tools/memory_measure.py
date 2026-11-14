@@ -1340,8 +1340,8 @@ def unit_icc(touched: np.ndarray, missed: np.ndarray) -> np.ndarray:
             np.maximum(0, (between - within) / denominator), np.nan)
 
 
-def pilot_units(package: Path) -> dict:
-    """Read the package's frozen independent draw, including the shared-fact layout."""
+def pilot_units(package: Path, *, independent: bool = True) -> dict:
+    """Read a frozen draw; blocked study records require the study path."""
     if HELD_OUT in package.resolve().parts:
         raise MeasureError(f'{package}: the held-out lineage is not read for the memory measure')
     manifest = read_json(package / 'manifest.json')
@@ -1351,6 +1351,13 @@ def pilot_units(package: Path) -> dict:
     value = read_json(path)
     if not isinstance(value, dict) or value.get('schema') not in ('knowledge-units/1', 'knowledge-units/2'):
         raise MeasureError(f'{path}: expected knowledge-units/1 or knowledge-units/2; no other version is read')
+    if independent and value['schema'] != 'knowledge-units/1':
+        raise MeasureError(f'{path}: pilot requires knowledge-units/1 independent draws; knowledge-units/2 is study-only')
+    required = {'id', 'article_id', 'fact_ids', 'withheld'}
+    if (not isinstance(value.get('units'), list)
+            or any(not isinstance(u, dict) or not required <= u.keys()
+                   or not isinstance(u['fact_ids'], list) for u in value['units'])):
+        raise MeasureError(f'{path}: units must be a list of dicts with id, article_id, fact_ids and withheld')
     if value['schema'] == 'knowledge-units/2' and (
             type(value.get('start_index')) is not int or value['start_index'] < 0
             or not isinstance(value.get('block'), str) or not value['block']
@@ -1448,7 +1455,7 @@ def unit_outcomes(run: Path, runs: Sequence[Path], *, independent: bool = True) 
             stale_or_false=any(row['holds'] == 'stale_or_false' for row in applied))
 
     units, shared, fact_outcomes = [], [], []
-    draws_by_start = {package.name: pilot_units(package) for package in runs}
+    draws_by_start = {package.name: pilot_units(package, independent=independent) for package in runs}
     seeds = [drawn['seed'] for drawn in draws_by_start.values()]
     if independent and len(set(seeds)) != len(seeds):
         raise MeasureError('pilot requires each start\'s draw to have its own seed: a repeated seed repeats the arms, '
@@ -1653,17 +1660,24 @@ def crossed_mixed_model(units: Sequence[dict]) -> dict:
             raise ValueError('did not converge: ' + str(fitted.optim_retvals.get('message')))
         if not np.isfinite(np.r_[fitted.fe_mean, fitted.fe_sd, fitted.vcp_mean, fitted.vcp_sd]).all():
             raise ValueError('nonfinite posterior estimates')
+        with np.errstate(over='ignore', invalid='ignore'):
+            components = {name: dict(log_sd_mean=float(mean), log_sd_sd=float(sd),
+                    variance_mean=float(np.exp(2 * mean + 2 * sd ** 2)),
+                    variance_sd=float(np.sqrt(np.expm1(4 * sd ** 2)) * np.exp(2 * mean + 2 * sd ** 2)))
+                    for name, mean, sd in zip(('unit', 'start', 'withheld_by_unit'), fitted.vcp_mean, fitted.vcp_sd)}
+        if not all(math.isfinite(number) for component in components.values() for number in component.values()):
+            raise ValueError('nonfinite reported variance components')
         return dict(status='ok', rows=len(selected), withheld=dict(mean=float(fitted.fe_mean[1]), sd=float(fitted.fe_sd[1])),
-            variance_components={name: dict(log_sd_mean=float(mean), log_sd_sd=float(sd),
-                variance_mean=float(np.exp(2 * mean + 2 * sd ** 2)),
-                variance_sd=float(np.sqrt(np.expm1(4 * sd ** 2)) * np.exp(2 * mean + 2 * sd ** 2)))
-                for name, mean, sd in zip(('unit', 'start', 'withheld_by_unit'), fitted.vcp_mean, fitted.vcp_sd)})
+            variance_components=components)
     except Exception as error:
         return dict(status='failed', failure=f'{type(error).__name__}: {error}')
 
 
 def study(run: Path, runs: Sequence[Path], draw: Path, seed: int = 653, draws: int = 10000) -> dict:
-    design = read_study_draw(draw)
+    try:
+        design = read_study_draw(draw)
+    except (ValueError, KeyError) as error:
+        raise MeasureError(f'{draw}: invalid study draw: {error}') from error
     digest = file_sha256(draw)
     data = unit_outcomes(run, runs, independent=False)
     n, layout = len(design['starts']), design['layout']
@@ -1783,7 +1797,7 @@ def simulate_study(inputs: Path, price: float, starts: Sequence[int] = tuple(ran
             or touch.sum() == 0 or rho is None or not math.isfinite(rho) or not 0 <= rho < 1):
         raise MeasureError('simulation needs finite probabilities, interior miss probabilities, and spread in [0, 1)')
     if (sims < 1 or not math.isfinite(price) or price < 0 or not 0 < effect <= 1 or not starts or not blocks
-            or any(n < 2 for n in starts) or any(b < 1 or b > min(starts) for b in blocks)
+            or any(n < 2 for n in starts) or any(b < 1 or b > min(starts) // 2 for b in blocks)
             or any(not math.isfinite(sd) or sd < 0 for sd in slope_sd) or not slope_sd):
         raise MeasureError('invalid study simulation grid, effect, price or sims')
     logits = np.log(baseline / (1 - baseline))
@@ -1808,14 +1822,21 @@ def simulate_study(inputs: Path, price: float, starts: Sequence[int] = tuple(ran
         def withheld_mean(shift):
             return float(np.average(_logistic(logits[:, None] + shift + math.hypot(start_sd, sd) * nodes) @ weights, weights=touch))
         # A heterogeneous slope can require a negative shift even when effect=1.
-        low, high = -100., 100.
-        for _ in range(80):
-            mid = (low + high) / 2
-            if withheld_mean(mid) < delivered / effect:
-                low = mid
-            else:
-                high = mid
-        log_or = (low + high) / 2
+        bound = 100.
+        while True:
+            low, high = -bound, bound
+            for _ in range(80):
+                mid = (low + high) / 2
+                if withheld_mean(mid) < delivered / effect:
+                    low = mid
+                else:
+                    high = mid
+            log_or = (low + high) / 2
+            if abs(withheld_mean(log_or) - delivered / effect) <= 1e-6:
+                break
+            if bound >= 1e4:
+                raise MeasureError('withheld missed share cannot match the requested effect within 1e-6 at |log_or| <= 1e4')
+            bound = min(2 * bound, 1e4)
         for block_count in blocks:
             for n in starts:
                 sizes = [n // block_count + (b < n % block_count) for b in range(block_count)]

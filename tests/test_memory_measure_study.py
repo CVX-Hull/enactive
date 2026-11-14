@@ -54,7 +54,7 @@ def test_study_estimand_itt_touch_placebo_and_mixed_failure(tmp_path, monkeypatc
     primary = report['primary']
     assert primary['units'] == ['article-a']
     assert primary['excluded'] == dict(never_touched=['article-b', 'idle'], one_arm_only=[])
-    record = mm.pilot_units(packages[0])
+    record = mm.pilot_units(packages[0], independent=False)
     withheld_east = next(u['withheld'] for u in record['units'] if u['id'] == 'article-a')
     assert primary['value'] == (1 if withheld_east else -1)
     assert primary['p'] == pytest.approx(.5 if withheld_east else 1, abs=.04)
@@ -81,7 +81,7 @@ def test_study_rejects_bad_draw_provenance_and_use_packets(tmp_path, fault):
         mapping['kind'] = 'use'
         save(run / 'private/judge-mapping.json', mapping)
     else:
-        r = mm.pilot_units(packages[1])
+        r = mm.pilot_units(packages[1], independent=False)
         if fault == 'hash':
             r['draw_sha256'] = 'f' * 64
         elif fault == 'repeated':
@@ -149,6 +149,31 @@ def test_mixed_model_nonconvergence_and_success_are_reported(monkeypatch):
     assert result['withheld'] == dict(mean=.8, sd=.2)
     assert set(result['variance_components']) == {'unit', 'start', 'withheld_by_unit'}
 
+    monkeypatch.setattr(BinomialBayesMixedGLM, 'fit_vb', lambda self, **kwargs: SimpleNamespace(optim_retvals=dict(success=True),
+        fe_mean=np.array([0., .8]), fe_sd=np.array([.1, .2]), vcp_mean=np.array([400., 0., 0.]), vcp_sd=np.array([.1, .1, .1])))
+    result = mm.crossed_mixed_model(units)
+    assert result['status'] == 'failed' and 'nonfinite' in result['failure']
+    json.dumps(result, allow_nan=False)
+
+
+def test_real_mixed_model_reports_only_finite_numbers():
+    rng = np.random.default_rng(653)
+    units = [dict(id=f'unit-{u}', start=f'start-{s}', arm='withheld' if (u + s) % 2 else 'delivered',
+                  touched=True, missed=bool(rng.random() < (.65 if (u + s) % 2 else .35)))
+             for u in range(4) for s in range(6)]
+    result = mm.crossed_mixed_model(units)
+    assert result['status'] in ('ok', 'failed')
+    if result['status'] == 'failed':
+        assert result['failure']
+    def finite_numbers(value):
+        if isinstance(value, dict):
+            return all(finite_numbers(v) for v in value.values())
+        if isinstance(value, (int, float)):
+            return np.isfinite(value)
+        return True
+    assert finite_numbers(result)
+    json.dumps(result, allow_nan=False)
+
 
 def test_study_inputs_use_pooled_arms_and_beta_shrinkage_on_sealed_pilot_format(tmp_path):
     run, packages = pilot_fixture(tmp_path)
@@ -196,7 +221,7 @@ def test_facts_builder_reads_both_unit_record_versions_and_refuses_others(tmp_pa
     actor = package / 'actors/001'
     actor.mkdir(parents=True)
     (actor / 'host.jsonl').write_text(json.dumps(dict(type='host-start', schema='player-host/5', telemetry_version=5, actor_id='actor')) + '\n')
-    record = mm.pilot_units(package)
+    record = mm.pilot_units(package, independent=False)
     result = mm.build_facts(tmp_path / 'memory-measure/facts', [package])['admissions']['package']['001']
     assert {f['id'] for f in result['index']} == ke.delivered_fact_ids(record)
     record['schema'] = 'knowledge-units/3'
@@ -206,7 +231,33 @@ def test_facts_builder_reads_both_unit_record_versions_and_refuses_others(tmp_pa
     with pytest.raises(mm.MeasureError, match='unsupported frozen knowledge'):
         mm.build_facts(tmp_path / 'memory-measure/invalid', [package])
     with pytest.raises(mm.MeasureError, match='knowledge-units/1 or knowledge-units/2'):
-        mm.pilot_units(package)
+        mm.pilot_units(package, independent=False)
+
+
+def test_pilot_refuses_study_unit_records(tmp_path):
+    run, packages, _, _ = study_fixture(tmp_path)
+    with pytest.raises(mm.MeasureError, match='pilot requires knowledge-units/1'):
+        mm.pilot(run, packages, draws=10)
+    assert not (run / 'pilot.json').exists()
+
+
+@pytest.mark.parametrize('units', [None, {}, ['unit'], [{}], [dict(id='unit', placebo=False)]])
+def test_study_unit_records_refuse_malformed_units(tmp_path, units):
+    _, packages, _, _ = study_fixture(tmp_path)
+    path = packages[0] / 'private/units.json'
+    record = json.loads(path.read_text())
+    record['units'] = units
+    save(path, record)
+    with pytest.raises(mm.MeasureError, match='units must be a list of dicts'):
+        mm.pilot_units(packages[0], independent=False)
+
+
+@pytest.mark.parametrize('contents', ['{', '{}', '{"schema": "withholding-study-draw/1"}'])
+def test_study_wraps_malformed_draw_as_measure_error(tmp_path, contents):
+    path = tmp_path / 'malformed-draw.json'
+    path.write_text(contents)
+    with pytest.raises(mm.MeasureError, match='invalid study draw'):
+        mm.study(tmp_path / 'unused-run', [], path)
 
 
 def test_study_and_inputs_cli_and_simulation_json_do_not_write_outputs(tmp_path, monkeypatch, capsys):
@@ -231,7 +282,7 @@ def test_study_and_inputs_cli_and_simulation_json_do_not_write_outputs(tmp_path,
         assert result['delivered_missed_share'] / row['withheld_missed_share'] == pytest.approx(.5)
 
 
-@pytest.mark.parametrize('fault', ['version', 'rho', 'effect', 'sims', 'price', 'probability'])
+@pytest.mark.parametrize('fault', ['version', 'rho', 'effect', 'sims', 'price', 'probability', 'singleton-block'])
 def test_simulation_refuses_invalid_or_impossible_inputs(tmp_path, fault):
     value = dict(schema='withholding-study-inputs/1', spread=.1,
         units=[dict(id='unit', shrunk=dict(touch=.8, missed_when_touched=.2))])
@@ -246,11 +297,27 @@ def test_simulation_refuses_invalid_or_impossible_inputs(tmp_path, fault):
         kwargs['effect'] = .01
     elif fault == 'sims':
         kwargs['sims'] = 0
+    elif fault == 'singleton-block':
+        kwargs.update(starts=[5], blocks=[3])
     else:
         kwargs['price'] = -1
     path = save(tmp_path / 'inputs.json', value)
     with pytest.raises(mm.MeasureError):
         mm.simulate_study(path, **kwargs)
+
+
+@pytest.mark.parametrize('slope_sd', [1000., 1e6])
+def test_simulation_extreme_slope_solves_effect_or_refuses(tmp_path, slope_sd):
+    path = save(tmp_path / 'inputs.json', dict(schema='withholding-study-inputs/1', spread=0.,
+        units=[dict(id='unit', shrunk=dict(touch=1., missed_when_touched=.2))]))
+    try:
+        report = mm.simulate_study(path, 1., starts=[4], blocks=[1], slope_sd=[slope_sd], sims=1)
+    except mm.MeasureError as error:
+        assert 'cannot match the requested effect' in str(error)
+    else:
+        row = report['rows'][0]
+        assert abs(row['log_or']) > 100
+        assert abs(row['withheld_missed_share'] - report['delivered_missed_share'] / report['effect']) <= 1e-6
 
 
 def test_study_inputs_read_actual_sealed_pilot_when_available(tmp_path):

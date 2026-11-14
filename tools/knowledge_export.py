@@ -91,8 +91,8 @@ def layout_draw(version: str, layout: dict, starts: int, blocks: list[str], seed
     parsed = []
     for spec in blocks:
         label, size = spec.rsplit(':', 1)
-        if not label or int(size) < 1 or label in [b['label'] for b in parsed]:
-            raise ValueError('blocks need unique labels and positive counts')
+        if not label or int(size) < 2 or label in [b['label'] for b in parsed]:
+            raise ValueError('blocks need unique labels and counts >= 2')
         parsed.append(dict(label=label, count=int(size)))
     if starts < 2 or sum(b['count'] for b in parsed) != starts:
         raise ValueError('blocks must sum to starts, with starts >= 2')

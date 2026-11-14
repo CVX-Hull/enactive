@@ -124,7 +124,8 @@ def test_study_draw_block_balance_determinism_placebos_and_export(tmp_path, monk
 
 @pytest.mark.parametrize('n,blocks,placebo', [
     (1, ['save:1'], []), (4, ['save:3'], []), (4, ['save:4'], ['unknown']),
-    (4, ['save:4'], ['fact-4', 'fact-4']), (4, ['save:2', 'save:2'], []), (4, ['save:0', 'other:4'], [])])
+    (4, ['save:4'], ['fact-4', 'fact-4']), (4, ['save:2', 'save:2'], []), (4, ['save:0', 'other:4'], []),
+    (4, ['save:1', 'other:3'], [])])
 def test_study_draw_refusals(n, blocks, placebo):
     from tools.knowledge_export import study_draw
     with pytest.raises(ValueError):

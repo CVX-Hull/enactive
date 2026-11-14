@@ -162,10 +162,11 @@ class Starts:
 
     @staticmethod
     def source_paths(entries: dict[str, str]) -> tuple[str, str]:
-        user = 'user/' if any(p.startswith('user/save/') for p in entries) else 'start/user/'
+        if not any(p.startswith('user/save/') for p in entries):
+            raise ValueError('source study does not contain its saved game under user/save/')
         store = next((p for p in ('start/work/' + PLAYER_STORE, PLAYER_STORE, 'start/' + PLAYER_STORE)
                       if p in entries), PLAYER_STORE)
-        return user, store
+        return 'user/', store
 
     def payload(self, directory: Path) -> dict[str, str]:
         actual = {'user/' + p: h for p, h in inventory(directory / 'user').items()}

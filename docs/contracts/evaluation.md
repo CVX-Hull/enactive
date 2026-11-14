@@ -729,7 +729,7 @@ of the starts and delivered in the other half.
   the placebo unit IDs, and per unit and block the half size and the withheld start
   indices.
 - **Blocks** are the saved moments the starts copy: a block's label names the source
-  study (`starts create --from`), and the counts sum to `N`. Within each block, each unit
+  study (`starts create --from`), and the counts, each at least 2, sum to `N`. Within each block, each unit
   takes its own random permutation that withholds it in exactly half of the block's
   starts; for an odd count a fair coin per unit sets the half to the floor or the ceiling,
   and the draw records it.
@@ -737,7 +737,7 @@ of the starts and delivered in the other half.
   the study's saved moments, named before the draw. They are drawn like any unit and
   analysed apart; no fact is invented for them.
 - A reader rebuilds the draw from its seed and refuses a file that differs, repeated or
-  unknown placebo IDs, blocks that do not sum to `N`, or `N < 2`. The rebuild uses numpy's
+  unknown placebo IDs, a block of fewer than 2 starts, or blocks that do not sum to `N`. The rebuild uses numpy's
   generator, whose stream is reproducible only under the pinned numpy, so the pin does not
   change while a study's draw is in use.
 - A block's label is asserted, not checked: the analysis checks each package's block
@@ -746,8 +746,9 @@ of the starts and delivered in the other half.
 - `--study-draw FILE --start-index I` exports start `I`'s package. Its
   `private/units.json` is `knowledge-units/2`: the `knowledge-units/1` fields with the
   draw's seed, plus `draw_sha256`, `start_index`, `block` and each unit's `placebo`. The
-  facts builder and the pilot analysis read `knowledge-units/1` (the sealed pilot's
-  packages) and `knowledge-units/2`, and refuse any other version.
+  facts builder, `study` and `study-inputs` read `knowledge-units/1` (the sealed pilot's
+  packages) and `knowledge-units/2`; the pilot analysis reads only `knowledge-units/1`.
+  Any other version is refused.
 
 ### The withholding study's analysis (`withholding-study/1`)
 
@@ -777,12 +778,12 @@ pilot's rule above stays as it was for the sealed pilot.
   the units excluded as never touched or touched in one arm only.
 - **Intention to treat.** The same statistic and test over every non-placebo unit, with
   missed per unit and start and an untouched unit counted as not missed.
-- **Touch balance.** The touched share per arm, and the same test, two-sided, on touched:
+- **Touch balance.** Over non-placebo units, the touched share per arm, and the same test, two-sided, on touched:
   withholding must not change what the player gets to.
 - **Placebo.** The primary statistic and test over placebo units only. Delivery of facts
   that cannot matter should show no effect; one would point to a bias in the judges or
   the outcome.
-- **Secondary, a crossed mixed model.** On touched (unit, start) rows, statsmodels'
+- **Secondary, a crossed mixed model.** On touched non-placebo (unit, start) rows, statsmodels'
   `BinomialBayesMixedGLM` (variational fit): missed on withheld, with variance components
   for unit, start, and a withheld-by-unit slope. It reports the withheld coefficient's
   posterior mean and SD and each component's (log SD and implied variance). A failed or
@@ -790,8 +791,8 @@ pilot's rule above stays as it was for the sealed pilot.
   stands.
 - **Judges.** As in the pilot, the first two judges' agreement, κ and dispute rate over
   all pairs and over driving pairs, with a start-bootstrap interval on agreement, and on
-  the binary missed outcome (one judge gave `against` or `found_again`, the other not)
-  the 2×2 table, positive and negative specific agreement and Gwet's AC1. κ falls when
+  the binary missed outcome (`against` or `found_again` against any other label) the 2×2
+  table of the two judges' answers, positive and negative specific agreement and Gwet's AC1. κ falls when
   misses are rare even with high agreement; the specific agreements and AC1 show which
   side the disagreement is on.
 - `not_corrected` states that the outcome rests on adjudicated model-judge labels;
