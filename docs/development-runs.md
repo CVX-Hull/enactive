@@ -157,8 +157,10 @@ refuses missing, changed or extra files, and prints the start manifest's SHA-256
 Starts live in the main checkout's `.runtime/starts/<name>/`; `list` reports their
 hashes and player-store paths. A run using a start cites its manifest hash and says
 that the copied lineage is no longer held out. These copies do not establish a
-held-out comparison. The lead checks that each start loads to its recorded
-character and time before using it. The record citing a start lists its disposal
+held-out comparison. Every start of one source is a byte-identical, hash-verified copy,
+so one load through the custodian stands for all of them: the first start a study plays
+is read for its recorded character and time before the rest
+([owner decision](decisions/owner-decisions.md)). The record citing a start lists its disposal
 study and the userdir archive path.
 
 With the game closed, `python -m tools.starts install NAME` stages the start, then
