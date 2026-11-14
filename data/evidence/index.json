@@ -851,6 +851,125 @@
         "user": ".runtime/worktrees/real-launch-check/.runtime/user@d71ced0"
       },
       "visibility": "private"
+    },
+    "withholding-pilot-619": {
+      "availability": "present",
+      "bytes": 509122803,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-pilot.md"
+      ],
+      "files": 4409,
+      "manifest_sha256": "2480a55cf2fea43d63301dd414746e6a3d450d9f7219d5fc5ec3201ebeb1c8ac",
+      "note": "The withholding pilot (#619): the six frozen packages with traces, frames, receipts and session stores; their evaluation records; the blind, use and process judge runs (packets, events, adjudication, pilot.json, measure.json); the judges' raw answers and the lead's scripts",
+      "sources": {
+        "computer-sessions/withholding-pilot-619-11": ".runtime/computer-sessions/withholding-pilot-619-11",
+        "computer-sessions/withholding-pilot-619-12": ".runtime/computer-sessions/withholding-pilot-619-12",
+        "computer-sessions/withholding-pilot-619-13": ".runtime/computer-sessions/withholding-pilot-619-13",
+        "computer-sessions/withholding-pilot-619-14": ".runtime/computer-sessions/withholding-pilot-619-14",
+        "computer-sessions/withholding-pilot-619-15": ".runtime/computer-sessions/withholding-pilot-619-15",
+        "computer-sessions/withholding-pilot-619-16": ".runtime/computer-sessions/withholding-pilot-619-16",
+        "evaluations/2a3bbc96d426bd1804b2d4bddc32f0c4": ".runtime/evaluations/2a3bbc96d426bd1804b2d4bddc32f0c4",
+        "evaluations/3de3c09f6b8b7cd44ad6aeea3db28b2c": ".runtime/evaluations/3de3c09f6b8b7cd44ad6aeea3db28b2c",
+        "evaluations/7a27a05fb1a7e88fef6710a7132b452b": ".runtime/evaluations/7a27a05fb1a7e88fef6710a7132b452b",
+        "evaluations/bb8e73f1fbe6109b94a84ef058c7e36c": ".runtime/evaluations/bb8e73f1fbe6109b94a84ef058c7e36c",
+        "evaluations/eab6f6d1c3a247575f804bdcdb2d1549": ".runtime/evaluations/eab6f6d1c3a247575f804bdcdb2d1549",
+        "evaluations/f54a0683792049442a44c169e0cbb0a5": ".runtime/evaluations/f54a0683792049442a44c169e0cbb0a5",
+        "judging-inputs": "lead scratch: judges' answers, package builder, play chain, trace reader, simulation and host-summary outputs",
+        "memory-measure/pilot-619-blind": ".runtime/memory-measure/pilot-619-blind",
+        "memory-measure/pilot-619-use": ".runtime/memory-measure/pilot-619-use",
+        "memory-measure/process-pilot-619": ".runtime/memory-measure/process-pilot-619"
+      },
+      "visibility": "private"
+    },
+    "withholding-pilot-619-start-11": {
+      "availability": "present",
+      "bytes": 20216510,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-pilot.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "eb082c05d59948caceec044923c3b587d45e6d76d8f8d2addc84bcb18f55156e",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-11; manifest e084b94b912121ec13733d5569725f74c8c89f4d5ec898a1a94928e3a27a9ed6. Withholding pilot (#619) start S1: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-11",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-pilot-619-start-12": {
+      "availability": "present",
+      "bytes": 19677381,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-pilot.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "2421cacb81a3e57b74f61396afbb721a6fba72990a370598cb1c92d7e7d5ade4",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-12; manifest d6946113888a5e342ffc6fc26ffff4dfde09e93ebd22d9d8c62a41f9c9b1b669. Withholding pilot (#619) start seven-day-end-12: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-12",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-pilot-619-start-13": {
+      "availability": "present",
+      "bytes": 20559983,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-pilot.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "1c43dcf80f070b63654b3db61810924eccec39d912c733510001b4396394d586",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-13; manifest 540a09ae43c601b0d673ad635f8e5e6b46e39b8ed19e9c2929417f344962fa0f. Withholding pilot (#619) start seven-day-end-13: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-13",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-pilot-619-start-14": {
+      "availability": "present",
+      "bytes": 20559155,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-pilot.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "078de8ee8f9b3577c6cd02dab396be770c324675ea8a54c0f078f26fb91918b6",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-14; manifest a4deaabff4fb6bd0f5f68e34c59b00382597507f4a2396eccad7553a3416f894. Withholding pilot (#619) start seven-day-end-14: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-14",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-pilot-619-start-15": {
+      "availability": "present",
+      "bytes": 20085066,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-pilot.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "cc8e9583f44d489bb67154764ce9565605a8f77abee1cc7959ec964bef6996c8",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-15; manifest 23e02cdb269b1b992a7d5b33274398334032ba1980a725e9ee8241e8c9944329. Withholding pilot (#619) start seven-day-end-15: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-15",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-pilot-619-start-16": {
+      "availability": "present",
+      "bytes": 19939626,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-pilot.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "7bed5b5b9bd6008081c68c631f90082ba993d80179d260f57c9bf08dd997059b",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-16; manifest 907e23ef001c8d87575ed9a07ad402c2aaf86f6ae99f539f2f26718dabe3b8db. Withholding pilot (#619) start seven-day-end-16: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-16",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
     }
   }
 }
