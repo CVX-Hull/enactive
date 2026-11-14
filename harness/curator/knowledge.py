@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 
-SCHEMA = 'curator-knowledge/1'
+SCHEMA = 'curator-knowledge/2'
 BRANCH = 'main'
 IDENTITY = ('-c', 'user.name=enactive-gate', '-c', 'user.email=gate@localhost',
             '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', '-c', 'core.hooksPath=/dev/null')
@@ -85,6 +85,7 @@ class Repository:
             'knowledge.json': _dump({'schema': SCHEMA, 'game': self.game}),
             'facts.jsonl': b'',
             'ontology/types.json': b'[]\n',
+            'provenance.json': _dump({'frames': {}}),
             'programs/.keep': b'',
             'tests/.keep': b'',
         }
@@ -95,14 +96,27 @@ class Repository:
         tags = self._tags()
         if not tags:
             raise KnowledgeError(f'{self.path} has no published version; call ensure()')
-        return f'v{max(_number(tag) for tag in tags)}'
+        version = f'v{max(_number(tag) for tag in tags)}'
+        self._check_schema(version)
+        return version
 
     def _resolve(self, version: str | None) -> str:
-        version = self.published() if version is None else version
+        if version is None:
+            return self.published()
         _number(version)
         if version not in self._tags():
             raise KnowledgeError(f'unknown version {version}')
+        self._check_schema(version)
         return version
+
+    def _check_schema(self, version: str) -> None:
+        message = f'unsupported knowledge schema: expected {SCHEMA}; start a new repository'
+        try:
+            metadata = json.loads(self._show(version, 'knowledge.json'))
+        except (KnowledgeError, ValueError, RecursionError) as error:
+            raise KnowledgeError(message) from error
+        if not isinstance(metadata, dict) or metadata.get('schema') != SCHEMA:
+            raise KnowledgeError(message)
 
     def _show(self, version: str, relative: str) -> bytes:
         return _git(self.path, 'show', f'{version}:{relative}')
@@ -122,9 +136,18 @@ class Repository:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(self._show(version, raw))
 
-    def facts(self, version: str | None = None) -> list[dict]:
+    def records(self, version: str | None = None) -> list[dict]:
         text = self._show(self._resolve(version), 'facts.jsonl').decode('utf-8')
         return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+    def facts(self, version: str | None = None) -> list[dict]:
+        return [item for item in self.records(version) if item.get('record') == 'fact']
+
+    def articles(self, version: str | None = None) -> list[dict]:
+        return [item for item in self.records(version) if item.get('record') == 'article']
+
+    def provenance(self, version: str | None = None) -> dict:
+        return json.loads(self._show(self._resolve(version), 'provenance.json'))
 
     def types(self, version: str | None = None) -> list[dict]:
         return json.loads(self._show(self._resolve(version), 'ontology/types.json'))

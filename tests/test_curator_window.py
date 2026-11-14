@@ -46,8 +46,8 @@ def test_a_window_holds_only_its_steps_their_tool_calls_and_their_frames(tmp_pat
 
 
 def test_the_manifest_says_what_the_window_is_and_what_it_dropped(tmp_path):
-    out, manifest = narrowed(tmp_path, Window('s1', '001', 4, 6, game_time='day 2 08:15'))
-    assert manifest['window'] == dict(session='s1', actor='001', first=4, last=6, game_time='day 2 08:15',
+    out, manifest = narrowed(tmp_path, Window('s1', '001', 4, 6))
+    assert manifest['window'] == dict(session='s1', actor='001', first=4, last=6,
                                       steps_available=12)
     assert 'steps, tool calls and frames outside the window' in manifest['dropped']
     assert json.loads((out/'manifest.json').read_text()) == manifest
@@ -91,7 +91,7 @@ def test_a_window_must_fit_the_trace_it_is_given(tmp_path):
     dict(session='s1'), dict(actor='001'), dict(session='s1', actor='001'),
     dict(session='s1', actor='001', first=0, last=3), dict(session='s1', actor='001', first=5, last=4),
     dict(session='s1', actor='001', first=True, last=3), dict(session='s1', actor='001', first=1.5, last=3),
-    dict(session='s1', actor='001', first=1, last=3, game_time=9), dict(first=2), dict(game_time='day 1'),
+    dict(first=2),
     dict(session='../x', actor='001', first=1, last=3), dict(session='s 1', actor='001', first=1, last=3),
     dict(session='', actor='001', first=1, last=3), dict(session='s1', actor='a/b', first=1, last=3),
     dict(session='s1', actor='001\n', first=1, last=3), dict(session=5, actor='001', first=1, last=3),
@@ -120,10 +120,43 @@ def test_windows_are_read_from_rows_and_unknown_keys_are_refused():
         Window.read([1, 2])
 
 
-def test_coverage_names_the_session_actor_last_step_read_and_game_time(tmp_path):
-    out, manifest = narrowed(tmp_path, Window('s1', '001', 10, 40, game_time='day 3'))
-    assert coverage(Window('s1', '001', 10, 40, game_time='day 3'), ['s1'], manifest) == {
-        'schema': 'curator-coverage/1', 'session': 's1', 'actor': '001', 'last_step': 12, 'game_time': 'day 3'}
+def test_coverage_names_the_session_actor_and_last_step_read(tmp_path):
+    out, manifest = narrowed(tmp_path, Window('s1', '001', 10, 40))
+    assert coverage(Window('s1', '001', 10, 40), ['s1'], manifest) == {
+        'schema': 'curator-coverage/2', 'session': 's1', 'actor': '001', 'last_step': 12}
     whole = coverage(FULL, ['sd1a1', 'sd1a2'], {})
-    assert whole == {'schema': 'curator-coverage/1', 'session': 'sd1a1,sd1a2', 'actor': None, 'last_step': None,
-                     'game_time': None}
+    assert whole == {'schema': 'curator-coverage/2', 'session': 'sd1a1,sd1a2', 'actor': None, 'last_step': None}
+
+
+def test_sightings_follow_trace_order_even_when_windows_are_replayed_backwards(tmp_path):
+    from harness.curator.window import positions
+
+    trace = make_long_session(tmp_path/'evidence')
+    later = tmp_path/'later'
+    later_manifest = restrict(later, project([trace], later), Window('s1', '001', 7, 9))
+    known = positions(later, later_manifest, {})
+    earlier = tmp_path/'earlier'
+    earlier_manifest = restrict(earlier, project([trace], earlier), Window('s1', '001', 2, 4))
+    added = positions(earlier, earlier_manifest, known)
+    assert added[frame_id(1, 4)]['order'] < known[frame_id(1, 7)]['order']
+    assert positions(later, later_manifest, known | added) == known
+    assert added[frame_id(1, 2)] == dict(session='s1', actor='001', step=2, order=[1, '001', 2])
+
+
+def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path):
+    from harness.curator.window import citations_only, positions
+
+    trace = make_long_session(tmp_path/'evidence')
+    out = tmp_path/'trace'
+    manifest = project([trace], out)
+    cited = {frame_id(1, 3), frame_id(2, 5)}
+    reduced = citations_only(out, manifest, cited)
+    assert {p.stem for p in (out/'frames').iterdir()} == cited
+    assert [s['seq'] for s in steps(out)] == [3]
+    assert [s['seq'] for s in steps(out, '002')] == [5]
+    assert not (out/'s1'/'001'/'received.txt').exists()
+    assert not (out/'s1'/'handoffs').exists()
+    assert reduced['citations_only'] == sorted(cited)
+    assert positions(out, reduced, {}).keys() == cited
+    with pytest.raises(WindowError, match='missing from trace'):
+        citations_only(out, reduced, {'absent'})

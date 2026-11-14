@@ -41,11 +41,10 @@ json.dump(dict(schema='curator-submission/1', base_version=version, summary='fir
                from_drafts=[d for d in os.listdir('drafts')],
                changes=[dict(op='add_type', type=dict(schema='curator-type/1', name='container',
                                                     description='a place that holds items', fields=['holds'])),
-                        dict(op='add_fact', fact=dict(schema='curator-fact/2', id='f1', type='container',
-                                                      statement='the cupboard holds bottles',
+                        dict(op='add_fact', fact=dict(schema='curator-fact/3', record='fact', id='f1', type='container',
+                                                      text='the cupboard holds bottles',
                                                       scope=dict(game='testgame'), citations=[cite],
-                                                      subject='cupboard', place='the kitchen', game_time='day 1 08:00',
-                                                      kind='place_with_goods'))]),
+                                                      subject='cupboard'))]),
           open('submissions/s1/submission.json', 'w'))
 '''
 DRAFT = '''
@@ -80,7 +79,7 @@ def test_a_scripted_session_submits_a_fact_and_leaves_a_draft(tmp_path, world):
     record = run_session(repo, trace, host(tmp_path, 'both', SUBMIT + DRAFT))
     assert record['manifest']['lifecycle']['state'] == 'sealed'
     assert [v['accepted'] for v in record['verdicts']] == [True] and record['published_after'] == 'v1'
-    assert [f['statement'] for f in repo.facts('v1')] == ['the cupboard holds bottles']
+    assert [f['text'] for f in repo.facts('v1')] == ['the cupboard holds bottles']
     assert record['drafts']['created'] == ['plan']
     assert not any((repo.state/'workspaces').iterdir())  # the workspace is gone
     second = run_session(repo, trace, host(tmp_path, 'idle', IDLE))
@@ -346,7 +345,7 @@ def _log(repo, record) -> str:
 
 def test_a_window_session_is_given_only_its_steps_and_frames_and_the_brief_says_so(tmp_path, long_world):
     repo, trace = long_world
-    window = Window('s1', '001', 4, 6, game_time='day 2 08:15')
+    window = Window('s1', '001', 4, 6)
     record = run_session(repo, trace, host(tmp_path, 'show', SHOW_TRACE), window=window)
     log = _log(repo, record)
     assert record['manifest']['lifecycle']['state'] == 'sealed', record['manifest']['lifecycle']
@@ -354,13 +353,13 @@ def test_a_window_session_is_given_only_its_steps_and_frames_and_the_brief_says_
     assert json.loads(log.split('FRAMES ')[1].splitlines()[0]) == [f'{frame_id(1, n)}.png' for n in (4, 5, 6)]
     assert json.loads(log.split('WINDOW ')[1].splitlines()[0])['last'] == 6
     brief = (repo.state/'sessions'/record['manifest']['id']/'brief.md').read_text()
-    assert 'steps 4 to 6 of 12 of actor `001`' in brief and "'day 2 08:15'" in brief
+    assert 'steps 4 to 6 of 12 of actor `001`' in brief
     assert record['manifest']['inputs']['window'] == window.record() and record['manifest']['inputs']['window_frames'] == 3
 
 
 def test_a_window_session_cannot_cite_a_frame_outside_its_range_and_publishes_its_coverage(tmp_path, long_world):
     repo, trace = long_world
-    window = Window('s1', '001', 4, 6, game_time='day 2 08:15')
+    window = Window('s1', '001', 4, 6)
     outside = run_session(repo, trace, host(tmp_path, 'outside', SUBMIT, frame_id(1, 3)), window=window)
     verdict = outside['verdicts'][0]
     assert verdict['accepted'] is False and repo.published() == 'v0'
@@ -371,7 +370,7 @@ def test_a_window_session_cannot_cite_a_frame_outside_its_range_and_publishes_it
     assert inside['verdicts'][0]['accepted'] is True and repo.published() == 'v1'
     assert json.loads(subprocess.run(['git', 'show', 'v1:coverage.json'], cwd=repo.path, capture_output=True,
                                      text=True, check=True).stdout) == dict(
-        schema='curator-coverage/1', session='s1', actor='001', last_step=6, game_time='day 2 08:15')
+        schema='curator-coverage/2', session='s1', actor='001', last_step=6)
     assert inside['manifest']['inputs']['coverage']['last_step'] == 6
 
 
@@ -381,7 +380,7 @@ def test_a_whole_admission_session_is_the_full_window_and_stamps_no_actor(tmp_pa
     assert record['verdicts'][0]['accepted'] is True
     stamp = json.loads(subprocess.run(['git', 'show', 'v1:coverage.json'], cwd=repo.path, capture_output=True,
                                       text=True, check=True).stdout)
-    assert stamp == dict(schema='curator-coverage/1', session='s1', actor=None, last_step=None, game_time=None)
+    assert stamp == dict(schema='curator-coverage/2', session='s1', actor=None, last_step=None)
     assert record['manifest']['inputs']['window'] == {}
     assert 'This trace is a window' not in (repo.state/'sessions'/record['manifest']['id']/'brief.md').read_text()
 
@@ -392,3 +391,21 @@ def test_a_window_that_does_not_fit_its_trace_aborts_the_session_before_the_host
     record = run_session(repo, trace, host(tmp_path, 'idle', IDLE), window=Window('s1', '001', 13, 20))
     life = record['manifest']['lifecycle']
     assert life['state'] == 'aborted' and any('starts at 13' in e for e in life['errors'])
+
+
+def test_citations_accumulate_across_windows_of_one_admission(tmp_path, long_world):
+    repo, trace = long_world
+    first = run_session(repo, trace, host(tmp_path, 'first', SUBMIT), window=Window('s1', '001', 1, 2))
+    assert first['verdicts'][0]['accepted'], first
+    # The next window proposes a distinct fact using the already-published type.
+    second_code = SUBMIT + '''
+p = 'submissions/s1/submission.json'
+data = json.load(open(p))
+data['changes'] = [c for c in data['changes'] if c['op'] != 'add_type']
+data['changes'][0]['fact']['id'] = 'f2'
+json.dump(data, open(p, 'w'))
+'''
+    second = run_session(repo, trace, host(tmp_path, 'second', second_code), window=Window('s1', '001', 3, 4))
+    assert second['verdicts'][0]['accepted'], second
+    assert repo.provenance()['last_admission']['citations'] == [frame_id(1, 1), frame_id(1, 3)]
+    assert repo.provenance()['last_admission']['coverage']['last_step'] == 4

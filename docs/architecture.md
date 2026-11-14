@@ -179,8 +179,6 @@ Current coupling. None of it is in the shared player code. The entries inside
 | macOS SDL adapter loaded into the game process | [`harness/computer/native/`](../harness/computer/native) | [Native control](components/native-control.md) |
 | Adapter injection through `DYLD_INSERT_LIBRARIES` | [`harness/computer/launch.py`](../harness/computer/launch.py) | [Native control](components/native-control.md) |
 | CDDA-specific play guidance | [Player guide](player-guide.md) | Player guide |
-| Curator fact format `curator-fact/2`: required place and game time, four fixed kinds including `place_with_goods` | [`harness/curator/gate.py`](../harness/curator/gate.py), [`tools/curator_host/prompt.md`](../tools/curator_host/prompt.md) | [Curator](components/curator.md); [decided change](design/general-memory.md) |
-| The brief gate's check, a pattern match on subject and place for `place_with_goods` facts | [`tools/memory_screen_checks.py`](../tools/memory_screen_checks.py) | [Evaluation contract](contracts/evaluation.md) |
 | Memory measure: the anchor check's frozen prompt and `anchor_verdict` labels are worded for going to a known place with goods, kept only to re-judge the measure gate's 30 owner-labelled pairs; the standing packets, labels and measures name no kind of thing in a game | [`tools/memory_measure.py`](../tools/memory_measure.py), [`harness/evaluation/core/judge.py`](../harness/evaluation/core/judge.py) | [Evaluation contract](contracts/evaluation.md) |
 
 ## Separate recovery and memory boundaries

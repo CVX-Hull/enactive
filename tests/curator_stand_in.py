@@ -28,7 +28,7 @@ def _text(message: dict) -> str:
     return ''.join(part.get('text', '') for part in content or [] if isinstance(part, dict))
 
 
-def script(messages: list[dict], attack: str | None = None) -> list[tuple[str, dict]] | None:
+def script(messages: list[dict], attack: str | None = None, *, unfiled: bool = False) -> list[tuple[str, dict]] | None:
     """The tool calls for the next turn, or None for a plain-text turn.
 
     With `attack` (the path of a planted secret), the session instead tries to read it, write
@@ -41,6 +41,25 @@ def script(messages: list[dict], attack: str | None = None) -> list[tuple[str, d
                 ('write_file', {'path': 'trace/manifest.json', 'content': 'x'}), ('list_dir', {'path': '..'}),
                 ('read_file', {'path': '../../../credentials.json'})] if turns == 0 else (
                     [('finish', {'summary': 'attacks done'})] if turns == 1 else None)
+    grooming = any('Session kind: grooming.' in _text(m) for m in messages if m.get('role') == 'user')
+    if grooming:
+        if turns == 0:
+            return [('read_file', {'path': 'brief.md'}), ('read_file', {'path': 'knowledge/facts.jsonl'}),
+                    ('read_file', {'path': 'knowledge/ontology/types.json'}),
+                    ('read_file', {'path': 'grooming.md'}), ('read_file', {'path': 'trace/manifest.json'})]
+        if turns == 1:
+            tools = '\n'.join(_text(m) for m in messages if m.get('role') == 'tool')
+            version = re.search(r'Published knowledge: `(v[0-9]+)`', tools).group(1)
+            # This stand-in's admission publishes f1. Its grooming files that evidence.
+            article = dict(schema='curator-fact/3', record='article', id='a1', title='Stand-in subject',
+                           lead='A useful observed relation. Check before relying on it.',
+                           body=[dict(text='An observed relation.', facts=['f1'])], links=[])
+            submission = dict(schema='curator-submission/1', base_version=version, summary='stand-in grooming',
+                              changes=([dict(op='add_type', type=dict(schema='curator-type/1', name='unfiled',
+                                                                    description='a valid change with no filing', fields=[]))]
+                                       if unfiled else [dict(op='add_article', article=article)]))
+            return [('write_file', {'path': 'submissions/grooming/submission.json', 'content': json.dumps(submission)})]
+        return [('finish', {'summary': 'stand-in grooming done'})] if turns == 2 else None
     if turns == 0:
         return [('read_file', {'path': 'brief.md'}), ('list_dir', {'path': 'trace/frames'}),
                 ('read_file', {'path': 'knowledge/knowledge.json'})]
@@ -52,10 +71,9 @@ def script(messages: list[dict], attack: str | None = None) -> list[tuple[str, d
         submission = dict(schema='curator-submission/1', base_version=version, summary='stand-in: one control and one fact',
                           changes=[dict(op='add_type', type=dict(schema='curator-type/1', name='control',
                                                                  description='what an input does', fields=['input', 'effect'])),
-                                   dict(op='add_fact', fact=dict(schema='curator-fact/2', id='f1', type='control',
-                                                                 statement='stand-in statement', scope=dict(game=game),
-                                                                 citations=frames[:1], subject='stand-in subject',
-                                                                 place='', game_time='', kind='how_it_works'))])
+                                   dict(op='add_fact', fact=dict(schema='curator-fact/3', record='fact', id='f1', type='control',
+                                                                 text='stand-in statement', scope=dict(game=game),
+                                                                 citations=frames[:1], subject='stand-in subject'))])
         return [('view_frame', {'frames': frames[:2]}), ('run_workbench', {'args': ['--help']}),
                 ('write_file', {'path': 'submissions/stand-in/submission.json', 'content': json.dumps(submission)}),
                 ('write_file', {'path': 'drafts/notes/notes.md', 'content': 'unfinished'}),
@@ -86,6 +104,8 @@ class StandIn:
     """`rate-limit-once` refuses the first request with a server retry hint; otherwise `good`.
 
     `rate-limit-veto` adds the server's no-retry instruction to that refusal.
+
+    `grooming-unfiled` submits a valid type addition without filing the admission fact.
 
     `no-usage` omits usage (the proxy then fails closed).
     """
@@ -124,7 +144,7 @@ class StandIn:
                     prompt_tokens=1000 + 100 * turn, completion_tokens=40, total_tokens=1040 + 100 * turn, cost=outer.cost,
                     prompt_tokens_details=dict(cached_tokens=800 if turn else 0, cache_write_tokens=0),
                     completion_tokens_details=dict(reasoning_tokens=10))
-                data = stream(script(body['messages'], outer.attack), usage, turn)
+                data = stream(script(body['messages'], outer.attack, unfiled=outer.mode == 'grooming-unfiled'), usage, turn)
                 self.send_response(200)
                 self.send_header('content-type', 'text/event-stream')
                 self.send_header('content-length', str(len(data)))

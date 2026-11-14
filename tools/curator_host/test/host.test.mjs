@@ -170,7 +170,7 @@ test('every request ends with a budget note, and past four fifths reading tools 
 
 test('the dollar budget moves the phase too', async () => {
   const { budgetNote } = await import('../host.mjs');
-  assert.match(budgetNote({ requests: 1, maxRequests: 100, spent: 0.6, budget: 1 }).text, /More than half/);
+  assert.match(budgetNote({ requests: 1, maxRequests: 100, spent: 0.6, budget: 1 }).text, /a submission for changes you can support/);
   assert.match(budgetNote({ requests: 1, maxRequests: 100, spent: 0.85, budget: 1 }).text, /refused/);
   assert.doesNotMatch(budgetNote({ requests: 1, maxRequests: 100, spent: 0.1, budget: 1 }).text, /half|refused/);
 });

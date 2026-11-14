@@ -1,13 +1,12 @@
 """The memory screen's free checks on fixtures built here: a knowledge repository, a two-run lineage and the cut (#590)."""
 from datetime import datetime, timezone
-import hashlib
 import json
 from pathlib import Path
 
 import pytest
 
 from harness.curator.knowledge import Repository
-from tools.memory_screen_checks import (CutModel, brief_gate, StoreError, covered_turns, cut_report, fact_history, main,
+from tools.memory_screen_checks import (CutModel, StoreError, covered_turns, cut_report, fact_history, main,
     read_lineage, read_versions, replay, simulate, store_report, summarise)
 
 SESSION = 'c' * 32
@@ -15,8 +14,8 @@ RECORD = '5' * 32
 BASE = 4_000_000_000.0
 
 
-def fact(identity: str, statement: str, version: str, session: str, citations: list[str]) -> dict:
-    return dict(schema='curator-fact/1', id=identity, type='resource', statement=statement, scope=dict(game='cdda'),
+def fact(identity: str, text: str, version: str, session: str, citations: list[str]) -> dict:
+    return dict(schema='curator-fact/3', record='fact', id=identity, type='resource', text=text, scope=dict(game='cdda'),
         citations=citations, published_in=version, session=session)
 
 
@@ -29,9 +28,9 @@ def knowledge(root: Path, tank_frame: str) -> Path:
     repository = Repository(root, 'cdda')
     repository.ensure()
     recipe = fact('rod-recipe', 'A rod needs a stick.', 'v1', 'run-a-1', ['x-1'])
-    repository.commit({'facts.jsonl': lines(recipe)}, 'Publish v1')
-    repository.commit({'facts.jsonl': lines(dict(recipe, statement='A rod needs a stick and a hook.'),
-        fact('roof-tank', 'The roof tank holds 18 L of clean water.', 'v2', 'run-a-2', [tank_frame]))}, 'Publish v2')
+    repository.commit({'facts.jsonl': lines(recipe)}, 'Publish v1\n\nsession: run-a-1')
+    repository.commit({'facts.jsonl': lines(dict(recipe, text='A rod needs a stick and a hook.'),
+        fact('roof-tank', 'The roof tank holds 18 L of clean water.', 'v2', 'run-a-2', [tank_frame]))}, 'Publish v2\n\nsession: run-a-2')
     for session in ('run-a-1', 'run-a-2'):
         directory = repository.state / 'sessions' / session
         directory.mkdir(parents=True)
@@ -99,7 +98,7 @@ def test_store_reads_each_version_and_changes_nothing(tmp_path):
         ('v1', 1, len(lines(fact('rod-recipe', 'A rod needs a stick.', 'v1', 'run-a-1', ['x-1'])))), ('v2', 2, versions[2]['bytes'])]
     history = fact_history(versions, 'rod-recipe')
     assert (history['version'], history['changed_in'], history['dropped_in']) == ('v1', ['v2'], None)
-    assert history['statement'] == 'A rod needs a stick.' and history['latest_statement'].endswith('a hook.')
+    assert history['text'] == 'A rod needs a stick.' and history['latest_text'].endswith('a hook.')
     assert fact_history(versions, 'cupboard') is None
     report, = store_report([repository], ['tank=tank|roof', 'rations=ration'], [])
     assert [(row['version'], row['covers'], row['added'], row['changed']) for row in report['versions'][1:]] == [
@@ -174,102 +173,110 @@ def test_cut_report_and_the_command(tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)['model']['turn_tokens'] == 950
 
 
-def place_fact(identity: str, subject: str, place: str, statement: str = 'x', **more) -> dict:
-    return dict(schema='curator-fact/2', id=identity, type='resource', statement=statement, scope=dict(game='cdda'),
-        citations=[f'{identity}-frame'], subject=subject, place=place, game_time='day 1 09:00', kind='place_with_goods',
-        published_in='v1', session='s', **more)
+def article(identity='article', title='A subject', **extra):
+    return dict(schema='curator-fact/3', record='article', id=identity, title=title, lead='A hypothesis.',
+                body=[dict(text='A claim.', facts=['roof-tank'])], links=[], published_in='v3', session='groom', **extra)
 
 
-def places(root: Path, *facts: dict) -> Path:
-    repository = Repository(root, 'cdda')
-    repository.ensure()
-    repository.commit({'facts.jsonl': lines(*facts)}, 'Publish v1')
-    return repository.path
-
-
-def patterns(tmp_path: Path, *rows: dict) -> Path:
-    path = tmp_path / 'patterns.json'
-    path.write_text(json.dumps(list(rows)))
-    return path
-
-
-def test_brief_gate_needs_both_patterns_and_ignores_the_statement_and_superseded_facts(tmp_path):
-    repository = places(tmp_path / 'k',
-        place_fact('both', 'Water Tank', 'on the roof of the north house'),
-        place_fact('subject-only', 'water tank', 'by the river'),
-        place_fact('place-only', 'bucket', 'on the roof'),
-        place_fact('statement-only', 'bucket', 'by the river', statement='a water tank on the roof'),
-        place_fact('replaced', 'water tank', 'roof of the old shed', superseded_by='both'),
-        dict(place_fact('old-contract', 'water tank', 'roof'), schema='curator-fact/1'),
-        dict(place_fact('hazard', 'water tank', 'roof'), kind='hazard'))
-    path = patterns(tmp_path, dict(label='tank', subject='tank', place='roof'), dict(label='rod', subject='rod', place='.'))
-    report = brief_gate(repository, path)
-    assert report['labels'][0]['matches'] == [dict(id='both', subject='Water Tank', place='on the roof of the north house',
-        game_time='day 1 09:00', citations=['both-frame'])]
-    assert report['labels'][1]['matches'] == [] and (report['labels_with_a_match'], report['labels_total']) == (1, 2)
-    size = report['store']['facts_jsonl_bytes']
-    assert report['store'] == dict(facts=7, current_place_with_goods=4, facts_jsonl_bytes=size) and size > 0
-    assert report['version'] == 'v1' and report['patterns_sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def test_brief_gate_renders_text_and_json_and_refuses_bad_patterns(tmp_path, capsys):
-    repository = places(tmp_path / 'k', place_fact('both', 'tank', 'roof'))
-    path = patterns(tmp_path, dict(label='tank', subject='TANK', place='ROOF'))
-    assert main(['brief-gate', str(repository), '--patterns', str(path)]) == 0
+def test_store_reports_fact_and_article_totals_current_counts_and_bytes_per_version(tmp_path, capsys):
+    path = knowledge(tmp_path/'knowledge', 'aaaa-2')
+    repo = Repository(path.parent, path.name)
+    old = repo.facts()
+    groomed = [dict(old[0], retired=dict(reason='contradicted')), old[1], article()]
+    repo.commit({'facts.jsonl': lines(*groomed)}, 'grooming\n\nsession: groom')
+    versions = read_versions(path)
+    assert len(versions[-1]['facts']) == 2 and len(versions[-1]['articles']) == 1
+    assert fact_history(versions, 'article') is None
+    report, = store_report([path], ['found=18 L', 'article=A subject'], [])
+    assert [(r['facts'], r['articles'], r['current_facts'], r['current_articles'], r['bytes'])
+            for r in report['versions']] == [(0, 0, 0, 0, 0),
+                (1, 0, 1, 0, versions[1]['bytes']), (2, 0, 2, 0, versions[2]['bytes']),
+                (2, 1, 1, 1, len(lines(*groomed)))]
+    assert report['versions'][-1]['session'] == 'groom'  # article-only publication has a session
+    assert report['found']['found'][0]['text'] == 'The roof tank holds 18 L of clean water.'
+    assert report['found']['article'] == []
+    assert main(['store', str(path), '--find', 'found=18 L']) == 0
     text = capsys.readouterr().out
-    assert 'tank: 1 matches' in text and 'both' in text and 'labels with at least one match: 1 of 1' in text
-    assert main(['brief-gate', str(repository), '--patterns', str(path), '--json']) == 0
-    assert json.loads(capsys.readouterr().out)['labels_with_a_match'] == 1
-    for bad in ([], [dict(label='a', subject='x')], [dict(label='a', subject='x', place='y', more='z')],
-                [dict(label='a', subject='x', place='')], [dict(label='a', subject='x', place='y')] * 2):
-        with pytest.raises(StoreError):
-            brief_gate(repository, patterns(tmp_path, *bad))
+    assert '2 facts (1 current), 1 articles (1 current)' in text and '18 L of clean water.' in text
+    assert main(['store', str(path), '--json']) == 0
+    assert json.loads(capsys.readouterr().out)[0]['versions'][-1]['articles'] == 1
 
 
-def test_a_fact_that_matches_two_labels_is_shared_and_counts_for_neither(tmp_path):
-    repository = places(tmp_path / 'k',
-        place_fact('wide', 'water tank and rod', 'on the roof'),
-        place_fact('tank-only', 'water tank', 'on the roof'))
-    path = patterns(tmp_path, dict(label='tank', subject='tank', place='roof'), dict(label='rod', subject='rod', place='roof'))
-    report = brief_gate(repository, path)
-    tank, rod = report['labels']
-    assert [m['id'] for m in tank['matches']] == ['tank-only'] and [m['id'] for m in tank['shared']] == ['wide']
-    assert rod['matches'] == [] and [m['id'] for m in rod['shared']] == ['wide']
-    assert report['shared'] == [dict(id='wide', labels=['tank', 'rod'])]
-    assert (report['labels_with_a_match'], report['labels_total']) == (1, 2)  # the rod passes on nothing but the shared fact
+@pytest.mark.parametrize('schema', ['curator-fact/1', 'curator-fact/2', 'curator-fact/4', None])
+@pytest.mark.parametrize('command', ['store', 'replay'])
+def test_memory_readers_refuse_other_record_schemas(tmp_path, schema, command):
+    runs, tank, need = lineage(tmp_path)
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    invalid = dict(fact('f', 'x', 'v1', 's', [tank]), schema=schema)
+    repo.commit({'facts.jsonl': lines(invalid)}, 'unsupported record')
+    with pytest.raises(StoreError, match='unsupported record schema; expected curator-fact/3'):
+        if command == 'store':
+            store_report([repo.path], [], [])
+        else:
+            replay(runs, [f'x:need={need},fact=f'], None, repo.path, [])
 
 
-@pytest.mark.parametrize('field', ['subject', 'place'])
-@pytest.mark.parametrize('empty', ['', '.*', 'x*', '(a|)', '^', r'\b?'])
-def test_a_pattern_that_matches_the_empty_string_is_refused(tmp_path, field, empty):
-    repository = places(tmp_path / 'k', place_fact('a', 'tank', 'roof'))
-    row = dict(label='x', subject='tank', place='roof') | {field: empty}
-    with pytest.raises(StoreError):
-        brief_gate(repository, patterns(tmp_path, row))
+@pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/3', None])
+def test_memory_reader_refuses_other_repository_layouts(tmp_path, schema):
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    repo.commit({'knowledge.json': json.dumps(dict(schema=schema, game='cdda')).encode()}, 'unsupported layout')
+    with pytest.raises(StoreError, match='expected curator-knowledge/2; start a new repository'):
+        read_versions(repo.path)
 
 
-def test_brief_gate_reads_a_named_version_and_prints_the_version_it_read(tmp_path, capsys):
-    repository = Repository(tmp_path / 'k', 'cdda')
-    repository.ensure()
-    repository.commit({'facts.jsonl': lines(place_fact('first', 'tank', 'roof'))}, 'Publish v1')
-    repository.commit({'facts.jsonl': lines(place_fact('first', 'tank', 'roof'), place_fact('second', 'tank', 'roof 2'))},
-        'Publish v2')
-    path = patterns(tmp_path, dict(label='tank', subject='tank', place='roof'))
-    assert [m['id'] for m in brief_gate(repository.path, path)['labels'][0]['matches']] == ['first', 'second']
-    older = brief_gate(repository.path, path, 'v1')
-    assert older['version'] == 'v1' and [m['id'] for m in older['labels'][0]['matches']] == ['first']
-    assert brief_gate(repository.path, path, 'v0')['labels_with_a_match'] == 0
-    with pytest.raises(StoreError, match='v9'):
-        brief_gate(repository.path, path, 'v9')
-    assert main(['brief-gate', str(repository.path), '--patterns', str(path), '--version', 'v1']) == 0
-    assert 'version read: v1' in capsys.readouterr().out
-    assert main(['brief-gate', str(repository.path), '--patterns', str(path)]) == 0
-    assert 'version read: v2' in capsys.readouterr().out
+def test_replay_uses_fact_text_and_does_not_treat_an_article_as_a_fact(tmp_path):
+    runs, tank, need = lineage(tmp_path)
+    path = knowledge(tmp_path/'knowledge', tank)
+    repo = Repository(path.parent, path.name)
+    repo.commit({'facts.jsonl': lines(*repo.facts(), article())}, 'article')
+    row, = replay(runs, [f'x:need={need},fact=roof-tank'], None, path, [])
+    assert row['fact']['text'] == 'The roof tank holds 18 L of clean water.'
+    with pytest.raises(ValueError, match='fact article is in no version'):
+        replay(runs, [f'x:need={need},fact=article'], None, path, [])
 
 
-def test_brief_gate_reads_a_store_of_the_old_contract_without_matching_and_changes_nothing(tmp_path):
-    repository = knowledge(tmp_path / 'k', 'tank-frame')  # curator-fact/1 facts, as in the sealed stores
-    before = sorted(p.relative_to(repository).as_posix() for p in repository.rglob('*') if p.is_file())
-    report = brief_gate(repository, patterns(tmp_path, dict(label='tank', subject='tank', place='roof')))
-    assert report['labels_with_a_match'] == 0 and report['store']['facts'] == 2
-    assert before == sorted(p.relative_to(repository).as_posix() for p in repository.rglob('*') if p.is_file())
+@pytest.mark.parametrize('record', [None, 'type', ''])
+def test_memory_reader_refuses_unknown_record_discriminators(tmp_path, record):
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    repo.commit({'facts.jsonl': lines(dict(article(), record=record))}, 'unknown discriminator')
+    with pytest.raises(StoreError, match='unsupported record kind; expected fact or article'):
+        read_versions(repo.path)
+
+
+@pytest.mark.parametrize('metadata', [None, b'{', b'\xff'], ids=['missing', 'invalid-json', 'invalid-encoding'])
+def test_memory_reader_refuses_missing_or_unparseable_knowledge_metadata(tmp_path, metadata):
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    if metadata is None:
+        (repo.path/'knowledge.json').unlink()
+        files = {}
+    else:
+        files = {'knowledge.json': metadata}
+    repo.commit(files, 'invalid metadata fixture')
+    with pytest.raises(StoreError, match='unsupported knowledge schema:.*start a new repository'):
+        read_versions(repo.path)
+
+
+@pytest.mark.parametrize('operation', ['retype-only', 'retire-only'])
+def test_store_uses_the_commit_session_when_a_version_adds_no_record(tmp_path, operation):
+    path = knowledge(tmp_path/'knowledge', 'frame')
+    repo = Repository(path.parent, path.name)
+    records = repo.records()
+    if operation == 'retype-only':
+        records[0].update(type='observed', retyped=[dict(version='v3', **{'from': 'resource', 'to': 'observed'})])
+    else:
+        records[0]['retired'] = dict(reason='contradicted', session=operation, published_in='v3')
+    repo.commit({'facts.jsonl': lines(*records)}, f'Publish v3: {operation}\n\nsession: {operation}\nsubmission: fixture')
+    manifest = repo.state/'sessions'/operation/'manifest.json'
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps(dict(inputs=dict(trace_sessions=['run-b']))))
+    versions = read_versions(path)
+    assert len(versions[-1]['facts']) == len(versions[-2]['facts']) == 2
+    assert not any(r.get('published_in') == 'v3' for r in versions[-1]['facts'])
+    assert versions[-1]['session'] == operation
+    report, = store_report([path], [], [])
+    assert report['versions'][-1]['session'] == operation
+    assert report['versions'][-1]['covers'] == ['run-b']

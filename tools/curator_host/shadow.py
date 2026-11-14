@@ -154,7 +154,7 @@ def select(lineage: str, sessions: list[str] | None) -> tuple[dict, list[str]]:
 
 def read_windows(args: argparse.Namespace) -> list[Window] | None:
     """The windows to run, in the order given, or None for whole admissions. Two ways to write the same list:
-    a JSON file of `{session, actor, first, last[, game_time]}` rows, or a plan of equal windows of one actor."""
+    a JSON file of `{session, actor, first, last}` rows, or a plan of equal windows of one actor."""
     if args.windows_file and args.window_plan:
         raise ShadowError('--windows-file and --window-plan are two ways to write the same list; give one')
     if not (args.windows_file or args.window_plan):
@@ -375,7 +375,7 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             argv=host_argv(host, session_config),
             tools=(*host['roots'], config_dir.resolve()),
             limits=sandbox.Limits(wall_seconds=wall_seconds), proxy=proxy, proxy_port=port,
-            extra_env=host['env'], host=host_identity(host, model_config))
+            extra_env=host['env'], host=host_identity(host, model_config), grooming_brief=HOST_DIR/'grooming.md')
         record = run_session(repo, [trace], config, window=window, memory=memory, session_id=f'{name}-{uuid.uuid4().hex[:8]}')
         state = 'completed'
     except Exception as exc:  # noqa: BLE001 - a failed session is a result, not a crash of the run
@@ -577,7 +577,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--stop-on-abort', action='store_true')
     p.add_argument('--stop-on-reject', action='store_true',
                    help="stop the run when the gate rejects a session's submission (its facts are then lost)")
-    p.add_argument('--windows-file', help='JSON list of {session, actor, first, last[, game_time]}: one session over each '
+    p.add_argument('--windows-file', help='JSON list of {session, actor, first, last}: one session over each '
                    'window (one actor, steps first to last inclusive), in this order against one repository, instead of '
                    'whole admissions')
     p.add_argument('--window-plan', nargs=5, metavar=('SESSION', 'ACTOR', 'START', 'SIZE', 'COUNT'),

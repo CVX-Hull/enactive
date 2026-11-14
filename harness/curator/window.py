@@ -39,21 +39,19 @@ class WindowError(ValueError):
 @dataclass(frozen=True)
 class Window:
     """`Window()` covers everything. A restricted window names a session, an actor directory and
-    steps `first` to `last` (inclusive, 1-based). `game_time` is text the runner supplies for the
-    coverage stamp; shared code never parses it."""
+    steps `first` to `last` (inclusive, 1-based)."""
 
     session: str | None = None
     actor: str | None = None
     first: int = 1
     last: int | None = None
-    game_time: str | None = None
 
     def __post_init__(self):
         if (self.session is None) != (self.actor is None):
             raise WindowError('a window names both a session and an actor, or neither')
         if self.session is None:
-            if (self.first, self.last, self.game_time) != (1, None, None):
-                raise WindowError('the full window takes no range or game time')
+            if (self.first, self.last) != (1, None):
+                raise WindowError('the full window takes no range')
             return
         for name, value in (('session', self.session), ('actor', self.actor)):
             if not (isinstance(value, str) and NAME.fullmatch(value)):
@@ -62,8 +60,6 @@ class Window:
             raise WindowError('window first step must be an integer of at least 1')
         if not (isinstance(self.last, int) and not isinstance(self.last, bool) and self.last >= self.first):
             raise WindowError('window last step must be an integer not before the first')
-        if self.game_time is not None and not isinstance(self.game_time, str):
-            raise WindowError('window game_time is text')
 
     @property
     def full(self) -> bool:
@@ -71,13 +67,12 @@ class Window:
 
     @classmethod
     def read(cls, row: object) -> 'Window':
-        if not isinstance(row, dict) or set(row) - {'session', 'actor', 'first', 'last', 'game_time'}:
-            raise WindowError(f'a window is an object with session, actor, first, last and optional game_time: {row!r}')
+        if not isinstance(row, dict) or set(row) - {'session', 'actor', 'first', 'last'}:
+            raise WindowError(f'a window is an object with session, actor, first and last: {row!r}')
         return cls(**row)
 
     def record(self) -> dict:
-        return {} if self.full else dict(session=self.session, actor=self.actor, first=self.first, last=self.last,
-                                         game_time=self.game_time)
+        return {} if self.full else dict(session=self.session, actor=self.actor, first=self.first, last=self.last)
 
 
 FULL = Window()
@@ -85,12 +80,10 @@ FULL = Window()
 
 def coverage(window: Window, sessions: list[str], manifest: dict) -> dict:
     """What a session read, for the gate to publish with the version it makes: the session, the actor and
-    the last step read (the window's, as clamped to the steps the actor has), and the game time as the
-    runner gave it. A whole-admission session has no single actor or last step."""
+    the last step read (the window's, as clamped to the steps the actor has). A whole-admission session has no single actor or last step."""
     if window.full:
-        return dict(schema=COVERAGE, session=','.join(sessions), actor=None, last_step=None, game_time=None)
-    return dict(schema=COVERAGE, session=window.session, actor=window.actor, last_step=manifest['window']['last'],
-                game_time=window.game_time)
+        return dict(schema=COVERAGE, session=','.join(sessions), actor=None, last_step=None)
+    return dict(schema=COVERAGE, session=window.session, actor=window.actor, last_step=manifest['window']['last'])
 
 
 def _jsonl(path: Path) -> list[dict]:
@@ -153,5 +146,65 @@ def restrict(out: Path, manifest: dict, window: Window) -> dict:
                          for p in sorted(out.rglob('*')) if p.is_file() and p.name != MANIFEST}
     manifest['window'] = dict(window.record(), last=last, steps_available=len(steps))
     manifest['dropped'] = [*manifest['dropped'], *DROPPED]
+    (out/MANIFEST).write_text(json.dumps(manifest, sort_keys=True, indent=1))
+    return manifest
+
+
+def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> dict[str, dict]:
+    """Assign a stable ordered position to each frame, retaining its latest occurrence.
+
+    Session order is the supplied admission order; actor order is directory order;
+    step order is seq. The identity and seq are retained beside the ordinal for inspection.
+    """
+    result = {}
+    admissions = {p['session']: p['order'][0] for p in previous.values()}
+    next_admission = max(admissions.values(), default=0)
+    for session in manifest['sessions']:
+        if session['name'] not in admissions:
+            next_admission += 1
+            admissions[session['name']] = next_admission
+        for actor in session['actors']:
+            for step in _jsonl(out/session['name']/actor['directory']/'steps.jsonl'):
+                frame = step.get('frame')
+                if frame:
+                    position = dict(session=session['name'], actor=actor['directory'], step=step['seq'],
+                                    order=[admissions[session['name']], actor['directory'], step['seq']])
+                    candidates = [p for p in (previous.get(frame), result.get(frame), position) if p]
+                    result[frame] = max(candidates, key=lambda p: p['order'])
+    missing = {Path(name).stem for name in manifest['files'] if name.startswith('frames/')} - result.keys()
+    if missing:
+        raise WindowError(f'frames without trace positions: {sorted(missing)}')
+    return result
+
+
+def citations_only(out: Path, manifest: dict, citations: set[str]) -> dict:
+    """Grooming reads the last admission's cited frames, with their trace positions."""
+    available = {Path(name).stem for name in manifest['files'] if name.startswith('frames/')}
+    if citations - available:
+        raise WindowError(f'last admission citations missing from trace: {sorted(citations - available)}')
+    for frame in (out/'frames').iterdir():
+        if frame.stem not in citations:
+            frame.unlink()
+    # Other trace content could disclose uncited observations. Retain only cited steps.
+    for session in manifest['sessions']:
+        for actor in session['actors']:
+            directory = out/session['name']/actor['directory']
+            steps = [s for s in _jsonl(directory/'steps.jsonl') if s.get('frame') in citations]
+            for path in directory.iterdir():
+                if path.name != 'steps.jsonl':
+                    if path.is_dir():
+                        shutil.rmtree(path)
+                    else:
+                        path.unlink()
+            _write(directory/'steps.jsonl', steps)
+            actor.update(steps=len(steps), frames=len({s['frame'] for s in steps}), tool_calls=0)
+        handoffs = out/session['name']/'handoffs'
+        if handoffs.exists():
+            shutil.rmtree(handoffs)
+        session['handoffs'] = []
+    (out/'memory.json').unlink(missing_ok=True)
+    manifest['files'] = {str(p.relative_to(out)): hashlib.sha256(p.read_bytes()).hexdigest()
+                         for p in sorted(out.rglob('*')) if p.is_file() and p.name != MANIFEST}
+    manifest['citations_only'] = sorted(citations)
     (out/MANIFEST).write_text(json.dumps(manifest, sort_keys=True, indent=1))
     return manifest
