@@ -242,9 +242,9 @@ Three layers. Each can be built and judged alone, in this order.
 ### 2. A briefing from the curator's store
 
 - **Mechanism.** The first message of every actor, at an admission and at a handoff alike,
-  carries a briefing built by software from the latest published snapshot:
-  - **leads**: the leads of the articles a recall model chooses for this actor from the
-    mission, the previous final report and the article index
+  carries a briefing built by software from the run's delivered knowledge:
+  - **leads**: the leads of the articles a recall model chooses for this actor from its
+    first message (the mission and any predecessor's handoff context) and the article index
     ([general memory](general-memory.md#articles-over-facts));
   - **as an index**: one line for every other article, with its title and the start of
     its lead;
@@ -293,10 +293,11 @@ import contracts and one contract version
 **Delivered knowledge and the package.**
 
 - `python -m tools.knowledge_export REPOSITORY --version vN --package DIR [--withhold-seed S]`
-  reads one published version of the game's knowledge repository and writes:
-  - `knowledge.json` (`delivered-knowledge/1`) among the package's frozen files: the
-    version, the coverage stamp the gate already writes (`coverage.json`,
-    `curator-coverage/2`), the delivered articles (id, title, lead, body with cited fact
+  reads one published version of the game's knowledge repository and writes (and
+  `--empty --package DIR` writes the same files with no units and no coverage):
+  - `delivered-knowledge.json` (`delivered-knowledge/1`) among the package's frozen
+    files: the version, the coverage stamp the gate already writes (`coverage.json`,
+    `curator-coverage/2`; null when the version has none), the delivered articles (id, title, lead, body with cited fact
     ids, links, last confirmed) and the delivered current facts (id, type, text,
     subject, seen). Facts that no article files are listed too, and have their own
     index lines, as [general memory](general-memory.md#articles-over-facts) requires
@@ -304,16 +305,20 @@ import contracts and one contract version
   - `private/knowledge-full.json` and `private/units.json`: the whole version, and every
     unit with its facts, the seed and the draw. Their hashes are a closed field of the
     package manifest. Neither the host nor the application is given them.
-- **Every package carries `knowledge.json`.** A run without knowledge carries one with no
-  units, so every run takes the same path (S-MIGRATION: no optional input that switches
-  behaviour). The run package, its manifest and the route get new versions; the old
-  ones are refused for running and stay readable by the evaluator as archived versions.
+- **Every package carries `delivered-knowledge.json`.** A run without knowledge carries
+  one with no units, so every run takes the same path (S-MIGRATION: no optional input
+  that switches behaviour); with no units the host makes no recall request and the
+  recall bound in the finish reserve is zero. The run package, its manifest, the route
+  and the host's telemetry get new versions, and the old ones are refused for running.
+  Every sealed run before them then holds old versions, which the evaluator reads only
+  for the sessions in the closed archive index (S-MIGRATION); how those runs stay
+  readable for the judges and the evaluator is an owner decision, asked with #461.
 - **Units and the draw.** A unit is an article with the facts only it cites; a fact that
   no article files is a unit of its own; a fact cited by a delivered and a withheld
   article counts as delivered. With `--withhold-seed`, each unit, in id order, is
   withheld independently with probability one half: the design the
   [simulation](../acceptance/2026-11-13-withholding-simulation.md) and the analysis
-  assume. Withheld units are left out of `knowledge.json` entirely, and links to a
+  assume. Withheld units are left out of `delivered-knowledge.json` entirely, and links to a
   withheld article are removed from the delivered articles, so neither the leads, the
   index, the reminders, search nor a link names one. A read of an absent id or title
   answers as any miss does. The unit rule lives in that one module, which the judges'
@@ -321,7 +326,7 @@ import contracts and one contract version
 
 **The recall model in the host.**
 
-- **Inputs.** The host is given `knowledge.json` by a new argument, recorded in the
+- **Inputs.** The host is given `delivered-knowledge.json` by a new argument, recorded in the
   actor's frozen inputs. The briefing request reads the actor's first message (the
   mission and any predecessor's handoff context) and the index; a reminder request reads
   the actor's recent calls, the latest frame and the index.
@@ -341,10 +346,17 @@ import contracts and one contract version
   into the same `spent` as the player's. Before any attempt the host checks the limit
   against what is spent plus the bound of every attempt in flight, so the run can pass
   its limit by at most one player request and one recall request, and the package's
-  finish reserve covers both bounds. A recall request still in flight when the actor
-  ends is aborted and counted. The driver's event reader (`tools/campaign_player.py`)
-  and the evaluator's host reader (`harness/evaluation/core/host.py`) learn the role;
-  recall requests are never player decisions.
+  finish reserve covers both bounds. The host makes no new recall request once an
+  orderly stop is pending or received, or once what remains is at or below the finish
+  reserve, so recall never spends the player's way to an orderly finish; a recall
+  request the spend check refuses ends recall for that actor and never stops it. A
+  recall request still in flight when the actor ends is aborted and counted. Each recall
+  HTTP attempt counts against the package's attempt allowance and the driver's attempt
+  ending like a player attempt; the driver narrows `recall.max_requests` per actor from
+  what remains, as it does `max_requests`. The driver's event reader
+  (`tools/campaign_player.py`) and the evaluator's host reader
+  (`harness/evaluation/core/host.py`) learn the role; recall requests are never player
+  decisions.
 - **The route.** A closed `recall` object: `model` (same provider and key as the
   player), `every` (`N`), `max_requests` and `unpriced_request_usd`, the bound computed
   by the package check from that model's rates as for the player. The model and `N` are
@@ -352,13 +364,14 @@ import contracts and one contract version
   is spent.
 - **Failures.** A recall request that fails or returns no cost is counted at its bound
   and ends recall for that actor: a briefing then holds the index lines only, and later
-  reminders are logged as not made. The player plays on; only the player's own unpriced
-  success stops the actor, as the contract says now.
+  reminders are logged as not made. The player plays on. The player-host contract's rule
+  that an unpriced success stops the actor is scoped to player requests in the same
+  change.
 
 **The tools, the trace and the judges.**
 
 - **New tools, not changed ones.** `player_knowledge_read` and `player_knowledge_query`
-  read `knowledge.json`, which the driver passes to the application. Their results carry
+  read `delivered-knowledge.json`, which the driver passes to the application. Their results carry
   `grants_authority: false`. The player's own memory tools stay as they are until
   adoption ([#463](https://github.com/CVX-Hull/enactive/issues/463)), which removes
   them; no tool reads two stores, and no tool changes meaning.
@@ -370,13 +383,16 @@ import contracts and one contract version
 - **The judges' input.** After the run, `tools/memory_measure.py` builds `judged-facts/1`
   from those events, the knowledge tools' results, `private/knowledge-full.json` and
   `private/units.json`, mapping each player request to the evaluator's decision. A fact
-  has one route per actor, its first exposure in this order: `lead` (in the briefing or a
-  reminder), `read` (a read or a query result), `index`; `from_decision` is when that
-  exposure first reached the player. Withheld facts have the route `withheld`. The unit
-  record the benefit analysis re-draws is `private/units.json`.
+  has one route per actor, the strongest way it reached the player: `lead` (in the
+  briefing or a reminder), then `read` (its text in a read or a query result), then
+  `index`. `from_decision` is the last decision completed before the fact first reached
+  the player by a lead after the briefing or by a read, so the inputs of the next
+  decision, the first that could use it, count; a fact in the briefing has none.
+  Withheld facts have the route `withheld`. The unit record the benefit analysis
+  re-draws is `private/units.json`.
 - **Readers that move with the versions**: the evaluator's sources and facts readers,
   the run ledger, the driver's event reader, the viewer and the memory-read audit's tool
-  list; #461 names them in its paths.
+  list.
 
 ### 3. One cut, tied to what the store covers
 
@@ -491,7 +507,7 @@ alone:
 | Tests | The host's serialization and prefix tests, the player-host contract suite, the memory and handoff tests |
 
 The player's own store and its record format are retired in that change. Until then they
-stay as they are. Delivery itself (the snapshot, the briefing, the reminders and the
+stay as they are. Delivery itself (delivered knowledge, the briefing, the reminders and the
 knowledge tools) comes before adoption, as its own contract version used by every run
 ([the delivery boundary](#the-delivery-boundary)), so that development play and the
 withholding pilot can measure it.

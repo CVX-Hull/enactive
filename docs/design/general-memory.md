@@ -160,7 +160,8 @@ changes two things.
 
 1. **A recall model chooses the leads.** The briefing carries the
    [articles](#articles-over-facts): the leads of the articles a recall model chooses for
-   this actor from the mission, the previous final report and the article index, and one
+   this actor from its first message (the mission and any handoff context) and the
+   article index, and one
    index line (title and lead's first clause) for every other article. The player follows
    a link or searches only when it wants more. Relevance is judged by a model, so it
    holds for any game.
