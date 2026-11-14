@@ -27,8 +27,8 @@ test('real production MCP discovery forwards all exact current actor-only tool s
   const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({name:{"schema":schema,"description":description} for name,(description,schema) in tool_specs().items()}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
   const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
   const chosen=Object.keys(expected);
-  assert.equal(chosen.length,14);
-  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(chosen),
+  assert.equal(chosen.length,16);
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(chosen),
     context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
     timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{bodies.push(init.body);payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
@@ -64,7 +64,7 @@ test('missing allowlisted tool fails before provider call and closes child',asyn
 
 test('production MCP preserves actual source JSON and PNG through Pi while event images are references',async()=>{
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
     context:'Offline current pixel fixture',prompt:'Read actual source pixels.',model:model.id,
     effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -106,7 +106,7 @@ test('production MCP preserves actual source JSON and PNG through Pi while event
 });
 test('production MCP sealed handoff settles after earlier ordinary tool without followup inference or dispatch',async()=>{
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),
     context:'Offline current actor handoff fixture',prompt:'Retain unfinished context and hand off.',
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -131,7 +131,7 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
 
 test('production MCP foreign actor handoff cannot settle or dispatch later input',async()=>{
   const events=[];
-  const result=await runHost({session:'a'.repeat(32),actorId:'2'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'2'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),
     mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),context:'Offline foreign actor fixture',
     prompt:'Retain unfinished context.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async()=>reply(null,[['player_handoff',{ids:[],summary:'Foreign actor'}],['computer_observe',{}]]),onEvent:event=>events.push(event)});

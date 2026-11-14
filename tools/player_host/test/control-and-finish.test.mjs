@@ -16,7 +16,7 @@ test('declared inherited control gates startup until its bound command arrives',
   t.mock.method(McpClient.prototype,'callTool',async()=>{dispatches++;throw Error('No ordinary action is permitted');});
   t.mock.method(McpClient.prototype,'close',async()=>{});
   const control=new PassThrough();
-  const running=runHost({session:stopCommand.session,actorId:stopCommand.actor_id,pendingControlId:stopCommand.id,control,
+  const running=runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:stopCommand.session,actorId:stopCommand.actor_id,pendingControlId:stopCommand.id,control,
     configuration:route(),mcpConfig:{command:resolve(python),args:[fixture],cwd:tmpdir(),enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:2,tool_timeout_sec:2},
     context:'Frozen player guide',prompt:'Ongoing task',model:model.id,effort:'off',timeoutSeconds:2,env:{OFFLINE_TEST_KEY:'fixture'},
     fetch:async()=>{fetches++;return reply(null,[['player_finish',{disposition:'external_stop_complete',report:'Stopped',source_ids:[],control_id:stopCommand.id}]]);}});
@@ -32,7 +32,7 @@ for(const ending of ['eof','wrong-id']) test(`pending startup control ${ending} 
   let connections=0,fetches=0;
   t.mock.method(McpClient.prototype,'connect',async()=>{connections++;});
   const control=new PassThrough();
-  const running=runHost({session:stopCommand.session,actorId:stopCommand.actor_id,pendingControlId:stopCommand.id,control,
+  const running=runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:stopCommand.session,actorId:stopCommand.actor_id,pendingControlId:stopCommand.id,control,
     configuration:route(),mcpConfig:{command:resolve(python),args:[fixture],cwd:tmpdir(),enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:2,tool_timeout_sec:2},
     context:'Frozen guide',prompt:'Ongoing task',model:model.id,effort:'off',timeoutSeconds:2,env:{OFFLINE_TEST_KEY:'fixture'},fetch:async()=>{fetches++;throw Error('No fetch');}});
   if(ending==='eof')control.end();else control.write(JSON.stringify({...stopCommand,id:'f'.repeat(32)})+'\n');

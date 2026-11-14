@@ -28,10 +28,13 @@ def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool
     reported plus every request with no cost record at the route's bound. Without a driver record the spend is
     complete only when no host was started; otherwise it is unknown and the whole request allowance is charged."""
     bound=Decimal(route['unpriced_request_usd'])
+    recall_bound=Decimal(route['recall']['unpriced_request_usd'])
+    recall_unpriced=driver['unpriced_recall_requests'] if driver else 0
     reported=Decimal(driver['reported_usd']) if driver else Decimal(0)
     unpriced=driver['unpriced_requests'] if driver else 0
     return dict(spend_limit_usd=profile['spend_limit_usd'],reported_usd=usd_text(reported),unpriced_requests=unpriced,
-        unpriced_request_usd=usd_text(bound),spent_usd=usd_text(EXACT.add(reported,EXACT.multiply(Decimal(unpriced),bound))),
+        unpriced_request_usd=usd_text(bound),unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),
+        spent_usd=usd_text(EXACT.add(EXACT.add(reported,EXACT.multiply(Decimal(unpriced),bound)),EXACT.multiply(Decimal(recall_unpriced),recall_bound))),
         attempts_charged=driver['attempts_charged'] if driver else (profile['max_http_attempts'] if hosts_started else 0),
         allocated_max_attempts=profile['max_http_attempts'],
         spend_complete=driver['spend_complete'] if driver else not hosts_started)
@@ -46,7 +49,7 @@ def run_campaign(directory: Path) -> dict:
     owner=OwnedTarget(directory,profile['session'],target,Path(profile['library']['path']),Path(profile['shared_lock']),deadline)
     runtime=memory=server=server_thread=None
     stopped=threading.Event();driver=None
-    report=dict(schema='campaign-receipt/4',session=profile['session'],source_commit=profile['source_commit'],
+    report=dict(schema='campaign-receipt/5',session=profile['session'],source_commit=profile['source_commit'],
                 started_wall=time.time(),outcome='incomplete',normal_save_claimed_by_harness=False,
                 deciding_hosts_quiescent=False,native_absence_verified=False,input_authority_revoked=False)
     def cancel(signum,frame):
@@ -66,7 +69,7 @@ def run_campaign(directory: Path) -> dict:
         runtime=ComputerRuntime(directory,profile['session'],channel,owner.process,deadline,profile['limits'],max_actors=profile['max_hosts'])
         owner.wait_target()
         if stopped.is_set():raise ValueError('Cancelled before actor admission')
-        application=Application(runtime,memory,directory/'contexts')
+        application=Application(runtime,memory,directory/'contexts',knowledge=directory/'delivered-knowledge.json')
         server,server_thread=serve(application,profile['port'])
         write_new(directory/'ready.json',dict(schema='computer-ready/1',session=profile['session'],pid=owner.process.pid,
             viewer_url=f"http://127.0.0.1:{profile['port']}/",ready_wall=time.time()))

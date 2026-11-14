@@ -54,6 +54,8 @@ TOOL_ARGUMENTS = {
     'player_result': ('operation_id',),
     'player_handoff': ('ids', 'summary'),
     'player_memory_append': ('record',),
+    'player_knowledge_read': ('id_or_title',),
+    'player_knowledge_query': ('query',),
     'player_memory_read': ('record_id',),
     'player_memory_query': ('kind', 'limit', 'include_superseded'),
     'player_memory_context': ('ids', 'max_bytes'),

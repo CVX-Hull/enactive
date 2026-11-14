@@ -180,6 +180,11 @@ def _service(value):
 
 def _project(value):
     schema = value.get('schema')
+    if schema == 'player-knowledge/1':
+        result = _fields(value, {'schema', 'version', 'records', 'grants_authority'})
+        if result['grants_authority'] is not False or not isinstance(result['records'], list):
+            raise UnsupportedResult('Unsupported delivered knowledge result')
+        return result  # Article and fact text is opaque data, never another envelope.
     if schema == 'computer-operation/1':
         return _operation(value)
     if schema == 'player-service-result/1':

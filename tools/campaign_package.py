@@ -12,10 +12,10 @@ from harness.jsonio import file_sha256
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
 
-FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'}
+FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json','delivered-knowledge.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
         'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','ending_reserve',
-        'spend_limit_usd','labels'}
+        'spend_limit_usd','labels','private_files'}
 LABEL_FIELDS={'arm','start','scenario','lineage','admission'}
 PRINTABLE_ASCII=re.compile('[ -~]+')
 #: A declared dollar amount (a package's limit and reserve, a route's limit and bound): plain decimal text, never a
@@ -98,7 +98,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/4` adapter selection and return its argv."""
+    """Validate the closed `player-host/5` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -116,7 +116,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/6':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/7':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     labels(profile['labels'])
@@ -134,7 +134,13 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if set(profile['files'])!=FILES:raise ControlError('Freeze every selected driver input')
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
-        if path.stat().st_size>1048576 or file_sha256(path)!=sha:raise ControlError('Frozen driver input differs')
+        if (name!='delivered-knowledge.json' and path.stat().st_size>1048576) or file_sha256(path)!=sha:raise ControlError('Frozen driver input differs')
+    from harness.player.knowledge import Knowledge
+    knowledge=Knowledge(directory/'delivered-knowledge.json')
+    closed(profile['private_files'],{'knowledge-full.json','units.json'})
+    for name,sha in profile['private_files'].items():
+        if file_sha256(local_file(str(directory/'private'/name)))!=sha:
+            raise ControlError('Frozen private knowledge differs')
     for name in ('native','library'):
         closed(profile[name],{'path','sha256'})
         if file_sha256(local_file(profile[name]['path']))!=profile[name]['sha256']:
@@ -159,7 +165,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/4':
+    if type(route) is not dict or route.get('schema')!='player-host/5':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
@@ -197,13 +203,19 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
         env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     bound=unpriced_request_usd(route)
+    recall_bound=unpriced_request_usd(route['recall'])
+    if recall_bound<=0 or usd(route['recall']['unpriced_request_usd'],'recall.unpriced_request_usd')!=recall_bound:
+        raise ControlError('Recall unpriced_request_usd differs from its model rates')
+    if route['recall']['max_requests']>profile['max_http_attempts']:
+        raise ControlError('Recall attempts exceed original campaign allowance')
+    reserve_bound=usd_sum([bound,recall_bound if knowledge.records else Decimal(0)])
     # A route whose rates are all zero would count a failed request as free.
     if bound<=0:raise ControlError("The route's configured rates give no bound for a request with no cost record")
     if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:
         raise ControlError(f"route.json unpriced_request_usd must be {usd_text(bound)} for this route's rates")
     # With less than one unpriced request's bound left, a single failed request would end the run abruptly instead
     # of in order. The reserve is below the limit, so the limit exceeds the bound too.
-    if Decimal(reserve['usd'])<bound:
-        raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(bound)}, "
+    if Decimal(reserve['usd'])<reserve_bound:
+        raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(reserve_bound)}, "
             'so that one request with no cost record still leaves an orderly finish')
     return profile,route,target

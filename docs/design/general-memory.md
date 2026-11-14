@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: '2026-11-13'
-scope: 'Changes decided to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that grooms the store into articles over facts, the briefing''s leads chosen by a recall model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Decided by the owner on 13 November 2026. Built: the format, articles and grooming (#460), the judges and the withholding simulation (#386); not built: delivery (#461)'
+scope: 'Changes decided to the player''s memory after the memory screen''s gates (#460, #386): a game-neutral fact format and a curator that grooms the store into articles over facts, the briefing''s leads chosen by a recall model, reminders from a recall model during play, measurement of use on every run and of benefit by withholding facts within each start, and model judges as the standing measure. Amends the active context design (player-context.md). Built on the three gate records of 13 November 2026, an audit of the memory stack for game coupling and dated outside sources. Decided by the owner on 13 November 2026. Built: the format, articles and grooming (#460), the judges and the withholding simulation (#386), delivery with the briefing and reminders (#461); not built: the cut and curator sessions during play'
 review_trigger: The withholding simulation reports, delivery is first measured in play, or a measurement contradicts a premise stated here
 ---
 

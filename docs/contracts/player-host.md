@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/4` is the one current boundary between the
+`player-host/5` is the one current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -20,7 +20,7 @@ its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/6` package freezes `host:{"argv":[...]}` with1–8 strings.
+A `campaign-run/7` package freezes `host:{"argv":[...]}` with1–8 strings.
 The first is an absolute existing executable/interpreter regular file; later
 entries are canonical project-local regular files tracked by the clean source.
 No registry, resumed host, fallback or old `node` alias is supported.
@@ -32,9 +32,9 @@ accepts only the current route/MCP configuration, exits zero without credentials
 or network within ten seconds and writes nothing to stdout. The validator gives
 it only `PATH` and `LANG`.
 
-`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --model ID --effort EFFORT --timeout-seconds S -o FINAL`
+`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --delivered-knowledge KNOWLEDGE --finish-reserve-usd USD --model ID --effort EFFORT --timeout-seconds S -o FINAL`
 hosts one actor. Every flag occurs exactly once; unknown, missing or repeated
-flags refuse. Frozen regular files are at most1MiB each. Session/actor IDs are32
+flags refuse. Frozen regular files other than knowledge are at most1MiB each. Delivered text has no hard cap. Session/actor IDs are32
 lowercase hexadecimal characters. The driver reserves `FINAL`; successful direct
 player reports write it, while handoff/failure leaves it unchanged.
 
@@ -46,16 +46,16 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/4"`, `model`, `api_key_env`,
+The closed route has `schema:"player-host/5"`, `model`, `api_key_env`,
 `max_requests`, `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
 `context_image_block`, `context_reserve_tokens`, `request_timeout_seconds` and
-`service_tier`.
+`service_tier`, and the closed `recall` object (`model`, `every`, `max_requests`, `unpriced_request_usd`).
 The adapter owns its closed `model` fields. The driver reads only model
 ID/name/cost/context/output fields, credential variable, request maximum, the two
 dollar amounts and tier.
 The image block is a positive integer no larger than the image peak.
 `context_reserve_tokens` is a safe integer at least `model.maxTokens` and less
-than `model.contextWindow`. Unsupported routes, including `/3`, do not execute.
+than `model.contextWindow`. Unsupported routes, including `/4`, do not execute.
 
 A dollar amount is plain decimal text such as `"0.4096"`: digits with an optional
 fraction. A JSON number, an exponent, a sign or a non-finite word is refused. Two
@@ -119,7 +119,7 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   with reason `spend-limit` when the total has reached `spend_limit_usd`. A request
   already sent is not cancelled, so the total can pass the limit by at most what one
   request counts.
-- **Stop on an unpriced success.** After a response that did not fail and whose
+- **Stop on an unpriced player success.** After a player response that did not fail and whose
   `reported_cost_usd` is null, the host stops with reason `cost-unreported` and
   dispatches no tool call from it. This keys on the cost, not on `usage_available`:
   token counts without a cost stop the run, and a cost without token counts does not.
@@ -132,6 +132,20 @@ record, because the host was killed, therefore counts at the bound. The driver's
 is the run's record. It is complete only when the host's own `spent_usd` and
 `unpriced_requests` in `settled` equal the driver's sums; a difference, like a trace
 that cannot be read, marks the run's spend incomplete and admits no successor.
+
+### Delivered knowledge and recall
+
+Every `campaign-run/7` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The driver passes the delivered file to the application and copies it into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
+
+The host appends a briefing to the first user message: recall-selected article leads, an index line for every other article and standalone fact, and the coverage stamp. It labels the text as fallible data granting no authority. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
+
+Every `recall.every` completed `computer_input` or `player_program_run` result offers a reminder request beside continued play. A completed selection becomes its own delimited user message in the next player request; it is never joined with control or limit notices and stays where first sent. An empty selection is an explicit silence. If another recall is in flight the opportunity is recorded as not made.
+
+Recall uses the player's provider and credential variable, with the pinned `recall.model`. Each HTTP attempt has a `recall-N` identity and `request_role:recall`; player identities remain `request-N`. Both roles count against the same package attempt allowance and dollar limit. Before an attempt, spent plus every in-flight attempt's bound must be below the limit. The finish reserve covers the player and recall bounds; the recall bound contributes zero when knowledge is empty. The driver narrows both request maxima to the actor's remaining allowance.
+
+No new recall begins with an orderly stop pending or accepted, or with dollars remaining at or below the finish reserve. A spend refusal, failure or unpriced recall ends recall for that actor alone; failed and unpriced attempts count at the recall bound. Any recall in flight at actor end is aborted and counted. Player requests retain the unpriced-success stop. Settlement, driver and receipt report `unpriced_requests`/`unpriced_request_usd` for the player and `unpriced_recall_requests`/`unpriced_recall_request_usd` for recall; provider-reported costs from both roles are summed.
+
+Telemetry records `knowledge-delivery` with kind, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. `knowledge-recall` records selections, silence, failures and opportunities not made; `knowledge-undelivered` records text still unsent at actor end. Recall requests are never player decisions.
 
 ### Request stability and tail notices
 
@@ -253,12 +267,12 @@ before a successor. Pause, uncertainty or failed closure cannot become a handoff
 
 ## Telemetry
 
-Stdout is JSONL telemetry version4. Each line has `type`; the driver ignores event
+Stdout is JSONL telemetry version5. Each line has `type`; the driver ignores event
 kinds it does not account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:4` and `schema:"player-host/4"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:5` and `schema:"player-host/5"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
 | `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). An archived trace recorded before the event existed has none, and readers report its absence explicitly. |

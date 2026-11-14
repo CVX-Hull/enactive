@@ -13,10 +13,11 @@ from .computer.protocol import ControlError, canonical, closed
 from .computer.runtime import ComputerRuntime
 from .player.contracts import PlayerError
 from .player.memory import Memory
+from .player.knowledge import Knowledge
 from .player.programs import ProgramRepository, ProgramRunner
 
 READ_TOOLS = {'computer_result', 'player_source', 'player_memory_read', 'player_memory_query',
-              'player_memory_context', 'player_program_read', 'player_result'}
+              'player_memory_context', 'player_program_read', 'player_result', 'player_knowledge_read', 'player_knowledge_query'}
 
 
 class _ProgramControl:
@@ -60,9 +61,10 @@ def _program_projection(value, request_id):
 
 class Application:
     """One serialized playing-service caller; operator Pause bypasses this lock."""
-    def __init__(self, runtime: ComputerRuntime, memory: Memory, context_directory: Path) -> None:
+    def __init__(self, runtime: ComputerRuntime, memory: Memory, context_directory: Path, *, knowledge: Path | None = None) -> None:
         self.runtime, self.memory = runtime, memory
         self.programs = ProgramRepository(memory)
+        self.knowledge = Knowledge(knowledge) if knowledge is not None else None
         self.context_directory = context_directory
         context_directory.mkdir(mode=0o700)
         self.serial = threading.RLock()
@@ -168,6 +170,14 @@ class Application:
                 self.memory.finish_service(identity,result)
                 self.claims = self.memory.query(limit=5)
                 return result, None
+            if name in ('player_knowledge_read', 'player_knowledge_query'):
+                key = 'id_or_title' if name == 'player_knowledge_read' else 'query'
+                closed(args, {key})
+                if not isinstance(args[key], str):
+                    raise PlayerError('Knowledge argument must be text')
+                if self.knowledge is None:
+                    raise PlayerError('No delivered knowledge file supplied to this application')
+                return (self.knowledge.read(args[key]) if key == 'id_or_title' else self.knowledge.query(args[key])), None
             if name == 'player_memory_read':
                 closed(args, {'record_id'})
                 return self.memory.read(args['record_id']), None

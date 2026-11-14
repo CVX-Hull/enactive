@@ -510,8 +510,8 @@ def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
     (tmp_path / 'runs').mkdir()
     current, unversioned, future, replaced = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future', 'replaced'))
     # A campaign-run/5 manifest is read only for a session the closed archive index lists; this one is not listed.
-    for directory, manifest in ((current, dict(schema='campaign-run/6', session='1' * 32)), (unversioned, dict(session='2' * 32)),
-            (future, dict(schema='campaign-run/7', session='3' * 32)), (replaced, dict(schema='campaign-run/5', session='4' * 32))):
+    for directory, manifest in ((current, dict(schema='campaign-run/7', session='1' * 32)), (unversioned, dict(session='2' * 32)),
+            (future, dict(schema='campaign-run/8', session='3' * 32)), (replaced, dict(schema='campaign-run/5', session='4' * 32))):
         directory.mkdir()
         (directory / 'manifest.json').write_text(json.dumps(manifest))
     catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))
@@ -531,7 +531,7 @@ def test_the_live_session_comes_from_a_supported_manifest(tmp_path):
     (run_dir / 'manifest.json').write_text(json.dumps(dict(session=SESSION)))
     evaluator = LiveEvaluator(run_dir, tmp_path / 'root', FakeBinding())
     assert evaluator.session() is None
-    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=SESSION)))
+    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', session=SESSION)))
     assert evaluator.session() == SESSION
 
 

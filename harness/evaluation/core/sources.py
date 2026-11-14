@@ -23,11 +23,11 @@ SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 #: The current versions. Any other version of these records is an error naming the file and version, except where
 #: the closed archive index below lists that exact version for that session.
-HOST_SCHEMA = 'player-host/4'
-HOST_TELEMETRY = 4
-MANIFEST_SCHEMA = 'campaign-run/6'
-RECEIPT_SCHEMA = 'campaign-receipt/4'
-DRIVER_SCHEMA = 'player-driver/4'
+HOST_SCHEMA = 'player-host/5'
+HOST_TELEMETRY = 5
+MANIFEST_SCHEMA = 'campaign-run/7'
+RECEIPT_SCHEMA = 'campaign-receipt/5'
+DRIVER_SCHEMA = 'player-driver/5'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
@@ -103,6 +103,12 @@ ARCHIVE_COMBINATIONS = (
         dict(manifest='campaign-run/5', receipt='campaign-receipt/3', driver='player-driver/3', host='player-host/3',
              host_telemetry=3, run_ending='campaign-watch-terminal/4'),
         dict(_SHARED, manifest=_MANIFEST_5)),
+    # Owner decision, 13 November 2026: the one sealed dollar-limit run.
+    ArchiveCombination(
+        dict(manifest='campaign-run/6', receipt='campaign-receipt/4', driver='player-driver/4', host='player-host/4',
+             host_telemetry=4, run_ending='campaign-watch-terminal/4'),
+        dict(manifest=(*(key for key in _MANIFEST_5 if key != 'accounting'), 'spend_limit_usd'),
+             receipt=_RECEIPT_3, driver=(*_DRIVER_3, 'reported_usd', 'unpriced_requests', 'unpriced_request_usd', 'spent_usd', 'spend_complete'), host=_HOST_3)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
 MANIFEST_SCHEMAS = (*sorted({c.versions['manifest'] for c in ARCHIVE_COMBINATIONS} - {MANIFEST_SCHEMA}), MANIFEST_SCHEMA)
@@ -353,7 +359,7 @@ class HostTraceUnsupported(EvaluationError):
 
 def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
               entry: ArchiveSession | None = None) -> Iterator[HostEvent]:
-    """Stream one player-host/4 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+    """Stream one player-host/5 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
     host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
     evaluation never gates the control path (ADR008).
 
@@ -407,7 +413,7 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
 
 
 def read_host(path: Path, actor_hint: str, entry: ArchiveSession | None = None) -> tuple[str, tuple[HostEvent, ...]]:
-    """One whole player-host/4 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    """One whole player-host/5 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
     still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final.
     `entry` is its session's archive index entry, as in `iter_host`."""
     events = tuple(iter_host(path, actor_hint, partial_tail=True, entry=entry))

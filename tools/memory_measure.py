@@ -609,6 +609,97 @@ def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
 
 # --- the facts to judge -------------------------------------------------------------------------------------------------
 
+def build_facts(run: Path, runs: Sequence[Path]) -> dict:
+    """Build judged-facts from delivered data and the order of actual player exposures."""
+    from harness.evaluation.core.host import host_facts, returned_records
+    from harness.evaluation.core.sources import read_host, read_manifest
+    from tools.knowledge_export import units
+    admissions, recall_events = {}, []
+    for directory in runs:
+        manifest = read_manifest(directory)
+        if manifest.get('schema') != 'campaign-run/7':
+            raise MeasureError(f'{directory}: delivery requires campaign-run/7')
+        for name, digest in {**manifest['files'], **{'private/'+k:v for k,v in manifest['private_files'].items()}}.items():
+            if name in ('delivered-knowledge.json','private/knowledge-full.json','private/units.json') and file_sha256(directory/name) != digest:
+                raise MeasureError(f'{directory/name}: frozen knowledge hash differs')
+        full, drawn = read_json(directory/'private/knowledge-full.json'), read_json(directory/'private/units.json')
+        delivered = read_json(directory/'delivered-knowledge.json')
+        if full.get('schema') != 'delivered-knowledge/1' or delivered.get('schema') != full['schema'] \
+                or drawn.get('schema') != 'knowledge-units/1' or drawn['version'] != full['version']:
+            raise MeasureError(f'{directory}: unsupported frozen knowledge')
+        expected = units(full)
+        if [{k:v for k,v in u.items() if k != 'withheld'} for u in drawn['units']] != expected:
+            raise MeasureError(f'{directory}: unit record differs from the exported unit rule')
+        available = {f for u in drawn['units'] if not u['withheld'] for f in u['fact_ids']}
+        if available != {f['id'] for f in delivered['facts']}:
+            raise MeasureError(f'{directory}: delivered facts differ from the private draw')
+        articles = {a['id']:a for a in full['articles']}
+        host, names = {}, {}
+        for actor_dir in sorted((directory/'actors').iterdir()):
+            if not (actor_dir/'host.jsonl').is_file():continue
+            actor, events = read_host(actor_dir/'host.jsonl', actor_dir.name)
+            host[actor], names[actor] = events, actor_dir.name
+        facts = host_facts(tuple(host), host)
+        entries = {}
+        for actor, events in host.items():
+            entry = {route:[] for route in ROUTES}
+            entry.update(briefing='', reminders=[])
+            exposed, last = {}, 0
+            recalls = {}
+            calls = {(c.request_id,c.tool_call_id):c for c in facts.calls if c.actor == actor}
+            for event in events:
+                fields = event.fields
+                if event.type == 'knowledge-delivery':
+                    kind = fields['kind']
+                    source = recalls.get(fields.get('recall_request_id'))
+                    if source is not None:source.update(delivered=True,from_decision=last)
+                    if kind == 'briefing':entry['briefing'] = fields['text']
+                    else:entry['reminders'].append(dict(decision=last,text=fields['text']))
+                    for identity in fields['fact_ids']:
+                        if identity in available:
+                            exposed.setdefault(identity, ('lead', None if kind == 'briefing' or not last else last))
+                elif event.type == 'tool-result':
+                    call = calls.get((fields.get('request_id'),fields.get('tool_call_id')))
+                    if call is not None:
+                        # The result completes this player decision before the next request can use it.
+                        last = max(last,call.decision or 0)
+                        if call.tool in ('player_knowledge_read','player_knowledge_query') and not call.error:
+                            for record in returned_records(call):
+                                identities = {f for claim in record['body'] for f in claim['facts']} if 'body' in record else {record['id']}
+                                for identity in identities & available:
+                                    exposed.setdefault(identity,('read',last or None))
+                elif event.type == 'knowledge-recall':
+                    selected={f for aid in fields.get('article_ids',[]) for claim in articles[aid]['body'] for f in claim['facts']}
+                    record=dict(start=directory.name,actor=names[actor],decision=last,fact_ids=sorted(selected & available),delivered=False,**fields)
+                    recall_events.append(record)
+                    if fields.get('request_id'):recalls[fields['request_id']]=record
+            for fact in full['facts']:
+                route, decision = exposed.get(fact['id'], ('index',None)) if fact['id'] in available else ('withheld',None)
+                entry[route].append(dict(id=fact['id'],text=fact['text'],**({'from_decision':decision} if decision else {})))
+            entries[names[actor]] = entry
+        admissions[directory.name] = entries
+    value = dict(schema=FACTS_SCHEMA,admissions=admissions)
+    write_json(run/'judged-facts.json',value,once=True)
+    write_json(run/'private'/'recall.json',dict(schema='recall-measure-inputs/1',events=recall_events),once=True)
+    return value
+
+
+def recall_measure(run: Path, rows: Sequence[dict]) -> dict:
+    """Precision is the applied share of judged windows after actually delivered recall selections; silence is explicit empty reminder selections."""
+    path = run/'private'/'recall.json'
+    if not path.is_file():return dict(recorded=False)
+    events = read_json(path)['events']
+    completed = [e for e in events if e['kind'] == 'reminder' and e['status'] in ('silence','selected')]
+    leads = [row for event in events if event['status'] == 'selected' and event.get('delivered')
+             for row in rows if row['start'] == event['start'] and row['actor'] == event['actor']
+             and row['fact'] in event['fact_ids'] and row['last'] > event['from_decision'] and row['label'] != 'cannot_tell']
+    applied = sum(r['label'] in judge.APPLIED for r in leads)
+    silence = sum(e['status'] == 'silence' for e in completed)
+    return dict(recorded=True,precision=dict(numerator=applied,denominator=len(leads),value=applied/len(leads) if leads else None),
+        silence=dict(numerator=silence,denominator=len(completed),value=silence/len(completed) if completed else None),
+        failed=sum(e['status']=='failure' for e in events),not_made=sum(e['status']=='not-made' for e in events))
+
+
 def read_facts(path: Path, spans: dict[str, dict]) -> dict[tuple[str, str], dict]:
     """The `judged-facts/1` input as {(admission, actor): {facts, briefing, reminders}}, in the order of the
     selected admissions. Each fact is {id, text, route, from_decision}; an ID names one fact once per actor."""
@@ -1190,6 +1281,7 @@ def measure(run: Path, seed: int | None = None, draws: int = 10000) -> dict:
         labels_by_route={route: dict(pairs=sum(row['route'] == route for row in rows),
             **{label: sum(row['route'] == route and row['label'] == label for row in rows) for label in USE_LABELS})
             for route in ROUTES}, judges_overall=judges_beside(boot, rows, judges), measures=measures)
+    report['recall'] = recall_measure(run, rows) if adjudicated['kind'] == 'use' else dict(recorded=False)
     write_json(run / 'measure.json', report)
     return report
 
@@ -1745,6 +1837,9 @@ def render_withholding(report: dict) -> str:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True)
+    facts_command = commands.add_parser('facts', help='build judged-facts/1 from frozen delivery and host events')
+    facts_command.add_argument('run',type=Path)
+    facts_command.add_argument('--runs',nargs='+',type=Path,required=True)
     packets = commands.add_parser('packets', help='packets for the annotators or the judges').add_subparsers(dest='kind', required=True)
     for kind in ('annotate', 'use', 'blind'):
         command = packets.add_parser(kind)
@@ -1828,7 +1923,10 @@ def main(argv=None) -> int:
             print(json.dumps(report, indent=1) if args.json and not args.render else render_withholding(report))
             return 0
         run = measure_dir(args.run)
-        if args.command == 'packets' and args.kind == 'annotate':
+        if args.command == 'facts':
+            value=build_facts(run,run_dirs(args.runs))
+            print(f"judged-facts/1: {len(value['admissions'])} admissions in {run/'judged-facts.json'}")
+        elif args.command == 'packets' and args.kind == 'annotate':
             index = annotate_packets(run, run_dirs(args.runs), args.every, args.budget, args.min_changed)
             print(f"{len(index['packets'])} packets in {run / 'annotate'}; frames recorded {index['frames']['recorded']}, "
                 f"changed {index['frames']['changed']}, kept {index['frames']['kept']}; budget {index['budget_tokens']} tokens")

@@ -70,7 +70,7 @@ traits, location, tactic, target item or hint.
 | S2 | The player chooses every setup option, including the scenario. |
 
 Runs alternate S1, S2, S1, S2, S1 within an arm. Each run is frozen as a fresh
-`campaign-run/6` package from merged main, with these limits outside the
+`campaign-run/7` package from merged main, with these limits outside the
 player's context:
 
 | Setting | Value |

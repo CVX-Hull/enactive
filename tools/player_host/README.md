@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/4`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/5`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -91,7 +91,7 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/4"`, `model`,
+The closed route has exactly `schema: "player-host/5"`, `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
@@ -371,7 +371,7 @@ post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
 cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 4 retains request text/UTF8 counts,
+call IDs where applicable. Telemetry version 5 retains request text/UTF8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -481,7 +481,7 @@ progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 4 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 5 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings
@@ -515,3 +515,9 @@ retry, timer renewal or dispatch; only an eligible first attempt can authorize t
 one retry described above. Use the existing
 [offline evaluator](../../docs/evaluation.md#retained-host-and-browser-analysis)
 to analyze traces; future telemetry versions are not silently interpreted.
+
+## Frozen knowledge delivery
+
+The required `--delivered-knowledge` file is `delivered-knowledge/1`; it has no text-size cap. `--finish-reserve-usd` is the frozen reserve from the package. The closed route additionally requires `recall:{model,every,max_requests,unpriced_request_usd}` with the same provider and credential variable as the player. `max_requests` limits all player and recall HTTP attempts together; the nested maximum also limits recall attempts.
+
+The first user message carries a labelled fallible briefing and complete remaining index, including standalone facts and coverage. Recall reminders run beside play, become separate labelled messages, and preserve the sent prefix. Recall failure or absent cost disables recall alone. `recall-N` attempts share counted spend and limits, include every in-flight bound in admission, and never begin after an orderly stop or within the finish reserve. Empty knowledge makes no recall request. The host aborts and counts an in-flight recall at actor end. Settlement carries separate `unpriced_requests` and `unpriced_recall_requests` counts; telemetry 5 records `knowledge-delivery`, `knowledge-recall` (including silence/failure/not-made) and `knowledge-undelivered`. The full boundary is in the player-host contract.

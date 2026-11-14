@@ -18,10 +18,10 @@ rule still decide acceptance. No value on this page reaches the player.
 The evaluator reads one run directory read-only:
 - `session.sqlite3` (`computer-session/1`);
 - `sources/*.png`;
-- each `actors/NNN/host.jsonl` (`player-host/4`), including its per-request context
+- each `actors/NNN/host.jsonl` (`player-host/5`), including its per-request context
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/1`);
-- `manifest.json` (`campaign-run/6`), including its operator labels;
+- `manifest.json` (`campaign-run/7`), including its operator labels;
 - for the closed set of archived sessions only, the older versions of the manifest,
   host traces, receipt and run-ending record that the archive index lists for each
   session (see "Implementation rules");
@@ -42,13 +42,13 @@ input format is an error naming the file and version. Nothing is guessed.
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
   forbid the computer importing evaluation.
-- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/4`), used by
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/5`), used by
   the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
   `tools/campaign_player.py` stays separate because evaluation never gates the control path
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/4` telemetry 4. The one exception is a trace of an
+  `host-start` is not `player-host/5` telemetry 5. The one exception is a trace of an
   archived session: its caller passes that session's index entry, and the trace is then
   also read in the version the entry lists, when its `host-start` names that session.
   `host-summary` finds the entry from the manifest of the run directory the trace sits in,
@@ -366,13 +366,14 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     record in an older version is read only for a session the index lists with exactly
     that version, beside a manifest in the version the index lists for that session. Any
     other old version is an error naming the file and version. This reads historical
-    evidence; it is not an admission, and admission still requires `campaign-run/6`.
-  - **The three combinations.** The index holds exactly three combinations of versions.
-    All 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
+    evidence; it is not an admission, and admission still requires `campaign-run/7`.
+  - **The spend-limit session.** The owner added `spend-limit-run-555` on 13 November 2026: `campaign-run/6`, `campaign-receipt/4`, `player-driver/4`, `player-host/4` telemetry 4 and `campaign-watch-terminal/4`. It is read-only in those versions. Its manifest supplies `spend_limit_usd` rather than the earlier reservation; receipt/driver ending fields and host evidence are read as recorded. No archive is admitted for play.
+  - **The four combinations.** The index holds 55 sessions in four combinations of versions.
+    The original 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
     `player-driver/3` and `player-host/3` with telemetry version 3, beside a
     `campaign-run/4` or `campaign-run/5` manifest. For each record that is not current,
     the fields used are fixed.
-    - **Shared by all three:**
+    - **Shared by the original three combinations:**
       - From the receipt: `outcome` and `driver` for the run's ending; `session`,
         `source_commit`, `normal_save_claimed_by_harness`, `native_absence_verified`,
         `normal_native_exit_zero`, `deciding_hosts_quiescent` and
@@ -385,7 +386,7 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
         carry the listed `schema` and `telemetry_version` and name the session; the
         evaluator also takes its `actor_id`, `model`, `provider`, `effort` and
         `provider_routing`. No field the evaluator reads differs between the two trace
-        versions, and an archived trace has no counted cost.
+        versions, and these original archived traces have no counted cost.
       - From the manifest: `schema`, `session`, `player_store`, `source_commit`,
         `effort`, `files`, `accounting`, `limits`, `ending_reserve`, `wall_seconds`,
         `host_seconds`, `max_hosts` and `max_http_attempts`. `accounting` is the
@@ -502,8 +503,7 @@ Payload: `start` (`<admission>:<first>-<last>`), `item`, `label` (`straight`, `m
 
 ### The facts to judge (`judged-facts/1`)
 
-Facts come from the store and the trace, not from a list written in advance. Delivery
-(#461) writes this file for a run; until then the lead writes it.
+Facts come from the store and the trace, not from a list written in advance. `python -m tools.memory_measure facts RUN --runs PACKAGE...` builds `RUN/judged-facts.json` from the frozen delivered/full knowledge, private unit record, knowledge-tool results and delivery telemetry. It verifies the frozen knowledge hashes and the exporter's unit rule; the player never sees the private inputs.
 
     {"schema": "judged-facts/1",
      "admissions": {"<admission directory name>": {"<actor directory name>": {
@@ -513,8 +513,8 @@ Facts come from the store and the trace, not from a list written in advance. Del
        "reminders": [{"decision": 40, "text": "..."}]}}}}
 
 - A fact has one route for an actor; an id listed twice is refused.
-- `from_decision` is optional: the admission's decision from which the route holds (a
-  reminder's, a read's). Its `available_from` frame is the first kept frame whose carried
+- The route is the first lead or read exposure in time, with `index` only if neither occurs. Withheld facts come from `private/units.json`.
+- `from_decision` is optional: the last player decision completed before that same exposure; briefing leads and index lines have none. Recall requests never advance this numbering. Its `available_from` frame is the first kept frame whose carried
   inputs all come from decisions strictly after it; a use packet leaves the fact out of
   windows with no such frame, and an applied label (`in_line`, `against`, `found_again`)
   must cite a frame from there on, or `events` refuses it, so an action before or during a
@@ -597,7 +597,7 @@ use packets:
   labels and are not corrected against a human truth
   ([owner decisions](../decisions/owner-decisions.md)).
 - A run of blind packets gets label counts by route and the judges' agreement only.
-- The recall model's precision and silence are not built; they wait for #461.
+- `recall` records precision and silence when the facts builder recorded recall inputs (`private/recall.json`); older judge runs report `recorded:false`. Precision is the applied share (`in_line`, `against`, `found_again`) of judged fact windows after an actually delivered recall selection, excluding `cannot_tell`. A selection counts even if the fact's first route was an earlier read. Silence is explicit empty reminder selections divided by successful reminder selections; failures and opportunities not made are reported separately. A reminder still unsent at actor end contributes no precision exposure.
 
 ### Checks of a changed judge
 
@@ -668,27 +668,27 @@ Development-run quantities live as data in git, and pages render them or cite th
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/6` manifest and `campaign-receipt/4` alone |
+| `runs.jsonl` | One [`dev-run/2`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/7` manifest and `campaign-receipt/5` alone |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
-- **Origin.** `record` reads `campaign-run/6` packages with a `campaign-receipt/4` only;
+- **Origin.** `record` reads `campaign-run/7` packages with a `campaign-receipt/5` only;
   there is no reader for older manifests or receipts, and the rows already in the ledger
-  are not rewritten. It takes `provider_usd` from the receipt's `reported_usd`,
+  were migrated once from `dev-run/1` to `dev-run/2`: recall counts/bounds are zero/`"0"` for recorded splits and null/null for unknown splits. There is no runtime converter. It takes `provider_usd` from the receipt's `reported_usd`,
   `unpriced_attempts` from `unpriced_requests`, `unpriced_attempt_usd` from
-  `unpriced_request_usd` and `spend_usd` from `spent_usd`; no figure is typed in. A
+  `unpriced_request_usd`, the recall fields from `unpriced_recall_requests` and `unpriced_recall_request_usd`, and `spend_usd` from `spent_usd`; no figure is typed in. A
   receipt whose `spend_complete` is false gets a row only with `--record-upper-bound`:
   `provider_usd` is then the receipt's `spend_limit_usd`, `unpriced_attempts` is 1 and
-  `unpriced_attempt_usd` the receipt's bound, so `spend_usd` is the most the run can
+  `unpriced_attempt_usd` the player bound; the recall count is also 1 and its bound is the receipt's recall bound, so `spend_usd` is the most the run can
   have spent. No field marks such a row; its run's dated record does
   ([campaign procedure](../operations/campaign-run.md#start-and-close)). Rows whose packages are
   `campaign-run/4` take arm and start from the labels in the archive index,
   `archive-sessions.json`.
 - **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is
-  `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. An earlier row with an unknown split
-  holds null in all three fields and `spend_usd` at the receipt's configured estimate verbatim
+  `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd` plus `unpriced_recall_attempts` × `unpriced_recall_attempt_usd`. An earlier row with an unknown split
+  holds null in all five fields and `spend_usd` at the receipt's configured estimate verbatim
   (including its floating-point digits).
-- **Rejection.** A row without `schema: dev-run/1`, a schema violation (a label is required),
-  a repeated study and run, a repeated session, more unpriced than charged attempts, or an
+- **Rejection.** A row without `schema: dev-run/2`, a schema violation (a label is required),
+  a repeated study and run, a repeated session, more combined player and recall unpriced attempts than charged attempts, or an
   inconsistent spend split is an error naming the line. Snapshot rows are validated against
   their schema when read and before they are written.
 - **Generated tables.** A `<!-- evaluate-table study=N [lineage=L] core=C binding=ID:V -->` …

@@ -255,7 +255,7 @@ def test_guard_accepts_generic_terminal_without_claiming_normal_native_exit(tmp_
         wait_ready(f)
         # Nobody acted on the page; the run ends on the guard's own wall/monotonic mapping.
         ending_wall = f.result['ready_wall'] + .05
-        report = dict(schema='campaign-receipt/4', session=SESSION, source_commit=COMMIT,
+        report = dict(schema='campaign-receipt/5', session=SESSION, source_commit=COMMIT,
             started_wall=f.result['started_wall'], ended_wall=ending_wall,
             elapsed_seconds=ending_wall-f.result['started_wall'],
             outcome='player_external_stop_complete_unassessed', normal_save_claimed_by_harness=False,

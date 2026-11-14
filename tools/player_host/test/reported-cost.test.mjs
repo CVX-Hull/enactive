@@ -36,7 +36,7 @@ test('a reported cost is counted as the provider reported it, beside the unchang
   const {result, events} = await scenario(t, [reply('finished', [], {...pilot, ...tokens})], {configuration});
   assert.equal(result.ok, true);
   const start = events.find(event => event.type === 'host-start');
-  assert.deepEqual([start.schema, start.telemetry_version, start.spend_limit_usd, start.unpriced_request_usd], ['player-host/4', 4, '100', '0.25']);
+  assert.deepEqual([start.schema, start.telemetry_version, start.spend_limit_usd, start.unpriced_request_usd], ['player-host/5', 5, '100', '0.25']);
   const {wall_time, monotonic_ms, response_progress, ...completed} = events.find(event => event.type === 'response-complete');
   // 11 input tokens at $1 and 5 output at $2 per million: the estimate keeps its floating-point value and its label.
   assert.deepEqual(completed, {type:'response-complete', request_id:'request-1', model:'fixture-model', provider:'fixture',

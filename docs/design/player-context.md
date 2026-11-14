@@ -280,7 +280,8 @@ Three layers. Each can be built and judged alone, in this order.
 Where each part of layer 2 runs and what crosses each seam, so that delivery keeps the
 import contracts and one contract version
 ([#461](https://github.com/CVX-Hull/enactive/issues/461)). Decided by the lead on
-13 November 2026 and reviewed against the code; nothing here is built.
+13 November 2026 and reviewed against the code; built by #461. The contracts state the
+formats ([player host](../contracts/player-host.md), [evaluation](../contracts/evaluation.md)).
 
 | Part | Where it runs | Why there |
 | --- | --- | --- |

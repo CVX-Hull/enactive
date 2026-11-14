@@ -1,4 +1,4 @@
-"""Facts from player-host/4 traces: decisions, cost, tool calls and host-side events.
+"""Facts from player-host/5 traces: decisions, cost, tool calls and host-side events.
 
 Dollars here are the configured-rate estimate of each response (`usage.cost.total`), the one figure every run
 carries. The cost the provider reported, which the host counts toward the dollar limit, is not read. An archived
@@ -31,7 +31,7 @@ from .records import EventRow, RequestRow, ToolCallRow
 from .sources import HostEvent, MemoryFacts, Operation
 
 CREATING_TOOLS = ('computer_input', 'computer_observe', 'player_handoff', 'player_program_run')
-MEMORY_READ_TOOLS = ('player_memory_query', 'player_memory_read', 'player_memory_context')
+MEMORY_READ_TOOLS = ('player_memory_query', 'player_memory_read', 'player_memory_context', 'player_knowledge_read', 'player_knowledge_query')
 LARGE_REWRITE_CACHE_TOKENS = 30_000
 UNCERTAIN_DELIVERY = ('partial', 'unknown')
 
@@ -67,12 +67,16 @@ class Request:
     manifest: bool = False
 
     @property
+    def role(self) -> str:
+        return 'recall' if self.key.startswith('recall-') else 'player'
+
+    @property
     def completed(self) -> bool:
-        return self.end_ms is not None and self.stop_reason in ('stop', 'toolUse') and not self.aborted
+        return self.role == 'player' and self.end_ms is not None and self.stop_reason in ('stop', 'toolUse') and not self.aborted
 
     @property
     def non_tool_stop(self) -> bool:
-        return self.stop_reason is not None and self.stop_reason != 'toolUse'
+        return self.role == 'player' and self.stop_reason is not None and self.stop_reason != 'toolUse'
 
 
 @dataclass
@@ -223,10 +227,10 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                 logical = fields.get('logical_request_id') or key
                 if not isinstance(key, str):
                     continue
-                if logical not in ordinals:
+                if not key.startswith('recall-') and logical not in ordinals:
                     ordinals[logical] = len(ordinals) + 1
                 attempts[logical] = attempts.get(logical, 0) + 1
-                request = Request(key, logical, actor, offset + ordinals[logical], event.monotonic_ms, event.wall,
+                request = Request(key, logical, actor, offset + ordinals.get(logical, len(ordinals)), event.monotonic_ms, event.wall,
                     attempts[logical], retry=key in retries, retry_class=classes.get(key))
                 by_key[key] = by_logical[logical] = request
                 facts.requests.append(request)
@@ -440,6 +444,7 @@ def memory_reads(facts: HostFacts, carry: dict[str, frozenset[str]] | None = Non
     received = {taker: (carry or {}).get(giver, frozenset()) for giver, taker in zip(facts.actors, facts.actors[1:])}
     spans: dict[str, tuple[int, int]] = {}
     for request in facts.requests:
+        if request.role == 'recall':continue
         low, high = spans.get(request.actor, (request.decision, request.decision))
         spans[request.actor] = (min(low, request.decision), max(high, request.decision))
     calls: dict[str, list[ToolCall]] = {}

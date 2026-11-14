@@ -75,13 +75,14 @@ def read_lineage(runs: Sequence[Path]) -> tuple[list[Run], list[Actor]]:
         lineage.append(Run(run.name, facts, read_carry(run), offset))
         spans: dict[str, list] = {}
         for request in facts.requests:
+            if request.role == 'recall':continue
             span = spans.setdefault(request.actor, [request.decision, request.decision, request.wall])
             span[0], span[1] = min(span[0], request.decision), max(span[1], request.decision)
         for position, actor in enumerate(host):
             if actor in spans:
                 low, high, wall = spans[actor]
                 actors.append(Actor(run.name, names[actor], actor, offset + low, high - low + 1, position > 0, wall))
-        offset += max((request.decision for request in facts.requests), default=0)
+        offset += max((request.decision for request in facts.requests if request.role == 'player'), default=0)
     return lineage, actors
 
 
@@ -418,7 +419,8 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int]) -> di
     sequences, recorded = [], []
     for run in lineage:
         by_actor: dict[str, dict[int, dict]] = {}
-        for request in run.facts.requests:  # a retried request keeps its last attempt
+        for request in run.facts.requests:  # a retried player request keeps its last attempt
+            if request.role == 'recall':continue
             images = run.facts.images.get((request.actor, request.key))
             omitted = run.facts.omitted.get((request.actor, request.key), 0)
             row = by_actor.setdefault(request.actor, {}).setdefault(request.decision, dict(images=0, omitted=0))

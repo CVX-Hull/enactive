@@ -10,7 +10,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/2','player-host/3'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/5','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   // The dollar limit and the bound for a request with no cost record are plain decimal text; a number,
   // an exponent, a sign, a non-finite word or a limit of zero is refused, and so is leaving either out.
@@ -46,6 +46,7 @@ test('OpenRouter uses maintained routing and reasoning serializers with explicit
   configuration.model={...configuration.model,provider:'openrouter',baseUrl:'https://openrouter.ai/api/v1',reasoning:true,
     thinkingLevelMap:{medium:'medium'},compat:{...configuration.model.compat,supportsReasoningEffort:true,
       thinkingFormat:'openrouter',openRouterRouting:{only:['fireworks/us'],order:['fireworks/us'],allow_fallbacks:false,require_parameters:true}}};
+  configuration.recall.model=structuredClone(configuration.model);
   assert.doesNotThrow(()=>validateConfiguration(configuration,model.id,'medium'));
   for (const baseUrl of ['http://openrouter.ai/api/v1','https://other.invalid/api/v1','https://openrouter.ai/v1']) {
     assert.throws(()=>validateConfiguration({...configuration,model:{...configuration.model,baseUrl}},model.id,'medium'));
