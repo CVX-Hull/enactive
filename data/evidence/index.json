@@ -513,6 +513,36 @@
       },
       "visibility": "private"
     },
+    "delivery-dev-635": {
+      "availability": "present",
+      "bytes": 34883589,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-delivery-development-start.md"
+      ],
+      "files": 267,
+      "manifest_sha256": "9f9734a341fcc49e1ab7b75abce694b82d35a10859395f2e14f98db21d71e8e6",
+      "note": "The delivery development start (#635): the frozen package with both actors' host traces, frames, receipt and session store, and its final evaluation record",
+      "sources": {
+        "computer-sessions/delivery-dev-635": ".runtime/computer-sessions/delivery-dev-635",
+        "evaluations/88c9ddd4262c4518808a73c1982904fe": ".runtime/evaluations/88c9ddd4262c4518808a73c1982904fe"
+      },
+      "visibility": "private"
+    },
+    "delivery-dev-635-start": {
+      "availability": "present",
+      "bytes": 19541787,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-delivery-development-start.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "2699080bd24cd720863d76f3b04a6afbd2f07562d02b19dc08d000824c9e62f2",
+      "note": "Copied lineage 397 is no longer held out. Start seven-day-end-08; manifest 7fc079d1320f51428447fb8d97100a62441076a4c1d6648163a80c1635c2cdc6. The reusable start seven-day-end-08 after the delivery development start (#635): its working copy, player store and the installed final userdir",
+      "sources": {
+        "start": ".runtime/starts/seven-day-end-08",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
     "memory-screen-gates-460-386": {
       "availability": "present",
       "bytes": 117383888,
