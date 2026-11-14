@@ -44,6 +44,14 @@ that envelope. The lead records each run's spend in its run-ledger row and stops
 the owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
 A new envelope needs its own owner decision.
 
+**Real-model checks before merge.** A change to how a model is prompted or how its reply
+is parsed may spend up to \$1 of provider credit, without a separate approval, on a
+handful of real requests on the pinned route before it merges, run by the lead through
+project tooling and recorded in the pull request
+([owner decision](decisions/owner-decisions.md); control `C-MODEL-CHECK` on the
+[controls page](controls.md)). It counts against the key's credit limit and opens no
+study envelope; anything larger is asked with its price.
+
 **No envelope is open.** The five envelopes, for the development loop (study 372),
 the long-horizon arm (382), the seven-day lineage (397), the held-out lineage (522)
 and the memory screen's gates (590), are closed. The last was \$65 for curator sessions
