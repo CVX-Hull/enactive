@@ -27,6 +27,11 @@ existing scoped review, not another approval stage or authority to reduce CI.
 | Permissions, external access or isolation change | Focused security/operations review at that boundary. This is not gameplay strategy review or a critic/approval per key. |
 | Integrated acceptance/publication | Independent outcome/evidence and maintainability review against original requirements, source/configuration and failure/unknown receipts. Appropriate protected CI profiles and required outcome evidence remain. |
 
+A pull request that changes only the [owner decision log](../decisions/owner-decisions.md)
+or the [current work](../work.md) page gets at most one independent review, a
+clean-context one, and no second-family review (owner decision of 14 November 2026;
+R-CONTROL-BLOAT). Other changes get the review this page selects.
+
 For maintainer-facing design review, lead with the user outcome, a small boundary
 diagram when useful, important alternatives/tradeoffs, open decisions and evidence
 limits. Link implementation detail rather than requiring the user to audit it.

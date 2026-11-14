@@ -62,11 +62,8 @@ in the lead's scratch directory, and `BRIEF` the brief text.
   goes in parts, within the shell's argument limit. Antigravity keeps state between
   conversations (summaries, a `brain` directory) and whether a later run reads it is
   not known, so its review is the second family's view, and the clean-context review
-  is still a fresh agent on the lead's host.
-- **Which changes get both reviews** ([owner decision](../decisions/owner-decisions.md),
-  [R-CONTROL-BLOAT](../risks.md)): code, contracts and dated records get a
-  clean-context review and a second-family review; a change only to the decision log or
-  the current-work pages gets one clean-context review. Cost: one review fewer for those.
+  is still a fresh agent on the lead's host. When a second-family review is skipped is
+  in [review](../workflows/review.md).
 - **Credentials** ([R-KEY-LEAK](../risks.md)): the shell that starts either tool
   holds no provider key, since the tool reads its whole environment and would hand
   the key to a third provider. Cost: none beyond starting it from a clean shell.

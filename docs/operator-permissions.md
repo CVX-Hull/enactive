@@ -46,8 +46,8 @@ A new envelope needs its own owner decision.
 
 **Real-model checks before merge.** A change to how a model is prompted or how its reply
 is parsed may spend up to \$1 of provider credit, without a separate approval, on a
-handful of real requests on the pinned route before it merges, run by the lead through
-project tooling and recorded in the pull request
+handful of real requests on the pinned route before it merges, run by the lead as a
+short campaign package whose dollar limit is at most \$1 and recorded in the pull request
 ([owner decision](decisions/owner-decisions.md); control `C-MODEL-CHECK` on the
 [controls page](controls.md)). It counts against the key's credit limit and opens no
 study envelope; anything larger is asked with its price.
@@ -63,7 +63,8 @@ unspent remainder is not carried to other work. Each envelope and the decision t
 it is a row in the [owner decision log](decisions/owner-decisions.md). The run ledger,
 `data/evaluation/runs.jsonl`, holds those studies' runs, and
 `tools/run_ledger.py totals --study` reports one study's spend against its envelope.
-Spend outside a study is stated in the dated record of the work that spent it.
+Spend outside a study is stated in the dated record of the work that spent it, except a
+real-model check before merge, which its pull request records.
 
 ## Engineering decision and merge delegation
 
