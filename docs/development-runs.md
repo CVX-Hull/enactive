@@ -181,7 +181,9 @@ and hash in the sealed copy before removing the working start and installed
 userdir (R-EVIDENCE-LOSS). Excluded files are refused before sealing; mismatched
 files prevent removal. A seal receipt makes disposal resumable: retry with the
 same study to verify the seal and finish removal, with the installed marker
-removed last. Restore also finishes a pending sealed disposal. An unused start
+removed last. If a seal fails verification, the lifecycle refuses removal and the
+lead investigates the evidence store before any manual recovery step.
+Restore also finishes a pending sealed disposal. An unused start
 can be disposed of the same way. Archives remain outside the save tree.
 `python -m tools.starts restore-userdir ARCHIVE` restores a reported archive path
 or archive basename, verifies its hashes and archives any current userdir first.

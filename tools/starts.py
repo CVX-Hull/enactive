@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -36,31 +37,48 @@ def descriptive_name(name: str) -> str:
     return name
 
 
-def reject_links(path: Path) -> None:
+def reject_links(path: Path, *, root: Path | None = None) -> None:
+    path = path.absolute()
+    boundary = root.absolute() if root is not None else path.parent
+    if not path.is_relative_to(boundary):
+        boundary = boundary.resolve()
+    if not path.is_relative_to(boundary):
+        raise ValueError(f'{path}: outside the project root')
     for part in (path, *path.parents):
         if part.is_symlink():
             raise ValueError(f'{part}: symbolic links are refused')
+        if part == boundary:
+            break
 
 
-def read_json(path: Path) -> dict:
-    reject_links(path)
+def read_json(path: Path, *, root: Path | None = None) -> dict:
+    reject_links(path, root=root)
     value = json.loads(path.read_text(encoding='utf-8'))
     if not isinstance(value, dict):
         raise ValueError(f'{path}: expected a JSON object')
     return value
 
 
-def write_json(path: Path, value: dict) -> None:
-    reject_links(path)
+def write_json(path: Path, value: dict, *, root: Path | None = None) -> None:
+    reject_links(path, root=root)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'w', encoding='utf-8') as stream:
         stream.write(json.dumps(value, indent=2, sort_keys=True) + '\n')
 
 
-def replace_json(path: Path, value: dict) -> None:
-    reject_links(path)
+def replace_json(path: Path, value: dict, *, root: Path | None = None) -> None:
+    reject_links(path, root=root)
     temporary = path.with_name(path.name + '.tmp')
-    write_json(temporary, value)
+    reject_links(temporary, root=root)
+    try:
+        mode = temporary.lstat().st_mode
+    except FileNotFoundError:
+        pass
+    else:
+        if not stat.S_ISREG(mode):
+            raise ValueError(f'{temporary}: leftover receipt temporary must be a regular file')
+        temporary.unlink()
+    write_json(temporary, value, root=root)
     os.replace(temporary, path)
 
 
@@ -111,7 +129,7 @@ class Starts:
 
     @contextmanager
     def idle_game(self):
-        reject_links(game_lock_path(self.runtime))
+        reject_links(game_lock_path(self.runtime), root=self.root)
         with game_lock(self.runtime):
             refuse_game()
             yield
@@ -120,10 +138,10 @@ class Starts:
         # Check existing destinations before even the shared lock creates a file.
         for path in (self.installed, self.installed.with_name('installed.json.tmp'),
                      self.archive, self.user, game_lock_path(self.runtime)):
-            reject_links(path)
+            reject_links(path, root=self.root)
         for path in (self.user, self.starts / descriptive_name(name) if name else None):
             if path is not None:
-                reject_links(path)
+                reject_links(path, root=self.root)
                 if path.is_dir():
                     evidence.listing(path)
 
@@ -159,7 +177,7 @@ class Starts:
     def describe(self, name: str) -> dict:
         directory = self.starts / descriptive_name(name)
         path = directory / 'manifest.json'
-        manifest = read_json(path)
+        manifest = read_json(path, root=self.root)
         expected, source_hash = self.source_manifest()
         if (manifest['schema'] != SCHEMA or manifest['name'] != name or manifest['lineage'] != 397
                 or manifest['source_study'] != STUDY or manifest['source_manifest_sha256'] != source_hash
@@ -190,7 +208,7 @@ class Starts:
             self.check_payload(target, expected)
             write_json(target / 'manifest.json', dict(schema=SCHEMA, name=name, lineage=397,
                        source_study=STUDY, source_manifest_sha256=source_hash, files=expected,
-                       created=timestamp(), player_store=self.player_store(name), held_out=False))
+                       created=timestamp(), player_store=self.player_store(name), held_out=False), root=self.root)
             target.rename(directory)
         return self.describe(name)
 
@@ -203,14 +221,15 @@ class Starts:
         copy_tree(self.user, target / 'user')
         check_files(target / 'user', expected)
         check_files(self.user, expected)
-        write_json(target / 'manifest.json', dict(schema='userdir-archive/1', created=timestamp(), files=expected))
+        write_json(target / 'manifest.json', dict(schema='userdir-archive/1', created=timestamp(), files=expected),
+                   root=self.root)
         return target
 
     def active(self) -> dict | None:
-        reject_links(self.installed)
+        reject_links(self.installed, root=self.root)
         if not self.installed.exists():
             return None
-        receipt = read_json(self.installed)
+        receipt = read_json(self.installed, root=self.root)
         if receipt.get('schema') != 'start-installation/1':
             raise ValueError('unsupported installation receipt schema')
         return receipt
@@ -237,7 +256,7 @@ class Starts:
                     raise ValueError('working player store copy changed')
                 receipt = description | dict(schema='start-installation/1',
                                              archive=str(archive) if archive else None, installed=timestamp())
-                write_json(self.installed, receipt)
+                write_json(self.installed, receipt, root=self.root)
                 # Archive is complete and verified before this removal.
                 if self.user.exists():
                     shutil.rmtree(self.user)
@@ -252,7 +271,7 @@ class Starts:
         target = Path(archive)
         if not target.is_absolute():
             target = self.archive / target
-        reject_links(target / 'manifest.json')
+        reject_links(target / 'manifest.json', root=self.root)
         target = target.resolve()
         if target.parent != self.archive.resolve():
             raise ValueError('archive must be a userdir archive in the project archive directory')
@@ -266,7 +285,7 @@ class Starts:
                 if not pending:
                     raise ValueError('dispose the installed start before restoring a userdir')
                 self.finish_disposal(active['name'], pending, active, retry=True)
-            manifest = read_json(target / 'manifest.json')
+            manifest = read_json(target / 'manifest.json', root=self.root)
             if manifest['schema'] != 'userdir-archive/1':
                 raise ValueError('unsupported userdir archive schema')
             check_files(target / 'user', manifest['files'])
@@ -283,8 +302,8 @@ class Starts:
 
     def pending_disposal(self, name: str, active: dict | None) -> dict | None:
         path = self.starts / name / 'disposal.json'
-        reject_links(path)
-        local = read_json(path) if path.exists() else None
+        reject_links(path, root=self.root)
+        local = read_json(path, root=self.root) if path.exists() else None
         mirrored = active.get('disposal') if active and active['name'] == name else None
         if local and mirrored and local != mirrored:
             raise ValueError('disposal receipts disagree')
@@ -304,7 +323,7 @@ class Starts:
         # so give it a one-study view without changing the tracked index or store.
         with tempfile.TemporaryDirectory(prefix='.verifying-', dir=self.starts) as temporary:
             scoped = Path(temporary)
-            write_json(scoped / 'index.json', dict(schema=evidence.SCHEMA, studies={study: entry}))
+            write_json(scoped / 'index.json', dict(schema=evidence.SCHEMA, studies={study: entry}), root=self.root)
             shutil.copyfile(self.manifests / f'{study}.sha256', scoped / f'{study}.sha256')
             errors, _ = evidence.verify(full=True, store=self.store, manifests=scoped, expected=True)
             if errors:
@@ -317,7 +336,7 @@ class Starts:
         if installed and active.get('disposal') != receipt:
             # Keep the seal identity reachable if removing the start directory
             # succeeds but removing the installed marker fails.
-            replace_json(self.installed, active | dict(disposal=receipt))
+            replace_json(self.installed, active | dict(disposal=receipt), root=self.root)
         expected = self.verify_disposal(receipt)
         sources = [('start', directory)] + ([('user', self.user)] if installed else [])
         # Re-check the original directories after sealing. On retry some files
@@ -333,7 +352,20 @@ class Starts:
         if installed and self.user.exists():
             shutil.rmtree(self.user)
         if directory.exists():
-            shutil.rmtree(directory)
+            if installed:
+                shutil.rmtree(directory)
+            else:
+                # Without an installed marker there is no mirrored receipt.
+                # Keep this one reachable until all the working files are gone.
+                for child in sorted(directory.iterdir()):
+                    if child.name == 'disposal.json':
+                        continue
+                    if child.is_dir():
+                        shutil.rmtree(child)
+                    else:
+                        child.unlink()
+                (directory / 'disposal.json').unlink()
+                directory.rmdir()
         if installed:
             self.installed.unlink()  # last: recovery retains the seal identity until now
         return dict(name=name, sealed=receipt['study'], manifest_sha256=receipt['manifest_sha256'],
@@ -345,7 +377,7 @@ class Starts:
             raise ValueError('invalid disposal study name')
         for path in (self.store / study, self.manifests / f'{study}.sha256',
                      self.manifests / 'index.json', self.manifests / 'index.json.tmp'):
-            reject_links(path)
+            reject_links(path, root=self.root)
         with self.idle_game():
             active = self.active()
             pending = self.pending_disposal(name, active)
@@ -368,16 +400,31 @@ class Starts:
             if installed:
                 installation = directory / 'installation.json'
                 if installation.exists():
-                    if read_json(installation) != active:
+                    if read_json(installation, root=self.root) != active:
                         raise ValueError('installation receipt changed')
                 else:
-                    write_json(installation, active)
-            entry = evidence.seal(study, sources, cited_by,
+                    write_json(installation, active, root=self.root)
+            pending_path = directory / 'seal-pending.json'
+            pending = dict(schema='start-seal-pending/1', study=study,
+                           start_manifest_sha256=description['manifest_sha256'],
+                           sources={prefix: origin for prefix, _, origin in sources})
+            resuming = pending_path.exists()
+            if resuming:
+                if read_json(pending_path, root=self.root) != pending:
+                    raise ValueError('pending seal differs; retry with its recorded study and unchanged start')
+            else:
+                write_json(pending_path, pending, root=self.root)
+            entry = evidence.read_index(self.manifests)['studies'].get(study)
+            if entry is not None:
+                if not resuming or entry['sources'] != pending['sources']:
+                    raise ValueError('study already sealed and does not match the pending start')
+            else:
+                entry = evidence.seal(study, sources, cited_by,
                                   f'Copied lineage 397 is no longer held out. Start {name}; '
                                   f'manifest {description["manifest_sha256"]}. {note}',
                                   store=self.store, manifests=self.manifests)
             receipt = dict(schema='start-disposal/1', study=study, manifest_sha256=entry['manifest_sha256'])
-            write_json(directory / 'disposal.json', receipt)
+            write_json(directory / 'disposal.json', receipt, root=self.root)
             return self.finish_disposal(name, receipt, active, retry=False)
 
     def list(self) -> list[dict]:

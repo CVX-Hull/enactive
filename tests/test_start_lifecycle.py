@@ -514,3 +514,151 @@ def test_restore_confines_archives_to_project_archive_directory(manager, tmp_pat
         manager.restore_userdir(argument)
     starts.check_files(manager.user, previous)
     assert not manager.archive.exists()
+
+
+def test_replace_json_recovers_from_regular_leftover_temporary(manager):
+    manager.create(NAME)
+    manager.install(NAME)
+    temporary = manager.installed.with_name('installed.json.tmp')
+    temporary.write_text('{incomplete write')
+    result = manager.dispose(NAME, 'temporary-recovery', CITED, '')
+    assert result['sealed'] == 'temporary-recovery'
+    assert not temporary.exists() and not manager.installed.exists()
+
+
+@pytest.mark.parametrize('dangling', [False, True])
+def test_replace_json_never_removes_a_link_temporary(manager, tmp_path, dangling):
+    manager.starts.mkdir(parents=True)
+    starts.write_json(manager.installed, {'original': True})
+    outside = tmp_path / 'temporary-target'
+    if not dangling:
+        outside.write_text('preserved')
+    temporary = manager.installed.with_name('installed.json.tmp')
+    temporary.symlink_to(outside)
+    with pytest.raises(ValueError, match='links'):
+        starts.replace_json(manager.installed, {'replacement': True}, root=manager.root)
+    assert temporary.is_symlink()
+    assert starts.read_json(manager.installed) == {'original': True}
+    assert not outside.exists() if dangling else outside.read_text() == 'preserved'
+
+
+def test_uninstalled_disposal_keeps_receipt_through_partial_removal(manager, monkeypatch):
+    manager.create(NAME)
+    directory = manager.starts / NAME
+    original_remove = shutil.rmtree
+    def interrupted_remove(path, *a, **kw):
+        if Path(path) == directory / 'user':
+            # Earlier children, including the start manifest, are already gone.
+            assert not (directory / 'manifest.json').exists()
+            assert (directory / 'disposal.json').is_file()
+            (directory / 'user' / 'config' / 'options.json').unlink()
+            raise OSError('mid-removal failure')
+        return original_remove(path, *a, **kw)
+    with monkeypatch.context() as fault:
+        fault.setattr(shutil, 'rmtree', interrupted_remove)
+        with pytest.raises(OSError, match='mid-removal failure'):
+            manager.dispose(NAME, 'unused-partial-removal', CITED, '')
+    receipt = starts.read_json(directory / 'disposal.json')
+    assert receipt['study'] == 'unused-partial-removal'
+    monkeypatch.setattr(evidence, 'seal', lambda *a, **kw: pytest.fail('must reuse the seal'))
+    result = manager.dispose(NAME, 'unused-partial-removal', CITED, '')
+    assert result['manifest_sha256'] == receipt['manifest_sha256']
+    assert not directory.exists()
+
+
+@pytest.mark.parametrize('installed', [False, True])
+def test_pending_receipt_recovers_crash_after_seal_before_final_receipt(manager, monkeypatch, installed):
+    manager.create(NAME)
+    if installed:
+        manager.install(NAME)
+    directory = manager.starts / NAME
+    seal = evidence.seal
+    calls = []
+    def interrupted_seal(*a, **kw):
+        pending = starts.read_json(directory / 'seal-pending.json')
+        assert pending['study'] == 'pending-seal-recovery'
+        entry = seal(*a, **kw)
+        calls.append(entry)
+        raise OSError('crash after successful seal')
+    with monkeypatch.context() as fault:
+        fault.setattr(evidence, 'seal', interrupted_seal)
+        with pytest.raises(OSError, match='crash after successful seal'):
+            manager.dispose(NAME, 'pending-seal-recovery', CITED, '')
+    assert not (directory / 'disposal.json').exists() and calls
+    verify = evidence.verify
+    verified = []
+    def verifying(**kw):
+        assert kw['full'] is True
+        verified.append(kw)
+        return verify(**kw)
+    monkeypatch.setattr(evidence, 'verify', verifying)
+    monkeypatch.setattr(evidence, 'seal', lambda *a, **kw: pytest.fail('must not seal an already sealed study'))
+    result = manager.dispose(NAME, 'pending-seal-recovery', CITED, '')
+    assert result['manifest_sha256'] == calls[0]['manifest_sha256'] and verified
+    assert not directory.exists() and not manager.installed.exists()
+    assert not manager.user.exists()
+
+
+def test_pending_seal_does_not_adopt_a_study_from_a_different_start(manager, monkeypatch):
+    manager.create(NAME)
+    seal = evidence.seal
+    def fail_before_seal(*a, **kw):
+        raise OSError('not yet sealed')
+    with monkeypatch.context() as fault:
+        fault.setattr(evidence, 'seal', fail_before_seal)
+        with pytest.raises(OSError, match='not yet sealed'):
+            manager.dispose(NAME, 'different-origin', CITED, '')
+    # A different origin cannot stand in for this pending operation.
+    seal('different-origin', [('start', manager.starts / NAME, '.runtime/starts/another-start')],
+         CITED, 'different start', store=manager.store, manifests=manager.manifests)
+    with pytest.raises(ValueError, match='does not match the pending start'):
+        manager.dispose(NAME, 'different-origin', CITED, '')
+    assert (manager.starts / NAME / 'manifest.json').exists()
+    assert not (manager.starts / NAME / 'disposal.json').exists()
+
+
+def test_lifecycle_allows_symlinked_parent_but_rejects_links_inside_project(manager, tmp_path):
+    parent = tmp_path / 'parent-alias'
+    parent.symlink_to(manager.root.parent, target_is_directory=True)
+    root = parent / manager.root.name
+    aliased = starts.Starts(root=root, store=root / '.runtime' / 'evidence', manifests=root / 'data' / 'evidence')
+    aliased.create(NAME)
+    previous = old_user(aliased)
+    installation = aliased.install(NAME)
+    aliased.dispose(NAME, 'symlink-parent-outputs', CITED, '')
+    aliased.restore_userdir(installation['archive'])
+    starts.check_files(aliased.user, previous)
+    inner = root / '.runtime' / 'inner-link'
+    inner.symlink_to(aliased.starts, target_is_directory=True)
+    with pytest.raises(ValueError, match='links'):
+        starts.write_json(inner / 'receipt.json', {'value': True}, root=root)
+    assert not (aliased.starts / 'receipt.json').exists()
+
+
+@pytest.mark.parametrize('dangling', [False, True])
+@pytest.mark.parametrize('destination', ['study', 'manifest', 'index', 'index-temporary', 'store', 'manifests'])
+def test_dispose_refuses_store_and_manifest_links_before_writes(manager, tmp_path, monkeypatch,
+                                                              destination, dangling):
+    manager.create(NAME)
+    paths = dict(study=manager.store / 'linked-study',
+                 manifest=manager.manifests / 'linked-study.sha256',
+                 index=manager.manifests / 'index.json',
+                 **{'index-temporary': manager.manifests / 'index.json.tmp'},
+                 store=manager.store, manifests=manager.manifests)
+    link = paths[destination]
+    outside = tmp_path / ('outside-' + destination)
+    if link.exists():
+        link.rename(outside)
+    elif not dangling:
+        outside.write_text('preserved destination')
+    if dangling and outside.exists():
+        # Preserve real fixture files elsewhere; only the link target is absent.
+        outside.rename(tmp_path / ('retained-' + destination))
+    before = starts.inventory(outside) if outside.is_dir() else outside.read_bytes() if outside.exists() else None
+    link.symlink_to(outside)
+    monkeypatch.setattr(starts, 'game_lock', lambda *a: pytest.fail('must reject before any write'))
+    with pytest.raises(ValueError, match='links'):
+        manager.dispose(NAME, 'linked-study', CITED, '')
+    assert link.is_symlink()
+    after = starts.inventory(outside) if outside.is_dir() else outside.read_bytes() if outside.exists() else None
+    assert after == before
