@@ -110,9 +110,13 @@ class Repository:
         return version
 
     def _check_schema(self, version: str) -> None:
-        metadata = json.loads(self._show(version, 'knowledge.json'))
+        message = f'unsupported knowledge schema: expected {SCHEMA}; start a new repository'
+        try:
+            metadata = json.loads(self._show(version, 'knowledge.json'))
+        except (KnowledgeError, ValueError, RecursionError) as error:
+            raise KnowledgeError(message) from error
         if not isinstance(metadata, dict) or metadata.get('schema') != SCHEMA:
-            raise KnowledgeError(f'unsupported knowledge schema: expected {SCHEMA}; start a new repository')
+            raise KnowledgeError(message)
 
     def _show(self, version: str, relative: str) -> bytes:
         return _git(self.path, 'show', f'{version}:{relative}')

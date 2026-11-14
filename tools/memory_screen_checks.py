@@ -145,9 +145,13 @@ def read_versions(repository: Path) -> list[dict]:
         if kind != 'commit':
             raise StoreError(f'{repository}: {tag.name} is a {kind}, not a commit')
         files = _entries(objects, body.split(b'\n', 1)[0].split()[1].decode())
-        metadata = json.loads(_object(objects, files['knowledge.json'])[1])
+        message = f'{repository} {tag.name}: unsupported knowledge schema: expected curator-knowledge/2; start a new repository'
+        try:
+            metadata = json.loads(_object(objects, files['knowledge.json'])[1])
+        except (KeyError, StoreError, OSError, ValueError, RecursionError) as error:
+            raise StoreError(message) from error
         if not isinstance(metadata, dict) or metadata.get('schema') != 'curator-knowledge/2':
-            raise StoreError(f'{repository} {tag.name}: expected curator-knowledge/2; start a new repository')
+            raise StoreError(message)
         data = _object(objects, files['facts.jsonl'])[1]
         records = [json.loads(line) for line in data.decode('utf-8').splitlines() if line.strip()]
         for record in records:
@@ -155,7 +159,9 @@ def read_versions(repository: Path) -> list[dict]:
                 raise StoreError(f'{repository} {tag.name}: unsupported record schema; expected curator-fact/3')
             if record.get('record') not in ('fact', 'article'):
                 raise StoreError(f'{repository} {tag.name}: unsupported record kind; expected fact or article')
-        versions.append(dict(version=tag.name, commit=commit, bytes=len(data),
+        message_lines = body.partition(b'\n\n')[2].decode('utf-8').splitlines()
+        session = next((line.removeprefix('session: ') for line in message_lines if line.startswith('session: ')), None)
+        versions.append(dict(version=tag.name, commit=commit, session=session, bytes=len(data),
                              facts=[r for r in records if r['record'] == 'fact'],
                              articles=[r for r in records if r['record'] == 'article']))
     return versions
@@ -198,8 +204,7 @@ def store_report(repositories: Sequence[Path], finds: Sequence[str], runs: Seque
         rows, previous = [], {}
         for version in versions:
             facts = {fact['id']: fact for fact in version['facts']}
-            session = next((r.get('session') for r in [*version['facts'], *version['articles']]
-                            if r.get('published_in') == version['version']), None)
+            session = version['session']
             rows.append(dict(version=version['version'], session=session, covers=sessions.get(session, []),
                 facts=len(facts), articles=len(version['articles']),
                 current_facts=sum('superseded_by' not in f and 'retired' not in f for f in facts.values()),

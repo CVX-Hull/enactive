@@ -295,7 +295,7 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
                     found.append(f'{label}: inherited citation {citation!r} has no recorded provenance')
             else:
                 found.append(f'{label}: citation {citation!r} is outside the trace window'
-                             + (' and the replaced facts' if session_kind == 'grooming' else ''))
+                             + (' and the replaced facts' if session_kind == 'grooming' and op == 'supersede_fact' else ''))
         if op.startswith('retire_'):
             if change['id'] in by_id:
                 by_id[change['id']]['retired'] = dict(reason=change['reason'], citations=citations,

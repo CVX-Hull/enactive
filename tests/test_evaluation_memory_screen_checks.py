@@ -28,9 +28,9 @@ def knowledge(root: Path, tank_frame: str) -> Path:
     repository = Repository(root, 'cdda')
     repository.ensure()
     recipe = fact('rod-recipe', 'A rod needs a stick.', 'v1', 'run-a-1', ['x-1'])
-    repository.commit({'facts.jsonl': lines(recipe)}, 'Publish v1')
+    repository.commit({'facts.jsonl': lines(recipe)}, 'Publish v1\n\nsession: run-a-1')
     repository.commit({'facts.jsonl': lines(dict(recipe, text='A rod needs a stick and a hook.'),
-        fact('roof-tank', 'The roof tank holds 18 L of clean water.', 'v2', 'run-a-2', [tank_frame]))}, 'Publish v2')
+        fact('roof-tank', 'The roof tank holds 18 L of clean water.', 'v2', 'run-a-2', [tank_frame]))}, 'Publish v2\n\nsession: run-a-2')
     for session in ('run-a-1', 'run-a-2'):
         directory = repository.state / 'sessions' / session
         directory.mkdir(parents=True)
@@ -183,7 +183,7 @@ def test_store_reports_fact_and_article_totals_current_counts_and_bytes_per_vers
     repo = Repository(path.parent, path.name)
     old = repo.facts()
     groomed = [dict(old[0], retired=dict(reason='contradicted')), old[1], article()]
-    repo.commit({'facts.jsonl': lines(*groomed)}, 'grooming')
+    repo.commit({'facts.jsonl': lines(*groomed)}, 'grooming\n\nsession: groom')
     versions = read_versions(path)
     assert len(versions[-1]['facts']) == 2 and len(versions[-1]['articles']) == 1
     assert fact_history(versions, 'article') is None
@@ -244,3 +244,39 @@ def test_memory_reader_refuses_unknown_record_discriminators(tmp_path, record):
     repo.commit({'facts.jsonl': lines(dict(article(), record=record))}, 'unknown discriminator')
     with pytest.raises(StoreError, match='unsupported record kind; expected fact or article'):
         read_versions(repo.path)
+
+
+@pytest.mark.parametrize('metadata', [None, b'{', b'\xff'], ids=['missing', 'invalid-json', 'invalid-encoding'])
+def test_memory_reader_refuses_missing_or_unparseable_knowledge_metadata(tmp_path, metadata):
+    repo = Repository(tmp_path/'knowledge', 'cdda')
+    repo.ensure()
+    if metadata is None:
+        (repo.path/'knowledge.json').unlink()
+        files = {}
+    else:
+        files = {'knowledge.json': metadata}
+    repo.commit(files, 'invalid metadata fixture')
+    with pytest.raises(StoreError, match='unsupported knowledge schema:.*start a new repository'):
+        read_versions(repo.path)
+
+
+@pytest.mark.parametrize('operation', ['retype-only', 'retire-only'])
+def test_store_uses_the_commit_session_when_a_version_adds_no_record(tmp_path, operation):
+    path = knowledge(tmp_path/'knowledge', 'frame')
+    repo = Repository(path.parent, path.name)
+    records = repo.records()
+    if operation == 'retype-only':
+        records[0].update(type='observed', retyped=[dict(version='v3', **{'from': 'resource', 'to': 'observed'})])
+    else:
+        records[0]['retired'] = dict(reason='contradicted', session=operation, published_in='v3')
+    repo.commit({'facts.jsonl': lines(*records)}, f'Publish v3: {operation}\n\nsession: {operation}\nsubmission: fixture')
+    manifest = repo.state/'sessions'/operation/'manifest.json'
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps(dict(inputs=dict(trace_sessions=['run-b']))))
+    versions = read_versions(path)
+    assert len(versions[-1]['facts']) == len(versions[-2]['facts']) == 2
+    assert not any(r.get('published_in') == 'v3' for r in versions[-1]['facts'])
+    assert versions[-1]['session'] == operation
+    report, = store_report([path], [], [])
+    assert report['versions'][-1]['session'] == operation
+    assert report['versions'][-1]['covers'] == ['run-b']

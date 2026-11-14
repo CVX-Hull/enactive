@@ -1004,3 +1004,60 @@ def test_inherited_citations_require_recorded_frame_positions(tmp_path):
                                    base_version='v2'), frames=set(), session_kind='grooming')
     assert not verdict['accepted'] and verdict['diagnostics'] == [
         "changes[0]: inherited citation 'frame-1' has no recorded provenance"]
+
+
+def test_grooming_without_a_configured_brief_aborts_before_host_start(tmp_path, monkeypatch):
+    from tests.curator_trace import frame_id, make_long_session
+
+    repo = make_repo(tmp_path)
+    trace = make_long_session(tmp_path/'evidence')
+    citation = frame_id(1, 1)
+    assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind()),
+                                          dict(op='add_fact', fact=fact(citations=[citation]))]),
+               frames={citation})['accepted']
+    started = []
+    def forbidden(*args, **kwargs):
+        started.append(True)
+        pytest.fail('missing grooming brief must not start a host')
+    monkeypatch.setattr(sandbox, 'run', forbidden)
+    record = session.run_session(repo, [trace], session.SessionConfig(argv=('unused',)), session_kind='grooming')
+    assert record['manifest']['lifecycle']['state'] == 'aborted'
+    assert record['manifest']['lifecycle']['errors'] == [
+        'session: SessionError: grooming needs a configured grooming brief']
+    assert record['verdicts'] == [] and not started
+    assert repo.published() == 'v1'
+
+
+@pytest.mark.parametrize('metadata', [None, b'{', b'\xff'], ids=['missing', 'invalid-json', 'invalid-encoding'])
+def test_unreadable_knowledge_metadata_is_an_unsupported_schema_and_gate_rejection(tmp_path, metadata):
+    repo = make_repo(tmp_path)
+    if metadata is None:
+        (repo.path/'knowledge.json').unlink()
+        files = {}
+    else:
+        files = {'knowledge.json': metadata}
+    repo.commit(files, 'invalid metadata fixture')
+    before = snapshot(repo)
+    for read in [repo.published, repo.ensure, repo.records]:
+        with pytest.raises(KnowledgeError, match='unsupported knowledge schema:.*start a new repository'):
+            read()
+    verdict = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())], base_version='v1'))
+    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
+    assert 'unsupported knowledge schema:' in verdict['diagnostics'][0]
+    assert 'start a new repository' in verdict['diagnostics'][0]
+    assert snapshot(repo) == before
+
+
+@pytest.mark.parametrize('op', ['add_fact', 'retire_fact', 'supersede_fact'])
+def test_grooming_citation_diagnostic_mentions_replaced_facts_only_for_superseding(tmp_path, op):
+    repo = seeded(tmp_path)
+    if op == 'retire_fact':
+        change = dict(op=op, id='f1', reason='contradicted', citations=['outside'])
+    else:
+        change = dict(op=op, fact=fact('f2', citations=['outside']))
+        if op == 'supersede_fact':
+            change['ids'] = ['f1']
+    verdict = grooming(repo, tmp_path, [change])
+    suffix = ' and the replaced facts' if op == 'supersede_fact' else ''
+    assert not verdict['accepted'] and verdict['diagnostics'] == [
+        "changes[0]: citation 'outside' is outside the trace window" + suffix]
