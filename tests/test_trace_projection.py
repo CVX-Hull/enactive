@@ -381,3 +381,18 @@ def test_tracked_397_sidecar_index_matches_the_sealed_sessions():
     assert tracked['containers'] == sidecar.actor_sessions(EVIDENCE, '397-seven-day')
     text = json.dumps(tracked)
     assert 'actor.json' not in text and 'route.json' not in text
+
+
+def test_the_projection_keeps_exactly_the_arguments_each_tool_takes():
+    """R-REGRESSION (#626): an allowlist that differs from a tool's arguments silently drops what the player
+    actually sent (the read's record id and a program run's starting state were lost this way). The allowlist is
+    checked against the live tool table, tool by tool and argument by argument."""
+    from harness.player_tools import tool_specs
+    from harness.trace.projection import TOOL_ARGUMENTS, _arguments
+    specs = tool_specs()
+    assert set(TOOL_ARGUMENTS) == set(specs)
+    for tool, (_, schema) in specs.items():
+        assert set(TOOL_ARGUMENTS[tool]) == set(schema.get('properties', {})), tool
+    assert _arguments('player_memory_read', dict(record_id='r7')) == dict(record_id='r7')
+    run = dict(program_id='p', initial_state={'a': 1}, interpretation='i', selection='s', max_steps=3, max_seconds=4)
+    assert _arguments('player_program_run', run) == run
