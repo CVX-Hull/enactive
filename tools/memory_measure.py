@@ -209,7 +209,9 @@ def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dic
     for directory, run in zip(runs, lineage):
         if run.name in frames:
             raise MeasureError(f'{run.name}: selected twice')
-        session = read_json(directory / 'manifest.json')['session']
+        session = read_json(directory / 'manifest.json').get('session')
+        if not isinstance(session, str) or not session or '-' in session:
+            raise MeasureError(f'{run.name}: manifest session must be a non-empty id without "-"')
         spans[run.name] = {actor.name: (actor.first - offsets[run.name], actor.first - offsets[run.name] + actor.requests - 1)
             for actor in actors if actor.run == run.name}
         found, seen, pending, pending_decisions, stated, previous, owner = [], set(), [], [], [], None, None
