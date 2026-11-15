@@ -841,9 +841,9 @@ Examples:
   and `cannot_tell` if the frames do not show that.
 - The player types the thing's name into a search and the next frame shows the search closed, with no frame of
   its results: `found_again`, citing the frame where the search or its closing shows.
-- A fact warns that something goes wrong in one specific circumstance; the player does the general activity and
-  the window never shows that circumstance: not `against`. `in_line` if the player visibly kept clear of the
-  circumstance, otherwise `did_not_apply`.
+- A fact warns that something goes wrong in one specific circumstance, and the player does the general activity:
+  not `against` unless the frames show that circumstance. Go on to rule 3 as usual; then `in_line` if the player
+  visibly kept clear of the circumstance, otherwise `cannot_tell`.
 
 Then say whether the frames show the fact still holding (`holds`):
 
