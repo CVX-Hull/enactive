@@ -188,7 +188,7 @@ def test_judge_packets_are_cut_to_the_token_budget_and_record_it(tmp_path):
     fact_packets(wide, runs, facts, 'use', every=1, seed=1)
     assert [(p['window'], len(p['frames'])) for p in mapping_of(wide)['packets']] == [
         ('run-e/001:1-8', 7), ('run-f/001:1-5', 5), ('run-g/001:1-3', 3)]
-    budget = 3600
+    budget = 4200
     fact_packets(narrow, runs, facts, 'use', budget=budget, every=1, seed=1)
     mapping = mapping_of(narrow)
     assert mapping['budget_tokens'] == budget
@@ -413,7 +413,7 @@ def test_a_use_packet_leaves_out_a_fact_that_reached_the_player_after_its_window
     run = tmp_path / 'memory-measure' / 'narrow'
     run.mkdir(parents=True)
     fact_packets(run, runs[:1], save(tmp_path / 'facts.json', dict(FACTS, admissions={'run-e': FACTS['admissions']['run-e']})),
-        'use', budget=3600, every=1, seed=1)
+        'use', budget=4200, every=1, seed=1)
     windows = mapping_of(run)['packets']
     assert len(windows) > 1 and windows[0]['last'] < 6  # read-1 was read at decision 6
     assert 'read-1' not in windows[0]['facts'] and windows[-1]['facts']['read-1'] == 'read'
@@ -453,7 +453,7 @@ def test_a_blind_packet_shows_every_fact_in_every_window(tmp_path):
     run = tmp_path / 'memory-measure' / 'narrow'
     run.mkdir(parents=True)
     fact_packets(run, runs[:1], save(tmp_path / 'facts.json', dict(FACTS, admissions={'run-e': FACTS['admissions']['run-e']})),
-        'blind', budget=3600, every=1, seed=1)
+        'blind', budget=4200, every=1, seed=1)
     windows = mapping_of(run)['packets']
     assert len(windows) > 1 and all(sorted(w['facts']) == ['held-1', 'index-1', 'lead-1', 'lead-2', 'read-1'] for w in windows)
 
@@ -847,7 +847,7 @@ def test_blind_ids_and_grouping_are_independent_of_routes_and_unique_per_packet(
     for number, (lead, withheld) in enumerate((entries, entries[::-1])):
         run = tmp_path / 'memory-measure' / f'blind-{number}'
         facts = dict(schema='judged-facts/1', admissions={'run-e': {'001': dict(lead=[lead], withheld=[withheld])}})
-        mapping = fact_packets(run, runs, save(tmp_path / f'facts-{number}.json', facts), 'blind', budget=3600, every=1, seed=7)
+        mapping = fact_packets(run, runs, save(tmp_path / f'facts-{number}.json', facts), 'blind', budget=4200, every=1, seed=7)
         mappings.append(mapping)
         payloads.append([packet_text(run / 'judge-packets' / packet['packet']) for packet in mapping['packets']])
     assert payloads[0] == payloads[1]
@@ -863,11 +863,11 @@ def test_token_accounting_matches_every_serialized_file_and_flags_oversize(tmp_p
     run = tmp_path / 'memory-measure' / 'sized'
     runs = [admission(tmp_path / 'evidence', 'run-g', 'g', [1, 2], (1500, 1500))]
     if kind == 'annotate':
-        mapping = annotate_packets(run, runs, every=1, budget=3600)
+        mapping = annotate_packets(run, runs, every=1, budget=4200)
         root = run / 'annotate'
     else:
         mapping = fact_packets(run, runs, save(tmp_path / 'facts.json', dict(FACTS,
-            admissions={'run-g': FACTS['admissions']['run-g']})), kind, every=1, budget=3600)
+            admissions={'run-g': FACTS['admissions']['run-g']})), kind, every=1, budget=4200)
         root = run / 'judge-packets'
     assert len(mapping['packets']) == 2  # an oversized decision is retained and declared
     for packet in mapping['packets']:
@@ -877,7 +877,7 @@ def test_token_accounting_matches_every_serialized_file_and_flags_oversize(tmp_p
         estimate = manifest['budget']
         assert estimate['estimated']['text'] == actual_text
         assert estimate['estimated']['total'] == actual_text + 3000
-        assert estimate['over'] == packet['over_budget'] == (actual_text + 3000 > 3600)
+        assert estimate['over'] == packet['over_budget'] == (actual_text + 3000 > 4200)
         assert packet['estimated_tokens'] == actual_text + 3000
 
 

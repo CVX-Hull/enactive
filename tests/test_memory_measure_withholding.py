@@ -151,7 +151,7 @@ def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=Fa
         facts_edit(admissions)
     run = tmp_path / 'memory-measure' / 'pilot'
     facts = save(run / 'judged-facts.json', dict(schema='judged-facts/1', admissions=admissions))
-    mapping = memory_measure.fact_packets(run, packages, facts, kind, budget=3600, every=1, seed=8)
+    mapping = memory_measure.fact_packets(run, packages, facts, kind, budget=4200, every=1, seed=8)
     assert len([packet for packet in mapping['packets'] if packet['start'] == 'pilot-east']) >= 3
     # The first pair needs a third judge, whose answer differs from both originals.
     disputed = next(packet['packet'] for packet in mapping['packets'] if packet['start'] == 'pilot-east')
