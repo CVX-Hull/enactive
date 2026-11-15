@@ -24,7 +24,7 @@ def study_fixture(tmp_path):
             units=[dict(u, withheld=index in next(r['withheld'] for r in design['assignment'] if r['unit_id'] == u['id']),
                         placebo=u['id'] == 'lone') for u in layout['units']])
         unit_path = save(package / 'private/units.json', record)
-        save(package / 'manifest.json', dict(schema='campaign-run/7', private_files={'units.json': mm.file_sha256(unit_path)}))
+        save(package / 'manifest.json', dict(schema='campaign-run/7', session=json.loads((package / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
         available = ke.delivered_fact_ids(record)
         for actor, entry in facts['admissions'][package.name].items():
             all_facts = [fact for route in mm.ROUTES for fact in entry.get(route, [])]
@@ -89,7 +89,7 @@ def test_study_rejects_bad_draw_provenance_and_use_packets(tmp_path, fault):
         else:
             r['units'][0]['placebo'] = not r['units'][0]['placebo']
         unit_path = save(packages[1] / 'private/units.json', r)
-        save(packages[1] / 'manifest.json', dict(schema='campaign-run/7', private_files={'units.json': mm.file_sha256(unit_path)}))
+        save(packages[1] / 'manifest.json', dict(schema='campaign-run/7', session=json.loads((packages[1] / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
     with pytest.raises(mm.MeasureError):
         mm.study(run, packages, path, draws=10)
     assert not (run / 'study.json').exists()

@@ -542,6 +542,11 @@ fact's route and is never given to a judge. A run directory holds one kind.
   decision larger than the budget can. Facts are split over several packets of the same
   window when they would take more than half of what the briefing, reminders and
   instructions leave; when those leave less than a quarter of the budget, the tool refuses.
+- A run's frames are the sources its calls returned whose id carries the run's own
+  session (`<session>-<n>`, the session in its `manifest.json`); each must have its file
+  under `sources/`. A source of another session, such as an earlier lineage's screenshot
+  the player opened with `player_source` from its inherited store, is not a frame of the
+  run and is skipped.
 - An actor with facts but no kept frame is listed under `no_frames` in the mapping and
   the report.
 - **Use packets** hold `manifest.json`, `instructions.md`, `facts.json` (id, text, route,

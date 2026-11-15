@@ -33,6 +33,7 @@ def admission(root: Path, name: str, tag: str, shades: list, size=(8, 8)) -> Pat
     record and returns no frame; 'lost' presses a key whose frame never came back; 'handoff' starts the next actor."""
     run, wall, number, actor = root / name, BASE, 0, 0
     (run / 'sources').mkdir(parents=True)
+    save(run / 'manifest.json', dict(schema='campaign-run/7', session=tag * 8))
     groups = [[]]
     for shade in shades:
         if shade == 'handoff':
@@ -266,6 +267,55 @@ def test_every_nth_changed_the_changed_rule_and_actor_spans(tmp_path):
     first, second = frames['run-y']
     assert (second.actor, second.decision, len(second.inputs)) == ('002', 3, 1)
     assert second.stated == (dict(tool='computer_input', intent='INTENT-MARK 3', cites=['CITES-MARK']),)
+
+
+# R-FALSE-CLAIM: inherited source lookups must not become frames of the measured start.
+@pytest.mark.parametrize('foreign_session', ['b' * 32, 'a' * 8 + '0'])
+def test_foreign_sources_preserve_pending_fields_and_blind_packets(tmp_path, foreign_session):
+    directory = admission(tmp_path / 'evidence', 'run-a', 'a', [1, 'lost', 'lost', 2, 2])
+    host = directory / 'actors' / '001' / 'host.jsonl'
+    events = [json.loads(line) for line in host.read_text().splitlines()]
+    source = f'{foreign_session}-1'
+    for event in events:
+        if event.get('request_id') == 'request-3' and event['type'] in ('tool-start', 'tool-result'):
+            event['tool'] = 'player_source'
+            if event['type'] == 'tool-start':
+                event['arguments'] = dict(source_id=source, intent='LOOKUP-MARK', cites=['OLD-FACT'])
+    host.write_text(''.join(json.dumps(event) + '\n' for event in events))
+    expected = recorded_frames([directory])
+    facts = save(tmp_path / 'facts.json', dict(schema='judged-facts/1',
+        admissions={'run-a': {'001': dict(lead=[fact('lead')])}}))
+    baseline = tmp_path / 'memory-measure' / 'baseline'
+    run = tmp_path / 'memory-measure' / 'foreign'
+    assert main(['packets', 'blind', str(baseline), '--runs', str(directory), '--facts', str(facts),
+        '--every', '1', '--seed', '7']) == 0
+    for event in events:
+        if event.get('request_id') == 'request-3' and event['type'] == 'tool-result':
+            result = event['result']['content'][0]
+            result['text'] = json.dumps(dict(source=dict(source_id=source)))
+    host.write_text(''.join(json.dumps(event) + '\n' for event in events))
+    assert not (directory / 'sources' / f'{source}.png').exists()
+    frames, spans = recorded_frames([directory])
+    assert (frames, spans) == expected
+    assert [frame.source for frame in frames['run-a']] == [f'aaaaaaaa-{number}' for number in (1, 4, 5)]
+    second = frames['run-a'][1]
+    assert describe(second.inputs) == 'k2 k4' and second.input_decisions == (2, 4)
+    assert second.stated == (dict(tool='computer_input', intent='INTENT-MARK 2', cites=['CITES-MARK']),
+        dict(tool='player_source', intent='LOOKUP-MARK', cites=['OLD-FACT']),
+        dict(tool='computer_input', intent='INTENT-MARK 4', cites=['CITES-MARK']))
+    assert main(['packets', 'blind', str(run), '--runs', str(directory), '--facts', str(facts),
+        '--every', '1', '--seed', '7']) == 0
+    assert {source for packet in mapping_of(run)['packets'] for source in packet['frames'].values()} == {
+        frame.source for frame in frames['run-a'] if frame.changed}
+    assert {path.relative_to(run): path.read_bytes() for path in run.rglob('*') if path.is_file()} == {
+        path.relative_to(baseline): path.read_bytes() for path in baseline.rglob('*') if path.is_file()}
+
+
+def test_same_session_source_without_a_file_still_raises(tmp_path):
+    directory = admission(tmp_path, 'run-a', 'a', [1])
+    (directory / 'sources' / 'aaaaaaaa-1.png').unlink()
+    with pytest.raises(MeasureError, match='^run-a: frame aaaaaaaa-1 has no file under sources/$'):
+        recorded_frames([directory])
 
 
 # --- game-neutral wording -------------------------------------------------------------------------------------------------
