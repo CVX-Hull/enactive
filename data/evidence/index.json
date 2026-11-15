@@ -1003,6 +1003,1043 @@
         "user": ".runtime/user"
       },
       "visibility": "private"
+    },
+    "withholding-study-651": {
+      "availability": "present",
+      "bytes": 1765370972,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 14596,
+      "manifest_sha256": "2973f9751ccb7f6f55c6166db962ae8e3f29bbfc7c21f4de99111bfada1200dd",
+      "note": "Full withholding study (#651): the 63 run packages (60 analysed, 3 replaced) and the study draw",
+      "sources": {
+        "computer-sessions/withholding-study-651-01": ".runtime/computer-sessions/withholding-study-651-01",
+        "computer-sessions/withholding-study-651-02": ".runtime/computer-sessions/withholding-study-651-02",
+        "computer-sessions/withholding-study-651-03": ".runtime/computer-sessions/withholding-study-651-03",
+        "computer-sessions/withholding-study-651-04": ".runtime/computer-sessions/withholding-study-651-04",
+        "computer-sessions/withholding-study-651-05": ".runtime/computer-sessions/withholding-study-651-05",
+        "computer-sessions/withholding-study-651-06": ".runtime/computer-sessions/withholding-study-651-06",
+        "computer-sessions/withholding-study-651-07": ".runtime/computer-sessions/withholding-study-651-07",
+        "computer-sessions/withholding-study-651-08": ".runtime/computer-sessions/withholding-study-651-08",
+        "computer-sessions/withholding-study-651-09": ".runtime/computer-sessions/withholding-study-651-09",
+        "computer-sessions/withholding-study-651-09-replacement": ".runtime/computer-sessions/withholding-study-651-09-replacement",
+        "computer-sessions/withholding-study-651-10": ".runtime/computer-sessions/withholding-study-651-10",
+        "computer-sessions/withholding-study-651-11": ".runtime/computer-sessions/withholding-study-651-11",
+        "computer-sessions/withholding-study-651-12": ".runtime/computer-sessions/withholding-study-651-12",
+        "computer-sessions/withholding-study-651-13": ".runtime/computer-sessions/withholding-study-651-13",
+        "computer-sessions/withholding-study-651-14": ".runtime/computer-sessions/withholding-study-651-14",
+        "computer-sessions/withholding-study-651-15": ".runtime/computer-sessions/withholding-study-651-15",
+        "computer-sessions/withholding-study-651-16": ".runtime/computer-sessions/withholding-study-651-16",
+        "computer-sessions/withholding-study-651-17": ".runtime/computer-sessions/withholding-study-651-17",
+        "computer-sessions/withholding-study-651-18": ".runtime/computer-sessions/withholding-study-651-18",
+        "computer-sessions/withholding-study-651-19": ".runtime/computer-sessions/withholding-study-651-19",
+        "computer-sessions/withholding-study-651-20": ".runtime/computer-sessions/withholding-study-651-20",
+        "computer-sessions/withholding-study-651-20-replacement": ".runtime/computer-sessions/withholding-study-651-20-replacement",
+        "computer-sessions/withholding-study-651-21": ".runtime/computer-sessions/withholding-study-651-21",
+        "computer-sessions/withholding-study-651-22": ".runtime/computer-sessions/withholding-study-651-22",
+        "computer-sessions/withholding-study-651-23": ".runtime/computer-sessions/withholding-study-651-23",
+        "computer-sessions/withholding-study-651-24": ".runtime/computer-sessions/withholding-study-651-24",
+        "computer-sessions/withholding-study-651-25": ".runtime/computer-sessions/withholding-study-651-25",
+        "computer-sessions/withholding-study-651-26": ".runtime/computer-sessions/withholding-study-651-26",
+        "computer-sessions/withholding-study-651-27": ".runtime/computer-sessions/withholding-study-651-27",
+        "computer-sessions/withholding-study-651-28": ".runtime/computer-sessions/withholding-study-651-28",
+        "computer-sessions/withholding-study-651-29": ".runtime/computer-sessions/withholding-study-651-29",
+        "computer-sessions/withholding-study-651-29-replacement": ".runtime/computer-sessions/withholding-study-651-29-replacement",
+        "computer-sessions/withholding-study-651-30": ".runtime/computer-sessions/withholding-study-651-30",
+        "computer-sessions/withholding-study-651-31": ".runtime/computer-sessions/withholding-study-651-31",
+        "computer-sessions/withholding-study-651-32": ".runtime/computer-sessions/withholding-study-651-32",
+        "computer-sessions/withholding-study-651-33": ".runtime/computer-sessions/withholding-study-651-33",
+        "computer-sessions/withholding-study-651-34": ".runtime/computer-sessions/withholding-study-651-34",
+        "computer-sessions/withholding-study-651-35": ".runtime/computer-sessions/withholding-study-651-35",
+        "computer-sessions/withholding-study-651-36": ".runtime/computer-sessions/withholding-study-651-36",
+        "computer-sessions/withholding-study-651-37": ".runtime/computer-sessions/withholding-study-651-37",
+        "computer-sessions/withholding-study-651-38": ".runtime/computer-sessions/withholding-study-651-38",
+        "computer-sessions/withholding-study-651-39": ".runtime/computer-sessions/withholding-study-651-39",
+        "computer-sessions/withholding-study-651-40": ".runtime/computer-sessions/withholding-study-651-40",
+        "computer-sessions/withholding-study-651-41": ".runtime/computer-sessions/withholding-study-651-41",
+        "computer-sessions/withholding-study-651-42": ".runtime/computer-sessions/withholding-study-651-42",
+        "computer-sessions/withholding-study-651-43": ".runtime/computer-sessions/withholding-study-651-43",
+        "computer-sessions/withholding-study-651-44": ".runtime/computer-sessions/withholding-study-651-44",
+        "computer-sessions/withholding-study-651-45": ".runtime/computer-sessions/withholding-study-651-45",
+        "computer-sessions/withholding-study-651-46": ".runtime/computer-sessions/withholding-study-651-46",
+        "computer-sessions/withholding-study-651-47": ".runtime/computer-sessions/withholding-study-651-47",
+        "computer-sessions/withholding-study-651-48": ".runtime/computer-sessions/withholding-study-651-48",
+        "computer-sessions/withholding-study-651-49": ".runtime/computer-sessions/withholding-study-651-49",
+        "computer-sessions/withholding-study-651-50": ".runtime/computer-sessions/withholding-study-651-50",
+        "computer-sessions/withholding-study-651-51": ".runtime/computer-sessions/withholding-study-651-51",
+        "computer-sessions/withholding-study-651-52": ".runtime/computer-sessions/withholding-study-651-52",
+        "computer-sessions/withholding-study-651-53": ".runtime/computer-sessions/withholding-study-651-53",
+        "computer-sessions/withholding-study-651-54": ".runtime/computer-sessions/withholding-study-651-54",
+        "computer-sessions/withholding-study-651-55": ".runtime/computer-sessions/withholding-study-651-55",
+        "computer-sessions/withholding-study-651-56": ".runtime/computer-sessions/withholding-study-651-56",
+        "computer-sessions/withholding-study-651-57": ".runtime/computer-sessions/withholding-study-651-57",
+        "computer-sessions/withholding-study-651-58": ".runtime/computer-sessions/withholding-study-651-58",
+        "computer-sessions/withholding-study-651-59": ".runtime/computer-sessions/withholding-study-651-59",
+        "computer-sessions/withholding-study-651-60": ".runtime/computer-sessions/withholding-study-651-60",
+        "computer-sessions/withholding-study-651-draw.json": ".runtime/computer-sessions/withholding-study-651-draw.json"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-load-check": {
+      "availability": "present",
+      "bytes": 20370185,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "b2b15294962d9d191127abfc4f73f253b90bc3c769610a4554ab22b8d5ad8501",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-load; manifest b15fe19592620c8cfc924f8872c9a1a4b8de23a3067b70f03c19f58b7ed40cf9. Full withholding study (#651): load check of the second saved moment, a copy of withholding-pilot-619-start-12's final save",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-load",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-01": {
+      "availability": "present",
+      "bytes": 19713624,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "f923319ec2ba2cc612b6c6fdffa097c5dfdc8ef59c03851d3c7f47d2419c0d41",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-01; manifest 558550c3384d24708f76b22fd5636a45da6d10885a88e40a67077d7eb5d26dd1. Full withholding study (#651) S1, start withholding-651-a-01: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-01",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-02": {
+      "availability": "present",
+      "bytes": 20507891,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "1acc411c8980e54a4feaa9c68f3379be6a6053fe3be9247e96369b2b5e5ad43e",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-02; manifest e0cf40ae1b1e956d4f196f3acad32ca557f4281719f369b7504f964b7a8b8885. Full withholding study (#651) S2, start withholding-651-a-02: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-02",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-03": {
+      "availability": "present",
+      "bytes": 19756677,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "a89512389947566ecf255976edc0105e708392761023589b4274910c7962777a",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-03; manifest ea03f09c245aec173d23daf23fd530858fc2984f5648030d3777f6704414f8dc. Full withholding study (#651) S3, start withholding-651-a-03: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-03",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-04": {
+      "availability": "present",
+      "bytes": 20986320,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "1ae3cceecc13e58681f40b3bac0e4434d257c53155f7bbfec8b8aac5258ac2cc",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-04; manifest 870f6b6d8bc9bd2b259d41965ec0da2d8a1ff843dd8d4ee051e6b4de12c26dad. Full withholding study (#651) S4, start withholding-651-a-04: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-04",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-05": {
+      "availability": "present",
+      "bytes": 20623693,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "52eb3bcdede028afe068b7299d223dc88cf78abbc7e7b453a9a3af065cf21a11",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-05; manifest 1035655609d0a78c6b2cb30c602c401157670226fe60b387d88b88c24e615a80. Full withholding study (#651) S5, start withholding-651-a-05: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-05",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-06": {
+      "availability": "present",
+      "bytes": 19639792,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "6d8c0225c5f05dc3770682d50d4ebea8fe24c95ce1e91ee8aff586858ea907e8",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-06; manifest 6bdd2be0560d6e09ae6703317f72c861e2f3b03ca26806f9ad769bc0dae54991. Full withholding study (#651) S6, start withholding-651-a-06: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-06",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-07": {
+      "availability": "present",
+      "bytes": 19808402,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "999c72a71684c23561861bf9d34facd4466a1b6f01bb61f24131a5a9b03546ae",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-07; manifest 82c0c7ad554774c6318b4ab8dbc86b520d31887a7877b3fb223cbdd965d6478b. Full withholding study (#651) S7, start withholding-651-a-07: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-07",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-08": {
+      "availability": "present",
+      "bytes": 18999834,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "495ae105702308165fe184a6b1e1f40dffe5402ff26db71e97c1df2aefc86394",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-08; manifest 8f05cda7db0d107c5b108abec2dbc26766a1907680ce3732e2ad6298163a4372. Full withholding study (#651) S8, start withholding-651-a-08: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-08",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-09-cut-short": {
+      "availability": "present",
+      "bytes": 19673286,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "4a7b75c2cf39dacd28d08960809a5ae8f122a19ead7feb4ea2e398c2c7919066",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-09; manifest de3a48cb56179f0abe300d009dc040da3bca4f6fc5e887c3e4353a113d706c81. Full withholding study (#651) S9, start withholding-651-a-09: cut short by a provider refusal (HTTP 403) after 95 attempts; replaced at the same index by owner decision; outside the analysis",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-09",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-09-replacement": {
+      "availability": "present",
+      "bytes": 20414545,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "a9e028878007f4a295470de54da676e63f10b89ddd9f1ced4c3ce922b85043b0",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-09-replacement; manifest 26f65c9e249066747501f9077795d6bf2993e08914937a11aa32e0d9672938a6. Full withholding study (#651) S09-replacement, start withholding-651-a-09-replacement: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-09-replacement",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-10": {
+      "availability": "present",
+      "bytes": 19988640,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "e187958dfa7837a9797e0e7496499f693e165a1f4e74b66a88f8a3fea42f0052",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-10; manifest 6891503e641e0be27b03af19da12839f913240efa393491f69325d7b8e88496f. Full withholding study (#651) S10, start withholding-651-a-10: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-10",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-11": {
+      "availability": "present",
+      "bytes": 19997775,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "d89c30d220a983b85be906f250f58a557d2c9ab5acf40cd286f67e3800f4cab5",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-11; manifest 3c3f6aab45d3c36201e616cb85b61f1b21476b5cff0f37532e5ac9f2a4822830. Full withholding study (#651) S11, start withholding-651-a-11: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-11",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-12": {
+      "availability": "present",
+      "bytes": 19573796,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "a5aa26595cf3128fc75bc2789b7797608fff975a431ee6b271052dc0256f9a4c",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-12; manifest cac6bbe1eb2e2a5818f0adbb277cb1e3a76abfcad1ca1fdb6abffa7bb79d7685. Full withholding study (#651) S12, start withholding-651-a-12: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-12",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-13": {
+      "availability": "present",
+      "bytes": 20681422,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "1546d5c32bbf90be34670778476462977615de5e2346029b7fd9f110f6b07854",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-13; manifest c0b0d570798f7a249ef7c2dbdc73e37f268e735a4aa85bcda82a3203f10cbb85. Full withholding study (#651) S13, start withholding-651-a-13: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-13",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-14": {
+      "availability": "present",
+      "bytes": 19237498,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "379e5e5c3cba377bcc3438c530a4c030afde2d0d082c0df318ef7eac3ea7e987",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-14; manifest 46076f016c5f8a5d3aae1f3201d34df95ff25c2b40a275030097d009f6fda7e4. Full withholding study (#651) S14, start withholding-651-a-14: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-14",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-15": {
+      "availability": "present",
+      "bytes": 20622551,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "f016fdc7760780fb941685c875d2cda219f7a94f9d515884cb1314a07fced84a",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-15; manifest 745ef902f0609b5903c8377d8fee2715ed800064896e0bae5f5e1990d8355c48. Full withholding study (#651) S15, start withholding-651-a-15: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-15",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-16": {
+      "availability": "present",
+      "bytes": 19282181,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "e9c2c6a2c39d9698f596f395d37070dbd2d7b4d8b7669ae990d8bccdc2900e4e",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-16; manifest 1c420be9a8bbc93983e7a13e36406fa2912a5f2eb2045d858700807cadd8de2b. Full withholding study (#651) S16, start withholding-651-a-16: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-16",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-17": {
+      "availability": "present",
+      "bytes": 20275141,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "7c063a3b20e289377dcfdd8a17de5b4d2af2cd564abe17e23d82cdaa076b8213",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-17; manifest 4fa537c685ea1226610e7c1534052a66ec2be4f108e640ab6148ae4c5e6b4b31. Full withholding study (#651) S17, start withholding-651-a-17: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-17",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-18": {
+      "availability": "present",
+      "bytes": 18986771,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "d0c4414dc574a40af16191c10c5388ae474caf29bbbadf5a15e456a593f495c7",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-18; manifest 3792dc5eeb0475b6bdfca84332287d9be0f476da42bb82cd5fb65e2015036841. Full withholding study (#651) S18, start withholding-651-a-18: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-18",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-19": {
+      "availability": "present",
+      "bytes": 20405073,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 342,
+      "manifest_sha256": "392604ee1166d145bb68b30e3fc1152f8525f203e5ebe4bbe7788aa6787c7d9a",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-19; manifest f062cc899cbf685818f88fac199ff268c8c970911e27e0c80fb0b07d7fae78c1. Full withholding study (#651) S19, start withholding-651-a-19: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-19",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-20-invalid": {
+      "availability": "present",
+      "bytes": 18986530,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "b9f28cbe5759c68210a34b401ae014b3b9f48d6457195a0cf15a8b00170ef57c",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-20; manifest 786403eaa3f36f813fc9f9cb8e830c9ab3a1d36bd7668e3b3082001e4f462dc2. Full withholding study (#651) S20, start withholding-651-a-20: invalid, no input reached the game (custodian port in use); replaced at the same index",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-20",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-20-replacement": {
+      "availability": "present",
+      "bytes": 19364634,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 340,
+      "manifest_sha256": "262ed088bed71dee4f7d40b580646babd5a41140aca86b2c34097cc1d0299d7e",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-20-replacement; manifest 8df4f4cfa891aec88f02b5be439e934708d59c392597103ecae0926ee0724a62. Full withholding study (#651) S20-replacement, start withholding-651-a-20-replacement: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-20-replacement",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-21": {
+      "availability": "present",
+      "bytes": 19661525,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "6292d39f622ced4f5b7263a91456458a5b9f2d5028d46e00c88aa6eca924aacc",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-21; manifest 4ba1ce49f1dfef28b413b133140921664cd147822cdb5c8c9688bd0e41a9935f. Full withholding study (#651) S21, start withholding-651-a-21: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-21",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-22": {
+      "availability": "present",
+      "bytes": 20168015,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "b75c7686c2a91f69a506cb48af5e5ea5c699f67567f3d34b1f935e0abd4e1523",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-22; manifest d09dfe015e999baac210272fbc89aac0f01b428c3ffdd4bc608b1c93ada5d70f. Full withholding study (#651) S22, start withholding-651-a-22: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-22",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-23": {
+      "availability": "present",
+      "bytes": 19005953,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "8655968ac057db03571e0988a37d173539f357667e342570fce5d91feb2aa05f",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-23; manifest 2a20993692892bb2a8bd3822602e656c43423fba29adaa5e4745f4ad57642ebc. Full withholding study (#651) S23, start withholding-651-a-23: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-23",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-24": {
+      "availability": "present",
+      "bytes": 18927544,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "d7b478c6101d9e7309e69ef91fbf23b094c0addc5241c390b8705c989e1c9863",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-24; manifest d506a41e92a9a5f1ab574f873f8ce938b4e6bd21e076e4fb00abc5e73dbb0c3e. Full withholding study (#651) S24, start withholding-651-a-24: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-24",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-25": {
+      "availability": "present",
+      "bytes": 19643028,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "c3406e3112a2f574fc29df1cba700818db3d87f5330260b245388c176d081c62",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-25; manifest 1cda0d6730b93a8320168499066fa795a265e4a2fda7853b8d5953b1c62ac622. Full withholding study (#651) S25, start withholding-651-a-25: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-25",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-26": {
+      "availability": "present",
+      "bytes": 20339455,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "ec37ff76e459ba3a69a4ff0ae1bd63e08873ffcffb342ac686f1cd8214ef071b",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-26; manifest fbb2e4e6caf10ad60eb6a677e9bc2333ce0cdbfc2c50978b45f78b6f0559c6e1. Full withholding study (#651) S26, start withholding-651-a-26: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-26",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-27": {
+      "availability": "present",
+      "bytes": 19294783,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "a78827522c0c1548249c86c253aa30fb8e6db054548d30e93977d82588d93708",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-27; manifest ee1a9cc27ea4178a96f8a30207e808eabcbcbbcd56e27654e868b978e9395145. Full withholding study (#651) S27, start withholding-651-a-27: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-27",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-28": {
+      "availability": "present",
+      "bytes": 19641931,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "18e46ddd75067e9e9b7995513133152d02bcc5e240f86d4ef5c231caa7566bfc",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-28; manifest 7019e0722921dac886d27b25502c3fa62127ee7793d6ef1cc77bd53291047654. Full withholding study (#651) S28, start withholding-651-a-28: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-28",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-29-interrupted": {
+      "availability": "present",
+      "bytes": 18986534,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 335,
+      "manifest_sha256": "7f59cb1273337020afceb935fc6f9b4aaa3be6cb9de2c65f661771aac4769b19",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-29; manifest 11b3aa2518262de14854abda8369e3b9973b8d51b6aad6a73fb8d92d4e836a09. Full withholding study (#651) S29, start withholding-651-a-29: interrupted after 7 attempts when an accidental human click on the game window fenced the player's input; replaced at the same index by owner decision",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-29",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-29-replacement": {
+      "availability": "present",
+      "bytes": 19113191,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "324d596a2108a2e012709d7346a8575f46bb12ca1c3ae933717d65f53f9dc668",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-29-replacement; manifest 22b04be11e061cde624ff100e019aac1f90019116fc32b5059a06d41846344c8. Full withholding study (#651) S29-replacement, start withholding-651-a-29-replacement: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-29-replacement",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-30": {
+      "availability": "present",
+      "bytes": 18919316,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "3e4bf975a30898509d48589c9ca11bacff2f94a1b9d99522c4ce335705994747",
+      "note": "Copied lineage 397 is no longer held out. Start withholding-651-a-30; manifest 515c2895094f756d68ce6e039ce40eca48b001bfa470e08f9097f70ecab859d7. Full withholding study (#651) S30, start withholding-651-a-30: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-a-30",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-31": {
+      "availability": "present",
+      "bytes": 20449307,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "70c44e8ef320d5639ee71152dd9dc13812234ee1697567d72a66e6e806ff94e1",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-01; manifest faf240a39cf8b806038abb314e3757e6dd023ed0b1fffc0381a3a4acb3f249d3. Full withholding study (#651) S31, start withholding-651-b-01: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-01",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-32": {
+      "availability": "present",
+      "bytes": 21448001,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "58d0d0344126c85245d3bcb44a4488dd2e4a0199f9eedaa8e94e08c12affbab9",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-02; manifest 4bbea15b2c665fdb4e57a6bee65add01b52ce25c3d11055306505f20c32371cd. Full withholding study (#651) S32, start withholding-651-b-02: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-02",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-33": {
+      "availability": "present",
+      "bytes": 21313651,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "2d4d13fa235db4e4e9861c88e882d41999837d91b4640b4b7734fa6546dea89d",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-03; manifest 6ed435bb1a68ddc0eaeb9ac4701675409e38d76e630a9e8717d217663f7f10f4. Full withholding study (#651) S33, start withholding-651-b-03: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-03",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-34": {
+      "availability": "present",
+      "bytes": 21081822,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "345116b2225ad3159b73aac395b5ff4d670d93f56d4c0fecce1c54b51c71e972",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-04; manifest 13f40339e313f06fc3808137a6bd27d08cfcb095b8b6b8c02984f634b5883481. Full withholding study (#651) S34, start withholding-651-b-04: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-04",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-35": {
+      "availability": "present",
+      "bytes": 21337886,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "2f3c156d6b96adad8756c2008fca74f611d59bc25a7716dcea45ccd753b1e46d",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-05; manifest 4d7b07253515f59b12882a36d365a11da46cc5c946471c2f9a470a22900e551d. Full withholding study (#651) S35, start withholding-651-b-05: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-05",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-36": {
+      "availability": "present",
+      "bytes": 21133784,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "84d6b006f9c25dd38620802f1908f2e845eeeaf527e356e476ccf1c83376fb76",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-06; manifest fa3937a12f58a25be621a279bf1e942f38d0d4358b4a8841c1efab0404ef7d8c. Full withholding study (#651) S36, start withholding-651-b-06: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-06",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-37": {
+      "availability": "present",
+      "bytes": 21670794,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "b05f565363c3abbdb96971abfcab226b72eca9cfe4e2a09e8ba3cf7eb1aabd48",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-07; manifest 149b317fe8976f11dddda60bb7e1e3add34414200e1db526090c0795b0a8df16. Full withholding study (#651) S37, start withholding-651-b-07: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-07",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-38": {
+      "availability": "present",
+      "bytes": 21380283,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "1c5ee8e452de74d3159a6da64a3149196647aae819fe26c46a3fdc8e6a6be7d7",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-08; manifest 9940b1900ab3e1b93a7e0c1192404f2d2471019c20b7627632b707f2b6c7e9fd. Full withholding study (#651) S38, start withholding-651-b-08: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-08",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-39": {
+      "availability": "present",
+      "bytes": 22013461,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 338,
+      "manifest_sha256": "6899c86a79647dd75acdeceadc7c4d6380c916dc1289cb085fa092f0b385f78f",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-09; manifest d70d7fb54a6c8397463d28cc3d7435228d9e9f33a054655bdb8679c5dfff1008. Full withholding study (#651) S39, start withholding-651-b-09: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-09",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-40": {
+      "availability": "present",
+      "bytes": 20969525,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "3930d2e8d58d7c20e9ef7db7fd7d9403a38286a3f2faefa2ce7b19e156f90f18",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-10; manifest 53070eabd25cd6b8155518efae0a11028b4deb0149238503203493f9ba569db7. Full withholding study (#651) S40, start withholding-651-b-10: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-10",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-41": {
+      "availability": "present",
+      "bytes": 21416327,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "f148e11da0e60881225699c52f3b2426c04b637be333a0887bdafb5ca5f0ce27",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-11; manifest 09ac503ab3db4aa82889b157651a12be090793212fa1f97fc8f0ef45c10484c4. Full withholding study (#651) S41, start withholding-651-b-11: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-11",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-42": {
+      "availability": "present",
+      "bytes": 21227775,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "0019e1d51e8f8e8b08181f98c762a3964ae37a0f314647ac91b063555c6f9512",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-12; manifest 3b7c066545389d4d2a29c978131773ca60c19122e3092d98c251e9c32b18023a. Full withholding study (#651) S42, start withholding-651-b-12: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-12",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-43": {
+      "availability": "present",
+      "bytes": 20408646,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "0711fb2e497987c053d4aa533ec43d2d77ec365b26f6fbc707febd2f72ee3e6d",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-13; manifest 1fb9ac00573e67c0c11d9df85044849f23d5786b7f22e916215c6f4ead844d0c. Full withholding study (#651) S43, start withholding-651-b-13: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-13",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-44": {
+      "availability": "present",
+      "bytes": 25582319,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 414,
+      "manifest_sha256": "64ed133e70b0f23898a9aa6d5df9e1b5e6cd10aeeb48156b42c0941d65bfafda",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-14; manifest 4ee9c0cb089c18349022ef3351fdb707257a7327cb5fc639fd2916b3f9cb21ae. Full withholding study (#651) S44, start withholding-651-b-14: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-14",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-45": {
+      "availability": "present",
+      "bytes": 21182046,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "8d3062537a19aab9ff49ad2ac66744de50a4a7f1203eb507845cceb3b4dd549e",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-15; manifest 1c7faa11e193033f92707c96ff67eaacfd5772b67a235973969acd152a571fe1. Full withholding study (#651) S45, start withholding-651-b-15: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-15",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-46": {
+      "availability": "present",
+      "bytes": 20903764,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "7b3b3754ae273debbf1396dff7bcd07fdc2dcf76cd15b47bcc38f15c1d852011",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-16; manifest 71a877782ee159674b6f7c41a5a35a20878431da7157916d3009f03f64dfe95d. Full withholding study (#651) S46, start withholding-651-b-16: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-16",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-47": {
+      "availability": "present",
+      "bytes": 21947386,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "bacbf18ecc9e18dd41777d66a3f337a64e6c8a447e36d4fff631278844556854",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-17; manifest 5c654d5e35d51850a635fdbf99f85dd5023f14e875d33da4c4ef6e4ea2ac603c. Full withholding study (#651) S47, start withholding-651-b-17: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-17",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-48": {
+      "availability": "present",
+      "bytes": 21405946,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 338,
+      "manifest_sha256": "9f6f0c65e2888cf69e5fe2473bf13eb15fe19f339993916d5b0755620d1c6bae",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-18; manifest b854d5c9a6408c8b18dfe540e6b5ae419fc4285af953db90f6b44a89c28d59a2. Full withholding study (#651) S48, start withholding-651-b-18: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-18",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-49": {
+      "availability": "present",
+      "bytes": 20540811,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "16b04bc2e55330c46ae030403fb6c3a4b06134e25bdd63828a2658b33aae0b2d",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-19; manifest 54572364ec46efa058403d2c9b1b75bab893338542ba58ee792104e30c9919e5. Full withholding study (#651) S49, start withholding-651-b-19: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-19",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-50": {
+      "availability": "present",
+      "bytes": 22086288,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "62935416008a8491c140d50f9e1c7cb93e0417c6fd1d7763d4f0e3879da40651",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-20; manifest e32a38e64e1da4216985a494b7e7580778caa3a9d6f18bd430627fbe10f2a61a. Full withholding study (#651) S50, start withholding-651-b-20: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-20",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-51": {
+      "availability": "present",
+      "bytes": 21513240,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "0709a3152b91956cb482ec50e9ea480465355677a23b04ea31eb99962f039be0",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-21; manifest 069bd1edfb375a8655f795c9134043e371af23f97ec283517f898eff959c3d53. Full withholding study (#651) S51, start withholding-651-b-21: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-21",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-52": {
+      "availability": "present",
+      "bytes": 21454965,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "4109ad48da229748e02c59c84892a50f0e9c1f0e5d693d31a8c4d089fbee0a7f",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-22; manifest 8be9423d36117b78be96cc63a124824b1d49216702caf93cb14c4599a786db1d. Full withholding study (#651) S52, start withholding-651-b-22: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-22",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-53": {
+      "availability": "present",
+      "bytes": 21605362,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "d8a139c51678564f3ba39d28e35dd3225d0af399c1c536449b34ab82f785fe04",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-23; manifest f9264edd3aed1b3a3343cd8de08910cca313515a9b51d63ce661b27f646e5c71. Full withholding study (#651) S53, start withholding-651-b-23: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-23",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-54": {
+      "availability": "present",
+      "bytes": 22233146,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 339,
+      "manifest_sha256": "e58ccf8d0a4718f0d0e069d5e701e2a4dc7b01c9193334fafd37cda90ac1c126",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-24; manifest 8ac0ceff4059e8ce9477066b450c5cd7749fc5331099714493a31e2897d44258. Full withholding study (#651) S54, start withholding-651-b-24: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-24",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-55": {
+      "availability": "present",
+      "bytes": 21586972,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "49c32a6b7df6a68f88debe91ebcf81cd186923a924d6ca5d71bc25542e242cef",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-25; manifest 3accaebe37bce601e1370b63ad5707169ece5263bde25f32590dcc6dc6c41675. Full withholding study (#651) S55, start withholding-651-b-25: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-25",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-56": {
+      "availability": "present",
+      "bytes": 21816195,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 339,
+      "manifest_sha256": "89533666b910cfdb2bfdf048a66186e29d35359cfa39f14f7cd9dd03b049d4d1",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-26; manifest 30223f7bc34e1867602b8f0074dc838002c9a24d01a7f443396201e4a6f104b3. Full withholding study (#651) S56, start withholding-651-b-26: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-26",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-57": {
+      "availability": "present",
+      "bytes": 21343818,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "fab3d631724d73982cb741ec0d6646049a4b6e199f94f4708d85787d780e899f",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-27; manifest 513f3622d61c29aefb448f0b9bf63ff19e48c5bd0da9a0b7d48fdff874aaf98a. Full withholding study (#651) S57, start withholding-651-b-27: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-27",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-58": {
+      "availability": "present",
+      "bytes": 21330752,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 336,
+      "manifest_sha256": "4c2c12a4d73e14ccd2042faf21520f4e3365573376eba6cbdc51468757e0c049",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-28; manifest b164ab3d9c9dc9669125ea2bca11c4a09ae6f1762d80a1d2ec76c1198ffb89d9. Full withholding study (#651) S58, start withholding-651-b-28: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-28",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-59": {
+      "availability": "present",
+      "bytes": 22439555,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 337,
+      "manifest_sha256": "53f22333358bf0eb727f6ca6d289d520f9374b42dec713f5bc9b8ad6d2933119",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-29; manifest 01bab1ce36ee58ea07b3876146ddd2c3be3192ff3e3d3ced0bfe360573c80b32. Full withholding study (#651) S59, start withholding-651-b-29: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-29",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-start-60": {
+      "availability": "present",
+      "bytes": 21972645,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 338,
+      "manifest_sha256": "dce85e10258aa24b245fda07387d44f1afae9af966dcaf92160199598dccb45b",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start withholding-651-b-30; manifest 904a13921656363e07262bfc2319dc51e9e33a63d67137c88dc8907f0679d21f. Full withholding study (#651) S60, start withholding-651-b-30: the start's working outputs after play",
+      "sources": {
+        "start": ".runtime/starts/withholding-651-b-30",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
     }
   }
 }
