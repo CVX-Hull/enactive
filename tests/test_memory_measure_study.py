@@ -35,7 +35,7 @@ def study_fixture(tmp_path):
     import shutil
     shutil.rmtree(run / 'judge-packets')
     (run / 'private/judge-mapping.json').unlink()
-    mapping = mm.fact_packets(run, packages, run / 'judged-facts.json', 'blind', budget=3600, every=1, seed=8)
+    mapping = mm.fact_packets(run, packages, run / 'judged-facts.json', 'blind', budget=4200, every=1, seed=8)
     rows = json.loads((run / 'adjudicated.json').read_text())
     routes = {(p['window'], f): route for p in mapping['packets'] for f, route in p['facts'].items()}
     for row in rows['rows']:

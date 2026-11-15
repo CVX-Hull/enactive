@@ -814,10 +814,13 @@ Choose in this order, and stop at the first that holds:
    not only the general activity), or went for something the fact says is empty or gone: `against`.
 3. The player spent an action only to learn what the fact says (a search, a description or help screen opened
    and then left without doing anything else with it, the same screen opened again to read the same thing, or
-   several screens tried to find it), before acting: `found_again`. A screen on which the player visibly sets
-   about making, using or eating, or a screen opened routinely, is not this (see `found_again` above), even if the attempt fails or is
-   abandoned: go on to rule 4. A search or description request aimed at what the fact is about, then closed without
-   use, is this even when no frame captures its contents; cite the frame where the search or its closing shows.
+   several screens tried to find it), before acting: `found_again`. A search or description request aimed at
+   what the fact is about, then closed without use, counts here even when no frame captures its contents and
+   even if the player does not act afterwards; cite the frame where the search or its closing shows. A screen on
+   which the player visibly sets about making, using or eating does not count here, even if the attempt fails or
+   is abandoned. Nor does a screen the player opens routinely, unless the player singles out the fact's entry
+   and does nothing with it. These exclusions set aside only those screens: any other action in the window that
+   counts here still makes it `found_again`. If none counts, go on to rule 4.
 4. The player did what the fact supports: `in_line`. This includes using a screen it opened to do something
    (to make, use, eat or move something) that also shows what the fact says.
 5. Otherwise: `cannot_tell`.
@@ -832,13 +835,15 @@ Examples:
 - The game warns of something the fact already says (that some ground is slow to cross) while the player
   walks on: not `found_again`; judge what the player did.
 - The player opens the same screen twice in a row to read the same figures, then acts: `found_again`.
-- The player opens the list of things it can make, picks the thing the fact is about and presses to make it, but the
-  attempt fails or it backs out: not `found_again`; `in_line` if it went about it the way the fact says, otherwise
-  `cannot_tell`.
-- The player types the thing's name into a search and the next frame shows the search closed, with no frame of its
-  results: `found_again`, citing the frame where the search or its closing shows.
-- A fact warns that something goes wrong in one specific circumstance; the player does the general activity without
-  that circumstance: not `against`.
+- The player opens the list of things it can make, picks the thing the fact is about and presses to make it, but
+  the attempt fails or it backs out: not `found_again`. If the fact warns that this attempt fails in the
+  circumstance the player tried it in, `against`; otherwise `in_line` if it went about it the way the fact says,
+  and `cannot_tell` if the frames do not show that.
+- The player types the thing's name into a search and the next frame shows the search closed, with no frame of
+  its results: `found_again`, citing the frame where the search or its closing shows.
+- A fact warns that something goes wrong in one specific circumstance; the player does the general activity and
+  the window never shows that circumstance: not `against`. `in_line` if the player visibly kept clear of the
+  circumstance, otherwise `did_not_apply`.
 
 Then say whether the frames show the fact still holding (`holds`):
 
