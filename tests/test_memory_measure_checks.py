@@ -412,15 +412,25 @@ def test_new_codebook_is_verbatim_in_both_instruction_kinds():
     bullet = '''- `found_again`: looked it up. The player spent an action to get information the fact already gave: it
   searched for it, or opened a screen or examined something whose only purpose then was to learn what the fact
   says, or tried several screens to find it. Seeing the fact on a screen the player opened to do something
-  else, or in a message the game showed on its own, is not `found_again`.'''
+  else, or in a message the game showed on its own, is not `found_again`. A screen on which the player visibly
+  sets about making, using or eating something (pressing to make one or several, choosing how many, readying what
+  the attempt needs) is opened to do something else, even if the attempt fails or is abandoned. So is a screen the
+  player opens routinely (a list of what is around it, an overview of the area, a list of what it carries), unless
+  the player singles out the fact's entry and does nothing with it.'''
+    against = '''- `against`: acted against it. The player did what the fact advises against, or went for something the fact
+  says is empty or gone. For a caution, the player must repeat the specific circumstance the fact reports, not only
+  the general activity.'''
     decision = '''Choose in this order, and stop at the first that holds:
 
 1. Nothing in the window could have made the fact matter to what the player was doing: `did_not_apply`.
-2. The player did what the fact advises against, or went for something the fact says is empty or gone:
-   `against`.
+2. The player did what the fact advises against (for a caution, repeating the specific circumstance it reports,
+   not only the general activity), or went for something the fact says is empty or gone: `against`.
 3. The player spent an action only to learn what the fact says (a search, a description or help screen opened
    and then left without doing anything else with it, the same screen opened again to read the same thing, or
-   several screens tried to find it), before acting: `found_again`.
+   several screens tried to find it), before acting: `found_again`. A screen on which the player visibly sets
+   about making, using or eating, or a screen opened routinely, is not this (see `found_again` above), even if the attempt fails or is
+   abandoned: go on to rule 4. A search or description request aimed at what the fact is about, then closed without
+   use, is this even when no frame captures its contents; cite the frame where the search or its closing shows.
 4. The player did what the fact supports: `in_line`. This includes using a screen it opened to do something
    (to make, use, eat or move something) that also shows what the fact says.
 5. Otherwise: `cannot_tell`.
@@ -434,8 +444,16 @@ Examples:
   unrelated: `did_not_apply` (or `in_line` if the player relied on the help), never `found_again`.
 - The game warns of something the fact already says (that some ground is slow to cross) while the player
   walks on: not `found_again`; judge what the player did.
-- The player opens the same screen twice in a row to read the same figures, then acts: `found_again`.'''
+- The player opens the same screen twice in a row to read the same figures, then acts: `found_again`.
+- The player opens the list of things it can make, picks the thing the fact is about and presses to make it, but the
+  attempt fails or it backs out: not `found_again`; `in_line` if it went about it the way the fact says, otherwise
+  `cannot_tell`.
+- The player types the thing's name into a search and the next frame shows the search closed, with no frame of its
+  results: `found_again`, citing the frame where the search or its closing shows.
+- A fact warns that something goes wrong in one specific circumstance; the player does the general activity without
+  that circumstance: not `against`.'''
     for instructions in JUDGE_INSTRUCTIONS.values():
+        assert against in instructions
         assert bullet in instructions and decision in instructions
         assert instructions.index(decision) < instructions.index('Then say whether')
 
