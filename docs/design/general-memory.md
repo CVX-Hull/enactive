@@ -267,12 +267,11 @@ provider; the coding host's capacity is its cost.
   test, in the [measure validation](../acceptance/2026-11-14-withholding-measure-validation.md);
   the first sizing, from the measure gate's numbers for the earlier per-start design, is
   the [withholding simulation](../acceptance/2026-11-13-withholding-simulation.md).
-- **The full study's result** ([record](../acceptance/2026-11-14-withholding-study.md)).
-  Over 60 starts the frozen primary is not positive (p 0.33). Of the secondaries fixed
-  before any arm comparison, only the revised codebook without the units whose facts
-  advise a check is positive (p 0.026). Delivery makes the player touch more of the
-  store's topics (0.30 of unit-starts against 0.20 withheld), so the touch-conditioned
-  estimand compares groups the treatment shaped, and intention to treat is null.
+- **Status.** A benefit is not confirmed: the full study's frozen primary is not
+  positive, and a benefit is only suggested, limited by the measure
+  ([record](../acceptance/2026-11-14-withholding-study.md)). Delivery changes which topics
+  the player touches, so the touch-conditioned estimand compares groups the treatment
+  shaped.
 
 ### Game-neutral judging
 
