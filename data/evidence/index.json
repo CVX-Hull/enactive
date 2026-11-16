@@ -1081,6 +1081,20 @@
       },
       "visibility": "private"
     },
+    "withholding-study-651-evaluations": {
+      "availability": "present",
+      "bytes": 42356736,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 189,
+      "manifest_sha256": "9cd082a3e357c42a6d868260f4900203dd4c5619a628675bbe0bde3147d9c783",
+      "note": "Full withholding study (#651): the evaluator's records of every played start, behind the run ledger's metric-snapshot rows",
+      "sources": {
+        "evaluations": ".runtime/evaluations (the 63 evaluation records of #651's played starts: 60 analysed and 3 replaced)"
+      },
+      "visibility": "private"
+    },
     "withholding-study-651-judging": {
       "availability": "present",
       "bytes": 1878576811,
@@ -1114,6 +1128,20 @@
       "sources": {
         "start": ".runtime/starts/withholding-651-b-load",
         "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
+    "withholding-study-651-load-check-package": {
+      "availability": "present",
+      "bytes": 1512458,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 40,
+      "manifest_sha256": "8b9619159fbbee26fee25bf5153067b91737f2a45aaea2c9d2a9fb9019c83f84",
+      "note": "Full withholding study (#651): the load check's package (trace, receipt, frames) for the second saved moment",
+      "sources": {
+        "computer-sessions/withholding-651-b-load": ".runtime/computer-sessions/withholding-651-b-load (the load check's package)"
       },
       "visibility": "private"
     },
