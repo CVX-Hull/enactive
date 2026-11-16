@@ -114,16 +114,15 @@ widely (the mixed model's unit variance is about 9 on the log-odds scale, agains
 
 ### The judges
 
-| Labels | Packets | Label agreement, κ (all pairs) | Driving pairs: n, κ | Missed: positive / negative specific agreement, AC1 | C settled alone |
-| --- | --- | --- | --- | --- | --- |
-| Opus, frozen | 137 | 0.956, 0.814 | 1,244, 0.526 | 0.839 / 0.997, 0.993 | 45 |
-| GPT, frozen | 137 | 0.952, 0.840 | 1,472, 0.570 | 0.867 / 0.996, 0.992 | 38 |
-| GPT, revised | 138 | 0.952, 0.849 | 1,545, 0.675 | 0.901 / 0.996, 0.992 | 40 |
+| Labels | Packets (to C) | All pairs: n, label agreement, κ | Driving pairs: n, agreement, κ | Missed, all pairs: positive / negative specific agreement, AC1 | Missed, driving pairs: negative specific, AC1 | C settled alone |
+| --- | --- | --- | --- | --- | --- | --- |
+| Opus, frozen | 137 (130) | 10,549, 0.956, 0.814 | 1,244, 0.799, 0.526 | 0.839 / 0.997, 0.993 | 0.968, 0.925 | 45 |
+| GPT, frozen | 137 (127) | 10,549, 0.952, 0.840 | 1,472, 0.810, 0.570 | 0.867 / 0.996, 0.992 | 0.967, 0.924 | 38 |
+| GPT, revised | 138 (129) | 10,626, 0.952, 0.849 | 1,545, 0.835, 0.675 | 0.901 / 0.996, 0.992 | 0.963, 0.911 | 40 |
 
-On driving pairs, AC1 on the missed outcome was 0.925, 0.924 and 0.911. No pair was left
-without a label. Before the revision merged, a prompt check on the 15 sealed pilot
+No pair was left without a label. Before the revision merged, a prompt check on the 15 sealed pilot
 stretches (`prompt-check report`) moved agreement from 0.952 to 0.966 and κ from 0.790 to
-0.845 (shift +0.055; 0.005 to 0.127 over 6 starts). It used Opus judges on both sides,
+0.845 (Δκ +0.056; 0.005 to 0.127 over 6 starts). It used Opus judges on both sides,
 so it does not cover the GPT judges who applied the revised codebook; their own κ under
 the frozen and revised codebooks is in the table.
 
@@ -132,13 +131,14 @@ the frozen and revised codebooks is in the table.
 From the Opus use packets, which show the briefing and reminders:
 - when the lead was delivered, the player acted in line with the fact in 611 of 724
   windows where it applied (0.844, 0.814 to 0.872);
-- it found the fact again in 0.145;
+- it found the fact again in 105 of them (0.145, 0.117 to 0.175);
 - of the 634 windows in which it acted in line with a fact it had, the frames showed
   that fact stale or false in 16 (0.025);
 - of 97 facts it read, it then acted in line with 12 (0.124).
 
-The judges agreed on 0.941 of use labels (κ 0.795); on the 816 pairs that drive the
-in-line rate, on 0.800 (κ 0.49, 0.43 to 0.56).
+The judges agreed on 0.941 of 6,529 use pairs (κ 0.795, dispute rate 0.059); on the 816
+pairs that drive the in-line rate, on 0.800 (κ 0.49, 0.43 to 0.56). C judged 132 of the
+143 packets and settled 31 pairs with a label neither A nor B gave.
 
 ### At no extra spend
 
@@ -179,8 +179,12 @@ it:
 - **The two secondary-B readings differ from the primary in two ways at once,** the
   codebook and the judge model. Within the GPT judges, the codebook alone moves the
   statistic from +0.015 to +0.050 over all units (p 0.358 to 0.087) and from +0.065 to
-  +0.089 without the nine (p 0.064 to 0.026). The GPT and Opus readings on the frozen
-  codebook agree closely (+0.015 against +0.021; +0.065 against +0.059).
+  +0.089 without the nine (p 0.064 to 0.026). On the frozen codebook the GPT and Opus
+  point estimates are close (+0.015 against +0.021; +0.065 against +0.059), but GPT
+  marks more unit-starts touched (544 against 478; 298 against 246 without the nine) and
+  gives a much smaller p without the nine (0.064 against 0.199). Most of the move from
+  the primary's 0.199 to secondary B's 0.026 comes with the judge model, and whether Opus
+  judges on the revised codebook would have reached 0.05 is not known.
 - **Pooled, delivery looks worse.** Touched delivered units were missed more often than
   touched withheld ones in every labelling (above); only the within-unit comparison is
   positive, and the two summaries weigh units differently because delivery changes which
@@ -225,7 +229,8 @@ From the [measure validation](2026-11-14-withholding-measure-validation.md#threa
   exactly half. Which units the second moment's starts touch was not analysed apart.
 - **Judging is not free in time.** 922 Opus host judgings (blind 404, use 418, quality
   check 70, prompt check 30) and 806 GPT judgings through Codex (about 3 hours at 12 at a
-  time), all at no provider spend.
+  time), all at no provider spend. These count the sealed events; the superseded,
+  unused and test judgings in Deviations come on top.
 - **Some misses may be habits delivery does not change.** The check-advice units are the
   clearest case; leaving them out is Secondary A, and it raises every reading.
 - **The examples name a companion and eating.** These were kept; the revision adds
@@ -269,7 +274,7 @@ From the [measure validation](2026-11-14-withholding-measure-validation.md#threa
   null primary was known), and so GPT also judged the frozen codebook's packets for the
   comparison. The prompt check used Opus judges and does not cover them.
   - Each GPT judging ran on an isolated copy of one packet, read-only, with every frame
-    attached.
+    attached; one test judging of one revised packet checked this first and is not used.
   - 36 Opus judgings of the revised packets made before the decision are kept and not
     used.
   - The revised set has 138 packets to the primary's 137, because the longer
@@ -297,11 +302,13 @@ Judging, prompt checks and reviews made no provider spend.
   `-start-09-cut-short`, `-start-20-invalid` and `-start-29-interrupted`: each start's
   final userdir, disposed of with a seal.
 - `withholding-study-651-judging` (18,104 files):
-  - every judging run: the Opus primary, use and quality check; the GPT frozen and
-    revised runs; the prompt check;
-  - each with its packets, events, adjudication, `study.json`, `measure.json` and
-    `secondary-a.json`. The GPT frozen run's packets are byte-identical to the primary's
-    and are not stored twice;
+  - the three blind runs (the Opus primary, GPT frozen, GPT revised), each with its
+    events, adjudication, judged facts, `study.json` and `secondary-a.json`, and the
+    packets of the primary and the revised run. The GPT frozen run judged the primary's
+    packets, which are byte-identical and not stored twice;
+  - the Opus use run, with its packets, events, adjudication and `measure.json`;
+  - the quality check (35 packets, judges A and B, adjudication), and the prompt check
+    (15 pilot stretches, judges A and B, `prompt-check.json`);
   - every judge's raw answer, including superseded ones;
   - the Codex judging logs and final messages;
   - the lead's scripts and outputs: the package builders, the play chain and leak check,
