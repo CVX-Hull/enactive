@@ -18,8 +18,10 @@ scope: 'The full withholding study (#651): 60 starts over two sealed saved momen
   primary is not positive. The only positive reading is secondary B's without the nine
   check-advice units (one-sided p 0.026). Secondary B as run differs from its
   pre-specification in two ways settled after the null primary was known: the
-  codebook's final wording, and GPT judges in place of Opus. The study gives no reading
-  with p 0.05 or below over all units, and none with the frozen codebook.
+  codebook's final wording, and GPT judges in place of Opus. On the same frozen packets
+  without the nine, GPT judges give p 0.064 where Opus gives 0.199, so most of the move
+  comes with the judge model. The study gives no reading with p 0.05 or below over all
+  units, and none with the frozen codebook.
 - **The primary** (Opus judges A and B, C on disputes; the randomization test within
   units, 10,000 draws, seed 653): withheld units were missed more often than delivered
   ones by **+0.021**, **p 0.329**, over the 20 units counted (9 never touched, 3
