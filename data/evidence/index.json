@@ -1081,6 +1081,27 @@
       },
       "visibility": "private"
     },
+    "withholding-study-651-judging": {
+      "availability": "present",
+      "bytes": 1878576811,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 18104,
+      "manifest_sha256": "1aafc61e5ada10e4ddec0e44abb9dad77bf1d39eb6eed3ffe82b50f57c23af37",
+      "note": "Full withholding study (#651): every judging run, answer, script and log behind the primary and the pre-specified secondaries",
+      "sources": {
+        "codex-judge-logs": "lead scratchpad gpt-isolated: codex exec logs and final messages",
+        "judging-inputs": "lead scratchpad s651: answers, scripts, logs, comments",
+        "memory-measure/prompt-check-codebook-651": ".runtime/memory-measure/prompt-check-codebook-651",
+        "memory-measure/study-651-blind": ".runtime/memory-measure/study-651-blind (Opus primary, d73d6643)",
+        "memory-measure/study-651-blind-gpt": ".runtime/memory-measure/study-651-blind-gpt without judge-packets (byte-identical to study-651-blind's)",
+        "memory-measure/study-651-blind-revised": ".runtime/memory-measure/study-651-blind-revised (GPT, revised codebook d73d6643)",
+        "memory-measure/study-651-qa": ".runtime/memory-measure/study-651-qa (quality check, Opus)",
+        "memory-measure/study-651-use": ".runtime/memory-measure/study-651-use (Opus use labels)"
+      },
+      "visibility": "private"
+    },
     "withholding-study-651-load-check": {
       "availability": "present",
       "bytes": 20370185,
