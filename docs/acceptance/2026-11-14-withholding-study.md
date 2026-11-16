@@ -35,8 +35,8 @@ scope: 'The full withholding study (#651): 60 starts over two sealed saved momen
   death by fire at the first saved moment; they are valid outcomes and stay in.
 - **Use, judged separately** (Opus): when a fact whose lead was delivered applied, the
   player acted in line with it in **84.4%** of windows (611 of 724; 0.814 to 0.872) and
-  looked it up again in 14.5%; it acted on a fact the frames showed stale or false in
-  16 of 634 windows (2.5%).
+  looked it up again in 14.5%. Of the 634 windows in which it acted in line with a fact
+  it had, the frames showed that fact stale or false in 16 (2.5%).
 - **Spend: \$86.40 counted of the \$120 cap** (the load check \$0.018; 63 played
   attempts \$86.38, recall included). All judging was at no provider spend: Opus judges
   are host agents, and the GPT judges ran through Codex on the owner's own credits.
@@ -125,7 +125,8 @@ From the Opus use packets, which show the briefing and reminders:
 - when the lead was delivered, the player acted in line with the fact in 611 of 724
   windows where it applied (0.844, 0.814 to 0.872);
 - it found the fact again in 0.145;
-- it acted on a fact the frames showed stale or false in 16 of 634 (0.025);
+- of the 634 windows in which it acted in line with a fact it had, the frames showed
+  that fact stale or false in 16 (0.025);
 - of 97 facts it read, it then acted in line with 12 (0.124).
 
 The judges agreed on 0.941 of use labels (κ 0.795).
