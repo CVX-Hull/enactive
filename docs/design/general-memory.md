@@ -49,9 +49,11 @@ review_trigger: The withholding simulation reports, delivery is first measured i
   5. **Judges** are the standing measure, without further audits by the owner; the
      measure gate's 30 owner labels are the anchor set.
   6. **The cut** is not built yet.
-- **Not known.** Whether a recall model helps or distracts in this game; the withholding
-  design's power; whether grooming holds the store's size; whether the owner's blind
-  answers or the judges are nearer the truth on engagement.
+- **Not known.** Whether delivery helps: the full withholding study suggests a benefit
+  limited by the measure, not a confirmed one
+  ([record](../acceptance/2026-11-14-withholding-study.md)); whether a recall model helps
+  or distracts in this game; whether grooming holds the store's size; whether the owner's
+  blind answers or the judges are nearer the truth on engagement.
 
 Terms are in the [glossary](../glossary.md).
 
@@ -265,6 +267,11 @@ provider; the coding host's capacity is its cost.
   test, in the [measure validation](../acceptance/2026-11-14-withholding-measure-validation.md);
   the first sizing, from the measure gate's numbers for the earlier per-start design, is
   the [withholding simulation](../acceptance/2026-11-13-withholding-simulation.md).
+- **Status.** A benefit is not confirmed: the full study's frozen primary is not
+  positive, and a benefit is only suggested, limited by the measure
+  ([record](../acceptance/2026-11-14-withholding-study.md)). Delivery changes which topics
+  the player touches, so the touch-conditioned estimand compares groups the treatment
+  shaped.
 
 ### Game-neutral judging
 
