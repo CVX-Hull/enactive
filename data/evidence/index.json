@@ -1131,6 +1131,20 @@
       },
       "visibility": "private"
     },
+    "withholding-study-651-load-check-package": {
+      "availability": "present",
+      "bytes": 1512458,
+      "cited_by": [
+        "docs/acceptance/2026-11-14-withholding-study.md"
+      ],
+      "files": 40,
+      "manifest_sha256": "8b9619159fbbee26fee25bf5153067b91737f2a45aaea2c9d2a9fb9019c83f84",
+      "note": "Full withholding study (#651): the load check's package (trace, receipt, frames) for the second saved moment",
+      "sources": {
+        "computer-sessions/withholding-651-b-load": ".runtime/computer-sessions/withholding-651-b-load (the load check's package)"
+      },
+      "visibility": "private"
+    },
     "withholding-study-651-start-01": {
       "availability": "present",
       "bytes": 19713624,
