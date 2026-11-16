@@ -459,10 +459,11 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   a cut is made only if it frees at least ten turns, and both marks are counted above
   the briefing's size. Without the first, a curator about 39 decisions behind makes the
   host rewrite the window at most requests.
-- **The cut is not built.** The session price pilot reported a median of \$0.20 and 99 s
-  for 20 decisions, with coverage trailing play by about 23 decisions; the owner decided
-  on 13 November 2026 to build delivery first and decide the cut after it is measured
-  ([record](../acceptance/2026-11-13-session-price-pilot.md)).
+- **The cut is not built** and does not ship with adoption (#463). The session price
+  pilot reported a median of \$0.20 and 99 s for 20 decisions, with coverage trailing play
+  by about 23 decisions ([record](../acceptance/2026-11-13-session-price-pilot.md)). The
+  cut is decided again once the curator's lag behind play is measured
+  ([decision log](../decisions/owner-decisions.md)).
 - **Coverage.** Each published version carries the gate's coverage stamp
   (`coverage.json`, `curator-coverage/2`: the session, the actor and the last step its
   window read), which delivered knowledge repeats.
