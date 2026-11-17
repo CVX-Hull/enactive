@@ -70,6 +70,148 @@ reasons to score all assigned episodes and to separate predictive fit from actio
 
 All mappings from these methods to curator agents below are **research hypotheses**.
 
+## Fit with the implemented player, curator and planned designs
+
+### Baseline and the missing connection
+
+Source and sealed-artifact review at `a3d61521` distinguishes four statuses: built,
+measured, adopted-but-pending and proposed. Current contracts/source remain the
+runtime authority; this comparison does not adopt the research design.
+
+| Part | What exists | What this research adds or must not assume |
+| --- | --- | --- |
+| Deciding player | The [Pi host](../../tools/player_host/README.md) runs a model/tool loop over visible frames, objective, conversation and basic controls. Context/handoff and original resource limits belong to the [host contract](../contracts/player-host.md). | Treat the actor's recent conversation as part of recurrent state. Extra curator memory is not the whole recurrence, and its benefit is tested with natural actor context held equal. |
+| Player-owned durable state | [Current tools](../../harness/player_tools.py) still include memory writes and bounded player-authored programs. | [#463](https://github.com/CVX-Hull/enactive/issues/463) removes those write/program paths in the adopted memory migration and adds public intent/cites/hints. This does not remove the player's immediate reasoning, ongoing objective or handoff responsibility. |
+| Curator | [Sessions](curator-session.md) read sealed visible trace windows and published knowledge, propose facts/articles/types, and groom the store. Sandboxing, model proxy, source references and versioned publication are built. | Reuse them for incremental learning. There is no live scheduler or hidden engine-state feed to assume. A player hint is a fallible learning lead, not an assertion automatically promoted to truth. |
+| Representation | [Gate v0](../../harness/curator/gate.py) supports typed free-text facts, articles and type metadata. [The prompt](../../tools/curator_host/prompt.md) explicitly says type fields do not add fact keys. | New type names do not demonstrate learned typed state. Explicit relation instances, identity rules, constraints and schema migrations need an experimental representation/readout and eventually the coordinated schema path in #457. |
+| Delivery | [Knowledge export](../../tools/knowledge_export.py) freezes a version for a run; [recall](../../tools/player_host/host.mjs) selects briefing/reminder entries, and delivered facts/articles can be read or queried. | Recall is a retrieval role, not a curator updating the store. Arbitrary schema data cannot silently pass through the current closed delivered-knowledge format. |
+| Publication and evaluation | The current gate validates form, source membership, references and base version. The [independent evaluator](../contracts/evaluation.md) reads recorded outcomes and never feeds the player/curator. | Structural validity does not establish truth, sufficient memory or action value. Planned later-trace admission tests in #457 must remain distinct from independent study outcomes. |
+
+The inspected groomed `v18` artifact has 77 current facts, 32 articles and four types
+(procedure, recipe, resource, hazard), all with empty field lists. The
+[curator-scoring record](../acceptance/2026-11-13-curator-scoring.md) establishes the
+store/version provenance and its measured limits. This is a working text-knowledge
+organization, not evidence that a general structured world model emerged. Mechanics
+can already be expressed in prose; structured payloads must earn their extra machinery.
+
+The [withholding study](../acceptance/2026-11-14-withholding-study.md) and
+[session follow-up](../acceptance/2026-11-16-withholding-follow-up-and-grooming.md)
+measured a fixed store on two saved moments of one lineage. Their null frozen primary,
+short/censored continuations and delivery-to-action gaps motivate the new comparison.
+They neither establish nor refute the value of a continuously revising curator.
+
+Some older standing statements in ADR 009, component pages and the context design
+still describe the pre-adoption state. The [owner decision](../decisions/owner-decisions.md)
+and #463 distinguish adoption with benefit unclaimed from its pending implementation;
+#463 already owns coordinated rule alignment. Do not interpret those stale summaries
+as revoking adoption or assume the pending migration has already shipped.
+
+### One system, several kinds of learned content
+
+The proposed recurrent system consists of **actor context C**, **published knowledge K**,
+its **representation S**, and later optional **programs P**. These are responsibilities,
+not mandatory separate databases, model tiers or hand-written domain types.
+
+- **Immediate working context:** what the actor currently sees, intends and is doing.
+  The player owns decisions and can continue when a helper is unavailable.
+- **World/episode beliefs:** source-linked, revisable interpretations of this survivor's
+  surroundings, possessions and events. Historical observation and current belief differ.
+- **Mechanics hypotheses:** conditional relationships supported by observed effects,
+  including their applicability, alternatives and counterexamples. They do not become
+  universally true because the curator wrote an article about them.
+- **Ongoing work:** unfinished objectives, dependencies and reasons a plan changed.
+  Curator records help continuity; they do not take planning authority from the actor.
+- **Reusable representations and later procedures:** types, relations and bounded
+  rule expressions may be state data; an executable gameplay program is a separate,
+  versioned behavior with its own proposed admission/execution contract.
+
+The existing recurrence equations describe the curator's explicit state and readout.
+The whole loop also updates the actor's conversation after each observation/action.
+A schema change is useful only if the same frozen reader and actor can interpret the
+new version. The reader therefore needs definitions/applicability and source support,
+not just unexplained field names. The proposed ontology card in #457 is a natural
+consumer seam, not proof that the current reader already supports arbitrary schemas.
+
+For example, an observed interaction suggests a rule conditional on some capability.
+A later visible counterexample causes the curator to narrow that rule or preserve two
+alternatives. A subsequent player query retrieves the revised condition and unresolved
+uncertainty. The player chooses whether to act, re-observe or investigate. Success is
+measured from the resulting visible play, not the elegance of the rewritten rule.
+No engineer needs to seed a CDDA capability type to conduct that test.
+
+### Crosswalk from the session's research
+
+| Research/design discussion | Place in this system | Consequence and limit |
+| --- | --- | --- |
+| [Memory representations](../research-memory-representations.md): replay, provenance, constraints, predictive state and compression | Evidence archive, K/S and reader R | Preserve consequential distinctions and origins; prediction under logged actions does not identify untried-action value. Byte length is a complexity penalty, not a sufficiency theorem. |
+| [Curated memory](../research-curated-memory.md): belief revision, truth maintenance, ontology and oversight | Curator update/grooming and #457 | Keep observation, interpretation, contradiction and retraction distinguishable. The belief calculus remains an owner decision; evidence is not converted to calibrated confidence by counting citations. |
+| Structured recurrence / the RNN analogy, including test-time-learning inspiration | Repeated visible-evidence updates plus slower schema proposals | The explicit recurrent state can contain records, graphs or bounded rules. This first experiment is discrete/model-mediated adaptation, not an implemented differentiable learner or automatic gradient through symbolic edits. |
+| Relational structures, predictive tests, information bottleneck and structural-form search | Competing S/U/R candidates under the same evidence/cost permissions | Search for operations that reuse across CDDA situations; retain replay/prose as serious alternatives. A fully expressive text baseline can encode relations, so explicit structure must improve use under resources. |
+| Database/materialized-view, truth-maintenance and compiler analogies from the representation discussion | Original visible evidence, revisable K/S and query views | Preserve source identity while rebuilding derived views; schema migrations should preserve relevant query meaning. These are design analogies, not a mandate for another event store, graph database or compiler framework. |
+| Control/state-estimation, automata and probabilistic-model analogies | Conditional mechanics hypotheses and state uncertainty | A compact state should retain distinctions needed for specified future observations/actions. Unknown hidden conditions remain unknown; a descriptive latent state or invented probability is not validated dynamics or calibrated belief. |
+| [Programs/library learning](../research-curated-programs.md), [executable policies](../research-executable-policies.md) and [organic discovery](organic-discovery.md) | Optional P, after useful memory | Reusable behavior is a later consumer of learned conditions and procedures. #177 owns its program/slot/monitor work; representation editing does not grant execution or prove library reuse. |
+| [Multiple timescales](../research-multirate-agents.md) | Fast actor, batched curator updates, slower grooming | Separate rates where useful; do not add mandatory agents or model tiers. Queueing, stale knowledge and correlated errors can outweigh compression. |
+| [Player context](player-context.md), [general memory](general-memory.md) and the delivery experiments | R, briefings/reminders, handoff and context cost | Store coverage is what was read, not proof of complete recall. A recent citation in an article does not make every claim fresh. The deferred context cut is not needed to test this system. |
+| [Transition study](../acceptance/2026-11-01-transition-corpus.md), [representation experiments](../acceptance/2026-10-18-memory-representations.md) and the latest withholding follow-up | Hypothesis selection and study design | Earlier predictive/toy results and frozen-store use are bounded evidence, not proof of hierarchy, safety or live learning. Diverse genuine CDDA sources and all-assigned outcomes address some of those limits. |
+
+### Learning feedback, freshness and integration order
+
+Keep three feedback paths distinct. The operating curator can compare its own earlier
+predictions with **later player-visible observations**. A future submission gate can
+run the separately specified private later-trace admission tests in #457; their feedback
+policy must not become an unrestricted answer oracle for repeated proposals. The
+independent research evaluator scores sealed final trials and sends no final answers
+into the operating learner. Development/selection scores can rank generic learner
+configurations outside final play, as this protocol already specifies.
+
+Measure freshness in **decisions, wall time and in-game time**, plus source coverage and
+version. The same number of player inputs can represent a short interaction or a long
+in-game activity. Coverage, publication recency and semantic validity are different:
+a mechanics claim may remain useful for a long time while an inventory claim changes
+immediately. Atomic publication avoids half-migrated views; it cannot make stale data
+true. Retrieval must preserve uncertainty and applicability. The player keeps recent
+observations and control while the curator works; no context cut follows from a
+coverage stamp.
+
+The smallest coherent sequence uses existing work rather than a new stack:
+
+1. **#463:** finish the adopted ownership/tool migration, intent/hint inputs and rule
+   alignment. This implementation is already decided; it does not wait for a positive
+   recurrence study. Player reasoning/handoff and knowledge reads remain.
+2. **#668:** prepare the real-CDDA source portfolio, deterministic stand-in packets,
+   candidate/readout comparison protocol and complete prices through current public
+   primitives. This tests the apparatus and defines the question; substantive model
+   replay and learner-failure evidence belong to a later separately approved pilot
+   under #666. Neither preparation nor research changes #463's shared files.
+3. **#457:** settle the open belief decision, later-trace gate semantics and coordinated
+   schema/ontology consumers. Use #668's interface requirements and, when available,
+   failures from the separately approved model-replay pilot to assess what structure
+   is needed. That pilot is not a new prerequisite to #457; do not install every
+   proposed mathematical formalism.
+4. **#664:** integrate new evidence, publication and delivery under the settled contracts;
+   compare inter-admission use with a separately admitted live-update condition. Price
+   total player/curator/recall cost and lag before reconsidering any context cut.
+5. **#177 / #472:** programs/monitor and practice remain their separately decided phases.
+   Offline representation research needs neither executable gameplay libraries nor an
+   extra practice instance. Other games remain future-version work.
+
+For each trial, join **source → claim/schema revision → published version → selected
+readout → delivery/read → player intent/input → observed effect**. Keep missing links
+unknown. This lets a failure be attributed to capture, representation, retrieval,
+timing or action use rather than blaming the curator as a whole. Existing telemetry,
+source IDs and #463's public emissions are the reuse path; retain no private reasoning.
+
+Freeze the complete role configuration per comparison. The documented selected route
+in [host operations](../operations/player-host.md) is DeepSeek Flash1017 medium, while
+the inspected full-study start package used GPT-6.1 Terra for both player and recall
+(262,144 player context, 32,768 recall context, 39 player images evicted in blocks of
+20, reminders scheduled every ten
+completed computer-input/program-run calls, subject to availability and budget).
+Those are different finite configurations; neither report qualifies the other. Pin
+player, curator and recall independently and equally across corresponding arms, and
+charge them all. Do not treat a coding-agent subscription, a default route or a passing
+software fixture as an unmeasured gameplay configuration.
+
 ## Hypotheses and objectives
 
 The primary question concerns a **frozen learner configuration** across CDDA conditions,
