@@ -33,8 +33,9 @@ and never grants custody.
 
 Each finite run freezes one [player host](components/player-interface.md) adapter
 behind the substitutable [`player-host/5` contract](contracts/player-host.md). The selected
-finite configuration is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium
-effort. Its exact route, metadata, context and limits are frozen per run; this
+finite configuration is OpenRouter / pinned OpenAI provider / GPT-6.1 Terra at medium
+effort. DeepSeek and other cheaper models are future candidates under #25; none is
+the current player. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.
 
 The player keeps an ongoing user objective. Finite tests retain their quotas,
@@ -46,7 +47,7 @@ action, and stopping automation certifies neither persistence nor a paused game.
 The [host contract](contracts/player-host.md#external-control) owns this current
 source behavior; real-play qualification is a separate claim.
 
-No candidate model or context change investigated so far has been adopted; the
+No cheaper replacement for Terra is adopted; the
 [acceptance index](acceptance/index.md) holds each investigation and its limits.
 Successful serving does not qualify useful cadence, and the player stays
 self-sufficient: the lead gives no gameplay hints.
