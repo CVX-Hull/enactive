@@ -12,6 +12,16 @@ our engineering inferences; they are not a claim to exhaust the literature.
 
 ## Research pages
 
+### Proposed investigation
+
+[Structured recurrence and representation search](design/structured-recurrence-research.md)
+asks whether a game-independent learner can discover useful memory structures and
+update/read rules across unfamiliar mechanics and independent games. It specifies
+competing representations, separate diagnostic/replay/real-play evidence, and bounded
+agent roles. Its first proposed delivery is a no-model fixture and price worksheet;
+paid studies and runtime adoption require their own decisions. The proposal is not an
+experimental result or a change to the current memory contract.
+
 ### Current: the question is open
 
 Each page answers areas of [ADR 009](decisions/009-curated-player.md)'s
