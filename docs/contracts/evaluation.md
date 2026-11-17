@@ -1114,6 +1114,10 @@ returns that label, `source_status`, `snapshot`, `items`, `total`, `next` and `l
   operation/status/null conventions are accepted. No Boolean alias or historical
   converter is used. Text, identifiers and lists use the existing bounded omission
   conventions; an overlong identifier is omitted, never shortened into another ID.
+  Free-form references and diagnostics containing `/` or `\` are conservatively
+  withheld as path-like detail, with `path_details_omitted` and identifier omission
+  metadata. This also hides benign separator-containing text; the source remains
+  available for local inspection. Whole values are withheld rather than presenting partially redacted identifiers.
 - Publication is a recorded gate report, not semantic verification, the repository's
   present head or delivery/read/use. Restore, unchanged and submission results remain
   distinct. Null and unknown versions remain explicit. No timestamp, gate pass rate,

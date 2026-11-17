@@ -365,3 +365,36 @@ def test_curator_projection_of_gate_and_restore_producer_results(tmp_path):
         ('submission', 'published', 'v0', None, 'v1'), ('submission', 'rejected', 'v0', None, None),
         ('restore', 'published', 'v1', 'v0', 'v2'), ('restore', 'unchanged', 'v2', 'v0', 'v2')]
     assert [r['operation_id'] for r in result['items']] == [r['operation_id'] for r in (published, rejected, changed, unchanged)]
+
+
+def test_curator_omits_path_details_from_real_producer_failure(tmp_path):
+    from harness.curator.knowledge import Repository
+    from tests.test_curator_gate import kind, run, submission
+    repo = Repository(tmp_path / 'private-repository-location', 'cdda')
+    result = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())]))
+    assert result['status'] == 'rejected' and str(repo.path) in result['diagnostics'][0]
+    source = repo.state / 'gate.jsonl'
+    before = source.read_bytes()
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(
+        curator_results=(('fixture', source),))))
+    response = client.get('/api/view/frame/curator-results?source=fixture')
+    item = response.json()['items'][0]
+    assert item['status'] == 'rejected' and item['path_details_omitted'] == 1
+    assert item['diagnostics'] == [] and str(tmp_path) not in response.text
+    assert source.read_bytes() == before
+    source.write_text(json.dumps(curator_row(submission='/private/a', session='C:\\private\\b')) + '\n')
+    item = client.get('/api/view/frame/curator-results?source=fixture').json()['items'][0]
+    assert item['submission'] is None and item['session'] is None and item['path_details_omitted'] == 2
+    assert item['omitted_characters'] == {'submission': 10, 'session': 12}
+
+
+def test_curator_oversize_response_can_be_narrowed_without_truncating_history(tmp_path):
+    source = tmp_path / 'gate.jsonl'
+    source.write_text((json.dumps(curator_row(diagnostics=['x' * 1024] * 100)) + '\n') * 45)
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(
+        curator_results=(('fixture', source),))))
+    url = '/api/view/frame/curator-results?source=fixture'
+    assert client.get(url).status_code == 413
+    narrowed = client.get(url + '&limit=1').json()
+    assert narrowed['source_status'] == 'available' and narrowed['total'] == 45 and narrowed['next'] == 1
+    assert len(narrowed['items']) == 1

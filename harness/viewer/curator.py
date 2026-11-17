@@ -56,17 +56,28 @@ def valid(row):
 def project(row, index):
     item = {'index': index}
     omitted = {}
+    path_details = 0
     for key in ('operation_id', 'operation', 'status', 'base_version', 'restored_from', 'version', 'submission', 'session'):
         value = row[key]
-        if isinstance(value, str) and len(value) > ID_LIMIT:
+        if isinstance(value, str) and ('/' in value or '\\' in value):
+            omitted[key] = len(value)
+            path_details += 1
+            value = None
+        elif isinstance(value, str) and len(value) > ID_LIMIT:
             omitted[key] = len(value)
             value = None
         item[key] = value
-    item['diagnostics'] = [s[:TEXT_LIMIT] for s in row['diagnostics'][:LIST_LIMIT]]
+    item['diagnostics'] = []
     item['diagnostics_omitted'] = max(0, len(row['diagnostics']) - LIST_LIMIT)
     for i, value in enumerate(row['diagnostics'][:LIST_LIMIT]):
+        if '/' in value or '\\' in value:
+            path_details += 1
+            continue
+        item['diagnostics'].append(value[:TEXT_LIMIT])
         if len(value) > TEXT_LIMIT:
             omitted[f'diagnostics.{i}'] = len(value) - TEXT_LIMIT
+    if path_details:
+        item['path_details_omitted'] = path_details
     if omitted:
         item['omitted_characters'] = omitted
     return item
@@ -100,7 +111,7 @@ def read(path):
 
 
 def results(sources, label, after, limit, digest):
-    path = next ( (path for name, path in sources if name == label), None )
+    path = next((path for name, path in sources if name == label), None)
     if path is None:
         raise ViewError(404, 'unknown_source')
     if (digest is not None and not re.fullmatch(r'[0-9a-f]{64}', digest)) or (after > 0 and digest is None):
