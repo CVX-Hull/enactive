@@ -148,9 +148,9 @@ It differs in role and in how it is judged:
 | **Programs** | Act in the actor's place until they yield | The actor's observation interface | Emissions, like the actor | Inputs while running, within declared risk and budgets |
 | **Monitor** (a model slot) | Watches running programs, and optionally the actor, for anomalies | Frames, emissions, progress stream | Stop or yield signals | Only whether to stop |
 
-The actor keeps memory read tools. It loses memory append and program save;
-continuity comes from published snapshots, with the outgoing actor's summary kept
-as a labelled hint at handoffs ([below](#reaching-the-actor-without-latency-d2)).
+The actor reads delivered knowledge and can submit hints. Continuity uses a frozen
+delivery and the outgoing actor's summary as a labelled hint at handoff. Live
+snapshot differences and program controls remain proposals ([below](#reaching-the-actor-without-latency-d2)).
 
 ## Memory
 
@@ -324,7 +324,7 @@ in the player system, separate from the evaluator's readers (ADR008).
 - `program_start` returns a handle at once; the actor receives a compressed progress
   stream (milestones, expectation outcomes, anomalies, yields) and may `steer`,
   `stop` or act.
-- **Actor input preempts the program between batches.** Today a program run holds
+- **Actor input preempts the program between batches.** The former program run held
   the application lock for its whole run (`harness/application.py:185-196`), so an
   asynchronous run needs the runner outside that lock. Custody rules for the
   handover:
@@ -652,8 +652,10 @@ checks its power by simulation before it runs.
 | **Programs and monitor** | Actor-interface programs as passive policies; capability slots with record and replay; supervised runs with preemption and verified risk classes; monitor slot; offline fitting; probation and library statistics; spectator program views | Per package, after the gate before spend | Pre-registered delegation share at matched failure rate; monitor detection on anomalies in recorded program runs |
 | **Practice instance** | One-way forks; determinism measurement; live fitting; slot swaps; spectator fork views | Per package | Owner decision first; concurrency guards held |
 
-**Standing is not kept here.** Nothing in this ADR is adopted, and the current
-contracts govern the running system. Where each phase stands is in
+**Standing.** The curator and memory boundary is adopted with benefit unclaimed;
+the current contracts govern its implemented scope. The cut, live scheduler and
+snapshot differences remain unbuilt. Programs, monitor and practice remain proposals;
+this does not adopt the whole ADR. Where each phase stands is in
 [#445](https://github.com/CVX-Hull/enactive/issues/445) and the Project; the owner's
 decisions are in the [owner decision log](owner-decisions.md). Evidence recorded for
 the phases:
@@ -671,9 +673,9 @@ the phases:
 - **Programs and monitor**, **practice instance:** none. The practice instance needs an
   owner decision first ([open decision 1](#open-owner-decisions)).
 
-Every phase replaces its contracts and stores in one migration
-(`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their
-successors); unsupported versions are refused.
+The adopted boundary uses `player-journal/1` and `player-hint/1`; current rules
+are in the [computer-control contract](../contracts/computer-control.md). Unsupported
+active versions are refused. Later phases require their own coordinated migration.
 
 ## Practice instance (proposal; owner decision open)
 
@@ -701,7 +703,8 @@ successors); unsupported versions are refused.
 
 ## Rule alignment
 
-Each change below takes effect only when its phase is adopted (D12).
+The table records the proposed phase changes (D12). The adopted memory boundary
+is described by current contracts; unbuilt proposals remain future work.
 
 | Current position | Where | Becomes |
 | --- | --- | --- |

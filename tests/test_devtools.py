@@ -84,7 +84,7 @@ class DevToolTests(unittest.TestCase):
             self.assert_broken(self.lint_imports(), "harness.player")
 
     def test_computer_cannot_acquire_semantics_or_adapters(self):
-        for module in ("harness.player.memory", "harness.application", "harness.player_client", "harness.server", "tools"):
+        for module in ("harness.player.journal", "harness.application", "harness.player_client", "harness.server", "tools"):
             self.write("computer/runtime.py", f"import {module}\n")
             self.assert_broken(self.lint_imports(), "harness.computer")
 

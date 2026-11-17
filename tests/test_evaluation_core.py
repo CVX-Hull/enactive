@@ -27,7 +27,7 @@ from harness.evaluation.core.records import (CORE_VERSION, EvaluationError, Reco
     read_metrics, read_readings, read_requests, read_run_facts, read_steps, read_tool_calls, record_path)
 from harness.evaluation.core.survival import (Observation, bootstrap_rmst, compare, kaplan_meier, logrank,
     restricted_mean, rmst)
-from harness.player.memory import Memory
+from tests.legacy_player_store import legacy_player_archive, write_memory
 from tools.evaluate import main
 
 SESSION = 'a' * 32
@@ -127,8 +127,9 @@ def iso(wall: float) -> str:
 class Run:
     """Builds `session.sqlite3`, `sources/`, `actors/NNN/host.jsonl`, `manifest.json` and contexts."""
 
-    def __init__(self, directory: Path, session: str = SESSION, base: float = BASE, hosts: bool = True) -> None:
+    def __init__(self, directory: Path, session: str = SESSION, base: float = BASE, hosts: bool = True, historical: bool = False) -> None:
         self.directory, self.session, self.base, self.hosts = directory, session, base, hosts
+        self.historical = historical
         directory.mkdir(parents=True, exist_ok=True)
         self.store = SessionStore(directory, session, LIMITS, 1e9)
         self.actors: list[str] = []
@@ -146,7 +147,7 @@ class Run:
         actor = name or f'{len(self.actors) + 1:032x}'
         self.store.add_actor(actor, hashlib.sha256(actor.encode()).hexdigest())
         self.actors.append(actor)
-        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/5', telemetry_version=5, actor_id=actor,
+        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/5' if self.historical else 'player-host/6', telemetry_version=5 if self.historical else 6, actor_id=actor,
             session=self.session)]
         return actor
 
@@ -249,10 +250,10 @@ class Run:
             events = [*self.host[actor], self.event(actor, 'settled', **fields,
                 requests=sum(e['type'] == 'request-start' for e in self.host[actor]))]
             (directory / 'host.jsonl').write_text(''.join(json.dumps(e) + '\n' for e in events))
-            (directory / 'actor.json').write_text(json.dumps(dict(schema='player-adapter/1', actor_id=actor)))
+            (directory / 'actor.json').write_text(json.dumps(dict(schema='player-adapter/1' if self.historical else 'player-adapter/2', actor_id=actor)))
             (directory / 'context.txt').write_text('GUIDE')
             (directory / 'prompt.txt').write_text(f'ASSIGNMENT {index}')
-        self.manifest = dict(schema='campaign-run/7', session=self.session, source_commit='fixture', **manifest)
+        self.manifest = dict(schema='campaign-run/7' if self.historical else 'campaign-run/8', session=self.session, source_commit='fixture', **manifest)
         if memory is not None:
             self.manifest['player_store'] = str(memory)
         (self.directory / 'manifest.json').write_text(json.dumps(self.manifest))
@@ -262,9 +263,9 @@ class Run:
         directory = self.directory / 'contexts'
         directory.mkdir(exist_ok=True)
         identity = f'{len(list(directory.iterdir())) + 1:032x}'
-        (directory / f'{identity}.json').write_text(json.dumps(dict(schema='player-handoff-context/1', context_id=identity,
+        (directory / f'{identity}.json').write_text(json.dumps(dict(schema='player-handoff-context/1' if self.historical else 'player-handoff-context/2', context_id=identity,
             session=self.session, actor_id=actor, summary='carry', grants_authority=False,
-            knowledge=dict(records=[dict(id=r) for r in records], programs=[]))))
+            **(dict(knowledge=dict(records=[dict(id=r) for r in records], programs=[])) if self.historical else dict(summary_is_hint=True)))))
         return identity
 
 
@@ -635,7 +636,7 @@ def test_custody_stop_handoff_and_host_events(tmp_path):
         a = run.actor()
         run.step(a, 'input', [key('j')], F('in_play', 3600, fill=1))
         run.step(a, 'input', [key('j')], F('in_play', 3660, fill=2), status='unknown', receipt='unknown')
-        context = run.context(a, ['rec-1'])
+        context = run.context(a, [])
         run.step(a, 'handoff', None, None, status='sealed', handoff=dict(schema='player-handoff/1', operation_id='x',
             session=SESSION, actor_id=a, context_id=context, context_sha256='b' * 64, sealed_wall=BASE, grants_authority=False))
         run.host[a].append(run.event(a, 'control-accepted', iso(BASE + 35), control_id='c' * 32, control_type='orderly_stop'))
@@ -677,15 +678,12 @@ def record_doc(kind: str = 'work') -> dict:
 
 def memory_scenario(directory: Path) -> Path:
     """Two actors: memory writes/reads, programs, a handoff with carried context and a resume."""
-    run = Run(directory)
+    run = Run(directory, historical=True)
     memory_path = directory.parent / 'memory.sqlite3'
-    with Memory(memory_path) as memory:
-        first = memory.append('actor-a', record_doc())['id']
-        second = memory.append('actor-a', record_doc('decision'))['id']
-        third = memory.append('actor-b', record_doc('claim'))['id']
-        memory._db.execute("INSERT INTO programs(id,document,parent_id) VALUES('prog-old',?,NULL)",
-            (json.dumps(dict(id='prog-old', actor_id='actor-prior', created_wall=1.0, sha256='0' * 64)),))
-        memory._db.commit()
+    first, second, third = '1'*32, '2'*32, '3'*32
+    write_memory(memory_path, [dict(record_doc(kind), id=identity, actor_id=actor, created_wall=BASE)
+        for identity, actor, kind in ((first, 'actor-a', 'work'), (second, 'actor-a', 'decision'), (third, 'actor-b', 'claim'))],
+        [dict(id='prog-old', actor_id='actor-prior', created_wall=1.0, sha256='0'*64)])
     a = run.actor(f'{1:032x}')
     run.step(a, 'input', [key('j')], F('in_play', 3600, fill=1))
     run.call(a, 'player_memory_append', dict(record=record_doc()), dict(id=first, kind='work', supports=[], sources=['s1']))
@@ -714,7 +712,7 @@ def memory_scenario(directory: Path) -> Path:
     return directory
 
 
-def test_memory_program_and_handoff_events_and_metrics(tmp_path):
+def test_memory_program_and_handoff_events_and_metrics(tmp_path, legacy_player_archive):
     path = run_and_evaluate(tmp_path, memory_scenario)
     writes = events_of(path, 'memory_write')
     assert [e['payload']['record_kind'] for e in writes] == ['work', 'decision', 'claim']
@@ -1153,10 +1151,10 @@ def test_unsupported_input_versions_are_errors(tmp_path):
     (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION)))
     with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/5.*not listed'):
         evaluate(directory, FakeBinding(), tmp_path / 'e1')
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', session=SESSION)))
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/8', session=SESSION)))
     host = directory / 'actors' / '001' / 'host.jsonl'
     original = host.read_text()
-    host.write_text(original.replace('"schema": "player-host/5", "telemetry_version": 5', '"schema": "player-host/3", "telemetry_version": 3'))
+    host.write_text(original.replace('"schema": "player-host/6", "telemetry_version": 6', '"schema": "player-host/3", "telemetry_version": 3'))
     assert host.read_text() != original
     with pytest.raises(EvaluationError, match=r'host\.jsonl.*player-host/3'):
         evaluate(directory, FakeBinding(), tmp_path / 'e2')
@@ -1178,7 +1176,7 @@ def test_unsupported_memory_and_record_versions_are_errors(tmp_path):
     connection.commit()
     connection.close()
     directory = main_scenario(tmp_path / 'run')
-    with pytest.raises(EvaluationError, match=r'old-memory\.sqlite3.*player-memory/2'):
+    with pytest.raises(EvaluationError, match=r'old-memory\.sqlite3.*player-journal/1'):
         evaluate(directory, FakeBinding(), tmp_path / 'e', memory_store=memory)
     path = run_and_evaluate(tmp_path / 'ok')
     connection = sqlite3.connect(path)
@@ -1408,7 +1406,7 @@ def test_censor_reasons(tmp_path, name, options, reason):
 def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path, monkeypatch):
     from harness.evaluation.core.sources import read_end_facts
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
-    current = dict(schema='campaign-run/7', session=SESSION)
+    current = dict(schema='campaign-run/8', session=SESSION)
     archived = dict(schema='campaign-run/4', session=SESSION)
     directory = tmp_path / 'end'
     directory.mkdir()
@@ -1540,30 +1538,31 @@ def as_archived(directory: Path, versions: tuple, *, receipt: bool = False) -> P
     return directory
 
 
-def test_the_shipped_archive_index_is_exactly_the_55_sealed_sessions_in_four_version_combinations():
+def test_the_shipped_archive_index_preserves_exact_pre_adoption_sessions():
     from collections import Counter
     import harness.evaluation.core.sources as sources
     sessions = sources.archive_sessions()
-    assert len(sessions) == 55 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
+    assert len(sessions) == 135 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
     assert all(key == item.session for key, item in sessions.items())
-    assert len({(item.study, item.run) for item in sessions.values()}) == 55
+    assert len({(item.study, item.run) for item in sessions.values()}) == 135
     spend_limit = ('campaign-run/6','campaign-receipt/4','player-driver/4','player-host/4',4,'campaign-watch-terminal/4')
-    # Exactly the four combinations that exist, each naming every record version.
+    memory_adoption = ('campaign-run/7','campaign-receipt/5','player-driver/5','player-host/5',5,'campaign-watch-terminal/4')
+    # Exact allowed combinations, including pre-adoption delivery traces.
     assert [tuple(c.versions.items()) for c in sources.ARCHIVE_COMBINATIONS] == [
-        tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit)]
+        tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit, memory_adoption)]
     assert Counter(tuple(item.combination.versions.values()) for item in sessions.values()) == {
-        OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2, spend_limit: 1}
+        OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2, spend_limit: 1, memory_adoption: 80}
     # A combination names the fields read from exactly the records the reader takes in an old version. Every
     # archived session predates the dollar limit, so its manifest, receipt, driver record and host traces all do.
     current = dict(manifest=sources.MANIFEST_SCHEMA, receipt=sources.RECEIPT_SCHEMA, driver=sources.DRIVER_SCHEMA,
                    host=sources.HOST_SCHEMA, run_ending=sources.WATCH_TERMINAL_SCHEMA)
     for combination in sources.ARCHIVE_COMBINATIONS:
         assert set(combination.fields) == {key for key, value in current.items() if combination.versions[key] != value}
-        assert {'manifest', 'receipt', 'driver', 'host'} <= set(combination.fields)
+        assert {'manifest', 'host'} <= set(combination.fields)
         assert combination.versions['host_telemetry'] != sources.HOST_TELEMETRY
     assert [c.fields.get('run_ending') for c in sources.ARCHIVE_COMBINATIONS] == [
-        ('reason',), ('session', 'reason', 'pause_reason'), None, None]
-    assert ['labels' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True]
+        ('reason',), ('session', 'reason', 'pause_reason'), None, None, None]
+    assert ['labels' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True]
     assert all('accounting' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS[:3])
     assert 'spend_limit_usd' in sources.ARCHIVE_COMBINATIONS[3].fields['manifest']
     # The operator labels are on the 30 older sessions and nowhere else.
@@ -1571,7 +1570,7 @@ def test_the_shipped_archive_index_is_exactly_the_55_sealed_sessions_in_four_ver
     assert labelled == {key for key, item in sessions.items() if item.combination.versions['manifest'] == 'campaign-run/4'}
     assert len(labelled) == 30
     assert all(set(sessions[key].labels) == {'arm', 'start', 'scenario', 'lineage', 'admission'} for key in labelled)
-    assert Counter(item.study for item in sessions.values()) == {
+    assert Counter(item.study for item in sessions.values() if item.combination.versions['manifest'] != 'campaign-run/7') == {
         '372-382-dev-loop': 37, '522-held-out': 8, '397-seven-day': 7, 'supervised-launch-check-558': 2, 'spend-limit-run-555': 1}
 
 
@@ -1587,13 +1586,18 @@ def recorded_versions(directory: Path) -> dict:
     for trace in sorted(directory.glob('actors/*/host.jsonl')):
         with trace.open('rb') as stream:
             starts.append(json.loads(stream.readline()))
-    assert starts and all(start['type'] == 'host-start' for start in starts), directory
+    assert all(start['type'] == 'host-start' for start in starts), directory
     hosts = {(start['schema'], start['telemetry_version']) for start in starts}
-    assert len(hosts) == 1, directory
-    (host, telemetry), = hosts
-    return dict(manifest=json.loads((directory / 'manifest.json').read_text())['schema'], receipt=receipt['schema'],
-        driver=receipt['driver']['schema'], host=host, host_telemetry=telemetry,
-        run_ending=json.loads((directory / 'watch-terminal.json').read_text())['schema'])
+    assert len(hosts) <= 1, directory
+    versions = dict(manifest=json.loads((directory/'manifest.json').read_text())['schema'], receipt=receipt['schema'])
+    if receipt.get('driver'): versions['driver'] = receipt['driver']['schema']
+    if hosts:
+        (host, telemetry), = hosts
+        versions.update(host=host, host_telemetry=telemetry)
+    terminal = directory/'watch-terminal.json'
+    if terminal.is_file(): versions['run_ending'] = json.loads(terminal.read_text())['schema']
+    return versions
+
 
 
 @pytest.mark.skipif(not (sealed_store() / '522-held-out' / 'computer-sessions').is_dir(),
@@ -1602,11 +1606,17 @@ def test_the_archive_index_matches_the_sealed_store():
     import harness.evaluation.core.sources as sources
     store, sessions = sealed_store(), sources.archive_sessions()
     listed = set()
+    manifests = {}
+    for path in store.rglob('manifest.json'):
+        value = json.loads(path.read_text())
+        if isinstance(value, dict) and str(value.get('schema', '')).startswith('campaign-run/'):
+            manifests[value['session']] = path.parent
     for session, item in sessions.items():
-        directory = store / item.study / 'computer-sessions' / item.run
+        directory = manifests[session]
+        assert directory.relative_to(store).parts[0] == item.study and directory.name == item.run
         manifest = sources.read_manifest(directory)
         assert manifest['session'] == session, directory
-        assert recorded_versions(directory) == item.combination.versions, directory
+        assert all(item.combination.versions[key] == value for key, value in recorded_versions(directory).items()), directory
         facts = sources.read_end_facts(directory, manifest)
         assert isinstance(facts.paused, bool) and (facts.pause_reason is None or facts.paused)
         listed.add(directory)
@@ -1732,7 +1742,7 @@ def test_a_current_run_with_a_v2_terminal_is_an_error(tmp_path, monkeypatch):
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
     directory = ended_run(tmp_path / 'current', files={'watch-terminal.json': dict(
         schema='campaign-watch-terminal/2', reason='operator_pause')})
-    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/7'
+    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/8'
     with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*unsupported version.*campaign-watch-terminal/2'):
         evaluate(directory, FakeBinding(), tmp_path / 'evals')
 
@@ -1821,7 +1831,7 @@ def test_run_facts_labels_and_host_rows(tmp_path):
     assert (facts['model'], facts['provider'], facts['route'], facts['effort']) == ('m/x', 'p', dict(only=['p']), 'medium')
     assert (facts['guide_sha256'], facts['assignment_sha256']) == ('g' * 64, 'p' * 64)
     # A current run's allowance is its declared dollar limit; it has no ceiling and no earlier reservation.
-    assert (facts['manifest_schema'], facts['spend_allowance_usd'], facts['limits']) == ('campaign-run/7', 15.5, LIMITS)
+    assert (facts['manifest_schema'], facts['spend_allowance_usd'], facts['limits']) == ('campaign-run/8', 15.5, LIMITS)
     assert (facts['declared_ceiling_usd'], facts['prior_reserved_usd']) == (None, None)
     assert read_metadata(connection)['labels']['arm'] == 'X' and read_metadata(connection)['arm'] == 'X'
     calls = read_tool_calls(connection)
@@ -1947,7 +1957,7 @@ def test_input_digests_are_the_sha256_of_each_file(tmp_path):
 
 def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     from harness.evaluation.core.sources import HostTraceUnsupported, read_host
-    start = dict(type='host-start', schema='player-host/5', telemetry_version=5, actor_id='actor-1', monotonic_ms=0,
+    start = dict(type='host-start', schema='player-host/6', telemetry_version=6, actor_id='actor-1', monotonic_ms=0,
         wall_time='2026-11-07T01:02:03.500Z')
     path = tmp_path / 'host.jsonl'
     path.write_text(json.dumps(start) + '\n' + json.dumps(dict(type='settled', monotonic_ms=1, wall_time='not a time')) + '\n')
@@ -1956,7 +1966,7 @@ def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     assert events[1].wall is None and events[1].line == 2
     for lines, kind in (([], 'empty'), ([dict(type='thread.started')], 'format'),
             ([dict(start, schema='player-host/3', telemetry_version=3)], 'version'), ([dict(start, schema='player-host/3')], 'version'),
-            ([dict(start, telemetry_version=3)], 'version'), ([dict(start, telemetry_version=5.0)], 'version')):
+            ([dict(start, telemetry_version=3)], 'version'), ([dict(start, telemetry_version=6.0)], 'version')):
         path.write_text(''.join(json.dumps(line) + '\n' for line in lines))
         with pytest.raises(HostTraceUnsupported) as error:
             read_host(path, 'hint')

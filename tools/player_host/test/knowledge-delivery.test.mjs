@@ -132,31 +132,22 @@ test('a completed reminder without another player request is recorded as undeliv
   assert.equal(events.filter(e => e.type === 'knowledge-delivery' && e.kind === 'reminder').length,0);
 });
 
-test('cadence counts program-run and computer-input results together, excluding knowledge reads',async t => {
-  let programId;
+test('cadence counts computer inputs while hints and knowledge reads do not advance it',async t => {
   const configuration=route();
   configuration.recall={model:{...structuredClone(model),id:'recall-fixture'},every:2,max_requests:5,unpriced_request_usd:'0.2'};
   const {events,result}=await scenario(t,{configuration:{recall:configuration.recall},
-    enabledTools:['player_program_save','player_program_run','computer_input','player_knowledge_query'],
-    onEvent:event => {
-      if (event.type === 'tool-result' && event.tool === 'player_program_save') programId=JSON.parse(event.result.content[0].text).id;
-    },playerFetch:n => {
-      if (n === 1) return reply(null,[['player_program_save',{program:{schema:'player-program/2',view_schema:'program-view/4',
-        code:"function step(v,s){return {status:'done',state:s,actions:null,reason:'cadence fixture'}}",
-        parent_id:null,reason:'cadence fixture',source_ids:[],record_ids:[],applicability:null}}]]);
-      if (n === 2) return reply(null,[['player_program_run',{program_id:programId,initial_state:{},interpretation:{},
-        selection:{crop:null,size:[4,4]},max_steps:1,max_seconds:1}]]);
+    enabledTools:['player_hint','computer_input','player_knowledge_query'],playerFetch:n => {
+      if (n === 1) return reply(null,[['player_hint',{text:'Unverified cadence fixture report'}]]);
       if (n === 3 || n === 5) return reply(null,[['player_knowledge_query',{query:'claim'}]]);
-      if (n === 4) return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]]);
+      if (n === 2 || n === 4) return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]]);
       return reply('Finished');
     }});
   assert.equal(result.ok,true);
-  const run=events.find(e => e.type === 'tool-result' && e.tool === 'player_program_run');
-  assert.equal(run.result.isError,false);
-  assert.equal(JSON.parse(run.result.content[0].text).status,'done');
   const recalls=events.filter(e => e.type === 'request-start' && e.request_role === 'recall');
   assert.equal(recalls.length,2);
-  assert.ok(events.indexOf(recalls[1])>events.findIndex(e => e.type === 'tool-result' && e.tool === 'computer_input'));
+  const inputs=events.filter(e => e.type === 'tool-result' && e.tool === 'computer_input');
+  assert.equal(inputs.length,2);
+  assert.ok(events.indexOf(recalls[1])>events.indexOf(inputs[1]));
 });
 
 test('an in-flight recall bound refuses the next player attempt and actor end aborts and charges recall',async t => {

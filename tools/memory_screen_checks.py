@@ -72,7 +72,7 @@ def read_lineage(runs: Sequence[Path]) -> tuple[list[Run], list[Actor]]:
             actor, events = read_host(directory / 'host.jsonl', directory.name, entry)
             host[actor], names[actor] = events, directory.name
         facts = host_facts(tuple(host), host)
-        lineage.append(Run(run.name, facts, read_carry(run), offset))
+        lineage.append(Run(run.name, facts, read_carry(run, historical=entry is not None), offset))
         spans: dict[str, list] = {}
         for request in facts.requests:
             if request.role == 'recall':continue

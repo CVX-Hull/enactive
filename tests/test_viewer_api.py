@@ -19,6 +19,7 @@ from harness.viewer.app import MAX_BYTES, create_app
 from harness.viewer.catalog import API, Catalog
 from harness.viewer.live import LiveEvaluator
 from harness.viewer.pause import dollars_per_minute, looping_streak
+from tests.legacy_player_store import legacy_player_archive
 from tests.test_evaluation_core import (BASE, F, FakeBinding, LIMITS, Run, SESSION, ended_run, growing_run, iso, key,
     main_scenario, memory_scenario)
 
@@ -249,7 +250,7 @@ def test_context_route_is_exact_with_a_manifest_and_reconstructed_without(tmp_pa
     assert client.get(f'/api/view/run/{SESSION}/context/request-99').status_code == 404
 
 
-def test_memory_programs_and_handoffs(tmp_path):
+def test_memory_programs_and_handoffs(tmp_path, legacy_player_archive):
     runs = tmp_path / 'runs'
     memory_scenario(runs / 'mem')
     evaluate(runs / 'mem', FakeBinding(), tmp_path / 'root', created_wall=1.0)
@@ -510,8 +511,8 @@ def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
     (tmp_path / 'runs').mkdir()
     current, unversioned, future, replaced = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future', 'replaced'))
     # A campaign-run/5 manifest is read only for a session the closed archive index lists; this one is not listed.
-    for directory, manifest in ((current, dict(schema='campaign-run/7', session='1' * 32)), (unversioned, dict(session='2' * 32)),
-            (future, dict(schema='campaign-run/8', session='3' * 32)), (replaced, dict(schema='campaign-run/5', session='4' * 32))):
+    for directory, manifest in ((current, dict(schema='campaign-run/8', session='1' * 32)), (unversioned, dict(session='2' * 32)),
+            (future, dict(schema='campaign-run/9', session='3' * 32)), (replaced, dict(schema='campaign-run/5', session='4' * 32))):
         directory.mkdir()
         (directory / 'manifest.json').write_text(json.dumps(manifest))
     catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))
@@ -531,7 +532,7 @@ def test_the_live_session_comes_from_a_supported_manifest(tmp_path):
     (run_dir / 'manifest.json').write_text(json.dumps(dict(session=SESSION)))
     evaluator = LiveEvaluator(run_dir, tmp_path / 'root', FakeBinding())
     assert evaluator.session() is None
-    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', session=SESSION)))
+    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/8', session=SESSION)))
     assert evaluator.session() == SESSION
 
 
@@ -549,3 +550,31 @@ def test_the_labels_file_is_bounded_and_a_bad_line_names_its_position(tmp_path):
     with pytest.raises(ViewError) as error:
         catalog.labels()
     assert error.value.code == 'bad_data_file' and 'larger than' in error.value.detail
+
+
+def test_current_journal_hints_are_read_only_public_reports(tmp_path):
+    from harness.player.journal import Journal
+    directory = tmp_path/'runs'/'current'
+    run = Run(directory)
+    actor = run.actor()
+    run.step(actor, 'input', [key('j')], F('in_play', 3600))
+    store = tmp_path/'journal.sqlite3'
+    args = dict(intent='Report an uncertain observation',text='The visible passage may be blocked',cites=[])
+    with Journal(store) as journal:
+        journal.record_call('hint-call',actor,'player_hint',args)
+        hint = journal.hint('hint-call',actor,args['text'],[],args['intent'],[])
+    run.call(actor,'player_hint',args,hint)
+    run.finish(memory=store)
+    before = store.read_bytes()
+    evaluate(directory,FakeBinding(),tmp_path/'root',created_wall=1.0)
+    client = TestClient(create_app(Catalog(tmp_path/'root',(tmp_path/'runs',),data_dir=data_directory(tmp_path))))
+    value = client.get(f'/api/view/run/{SESSION}/memory').json()
+    assert value['store_schema']=='player-journal/1' and value['records']==[]
+    assert value['hints']==[hint] and value['provenance']=='player_public_report'
+    programs = client.get(f'/api/view/run/{SESSION}/programs').json()
+    assert programs['capability']=='retired' and programs['programs']==[] and programs['runs']==[]
+    assert store.read_bytes()==before
+    store.unlink()
+    assert client.get(f'/api/view/run/{SESSION}/programs').json()['capability']=='retired'
+    missing = client.get(f'/api/view/run/{SESSION}/memory').json()
+    assert missing['available'] is False and missing['store_schema']=='player-journal/1'

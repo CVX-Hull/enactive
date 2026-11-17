@@ -114,6 +114,7 @@ const MIN_PROGRAMS = 5;
 function Programs({run}) {
   const {data, error} = useView(runPath(run, 'programs'));
   if (!data) return html`<${Panel} title="Programs" span="s12"><${Waiting} store=${store} what="programs" error=${error} /><//>`;
+  if (data.capability === 'retired') return html`<${Panel} title="Programs" span="s12"><${Insufficient}>Programs are unavailable for this run.<//><//>`;
   const programs = data.programs || [], runs = data.runs || [];
   const saved = new Set([...programs.map(p => p.id), ...(data.saves || []).map(x => x.program_id)]);
   return html`${programs.length < MIN_PROGRAMS ? html`<${Panel} span="s12"><${Insufficient}><b>Insufficient sample.</b> ${saved.size} program${saved.size === 1 ? ' was' : 's were'} saved and ${runs.length} program run${runs.length === 1 ? '' : 's'} recorded in this run. Rates are not shown until there are at least ${MIN_PROGRAMS} programs.<//><//>` : null}
@@ -132,7 +133,19 @@ function Memory({run}) {
   const [sel, setSel] = useState(0);
   const [frame, setFrame] = useState(null);
   if (!data) return html`<${Panel} title="Memory" span="s12"><${Waiting} store=${store} what="memory records" error=${error} /><//>`;
+  if (!data.available && data.store_schema === 'player-journal/1') return html`<${Panel} title="Public player hints" span="s12"><${Insufficient}>Public player reports are unavailable for this run.<//><//>`;
   if (!data.available) return html`<${Panel} title="Memory" span="s12"><${Insufficient}>This run's player memory store is not available to the viewer.<//><//>`;
+  if (data.store_schema === 'player-journal/1') {
+    const hints = data.hints || [];
+    return html`<${Panel} title="Public player hints" span="s12">
+      <p class="note">Player-authored memory records are unavailable. These hints are unverified player reports, separate from curated knowledge.</p>
+      ${hints.length ? hints.map(h => html`<article><h3>${shortId(h.id)} · actor ${shortId(h.actor_id)}</h3>
+        <div><${Pv} source="player_claim" detail="unverified hint" /></div><p class="prewrap">${h.text}</p>
+        <dl class="kv"><dt>Intent</dt><dd>${h.intent}</dd><dt>Cites</dt><dd>${(h.cites || []).join(', ') || 'none stated'}</dd>
+          <dt>Source IDs</dt><dd>${(h.source_ids || []).join(', ') || 'none stated'}</dd></dl></article>`)
+        : html`<${Insufficient}>No public hints recorded.<//>`}
+      ${data.hints_omitted ? html`<p class="note">${data.hints_omitted} additional hints are omitted from this bounded view.</p>` : null}<//>`;
+  }
   const records = data.records || [];
   const r = records[Math.min(sel, records.length - 1)];
   const reads = records.reduce((a, x) => a + (x.reads || []).length, 0);

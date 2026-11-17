@@ -22,7 +22,7 @@ import tempfile
 from harness.prepared_app import game_lock, game_lock_path
 from tools import evidence
 
-SCHEMA = 'start-manifest/1'
+SCHEMA = 'start-manifest/2'
 STUDY = '397-seven-day'
 PLAYER_STORE = 'player-memory-sd1.sqlite3'
 
@@ -200,7 +200,7 @@ class Starts:
                     player_store=str(self.root / manifest['player_store']), directory=str(directory))
 
     def player_store(self, name: str) -> str:
-        return f'.runtime/starts/{name}/work/{PLAYER_STORE}'
+        return f'.runtime/starts/{name}/work/player-journal.sqlite3'
 
     def create(self, name: str, study: str = STUDY) -> dict:
         self.preflight(name)
@@ -272,9 +272,9 @@ class Starts:
                 check_files(staged, inventory(directory / 'user'))
                 archive = self.archive_userdir()
                 work.mkdir()
-                shutil.copyfile(directory / PLAYER_STORE, work / PLAYER_STORE)
-                if evidence.file_sha256(work / PLAYER_STORE) != evidence.file_sha256(directory / PLAYER_STORE):
-                    raise ValueError('working player store copy changed')
+                from harness.player.journal import Journal
+                with Journal(work / 'player-journal.sqlite3'):
+                    pass
                 receipt = description | dict(schema='start-installation/1',
                                              archive=str(archive) if archive else None, installed=timestamp())
                 write_json(self.installed, receipt, root=self.root)

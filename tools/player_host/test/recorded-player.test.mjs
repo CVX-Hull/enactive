@@ -23,15 +23,16 @@ const model = {id:'recorded-offline-model',name:'Offline fixture',api:'openai-co
   baseUrl:'https://fixture.invalid/v1',reasoning:false,input:['text','image'],
   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:1000000,maxTokens:1024,
   compat:{supportsDeveloperRole:false,supportsStore:false,supportsUsageInStreaming:true}};
-const configuration = () => ({schema:'player-host/5',service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,max_requests:2,unpriced_request_usd:'0.25'},
+const configuration = () => ({schema:'player-host/6',service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,max_requests:2,unpriced_request_usd:'0.25'},
   api_key_env:'OFFLINE_TEST_KEY',max_requests:2,spend_limit_usd:'100',unpriced_request_usd:'0.25',max_context_images:30,context_image_block:1,
   context_reserve_tokens:4096,request_timeout_seconds:2});
-const finish = ['player_finish',{disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];
-const proposal = ['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}];
+const finish = ['player_finish',{intent:'Report the recorded assessment',disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];
+const proposal = ['computer_input',{intent:'Propose a bounded recorded action',actions:[{type:'key',key:'x',modifiers:[]}]}];
 
 // Same maintained SDK mocking pattern as host-scenario.mjs: scripted Responses,
 // injected fetch and real MCP stdio. There is no listener or provider parser.
 function reply(calls) {
+  calls = calls.map(([name,args]) => [name,{intent:'Assess the retained fixture',...args}]);
   const delta = {role:'assistant',tool_calls:calls.map(([name,args],index)=>({index,id:`recorded-${index}`,
     type:'function',function:{name,arguments:JSON.stringify(args)}}))};
   const chunks = [
@@ -167,7 +168,7 @@ test('exact member source read grows only its original image continuation',async
   assert.equal(continuationImages(payloads[1])[0].image_url.url,'data:image/png;base64,'+originals[1].toString('base64'));
   const observed = events.find(event=>event.type==='tool-result').result;
   assert.deepEqual(JSON.parse(observed.content[1].text),{historical:true,selected_current:false,source:packet.sources[1]});
-  assert.deepEqual(calls.map(call=>[call.name,call.arguments,call.read]),[['player_source',{source_id},true]]);
+  assert.deepEqual(calls.map(call=>[call.name,call.arguments,call.read]),[['player_source',{intent:'Assess the retained fixture',source_id},true]]);
 });
 
 test('retry is charged inside the same two-attempt cap; observation without image continuation stays incomplete',async t=>{

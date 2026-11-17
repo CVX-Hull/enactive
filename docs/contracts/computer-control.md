@@ -17,7 +17,7 @@ owns scoped actual outcomes; #176 and its linked PR retain the delivery receipts
 `harness/computer/` owns pixels, basic events, mechanical geometry, one writer,
 original limits, permanent Pause, exact delivery uncertainty and owned cleanup.
 It cannot import player/game/tooling modules. `harness/player/` owns fallible
-knowledge, programs, game interpretation and context. The composition service
+public call and hint journals and game interpretation. The composition service
 connects them; player assertions never grant input custody or certify a save.
 All game-specific preparation stays outside the computer package.
 
@@ -27,11 +27,12 @@ creation. A selected partial directory refuses even without a DB. Never scan or
 drain old inboxes or unrelated retained sessions. Existing native7/mission11/DB13,
 proof profiles and executable old player formats are unsupported. Preserve their
 original artifacts/source as inert history; retain upstream saves unchanged and
-load them only through visible controls. Current player knowledge uses a selected
-`player-memory/2` store, which may span fresh native-child sessions. Its SQLite
-`user_version` is2. Select a fresh store; unsupported old stores refuse without
-automatic library conversion. The canonical computer store and native wire
-versions are the ones this contract defines.
+load them only through visible controls. The selected `player-journal/1` store
+(SQLite `user_version=1`) may span fresh native-child sessions. A supported current
+journal may be reopened; a nonempty unrecognized or unsupported store is refused
+before native launch. The journal stores public calls, hints and referenced source
+metadata and PNGs, not player-authored durable knowledge or programs. The canonical
+computer store and native wire versions are the ones this contract defines.
 
 ## Native channel
 
@@ -186,8 +187,7 @@ values (table above).
 Internal service envelopes, below the actor projection, are `player-response/1`,
 `player-error/1` and `player-transport/1` ([service](../../harness/server.py),
 [client](../../harness/player_client.py)), plus the per-tool results
-`player-service-result/1`, `player-program-run/1`, `player-source-read/1`,
-`player-query/1` and `player-context/1`. [The actor projection](../../harness/player_view.py)
+`player-service-result/2` and `player-source-read/1`. [The actor projection](../../harness/player_view.py)
 is their authority. It maps the internal error and transport envelopes to
 `player-error/2` and `player-transport/2` for the model. These are layer names,
 not older versions of the `/2` envelopes.
@@ -208,8 +208,8 @@ Handoff seals the actor only with no outstanding/uncertain input or permanent
 Pause. Persist a canonical immutable context snapshot before sealing. The operation
 binds `handoff:{schema:"player-handoff/1",operation_id,session,actor_id,context_id,
 context_sha256,sealed_wall,grants_authority:false}`. A sealed token permits original
-result, retained-source and player/context reads only. It cannot observe anew,
-input, mutate memory, run a program or create another handoff.
+result and retained-source reads only. It cannot observe anew,
+input, write a hint or create another handoff.
 The host accepts only its direct handoff or collection of its own pending original
 handoff. The driver verifies canonical issuance/context digest and actual old host/
 MCP process-group quiescence before minting a successor under **original** limits.
@@ -218,98 +218,48 @@ collection cannot restore succession. No game phase or identity requirement.
 
 ## Player knowledge and executable proposals
 
-The pure player package has no process/provider/server/runtime imports. Its typed
-control callback is `observe(actor_id,*,deadline_monotonic=None)->(operation,png|None)`
-and `input(actor_id,actions,*,source_id=None,deadline_monotonic=None)->(operation,png|None)`.
-A supplied deadline can only shrink the original run/15-second operation horizon;
-the runner passes its one original deadline to every callback. `ProgramRunner` belongs
-in `harness/player/programs.py`; only the coordinator submits its proposals through
-the same computer port. A helper failure/yield leaves basic input available unless
-mechanical custody itself stopped.
+The player receives curated knowledge through the delivered-knowledge tools and
+may submit a fallible `player_hint`. The journal is public trace and hint storage;
+it is separate from the curator's assertions and cannot publish facts. Every
+public player tool call, including host-local `player_finish`, requires `intent`:
+nonempty one-line text of at most 512 characters. Optional `cites` contains at
+most 16 unique nonempty IDs of at most 128 characters each. These are public
+reports, not provider reasoning or input eligibility. The application and host
+validate the metadata; only semantic arguments reach the mechanical runtime.
 
-Predispatch program lookup/argument faults produce a terminal collectable helper
-result under the original run ID, with no computer operation. They do not revoke
-healthy basic input. An exception during computer input remains uncertain and
-permanently stops further input; collecting a helper result cannot rearm custody.
+`player_hint` accepts `text` (1..8192 characters) and optional `source_ids`
+(default empty, at most 16 unique IDs). Unknown source references fail. Its
+`player-hint/1` record contains `id`, `actor_id`, `created_wall`, `text`,
+`source_ids`, `intent` and `cites`. Referenced images establish availability,
+not attention. The bounded source store preserves original PNGs and digests;
+source read verifies the digest. Failure to retain a hint leaves ordinary input
+available when custody is healthy.
 
-`player-record/1`: closed `schema,kind,text,data,sources,supports,supersedes,
-applicability,program_id`; kinds claim/work/decision/procedure/correction/advice.
-Text≤8192; data object≤16KiB; source/support lists≤16; supersedes/program may be null.
-Applicability is null or `{game,version,notes}` (128/128/1024characters).
-Store assigns ID, actor and creation time. References must exist; corrections name
-a prior superseded record. Keep parents/contradictions; default queries hide
-superseded records, never erase history. Quantities/Work/success remain player claims.
-Advice is candidate-only. No old campaign-memory or executable import readers.
+The journal records public operation ID, actor, tool and arguments and refuses
+conflicting reuse. Hint authoring is atomic and idempotent. `player_result`
+collects only the actor's original hint as `player-service-result/2`, with
+`operation_id`, `actor_id`, `kind:player_hint`, `status:completed`, `value` and
+`grants_authority:false`. A metadata row alone does not establish submission;
+uncertainty depends on a native operation or stored hint. Mechanical operations
+keep their original collection and no-replay rules.
 
-`player-program/2`: closed `schema,view_schema,code,parent_id,reason,source_ids,record_ids,
-applicability`, with required `view_schema:"program-view/4"`; code≤32KiB UTF-8,
-reason≤2048, references≤16. Store assigns immutable
-program ID/SHA/actor/time; parent must exist. Preserve source/record support and
-one-parent ancestry. Sibling revisions may coexist as fallible alternatives;
-the store chooses no winner. Applicability is fallible data, not native eligibility.
-
-Composition lazily registers exact referenced images on explicit memory append or
-program save, before that transaction. Current sources come from the computer
-port; prior-session sources from the explicitly selected player store. The bounded
-256MiB PNG BLOB store keeps durable provenance independent of old input authority.
-Do not copy every Observe. Capacity/registration failure reports cannot-remember
-and leaves basic input available. Verify SHA on image read; no silent eviction.
-
-Context selects≤32 roots, follows bounded support/correction/program ancestry and
-returns whole records, source references and explicit omissions within≤64KiB.
-`player_handoff` first requires every root to name a stored record or program. Any
-other root refuses the handoff before a context is written or the actor is sealed
-(`player-error/1`, `submission: none`), naming the unknown IDs so the actor can
-correct them (#450). A read-only context request still reports such a root as an
-omission.
-The sealed packet (`player-handoff-context/1`) names the actor that sealed it in
-`session` and `actor_id`. The driver gives it to the successor labelled as its
-predecessor's, and says those fields name the previous actor, not the reader; the
-successor's own IDs come in its first user message.
-Every actor is offered `player_handoff`, so the tool table is constant. The final
-actor of an admission, which has no successor, gets a refusal
-(`player-error/1`, `submission: none`: "no successor is available, because this is the
-final actor. Write your report and call player_finish."). The refusal comes before a
-context is written or the actor is sealed, so it changes no state and the actor keeps
-playing.
-Oversized records/code are omitted explicitly with readable IDs, never truncated
-into plausible executable content. Source references are availability, not read proof.
-
-`program-view/4` contains `schema,source,image,interpretation`, without the global
-experiment-resource `remaining` object. Helper-selected time/step limits and its
-elapsed execution result remain available.
-Pillow13.0.0 decodes exact PNG into a player-selected crop and nearest-neighbour
-RGB view≤96×96. Image includes dimensions, flat RGB channel values, original
-geometry, crop, sampling and explicit omissions/alpha-on-black derivation.
-Selection is `{crop:null|[x,y,w,h],size:[max_width,max_height]}`; interpretation is
-player JSON, never inferred engine facts. Full source is separately readable.
-Keep the existing V8 source/view/state/result/heap/compile/step and microtask bounds.
-A step returns `{status:"act"|"yield"|"done",state,actions,reason}`: actions are the
-same basic public controls for act and null otherwise. Evaluation never dispatches.
-`ProgramRunner` consumes an actual capture each step (including a preceding input's
-returned capture), runs≤64steps/20s under original control limits and retains every
-original operation/source. No replay or success inference; faults/unknown stop that run.
+`player_handoff` accepts only a summary and common metadata. Its immutable
+`player-handoff-context/2` contains `context_id`, `session`, `actor_id`, `summary`,
+`created_wall`, `grants_authority:false` and `summary_is_hint:true`; it has no
+record roots or player knowledge graph. The successor receives the summary as a
+labelled predecessor hint. The final actor gets a refusal before sealing and can
+continue or finish. The original actor fence, quiescence and finite limits remain.
 
 ## Composed operations and telemetry
 
-All public mutation IDs share one namespace across computer and player services.
-Persist player service intent before authoring/execution and child computer IDs
-before each callback. A duplicate collects its original result or refuses; it
-cannot cross from a program-run ID into a new basic input. `player_result` reads
-original authoring/program results and child operation references without execution.
-Earlier session references remain knowledge only, with no restored input authority.
-Compact program results keep source/operation IDs, decisions, state hashes and final
-state, with explicit omissions; full original receipts/images remain separately readable.
-
 Native intent/send/receipt timestamps retain their original wall/monotonic values.
-Late collection never renews a source's `received_wall`. Host telemetry version3
-records payload hashes/counts, image references and bounded ordinary assistant text;
-it excludes private reasoning and base64 history while preserving the actual model
-payload. Stable frozen system context and the ongoing user objective are reused
-across actors; handoff knowledge stays explicit fallible player data. Experiment
-quotas, final-actor policy and ending reserves stay in operator accounting,
-outside player prompt/tool/program views. Host decision-time and custodian
-horizons stay distinct. Analysis is read-only and current-format only.
+Late collection never renews a source's `received_wall`. Host telemetry version 6
+records public call metadata, payload hashes/counts, image references and bounded
+ordinary assistant text; it excludes private reasoning and base64 history. Stable
+frozen system context and the ongoing user objective are reused across actors.
+Experiment quotas, final-actor policy and ending reserves remain in operator
+accounting, outside the player prompt and tool views. Host decision-time and
+custodian horizons stay distinct.
 
 ## Passive spectator reads and operator Pause
 

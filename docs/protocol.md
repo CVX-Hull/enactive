@@ -20,7 +20,7 @@ says how to read them.
 | --- | --- |
 | Native packets, images, Pause and backpressure | [Native channel](contracts/computer-control.md#native-channel), [protocol code](../harness/computer/protocol.py) |
 | Operations, actor custody, original collection and handoff | [Computer operations and custody](contracts/computer-control.md#computer-operations-and-custody), [runtime](../harness/computer/runtime.py) |
-| Claims, sources, programs and bounded context | [Player knowledge and executable proposals](contracts/computer-control.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
+| Hints, sources and handoff context | [Player knowledge and executable proposals](contracts/computer-control.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
 | Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
 | Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
 | Interpretive run evaluation and the spectator view | [Evaluation records, metrics and spectator view](contracts/evaluation.md); rationale in [ADR008](decisions/008-evaluation-and-spectator.md). Nothing in it reaches the player or gates input. |
@@ -42,19 +42,19 @@ transfer, with no game-phase or identity requirement.
 
 ### Quiescent player replacement
 
-The player selects context roots and summary with `player_handoff`. Canonical
+The player supplies a summary with `player_handoff`. Canonical
 issuance seals its actor. The player host settles only its direct originating handoff
 or exact original collection; the driver verifies context digest and actual
 old host/MCP group quiescence before a successor. Original limits persist.
 The [player host contract](contracts/player-host.md) owns the substitutable
-`player-host/5` invocation, telemetry, settlement and isolation rules.
+`player-host/6` invocation, telemetry, settlement and isolation rules.
 
 The player keeps its ongoing user objective. Experiment quotas and final-actor
-policy remain outside its guide, prompt, MCP results and program views. MCP emits
+policy remain outside its guide, prompt and MCP results. MCP emits
 `player-computer-result/2` (a short result; the full `player-computer-operation/1`
 record stays with the host and the trace) without global deadline/remaining data, plus
 `player-error/2` and `player-transport/2`; canonical operation/HTTP records remain
-unchanged. Programs require `player-program/2` with `view_schema:"program-view/4"`.
+unchanged.
 
 The driver owns bounded `player-control/1` stdin and admission-wide pending stop
 identity. A successor declared with a pending ID waits for its matching command
@@ -73,7 +73,7 @@ neither delivery nor nondelivery. MCP cancellation requests independent permanen
 Pause before abandoning the await.
 
 Current storage is fresh `computer-session/1` plus explicitly selected
-`player-memory/2`. Immutable sources retain original PNG bytes and digest.
+`player-journal/1`. Immutable sources retain original PNG bytes and digest.
 [Current data treatment](contracts/computer-control.md#responsibilities-and-current-data)
 and [migration](operations/migration.md) own versions and historical-state handling.
 
@@ -81,5 +81,4 @@ and [migration](operations/migration.md) own versions and historical-state handl
 
 One designated player, run by the selected player host, owns routine gameplay interpretation and choices.
 The lead owns source, frozen admission, review and verification. Explorers and
-reviewers send no game input. Advisers and programs are optional fallible aids;
-the current route has no asynchronous semantic worker or hidden game-state feed.
+reviewers send no game input. The current route has no live curator scheduler or hidden game-state feed.

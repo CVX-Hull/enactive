@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/2); see docs/contracts/evaluation.md.
 
-record derives one admission's row from its package alone (campaign-run/7 manifest and campaign-receipt/5, whose
+record derives one admission's row from its package alone (campaign-run/8 manifest and campaign-receipt/5, whose
 accounting holds the provider-reported cost and the requests counted at the bound) and appends it; a package
 without a receipt gets no row, and one whose receipt says its spend is incomplete gets a row only with
 --record-upper-bound, at its declared limit plus possible in-flight bounds, limited by charged attempts and delivered units. totals reports a
@@ -90,20 +90,23 @@ def plain(amount: Decimal) -> str:
 
 
 def package_row(package: Path, *, study: int, label: str, upper_bound: bool = False) -> dict:
-    """One dev-run/2 row from a finished campaign-run/7 package (receipt campaign-receipt/5). Its spend is the
+    """One dev-run/2 row from a finished campaign-run/8 package (receipt campaign-receipt/5). Its spend is the
     receipt's: the provider-reported cost plus each request with no cost record at the route's bound.
 
     A receipt whose spend is incomplete gets a row only with `upper_bound`, which records the most the run can have
     spent: its declared limit plus the bounds of the possible in-flight player and recall attempts,
     limited by charged attempts; recall contributes only with delivered units. The row has no field that marks it; the run's dated record says so."""
-    manifest, receipt_path = _json(package / 'manifest.json'), package / 'receipt.json'
+    from harness.evaluation.core.sources import EvaluationError, read_manifest
+    try:
+        manifest = read_manifest(package)
+    except EvaluationError as exc:
+        raise LedgerError(str(exc)) from exc
+    receipt_path = package / 'receipt.json'
     if not receipt_path.is_file():
         raise LedgerError(f'{package.name}: no receipt.json; reconcile the admission before recording it')
     receipt = _json(receipt_path)
     if receipt.get('schema') != 'campaign-receipt/5':
         raise LedgerError(f'{package.name}: unsupported receipt {receipt.get("schema")!r}')
-    if manifest.get('schema') != 'campaign-run/7':
-        raise LedgerError(f'{package.name}: unsupported manifest {manifest.get("schema")!r}')
     labels = manifest['labels']
     if receipt['session'] != manifest['session'] or receipt['source_commit'] != manifest['source_commit']:
         raise LedgerError(f'{package.name}: receipt and manifest disagree on session or source')

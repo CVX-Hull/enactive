@@ -2,7 +2,6 @@
 from pathlib import Path
 import copy
 import json
-import sqlite3
 from types import SimpleNamespace
 from unittest.mock import patch
 import uuid
@@ -14,13 +13,10 @@ import pytest
 from harness.application import Application
 from harness.computer.protocol import ControlError
 from harness.player.contracts import PlayerError, canonical
-from harness.player.memory import Memory
-from harness.player.programs import ProgramRepository, ProgramRunner
+from harness.player.journal import Journal
 from harness.player_mcp import make_server
 from harness.player_view import UnsupportedResult, actor_error, actor_result, short_result
 from test_computer_runtime import make_runtime, key
-from test_player_context import program
-from test_player_memory import record
 
 
 OPAQUE = dict(remaining={'requests': 987654}, deadline_monotonic=123456,
@@ -30,7 +26,7 @@ OPAQUE = dict(remaining={'requests': 987654}, deadline_monotonic=123456,
 @pytest.fixture
 def service(tmp_path):
     runtime, channel, actor = make_runtime(tmp_path)
-    memory = Memory(tmp_path / 'player.sqlite3')
+    memory = Journal(tmp_path / 'player.sqlite3')
     app = Application(runtime, memory, tmp_path / 'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     try:
         yield app, runtime, channel, actor
@@ -40,7 +36,7 @@ def service(tmp_path):
 
 
 def call(app, actor, name, args):
-    return app.call(actor['token'], name, args, uuid.uuid4().hex)[0]
+    return app.call(actor['token'], name, dict(args, intent='test'), uuid.uuid4().hex)[0]
 
 
 def test_direct_collection_handoff_and_accounting_stay_original(service):
@@ -60,7 +56,7 @@ def test_direct_collection_handoff_and_accounting_stay_original(service):
     assert raw == original and runtime.store.operation(raw['operation_id']) == original
     assert runtime.store.counts() == counts
     assert [item[0] for item in channel.calls] == ['input', 'observe']
-    handoff = call(app, actor, 'player_handoff', {'ids': [], 'summary': 'unfinished'})
+    handoff = call(app, actor, 'player_handoff', {'summary': 'unfinished'})
     assert actor_result(handoff)['handoff'] == handoff['handoff']
     assert actor_result(handoff)['status'] == 'sealed'
 
@@ -72,69 +68,6 @@ def test_malformed_collection_id_keeps_repairable_feedback_without_computer_call
     view=actor_result(dict(schema='player-error/1',error='ControlError',reason=str(failure.value),submission='rejected'))
     assert view['reason']=='Operation ID must be32 lowercase hexadecimal characters'
     assert view['input_replayed'] is False and channel.calls==[] and runtime.store.counts()['inputs']==0
-
-
-def test_nested_program_result_collection_and_opaque_authored_data(service):
-    app, runtime, channel, actor = service
-    saved = call(app, actor, 'player_program_save', {'program': program(code="""
-        function step(v,s){
-          if(v.schema!=='program-view/4'||'remaining' in v || JSON.stringify(v.interpretation)!==JSON.stringify(s)) throw Error('wrong view');
-          return {status:'yield',state:s,actions:null,reason:'remaining requests are player words'};
-        }""")})
-    args = dict(program_id=saved['id'], initial_state=OPAQUE, interpretation=OPAQUE,
-                selection={'crop': None, 'size': [4, 4]})
-    identity = uuid.uuid4().hex
-    raw, _ = app.call(actor['token'], 'player_program_run', args, identity)
-    snapshot = copy.deepcopy(raw)
-    counts = runtime.store.counts()
-    view = actor_result(raw)
-    assert view['final_state'] == OPAQUE
-    assert view['reason'] == 'remaining requests are player words'
-    assert view['steps'][0]['result'] == raw['steps'][0]['result']
-    assert raw == snapshot
-    collected = call(app, actor, 'player_result', {'operation_id': identity})
-    result = actor_result(collected)
-    assert result['value'] == view
-    assert result['collected_operations'][0]['schema'] == 'player-computer-operation/1'
-    assert 'remaining' not in result['collected_operations'][0]
-    assert collected['collected_operations'][0]['remaining']
-    assert runtime.store.counts() == counts
-    assert app.memory.service_result(identity)['value'] == raw
-    data = call(app, actor, 'player_memory_append', {'record': record(data=OPAQUE)})
-    assert actor_result(data) == data
-    assert actor_result(saved) == saved
-    query = call(app, actor, 'player_memory_query', {})
-    assert actor_result(query) == query
-    context = call(app, actor, 'player_memory_context', {'ids': [data['id'], saved['id']]})
-    assert actor_result(context) == context
-    source_read = call(app, actor, 'player_source', {'source_id': raw['steps'][0]['source']['source_id']})
-    assert actor_result(source_read) == source_read
-    assert call(app, actor, 'computer_input', {'actions': [key()]})['status'] == 'completed'
-
-
-def test_compile_fault_is_collected_once_and_healthy_direct_input_remains(service):
-    app, runtime, channel, actor = service
-    saved = call(app, actor, 'player_program_save', {'program': program(code='function step(')})
-    args = dict(program_id=saved['id'], initial_state={}, interpretation={}, selection={'crop': None, 'size': [1, 1]})
-    identity = uuid.uuid4().hex
-    raw, _ = app.call(actor['token'], 'player_program_run', args, identity)
-    assert raw['status'] == 'fault' and channel.calls == []
-    assert actor_result(raw)['status'] == 'fault'
-    collected = call(app, actor, 'player_result', {'operation_id': identity})
-    assert actor_result(collected)['value'] == actor_result(raw)
-    assert channel.calls == [] and not channel.stopped.is_set()
-    assert call(app, actor, 'computer_input', {'actions': [key()]})['status'] == 'completed'
-
-
-def test_valid_large_query_keeps_each_complete_record_and_copy_isolation():
-    item = dict(record(text='x'*8192, data={'remaining': 'x'*16000}),
-                id='record', actor_id='actor', created_wall=1)
-    query = dict(schema='player-query/1', records=[item]*50, grants_authority=False)
-    assert len(json.dumps(query)) > 1048576
-    projected = actor_result(query)
-    assert projected == query
-    projected['records'][0]['data']['remaining'] = 'changed actor copy'
-    assert query['records'][0]['data']['remaining'] == 'x'*16000
 
 
 def test_controller_diagnostics_are_bounded_but_native_receipts_are_exact(service):
@@ -348,13 +281,11 @@ def test_computer_result_returns_the_full_record_and_every_other_result_is_uncha
                       'computer_result', {'operation_id': raw['operation_id']})
     assert json.loads(result.content[0].text) == actor_result(collected)
     assert json.loads(result.content[0].text)['receipts'] and result.structured_content is None
-    handoff = call(app, actor, 'player_handoff', {'ids': [], 'summary': 'unfinished'})
+    handoff = call(app, actor, 'player_handoff', {'summary': 'unfinished'})
     result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (handoff, None, False)), 'player_handoff')
     assert json.loads(result.content[0].text) == dict(schema='player-computer-result/2', status='sealed')
     assert result.structured_content['handoff'] == handoff['handoff']
-    query = dict(schema='player-query/1', records=[], grants_authority=False)
-    result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (query, None, False)), 'player_memory_query')
-    assert json.loads(result.content[0].text) == query and result.structured_content is None
+
 
 
 def test_an_old_result_version_is_not_a_current_operation_record(service):
@@ -363,32 +294,3 @@ def test_an_old_result_version_is_not_a_current_operation_record(service):
         short_result(dict(actor_result(call(app, actor, 'computer_observe', {})), schema='player-computer-result/1'))
     with pytest.raises(UnsupportedResult):
         short_result(call(app, actor, 'computer_observe', {}))
-
-
-def test_old_store_and_executable_formats_reject_before_port_effects(tmp_path):
-    path = tmp_path / 'memory'
-    with Memory(path) as memory:
-        assert memory._db.execute('PRAGMA user_version').fetchone()[0] == 2
-        assert memory._db.execute('SELECT schema FROM metadata').fetchone()[0] == 'player-memory/2'
-        repo = ProgramRepository(memory)
-        current = program()
-        for old in (dict(current, schema='player-program/1'), dict(current, view_schema='program-view/3'),
-                    {k: v for k, v in current.items() if k != 'view_schema'}):
-            with pytest.raises(PlayerError):
-                repo.save('actor', old)
-        saved = repo.save('actor', current)
-        damaged = dict(saved, view_schema='program-view/3')
-        memory._db.execute('UPDATE programs SET document=? WHERE id=?', (canonical(damaged), saved['id']))
-        memory._db.commit()
-        class NoEffects:
-            def observe(self, *args, **kwargs):
-                pytest.fail('old executable reached computer port')
-        result = ProgramRunner(repo, NoEffects()).run(saved['id'], 'actor', {}, {}, {'crop': None, 'size': [1, 1]})
-        assert result['status'] == 'fault' and result['operations'] == []
-    with sqlite3.connect(path) as db:
-        db.execute('PRAGMA user_version=1')
-        db.execute("UPDATE metadata SET schema='player-memory/1'")
-    before = path.read_bytes()
-    with pytest.raises(PlayerError, match='fresh player-memory/2'):
-        Memory(path)
-    assert path.read_bytes() == before

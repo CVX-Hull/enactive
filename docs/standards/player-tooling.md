@@ -10,8 +10,7 @@ For gameplay, use the selected player host's explicit current structured
 tools under the [player host contract](../contracts/player-host.md). The adapter assigns an original durable operation ID before submission;
 software owns serialization, exact image presentation, bounded collection and
 deterministic accounting. Actor capabilities and native custody remain outside
-model arguments. The player selects intent, basic controls, optional program and
-source/knowledge references. Software must not infer a game phase, tactic,
+model arguments. The player selects intent, basic controls, hints and source/knowledge references. Software must not infer a game phase, tactic,
 identity, success, resource gain or permission from that selection.
 
 Consume the standard MCP result envelope: retain and surface text, actual images
@@ -21,14 +20,12 @@ uncertain; never issue a new input as a transport retry. No JSON-RPC ID, old ima
 knowledge row or source reference becomes a new authority/resource allowance.
 Across composed services, the same public mutation ID cannot dispatch twice.
 
-Memory/programs/context are optional fallible player services. Source exposure,
-explicit read, selection, proposal, delivered input and observed useful effect are
-different evidence. A player-written program receives actual image data plus
-explicit interpretation and proposes the same basic controls; local yield or
-caller refusal leaves ordinary fallback available. Ordinary playing must not
-require source archaeology, private scripts, opaque bookkeeping or one model call
-per arrow. Reuse the maintained SDK and current schema rather than maintaining a
-second result/binding protocol. No per-action review or lead tactic is introduced.
+Curated knowledge and player hints are fallible data. Source exposure, explicit
+read, selection, delivered input and observed useful effect are different evidence.
+Ordinary playing must not require source archaeology, private scripts, opaque
+bookkeeping or one model call per arrow. Reuse the maintained SDK and current
+schema rather than maintaining a second result/binding protocol. No per-action
+review or lead tactic is introduced.
 
 Handoff seals the actor and retains canonical context, without a game-state gate.
 Only the direct originating issuance or exact original collection may settle it.

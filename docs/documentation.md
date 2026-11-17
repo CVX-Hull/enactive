@@ -56,7 +56,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | Location | Responsibility |
 | --- | --- |
 | `harness/computer/` | Mechanical packets, socket, writer, store, target custody and SDL adapter; no game/player semantics. |
-| `harness/player/` | Pure fallible knowledge, image views, bounded programs and context; no process/provider/native authority. |
+| `harness/player/` | Public journal, hints and fallible delivered knowledge; no process/provider/native authority. |
 | `harness/application.py` and transport adapters | Compose current ports/tools without granting observer authority. |
 | `harness/evaluation/` | Interpretive run evaluation ([contract](contracts/evaluation.md)): game-neutral `core/` and the `cdda/` binding. It is never imported by player, computer or server code. |
 | `harness/viewer/` | The read-only viewer process the spectator page reads through the gateway; outside supervision. |
@@ -81,7 +81,7 @@ needs these and the [glossary](glossary.md), not the whole start-here set.
 | Code | Explanation | Exact rules | Tests |
 | --- | --- | --- | --- |
 | `harness/computer/`, the native bridge | [Native control](components/native-control.md) | [Computer control](contracts/computer-control.md) | `tests/test_computer_*.py`, the compiled `tests/computer_*_check.py` |
-| `harness/player/`, `harness/player_tools.py`, `player_view.py`, `player_mcp.py`, `player_client.py` | [Player interface](components/player-interface.md), [memory and learning](components/memory-learning.md) | [Computer control](contracts/computer-control.md), [player guide](player-guide.md) | `tests/test_player_memory.py`, `test_player_programs.py`, `test_player_view.py`, `test_player_context.py`, `test_player_isolation.py`, `test_policy_program.py` |
+| `harness/player/`, `harness/player_tools.py`, `player_view.py`, `player_mcp.py`, `player_client.py` | [Player interface](components/player-interface.md), [memory and learning](components/memory-learning.md) | [Computer control](contracts/computer-control.md), [player guide](player-guide.md) | `tests/test_player_journal.py`, `test_player_view.py`, `test_player_isolation.py` |
 | `harness/application.py`, `harness/server.py` | [Execution](components/mission-execution.md) | [Computer control](contracts/computer-control.md) | `tests/test_player_application.py`, `tests/test_server.py` |
 | `tools/player_host/`, `tools/campaign_*.py`, `tools/configure_player_tools.py` | [Player host procedure](operations/player-host.md), [campaign procedure](operations/campaign-run.md), [supervision](operations/campaign-supervision.md) | [Player host](contracts/player-host.md) | `tests/test_player_host_*.py`, `tests/test_campaign_*.py`, `tools/player_host/test/` |
 | `harness/curator/`, `tools/curator_host/` | [Curator](components/curator.md), [curator session design](design/curator-session.md) | [Curator hosts](operations/curator-hosts.md) | `tests/test_curator_*.py`, `tools/curator_host/test/` |

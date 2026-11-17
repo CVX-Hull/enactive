@@ -4,29 +4,28 @@ review_trigger: Responsibility, supported behavior, interfaces or qualification 
 status: active
 ---
 
-# Curator and trace workbench (ADR 009 baseline and workbench phase)
+# Curator and trace workbench
 
-This is shadow infrastructure for [ADR 009](../decisions/009-curated-player.md)'s
-curator. It runs only over sealed traces. The running player does not use it, and
-nothing in the player, the computer, evaluation or the viewer imports it: the
-import contracts in `pyproject.toml` forbid it. The curator itself holds no custody and
-no player access, and reads no evaluation records. Nothing here is
-adopted; the baseline and workbench phase's
-[outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separately.
+The curator works over sealed traces and holds no custody or player access. Its
+published knowledge reaches the player through a frozen export; the player and
+computer do not import curator code. Curated memory is adopted with benefit
+unclaimed. There is no live curator scheduler or snapshot-difference delivery.
+The baseline and workbench [outcome](../acceptance/2026-11-08-adr009-p0.md)
+is recorded separately.
 
 ## Internal responsibilities
 
 | Part | Owned data and consequence |
 | --- | --- |
-| [Trace projection](../../harness/trace/projection.py) | `trace-projection/1`: an allowlisted, secret-guarded copy of sealed sessions (frames, steps, received text, handoffs) for a curator workspace. [Design](../design/trace-workbench.md) |
-| [Sealed readers](../../harness/trace/stores.py), [memory reader](../../harness/trace/memory_reader.py) | Immutable SQLite opens that refuse a non-empty write-ahead log; a read-only `player-memory/2` reader |
+| [Trace projection](../../harness/trace/projection.py) | `trace-projection/2`: an allowlisted, secret-guarded copy of sealed sessions (frames, steps, received text, handoffs) for a curator workspace. [Design](../design/trace-workbench.md) |
+| [Sealed readers](../../harness/trace/stores.py), [memory reader](../../harness/trace/memory_reader.py) | Immutable SQLite opens that refuse a non-empty write-ahead log; a read-only current journal reader and explicit data-only historical readers |
 | [Workbench](../../harness/trace/workbench.py), [images](../../harness/trace/images.py) | Steps, frames, region diffs and similar frames, run inside the workspace |
 | [Sidecars](../../harness/trace/sidecar.py) | `container-manifest/1` and `container-index/1` beside sealed evidence (`data/containers/`), which is never rewritten |
 | [Sandbox](../../harness/curator/sandbox.py) | Default-deny Seatbelt profile and polling supervisor: writes only in the workspace's writable directories, one loopback port, and bounded memory, processes, time and size of the session's own files. It does not watch or protect the rest of the disk ([what is bounded](../operations/curator-hosts.md#what-the-sandbox-bounds)). [Research and residual risks](../research-curator-sandbox.md) |
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Providers](../../tools/curator_host/providers.py) (an adapter) | The concrete `Provider` values (Anthropic messages, OpenRouter chat completions): routes, key header, allowlists, extra refusals, forwarded headers and how usage becomes dollars. Provider and model names stay here |
 | [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. Only gate v0 commits to it, and it checks form, base version, scope, provenance and article references under the [session publication rules](../design/curator-session.md#gate-v0). [Design](../design/curator-session.md) |
-| [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
+| [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Decision-window and citations-only views remove the entire journal JSON; only filtered in-window calls can carry hints. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | The draft lifecycle (open, stale, abandoned, promoted) and one ephemeral sandboxed session per run, with a close-out that never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the #397 and #372 development lineages (never #382's held-out lineages) under a dollar cap |
@@ -53,7 +52,7 @@ adopted; the baseline and workbench phase's
   ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
 - **Knowledge and records.** Each run starts its own knowledge repository. Session
   records are kept, and workspaces are deleted.
-- **Ownership.** The lead owns this code until the curator and memory phase assigns it.
+- **Ownership.** The lead owns this code.
 
 ## Assurance and evidence
 

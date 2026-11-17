@@ -37,7 +37,9 @@ def test_a_window_holds_only_its_steps_their_tool_calls_and_their_frames(tmp_pat
     assert [s['frame'] for s in steps(out)] == frames
     calls = tools(out)
     # three computer calls named by their operations, plus the memory read made just before step 6
-    assert [c['tool'] for c in calls] == ['computer_input', 'computer_input', 'player_memory_read', 'computer_input']
+    assert [c['tool'] for c in calls] == ['computer_input', 'computer_input', 'player_hint', 'computer_input']
+    assert calls[2]['arguments']['text'] == 'hint at step 6'
+    assert 'hint at step 3' not in (out/'s1'/'001'/'tools.jsonl').read_text()
     assert [c['outcome'].get('operation_id') for c in calls if c['tool'] == 'computer_input'] == [
         'op-1-4', 'op-1-5', 'op-1-6']
     assert manifest['sessions'][0]['actors'] == [dict(directory='001', actor_id='1' * 32, steps=3, frames=3, tool_calls=4)]
@@ -50,6 +52,7 @@ def test_the_manifest_says_what_the_window_is_and_what_it_dropped(tmp_path):
     assert manifest['window'] == dict(session='s1', actor='001', first=4, last=6,
                                       steps_available=12)
     assert 'steps, tool calls and frames outside the window' in manifest['dropped']
+    assert manifest['hints'] == 'in-window tool calls only'
     assert json.loads((out/'manifest.json').read_text()) == manifest
     for relative, digest in manifest['files'].items():
         assert hashlib.sha256((out/relative).read_bytes()).hexdigest() == digest
@@ -65,9 +68,9 @@ def test_a_window_drops_other_actors_handoffs_memory_and_the_final_report(tmp_pa
 
 def test_tool_calls_that_name_no_step_follow_the_next_step_and_the_last_call_the_last_step(tmp_path):
     out, _ = narrowed(tmp_path, Window('s1', '001', 3, 3))
-    assert [c['tool'] for c in tools(out)] == ['player_memory_read', 'computer_input']  # the read before step 3
+    assert [c['tool'] for c in tools(out)] == ['player_hint', 'computer_input']  # the read before step 3
     out2, _ = narrowed(tmp_path/'again', Window('s1', '001', 12, 12))
-    assert [c['tool'] for c in tools(out2)] == ['player_memory_read', 'computer_input']
+    assert [c['tool'] for c in tools(out2)] == ['player_hint', 'computer_input']
     out3, _ = narrowed(tmp_path/'third', Window('s1', '001', 7, 8))
     assert [c['tool'] for c in tools(out3)] == ['computer_input', 'computer_input']  # no read before 7 or 8
 
@@ -148,7 +151,12 @@ def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path
 
     trace = make_long_session(tmp_path/'evidence')
     out = tmp_path/'trace'
-    manifest = project([trace], out)
+    from tests.test_trace_projection import make_journal
+
+    journal = tmp_path/'journal.sqlite3'
+    make_journal(journal)
+    manifest = project([trace], out, journal=journal)
+    assert (out/'journal.json').exists()
     cited = {frame_id(1, 3), frame_id(2, 5)}
     reduced = citations_only(out, manifest, cited)
     assert {p.stem for p in (out/'frames').iterdir()} == cited
@@ -156,7 +164,23 @@ def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path
     assert [s['seq'] for s in steps(out, '002')] == [5]
     assert not (out/'s1'/'001'/'received.txt').exists()
     assert not (out/'s1'/'handoffs').exists()
+    assert not (out/'journal.json').exists()
+    assert [c['arguments'].get('text') for c in tools(out) if c['tool'] == 'player_hint'] == ['hint at step 3']
+    assert 'hint at step 6' not in (out/'s1'/'001'/'tools.jsonl').read_text()
     assert reduced['citations_only'] == sorted(cited)
     assert positions(out, reduced, {}).keys() == cited
     with pytest.raises(WindowError, match='missing from trace'):
         citations_only(out, reduced, {'absent'})
+
+
+def test_window_removes_entire_journal_and_keeps_only_in_range_hints(tmp_path):
+    from tests.test_trace_projection import make_journal
+
+    trace = make_long_session(tmp_path/'evidence')
+    journal = tmp_path/'journal.sqlite3'
+    make_journal(journal)
+    out = tmp_path/'trace'
+    manifest = restrict(out, project([trace], out, journal=journal), Window('s1', '001', 4, 6))
+    assert not (out/'journal.json').exists() and 'journal.json' not in manifest['files']
+    assert [c['arguments']['text'] for c in tools(out) if c['tool'] == 'player_hint'] == ['hint at step 6']
+    assert 'out-of-window journal sentinel' not in ''.join(p.read_text() for p in out.rglob('*.json*'))

@@ -16,13 +16,11 @@ versions and failure behavior.
 ```mermaid
 flowchart TB
   accTitle: Current player and mechanical computer custody
-  accDescr: Logical responsibilities, not separate required models. The player keeps the user's ongoing objective, interprets images and chooses basic controls. Optional knowledge and programs are fallible. The finite test controller retains quotas outside player context and can request bounded finish-up. Direct finish reports are claims, not save certificates. Independent user Pause and hard limits stop input without a model reply. The game determines effects and saving; no memory or game claim grants custody.
+  accDescr: Logical responsibilities, not separate required models. The player keeps the user's ongoing objective, interprets images and chooses basic controls. Curated knowledge and player hints are fallible. The finite test controller retains quotas outside player context and can request bounded finish-up. Direct finish reports are claims, not save certificates. Independent user Pause and hard limits stop input without a model reply. The game determines effects and saving; no memory or game claim grants custody.
   U["User<br/>Objective and independent Pause"] --> P["Designated player in selected host<br/>Interpret pixels and choose actions"]
-  M["Optional player knowledge<br/>Claims, Work, corrections and context"] -->|"Fallible evidence"| P
-  P -->|"Basic input or explicit program run"| A["Composition and MCP tools"]
+  M["Curated knowledge<br/>Briefing and reads"] -->|"Fallible evidence"| P
+  P -->|"Basic input and hints"| A["Composition and MCP tools"]
   A -->|"Same computer port"| C["One mechanical custodian<br/>Original limits and actor capabilities"]
-  A --> R["Bounded local program<br/>Actual image view and optional interpretation"]
-  R -->|"Basic proposals only"| C
   C -->|"SDL events over inherited socket"| G["Windowed game<br/>Determines outcomes"]
   G -->|"Actual pixels and delivery receipts"| C
   C -->|"Original evidence and uncertainty<br/>Actor view excludes global countdowns"| A
@@ -30,7 +28,7 @@ flowchart TB
   T["Finite test controller<br/>Operator quotas and ending reserves"] -->|"Optional bounded finish-up request"| P
   P -->|"Direct player_finish claim"| T
   T -->|"Independent hard limits and owned cleanup"| C
-  P -->|"Explicit supported assertions"| M
+  P -->|"Fallible hints for later curation"| J["Public player journal"]
   C --> V["Passive spectator<br/>Mechanical status and labelled player claims"]
   U -->|"Permanent stop, independent of writer"| C
 ```
@@ -43,18 +41,18 @@ Its text equivalent is below.
 | --- | --- | --- |
 | Deciding player / player host | Ongoing user objective, visual interpretation, game choices and fallible claims; direct finish reports, explicit provider/context/tools | [Player interface](components/player-interface.md) |
 | Finite test controller | Operator-only quotas and ending reserves, external finish-up request and exact owned process cleanup; no game-save guarantee | [Campaign procedure](operations/campaign-run.md) |
-| Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
+| Player journal and knowledge | Public calls, hints, source provenance and curated delivery; no custody | [Memory and learning](components/memory-learning.md) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
 | Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
 | Run evaluator | Offline, versioned interpretive records and metrics with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
-| Curator shadow (ADR 009, not adopted) | Sealed-trace projection and workbench; sandboxed curator sessions, a key-holding model proxy, a gate-only knowledge repository and drafts; no custody, no player access, never reached by the player | [Curator and trace workbench](components/curator.md) |
+| Curator | Sealed-trace workbench, sandboxed sessions and gate-only knowledge repository; frozen exports reach the player; no custody or live scheduler | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/7` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/8` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -75,7 +73,7 @@ page. Under supervision the [gateway](../tools/campaign_watch.py) serves the pag
 forwards view reads to a separate read-only viewer
 ([observer operations](components/observer-operations.md)).
 The [application](../harness/application.py)
-composes the computer port with optional player memory/program services. A
+composes the computer port with journal and delivered-knowledge services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.
 The selected [player host](contracts/player-host.md) owns model calls; the campaign
 driver owns exact host/MCP group cleanup. The driver sends bounded JSONL control
@@ -93,10 +91,8 @@ producer or native custody. Supervision, host settlement and game outcomes stay
 separate; source fixtures do not qualify actual play or human attention.
 
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
-`player-memory/2` store may span fresh native-child sessions. Old runtime formats
-stay inert, except that the evaluator reads the closed set of archived
-`campaign-run/4` development-loop sessions read-only; no current reader imports
-executable old libraries.
+`player-journal/1` store may span fresh native-child sessions. Old active formats
+stay inert; explicit data-only readers preserve the closed sealed archive.
 
 ## Action and recovery views
 
@@ -161,8 +157,7 @@ arbitrary OS hangs. The publication-stall cause in [#128](https://github.com/CVX
 
 ## Game-family portability
 
-The computer package imports no game interpretation. Shared player claims,
-programs and context consume only the computer port and explicit player data.
+The computer package imports no game interpretation. Shared player hints and context consume only the computer port and explicit player data.
 CDDA-specific preparation stays outside that package. This separation is a source
 boundary; actual portability to a second game remains unqualified.
 
@@ -184,17 +179,10 @@ Current coupling. None of it is in the shared player code. The entries inside
 
 ## Separate recovery and memory boundaries
 
-Remembered sources/claims and old process IDs never restore custody. Player
-corrections retain prior records and contradictions. Program failures/yields leave
-basic input available if mechanical custody is healthy. Mechanical Pause or
-uncertainty cannot become a resumable handoff.
-
-## Bounded planning without execution authority
-
-Local JavaScript sees an explicit image view and optional player interpretation.
-It proposes the same basic controls; the coordinator alone submits them under
-original deadlines/capacities. Candidate advice and applicability are fallible
-player data. No semantic supervisor or planner is required for ordinary control.
+Referenced sources, hints and old process IDs never restore custody. Curated
+knowledge and player hints are fallible. A hint failure leaves basic input
+available if mechanical custody is healthy. Mechanical Pause or uncertainty
+cannot become a resumable handoff.
 
 ## Run ownership and operator takeover
 
@@ -237,12 +225,12 @@ Direct player finish is a claim, not saving or game acceptance.
 The main current formats (not an exhaustive list; the contracts own every field)
 are `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/1`, `computer-operation/1`, `computer-source/1`,
-`player-memory/2`, `player-record/1`, `player-program/2`, `program-view/4`,
-`player-handoff/1`, `player-host/5`, `campaign-run/7` and `delivered-knowledge/1`. Model-facing operation,
+`player-journal/1`, `player-hint/1`, `player-handoff/1`, `player-host/6`,
+`campaign-run/8` and `delivered-knowledge/1`. Model-facing operation,
 error and transport envelopes are `player-computer-result/2`, `player-computer-operation/1`, `player-error/2`
 and `player-transport/2`; canonical operations/HTTP records are unchanged.
 The [host contract](contracts/player-host.md) and [campaign procedure](operations/campaign-run.md)
-own telemetry5, `player-driver/5`, `campaign-receipt/5` and `player-host-inputs/3`.
+own telemetry6, `player-driver/5`, `campaign-receipt/5` and `player-host-inputs/3`.
 The [evaluation contract](contracts/evaluation.md) owns `evaluation-record/1` and the
 tracked `dev-run/2` ledger and `run-metrics/1` snapshot; the
 [evidence procedure](operations/evidence-cleanup.md) owns `evidence-index/1` and its
@@ -259,7 +247,7 @@ source/data deployment; mixed readers and replay are unsupported.
 | Changed boundary | Evidence to inspect and limit |
 | --- | --- |
 | Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
-| Memory/program/context | Pure player and composition assertions for provenance, helper fault isolation and original child IDs; [memory](components/memory-learning.md#assurance-and-evidence). |
+| Journal and hints | Player and composition assertions for provenance, hint isolation and original IDs; [memory](components/memory-learning.md). |
 | Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
 | Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [observer](components/observer-operations.md#assurance-and-evidence). |
 | Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation.md). |

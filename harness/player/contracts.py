@@ -6,7 +6,6 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
-from harness.computer.protocol import validate_actions
 from harness.jsonio import canonical as _canonical, strict_loads
 
 
@@ -72,48 +71,21 @@ def bounded_integer(value: object, low: int, high: int) -> int:
     return value
 
 
-_APPLICABILITY = {'anyOf': [_object(dict(game=_text(128), version=_text(128), notes=_text(1024, empty=True))), {'type': 'null'}]}
-_REFS = dict(type='array', items=_text(128), maxItems=16, uniqueItems=True)
-_NULL_ID = {'anyOf': [_text(128), {'type': 'null'}]}
-_RECORD = _object(dict(schema={'const': 'player-record/1'}, kind=_enum('claim', 'work', 'decision', 'procedure', 'correction', 'advice'),
-                       text=_text(8192, empty=True), data={'type': 'object'}, sources=_REFS, supports=_REFS,
-                       supersedes=_NULL_ID, applicability=_APPLICABILITY, program_id=_NULL_ID))
-_PROGRAM = _object(dict(schema={'const': 'player-program/2'}, view_schema={'const': 'program-view/4'}, code=_text(32768), parent_id=_NULL_ID,
-                        reason=_text(2048, empty=True), source_ids=_REFS, record_ids=_REFS, applicability=_APPLICABILITY))
+def references(value: object) -> list[str]:
+    if type(value) is not list or len(value) > 16:
+        raise PlayerError('References must be a list of at most 16 unique IDs')
+    for item in value:
+        identity(item)
+    if len(set(value)) != len(value):
+        raise PlayerError('References must be a list of at most 16 unique IDs')
+    return value
 
 
-def record(value: object) -> dict:
-    result = json_object(value)
-    validate_json(result, _RECORD)
-    if len(canonical(result['data']).encode('utf-8')) > 16384:
-        raise PlayerError('Record data exceeds 16 KiB')
-    if result['kind'] == 'correction' and result['supersedes'] is None:
-        raise PlayerError('Correction requires its prior record')
-    return result
-
-
-def program(value: object) -> dict:
-    result = json_object(value)
-    validate_json(result, _PROGRAM)
-    if len(result['code'].encode('utf-8')) > 32768:
-        raise PlayerError('Program source exceeds 32 KiB')
-    return result
-
-
-def record_schema() -> dict:
-    return json_object(_RECORD)
-
-
-def program_schema() -> dict:
-    return json_object(_PROGRAM)
-
-
-def policy_result(value: object) -> dict:
-    result = json_object(value)
-    validate_json(result, _object(dict(status=_enum('act', 'yield', 'done'), state={'type': 'object'},
-                                      actions={}, reason=_text(1024))))
-    if result['status'] == 'act':
-        validate_actions(result['actions'])
-    elif result['actions'] is not None:
-        raise PlayerError('Yield/done actions must be null')
-    return result
+def common_arguments(args: object) -> tuple[dict, str, list[str]]:
+    if type(args) is not dict:
+        raise PlayerError('Tool arguments must be an object')
+    intent = args.get('intent')
+    if type(intent) is not str or not 1 <= len(intent) <= 512 or not intent.strip() or len(intent.splitlines()) != 1 or any(c in intent for c in '\r\n'):
+        raise PlayerError('Intent must be nonempty one-line text within 512 characters')
+    cites = references(args.get('cites', []))
+    return {k:v for k,v in args.items() if k not in {'intent', 'cites'}}, intent, cites

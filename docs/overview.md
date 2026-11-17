@@ -19,8 +19,8 @@ actual PNGs, mechanical window geometry, key/text/pointer/wait, exact operation
 collection, one writer and original limits. It contains no game-phase, menu,
 activity, item or character-identity eligibility checks. The playing system owns
 all interpretation, save/load choices, plans, quantities, Work and success claims.
-Optional memory and local programs can help; ordinary input remains available
-when a helper fails and mechanical custody is healthy.
+Curated knowledge and fallible player hints support continuity; ordinary input
+remains available when a hint fails and mechanical custody is healthy.
 
 ## How it works
 
@@ -28,11 +28,10 @@ The [architecture diagram](architecture.md#scope-and-responsibilities) answers ‚
 decides, who sends input and who can stop it?‚Äù Its boxes are responsibilities, not
 separate required models. The player interprets pixels; the
 custodian serializes basic actions through the SDL adapter; the game determines
-effects. The user can Pause independently. Memory contains fallible player claims
-and never grants custody.
+effects. The user can Pause independently. Curated knowledge and hints never grant custody.
 
 Each finite run freezes one [player host](components/player-interface.md) adapter
-behind the substitutable [`player-host/5` contract](contracts/player-host.md). The selected
+behind the substitutable [`player-host/6` contract](contracts/player-host.md). The selected
 finite configuration is OpenRouter / pinned OpenAI provider / GPT-6.1 Terra at medium
 effort. DeepSeek and other cheaper models are future candidates under #25; none is
 the current player. Its exact route, metadata, context and limits are frozen per run; this
@@ -61,7 +60,7 @@ The [architecture](architecture.md) explains ownership, the
 | Boundary | Current scope and limit |
 | --- | --- |
 | Mechanical control | Actual CDDA key/text/pointer effects, useful stock, deliberate Save/new-child reload and separate normal exit are documented in the [production evidence](acceptance/2026-10-29-computer-control.md). Original uncertain exit ACKs remain unknown. |
-| Player services | Actual image-conditioned scouting, failed/revised programs, source-backed correction and successor application are demonstrated. This is functional utility, not a safe-navigation or learning-benefit guarantee. |
+| Player services | Curated knowledge is delivered to the player and hints are retained for curation. Benefit and safe-navigation guarantees are unclaimed; historical program evidence remains bound to its original implementation. |
 | Player context | The [player guide](player-guide.md#play-from-observed-effects) works from observed effects. The player's spatial and search claims can exceed the evidence. No causal prompt benefit or general reliability is qualified. |
 | Actor replacement | Actual old host/MCP quiescence and immutable context preceded a fresh successor under original limits. No game menu, save or identity condition grants authority. |
 | Spectator | The [spectator](components/observer-operations.md) separates a supervised control path (frame, status, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames, plus hand-checked night and day-rollover frames. No held-out clock falls between 7:50 PM and 6:00 AM, popup-covered clocks and severe need labels have no held-out examples, and creature counting and death recall are not yet validated ([reader validation](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383)). Human-usability efficacy remains unqualified. |

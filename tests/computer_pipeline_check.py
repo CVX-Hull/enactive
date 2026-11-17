@@ -12,7 +12,7 @@ import uuid
 from harness.application import Application
 from harness.computer.launch import OwnedTarget
 from harness.computer.runtime import ComputerRuntime
-from harness.player.memory import Memory
+from harness.player.journal import Journal
 from tests.computer_native_check import arguments,exclusion,records
 
 
@@ -27,10 +27,10 @@ def check(options):
         owner.reserve();channel=owner.start()
         runtime=ComputerRuntime(options.output,session,channel,owner.process,owner.deadline,
             dict(max_inputs=30,max_requests=60,max_frames=60,max_bytes=2**31))
-        memory=Memory(options.output/'player.sqlite3')
+        memory=Journal(options.output/'player.sqlite3')
         app=Application(runtime,memory,options.output/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json');actor=runtime.add_actor()
         owner.wait_target();exclusion(owner.shared_lock,True)
-        def call(tool,args):return app.call(actor['token'],tool,args,uuid.uuid4().hex)[0]
+        def call(tool,args):return app.call(actor['token'],tool,dict(intent='Check the fixture through '+tool,**args),uuid.uuid4().hex)[0]
         end=time.monotonic()+3
         while True:
             observed=call('computer_observe',{})
@@ -38,27 +38,15 @@ def check(options):
             assert time.monotonic()<end,'No actual fixture image'
             time.sleep(.03)
         source=observed['source'];_,png=runtime.source(source['source_id'])
-        record=dict(schema='player-record/1',kind='claim',text='Fixture background from actual pixels',data={},
-            sources=[source['source_id']],supports=[],supersedes=None,applicability=None,program_id=None)
-        saved_record=call('player_memory_append',dict(record=record))
-        code="""function step(v,s){
-          if(!v.image || !Array.isArray(v.image.rgb)) return {status:'yield',state:s,actions:null,reason:'pixels absent'};
-          if(s.n===0) return {status:'act',state:{n:1,before:v.image.rgb[0]},
-            actions:[{type:'key',key:'RIGHT',modifiers:[]}],reason:'fixture raw input'};
-          return {status:v.image.rgb[0]!==s.before?'done':'yield',state:s,actions:null,reason:'actual changed pixel comparison'};
-        }"""
-        program=call('player_program_save',dict(program=dict(schema='player-program/2',view_schema='program-view/4',code=code,parent_id=None,
-            reason='Independent fixture image-conditioned candidate',source_ids=[source['source_id']],
-            record_ids=[saved_record['id']],applicability=None)))
-        result=call('player_program_run',dict(program_id=program['id'],initial_state=dict(n=0),interpretation={},
-            selection=dict(crop=None,size=[8,8]),max_steps=3,max_seconds=5))
-        assert result['status']=='done',result
-        assert result['steps'][0]['source']!=result['steps'][1]['source']
+        hint=call('player_hint',dict(text='Fixture background from actual pixels',source_ids=[source['source_id']]))
+        assert hint['schema']=='player-hint/1' and not any(r.get('key')==1073741903 for r in records(options.output/'events.jsonl'))
+        moved=call('computer_input',dict(actions=[dict(type='key',key='RIGHT',modifiers=[])]))
+        assert moved['status']=='completed' and moved['source']['source_id']!=source['source_id']
         assert any(row.get('key')==1073741903 and row.get('type')==768 for row in records(options.output/'events.jsonl'))
         ending=call('computer_input',dict(actions=[dict(type='key',key='ESC',modifiers=[])]))
         owner.process.wait(timeout=5)
         report.update(passed=True,initial_source=source,initial_png_sha256=hashlib.sha256(png).hexdigest(),
-            record=saved_record,program_id=program['id'],program_run=result,ending_operation=ending)
+            hint=hint,direct_operation=moved,ending_operation=ending)
     finally:
         report['cleanup']=owner.close()
         if runtime is not None:runtime.store.close()

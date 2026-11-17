@@ -28,7 +28,7 @@ from .gate import COVERAGE
 
 MANIFEST = 'manifest.json'
 NAME = re.compile(r'[A-Za-z0-9_-]+')
-DROPPED = ('every other actor', 'sealed handoff packets', 'the sealed memory store',
+DROPPED = ('every other actor', 'sealed handoff packets', 'the sealed memory and journal stores',
            "the actor's final report", 'steps, tool calls and frames outside the window')
 
 
@@ -140,6 +140,8 @@ def restrict(out: Path, manifest: dict, window: Window) -> dict:
         if frame.stem not in frames:
             frame.unlink()
     (out/'memory.json').unlink(missing_ok=True)
+    (out/'journal.json').unlink(missing_ok=True)
+    manifest['hints'] = 'in-window tool calls only'
     entry['actors'] = [dict(actor, steps=len(kept), frames=len(frames), tool_calls=len(calls))]
     entry['handoffs'] = []
     manifest['files'] = {str(p.relative_to(out)): hashlib.sha256(p.read_bytes()).hexdigest()
@@ -189,20 +191,29 @@ def citations_only(out: Path, manifest: dict, citations: set[str]) -> dict:
     for session in manifest['sessions']:
         for actor in session['actors']:
             directory = out/session['name']/actor['directory']
-            steps = [s for s in _jsonl(directory/'steps.jsonl') if s.get('frame') in citations]
+            all_steps = _jsonl(directory/'steps.jsonl')
+            steps = [s for s in all_steps if s.get('frame') in citations]
+            calls = _jsonl(directory/'tools.jsonl')
+            owners = _owners(calls, {s['operation_id']: s['seq'] for s in all_steps},
+                             max((s['seq'] for s in all_steps), default=0))
+            kept_seq = {s['seq'] for s in steps}
+            calls = [call for call, owner in zip(calls, owners) if owner in kept_seq]
             for path in directory.iterdir():
-                if path.name != 'steps.jsonl':
+                if path.name not in ('steps.jsonl', 'tools.jsonl'):
                     if path.is_dir():
                         shutil.rmtree(path)
                     else:
                         path.unlink()
             _write(directory/'steps.jsonl', steps)
-            actor.update(steps=len(steps), frames=len({s['frame'] for s in steps}), tool_calls=0)
+            _write(directory/'tools.jsonl', calls)
+            actor.update(steps=len(steps), frames=len({s['frame'] for s in steps}), tool_calls=len(calls))
         handoffs = out/session['name']/'handoffs'
         if handoffs.exists():
             shutil.rmtree(handoffs)
         session['handoffs'] = []
     (out/'memory.json').unlink(missing_ok=True)
+    (out/'journal.json').unlink(missing_ok=True)
+    manifest['hints'] = 'cited-step tool calls only'
     manifest['files'] = {str(p.relative_to(out)): hashlib.sha256(p.read_bytes()).hexdigest()
                          for p in sorted(out.rglob('*')) if p.is_file() and p.name != MANIFEST}
     manifest['citations_only'] = sorted(citations)

@@ -173,14 +173,16 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
               + (f"accepted as `{v['version']}`" if v['accepted']
                  else 'rejected: ' + '; '.join(repr(d) for d in v['diagnostics']))
               for v in verdicts] or ['None.']
-    lines += ['', '## Hints and flagged types', '', 'None.', '', '## Close-out', '',
+    lines += ['', '## Hints and flagged types', '',
+              'Player hints in the selected trace tool calls are fallible public reports, not published facts. '
+              'Check their source evidence before proposing knowledge. No additional operator hints.', '', '## Close-out', '',
               'Put each proposed change in `submissions/<id>/submission.json`; work to continue later in '
               '`drafts/<id>/`. Everything else is discarded.', '']
     return '\n'.join(lines)
 
 
 def run_session(repo: Repository, trace_sessions: list[Path], config: SessionConfig, *, window: Window = FULL,
-                memory: Path | None = None, session_id: str | None = None, session_kind: str = 'admission') -> dict:
+                memory: Path | None = None, journal: Path | None = None, session_id: str | None = None, session_kind: str = 'admission') -> dict:
     if session_kind not in ('admission', 'grooming'):
         raise SessionError('unknown session kind')
     if session_kind == 'grooming' and not window.full:
@@ -197,7 +199,7 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
     cleanup: list[str] = []
     try:
         record_dir.mkdir(parents=True)
-        return _run(repo, trace_sessions, config, memory, window, session_id, record_dir, session_kind)
+        return _run(repo, trace_sessions, config, memory, journal, window, session_id, record_dir, session_kind)
     finally:
         for target in (repo.state/'workspaces'/session_id, repo.state/'workspaces'/f'{session_id}.home'):
             try:
@@ -215,7 +217,7 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
             lock.close()
 
 
-def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, memory: Path | None, window: Window,
+def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, memory: Path | None, journal: Path | None, window: Window,
          session_id: str, record_dir: Path, session_kind: str) -> dict:
     """Prepare, run and close out one session. Any failure seals the record `aborted` with its error."""
     manifest: dict | None = None
@@ -237,7 +239,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         if any(item.get('schema') != FACT for item in repo.records()):
             raise SessionError(f'published store is not {FACT}; start a new repository')
         repo.export(version, workspace/'knowledge')
-        trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory), window)
+        trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory, journal=journal), window)
         provenance = repo.provenance()
         if session_kind == 'grooming':
             last = provenance.get('last_admission')

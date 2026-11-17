@@ -6,8 +6,8 @@ from pathlib import Path
 from harness.evaluation.core.host import (ToolCall, frame_source, host_facts, memory_reads, names_record, record_ids,
     returned_records, typed_text)
 from harness.evaluation.core.records import RecordWriter, StepRow
-from harness.evaluation.core.sources import read_carry, read_host
-from harness.player.memory import Memory
+from harness.evaluation.core.sources import read_carry, read_host, run_archive_entry
+from tests.legacy_player_store import legacy_player_archive, write_memory
 from tools.memory_reads import main
 
 SESSION = 'c' * 32
@@ -87,21 +87,20 @@ def build(root: Path) -> Path:
     second.call('player_memory_append', dict(record=document('Closing.', supports=[LOCKER])),
         stored(CLOSING, SECOND, BASE + 108, 'Closing.', supports=[LOCKER]))
     second.write(run / 'actors' / '002')
-    with Memory(root / 'store.sqlite3') as memory:
-        memory.append('e' * 32, document(locker['text'], data=locker['data']), request_id=LOCKER)
-        memory.append(FIRST, document(torch['text']), request_id=TORCH)
-        memory.append(SECOND, document('Never delivered.'), request_id='4' * 32)
+    write_memory(root/'store.sqlite3', [stored(LOCKER, 'e'*32, BASE-3600, locker['text'], data=locker['data']),
+        stored(TORCH, FIRST, BASE+2, torch['text']), stored('4'*32, SECOND, BASE+3, 'Never delivered.')])
+    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7',session=SESSION)))
     return run
 
 
 def facts_of(run: Path):
-    host = dict(read_host(directory / 'host.jsonl', directory.name) for directory in sorted((run / 'actors').iterdir()))
+    host = dict(read_host(directory / 'host.jsonl', directory.name, run_archive_entry(run)) for directory in sorted((run / 'actors').iterdir()))
     return host_facts(tuple(host), host)
 
 
-def test_reads_list_records_held_ids_and_the_calls_around_them(tmp_path):
+def test_reads_list_records_held_ids_and_the_calls_around_them(tmp_path, legacy_player_archive):
     run = build(tmp_path)
-    query, read = memory_reads(facts_of(run), read_carry(run))  # the failed read is not listed
+    query, read = memory_reads(facts_of(run), read_carry(run, historical=True))  # the failed read is not listed
     assert (query.call.tool, query.request, query.actor_requests) == ('player_memory_query', 2, 8)
     assert [record['id'] for record in query.records] == record_ids(query.call) == [TORCH, LOCKER]
     assert query.held == {TORCH}  # the handoff context carried it; the locker record is new to this actor
@@ -119,7 +118,7 @@ def test_reads_list_records_held_ids_and_the_calls_around_them(tmp_path):
     assert memory_reads(facts_of(run))[0].held == frozenset()  # without the contexts nothing is known to be carried
 
 
-def test_a_short_computer_result_gives_its_operation_and_frame_from_the_full_record_and_its_text_size_from_the_text(tmp_path):
+def test_a_short_computer_result_gives_its_operation_and_frame_from_the_full_record_and_its_text_size_from_the_text(tmp_path, legacy_player_archive):
     frame = f'{SESSION}-3'
     shown = dict(schema='player-computer-result/2', status='completed', source_id=frame, width=4, height=4)
     full = dict(schema='player-computer-operation/1', operation_id='7' * 32, status='completed', source=dict(source_id=frame))
@@ -127,7 +126,8 @@ def test_a_short_computer_result_gives_its_operation_and_frame_from_the_full_rec
     trace.call('computer_input', dict(actions=[]), shown, record=full)
     trace.call('computer_input', dict(actions=[]), dict(operation_id='8' * 32, source=dict(source_id=f'{SESSION}-4')))  # an earlier trace
     trace.write(tmp_path / 'actors' / '001')
-    host = dict([read_host(tmp_path / 'actors' / '001' / 'host.jsonl', '001')])
+    (tmp_path/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7',session=SESSION)))
+    host = dict([read_host(tmp_path / 'actors' / '001' / 'host.jsonl', '001', run_archive_entry(tmp_path))])
     short, earlier = host_facts(tuple(host), host).calls
     assert (short.operation_id, frame_source(short)) == ('7' * 32, frame)
     assert short.result_bytes == len(json.dumps(shown).encode())  # what the model read, not the record beside it
@@ -145,7 +145,7 @@ def test_text_and_record_helpers():
     assert returned_records(ToolCall('actor', 0, None, 1, 1, 'player_memory_query', {}, result=dict(records='none'))) == []
 
 
-def test_tool_reports_counts_ages_game_time_the_store_and_rediscoveries(tmp_path, capsys):
+def test_tool_reports_counts_ages_game_time_the_store_and_rediscoveries(tmp_path, capsys, legacy_player_archive):
     run = build(tmp_path)
     with RecordWriter.create(tmp_path / 'records' / SESSION / 'record.sqlite3', dict(game_time_unit='seconds')) as writer:
         writer.append_steps([StepRow(1, 'o' * 32, FIRST, 'input', BASE - 4000, 1, None, None, 500, 'in_play', None, None, None),

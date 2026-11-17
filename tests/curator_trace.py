@@ -52,8 +52,8 @@ def make_long_session(root: Path, name: str = 's1', steps: int = 12, actors: tup
                        json.dumps([dict(type='key', key='RIGHT', modifiers=[])]), json.dumps(dict(status='completed'))))
             db.execute('INSERT INTO native_intents VALUES(?,?,NULL,?, ?)', (f'n-{number}-{step}', op, sid, 't'))
             if step % 3 == 0:
-                events += [dict(type='tool-start', tool_call_id=f'm{step}', tool='player_memory_read', arguments=dict(record_id=f'r{step}')),
-                           dict(type='tool-result', tool_call_id=f'm{step}', tool='player_memory_read', wall_time='t',
+                events += [dict(type='tool-start', tool_call_id=f'm{step}', tool='player_hint', arguments=dict(text=f'hint at step {step}', source_ids=[], intent='remember', cites=[])),
+                           dict(type='tool-result', tool_call_id=f'm{step}', tool='player_hint', wall_time='t',
                                 result=dict(isError=False, content=[dict(type='text', text=json.dumps(dict(records=[])))]))]
             events += [dict(type='tool-start', tool_call_id=f'c{step}', tool='computer_input',
                             arguments=dict(actions=[dict(type='key', key='RIGHT', modifiers=[])])),

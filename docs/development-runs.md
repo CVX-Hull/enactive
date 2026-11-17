@@ -70,7 +70,7 @@ traits, location, tactic, target item or hint.
 | S2 | The player chooses every setup option, including the scenario. |
 
 Runs alternate S1, S2, S1, S2, S1 within an arm. Each run is frozen as a fresh
-`campaign-run/7` package from merged main, with these limits outside the
+`campaign-run/8` package from merged main, with these limits outside the
 player's context:
 
 | Setting | Value |
@@ -153,7 +153,8 @@ With three lineages this is a screen, not a qualification.
 `python -m tools.starts create seven-day-end-01` copies the sealed #397 study's
 `user/` and `player-memory-sd1.sqlite3` without editing their contents. The tool
 checks every copied path and hash against `data/evidence/397-seven-day.sha256`,
-refuses missing, changed or extra files, and prints the start manifest's SHA-256.
+refuses missing, changed or extra files, and prints the `start-manifest/2` SHA-256. The sealed source store remains historical input;
+reset prepares a fresh current journal in `work/`. Unsupported old active starts refuse.
 Starts live in the main checkout's `.runtime/starts/<name>/`; `list` reports their
 hashes and player-store paths. A run using a start cites its manifest hash and says
 that the copied lineage is no longer held out. These copies do not establish a
@@ -173,7 +174,7 @@ With the game closed, `python -m tools.starts install NAME` stages the start, th
 copies the current `.runtime/user/` into `.runtime/archive/userdir-<timestamp>/`
 and verifies every file by hash before installing the staged userdir. It prints
 the archive location and `player_store`: the run package points that field at the reported absolute
-path, `.runtime/starts/NAME/work/player-memory-sd1.sqlite3` in the main checkout.
+path, the fresh journal under `.runtime/starts/NAME/work/` in the main checkout.
 The tool holds the shared game lock and checks `ps` for any executable whose
 basename starts with `cataclysm`, ignoring case, before install, restore or
 disposal (R-SAVE-LOSS). Dispose the installed start before installing another.

@@ -346,7 +346,7 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   authority. The system prompt and tool table stay identical across actors, so request
   prefixes stay byte-identical.
 - **Reminders.** `N` counts the actor's completed input operations (`computer_input`
-  and `player_program_run` results), which the host sees. Every `N` of them the host
+  results), which the host sees. Every `N` of them the host
   asks for a reminder and keeps playing. The answer, or nothing, goes into the next
   request as its own delimited message labelled as fallible knowledge, never joined to a
   control or limit notice, and stays in the history where it was first sent, so the
@@ -400,8 +400,7 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
 
 - **New tools, not changed ones.** `player_knowledge_read` and `player_knowledge_query`
   read `delivered-knowledge.json`, which the driver passes to the application. Their results carry
-  `grants_authority: false`. The player's own memory tools stay as they are until
-  adoption ([#463](https://github.com/CVX-Hull/enactive/issues/463)), which removes
+  `grants_authority: false`. Adoption ([#463](https://github.com/CVX-Hull/enactive/issues/463)) removes
   them; no tool reads two stores, and no tool changes meaning.
 - **Telemetry.** The host records each briefing and each reminder with its full text,
   the article and fact ids it named, the version of delivered knowledge, the recall
@@ -519,34 +518,19 @@ because every field is output the player writes and then re-reads.
   - `player_hint`: added. It replaces the player's append as its one way to tell the
     curator something.
 
-### The migration that follows
+<a id="the-migration-that-follows"></a>
 
-The adopted memory phase has one active-player migration under S-MIGRATION
-([#463](https://github.com/CVX-Hull/enactive/issues/463)). Short results and knowledge
-delivery already have their own current contracts. The migration keeps those delivery
-rules and finite handoff behavior; it does not include the deferred cut or a live curator
-scheduler. The [owner decision log](../decisions/owner-decisions.md) owns that boundary.
+### The adopted boundary
 
-| Area | Change |
-| --- | --- |
-| Tool results and delivery | Keep the current short results, source/handoff receipts, briefing, reminders and knowledge reads; update affected callers with the migration |
-| Player host contract | Version the adopted tool/record contract and its public intent, optional cites and hints; keep the current image-history and finite handoff rules |
-| Tool table | Remove the player's own memory tools (`player_memory_append`, `player_memory_context`, `player_memory_read`, `player_memory_query`) and all three program tools; knowledge tools stay; add `player_hint`; require `intent` on every call and allow optional `cites` |
-| Handoff | The packet carries the summary as a labelled hint and no record roots |
-| Driver and package | Migrate supported schemas and readers together; retain finite actor limits and handoff rather than assuming a cut supplies capacity |
-| Player guide | Memory is no longer optional reading: what the briefing is, that it is fallible, how to read an index line, when to hint |
-| Curator | Accept fallible player hints without granting them publication authority; no live scheduler or snapshot-difference delivery in this migration |
-| Tests and readers | Host serialization/prefix and contract suites, memory/handoff/version refusal, trace projection, evaluator and read-only viewer readers; full regression on the integrated candidate |
-
-The player's own store and its record format are retired in that change. Programs return
-through the knowledge repository and gate in
-[#465](https://github.com/CVX-Hull/enactive/issues/465). Until migration the current active
-contracts stay in force. Delivery itself (delivered knowledge, the briefing, the reminders
-and the knowledge tools) has its own contract version used by every run
-([the delivery boundary](#the-delivery-boundary)), so that development play and the
-withholding pilot can measure it. Live curator triggers, snapshot differences, coverage
-marks and coverage-based removal remain later work: lag must be measured before the cut
-is reconsidered. Their design above is not implementation acceptance for #463.
+The current [computer-control contract](../contracts/computer-control.md) and
+[player host contract](../contracts/player-host.md) own the implemented rules.
+The player receives the briefing, reminders and knowledge reads; its public calls
+carry intent and optional cites, and `player_hint` records fallible reports. Handoff
+carries the summary as a labelled hint without record roots. A journal stores calls,
+hints and sources, not player-authored knowledge. Finite handoff and short results
+remain. The cut, live curator scheduler and snapshot-difference delivery are not
+built; programs return only through later work. Curated memory is adopted with
+benefit unclaimed. The frozen withholding scoring and sizing remain study designs.
 
 ## Owner decisions
 

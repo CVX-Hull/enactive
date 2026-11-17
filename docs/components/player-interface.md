@@ -18,8 +18,8 @@ the [current adapter reference](../../tools/player_host/README.md) owns its prov
 
 | Part | Responsibility / limit |
 | --- | --- |
-| [Tool schema](../../harness/player_tools.py) | Basic observe/input/result/stop and optional source/memory/program/context/handoff tools; no semantic gameplay API. |
-| [Player client](../../harness/player_client.py) | Per-actor explicit `player-adapter/1`, ID assigned before submission, exact source retrieval and uncertainty; no native/process/provider ownership. |
+| [Tool schema](../../harness/player_tools.py) | Basic observe/input/result/stop and source, knowledge, hint and handoff tools; no semantic gameplay API. |
+| [Player client](../../harness/player_client.py) | Per-actor explicit `player-adapter/2`, ID assigned before submission, exact source retrieval and uncertainty; no native/process/provider ownership. |
 | [MCP adapter](../../harness/player_mcp.py) | Official SDK transport and actual image blocks; cancellation requests independent permanent stop. |
 | [Player host](../contracts/player-host.md) | Any conforming adapter: explicit model/context/MCP table, sequential tools, direct `player_finish` and origin-bound handoff settlement, bounded external control and context turnover. |
 | [Campaign driver](../../tools/campaign_player.py) | Operator-only finite quotas/ending reserves, admission-wide stop identity, exact host/MCP groups, canonical handoff/context and verified quiescence before successor. |
@@ -34,15 +34,14 @@ route selection and host conformance are separate from model/gameplay qualificat
 
 Initial context consists of the guide, frozen objective and actual selected tool
 schema. The objective is ongoing; experiment countdowns and final-actor policy
-are absent from supplied prompt/tool/program views. The typed MCP projection gives the model a
+are absent from supplied prompt and tool views. The typed MCP projection gives the model a
 short result and keeps the original evidence and uncertainty in the operation record while excluding global resource accounting;
-canonical operator records remain unchanged. The player uses optional typed memory/context and exact source reads as
-needed. A program receives actual selected image pixels and optional player
-interpretation, never engine facts. The provider image-history window retains all
+canonical operator records remain unchanged. The player uses curated knowledge,
+hints and exact source reads as needed; none supplies engine facts. The provider image-history window retains all
 text/IDs, marks omitted older pixels and protects the current result group; an
 oversized protected group stops. Source availability does not prove the actor read it.
 
-Current provider route is closed `player-host/5`, with a dollar limit, an explicit image peak and
+Current provider route is closed `player-host/6`, with a dollar limit, an explicit image peak and
 count-only eviction block,
 cost/capacity/effort metadata and default service tier for the current campaign.
 OpenRouter uses exact selected full-tag routing, no fallback and required parameter
@@ -75,12 +74,12 @@ originating issuance or exact original collection settles host handoff. After th
 host closes its owned MCP child, the driver checks actual old process-group
 quiescence and context digest before minting a successor under original limits.
 No menu/save/identity check is required. User Pause, uncertainty or failed closure
-cannot become resumable handoff. At most two hosts are permitted by `campaign-run/7`.
+cannot become resumable handoff. At most two hosts are permitted by `campaign-run/8`.
 
 ## Assurance and evidence
 
 The [host contract suite](../../tests/test_player_host_contract.py) drives each listed
-adapter only through `player-host/5`. [Adapter](../../tests/test_player_host_adapter.py),
+adapter only through `player-host/6`. [Adapter](../../tests/test_player_host_adapter.py),
 [driver](../../tests/test_campaign_player.py) and [custodian](../../tests/test_campaign_run.py)
 fixtures exercise real maintained libraries with synthetic provider/owned children.
 They add configuration, image, settlement, accounting and cleanup evidence without

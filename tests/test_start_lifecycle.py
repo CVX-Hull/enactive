@@ -65,7 +65,7 @@ def test_copy_matches_every_manifest_hash_and_never_opens_sealed_original_for_wr
     description = manager.create(NAME)
     target = manager.starts / NAME
     manifest = json.loads((target / 'manifest.json').read_text())
-    assert manifest['schema'] == 'start-manifest/1'
+    assert manifest['schema'] == 'start-manifest/2'
     assert manifest['lineage'] == 397 and manifest['source_study'] == starts.STUDY
     assert manifest['source_manifest_sha256'] == evidence.file_sha256(manager.manifests / f'{starts.STUDY}.sha256')
     assert manifest['files'] == before
@@ -140,8 +140,13 @@ def test_install_archives_and_verifies_before_replacing_then_uses_writable_store
     assert checked_removal
     starts.check_files(Path(receipt['archive']) / 'user', previous)
     assert starts.inventory(manager.user) == starts.inventory(manager.starts / NAME / 'user')
-    assert Path(description['player_store']).read_bytes() == (manager.starts / NAME / starts.PLAYER_STORE).read_bytes()
-    Path(description['player_store']).write_bytes(b'ordinary working memory')
+    from harness.player.journal import Journal
+    source_bytes = (manager.starts/NAME/starts.PLAYER_STORE).read_bytes()
+    with Journal(description['player_store']) as journal:
+        assert journal.calls()==[] and journal.hints()==[]
+        journal.record_call('fixture-hint','actor','player_hint',dict(intent='Report an uncertain observation',text='Unverified'))
+        journal.hint('fixture-hint','actor','Unverified',[],'Report an uncertain observation',[])
+    assert (manager.starts/NAME/starts.PLAYER_STORE).read_bytes()==source_bytes
     assert (manager.user / 'save' / 'A world' / 'survivor.sav').stat().st_mode & 0o200
     manager.create('seven-day-end-02')
     with pytest.raises(ValueError, match='dispose'):
@@ -310,7 +315,7 @@ def test_names_and_unsupported_start_versions_are_refused(manager):
             manager.create(name)
     manager.create(NAME)
     path = manager.starts / NAME / 'manifest.json'
-    path.write_text(path.read_text().replace('start-manifest/1', 'start-manifest/0'))
+    path.write_text(path.read_text().replace('start-manifest/2', 'start-manifest/0'))
     with pytest.raises(ValueError, match='unsupported'):
         manager.install(NAME)
 

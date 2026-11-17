@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/5` is the one current boundary between the
+`player-host/6` is the one current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -20,7 +20,7 @@ its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/7` package freezes `host:{"argv":[...]}` with1–8 strings.
+A `campaign-run/8` package freezes `host:{"argv":[...]}` with1–8 strings.
 The first is an absolute existing executable/interpreter regular file; later
 entries are canonical project-local regular files tracked by the clean source.
 No registry, resumed host, fallback or old `node` alias is supported.
@@ -46,7 +46,7 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/5"`, `model`, `api_key_env`,
+The closed route has `schema:"player-host/6"`, `model`, `api_key_env`,
 `max_requests`, `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
 `context_image_block`, `context_reserve_tokens`, `request_timeout_seconds` and
 `service_tier`, and the closed `recall` object (`model`, `every`, `max_requests`, `unpriced_request_usd`).
@@ -77,7 +77,7 @@ unknown and retries never renew limits. The adapter reference defines eligible
 transient refusals. The retry is proven by offline fixtures only; no live 5xx response
 has exercised it ([#308](https://github.com/CVX-Hull/enactive/issues/308)). Host seconds and custodian mechanical resources are separate.
 These operator counts do not enter the assignment, repeated model messages or
-actor tool/program results.
+actor tool results.
 
 The current adapter reuses its maintained context estimate, reported usage and a text/image
 heuristic floor to warn before capacity becomes critical. The warning offers the
@@ -135,11 +135,11 @@ that cannot be read, marks the run's spend incomplete and admits no successor.
 
 ### Delivered knowledge and recall
 
-Every `campaign-run/7` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
+Every `campaign-run/8` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
 
 The host appends a briefing to the first user message: recall-selected article leads or standalone fact text, an index line for every other article and standalone fact, and the coverage stamp. It labels the text as fallible data granting no authority. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
 
-Every `recall.every` completed `computer_input` or `player_program_run` result offers a reminder request beside continued play. A completed selection becomes its own delimited user message in the next player request; it is never joined with control or limit notices and stays where first sent. An empty selection is an explicit silence. If another recall is in flight the opportunity is recorded as not made.
+Every `recall.every` completed `computer_input` result offers a reminder request beside continued play. A completed selection becomes its own delimited user message in the next player request; it is never joined with control or limit notices and stays where first sent. An empty selection is an explicit silence. If another recall is in flight the opportunity is recorded as not made.
 
 Recall uses the player's provider and credential variable, with the pinned `recall.model`. Each HTTP attempt has a `recall-N` identity and `request_role:recall`; player identities remain `request-N`. Both roles count against the same package attempt allowance and dollar limit. Before an attempt, spent plus every in-flight attempt's bound must be below the limit. The finish reserve covers the player and recall bounds; the recall bound contributes zero when knowledge is empty. `recall.max_requests` is a per-run allowance. For each actor the driver passes `min(route recall max - recall attempts used by earlier actors, attempts left)`. It counts earlier actors' `recall-*` starts from their events; incomplete accounting conservatively charges that actor's whole allocated recall allowance. A host counts a recall attempt, assigns its `recall-N` identity and emits `request-start` only when fetch starts. Both total and recall-only attempt limits are re-checked there. Recall is refused when the actor has at most one attempt left, preserving the player's final attempt. An unstarted recall has no request ID.
 
@@ -271,12 +271,12 @@ before a successor. Pause, uncertainty or failed closure cannot become a handoff
 
 ## Telemetry
 
-Stdout is JSONL telemetry version5. Each line has `type`; the driver ignores event
+Stdout is JSONL telemetry version6. Each line has `type`; the driver ignores event
 kinds it does not account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:5` and `schema:"player-host/5"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:6` and `schema:"player-host/6"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
 | `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). An archived trace recorded before the event existed has none, and readers report its absence explicitly. |

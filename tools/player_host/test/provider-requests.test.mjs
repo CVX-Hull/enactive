@@ -30,7 +30,7 @@ test('response diagnostics count UTF8 fragments and reset for each actual reques
   assert.ok(a.body_chunks>0);assert.equal(a.provider_events,2);assert.equal(b.provider_events,2);
   assert.equal(a.content_bytes,2);assert.equal(a.reasoning_bytes,3);assert.equal(a.tool_argument_bytes,2);
   assert.equal(b.content_bytes,8);assert.equal(b.reasoning_bytes,0);
-  assert.equal(b.tool_argument_bytes,Buffer.byteLength(JSON.stringify({disposition:'task_complete',report:'finished',source_ids:[],control_id:null})));
+  assert.equal(b.tool_argument_bytes,Buffer.byteLength(JSON.stringify({intent:'State the fixture action',disposition:'task_complete',report:'finished',source_ids:[],control_id:null})));
   assert.ok(a.last_field_delta_ms<=a.last_provider_event_ms);
   assert.ok(a.last_body_chunk_ms<=completed[0].monotonic_ms);
   assert.equal(a.scope,'current-http-attempt');
@@ -115,7 +115,7 @@ test('rate-limit diagnostic snapshots remain isolated from retry response counte
   assert.equal(a.request_id,'request-1');assert.equal(a.body_bytes,refusalBytes);assert.equal(a.provider_events,0);
   assert.equal(a.last_field_delta_ms,null);assert.equal(b.request_id,'request-2');
   assert.equal(b.provider_events,2);assert.equal(b.content_bytes,2);
-  assert.equal(b.tool_argument_bytes,Buffer.byteLength(JSON.stringify({disposition:'task_complete',report:'ok',source_ids:[],control_id:null})));
+  assert.equal(b.tool_argument_bytes,Buffer.byteLength(JSON.stringify({intent:'State the fixture action',disposition:'task_complete',report:'ok',source_ids:[],control_id:null})));
 });
 test('host deadline interrupts an actually started tool and closes its child',async t=>{
   // Real initialization cannot consume the controlled deadline. The outer

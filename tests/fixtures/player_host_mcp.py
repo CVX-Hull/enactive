@@ -151,7 +151,7 @@ def handoff_receipt(mode):
 
 
 @server.tool()
-async def player_handoff(ids: list[str] | None = None, summary: str = "", mode: str = "complete") -> CallToolResult:
+async def player_handoff(summary: str = "", mode: str = "complete", intent: str = "Fixture handoff", cites: list[str] | None = None) -> CallToolResult:
     record(dict(tool="player_handoff", mode=mode))
     value = handoff_receipt(mode)
     # As the tool server serves a direct handoff: the model reads a short result and the host reads the full
@@ -171,7 +171,7 @@ async def player_handoff(ids: list[str] | None = None, summary: str = "", mode: 
 
 
 @server.tool()
-async def computer_result(operation_id: str, mode: str = "complete") -> CallToolResult:
+async def computer_result(operation_id: str, mode: str = "complete", intent: str = "Collect fixture receipt", cites: list[str] | None = None) -> CallToolResult:
     record(dict(tool="computer_result", mode=mode))
     return CallToolResult(content=[TextContent(type="text", text="Formatting failed" if mode == "plain-error"
         else json.dumps(handoff_receipt(mode)))], isError=mode == "plain-error")

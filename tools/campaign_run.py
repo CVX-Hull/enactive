@@ -17,7 +17,7 @@ if __package__ in (None,''):sys.path.insert(0,str(ROOT))
 from harness.application import Application
 from harness.computer.launch import OwnedTarget
 from harness.computer.runtime import ComputerRuntime
-from harness.player.memory import Memory
+from harness.player.journal import Journal
 from harness.server import serve
 from tools.campaign_package import EXACT,preflight,usd_text
 from tools.campaign_player import run_hosts,write_new
@@ -60,7 +60,7 @@ def run_campaign(directory: Path) -> dict:
         owner.reserve()
         # Unsupported selected player stores reject before a native child exists.
         player_path=Path(profile['player_store']);player_path.parent.mkdir(parents=True,exist_ok=True)
-        memory=Memory(player_path)
+        memory=Journal(player_path)
         if stopped.is_set():raise ValueError('Cancelled before native launch')
         channel=owner.start()
         if stopped.is_set():

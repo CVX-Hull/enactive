@@ -165,7 +165,7 @@ test('handoff also aborts and counts the actor\'s in-flight recall',async t=>{
   let aborted=false;
   const {result,events}=await scenario(t,{enabledTools:['computer_input','player_handoff'],
     playerFetch:n=>n===1?reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]])
-      :reply(null,[['player_handoff',{ids:[],summary:'Retain the fixture context'}]]),
+      :reply(null,[['player_handoff',{summary:'Retain the fixture context'}]]),
     recallFetch:(n,init)=>n===1?recallReply(['article-a']):new Promise((_resolve,reject)=>{
       init.signal.addEventListener('abort',()=>{aborted=true;reject(new Error('fixture aborted'));},{once:true});
     })});

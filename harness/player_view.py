@@ -1,14 +1,14 @@
-"""Typed MCP actor views; canonical operator records and authored data stay intact.
+"""Typed MCP actor views; canonical operator records and public hint data stay intact.
 
-Only declared envelope positions are traversed. In particular a record's data,
-program source, decision reason and state are never interpreted as envelopes.
+Only declared envelope positions are traversed. Public hint text and citation IDs
+are never interpreted as envelopes.
 """
 from __future__ import annotations
 
 import copy
 
 from .computer.protocol import receipt, source
-from .player.contracts import PlayerError, program, record
+from .player.contracts import PlayerError, common_arguments, references
 
 
 class UnsupportedResult(PlayerError):
@@ -32,7 +32,6 @@ _FEEDBACK = {
     'Combined waits exceed the original 15-second operation bound',
     'Pointer requires a source issued to this actor', 'Pointer exceeds original full-image coordinates',
     'Input requires actions and optional source_id', 'Unknown memory-query fields',
-    'Context requires ids and optional max_bytes', 'Invalid program-run fields',
     'Actor sealed; original collection/read only', 'Actor is not the active writer',
     'Input fenced; original collection only', 'Unknown ephemeral actor capability',
     'Actor capability unavailable', 'Unsettled input cannot become a handoff',
@@ -40,8 +39,7 @@ _FEEDBACK = {
     'Unknown original player-service operation', 'Yield/done actions must be null',
     'Selection requires exactly crop and size', 'Selection size requires two dimensions',
     'Crop requires x,y,width,height', 'Crop exceeds the captured image',
-    'Program source exceeds 32 KiB', 'Correction requires its prior record',
-    'Record data exceeds 16 KiB', 'Identity must be 1..128 characters',
+    'Identity must be 1..128 characters',
     'Program duration must be finite within (0,20] seconds',
     'Unknown current tool',
     'Operation ID must be32 lowercase hexadecimal characters',
@@ -49,12 +47,12 @@ _FEEDBACK = {
 
 
 def _diagnostic(reason, error=None):
-    if error in {'PlayerError', 'PolicyProgramError'} and isinstance(reason, str):
+    if error == 'PlayerError' and isinstance(reason, str):
         return reason[:1100]
     if isinstance(reason, str) and reason in _FEEDBACK:
         return reason
     if isinstance(reason, str) and reason.startswith(('Invalid player data: ', 'Invalid player JSON: ',
-                                                      'PlayerError: ', 'PolicyProgramError: ')):
+                                                      'PlayerError: ')):
         return reason[:1100]
     if reason == 'Owned native child exited':
         return 'Owned application exited'
@@ -78,12 +76,6 @@ def _native(value):
     if result['schema'] not in {'computer-local/1', 'computer-transport/2'}:
         raise UnsupportedResult('Unsupported native result')
     result['reason'] = _diagnostic(result['reason'])
-    return result
-
-
-def _reference(value):
-    result = _fields(value, {'operation_id', 'session', 'actor_id', 'kind', 'status', 'reason', 'source_id'})
-    result['reason'] = _operation_reason(result)
     return result
 
 
@@ -123,58 +115,22 @@ def _operation(value):
     return result
 
 
-def _program_run(value):
-    result = _fields(value, {'schema', 'program_id', 'run_id', 'status', 'reason', 'final_state',
-                             'elapsed_seconds', 'steps', 'operations', 'omissions'})
-    if result['status'] not in {'done', 'yield', 'limit'}:
-        result['reason'] = _diagnostic(result['reason'])
-    steps = []
-    for item in result['steps']:
-        step = _fields(item, {'source', 'operation', 'input_operation', 'result'})
-        source(step['source'])
-        step['operation'] = _reference(step['operation'])
-        if step['input_operation'] is not None:
-            step['input_operation'] = _reference(step['input_operation'])
-        if step['result'] is not None:
-            # Player decision reason/actions and state hashes are opaque data.
-            _fields(step['result'], {'status', 'actions', 'reason', 'state_sha256'})
-        steps.append(step)
-    result['steps'] = steps
-    result['operations'] = [_reference(item) for item in result['operations']]
+def _hint(value):
+    result = _fields(value, {'schema', 'id', 'actor_id', 'created_wall', 'text', 'source_ids', 'intent', 'cites'})
+    if result['schema'] != 'player-hint/1' or type(result['text']) is not str or not 1 <= len(result['text']) <= 8192:
+        raise UnsupportedResult('Unsupported hint')
+    references(result['source_ids'])
+    common_arguments({'intent': result['intent'], 'cites': result['cites']})
     return result
 
 
-def _authored(value, kind):
-    assigned = {'id', 'actor_id', 'created_wall'} | ({'sha256'} if kind == 'player-program/2' else set())
-    if not assigned <= value.keys():
-        raise UnsupportedResult('Incomplete stored player data')
-    (program if kind == 'player-program/2' else record)({k: v for k, v in value.items() if k not in assigned})
-    return value
-
-
 def _service(value):
-    result = _fields(value, {'schema', 'operation_id', 'actor_id', 'kind', 'status', 'value', 'progress',
-                             'grants_authority'}, {'collected_operations'})
-    _fields(result['progress'], {'steps'})
-    for step in result['progress']['steps']:
-        _fields(step, {'operation_id', 'session', 'kind'})
-    if result['value'] is not None:
-        expected = {'player_memory_append': 'player-record/1', 'player_program_save': 'player-program/2',
-                    'player_program_run': 'player-program-run/1'}.get(result['kind'])
-        if expected is None or result['value'].get('schema') != expected:
-            raise UnsupportedResult('Unsupported original service result')
-        result['value'] = _project(result['value'])
-    if 'collected_operations' in result:
-        children = []
-        for child in result['collected_operations']:
-            if child.get('schema') == 'computer-operation/1':
-                children.append(_operation(child))
-            else:
-                item = _fields(child, {'operation_id', 'session', 'kind', 'status'})
-                if item['status'] not in {'not_submitted_to_computer', 'retained_in_prior_session; no authority restored'}:
-                    raise UnsupportedResult('Unsupported original child result')
-                children.append(item)
-        result['collected_operations'] = children
+    result = _fields(value, {'schema', 'operation_id', 'actor_id', 'kind', 'status', 'value', 'grants_authority'})
+    if result['kind'] != 'player_hint' or result['status'] != 'completed' or result['grants_authority'] is not False:
+        raise UnsupportedResult('Unsupported original service result')
+    result['value'] = _hint(result['value'])
+    if result['value']['id'] != result['operation_id'] or result['value']['actor_id'] != result['actor_id']:
+        raise UnsupportedResult('Original service identity differs')
     return result
 
 
@@ -187,12 +143,10 @@ def _project(value):
         return result  # Article and fact text is opaque data, never another envelope.
     if schema == 'computer-operation/1':
         return _operation(value)
-    if schema == 'player-service-result/1':
+    if schema == 'player-service-result/2':
         return _service(value)
-    if schema == 'player-program-run/1':
-        return _program_run(value)
-    if schema in {'player-record/1', 'player-program/2'}:
-        return _authored(value, schema)
+    if schema == 'player-hint/1':
+        return _hint(value)
     if schema == 'player-transport/1':
         result = _fields(value, {'schema', 'operation_id', 'session', 'actor_id', 'kind', 'status', 'reason',
                                  'collect_with', 'input_replayed'})
@@ -205,20 +159,6 @@ def _project(value):
     if schema == 'player-source-read/1':
         result = _fields(value, {'schema', 'source', 'read_wall'}, {'image_unavailable', 'image_limit_bytes', 'image_note'})
         source(result['source'])
-        return result
-    if schema == 'player-query/1':
-        result = _fields(value, {'schema', 'records', 'grants_authority'})
-        result['records'] = [_authored(item, 'player-record/1') for item in result['records']]
-        return result
-    if schema == 'player-context/1':
-        result = _fields(value, {'schema', 'roots', 'records', 'programs', 'sources', 'omissions'})
-        result['records'] = [_authored(item, 'player-record/1') for item in result['records']]
-        result['programs'] = [_authored(item, 'player-program/2') for item in result['programs']]
-        for item in result['sources']:
-            _fields(item, {'source', 'available', 'read_verified'})
-            source(item['source'])
-        for item in result['omissions']:
-            _fields(item, {'id', 'reason'})
         return result
     if schema is None:
         result = _fields(value, {'stop_requested', 'native_pause_confirmed', 'reason'}, {'grants_authority'})
@@ -251,7 +191,6 @@ def actor_result(value):
     """Copy and project only current declared result envelopes, or fail closed."""
     if type(value) is not dict:
         raise UnsupportedResult('Unsupported player result type')
-    # The client already bounded/decoded transport JSON. Reuse that envelope
-    # limit; the 1 MiB player authoring limit applies to individual records,
-    # whereas a valid 50-record query can be larger.
+    # The client already bounded and decoded transport JSON. Copy only declared
+    # result envelopes; hint text remains an opaque public report.
     return _project(copy.deepcopy(value))

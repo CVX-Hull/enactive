@@ -77,15 +77,14 @@ record exact direct/transitive versions, integrity and license metadata. Origina
 notices remain in those installed distributions; no upstream code or binary is
 vendored in Git. Pi MCP includes notices for its SDK-derived OAuth code, which
 this stdio-only integration does not invoke. Preserve upstream notices before
-redistributing a bundled installation. This runtime does not replace MiniRacer
-for player-authored programs or the Python MCP server. Selection and upkeep
+redistributing a bundled installation. The Python MCP server remains a separate dependency. Selection and upkeep
 conditions are in the [host brief](docs/changes/069-controllable-player-host.md).
 
-## Player program runtime
+## Retired player program runtime
 
-Player-authored routines use [MiniRacer](https://bpcreech.com/PyMiniRacer/)
-0.14.1 (ISC), hash-pinned in the shared Python lock and installed only in the
-project environment. Its wheel embeds V8 and supporting code under their own
+The retired player-authored routine implementation used [MiniRacer](https://bpcreech.com/PyMiniRacer/)
+0.14.1 (ISC). Its source and pinned dependency remain in Git history; it is not
+a dependency of the current player. Its wheel embeds V8 and supporting code under their own
 notices. The installed distribution's `licenses/LICENSE` contains MiniRacer's
 ISC grant; `licenses/AUTHORS.md` retains its authors. Metadata and those files
 were reviewed on 2026-10-23; they are not a complete V8 component-license audit.
@@ -95,7 +94,7 @@ and rejected alternatives are in [the execution brief](docs/changes/061-player-p
 
 ## Player image decoding
 
-Pillow 13.0.0 decodes bounded player-selected PNG views. Its package metadata
+Pillow 13.0.0 decodes player-visible PNGs for interpretive evaluation and fixtures. Its package metadata
 identifies MIT-CMU; its installed `licenses/LICENSE` also retains notices for
 bundled image libraries. Exact artifacts/hashes are in the development lock.
 Metadata and the installed notice were inspected on 2026-10-29; this is not a

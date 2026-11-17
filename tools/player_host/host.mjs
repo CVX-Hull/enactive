@@ -83,7 +83,7 @@ function listenControl(input, session, actorId, accept, fail) {
 export function validateConfiguration(configuration, selectedModel, effort, nested = false) {
   bounded(configuration);
   closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall']);
-  requireThat(configuration.schema === 'player-host/5');
+  requireThat(configuration.schema === 'player-host/6');
   // Dollars this actor may still spend, and what one request with no cost record counts for.
   // Both are plain decimal text computed by the driver and above zero; a JSON number is refused.
   // A zero bound would count a failed request as free.
@@ -841,7 +841,7 @@ export async function runHost(options) {
     affinityId = sessionAffinityId(options.session);
     spendLimit = amountFromText(configuration.spend_limit_usd);
     unpricedBound = amountFromText(configuration.unpriced_request_usd);
-    emit('host-start', {telemetry_version:5, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
+    emit('host-start', {telemetry_version:6, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -891,7 +891,7 @@ export async function runHost(options) {
         const sourceId = resultSourceId(result);
         if (sourceId !== null) sourceIds.set(toolCallId, sourceId);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
-        if (['computer_input','player_program_run'].includes(name)) {
+        if (name === 'computer_input') {
           completedInputs++;
           if (completedInputs % configuration.recall.every === 0 && !recallFlight) {
             recallTask = recall('reminder').then(value => { if (value) pendingReminders.push(value); });
@@ -916,12 +916,16 @@ export async function runHost(options) {
       }};
     });
     tools.push({name:'player_finish', label:'player_finish', description:'Direct player claim that this task is complete or cannot continue, or that accepted automation stop is complete. This stops automation; it certifies neither game persistence nor native exit.',
-      parameters:Type.Unsafe({type:'object', additionalProperties:false, required:['disposition', 'report', 'source_ids', 'control_id'], properties:{
+      parameters:Type.Unsafe({type:'object', additionalProperties:false, required:['intent', 'disposition', 'report', 'source_ids', 'control_id'], properties:{
+        intent:{type:'string', minLength:1, maxLength:512, pattern:'^[^\\r\\n\\v\\f\\u0085\\u2028\\u2029]+$'},
+        cites:{type:'array', maxItems:16, uniqueItems:true, items:{type:'string', minLength:1, maxLength:128}},
         disposition:{enum:['task_complete', 'cannot_continue', 'external_stop_complete']}, report:{type:'string', maxLength:8192},
         source_ids:{type:'array', maxItems:16, uniqueItems:true, items:{type:'string', minLength:1, maxLength:128}},
         control_id:{anyOf:[{type:'null'}, {type:'string', pattern:'^[a-f0-9]{32}$'}]}}}),
       async execute(toolCallId, args) {
         requireThat(!fatal && !handoff && !finish, 'host-already-stopped');
+        requireThat(args.intent.trim().length > 0 && args.intent.isWellFormed()
+          && (args.cites ?? []).every(id => id.isWellFormed()), 'invalid-finish');
         requireThat(args.report.isWellFormed() && args.source_ids.every(id => id.isWellFormed()), 'invalid-finish');
         requireThat(args.disposition === 'external_stop_complete'
           ? control !== undefined && args.control_id === control.id

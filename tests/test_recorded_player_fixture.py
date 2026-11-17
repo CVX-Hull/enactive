@@ -81,14 +81,14 @@ def test_stdio_current_schemas_exact_original_pairs_and_all_other_tools_refused(
                     listed = await client.list_tools()
                     assert {tool.name: (tool.description, tool.input_schema) for tool in listed.tools} == tool_specs()
                     assert all(tool.name != 'player_finish' for tool in listed.tools)
-                    observed = await client.call_tool('computer_observe', {})
+                    observed = await client.call_tool('computer_observe', {'intent':'Inspect the recorded source'})
                     assert not observed.is_error
                     assert json.loads(observed.content[0].text)['current_source_id'] == packet['current_source_id']
                     for index, metadata in enumerate(packet['sources']):
                         label = json.loads(observed.content[1 + index * 2].text)
                         assert label == dict(historical=True, selected_current=index == 2, source=metadata)
                         assert base64.b64decode(observed.content[2 + index * 2].data) == images[index]
-                        exact = await client.call_tool('player_source', {'source_id': metadata['source_id']})
+                        exact = await client.call_tool('player_source', {'intent':'Inspect the exact retained image','source_id': metadata['source_id']})
                         assert not exact.is_error
                         assert json.loads(exact.content[1].text)['source'] == metadata
                         assert base64.b64decode(exact.content[2].data) == images[index]
@@ -196,4 +196,4 @@ print(json.dumps(sorted(sys.modules)))
                             capture_output=True, text=True, timeout=15)
     modules = set(json.loads(result.stdout))
     assert not modules & {'harness.player_client', 'harness.application', 'harness.computer.runtime',
-                          'harness.computer.channel', 'harness.player.memory', 'harness.player.programs'}
+                          'harness.computer.channel', 'harness.player.journal'}

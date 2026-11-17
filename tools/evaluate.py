@@ -7,7 +7,7 @@ docs/contracts/evaluation.md): each value carries its source and confidence, and
 evaluator still accepts no run or claim. Acceptance stays with frames, receipts, review
 and the issue's decision rule.
 
-host-summary selects current player-host/5 (telemetry version 5) files, actor directories or campaign
+host-summary selects current player-host/6 (telemetry version 6) files, actor directories or campaign
 folders (4096 files / 8 GiB; 64 MiB per line; two million lines per trace); an older trace is read only inside
 the run directory of a session the closed archive index lists.
 control-summary selects 1..32 computer-session/1 databases/directories (512 MiB
@@ -292,7 +292,7 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
     parser.add_argument('--format', choices=('json', 'markdown'), default='json')
     parser.add_argument('--binding', help='evaluate-run, evaluate-runs, evaluate-lineage: game binding name')
     parser.add_argument('--root', type=Path, help='evaluate-run, evaluate-runs, evaluate-lineage: evaluation record root, e.g. .runtime/evaluations')
-    parser.add_argument('--memory', type=Path, help='evaluate-run: player-memory/2 store if the manifest does not name it')
+    parser.add_argument('--memory', type=Path, help='evaluate-run: current player-journal/1 store if the manifest does not name it')
     parser.add_argument('--memory-dir', type=Path, help='evaluate-runs: directory of player-memory-<run>.sqlite3 stores')
     parser.add_argument('--replace', action='store_true', help='evaluate-run, evaluate-runs, evaluate-lineage: rewrite an existing record for these versions')
     parser.add_argument('--horizon', type=float, help='evaluate-compare: restricted mean horizon in game hours')

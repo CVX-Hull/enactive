@@ -478,6 +478,36 @@
       },
       "visibility": "private"
     },
+    "curated-memory-adoption-463": {
+      "availability": "present",
+      "bytes": 441043,
+      "cited_by": [
+        "docs/acceptance/2026-11-16-curated-memory-adoption.md"
+      ],
+      "files": 53,
+      "manifest_sha256": "e3c1c111dd4fe8c407a4781a988091a478e76f28bf9df2d9a8d7092a6b95de17",
+      "note": "Current journal adoption checks, including original failures, actual SDL composition and owner-approved pinned Terra contract check; no CDDA play or efficacy claim.",
+      "sources": {
+        "checks": "a30335d8c9d940baaff5ec7bed3704b7df92a69a",
+        "computer-sessions/curated-memory-model-check": "a30335d8c9d940baaff5ec7bed3704b7df92a69a",
+        "native-pipeline": "a30335d8c9d940baaff5ec7bed3704b7df92a69a"
+      },
+      "visibility": "private"
+    },
+    "curated-memory-adoption-463-transport": {
+      "availability": "present",
+      "bytes": 145901,
+      "cited_by": [
+        "docs/acceptance/2026-11-16-curated-memory-adoption.md"
+      ],
+      "files": 1,
+      "manifest_sha256": "58e9a71cbf70ab787350d886dabc40d00ac126da1d284147532948f3e3551816",
+      "note": "Earlier focused integration failures, including sandbox socket-bind refusals and host fixture assertions; later host-route recovery and full regression are retained in curated-memory-adoption-463.",
+      "sources": {
+        "checks": "pre-checkpoint integration attempt"
+      },
+      "visibility": "private"
+    },
     "curator-scoring-618": {
       "availability": "present",
       "bytes": 35613417,

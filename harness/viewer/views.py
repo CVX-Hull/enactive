@@ -16,7 +16,7 @@ from harness.evaluation.core import context as ctx
 from harness.evaluation.core.host import host_facts
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError, loads
-from harness.evaluation.core.sources import read_carry, read_host, read_json_file, read_manifest, read_memory, run_archive_entry
+from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_carry, read_host, read_json_file, read_manifest, read_historical_memory, read_player_store, run_archive_entry
 
 from .catalog import Catalog, RunInfo, ViewError
 from . import pause
@@ -305,20 +305,22 @@ def memory_store(catalog: Catalog, info: RunInfo):
             raise ViewError(500, 'bad_manifest', str(exc)) from exc
     if not path or not Path(path).is_file():
         return None
-    return read_memory(Path(path))
+    return (read_historical_memory(Path(path)) if run_archive_entry(catalog.need_run_dir(info)) is not None
+            else read_player_store(Path(path)))
 
 
 def memory(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> dict:
     store = memory_store(catalog, info)
     if store is None:
-        return dict(records=[], available=False)
+        return dict(records=[], hints=[], available=False,
+                    store_schema='player-journal/1' if info.facts.get('manifest_schema')==MANIFEST_SCHEMA else None)
     reads: dict[str, list[dict]] = {}
     for seq, payload in connection.execute("SELECT seq_start, payload FROM events WHERE kind='memory_read' ORDER BY seq_start"):
         value = loads(payload)
         for record_id in value.get('record_ids', ()):
             reads.setdefault(record_id, []).append(dict(seq=seq, actor=value.get('actor'), tool=value.get('tool')))
     carried: dict[str, list[str]] = {}
-    for actor, ids in read_carry(catalog.need_run_dir(info)).items():
+    for actor, ids in read_carry(catalog.need_run_dir(info), historical=run_archive_entry(catalog.need_run_dir(info)) is not None).items():
         for record_id in ids:
             carried.setdefault(record_id, []).append(actor)
     labels = [l for l in catalog.labels() if l.get('session') == info.session]
@@ -333,7 +335,7 @@ def memory(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> d
             text=(doc.get('text') or '')[:4000], data=doc.get('data'), sources=doc.get('sources') or [],
             supports=doc.get('supports') or [], supersedes=doc.get('supersedes'), chain=chain, reads=reads.get(record_id, []),
             carried_by=carried.get(record_id, []), labels=[l for l in labels if l.get('target') == record_id]))
-    return dict(records=items, available=True, provenance='player_claim')
+    return dict(records=items, hints=list(store.hints[:500]), hints_omitted=max(0,len(store.hints)-500), store_schema=store.schema, available=True, provenance='player_public_report' if store.schema=='player-journal/1' else 'player_claim')
 
 
 def programs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> dict:
@@ -359,7 +361,9 @@ def programs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) ->
                     run_id=value.get('run_id'), status=value.get('status'), steps=len(steps_done),
                     elapsed_seconds=value.get('elapsed_seconds'), reason=value.get('reason'), wall=call.wall))
     saves = [loads(p) for (p,) in connection.execute("SELECT payload FROM events WHERE kind='program_save' ORDER BY seq_start")]
-    return dict(programs=docs, runs=runs, saves=saves, provenance='player_claim')
+    return dict(programs=docs, runs=runs, saves=saves, provenance='player_claim',
+                capability='retired' if info.facts.get('manifest_schema')==MANIFEST_SCHEMA else 'recorded',
+                store_schema=store.schema if store is not None else None)
 
 
 def handoffs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> dict:

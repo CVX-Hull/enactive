@@ -143,10 +143,10 @@ before it can support a claim about a new action.
 Sources are the [computer-control contract](../contracts/computer-control.md),
 [runtime](../../harness/computer/runtime.py),
 [application](../../harness/application.py),
-[memory](../../harness/player/memory.py),
-[context builder](../../harness/player/context.py),
-[program runner](../../harness/player/programs.py) and
-[image view](../../harness/player/images.py). The store retains original computer
+[memory](https://github.com/CVX-Hull/enactive/blob/6f6c548e60c91ce01635f4452dcca925750e645c/harness/player/memory.py),
+[context builder](https://github.com/CVX-Hull/enactive/blob/6f6c548e60c91ce01635f4452dcca925750e645c/harness/player/context.py),
+[program runner](https://github.com/CVX-Hull/enactive/blob/6f6c548e60c91ce01635f4452dcca925750e645c/harness/player/programs.py) and
+[image view](https://github.com/CVX-Hull/enactive/blob/6f6c548e60c91ce01635f4452dcca925750e645c/harness/player/images.py). The store retains original computer
 results independently of model-facing serialization.
 
 Tool affordance limits remain distinct from a test's countdown. For example,

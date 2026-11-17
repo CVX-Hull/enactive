@@ -23,7 +23,7 @@ def package(root):
     values={
         'delivered-knowledge.json':empty(),
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
-        'route.json':dict(schema='player-host/5',service_tier='default',max_requests=10,context_reserve_tokens=200,
+        'route.json':dict(schema='player-host/6',service_tier='default',max_requests=10,context_reserve_tokens=200,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
@@ -33,7 +33,7 @@ def package(root):
     values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,max_requests=3,unpriced_request_usd='0.00063')
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/7',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/8',session='a'*32,source_commit='f'*40,
         labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
         files={name:artifact(directory/name)['sha256'] for name in values},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')},
@@ -131,7 +131,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
     if fault in ('old_route','previous_route','reservation_route'):
-        rewrite_route(directory,profile,schema=dict(old_route='pi-player-host/5',previous_route='player-host/2',reservation_route='player-host/3')[fault])
+        rewrite_route(directory,profile,schema=dict(old_route='pi-player-host/6',previous_route='player-host/2',reservation_route='player-host/3')[fault])
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')
     if fault=='different_lock':profile['shared_lock']=str(tmp_path/'another.lock')
