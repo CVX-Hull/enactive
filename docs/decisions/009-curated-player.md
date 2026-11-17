@@ -293,21 +293,81 @@ also supply the producer of expectation evidence that
 
 ### On the actor's interface (D7)
 
-A program receives what the actor receives (the full-resolution frame, the
-snapshot and the objective) and returns basic computer inputs with emissions, or
+A proposed program receives what the actor receives (the full-resolution frame,
+the objective and delivered knowledge) and returns basic computer inputs with emissions, or
 yields with a reason. The actor delegates "run this until it yields". For a simple
 game the top level may itself be a program. Programs still emit only basic controls
 through the same port (ADR006). A program may be a small module with its own
 fixtures and tests in the knowledge repository; each run pins the program version
 it used.
 
-**Programs stay passive policies in an isolated runtime,** as today's are: an
-engine with no I/O, bounded memory and a per-step time limit
-(`harness/player/policy_program.py:13-20`). A program never runs code in the
+**Programs would stay passive policies in an isolated runtime:** an engine with
+no I/O, bounded memory and a per-step time limit. The former policy runtime was
+removed in #463; it is historical rationale, not an available runner or API. A program never runs code in the
 process that holds input custody. It returns inputs, emissions or slot requests as
 data; the runner checks them and acts. Curator-written code, including programs'
 tests, runs only in the curator's sandbox or the gate's own sandbox, never in the
 live harness or the process that publishes.
+
+### Interface milestones and acceptance ownership
+
+**Disposition of #702: defer program implementation.** The source inventory at
+`207323e68b90e7e7520a2427a4593701c4ea6dcb` has only the current basic computer,
+knowledge, hint and completion tools in `harness/player_tools.py` and dispatch in
+`harness/application.py`. Historical trace/viewer program readers are not producers.
+The current knowledge repository reserves `programs/` and `tests/` placeholders;
+the gate neither accepts nor executes programs. #700 is an independent compatible
+snapshot restore/result migration, under implementation at this design checkpoint.
+It supplies neither a program artifact contract nor disable of running input.
+
+This table assigns the missing interfaces; it does not adopt them. The existing
+[curator-session contract and consumer/test matrix](../design/curator-session.md#shared-consumer-and-verification-matrix)
+own gate lifecycle and consumer migration. No second lifecycle is specified here.
+
+| Interface / producer | Actual prerequisite and present status | Evidence admitting its consumer / acceptance owner |
+| --- | --- | --- |
+| Knowledge/fact contract — #457; restore slice #700 | Current `curator-knowledge/2`, `curator-fact/3` and frozen delivery exist. Belief, ontology and semantic gate changes remain unresolved; restore is separate. | Coordinated current-schema producer/readers, negative tests and supported oracle/cohort/utility plan admit the remaining #457 migration. Restore alone does not settle it. |
+| Program storage/submission envelope — #465 with #457 gate ownership | No program producer. Needs one immutable artifact identity, multi-file manifest/test layout, version/base references and publication eligibility contract; no fields or schema are frozen here. | Reviewed bounded contract plus same-change producer, gate and reader migration and unsupported-version tests. #465 retains gate-only publication, passive execution and every original acceptance criterion; a storage stub cannot close it. |
+| Passive actor interface — #465 | Needs the delivered frame/objective/knowledge boundary and typed inputs, emissions, slot requests and yield on current basic control. Removed `program-view/4` is not a basis. | Full-observation and pinned-version fixtures, no-I/O isolation and refusal tests for the one new contract. No old API or game-specific harness semantics return. |
+| Runner and custody — #465 passive runtime; #467 supervision; #466 slots | No runner exists. Needs validated policy output, frozen artifact/knowledge/slot bindings and existing delivery receipts; slots and asynchronous custody are later interfaces. | #465 proves passive execution; #466 proves budgeted slot mediation; #467 separately proves one sender, bounded preemption, observation freshness and handoff under the current computer-control contract. Storage proves none of these. |
+| Gate test/score plan — #457; program fitting consumer #469 | No supported semantic oracle, counterfactual utility measure or future-source coordinator. Mechanical replay agreement is a filter; curator-authored tests alone are not an independent oracle. | A frozen, source-separated plan and actual record producers, followed by independent verification and negative cases. Neither #465 nor #469 completion is added as a reverse blocker on #457. |
+| Disable/retirement — #457 eligibility; #467/#468 running custody | No program identity/eligibility producer. Selection revocation and stopping in-flight input are different effects. Restoring knowledge is not a stop command. | A future coordinated brief must specify the targeted immutable artifact/version, revocation persistence and effect on pinned selections; #467/#468 must prove active stop/receipt behavior. Full #457 program-disable acceptance stays open. |
+| Fitting/library — #469 | Needs the implemented #465/#467 interfaces and supported #457 later-source tests, with actual invocation/result records. | Replay can establish agreement only for observed inputs; later trace and finite supervised play must support probation, revision, retirement and utility claims. No invented success labels. |
+| Monitor/risk and viewer — #468/#471; existing reader #464 | Need actual #466/#467/#469 producers and gate-supported classification. Recorded knowledge viewing is not a program progress stream. | #468 measures detection on recorded program anomalies; #471 projects recorded identities, state, receipts and explicit unknowns using existing readers. Neither view nor self-declared risk establishes safety. |
+
+The minimum future handoff would freeze artifact identity/content and multi-file
+layout, base/version pinning, selection eligibility/revocation, and the passive
+input/output envelope, with explicit unknown/refusal outcomes and every affected
+producer/consumer/test migration. It must decide whether an artifact can be stored
+as ineligible before semantic qualification and what a disable does to an already
+pinned selection. Those choices are **unresolved**, not an authorization to publish
+unverified code. A complete language, interpreter, scheduler or risk framework is
+outside this discovery.
+
+There is no supported executable milestone to substitute for the existing full
+#457 blocker on #465 yet. Keep that blocker and #465–#471 in Backlog; parent #177
+membership is not a completion edge. Do not add #465/#469 completion back onto
+#457. Revisit with a bounded lead-owned brief naming the current contract paths,
+artifact/eligibility choices, semantic oracle/cohort/utility decisions and migration
+acceptance above. Only then can a reviewed interface deliverable replace a whole
+issue edge; #457's remaining belief and program-disable acceptance must stay tracked.
+This source-only defer closes discovery #702, not a program milestone. #470 remains
+the later integrated study; practice #472's decision and #473/#474 stay separate.
+
+| Finite source/tabletop case | Result and responsible gap |
+| --- | --- |
+| No current program producer | No program admission/run; #465 owns the missing coordinated contract. Historical readers confer no capability. |
+| Proposed artifact, no gate oracle | No semantic qualification or safe classification; #457 owns the oracle/cohort/utility gap. Ineligible storage itself needs the future explicit decision. |
+| Runner absent | No execution evidence; #465 owns passive runtime and #467 supervision. A manifest cannot act. |
+| Disable before selection / while running | Eligibility revocation belongs to #457's future program contract; stopping active custody belongs to #467/#468. Neither is implemented or satisfied by restore. |
+| Base changes or knowledge restores | A run's immutable program and delivered-knowledge pins cannot silently change. Future #465/#457 migration must specify stale-base refusal and effect on new selection; frozen old delivery remains evidence. |
+| Unknown or partial delivery | Existing computer-control permanent input stop applies; future #467 cannot reinterpret it as resumable yield or retry. No tabletop result proves receipt handling. |
+| Fitting, monitor or viewer requested before records exist | #469/#468/#471 remain blocked on real producers and qualified evidence; unavailable data stays absent/unknown, never fabricated success. |
+
+Independent source/architecture review and document CI qualify publication of this
+design only. These cases are not portable execution, native or real-play acceptance.
+The bounded review addresses R-ARCHITECTURE-DRIFT, R-FALSE-CLAIM and R-WRONG-MERGE
+at the cost of one source/design pass; it adds no runtime control or test framework.
 
 ### Model calls through capability slots (D8)
 
@@ -328,7 +388,7 @@ in the player system, separate from the evaluator's readers (ADR008).
   stream (milestones, expectation outcomes, anomalies, yields) and may `steer`,
   `stop` or act.
 - **Actor input preempts the program between batches.** The former program run held
-  the application lock for its whole run (`harness/application.py:185-196`), so an
+  the application lock for its whole run in the historical implementation, so an
   asynchronous run needs the runner outside that lock. Custody rules for the
   handover:
   - While a program runs, it holds the input capability, and the actor's input
