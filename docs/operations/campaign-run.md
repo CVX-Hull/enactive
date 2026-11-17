@@ -169,13 +169,10 @@ Choose the limit from the realistic cost of the planned run, inside the owner's
 envelope. The configured-rate estimate in a trace (`usage.cost`) is not what counts;
 the receipt records the counted figures.
 
-Before paid play, the lead reads the provider account balance and confirms that
-the auto top-up threshold stays above the realistic actual cost of the planned
-runs. OpenRouter sizes its in-flight hold from the current balance, so a low
-account produces repeated in-flight 402s that one host retry may not outlast
-(the [#304 record](../acceptance/2026-10-31-capable-player.md) holds an example), and an exhausted one returns terminal credit
-refusals. A key credit limit close to what the key has already spent can cause the
-same refusals, and each refused request counts at the bound.
+The [operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)
+assign provider billing to the owner. Before paid play, the lead verifies the
+approved envelope against the frozen package. Preserve provider credit refusals
+as run evidence and count a refusal without a usable cost at the frozen bound.
 
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked
@@ -344,10 +341,13 @@ lead has done both of these:
 1. Recorded the run with `--record-upper-bound` added to the command above. The row
    then holds the most the run can have spent: `provider_usd` is the receipt's
    `spend_limit_usd`; the player unpriced count is `min(1, attempts)`, and the recall unpriced count is 1 only when delivered knowledge has units and at least two attempts were charged. The two bounds come from the receipt. Thus `spend_usd` is the limit plus the possible in-flight bounds, and combined unpriced counts never exceed attempts. The flag is refused for a receipt whose spend is complete.
-2. Noted in the run's dated record that the row is an upper bound, with the OpenRouter
-   key's activity figure for the run's time window. A `dev-run/2` row has no field
-   that marks an upper bound, so the dated record is where that is stated. `run_ledger totals --study ISSUE --envelope USD`
-applies the [actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),
+2. Marked the row as an upper bound in the run's dated record and stated which
+   cost evidence was unavailable. The provider's charge remains unknown when the
+   run could not establish it. The record supplies that context for the
+   `dev-run/2` row.
+
+`run_ledger totals --study ISSUE --envelope USD` applies the
+[actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),
 with `--forecast-largest USD` standing in for the largest admission before any completes.
 This is the only ledger writer.
 
