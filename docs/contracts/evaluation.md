@@ -1144,6 +1144,9 @@ newline. A source change requires a fresh snapshot; no receipt is associated wit
 run or a separate result journal. The reader accepts the current close-out object,
 terminal curator-session `container-manifest/1` and current `curator-gate/2` results;
 unsupported metadata and records yield no partial projection.
+Required close-out lifecycle fields and prepared-session metadata must be present;
+the producer's minimal preparation-abort receipt remains valid. Restricted windows
+start at one and end no earlier than their first step.
 
 The session route returns `header` and `drafts` alongside the paged result `items`.
 The allowlisted header records inputs, pinned versions and digests, configured limits,

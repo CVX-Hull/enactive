@@ -175,6 +175,19 @@ def session_projection(record: object) -> tuple[dict, dict | None, list]:
     if m['kind'] != 'curator-session' or m['owner_role'] != 'curator' or m['lifecycle']['state'] not in ('sealed', 'aborted'):
         raise ValueError('manifest kind')
     inputs, pinned, budgets, life, provenance = (m[k] for k in ('inputs', 'pinned', 'budgets', 'lifecycle', 'provenance'))
+    if not {'state', 'ended_wall', 'stopped', 'returncode', 'survivors', 'errors', 'refused'} <= life.keys():
+        raise ValueError('incomplete close-out')
+    if 'started_wall' in life:
+        if (not {'session_kind', 'trace_sessions', 'window_frames', 'window', 'coverage', 'drafts'} <= inputs.keys()
+                or not {'knowledge_version', 'trace_manifest_sha256', 'brief_sha256'} <= pinned.keys()
+                or not {'wall_seconds', 'memory_bytes', 'disk_bytes', 'cap_usd'} <= budgets.keys()
+                or (inputs['session_kind'] == 'grooming' and 'grooming_sha256' not in pinned)):
+            raise ValueError('incomplete prepared session')
+    elif life['state'] != 'aborted' or any((inputs, pinned, budgets, provenance)):
+        raise ValueError('incomplete preparation abort')
+    resource_keys = {'seconds', 'peak_memory_bytes', 'peak_disk_bytes'}
+    if (life['state'] == 'sealed' or resource_keys & provenance.keys()) and not resource_keys <= provenance.keys():
+        raise ValueError('incomplete resource report')
     string = lambda v: isinstance(v, str)
     integer = lambda v: type(v) is int and v >= 0
     strings = lambda v: isinstance(v, list) and all(string(x) for x in v)
@@ -195,7 +208,9 @@ def session_projection(record: object) -> tuple[dict, dict | None, list]:
         raise ValueError('metadata')
     window = inputs.get('window')
     if 'window' in inputs and (not isinstance(window, dict) or set(window) not in (set(), {'session', 'actor', 'first', 'last'}) or
-        (window and (not all(string(window[k]) for k in ('session', 'actor')) or not all(integer(window[k]) for k in ('first', 'last'))))):
+        (window and (not all(string(window[k]) for k in ('session', 'actor'))
+                     or not all(integer(window[k]) for k in ('first', 'last'))
+                     or window['first'] < 1 or window['last'] < window['first']))):
         raise ValueError('window')
     coverage = inputs.get('coverage')
     if 'coverage' in inputs and (not isinstance(coverage, dict) or set(coverage) != {'schema', 'session', 'actor', 'last_step'} or coverage['schema'] != 'curator-coverage/2' or not string(coverage['session']) or not _optional(coverage, 'actor', string) or not _optional(coverage, 'last_step', integer)):
@@ -223,12 +238,12 @@ def session_projection(record: object) -> tuple[dict, dict | None, list]:
         if omitted:
             out['omitted_characters'] = omitted
         return out
-    header = dict(**fields(m, ('id',)), inputs=fields(inputs, ('session_kind', 'window_frames')),
+    header = dict(**fields(dict(id=m['id'], published_after=published), ('id', 'published_after')),
+                  inputs=fields(inputs, ('session_kind', 'window_frames')),
                   pinned=fields(pinned, ('knowledge_version', 'trace_manifest_sha256', 'brief_sha256', 'grooming_sha256')),
                   budgets=fields(budgets, ('wall_seconds', 'memory_bytes', 'disk_bytes', 'cap_usd')),
                   lifecycle=fields(life, ('state', 'started_wall', 'ended_wall', 'stopped', 'returncode')),
-                  resources=fields(provenance, ('seconds', 'peak_memory_bytes', 'peak_disk_bytes')),
-                  published_after=published)
+                  resources=fields(provenance, ('seconds', 'peak_memory_bytes', 'peak_disk_bytes')))
     for k in ('trace_sessions', 'drafts'):
         if k in inputs and inputs[k] is not None: header['inputs'][k] = _text_list(inputs[k])
     for k in ('errors', 'refused'):
