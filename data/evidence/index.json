@@ -720,6 +720,20 @@
       },
       "visibility": "private"
     },
+    "post-gate-design-backlog-grooming": {
+      "availability": "present",
+      "bytes": 3989689,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-post-gate-design-backlog-grooming.md"
+      ],
+      "files": 58,
+      "manifest_sha256": "497f54f0f3819f93531a295b70c33d5d3a9692fe0772a10eb5be9656c3306c86",
+      "note": "Complete33-open-issue baseline and35-open/272-card final readbacks after697design. Retain700ReadyImportant; add701/702ReadyFollowup with disjoint bounded definitions/retirement, parent/blocker relations and six current descriptions preserving all Acceptance. All existing Projectfieldsunchanged; sharedwork/reviewcanoverlap, integration/CIserialized. Includes original/current tracker, briefs and source/review/cleanup adjudication. No implementation, new images/labels or experimental provider/game/native calls. Git/publicationPR owns source history and later CI; duplicate task staging removed only after full hash/path proof.",
+      "sources": {
+        "tracker": ".runtime/backlog-after-gate-contract@6625a8c380601aa089c7f8a0f9452db07ad59dba"
+      },
+      "visibility": "private"
+    },
     "post-process-report-backlog-grooming": {
       "availability": "present",
       "bytes": 3878990,
