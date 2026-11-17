@@ -475,7 +475,7 @@ def custodian(tmp_path):
     """The real custodian/playing-service HTTP listener (with /api/pause) over receiver doubles."""
     from harness.application import Application
     from harness.computer.runtime import ComputerRuntime
-    from harness.player.memory import Memory
+    from harness.player.journal import Journal
     from harness.server import serve
     from tests.test_computer_runtime import Channel, Process
 
@@ -483,10 +483,10 @@ def custodian(tmp_path):
     directory.mkdir()
     runtime = ComputerRuntime(directory, 'a'*32, Channel(), Process(), time.monotonic()+90,
                               dict(max_inputs=10, max_requests=20, max_frames=20, max_bytes=2**20))
-    memory = Memory(directory/'player.sqlite3')
+    memory = Journal(directory/'player.sqlite3')
     server, thread = serve(Application(runtime, memory, directory/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json'), 0)
     actor = runtime.add_actor()
-    (directory/'actor.json').write_text(json.dumps(dict(schema='player-adapter/1', session=runtime.session,
+    (directory/'actor.json').write_text(json.dumps(dict(schema='player-adapter/2', session=runtime.session,
                                                         base_url=f'http://127.0.0.1:{server.server_port}', **actor)))
     try:
         yield server.server_port, directory

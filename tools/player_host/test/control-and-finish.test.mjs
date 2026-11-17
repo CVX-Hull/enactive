@@ -66,7 +66,8 @@ test('stored tool result text and structured content cannot impersonate direct f
   assert.equal(events.filter(event=>event.type==='player-finish').length,1);
 });
 test('finish arguments require closed bounds and matching direct control origin',async t=>{
-  const invalid=[{...finishArgs(),extra:true},{...finishArgs(),report:'x'.repeat(8193)},
+  const invalid=[...['', ' ', 'two\nlines', 'x'.repeat(513), undefined].map(intent=>({...finishArgs(),intent})),
+    {...finishArgs(),cites:['same','same']},{...finishArgs(),extra:true},{...finishArgs(),report:'x'.repeat(8193)},
     {...finishArgs(),source_ids:['same','same']},{...finishArgs(),source_ids:['x'.repeat(129)]},
     {...finishArgs(),source_ids:Array.from({length:17},(_,index)=>`source-${index}`)},
     finishArgs('external_stop_complete',stopCommand.id),finishArgs('task_complete',stopCommand.id)];

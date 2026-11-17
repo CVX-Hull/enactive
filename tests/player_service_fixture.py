@@ -19,7 +19,7 @@ import anyio
 
 from harness.application import Application
 from harness.computer.runtime import ComputerRuntime
-from harness.player.memory import Memory
+from harness.player.journal import Journal
 from harness.player_mcp import run
 from harness.server import serve
 from tests.test_computer_runtime import Channel, Process
@@ -37,7 +37,7 @@ def main():
         channel=Channel()
         runtime=ComputerRuntime(directory,'a'*32,channel,Process(),time.monotonic()+90,
             dict(max_inputs=100,max_requests=200,max_frames=200,max_bytes=2**30))
-        memory=Memory(directory/'player.sqlite3')
+        memory=Journal(directory/'player.sqlite3')
         application=Application(runtime,memory,directory/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
         server,thread=serve(application,0)
         if args.actor_id is None:
@@ -49,7 +49,7 @@ def main():
             with patch('harness.computer.runtime.uuid.uuid4',return_value=SimpleNamespace(hex=args.actor_id)):
                 actor=runtime.add_actor()
         config=directory/'actor.json'
-        config.write_text(json.dumps(dict(schema='player-adapter/1',base_url=f'http://127.0.0.1:{server.server_port}',
+        config.write_text(json.dumps(dict(schema='player-adapter/2',base_url=f'http://127.0.0.1:{server.server_port}',
             session=runtime.session,**actor)))
         config.chmod(0o600)
         try:

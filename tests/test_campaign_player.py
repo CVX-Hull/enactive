@@ -16,7 +16,7 @@ from tools.configure_player_tools import configuration
 
 
 BOUND=Decimal('0.25')
-START=dict(type='host-start',telemetry_version=5,schema='player-host/5')
+START=dict(type='host-start',telemetry_version=6,schema='player-host/6')
 
 
 def cost(request,amount,how='provider-reported',kind='response-complete'):
@@ -124,7 +124,7 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/5',4),('player-host/3',3),('player-host/3',4),('player-host/5',3),(None,4)])
+@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/3',3),('player-host/3',4),('player-host/6',3),(None,4)])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
@@ -174,7 +174,7 @@ assert prompt.startswith('Frozen mission') and 'Software actor/resource note' no
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
-emit(type='host-start', telemetry_version=5, schema='player-host/5', spend_limit_usd=route['spend_limit_usd'])
+emit(type='host-start', telemetry_version=6, schema='player-host/6', spend_limit_usd=route['spend_limit_usd'])
 recall_made = int('WITH_RECALL' in prompt and route['recall']['max_requests']>0)
 if recall_made:
     emit(type='request-start',request_id='recall-1',request_role='recall')

@@ -18,7 +18,7 @@ evaluation or the curator, and it opens no network or process.
 
 ## Projection
 
-[`projection.project`](../../harness/trace/projection.py) writes `trace-projection/1`.
+[`projection.project`](../../harness/trace/projection.py) writes `trace-projection/2`.
 
 **What it contains:**
 - **Frames**, copied after their SHA-256 matches the sealed metadata. Frame IDs must

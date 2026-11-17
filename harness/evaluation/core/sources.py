@@ -23,14 +23,14 @@ SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 #: The current versions. Any other version of these records is an error naming the file and version, except where
 #: the closed archive index below lists that exact version for that session.
-HOST_SCHEMA = 'player-host/5'
-HOST_TELEMETRY = 5
-MANIFEST_SCHEMA = 'campaign-run/7'
+HOST_SCHEMA = 'player-host/6'
+HOST_TELEMETRY = 6
+MANIFEST_SCHEMA = 'campaign-run/8'
 RECEIPT_SCHEMA = 'campaign-receipt/5'
 DRIVER_SCHEMA = 'player-driver/5'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
 MEMORY_SCHEMA = 'player-memory/2'
-CONTEXT_SCHEMA = 'player-handoff-context/1'
+CONTEXT_SCHEMA = 'player-handoff-context/2'
 BUSY_TIMEOUT_SECONDS = 1.0
 #: Bounds of one JSON file and of one host trace (4096 traces and 8 GiB are `host-summary`'s selection bounds).
 MAX_JSON_FILE_BYTES = 16 * 1024 * 1024
@@ -82,7 +82,7 @@ _DRIVER_3 = ('schema', 'outcome', 'attempts_charged', 'host_seconds_used', 'conf
 #: Nothing else differs for a reader: the dollar-limit fields a current trace adds are read by no evaluator code.
 _HOST_3 = ('schema', 'telemetry_version', 'session', 'actor_id', 'model', 'provider', 'effort', 'provider_routing')
 _SHARED = dict(receipt=_RECEIPT_3, driver=_DRIVER_3, host=_HOST_3)
-#: Every accepted combination: exactly the three the sealed store holds. An index entry with any other is an error
+#: Every accepted historical combination, bound to exact sealed session IDs. An index entry with any other is an error
 #: at load. `read_end_facts` applies the receipt, driver and run-ending fields and takes nothing else from an old
 #: record.
 ARCHIVE_COMBINATIONS = (
@@ -109,6 +109,11 @@ ARCHIVE_COMBINATIONS = (
              host_telemetry=4, run_ending='campaign-watch-terminal/4'),
         dict(manifest=(*(key for key in _MANIFEST_5 if key != 'accounting'), 'spend_limit_usd'),
              receipt=_RECEIPT_3, driver=(*_DRIVER_3, 'reported_usd', 'unpriced_requests', 'unpriced_request_usd', 'spent_usd', 'spend_complete'), host=_HOST_3)),
+    # Memory adoption #463 preserves these exact sealed pre-migration sessions.
+    ArchiveCombination(
+        dict(manifest='campaign-run/7', receipt='campaign-receipt/5', driver='player-driver/5', host='player-host/5',
+             host_telemetry=5, run_ending='campaign-watch-terminal/4'),
+        dict(manifest=(*(key for key in _MANIFEST_5 if key != 'accounting'), 'spend_limit_usd'), host=_HOST_3)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
 MANIFEST_SCHEMAS = (*sorted({c.versions['manifest'] for c in ARCHIVE_COMBINATIONS} - {MANIFEST_SCHEMA}), MANIFEST_SCHEMA)
@@ -157,6 +162,9 @@ class MemoryFacts:
     path: Path
     records: dict[str, dict]
     programs: dict[str, dict]
+    hints: tuple[dict, ...] = ()
+    calls: tuple[dict, ...] = ()
+    schema: str = 'player-memory/2'
 
 
 @dataclass(frozen=True)
@@ -359,7 +367,7 @@ class HostTraceUnsupported(EvaluationError):
 
 def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
               entry: ArchiveSession | None = None) -> Iterator[HostEvent]:
-    """Stream one player-host/5 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+    """Stream one current player-host/6 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
     host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
     evaluation never gates the control path (ADR008).
 
@@ -413,14 +421,27 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
 
 
 def read_host(path: Path, actor_hint: str, entry: ArchiveSession | None = None) -> tuple[str, tuple[HostEvent, ...]]:
-    """One whole player-host/5 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    """One whole current player-host/6 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
     still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final.
     `entry` is its session's archive index entry, as in `iter_host`."""
     events = tuple(iter_host(path, actor_hint, partial_tail=True, entry=entry))
     return events[0].actor, events
 
 
-def read_memory(path: Path) -> MemoryFacts:
+def read_player_store(path: Path) -> MemoryFacts:
+    """Read a current public journal through a read-only connection, without player writers."""
+    from harness.trace.journal_reader import StoreError, read_connection
+    connection = _connect_readonly(path)
+    try:
+        data = read_connection(connection, path)
+    except (sqlite3.Error, StoreError) as exc:
+        raise EvaluationError(f'{path}: cannot read player-journal/1 ({exc})') from exc
+    finally:
+        connection.close()
+    return MemoryFacts(path, {}, {}, tuple(data['hints']), tuple(data['calls']), data['schema'])
+
+
+def read_historical_memory(path: Path) -> MemoryFacts:
     """Read a player-memory/2 store: only authorship and structure, never the PNG blobs."""
     connection = _connect_readonly(path)
     try:
@@ -442,7 +463,7 @@ def read_memory(path: Path) -> MemoryFacts:
     return MemoryFacts(path, records, programs)
 
 
-def read_carry(run_dir: Path) -> dict[str, frozenset[str]]:
+def read_carry(run_dir: Path, *, historical: bool = False) -> dict[str, frozenset[str]]:
     """Record and program IDs each handing-off actor carried, from its contexts/<id>.json."""
     carry: dict[str, frozenset[str]] = {}
     directory = run_dir / 'contexts'
@@ -450,10 +471,12 @@ def read_carry(run_dir: Path) -> dict[str, frozenset[str]]:
         return carry
     for path in sorted(directory.glob('*.json')):
         packet = read_json_file(path)
-        if not isinstance(packet, dict) or packet.get('schema') != CONTEXT_SCHEMA:
+        if not isinstance(packet, dict) or packet.get('schema') != ('player-handoff-context/1' if historical else CONTEXT_SCHEMA):
             found = packet.get('schema') if isinstance(packet, dict) else None
             raise EvaluationError(f'{path}: unsupported handoff context version {found!r}; expected {CONTEXT_SCHEMA}')
-        knowledge = packet.get('knowledge') or {}
+        if not historical and (packet.get('summary_is_hint') is not True or 'knowledge' in packet or 'ids' in packet):
+            raise EvaluationError(f'{path}: unsupported current handoff hint shape')
+        knowledge = (packet.get('knowledge') or {}) if historical else {}
         ids = {node['id'] for key in ('records', 'programs') for node in knowledge.get(key, ()) if isinstance(node, dict) and 'id' in node}
         carry[packet['actor_id']] = frozenset(ids)
     return carry
@@ -541,8 +564,8 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
         candidate = Path(manifest['player_store'])
         candidate = candidate if candidate.is_absolute() else run_dir / candidate
         selected = candidate if candidate.is_file() else None
-    memory = read_memory(Path(selected)) if selected is not None else None
+    memory = (read_historical_memory(Path(selected)) if entry is not None else read_player_store(Path(selected))) if selected is not None else None
     if selected is not None:
         found['player-memory'] = digest(Path(selected))
     return RunInputs(run_dir, session, manifest, tuple(operations), operations[-1].seq if operations else None,
-        tuple(actors), host, read_carry(run_dir), memory, found, read_end_facts(run_dir, manifest))
+        tuple(actors), host, read_carry(run_dir, historical=entry is not None), memory, found, read_end_facts(run_dir, manifest))

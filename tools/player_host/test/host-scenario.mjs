@@ -18,11 +18,12 @@ const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.p
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
 // The dollar limit is far above anything these fixtures count, so only a test that sets its own limit meets it.
-const route = () => ({schema:'player-host/5',context_reserve_tokens:4096,service_tier:'default', model:structuredClone(model), recall:{model:structuredClone(model),every:5,max_requests:4,unpriced_request_usd:'0.25'}, api_key_env:'OFFLINE_TEST_KEY', max_requests:4, spend_limit_usd:'100', unpriced_request_usd:'0.25', max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const route = () => ({schema:'player-host/6',context_reserve_tokens:4096,service_tier:'default', model:structuredClone(model), recall:{model:structuredClone(model),every:5,max_requests:4,unpriced_request_usd:'0.25'}, api_key_env:'OFFLINE_TEST_KEY', max_requests:4, spend_limit_usd:'100', unpriced_request_usd:'0.25', max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 // The usage record a fixture response carries unless a test supplies its own: token counts and a reported cost.
 const usageRecord = {prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0.000038};
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   if (!calls.length && content !== null) calls = [['player_finish',{disposition:'task_complete',report:content.slice(0,8192),source_ids:[],control_id:null}]];
+  calls = calls.map(([name,args]) => [name, ['computer_observe','computer_input','computer_result','computer_stop','player_source','player_knowledge_read','player_knowledge_query','player_hint','player_result','player_handoff','player_finish'].includes(name) ? {intent:'State the fixture action', ...args} : args]);
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
     {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:withUsage === true ? usageRecord : withUsage} : {})}];
@@ -95,7 +96,7 @@ function eventStream(text) {
   return new Response(text, {headers:{'content-type':'text/event-stream'}});
 }
 
-const handoffArgs = {ids:[],summary:'Retain current context'};
+const handoffArgs = {intent:'Hand off the unfinished objective',summary:'Retain current context'};
 const handoffTools = ['mutate','player_handoff','computer_result'];
 const handoffId = '1'.repeat(32);
 const sessionId = '2'.repeat(32);

@@ -18,14 +18,14 @@ rule still decide acceptance. No value on this page reaches the player.
 The evaluator reads one run directory read-only:
 - `session.sqlite3` (`computer-session/1`);
 - `sources/*.png`;
-- each `actors/NNN/host.jsonl` (`player-host/5`), including its per-request context
+- each `actors/NNN/host.jsonl` (`player-host/6`), including its per-request context
   manifest;
-- the handoff contexts under `contexts/*.json` (`player-handoff-context/1`);
-- `manifest.json` (`campaign-run/7`), including its operator labels;
+- the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
+- `manifest.json` (`campaign-run/8`), including its operator labels;
 - for the closed set of archived sessions only, the older versions of the manifest,
   host traces, receipt and run-ending record that the archive index lists for each
   session (see "Implementation rules");
-- the run's `player-memory/2` store.
+- the run's `player-journal/1` public call and hint store.
 
 Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
 input format is an error naming the file and version. Nothing is guessed.
@@ -42,13 +42,13 @@ input format is an error naming the file and version. Nothing is guessed.
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
   forbid the computer importing evaluation.
-- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/5`), used by
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/6`), used by
   the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
   `tools/campaign_player.py` stays separate because evaluation never gates the control path
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/5` telemetry 5. The one exception is a trace of an
+  `host-start` is not `player-host/6` telemetry 6. The one exception is a trace of an
   archived session: its caller passes that session's index entry, and the trace is then
   also read in the version the entry lists, when its `host-start` names that session.
   `host-summary` finds the entry from the manifest of the run directory the trace sits in,
@@ -107,7 +107,9 @@ Its `metadata.state` is `live` or `final`.
 - `payload` is JSON. Core field names never contain game words; game detail lives in
   `payload.binding`.
 
-**Core event kinds.**
+**Core event kinds.** Legacy memory and program events are historical evidence;
+the current journal supplies public calls and hints, with authored-memory and
+program views unavailable for current runs.
 
 Mechanical (from host traces and the session store):
 - `handoff`;
@@ -272,7 +274,7 @@ their numbers for latency and delivery counts.
 | `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
 | `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`); `pilot` writes the withholding pilot's unit-level analysis (`withholding-pilot/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
 | `python -m tools.process_measures` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The game-neutral process measures: `milestones packets` and `milestones events` freeze each admission's milestones; `packets`, `events`, `agreement` and `measure` judge windows and report `process-measures/1`. It calls no model and spends nothing; see [process measures](#process-measures-process-measures1). |
-| `python -m tools.memory_reads` | text, or `--json` | Per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
+| `python -m tools.memory_reads` | text, or `--json` | For sealed historical traces, per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
 | `python -m tools.memory_screen_checks` | text, or `--json` | Three subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options. Its `recorded` row is from the traces; every other row is simulated, not measured. |
 
 **Percentiles.** There is one definition, nearest rank (`metrics.nearest_rank`): the
@@ -367,9 +369,15 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     record in an older version is read only for a session the index lists with exactly
     that version, beside a manifest in the version the index lists for that session. Any
     other old version is an error naming the file and version. This reads historical
-    evidence; it is not an admission, and admission still requires `campaign-run/7`.
+    evidence; it is not an admission, and admission still requires `campaign-run/8`.
   - **The spend-limit session.** The owner added `spend-limit-run-555` on 13 November 2026: `campaign-run/6`, `campaign-receipt/4`, `player-driver/4`, `player-host/4` telemetry 4 and `campaign-watch-terminal/4`. It is read-only in those versions. Its manifest supplies `spend_limit_usd` rather than the earlier reservation; receipt/driver ending fields and host evidence are read as recorded. No archive is admitted for play.
-  - **The four combinations.** The index holds 55 sessions in four combinations of versions.
+  - **The five combinations.** The index holds 135 sessions in five combinations of versions.
+    The memory adoption migration (#463) adds the 80 exact sealed `campaign-run/7`
+    packages with `campaign-receipt/5`, `player-driver/5`, `player-host/5` telemetry 5
+    and `campaign-watch-terminal/4`. Missing records stay missing; an allowed version
+    does not establish that a host ran or that a terminal was recorded. Only the old
+    manifest and host versions differ from current for this combination; their
+    recorded labels, spend limit and public events remain evidence.
     The original 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
     `player-driver/3` and `player-host/3` with telemetry version 3, beside a
     `campaign-run/4` or `campaign-run/5` manifest. For each record that is not current,
@@ -936,10 +944,10 @@ Development-run quantities live as data in git, and pages render them or cite th
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/2`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/7` manifest and `campaign-receipt/5` alone |
+| `runs.jsonl` | One [`dev-run/2`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/8` manifest and `campaign-receipt/5` alone |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
-- **Origin.** `record` reads `campaign-run/7` packages with a `campaign-receipt/5` only;
+- **Origin.** `record` reads `campaign-run/8` packages with a `campaign-receipt/5` only;
   there is no reader for older manifests or receipts, and the rows already in the ledger
   were migrated once from `dev-run/1` to `dev-run/2`: recall counts/bounds are zero/`"0"` for recorded splits and null/null for unknown splits. There is no runtime converter. It takes `provider_usd` from the receipt's `reported_usd`,
   `unpriced_attempts` from `unpriced_requests`, `unpriced_attempt_usd` from

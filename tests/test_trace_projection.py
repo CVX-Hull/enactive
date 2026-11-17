@@ -383,16 +383,74 @@ def test_tracked_397_sidecar_index_matches_the_sealed_sessions():
     assert 'actor.json' not in text and 'route.json' not in text
 
 
-def test_the_projection_keeps_exactly_the_arguments_each_tool_takes():
-    """R-REGRESSION (#626): an allowlist that differs from a tool's arguments silently drops what the player
-    actually sent (the read's record id and a program run's starting state were lost this way). The allowlist is
-    checked against the live tool table, tool by tool and argument by argument."""
-    from harness.player_tools import tool_specs
-    from harness.trace.projection import TOOL_ARGUMENTS, _arguments
-    specs = tool_specs()
-    assert set(TOOL_ARGUMENTS) == set(specs)
-    for tool, (_, schema) in specs.items():
-        assert set(TOOL_ARGUMENTS[tool]) == set(schema.get('properties', {})), tool
-    assert _arguments('player_memory_read', dict(record_id='r7')) == dict(record_id='r7')
-    run = dict(program_id='p', initial_state={'a': 1}, interpretation='i', selection='s', max_steps=3, max_seconds=4)
-    assert _arguments('player_program_run', run) == run
+def test_current_public_arguments_are_allowlisted():
+    from harness.trace.projection import _arguments
+
+    assert _arguments('player_hint', dict(text='note', source_ids=['s'], intent='remember', cites=['c'],
+                                          reasoning='private')) == dict(
+        text='note', source_ids=['s'], intent='remember', cites=['c'])
+    assert _arguments('unknown', dict(intent='private')) == {}
+
+
+def make_journal(path):
+    db = sqlite3.connect(path)
+    db.executescript("""
+        PRAGMA user_version=1;
+        CREATE TABLE metadata(schema TEXT NOT NULL);
+        CREATE TABLE sources(id TEXT PRIMARY KEY, metadata TEXT NOT NULL, png BLOB);
+        CREATE TABLE calls(id TEXT PRIMARY KEY, actor TEXT NOT NULL, tool TEXT NOT NULL, args TEXT NOT NULL);
+        CREATE TABLE hints(id TEXT PRIMARY KEY REFERENCES calls(id), document TEXT NOT NULL);
+        INSERT INTO metadata VALUES ('player-journal/1');
+    """)
+    db.execute('INSERT INTO sources VALUES(?,?,?)', ('s1', json.dumps({'source_id': 's1'}), b'private png'))
+    args = dict(text='out-of-window journal sentinel', source_ids=['s1'], intent='remember', cites=[], reasoning='private')
+    db.execute('INSERT INTO calls VALUES(?,?,?,?)', ('h1', 'actor', 'player_hint', json.dumps(args)))
+    hint = dict(schema='player-hint/1', id='h1', actor_id='actor', created_wall=1, text=args['text'],
+                source_ids=['s1'], intent='remember', cites=[], reasoning='private')
+    db.execute('INSERT INTO hints VALUES(?,?)', ('h1', json.dumps(hint)))
+    db.commit()
+    db.close()
+
+
+def test_journal_projection_is_public_read_only_and_hashed(tmp_path):
+    session = make_session(tmp_path)
+    journal = tmp_path/'journal.sqlite3'
+    make_journal(journal)
+    before = journal.read_bytes()
+    out = tmp_path/'trace'
+    manifest = project([session], out, journal=journal)
+    doc = json.loads((out/'journal.json').read_text())
+    assert manifest['schema'] == 'trace-projection/2' and manifest['hints'] == 'journal.json and tool calls'
+    assert doc['hints'][0]['text'] == 'out-of-window journal sentinel'
+    assert doc['calls'][0]['arguments']['intent'] == 'remember'
+    assert b'private' not in (out/'journal.json').read_bytes()
+    assert manifest['files']['journal.json'] == hashlib.sha256((out/'journal.json').read_bytes()).hexdigest()
+    assert journal.read_bytes() == before
+
+
+def test_bad_journal_fails_without_partial_output(tmp_path):
+    session = make_session(tmp_path)
+    journal = tmp_path/'journal.sqlite3'
+    make_journal(journal)
+    db = sqlite3.connect(journal)
+    db.execute('PRAGMA user_version=2')
+    db.close()
+    with pytest.raises(ProjectionError, match='user_version'):
+        project([session], tmp_path/'trace', journal=journal)
+    assert not (tmp_path/'trace').exists()
+    assert not list(tmp_path.glob('.trace.partial-*'))
+
+
+def test_secret_in_journal_fails_closed(tmp_path):
+    session = make_session(tmp_path)
+    journal = tmp_path/'journal.sqlite3'
+    make_journal(journal)
+    db = sqlite3.connect(journal)
+    doc = json.loads(db.execute('SELECT document FROM hints').fetchone()[0])
+    doc['text'] = TOKEN
+    db.execute('UPDATE hints SET document=?', (json.dumps(doc),))
+    db.commit()
+    db.close()
+    with pytest.raises(ProjectionError, match='Secret guard'):
+        project([session], tmp_path/'trace', journal=journal)
+    assert no_output(tmp_path)

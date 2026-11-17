@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/5`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/6`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -91,7 +91,7 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/5"`, `model`,
+The closed route has exactly `schema: "player-host/6"`, `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
@@ -353,8 +353,16 @@ sealed, the driver may deliver the same command to a verified successor under
 original reserves, gated as above, or record incomplete ending. Pause, hard
 deadlines and owned cleanup remain independent of model response or game saving.
 
+All player tools require public `intent` and allow optional `cites` under the same
+bounds as finish below. `player_hint` reports fallible text and optional source IDs
+without publishing knowledge. Active player memory-authoring and program tools are
+retired. Handoff carries a labelled summary hint with no record roots; existing
+briefing, reminders and knowledge reads retain their contracts.
+
 The host adds reserved `player_finish` beside MCP tools, with closed
-`disposition,report,source_ids,control_id` arguments. Dispositions are
+`intent,disposition,report,source_ids,control_id` arguments and optional `cites`.
+`intent` is nonempty one-line public text, at most 512 characters; optional citations
+are at most 16 unique IDs (each 1..128 characters). Dispositions are
 `task_complete`, `cannot_continue`, `external_stop_complete`; report≤8192characters,
 unique source IDs≤16 (each1..128characters). External completion must name the
 directly received control; other dispositions require null. Only validated direct
@@ -371,7 +379,7 @@ post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
 cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 5 retains request text/UTF8 counts,
+call IDs where applicable. Telemetry version 6 retains request text/UTF8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -481,7 +489,7 @@ progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 5 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 6 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings
@@ -520,4 +528,4 @@ to analyze traces; future telemetry versions are not silently interpreted.
 
 The required `--delivered-knowledge` file is `delivered-knowledge/1`; it has no text-size cap. `--finish-reserve-usd` is the frozen reserve from the package. The closed route additionally requires `recall:{model,every,max_requests,unpriced_request_usd}` with the same provider and credential variable as the player. `max_requests` limits all player and recall HTTP attempts together; the nested maximum is a per-run recall allowance that the driver reduces by prior actors' recall attempts (their whole recall allocation when accounting is incomplete). Recall counts and request IDs begin at fetch, where both attempt limits are checked again; it never takes the player's final attempt.
 
-The first user message carries a labelled fallible briefing and complete remaining index, including standalone facts and coverage. Recall reminders run beside play, become separate labelled messages, and preserve the sent prefix. Recall asks for one JSON object (structured output on OpenRouter), puts the index first in its request, and accepts one object, bare or in one code fence. An invalid selection with a valid cost fails that opportunity only; any other recall failure or absent cost disables recall alone. `knowledge-recall` keeps the bounded reply text and the precise refusal reason. A valid reported cost is retained when selection is rejected or a response stops for length; only missing or invalid cost uses the bound. `recall-N` attempts share counted spend and limits, include every in-flight bound in admission, and never begin after an orderly stop or when spent plus an in-flight player bound plus the finish reserve reaches the limit. Empty knowledge makes no recall request. The host aborts and counts an in-flight recall at actor end. Settlement carries separate `unpriced_requests` and `unpriced_recall_requests` counts; telemetry 5 records `knowledge-delivery`, `knowledge-recall` (including silence/failure/not-made) and `knowledge-undelivered`. The full boundary is in the player-host contract.
+The first user message carries a labelled fallible briefing and complete remaining index, including standalone facts and coverage. Recall reminders run beside play, become separate labelled messages, and preserve the sent prefix. Recall asks for one JSON object (structured output on OpenRouter), puts the index first in its request, and accepts one object, bare or in one code fence. An invalid selection with a valid cost fails that opportunity only; any other recall failure or absent cost disables recall alone. `knowledge-recall` keeps the bounded reply text and the precise refusal reason. A valid reported cost is retained when selection is rejected or a response stops for length; only missing or invalid cost uses the bound. `recall-N` attempts share counted spend and limits, include every in-flight bound in admission, and never begin after an orderly stop or when spent plus an in-flight player bound plus the finish reserve reaches the limit. Empty knowledge makes no recall request. The host aborts and counts an in-flight recall at actor end. Settlement carries separate `unpriced_requests` and `unpriced_recall_requests` counts; telemetry 6 records `knowledge-delivery`, `knowledge-recall` (including silence/failure/not-made) and `knowledge-undelivered`. The full boundary is in the player-host contract.

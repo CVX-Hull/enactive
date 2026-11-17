@@ -82,3 +82,32 @@ test('no network origin is used: every request stays on the page origin', {timeo
   await page.close();
   assert.deepEqual(foreign, []);
 });
+
+test('current hints stay unverified text and retired programs are explicit', {timeout: 30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#live`, {width:390,height:900,mobile:true});
+  const hint = {id:'hint-visible',actor_id:'a'.repeat(32),text:'<script>window.hintExecuted=true</script> An uncertain report',
+    intent:'Report what needs checking',cites:['fact-visible'],source_ids:['source-unverified']};
+  try {
+    await S.ready(page);
+    page.on('request', request => {
+      const path = new URL(request.url()).pathname;
+      const value = path.endsWith('/memory') ? {schema:'spectator-view/1',available:true,store_schema:'player-journal/1',records:[],hints:[hint],hints_omitted:0}
+        : path.endsWith('/programs') ? {schema:'spectator-view/1',capability:'retired',store_schema:'player-journal/1',programs:[],runs:[],saves:[]} : null;
+      if (value) request.respond({status:200,contentType:'application/json',body:JSON.stringify(value)});
+      else request.continue();
+    });
+    await page.setRequestInterception(true);
+    await page.evaluate(() => { location.hash='#run/memory'; });
+    await S.until(page, () => document.getElementById('app').innerText.includes('An uncertain report'));
+    const text = await page.$eval('#app', node => node.innerText);
+    for (const value of ['unverified player reports',hint.text,hint.intent,'fact-visible','source-unverified']) assert.ok(text.includes(value),value);
+    assert.doesNotMatch(text,/No memory records|0 written/);
+    assert.equal(await page.evaluate(() => window.hintExecuted),undefined);
+    await S.shot(page,'current-hints-phone');
+    assert.equal(await S.overflow(page),0);
+    await page.evaluate(() => { location.hash='#run/programs'; });
+    await S.until(page, () => document.getElementById('app').innerText.includes('Programs are unavailable for this run'));
+    assert.doesNotMatch(await page.$eval('#app', node => node.innerText),/Insufficient sample/);
+    assert.deepEqual(page.problems,[]);
+  } finally { await page.close(); }
+});

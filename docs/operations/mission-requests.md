@@ -9,7 +9,7 @@ status: active
 # Basic computer tools and the player
 
 The [tool schema](../../harness/player_tools.py) exposes basic computer controls plus
-optional player-owned knowledge/program/context. Inspect it read-only with:
+curated knowledge reads, player hints and handoff. Inspect it read-only with:
 
 ```sh
 .venv/bin/python -m tools.configure_player_tools --describe
@@ -27,10 +27,9 @@ never retry the effect. Partial/unknown input permanently stops further input.
 A known no-submission argument refusal may be corrected through a new explicit
 choice; missing/lost transport proves neither delivery nor nondelivery.
 
-Player memory stores fallible claims/Work/decisions/procedures/corrections/advice.
-Programs are immutable proposals over actual selected image views and optional
-player interpretation; helper faults/yields leave basic input available when
-custody is healthy. Save/load, identity and success are player judgments, not tools.
+The player journal stores public calls, hints and referenced sources, not authored
+knowledge. A hint failure leaves basic input available when custody is healthy.
+Save/load, identity and success are player judgments, not tools.
 
 `player_handoff` seals the actor with canonical bounded context. The driver alone
 admits a successor after actual host/MCP quiescence and canonical verification,

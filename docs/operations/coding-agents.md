@@ -134,7 +134,7 @@ project policy. Never widen one host to match a mistake in the other.
 ## Player MCP entry
 
 A coding agent may attach the player MCP adapter only for engineering inspection of
-an explicitly issued `player-adapter/1` actor: a fixture service, or an actor the
+an explicitly issued `player-adapter/2` actor: a fixture service, or an actor the
 lead deliberately issued under the current custody procedure. It is not a deciding
 host, and any input sent through it is a game input under the designation rules.
 Unlike a player host's MCP child, which receives only `PATH` and `LANG`, a lead-side

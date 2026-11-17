@@ -19,7 +19,7 @@ def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounti
     """A finished package whose receipt counted $1.0 of reported cost and one request at the $0.4096 bound."""
     directory = root / name
     directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', session=SESSION,
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/8', session=SESSION,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
     (directory/'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/1',version=None,coverage=None,articles=[],facts=[])))
     if receipt:
@@ -119,7 +119,7 @@ def test_record_defaults_the_label_and_refuses_earlier_package_versions(tmp_path
     directory = package(tmp_path / 'packages', reported_usd='0', unpriced_requests=0, spent_usd='0')
     assert main(['--ledger', str(ledger), 'record', str(directory), '--study', '999']) == 0
     assert read_ledger(ledger)[0] == row(spend_usd='0', provider_usd='0', unpriced_attempts=0)
-    for name, file, schema, message in (('lh9a2', 'manifest.json', 'campaign-run/5', "unsupported manifest 'campaign-run/5'"),
+    for name, file, schema, message in (('lh9a2', 'manifest.json', 'campaign-run/5', "campaign-run/5 is read only"),
                                         ('lh9a3', 'receipt.json', 'campaign-receipt/3', "unsupported receipt 'campaign-receipt/3'")):
         other = package(tmp_path / name, name=name)
         (other / file).write_text(json.dumps(json.loads((other / file).read_text()) | dict(schema=schema)))

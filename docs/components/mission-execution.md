@@ -19,8 +19,7 @@ services through [Application](../../harness/application.py). The
 | --- | --- |
 | Mechanical writer | Validates complete basic sequences, reserves original resources before publication, serializes dispatch and retains exact operation/native IDs. |
 | Composition | Serializes playing-service calls, checks actor authority again after waiting, lazily registers explicitly referenced images and retains service request IDs. |
-| Local program coordinator | Sends program proposals through the same computer callback; retains child IDs before effects and passes the original deadline. |
-| Context/handoff | Writes canonical immutable knowledge snapshot before sealing; snapshot is data, not a capability. |
+| Context/handoff | Writes canonical immutable summary hint before sealing; snapshot is data, not a capability. |
 | Campaign custodian/driver | Own exact native and host handles, validate old-host quiescence and mint a successor only under original limits. |
 
 The loopback server/MCP adapter are transports, not additional writers. HTTP
@@ -28,22 +27,14 @@ submissions carry client-assigned IDs. Duplicate collection never redispatches.
 Mechanical operation states are pending/completed/refused/partial/unknown/sealed;
 none is a game-phase or task-success predicate.
 
-## Programs, feedback and organic discovery
+## Feedback and discovery
 
-The player interprets actual images and authors optional JavaScript procedures.
-`ProgramRunner` consumes a real capture per step, evaluates a bounded proposal and
-uses the same basic control port. Returned images can feed the next step directly.
-No game-semantic eligibility handler or structured engine fact is injected.
-Helper failure/yield leaves direct input usable if mechanical custody is healthy;
-unknown/partial input stops further input. [Memory/program component](memory-learning.md).
-
-## Local feedback cost
-
-Program CPU/state/heap/time and child-operation budgets are bounded independently
-of player host requests. A local program does not make an inference call each step.
-Configured estimates, provider-reported cost, actual HTTP attempts and invoices stay distinct. Useful
-whole-player cadence and causal learning benefit require authentic outcomes,
-not loop speed or packet timings.
+The player interprets actual images and selects basic controls. It can report
+fallible hints for later curation; no game-semantic eligibility handler or
+structured engine fact is injected. Unknown or partial input stops further input.
+[Memory and learning](memory-learning.md) describes the journal and delivery.
+Configured estimates, provider-reported cost, actual HTTP attempts and invoices
+stay distinct. Useful cadence and causal learning benefit require authentic outcomes.
 
 ## Lifecycle and change review
 
@@ -61,9 +52,9 @@ handoff record restores authority after restart. [Migration](../operations/migra
 ## Assurance and evidence
 
 [Runtime](../../tests/test_computer_runtime.py), [application](../../tests/test_player_application.py),
-[program](../../tests/test_player_programs.py), [MCP](../../tests/test_player_host_adapter.py)
+journal (`tests/test_player_journal.py`), [MCP](../../tests/test_player_host_adapter.py)
 and [campaign](../../tests/test_campaign_run.py) assertions cover distinct custody,
-composition, proposal, transport and cleanup boundaries. Check actual assertions
+composition, journal, transport and cleanup boundaries. Check actual assertions
 against the changed invariant; fixtures do not qualify real game usefulness or
 save/reload/ending. The [production report](../acceptance/2026-10-29-computer-control.md)
 owns those actual outcomes and their limits.

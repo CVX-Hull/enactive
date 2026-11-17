@@ -50,9 +50,9 @@ def make_server(client: PlayerClient) -> Server:
             return types.CallToolResult(is_error=True,content=[types.TextContent(type='text',text=canonical(
                 actor_error(exc)))])
 
-    server=Server('enactive-player',version='2.0.0',
+    server=Server('enactive-player',version='3.0.0',
         instructions=('Only basic computer control is authoritative. You own all game interpretation, goals, menus, identity, time, '
-        'tactics, save/load and success. Memory/procedures/advice are optional fallible player data. Use actual pixels. '
+        'tactics, save/load and success. Hints and delivered knowledge are fallible player data. Use actual pixels. '
         'Delivered input is not useful success. Partial/unknown input ends dispatch; collect original IDs, never replay/rearm. '
         'User Pause/takeover is permanent. Handoff seals only this actor under original resources; computer_stop does not save/exit. '
         'No source search, hidden game state, saves, shell or OS tools are available.'),

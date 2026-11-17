@@ -97,8 +97,8 @@ class HostEvents:
             value=json.loads(line)
             kind=value.get('type')
             if kind=='host-start':
-                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=5
-                        or value.get('schema')!='player-host/5'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=6
+                        or value.get('schema')!='player-host/6'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'(request|recall)-([1-9][0-9]*)',value.get('request_id',''))
@@ -212,7 +212,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             target.mkdir(mode=0o700)
             record['actor_id']=actor['actor_id']
             actor_file=target/'actor.json'
-            write_new(actor_file,dict(schema='player-adapter/1',base_url=f"http://127.0.0.1:{profile['port']}",
+            write_new(actor_file,dict(schema='player-adapter/2',base_url=f"http://127.0.0.1:{profile['port']}",
                                      session=profile['session'],**actor))
             selected_route=dict(route,max_requests=allowance,spend_limit_usd=usd_text(dollars),
                 recall=dict(route['recall'],max_requests=recall_allowance))

@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/7` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/8` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -24,20 +24,20 @@ Select one fresh canonical project-local directory under `.runtime/computer-sess
 Its manifest binds the exact clean source commit and SHA256 of all five driver
 inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`.
 It also freezes native executable/adapter bytes, bounded initial target files,
-shared-lock path, explicit `player-memory/2` store, player host argv, effort,
+shared-lock path, explicit `player-journal/1` store (`player_store`), player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 aggregate HTTP-attempt bound, computer input/request/frame/byte capacities,
 `ending_reserve`, the dollar limit `spend_limit_usd` and the operator-only
 [`labels`](#operator-labels). Source/directory mismatch refuses
-before launch. Player stores use SQLite `user_version=2`; unsupported old
-libraries are refused without conversion.
+before launch. Journals use SQLite `user_version=1`; supported current journals may be reopened.
+Unsupported or unrecognized nonempty stores are refused without conversion.
 
 `target.json` has explicit argv/cwd/environment; its first executable and selected
 working directory are absolute. Keep the prepared wrapper/windowed project userdir
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/5` with text/image input and explicit
+`route.json` uses current `player-host/6` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. It repeats the package's `spend_limit_usd` and carries
 `unpriced_request_usd` ([Spend limit](#spend-limit)). The selected route is OpenRouter /
@@ -49,7 +49,7 @@ record names it, and it confers no selection.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
 Freeze the player guide/current schema and ongoing user objective in context/prompt.
 Keep experiment quotas, ending reserves and host counts in operator files,
-outside the player's supplied prompt/tool/program views. The one deliberate
+outside the player's supplied prompt and tool views. The one deliberate
 final-actor signal is the refusal of a handoff call: every actor has the same tool
 table, and an actor with no successor is told so only when it calls
 `player_handoff` ([host procedure](player-host.md)). Do not put mutable
@@ -101,7 +101,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/7",
+  "schema": "campaign-run/8",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "START", "scenario": "SCENARIO", "lineage": null, "admission": null},
@@ -231,7 +231,7 @@ far; a request still in flight is not yet counted, so the reserve should cover w
 one more request can count. It retains
 one command identity for the whole admission. Static validation checks field
 bounds only. Before admission the lead forecasts reserve adequacy for the largest
-already-admitted input/program burst, the current provider attempt, control
+already-admitted input burst, the current provider attempt, control
 delivery and any permitted successor, under the original limits. The example
 numbers above are placeholders, not a proof that a particular ending fits.
 

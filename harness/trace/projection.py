@@ -16,7 +16,7 @@ nothing is published. The projection is built in a sibling directory and renamed
 only when complete, so a failure never leaves a partial `trace/`.
 
 Layout written under `out`:
-  manifest.json                          trace-projection/1: what was projected, with hashes
+  manifest.json                          trace-projection/2: what was projected, with hashes
   frames/<source_id>.png                 frames, verified
   <session>/<actor>/steps.jsonl          operations in order: kind, input actions, status, frame
   <session>/<actor>/tools.jsonl          tool calls: name, allowlisted arguments, outcome
@@ -24,10 +24,10 @@ Layout written under `out`:
   <session>/<actor>/guide.txt            the working guide it was given
   <session>/<actor>/final.txt            its final report, when one exists
   <session>/handoffs/<context_id>.json   sealed handoff packets: summary and knowledge
-  memory.json                            the sealed player-memory/2 store, via the evidence reader
+  memory.json                            historical sealed player-memory/2 evidence
+  journal.json                           sealed player-journal/1 public data, without image bytes
 
-Traces recorded before ADR 009 have no emissions or hints; the manifest says so instead of
-writing empty files. What the projection drops is listed in the manifest.
+The manifest records which optional journal was included and what the projection drops.
 """
 from __future__ import annotations
 
@@ -39,10 +39,10 @@ import shutil
 import sqlite3
 import uuid
 
-from . import memory_reader
+from . import journal_reader, memory_reader
 from .stores import SealedStoreError, sealed
 
-SCHEMA = 'trace-projection/1'
+SCHEMA = 'trace-projection/2'
 ACTION_FIELDS = ('type', 'key', 'modifiers', 'text', 'seconds', 'x', 'y', 'button')
 RECORD_FIELDS = ('kind', 'text', 'data', 'sources', 'supports', 'supersedes', 'applicability', 'program_id')
 TOOL_ARGUMENTS = {
@@ -51,6 +51,7 @@ TOOL_ARGUMENTS = {
     'computer_result': ('operation_id',),
     'computer_stop': (),
     'player_source': ('source_id',),
+    'player_hint': ('text', 'source_ids'),
     'player_result': ('operation_id',),
     'player_handoff': ('ids', 'summary'),
     'player_memory_append': ('record',),
@@ -90,7 +91,7 @@ def _action(value) -> dict | None:
 def _arguments(tool: str, arguments) -> dict:
     if not isinstance(arguments, dict):
         return {}
-    kept = _pick(arguments, TOOL_ARGUMENTS.get(tool, ()))
+    kept = _pick(arguments, (*TOOL_ARGUMENTS.get(tool, ()), 'intent', 'cites') if tool in TOOL_ARGUMENTS else ())
     if 'actions' in kept:
         kept['actions'] = [a for a in map(_action, kept['actions'] or []) if a is not None]
     if 'record' in kept and isinstance(kept['record'], dict):
@@ -248,7 +249,7 @@ def _tools(host: Path) -> list[dict]:
     return calls
 
 
-def _project_into(sessions: list[Path], out: Path, memory: Path | None) -> dict:
+def _project_into(sessions: list[Path], out: Path, memory: Path | None, journal: Path | None) -> dict:
     (out/'frames').mkdir(parents=True)
     hashes: dict[str, str] = {}
 
@@ -303,7 +304,7 @@ def _project_into(sessions: list[Path], out: Path, memory: Path | None) -> dict:
         handoffs = []
         for path in sorted((session/'contexts').glob('*.json')) if (session/'contexts').is_dir() else []:
             kept = _pick(_json(path), ('schema', 'context_id', 'session', 'actor_id', 'summary', 'knowledge',
-                                       'created_wall', 'grants_authority'))
+                                       'created_wall', 'grants_authority', 'summary_is_hint'))
             target = out/session.name/'handoffs'/f'{path.stem}.json'
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(json.dumps(kept, sort_keys=True, ensure_ascii=False, indent=1))
@@ -317,10 +318,19 @@ def _project_into(sessions: list[Path], out: Path, memory: Path | None) -> dict:
             raise ProjectionError(str(exc)) from exc
         (out/'memory.json').write_text(json.dumps(store, sort_keys=True, ensure_ascii=False, indent=1))
         record_file(out/'memory.json')
+    if journal is not None:
+        try:
+            store = journal_reader.read(journal)
+        except journal_reader.StoreError as exc:
+            raise ProjectionError(str(exc)) from exc
+        for call in store['calls']:
+            call['arguments'] = _arguments(call['tool'], call['arguments'])
+        (out/'journal.json').write_text(json.dumps(store, sort_keys=True, ensure_ascii=False, indent=1))
+        record_file(out/'journal.json')
     manifest = dict(schema=SCHEMA, sessions=projected, files=hashes, never_projected=list(NEVER),
                     dropped=list(DROPPED), secret_guard='passed',
-                    emissions='none recorded (traces predate ADR 009 emissions)',
-                    hints='none recorded (traces predate ADR 009 hints)')
+                    emissions='public intent/cites included where recorded; private model reasoning is not projected',
+                    hints='journal.json and tool calls' if journal is not None else 'tool calls only')
     (out/'manifest.json').write_text(json.dumps(manifest, sort_keys=True, indent=1))
     return manifest
 
@@ -334,13 +344,15 @@ def guard(out: Path, secrets: set[bytes]) -> None:
                                   'nothing was projected')
 
 
-def project(sessions: list[Path], out: Path, *, memory: Path | None = None) -> dict:
+def project(sessions: list[Path], out: Path, *, memory: Path | None = None, journal: Path | None = None) -> dict:
     """Project sealed sessions into `out` (which must not exist). Returns the manifest."""
+    if memory is not None and journal is not None:
+        raise ProjectionError('select either historical memory or current journal')
     if out.exists():
         raise ProjectionError(f'{out}: projection target must not exist')
     partial = out.with_name(f'.{out.name}.partial-{uuid.uuid4().hex[:8]}')
     try:
-        manifest = _project_into(sessions, partial, memory)
+        manifest = _project_into(sessions, partial, memory, journal)
         guard(partial, set().union(*(_secrets(s) for s in sessions)) if sessions else set())
         partial.rename(out)
         return manifest

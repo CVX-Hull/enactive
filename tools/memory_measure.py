@@ -617,13 +617,13 @@ def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
 def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     """Build judged-facts from delivered data and the order of actual player exposures."""
     from harness.evaluation.core.host import host_facts, returned_records
-    from harness.evaluation.core.sources import read_host, read_manifest
+    from harness.evaluation.core.sources import archive_entry, read_host, read_manifest
     from tools.knowledge_export import units, delivered_fact_ids
     admissions, recall_events = {}, []
     for directory in runs:
         manifest = read_manifest(directory)
-        if manifest.get('schema') != 'campaign-run/7':
-            raise MeasureError(f'{directory}: delivery requires campaign-run/7')
+        if manifest.get('schema') not in ('campaign-run/8','campaign-run/7'):
+            raise MeasureError(f'{directory}: delivery requires campaign-run/8 or indexed historical /7')
         for name, digest in {**manifest['files'], **{'private/'+k:v for k,v in manifest['private_files'].items()}}.items():
             if name in ('delivered-knowledge.json','private/knowledge-full.json','private/units.json') and file_sha256(directory/name) != digest:
                 raise MeasureError(f'{directory/name}: frozen knowledge hash differs')
@@ -643,7 +643,7 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
         host, names = {}, {}
         for actor_dir in sorted((directory/'actors').iterdir()):
             if not (actor_dir/'host.jsonl').is_file():continue
-            actor, events = read_host(actor_dir/'host.jsonl', actor_dir.name)
+            actor, events = read_host(actor_dir/'host.jsonl', actor_dir.name, archive_entry(manifest))
             host[actor], names[actor] = events, actor_dir.name
         facts = host_facts(tuple(host), host)
         entries = {}
@@ -1367,9 +1367,13 @@ def pilot_units(package: Path, *, independent: bool = True) -> dict:
     """Read a frozen draw; blocked study records require the study path."""
     if HELD_OUT in package.resolve().parts:
         raise MeasureError(f'{package}: the held-out lineage is not read for the memory measure')
-    manifest = read_json(package / 'manifest.json')
-    if not isinstance(manifest, dict) or manifest.get('schema') != 'campaign-run/7':
-        raise MeasureError(f'{package}: pilot requires campaign-run/7')
+    from harness.evaluation.core.sources import EvaluationError, read_manifest
+    try:
+        manifest = read_manifest(package)
+    except EvaluationError as exc:
+        raise MeasureError(f'{package}: pilot requires campaign-run/8 or indexed historical /7 ({exc})') from exc
+    if manifest.get('schema') not in ('campaign-run/8','campaign-run/7'):
+        raise MeasureError(f'{package}: pilot requires campaign-run/8 or indexed historical /7')
     path = package / 'private' / 'units.json'
     value = read_json(path)
     if not isinstance(value, dict) or value.get('schema') not in ('knowledge-units/1', 'knowledge-units/2'):

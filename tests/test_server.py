@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from harness.application import Application
-from harness.player.memory import Memory
+from harness.player.journal import Journal
 from harness.server import serve
 from harness.player_client import PlayerClient
 from test_computer_runtime import make_runtime,key
@@ -19,17 +19,23 @@ from test_computer_runtime import make_runtime,key
 @pytest.fixture
 def service(tmp_path):
     runtime,channel,actor=make_runtime(tmp_path)
-    memory=Memory(tmp_path/'player.sqlite3')
+    memory=Journal(tmp_path/'player.sqlite3')
     app=Application(runtime,memory,tmp_path/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     server,thread=serve(app,0)
-    config=tmp_path/'actor.json';config.write_text(json.dumps(dict(schema='player-adapter/1',
+    config=tmp_path/'actor.json';config.write_text(json.dumps(dict(schema='player-adapter/2',
         base_url=f'http://127.0.0.1:{server.server_port}',session=runtime.session,**actor)))
     try:yield app,channel,actor,server.server_port,PlayerClient(config)
     finally:
         server.shutdown();server.server_close();thread.join(2);runtime.close();memory.close()
 
 
+def actor_call(client, tool, args):
+    return client.call(tool,{'intent':'Exercise the fixture '+tool,**args})
+
+
 def post(port,path,value,token=None,origin=None):
+    if path == '/api/tool' and isinstance(value.get('arguments'),dict):
+        value = dict(value,arguments={'intent':'Exercise the fixture '+value['tool'],**value['arguments']})
     conn=HTTPConnection('127.0.0.1',port,timeout=3)
     headers={'Content-Type':'application/json'}
     if token:headers['Authorization']='Bearer '+token
@@ -42,7 +48,7 @@ def post(port,path,value,token=None,origin=None):
 
 def test_adapter_exact_image_and_duplicate_original_id(service):
     app,channel,actor,port,client=service
-    value,png,error=client.call('computer_observe',{})
+    value,png,error=actor_call(client,'computer_observe',{})
     assert not error and png==channel.png and value['source']['schema']=='computer-source/1'
     identity=uuid.uuid4().hex
     request=dict(operation_id=identity,tool='computer_input',arguments=dict(actions=[key()]))
@@ -88,32 +94,39 @@ def test_custodian_serves_only_status_source_pause_and_actor_routes(service):
     assert len(channel.calls)==before and not channel.stopped.is_set()
 
 
-@pytest.mark.parametrize('invalid', [{}, {'max_seconds':0}, {'initial_state':[]}])
-def test_program_predispatch_fault_is_terminal_collectable_and_preserves_basic_control(service,invalid):
+def test_hint_lost_reply_is_collectable_without_input_or_duplicate_authoring(service):
     app,channel,actor,port,client=service
-    arguments=dict(program_id=uuid.uuid4().hex,initial_state={},interpretation={},
-                   selection=dict(crop=None,size=[4,4]))
-    arguments.update(invalid)
+    original=client._post
+    arguments=dict(intent='Report uncertainty',text='This is an unverified player hint')
+    def lose(path,value,**kwargs):
+        result=original(path,value,**kwargs)
+        if path=='/api/tool' and value['tool']=='player_hint':
+            raise OSError('Fixture lost reply after committed hint')
+        return result
     before=len(channel.calls)
-    result,_,error=client.call('player_program_run',arguments)
-    assert not error and result['status']=='fault'
+    with patch.object(client,'_post',side_effect=lose):
+        unknown,_,error=actor_call(client,'player_hint',arguments)
+    assert not error and unknown['status']=='unknown' and unknown['collect_with']=='player_result'
+    collected,_,error=actor_call(client,'player_result',dict(operation_id=unknown['operation_id']))
+    assert not error and collected['status']=='completed' and collected['value']['schema']=='player-hint/1'
+    status,repeated=post(port,'/api/tool',dict(operation_id=unknown['operation_id'],tool='player_hint',arguments=arguments),actor['token'])
+    assert status==200 and repeated['value']==collected['value'] and len(app.journal.hints())==1
     assert len(channel.calls)==before and not channel.stopped.is_set()
-    collected,_,error=client.call('player_result',dict(operation_id=result['run_id']))
-    assert not error and collected['status']=='completed' and collected['value']==result
-    assert collected['progress']['steps']==[] and collected['collected_operations']==[]
-    status,repeated=post(port,'/api/tool',dict(operation_id=result['run_id'],tool='player_program_run',
-                                            arguments=arguments),actor['token'])
-    assert status==200 and repeated['value']==result
-    assert len(channel.calls)==before
-    after,_,error=client.call('computer_input',dict(actions=[key()]))
-    assert not error and after['status']=='completed' and not channel.stopped.is_set()
+
+
+def test_direct_http_cannot_omit_public_intent(service):
+    app,channel,actor,port,client=service
+    before=len(channel.calls)
+    result,_,error=client.call('computer_input',dict(actions=[key()]))
+    assert error and result['submission']=='none' and len(channel.calls)==before
+    assert app.journal.calls()==[] and not channel.stopped.is_set()
 
 
 def test_sealed_actor_can_collect_but_cannot_stop_successor(service):
     app,channel,actor,port,client=service
-    result,_,error=client.call('player_handoff',dict(ids=[],summary='Fixture unfinished task'))
+    result,_,error=actor_call(client,'player_handoff',dict(summary='Fixture unfinished task'))
     assert not error and client.sealed
-    assert client.call('computer_result',dict(operation_id=result['operation_id']))[0]['status']=='sealed'
+    assert actor_call(client,'computer_result',dict(operation_id=result['operation_id']))[0]['status']=='sealed'
     app.runtime.confirm_quiescent(actor['actor_id'],result['operation_id'],host_quiescent=True)
     successor=app.runtime.add_actor()
     assert successor['actor_id']!=actor['actor_id']
@@ -121,71 +134,28 @@ def test_sealed_actor_can_collect_but_cannot_stop_successor(service):
     assert status==400 and not channel.stopped.is_set()
 
 
-NOTE = dict(schema='player-record/1', kind='claim', text='Fixture fact for a successor', data={},
-            sources=[], supports=[], supersedes=None, applicability=None, program_id=None)
-# The root ID mistyped in #397's sd1a3 handoff: well-formed, but no stored record or program.
-MISTYPED = 'ef2ead6a94b741cbaf62ec919e2abcd5'
 
-
-@pytest.mark.parametrize('roots', [[MISTYPED], ['stored', MISTYPED], [MISTYPED, MISTYPED]])
-def test_unknown_handoff_root_is_refused_before_sealing_and_can_be_corrected(service, roots):
+@pytest.mark.parametrize('extra', [{'ids':[]},{'ids':['retired-root']},{'knowledge':{}}])
+def test_retired_handoff_roots_are_refused_before_sealing(service,extra):
     app,channel,actor,port,client=service
-    saved,_,error=client.call('player_memory_append',dict(record=NOTE))
-    assert not error
-    ids=[saved['id'] if root == 'stored' else root for root in roots]
-    refused,_,error=client.call('player_handoff',dict(ids=ids,summary='Fixture unfinished task'))
-    assert error and refused['schema']=='player-error/1' and refused['submission']=='none'
-    assert refused['reason'].count(MISTYPED)==1 and saved['id'] not in refused['reason']
-    assert 'player_handoff again' in refused['reason']
-    assert not client.sealed and list(app.context_directory.glob('*.json'))==[]
-    # Still the active actor: it can act, then hand off with the corrected root.
-    observed,_,error=client.call('computer_observe',{})
-    assert not error and observed['status']=='completed'
-    sealed,_,error=client.call('player_handoff',dict(ids=[saved['id']],summary='Fixture unfinished task'))
-    assert not error and client.sealed
-    packet=json.loads(next(app.context_directory.glob('*.json')).read_text())
-    assert [r['id'] for r in packet['knowledge']['records']]==[saved['id']]
-    assert packet['knowledge']['omissions']==[]
+    refused,_,error=actor_call(client,'player_handoff',dict(summary='Fixture unfinished task',**extra))
+    assert error and refused['submission']=='none' and not client.sealed
+    assert list(app.context_directory.glob('*.json'))==[] and not channel.stopped.is_set()
+    value,_,error=actor_call(client,'computer_observe',{})
+    assert not error and value['status']=='completed'
 
 
 def test_the_final_actor_is_refused_a_handoff_without_any_state_change(service):
     app,channel,actor,port,client=service
     app.final_actor=actor['actor_id']
-    refused,_,error=client.call('player_handoff',dict(ids=[],summary='Fixture unfinished task'))
+    refused,_,error=actor_call(client,'player_handoff',dict(summary='Fixture unfinished task'))
     assert error and refused['schema']=='player-error/1' and refused['submission']=='none'
     assert 'no successor is available' in refused['reason'] and 'final actor' in refused['reason'] and 'player_finish' in refused['reason']
     assert not client.sealed and list(app.context_directory.glob('*.json'))==[]
     assert app.runtime.actor_stage(actor['actor_id'])=='active'
-    observed,_,error=client.call('computer_observe',{})
+    observed,_,error=actor_call(client,'computer_observe',{})
     assert not error and observed['status']=='completed'
 
-
-@pytest.mark.parametrize('bad', ['', 'x'*129])
-def test_malformed_handoff_root_is_refused_before_sealing(service, bad):
-    app,channel,actor,port,client=service
-    refused,_,error=client.call('player_handoff',dict(ids=[MISTYPED,bad],summary='Fixture'))
-    assert error and refused['submission']=='none' and refused['error']=='PlayerError'
-    assert not client.sealed and list(app.context_directory.glob('*.json'))==[]
-
-
-def test_many_unknown_roots_keep_the_instruction_within_the_error_cut(service):
-    app,channel,actor,port,client=service
-    ids=[f'{i:032x}' for i in range(1, 33)]
-    refused,_,error=client.call('player_handoff',dict(ids=ids,summary='Fixture'))
-    assert error and 'player_handoff again' in refused['reason'] and 'and 24 more' in refused['reason']
-
-
-def test_a_stored_program_is_a_valid_handoff_root(service):
-    app,channel,actor,port,client=service
-    code="function step(v,s){return {status:'done',state:s,actions:null,reason:'fixture'};}"
-    program,_,error=client.call('player_program_save',dict(program=dict(schema='player-program/2',
-        view_schema='program-view/4',code=code,parent_id=None,reason='Fixture program root',source_ids=[],
-        record_ids=[],applicability=None)))
-    assert not error, program
-    sealed,_,error=client.call('player_handoff',dict(ids=[program['id']],summary='Fixture unfinished task'))
-    assert not error and client.sealed
-    packet=json.loads(next(app.context_directory.glob('*.json')).read_text())
-    assert [p['id'] for p in packet['knowledge']['programs']]==[program['id']]
 
 
 def test_lost_handoff_response_stops_current_sealed_actor_and_cannot_resume(service):
@@ -197,9 +167,9 @@ def test_lost_handoff_response_stops_current_sealed_actor_and_cannot_resume(serv
             raise OSError('Fixture lost response after actual sealing')
         return result
     with patch.object(client,'_post',side_effect=lose):
-        value,_,error=client.call('player_handoff',dict(ids=[],summary='Fixture unfinished work'))
+        value,_,error=actor_call(client,'player_handoff',dict(summary='Fixture unfinished work'))
     assert value['status']=='unknown' and not error and channel.stopped.is_set()
-    collected,_,_=client.call('computer_result',dict(operation_id=value['operation_id']))
+    collected,_,_=actor_call(client,'computer_result',dict(operation_id=value['operation_id']))
     assert collected['status']=='sealed'
     with pytest.raises(ValueError):
         app.runtime.confirm_quiescent(actor['actor_id'],value['operation_id'],host_quiescent=True)
@@ -208,7 +178,7 @@ def test_lost_handoff_response_stops_current_sealed_actor_and_cannot_resume(serv
 
 def test_explicit_mcp_cancellation_can_stop_the_current_sealed_actor(service):
     app,channel,actor,port,client=service
-    client.call('player_handoff',dict(ids=[],summary='Fixture unfinished work'))
+    actor_call(client,'player_handoff',dict(summary='Fixture unfinished work'))
     assert client.sealed and not channel.stopped.is_set()
     result=client.stop('MCP operation cancelled')
     assert result['stop_requested'] and channel.stopped.is_set()

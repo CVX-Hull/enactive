@@ -15,7 +15,7 @@ player claims or SQLite records cannot reconstruct authority after restart.
 
 A live actor can observe/input through its current tools. A sealed actor can only
 collect originals and read retained source/knowledge/context. It cannot capture
-anew, mutate memory, run programs or create another handoff. User Pause and
+anew, write hints or create another handoff. User Pause and
 partial/unknown delivery permanently stop input and cannot become a resumable transfer.
 
 Handoff persists canonical immutable context before sealing. The driver verifies
@@ -32,7 +32,7 @@ ordinary save/load/exit choices and fallible quantities/Work/outcome claims.
 a frozen run is not permission for another paid allocation or publication.
 
 Role restrictions are procedural, not OS security isolation. Explorers/reviewers
-never send game input. Optional advisers/programs only propose. No player memory,
+never send game input. No hint or curated knowledge,
 advice or stored context can bypass mechanical input custody.
 
 ## Designated campaign operator

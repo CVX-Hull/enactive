@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/5` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/6` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -78,7 +78,7 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/5", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/6", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
@@ -99,6 +99,7 @@ def text_response(text: str) -> tuple:
 
 
 def tool_response(name: str, arguments: dict) -> tuple:
+    if name == 'player_finish': arguments = {'intent':'Report the task disposition',**arguments}
     call = dict(index=0, id="call-0", type="function", function=dict(name=name, arguments=json.dumps(arguments)))
     return ("sse", sse(
         dict(id="ref", model="ref-backend", choices=[dict(index=0, delta=dict(role="assistant", tool_calls=[call]), finish_reason=None)]),
@@ -292,7 +293,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/5", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
+    for schema in ("pi-player-host/6", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -343,7 +344,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/5" and events[0]["telemetry_version"] == 5
+    assert events[0]["schema"] == "player-host/6" and events[0]["telemetry_version"] == 6
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
@@ -426,7 +427,7 @@ def test_control_eof_before_settlement_is_unsuccessful(adapter, host_factory):
 
 
 def test_handoff_settles_once_leaves_final_unchanged_and_closes_the_mcp_child(adapter, host_factory):
-    hosted = host_factory([tool_response("player_handoff", dict(ids=[], summary="Retain current context")),
+    hosted = host_factory([tool_response("player_handoff", dict(summary="Retain current context")),
                            text_response("must never be requested")], enabled_tools=("player_handoff",))
     assert hosted.start().wait() == 0
     handoffs = [event for event in hosted.events() if event["type"] == "handoff"]

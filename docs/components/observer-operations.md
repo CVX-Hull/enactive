@@ -112,7 +112,7 @@ The gateway forwards `GET /api/view/*` to it on its own connection:
 over role tabs. *Actor* lists the four #397 forgetting episodes from the tracked probe
 episodes, each anchor opening the existing Live view at that step, or saying why its frame
 is unavailable. *Containers* lists the sidecar inventory with each manifest. *Curator*,
-*Knowledge* and *Programs* are placeholders that name the phase that brings them, and
+*Knowledge* and *Programs* are placeholders for future viewer work, and
 health slots without data say "not yet measured" instead of a number. It is served by the
 viewer's `/api/view/frame/*` routes ([contract](../contracts/evaluation.md#spectator-frame-spectator-frame1)),
 reads only, and leaves the Pause path untouched.

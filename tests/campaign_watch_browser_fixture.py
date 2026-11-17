@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw
 from harness.application import Application
 from harness.computer.launch import close_group
 from harness.computer.runtime import ComputerRuntime
-from harness.player.memory import Memory
+from harness.player.journal import Journal
 from harness.server import serve
 from tests.test_computer_runtime import Channel, Process
 from tools.campaign_supervision import supervise
@@ -74,7 +74,7 @@ def main(argv=None) -> int:
     channel = FixturePixels()
     runtime = ComputerRuntime(directory, SESSION, channel, Process(), mono+180,
         dict(max_inputs=20, max_requests=30, max_frames=40, max_bytes=2**30))
-    memory = Memory(directory/'player.sqlite3')
+    memory = Journal(directory/'player.sqlite3')
     app = Application(runtime, memory, directory/'contexts',knowledge=Path(__file__).with_name('fixtures')/'empty-delivered-knowledge.json')
     actor = runtime.add_actor(); runtime.observe(actor['actor_id'])
     server, server_thread = serve(app, 0)

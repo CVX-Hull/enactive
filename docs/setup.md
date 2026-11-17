@@ -21,7 +21,8 @@ python3 tools/setup.py --venv
 No flags prints read-only status. The optional `.venv` uses the selected existing
 interpreter. [Requirements](../requirements.in) and the hashed
 [development lock](../requirements-dev.lock) pin runtime/check dependencies,
-including MCP, MiniRacer/V8 and Pillow image decoding.
+including MCP, Pillow image decoding and the evaluation tools. The retired
+player-program runtime is not a current dependency.
 
 ## Install development controls locally
 
@@ -60,7 +61,7 @@ Installation needs network; checks never install dependencies.
 ### Install the generic gameplay host
 
 The current player host adapter, [Pi](../tools/player_host/README.md), implements the
-[player host contract](contracts/player-host.md) (`player-host/5`) and uses its own pinned npm lock:
+[player host contract](contracts/player-host.md) (`player-host/6`) and uses its own pinned npm lock:
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
@@ -102,7 +103,7 @@ Inspect the current schemas without creating a runtime:
 .venv/bin/python -m tools.configure_player_tools --describe
 ```
 
-The campaign driver creates each actor's current `player-adapter/1` and MCP
+The campaign driver creates each actor's current `player-adapter/2` and MCP
 configuration. For a separately selected actor configuration, the generator uses
 explicit project-local paths and refuses to overwrite the output:
 

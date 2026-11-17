@@ -14,14 +14,14 @@ from .computer.protocol import ControlError, canonical, closed, decode_json, rea
 
 IMAGE_LIMIT = 16 * 1024 * 1024
 ADAPTER_CLOSE_REASON = 'Actor adapter closed'
-EFFECT_TOOLS = {'computer_observe','computer_input','player_program_run','player_handoff'}
+EFFECT_TOOLS = {'computer_observe','computer_input','player_handoff'}
 
 
 class PlayerClient:
     def __init__(self, config) -> None:
         value=read_json(config)
         closed(value,{'schema','base_url','session','actor_id','token'})
-        if value['schema'] != 'player-adapter/1':
+        if value['schema'] != 'player-adapter/2':
             raise ControlError('Unsupported player adapter; old mission profiles cannot run')
         url=urlsplit(value['base_url'])
         if (url.scheme != 'http' or url.hostname != '127.0.0.1' or not url.port

@@ -28,7 +28,7 @@ from pathlib import Path
 from harness.evaluation.core.host import (MEMORY_READ_TOOLS, ToolCall, frame_source, host_facts, memory_reads,
     record_ids, typed_text)
 from harness.evaluation.core.records import open_readonly, read_steps
-from harness.evaluation.core.sources import read_carry, read_host, read_memory, run_archive_entry
+from harness.evaluation.core.sources import read_carry, read_host, read_historical_memory, run_archive_entry
 
 MEMORY_TOOLS = ('player_memory_append', *MEMORY_READ_TOOLS)
 
@@ -102,7 +102,7 @@ def read_runs(runs: list[Path], clock, before: int, after: int) -> dict:
                     responses += 1
                     with_text += bool(progress.get('content_bytes'))
                     with_reasoning += bool(progress.get('reasoning_bytes'))
-        carry = read_carry(run)
+        carry = read_carry(run, historical=run_archive_entry(run) is not None)
         facts = host_facts(tuple(host), host)
         traces += len(host)
         calls += len(facts.calls)
@@ -157,7 +157,7 @@ def store_rows(path: Path, result: dict) -> list[dict]:
     """Every stored record with how it reached a later actor: returned by a read, carried by a handoff, or neither."""
     carried = {record for moments in result['_held'].values() for index, ids in moments if index is None for record in ids}
     rows = []
-    for identity, record in read_memory(path).records.items():
+    for identity, record in read_historical_memory(path).records.items():
         reads = result['first_read'].get(identity, [])
         rows.append(dict(id=identity, kind=record.get('kind'), author=result['_authors'].get(record.get('actor_id'),
             record.get('actor_id')), created=iso(record.get('created_wall')), returned_by_reads=len(reads),
@@ -171,7 +171,7 @@ def rediscoveries(probes: Path, runs: list[Path], result: dict, store: Path | No
     `given` lists how the actor held the record before the rediscovered frame: `handoff` (its starting context
     carried it) or `own write or read`. `existed` says the record was written before that frame; it needs the store
     and is None without it, or when no call of the actor returned the frame."""
-    created = {identity: record.get('created_wall') for identity, record in read_memory(store).records.items()} if store else {}
+    created = {identity: record.get('created_wall') for identity, record in read_historical_memory(store).records.items()} if store else {}
     facts, rows = {}, []
     frames: dict[tuple[str, str], dict[str, ToolCall]] = {}
     for run in runs:

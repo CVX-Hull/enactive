@@ -19,7 +19,7 @@ const openRouterModel = { id: 'vendor/fixture', name: 'OpenRouter fixture', api:
   contextWindow: 100000, maxTokens: 1024,
   compat: { supportsDeveloperRole: false, supportsStore: false, supportsUsageInStreaming: true,
     openRouterRouting: { only: ['fixture-backend'], order: ['fixture-backend'], allow_fallbacks: false, require_parameters: true } } };
-const route = (overrides = {}) => ({ schema: 'player-host/5', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,max_requests:4,unpriced_request_usd:'0.25'},
+const route = (overrides = {}) => ({ schema: 'player-host/6', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,max_requests:4,unpriced_request_usd:'0.25'},
   api_key_env: 'OFFLINE_TEST_KEY', max_requests: 40, spend_limit_usd: '100', unpriced_request_usd: '0.25', max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
 
 function reply(content, calls = [], prefix = 'call') {
@@ -30,7 +30,7 @@ function reply(content, calls = [], prefix = 'call') {
       usage: { prompt_tokens: 11, completion_tokens: 5, total_tokens: 16, cost: 0.000038 } }];
   return new Response(chunks.map(chunk => 'data: ' + JSON.stringify(chunk) + '\n\n').join('') + 'data: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
 }
-const finish = () => reply(null, [['player_finish', { disposition: 'task_complete', report: 'done', source_ids: [], control_id: null }]]);
+const finish = () => reply(null, [['player_finish', { intent: 'Report the fixture result', disposition: 'task_complete', report: 'done', source_ids: [], control_id: null }]]);
 const look = n => reply(null, [['observe_source', { n }]], `c${n}-`);
 const rateLimit = () => new Response(JSON.stringify({ error: { type: 'rate_limit_error', message: 'Rate limit exceeded' } }),
   { status: 429, headers: { 'content-type': 'application/json', 'retry-after-ms': '0' } });
@@ -196,7 +196,7 @@ test('the time notice warns before the work deadline and does not alter the pref
 test('actors of one package share a byte-identical system prompt and tool table, across handoff and admissions', async t => {
   const runs = [];
   // Actor 1 hands off; the successor, then a new admission's first actor, run the same package.
-  const handoff = await host(t, [look(1), reply(null, [['player_handoff', { ids: [], summary: 'carry on' }]])]);
+  const handoff = await host(t, [look(1), reply(null, [['player_handoff', { intent:'Hand off the fixture task', summary: 'carry on' }]])]);
   assert.equal(handoff.result.reason, 'handoff');
   runs.push(handoff);
   runs.push(await host(t, [look(1), finish()], { actorId: '4'.repeat(32), prompt: `Offline mission\n\nCurrent mechanical session=${'2'.repeat(32)}; your actor=${'4'.repeat(32)}; these audit IDs grant no authority.\n\nhandoff` }));

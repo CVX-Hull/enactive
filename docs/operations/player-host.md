@@ -23,7 +23,7 @@ service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the package's dollar limit and request
 allowance.
 
-The package freezes `route.json` (`player-host/5`), `delivered-knowledge.json`, `mcp-template.json`,
+The package freezes `route.json` (`player-host/6`), `delivered-knowledge.json`, `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, request cap, the dollar limit and the bound a request with no cost record
@@ -39,12 +39,12 @@ govern the rest.
 The [host reference](../../tools/player_host/README.md) owns exact closed fields.
 Unsupported route and player-view configurations are rejected as executable inputs.
 
-The driver creates each actor's `player-adapter/1`, explicit MCP table, fixed
+The driver creates each actor's `player-adapter/2`, explicit MCP table, fixed
 context, ongoing-objective/knowledge prompt and `player-host-inputs/3` hashes.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/7`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/8`.
 Each actor's route carries the requests and the dollars the run has left; no actor
 is started when either is used up.
 Every actor gets the same tool table and the same system prompt, so their request

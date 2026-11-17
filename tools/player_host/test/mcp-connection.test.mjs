@@ -27,7 +27,9 @@ test('real production MCP discovery forwards all exact current actor-only tool s
   const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({name:{"schema":schema,"description":description} for name,(description,schema) in tool_specs().items()}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
   const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
   const chosen=Object.keys(expected);
-  assert.equal(chosen.length,16);
+  assert.equal(chosen.length,10);
+  assert.ok(chosen.includes('player_hint'));
+  assert.ok(chosen.every(name=>!name.startsWith('player_memory_')&&!name.startsWith('player_program_')));
   const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(chosen),
     context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
     timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
@@ -41,7 +43,7 @@ test('real production MCP discovery forwards all exact current actor-only tool s
     for(const key of ['actor_id','session','token']) assert.equal(Object.hasOwn(tool.function.parameters.properties,key),false);
   }
   const handoff=payloads[0].tools.find(tool=>tool.function.name==='player_handoff').function;
-  assert.deepEqual(handoff.parameters.required,['ids','summary']);
+  assert.deepEqual(handoff.parameters.required,['summary','intent']);
   assert.ok(chosen.includes('computer_result')&&chosen.includes('player_result'));
   assert.ok(chosen.every(name=>!name.startsWith('enactive_')));
   assert.ok(payloads[0].messages[0].content.includes('Only basic computer control is authoritative'));
@@ -111,7 +113,7 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
       bodies.push(init.body);payloads.push(JSON.parse(init.body));
-      return reply(null,[['computer_observe',{}],['player_handoff',{ids:[],summary:'synthetic unfinished work'}],['computer_observe',{}]]);
+      return reply(null,[['computer_observe',{}],['player_handoff',{summary:'synthetic unfinished work'}],['computer_observe',{}]]);
     },onEvent:e=>events.push(e)});
   assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null});
   assertRequestMetadata(events,bodies);
@@ -134,7 +136,7 @@ test('production MCP foreign actor handoff cannot settle or dispatch later input
   const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'2'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),
     mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),context:'Offline foreign actor fixture',
     prompt:'Retain unfinished context.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
-    fetch:async()=>reply(null,[['player_handoff',{ids:[],summary:'Foreign actor'}],['computer_observe',{}]]),onEvent:event=>events.push(event)});
+    fetch:async()=>reply(null,[['player_handoff',{summary:'Foreign actor'}],['computer_observe',{}]]),onEvent:event=>events.push(event)});
   assert.equal(result.ok,false);assert.equal(result.reason,'invalid-handoff-receipt');assert.equal(result.requests,1);
   assert.deepEqual(events.filter(event=>event.type==='tool-start').map(event=>event.tool),['player_handoff']);
   assert.equal(events.filter(event=>event.type==='handoff').length,0);
