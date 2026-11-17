@@ -205,9 +205,12 @@ complexity, on data it was not fitted to:
 | Coverage, use, stability | Share left untyped; reads and citations per type; churn per boundary |
 
 The curator proposes an edit; the **gate**, not the curator, computes the utility
-measure minus a complexity penalty, on trace that arrived after the submission's
-base version, and accepts the edit only if it improves. The curator never grades
-its own proposals.
+measure minus a specified complexity penalty, under the
+[proposed verification/publication contract](../design/curator-session.md#proposed-prospective-verification-and-publication-contract).
+Its cohort must be captured after candidate freeze and remain unexposed; being later
+than a base version alone is insufficient. The curator never grades its own proposals.
+Semantic utility admission is deferred until a supported oracle, comparison and finite
+acceptance policy exist; structural validity and compression alone do not supply them.
 
 **The lead's probes never enter the playing system.** A probe ("at this point, a
 query about X should surface Y") is written by the lead from a real episode's
@@ -405,12 +408,18 @@ Each session gets a fresh workspace with the access a coding agent expects:
   record (input manifest, transcript, submissions, gate results) is kept.
 - **Failures and ordering.**
   - A crash or breached guard seals the session as aborted and keeps its drafts.
-  - Every submission is gated before the next session starts. A submission whose
-    base version is no longer current is rejected and reported in the next brief.
+  - A proposing session closes and releases its lock while a frozen submission awaits
+    future evidence. Settle or explicitly defer it before the next curator session;
+    approved player admissions can produce evidence using their unchanged frozen
+    knowledge. The [planned lifecycle](../design/curator-session.md#lifecycle-without-a-session-deadlock)
+    owns the finite boundary. A submission whose base version is no longer current
+    is rejected and reported in the next brief.
   - Gate failures trigger later sessions with back-off, so a failing submission
     cannot loop.
-  - The operator can have the gate revert to an earlier knowledge version or disable
-    a published program. That removes curator output; it adds no lead knowledge.
+  - The [planned operator restore](../design/curator-session.md#minimum-first-slice-operator-restore)
+    republishes compatible earlier contents under a new monotone version, preserving
+    original observation age and all old tags. It removes/restores curator output and
+    adds no lead knowledge. Program disable remains a separate later runner contract.
 - **Why.** Nothing survives a session except through the gate or a managed draft,
   so the curator cannot accumulate unreviewed state. A session is defined by its
   inputs, so it can be replayed, and two curator hosts or models can be compared on
@@ -434,10 +443,11 @@ checks every submission for:
   is true);
 - the type-similarity check (D3);
 - the curator's self-checks, plus **gate-owned tests the curator cannot see or
-  edit**. These are prospective: they score the submission on trace that arrives
-  after its base version, which the curator could not have read. They are defined
-  for programs (replay agreement, predicates) and for knowledge (retrieval misses
-  and re-observation outcomes in the new trace);
+  edit**. The [planned source/utility boundary](../design/curator-session.md#testoracle-and-utility-boundary)
+  requires capture after candidate freeze and controlled non-exposure. Program
+  replay/predicates still need their runner contract; knowledge retrieval and
+  re-observation checks still need a supported semantic oracle. These are proposed
+  capabilities, not existing gate scores;
 - offline replay and sandbox limits for programs;
 - size and budget limits.
 
