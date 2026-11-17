@@ -15,12 +15,13 @@ our engineering inferences; they are not a claim to exhaust the literature.
 ### Proposed investigation
 
 [Structured recurrence and representation search](design/structured-recurrence-research.md)
-asks whether a game-independent learner can discover useful memory structures and
-update/read rules across unfamiliar mechanics and independent games. It specifies
-competing representations, separate diagnostic/replay/real-play evidence, and bounded
-agent roles. Its first proposed delivery is a no-model fixture and price worksheet;
-paid studies and runtime adoption require their own decisions. The proposal is not an
-experimental result or a change to the current memory contract.
+asks whether generic memory and update/read mechanisms improve play across diverse
+CDDA starts. It specifies competing representations, whole-world/lineage splits,
+prefix replay, actual CDDA continuations and gameplaying player/curator/retrieval roles.
+The first delivery inventories real sources and prepares no-model packets, scoring and
+a priced pilot. Other games and unforeseen cross-game problems are deferred to future
+versions. Paid studies and runtime adoption require their own decisions; the proposal
+is not an experimental result or a change to the current memory contract.
 
 ### Current: the question is open
 
