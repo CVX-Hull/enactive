@@ -26,6 +26,13 @@ Terra remains the current player; #25 owns later cheaper-model trials. No envelo
 open, and this proposal neither resolves the belief choice nor gates #463's adoption.
 The later replay investigation is [#677](https://github.com/CVX-Hull/enactive/issues/677).
 
+The [measurement audit](../acceptance/2026-11-16-experiment-measurement-review.md)
+constrains the evaluation: score all assigned targets, preserve unknown evidence and
+actual input exposure, and distinguish justified verification from avoidable lookup.
+Judge agreement and all-negative validation samples cannot qualify correctness or
+positive-case sensitivity. Numeric calibration and gameplay utility remain separate
+claims; reuse the source-grouped packets and qualify only the outcome actually used.
+
 ## Primary foundations and what they support
 
 Targeted retrieval/read date: **16 November 2026**. These are foundational mechanisms,

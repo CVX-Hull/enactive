@@ -806,6 +806,13 @@ pilot's rule above stays as it was for the sealed pilot.
 
 ### The withholding study's sizing (`withholding-study-simulation/1`)
 
+This version describes the retained study apparatus. The
+[measurement review](../acceptance/2026-11-16-experiment-measurement-review.md#concrete-sizing-discrepancy)
+identifies smoothing of structurally unscoreable units into possible simulated
+touches. Its power forecasts are not qualified for reuse in a renewed study;
+future sizing needs a coordinated input/simulator repair. Historical inputs,
+results and frozen analysis source remain unchanged.
+
 - `study-inputs RUN --runs PACKAGE... --out FILE` writes `withholding-study-inputs/1`
   from a judged blind run (it reads the sealed pilot's packages): per unit the starts,
   touched and missed counts, the raw touched share and missed share when touched (pooled
