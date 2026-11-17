@@ -23,7 +23,7 @@ from harness.evaluation.core import judge, records
 from harness.evaluation.core.host import frame_source
 from harness.evaluation.core.sources import read_host, run_archive_entry
 from harness.jsonio import file_sha256
-from tools.memory_measure import (BOOTSTRAP_NOTE, HELD_OUT, NAME, NOT_CORRECTED, PACKET_TOKENS, Building,
+from tools.memory_measure import (HELD_OUT, NAME, NOT_CORRECTED, PACKET_TOKENS, Building,
     Frame, MeasureError, StartBootstrap, budget_entry, cohen_kappa, copy_frame, cut, events_target, frame_row, json_text,
     judges_beside, manifest_text, measure_dir, read_json, read_lineage, recorded_frames, seal_packet, text,
     verify_packet, write_json)
@@ -625,20 +625,53 @@ def ratio(numerator, denominator):
         return np.where(denominator > 0, numerator / denominator, np.nan)
 
 
+def range_fields(bounds: list[float] | None, eligible: int, *, undefined: bool = False,
+                 no_denominator: bool = False, boundary: bool = False) -> dict:
+    if undefined:
+        status, reason = 'undefined_statistic', 'The observed statistic is undefined'
+    elif no_denominator:
+        status, reason = 'no_denominator', 'The observed denominator is zero'
+    elif eligible < 2:
+        status, reason = 'insufficient_admissions', 'Fewer than two admissions have positive denominators'
+    elif boundary:
+        status, reason = 'boundary_observation', 'The observed rate is zero or one'
+    elif bounds is None:
+        status, reason = 'no_defined_resamples', 'No bootstrap resamples have a defined statistic'
+    elif bounds[0] == bounds[1]:
+        status, reason = 'degenerate_resampling', 'The bootstrap percentile bounds are equal'
+    else:
+        status, reason = 'descriptive', None
+    return dict(resample_range=bounds if status == 'descriptive' else None,
+        range_status=status, range_reason=reason, eligible_admissions=eligible)
+
+
 def rate(boot: StartBootstrap, rows: Sequence[dict], require_unflagged: bool = False) -> dict:
     numerator = boot.sums(rows, lambda row: row['numerator'])
     denominator = boot.sums(rows, lambda row: row['denominator'])
     n, d = float(numerator.sum()), float(denominator.sum())
-    interval = None
-    if np.count_nonzero(denominator > 0) >= 2:
+    eligible = int(np.count_nonzero(denominator > 0))
+    bounds = None
+    if eligible >= 2:
         if require_unflagged:
             unflagged = boot.sums(rows, lambda row: row['denominator'] if not row['flag'] else 0)
-            interval = boot.interval(lambda n, d, u: np.where(u > 0, ratio(n, d), np.nan),
+            bounds = boot.interval(lambda n, d, u: np.where(u > 0, ratio(n, d), np.nan),
                 numerator, denominator, unflagged)
         else:
-            interval = boot.interval(ratio, numerator, denominator)
+            bounds = boot.interval(ratio, numerator, denominator)
     return dict(numerator=n, denominator=d, value=n / d if d else None,
-        interval=interval)
+        **range_fields(bounds, eligible, no_denominator=not d, boundary=bool(d and (n == 0 or n == d))))
+
+
+def present_judge_ranges(health: dict, rows: Sequence[dict]) -> None:
+    """Adapt freshly computed agreement diagnostics without changing shared agreement output."""
+    for group, selected in (('all_pairs', rows), ('driving_pairs', [r for r in rows if r['driving']])):
+        eligible = len({row['start'] for row in selected})
+        for name in ('kappa', 'dispute_rate'):
+            statistic = health[group][name]
+            bounds = statistic.pop('interval')
+            value = statistic['value']
+            statistic.update(range_fields(bounds, eligible, undefined=value is None,
+                boundary=name == 'dispute_rate' and value in (0, 1)))
 
 
 def binding_comparison(mapping: dict, rows: Sequence[dict], root: Path | None) -> tuple[dict | None, str | None, list[dict]]:
@@ -707,6 +740,7 @@ def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path |
     for kind in KINDS:
         selected = [r for r in rows if r['kind'] == kind]
         health = agreement_health(boot, selected, judges, kind)
+        present_judge_ranges(health, selected)
         kappa = health['binary']['kappa']['value']
         kept = kappa is not None and kappa >= KAPPA_FLOOR
         reason = None if kept else 'All-pairs binary kappa is undefined' if kappa is None else \
@@ -741,14 +775,16 @@ def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path |
             value['sampled_unflagged'] = rate(boot, [unit for unit in units if not unit['flag']])
             value['weighted']['reason'] = None
             if mapping['sampling']['unflagged'] and not mapping['sampling']['sampled_unflagged']:
-                value['weighted'] = dict(numerator=None, denominator=None, value=None, interval=None,
+                value['weighted'].update(numerator=None, denominator=None, value=None, resample_range=None,
+                    range_status='unestimable_sampling',
+                    range_reason='No unflagged windows sampled; the all-window rate is not estimable',
                     reason='No unflagged windows sampled; the all-window rate is not estimable')
         measures[kind.removesuffix('_verdict')] = value
     stuck = [r for r in rows if r['kind'] == judge.STUCK]
     pairs = [(by_packet[r['packet']]['flag'], r['label'] in DRIVING[judge.STUCK]) for r in stuck]
     table = Counter(pairs)
     binding, binding_reason, binding_skipped = binding_comparison(mapping, rows, records_root)
-    value = dict(schema='process-measures/1', judges=judges, third=adjudicated['third'],
+    value = dict(schema='process-measures/2', judges=judges, third=adjudicated['third'],
         third_alone=adjudicated['third_alone'], pairs=len(rows), measures=measures, sampling=mapping['sampling'],
         filter=dict(judged_windows=len(pairs), agreement=sum(a == b for a, b in pairs) / len(pairs) if pairs else None,
             counts=dict(both=table[True, True], filter_only=table[True, False], judge_only=table[False, True],
@@ -758,7 +794,12 @@ def measure(run: Path, seed: int = 620, draws: int = 10000, records_root: Path |
             judged_cut=sum(w['claims_cut'] for w in mapping['windows'] if w['judged']),
             recorded_text_omitted_bytes=sum(w['text_omitted_bytes'] for w in mapping['windows'])),
         binding=binding, binding_reason=binding_reason, binding_skipped=binding_skipped, not_corrected=NOT_CORRECTED,
-        bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), note=BOOTSTRAP_NOTE), kappa_floor=KAPPA_FLOOR,
+        bootstrap=dict(seed=seed, draws=draws, starts=len(boot.names), resampling_unit='admission',
+            percentiles=[2.5, 97.5], interpretation='descriptive',
+            note='Descriptive admission-bootstrap percentiles; not a population confidence interval or validated error bound.',
+            independent_source_groups='unknown',
+            independent_source_groups_reason='Current inputs do not qualify world or lineage independence.'),
+        judge_diagnostics='Judge agreement diagnostics, not accuracy or truth.', kappa_floor=KAPPA_FLOOR,
         skipped=mapping['skipped'])
     write_json(run / 'process.json', value)
     return value

@@ -273,7 +273,7 @@ their numbers for latency and delivery counts.
 | `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. Per trace, per run directory and for the whole selection, `response_by_prompt`: response time (count, p50, p95), the share within 2 s and within 5 s and the mean provider-reported cost per request, for all responses and by prompt-size band (input plus cache read plus cache write tokens: under 20,000; 20,000 to 60,000; 60,000 to 100,000; 100,000 to 150,000; over 150,000), and the interval from one request's first tool result to the next. `prompt_composition`: per trace one object, per run directory and for the whole selection a list with one object per route (the host's `model`). It says what the prompt is made of, fitted by least squares on the growth in prompt tokens between consecutive requests of an actor against what was added, from the provider's reported `usage` and the trace's own sizes alone, so it holds for any model that reports usage. An object has `pairs` (fitted), `left_out`, `image_counts` (histogram of images per fitted pair), `image_term_separable`, `images_per_turn`, `usage_fit`, `usage_fit_reason` and `tokenizer_check`. `usage_fit` has `per_result_byte` (tokens per byte of tool-result text: the `content` text the model reads, in the short form or the full one, never `structuredContent`), `per_output_token` (per output token of the previous reply, reasoning included), `per_image`, `per_turn_constant`, `per_turn_at_modal_images`, `residual_abs` (p50, p95, share within 5 tokens) and `pairs`. Every eligible pair is fitted; the image count is a term of the fit whenever it varies, so a turn with another count has its own intercept and does not bend the byte slope. `per_image` and `per_turn_constant` are numbers only when at least 10% of the fitted pairs have a count other than the most common one (`image_term_separable` true). Otherwise (`image_term_separable` false) they are null, because the image term cannot be told from the constant, and the supported figure is `per_turn_at_modal_images`, the constant plus `images_per_turn` (the most common count) images; it is null when they are separable. `left_out` counts the pairs not fitted, by `usage_unknown` (a prompt size or the reply's output is unknown), `projection_unknown` (only one of the two requests has an image projection event), `images_dropped` (the host dropped images between the two requests), `notice_added` (a `tail-notice` or delivered knowledge reminder on the second) and `not_one_call` (the reply did not make exactly one call with one result). `usage_fit` is null, with `usage_fit_reason`, when there are no more pairs than terms or the terms are not independent (for example every result has the same length). A tokenizer is only an optional check: `python -m tools.host_analysis PATH... --tokenizer [ROUTE=]ENCODING` (or `host_summary(paths, tokenizers)`) fills `tokenizer_check`, otherwise null; it fits the growth on that tokenizer's count of the result text, the reply's visible output tokens and its reasoning tokens (with the same image treatment) and reports `slope` (`per_result_token`) and `holds`: the slope is within 1 ± 0.01 and the median absolute residual is at most 1 token (this reader's stated limit; the recorded medians for `o200k_base` were 0.2 and 0.1). A tokenizer that is not installed, cannot be loaded or whose counting function raises gives `available: false` and a `reason`, and a degenerate fit gives a `reason` and no `slope`; the usage fit is unaffected. The command exits 2 when a `ROUTE` names no selected trace. `--format markdown` prints the tables. |
 | `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
 | `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`); `pilot` writes the withholding pilot's unit-level analysis (`withholding-pilot/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
-| `python -m tools.process_measures` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The game-neutral process measures: `milestones packets` and `milestones events` freeze each admission's milestones; `packets`, `events`, `agreement` and `measure` judge windows and report `process-measures/1`. It calls no model and spends nothing; see [process measures](#process-measures-process-measures1). |
+| `python -m tools.process_measures` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The game-neutral process measures: `milestones packets` and `milestones events` freeze each admission's milestones; `packets`, `events`, `agreement` and `measure` judge windows and report `process-measures/2`. It calls no model and spends nothing; see [process measures](#process-measures-process-measures2). |
 | `python -m tools.memory_reads` | text, or `--json` | For sealed historical traces, per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
 | `python -m tools.memory_screen_checks` | text, or `--json` | Three subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options. Its `recorded` row is from the traces; every other row is simulated, not measured. |
 
@@ -844,7 +844,11 @@ Historical inputs, results and frozen analysis source remain unchanged.
   power, smallest starts reaching 0.8, and price. It is seeded and writes no file.
   Historical inputs and results remain frozen; unsupported input versions are rejected.
 
-### Process measures (`process-measures/1`)
+<a id="process-measures-process-measures1"></a>
+
+Historical `process-measures/1` reports remain sealed; the current report contract is v2 below.
+
+### Process measures (`process-measures/2`)
 
 `python -m tools.process_measures` measures how play went beyond memory, in game-neutral
 terms ([#620](https://github.com/CVX-Hull/enactive/issues/620)): windows stuck or looping,
@@ -892,7 +896,7 @@ source IDs, translated from the packet's frame names), `judge`, `model`, `packet
   pairs driving the measure (either first judge gave `stuck` or `looping`,
   `repeated_failed_approach`, `reached`, or `unsupported`), chosen before adjudication.
 
-`measure RUN [--records ROOT]` writes `process.json` (`process-measures/1`):
+`measure RUN [--records ROOT]` writes `process.json` (`process-measures/2`):
 
 | Measure | Definition |
 | --- | --- |
@@ -901,9 +905,23 @@ source IDs, translated from the packet's frame names), `judge`, `model`, `packet
 | `milestone` | Frozen milestones reached over frozen milestones, overall and per admission |
 | `claim` | Unsupported over supported plus unsupported success claims, among the kept candidates |
 
-Each rate has a 95% interval from a cluster bootstrap over admissions, given only when at
-least two admissions have a positive denominator for it, and the judges' figures beside it;
-the claim rate is over kept candidates only and is not weighted by window sampling.
+Each rate retains its numerator, denominator and value, and reports `eligible_admissions`
+(the number of admissions with an observed positive denominator), `resample_range`,
+`range_status` and `range_reason`. A nondegenerate `descriptive` range gives the 2.5th and
+97.5th percentiles of the seeded admission bootstrap; it is neither a population confidence
+interval nor a validated error bound. Other statuses give a null range and a reason:
+`no_denominator`, `insufficient_admissions`, `boundary_observation` (rate zero or one),
+`no_defined_resamples`, `degenerate_resampling` or `unestimable_sampling` (an unsampled
+stratum). For the last, the eligible count still describes observed denominators and does
+not make the all-window rate estimable. Bootstrap metadata states the resampling unit is an
+admission and independent source groups are unknown: current inputs do not qualify world or
+lineage independence. Admissions are not counts of independent worlds.
+
+The all-pairs and driving-pairs judge κ and dispute rates use the same range fields;
+`undefined_statistic` marks an undefined point, and the boundary rule applies to dispute
+rate but not κ. These and the plain agreement and binary κ figures are diagnostics of judge
+agreement, not accuracy or truth. The claim rate is over kept candidates only and is not
+weighted by window sampling.
 `events` refuses, before writing anything, answers that do not cover every packet (for a
 third judge, every packet the agreement lists) and any answer field not allowed for its
 kind; one judge and model derive every admission's milestones. Whether a measure is `kept` is decided on its driving outcome as a
