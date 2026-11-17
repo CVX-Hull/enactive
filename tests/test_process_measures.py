@@ -329,8 +329,8 @@ def test_sampling_weighting_cap_counts_and_unestimable_unsampled_stratum(tmp_pat
     assert stuck['value'] == 1 / 2
     assert stuck['flagged']['value'] == 1
     assert stuck['sampled_unflagged']['value'] == 0
-    assert stuck['flagged']['interval'] is None
-    assert stuck['sampled_unflagged']['interval'] is None
+    assert stuck['flagged']['resample_range'] is None
+    assert stuck['sampled_unflagged']['resample_range'] is None
     assert stuck['weighted']['value'] == 1 / 4
     assert stuck['weighted']['denominator'] == 4
     assert report['measures']['retry']['weighted']['value'] == 1 / 4
@@ -340,7 +340,7 @@ def test_sampling_weighting_cap_counts_and_unestimable_unsampled_stratum(tmp_pat
     assert report['filter']['agreement'] == 1
     assert report['binding'] is None and '--records' in report['binding_reason']
     assert report == json.loads((run / 'process.json').read_text())
-    assert stuck['interval'] is not None
+    assert stuck['resample_range'] is not None
     assert 'not corrected' in report['not_corrected']
     # No unflagged sample: refuse to extrapolate the flagged observations to unobserved strata.
     other = tmp_path / 'no-sample'
@@ -349,6 +349,8 @@ def test_sampling_weighting_cap_counts_and_unestimable_unsampled_stratum(tmp_pat
     pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
     value = pm.measure(run, draws=20)['measures']['stuck']['weighted']
     assert value['value'] is None and 'not estimable' in value['reason']
+    assert value['range_status'] == 'unestimable_sampling'
+    assert value['eligible_admissions'] > 0
 
 
 def test_kappa_floor_drops_measure_using_binary_all_pairs_before_adjudication(tmp_path):
@@ -495,7 +497,7 @@ def test_isolation_and_held_out_refusal_before_reading(tmp_path):
             builder(tmp_path / 'memory-measure' / 'run', [source])
 
 
-def test_cli_one_admission_and_single_start_interval(tmp_path, capsys):
+def test_cli_one_admission_and_single_start_range(tmp_path, capsys):
     source = evidence(tmp_path, repeated=True)
     run = tmp_path / 'memory-measure' / 'cli'
     assert pm.main(['milestones', 'packets', str(run), '--runs', str(source)]) == 0
@@ -510,7 +512,16 @@ def test_cli_one_admission_and_single_start_interval(tmp_path, capsys):
         assert pm.main(['events', str(run), '--judge', name, '--model', 'host', *map(str, paths)]) == 0
     assert pm.main(['agreement', str(run), '--judges', 'judge-a', 'judge-b', '--draws', '20']) == 0
     assert pm.main(['measure', str(run), '--draws', '20', '--json']) == 0
-    assert json.loads((run / 'process.json').read_text())['measures']['stuck']['interval'] is None
+    report = json.loads((run / 'process.json').read_text())
+    assert report['schema'] == 'process-measures/2'
+    assert report['bootstrap']['resampling_unit'] == 'admission'
+    assert report['bootstrap']['independent_source_groups'] == 'unknown'
+    assert report['measures']['stuck']['resample_range'] is None
+    assert report['measures']['stuck']['range_status'] == 'insufficient_admissions'
+    assert '"interval"' not in json.dumps(report)
+    adjudicated = json.loads((run / 'process-adjudicated.json').read_text())
+    assert adjudicated['schema'] == 'process-adjudicated/1'
+    assert 'interval' in adjudicated['statistics'][judge.STUCK]['all_pairs']['kappa']
     assert pm.main(['measure', str(run), '--draws', '0']) == 1
     capsys.readouterr()
 
@@ -642,13 +653,75 @@ def test_report_whitespace_deduplication_and_requestless_finish_fallback(tmp_pat
     assert rows[1]['after_frame'] == list(packet['frames'])[0]
 
 
-def test_rate_intervals_require_two_admissions_with_a_positive_denominator():
+def test_rate_ranges_require_two_admissions_with_a_positive_denominator():
     boot = pm.StartBootstrap(['a', 'b', 'c'], 620, 100)
     rows = [dict(start='a', numerator=1, denominator=2), dict(start='a', numerator=0, denominator=1),
         dict(start='b', numerator=0, denominator=0)]
     assert pm.rate(boot, rows)['value'] == 1 / 3
-    assert pm.rate(boot, rows)['interval'] is None
-    assert pm.rate(boot, rows + [dict(start='b', numerator=1, denominator=2)])['interval'] is not None
+    assert pm.rate(boot, rows)['resample_range'] is None
+    assert pm.rate(boot, rows + [dict(start='b', numerator=1, denominator=2)])['resample_range'] is not None
+
+
+def test_rate_range_statuses_and_points():
+    boot = pm.StartBootstrap(['a', 'b'], 620, 100)
+    def rows(a, b):
+        return [dict(start='a', numerator=a[0], denominator=a[1]),
+            dict(start='b', numerator=b[0], denominator=b[1])]
+    for data, status, value, eligible in [
+        (rows((0, 0), (0, 0)), 'no_denominator', None, 0),
+        (rows((1, 2), (0, 0)), 'insufficient_admissions', 0.5, 1),
+        (rows((0, 1), (0, 1)), 'boundary_observation', 0, 2),
+        (rows((1, 1), (1, 1)), 'boundary_observation', 1, 2),
+        (rows((1, 2), (1, 2)), 'degenerate_resampling', 0.5, 2),
+        (rows((0, 1), (1, 1)), 'descriptive', 0.5, 2),
+    ]:
+        result = pm.rate(boot, data)
+        assert result['value'] == value and result['eligible_admissions'] == eligible
+        assert result['range_status'] == status
+        assert (result['resample_range'] is not None) == (status == 'descriptive')
+        assert (result['range_reason'] is None) == (status == 'descriptive')
+    boot.index = np.array([[0, 0], [0, 0]])
+    data = [dict(start='a', numerator=1, denominator=1, flag=True),
+        dict(start='b', numerator=0, denominator=1, flag=False)]
+    assert pm.rate(boot, data, require_unflagged=True)['range_status'] == 'no_defined_resamples'
+
+
+def test_nested_judge_ranges_are_diagnostics_and_preserve_agreement(tmp_path):
+    run, _ = judged(tmp_path, sample_unflagged=1)
+    agreement = pm.agreement(run, ['judge-a', 'judge-b'], draws=50)
+    report = pm.measure(run, draws=50)
+    assert 'judge agreement' in report['judge_diagnostics'].lower()
+    for kind in pm.KINDS:
+        measured = report['measures'][kind.removesuffix('_verdict')]['judges']
+        original = agreement['statistics'][kind]
+        assert measured['binary'] == original['binary']
+        for group in ('all_pairs', 'driving_pairs'):
+            for name in ('kappa', 'dispute_rate'):
+                result = measured[group][name]
+                assert result['value'] == original[group][name]['value']
+                assert 'interval' not in result
+                selected = [row for row in agreement['rows'] if row['kind'] == kind
+                    and (group == 'all_pairs' or row['driving'])]
+                assert result['eligible_admissions'] == len({row['start'] for row in selected})
+                if result['value'] is None:
+                    assert result['range_status'] == 'undefined_statistic'
+                    assert result['resample_range'] is None
+                elif name == 'dispute_rate' and result['value'] in (0, 1) and result['eligible_admissions'] >= 2:
+                    assert result['range_status'] == 'boundary_observation'
+
+
+def test_judge_range_presentation_handles_undefined_and_kappa_boundary():
+    rows = [dict(start='a', driving=True), dict(start='b', driving=False)]
+    health = dict(all_pairs=dict(kappa=dict(value=1, interval=[0.5, 1]),
+        dispute_rate=dict(value=0.5, interval=None)),
+        driving_pairs=dict(kappa=dict(value=None, interval=None),
+            dispute_rate=dict(value=0, interval=None)))
+    pm.present_judge_ranges(health, rows)
+    assert health['all_pairs']['kappa']['range_status'] == 'descriptive'
+    assert health['all_pairs']['kappa']['resample_range'] == [0.5, 1]
+    assert health['all_pairs']['dispute_rate']['range_status'] == 'no_defined_resamples'
+    assert health['driving_pairs']['kappa']['range_status'] == 'undefined_statistic'
+    assert health['driving_pairs']['dispute_rate']['range_status'] == 'insufficient_admissions'
 
 
 def test_weighted_bootstrap_drops_replicates_without_sampled_unflagged_windows():
@@ -659,8 +732,8 @@ def test_weighted_bootstrap_drops_replicates_without_sampled_unflagged_windows()
         dict(start='c', numerator=1, denominator=2, flag=False)]
     result = pm.rate(boot, rows, require_unflagged=True)
     assert result['value'] == 2 / 5
-    assert result['interval'] == pytest.approx(np.percentile([2 / 5, 0, 1 / 2], [2.5, 97.5]))
-    assert result['interval'] != pm.rate(boot, rows)['interval']
+    assert result['resample_range'] == pytest.approx(np.percentile([2 / 5, 0, 1 / 2], [2.5, 97.5]))
+    assert result['resample_range'] != pm.rate(boot, rows)['resample_range']
 
 
 def test_every_admission_packet_excludes_real_forbidden_fixture_inputs(tmp_path):
