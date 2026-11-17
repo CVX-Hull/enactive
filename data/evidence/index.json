@@ -720,6 +720,20 @@
       },
       "visibility": "private"
     },
+    "post-process-report-backlog-grooming": {
+      "availability": "present",
+      "bytes": 3878990,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-post-process-report-backlog-grooming.md"
+      ],
+      "files": 54,
+      "manifest_sha256": "67023fd0aec8b88d4714ac8254377a407c5113864d10337f944945d3934c880b",
+      "note": "Full32-open-issue baseline and reconciled33-issue/269-card readbacks after process-measures/2. Selected #697 Ready/Important source-only gate-contract discovery; three existing issue descriptions retain byte-identical acceptance, #697 blocks457,666returnsNext. Includes brief, native graph, verification and review/cleanup dispositions. Source baseline7ef2706bc1cdf7fe055a71572e2f31f0ab967dcd. No new game/image/label/provider experiment or runtime implementation; duplicate task staging removed only after full hash/path verification. Git and the publication PR own source history and later CI receipts.",
+      "sources": {
+        "tracker": ".runtime/backlog-grooming-after-ranges@7ef2706bc1cdf7fe055a71572e2f31f0ab967dcd"
+      },
+      "visibility": "private"
+    },
     "post-reader-backlog-grooming": {
       "availability": "present",
       "bytes": 3992780,
