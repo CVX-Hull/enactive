@@ -92,11 +92,22 @@ provenance algebra are extension candidates only after a concrete baseline failu
 
 ### Mechanical checks: no model, no gameplay
 
-Use formula and bookkeeping checks, not another interactive game. Check matched
-Beta/opinion projections, repeat-origin invariance, and retraction of alternative
-supports: `(a AND b) OR (a AND c)` survives removal of b but not removal of a. Include
-balanced conflicting support and no-support cases, with different evidence strength.
-These checks validate an implementation against its definition, not useful learning.
+`tools/recurrence_research/belief.py` provides `evidence_views` for exact rational,
+finite Beta/opinion fixtures and `active_alternatives` and `revision_state` for supplied
+origin conjunctions and their alternative supports. The focused tests check matched
+projections, repeat-origin invariance and retraction: `(a AND b) OR (a AND c)`
+survives removal of b but not removal of a. Balanced conflicting evidence and a
+numerical no-support prior can have the same mean and different uncertainty.
+
+These are synthetic definition and bookkeeping checks, not useful learning or evidence
+of CDDA efficacy, calibration or production adoption. Polarity and dependencies are
+supplied; distinct IDs do not establish independent observations. No source reliability,
+observation-to-weight conversion or numerical evidence is inferred from the graph.
+Qualitative unknown is not converted to probability .5; the numerical prior is a
+separate supplied fixture. The #677 method comparison owns this apparatus; reassess it
+at #677 completion, stop or method abandonment and remove it and its tests if no named
+consumer continues to need them. The bounded offline checks reduce R-FALSE-CLAIM and
+R-REGRESSION by catching projection and support bookkeeping errors.
 
 Prepare CDDA packets through #668. All previously inspected lineages are development
 material. No LLM extraction, replay or new-start creation is authorized by preparation.
