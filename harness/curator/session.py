@@ -29,7 +29,7 @@ from harness.trace.sidecar import validate
 
 from . import sandbox
 from .containers import Drafts, UnsafeTree, read_tree, write_tree
-from .gate import FACT, gate
+from .gate import FACT, gate, journal as gate_journal
 from .window import FULL, Window, coverage as window_coverage, restrict, positions, citations_only
 from .knowledge import Repository
 
@@ -166,12 +166,11 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
               '(run from `workbench/`).', '', '## Drafts', '']
     lines += [f"- `{d['id']}` ({d['lifecycle']['state']}, untouched for {d['lifecycle'].get('untouched_sessions', 0)} "
               f"sessions) in `drafts/{d['id']}/`" for d in drafts] or ['None.']
-    log = repo.state/'gate.jsonl'
-    verdicts = [json.loads(line) for line in log.read_text().splitlines()][-10:] if log.is_file() else []
+    verdicts = gate_journal(repo)[-10:]
     lines += ['', '## Recent gate results', '']
-    lines += [f"- {v['submission']!r} from session `{v['session']}`: "
-              + (f"accepted as `{v['version']}`" if v['accepted']
-                 else 'rejected: ' + '; '.join(repr(d) for d in v['diagnostics']))
+    lines += [f"- {v['operation']} {v['submission']!r} from session `{v['session']}`: "
+              + (f"{v['status']} as `{v['version']}`" if v['version'] is not None else v['status'])
+              + (': ' + '; '.join(repr(d) for d in v['diagnostics']) if v['diagnostics'] else '')
               for v in verdicts] or ['None.']
     lines += ['', '## Hints and flagged types', '',
               'Player hints in the selected trace tool calls are fallible public reports, not published facts. '
@@ -198,6 +197,7 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
     record_dir = repo.state/'sessions'/session_id
     cleanup: list[str] = []
     try:
+        gate_journal(repo)
         record_dir.mkdir(parents=True)
         return _run(repo, trace_sessions, config, memory, journal, window, session_id, record_dir, session_kind)
     finally:
@@ -359,8 +359,10 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
                 try:
                     verdict = gate(repo, submission, session_id=session_id, window_frames=window_frames, coverage=coverage, session_kind=session_kind)
                     verdicts.append(verdict)
-                    if verdict['accepted']:
+                    if verdict['status'] == 'published' and verdict['operation'] == 'submission':
                         drafts.promote(verdict.get('from_drafts', []), session_id)
+                    if verdict['status'] == 'unknown':
+                        break
                 except Exception as exc:  # noqa: BLE001
                     errors.append(f'close-out: gate {submission.name!r}: {_error(exc)}')
                     break

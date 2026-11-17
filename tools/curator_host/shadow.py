@@ -18,7 +18,7 @@ printed or written.
 runs ten windows of 20 steps of one actor in order against one repository (`--windows-file` takes the same list as
 JSON; see docs/operations/curator-hosts.md). Only the sampled sessions of the two development lineages can be named. The held-out lineages
 (#382's three, stored as `lh1`, `lh2` and `lh3`, and #522's fourth, stored as `lh4`) are refused by name.
-Summaries are `curator-shadow/1`, one per session and one per run. Prices are the frozen `curator-prices/1` file in `data/curator/`.
+Summaries are `curator-shadow/2`, one per session and one per run. Prices are the frozen `curator-prices/1` file in `data/curator/`.
 """
 from __future__ import annotations
 
@@ -44,11 +44,22 @@ from harness.curator import sandbox  # noqa: E402
 from harness.curator.knowledge import Repository  # noqa: E402
 from harness.curator.proxy import ModelProxy, Price  # noqa: E402
 from harness.curator.session import SessionConfig, run_session  # noqa: E402
+from harness.curator.gate import journal, VERDICT  # noqa: E402
 from harness.curator.window import FULL, Window, WindowError  # noqa: E402
 from tools.campaign_supervision import credential  # noqa: E402
 from tools.curator_host.providers import OPENROUTER  # noqa: E402
 
-SCHEMA = 'curator-shadow/1'
+SCHEMA = 'curator-shadow/2'
+
+
+def verdict_summary(verdicts: list[dict]) -> dict:
+    unresolved = any(v.get('schema') != VERDICT or v.get('operation') not in ('submission', 'restore')
+                     or v.get('status') not in ('published', 'rejected', 'unchanged') for v in verdicts)
+    submissions = [v for v in verdicts if v.get('schema') == VERDICT and v.get('operation') == 'submission']
+    return dict(submissions=len(submissions), accepted=sum(v.get('status') == 'published' for v in submissions),
+                rejected=sum(v.get('status') == 'rejected' for v in submissions), unresolved=unresolved,
+                verdicts=[dict(operation=v.get('operation'), status=v.get('status'), submission=v.get('submission'),
+                               version=v.get('version'), diagnostics=v.get('diagnostics')) for v in verdicts])
 PRICES_SCHEMA = 'curator-prices/1'
 HOST_SCHEMA = 'curator-host/1'
 HOST_DIR = ROOT/'tools'/'curator_host'
@@ -350,7 +361,7 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             memory_note: str, host: dict, config_path: Path, config_dir: Path, model_config: dict, prices: dict[str, Price],
             key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int,
             window: Window = FULL, session_kind: str = 'admission') -> dict:
-    """One curator session through its own proxy. Returns the `curator-shadow/1` session summary."""
+    """One curator session through its own proxy. Returns the `curator-shadow/2` session summary."""
     session_dir = out/lineage/name
     session_dir.mkdir(parents=True)
     arm = ARMS[arm_name]
@@ -413,10 +424,7 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
                          seconds=record['manifest']['provenance'].get('seconds'),
                          peak_memory_bytes=record['manifest']['provenance'].get('peak_memory_bytes')),
             errors=life.get('errors', []), refused=life.get('refused', []),
-            submissions=len(verdicts), accepted=sum(1 for v in verdicts if v['accepted']),
-            rejected=sum(1 for v in verdicts if not v['accepted']),
-            verdicts=[dict(submission=v['submission'], accepted=v['accepted'], version=v['version'],
-                           diagnostics=v['diagnostics']) for v in verdicts],
+            **verdict_summary(verdicts),
             drafts=dict(created=drafts.get('created', []), renewed=drafts.get('renewed', []),
                         refused=drafts.get('refused', [])),
             published_after=record['published_after'],
@@ -490,6 +498,7 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
                               f'{knowledge.name!r}; this run is arm {args.arm!r}, lineage {args.lineage!r}')
     elif knowledge.exists():
         raise ShadowError(f'{knowledge} exists; every run starts a fresh knowledge repository')
+    journal(Repository(knowledge, GAME))
     host = host_tools()  # after every refusal above, so a refused run needs no host tools
     model_config = host_configuration(
         arm, prices, effort=args.effort or arm.effort, max_requests=args.max_requests,
@@ -545,6 +554,8 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
             reason = 'proxy-unsettled'
         elif summary.get('sandbox', {}).get('survivors') != []:
             reason = 'cleanup-unconfirmed'
+        elif summary.get('unresolved'):
+            reason = 'unresolved-result'
         elif args.stop_on_abort and summary.get('session_state') != 'sealed':
             reason = 'session-aborted'
         elif args.stop_on_reject and summary.get('rejected'):

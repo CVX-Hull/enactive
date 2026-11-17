@@ -166,12 +166,14 @@ Node tests: `cd tools/curator_host && npm test`.
 - **The prompt is recorded.** `prompt_sha256` (of `prompt.md`) is in the run summary's `host`
   and in each session manifest's `pinned.host`. A grooming session additionally pins
   `grooming_sha256` in its manifest.
-- **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
+- **Output.** `curator-shadow/2` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,
   proxy-settled cost, requests, tool calls, submissions, verdicts with diagnostics, drafts, the
   record path, the proxy's `revoked` and breaches, and whether the cap stopped it, its
-  `session_kind` (`admission` or `grooming`) and the trace session it read. The run summary
+  `session_kind` (`admission` or `grooming`) and the trace session it read. Counts cover published
+  and rejected submissions only; restore and unchanged events are distinct, and an unknown or
+  unsupported result stops the screen as unresolved. The run summary
   lists each session with its kind and published versions before and after, records `groom`,
   `groom_only` and `grooming_skipped` (an admission that published nothing is not groomed),
   counts every session in `sessions_run`, and is `complete` when every planned admission (or,

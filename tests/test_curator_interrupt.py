@@ -170,6 +170,30 @@ def test_generic_shadow_stops_on_incomplete_accounting_or_cleanup_without_option
     assert calls == ['sd1a1'] and run['stopped'] == expected and not run['complete']
 
 
+@pytest.mark.parametrize(('unresolved', 'rejected', 'flags', 'expected'), [
+    (True, 0, [], 'unresolved-result'),
+    (False, 1, ['--stop-on-reject'], 'submission-rejected'),
+])
+def test_shadow_stop_policy_distinguishes_unresolved_and_rejection(tmp_path, monkeypatch, unresolved, rejected, flags, expected):
+    evidence = synthetic_evidence(tmp_path, names=('sd1a1', 'sd1a2'))
+    runtime = tmp_path/'runtime'
+    calls = []
+    def summary(**kwargs):
+        calls.append(kwargs['name'])
+        return dict(run_state='completed', session_state='sealed', cost_usd='.001', requests=1,
+                    accepted=0, rejected=rejected, unresolved=unresolved, stopped_by_cap=False,
+                    proxy=dict(revoked=False, breaches=0, settled=True), sandbox=dict(survivors=[]))
+    monkeypatch.setattr(shadow, 'host_tools', lambda: {})
+    monkeypatch.setattr(shadow, 'host_identity', lambda *args: {'name': 'fixture'})
+    monkeypatch.setattr(shadow, 'run_one', summary)
+    args = shadow.parser().parse_args(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2',
+                                      '--cap-usd', '1', '--runtime-root', str(runtime),
+                                      '--out', str(runtime/'curator-shadow/result'),
+                                      '--evidence-root', str(evidence), *flags])
+    run = shadow.run_shadow(args, KEY)
+    assert calls == ['sd1a1'] and run['stopped'] == expected and not run['complete']
+
+
 @pytest.fixture
 def synthetic_sandbox(tmp_path, monkeypatch):
     workspace, home = tmp_path/'workspace', tmp_path/'home'

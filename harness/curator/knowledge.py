@@ -158,13 +158,45 @@ class Repository:
         self._publish(files, message, next_version)
         return next_version
 
-    def _publish(self, files: dict[str, bytes], message: str, tag: str) -> None:
+    def snapshot(self, version: str) -> dict[str, bytes]:
+        """Read a published tree, refusing non-regular Git entries."""
+        version = self._resolve(version)
+        entries = _git(self.path, 'ls-tree', '-r', '-z', version).split(b'\0')
+        files = {}
+        for entry in entries:
+            if not entry:
+                continue
+            metadata, raw = entry.split(b'\t', 1)
+            mode, kind, _ = metadata.split(b' ', 2)
+            if mode != b'100644' or kind != b'blob':
+                raise KnowledgeError('snapshot contains a non-regular file')
+            name = raw.decode('utf-8')
+            _safe(name)
+            files[name] = self._show(version, name)
+        return files
+
+    def reconcile(self) -> None:
+        """Discard unpublished work and return the writer to the highest tag."""
+        version = self.published()
+        _git(self.path, 'reset', '-q', '--hard', version)
+        _git(self.path, 'clean', '-fdxq')
+
+    def commit_snapshot(self, files: dict[str, bytes], message: str) -> str:
+        """Publish an exact tree, removing files omitted from the snapshot."""
+        current = self.snapshot(self.published())
+        next_version = f'v{_number(self.published()) + 1}'
+        self._publish(files, message, next_version, delete=set(current) - set(files))
+        return next_version
+
+    def _publish(self, files: dict[str, bytes], message: str, tag: str, *, delete: set[str] = frozenset()) -> None:
         targets = {_safe(name): data for name, data in files.items()}
         try:
             head = _git(self.path, 'rev-parse', '--verify', '-q', 'HEAD').decode().strip()
         except KnowledgeError:
             head = None
         try:
+            for name in delete:
+                self.path.joinpath(*_safe(name).parts).unlink()
             for relative, data in targets.items():
                 target = self.path.joinpath(*relative.parts)
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -173,7 +205,10 @@ class Repository:
             _git(self.path, 'commit', '-q', '--no-verify', '-m', message)
             _git(self.path, 'tag', tag)
         except BaseException:
-            self._rollback(head)
+            # A tag may have been created even if the tagging command reported failure.
+            # Never reset the branch away from a known published commit.
+            if tag not in self._tags():
+                self._rollback(head)
             raise
 
     def _rollback(self, head: str | None) -> None:

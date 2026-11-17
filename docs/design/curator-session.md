@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: 'Current curator-fact/3 structural publication, sessions and drafts; proposed prospective gate and compatible-snapshot restore contract (#697)'
+scope: 'Current curator-fact/3 structural publication, sessions and drafts; compatible-snapshot restore and proposed prospective gate'
 review_trigger: A change to the knowledge repository layout, the submission or fact shapes, the gate checks, the draft lifecycle or the session close-out
 ---
 
@@ -302,8 +302,8 @@ meets these requirements. A future paid check/qualification needs separate appro
 
 ### Minimum first slice: operator restore
 
-**Recommended independent follow-on, not implemented here.** An operator may remove
-curator output by restoring a previously published compatible snapshot. No belief model,
+An operator may remove curator output by restoring a previously published compatible
+snapshot. No belief model,
 semantic oracle, new trace or program runtime is needed for this operation. The command
 accepts only repository identity, expected current base and target version; it accepts
 no replacement knowledge text or free-form explanation that could reach the curator.
@@ -312,6 +312,7 @@ repository from operator text.
 
 Use a gate-owned `restore` entry under `python -m harness.curator.gate`, backed by the
 existing repository and exclusive session lock. Keep `published()`'s highest-tag rule.
+Run `python -m harness.curator.gate restore ROOT --game GAME --expected-base VERSION --target VERSION`.
 Restore by publishing the target's validated content as a **new monotone version**;
 never move/delete tags, reset a published version or rewrite a frozen delivery file.
 The restore target must belong to this repository/fork, exist and satisfy current
@@ -321,8 +322,8 @@ tree, is an `unchanged` no-op with the current version reported and no new tag.
 
 Restore the compatible target's facts/articles/types, coverage and provenance together,
 including absence of an optional file at v0; never mix old facts with newer coverage.
-The existing `commit(files)` overlays files and cannot express deletion. The follow-on
-must own an exact-snapshot/delete-capable transaction using the existing Git repository,
+The existing `commit(files)` overlays files and cannot express deletion. The gate uses
+an exact-snapshot/delete-capable transaction using the existing Git repository,
 with regular-file/layout validation before mutation and the same commit-then-tag
 publication point. An omitted target file is removed, not left over from the current
 tree. No administrative empty commit is needed for a content-identical restore.
@@ -347,7 +348,7 @@ after tagging is an already published restore with unknown/incomplete reporting,
 not permission to roll back or blindly retry. Retain the trusted operation identity
 and base/target/new-version link in Git publication metadata and the gate result.
 
-The follow-on's one current result is **`curator-gate/2`**. Every result has `operation`
+The one current result is **`curator-gate/2`**. Every result has `operation`
 (`submission` or `restore`), software-generated `operation_id`, `status` (`published`,
 `rejected`, `unchanged` or `unknown`), `base_version`, `restored_from`, `version`,
 `submission`, `session`, `from_drafts` and `diagnostics`. Existing submission/session
@@ -366,7 +367,7 @@ policy together. First-slice writers use only these four statuses. Future prospe
 not silently appended to v2. The shadow runner counts `rejected` only as rejection;
 unknown or an unsupported status/schema stops its screen as unresolved, not successful
 or rejected evidence. Restore events are not submission outcomes in its summary.
-Its changed session/run summaries become `curator-shadow/2` in the same migration;
+Its session/run summaries are `curator-shadow/2`;
 the verdict projections use status/operation, while aggregate accepted/rejected counts
 keep their stated meanings for submissions only. Existing sealed v1 summaries remain
 historical evidence, not active input to the new writer/reader.
@@ -388,12 +389,12 @@ base; an unchanged no-op does not. Frozen admissions keep their existing version
 
 ### Shared consumer and verification matrix
 
-This matrix is the batch's shared handoff, not permission to change these consumers now.
+This matrix identifies current restore behavior and later prospective work.
 
 | Surface / owner | Implemented boundary | Planned change and reused verification |
 | --- | --- | --- |
-| Repository/gate/session — #457 and restore first slice | `curator-knowledge/2`, `curator-fact/3`, structural verdict and recent-results brief | Exact-snapshot monotone restore, historical-ID reservation and v2 verdict migration first; prospective receipt/state/plan later. `test_curator_gate.py`, `test_curator_session.py`, `test_curator_window.py`, interruption/collection cases. |
-| Shadow runner — restore first slice / #664 | `tools/curator_host/shadow.py` counts/projects verdicts in `curator-shadow/1` and implements `--stop-on-reject` | Move changed summaries to `/2` with schema/status/operation handling, retaining true submission rejection counts and stopping on unresolved outcomes. Reuse `test_curator_host.py` and relevant shadow interruption/summary cases; update the output section of curator-host operations together. |
+| Repository/gate/session — #457 and restore first slice | `curator-knowledge/2`, `curator-fact/3`, exact-snapshot restore, historical-ID reservation and `curator-gate/2` verdict | Prospective receipt/state/plan later. `test_curator_gate.py`, `test_curator_session.py`, `test_curator_window.py`, interruption/collection cases. |
+| Shadow runner — restore first slice / #664 | `curator-shadow/2` counts submission results and stops on unresolved outcomes | Retain schema/status/operation handling and true submission rejection counts. Reuse `test_curator_host.py` and relevant shadow interruption/summary cases; update the output section of curator-host operations together. |
 | Projection/window — #457/#664 | `trace-projection/2`, narrowed file hashes, `curator-coverage/2` | Exposure/acquisition receipt is a separate future requirement; coverage is not a proof of unseen source. Reuse window and trace projection tests; no evaluator imports. |
 | Export and delivery freeze — #457/#664 | `tools/knowledge_export.py`, `delivered-knowledge/1`, frozen `player-host-inputs/3` hashes | Restore changes future exports only; never rewrite existing packages. `test_knowledge_export.py`, package/host-contract cases. Any later live update requires one coordinated host/delivery migration. |
 | Playing host/recall — #664 | Frozen version and coverage in knowledge selections/delivery; fallible hints/journal | No pending candidate delivered. Distinguish publication, selection, delivery, read, observed effect and confirmation time. Reuse `tools/player_host/test/knowledge-delivery.test.mjs` and adapter contract tests. |

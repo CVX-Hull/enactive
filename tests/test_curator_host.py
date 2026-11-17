@@ -73,6 +73,19 @@ def events(record_dir: Path):
 
 
 # ---------------------------------------------------------------- the host through the proxy and the sandbox
+def test_shadow_verdict_summary_distinguishes_submissions_and_unresolved_results():
+    from tools.curator_host.shadow import verdict_summary
+    def result(operation, status, schema='curator-gate/2'):
+        return dict(schema=schema, operation=operation, status=status, submission='s', version=None, diagnostics=[])
+    summary = verdict_summary([result('submission', 'published'), result('submission', 'rejected'),
+                               result('restore', 'published'), result('restore', 'unchanged')])
+    assert (summary['submissions'], summary['accepted'], summary['rejected']) == (2, 1, 1)
+    assert not summary['unresolved']
+    for invalid in [result('submission', 'unknown'), result('submission', 'pending'),
+                    result('submission', 'published', 'curator-gate/1')]:
+        assert verdict_summary([invalid])['unresolved']
+
+
 @native
 def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(tmp_path, world):
     repo, trace = world
@@ -87,7 +100,7 @@ def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(
     log = repo.state/'sessions'/record['manifest']['id']
     assert life['state'] == 'sealed' and life['returncode'] == 0 and life['stopped'] is None, (life, (log/'host-output.log').read_text())
     # A valid submission reached the gate and was published; the draft was kept.
-    assert [v['accepted'] for v in record['verdicts']] == [True] and record['published_after'] == 'v1'
+    assert [v['status'] for v in record['verdicts']] == ['published'] and record['published_after'] == 'v1'
     assert [f['text'] for f in repo.facts('v1')] == ['stand-in statement']
     assert record['drafts']['created'] == ['notes']
     # Every request passed the proxy's allowlist; the provider saw only the proxy's key.
@@ -430,7 +443,7 @@ def test_both_arms_configure_a_host_the_proxy_allows():
 
 SUMMARY_FIELDS = {'window', 'coverage', 'schema', 'kind', 'arm', 'model', 'effort', 'lineage', 'trace_session', 'memory', 'cap_usd', 'started_wall',
                   'run_state', 'wall_seconds', 'cost_usd', 'proxy', 'stopped_by_cap', 'session_id', 'record', 'session_state',
-                  'sandbox', 'errors', 'refused', 'submissions', 'accepted', 'rejected', 'verdicts', 'drafts', 'published_after',
+                  'sandbox', 'errors', 'refused', 'submissions', 'accepted', 'rejected', 'unresolved', 'verdicts', 'drafts', 'published_after',
                   'requests', 'time_to_first_request_seconds', 'first_request_prompt_tokens', 'tokens', 'host_reported_cost_usd',
                   'tool_calls', 'host_end', 'model_status', 'host_budget_usd', 'published_before', 'session_kind'}
 
@@ -442,7 +455,7 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
     assert code == 0
     session = json.loads((out/'397'/'sd1a1'/'summary.json').read_text())
     assert set(session) == SUMMARY_FIELDS, set(session) ^ SUMMARY_FIELDS
-    assert session['schema'] == 'curator-shadow/1' and session['kind'] == 'session' and session['session_state'] == 'sealed'
+    assert session['schema'] == 'curator-shadow/2' and session['kind'] == 'session' and session['session_state'] == 'sealed'
     assert session['cost_usd'] == '0.0036' and session['requests'] == 3 and session['first_request_prompt_tokens'] == 1000
     assert session['tokens'] == dict(prompt=3300, completion=120, cached=1600, cache_write=0, reasoning=30)
     proxy = dict(session['proxy'])
@@ -454,12 +467,12 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
     assert closure['schema'] == 'curator-proxy-close/1' and closure['settled']
     assert closure['spent_snapshot_usd'] == session['cost_usd']
     assert session['stopped_by_cap'] is False and session['submissions'] == 1 and (session['accepted'], session['rejected']) == (1, 0)
-    assert session['verdicts'][0]['accepted'] and session['drafts']['created'] == ['notes']
+    assert session['verdicts'][0]['status'] == 'published' and session['drafts']['created'] == ['notes']
     assert session['tool_calls']['by_name']['write_file'] == 2 and session['tool_calls']['failed'] == 1
     assert session['time_to_first_request_seconds'] > 0 and session['host_end'] == dict(reason='finished', ok=True)
     assert session['memory']['passed'] is False and Path(session['record']).is_dir()
     run = json.loads((out/'summary.json').read_text())
-    assert run['schema'] == 'curator-shadow/1' and run['kind'] == 'run' and run['complete'] is True and run['stopped'] is None
+    assert run['schema'] == 'curator-shadow/2' and run['kind'] == 'run' and run['complete'] is True and run['stopped'] is None
     assert run['total_cost_usd'] == '0.0036' and run['published_version'] == 'v1' and run['sessions_run'] == 1
     # Each run has its own fresh repository, named by its output directory.
     assert (runtime/'knowledge'/'shadow-454'/'dry-run'/'terra'/'397'/'cdda').is_dir()
@@ -817,11 +830,11 @@ def test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact
             proxy.close()
     assert grooming['manifest']['lifecycle']['state'] == 'sealed', grooming
     if not file_all:
-        assert [v['accepted'] for v in grooming['verdicts']] == [False], grooming
+        assert [v['status'] for v in grooming['verdicts']] == ['rejected'], grooming
         assert grooming['published_after'] == 'v1'
         assert grooming['verdicts'][0]['diagnostics'] == ["grooming: unfiled current facts ['f1']"]
         return
-    assert [v['accepted'] for v in grooming['verdicts']] == [True], grooming
+    assert [v['status'] for v in grooming['verdicts']] == ['published'], grooming
     assert grooming['published_after'] == 'v2'
     stored_brief = repo.state/'sessions'/'grooming'/'grooming.md'
     assert 'Configured brief marker.' in stored_brief.read_text()

@@ -78,19 +78,19 @@ def test_a_scripted_session_submits_a_fact_and_leaves_a_draft(tmp_path, world):
     repo, trace = world
     record = run_session(repo, trace, host(tmp_path, 'both', SUBMIT + DRAFT))
     assert record['manifest']['lifecycle']['state'] == 'sealed'
-    assert [v['accepted'] for v in record['verdicts']] == [True] and record['published_after'] == 'v1'
+    assert [v['status'] for v in record['verdicts']] == ['published'] and record['published_after'] == 'v1'
     assert [f['text'] for f in repo.facts('v1')] == ['the cupboard holds bottles']
     assert record['drafts']['created'] == ['plan']
     assert not any((repo.state/'workspaces').iterdir())  # the workspace is gone
     second = run_session(repo, trace, host(tmp_path, 'idle', IDLE))
     brief = (repo.state/'sessions'/second['manifest']['id']/'brief.md').read_text()
-    assert '`v1`' in brief and '`plan`' in brief and 'accepted as `v1`' in brief
+    assert '`v1`' in brief and '`plan`' in brief and 'published as `v1`' in brief
 
 
 def test_out_of_window_citations_are_rejected_and_reported_in_the_next_brief(tmp_path, world):
     repo, trace = world
     record = run_session(repo, trace, host(tmp_path, 'outside', SUBMIT, 'f'*32 + '-9'))
-    assert record['verdicts'][0]['accepted'] is False and repo.published() == 'v0'
+    assert record['verdicts'][0]['status'] == 'rejected' and repo.published() == 'v0'
     assert any('window' in d for d in record['verdicts'][0]['diagnostics'])
     second = run_session(repo, trace, host(tmp_path, 'idle', IDLE))
     assert 'rejected:' in (repo.state/'sessions'/second['manifest']['id']/'brief.md').read_text()
@@ -119,7 +119,7 @@ def test_retained_input_assertions_pass_real_hosts_and_block_a_changed_input(tmp
 def test_a_second_submission_on_the_same_base_is_stale(tmp_path, world):
     repo, trace = world
     record = run_session(repo, trace, host(tmp_path, 'two', TWO_STALE))
-    assert [v['accepted'] for v in record['verdicts']] == [True, False]
+    assert [v['status'] for v in record['verdicts']] == ['published', 'rejected']
     assert any('v1' in d for d in record['verdicts'][1]['diagnostics'])
 
 
@@ -159,7 +159,7 @@ def test_accepting_a_submission_promotes_the_drafts_it_names(tmp_path, world):
     repo, trace = world
     run_session(repo, trace, host(tmp_path, 'draft', DRAFT))
     record = run_session(repo, trace, host(tmp_path, 'submit', SUBMIT))
-    assert record['verdicts'][0]['accepted'] and record['verdicts'][0]['from_drafts'] == ['plan']
+    assert record['verdicts'][0]['status'] == 'published' and record['verdicts'][0]['from_drafts'] == ['plan']
     assert (repo.state/'drafts-archive'/'plan').exists() and not (repo.state/'drafts'/'plan').exists()
     manifest = json.loads((repo.state/'drafts-archive'/'plan'/'manifest.json').read_text())
     assert manifest['lifecycle']['state'] == 'promoted'
@@ -362,12 +362,12 @@ def test_a_window_session_cannot_cite_a_frame_outside_its_range_and_publishes_it
     window = Window('s1', '001', 4, 6)
     outside = run_session(repo, trace, host(tmp_path, 'outside', SUBMIT, frame_id(1, 3)), window=window)
     verdict = outside['verdicts'][0]
-    assert verdict['accepted'] is False and repo.published() == 'v0'
+    assert verdict['status'] == 'rejected' and repo.published() == 'v0'
     assert any(f'citation {frame_id(1, 3)!r} is outside the trace window' in d for d in verdict['diagnostics'])
     other_actor = run_session(repo, trace, host(tmp_path, 'other', SUBMIT, frame_id(2, 5)), window=window)
-    assert other_actor['verdicts'][0]['accepted'] is False
+    assert other_actor['verdicts'][0]['status'] == 'rejected'
     inside = run_session(repo, trace, host(tmp_path, 'inside', SUBMIT), window=window)
-    assert inside['verdicts'][0]['accepted'] is True and repo.published() == 'v1'
+    assert inside['verdicts'][0]['status'] == 'published' and repo.published() == 'v1'
     assert json.loads(subprocess.run(['git', 'show', 'v1:coverage.json'], cwd=repo.path, capture_output=True,
                                      text=True, check=True).stdout) == dict(
         schema='curator-coverage/2', session='s1', actor='001', last_step=6)
@@ -377,7 +377,7 @@ def test_a_window_session_cannot_cite_a_frame_outside_its_range_and_publishes_it
 def test_a_whole_admission_session_is_the_full_window_and_stamps_no_actor(tmp_path, long_world):
     repo, trace = long_world
     record = run_session(repo, trace, host(tmp_path, 'whole', SUBMIT))
-    assert record['verdicts'][0]['accepted'] is True
+    assert record['verdicts'][0]['status'] == 'published'
     stamp = json.loads(subprocess.run(['git', 'show', 'v1:coverage.json'], cwd=repo.path, capture_output=True,
                                       text=True, check=True).stdout)
     assert stamp == dict(schema='curator-coverage/2', session='s1', actor=None, last_step=None)
@@ -396,7 +396,7 @@ def test_a_window_that_does_not_fit_its_trace_aborts_the_session_before_the_host
 def test_citations_accumulate_across_windows_of_one_admission(tmp_path, long_world):
     repo, trace = long_world
     first = run_session(repo, trace, host(tmp_path, 'first', SUBMIT), window=Window('s1', '001', 1, 2))
-    assert first['verdicts'][0]['accepted'], first
+    assert first['verdicts'][0]['status'] == 'published', first
     # The next window proposes a distinct fact using the already-published type.
     second_code = SUBMIT + '''
 p = 'submissions/s1/submission.json'
@@ -406,6 +406,6 @@ data['changes'][0]['fact']['id'] = 'f2'
 json.dump(data, open(p, 'w'))
 '''
     second = run_session(repo, trace, host(tmp_path, 'second', second_code), window=Window('s1', '001', 3, 4))
-    assert second['verdicts'][0]['accepted'], second
+    assert second['verdicts'][0]['status'] == 'published', second
     assert repo.provenance()['last_admission']['citations'] == [frame_id(1, 1), frame_id(1, 3)]
     assert repo.provenance()['last_admission']['coverage']['last_step'] == 4
