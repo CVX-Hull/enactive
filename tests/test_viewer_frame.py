@@ -277,3 +277,124 @@ def test_the_frame_writes_nothing_and_accepts_no_write_method(frame):
         for route in [*ROUTES, '/api/view/frame/containers/syn/base1']:
             assert getattr(client, method)(route).status_code == 405, (method, route)
     assert [snapshot(directory) for directory in watched] == before
+
+
+def curator_row(**changes):
+    row = dict(schema='curator-gate/2', operation='submission', operation_id='a' * 32,
+               status='published', base_version='v1', restored_from=None, version='v2',
+               submission='submission', session='session', from_drafts=[], diagnostics=[])
+    row.update(changes)
+    return row
+
+
+def test_curator_sources_and_snapshot_pages(tmp_path):
+    from harness.viewer.curator import parse_sources
+    path = tmp_path / 'gate.jsonl'
+    rows = [curator_row(), curator_row(status='rejected', version=None),
+            curator_row(operation='restore', status='published', submission=None, session=None, restored_from='v0'),
+            curator_row(operation='restore', status='unchanged', submission=None, session=None, restored_from='v0'),
+            curator_row(status='unknown', version=None), curator_row(status='unknown', version='v3')]
+    path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(curator_results=parse_sources([f'alpha={path}']))))
+    assert client.get('/api/view/frame/curator-sources').json()['items'] == [{'label': 'alpha'}]
+    url = '/api/view/frame/curator-results?source=alpha&limit=2'
+    first = client.get(url).json()
+    assert first['source_status'] == 'available' and first['total'] == 6 and first['next'] == 2
+    assert first['items'][0]['operation_id'] == 'a' * 32 and 'from_drafts' not in first['items'][0]
+    digest = first['snapshot']['sha256']
+    assert client.get(url + '&after=2').status_code == 400
+    page = client.get(url + '&after=2&snapshot=' + digest).json()
+    assert [row['status'] for row in page['items']] == ['published', 'unchanged']
+    assert [r['version'] for r in client.get(url + '&after=4&snapshot=' + digest).json()['items']] == [None, 'v3']
+    path.write_text(path.read_text() + json.dumps(rows[0]) + '\n')
+    changed = client.get(url + '&after=2&snapshot=' + digest)
+    assert changed.status_code == 409 and changed.json()['error'] == 'source_changed'
+    assert client.get(url + '&snapshot=invalid').status_code == 400
+    assert client.get('/api/view/frame/curator-results?source=other').status_code == 404
+    assert client.post(url).status_code == 405
+    assert str(path) not in client.get(url).text
+
+
+def test_curator_states_and_bounded_projection(tmp_path):
+    from harness.evaluation.core.sources import MAX_JSON_FILE_BYTES
+    from harness.viewer.curator import parse_sources
+    path = tmp_path / 'gate'
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(curator_results=(('x', path),))))
+    def state():
+        return client.get('/api/view/frame/curator-results?source=x').json()
+    assert state()['source_status'] == 'missing'
+    path.write_bytes(b'')
+    assert state()['source_status'] == 'empty'
+    path.write_text(json.dumps(curator_row()))
+    assert state()['source_status'] == 'malformed'
+    path.write_text(json.dumps(curator_row()) + '\n{')
+    assert state()['source_status'] == 'malformed' and state()['items'] == []
+    path.write_text(json.dumps(curator_row()) + '\n' + json.dumps(curator_row(schema='old')) + '\n')
+    assert state()['source_status'] == 'unsupported' and state()['items'] == []
+    path.write_text(json.dumps(curator_row(status='pending')) + '\n')
+    assert state()['source_status'] == 'unsupported'
+    path.write_text(json.dumps(curator_row(submission='x' * 513, diagnostics=['<script>' + 'x' * 1024] * 101)) + '\n')
+    item = state()['items'][0]
+    assert item['submission'] is None and item['omitted_characters']['submission'] == 513
+    assert len(item['diagnostics']) == 100 and len(item['diagnostics'][0]) == 1024 and item['diagnostics_omitted'] == 1
+    path.write_bytes(b'x' * (MAX_JSON_FILE_BYTES + 1))
+    assert state()['source_status'] == 'too_large' and state()['snapshot']['bytes'] == MAX_JSON_FILE_BYTES + 1
+    path.unlink()
+    path.mkdir()
+    assert state()['source_status'] == 'unreadable'
+    for values in (['=x'], ['a='], ['bad label=x'], ['a=x', 'a=y']):
+        with pytest.raises(ValueError):
+            parse_sources(values)
+    assert parse_sources(['a=x=y'])[0][1] == Path('x=y')
+
+
+def test_curator_projection_of_gate_and_restore_producer_results(tmp_path):
+    from harness.curator.gate import restore
+    from tests.test_curator_gate import fact, kind, make_repo, run, submission
+    repo = make_repo(tmp_path)
+    published = run(repo, submission(tmp_path, [dict(op='add_type', type=kind()),
+                                               dict(op='add_fact', fact=fact())]))
+    rejected = run(repo, submission(tmp_path, [], name='stale', base_version='v0'))
+    changed = restore(repo, expected_base='v1', target='v0')
+    unchanged = restore(repo, expected_base='v2', target='v0')
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(
+        curator_results=(('fixture', repo.state / 'gate.jsonl'),))))
+    result = client.get('/api/view/frame/curator-results?source=fixture').json()
+    assert result['source_status'] == 'available'
+    assert [(r['operation'], r['status'], r['base_version'], r['restored_from'], r['version']) for r in result['items']] == [
+        ('submission', 'published', 'v0', None, 'v1'), ('submission', 'rejected', 'v0', None, None),
+        ('restore', 'published', 'v1', 'v0', 'v2'), ('restore', 'unchanged', 'v2', 'v0', 'v2')]
+    assert [r['operation_id'] for r in result['items']] == [r['operation_id'] for r in (published, rejected, changed, unchanged)]
+
+
+def test_curator_omits_path_details_from_real_producer_failure(tmp_path):
+    from harness.curator.knowledge import Repository
+    from tests.test_curator_gate import kind, run, submission
+    repo = Repository(tmp_path / 'private-repository-location', 'cdda')
+    result = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())]))
+    assert result['status'] == 'rejected' and str(repo.path) in result['diagnostics'][0]
+    source = repo.state / 'gate.jsonl'
+    before = source.read_bytes()
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(
+        curator_results=(('fixture', source),))))
+    response = client.get('/api/view/frame/curator-results?source=fixture')
+    item = response.json()['items'][0]
+    assert item['status'] == 'rejected' and item['path_details_omitted'] == 1
+    assert item['diagnostics'] == [] and str(tmp_path) not in response.text
+    assert source.read_bytes() == before
+    source.write_text(json.dumps(curator_row(submission='/private/a', session='C:\\private\\b')) + '\n')
+    item = client.get('/api/view/frame/curator-results?source=fixture').json()['items'][0]
+    assert item['submission'] is None and item['session'] is None and item['path_details_omitted'] == 2
+    assert item['omitted_characters'] == {'submission': 10, 'session': 12}
+
+
+def test_curator_oversize_response_can_be_narrowed_without_truncating_history(tmp_path):
+    source = tmp_path / 'gate.jsonl'
+    source.write_text((json.dumps(curator_row(diagnostics=['x' * 1024] * 100)) + '\n') * 45)
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(
+        curator_results=(('fixture', source),))))
+    url = '/api/view/frame/curator-results?source=fixture'
+    assert client.get(url).status_code == 413
+    narrowed = client.get(url + '&limit=1').json()
+    assert narrowed['source_status'] == 'available' and narrowed['total'] == 45 and narrowed['next'] == 1
+    assert len(narrowed['items']) == 1

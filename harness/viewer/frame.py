@@ -29,6 +29,7 @@ class FrameSources:
     """Where the frame reads its tracked data from; tests point both at synthetic directories."""
     containers: Path = DATA_ROOT / 'containers'
     probes: Path = DATA_ROOT / 'evaluation' / 'probes'
+    curator_results: tuple[tuple[str, Path], ...] = ()
 
 
 # The health strip's slots (ADR 009's spectator direction) and the phase that first delivers each. `actor_cadence` is measured from sealed

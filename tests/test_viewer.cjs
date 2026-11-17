@@ -178,3 +178,109 @@ test('recorded reader refreshes actors and public reports while staying on the p
     assert.deepEqual(page.problems,[]);
   } finally { await page.close(); }
 });
+
+test('curator results select and show escaped recorded detail on a phone', {timeout: 30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#live`, {width:390,height:900,mobile:true});
+  const digest = 'a'.repeat(64);
+  const row = {index:0,operation_id:'b'.repeat(32),operation:'submission',status:'unknown',base_version:'v1',
+    restored_from:null,version:null,submission:'<img src=x onerror=window.curatorExecuted=true>',session:'session',
+    diagnostics:['<b>recorded diagnostic'],diagnostics_omitted:0};
+  try {
+    await S.ready(page);
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      const url = new URL(request.url());
+      const body = url.pathname.endsWith('/frame/curator-sources') ? {schema:'spectator-frame/1',items:[{label:'fixture'}],total:1,next:null,limit:500}
+        : url.pathname.endsWith('/frame/curator-results') ? {schema:'spectator-frame/1',source:'fixture',source_status:'available',snapshot:{sha256:digest,bytes:123},items:[row],total:1,next:null,limit:25} : null;
+      if (body) request.respond({status:200,contentType:'application/json',body:JSON.stringify(body)});
+      else request.continue();
+    });
+    await page.evaluate(() => { location.hash='#frame/curator'; });
+    await S.until(page, () => Array.from(document.querySelector('[data-curator-source]')?.options || []).some(o => o.value === 'fixture'));
+    await page.select('[data-curator-source]', 'fixture');
+    await S.until(page, () => document.querySelector('table.data button.link'));
+    await page.focus('table.data button.link');
+    await page.keyboard.press('Enter');
+    await S.until(page, () => document.querySelector('[data-curator-detail]'));
+    const text = await page.$eval('[data-curator-detail]', n => n.innerText);
+    assert.match(text, /unknown/); assert.ok(text.includes(row.submission)); assert.ok(text.includes(row.diagnostics[0]));
+    assert.equal(await page.evaluate(() => window.curatorExecuted), undefined);
+    assert.equal(await S.overflow(page), 0);
+    await S.until(page, () => document.activeElement?.hasAttribute('data-curator-detail'));
+    await S.shot(page, 'curator-results-phone');
+    await page.select('[data-curator-source]', '');
+    await S.until(page, () => !document.querySelector('[data-curator-detail]'));
+    assert.deepEqual(page.problems, []);
+  } finally { await page.close(); }
+});
+
+test('curator paging and refresh keep empty, changed and failed sources distinct', {timeout: 30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#live`);
+  let digest = 'a'.repeat(64), fail = true, failedRequests = 0;
+  const labels = ['first','empty','missing','malformed','failed', ...Array.from({length:495},(_,i)=>`extra-${i}`)];
+  const row = {index:0,operation_id:'b'.repeat(32),operation:'restore',status:'unchanged',base_version:'v2',
+    restored_from:'v0',version:'v2',submission:null,session:null,diagnostics:[],diagnostics_omitted:0};
+  try {
+    await S.ready(page);
+    page.on('request', request => {
+      const url = new URL(request.url());
+      let body, status=200;
+      if (url.pathname.endsWith('/frame/curator-sources')) {
+        const later = url.searchParams.get('after') === '500';
+        body={schema:'spectator-frame/1',items:(later?['last']:labels).map(label=>({label})),total:501,next:later?null:500,limit:500};
+      } else if (url.pathname.endsWith('/frame/curator-results')) {
+        const source=url.searchParams.get('source'), old=url.searchParams.get('snapshot');
+        if (source==='failed' && fail) { failedRequests++; status=503; body={viewer:'unavailable'}; }
+        else if (old && old!==digest) { status=409; body={schema:'spectator-view/2',error:'source_changed'}; }
+        else { const state=['empty','missing','malformed'].includes(source)?source:'available';
+          body={schema:'spectator-frame/1',source,source_status:state,snapshot:['missing'].includes(source)?null:{sha256:digest,bytes:123},
+            items:state==='available'?[row]:[],total:state==='available'?1:0,next:null,limit:25}; }
+      }
+      if (body) request.respond({status,contentType:'application/json',body:JSON.stringify(body)});
+      else request.continue();
+    });
+    await page.setRequestInterception(true);
+    await page.evaluate(()=>{location.hash='#frame/curator';});
+    await S.until(page,()=>Array.from(document.querySelector('[data-curator-source]')?.options||[]).some(o=>o.value==='first'));
+    await page.select('[data-curator-source]','first');
+    await S.until(page,()=>document.querySelector('table.data button.link'));
+    await page.click('table.data button.link');
+    await S.until(page,()=>document.querySelector('[data-curator-detail]'));
+    await S.shot(page,'curator-results-desktop');
+    digest='c'.repeat(64);
+    await S.until(page,()=>document.querySelector('[data-curator-error]')?.textContent.includes('Source changed'));
+    assert.equal(await page.$('[data-curator-detail]'),null);
+    assert.equal(await page.$('table.data'),null);
+    await S.shot(page,'curator-source-changed');
+    await page.evaluate(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Refresh results').click());
+    await S.until(page,()=>document.querySelector('[data-curator-status]')?.textContent.includes('available'));
+    assert.equal(await page.$('[data-curator-detail]'),null);
+    await page.select('[data-curator-source]','empty');
+    await S.until(page,()=>document.querySelector('[data-curator-status]')?.textContent.includes('contains no results'));
+    await S.shot(page,'curator-source-empty');
+    for (const source of ['missing','malformed']) {
+      await page.select('[data-curator-source]',source);
+      await S.until(page,label=>document.querySelector('[data-curator-status]')?.textContent.includes(label),source);
+      assert.equal(await page.$('table.data'),null);
+    }
+    page.expect503=true;
+    await page.select('[data-curator-source]','failed');
+    await S.until(page,()=>document.querySelector('[data-curator-error]')?.textContent.includes('Viewer unavailable'));
+    const before=failedRequests;
+    fail=false;
+    await page.evaluate(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Refresh results').click());
+    await S.until(page,()=>document.querySelector('[data-curator-status]')?.textContent.includes('available'),null,2000);
+    assert.equal(failedRequests,before);
+    assert.equal(await page.evaluate(()=>document.activeElement?.hasAttribute('data-curator-source')),true);
+    page.expect503=false;
+    await page.select('[data-curator-source]','first');
+    await S.until(page,()=>document.querySelector('table.data button.link'));
+    await page.click('table.data button.link');
+    await page.evaluate(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Next sources').click());
+    await S.until(page,()=>Array.from(document.querySelector('[data-curator-source]')?.options||[]).some(o=>o.value==='last'));
+    assert.equal(await page.$eval('[data-curator-source]',n=>n.value),'');
+    assert.equal(await page.$('[data-curator-detail]'),null);
+    assert.equal(await page.$('[data-curator-status]'),null);
+    assert.deepEqual(page.problems.filter(p=>!p.startsWith('http 409: /api/view/frame/curator-results')),[]);
+  } finally { await page.close(); }
+});

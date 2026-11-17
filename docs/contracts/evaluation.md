@@ -1028,6 +1028,8 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/health` | The spectator frame's health strip (`spectator-frame/1`, below) |
 | `/api/view/frame/containers?after=&limit=`, `/api/view/frame/containers/<container_id>` | The container inventory and one manifest (`spectator-frame/1`, below) |
 | `/api/view/frame/episodes` | The tracked forgetting episodes with anchors resolved to runs and frames (`spectator-frame/1`, below) |
+| `/api/view/frame/curator-sources?after=&limit=` | Configured curator result-source labels, without paths (`spectator-frame/1`, below) |
+| `/api/view/frame/curator-results?source=&after=&limit=&snapshot=` | One source’s recorded current submission/restore results and read-snapshot provenance (`spectator-frame/1`, below) |
 
 ### Recorded knowledge and public reports
 
@@ -1079,12 +1081,63 @@ phone-width wrapping, and preserves the separate Live/Pause
 path. The existing hint list remains available. Richer curator, belief/scope,
 ontology, draft and program views remain outside this projection.
 
+### Recorded curator results
+
+The Curator tab reads only operator-configured result files. Repeat
+`--curator-results LABEL=FILE` on the supervisor or standalone viewer CLI to select
+existing `gate.jsonl` files or immutable snapshots. Labels are unique, match
+`[A-Za-z0-9][A-Za-z0-9_.-]{0,127}` and are the only source selectors exposed to the
+browser. The default has no sources. A label is operator-supplied identity, not
+verification of game/fork identity or a link to a player run. The supervisor forwards
+these arguments only to its unsupervised viewer child; they grant no input authority.
+
+Both result routes use `spectator-frame/1` success payloads and the existing
+`spectator-view/2` error envelope. The sources route pages `items: [{label}]` with
+`total`, `next` and `limit`. The results route requires a configured `source` and
+returns that label, `source_status`, `snapshot`, `items`, `total`, `next` and `limit`:
+
+- `source_status` is `available`, `empty`, `missing`, `unreadable`, `too_large`,
+  `unsupported` or `malformed`. A readable empty source differs from an absent one.
+  Unsupported/mixed schemas, malformed JSON or a partial tail produce no result rows.
+  A valid result whose status is `unknown` belongs to an `available` source.
+- A successful read identifies its exact bytes with `snapshot: {sha256, bytes}`.
+  The reader reads at most `MAX_JSON_FILE_BYTES + 1` (16 MiB plus one byte); excess
+  is `too_large`, never a complete truncated journal. Regular result files are read
+  without a writer lock, repository access, Git execution or a persistent history.
+- `after > 0` requires the snapshot digest. A changed digest returns `409
+  source_changed`; the page resets visibly instead of combining different reads.
+  Bad paging/digests are `400`; an unknown configured-source label is `404`.
+  The existing response ceiling remains `413 response_too_large`.
+- Rows preserve journal order with an `index`, exact `operation_id`, `operation`,
+  `status`, `base_version`, `restored_from`, `version`, `submission`, `session` and
+  bounded `diagnostics`. Only the current exact `curator-gate/2` shape and its
+  operation/status/null conventions are accepted. No Boolean alias or historical
+  converter is used. Text, identifiers and lists use the existing bounded omission
+  conventions; an overlong identifier is omitted, never shortened into another ID.
+  Free-form references and diagnostics containing `/` or `\` are conservatively
+  withheld as path-like detail, with `path_details_omitted` and identifier omission
+  metadata. This also hides benign separator-containing text; the source remains
+  available for local inspection. Whole values are withheld rather than presenting partially redacted identifiers.
+- Publication is a recorded gate report, not semantic verification, the repository's
+  present head or delivery/read/use. Restore, unchanged and submission results remain
+  distinct. Null and unknown versions remain explicit. No timestamp, gate pass rate,
+  lag, absolute age, health-slot value or run association is inferred.
+
+The reader serves no raw paths, briefs, transcripts, submission bodies, drafts,
+credentials or arbitrary repository files. It writes nothing and imports no curator
+runtime; no output reaches the player or curator. The Curator tab provides source
+selection, result rows and detail using escaped content and keyboard controls. The
+remaining session timeline, diffs, drafts, ontology and program views stay unavailable.
+Source changes reset stale result/detail selection; the control frame and independent
+Pause continue through their existing path. Fixture projection and rendered checks
+establish this reader's behavior, not semantic gate efficacy or real curator lag.
+
 ### Spectator frame (`spectator-frame/1`)
 
 The `/api/view/frame/*` routes are the spectator's frame
 ([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18)). They follow the rules above (`GET` only, under 4 MiB, nothing written) but carry
 `"schema": "spectator-frame/1"`. Errors keep the `spectator-view/2` envelope. They read
-tracked data and the catalog's stores, and nothing they compute reaches the player or the
+tracked data, the catalog's stores and explicitly configured curator result files, and nothing they compute reaches the player or the
 curator (ADR008). The container and probe directories default to the repository's
 `data/containers` and `data/evaluation/probes`; `create_app(frame_sources=)` overrides
 them for tests.

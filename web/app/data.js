@@ -81,7 +81,7 @@ export const runPath = (run, tail) => `run/${encodeURIComponent(run)}/${tail}`;
 export const framePath = (run, sourceId) => `/api/view/${runPath(run, `frame/${encodeURIComponent(sourceId)}`)}`;
 
 /** Fetch one viewer route into component state; refetch on an interval and when the viewer returns. */
-export function useView(path, every = 5000, schema = 'spectator-view/2') {
+export function useView(path, every = 5000, schema = 'spectator-view/2', refresh = 0) {
   const [state, setState] = useState({path: null, data: null, error: null});
   useEffect(() => {
     if (!path) return undefined;
@@ -97,7 +97,7 @@ export function useView(path, every = 5000, schema = 'spectator-view/2') {
     };
     void run();
     return () => { dead = true; clearTimeout(timer); };
-  }, [path, every, schema]);
+  }, [path, every, schema, refresh]);
   return state.path === path ? state : {path, data: null, error: null};
 }
 
