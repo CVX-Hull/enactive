@@ -79,7 +79,7 @@ def journal(repo: Repository) -> list[dict]:
 
 def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str]]:
     """Validate compatible published snapshots and reserve their record identities."""
-    snapshots, identities = {}, set()
+    snapshots, identities, records_by_version = {}, set(), {}
     required = {'knowledge.json', 'facts.jsonl', 'ontology/types.json', 'provenance.json',
                 'programs/.keep', 'tests/.keep'}
     tags = set(repo._tags())
@@ -177,10 +177,25 @@ def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str]]:
                         or article.get('last_confirmed') != max((facts[i]['seen'] for i in cited), key=lambda p: p['order'])):
                     raise ValueError('invalid article references')
             snapshots[version] = files
+            records_by_version[version] = by_id
             identities.update(by_id)
         except (ValueError, KeyError, TypeError, UnicodeError, RecursionError, KnowledgeError) as error:
             raise KnowledgeError(f'incompatible history at {version}') from error
+    for version, records in records_by_version.items():
+        for identity, record in records.items():
+            origin = records_by_version[record['published_in']].get(identity)
+            if (origin is None or origin['published_in'] != record['published_in']
+                    or origin['record'] != record['record'] or origin['session'] != record['session']):
+                raise KnowledgeError(f'incompatible history at {version}')
     return snapshots, identities
+
+
+def _failed_publication(repo: Repository, version: str) -> tuple[str, str | None]:
+    """A failed lookup cannot establish that publication did not happen."""
+    try:
+        return ('unknown', version) if version in repo._tags() else ('rejected', None)
+    except KnowledgeError:
+        return 'unknown', None
 
 
 def current(record: dict) -> bool:
@@ -566,8 +581,8 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
                 verdict['status'] = 'published'
                 verdict['version'] = published
     except (KnowledgeError, OSError, UnicodeError) as error:
-        if 'version' in locals() and version in repo._tags():
-            verdict['status'], verdict['version'] = 'unknown', version
+        if 'version' in locals():
+            verdict['status'], verdict['version'] = _failed_publication(repo, version)
         diagnostics.append(f'publication failed: {error}')
     repo.state.mkdir(parents=True, exist_ok=True)
     try:
@@ -615,8 +630,8 @@ def restore(repo: Repository, *, expected_base: str, target: str) -> dict:
                 result['version'] = repo.commit_snapshot(snapshots[target], message)
                 result['status'] = 'published'
         except (KnowledgeError, OSError, UnicodeError) as error:
-            if next_version and next_version in repo._tags():
-                result['status'], result['version'] = 'unknown', next_version
+            if next_version:
+                result['status'], result['version'] = _failed_publication(repo, next_version)
             result['diagnostics'].append(failure)
         try:
             with (repo.state / 'gate.jsonl').open('a', encoding='utf-8') as handle:

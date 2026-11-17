@@ -207,7 +207,11 @@ class Repository:
         except BaseException:
             # A tag may have been created even if the tagging command reported failure.
             # Never reset the branch away from a known published commit.
-            if tag not in self._tags():
+            try:
+                published = tag in self._tags()
+            except KnowledgeError:
+                published = None
+            if published is False:
                 self._rollback(head)
             raise
 

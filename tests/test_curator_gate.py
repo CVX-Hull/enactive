@@ -208,6 +208,44 @@ def test_restore_keeps_tag_if_tag_command_reports_failure_after_creation(tmp_pat
     assert repo.published() == 'v2' and repo.snapshot('v2') == repo.snapshot('v0')
 
 
+@pytest.mark.parametrize('operation', ['restore', 'submission'])
+def test_post_tag_lookup_failure_keeps_an_unresolved_result(tmp_path, monkeypatch, operation):
+    from tools.curator_host.shadow import verdict_summary
+    repo = seeded(tmp_path)
+    original = knowledge._git
+    failed_reads = 0
+    tagged = False
+    def uncertain_tag(path, *args):
+        nonlocal failed_reads, tagged
+        if tagged and args == ('tag', '--list', 'v*') and failed_reads < 2:
+            failed_reads += 1
+            raise KnowledgeError('temporarily unavailable tag lookup')
+        value = original(path, *args)
+        if args == ('tag', 'v2'):
+            tagged = True
+            raise KnowledgeError('tag command reported late failure')
+        return value
+    monkeypatch.setattr(knowledge, '_git', uncertain_tag)
+    if operation == 'restore':
+        result = restore(repo, expected_base='v1', target='v0')
+    else:
+        result = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('new'))],
+                                      name='new', base_version='v1'))
+    assert result['status'] == 'unknown' and result['version'] is None
+    assert verdict_summary([result])['unresolved']
+    assert repo.published() == 'v2'
+    assert git(repo, 'rev-parse', 'HEAD').strip() == git(repo, 'rev-parse', 'v2').strip()
+
+
+def test_restore_refuses_a_record_absent_from_its_claimed_publication(tmp_path):
+    repo = seeded(tmp_path)
+    record = dict(repo.records()[0], published_in='v0')
+    repo.commit({'facts.jsonl': (json.dumps(record) + '\n').encode()}, 'invalid publication reference')
+    before = snapshot(repo)
+    result = restore(repo, expected_base='v2', target='v2')
+    assert result['status'] == 'rejected' and snapshot(repo) == before
+
+
 def test_submission_reconciles_untagged_commit_before_publication(tmp_path):
     repo = seeded(tmp_path)
     knowledge._git(repo.path, 'commit', '--allow-empty', '-m', 'interrupted')
