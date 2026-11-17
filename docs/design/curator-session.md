@@ -2,7 +2,7 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: 'Knowledge repository, admission and grooming sessions, drafts and structural publication of curator-fact/3 (#460)'
+scope: 'Current curator-fact/3 structural publication, sessions and drafts; proposed prospective gate and compatible-snapshot restore contract (#697)'
 review_trigger: A change to the knowledge repository layout, the submission or fact shapes, the gate checks, the draft lifecycle or the session close-out
 ---
 
@@ -11,7 +11,7 @@ review_trigger: A change to the knowledge repository layout, the submission or f
 This is the curator's workspace, persistence and publication path from
 [ADR 009](../decisions/009-curated-player.md#the-curator-as-a-coding-agent-d14), version 0.
 It is enough to run scripted and shadow sessions over sealed traces. Not yet: live actor
-integration, gate-owned prospective tests and computed utility (#459), and executing
+integration, gate-owned prospective tests and computed utility (#457), and executing
 submitted programs. **v0 runs nothing a submission contains**; it validates and publishes
 data.
 
@@ -192,8 +192,257 @@ The gate applies its checks in this order, and the first failure rejects:
    they require no semantic model calls.
 
 An accepted submission is published atomically: one commit, one new tag, then the
-`published` pointer moves. A rejected one returns its diagnostics in the next session's
+highest version tag identifies the publication (there is no separate mutable pointer).
+A rejected one returns its diagnostics in the next session's
 brief. Only the gate writes the repository, so no lead text enters published knowledge.
+
+## Proposed prospective verification and publication contract
+
+**Design result of #697; unimplemented.** This section owns the planned gate boundary
+for #457, #664 and #464. Gate v0 above remains the current implementation. The minimum
+independent implementation recommendation is **operator restore of a compatible published
+snapshot**, below. Defer semantic prospective admission: no implemented test oracle,
+utility policy or future-source coordinator currently supports it. This is a bounded
+design/feasibility conclusion, not qualification of a semantic scorer or permission to
+build a scheduler. #457's complete acceptance and separate owner belief choice remain.
+
+### Evidence identity and exposure
+
+The current session pins a knowledge version, trace-manifest hash and brief hash,
+exports the entire published store, and copies open/stale drafts. Its brief includes
+recent gate diagnostics. A restricted window retains the actor's prompt and guide;
+the step bound alone is not its information boundary. `curator-coverage/2` records a
+last step or whole-admission names, not the complete history of information exposed
+to the curator. In particular, trace later than a base version can already have been
+supplied in a window, draft, published record or diagnostic.
+
+The proposed trusted coordinator freezes each candidate **after collection**, before
+selecting verification evidence. Its receipt binds:
+
+- the repository/fork identity (game, study/arm/lineage where applicable), base tag and
+  commit/content identity, source session, immutable submitted bytes and candidate digest;
+- the actual file inventory offered to that curator: narrowed trace manifest and hashes,
+  exported knowledge digest/version, prompt/guide/brief, draft copies and prior diagnostics;
+- a frozen gate-owned test-plan identity, its target/source definitions, resource limit
+  and stop boundary; the candidate cannot nominate its own favorable future cohort;
+- the trusted acquisition frontier at collection and the original session/operation/source
+  IDs and hashes of later evidence. Wall-clock filenames, copied directories, admission
+  names or a greater step number alone do not prove capture order or independence.
+
+Exposure means bytes made available, not a claim about which files a model read.
+Account for all prior controlled exposures on that repository branch, including aborted
+sessions and unpublished drafts; a fresh sandbox does not erase those disclosures.
+Unknown exposure/capture provenance makes the proposed cohort ineligible. This bounds
+controlled input leakage; it cannot prove absence of model prior knowledge or guessed
+answers. Source IDs plus original operations identify observations; identical image bytes
+can be a later re-observation and do not establish new information or independent worlds.
+
+For the first prospective design, admit only **new captures after candidate freeze**,
+from an independently approved subsequent admission on the same permitted fork/lineage.
+An already sealed admission's omitted suffix is development holdback, not this prospective
+evidence. No cross-world promotion, arm mixing or new gameplay permission follows.
+Keep the cohort outside curator workspaces until its verdict is terminal. A cohort exposed
+through raw trace, derived knowledge or feedback cannot be reused as fresh evidence for a
+revised candidate. This is a proposed input contract; current manifests do not implement it.
+
+### Lifecycle without a session deadlock
+
+Use existing session/submission records and the gate journal, extended together under
+one current contract when implemented; do not create a second knowledge/history service.
+The minimum coordinator handles one frozen candidate per repository at a time, with
+one writer. It closes the proposing session and releases its lock while verification is
+pending. “Gate before the next session” means **settle or explicitly defer the candidate
+before another curator session**, not hold the lock while waiting for future gameplay.
+
+| State/event | Proposed effect |
+| --- | --- |
+| Collection/structural refusal | Retain the submission and precise non-semantic diagnostic; publish nothing. |
+| Structurally eligible, plan missing/unsupported | Terminal `deferred`: name the missing oracle/input/policy, rather than silently use structural acceptance as semantic acceptance. |
+| Eligible frozen candidate, no later trace yet | `pending`; published base stays unchanged. No draft promotion or delivery of the candidate. |
+| Approved next admission | Player uses its frozen published knowledge. Existing game/run authority and budget govern capture; the pending proposal grants neither. |
+| Later source ready | Verify receipt/exposure/order and evaluate before giving that cohort to another curator. The immutable candidate and plan stay fixed. |
+| Unknown result, absent opportunity or breached limit | No acceptance or claimed negative utility; defer at the frozen finite boundary. Do not retry until a favorable score appears. |
+| Known test failure/non-improvement under a supported plan | Reject with the rule category, not a claim of universal falsity. |
+| Supported tests and utility policy pass | Recheck the base under the writer lock, then atomically publish and promote drafts. |
+| Any intervening publication, including restore | Reject as stale. No automatic rebase or reuse of its cohort as a fresh test. |
+| No admissible source by the boundary, or a curator session is needed first | Terminal defer with the source gap; retain the candidate as evidence/managed work, then allow the next session. No indefinite wait or automatic run renewal. |
+
+Semantic feedback is limited to terminal status and coarse rule categories; the next
+brief receives no hidden queries, expected answers, source excerpts or evaluator labels.
+Acceptance itself leaks information. Fresh cohorts for later proposals and explicit
+exposure accounting limit adaptive reuse; they are not a guarantee against all inference.
+The operator/spectator may inspect retained evidence through their separate read-only
+surface. Its contents do not become the curator's brief by reference or import.
+
+### Test/oracle and utility boundary
+
+| Proposed check | Actual source and limit | Admission recommendation |
+| --- | --- | --- |
+| Shape, scope, stale base, resolvable citations/links/types | Current structural gate and immutable source identities | Reuse; these establish structure/provenance, never factual truth. |
+| Capture order, exposure, cohort freshness and writer transitions | Trusted receipts/coordinator described above | Mechanically testable once implemented; current coverage stamps alone are insufficient. |
+| Retrieval misses, re-observation truth and wrong merges | Need a defined proposition, opportunity, scope/horizon and independently produced answer from allowed visible observations | Deferred. No such executable gate oracle is currently supplied. A hint/citation/read or curator assertion is not its own truth label. |
+| Retrieval comparison | Needs a common target/query set and expected answers fixed independently of the edit | Deferred. Existing reads were selected under the base store; replaying them alone does not measure candidate usefulness or unseen actions. |
+| Compression/type agreement/churn | Fixed coding/counting scheme or classification procedure; account for its calls/cost | Descriptive diagnostics until their relationship to the frozen utility policy is specified. Fewer bytes or more agreement do not prove correctness or benefit. |
+| Program replay/predicates/disable | Requires #465/#467/#469 program and runner contracts | Later scope, not execution of submitted code by this knowledge gate. |
+
+A future gate test plan must bind the base/candidate comparison, visible source/answer
+origin, eligible opportunities, unknown rules, scoring and complexity convention,
+acceptance rule, resource/call price and finite stop **before** viewing its cohort.
+Both candidates receive the same information and evaluation resources. Unsupported or
+undefined support yields unknown/defer, not a zero score or a pass. A fallible semantic
+assessor would be a separately specified playing-system component, with its own errors
+and price, not a route from existing offline judges into the curator.
+
+The gate computes any supported comparison itself; the proposing curator cannot edit
+the plan, expected answers or pass criterion. Curator self-tests remain untrusted inputs.
+Do not translate an unspecified “utility minus complexity” formula into an arbitrary
+threshold. No utility-based publication is recommended until a concrete finite plan
+meets these requirements. A future paid check/qualification needs separate approval;
+#677's research and #681's outcome qualification are not retroactively gate feedback.
+
+### Minimum first slice: operator restore
+
+**Recommended independent follow-on, not implemented here.** An operator may remove
+curator output by restoring a previously published compatible snapshot. No belief model,
+semantic oracle, new trace or program runtime is needed for this operation. The command
+accepts only repository identity, expected current base and target version; it accepts
+no replacement knowledge text or free-form explanation that could reach the curator.
+It operates on an existing published repository; it does not initialize a new game
+repository from operator text.
+
+Use a gate-owned `restore` entry under `python -m harness.curator.gate`, backed by the
+existing repository and exclusive session lock. Keep `published()`'s highest-tag rule.
+Restore by publishing the target's validated content as a **new monotone version**;
+never move/delete tags, reset a published version or rewrite a frozen delivery file.
+The restore target must belong to this repository/fork, exist and satisfy current
+repository/fact/type/reference/provenance contracts. Unsupported historical formats
+are refused. Target equal to current, or content-identical to the current published
+tree, is an `unchanged` no-op with the current version reported and no new tag.
+
+Restore the compatible target's facts/articles/types, coverage and provenance together,
+including absence of an optional file at v0; never mix old facts with newer coverage.
+The existing `commit(files)` overlays files and cannot express deletion. The follow-on
+must own an exact-snapshot/delete-capable transaction using the existing Git repository,
+with regular-file/layout validation before mutation and the same commit-then-tag
+publication point. An omitted target file is removed, not left over from the current
+tree. No administrative empty commit is needed for a content-identical restore.
+Preserve original `seen`, `last_confirmed`, `published_in`, session and citation data.
+The new publication is administrative removal/restoration, **not fresh confirmation**.
+Git history retains all superseded versions. Future submissions must reserve record IDs
+across published history, including records removed from the restored working snapshot;
+otherwise an old ID could be reused for different content after restore. Derive the
+reservation from compatible tagged history, not another mutable identity database.
+This is restoration of the original record identity, not creation of a new assertion.
+
+First-slice repositories contain no executable programs or submitted test payloads;
+refuse restoration of unsupported program/test content instead of claiming program
+disable or sandbox execution. #457 retains that later requirement. Do not infer that
+restoring knowledge stops an already running program.
+
+Under the writer lock, compare `expected_base`, validate all content before mutation,
+and publish through the existing commit-then-tag transaction. Only successful tagging
+changes the published version. Untagged interrupted writes must be reconciled to the
+highest published tag before a later write; no accepted tag is removed. A failure
+after tagging is an already published restore with unknown/incomplete reporting,
+not permission to roll back or blindly retry. Retain the trusted operation identity
+and base/target/new-version link in Git publication metadata and the gate result.
+
+The follow-on's one current result is **`curator-gate/2`**. Every result has `operation`
+(`submission` or `restore`), software-generated `operation_id`, `status` (`published`,
+`rejected`, `unchanged` or `unknown`), `base_version`, `restored_from`, `version`,
+`submission`, `session`, `from_drafts` and `diagnostics`. Existing submission/session
+identities are null for a restore; `restored_from` is null for a submission. Only
+`published` promotes drafts, and only for a submission. An unchanged restore reports
+the existing `version`; a rejection has no result version. `unknown` reports only a
+version actually established, otherwise null. Do not retain an `accepted` alias.
+Software generates the operation ID before mutation and binds it to publication metadata;
+an unresolved reporting failure never licenses a retry or changes a known tagged result
+to a rejection. Restore diagnostics are fixed administrative categories, never
+operator-supplied game advice.
+
+Migrate the producer, journal reader, session close-out/brief and shadow summary/stop
+policy together. First-slice writers use only these four statuses. Future prospective
+`pending`/`deferred` publication requires its own coordinated contract revision; it is
+not silently appended to v2. The shadow runner counts `rejected` only as rejection;
+unknown or an unsupported status/schema stops its screen as unresolved, not successful
+or rejected evidence. Restore events are not submission outcomes in its summary.
+Its changed session/run summaries become `curator-shadow/2` in the same migration;
+the verdict projections use status/operation, while aggregate accepted/rejected counts
+keep their stated meanings for submissions only. Existing sealed v1 summaries remain
+historical evidence, not active input to the new writer/reader.
+
+**Persisted-history disposition:** an active v1 journal is refused before repository
+mutation or host launch;
+there is no mixed-journal reader, relabelling pass or compatibility path. Use a fresh
+project-local working fork/state with the compatible knowledge Git history preserved
+(all version tags and record-ID reservations), keeping the original v1 journal and
+session records at their original retained location. Sealed evidence is never rewritten.
+The first slice also refuses a working history whose record/layout contracts it cannot
+validate; it does not skip such tags when reserving IDs or add a legacy converter.
+New state does not make inherited knowledge/exposures independent or unseen. This
+administrative restore slice makes no prospective qualification from such a fork;
+later verification still needs its complete controlled-exposure provenance.
+
+A successful restore publication invalidates any pending candidate on the previous
+base; an unchanged no-op does not. Frozen admissions keep their existing version/digest.
+
+### Shared consumer and verification matrix
+
+This matrix is the batch's shared handoff, not permission to change these consumers now.
+
+| Surface / owner | Implemented boundary | Planned change and reused verification |
+| --- | --- | --- |
+| Repository/gate/session — #457 and restore first slice | `curator-knowledge/2`, `curator-fact/3`, structural verdict and recent-results brief | Exact-snapshot monotone restore, historical-ID reservation and v2 verdict migration first; prospective receipt/state/plan later. `test_curator_gate.py`, `test_curator_session.py`, `test_curator_window.py`, interruption/collection cases. |
+| Shadow runner — restore first slice / #664 | `tools/curator_host/shadow.py` counts/projects verdicts in `curator-shadow/1` and implements `--stop-on-reject` | Move changed summaries to `/2` with schema/status/operation handling, retaining true submission rejection counts and stopping on unresolved outcomes. Reuse `test_curator_host.py` and relevant shadow interruption/summary cases; update the output section of curator-host operations together. |
+| Projection/window — #457/#664 | `trace-projection/2`, narrowed file hashes, `curator-coverage/2` | Exposure/acquisition receipt is a separate future requirement; coverage is not a proof of unseen source. Reuse window and trace projection tests; no evaluator imports. |
+| Export and delivery freeze — #457/#664 | `tools/knowledge_export.py`, `delivered-knowledge/1`, frozen `player-host-inputs/3` hashes | Restore changes future exports only; never rewrite existing packages. `test_knowledge_export.py`, package/host-contract cases. Any later live update requires one coordinated host/delivery migration. |
+| Playing host/recall — #664 | Frozen version and coverage in knowledge selections/delivery; fallible hints/journal | No pending candidate delivered. Distinguish publication, selection, delivery, read, observed effect and confirmation time. Reuse `tools/player_host/test/knowledge-delivery.test.mjs` and adapter contract tests. |
+| Spectator — #464 | #689's digest-verified recorded knowledge/public-report projection in `spectator-view/2` | Broader view needs recorded candidate/base/target/result IDs, state/reason and restricted evidence links; explicit absent/unknown states until a producer exists. Reuse `harness/viewer/knowledge.py`, `test_viewer_api.py` and viewer browser cases. No new control or curator feedback. |
+| Historical/research readers — #457 | `memory_screen_checks.py` reads compatible tagged stores; `memory_measure.py` consumes frozen packets/draws | Retain version-qualified identity and old observation age; never rescore sealed history. Reuse existing screen-check, memory-measure and export cases. New gate diagnostics are not judge labels/calibration. |
+| Programs — #465/#468/#469 | No active program-run API after #463 | Later typed program/test contract, sandbox/replay/disable and scoring plan; serialize shared gate/runner writes. No speculative program acceptance in the knowledge slice. |
+
+#664 must supply approved future-source acquisition, exposure/cohort custody, finite
+pending expiry and delivery-version handoff before live prospective verification.
+Publication, source coverage and observation age are separate clocks. Existing frozen
+delivery does not implement snapshot diffs or refresh; this design does not reconsider
+the context cut. #464 can plan the reader fields now, but implementation needs actual
+record producers; it reuses #689 rather than a second projection/history store.
+
+The program handoff also has a milestone gap: #465 waits for #457's settled gate/store
+contract, while #457's full acceptance includes program disable and #468/#469 need
+runner-supported tests. A whole-issue completion edge cannot stand in for a reviewed
+interface milestone. Before admitting program implementation, the lead must reconcile
+that ordering with explicit ownership of disable and scoring; do not add a reverse
+completion edge or silently drop #457 acceptance. This design admits no program work.
+
+### Finite contract-case review and admission outcome
+
+| Case | Required result / remaining gap |
+| --- | --- |
+| No later trace | Pending only under a concrete plan/bound; terminal defer if absent/expired. No new game call. |
+| “Later” source was already offered, or copied/renamed | Ineligible; exposure/original acquisition identity wins over version/name/step comparisons. |
+| Delayed evidence and next session | Release writer lock; approved player admission may use old frozen knowledge; settle/defer before another curator sees the cohort. |
+| Stale base or concurrent restore | Reject/re-propose against the new base; no transparent rebase or cohort reuse. |
+| Malformed/unsupported test or utility input | Structural reject or explicit unsupported-plan defer; never execute arbitrary submitted tests. |
+| Unknown semantic answer / no opportunity | Defer, not a known failure or zero utility. Oracle/coverage remain missing. |
+| Accepted prospective publication | Requires supported frozen tests/utility, eligible cohort and final base check. This path is deferred today. |
+| Rejected submission | No knowledge mutation or draft promotion; retain bounded diagnostics without hidden answers. |
+| Restore then new proposal | New tag contains the selected old snapshot with old observation ages; reserve historical IDs; old-base proposal is stale. New proposal uses current tag and new evidence if verification is later attempted. |
+| Restore to v0, or repeat an already restored target | Restore optional-file absence exactly; export missing coverage as null. Content-identical target is unchanged, with no extra tag. |
+| Interrupted restore before/after tag | Before tag, published version unchanged; reconcile untagged work before either normal or restore writer proceeds. After tag, retain publication and report uncertainty; never manufacture a second successful result by retry. |
+| Old journal or unknown result in the shadow runner | Refuse v1/mixed active state before repository mutation/host launch; unknown is unresolved and stops the screen, never counted as a rejection or success. |
+
+Source inspection of the frozen #697 baseline established the missing interfaces;
+these are tabletop requirements, not executed runtime tests. Independent design review
+and existing document checks assess this artifact. The restore follow-on needs focused
+positive/negative transaction, identity, provenance, lock, export and brief tests plus
+protected full CI; no model/game or native game/adapter acceptance is needed for its
+administrative scope. Applicable existing session/sandbox tests are a separate macOS
+Seatbelt lane, run by the lead when changed behavior requires them; portable CI is not
+substitute evidence for that lane.
+R-ARCHITECTURE-DRIFT/R-FALSE-CLAIM/R-REGRESSION/R-EVIDENCE-LOSS: source/visibility and
+transaction cases prevent feedback leakage, false freshness and lost/version-confused
+knowledge at bounded offline cost. No universal validation or truth framework is added.
 
 ## Drafts
 
