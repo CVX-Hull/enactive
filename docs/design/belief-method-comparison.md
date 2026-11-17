@@ -38,7 +38,7 @@ its limitations remain in [the curated-memory review](../research-curated-memory
 | Green et al., [Provenance Semirings](https://www.cs.ucdavis.edu/~green/papers/pods07.pdf), PODS 2007, §§2–4 | Track alternative and shared derivations | A small origin/dependency graph is sufficient to test the idea; lineage is neither truth nor numerical independence |
 | Gneiting and Raftery, [Proper Scoring Rules](https://sites.stat.washington.edu/raftery/Research/PDF/Gneiting2007jasa.pdf), JASA 2007, §§1–3 | Score probabilistic predictions against their realized outcomes | Lower loss does not establish calibration on unobserved situations or better game decisions; label error remains |
 | [NIST censoring guidance](https://www.itl.nist.gov/div898/handbook/apr/section1/apr131.htm), retrieved 16 November 2026, exact/readout/interval examples | Distinguish exact event times, intervals and right censoring | Gameplay revisits are selected, conditions can change back, and a source statement becoming wrong is not necessarily an irreversible failure |
-| Gelman, [Multilevel Modeling: What It Can and Cannot Do](https://www.stat.columbia.edu/~gelman/research/published/multi2.pdf), 2006, §§2–4 | Partially pool sparse groups | Pooling can transfer a wrong assumption; types/profiles do not become exchangeable because their names are similar |
+| Gelman, [Multilevel Modeling: What It Can and Cannot Do](https://www.stat.columbia.edu/~gelman/research/published/multi2.pdf), 2006, §§2–3 | Partially pool sparse groups | Pooling can transfer a wrong assumption; types/profiles do not become exchangeable because their names are similar |
 
 ### Subjective logic is partly a representation comparison
 
