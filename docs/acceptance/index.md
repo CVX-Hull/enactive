@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-16 | [Prospective withholding scoreability repair](2026-11-16-withholding-scoreability-repair.md) | measurement | No-model prospective withholding scoreability repair and finite same-assumption Monte Carlo diagnostic; historical observed study and frozen artifacts unchanged | historical |
 | 2026-11-16 | [Withholding follow-up and backlog review](2026-11-16-withholding-follow-up-and-grooming.md) | review | Backlog review of all 29 open issues and the Enactive Project; exploratory re-reading of the full withholding study’s 60 valid starts for elapsed game time, progress, fire outcomes and the delivery-to-action gap; project-local cleanup. No new play or provider spend. | historical |
 | 2026-11-16 | [Full backlog grooming and cleanup](2026-11-16-full-backlog-grooming.md) | review | Full review of 35 open Issues, native dependency/parent links and all 264 Project cards; Ready selection, issue reconciliation and owned routine cleanup. No runtime implementation or new study spend. | historical |
 | 2026-11-16 | [Experiment measurement review](2026-11-16-experiment-measurement-review.md) | review | Retrospective audit of experiment measurements, interpretation and prospective evaluation repairs; no new gameplay, model calls or revised historical outcomes | historical |

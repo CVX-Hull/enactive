@@ -179,20 +179,21 @@ def test_study_inputs_use_pooled_arms_and_beta_shrinkage_on_sealed_pilot_format(
     run, packages = pilot_fixture(tmp_path)
     path = tmp_path / 'inputs.json'
     result = mm.study_inputs(run, packages, path)
-    assert result == json.loads(path.read_text()) and result['schema'] == 'withholding-study-inputs/1'
+    assert result == json.loads(path.read_text()) and result['schema'] == 'withholding-study-inputs/2'
     assert result['prior_strength'] == 2 and result['pooled'] == dict(touch=.5, missed_when_touched=.5)
     units = {u['id']: u for u in result['units']}
     assert units['article-a']['raw'] == dict(touch=1., missed_when_touched=.5)
     assert units['article-a']['shrunk'] == dict(touch=.75, missed_when_touched=.5)
     assert units['idle']['raw'] == dict(touch=0., missed_when_touched=None)
     assert units['idle']['shrunk'] == dict(touch=.25, missed_when_touched=.5)
+    assert units['idle']['exclusive_scoreable'] is True and units['idle']['placebo'] is False
     assert result['spread'] == 1.
     assert mm.study_inputs(run, packages, tmp_path / 'again.json') == result
 
 
 def test_simulate_study_seeded_power_and_prices(tmp_path):
-    path = save(tmp_path / 'inputs.json', dict(schema='withholding-study-inputs/1', spread=.1,
-        units=[dict(id=f'unit-{i}', shrunk=dict(touch=.8, missed_when_touched=.2)) for i in range(6)]))
+    path = save(tmp_path / 'inputs.json', dict(schema='withholding-study-inputs/2', spread=.1,
+        units=[dict(id=f'unit-{i}', exclusive_scoreable=True, placebo=False, shrunk=dict(touch=.8, missed_when_touched=.2)) for i in range(6)]))
     report = mm.simulate_study(path, 4., starts=[4, 40], blocks=[1, 2], slope_sd=[0.], sims=40, seed=653)
     assert report == mm.simulate_study(path, 4., starts=[4, 40], blocks=[1, 2], slope_sd=[0.], sims=40, seed=653)
     assert report['draws'] == 2000 and report['effect'] == .5
@@ -272,13 +273,13 @@ def test_study_and_inputs_cli_and_simulation_json_do_not_write_outputs(tmp_path,
     inputs = tmp_path / 'derived.json'
     assert mm.main(['study-inputs', str(run), '--runs', *args, '--out', str(inputs)]) == 0
     capsys.readouterr()
-    synthetic = save(tmp_path / 'synthetic.json', dict(schema='withholding-study-inputs/1', spread=0.,
-        units=[dict(id='unit', shrunk=dict(touch=1., missed_when_touched=.1))]))
+    synthetic = save(tmp_path / 'synthetic.json', dict(schema='withholding-study-inputs/2', spread=0.,
+        units=[dict(id='unit', exclusive_scoreable=True, placebo=False, shrunk=dict(touch=1., missed_when_touched=.1))]))
     before = sorted(tmp_path.rglob('*'))
     assert mm.main(['simulate-study', '--inputs', str(synthetic), '--price', '3', '--starts', '4', '--blocks', '1',
                     '--slope-sd', '0', '.5', '--sims', '2', '--json']) == 0
     result = json.loads(capsys.readouterr().out)
-    assert result['schema'] == 'withholding-study-simulation/1' and len(result['rows']) == 2
+    assert result['schema'] == 'withholding-study-simulation/2' and len(result['rows']) == 2
     assert sorted(tmp_path.rglob('*')) == before
     for row in result['rows']:
         assert result['delivered_missed_share'] / row['withheld_missed_share'] == pytest.approx(.5)
@@ -286,8 +287,8 @@ def test_study_and_inputs_cli_and_simulation_json_do_not_write_outputs(tmp_path,
 
 @pytest.mark.parametrize('fault', ['version', 'rho', 'effect', 'sims', 'price', 'probability', 'singleton-block'])
 def test_simulation_refuses_invalid_or_impossible_inputs(tmp_path, fault):
-    value = dict(schema='withholding-study-inputs/1', spread=.1,
-        units=[dict(id='unit', shrunk=dict(touch=.8, missed_when_touched=.2))])
+    value = dict(schema='withholding-study-inputs/2', spread=.1,
+        units=[dict(id='unit', exclusive_scoreable=True, placebo=False, shrunk=dict(touch=.8, missed_when_touched=.2))])
     kwargs = dict(price=2., sims=1)
     if fault == 'version':
         value['schema'] = 'withholding-study-inputs/0'
@@ -310,8 +311,8 @@ def test_simulation_refuses_invalid_or_impossible_inputs(tmp_path, fault):
 
 @pytest.mark.parametrize('slope_sd', [1000., 1e6])
 def test_simulation_extreme_slope_solves_effect_or_refuses(tmp_path, slope_sd):
-    path = save(tmp_path / 'inputs.json', dict(schema='withholding-study-inputs/1', spread=0.,
-        units=[dict(id='unit', shrunk=dict(touch=1., missed_when_touched=.2))]))
+    path = save(tmp_path / 'inputs.json', dict(schema='withholding-study-inputs/2', spread=0.,
+        units=[dict(id='unit', exclusive_scoreable=True, placebo=False, shrunk=dict(touch=1., missed_when_touched=.2))]))
     try:
         report = mm.simulate_study(path, 1., starts=[4], blocks=[1], slope_sd=[slope_sd], sims=1)
     except mm.MeasureError as error:
@@ -333,6 +334,10 @@ def test_study_inputs_read_actual_sealed_pilot_when_available(tmp_path):
     assert result['pooled']['missed_when_touched'] == pytest.approx(21 / 53)
     assert sum(u['touched'] for u in result['units']) == 53
     assert result['spread'] is not None
+    structural = [u for u in result['units'] if not u['exclusive_scoreable']]
+    assert len(structural) == 8
+    assert all(u['touched'] == u['missed'] == 0 and u['shrunk'] == dict(touch=0, missed_when_touched=0)
+               for u in structural)
 
 
 def test_primary_empty_and_one_arm_only_and_itt_missing_arm():
@@ -346,3 +351,106 @@ def test_primary_empty_and_one_arm_only_and_itt_missing_arm():
     result = mm.study_test(np.array([[True, True]]), np.ones((1, 2), dtype=bool), np.zeros((1, 2), dtype=bool),
                           [1, 1], np.array([[1, 1]]), draws=10, seed=653, mode='itt')
     assert result['value'] is None and result['p'] is None
+
+
+def test_inputs_zero_structural_units_and_require_consistent_layout(tmp_path, monkeypatch):
+    run, packages = pilot_fixture(tmp_path)
+    original = mm.unit_outcomes(run, packages, independent=False)
+    for name, record in original['records'].items():
+        record['units'].append(dict(id='empty', article_id='empty', fact_ids=[], withheld=False))
+        original['units'].append(dict(id='empty', start=name, touched=False, missed=False))
+    monkeypatch.setattr(mm, 'unit_outcomes', lambda *args, **kwargs: original)
+    result = mm.study_inputs(run, packages, tmp_path / 'inputs.json')
+    units = {u['id']: u for u in result['units']}
+    assert units['empty']['exclusive_scoreable'] is False
+    assert units['empty']['raw'] == dict(touch=0, missed_when_touched=None)
+    assert units['empty']['shrunk'] == dict(touch=0, missed_when_touched=0)
+    assert units['idle']['shrunk']['touch'] > 0
+    original['records'][packages[1].name]['units'][-1]['fact_ids'] = ['new-fact']
+    with pytest.raises(mm.MeasureError, match='same exclusive facts'):
+        mm.study_inputs(run, packages, tmp_path / 'bad.json')
+    original['records'][packages[1].name]['units'][-1]['fact_ids'] = []
+    original['records'][packages[1].name]['units'][-1]['placebo'] = True
+    with pytest.raises(mm.MeasureError, match='placebo flags'):
+        mm.study_inputs(run, packages, tmp_path / 'bad.json')
+
+
+def test_simulator_excludes_units_and_uses_real_primary_analysis(tmp_path, monkeypatch):
+    units = [dict(id='always', exclusive_scoreable=True, placebo=False, shrunk=dict(touch=1., missed_when_touched=.2)),
+             dict(id='never', exclusive_scoreable=True, placebo=False, shrunk=dict(touch=0., missed_when_touched=.2)),
+             dict(id='empty', exclusive_scoreable=False, placebo=False, shrunk=dict(touch=0., missed_when_touched=0.)),
+             dict(id='placebo', exclusive_scoreable=True, placebo=True, shrunk=dict(touch=1., missed_when_touched=.2))]
+    path = save(tmp_path / 'inputs.json', dict(schema='withholding-study-inputs/2', spread=0., units=units))
+    real_test = mm.study_test
+    observed = []
+    def check(assigned, touched, missed, sizes, halves, **kwargs):
+        assert touched.shape == (2, 4)
+        assert touched[0].all() and not touched[1].any()
+        assert not (missed & ~touched).any()
+        result = real_test(assigned, touched, missed, sizes, halves, **kwargs)
+        assert result['units_counted'] == 1
+        observed.append(result)
+        return result
+    monkeypatch.setattr(mm, 'study_test', check)
+    result = mm.simulate_study(path, 1, starts=[4], blocks=[1], slope_sd=[0], sims=1)
+    assert result['excluded'] == dict(structural_empty=['empty'], placebo=['placebo'])
+    assert len(observed) == 1
+    units[0]['shrunk']['touch'] = 0
+    save(path, dict(schema='withholding-study-inputs/2', spread=0., units=units))
+    with pytest.raises(mm.MeasureError):
+        mm.simulate_study(path, 1, starts=[4], blocks=[1], slope_sd=[0], sims=1)
+
+
+@pytest.mark.parametrize('fault', ['missing_scoreable', 'bad_scoreable', 'missing_placebo', 'structural_touch',
+                                   'structural_miss', 'structural_count', 'missing_shrunk', 'old_version'])
+def test_simulator_rejects_invalid_scoreability(tmp_path, fault):
+    unit = dict(id='empty', exclusive_scoreable=False, placebo=False, touched=0, missed=0,
+                shrunk=dict(touch=0, missed_when_touched=0))
+    companion = dict(id='valid', exclusive_scoreable=True, placebo=False,
+                     shrunk=dict(touch=1, missed_when_touched=.2))
+    value = dict(schema='withholding-study-inputs/2', spread=0, units=[unit, companion])
+    if fault == 'missing_scoreable': del unit['exclusive_scoreable']
+    elif fault == 'bad_scoreable': unit['exclusive_scoreable'] = 1
+    elif fault == 'missing_placebo': del unit['placebo']
+    elif fault == 'structural_touch': unit['shrunk']['touch'] = .1
+    elif fault == 'structural_miss': unit['shrunk']['missed_when_touched'] = .1
+    elif fault == 'structural_count': unit['touched'] = 1
+    elif fault == 'missing_shrunk': del unit['shrunk']
+    else: value['schema'] = 'withholding-study-inputs/1'
+    with pytest.raises(mm.MeasureError):
+        mm.simulate_study(save(tmp_path / 'bad.json', value), 1, starts=[4], blocks=[1], slope_sd=[0], sims=1)
+
+
+def test_simulated_one_arm_and_empty_primary_are_undefined(tmp_path, monkeypatch):
+    units = [dict(id='one-arm', exclusive_scoreable=True, placebo=False,
+                  shrunk=dict(touch=.5, missed_when_touched=.2)),
+             dict(id='never', exclusive_scoreable=True, placebo=False,
+                  shrunk=dict(touch=.5, missed_when_touched=.2)),
+             dict(id='empty', exclusive_scoreable=False, placebo=False,
+                  shrunk=dict(touch=0, missed_when_touched=0)),
+             dict(id='placebo', exclusive_scoreable=True, placebo=True,
+                  shrunk=dict(touch=1, missed_when_touched=.2))]
+    path = save(tmp_path / 'inputs.json', dict(schema='withholding-study-inputs/2', spread=0, units=units))
+    class FixedRandom:
+        def random(self, shape):
+            return np.array([[0, 1, 1, 1], [1, 1, 1, 1]]) if shape == (2, 4) else np.ones(shape)
+        def normal(self, mean, sd, size):
+            return np.zeros(size)
+        def integers(self, *args):
+            return 653
+    real_test, real_rng, real_assignment = mm.study_test, mm.np.random.default_rng, mm.blocked_assignment
+    results = []
+    def check(assigned, touched, missed, sizes, halves, **kwargs):
+        assert touched.tolist() == [[True, False, False, False], [False] * 4]
+        monkeypatch.setattr(mm.np.random, 'default_rng', real_rng)
+        monkeypatch.setattr(mm, 'blocked_assignment', real_assignment)
+        result = real_test(assigned, touched, missed, sizes, halves, **kwargs)
+        results.append(result)
+        return result
+    monkeypatch.setattr(mm.np.random, 'default_rng', lambda seed: FixedRandom())
+    monkeypatch.setattr(mm, 'blocked_assignment', lambda rng, sizes, count: (
+        np.array([[[True, True, False, False]] * count]), np.array([[[2]] * count])))
+    monkeypatch.setattr(mm, 'study_test', check)
+    report = mm.simulate_study(path, 1, starts=[4], blocks=[1], slope_sd=[0], sims=1)
+    assert results[0]['value'] is None and results[0]['p'] is None and results[0]['units_counted'] == 0
+    assert report['rows'][0]['power'] == 0
