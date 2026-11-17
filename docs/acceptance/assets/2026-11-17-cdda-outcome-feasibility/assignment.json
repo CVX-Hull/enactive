@@ -1,0 +1,477 @@
+{
+  "admissions": [
+    {
+      "directory_run_mismatch": false,
+      "indexed_manifest_sha256": "2487838cdb3218e00d419c7cede6d31923ee5f6efc843718ad3c3853833d89d2",
+      "indexed_study": "397-seven-day",
+      "ledger_admission": 1,
+      "ledger_lineage": "L1",
+      "ledger_outcome": "player_cannot_continue_unassessed",
+      "manifest_sha256": "63ea3f86a2959adffdd29bdb39190b0602add472402b343ec199c865899b1bee",
+      "matching_session_paths": [
+        ".runtime/evidence/397-seven-day/computer-sessions/sd1a1"
+      ],
+      "operation_bounds": {
+        "completed_inputs": 333,
+        "first": {
+          "created_wall": 1794093515.535857,
+          "kind": "observe",
+          "operation_id": "3528a36bca0943c9883d1a1592f5ecba",
+          "status": "completed"
+        },
+        "last": {
+          "created_wall": 1794095994.512255,
+          "kind": "input",
+          "operation_id": "2cd438de38e248fbabb23992d1eea5dc",
+          "status": "completed"
+        },
+        "operations": 336
+      },
+      "pairs": [
+        {
+          "baseline": {
+            "actor_id": "4b53df8e07f14a52bd8c400a3937280c",
+            "actor_sequence": 1,
+            "created_wall": 1794093515.535857,
+            "exists": true,
+            "operation_id": "3528a36bca0943c9883d1a1592f5ecba",
+            "operation_kind": "observe",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a1/sources/f37efc17970589e90aff3c73d3742a89-2.png",
+            "sha256": "33a429c4745b64c59e2e708a799e9f8743f837e03a84b74a1f229c8308618ca8",
+            "source_id": "f37efc17970589e90aff3c73d3742a89-2"
+          },
+          "endpoint": {
+            "actor_id": "9847a81d10cc461abf3eee2a14a316ea",
+            "actor_sequence": 202,
+            "created_wall": 1794095994.512255,
+            "exists": true,
+            "operation_id": "2cd438de38e248fbabb23992d1eea5dc",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a1/sources/f37efc17970589e90aff3c73d3742a89-18452.png",
+            "sha256": "3ed958d6218ad809010b2a1a6538262f39b8174be874bedb725529d4349a5d25",
+            "source_id": "f37efc17970589e90aff3c73d3742a89-18452"
+          },
+          "regime": "first-last retained"
+        },
+        {
+          "baseline": {
+            "actor_id": "4b53df8e07f14a52bd8c400a3937280c",
+            "actor_sequence": 11,
+            "created_wall": 1794093547.988974,
+            "exists": true,
+            "operation_id": "aa0164cce97a4af08b118b764646e4e7",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a1/sources/f37efc17970589e90aff3c73d3742a89-336.png",
+            "sha256": "1fc3441f1f6c15d00ca9eb79b6b24a6a3654ee621b572521ea55e0e1e846d5ef",
+            "source_id": "f37efc17970589e90aff3c73d3742a89-336"
+          },
+          "endpoint": {
+            "actor_id": "4b53df8e07f14a52bd8c400a3937280c",
+            "actor_sequence": 101,
+            "created_wall": 1794094113.682389,
+            "exists": true,
+            "operation_id": "5f28340b34cb415db23af5d7fa360c3b",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a1/sources/f37efc17970589e90aff3c73d3742a89-4195.png",
+            "sha256": "57cdc4ddbe0e9db83e809c1027ca72d4de53e3db39f82d065abf7f19c5410e32",
+            "source_id": "f37efc17970589e90aff3c73d3742a89-4195"
+          },
+          "endpoint_basis": "input 100",
+          "regime": "completed inputs 10-100 (final retained if fewer than 100)"
+        }
+      ],
+      "run": "sd1a1",
+      "session": "f37efc17970589e90aff3c73d3742a89",
+      "stratification_tag_unqualified": "censored",
+      "study": 397
+    },
+    {
+      "directory_run_mismatch": false,
+      "indexed_manifest_sha256": "2487838cdb3218e00d419c7cede6d31923ee5f6efc843718ad3c3853833d89d2",
+      "indexed_study": "397-seven-day",
+      "ledger_admission": 7,
+      "ledger_lineage": "L1",
+      "ledger_outcome": "player_cannot_continue_unassessed",
+      "manifest_sha256": "d923719632ee2249ad1558a01928642690f5b6e452e92c901603d86b694f7c98",
+      "matching_session_paths": [
+        ".runtime/evidence/397-seven-day/computer-sessions/sd1a7"
+      ],
+      "operation_bounds": {
+        "completed_inputs": 206,
+        "first": {
+          "created_wall": 1794108074.710271,
+          "kind": "observe",
+          "operation_id": "3788472a11ed4d698ba5885f4d90f6de",
+          "status": "completed"
+        },
+        "last": {
+          "created_wall": 1794109721.545811,
+          "kind": "input",
+          "operation_id": "4894a63b95804bd2ae848abc4282714b",
+          "status": "completed"
+        },
+        "operations": 209
+      },
+      "pairs": [
+        {
+          "baseline": {
+            "actor_id": "6e8a51dad41a4d5fabad8ce21aedbb4c",
+            "actor_sequence": 1,
+            "created_wall": 1794108074.710271,
+            "exists": true,
+            "operation_id": "3788472a11ed4d698ba5885f4d90f6de",
+            "operation_kind": "observe",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a7/sources/bf01a9f1ca634ea63144b01cd8debe8d-2.png",
+            "sha256": "e376bb632dc5a7d0b8fb2eb9409f9e74b04fed87b9fcc865e10948d26002a2d3",
+            "source_id": "bf01a9f1ca634ea63144b01cd8debe8d-2"
+          },
+          "endpoint": {
+            "actor_id": "6d1edf495d4a47e2a908697dc7e0d606",
+            "actor_sequence": 53,
+            "created_wall": 1794109721.545811,
+            "exists": true,
+            "operation_id": "4894a63b95804bd2ae848abc4282714b",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a7/sources/bf01a9f1ca634ea63144b01cd8debe8d-12318.png",
+            "sha256": "50b1ce87e27ef04fc718e40c8f2171b6f0fc6ea6d7a7faba90ed9292511a5949",
+            "source_id": "bf01a9f1ca634ea63144b01cd8debe8d-12318"
+          },
+          "regime": "first-last retained"
+        },
+        {
+          "baseline": {
+            "actor_id": "6e8a51dad41a4d5fabad8ce21aedbb4c",
+            "actor_sequence": 11,
+            "created_wall": 1794108115.168897,
+            "exists": true,
+            "operation_id": "05f79e6a95b04ef19585e5bcec61a7f7",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a7/sources/bf01a9f1ca634ea63144b01cd8debe8d-454.png",
+            "sha256": "3b8b3d5f2be0ec21c8441f0e25f6521adc6355c7194ac0ec3f8b50fa6ee8679d",
+            "source_id": "bf01a9f1ca634ea63144b01cd8debe8d-454"
+          },
+          "endpoint": {
+            "actor_id": "6e8a51dad41a4d5fabad8ce21aedbb4c",
+            "actor_sequence": 101,
+            "created_wall": 1794108815.532799,
+            "exists": true,
+            "operation_id": "ab91d5faaa8744049fdda5966e5b43c1",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a7/sources/bf01a9f1ca634ea63144b01cd8debe8d-5132.png",
+            "sha256": "96d501439d24f7570247875ed44b8de41bf6893cf11db758137b339249b67dff",
+            "source_id": "bf01a9f1ca634ea63144b01cd8debe8d-5132"
+          },
+          "endpoint_basis": "input 100",
+          "regime": "completed inputs 10-100 (final retained if fewer than 100)"
+        }
+      ],
+      "run": "sd1a7",
+      "session": "bf01a9f1ca634ea63144b01cd8debe8d",
+      "stratification_tag_unqualified": "died",
+      "study": 397
+    },
+    {
+      "directory_run_mismatch": false,
+      "indexed_manifest_sha256": "50f3dea4ae53d9621ee70a433c90b40fd73c2b74ce87629272c46b1b63e356b8",
+      "indexed_study": "delivery-check-642",
+      "ledger_admission": null,
+      "ledger_lineage": null,
+      "ledger_outcome": "player_external_stop_complete_unassessed",
+      "manifest_sha256": "245f350aadfe0442089b9f594ae4e9a43b3b7235b77fa2fd42c0606391bd4079",
+      "matching_session_paths": [
+        ".runtime/evidence/delivery-check-642/computer-sessions/delivery-check-642"
+      ],
+      "operation_bounds": {
+        "completed_inputs": 197,
+        "first": {
+          "created_wall": 1794638892.441212,
+          "kind": "observe",
+          "operation_id": "06217653376d42389f6463e89c452c0d",
+          "status": "completed"
+        },
+        "last": {
+          "created_wall": 1794640352.589161,
+          "kind": "input",
+          "operation_id": "12feaf35936b4b45ade3567e13094aab",
+          "status": "completed"
+        },
+        "operations": 200
+      },
+      "pairs": [
+        {
+          "baseline": {
+            "actor_id": "e1f02db82b0542fa82fa609939ba1841",
+            "actor_sequence": 1,
+            "created_wall": 1794638892.441212,
+            "exists": true,
+            "operation_id": "06217653376d42389f6463e89c452c0d",
+            "operation_kind": "observe",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/delivery-check-642/computer-sessions/delivery-check-642/sources/d073e0e4acac4303841bf92e0e3155c8-2.png",
+            "sha256": "b30c4f774240527620215254ce0787b674d4faa9ac0dabcda9e5cad846c50363",
+            "source_id": "d073e0e4acac4303841bf92e0e3155c8-2"
+          },
+          "endpoint": {
+            "actor_id": "1010717b8fa942eba2255865ca2efaf6",
+            "actor_sequence": 7,
+            "created_wall": 1794640352.589161,
+            "exists": true,
+            "operation_id": "12feaf35936b4b45ade3567e13094aab",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/delivery-check-642/computer-sessions/delivery-check-642/sources/d073e0e4acac4303841bf92e0e3155c8-9735.png",
+            "sha256": "37639193a02b2e6d5bd8651994452b81b056d627f971200189ef61beb9dfc01e",
+            "source_id": "d073e0e4acac4303841bf92e0e3155c8-9735"
+          },
+          "regime": "first-last retained"
+        },
+        {
+          "baseline": {
+            "actor_id": "e1f02db82b0542fa82fa609939ba1841",
+            "actor_sequence": 11,
+            "created_wall": 1794638930.907251,
+            "exists": true,
+            "operation_id": "6a3f2b136bae4482bbd0686cd3186a60",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/delivery-check-642/computer-sessions/delivery-check-642/sources/d073e0e4acac4303841bf92e0e3155c8-313.png",
+            "sha256": "31b19debdc6e061ea8d97078cef5d1007ea5344f46addead0ec2eb3f370bb2e6",
+            "source_id": "d073e0e4acac4303841bf92e0e3155c8-313"
+          },
+          "endpoint": {
+            "actor_id": "e1f02db82b0542fa82fa609939ba1841",
+            "actor_sequence": 101,
+            "created_wall": 1794639586.361053,
+            "exists": true,
+            "operation_id": "16069a8142804247a3b6241873560f97",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/delivery-check-642/computer-sessions/delivery-check-642/sources/d073e0e4acac4303841bf92e0e3155c8-6018.png",
+            "sha256": "bc6d48e9839cc2449835d10cc8eddcf70ced8a8961a577b8aa64da6848453d00",
+            "source_id": "d073e0e4acac4303841bf92e0e3155c8-6018"
+          },
+          "endpoint_basis": "input 100",
+          "regime": "completed inputs 10-100 (final retained if fewer than 100)"
+        }
+      ],
+      "run": "delivery-check-642",
+      "session": "d073e0e4acac4303841bf92e0e3155c8",
+      "stratification_tag_unqualified": "censored",
+      "study": 642
+    },
+    {
+      "directory_run_mismatch": false,
+      "indexed_manifest_sha256": "2973f9751ccb7f6f55c6166db962ae8e3f29bbfc7c21f4de99111bfada1200dd",
+      "indexed_study": "withholding-study-651",
+      "ledger_admission": null,
+      "ledger_lineage": null,
+      "ledger_outcome": "player_external_stop_complete_unassessed",
+      "manifest_sha256": "3fa498437cfb27ea1a975122fa32198338b2e74d829745f1a068393292761446",
+      "matching_session_paths": [
+        ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-01"
+      ],
+      "operation_bounds": {
+        "completed_inputs": 201,
+        "first": {
+          "created_wall": 1794691083.592135,
+          "kind": "observe",
+          "operation_id": "f5e17125d786455393ab3a5d2ce28e4d",
+          "status": "completed"
+        },
+        "last": {
+          "created_wall": 1794692564.229463,
+          "kind": "input",
+          "operation_id": "4042c54abf4341cd80c7e9c14b40a56e",
+          "status": "completed"
+        },
+        "operations": 204
+      },
+      "pairs": [
+        {
+          "baseline": {
+            "actor_id": "144734bc158c49c392afcfb8765e83a2",
+            "actor_sequence": 1,
+            "created_wall": 1794691083.592135,
+            "exists": true,
+            "operation_id": "f5e17125d786455393ab3a5d2ce28e4d",
+            "operation_kind": "observe",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-01/sources/847fa1fdd004ec904c646f6fea299f4a-2.png",
+            "sha256": "7883831334b193620c082b9df239928f99b3c65d340af0acd5b1bee3f7b1220b",
+            "source_id": "847fa1fdd004ec904c646f6fea299f4a-2"
+          },
+          "endpoint": {
+            "actor_id": "96819d5771594345b74471cc984aecd4",
+            "actor_sequence": 60,
+            "created_wall": 1794692564.229463,
+            "exists": true,
+            "operation_id": "4042c54abf4341cd80c7e9c14b40a56e",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-01/sources/847fa1fdd004ec904c646f6fea299f4a-9307.png",
+            "sha256": "d4cb57b3a32545056a0fc10462add2162bf1fa333b321917b6c96d8847b6e955",
+            "source_id": "847fa1fdd004ec904c646f6fea299f4a-9307"
+          },
+          "regime": "first-last retained"
+        },
+        {
+          "baseline": {
+            "actor_id": "144734bc158c49c392afcfb8765e83a2",
+            "actor_sequence": 11,
+            "created_wall": 1794691122.0628512,
+            "exists": true,
+            "operation_id": "c51336083b814200b86aee427da19295",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-01/sources/847fa1fdd004ec904c646f6fea299f4a-357.png",
+            "sha256": "222cf37cd63891b547c073867eb3040d53ae074e5e90c267444a6e27a2acad8b",
+            "source_id": "847fa1fdd004ec904c646f6fea299f4a-357"
+          },
+          "endpoint": {
+            "actor_id": "144734bc158c49c392afcfb8765e83a2",
+            "actor_sequence": 101,
+            "created_wall": 1794691766.872111,
+            "exists": true,
+            "operation_id": "2a0d5f6bf8e44305bb0ce374f015d6ea",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-01/sources/847fa1fdd004ec904c646f6fea299f4a-5667.png",
+            "sha256": "7141dc65467517ac0cea935c8868c33968f0742837ff025e4634760b9e4d364a",
+            "source_id": "847fa1fdd004ec904c646f6fea299f4a-5667"
+          },
+          "endpoint_basis": "input 100",
+          "regime": "completed inputs 10-100 (final retained if fewer than 100)"
+        }
+      ],
+      "run": "withholding-study-651-01",
+      "session": "847fa1fdd004ec904c646f6fea299f4a",
+      "stratification_tag_unqualified": "censored",
+      "study": 651
+    },
+    {
+      "directory_run_mismatch": false,
+      "indexed_manifest_sha256": "2973f9751ccb7f6f55c6166db962ae8e3f29bbfc7c21f4de99111bfada1200dd",
+      "indexed_study": "withholding-study-651",
+      "ledger_admission": null,
+      "ledger_lineage": null,
+      "ledger_outcome": "player_cannot_continue_unassessed",
+      "manifest_sha256": "61068b27b435c372c77a4fc3062c83e27e0563c07f982130a62951fb70add0a2",
+      "matching_session_paths": [
+        ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-14"
+      ],
+      "operation_bounds": {
+        "completed_inputs": 118,
+        "first": {
+          "created_wall": 1794730996.849115,
+          "kind": "observe",
+          "operation_id": "2ae32d84b12447a98728dcf5ac67f2c5",
+          "status": "completed"
+        },
+        "last": {
+          "created_wall": 1794731877.471488,
+          "kind": "input",
+          "operation_id": "2c0ba65a205341ee8f7042d3418be5b3",
+          "status": "completed"
+        },
+        "operations": 119
+      },
+      "pairs": [
+        {
+          "baseline": {
+            "actor_id": "96aecfd1bd5f4bcc9cd77b54028b9de7",
+            "actor_sequence": 1,
+            "created_wall": 1794730996.849115,
+            "exists": true,
+            "operation_id": "2ae32d84b12447a98728dcf5ac67f2c5",
+            "operation_kind": "observe",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-14/sources/ce22ca3a3f3fd3a30578aca6f801a34b-2.png",
+            "sha256": "ae7caee1214fc3eb82509e545af7f78277f9ac26e648d026cc298bae428cb0ca",
+            "source_id": "ce22ca3a3f3fd3a30578aca6f801a34b-2"
+          },
+          "endpoint": {
+            "actor_id": "96aecfd1bd5f4bcc9cd77b54028b9de7",
+            "actor_sequence": 119,
+            "created_wall": 1794731877.471488,
+            "exists": true,
+            "operation_id": "2c0ba65a205341ee8f7042d3418be5b3",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-14/sources/ce22ca3a3f3fd3a30578aca6f801a34b-7125.png",
+            "sha256": "58ae98822e6965c9c37e8a4d982eca7ed4b92f58f9cbcaa91eb57d26ef0fb64d",
+            "source_id": "ce22ca3a3f3fd3a30578aca6f801a34b-7125"
+          },
+          "regime": "first-last retained"
+        },
+        {
+          "baseline": {
+            "actor_id": "96aecfd1bd5f4bcc9cd77b54028b9de7",
+            "actor_sequence": 11,
+            "created_wall": 1794731038.42079,
+            "exists": true,
+            "operation_id": "3fe6b276af0d45adb066b22e62e233ab",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-14/sources/ce22ca3a3f3fd3a30578aca6f801a34b-522.png",
+            "sha256": "63dfe4c9f8ed3b8f15c66b794912c2025f606c8cd4e7f98ec47a8d312ef11ea3",
+            "source_id": "ce22ca3a3f3fd3a30578aca6f801a34b-522"
+          },
+          "endpoint": {
+            "actor_id": "96aecfd1bd5f4bcc9cd77b54028b9de7",
+            "actor_sequence": 101,
+            "created_wall": 1794731728.502767,
+            "exists": true,
+            "operation_id": "3075b355055847209053251f372c0f4f",
+            "operation_kind": "input",
+            "operation_status": "completed",
+            "path": ".runtime/evidence/withholding-study-651/computer-sessions/withholding-study-651-14/sources/ce22ca3a3f3fd3a30578aca6f801a34b-5547.png",
+            "sha256": "64c6c9419734dab192867094db464c42c5725fe85600a109203a2adf0af0e9de",
+            "source_id": "ce22ca3a3f3fd3a30578aca6f801a34b-5547"
+          },
+          "endpoint_basis": "input 100",
+          "regime": "completed inputs 10-100 (final retained if fewer than 100)"
+        }
+      ],
+      "run": "withholding-study-651-14",
+      "session": "ce22ca3a3f3fd3a30578aca6f801a34b",
+      "stratification_tag_unqualified": "died",
+      "study": 651
+    }
+  ],
+  "codebook": {
+    "alive": "alive only with visible identity and evidence of live state at assigned endpoint; dead only visible death for same survivor; else unknown, including menus and occlusion",
+    "clock_travel": "elapsed clock and landmark/map travel separately only where both endpoints visibly support comparison",
+    "composite": "task progress AND alive; unknown stays unknown; record ending/censor/failure separately, do not infer death from a stop",
+    "progress": "source-specific explicit before/after task change; positive/negative/boundary/unknown; starting stock alone is not progress"
+  },
+  "missing_strata": [
+    {
+      "study": 642,
+      "tag": "died"
+    }
+  ],
+  "rule": "First lexical run per family and unqualified metrics outcome censored/died, deduplicated; no replacement. Pair first/last retained operation source and completed input 10/100, final retained if fewer than 100; missing source is unknown.",
+  "split": "development; not blinded or held out",
+  "unclassified": [
+    {
+      "run": "withholding-study-651-20",
+      "session": "9a72559d38362a98ea8e05a704747256",
+      "study": 651,
+      "tag": null
+    },
+    {
+      "run": "withholding-study-651-29",
+      "session": "fb058cd3a6521c63312e9a2d11b1b1c0",
+      "study": 651,
+      "tag": null
+    }
+  ]
+}

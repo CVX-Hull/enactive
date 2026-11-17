@@ -478,6 +478,21 @@
       },
       "visibility": "private"
     },
+    "cdda-outcome-feasibility": {
+      "availability": "present",
+      "bytes": 73511,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-cdda-outcome-feasibility.md"
+      ],
+      "files": 7,
+      "manifest_sha256": "e3709edf685bb7361d0ea89ce11570808aa917b86037fe6cef5d1243a8ff1712",
+      "note": "Five-admission ten-pair fixed development feasibility: initial20assignedimageviews and6independentreviewreopens, no other pixels, provider/model requests or gameplay. Outcome target deferred, no qualification/power/replication claim. Raw images remain canonical in their existing seals. Includes native Git source bundles for two exclusively owned Git-linked worker checkouts because app archive refused them; base prerequisite is retained on main. Remove owned duplicate artifacts/checkouts only after full hash and ownership verification; retain saves/builds/dependencies/canonical evidence.",
+      "sources": {
+        "feasibility": ".runtime/worktrees/cdda-outcome-feasibility/.runtime/feasibility, assignment frozen before image inspection",
+        "worker-source": ".runtime/source-retirement, owned goal worker source bundles with retained base 41f08c6c102fbdb0b39fe0ca3865f1bae2ec8349"
+      },
+      "visibility": "private"
+    },
     "cdda-recurrence-preparation-668": {
       "availability": "present",
       "bytes": 436037,
