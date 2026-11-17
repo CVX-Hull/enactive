@@ -14,7 +14,7 @@ const useFrame = (path, every = 15000) => useView(path, every, SCHEMA);
 /* ---------------------------------------------------------------- frame */
 export function Frame({section}) {
   const role = ROLES.some(r => r[0] === section) ? section : 'actor';
-  const body = role === 'actor' ? html`<${Actor} />` : role === 'containers' ? html`<${Containers} />` : html`<${Placeholder} role=${role} />`;
+  const body = role === 'actor' ? html`<${Actor} />` : role === 'curator' ? html`<${Curator} />` : role === 'containers' ? html`<${Containers} />` : html`<${Placeholder} role=${role} />`;
   return html`<section class="grid" data-view="frame" aria-label="Spectator frame">
     <div class="s12"><${Health} /></div>
     <div class="s12"><${SubNav} tabs=${ROLES} base="frame" current=${role} label="Roles" /></div>${body}</section>`;
@@ -58,6 +58,33 @@ function Placeholder({role}) {
   const [phase, title, text] = PLACEHOLDERS[role];
   return html`<${Panel} title=${title} note=${`arrives in ${phaseName(phase)}`} span="s12">
     <${Insufficient}><b>Arrives in ${phaseName(phase)}.</b> There is no ${title.toLowerCase()} data yet, so this view shows none. ${text}<//><//>`;
+}
+
+/* Recorded results belong to an operator-selected source, independent of any run. */
+function Curator() {
+  const [sourceAfter, setSourceAfter] = useState(0);
+  const sources = useFrame(`frame/curator-sources?limit=500&after=${sourceAfter}`, 5000);
+  const [source, setSource] = useState('');
+  const [after, setAfter] = useState(0);
+  const [snapshot, setSnapshot] = useState(null);
+  const [pick, setPick] = useState(null);
+  const path = source ? `frame/curator-results?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
+  const result = useFrame(path, 5000);
+  const data = result.error ? null : result.data;
+  useEffect(() => { if (data && data.snapshot && !snapshot) setSnapshot(data.snapshot.sha256); }, [data, snapshot]);
+  const reset = () => { setAfter(0); setSnapshot(null); setPick(null); };
+  const selected = data && data.items.find(row => row.index === pick);
+  const value = v => v === null || v === undefined ? 'null' : v;
+  return html`<${Panel} title="Curator results" span="s12">
+    <p class="note">Recorded publication reports in journal order. A source label does not establish a run association or the repository's current head.</p>
+    ${!sources.data ? html`<${Waiting} store=${store} what="curator sources" error=${sources.error} />` : !sources.data.items.length ? html`<p>No curator result sources configured.</p>` : html`<label>Result source <select data-curator-source value=${source} onChange=${e => {setSource(e.target.value); reset();}}><option value="">Choose a source</option>${sources.data.items.map(item => html`<option value=${item.label}>${item.label}</option>`)}</select></label>${sourceAfter || sources.data.next !== null ? html`<p><button type="button" disabled=${sourceAfter === 0} onClick=${() => setSourceAfter(Math.max(0, sourceAfter - 500))}>Previous sources</button> <button type="button" disabled=${sources.data.next === null} onClick=${() => setSourceAfter(sources.data.next)}>Next sources</button></p>` : null}`}
+    ${source && result.error ? html`<p role="alert">${result.error.message === 'source_changed' ? 'Source changed; refresh to restart paging.' : result.error.message}</p><button type="button" onClick=${reset}>Refresh results</button>` : null}
+    ${source && !data && !result.error ? html`<${Waiting} store=${store} what="curator results" />` : null}
+    ${data ? html`<p>Source status: ${data.source_status}</p>${data.snapshot ? html`<p class="mono wrapany">Snapshot SHA-256: ${data.snapshot.sha256} · ${data.snapshot.bytes} bytes</p>` : null}
+      ${data.source_status === 'available' ? html`<${Table} columns=${[{title:'Recorded order', render:r => r.index}, {title:'Operation', key:'operation'}, {title:'Status', key:'status'}, {title:'Operation ID', render:r => value(r.operation_id), wrap:true}]} rows=${data.items} selected=${data.items.findIndex(r => r.index === pick)} onPick=${(i, row) => setPick(row.index)} />
+        <p><button type="button" disabled=${after === 0} onClick=${() => {setPick(null); setAfter(Math.max(0, after - 25));}}>Previous results</button> <button type="button" disabled=${data.next === null} onClick=${() => {setSnapshot(data.snapshot.sha256); setPick(null); setAfter(data.next);}}>Next results</button></p>` : null}
+      ${selected ? html`<section data-curator-detail><h3>Recorded result</h3><dl class="kv wide">${['operation_id','operation','status','base_version','restored_from','version','submission','session'].map(key => html`<dt>${key}</dt><dd class="mono wrapany">${value(selected[key])}</dd>`)}</dl><h4>Diagnostics</h4>${selected.diagnostics.length ? selected.diagnostics.map(d => html`<p class="wrapany">${d}</p>`) : html`<p>None recorded.</p>`}<${Omissions} value=${selected} /></section>` : null}` : null}
+    <p class="note">Session timelines, diffs, drafts and ontology views are unavailable.</p><//>`;
 }
 
 /* ---------------------------------------------------------------- actor: the forgetting episodes */

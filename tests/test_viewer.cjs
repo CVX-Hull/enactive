@@ -178,3 +178,36 @@ test('recorded reader refreshes actors and public reports while staying on the p
     assert.deepEqual(page.problems,[]);
   } finally { await page.close(); }
 });
+
+test('curator results select and show escaped recorded detail on a phone', {timeout: 30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#live`, {width:390,height:900,mobile:true});
+  const digest = 'a'.repeat(64);
+  const row = {index:0,operation_id:'b'.repeat(32),operation:'submission',status:'unknown',base_version:'v1',
+    restored_from:null,version:null,submission:'<script>window.curatorExecuted=true</script>',session:'session',
+    diagnostics:['<b>recorded diagnostic</b>'],diagnostics_omitted:0};
+  try {
+    await S.ready(page);
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      const url = new URL(request.url());
+      const body = url.pathname.endsWith('/frame/curator-sources') ? {schema:'spectator-frame/1',items:[{label:'fixture'}],total:1,next:null,limit:500}
+        : url.pathname.endsWith('/frame/curator-results') ? {schema:'spectator-frame/1',source:'fixture',source_status:'available',snapshot:{sha256:digest,bytes:123},items:[row],total:1,next:null,limit:25} : null;
+      if (body) request.respond({status:200,contentType:'application/json',body:JSON.stringify(body)});
+      else request.continue();
+    });
+    await page.evaluate(() => { location.hash='#frame/curator'; });
+    await S.until(page, () => document.querySelector('[data-curator-source] option[value="fixture"]'));
+    await page.select('[data-curator-source]', 'fixture');
+    await S.until(page, () => document.querySelector('table.data button.link'));
+    await page.focus('table.data button.link');
+    await page.keyboard.press('Enter');
+    await S.until(page, () => document.querySelector('[data-curator-detail]'));
+    const text = await page.$eval('[data-curator-detail]', n => n.innerText);
+    assert.match(text, /unknown/); assert.ok(text.includes(row.submission)); assert.ok(text.includes(row.diagnostics[0]));
+    assert.equal(await page.evaluate(() => window.curatorExecuted), undefined);
+    assert.equal(await S.overflow(page), 0);
+    await page.select('[data-curator-source]', '');
+    await S.until(page, () => !document.querySelector('[data-curator-detail]'));
+    assert.deepEqual(page.problems, []);
+  } finally { await page.close(); }
+});

@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from . import cross, views, knowledge
+from . import cross, views, knowledge, curator
 from . import frame as frame_view
 from .catalog import API, Catalog, RunInfo, ViewError
 from .live import LiveEvaluator
@@ -171,8 +171,21 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
     def frame_episodes(request: Request) -> Response:
         return frame_reply(frame_view.episodes(catalog, sources))
 
+    def curator_sources(request: Request) -> Response:
+        after, limit = paging(request)
+        rows = [dict(label=label) for label, _ in sources.curator_results]
+        return frame_reply(dict(items=rows[after:after + limit], total=len(rows),
+                                next=after + limit if after + limit < len(rows) else None, limit=limit))
+
+    def curator_results(request: Request) -> Response:
+        after, limit = paging(request)
+        return frame_reply(curator.results(sources.curator_results, request.query_params.get('source'),
+                                           after, limit, request.query_params.get('snapshot')))
+
     prefix = '/api/view'
-    routes = [Route(f'{prefix}/frame/health', plain(frame_health), methods=['GET']),
+    routes = [Route(f'{prefix}/frame/curator-sources', plain(curator_sources), methods=['GET']),
+        Route(f'{prefix}/frame/curator-results', plain(curator_results), methods=['GET']),
+        Route(f'{prefix}/frame/health', plain(frame_health), methods=['GET']),
         Route(f'{prefix}/frame/containers', plain(frame_containers), methods=['GET']),
         Route(f'{prefix}/frame/containers/{{container_id:path}}', plain(frame_container), methods=['GET']),
         Route(f'{prefix}/frame/episodes', plain(frame_episodes), methods=['GET']),
