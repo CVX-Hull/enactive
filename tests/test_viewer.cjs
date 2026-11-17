@@ -91,8 +91,8 @@ test('current hints stay unverified text and retired programs are explicit', {ti
     await S.ready(page);
     page.on('request', request => {
       const path = new URL(request.url()).pathname;
-      const value = path.endsWith('/memory') ? {schema:'spectator-view/1',available:true,store_schema:'player-journal/1',records:[],hints:[hint],hints_omitted:0}
-        : path.endsWith('/programs') ? {schema:'spectator-view/1',capability:'retired',store_schema:'player-journal/1',programs:[],runs:[],saves:[]} : null;
+      const value = path.endsWith('/memory') ? {schema:'spectator-view/2',available:true,store_schema:'player-journal/1',records:[],hints:[hint],hints_omitted:0}
+        : path.endsWith('/programs') ? {schema:'spectator-view/2',capability:'retired',store_schema:'player-journal/1',programs:[],runs:[],saves:[]} : null;
       if (value) request.respond({status:200,contentType:'application/json',body:JSON.stringify(value)});
       else request.continue();
     });
@@ -108,6 +108,73 @@ test('current hints stay unverified text and retired programs are explicit', {ti
     await page.evaluate(() => { location.hash='#run/programs'; });
     await S.until(page, () => document.getElementById('app').innerText.includes('Programs are unavailable for this run'));
     assert.doesNotMatch(await page.$eval('#app', node => node.innerText),/Insufficient sample/);
+    assert.deepEqual(page.problems,[]);
+  } finally { await page.close(); }
+});
+
+test('recorded reader keeps delivery, reports, operation and outcome distinct on a phone', {timeout: 30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#frame/actor`, {width:390,height:900,mobile:true});
+  try {
+    await S.ready(page);
+    await S.until(page, () => [...(document.querySelector('[data-reader-actor]')?.options || [])].some(o => o.value === 'actor-1'));
+    await page.select('[data-reader-actor]', 'actor-1');
+    await S.until(page, () => document.getElementById('app').innerText.toLowerCase().includes('public hints (unverified)'));
+    await page.select('[data-reader-request]', 'request-1');
+    await S.until(page, () => document.querySelector('[data-reader-request]')?.value === 'request-1');
+    await page.evaluate(() => { for (const d of document.querySelectorAll('#app details')) d.open = true; });
+    let text = await page.$eval('#app', n => n.innerText);
+    for (const expected of ['knowledge-delivery', 'Move carefully', 'fact-visible', 'The visible passage may be blocked',
+      'Receipt disposition: delivered', 'I believe I am done', 'Evaluator outcome', 'Original frame']) assert.ok(text.toLowerCase().includes(expected.toLowerCase()), expected);
+    const buttons = await page.$$('button');
+    const fact = await Promise.all(buttons.map(b => b.evaluate(el => el.textContent)));
+    await buttons[fact.indexOf('fact-visible')].focus();
+    await page.keyboard.press('Enter');
+    await S.until(page, () => document.getElementById('app').innerText.includes('Entry fact-visible'));
+    await S.until(page, () => document.activeElement?.matches('[data-reader-entry] > summary'));
+    assert.equal(await page.evaluate(() => window.readerExecuted), undefined);
+    assert.equal(await S.overflow(page), 0);
+    await S.shot(page, 'recorded-reader-phone');
+    await page.select('[data-reader-actor]', 'actor-2');
+    await S.until(page, () => document.getElementById('app').innerText.includes('Public journal unavailable.'));
+    text = await page.$eval('#app', n => n.innerText);
+    assert.doesNotMatch(text, /Entry fact-visible/);
+    assert.deepEqual(page.problems, []);
+  } finally { await page.close(); }
+});
+
+
+test('recorded reader refreshes actors and public reports while staying on the page', {timeout:30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#frame/actor`, {width:390,height:900,mobile:true});
+  const fixture = JSON.parse(require('node:fs').readFileSync(require('node:path').join(__dirname,'fixtures/spectator/knowledge.json'),'utf8'));
+  let phase=0, emptySeen=false;
+  try {
+    await page.setRequestInterception(true);
+    page.on('request', r => {
+      const url=new URL(r.url());
+      if (!url.pathname.endsWith('/knowledge')) { r.continue(); return; }
+      let body;
+      if (!url.searchParams.get('actor')) {
+        emptySeen ||= phase===0;
+        body={schema:'spectator-view/2',actors:phase ? fixture.actors : [],actors_omitted:0,actor:null,request_id:null};
+      } else {
+        body=structuredClone(fixture);
+        if (phase===2) { body.hints[0].text='A later public hint'; body.requests.push('request-2'); }
+      }
+      r.respond({status:200,contentType:'application/json',body:JSON.stringify(body)});
+    });
+    await page.reload({waitUntil:'load'});
+    await S.ready(page);
+    await S.until(page, () => !!document.querySelector('[data-reader-actor]'));
+    assert.equal(emptySeen,true);
+    assert.deepEqual(await page.$$eval('[data-reader-actor] option', ns=>ns.map(n=>n.value)),['']);
+    phase=1;
+    await S.until(page, () => [...(document.querySelector('[data-reader-actor]')?.options || [])].some(o=>o.value==='actor-1'));
+    await page.select('[data-reader-actor]','actor-1');
+    await S.until(page, () => document.getElementById('app').innerText.includes('The visible passage may be blocked'));
+    phase=2;
+    await S.until(page, () => document.getElementById('app').innerText.includes('A later public hint'));
+    assert.ok(await page.$$eval('[data-reader-request] option', ns=>ns.some(n=>n.value==='request-2')));
+    assert.equal(await S.overflow(page),0);
     assert.deepEqual(page.problems,[]);
   } finally { await page.close(); }
 });

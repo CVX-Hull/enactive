@@ -21,7 +21,7 @@ records and can fail without effect. [Architecture](../architecture.md) and
 | [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive `/api/status` and `/api/source/ID` routes, independent Pause and the actor tool routes. It serves no page and no derived view. |
 | [Gateway](../../tools/campaign_watch.py) | The page origin and static files, relayed status and source reads, Pause with a reason, and bounded forwarding of view reads. Its exit ends supervision, so it stays minimal. |
 | [Page](../../web/) | Source presentation, labels, resource status, Pause feedback and the viewer's views. Served by the gateway. |
-| Viewer (`harness/viewer`) | Read-only evaluator views of the live run and archived runs ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view1)). A separate process outside supervision. |
+| Viewer (`harness/viewer`) | Read-only evaluator views of the live run and archived runs ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). A separate process outside supervision. |
 | [Supervisor](../../tools/campaign_supervision.py) | Starts and stops the custodian, gateway, keep-awake and viewer children; the guardian owns the custody deadline and the Pause receipt ([procedure](../operations/campaign-supervision.md)). |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |
@@ -69,7 +69,7 @@ verify absence stays unknown. No unrelated process scan/adoption is supported.
 The supervisor starts `python -m harness.viewer` as an **unsupervised** child on a free
 loopback port, with the live run directory, the evaluation root
 (`.runtime/evaluations`) and optionally a directory of archived runs. It runs the
-evaluator incrementally over the live run's records and serves `spectator-view/1`. It
+evaluator incrementally over the live run's records and serves `spectator-view/2`. It
 writes only the live run's `live` evaluation store and never reaches the custodian, the
 player context or any input.
 
@@ -109,10 +109,16 @@ The gateway forwards `GET /api/view/*` to it on its own connection:
 
 **Spectator frame.** The page's *Roles and containers* view
 ([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18), `web/app/frame.js`) is a health strip
-over role tabs. *Actor* lists the four #397 forgetting episodes from the tracked probe
-episodes, each anchor opening the existing Live view at that step, or saying why its frame
-is unavailable. *Containers* lists the sidecar inventory with each manifest. *Curator*,
-*Knowledge* and *Programs* are placeholders for future viewer work, and
+over role tabs. *Actor* offers the selected run’s recorded knowledge/public-report
+reader: select an actor and request, inspect selection/delivery, follow an ID into
+the digest-verified frozen snapshot, and inspect explicit reads, fallible public
+reports and their mechanical results. Source links use recorded IDs and the existing
+frame verifier; missing links, ages and journals stay unavailable. The
+[view contract](../contracts/evaluation.md#recorded-knowledge-and-public-reports)
+owns fields and bounds. Historical #397 forgetting episodes remain alongside it,
+with anchors opening Live at that step or explaining why the frame is unavailable.
+*Containers* lists the sidecar inventory with each manifest. *Curator*, the broader
+*Knowledge* view and *Programs* retain placeholders for their remaining work, and
 health slots without data say "not yet measured" instead of a number. It is served by the
 viewer's `/api/view/frame/*` routes ([contract](../contracts/evaluation.md#spectator-frame-spectator-frame1)),
 reads only, and leaves the Pause path untouched.

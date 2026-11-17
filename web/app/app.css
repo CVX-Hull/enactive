@@ -254,3 +254,8 @@ details summary { cursor: pointer; }
   .kv.wide { grid-template-columns: 1fr; } .kv.wide dd { text-align: left; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Recorded reader controls stay usable with long identifiers on narrow screens. */
+.knowledge-reader select, .knowledge-reader button { max-width: 100%; }
+.knowledge-reader button { white-space: normal; overflow-wrap: anywhere; }
+.knowledge-reader details, .knowledge-reader summary { overflow-wrap: anywhere; }

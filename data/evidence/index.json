@@ -763,6 +763,20 @@
       },
       "visibility": "private"
     },
+    "recorded-knowledge-spectator": {
+      "availability": "present",
+      "bytes": 4240905,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-recorded-knowledge-spectator.md"
+      ],
+      "files": 37,
+      "manifest_sha256": "f76d61402c2e12717aa13751ca0976fafb848dce56af13792bd73308d6ec209d",
+      "note": "Retained #642 viewer projection/rendering and synthetic current-journal/browser acceptance, including failed and passing local checks and exact leaf briefs. The evaluation SQLite copy is byte-verified from delivery-check-642 and owns disposable WAL sidecars; canonical evidence is unchanged. No new CDDA/native/model/provider run or spend. Owned copies/worktrees retired after full hash verification and protected delivery.",
+      "sources": {
+        "viewer": ".runtime/ready-delivery, viewer source 7ea9563960e815f1a7f74bf97dce5922d108ea47"
+      },
+      "visibility": "private"
+    },
     "seven-day-recap-video": {
       "availability": "present",
       "bytes": 2722183,

@@ -16,7 +16,7 @@ from typing import Any
 from harness.evaluation.core.records import (EvaluationError, open_readonly, read_metadata, read_metrics, read_run_facts)
 from harness.evaluation.core.sources import read_json_file, read_json_lines, read_manifest
 
-API = 'spectator-view/1'
+API = 'spectator-view/2'
 DATA_DIR = Path(__file__).resolve().parents[2] / 'data' / 'evaluation'
 
 

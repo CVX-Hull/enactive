@@ -178,7 +178,7 @@ def make_handler(state: State):
                 if found:
                     self.json(200, found[0])
                 else:
-                    self.json(404, {'schema': 'spectator-view/1', 'error': 'unknown_container', 'detail': wanted})
+                    self.json(404, {'schema': 'spectator-view/2', 'error': 'unknown_container', 'detail': wanted})
                 return
             if route == 'improve/changes':
                 self.json(200, load('improve-changes.json')); return
@@ -206,7 +206,7 @@ def make_handler(state: State):
                 limit = min(500, int(first('limit', 100)))
                 rows = [s for s in state.steps[:visible] if s['seq'] > after]
                 page = rows[:limit]
-                self.json(200, dict(schema='spectator-view/1', items=page, limit=limit,
+                self.json(200, dict(schema='spectator-view/2', items=page, limit=limit,
                                     next=page[-1]['seq'] if len(rows) > limit else None)); return
             if sub == 'requests':
                 body = load('requests.json')
@@ -225,6 +225,23 @@ def make_handler(state: State):
                 for key in ('tool', 'status'):
                     if first(key):
                         body['items'] = [c for c in body['items'] if c[key] == first(key)]
+                self.json(200, body); return
+            if sub == 'knowledge':
+                body = load('knowledge.json')
+                actor = first('actor')
+                if not actor:
+                    body = {k: body[k] for k in ('schema', 'actors', 'actors_omitted')}
+                    body.update(actor=None, request_id=None)
+                else:
+                    body['actor'] = actor
+                    body['request_id'] = first('request') or None
+                    selected = first('entry')
+                    if selected:
+                        body['snapshot']['entry_id'] = selected
+                        body['snapshot']['items'] = [item for item in body['snapshot']['items'] if item['id'] == selected]
+                        body['snapshot']['total'] = len(body['snapshot']['items'])
+                    if actor == 'actor-2':
+                        body.update(events=[], calls=[], hints=[], finishes=[], journal_available=False)
                 self.json(200, body); return
             if sub in ('tools', 'memory', 'programs', 'handoffs'):
                 self.json(200, load(sub + '.json')); return

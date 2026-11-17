@@ -1,9 +1,9 @@
-"""The read-only spectator viewer: every `spectator-view/1` route (docs/contracts/evaluation.md).
+"""The read-only spectator viewer: every `spectator-view/2` route (docs/contracts/evaluation.md).
 
-All routes are GET. JSON responses carry `"schema": "spectator-view/1"`, stay under 4 MiB and are paginated with
+All routes are GET. JSON responses carry `"schema": "spectator-view/2"`, stay under 4 MiB and are paginated with
 `after` and `limit` (at most 500) where they list. The application writes nothing; the only write in the process
 is the live evaluator's own `live` store, which the app merely reports on. The `/frame/` routes are the spectator's
-frame (`spectator-frame/1`, `frame.py`): errors still use the `spectator-view/1` envelope.
+frame (`spectator-frame/1`, `frame.py`): errors still use the `spectator-view/2` envelope.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from . import cross, views
+from . import cross, views, knowledge
 from . import frame as frame_view
 from .catalog import API, Catalog, RunInfo, ViewError
 from .live import LiveEvaluator
@@ -126,6 +126,11 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
     def memory(request: Request, info: RunInfo, connection) -> Response:
         return reply(views.memory(catalog, info, connection))
 
+    def knowledge_(request: Request, info: RunInfo, connection) -> Response:
+        after, limit = paging(request)
+        return reply(knowledge.projection(catalog, info, connection, request.query_params.get('actor') or None,
+            request.query_params.get('request') or None, after, limit, request.query_params.get('entry') or None))
+
     def programs(request: Request, info: RunInfo, connection) -> Response:
         return reply(views.programs(catalog, info, connection))
 
@@ -180,6 +185,7 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         Route(f'{prefix}/run/{{run}}/requests', with_run(requests_), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/context/{{request_id}}', with_run(context), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/memory', with_run(memory), methods=['GET']),
+        Route(f'{prefix}/run/{{run}}/knowledge', with_run(knowledge_), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/programs', with_run(programs), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/handoffs', with_run(handoffs), methods=['GET']),
         Route(f'{prefix}/improve/changes', plain(changes), methods=['GET']),

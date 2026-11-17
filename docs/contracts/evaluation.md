@@ -983,9 +983,9 @@ Development-run quantities live as data in git, and pages render them or cite th
   [added held-out lineage](../acceptance/2026-11-09-held-out-lineage-522.md)); those tables
   are never rewritten (ADR008) and are not checked.
 
-## Spectator view API (`spectator-view/1`)
+## Spectator view API (`spectator-view/2`)
 
-All routes are `GET`, return JSON with `"schema": "spectator-view/1"` unless noted, stay
+All routes are `GET`, return JSON with `"schema": "spectator-view/2"` unless noted, stay
 under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 `after`/`limit` (`limit` ≤ 500).
 
@@ -1000,6 +1000,7 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/run/<run>/requests?after=&limit=` | Request rows, plus eviction and handoff markers |
 | `/api/view/run/<run>/context/<request_id>` | Ordered parts replayed from the manifest (`exact: true`). Without a manifest: frozen inputs plus recorded tool results (`exact: false`). |
 | `/api/view/run/<run>/memory` | Records with kind, chain, cited sources, reads (record IDs returned), handoff carry and human audit labels |
+| `/api/view/run/<run>/knowledge?actor=&request=&entry=&after=&limit=` | Actor/request selection, recorded knowledge selection/delivery, verified frozen snapshot entries, explicit reads and public reports, linked mechanical results and separately labelled evaluator outcome |
 | `/api/view/run/<run>/programs` | Programs with lineage and runs (status, steps, elapsed, reason) |
 | `/api/view/run/<run>/handoffs` | Handoffs with position, decisions to resume, carry ratio, carry text and identity check |
 | `/api/view/improve/changes` | Change records with per-run target, uptake and guard values for each arm, and bootstrap intervals |
@@ -1010,11 +1011,61 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/containers?after=&limit=`, `/api/view/frame/containers/<container_id>` | The container inventory and one manifest (`spectator-frame/1`, below) |
 | `/api/view/frame/episodes` | The tracked forgetting episodes with anchors resolved to runs and frames (`spectator-frame/1`, below) |
 
+### Recorded knowledge and public reports
+
+The `knowledge` route is a pure viewer projection over the selected run. Without
+`actor` it returns actor IDs from recorded requests; with `actor` it returns that
+actor's request IDs, `events`, `snapshot_status`/`snapshot`, `calls`, `hints`,
+`journal_available`, `finishes`, `context` and `outcome`. `request` filters
+selection/delivery by its recorded player or recall request IDs and calls by their
+request ID; hints and finish claims remain actor-wide. An unknown actor/request is
+`404`. `entry` selects an exact ID within the actor's snapshot, not a global store.
+
+- `events` allowlist `knowledge-recall`, `knowledge-delivery` and
+  `knowledge-undelivered` fields, selected article/fact/index IDs, delivery leads/index
+  and original trace line. Selection, delivery and an explicit read are distinct.
+  Missing delivery text or a missing join stays unavailable; proximity proves no use.
+- `snapshot_status` is `verified`, `unavailable`, `hash_unavailable` or
+  `hash_mismatch`. Entries are served only after the actor's `player-host-inputs/3`
+  `frozen.json` names this actor/session and its `delivered-knowledge.json` digest
+  matches. Missing/mismatched bytes are never presented as the frozen contents.
+  The `delivered-knowledge/1` snapshot exposes only public article/fact fields,
+  coverage and confirmation markers in their recorded units. It pages `items` with
+  `total`, `limit` and `next`. An absent entry is unavailable, not proof of withholding.
+  No private full export, withheld-unit file or curator repository is read.
+- `calls` expose public intent/cites, knowledge query/read returned IDs, status and
+  explicit operation/source/step IDs, allowlisted tool-result status/reason/delivery,
+  and original operation status/receipt dispositions. Intent, hints and finish
+  claims are unverified player reports; SDL delivery and evaluator outcome have
+  their separate meanings. No expectation or private reasoning is inferred.
+- `anchors` resolve only explicitly recorded source IDs through the existing
+  catalog/frame digest verifier, including other catalog runs. Each has `run`,
+  `source_id`, `available`, `reason`; missing catalog/source/digest support remains
+  unavailable. Citation IDs are not reinterpreted as source IDs. Confirmation tuples
+  without source IDs or comparable timestamps provide neither a source link nor an
+  absolute age. Publication/coverage recency is not truth or measured curator lag.
+- `context` exposes exactness, part count and missing-kind markers through the
+  existing request-context reader, without transcript text or reasoning.
+  `journal_available: false` is distinct from a readable journal with zero hints.
+- Actor/request lists cap at 500; event/call/hint/finish lists cap at 100. Text fields
+  cap at 1,024 characters; identifiers over 512 characters are omitted instead of
+  truncated into false identities. Nested body/lead/index/receipt/source lists have
+  explicit bounds and omissions. `*_omitted`/`omitted_characters` disclose omitted
+  items/characters. The common 4 MiB ceiling still returns `413 response_too_large`;
+  select a request or narrower entry/page instead of treating that as empty data.
+
+The Actor tab offers this reader alongside historical forgetting episodes. It
+supports native keyboard controls, focuses a selected snapshot entry after loading,
+refreshes at the existing five-second viewer cadence, uses escaped text and
+phone-width wrapping, and preserves the separate Live/Pause
+path. The existing hint list remains available. Richer curator, belief/scope,
+ontology, draft and program views remain outside this projection.
+
 ### Spectator frame (`spectator-frame/1`)
 
 The `/api/view/frame/*` routes are the spectator's frame
 ([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18)). They follow the rules above (`GET` only, under 4 MiB, nothing written) but carry
-`"schema": "spectator-frame/1"`. Errors keep the `spectator-view/1` envelope. They read
+`"schema": "spectator-frame/1"`. Errors keep the `spectator-view/2` envelope. They read
 tracked data and the catalog's stores, and nothing they compute reaches the player or the
 curator (ADR008). The container and probe directories default to the repository's
 `data/containers` and `data/evaluation/probes`; `create_app(frame_sources=)` overrides
