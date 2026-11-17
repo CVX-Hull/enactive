@@ -89,7 +89,7 @@ for failed gameplay. Keep every failed or abandoned chain and its original limit
 [#145](https://github.com/CVX-Hull/enactive/issues/145) own cadence, curated memory and
 programs, and independent survival outcomes, which the boundary does not imply.
 
-Development runs use a diagnostic route that confers no player selection, under the
+Development runs freeze the selected current route and configuration under the
 [development-run method](development-runs.md). The [run evaluator and
 spectator](decisions/008-evaluation-and-spectator.md) score runs from recorded frames and
 traces; whole-run survival cannot separate arms at affordable run counts, so each change
