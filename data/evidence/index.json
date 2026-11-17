@@ -720,6 +720,20 @@
       },
       "visibility": "private"
     },
+    "post-reader-backlog-grooming": {
+      "availability": "present",
+      "bytes": 3992780,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-post-reader-backlog-grooming.md"
+      ],
+      "files": 53,
+      "manifest_sha256": "311479df9f2bf4d2696c667cffc2fb375cd5855e8a5277effe8ae94c3d5ed348",
+      "note": "Complete open-backlog and Project before/after snapshots, native dependency graph, issue briefs, boundary arithmetic reproduction, review dispositions and cleanup inventory after reader/outcome-feasibility delivery. Baseline 656350022507492b8b0f44b955d6614e9239e3fd; actual tracker readback selects only #694 Ready. No game, image inspection, provider call, new outcome labels or efficacy claim. Publication diff/PR owns source history; duplicate task staging removed only after full hash verification.",
+      "sources": {
+        "tracker": "656350022507492b8b0f44b955d6614e9239e3fd"
+      },
+      "visibility": "private"
+    },
     "process-measures-620": {
       "availability": "present",
       "bytes": 161736263,

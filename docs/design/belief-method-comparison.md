@@ -186,9 +186,11 @@ built; no second corpus, judge stack or knowledge history is created. Any code o
 and validation are assigned by its bounded brief after the shared interfaces exist.
 
 #457 owns the production schema, belief choice and gate; this study informs rather than
-automatically blocks it. #463 stays the next Important migration. #664 owns later live
-freshness. #25 retains cheaper-player alternatives after memory/context work; Terra is
-the current baseline and no study here authorizes swapping it. No programs, monitor,
+automatically blocks it. The adopted #463 migration is complete, and #689 supplies the
+current recorded knowledge/public-report reader. GitHub owns the next work selection;
+#664 owns later live freshness. #25 retains cheaper-player alternatives after
+memory/context work; Terra is the current baseline and no study here authorizes
+swapping it. No programs, monitor,
 practice instance, context cut or second game is adopted.
 
 These procedures apply existing risks: provenance and common-label/split isolation
