@@ -65,9 +65,9 @@ unit file was opened to fill a missing join.
   65.90 seconds. It covers light/dark/390 px views, historical anchors, hint escaping,
   retired programs, the current recorded-reader phone flow, and initially absent
   actors followed by new actors, hints and request IDs without navigation.
-- Final fast checks and both source commit hooks passed. Exact protected full CI and
-  merged-main checks are recorded on the pull request; no native/gameplay lane is
-  claimed here.
+- Final fast checks and both source commit hooks passed. Protected full CI and
+  merged-main verification remain separate required delivery checks; their results
+  belong to the pull request. No native/gameplay lane is claimed here.
 
 The current-journal API/browser cases are **synthetic interface fixtures**. They
 separate an explicit knowledge read from computer input, show public intent/cites
