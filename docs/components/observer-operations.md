@@ -117,13 +117,16 @@ frame verifier; missing links, ages and journals stay unavailable. The
 [view contract](../contracts/evaluation.md#recorded-knowledge-and-public-reports)
 owns fields and bounds. Historical #397 forgetting episodes remain alongside it,
 with anchors opening Live at that step or explaining why the frame is unavailable.
-*Containers* lists the sidecar inventory with each manifest. *Curator* selects
+*Containers* lists the sidecar inventory with each manifest. *Curator* also selects
+configured terminal session receipts and displays recorded metadata, historical draft
+collection events and paged gate results ([session contract](../contracts/evaluation.md#recorded-curator-sessions)).
+*Curator* selects
 operator-configured current result journals and shows recorded submission/restore
 statuses and versions with a digest/byte cutoff. It provides no verified run link,
 semantic verdict, present-head assertion or lag measure. Missing, empty, unsupported,
 malformed and changed sources remain distinct. The
 [result contract](../contracts/evaluation.md#recorded-curator-results) owns fields,
-bounds and snapshot paging. Broader curator timelines/diffs/drafts, *Knowledge*
+bounds and snapshot paging. Broader curator timelines/diffs and current draft states, *Knowledge*
 ontology/belief views and *Programs* retain their remaining placeholders; health slots
 without data say "not yet measured" instead of a number. It is served by the
 viewer's `/api/view/frame/*` routes ([contract](../contracts/evaluation.md#spectator-frame-spectator-frame1)),

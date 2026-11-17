@@ -14,7 +14,7 @@ const useFrame = (path, every = 15000, refresh = 0) => useView(path, every, SCHE
 /* ---------------------------------------------------------------- frame */
 export function Frame({section}) {
   const role = ROLES.some(r => r[0] === section) ? section : 'actor';
-  const body = role === 'actor' ? html`<${Actor} />` : role === 'curator' ? html`<${Curator} />` : role === 'containers' ? html`<${Containers} />` : html`<${Placeholder} role=${role} />`;
+  const body = role === 'actor' ? html`<${Actor} />` : role === 'curator' ? html`<${CuratorViews} />` : role === 'containers' ? html`<${Containers} />` : html`<${Placeholder} role=${role} />`;
   return html`<section class="grid" data-view="frame" aria-label="Spectator frame">
     <div class="s12"><${Health} /></div>
     <div class="s12"><${SubNav} tabs=${ROLES} base="frame" current=${role} label="Roles" /></div>${body}</section>`;
@@ -60,6 +60,66 @@ function Placeholder({role}) {
     <${Insufficient}><b>Arrives in ${phaseName(phase)}.</b> There is no ${title.toLowerCase()} data yet, so this view shows none. ${text}<//><//>`;
 }
 
+const RESULT_STATUS = {available:'Recorded data available.', empty:'The source is readable and empty.', missing:'The configured file is missing.', unreadable:'The configured source cannot be read as a regular file.', too_large:'The source exceeds the 16 MiB input limit.', unsupported:'The source contains unsupported records.', malformed:'The source contains malformed records.'};
+
+function ResultRows({data, after, pick, setPick, setAfter, detailAttribute}) {
+  const selected = data.items.find(row => row.index === pick);
+  useEffect(() => { if (selected) document.querySelector(`[${detailAttribute}]`)?.focus(); }, [pick, Boolean(selected)]);
+  const value = (v, key) => v === null || v === undefined ? (selected?.omitted_characters?.[key] ? 'omitted' : 'null') : v;
+  return html`<${Table} columns=${[{title:'Recorded order', render:r => r.index}, {title:'Operation', key:'operation'}, {title:'Status', key:'status'}, {title:'Operation ID', render:r => value(r.operation_id), wrap:true}]} rows=${data.items} selected=${data.items.findIndex(r => r.index === pick)} onPick=${(i, row) => setPick(row.index)} />
+    <p><button type="button" disabled=${after === 0} onClick=${() => {setPick(null); setAfter(Math.max(0, after - 25));}}>Previous results</button> <button type="button" disabled=${data.next === null} onClick=${() => {setPick(null); setAfter(data.next);}}>Next results</button></p>
+    ${selected ? html`<section data-curator-detail=${detailAttribute === 'data-curator-detail' ? '' : null} data-session-detail=${detailAttribute === 'data-session-detail' ? '' : null} tabIndex=${-1}><h3>Recorded result</h3><dl class="kv wide">${['operation_id','operation','status','base_version','restored_from','version','submission','session'].map(key => html`<dt>${key}</dt><dd class="mono wrapany">${value(selected[key], key)}</dd>`)}</dl><h4>Diagnostics</h4>${selected.diagnostics.length ? selected.diagnostics.map(d => html`<p class="wrapany">${d}</p>`) : html`<p>${selected.path_details_omitted ? 'No diagnostic text displayed; path-like details are withheld.' : 'None recorded.'}</p>`}<${Omissions} value=${selected} /></section>` : null}`;
+}
+
+function Metadata({title, data, labels}) {
+  const display = (value, key) => {
+    if (data?.omitted_characters?.[key]) return 'omitted (path-like or too long)';
+    if (value === undefined || value === null) return 'unavailable';
+    if (Array.isArray(value)) return value.length ? value.map(item => display(item, '')).join(', ') : 'none recorded';
+    if (typeof value === 'object') {
+      if ('items' in value) return `${value.items.length ? value.items.map(item => display(item, '')).join(', ') : 'none recorded'}${value.omitted ? `; ${value.omitted} more omitted` : ''}${value.values_omitted ? `; ${value.values_omitted} values omitted` : ''}`;
+      const entries = Object.entries(value).filter(([name]) => name !== 'omitted_characters');
+      return entries.length ? entries.map(([name, item]) => `${name}: ${value.omitted_characters?.[name] ? 'omitted' : display(item, name)}`).join(' · ') : 'full window';
+    }
+    return String(value);
+  };
+  return html`<h4>${title}</h4><dl class="kv wide">${labels.map(([key, label]) => html`<dt>${label}</dt><dd class="mono wrapany">${display(data?.[key], key)}</dd>`)}</dl><${Omissions} value=${data} />`;
+}
+
+function CuratorViews() {
+  return html`<${CuratorSession} /><${Curator} />`;
+}
+
+function CuratorSession() {
+  const [sourceAfter, setSourceAfter] = useState(0);
+  const sources = useFrame(`frame/curator-session-sources?limit=500&after=${sourceAfter}`, 5000);
+  const [source, setSource] = useState('');
+  const [after, setAfter] = useState(0);
+  const [snapshot, setSnapshot] = useState(null);
+  const [pick, setPick] = useState(null);
+  const [refresh, setRefresh] = useState(0);
+  const path = source ? `frame/curator-session?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
+  const result = useFrame(path, 5000, refresh);
+  const data = result.error ? null : result.data;
+  useEffect(() => { if (data?.snapshot && !snapshot) setSnapshot(data.snapshot.sha256); }, [data, snapshot]);
+  const reset = () => { setAfter(0); setSnapshot(null); setPick(null); setRefresh(n => n + 1); };
+  return html`<${Panel} title="Recorded curator session" span="s12">
+    <p class="note">Operator-supplied aliases identify configured receipts, not a verified fork or association with a run or result journal. These are historical records, not live custody. Wall time is not game time; the USD cap is a limit, not measured spend.</p>
+    ${!sources.data ? html`<${Waiting} store=${store} what="session sources" error=${sources.error} />` : !sources.data.items.length ? html`<p>No curator session sources configured.</p>` : html`<label>Session receipt <select data-session-source value=${source} onChange=${e => {setSource(e.target.value); reset();}}><option value="">Choose a source</option>${sources.data.items.map(item => html`<option value=${item.label}>${item.label}</option>`)}</select></label>${sourceAfter || sources.data.next !== null ? html`<p><button type="button" disabled=${sourceAfter === 0} onClick=${() => {setSourceAfter(Math.max(0, sourceAfter - 500)); setSource(''); reset();}}>Previous sources</button> <button type="button" disabled=${sources.data.next === null} onClick=${() => {setSourceAfter(sources.data.next); setSource(''); reset();}}>Next sources</button></p>` : null}`}
+    ${source && result.error ? html`<p role="alert">${result.error.message === 'source_changed' ? 'Source changed; refresh for a fresh snapshot.' : result.error.message}</p><button type="button" onClick=${() => {reset(); document.querySelector('[data-session-source]')?.focus();}}>Refresh session</button>` : null}
+    ${source && !data && !result.error ? html`<${Waiting} store=${store} what="session receipt" />` : null}
+    ${data ? html`<p data-session-status>Source ${data.source}: ${RESULT_STATUS[data.source_status] || 'Source state unavailable.'}</p>${data.snapshot ? html`<p class="mono wrapany">Snapshot SHA-256: ${data.snapshot.sha256} · ${data.snapshot.bytes} bytes</p>` : null}
+      ${data.header ? html`<h3>Recorded session metadata</h3>
+      <${Metadata} title="Identity" data=${data.header} labels=${[['id','Session ID'], ['published_after','Published after']]} />
+      <${Metadata} title="Recorded inputs" data=${data.header.inputs} labels=${[['session_kind','Session kind'],['trace_sessions','Trace sessions'],['window','Window'],['coverage','Coverage'],['window_frames','Frame count'],['drafts','Input draft IDs']]} />
+      <${Metadata} title="Pinned versions and digests" data=${data.header.pinned} labels=${[['knowledge_version','Knowledge version'],['trace_manifest_sha256','Trace digest'],['brief_sha256','Brief digest'],['grooming_sha256','Grooming digest']]} />
+      <${Metadata} title="Configured limits" data=${data.header.budgets} labels=${[['wall_seconds','Wall seconds'],['memory_bytes','Memory bytes'],['disk_bytes','Disk bytes'],['cap_usd','USD cap']]} />
+      <${Metadata} title="Terminal lifecycle" data=${data.header.lifecycle} labels=${[['state','State'],['started_wall','Started wall timestamp'],['ended_wall','Ended wall timestamp'],['stopped','Stop reason'],['returncode','Return code'],['survivor_count','Survivor count'],['errors','Errors'],['refused','Refusals']]} />
+      <${Metadata} title="Recorded resources" data=${data.header.resources} labels=${[['seconds','Resource seconds'],['peak_memory_bytes','Peak memory bytes'],['peak_disk_bytes','Peak disk bytes']]} />
+      <h3>Historical draft collection events</h3>${data.drafts === null ? html`<p>No collection report recorded.</p>` : html`<${Metadata} title="Collection report" data=${data.drafts} labels=${[['created','Created'],['renewed','Renewed'],['aged','Aged'],['stale','Stale'],['abandoned','Abandoned'],['refused','Refused']]} />`}<p class="note">Collection events are not current draft states or a complete promotion history.</p>
+      <h3>Recorded gate results</h3>${data.total === 0 ? html`<p>No results recorded; this does not establish publications or acceptance.</p>` : html`<${ResultRows} data=${data} after=${after} pick=${pick} setPick=${setPick} setAfter=${setAfter} detailAttribute="data-session-detail" />`}` : null}` : null}<//>`;
+}
+
 /* Recorded results belong to an operator-selected source, independent of any run. */
 function Curator() {
   const [sourceAfter, setSourceAfter] = useState(0);
@@ -75,9 +135,6 @@ function Curator() {
   useEffect(() => { if (data && data.snapshot && !snapshot) setSnapshot(data.snapshot.sha256); }, [data, snapshot]);
   const reset = () => { setAfter(0); setSnapshot(null); setPick(null); setRefresh(n => n + 1); };
   const sourcePage = index => { setSourceAfter(index); setSource(''); reset(); };
-  const selected = data && data.items.find(row => row.index === pick);
-  useEffect(() => { if (selected) document.querySelector('[data-curator-detail]')?.focus(); }, [pick, Boolean(selected)]);
-  const value = (v, key) => v === null || v === undefined ? (selected?.omitted_characters?.[key] ? 'omitted' : 'null') : v;
   const messages = {available:'Recorded results available.', empty:'The source is readable and contains no results.', missing:'The configured result file is missing.', unreadable:'The configured source cannot be read as a regular file.', too_large:'The result source exceeds the 16 MiB input limit.', unsupported:'The source contains unsupported or mixed result records.', malformed:'The source contains malformed or incomplete records.'};
   return html`<${Panel} title="Curator results" span="s12">
     <p class="note">Recorded publication reports in journal order. A source label does not establish a run association or the repository's current head.</p>
@@ -85,10 +142,8 @@ function Curator() {
     ${source && result.error ? html`<p role="alert" data-curator-error>${result.error.message === 'source_changed' ? 'Source changed; refresh to restart paging.' : result.error.message}</p><button type="button" onClick=${() => {reset(); document.querySelector('[data-curator-source]')?.focus();}}>Refresh results</button>` : null}
     ${source && !data && !result.error ? html`<${Waiting} store=${store} what="curator results" />` : null}
     ${data ? html`<p data-curator-status>Source ${data.source}: ${messages[data.source_status] || 'Source state unavailable.'}</p>${data.snapshot ? html`<p class="mono wrapany">Snapshot SHA-256: ${data.snapshot.sha256} · ${data.snapshot.bytes} bytes</p>` : null}
-      ${data.source_status === 'available' ? html`<${Table} columns=${[{title:'Recorded order', render:r => r.index}, {title:'Operation', key:'operation'}, {title:'Status', key:'status'}, {title:'Operation ID', render:r => value(r.operation_id), wrap:true}]} rows=${data.items} selected=${data.items.findIndex(r => r.index === pick)} onPick=${(i, row) => setPick(row.index)} />
-        <p><button type="button" disabled=${after === 0} onClick=${() => {setPick(null); setAfter(Math.max(0, after - 25));}}>Previous results</button> <button type="button" disabled=${data.next === null} onClick=${() => {setSnapshot(data.snapshot.sha256); setPick(null); setAfter(data.next);}}>Next results</button></p>` : null}
-      ${selected ? html`<section data-curator-detail tabIndex=${-1}><h3>Recorded result</h3><dl class="kv wide">${['operation_id','operation','status','base_version','restored_from','version','submission','session'].map(key => html`<dt>${key}</dt><dd class="mono wrapany">${value(selected[key], key)}</dd>`)}</dl><h4>Diagnostics</h4>${selected.diagnostics.length ? selected.diagnostics.map(d => html`<p class="wrapany">${d}</p>`) : html`<p>${selected.path_details_omitted ? 'No diagnostic text displayed; path-like details are withheld.' : 'None recorded.'}</p>`}<${Omissions} value=${selected} /></section>` : null}` : null}
-    <p class="note">Session timelines, diffs, drafts and ontology views are unavailable.</p><//>`;
+      ${data.source_status === 'available' ? html`<${ResultRows} data=${data} after=${after} pick=${pick} setPick=${setPick} setAfter=${setAfter} detailAttribute="data-curator-detail" />` : null}` : null}
+    <p class="note">Session timelines, diffs, draft contents and current draft states, and ontology views are unavailable.</p><//>`;
 }
 
 /* ---------------------------------------------------------------- actor: the forgetting episodes */

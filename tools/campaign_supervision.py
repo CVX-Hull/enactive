@@ -223,7 +223,7 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
 
 
 def run_supervised(directory: Path, *, runs: Path | None = None, popen=subprocess.Popen,
-                   clock=time, viewer_port: Callable[[], int] = free_loopback_port, curator_results=()) -> dict:
+                   clock=time, viewer_port: Callable[[], int] = free_loopback_port, curator_results=(), curator_sessions=()) -> dict:
     directory = directory.resolve(strict=True)
     if any((directory/name).exists() or (directory/name).is_symlink() for name in MARKERS):
         raise ValueError('Selected package has prior/partial supervision; never rearm it')
@@ -280,7 +280,8 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                                 '--root', str(ROOT/'.runtime'/'evaluations'),
                                 *(['--runs', str(runs)] if runs is not None else []),
                                 '--port', str(port), '--host', '127.0.0.1',
-                                *[arg for value in curator_results for arg in ('--curator-results', value)]]
+                                *[arg for value in curator_results for arg in ('--curator-results', value)],
+                                *[arg for value in curator_sessions for arg in ('--curator-sessions', value)]]
                         handle = popen(argv, start_new_session=True, cwd=ROOT, env=env,
                                        stdout=viewer_out, stderr=viewer_err)
                         viewer['handle'] = handle
@@ -396,8 +397,9 @@ def main(argv=None) -> int:
     parser.add_argument('--runs', type=Path, default=None,
         help='directory of archived run directories for the viewer to list beside the live run')
     parser.add_argument('--curator-results', action='append', default=[], metavar='LABEL=FILE')
+    parser.add_argument('--curator-sessions', action='append', default=[], metavar='LABEL=FILE')
     options = parser.parse_args(argv)
-    result = run_supervised(options.run, runs=options.runs, curator_results=options.curator_results)
+    result = run_supervised(options.run, runs=options.runs, curator_results=options.curator_results, curator_sessions=options.curator_sessions)
     print(json.dumps(result))
     return 0 if (result['reason'] == 'custodian_terminal' and result['terminal_coverage_verified']
         and result['cleanup_verified'] and result['manifest_unchanged']

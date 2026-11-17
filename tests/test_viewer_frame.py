@@ -398,3 +398,137 @@ def test_curator_oversize_response_can_be_narrowed_without_truncating_history(tm
     narrowed = client.get(url + '&limit=1').json()
     assert narrowed['source_status'] == 'available' and narrowed['total'] == 45 and narrowed['next'] == 1
     assert len(narrowed['items']) == 1
+
+
+def test_curator_session_receipts_and_failures(tmp_path):
+    path = tmp_path / 'close-out.json'
+    manifest = dict(schema='container-manifest/1', id='session-1', kind='curator-session', owner_role='curator',
+                    inputs=dict(session_kind='admission', trace_sessions=['trace-1'], window_frames=4, window={},
+                                coverage=dict(schema='curator-coverage/2', session='trace-1', actor=None, last_step=None), drafts=['draft-1']),
+                    pinned=dict(knowledge_version='v1', trace_manifest_sha256='a' * 64, brief_sha256='b' * 64, host={'private': '/secret'}),
+                    budgets=dict(wall_seconds=60, memory_bytes=100, disk_bytes=200, cap_usd='2.50'),
+                    lifecycle=dict(state='sealed', started_wall=1.0, ended_wall=2.0, stopped=None, returncode=0,
+                                   survivors=[], errors=['private /secret'], refused=[]),
+                    provenance=dict(repository='/secret/repo', seconds=1.0, peak_memory_bytes=5, peak_disk_bytes=6), retention={})
+    report = dict(created=['draft-1'], renewed=[], aged=[], stale=[], abandoned=[], refused=[dict(id='/secret', reason='bad /secret')])
+    receipt = dict(manifest=manifest, verdicts=[curator_row(), curator_row(status='unknown', version=None)], drafts=report, published_after='v2')
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(curator_sessions=(('receipt', path),))))
+    url = '/api/view/frame/curator-session?source=receipt&limit=1'
+    assert client.get('/api/view/frame/curator-session-sources').json()['items'] == [{'label': 'receipt'}]
+    assert client.get(url).json()['source_status'] == 'missing'
+    path.write_text(json.dumps(receipt))
+    before = path.read_bytes()
+    response = client.get(url)
+    data = response.json()
+    assert data['source_status'] == 'available' and data['total'] == 2 and data['next'] == 1
+    assert data['header']['lifecycle']['survivor_count'] == 0 and data['drafts']['created']['items'] == ['draft-1']
+    assert '/secret' not in response.text and path.read_bytes() == before
+    digest = data['snapshot']['sha256']
+    assert client.get(url + '&after=1').status_code == 400
+    assert client.get(url + '&after=1&snapshot=' + digest).json()['items'][0]['status'] == 'unknown'
+    manifest['lifecycle']['state'] = 'aborted'
+    manifest['lifecycle']['survivors'] = None
+    manifest['lifecycle'].pop('started_wall')
+    manifest['inputs'] = {}; manifest['pinned'] = {}; manifest['budgets'] = {}; manifest['provenance'] = {}
+    receipt['drafts'] = {}; receipt['verdicts'] = []; receipt['published_after'] = None
+    path.write_text(json.dumps(receipt))
+    assert client.get(url + '&snapshot=' + digest).status_code == 409
+    minimal = client.get(url).json()
+    assert minimal['header']['lifecycle']['survivor_count'] is None and minimal['drafts'] is None and minimal['total'] == 0
+    manifest['kind'] = []
+    path.write_text(json.dumps(receipt))
+    assert client.get(url).json()['source_status'] == 'unsupported'
+    manifest['kind'] = 'curator-session'; manifest['inputs'] = {'trace_sessions': 'bad'}
+    path.write_text(json.dumps(receipt))
+    assert client.get(url).json()['source_status'] == 'unsupported'
+    path.write_text('{')
+    assert client.get(url).json()['source_status'] == 'malformed'
+    assert client.post(url).status_code == 405
+
+
+def test_curator_session_reads_actual_minimal_close_out(tmp_path):
+    from harness.curator.session import _close_out
+
+    class Repository:
+        def published(self):
+            return 'v0'
+
+    record = _close_out(Repository(), 'aborted-session', tmp_path, tmp_path, None, None,
+                        ['pre-host failure'], {}, None, None, None)
+    path = tmp_path / 'close-out.json'
+    assert not path.read_bytes().endswith(b'\n')
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(curator_sessions=(('abort', path),))))
+    result = client.get('/api/view/frame/curator-session?source=abort').json()
+    assert result['source_status'] == 'available' and result['header']['id'] == record['manifest']['id']
+    assert result['header']['lifecycle']['state'] == 'aborted' and result['drafts'] is None
+    assert result['header']['lifecycle']['survivor_count'] is None and result['total'] == 0
+    for key in ('ended_wall', 'stopped', 'returncode', 'survivors', 'errors', 'refused'):
+        value = record['manifest']['lifecycle'].pop(key)
+        path.write_text(json.dumps(record))
+        assert client.get('/api/view/frame/curator-session?source=abort').json()['source_status'] == 'unsupported'
+        record['manifest']['lifecycle'][key] = value
+    record['manifest']['lifecycle']['state'] = 'sealed'
+    path.write_text(json.dumps(record))
+    assert client.get('/api/view/frame/curator-session?source=abort').json()['source_status'] == 'unsupported'
+
+
+def test_curator_session_grooming_metadata_validation_and_bounds(tmp_path):
+    from harness.evaluation.core.sources import MAX_JSON_FILE_BYTES
+    path = tmp_path / 'receipt'
+    manifest = dict(schema='container-manifest/1', id='groom', kind='curator-session', owner_role='curator',
+                    inputs=dict(session_kind='grooming', trace_sessions=['s'], window_frames=0, window={},
+                                coverage=dict(schema='curator-coverage/2', session='s', actor=None, last_step=None), drafts=[]),
+                    pinned=dict(knowledge_version='v1', trace_manifest_sha256='a'*64, brief_sha256='b'*64, grooming_sha256='c'*64),
+                    budgets=dict(wall_seconds=60, memory_bytes=100, disk_bytes=200, cap_usd='1E+2'),
+                    lifecycle=dict(state='aborted', started_wall=1, ended_wall=2, stopped='timeout', returncode=-9,
+                                   survivors=[42], errors=[], refused=[]),
+                    provenance=dict(seconds=1, peak_memory_bytes=5, peak_disk_bytes=6), retention={})
+    report = dict(created=[], renewed=[], aged=[], stale=[], abandoned=[], refused=[])
+    receipt = dict(manifest=manifest, verdicts=[curator_row(status='unknown', version=None)], drafts=report, published_after=None)
+    client = TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=FrameSources(curator_sessions=(('groom', path),))))
+    url = '/api/view/frame/curator-session?source=groom'
+    def get():
+        path.write_text(json.dumps(receipt))
+        return client.get(url).json()
+    data = get()
+    assert data['source_status'] == 'available' and data['drafts']['created']['items'] == []
+    assert data['header']['inputs']['coverage']['schema'] == 'curator-coverage/2'
+    assert data['header']['budgets']['cap_usd'] == '1E+2' and data['header']['lifecycle']['survivor_count'] == 1
+    receipt['published_after'] = 'v' + '9' * 1000
+    bounded = get()['header']
+    assert bounded['published_after'] is None and bounded['omitted_characters']['published_after'] == 1001
+    receipt['published_after'] = None
+    for section, key in (('inputs', 'coverage'), ('pinned', 'brief_sha256'),
+                         ('pinned', 'grooming_sha256'), ('budgets', 'wall_seconds')):
+        value = manifest[section].pop(key)
+        assert get()['source_status'] == 'unsupported'
+        manifest[section][key] = value
+    manifest['lifecycle']['state'] = 'sealed'
+    manifest['lifecycle'].update(stopped=None, returncode=0)
+    assert get()['source_status'] == 'available'
+    value = manifest['provenance'].pop('peak_disk_bytes')
+    assert get()['source_status'] == 'unsupported'
+    manifest['provenance']['peak_disk_bytes'] = value
+    manifest['lifecycle']['state'] = 'aborted'
+    manifest['lifecycle'].update(stopped='timeout', returncode=-9)
+    for first, last in ((0, 0), (2, 1)):
+        manifest['inputs']['window'] = dict(session='s', actor='actor-1', first=first, last=last)
+        assert get()['source_status'] == 'unsupported'
+    manifest['inputs']['window'] = dict(session='s', actor='actor-1', first=1, last=2)
+    assert get()['source_status'] == 'available'
+    manifest['inputs']['window'] = {}
+    manifest['lifecycle']['survivors'] = ['42']
+    assert get()['source_status'] == 'unsupported'
+    manifest['lifecycle']['survivors'] = []
+    manifest['budgets']['wall_seconds'] = 10**1000
+    assert get()['source_status'] == 'unsupported'
+    manifest['budgets']['wall_seconds'] = 60
+    manifest['inputs']['coverage']['schema'] = 'old'
+    assert get()['source_status'] == 'unsupported'
+    manifest['inputs']['coverage']['schema'] = 'curator-coverage/2'
+    receipt['verdicts'][0]['schema'] = 'old'
+    assert get()['source_status'] == 'unsupported'
+    path.write_bytes(b'x' * (MAX_JSON_FILE_BYTES + 1))
+    assert client.get(url).json()['source_status'] == 'too_large'
+    path.unlink(); path.mkdir()
+    assert client.get(url).json()['source_status'] == 'unreadable'
