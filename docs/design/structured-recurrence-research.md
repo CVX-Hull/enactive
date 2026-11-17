@@ -440,6 +440,11 @@ Inventory sealed sources and visible evidence at $0 new provider spend. Build on
 prefix-only player → curator update → retrieval → player-decision packet cycle using
 deterministic stand-ins and an actual development CDDA trace. Check reset, source
 references, failed edits, stale coverage, explicit unknowns and all-assigned scoring.
+Use one prefix packet/cycle and one deterministic outcome reduction, rather than a
+general scorer or power grid. Outcome-reader qualification belongs to #681 after
+source feasibility; the later #677 comparison reuses these packets. Calibration is
+a plan here, not a result. The old-estimator sizing repair #680 is independent and
+does not become a prerequisite to packet preparation or memory adoption #463.
 Retain failures; do not launch a model or CDDA to pass this slice. No stand-in success
 is evidence of useful learning. Existing traces can establish the apparatus even if
 new independent source acquisition needs later paid setup.
@@ -673,7 +678,8 @@ the campaign custodian, secret proxy, evaluator database or Git source history.
 The first implementation brief owns only `tools/recurrence_research/` and
 `tests/test_recurrence_research_*.py`, plus this proposed document if the design changes.
 A minimal package contains source-portfolio metadata, candidate/data validation, real
-prefix replay/packet construction and scoring/calibration. It contains no game generator.
+prefix packet construction, one deterministic score example and a later calibration
+and reader-qualification plan. It contains no game generator or general scoring stack.
 Worker ownership is split between portfolio/packet
 and candidate/scoring files, with the lead owning the manifest and integration. Exact
 filenames/interfaces are written in the bounded briefs before either worker starts.
