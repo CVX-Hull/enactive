@@ -299,7 +299,7 @@ def test_a_capped_grooming_is_rerun_alone_with_twice_the_cap(tmp_path, monkeypat
     evidence = synthetic_evidence(tmp_path, names=('sd1a1',))
     runtime = tmp_path/'runtime'
     knowledge = runtime/'knowledge'/'shadow-454'/'first'/'terra'/'397'
-    (knowledge/shadow.GAME/'.git').mkdir(parents=True)
+    Repository(knowledge, shadow.GAME).ensure()
     calls = []
 
     def fake(**kwargs):
@@ -311,8 +311,6 @@ def test_a_capped_grooming_is_rerun_alone_with_twice_the_cap(tmp_path, monkeypat
     monkeypatch.setattr(shadow, 'host_tools', lambda: {})
     monkeypatch.setattr(shadow, 'host_identity', lambda *args: {'name': 'fixture'})
     monkeypatch.setattr(shadow, 'run_one', fake)
-    monkeypatch.setattr(shadow, 'Repository', lambda path, game: SimpleNamespace(ensure=lambda: None, published=lambda: 'v1',
-                                                                                 path=path/game))
     base = ['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', '--cap-usd', '5', '--session-cap-usd', '1',
             '--runtime-root', str(runtime), '--evidence-root', str(evidence)]
     args = shadow.parser().parse_args([*base, '--groom-only', '--double-session-cap', '--knowledge-root', str(knowledge),
