@@ -492,6 +492,20 @@
       },
       "visibility": "private"
     },
+    "cdda-recurrence-preparation-668-ci-repair": {
+      "availability": "present",
+      "bytes": 582476,
+      "cited_by": [
+        "docs/acceptance/2026-11-16-cdda-recurrence-preparation.md"
+      ],
+      "files": 13,
+      "manifest_sha256": "f3e78c422a63d71cfcc045b21a22a48aeb792121b9d4b3ac3b6241a2329809a9",
+      "note": "Retained original CI neutrality failure and explicit-spec repair; data bytes and research outputs unchanged; no exemption or model/native call.",
+      "sources": {
+        "preparation": ".runtime/recurrence-preparation-668-ci-repair after67946c8 explicit specification repair"
+      },
+      "visibility": "private"
+    },
     "curated-memory-adoption-463": {
       "availability": "present",
       "bytes": 441043,

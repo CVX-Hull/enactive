@@ -5,12 +5,14 @@ from decimal import Decimal
 
 from tools.recurrence_research.prepare import portfolio, prepare, worksheet
 
+SPEC = Path(__file__).resolve().parents[1] / 'data/recurrence-research/spec.json'
+
 
 def test_absent_sources_are_explicit(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / '.runtime').mkdir()
     out = tmp_path / '.runtime' / 'output'
-    prepare(tmp_path, out)
+    prepare(tmp_path, out, SPEC)
     assert json.loads((out / 'packet.json').read_text())['status'] == 'unavailable'
     assert json.loads((out / 'cycle.json').read_text())['status'] == 'unavailable'
 
@@ -31,7 +33,7 @@ def test_packet_exposes_only_selected_operations(tmp_path, monkeypatch):
     metadata = {sid: {'sha256': hashlib.sha256(sid.encode()).hexdigest()} for sid in ids}
     monkeypatch.setattr(module, '_steps', lambda *_: ({'actor': steps}, metadata))
     out = tmp_path / '.runtime' / 'result'
-    module.prepare(tmp_path, out)
+    module.prepare(tmp_path, out, SPEC)
     packet = json.loads((out / 'packet.json').read_text())
     assert [row['frame'] for row in packet['steps']] == ids
     assert sorted(p.name for p in (out / 'frames').iterdir()) == sorted(f'{sid}.png' for sid in ids)
@@ -56,7 +58,7 @@ def test_study_archive_hash_does_not_merge_distinct_saved_payloads(tmp_path):
 
 
 def test_full_proposed_role_bill_includes_acquisition_and_ending():
-    spec = json.loads(Path('tools/recurrence_research/spec.json').read_text())['worksheet']
+    spec = json.loads(SPEC.read_text())['worksheet']
     result = worksheet(spec)
     replay, pilot = result['stages']
     assert replay['model_bound_usd'] == '14.19264'

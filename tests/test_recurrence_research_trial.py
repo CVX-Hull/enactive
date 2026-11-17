@@ -18,7 +18,7 @@ def test_disabled_edit_still_applies_values_and_unknown_source_rejected():
 
 
 def test_value_update_retains_the_published_schema():
-    candidate = json.loads(Path('tools/recurrence_research/spec.json').read_text())['candidate']
+    candidate = json.loads(Path('data/recurrence-research/spec.json').read_text())['candidate']
     result = cycle(candidate, ['a', 'b', 'c'])['publication']
     record = {**result['state']['records'][0], 'note': 'uncertain interpretation'}
     schema, state = edit(result['schema'], result['state'], {'value_edits': [record]}, ['a', 'b', 'c'])
@@ -27,7 +27,7 @@ def test_value_update_retains_the_published_schema():
 
 
 def test_research_cycle_and_all_assigned_reduction():
-    candidate = json.loads(Path('tools/recurrence_research/spec.json').read_text())['candidate']
+    candidate = json.loads(Path('data/recurrence-research/spec.json').read_text())['candidate']
     result = cycle(candidate, ['a', 'b', 'c'])
     assert result['reset']['state'] == {'records': []}
     assert result['stale_coverage']['readout'].startswith('unknown')

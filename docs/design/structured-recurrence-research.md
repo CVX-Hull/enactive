@@ -675,8 +675,10 @@ fact/article gate is **not** an arbitrary representation runner. Reuse machinery
 its actual interfaces; document a missing seam before extending it. Do not duplicate
 the campaign custodian, secret proxy, evaluator database or Git source history.
 
-The first implementation brief owns only `tools/recurrence_research/` and
-`tests/test_recurrence_research_*.py`, plus this proposed document if the design changes.
+The first implementation brief owns `tools/recurrence_research/`, its inert protocol
+data in `data/recurrence-research/`, and `tests/test_recurrence_research_*.py`, plus
+this proposed document if the design changes. Generic tools consume an explicit
+specification; selected provider/model profiles belong to the study data.
 A minimal package contains source-portfolio metadata, candidate/data validation, real
 prefix packet construction, one deterministic score example and a later calibration
 and reader-qualification plan. It contains no game generator or general scoring stack.
@@ -695,7 +697,7 @@ prepares one source inventory, selected real-CDDA prefix subset, inert update/re
 cycle, fixed-question outcome example and proposed role/price worksheet:
 
 ```sh
-.venv/bin/python -m tools.recurrence_research.prepare --root "$PWD" --out .runtime/recurrence-preparation
+.venv/bin/python -m tools.recurrence_research.prepare --root "$PWD" --spec data/recurrence-research/spec.json --out .runtime/recurrence-preparation
 ```
 
 The output directory must be fresh. Retained evidence is optional in a fresh checkout;
@@ -706,7 +708,7 @@ unknown. Source annotations are manually checked against those frames. This is a
 deterministic stand-in, not a model comparison, learned structure or a qualified
 task/survival reader.
 
-[`spec.json`](../../tools/recurrence_research/spec.json) fixes the generic candidate,
+[`spec.json`](../../data/recurrence-research/spec.json) fixes the generic candidate,
 schema/value-edit separation, paired-source metadata, role prompts and proposed
 resource allocations. The worksheet computes conservative configured-price model
 bounds, separately for replay and a nine-continuation pilot, including finite new-world

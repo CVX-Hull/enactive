@@ -100,13 +100,13 @@ def worksheet(spec):
     return result
 
 
-def prepare(root, out):
+def prepare(root, out, spec_path):
     root = root.resolve()
     out = out.resolve()
     if not out.is_relative_to(Path.cwd().resolve() / '.runtime'):
         raise ValueError('output must be under this checkout .runtime')
     out.mkdir(parents=True, exist_ok=False)
-    spec = json.loads(Path(__file__).with_name('spec.json').read_text())
+    spec = json.loads(spec_path.read_text())
     inventory = portfolio(root)
     inventory['acquisition_slots'] = [dict(profile=profile, split='development',
         status='unacquired; independent new world/survivor required') for profile in spec['worksheet']['profiles']]
@@ -156,8 +156,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', required=True, type=Path)
     parser.add_argument('--out', required=True, type=Path)
+    parser.add_argument('--spec', required=True, type=Path)
     args = parser.parse_args()
-    prepare(args.root, args.out)
+    prepare(args.root, args.out, args.spec)
 
 
 if __name__ == '__main__':

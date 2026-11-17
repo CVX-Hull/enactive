@@ -20,7 +20,7 @@ unfilled; the inspected traces cannot supply the proposed diversity by copying t
 
 The [proposal](../design/structured-recurrence-research.md#implemented-no-model-preparation)
 owns how to reproduce this slice and what the later experiment would test.
-[`spec.json`](../../tools/recurrence_research/spec.json) owns its candidate, prompts,
+[`spec.json`](../../data/recurrence-research/spec.json) owns its candidate, prompts,
 role ceilings, profiles, grouping/scoring specification and explicit unpriced work.
 The current player/curator publication interfaces were not changed.
 
@@ -127,7 +127,15 @@ failed-edit immutability and all-assigned unknown handling. Actual preparation r
 against retained evidence; the three images were visually inspected independently
 of the fixture tests. No new dependency, native boundary or model invocation was added.
 
-The sealed `cdda-recurrence-preparation-668` entry in the
+The first protected Python lane failed its host-neutrality scan (one failure,
+1,701 passes and 68 skips): the inert protocol's provider names were under `tools/`.
+The repair moves the byte-identical protocol into `data/recurrence-research/` and
+requires explicit `--spec` input to the generic tool. The neutrality check is unchanged.
+All callers and document links migrate together; no old default path remains.
+Eleven targeted preparation/neutrality tests then passed, and actual preparation
+reproduced the same inventory, packet, cycle, outcome, trial specification and prices.
+
+The sealed `cdda-recurrence-preparation-668` entry and its CI-repair supplement in the
 [evidence index](../../data/evidence/index.json) retains the inventory, packet/images,
 cycle, row reduction, trial specification, worksheet and validation logs. Independent
 review, protected full CI and merged-main validation are reported on the pull request.
