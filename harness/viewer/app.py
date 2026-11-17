@@ -182,8 +182,21 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         return frame_reply(curator.results(sources.curator_results, request.query_params.get('source'),
                                            after, limit, request.query_params.get('snapshot')))
 
+    def curator_session_sources(request: Request) -> Response:
+        after, limit = paging(request)
+        rows = [dict(label=label) for label, _ in sources.curator_sessions]
+        return frame_reply(dict(items=rows[after:after + limit], total=len(rows),
+                                next=after + limit if after + limit < len(rows) else None, limit=limit))
+
+    def curator_session(request: Request) -> Response:
+        after, limit = paging(request)
+        return frame_reply(curator.session(sources.curator_sessions, request.query_params.get('source'),
+                                           after, limit, request.query_params.get('snapshot')))
+
     prefix = '/api/view'
-    routes = [Route(f'{prefix}/frame/curator-sources', plain(curator_sources), methods=['GET']),
+    routes = [Route(f'{prefix}/frame/curator-session-sources', plain(curator_session_sources), methods=['GET']),
+        Route(f'{prefix}/frame/curator-session', plain(curator_session), methods=['GET']),
+        Route(f'{prefix}/frame/curator-sources', plain(curator_sources), methods=['GET']),
         Route(f'{prefix}/frame/curator-results', plain(curator_results), methods=['GET']),
         Route(f'{prefix}/frame/health', plain(frame_health), methods=['GET']),
         Route(f'{prefix}/frame/containers', plain(frame_containers), methods=['GET']),

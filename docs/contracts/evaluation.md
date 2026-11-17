@@ -1030,6 +1030,8 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/episodes` | The tracked forgetting episodes with anchors resolved to runs and frames (`spectator-frame/1`, below) |
 | `/api/view/frame/curator-sources?after=&limit=` | Configured curator result-source labels, without paths (`spectator-frame/1`, below) |
 | `/api/view/frame/curator-results?source=&after=&limit=&snapshot=` | One source’s recorded current submission/restore results and read-snapshot provenance (`spectator-frame/1`, below) |
+| `/api/view/frame/curator-session-sources?after=&limit=` | Operator-configured receipt labels |
+| `/api/view/frame/curator-session?source=&after=&limit=&snapshot=` | One terminal curator session receipt and its paged gate results |
 
 ### Recorded knowledge and public reports
 
@@ -1127,10 +1129,32 @@ The reader serves no raw paths, briefs, transcripts, submission bodies, drafts,
 credentials or arbitrary repository files. It writes nothing and imports no curator
 runtime; no output reaches the player or curator. The Curator tab provides source
 selection, result rows and detail using escaped content and keyboard controls. The
-remaining session timeline, diffs, drafts, ontology and program views stay unavailable.
+remaining session timeline, diffs, draft contents and current states, ontology and program views stay unavailable.
 Source changes reset stale result/detail selection; the control frame and independent
 Pause continue through their existing path. Fixture projection and rendered checks
 establish this reader's behavior, not semantic gate efficacy or real curator lag.
+
+### Recorded curator sessions
+
+Repeat `--curator-sessions LABEL=FILE` on the supervisor or standalone viewer to
+configure individual current `close-out.json` receipts. The browser selects only
+operator-supplied aliases, with the same label, bounded regular-file read, paging,
+source status and snapshot rules as recorded results. JSON does not require a final
+newline. A source change requires a fresh snapshot; no receipt is associated with a
+run or a separate result journal. The reader accepts the current close-out object,
+terminal curator-session `container-manifest/1` and current `curator-gate/2` results;
+unsupported metadata and records yield no partial projection.
+
+The session route returns `header` and `drafts` alongside the paged result `items`.
+The allowlisted header records inputs, pinned versions and digests, configured limits,
+terminal lifecycle, resource measurements and `published_after`; absent values are
+unavailable. A USD cap is not measured spend, and wall timestamps do not represent
+game time or live custody. Identifiers and free text use bounded path-like omission;
+no host configuration, repository path or raw manifest is returned. `drafts: null`
+means no collection report was recorded; a report with empty lists is distinct. These
+collection events are historical, not current draft states or complete promotion
+history. Empty verdicts establish no result, not zero publications or acceptance.
+The reader uses no producer lock, writes no records and makes no Git or provider call.
 
 ### Spectator frame (`spectator-frame/1`)
 

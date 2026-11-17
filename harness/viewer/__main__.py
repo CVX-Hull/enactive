@@ -33,9 +33,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--curator-results', action='append', default=[], metavar='LABEL=FILE')
+    parser.add_argument('--curator-sessions', action='append', default=[], metavar='LABEL=FILE')
     arguments = parser.parse_args(argv)
     try:
         curator_results = parse_sources(arguments.curator_results)
+        curator_sessions = parse_sources(arguments.curator_sessions)
     except ValueError as exc:
         parser.error(str(exc))
     if arguments.host not in ('127.0.0.1', 'localhost', '::1'):
@@ -47,7 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         evaluator.start()
     catalog = Catalog(arguments.root, tuple(arguments.runs), arguments.run)
     try:
-        uvicorn.run(create_app(catalog, evaluator, frame_sources=FrameSources(curator_results=curator_results)), host=arguments.host, port=arguments.port, log_level='warning')
+        uvicorn.run(create_app(catalog, evaluator, frame_sources=FrameSources(curator_results=curator_results, curator_sessions=curator_sessions)), host=arguments.host, port=arguments.port, log_level='warning')
     finally:
         if evaluator is not None:
             evaluator.stop()

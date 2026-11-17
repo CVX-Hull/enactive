@@ -225,7 +225,7 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
     monkeypatch.setattr(guard, 'supervise', supervision)
     original = signal.getsignal(signal.SIGTERM)
     result = guard.run_supervised(tmp_path, popen=launch, viewer_port=lambda: 54321,
-                                  curator_results=('alpha=one', 'beta=two'))
+                                  curator_results=('alpha=one', 'beta=two'), curator_sessions=('receipt=three',))
     assert signal.getsignal(signal.SIGTERM) == original
     assert all(child.poll() is not None for child in launched)
     assert result['cleanup_verified'] and not result['terminal_coverage_verified']
@@ -255,7 +255,8 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
     if fail_at != 0:
         argv = calls[1][0]
         assert argv[1:3] == ['-m', 'harness.viewer'] and argv[argv.index('--port')+1] == '54321'
-        assert argv[-4:] == ['--curator-results', 'alpha=one', '--curator-results', 'beta=two']
+        assert argv[-6:] == ['--curator-results', 'alpha=one', '--curator-results', 'beta=two', '--curator-sessions', 'receipt=three']
+        assert all('--curator-sessions' not in args for args, _ in calls if 'harness.viewer' not in args)
         assert all('--curator-results' not in args for args, _ in calls if 'harness.viewer' not in args)
         assert argv[argv.index('--host')+1] == '127.0.0.1' and argv[argv.index('--run')+1] == str(tmp_path)
         assert argv[argv.index('--root')+1] == str(guard.ROOT/'.runtime'/'evaluations') and '--runs' not in argv

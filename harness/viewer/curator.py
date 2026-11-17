@@ -3,12 +3,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+from decimal import Decimal, InvalidOperation
 import os
 from pathlib import Path
 import re
 import stat
 
 from harness.evaluation.core.sources import MAX_JSON_FILE_BYTES
+from harness.trace.sidecar import ManifestError, validate
 from .catalog import ViewError
 from .knowledge import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT
 
@@ -83,22 +86,29 @@ def project(row, index):
     return item
 
 
-def read(path):
+def read_file(path):
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
         with os.fdopen(fd, 'rb') as stream:
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
-                return 'unreadable', None, []
+                return 'unreadable', None, None
             data = stream.read(MAX_JSON_FILE_BYTES + 1)
     except FileNotFoundError:
-        return 'missing', None, []
+        return 'missing', None, None
     except OSError:
-        return 'unreadable', None, []
+        return 'unreadable', None, None
     snapshot = {'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)}
     if len(data) > MAX_JSON_FILE_BYTES:
-        return 'too_large', snapshot, []
+        return 'too_large', snapshot, None
     if not data:
-        return 'empty', snapshot, []
+        return 'empty', snapshot, None
+    return 'available', snapshot, data
+
+
+def read(path):
+    status, snapshot, data = read_file(path)
+    if status != 'available':
+        return status, snapshot, []
     if not data.endswith(b'\n'):
         return 'malformed', snapshot, []
     try:
@@ -121,3 +131,134 @@ def results(sources, label, after, limit, digest):
         raise ViewError(409, 'source_changed')
     return dict(source=label, source_status=status, snapshot=snapshot, items=rows[after:after + limit],
                 total=len(rows), next=after + limit if after + limit < len(rows) else None, limit=limit)
+
+
+def _safe(value: str | None) -> str | None:
+    """Omit path-like or oversized strings; never expose private path fragments."""
+    if value is None:
+        return None
+    return value if len(value) <= ID_LIMIT and '/' not in value and '\\' not in value else None
+
+
+def _text_list(values: list[str]) -> dict:
+    items = [_safe(v) for v in values[:LIST_LIMIT]]
+    return dict(items=items, omitted=max(0, len(values) - LIST_LIMIT), values_omitted=sum(v is None for v in items))
+
+
+def _number(value: object) -> bool:
+    return ((type(value) is int and 0 <= value <= 2**53 - 1) or
+            (type(value) is float and math.isfinite(value) and value >= 0))
+
+
+def _cap(value: object) -> bool:
+    if not isinstance(value, str) or len(value) > 128:
+        return False
+    try:
+        amount = Decimal(value)
+    except InvalidOperation:
+        return False
+    return amount.is_finite() and amount >= 0
+
+
+def _optional(obj: dict, key: str, predicate) -> bool:
+    return key not in obj or obj[key] is None or predicate(obj[key])
+
+
+def session_projection(record: object) -> tuple[dict, dict | None, list]:
+    if not isinstance(record, dict) or set(record) != {'manifest', 'verdicts', 'drafts', 'published_after'}:
+        raise ValueError('receipt shape')
+    m = record['manifest']
+    try:
+        validate(m)
+    except (ManifestError, TypeError, KeyError):
+        raise ValueError('manifest') from None
+    if m['kind'] != 'curator-session' or m['owner_role'] != 'curator' or m['lifecycle']['state'] not in ('sealed', 'aborted'):
+        raise ValueError('manifest kind')
+    inputs, pinned, budgets, life, provenance = (m[k] for k in ('inputs', 'pinned', 'budgets', 'lifecycle', 'provenance'))
+    string = lambda v: isinstance(v, str)
+    integer = lambda v: type(v) is int and v >= 0
+    strings = lambda v: isinstance(v, list) and all(string(x) for x in v)
+    checks = [(inputs, 'session_kind', lambda v: v in ('admission', 'grooming')),
+              (inputs, 'trace_sessions', strings), (inputs, 'drafts', strings), (inputs, 'window_frames', integer),
+              (pinned, 'knowledge_version', lambda v: string(v) and VERSION.fullmatch(v)),
+              *[(pinned, k, lambda v: string(v) and re.fullmatch(r'[0-9a-f]{64}', v)) for k in ('trace_manifest_sha256', 'brief_sha256', 'grooming_sha256')],
+              *[(budgets, k, _number) for k in ('wall_seconds', 'memory_bytes', 'disk_bytes')],
+              (budgets, 'cap_usd', _cap),
+              *[(life, k, _number) for k in ('started_wall', 'ended_wall')],
+              (life, 'stopped', string), (life, 'returncode', lambda v: type(v) is int),
+              (life, 'survivors', lambda v: isinstance(v, list) and all(type(x) is int for x in v)), (life, 'errors', strings), (life, 'refused', strings),
+              *[(provenance, k, _number) for k in ('seconds', 'peak_memory_bytes', 'peak_disk_bytes')]]
+    nullable = {(id(budgets), 'cap_usd'), (id(life), 'stopped'), (id(life), 'returncode'),
+                (id(life), 'survivors')}
+    if not all((key not in obj or (obj[key] is None and (id(obj), key) in nullable)
+                or (obj[key] is not None and predicate(obj[key]))) for obj, key, predicate in checks):
+        raise ValueError('metadata')
+    window = inputs.get('window')
+    if 'window' in inputs and (not isinstance(window, dict) or set(window) not in (set(), {'session', 'actor', 'first', 'last'}) or
+        (window and (not all(string(window[k]) for k in ('session', 'actor')) or not all(integer(window[k]) for k in ('first', 'last'))))):
+        raise ValueError('window')
+    coverage = inputs.get('coverage')
+    if 'coverage' in inputs and (not isinstance(coverage, dict) or set(coverage) != {'schema', 'session', 'actor', 'last_step'} or coverage['schema'] != 'curator-coverage/2' or not string(coverage['session']) or not _optional(coverage, 'actor', string) or not _optional(coverage, 'last_step', integer)):
+        raise ValueError('coverage')
+    verdicts = record['verdicts']
+    drafts = record['drafts']
+    if not isinstance(verdicts, list) or not all(valid(v) for v in verdicts):
+        raise ValueError('verdicts')
+    keys = ('created', 'renewed', 'aged', 'stale', 'abandoned', 'refused')
+    if not isinstance(drafts, dict) or (drafts and (set(drafts) != set(keys) or not all(strings(drafts[k]) for k in keys[:-1]) or not isinstance(drafts['refused'], list) or not all(isinstance(v, dict) and set(v) == {'id', 'reason'} and all(string(v[k]) for k in ('id', 'reason')) for v in drafts['refused']))):
+        raise ValueError('drafts')
+    published = record['published_after']
+    if published is not None and (not string(published) or not VERSION.fullmatch(published)):
+        raise ValueError('published')
+    def fields(obj, names):
+        out = {}
+        omitted = {}
+        for k in names:
+            if k not in obj:
+                continue
+            value = obj[k]
+            out[k] = _safe(value) if isinstance(value, str) else value
+            if isinstance(value, str) and out[k] is None:
+                omitted[k] = len(value)
+        if omitted:
+            out['omitted_characters'] = omitted
+        return out
+    header = dict(**fields(m, ('id',)), inputs=fields(inputs, ('session_kind', 'window_frames')),
+                  pinned=fields(pinned, ('knowledge_version', 'trace_manifest_sha256', 'brief_sha256', 'grooming_sha256')),
+                  budgets=fields(budgets, ('wall_seconds', 'memory_bytes', 'disk_bytes', 'cap_usd')),
+                  lifecycle=fields(life, ('state', 'started_wall', 'ended_wall', 'stopped', 'returncode')),
+                  resources=fields(provenance, ('seconds', 'peak_memory_bytes', 'peak_disk_bytes')),
+                  published_after=published)
+    for k in ('trace_sessions', 'drafts'):
+        if k in inputs and inputs[k] is not None: header['inputs'][k] = _text_list(inputs[k])
+    for k in ('errors', 'refused'):
+        if k in life and life[k] is not None: header['lifecycle'][k] = _text_list(life[k])
+    if 'survivors' in life: header['lifecycle']['survivor_count'] = len(life['survivors']) if life['survivors'] is not None else None
+    if window is not None: header['inputs']['window'] = fields(window, ('session', 'actor', 'first', 'last'))
+    if coverage is not None: header['inputs']['coverage'] = dict(schema='curator-coverage/2', **fields(coverage, ('session', 'actor', 'last_step')))
+    report = None if not drafts else {k: _text_list(drafts[k]) for k in keys[:-1]}
+    if report is not None:
+        report['refused'] = dict(items=[fields(v, ('id', 'reason')) for v in drafts['refused'][:LIST_LIMIT]], omitted=max(0, len(drafts['refused']) - LIST_LIMIT))
+    return header, report, verdicts
+
+
+def session(sources: tuple[tuple[str, Path], ...], label: str | None, after: int, limit: int,
+            digest: str | None) -> dict:
+    path = next((path for name, path in sources if name == label), None)
+    if path is None: raise ViewError(404, 'unknown_source')
+    if (digest is not None and not re.fullmatch(r'[0-9a-f]{64}', digest)) or (after > 0 and digest is None):
+        raise ViewError(400, 'bad_snapshot')
+    status, snapshot, data = read_file(path)
+    if digest is not None and (snapshot is None or digest != snapshot['sha256']): raise ViewError(409, 'source_changed')
+    header, report, verdicts = None, None, []
+    if status == 'available':
+        try:
+            record = json.loads(data.decode('utf-8'))
+        except (ValueError, UnicodeError, RecursionError):
+            status = 'malformed'
+        else:
+            try: header, report, verdicts = session_projection(record)
+            except (ValueError, TypeError, KeyError, RecursionError): status = 'unsupported'
+    return dict(source=label, source_status=status, snapshot=snapshot, header=header, drafts=report,
+                items=[project(v, i) for i, v in enumerate(verdicts[after:after + limit], after)],
+                total=len(verdicts), next=after + limit if after + limit < len(verdicts) else None, limit=limit)

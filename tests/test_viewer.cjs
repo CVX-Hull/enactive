@@ -284,3 +284,38 @@ test('curator paging and refresh keep empty, changed and failed sources distinct
     assert.deepEqual(page.problems.filter(p=>!p.startsWith('http 409: /api/view/frame/curator-results')),[]);
   } finally { await page.close(); }
 });
+
+test('curator session selects a receipt and resets detail when its snapshot changes', {timeout: 30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#live`, {width:390,height:900,mobile:true});
+  const digest = 'a'.repeat(64);
+  const row = {index:0,operation_id:'b'.repeat(32),operation:'submission',status:'unknown',base_version:'v1',
+    restored_from:null,version:null,submission:'s',session:'session',diagnostics:[],diagnostics_omitted:0};
+  let changed = false;
+  try {
+    await S.ready(page);
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      const url = new URL(request.url());
+      if (url.pathname.endsWith('/frame/curator-session-sources')) return request.respond({status:200,contentType:'application/json',body:JSON.stringify({schema:'spectator-frame/1',items:[{label:'receipt'}],total:1,next:null,limit:500})});
+      if (url.pathname.endsWith('/frame/curator-session')) {
+        if (changed && url.searchParams.has('snapshot')) return request.respond({status:409,contentType:'application/json',body:JSON.stringify({schema:'spectator-view/2',error:'source_changed'})});
+        return request.respond({status:200,contentType:'application/json',body:JSON.stringify({schema:'spectator-frame/1',source:'receipt',source_status:'available',snapshot:{sha256:digest,bytes:20},header:{id:'s1',inputs:{session_kind:'admission'},pinned:{},budgets:{cap_usd:'2'},lifecycle:{state:'sealed'},resources:{},published_after:'v1'},drafts:null,items:[row],total:1,next:null,limit:25})});
+      }
+      request.continue();
+    });
+    await page.evaluate(() => { location.hash='#frame/curator'; });
+    await S.until(page, () => Array.from(document.querySelector('[data-session-source]')?.options || []).some(o => o.value === 'receipt'));
+    await page.select('[data-session-source]', 'receipt');
+    await S.until(page, () => document.querySelector('table.data button.link'));
+    await page.focus('table.data button.link'); await page.keyboard.press('Enter');
+    await S.until(page, () => document.activeElement?.hasAttribute('data-session-detail'));
+    assert.match(await page.$eval('#app', n => n.innerText), /No collection report recorded/);
+    assert.equal(await S.overflow(page), 0);
+    await S.shot(page, 'curator-session-phone');
+    changed = true;
+    await S.until(page, () => Array.from(document.querySelectorAll('[role=alert]')).some(n => n.textContent.includes('Source changed')), null, 8000);
+    assert.equal(await page.$('[data-session-detail]'), null);
+    await S.shot(page, 'curator-session-changed');
+    assert.deepEqual(page.problems.filter(p => !p.startsWith('http 409: /api/view/frame/curator-session')), []);
+  } finally { await page.close(); }
+});

@@ -47,6 +47,11 @@ Files are read only, with a 16 MiB input ceiling and digest-bound paging. Empty,
 unavailable, unsupported and unknown data stay explicit; publication is not factual
 verification or measured lag. See the [result contract](../contracts/evaluation.md#recorded-curator-results).
 
+For recorded curator sessions, repeat `--curator-sessions LABEL=FILE` with individual
+terminal `close-out.json` files. Select the operator-supplied alias in the Curator tab;
+the recorded session and its draft collection events do not establish a run association
+or current draft state. See the [session contract](../contracts/evaluation.md#recorded-curator-sessions).
+
 If the page says **viewer unavailable**, the run, the frame and
 Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
 viewer is not restarted during a run.
