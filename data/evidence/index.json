@@ -705,6 +705,20 @@
       },
       "visibility": "private"
     },
+    "ready-delivery-retirement": {
+      "availability": "present",
+      "bytes": 7824545,
+      "cited_by": [
+        "docs/acceptance/2026-11-16-ready-delivery-retirement.md"
+      ],
+      "files": 202,
+      "manifest_sha256": "6799387fbf10fa179e7c91f7c1b1f2e1e38c3d1b75611ed35cfa1ff47dddfd9b",
+      "note": "Owned worker source patches, prototype outputs, projection metadata and original failure/pass/CI logs preserved before cleanup;272 projected images remain byte-identical in sealed397 evidence.",
+      "sources": {
+        "retirement": ".runtime/ready-delivery-retirement after Ready merges685-687"
+      },
+      "visibility": "private"
+    },
     "recall-check-642": {
       "availability": "present",
       "bytes": 2565029,
