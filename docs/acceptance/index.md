@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | [Recorded knowledge in the spectator](2026-11-17-recorded-knowledge-spectator.md) | measurement | Recorded knowledge/public-report reader: retained #642 replay through the real viewer, synthetic current-journal browser acceptance and focused portable checks; no new CDDA play, native build or provider call | historical |
 | 2026-11-16 | [Prospective withholding scoreability repair](2026-11-16-withholding-scoreability-repair.md) | measurement | No-model prospective withholding scoreability repair and finite same-assumption Monte Carlo diagnostic; historical observed study and frozen artifacts unchanged | historical |
 | 2026-11-16 | [Withholding follow-up and backlog review](2026-11-16-withholding-follow-up-and-grooming.md) | review | Backlog review of all 29 open issues and the Enactive Project; exploratory re-reading of the full withholding study’s 60 valid starts for elapsed game time, progress, fire outcomes and the delivery-to-action gap; project-local cleanup. No new play or provider spend. | historical |
 | 2026-11-16 | [Ready delivery retirement](2026-11-16-ready-delivery-retirement.md) | review | Ready delivery reconciliation and retirement of owned temporary checkouts and duplicate outputs after evidence preservation; no saves or sealed evidence removed | historical |
