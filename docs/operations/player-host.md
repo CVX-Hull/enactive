@@ -14,8 +14,10 @@ host only through the [finite campaign custodian](campaign-run.md), not an old
 mission-driver CLI. Freeze the Pi adapter as
 `"host": {"argv": ["ABSOLUTE_EXISTING_NODE_EXECUTABLE", "ABSOLUTE_PROJECT_ROOT/tools/player_host/run.mjs"]}`.
 
-The selected finite configuration is OpenRouter / explicitly pinned provider / DeepSeek
-Flash1017 medium. Freeze its verified full endpoint tag and supported parameters
+The selected finite configuration is OpenRouter / pinned OpenAI provider /
+`openai/gpt-6.1-terra`, medium effort. DeepSeek and other cheaper player models are
+future alternatives to test under #25, not current defaults. Freeze the verified
+full endpoint tag and supported parameters
 in `route.json`; use no fallback. The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the package's dollar limit and request

@@ -68,7 +68,8 @@ npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host 
 
 It loads explicit frozen provider/MCP/context files, not coding-agent settings,
 shell/file tools, personal sessions or global credentials. The selected finite
-route is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium effort.
+route is OpenRouter / pinned OpenAI provider / `openai/gpt-6.1-terra` at medium
+effort. DeepSeek and other cheaper player models are future test candidates (#25).
 The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
 follow actual shared-pool failures, not automatic fallback. Freeze
 its actual endpoint tag, supported parameters, image peak, eviction block,

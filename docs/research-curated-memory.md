@@ -23,6 +23,22 @@ papers are cited by reference only where this page relies on them; nothing below
 re-reviews them. Neither earlier page covered measured consolidation lag, ontology
 induction, or oversight interfaces.
 
+## Targeted primary-source recheck: 16 November 2026
+
+The 8 November read scopes and conclusions below retain their original date. A
+subsequent primary-text check verified the binomial-opinion/Beta mapping in Jøsang's
+2013 manuscript, §§3.1.1–3.1.3, and fusion assumptions in §4.7. This supersedes the
+mapping's **unverified** status for future decisions; it does not establish a useful
+fusion rule for curator memory. Matched evidence and priors make the basic numerical
+forms an equivalence control, not two independent predictive improvements.
+
+The proposed [CDDA belief-method comparison](design/belief-method-comparison.md)
+records this check and primary sources for provenance, proper scores, censoring and
+partial pooling, with their read scopes and transfer limits. It separates apparatus
+checks, model-mediated replay and live decision benefit. The owner has not selected a
+belief calculus; #457 retains that decision. No earlier experiment is reinterpreted as
+held-out evidence and no study spend is opened.
+
 ## Brief and method
 
 **Brief questions (recorded verbatim in substance).** Each is an area of ADR 009's

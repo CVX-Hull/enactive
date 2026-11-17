@@ -23,6 +23,13 @@ a priced pilot. Other games and unforeseen cross-game problems are deferred to f
 versions. Paid studies and runtime adoption require their own decisions; the proposal
 is not an experimental result or a change to the current memory contract.
 
+The [belief-method comparison](design/belief-method-comparison.md) isolates provenance,
+revision, subjective-logic/Beta opinions, staleness and pooling on the same CDDA replay
+packets before any live claim. It informs #457's open belief decision; no calculus is
+adopted. The primary foundations were rechecked on 16 November 2026, including the
+matched binomial-opinion/Beta equivalence. Terra stays the player baseline; cheaper
+model trials remain #25's separate work.
+
 ### Current: the question is open
 
 Each page answers areas of [ADR 009](decisions/009-curated-player.md)'s

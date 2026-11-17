@@ -201,16 +201,23 @@ unknown. This lets a failure be attributed to capture, representation, retrieval
 timing or action use rather than blaming the curator as a whole. Existing telemetry,
 source IDs and #463's public emissions are the reuse path; retain no private reasoning.
 
-Freeze the complete role configuration per comparison. The documented selected route
-in [host operations](../operations/player-host.md) is DeepSeek Flash1017 medium, while
-the inspected full-study start package used GPT-6.1 Terra for both player and recall
-(262,144 player context, 32,768 recall context, 39 player images evicted in blocks of
-20, reminders scheduled every ten
+Freeze the complete role configuration per comparison. The current player is
+**GPT-6.1 Terra, medium effort, OpenRouter with the OpenAI provider pinned**, as the
+[owner decision log](../decisions/owner-decisions.md) and
+[host operations](../operations/player-host.md) state. DeepSeek and other cheaper
+player models are future alternatives under #25, not current defaults. The inspected
+full-study package also used Terra for recall (262,144 player context, 32,768 recall
+context, 39 player images evicted in blocks of 20, reminders scheduled every ten
 completed computer-input/program-run calls, subject to availability and budget).
-Those are different finite configurations; neither report qualifies the other. Pin
-player, curator and recall independently and equally across corresponding arms, and
-charge them all. Do not treat a coding-agent subscription, a default route or a passing
-software fixture as an unmeasured gameplay configuration.
+Curator, recall and judge configurations remain explicitly frozen per package; the
+player selection does not choose every role's model automatically. Hold corresponding
+roles equal across belief/representation arms, charge them all, and test cheaper player
+models separately so a model switch cannot masquerade as a memory improvement.
+
+The [belief-method comparison](belief-method-comparison.md) specifies how provenance,
+qualitative revision, numerical opinions and optional staleness/pooling models can be
+screened on the same CDDA prefixes. It supplies evidence for #457's open choice without
+adopting a calculus or becoming a new prerequisite to the decided #463 migration.
 
 ## Hypotheses and objectives
 

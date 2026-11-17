@@ -26,7 +26,8 @@ the [current adapter reference](../../tools/player_host/README.md) owns its prov
 
 The host loads no coding-agent shell/file tools, personal configuration, resource
 discovery or resumed session. No coding-agent fallback is supported. Selected
-OpenRouter / explicitly pinned provider / DeepSeek Flash1017 medium is frozen per finite run;
+OpenRouter / pinned OpenAI provider / GPT-6.1 Terra medium is frozen per finite run
+([selected host configuration](../operations/player-host.md));
 route selection and host conformance are separate from model/gameplay qualification.
 
 ## Context and failure boundaries
