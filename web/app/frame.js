@@ -1,8 +1,8 @@
 // The spectator's frame (ADR 009's spectator direction): a health strip over role views. Actor works on real sealed data and shows
 // the forgetting episodes; Curator, Knowledge and Programs say which phase brings them; Containers is the inventory.
 // Read-only: every value comes from /api/view/frame/* (spectator-frame/1); anchors open the existing per-run views.
-import {html, useState, Panel, Pv, Waiting, Table, Insufficient, Callout, fmtMoney, trim, label} from './ui.js';
-import {store, framePath, selectRun, set, useView} from './data.js';
+import {html, useState, useEffect, Panel, Pv, Waiting, Table, Insufficient, Callout, fmtMoney, trim, label} from './ui.js';
+import {store, framePath, runPath, selectRun, set, useStore, useView} from './data.js';
 import {SubNav} from './diagnose.js';
 
 const SCHEMA = 'spectator-frame/1';
@@ -51,7 +51,7 @@ function Health() {
 // What each role will show and when, from ADR 009's spectator direction and its phases. Nothing here is data.
 const PLACEHOLDERS = {
   curator: ['curator-and-memory', 'Curator', 'A session timeline with lag; each session\'s brief, transcript summary, submissions and gate verdicts; submission diffs; open and stale drafts.'],
-  knowledge: ['curator-and-memory', 'Knowledge', 'Facts with provenance frames, scope, belief and staleness; what each snapshot showed the actor and when. The ontology browser with versions and grooming history follows the ontology work.'],
+  knowledge: ['curator-and-memory', 'Knowledge', 'The Actor view shows recorded delivered snapshots; the broader facts view will add scope, belief and staleness. The ontology browser with versions and grooming history follows the ontology work.'],
   programs: ['programs-and-monitor', 'Programs', 'The program library with versions and statistics; live delegated runs with their progress; preemptions, yields, monitor flags and stops.'],
 };
 function Placeholder({role}) {
@@ -117,15 +117,78 @@ function Episode({episode}) {
     <div class="anchors">${ANCHORS.map(([key, name]) => html`<${Anchor} name=${name} anchor=${episode[key]} busy=${busy} setBusy=${setBusy} failed=${failed} setFailed=${setFailed} />`)}</div><//>`;
 }
 
+function Omissions({value}) {
+  const found = [];
+  function visit(node, path = '') {
+    if (!node || typeof node !== 'object') return;
+    for (const [key, item] of Object.entries(node)) {
+      const name = path ? `${path}.${key}` : key;
+      if (key.endsWith('_omitted') && item) found.push(`${name}: ${item}`);
+      else if ((key === 'omitted_characters' || key === 'order_omitted_characters') && Object.keys(item || {}).length) found.push(`${name}: ${JSON.stringify(item)}`);
+      else if (Array.isArray(item)) item.forEach((child, i) => visit(child, `${name}[${i}]`));
+      else if (item && typeof item === 'object') visit(item, name);
+    }
+  }
+  visit(value);
+  return found.length ? html`<p class="note wrapany">Omitted: ${found.join(' · ')}</p>` : null;
+}
+
+function SourceAnchors({anchors}) {
+  return (anchors || []).map(anchor => html`<p class="note wrapany">Source ${anchor.source_id}: ${anchor.available
+    ? html`<a href=${framePath(anchor.run, anchor.source_id)} target="_blank" rel="noopener">Original frame (${anchor.run})</a>`
+    : `unavailable (${anchor.reason || 'unknown'})`}</p>`);
+}
+
+function EntryButtons({ids, choose}) {
+  return ids.length ? ids.map(id => html`<button type="button" class="wrapany" onClick=${() => choose(id)}>${id}</button>`) : 'none recorded';
+}
+
+function RecordedKnowledge() {
+  const {runId} = useStore();
+  const [actor, setActor] = useState('');
+  const [request, setRequest] = useState('');
+  const [after, setAfter] = useState(0);
+  const [entry, setEntry] = useState('');
+  const [focusEntry, setFocusEntry] = useState(false);
+  useEffect(() => { setActor(''); setRequest(''); setAfter(0); setEntry(''); }, [runId]);
+  const path = runId ? runPath(runId, `knowledge?actor=${encodeURIComponent(actor)}&request=${encodeURIComponent(request)}&entry=${encodeURIComponent(entry)}&after=${after}&limit=25`) : null;
+  const {data, error} = useView(path);
+  const choose = id => {setEntry(id); setAfter(0); setFocusEntry(!!id);};
+  useEffect(() => {
+    if (focusEntry && data && data.snapshot && data.snapshot.entry_id === entry) {
+      const target = document.querySelector('[data-reader-entry] > summary') || document.querySelector('[data-reader-snapshot]');
+      if (target) target.focus();
+      setFocusEntry(false);
+    }
+  }, [focusEntry, data, entry]);
+  if (!runId) return html`<${Panel} title="Recorded knowledge" span="s12"><${Insufficient}>Select a run to inspect its records.<//><//>`;
+  if (!data) return html`<${Panel} title="Recorded knowledge" span="s12"><${Waiting} store=${store} what="recorded knowledge" error=${error} /><//>`;
+  return html`<${Panel} title="Recorded knowledge and public reports" note="Recorded data · reports are unverified" span="s12" className="knowledge-reader">
+    <p class="note">Selection, delivery, explicit reads, public reports and game effects are separate records. An absent ID or link is unavailable; it does not establish attention, use or withholding.</p>
+    <label>Actor <select data-reader-actor value=${actor} onChange=${e => {setActor(e.target.value); setRequest(''); setEntry(''); setAfter(0);}}><option value="">Choose an actor</option>${data.actors.map(a => html`<option value=${a}>${a}</option>`)}</select></label>
+    ${actor ? html`<label> Request <select data-reader-request value=${request} onChange=${e => {setRequest(e.target.value); setAfter(0);}}><option value="">All recorded requests</option>${(data.requests || []).map(r => html`<option value=${r}>${r}</option>`)}</select></label>` : null}
+    <${Omissions} value=${{actors_omitted:data.actors_omitted,requests_omitted:data.requests_omitted}} />
+    ${actor ? html`<p class="note">Context: ${data.context ? (data.context.exact ? 'recorded manifest' : 'reconstructed or unavailable') : 'select a request'}.</p>
+      <h3>Selection and delivery</h3>${data.events.length ? data.events.map(e => html`<details><summary>${e.type} · ${e.kind || 'unknown'} · ${e.status || 'recorded'} · line ${e.line}</summary>
+        <p class="wrapany">Recall request: ${e.recall_request_id || e.request_id || 'unavailable'} · receiving request: ${e.receiving_player_request_id || 'unavailable'} · version: ${e.version || 'unavailable'}</p>
+        ${e.delivery_text_unavailable ? html`<p>Delivered text unavailable.</p>` : null}
+        ${(e.leads || []).map(v => html`<p class="wrapany">Delivered lead: ${v.title || v.id}: ${v.lead}</p>`)}${(e.index || []).map(v => html`<p class="wrapany">Delivered index: ${v.title || v.id}: ${v.index}</p>`)}
+        <p>Articles: <${EntryButtons} ids=${e.article_ids} choose=${choose} /><br />Facts: <${EntryButtons} ids=${e.fact_ids} choose=${choose} /><br />Index: <${EntryButtons} ids=${e.index_ids} choose=${choose} /></p><${Omissions} value=${e} /></details>`) : html`<p>No matching selection or delivery recorded.</p>`}<${Omissions} value=${{events_omitted:data.events_omitted}} />
+      <h3 data-reader-snapshot tabIndex="-1">Frozen delivered snapshot</h3>${entry ? html`<p class="wrapany">Entry ${entry} <button type="button" onClick=${() => choose('')}>Show all entries</button></p>` : null}${data.snapshot ? html`<p class="wrapany">Digest verified · version: ${data.snapshot.version || 'unavailable'} · coverage: ${JSON.stringify(data.snapshot.coverage) || 'unavailable'} · ${data.snapshot.total} entries. Citation source and absolute age are unavailable unless recorded.</p>
+        <${Omissions} value=${{coverage:data.snapshot.coverage,omitted_characters:data.snapshot.omitted_characters}} />
+        ${entry && !data.snapshot.items.length ? html`<p>Entry unavailable in this snapshot.</p>` : null}${data.snapshot.items.map(item => html`<details data-reader-entry open=${!!entry}><summary class="wrapany">${item.kind}: ${item.title || item.subject || item.id || 'ID unavailable'}</summary><p class="mono wrapany">${item.id || 'ID unavailable'}</p><p class="wrapany">${item.lead || item.text || ''}</p>${item.body.map(part => html`<p class="wrapany">${part.text} · facts: ${part.facts.join(', ') || 'unavailable'}</p>`)}<p class="wrapany">Seen: ${JSON.stringify(item.seen) || 'unavailable'} · last confirmed: ${JSON.stringify(item.last_confirmed) || 'unavailable'} · source IDs: ${item.source_ids.join(', ') || 'unavailable'} · links: ${item.links.join(', ') || 'unavailable'}</p><${SourceAnchors} anchors=${item.anchors} /><${Omissions} value=${item} /></details>`)}
+        <p><button type="button" disabled=${after === 0} onClick=${() => setAfter(Math.max(0, after-25))}>Previous entries</button> <button type="button" disabled=${data.snapshot.next === null} onClick=${() => setAfter(data.snapshot.next)}>Next entries</button></p>` : html`<p>Frozen delivered snapshot unavailable (${data.snapshot_status || 'unavailable'}).</p>`}
+      <h3>Recorded calls and results</h3>${data.calls.length ? data.calls.map(c => html`<details><summary class="wrapany">${c.tool} · ${c.status} · ${c.request_id || 'request unavailable'}</summary><p class="wrapany">Call: ${c.tool_call_id || 'unavailable'} · intent (unverified): ${c.intent || 'unavailable'} · cites: ${c.cites.join(', ') || 'none recorded'}</p><p class="wrapany">Query: ${c.query || 'unavailable'} · returned IDs: <${EntryButtons} ids=${c.returned_ids} choose=${choose} /> · operation: ${c.operation_id || 'unavailable'}</p><p class="wrapany">Tool result status: ${c.result.status || 'unavailable'} · reason: ${c.result.reason || 'unavailable'} · delivered: ${c.result.delivered ?? 'unavailable'}</p><p class="wrapany">Operation status: ${c.operation ? c.operation.status : 'unavailable'} · reason: ${c.operation && c.operation.reason || 'unavailable'}</p>${c.operation ? c.operation.receipts.map(r => html`<p class="wrapany">Receipt disposition: ${r.disposition || 'unavailable'} · status: ${r.status || 'unavailable'} · reason: ${r.reason || 'unavailable'}</p>`) : null}<${SourceAnchors} anchors=${c.anchors} /><${Omissions} value=${c} /></details>`) : html`<p>No matching calls recorded.</p>`}<${Omissions} value=${{calls_omitted:data.calls_omitted}} />
+      <h3>Public hints (unverified)</h3><p class="note">Hints and finish claims cover this actor; they are not attributed to the selected request.</p>${!data.journal_available ? html`<p>Public journal unavailable.</p>` : data.hints.length ? data.hints.map(h => html`<div><p class="wrapany">${h.text} · intent: ${h.intent || 'unavailable'} · cites: ${h.cites.join(', ') || 'none recorded'}</p><${SourceAnchors} anchors=${h.anchors} /><${Omissions} value=${h} /></div>`) : html`<p>No public hints recorded.</p>`}<${Omissions} value=${{hints_omitted:data.hints_omitted}} />
+      <h3>Player finish claims (unverified)</h3>${data.finishes.length ? data.finishes.map(f => html`<div><p class="wrapany">${f.disposition || 'unavailable'} · ${f.report || 'unavailable'} · cites: ${f.cites.join(', ') || 'none recorded'}</p><${SourceAnchors} anchors=${f.anchors} /><${Omissions} value=${f} /></div>`) : html`<p>No finish claim recorded.</p>`}<${Omissions} value=${{finishes_omitted:data.finishes_omitted}} /><h3>Evaluator outcome</h3><p class="wrapany">${data.outcome ? JSON.stringify(data.outcome) : 'Unavailable'}</p>` : null}<//>`;
+}
+
 function Actor() {
   const {data, error} = useFrame('frame/episodes');
-  if (!data) return html`<${Panel} title="Actor" span="s12"><${Waiting} store=${store} what="the forgetting episodes" error=${error} /><//>`;
-  if (!data.lineages.length) return html`<${Panel} title="Actor" span="s12"><${Insufficient}>No episodes are tracked.<//><//>`;
-  return html`<${Panel} title="Actor" note="sealed traces · read-only" span="s12">
-      <${Callout}><b>What this shows.</b> Facts the actor knew and then lost at a handoff, each anchored in the sealed frames where it was observed, needed and acted on without. Open an anchor to see the actor's decision at that frame. The live frame is on <a href="#live">Live</a>; intent, expectation and outcome side by side, citations, hints and the snapshot in use arrive in ${phaseName('curator-and-memory')} with required emissions.<//><//>
-    ${data.lineages.map(lineage => html`<${Panel} title=${`Lineage ${lineage.lineage}`} note=${`study ${lineage.study}`} span="s12">
-      <p class="note">${lineage.note}</p><//>
-      ${lineage.episodes.map(episode => html`<${Episode} episode=${episode} />`)}`)}`;
+  return html`<${RecordedKnowledge} />
+    ${!data ? html`<${Panel} title="Forgetting episodes" span="s12"><${Waiting} store=${store} what="the forgetting episodes" error=${error} /><//>` :
+      !data.lineages.length ? html`<${Panel} title="Forgetting episodes" span="s12"><${Insufficient}>No episodes are tracked.<//><//>` :
+      data.lineages.map(lineage => html`<${Panel} title=${`Lineage ${lineage.lineage}`} note=${`study ${lineage.study}`} span="s12"><p class="note">${lineage.note}</p><//>${lineage.episodes.map(episode => html`<${Episode} episode=${episode} />`)}`)}`;
 }
 
 /* ---------------------------------------------------------------- containers */

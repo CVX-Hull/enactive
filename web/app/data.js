@@ -45,7 +45,7 @@ export function useStore() {
 /* ---------------------------------------------------------------- fetching */
 export class ViewerDown extends Error {}
 
-export async function viewerGet(path, schema = 'spectator-view/1') {
+export async function viewerGet(path, schema = 'spectator-view/2') {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), VIEW_TIMEOUT_MS);
   let response;
@@ -61,6 +61,7 @@ export async function viewerGet(path, schema = 'spectator-view/1') {
   if (!response.ok) {
     if (response.status >= 500) { markViewer(false); throw new ViewerDown('Viewer unavailable'); }
     markViewer(true);
+    if (response.status === 413) throw new Error('Response too large (HTTP 413); select a request or fewer entries.');
     throw new Error(body && body.error ? String(body.error) : `The viewer has nothing here (HTTP ${response.status})`);
   }
   if (!body || body.schema !== schema) {
@@ -80,7 +81,7 @@ export const runPath = (run, tail) => `run/${encodeURIComponent(run)}/${tail}`;
 export const framePath = (run, sourceId) => `/api/view/${runPath(run, `frame/${encodeURIComponent(sourceId)}`)}`;
 
 /** Fetch one viewer route into component state; refetch on an interval and when the viewer returns. */
-export function useView(path, every = 5000, schema = 'spectator-view/1') {
+export function useView(path, every = 5000, schema = 'spectator-view/2') {
   const [state, setState] = useState({path: null, data: null, error: null});
   useEffect(() => {
     if (!path) return undefined;

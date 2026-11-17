@@ -1,4 +1,4 @@
-"""The read-only spectator viewer (ADR008, spectator-view/1) over synthetic runs and a pure fake binding.
+"""The read-only spectator viewer (ADR008, spectator-view/2) over synthetic runs and a pure fake binding.
 
 Every route is exercised through Starlette's TestClient: schema, bounds, pagination, frame digest refusal, no
 write methods, Pause conditions (met and clear) and incremental live evaluation. These tests establish the API
@@ -7,6 +7,7 @@ contract, not any game reader.
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 import time
 
@@ -83,7 +84,7 @@ def test_every_json_route_has_the_schema_and_stays_bounded(archive):
         response = client.get(route)
         assert response.status_code == 200, (route, response.text[:200])
         assert response.headers['content-type'] == 'application/json'
-        assert response.json()['schema'] == API == 'spectator-view/1'
+        assert response.json()['schema'] == API == 'spectator-view/2'
         assert len(response.content) < MAX_BYTES
     assert client.get(f'/api/view/run/base1/summary').json()['session'] == session  # the directory name works too
     assert client.get('/api/view/run/nope/summary').status_code == 404
@@ -557,12 +558,16 @@ def test_current_journal_hints_are_read_only_public_reports(tmp_path):
     directory = tmp_path/'runs'/'current'
     run = Run(directory)
     actor = run.actor()
-    run.step(actor, 'input', [key('j')], F('in_play', 3600))
+    operation = run.step(actor, 'input', [key('j')], F('in_play', 3600))
+    source_id = f'{SESSION}-1'
+    start = next(e for e in run.host[actor] if e['type'] == 'tool-start')
+    start['arguments'].update(intent='Move carefully', cites=['fact-visible'])
+    run.host[actor].append(run.event(actor, 'player-finish', request_id='request-1', disposition='task_complete', report='I believe I am done', intent='Finish', cites=['fact-visible'], source_ids=[source_id]))
     store = tmp_path/'journal.sqlite3'
-    args = dict(intent='Report an uncertain observation',text='The visible passage may be blocked',cites=[])
+    args = dict(intent='Report an uncertain observation',text='The visible passage may be blocked',cites=['fact-visible'])
     with Journal(store) as journal:
         journal.record_call('hint-call',actor,'player_hint',args)
-        hint = journal.hint('hint-call',actor,args['text'],[],args['intent'],[])
+        hint = journal.hint('hint-call',actor,args['text'],[],args['intent'],args['cites'])
     run.call(actor,'player_hint',args,hint)
     run.finish(memory=store)
     before = store.read_bytes()
@@ -571,6 +576,16 @@ def test_current_journal_hints_are_read_only_public_reports(tmp_path):
     value = client.get(f'/api/view/run/{SESSION}/memory').json()
     assert value['store_schema']=='player-journal/1' and value['records']==[]
     assert value['hints']==[hint] and value['provenance']=='player_public_report'
+    reader = client.get(f'/api/view/run/{SESSION}/knowledge', params=dict(actor=actor,request='request-1')).json()
+    assert reader['journal_available'] is True and reader['hints'][0]['cites']==['fact-visible']
+    call = next(c for c in reader['calls'] if c['tool']=='computer_input')
+    assert call['intent']=='Move carefully' and call['cites']==['fact-visible']
+    assert call['operation_id']==operation and call['operation']['status']=='completed'
+    assert call['operation']['receipts'][0]['disposition']=='delivered'
+    assert call['anchors']==[dict(run='current',source_id=source_id,available=True,reason=None)]
+    assert reader['finishes'][0]['report']=='I believe I am done' and reader['finishes'][0]['disposition']=='task_complete'
+    assert reader['outcome'] == client.get(f'/api/view/run/{SESSION}/summary').json()['outcome']
+    assert reader['finishes'][0]['anchors'][0]['available'] is True
     programs = client.get(f'/api/view/run/{SESSION}/programs').json()
     assert programs['capability']=='retired' and programs['programs']==[] and programs['runs']==[]
     assert store.read_bytes()==before
@@ -578,3 +593,94 @@ def test_current_journal_hints_are_read_only_public_reports(tmp_path):
     assert client.get(f'/api/view/run/{SESSION}/programs').json()['capability']=='retired'
     missing = client.get(f'/api/view/run/{SESSION}/memory').json()
     assert missing['available'] is False and missing['store_schema']=='player-journal/1'
+    assert client.get(f'/api/view/run/{SESSION}/knowledge',params=dict(actor=actor)).json()['journal_available'] is False
+
+
+def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls_separate(tmp_path):
+    directory = tmp_path/'runs'/'recorded'
+    run = Run(directory)
+    actor = run.actor()
+    run.request(actor)
+    run.host[actor].append(run.event(actor, 'request-start', request_id='recall-1'))
+    recall = run.event(actor, 'knowledge-recall', status='selected', request_id='recall-1', article_ids=['article-a'], fact_ids=['fact-a'], reply_text='private-reasoning')
+    recall['kind'] = 'briefing'
+    run.host[actor].append(recall)
+    delivery = run.event(actor, 'knowledge-delivery', recall_request_id='recall-1', receiving_player_request_id='request-1', version='v18', article_ids=['article-a'], fact_ids=['fact-a'])
+    delivery['kind'] = 'briefing'
+    run.host[actor].append(delivery)
+    run.call(actor, 'player_knowledge_read', dict(intent='inspect', cites=['fact-a'], id_or_title='fact-a', secret='credential'), dict(records=[dict(id='fact-a',text='A fact')]))
+    run.call(actor, 'player_knowledge_read', dict(intent='Look for missing entry', cites=[], id_or_title='missing-entry'), dict(records=[]))
+    run.finish()
+    actor_dir = next((directory/'actors').iterdir())
+    (actor_dir/'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/1',version='v18',
+        coverage=dict(session='s',actor=None,last_step=None),articles=[dict(id='article-a',title='A',lead='Lead',body=[dict(text='Claim',facts=['fact-a'])],last_confirmed=dict(order=[1,'001',4],session='s',actor='001',step=4))],
+        facts=[dict(id='fact-a',text='A fact',seen=dict(order=[1,'001',3],session='s',actor='001',step=3))])))
+    snapshot_path = actor_dir/'delivered-knowledge.json'
+    (actor_dir/'frozen.json').write_text(json.dumps(dict(schema='player-host-inputs/3',session=SESSION,actor_id=actor,files={'delivered-knowledge.json':hashlib.sha256(snapshot_path.read_bytes()).hexdigest()})))
+    evaluate(directory,FakeBinding(),tmp_path/'root',created_wall=1.0)
+    client = TestClient(create_app(Catalog(tmp_path/'root',(tmp_path/'runs',),data_dir=data_directory(tmp_path))))
+    url=f'/api/view/run/{SESSION}/knowledge'
+    assert client.get(url).json()['actors'] == [actor]
+    page=client.get(url,params=dict(actor=actor,request='request-1',limit=1)).json()
+    assert page['snapshot']['version']=='v18' and page['snapshot']['next']==1
+    assert page['snapshot']['coverage']['actor'] is None
+    assert page['snapshot']['items'][0]['last_confirmed']['order']==[1,'001',4]
+    assert [e['type'] for e in page['events']]==['knowledge-delivery']
+    assert page['events'][0]['recall_request_id']=='recall-1'
+    assert page['calls'][0]['returned_ids']==['fact-a'] and page['calls'][0]['intent']=='inspect'
+    assert page['calls'][0]['query']=='fact-a'
+    assert page['calls'][1]['query']=='missing-entry' and page['calls'][1]['returned_ids']==[]
+    assert 'credential' not in json.dumps(page) and 'private-reasoning' not in json.dumps(page)
+    selection=client.get(url,params=dict(actor=actor,request='recall-1')).json()
+    assert [e['type'] for e in selection['events']]==['knowledge-recall','knowledge-delivery']
+    assert client.get(url,params=dict(actor=actor,request='missing')).status_code==404
+    assert client.get(url,params=dict(actor=actor,after=1,limit=1)).json()['snapshot']['items'][0]['id']=='fact-a'
+    assert client.get(url,params=dict(actor=actor,entry='fact-a')).json()['snapshot']['items'][0]['id']=='fact-a'
+    assert client.get(url,params=dict(actor=actor,entry='absent')).json()['snapshot']['items']==[]
+    snapshot_path.write_text(snapshot_path.read_text()+' ')
+    mismatch=client.get(url,params=dict(actor=actor)).json()
+    assert mismatch['snapshot'] is None and mismatch['snapshot_status']=='hash_mismatch'
+    (actor_dir/'frozen.json').unlink()
+    absent=client.get(url,params=dict(actor=actor)).json()
+    assert absent['snapshot'] is None and absent['snapshot_status']=='hash_unavailable'
+
+
+def test_knowledge_exact_source_anchors_and_omissions(tmp_path):
+    runs = tmp_path/'runs'
+    other_session = 'b'*32
+    other = Run(runs/'other', session=other_session)
+    other_actor = other.actor()
+    other.step(other_actor, 'observe', [], F('in_play', 3600))
+    other.finish()
+    run = Run(runs/'reader')
+    actor = run.actor()
+    run.request(actor)
+    long_id = 'x'*513
+    e = run.event(actor, 'knowledge-recall', request_id='request-1', status='selected', article_ids=[long_id, *[f'a-{i}' for i in range(101)]])
+    e['kind'] = 'briefing'
+    run.host[actor].append(e)
+    run.call(actor, 'player_knowledge_read', dict(intent='x'*1100, cites=[long_id]), dict(records=[dict(id=long_id),dict(id='fact')]))
+    run.finish()
+    path = runs/'reader'/'actors'/'001'/'delivered-knowledge.json'
+    source_id = f'{other_session}-1'
+    path.write_text(json.dumps(dict(schema='delivered-knowledge/1',version='v',coverage=None,articles=[dict(
+        id='article',title='Example',lead='x'*1100,source_ids=[source_id, f'{"c"*32}-1', long_id],
+        last_confirmed=dict(source_id=source_id, order=[1,'001',4]),body=[dict(text='y'*1100,facts=[long_id, 'fact'])]*21)],facts=[])))
+    (path.parent/'frozen.json').write_text(json.dumps(dict(schema='player-host-inputs/3',session=SESSION,actor_id=actor,files={'delivered-knowledge.json':hashlib.sha256(path.read_bytes()).hexdigest()})))
+    evaluate(runs/'other',FakeBinding(),tmp_path/'root',created_wall=1.0)
+    evaluate(runs/'reader',FakeBinding(),tmp_path/'root',created_wall=1.0)
+    client=TestClient(create_app(Catalog(tmp_path/'root',(runs,),data_dir=data_directory(tmp_path))))
+    url=f'/api/view/run/{SESSION}/knowledge'
+    value=client.get(url,params=dict(actor=actor,request='request-1',entry='article')).json()
+    item=value['snapshot']['items'][0]
+    assert item['anchors']==[dict(run='other',source_id=source_id,available=True,reason=None),
+        dict(run=None,source_id=f'{"c"*32}-1',available=False,reason='run_not_in_catalog')]
+    assert item['source_ids_omitted']==1 and item['body_omitted']==1
+    assert item['omitted_characters']['lead']==76 and item['body'][0]['omitted_characters']['text']==76
+    assert item['body'][0]['facts']==['fact'] and item['body'][0]['facts_omitted']==1
+    assert long_id not in value['events'][0]['article_ids'] and value['events'][0]['article_ids_omitted']==3
+    assert value['calls'][0]['cites_omitted']==1 and value['calls'][0]['returned_ids_omitted']==1
+    assert value['calls'][0]['omitted_characters']['intent']==76
+    (runs/'other'/'sources'/f'{source_id}.png').write_bytes(b'tampered')
+    broken=client.get(url,params=dict(actor=actor,entry='article')).json()['snapshot']['items'][0]['anchors'][0]
+    assert broken['available'] is False and broken['reason']=='frame_digest_mismatch'

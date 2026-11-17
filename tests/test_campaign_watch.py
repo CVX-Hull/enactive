@@ -32,7 +32,7 @@ VIEWER_SCRIPT = (
     'class H(http.server.BaseHTTPRequestHandler):\n'
     '    def log_message(self,*a):pass\n'
     '    def do_GET(self):\n'
-    '        d=b\'{"schema":"spectator-view/1"}\'\n'
+    '        d=b\'{"schema":"spectator-view/2"}\'\n'
     '        self.send_response(200);self.send_header("Content-Type","application/json")\n'
     '        self.send_header("Content-Length",str(len(d)));self.end_headers();self.wfile.write(d)\n'
     'http.server.ThreadingHTTPServer(("127.0.0.1",int(sys.argv[1])),H).serve_forever()\n')
@@ -52,7 +52,7 @@ def put(path, value):
 def fixture(tmp_path, *, receiver_pid=None, viewer='thread'):
     state = dict(block=False, fetching=threading.Event(), unblock=threading.Event(), paused=False,
                  status_session=SESSION, native=None, reason=None, source_bytes=PNG, pause_body=None,
-                 view=dict(status=200, media='application/json', body=b'{"schema":"spectator-view/1"}',
+                 view=dict(status=200, media='application/json', body=b'{"schema":"spectator-view/2"}',
                            declared=None, delay=0, paths=[]))
     class Upstream(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -373,7 +373,7 @@ def test_every_pause_reason_is_recorded_by_the_guard(tmp_path, reason):
 def test_viewer_json_and_png_pass_with_gateway_owned_headers(tmp_path):
     with fixture(tmp_path) as f:
         response, data = f.reply('/api/view/runs?limit=5')
-        assert response.status == 200 and json.loads(data) == {'schema': 'spectator-view/1'}
+        assert response.status == 200 and json.loads(data) == {'schema': 'spectator-view/2'}
         assert f.state['view']['paths'] == ['/api/view/runs?limit=5']
         assert response.getheader('Content-Type') == 'application/json'
         policy = response.getheader('Content-Security-Policy')
@@ -460,7 +460,7 @@ def test_killed_viewer_mid_run_leaves_status_frames_and_pause_working(tmp_path):
             if code == 200 or time.monotonic() > deadline:
                 break
             time.sleep(.05)
-        assert code == 200 and json.loads(data)['schema'] == 'spectator-view/1'
+        assert code == 200 and json.loads(data)['schema'] == 'spectator-view/2'
         os.killpg(f.viewer_process.pid, signal.SIGKILL)
         f.viewer_process.wait(3)
         assert json.loads(f.call('/api/view/runs')[1]) == {'viewer': 'unavailable'}

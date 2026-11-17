@@ -36,7 +36,7 @@ for the control path and its limits.
 outside supervision, and stops it with the other children. It shows the evaluator's
 interpretation of the live run and of archived runs when you pass
 `--runs DIR` to supervision, each reading labelled with its source and confidence
-([contract](../contracts/evaluation.md#spectator-view-api-spectator-view1)). Its
+([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). Its
 displays inform you and gate nothing; the Pause conditions it computes are advice.
 If the page says **viewer unavailable**, the run, the frame and
 Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
