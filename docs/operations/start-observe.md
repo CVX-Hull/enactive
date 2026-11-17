@@ -38,6 +38,15 @@ interpretation of the live run and of archived runs when you pass
 `--runs DIR` to supervision, each reading labelled with its source and confidence
 ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). Its
 displays inform you and gate nothing; the Pause conditions it computes are advice.
+
+For recorded curator results, repeat `--curator-results LABEL=FILE` on the supervisor
+command, naming existing current result files or snapshots. The Curator tab selects
+those labels and displays recorded submission/restore status and versions. No source
+is selected by default; labels do not associate a journal with the live player run.
+Files are read only, with a 16 MiB input ceiling and digest-bound paging. Empty,
+unavailable, unsupported and unknown data stay explicit; publication is not factual
+verification or measured lag. See the [result contract](../contracts/evaluation.md#recorded-curator-results).
+
 If the page says **viewer unavailable**, the run, the frame and
 Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
 viewer is not restarted during a run.

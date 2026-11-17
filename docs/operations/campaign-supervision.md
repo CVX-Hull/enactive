@@ -44,6 +44,12 @@ spending or new admission. General unattended operation remains unqualified.
    ```
 
    Add `--runs DIR` to let the viewer list archived run directories beside the live run.
+   Repeat `--curator-results LABEL=FILE` to let the Curator tab read explicitly selected
+   current result journals or snapshots. Labels are unique and browser selection never
+   accepts a filesystem path. These optional arguments go only to the unsupervised
+   viewer; they do not change the frozen player package, credential routing, custody
+   or Pause. The [recorded-result contract](../contracts/evaluation.md#recorded-curator-results)
+   owns bounds, source states and snapshot identity.
 
 4. Open the exact printed gateway URL to observe play and reach Pause. The
    supervisor starts the viewer as an unsupervised child on a free loopback port; if
