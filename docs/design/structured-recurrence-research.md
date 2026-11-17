@@ -727,6 +727,23 @@ unfilled; copies cannot satisfy the diversity proposal. The
 owns the measured output and limits. #681 retains outcome-reader qualification;
 #677 can reuse the packets, while supported live integration remains #664/#457.
 
+### Visible outcome feasibility
+
+The fixed development comparison in the [feasibility record](../acceptance/2026-11-17-cdda-outcome-feasibility.md)
+**defers** an outcome-reader target: the assigned pairs show visible death and useful
+boundaries but do not support a common before/after task-progress bundle with named
+identity at the endpoint. Existing starting stock and isolated action messages do not
+establish that bundle. The parent primary remains task progress AND alive; clock and
+travel remain separate measurements. The record fixes a provisional codebook and
+retains unknowns and all assignments, not qualified labels or a final estimand.
+
+#681 needs a specified observable task, supporting positive/negative and failure
+cases, endpoint identity and genuinely independent uninspected source groups before
+reader qualification. The inspected #397, #642 and #651 cases are related development
+evidence, not independent held-out worlds. Price acquisition and independent labels
+using the existing worksheet before seeking an envelope. #677 may reuse these cases;
+this decision does not gate #457.
+
 ## Resource, evidence and delivery decisions
 
 | Boundary | Proposed allowance or decision |
