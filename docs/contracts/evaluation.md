@@ -812,35 +812,37 @@ pilot's rule above stays as it was for the sealed pilot.
   `threats` lists the blocks and their sources, the number of units counted, and that
   judge reliance.
 
-### The withholding study's sizing (`withholding-study-simulation/1`)
+### The withholding study's sizing (`withholding-study-simulation/2`)
 
-This version describes the retained study apparatus. The
-[measurement review](../acceptance/2026-11-16-experiment-measurement-review.md#concrete-sizing-discrepancy)
-identifies smoothing of structurally unscoreable units into possible simulated
-touches. Its power forecasts are not qualified for reuse in a renewed study;
-future sizing needs a coordinated input/simulator repair. Historical inputs,
-results and frozen analysis source remain unchanged.
+The [measurement audit](../acceptance/2026-11-16-experiment-measurement-review.md#concrete-sizing-discrepancy)
+identified impossible simulated touches in the previous prospective contract. This
+repair preserves the estimator and other model assumptions; it does not calibrate
+real-game power or size the recurrence proposal's future all-assigned outcome.
+Historical inputs, results and frozen analysis source remain unchanged.
 
-- `study-inputs RUN --runs PACKAGE... --out FILE` writes `withholding-study-inputs/1`
-  from a judged blind run (it reads the sealed pilot's packages): per unit the starts,
-  touched and missed counts, the raw touched share and missed share when touched (pooled
-  over arms), the same shrunk toward the pooled values with a beta prior of strength 2
-  (`(k + 2·pooled) / (n + 2)`), the pooled values, and the start-level spread as the
-  pilot computes it. It refuses packages whose unit sets differ.
+- `study-inputs RUN --runs PACKAGE... --out FILE` writes `withholding-study-inputs/2`
+  from a judged blind run. Every unit carries required boolean `exclusive_scoreable`
+  (whether its validated exclusive fact list is nonempty) and `placebo` (false for
+  `knowledge-units/1`). Exclusive fact lists and placebo flags must agree across starts.
+  The output gives counts, raw shares and shares shrunk toward pooled values using a
+  beta prior of strength 2 (`(k + 2·pooled) / (n + 2)`). A structurally empty unit
+  has zero shrunk touch and missed-when-touched shares; its raw conditional miss is
+  null. A scoreable unit with no observed touches retains the usual shrinkage.
+  Pooled touch uses all unit-starts as its denominator, including structural and placebo
+  units; pooled miss uses all touched unit-starts. Spread also uses all units. These
+  populations preserve the previous sizing calculation rather than refitting it.
 - `simulate-study --inputs FILE --price USD [--starts …] [--blocks …] [--effect 0.5]
-  [--slope-sd …] [--sims 1000] [--seed 653] [--json]` simulates studies with the inputs'
-  units (defaults: starts 10 to 100 by 10, blocks 1, 2, 3, slope SD 0, 0.5, 1). Each unit
-  is touched with its shrunk probability; a start effect on the log-odds, normal with the
-  SD that reproduces the inputs' spread, is shared by every unit of a start; a delivered
-  touched unit is missed at its baseline log-odds, a withheld one at the baseline plus
-  `log_or` plus a per-unit normal slope with the given SD. `log_or` is solved so that the
-  pooled delivered missed share is `effect` times the withheld one (0.5: delivery halves
-  misses). Each simulated study gets a fresh blocked draw and is analysed with the primary
-  test (2,000 re-draws). It refuses a block count above half the smallest number of
-  starts (every block holds at least 2), and an effect whose `log_or` it cannot solve to
-  within 1e-6 for |`log_or`| up to 10⁴. It reports power at 0.05 per grid point, the smallest number of
-  starts reaching 0.8 for each block count and slope SD, and the price at `--price` per
-  start. It is seeded and writes no file.
+  [--slope-sd …] [--sims 1000] [--seed 653] [--json]` selects only scoreable,
+  non-placebo units and reports excluded structural-empty and placebo IDs. It refuses
+  no eligible units or no positive touch probability. Defaults are starts 10 to 100 by
+  10, blocks 1, 2, 3, slope SD 0, 0.5, 1. Each unit is touched with its shrunk
+  probability; a shared start effect and a withheld per-unit slope act on miss log-odds.
+  The solved `log_or` makes the pooled delivered missed share `effect` times the
+  withheld share. Each simulated study receives a fresh blocked draw and the primary
+  test with 2,000 re-draws. It refuses block counts above half the smallest number of
+  starts and effects it cannot solve within 1e-6 at |`log_or`| up to 10⁴. It reports
+  power, smallest starts reaching 0.8, and price. It is seeded and writes no file.
+  Historical inputs and results remain frozen; unsupported input versions are rejected.
 
 ### Process measures (`process-measures/1`)
 

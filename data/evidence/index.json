@@ -1034,6 +1034,20 @@
       },
       "visibility": "private"
     },
+    "withholding-scoreability-680": {
+      "availability": "present",
+      "bytes": 209934,
+      "cited_by": [
+        "docs/acceptance/2026-11-16-withholding-scoreability-repair.md"
+      ],
+      "files": 12,
+      "manifest_sha256": "e192e23076db8098f4c1e53bc9810a89a020efb61a59479e3b3cca8cbb344d0a",
+      "note": "Finite offline structural-scoreability diagnostic with unchanged historical estimator and pooled assumptions; no model/native calls or future power qualification.",
+      "sources": {
+        "diagnostic": ".runtime/withholding-scoreability-680 from main7c6c plus repaired candidate"
+      },
+      "visibility": "private"
+    },
     "withholding-study-651": {
       "availability": "present",
       "bytes": 1765370972,

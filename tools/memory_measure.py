@@ -1789,6 +1789,10 @@ def study_inputs(run: Path, runs: Sequence[Path], out: Path) -> dict:
     by_start = {p.name: [u for u in data['units'] if u['start'] == p.name] for p in runs}
     if any({u['id'] for u in selected} != set(identities) for selected in by_start.values()):
         raise MeasureError('study inputs require the same units in every start')
+    layouts = [{u['id']: (u['fact_ids'], u.get('placebo', False)) for u in record['units']}
+               for record in data['records'].values()]
+    if any(layout != layouts[0] for layout in layouts[1:]):
+        raise MeasureError('study inputs require the same exclusive facts and placebo flags in every start')
     total_touched = sum(u['touched'] for u in data['units'])
     pooled_touch = total_touched / len(data['units']) if data['units'] else 0
     pooled_miss = sum(u['missed'] for u in data['units']) / total_touched if total_touched else 0
@@ -1796,13 +1800,15 @@ def study_inputs(run: Path, runs: Sequence[Path], out: Path) -> dict:
     for identity in identities:
         selected = [u for u in data['units'] if u['id'] == identity]
         touched, missed = sum(u['touched'] for u in selected), sum(u['missed'] for u in selected)
-        units.append(dict(id=identity, starts=len(runs), touched=touched, missed=missed,
+        scoreable, placebo = bool(layouts[0][identity][0]), layouts[0][identity][1]
+        units.append(dict(id=identity, exclusive_scoreable=scoreable, placebo=placebo,
+            starts=len(runs), touched=touched, missed=missed,
             raw=dict(touch=touched / len(runs), missed_when_touched=missed / touched if touched else None),
-            shrunk=dict(touch=(touched + 2 * pooled_touch) / (len(runs) + 2),
-                        missed_when_touched=(missed + 2 * pooled_miss) / (touched + 2))))
+            shrunk=dict(touch=(touched + 2 * pooled_touch) / (len(runs) + 2) if scoreable else 0,
+                        missed_when_touched=(missed + 2 * pooled_miss) / (touched + 2) if scoreable else 0)))
     spread = _number(float(unit_icc(np.array([sum(u['touched'] for u in us) for us in by_start.values()]),
                                   np.array([sum(u['missed'] for u in us) for us in by_start.values()]))))
-    report = dict(schema='withholding-study-inputs/1', starts=len(runs), prior_strength=2,
+    report = dict(schema='withholding-study-inputs/2', starts=len(runs), prior_strength=2,
         pooled=dict(touch=pooled_touch, missed_when_touched=pooled_miss), units=units, spread=spread,
         not_corrected=NOT_CORRECTED)
     write_json(out, report, once=True)
@@ -1817,14 +1823,36 @@ def simulate_study(inputs: Path, price: float, starts: Sequence[int] = tuple(ran
                    blocks: Sequence[int] = (1, 2, 3), effect: float = .5,
                    slope_sd: Sequence[float] = (0., .5, 1.), sims: int = 1000, seed: int = 653) -> dict:
     value = read_json(inputs)
-    if not isinstance(value, dict) or value.get('schema') != 'withholding-study-inputs/1':
-        raise MeasureError('expected withholding-study-inputs/1')
-    touch = np.array([u['shrunk']['touch'] for u in value['units']], dtype=float)
-    baseline = np.array([u['shrunk']['missed_when_touched'] for u in value['units']], dtype=float)
-    rho = value['spread']
+    if not isinstance(value, dict) or value.get('schema') != 'withholding-study-inputs/2':
+        raise MeasureError('expected withholding-study-inputs/2')
+    units = value.get('units')
+    if not isinstance(units, list):
+        raise MeasureError('simulation requires a unit list')
+    ids = set()
+    for unit in units:
+        if (not isinstance(unit, dict) or not isinstance(unit.get('id'), str) or not unit['id']
+                or unit['id'] in ids or type(unit.get('exclusive_scoreable')) is not bool
+                or type(unit.get('placebo')) is not bool or not isinstance(unit.get('shrunk'), dict)):
+            raise MeasureError('simulation requires unique unit IDs, scoreability and placebo booleans, and shrunk probabilities')
+        ids.add(unit['id'])
+        shrunk = unit['shrunk']
+        if any(type(shrunk.get(key)) not in (int, float) or not math.isfinite(shrunk[key])
+               or not 0 <= shrunk[key] <= 1 for key in ('touch', 'missed_when_touched')):
+            raise MeasureError('simulation requires finite probabilities in [0, 1]')
+        raw = unit.get('raw')
+        if not unit['exclusive_scoreable'] and (shrunk['touch'] != 0 or shrunk['missed_when_touched'] != 0
+                or unit.get('touched', 0) != 0 or unit.get('missed', 0) != 0
+                or (raw is not None and raw != dict(touch=0, missed_when_touched=None))):
+            raise MeasureError('structurally empty units require zero touched, missed and shrunk probabilities')
+    excluded = dict(structural_empty=[u['id'] for u in units if not u['exclusive_scoreable']],
+                    placebo=[u['id'] for u in units if u['placebo']])
+    eligible = [u for u in units if u['exclusive_scoreable'] and not u['placebo']]
+    touch = np.array([u['shrunk']['touch'] for u in eligible], dtype=float)
+    baseline = np.array([u['shrunk']['missed_when_touched'] for u in eligible], dtype=float)
+    rho = value.get('spread')
     if (not len(touch) or not np.isfinite(touch).all() or not np.isfinite(baseline).all()
             or np.any((touch < 0) | (touch > 1)) or np.any((baseline <= 0) | (baseline >= 1))
-            or touch.sum() == 0 or rho is None or not math.isfinite(rho) or not 0 <= rho < 1):
+            or touch.sum() == 0 or type(rho) not in (int, float) or not math.isfinite(rho) or not 0 <= rho < 1):
         raise MeasureError('simulation needs finite probabilities, interior miss probabilities, and spread in [0, 1)')
     if (sims < 1 or not math.isfinite(price) or price < 0 or not 0 < effect <= 1 or not starts or not blocks
             or any(n < 2 for n in starts) or any(b < 1 or b > min(starts) // 2 for b in blocks)
@@ -1889,7 +1917,7 @@ def simulate_study(inputs: Path, price: float, starts: Sequence[int] = tuple(ran
             passing = [r for r in rows if r['blocks'] == b and r['slope_sd'] == sd and r['power'] >= .8]
             n = min((r['starts'] for r in passing), default=None)
             minimum.append(dict(blocks=b, slope_sd=sd, starts=n, price_usd=n * price if n else None))
-    return dict(schema='withholding-study-simulation/1', inputs_sha256=file_sha256(inputs), seed=seed, sims=sims,
+    return dict(schema='withholding-study-simulation/2', excluded=excluded, inputs_sha256=file_sha256(inputs), seed=seed, sims=sims,
         draws=2000, effect=effect, price_per_start_usd=price, start_sd=start_sd, spread=rho,
         delivered_missed_share=delivered, rows=rows, minimum_starts=minimum)
 
@@ -2601,9 +2629,11 @@ def main(argv=None) -> int:
         if args.command == 'simulate-study':
             report = simulate_study(args.inputs, args.price, args.starts, args.blocks, args.effect,
                                     args.slope_sd, args.sims, args.seed)
-            print(json_text(report) if args.json else '\n'.join(
-                f"{r['starts']} starts, {r['blocks']} blocks, slope SD {r['slope_sd']}: "
-                f"power {r['power']:.3f}, ${r['price_usd']:.2f}" for r in report['rows']))
+            print(json_text(report) if args.json else '\n'.join([
+                f"Excluded structural-empty units: {', '.join(report['excluded']['structural_empty']) or 'none'}",
+                f"Excluded placebo units: {', '.join(report['excluded']['placebo']) or 'none'}",
+                *(f"{r['starts']} starts, {r['blocks']} blocks, slope SD {r['slope_sd']}: "
+                  f"power {r['power']:.3f}, ${r['price_usd']:.2f}" for r in report['rows'])]))
             return 0
         if args.command == 'simulate-withholding':
             if args.pilot:
