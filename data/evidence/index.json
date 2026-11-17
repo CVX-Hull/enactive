@@ -478,6 +478,20 @@
       },
       "visibility": "private"
     },
+    "cdda-recurrence-preparation-668": {
+      "availability": "present",
+      "bytes": 436037,
+      "cited_by": [
+        "docs/acceptance/2026-11-16-cdda-recurrence-preparation.md"
+      ],
+      "files": 13,
+      "manifest_sha256": "8bbc58680c1c3b97e3aab58f6e85985456f2107fbc9916139489304e5ba62f86",
+      "note": "No-model real-CDDA source subset and inert schema/readout/outcome preparation; proposed configured-price bounds, no acquisition, model calls, game launches or efficacy claims.",
+      "sources": {
+        "preparation": ".runtime/recurrence-preparation-668-sealed-input on main26a8ddea plus bounded candidate"
+      },
+      "visibility": "private"
+    },
     "curated-memory-adoption-463": {
       "availability": "present",
       "bytes": 441043,

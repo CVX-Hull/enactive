@@ -1,0 +1,302 @@
+{
+  "candidate": {
+    "id": "generic-records-v1",
+    "parent": null,
+    "state_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "records"
+      ],
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "body",
+              "source_ids"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "source_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "initial_state": {
+      "records": []
+    },
+    "updater": "Propose source-linked generic JSON record edits from the exposed batch.",
+    "reader": "Return relevant records with source references or unknown."
+  },
+  "worksheet": {
+    "status": "proposal only; no envelope approved",
+    "rates_per_million_usd": {
+      "input": 1,
+      "output": 5,
+      "cache_write_missing_usage_bound": 1.25
+    },
+    "arithmetic": "Missing-usage bound per request = (input cap x $1.25 + output cap x $5) / 1,000,000. Charge each admitted request including failures and retries within its cap. Requests cannot be renewed; no retry outside allocation.",
+    "acquisition": "Three preassigned normal-menu profile slots, one new world/survivor each, default game rules/difficulty. Record visible setup choices and first-play identity/time/location, then accept the first result. Each slot allows up to24 creation requests,4 save/load-check requests and2 cleanup requests (including failures). If a desired visible contrast is absent, retain the source with its actual labels and report the uncovered profile; never reroll for preferred traits. Stop on failure or allocation exhaustion; no replacements or renewal. Source setup/cleanup native and human durations and any infrastructure costs are unknown. Extra requests are outside this priced scope, not an available allowance.",
+    "profiles": [
+      "Sheltered with visibly limited supplies",
+      "Exposed and unfamiliar surroundings",
+      "Different visible capabilities or equipment"
+    ],
+    "coverage_target": [
+      "Sheltered limited supplies",
+      "Exposed unfamiliar surroundings",
+      "Different capabilities or equipment",
+      "Different visible environmental conditions",
+      "Established survivor and base",
+      "Changed location or later return"
+    ],
+    "coverage_note": "Twelve sources are a prospective coverage target only, not a sample size or authorization.",
+    "assignment": "Freeze source identity and parent, assign each independent world to all three arms with equivalent corresponding role settings; group continuations, moments and repeats within world/lineage.",
+    "estimator": "Proposed later all-assigned binary visible task-progress bundle AND alive at the finite request/wall endpoint; exact source predicates and reader qualification are frozen after feasibility, before final collection. Dead or failed-start outcomes are0 in the primary; ambiguous/censored visible outcomes remain unknown with0/1 bounds, and technical failures get a separate unknown sensitivity. Average sources equally within each profile then average profiles equally; compare arms by paired source, cluster uncertainty by entire world/lineage, nest moments/repeats within it, and include full search repeats if later claimed. Never condition on use or count copies as independent. Report displayed game-time intervals and censoring, and travel only with visible landmark/map support; no pixel-distance proxy.",
+    "calibration": "After source feasibility, #681 qualifies independent visible readers on positive, negative and unknown examples and distinguishes structural impossibility from rare zeros. Simulate the exact paired all-assigned estimator with source clustering, repeat/search variance and censoring before sizing; no old withholding power forecast. #677 reuses these packets.",
+    "current_interface": "Current fact/article publication and delivered-knowledge/1 do not carry arbitrary schemas. This is an inert research worksheet, not a scheduler or production integration.",
+    "stages": [
+      {
+        "name": "development replay",
+        "allocations": [
+          {
+            "role": "search",
+            "prompt": "Propose one generic candidate definition from development packets only; no executable code or evaluator-to-player channel. Return one candidate {id, parent, state_schema, initial_state, updater, reader}; generic initial records are required, state plus schema <=64 KiB, definitions <=16 KiB. The arm capability and development-only evidence constrain edits. Invalid proposals consume the one preparatory allowance; no replacement.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 3,
+            "derivation": "3 arms x 1 preparatory candidate each, including invalid proposals",
+            "input_tokens_per_request": 65536,
+            "output_tokens_per_request": 8192,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "player",
+            "prompt": "Given only the visible packet, objective and selected readout, choose the next ordinary input. State uncertainty; do not use evaluator results. For acquisition use the assigned normal menu once, save, reload and clean up under the finite request limit; record failures.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 27,
+            "derivation": "3 development source packets x 3 arms x 1 candidate x 3 decisions",
+            "input_tokens_per_request": 262144,
+            "output_tokens_per_request": 16384,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "curator",
+            "prompt": "Given only the visible batch and current research state, propose source-linked JSON value edits or a schema and migrated copy. Preserve uncertainty; never use evaluator results. Return {schema_edit?: {schema: JSON Schema 2020-12, migrated_state: object}, value_edits: [{id, body, source_ids}]}. Schema edits are inert JSON, never code. If editing_enabled is false, omit schema edits and update generic records. Retain contradictory alternatives and explicit unknowns. The published version and source coverage are inputs; do not invent source IDs.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 9,
+            "derivation": "3 packets x 3 arms x 1 candidate x 1 batch",
+            "input_tokens_per_request": 65536,
+            "output_tokens_per_request": 8192,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "recall",
+            "prompt": "Select relevant published records for the current query, cite source IDs and coverage, or answer unknown. Return {version, selected_record_ids, source_ids, answer, unknowns, coverage}; read only the frozen published state and the assigned query. Do not update state or infer that coverage proves validity.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 9,
+            "derivation": "3 packets x 3 arms x 1 candidate x 1 query",
+            "input_tokens_per_request": 32768,
+            "output_tokens_per_request": 4096,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "judge",
+            "prompt": "Independently label the frozen visible question positive, negative or unknown, citing visible frames; record censoring and technical failure. Return {assignment_id, question_id, label: positive|negative|unknown, source_ids, technical_failure, censoring_reason}. Inspect all assigned questions independently of candidate outputs; absent or ambiguous evidence is unknown. Do not send labels to player, curator, or retrieval.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 18,
+            "derivation": "3 packets x 3 arms x 1 candidate x 2 independent labels",
+            "input_tokens_per_request": 32768,
+            "output_tokens_per_request": 4096,
+            "wall_seconds_per_request": 300
+          }
+        ]
+      },
+      {
+        "name": "CDDA pilot",
+        "allocations": [
+          {
+            "role": "player",
+            "prompt": "Given only the visible packet, objective and selected readout, choose the next ordinary input. State uncertainty; do not use evaluator results. For acquisition use the assigned normal menu once, save, reload and clean up under the finite request limit; record failures.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 90,
+            "derivation": "3 fresh-world slots x (24 normal-menu creation + 4 save/load checks + 2 cleanup requests); failed attempts included",
+            "input_tokens_per_request": 262144,
+            "output_tokens_per_request": 16384,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "player",
+            "prompt": "Given only the visible packet, objective and selected readout, choose the next ordinary input. State uncertainty; do not use evaluator results. For acquisition use the assigned normal menu once, save, reload and clean up under the finite request limit; record failures.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 90,
+            "derivation": "3 independent sources x 3 arms x 1 frozen candidate x 10 continuation requests, final 2 reserved for ending/cleanup, no repeats",
+            "input_tokens_per_request": 262144,
+            "output_tokens_per_request": 16384,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "curator",
+            "prompt": "Given only the visible batch and current research state, propose source-linked JSON value edits or a schema and migrated copy. Preserve uncertainty; never use evaluator results. Return {schema_edit?: {schema: JSON Schema 2020-12, migrated_state: object}, value_edits: [{id, body, source_ids}]}. Schema edits are inert JSON, never code. If editing_enabled is false, omit schema edits and update generic records. Retain contradictory alternatives and explicit unknowns. The published version and source coverage are inputs; do not invent source IDs.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 9,
+            "derivation": "3 sources x 3 arms x 1 candidate x 1 batch; one sealed three-observation prefix per continuation, between admissions only",
+            "input_tokens_per_request": 65536,
+            "output_tokens_per_request": 8192,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "recall",
+            "prompt": "Select relevant published records for the current query, cite source IDs and coverage, or answer unknown. Return {version, selected_record_ids, source_ids, answer, unknowns, coverage}; read only the frozen published state and the assigned query. Do not update state or infer that coverage proves validity.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 27,
+            "derivation": "3 sources x 3 arms x 1 candidate x 3 queries",
+            "input_tokens_per_request": 32768,
+            "output_tokens_per_request": 4096,
+            "wall_seconds_per_request": 300
+          },
+          {
+            "role": "judge",
+            "prompt": "Independently label the frozen visible question positive, negative or unknown, citing visible frames; record censoring and technical failure. Return {assignment_id, question_id, label: positive|negative|unknown, source_ids, technical_failure, censoring_reason}. Inspect all assigned questions independently of candidate outputs; absent or ambiguous evidence is unknown. Do not send labels to player, curator, or retrieval.",
+            "route": {
+              "model": "openai/gpt-6.1-terra",
+              "provider": "openai",
+              "base_url": "https://openrouter.ai/api/v1",
+              "effort": "medium",
+              "service_tier": "default",
+              "pinned_provider_only": true,
+              "fallback": false
+            },
+            "requests_max": 18,
+            "derivation": "3 sources x 3 arms x 1 candidate x 2 independent labels",
+            "input_tokens_per_request": 32768,
+            "output_tokens_per_request": 4096,
+            "wall_seconds_per_request": 300
+          }
+        ]
+      }
+    ],
+    "candidate_search": "One candidate per arm including invalid proposals is priced in replay; a later allowance of up to 12 candidates per arm is not priced or authorized here. No replacement or repeat is included.",
+    "limits": "Player uses current configured 262144 input / 16384 output ($0.4096); recall 32768 / 4096 ($0.06144). Curator and search 65536 / 8192 ($0.12288), judge 32768 / 4096 ($0.06144) are proposed caps. Wall is 300 seconds per request; role/stage sums are upper bounds, not measured duration.",
+    "unpriced_components": [
+      "native/human durations and any non-provider infrastructure charges (unknown, not silently0)",
+      "larger search up to12 candidates per arm, repeats/replacements and additional profile coverage are excluded from this finite preparation; require separately priced scope",
+      "actual source-acquisition feasibility and any requests beyond fixed allocation: unsupported; stop instead of extending"
+    ],
+    "scope": "Computed model-rate bounds price two finite proposed stages separately and jointly, including all role attempts/failures/retries and reserved ending/acquisition calls. These are conservative configured-price bounds, not measured expected spend or a complete approval-ready pilot while feasibility, unqualified outcomes, unsupported arbitrary-schema live integration and non-provider costs remain unresolved. No envelope is approved; later actual pilot must narrow to current facts/articles or separately implement supported schema readout. Historical route provenance is distinct from the proposed per-role profiles.",
+    "structural_impossibility": "In later calibration declare a category structurally impossible only from the design and event definition; a zero count in finite observed samples is rare-zero evidence, not proof of impossibility.",
+    "route_facts": "Player Terra/OpenRouter pinned OpenAI medium and recall context32768 are current selected profiles; curator/search65536 and judge32768 are proposed caps, equal for corresponding roles across arms. The pinned current model metadata was verified2026-11-16; reprice the later exact admission at its time. No cheaper alternative is current."
+  },
+  "trial": {
+    "arms": [
+      "episodic-replay",
+      "fixed-recurrence",
+      "editable-representation"
+    ],
+    "paired_source_fields": [
+      "assignment_id",
+      "world_group",
+      "lineage",
+      "survivor",
+      "parent_moment",
+      "copy_group",
+      "profile",
+      "split",
+      "source_manifest_sha256",
+      "candidate_sha256",
+      "seed",
+      "role_profile_sha256",
+      "endpoint_allowance",
+      "arm_order"
+    ],
+    "reset": "Freeze initial schema/state and role prompts per independent world; start fresh model contexts, no candidate-private persistent conversation. All arms receive identical subset/archive permissions. This stand-in executes one candidate, not a model comparison.",
+    "joining": "source_id + sha256 -> proposal hash and parent research version -> publication hash + coverage -> readout version/hash + selected record IDs -> stand-in decision intent/source_ids/cites. Historical intent/hints, actual delivery and downstream action effect are unavailable; no private reasoning inferred."
+  }
+}

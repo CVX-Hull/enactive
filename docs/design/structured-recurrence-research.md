@@ -82,14 +82,15 @@ All mappings from these methods to curator agents below are **research hypothese
 
 ### Baseline and the missing connection
 
-Source and sealed-artifact review at `a3d61521` distinguishes four statuses: built,
-measured, adopted-but-pending and proposed. Current contracts/source remain the
+The initial source and artifact review used `a3d61521`; the adopted journal migration
+subsequently landed through #463 (`7c6c2469`). Distinguish built, measured and proposed.
+Current contracts/source remain the
 runtime authority; this comparison does not adopt the research design.
 
 | Part | What exists | What this research adds or must not assume |
 | --- | --- | --- |
 | Deciding player | The [Pi host](../../tools/player_host/README.md) runs a model/tool loop over visible frames, objective, conversation and basic controls. Context/handoff and original resource limits belong to the [host contract](../contracts/player-host.md). | Treat the actor's recent conversation as part of recurrent state. Extra curator memory is not the whole recurrence, and its benefit is tested with natural actor context held equal. |
-| Player-owned durable state | [Current tools](../../harness/player_tools.py) still include memory writes and bounded player-authored programs. | [#463](https://github.com/CVX-Hull/enactive/issues/463) removes those write/program paths in the adopted memory migration and adds public intent/cites/hints. This does not remove the player's immediate reasoning, ongoing objective or handoff responsibility. |
+| Player-owned durable state | [Current tools](../../harness/player_tools.py) record public intent/cites and separate fallible hints in `player-journal/1`; authored-memory/program tools are removed. | [#463](https://github.com/CVX-Hull/enactive/issues/463) implements this adopted boundary. Historical sources lack the new emissions. Immediate reasoning, ongoing objectives and summary-only handoff remain the player's responsibility. |
 | Curator | [Sessions](curator-session.md) read sealed visible trace windows and published knowledge, propose facts/articles/types, and groom the store. Sandboxing, model proxy, source references and versioned publication are built. | Reuse them for incremental learning. There is no live scheduler or hidden engine-state feed to assume. A player hint is a fallible learning lead, not an assertion automatically promoted to truth. |
 | Representation | [Gate v0](../../harness/curator/gate.py) supports typed free-text facts, articles and type metadata. [The prompt](../../tools/curator_host/prompt.md) explicitly says type fields do not add fact keys. | New type names do not demonstrate learned typed state. Explicit relation instances, identity rules, constraints and schema migrations need an experimental representation/readout and eventually the coordinated schema path in #457. |
 | Delivery | [Knowledge export](../../tools/knowledge_export.py) freezes a version for a run; [recall](../../tools/player_host/host.mjs) selects briefing/reminder entries, and delivered facts/articles can be read or queried. | Recall is a retrieval role, not a curator updating the store. Arbitrary schema data cannot silently pass through the current closed delivered-knowledge format. |
@@ -108,11 +109,10 @@ measured a fixed store on two saved moments of one lineage. Their null frozen pr
 short/censored continuations and delivery-to-action gaps motivate the new comparison.
 They neither establish nor refute the value of a continuously revising curator.
 
-Some older standing statements in ADR 009, component pages and the context design
-still describe the pre-adoption state. The [owner decision](../decisions/owner-decisions.md)
-and #463 distinguish adoption with benefit unclaimed from its pending implementation;
-#463 already owns coordinated rule alignment. Do not interpret those stale summaries
-as revoking adoption or assume the pending migration has already shipped.
+The [owner decision](../decisions/owner-decisions.md) adopts memory with benefit
+unclaimed. #463 aligns current rules and contracts for the implemented journal/hint
+boundary. Later representation, belief, live-update and execution phases remain
+proposals; this research does not adopt them.
 
 ### One system, several kinds of learned content
 
@@ -183,9 +183,9 @@ coverage stamp.
 
 The smallest coherent sequence uses existing work rather than a new stack:
 
-1. **#463:** finish the adopted ownership/tool migration, intent/hint inputs and rule
-   alignment. This implementation is already decided; it does not wait for a positive
-   recurrence study. Player reasoning/handoff and knowledge reads remain.
+1. **#463, complete:** the adopted ownership/tool migration, intent/hint inputs and rule
+   alignment are on main. No positive recurrence result was required. Player
+   reasoning/handoff and knowledge reads remain.
 2. **#668:** prepare the real-CDDA source portfolio, deterministic stand-in packets,
    candidate/readout comparison protocol and complete prices through current public
    primitives. This tests the apparatus and defines the question; substantive model
@@ -400,8 +400,9 @@ hard-coded fields in shared memory or computer-control code.
 
 ### Sources, copies, continuations and leakage
 
-The [reusable-start lifecycle](../development-runs.md#reusable-starts) can copy a
-sealed saved game and its associated player store. `tools/starts.py` supports another
+The [reusable-start lifecycle](../development-runs.md#reusable-starts) preserves a
+sealed saved game's historical source payload and prepares a fresh current journal.
+`tools/starts.py` supports another
 sealed source through `--from STUDY`; it does not generate a new survivor or world.
 Its [load evidence](../acceptance/2026-11-14-start-load-checks.md) concerns copies of one
 saved moment. The [withholding study](../acceptance/2026-11-14-withholding-study.md)
@@ -507,9 +508,8 @@ Pair arms by copied source moment; randomize/counterbalance their execution orde
 Reset memory and model session at each independent source assignment. Give each arm
 the same permitted visible setup history, initial source information and natural player
 context; only the memory treatment differs. Do not seed an inherited player store
-with an arm's earlier outputs. A legacy active store unsupported after #463 must be
-rejected or migrated through its coordinated contract; do not edit the sealed source
-or add a compatibility path. Repeated samples, saved moments and query windows remain
+with an arm's earlier outputs. Current starts prepare a fresh supported journal;
+never activate a copied legacy store or edit the sealed source. Repeated samples, saved moments and query windows remain
 nested in their source world/lineage.
 
 **Primary live outcome:** a source-specific, predeclared **visible task-progress bundle
@@ -687,6 +687,43 @@ No worker modifies `harness/`, existing host adapters, shared locks, dependencie
 production schemas. A needed change there returns to the lead as a separate decision.
 All outputs stay in an owned ignored `.runtime/` study directory; reusable sources are
 tracked normally. One-off study tooling is retired when its question is finished.
+
+### Implemented no-model preparation
+
+[`tools/recurrence_research/prepare.py`](../../tools/recurrence_research/prepare.py)
+prepares one source inventory, selected real-CDDA prefix subset, inert update/readout
+cycle, fixed-question outcome example and proposed role/price worksheet:
+
+```sh
+.venv/bin/python -m tools.recurrence_research.prepare --root "$PWD" --out .runtime/recurrence-preparation
+```
+
+The output directory must be fresh. Retained evidence is optional in a fresh checkout;
+absent sources produce an explicit unavailable packet. The selected development
+subset is three visible frames from #397's second admission, not a complete actor
+history. Historical intent/cites/hints and actual downstream readout use remain
+unknown. Source annotations are manually checked against those frames. This is a
+deterministic stand-in, not a model comparison, learned structure or a qualified
+task/survival reader.
+
+[`spec.json`](../../tools/recurrence_research/spec.json) fixes the generic candidate,
+schema/value-edit separation, paired-source metadata, role prompts and proposed
+resource allocations. The worksheet computes conservative configured-price model
+bounds, separately for replay and a nine-continuation pilot, including finite new-world
+acquisition, load/ending requests and failures. It keeps non-provider costs and source
+feasibility unknown. Extra requests, replacements, larger searches and additional
+coverage are excluded and need their own price; no balance or envelope is opened.
+These proposed prompts are inert data; no host or provider runner is added.
+
+The inventory covers retained reusable-source manifests and their source admissions.
+It hashes frozen payload maps to distinguish exact copies from changed payloads;
+neither a payload hash nor a study archive hash proves a new world. Related #397
+sources stay in one conservative cluster. Other properties remain unknown where no
+visible evidence was inspected. Three genuinely independent acquisition slots remain
+unfilled; copies cannot satisfy the diversity proposal. The
+[preparation record](../acceptance/2026-11-16-cdda-recurrence-preparation.md)
+owns the measured output and limits. #681 retains outcome-reader qualification;
+#677 can reuse the packets, while supported live integration remains #664/#457.
 
 ## Resource, evidence and delivery decisions
 
