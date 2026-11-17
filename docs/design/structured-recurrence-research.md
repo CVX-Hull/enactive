@@ -58,6 +58,14 @@ hierarchy. The [withholding study](../acceptance/2026-11-14-withholding-study.md
 confirm memory benefit, and delivery changed the set of topics touched. These are
 reasons to score all assigned episodes and to separate predictive fit from action value.
 
+The [measurement audit](../acceptance/2026-11-16-experiment-measurement-review.md)
+also identifies structurally impossible simulated events in earlier power sizing,
+unqualified positive-case readers and narrow conditional process measures. Future
+scoring must distinguish impossible from rare outcomes, qualify the specific visible
+task outcome on positive/negative/unknown examples, and group related continuations
+before uncertainty or power calculations. Reuse the common packets for these checks;
+the old sizing forecast is not a qualified sample-size recommendation for this study.
+
 | Primary source, read scope | Useful mechanism | Transfer limit |
 | --- | --- | --- |
 | Sun et al., [TTT](https://arxiv.org/html/2407.04620v2), 2024 v2, §§2.1–2.3, 2.7, 4.3 | A recurrent state can itself be a learner; update and readout are optimized in nested loops | Neural sequence learning does not establish that symbolic edits have gradients, sufficient state or useful game transfer |
