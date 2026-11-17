@@ -5,15 +5,17 @@ Portable: real Git in tmp_path repositories, no game, no provider.
 from __future__ import annotations
 
 import json
+import fcntl
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
 from harness.curator import containers, knowledge, sandbox, session
 from harness.curator.containers import Drafts, UnsafeTree, copy_tree
-from harness.curator.gate import gate
+from harness.curator.gate import gate, restore
 from harness.curator.knowledge import KnowledgeError, Repository
 
 FRAMES = {'frame-1', 'frame-2'}
@@ -73,6 +75,202 @@ def seeded(tmp_path: Path) -> Repository:
     return repo
 
 
+def test_restore_exact_v0_and_reserves_historical_identity(tmp_path):
+    repo = seeded(tmp_path)
+    before = repo.snapshot('v0')
+    result = restore(repo, expected_base='v1', target='v0')
+    assert result['status'] == 'published' and result['version'] == 'v2'
+    assert repo.snapshot('v2') == before and not (repo.path/'coverage.json').exists()
+    repeated = restore(repo, expected_base='v2', target='v0')
+    assert repeated['status'] == 'unchanged' and repeated['version'] == 'v2'
+    again = run(repo, submission(tmp_path, [dict(op='add_type', type=kind()),
+                dict(op='add_fact', fact=fact())], name='reuse', base_version='v2'))
+    assert again['status'] == 'rejected' and any('not new' in d for d in again['diagnostics'])
+
+
+def test_restore_refuses_stale_or_legacy_before_mutation(tmp_path):
+    repo = seeded(tmp_path)
+    before = snapshot(repo)
+    result = restore(repo, expected_base='v0', target='v0')
+    assert result['status'] == 'rejected' and snapshot(repo) == before
+    with (repo.state/'gate.jsonl').open('a') as log:
+        log.write('{"schema":"curator-gate/1"}\n')
+    with pytest.raises(KnowledgeError, match='unsupported active gate journal'):
+        restore(repo, expected_base='v1', target='v0')
+    with pytest.raises(KnowledgeError, match='unsupported active gate journal'):
+        session.brief(repo, 'v1', {'sessions': []}, [])
+    with pytest.raises(KnowledgeError, match='unsupported active gate journal'):
+        session.run_session(repo, [], session.SessionConfig(argv=('unused',)))
+    assert snapshot(repo) == before
+
+
+def test_restore_refuses_missing_or_unsupported_payload(tmp_path):
+    repo = seeded(tmp_path)
+    before = snapshot(repo)
+    assert restore(repo, expected_base='v1', target='v12')['status'] == 'rejected'
+    assert snapshot(repo) == before
+    repo.commit({'programs/unsupported.py': b'pass\n'}, 'unsupported program')
+    before = snapshot(repo)
+    assert restore(repo, expected_base='v2', target='v0')['status'] == 'rejected'
+    assert snapshot(repo) == before
+
+
+@pytest.mark.parametrize('files', [
+    {'knowledge.json': b'{"schema":"curator-knowledge/2","game":"foreign"}\n'},
+    {'provenance.json': b'{"frames":{"frame-1":{"order":1}}}\n'},
+    {'tests/payload': b'not a placeholder'},
+])
+def test_restore_refuses_incompatible_published_history(tmp_path, files):
+    repo = seeded(tmp_path)
+    repo.commit(files, 'incompatible history')
+    before = snapshot(repo)
+    result = restore(repo, expected_base='v2', target='v0')
+    assert result['status'] == 'rejected'
+    assert result['diagnostics'] == ['incompatible or unavailable history']
+    assert snapshot(repo) == before
+
+
+def test_restore_refuses_non_regular_snapshot_entries(tmp_path):
+    repo = seeded(tmp_path)
+    (repo.path/'tests'/'link').symlink_to('../facts.jsonl')
+    knowledge._git(repo.path, 'add', '-A')
+    knowledge._git(repo.path, 'commit', '-m', 'unsupported symlink')
+    knowledge._git(repo.path, 'tag', 'v2')
+    before = snapshot(repo)
+    result = restore(repo, expected_base='v2', target='v0')
+    assert result['status'] == 'rejected' and snapshot(repo) == before
+
+
+def test_restore_cli_accepts_only_version_selection(tmp_path):
+    repo = seeded(tmp_path)
+    result = subprocess.run([sys.executable, '-m', 'harness.curator.gate', 'restore', str(repo.path.parent),
+                             '--game', repo.game, '--expected-base', 'v1', '--target', 'v0'],
+                            capture_output=True, text=True, check=True)
+    assert json.loads(result.stdout)['status'] == 'published' and repo.published() == 'v2'
+    before = snapshot(repo)
+    refused = subprocess.run([sys.executable, '-m', 'harness.curator.gate', 'restore', str(repo.path.parent),
+                              '--game', repo.game, '--expected-base', 'v2', '--target', 'v1', '--reason', 'advice'],
+                             capture_output=True, text=True, check=False)
+    assert refused.returncode != 0 and snapshot(repo) == before
+
+
+def test_restore_respects_session_lock(tmp_path):
+    repo = seeded(tmp_path)
+    before = snapshot(repo)
+    with (repo.state/'lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(KnowledgeError, match='Another curator session'):
+            restore(repo, expected_base='v1', target='v0')
+    assert snapshot(repo) == before
+
+
+@pytest.mark.parametrize('failed_command', ['commit', 'tag'])
+def test_restore_reconciles_untagged_commit_and_reports_publication_failure(tmp_path, monkeypatch, failed_command):
+    repo = seeded(tmp_path)
+    knowledge._git(repo.path, 'commit', '--allow-empty', '-m', 'interrupted')
+    original = knowledge._git
+    def fail_publish(path, *args):
+        if args[0] == failed_command and (failed_command == 'commit' or args[-1] == 'v2'):
+            raise KnowledgeError('publication failure')
+        return original(path, *args)
+    monkeypatch.setattr(knowledge, '_git', fail_publish)
+    result = restore(repo, expected_base='v1', target='v0')
+    assert result['status'] == 'rejected' and repo.published() == 'v1'
+    assert git(repo, 'rev-parse', 'HEAD').strip() == git(repo, 'rev-parse', 'v1').strip()
+    assert (repo.path/'coverage.json').read_bytes() == repo.snapshot('v1')['coverage.json']
+    assert git(repo, 'status', '--porcelain') == ''
+
+
+def test_restore_reports_known_tag_when_result_append_fails(tmp_path, monkeypatch):
+    repo = seeded(tmp_path)
+    open_path = Path.open
+    def failing_append(path, mode='r', *args, **kwargs):
+        if path == repo.state/'gate.jsonl' and mode == 'a':
+            raise OSError('cannot append')
+        return open_path(path, mode, *args, **kwargs)
+    monkeypatch.setattr(Path, 'open', failing_append)
+    result = restore(repo, expected_base='v1', target='v0')
+    assert result['status'] == 'unknown' and result['version'] == 'v2'
+    assert repo.published() == 'v2' and repo.snapshot('v2') == repo.snapshot('v0')
+
+
+def test_restore_keeps_tag_if_tag_command_reports_failure_after_creation(tmp_path, monkeypatch):
+    repo = seeded(tmp_path)
+    original = knowledge._git
+    def tag_then_fail(path, *args):
+        value = original(path, *args)
+        if args == ('tag', 'v2'):
+            raise KnowledgeError('tag outcome reported late')
+        return value
+    monkeypatch.setattr(knowledge, '_git', tag_then_fail)
+    result = restore(repo, expected_base='v1', target='v0')
+    assert result['status'] == 'unknown' and result['version'] == 'v2'
+    assert repo.published() == 'v2' and repo.snapshot('v2') == repo.snapshot('v0')
+
+
+@pytest.mark.parametrize('operation', ['restore', 'submission'])
+def test_post_tag_lookup_failure_keeps_an_unresolved_result(tmp_path, monkeypatch, operation):
+    from tools.curator_host.shadow import verdict_summary
+    repo = seeded(tmp_path)
+    original = knowledge._git
+    failed_reads = 0
+    tagged = False
+    def uncertain_tag(path, *args):
+        nonlocal failed_reads, tagged
+        if tagged and args == ('tag', '--list', 'v*') and failed_reads < 2:
+            failed_reads += 1
+            raise KnowledgeError('temporarily unavailable tag lookup')
+        value = original(path, *args)
+        if args == ('tag', 'v2'):
+            tagged = True
+            raise KnowledgeError('tag command reported late failure')
+        return value
+    monkeypatch.setattr(knowledge, '_git', uncertain_tag)
+    if operation == 'restore':
+        result = restore(repo, expected_base='v1', target='v0')
+    else:
+        result = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('new'))],
+                                      name='new', base_version='v1'))
+    assert result['status'] == 'unknown' and result['version'] is None
+    assert verdict_summary([result])['unresolved']
+    assert repo.published() == 'v2'
+    assert git(repo, 'rev-parse', 'HEAD').strip() == git(repo, 'rev-parse', 'v2').strip()
+
+
+def test_restore_refuses_a_record_absent_from_its_claimed_publication(tmp_path):
+    repo = seeded(tmp_path)
+    record = dict(repo.records()[0], published_in='v0')
+    repo.commit({'facts.jsonl': (json.dumps(record) + '\n').encode()}, 'invalid publication reference')
+    before = snapshot(repo)
+    result = restore(repo, expected_base='v2', target='v2')
+    assert result['status'] == 'rejected' and snapshot(repo) == before
+
+
+def test_submission_reconciles_untagged_commit_before_publication(tmp_path):
+    repo = seeded(tmp_path)
+    knowledge._git(repo.path, 'commit', '--allow-empty', '-m', 'interrupted')
+    result = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('new'))],
+                                  name='new', base_version='v1'))
+    assert result['status'] == 'published' and result['version'] == 'v2'
+    assert git(repo, 'rev-parse', 'v2^').strip() == git(repo, 'rev-parse', 'v1').strip()
+
+
+def test_restored_export_preserves_ages_and_existing_delivery(tmp_path):
+    from tools.knowledge_export import export, published
+    repo = seeded(tmp_path)
+    original = published(repo.path, 'v1')
+    export(tmp_path/'frozen', original)
+    frozen = (tmp_path/'frozen'/'delivered-knowledge.json').read_bytes()
+    newer = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('f2'))],
+                                     name='newer', base_version='v1'))
+    assert newer['status'] == 'published'
+    result = restore(repo, expected_base='v2', target='v1')
+    assert result['status'] == 'published' and result['version'] == 'v3'
+    restored = published(repo.path, 'v3')
+    assert restored == dict(original, version='v3')
+    assert (tmp_path/'frozen'/'delivered-knowledge.json').read_bytes() == frozen
+
+
 def test_ensure_is_idempotent_and_starts_at_v0(tmp_path):
     repo = Repository(tmp_path / 'knowledge', 'cdda')
     assert repo.ensure() == 'v0'
@@ -93,9 +291,11 @@ def test_valid_submission_is_accepted_and_versions_are_exportable(tmp_path):
                                       {'op': 'add_fact', 'fact': fact()}],
                            from_drafts=['d1'])
     verdict = run(repo, directory)
-    assert verdict == {'schema': 'curator-gate/1', 'submission': 's1', 'session': 'sess',
-                       'accepted': True, 'base_version': 'v0', 'version': 'v1',
-                       'from_drafts': ['d1'], 'diagnostics': []}
+    operation_id = verdict['operation_id']
+    assert operation_id
+    assert {k: v for k, v in verdict.items() if k != 'operation_id'} == {'schema': 'curator-gate/2', 'operation': 'submission', 'status': 'published',
+                       'submission': 's1', 'session': 'sess', 'restored_from': None,
+                       'base_version': 'v0', 'version': 'v1', 'from_drafts': ['d1'], 'diagnostics': []}
     assert repo.published() == 'v1'
     stored = repo.facts()
     assert stored[0]['id'] == 'f1' and stored[0]['published_in'] == 'v1'
@@ -120,7 +320,7 @@ def test_stale_base_is_rejected_with_the_current_version(tmp_path):
     repo = seeded(tmp_path)
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact('f2')}]))
-    assert not verdict['accepted'] and verdict['version'] is None
+    assert not (verdict['status'] == 'published') and verdict['version'] is None
     assert any('v1' in line and 'stale' in line for line in verdict['diagnostics'])
     assert snapshot(repo) == before
 
@@ -131,7 +331,7 @@ def test_out_of_window_citation_is_rejected(tmp_path):
                {'op': 'add_fact', 'fact': fact(citations=('frame-1', 'elsewhere'))}]
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, changes))
-    assert not verdict['accepted']
+    assert not (verdict['status'] == 'published')
     assert any('elsewhere' in line for line in verdict['diagnostics'])
     assert snapshot(repo) == before
 
@@ -139,10 +339,10 @@ def test_out_of_window_citation_is_rejected(tmp_path):
 def test_unknown_type_rejected_and_accepted_when_added_in_the_submission(tmp_path):
     repo = make_repo(tmp_path)
     bad = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}]))
-    assert not bad['accepted'] and any('unknown type' in line for line in bad['diagnostics'])
+    assert not (bad['status'] == 'published') and any('unknown type' in line for line in bad['diagnostics'])
     good = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()},
                                            {'op': 'add_type', 'type': kind()}], name='s2'))
-    assert good['accepted'] and repo.published() == 'v1'
+    assert (good['status'] == 'published') and repo.published() == 'v1'
 
 
 def test_supersede_marks_the_old_fact(tmp_path):
@@ -160,29 +360,29 @@ def test_supersede_unknown_or_already_superseded_is_rejected(tmp_path):
     unknown = run(repo, submission(
         tmp_path, [{'op': 'supersede_fact', 'ids': ['nope'], 'fact': fact('f2')}],
         base_version='v1'))
-    assert not unknown['accepted'] and any('does not exist' in x for x in unknown['diagnostics'])
+    assert not (unknown['status'] == 'published') and any('does not exist' in x for x in unknown['diagnostics'])
     run(repo, submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f2')}],
                          name='s3', base_version='v1'))
     again = run(repo, submission(
         tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f3')}], name='s4',
         base_version='v2'))
-    assert not again['accepted'] and any('already superseded' in x for x in again['diagnostics'])
+    assert not (again['status'] == 'published') and any('already superseded' in x for x in again['diagnostics'])
     twice = run(repo, submission(
         tmp_path, [{'op': 'supersede_fact', 'ids': ['f2'], 'fact': fact('f4')},
                    {'op': 'supersede_fact', 'ids': ['f2'], 'fact': fact('f5')}], name='s5',
         base_version='v2'))
-    assert not twice['accepted']
+    assert not (twice['status'] == 'published')
 
 
 def test_duplicate_fact_ids_are_rejected(tmp_path):
     repo = seeded(tmp_path)
     existing = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact('f1')}],
                                     base_version='v1'))
-    assert not existing['accepted'] and any('not new' in x for x in existing['diagnostics'])
+    assert not (existing['status'] == 'published') and any('not new' in x for x in existing['diagnostics'])
     within = run(repo, submission(
         tmp_path, [{'op': 'add_fact', 'fact': fact('f9')}, {'op': 'add_fact', 'fact': fact('f9')}],
         name='s2', base_version='v1'))
-    assert not within['accepted']
+    assert not (within['status'] == 'published')
     assert repo.published() == 'v1'
 
 
@@ -190,7 +390,7 @@ def test_wrong_scope_game_is_rejected(tmp_path):
     repo = make_repo(tmp_path)
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
                                               {'op': 'add_fact', 'fact': fact(game='other')}]))
-    assert not verdict['accepted'] and any('scope game' in x for x in verdict['diagnostics'])
+    assert not (verdict['status'] == 'published') and any('scope game' in x for x in verdict['diagnostics'])
 
 
 def malformed_cases():
@@ -213,7 +413,7 @@ def test_malformed_submissions_are_rejected_and_leave_the_repository_alone(tmp_p
     repo = make_repo(tmp_path)
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, malformed_cases()[name]))
-    assert not verdict['accepted'] and verdict['diagnostics']
+    assert not (verdict['status'] == 'published') and verdict['diagnostics']
     assert snapshot(repo) == before
 
 
@@ -238,7 +438,7 @@ def test_envelope_problems_are_rejected(tmp_path):
     cases.update(oversize=huge, garbage=garbage, missing=empty)
     for name, directory in cases.items():
         verdict = run(repo, directory)
-        assert not verdict['accepted'], name
+        assert not (verdict['status'] == 'published'), name
         assert verdict['submission'] == directory.name
     assert snapshot(repo) == before
 
@@ -257,14 +457,14 @@ def test_failed_commit_leaves_published_unchanged(tmp_path, monkeypatch):
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
                                               {'op': 'add_fact', 'fact': fact()}]))
     monkeypatch.setattr(knowledge, '_git', real)
-    assert not verdict['accepted'] and verdict['version'] is None
+    assert not (verdict['status'] == 'published') and verdict['version'] is None
     assert any('forced tag failure' in x for x in verdict['diagnostics'])
     assert repo.published() == 'v0'
     assert snapshot(repo) == before
     assert repo.facts() == []
     retry = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
                                             {'op': 'add_fact', 'fact': fact()}], name='s2'))
-    assert retry['accepted'] and repo.published() == 'v1'
+    assert (retry['status'] == 'published') and repo.published() == 'v1'
 
 
 def test_gate_log_gains_one_line_per_call(tmp_path):
@@ -273,7 +473,7 @@ def test_gate_log_gains_one_line_per_call(tmp_path):
     run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}], name='s2'))
     run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}], name='s3'))
     lines = (repo.state / 'gate.jsonl').read_text().splitlines()
-    assert [json.loads(line)['accepted'] for line in lines] == [False, True, False]
+    assert [json.loads(line)['status'] for line in lines] == ['rejected', 'published', 'rejected']
     assert [json.loads(line)['submission'] for line in lines] == ['s1', 's2', 's3']
 
 
@@ -290,7 +490,7 @@ def test_the_gate_reads_neither_links_nor_special_files(tmp_path):
     os.mkfifo(fifo / 'submission.json')  # a blocking open here would hang the gate
     for directory in (linked, fifo):
         verdict = run(repo, directory)
-        assert not verdict['accepted'] and 'not a regular file' in verdict['diagnostics'][0]
+        assert not (verdict['status'] == 'published') and 'not a regular file' in verdict['diagnostics'][0]
     assert repo.published() == 'v0'
 
 
@@ -306,7 +506,7 @@ def test_pathological_json_is_rejected_not_raised(tmp_path):
                             from_drafts=['../../etc'])
     for directory in (deep, surrogate, bad_drafts):
         verdict = run(repo, directory)
-        assert not verdict['accepted'] and verdict['diagnostics'], directory.name
+        assert not (verdict['status'] == 'published') and verdict['diagnostics'], directory.name
         assert verdict['from_drafts'] == []
     assert repo.published() == 'v0'
 
@@ -321,7 +521,7 @@ def test_an_inherited_git_environment_cannot_redirect_the_repository(tmp_path, m
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]))
     monkeypatch.delenv('GIT_DIR')
     monkeypatch.delenv('GIT_WORK_TREE')
-    assert verdict['accepted'] and repo.published() == 'v1'
+    assert (verdict['status'] == 'published') and repo.published() == 'v1'
     assert subprocess.run(['git', 'tag'], cwd=other, capture_output=True, text=True).stdout == ''
 
 
@@ -499,7 +699,7 @@ def test_submission_names_cannot_add_lines_to_the_commit_message(tmp_path):
     repo = make_repo(tmp_path)
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}],
                                    name='s1\nCo-Authored-By: someone <x@example.com>'))
-    assert verdict['accepted']
+    assert (verdict['status'] == 'published')
     message = git(repo, 'log', '-1', '--format=%B')
     assert not any(line.startswith('Co-Authored-By') for line in message.splitlines())
 
@@ -541,7 +741,7 @@ def test_each_fact_rule_rejects_with_its_own_diagnostic_at_the_well_formed_stage
     before = snapshot(repo)
     bad, expected = FACT_RULES[name]
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': bad}]))
-    assert not verdict['accepted']
+    assert not (verdict['status'] == 'published')
     assert len(verdict['diagnostics']) == 1 and expected in verdict['diagnostics'][0], verdict['diagnostics']
     assert snapshot(repo) == before
 
@@ -550,7 +750,7 @@ def test_subject_is_optional_and_seen_is_the_latest_cited_position(tmp_path):
     repo = make_repo(tmp_path)
     item = without(fact(citations=['frame-2', 'frame-1']), 'subject')
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': item}]))
-    assert verdict['accepted'], verdict['diagnostics']
+    assert (verdict['status'] == 'published'), verdict['diagnostics']
     assert repo.facts()[0]['seen'] == dict(session='s1', actor='001', step=2, order=[1, '001', 2])
 
 
@@ -570,8 +770,8 @@ def test_the_gate_does_not_publish_into_a_repository_holding_facts_of_another_co
     repo = old_contract_repository(tmp_path)
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, [change()], base_version='v1'))
-    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
-    assert "published facts ['old'] are not curator-fact/3" in verdict['diagnostics'][0]
+    assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
+    assert verdict['diagnostics'] == ['publication failed: incompatible history at v1']
     assert snapshot(repo) == before and repo.published() == 'v1'
 
 
@@ -579,12 +779,12 @@ def test_the_coverage_stamp_is_published_with_the_version_and_changes_with_it(tm
     repo = make_repo(tmp_path)
     assert not (repo.path / 'coverage.json').exists()
     first = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]))
-    assert first['accepted']
+    assert (first['status'] == 'published')
     assert json.loads(git(repo, 'show', 'v1:coverage.json')) == COVERAGE
     later = {**COVERAGE, 'last_step': 40}
     second = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}], name='s2', base_version='v1'),
                  coverage=later)
-    assert second['accepted']
+    assert (second['status'] == 'published')
     assert json.loads(git(repo, 'show', 'v2:coverage.json')) == later
     assert json.loads(git(repo, 'show', 'v1:coverage.json')) == COVERAGE  # each version keeps its own
 
@@ -602,7 +802,7 @@ def test_a_submission_cannot_set_the_coverage_stamp(tmp_path, where):
     else:
         changes[1]['fact']['coverage'] = COVERAGE
     verdict = run(repo, submission(tmp_path, changes, **top))
-    assert not verdict['accepted'] and any('unexpected field' in d and 'coverage' in d for d in verdict['diagnostics'])
+    assert not (verdict['status'] == 'published') and any('unexpected field' in d and 'coverage' in d for d in verdict['diagnostics'])
     assert snapshot(repo) == before
 
 
@@ -612,7 +812,7 @@ def test_a_bad_stamp_from_the_runner_publishes_nothing(tmp_path, stamp):
     repo = make_repo(tmp_path)
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]), coverage=stamp)
-    assert not verdict['accepted'] and any('coverage' in d for d in verdict['diagnostics'])
+    assert not (verdict['status'] == 'published') and any('coverage' in d for d in verdict['diagnostics'])
     assert snapshot(repo) == before
 
 
@@ -629,14 +829,14 @@ def grooming(repo, tmp_path, changes, **kw):
 def test_supersede_merges_several_facts_and_retirement_preserves_evidence(tmp_path):
     repo = seeded(tmp_path)
     added = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact('f2')}], base_version='v1'))
-    assert added['accepted']
+    assert (added['status'] == 'published')
     merged = run(repo, submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1', 'f2'], 'fact': fact('merged')}],
                                   name='merge', base_version='v2'))
-    assert merged['accepted'], merged
+    assert (merged['status'] == 'published'), merged
     assert [f['superseded_by'] for f in repo.facts()[:2]] == ['merged', 'merged']
     retired = run(repo, submission(tmp_path, [dict(op='retire_fact', id='merged', reason='contradicted',
                                                  citations=['frame-2'])], name='retire', base_version='v3'))
-    assert retired['accepted'], retired
+    assert (retired['status'] == 'published'), retired
     assert repo.facts()[-1]['retired']['reason'] == 'contradicted'
     assert repo.facts()[-1]['retired']['citations'] == ['frame-2']
     assert 'retired' not in repo.facts('v3')[-1]
@@ -657,7 +857,7 @@ def test_merge_and_retirement_rules_are_independently_rejected(tmp_path, changes
     repo = seeded(tmp_path)
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, changes, base_version='v1'))
-    assert not verdict['accepted'] and any(expected in d for d in verdict['diagnostics']), verdict
+    assert not (verdict['status'] == 'published') and any(expected in d for d in verdict['diagnostics']), verdict
     assert snapshot(repo) == before
 
 
@@ -686,7 +886,7 @@ def test_each_article_shape_rule_rejects_on_its_own(tmp_path, name):
     repo = seeded(tmp_path)
     value, expected = ARTICLE_RULES[name]
     verdict = grooming(repo, tmp_path, [dict(op='add_article', article=value)])
-    assert not verdict['accepted']
+    assert not (verdict['status'] == 'published')
     assert len(verdict['diagnostics']) == 1 and expected in verdict['diagnostics'][0], verdict
 
 
@@ -695,14 +895,14 @@ def test_article_citations_links_and_last_confirmed_resolve_the_final_snapshot(t
     verdict = grooming(repo, tmp_path, [dict(op='add_fact', fact=fact('f2', citations=['frame-2'])),
                                        dict(op='add_article', article=article(links=['Other'])),
                                        dict(op='add_article', article=article('a2', 'Other', ['f1', 'f2']))])
-    assert verdict['accepted'], verdict
+    assert (verdict['status'] == 'published'), verdict
     assert repo.articles()[1]['last_confirmed']['step'] == 2
     assert all(r['schema'] == 'curator-fact/3' for r in repo.records())
     # Replace both articles together; neither stale citations nor incoming links survive.
     verdict = grooming(repo, tmp_path, [dict(op='supersede_fact', ids=['f1', 'f2'], fact=fact('merged')),
                                        dict(op='revise_article', id='a1', article=article('a3', 'Combined', ['merged'])),
                                        dict(op='retire_article', id='a2', reason='merged')], name='revise')
-    assert verdict['accepted'], verdict
+    assert (verdict['status'] == 'published'), verdict
     assert repo.articles()[0]['superseded_by'] == 'a3'
     assert repo.articles()[1]['retired']['reason'] == 'merged'
 
@@ -718,17 +918,17 @@ def test_each_article_reference_and_filing_rule_rejects(tmp_path, changes, expec
     repo = seeded(tmp_path)
     before = snapshot(repo)
     verdict = grooming(repo, tmp_path, changes)
-    assert not verdict['accepted'] and any(expected in d for d in verdict['diagnostics']), verdict
+    assert not (verdict['status'] == 'published') and any(expected in d for d in verdict['diagnostics']), verdict
     assert snapshot(repo) == before
 
 
 def test_retired_and_superseded_facts_cannot_support_current_articles(tmp_path):
     repo = seeded(tmp_path)
-    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())])['accepted']
+    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())])['status'] == 'published'
     for name, change in [('retire', dict(op='retire_fact', id='f1', reason='x', citations=['frame-1'])),
                          ('replace', dict(op='supersede_fact', ids=['f1'], fact=fact('f2')))]:
         verdict = run(repo, submission(tmp_path, [change], name=name, base_version='v2'))
-        assert not verdict['accepted'] and any("fact 'f1' is not current" in d for d in verdict['diagnostics']), verdict
+        assert not (verdict['status'] == 'published') and any("fact 'f1' is not current" in d for d in verdict['diagnostics']), verdict
     # The fact itself stays current because both rejected publications were atomic.
     assert 'retired' not in repo.facts()[0]
 
@@ -736,10 +936,10 @@ def test_retired_and_superseded_facts_cannot_support_current_articles(tmp_path):
 def test_removing_a_link_target_requires_repairing_incoming_links(tmp_path):
     repo = seeded(tmp_path)
     assert grooming(repo, tmp_path, [dict(op='add_article', article=article(links=['Other'])),
-                                     dict(op='add_article', article=article('a2', 'Other'))])['accepted']
+                                     dict(op='add_article', article=article('a2', 'Other'))])['status'] == 'published'
     verdict = run(repo, submission(tmp_path, [dict(op='retire_article', id='a2', reason='x')],
                                    name='retire', base_version='v2'))
-    assert not verdict['accepted'] and any('does not resolve' in d for d in verdict['diagnostics'])
+    assert not (verdict['status'] == 'published') and any('does not resolve' in d for d in verdict['diagnostics'])
 
 
 def test_every_type_revision_publishes_a_new_version_and_keeps_current_types(tmp_path):
@@ -758,7 +958,7 @@ def test_every_type_revision_publishes_a_new_version_and_keeps_current_types(tmp
             changes += [dict(op='retire_fact', id='f1', reason='contradicted', citations=['frame-1']),
                         dict(op='retire_article', id='a1', reason='no current evidence')]
         verdict = grooming(repo, tmp_path, changes, name=f'revision-{revision["action"]}')
-        assert verdict['accepted'] and verdict['version'] == f'v{index + 2}', verdict
+        assert (verdict['status'] == 'published') and verdict['version'] == f'v{index + 2}', verdict
     assert repo.types() == [] and repo.types('v1') == [kind()]
     assert repo.facts('v3')[0]['type'] == 'observed'
 
@@ -783,7 +983,7 @@ def test_every_type_revision_publishes_a_new_version_and_keeps_current_types(tmp
 def test_each_type_revision_rule_rejects(tmp_path, revision, expected):
     repo = seeded(tmp_path)
     verdict = grooming(repo, tmp_path, [dict(op='revise_types', **revision), dict(op='add_article', article=article())])
-    assert not verdict['accepted'] and any(expected in d for d in verdict['diagnostics']), verdict
+    assert not (verdict['status'] == 'published') and any(expected in d for d in verdict['diagnostics']), verdict
 
 
 def test_type_revisions_need_grooming_and_separate_versions(tmp_path):
@@ -791,9 +991,9 @@ def test_type_revisions_need_grooming_and_separate_versions(tmp_path):
     revision = dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('renamed')],
                     assignments={'f1': 'renamed'})
     verdict = run(repo, submission(tmp_path, [revision], base_version='v1'))
-    assert not verdict['accepted'] and verdict['diagnostics'] == ['changes[0]: type revisions require a grooming session']
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ['changes[0]: type revisions require a grooming session']
     verdict = grooming(repo, tmp_path, [revision, revision], name='twice')
-    assert not verdict['accepted'] and verdict['diagnostics'] == ['submission: each type revision needs its own published version']
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ['submission: each type revision needs its own published version']
 
 
 
@@ -802,7 +1002,7 @@ def test_bad_frame_provenance_with_an_article_rejects_before_deriving_confirmati
     changes = [dict(op='add_type', type=kind()), dict(op='add_fact', fact=fact(citations=['outside'])),
                dict(op='add_article', article=article())]
     verdict = run(repo, submission(tmp_path, changes))
-    assert not verdict['accepted']
+    assert not (verdict['status'] == 'published')
     assert verdict['diagnostics'] == ["changes[1]: citation 'outside' is outside the trace window"]
     assert repo.published() == 'v0'
 
@@ -811,7 +1011,7 @@ def test_bad_frame_provenance_with_an_article_rejects_before_deriving_confirmati
 def test_required_article_fields_are_individually_checked(tmp_path, field):
     repo = seeded(tmp_path)
     verdict = grooming(repo, tmp_path, [dict(op='add_article', article=without(article(), field))])
-    assert not verdict['accepted'] and verdict['diagnostics'] == [f"changes[0].article: missing field '{field}'"]
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == [f"changes[0].article: missing field '{field}'"]
 
 
 @pytest.mark.parametrize('op', ['revise_article', 'retire_article'])
@@ -820,7 +1020,7 @@ def test_article_operations_require_a_current_article_target(tmp_path, op):
     change = dict(op=op, id='f1')
     change.update(article=article()) if op == 'revise_article' else change.update(reason='x')
     verdict = run(repo, submission(tmp_path, [change], base_version='v1'))
-    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[0]: article 'f1' does not exist"]
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[0]: article 'f1' does not exist"]
 
 
 def test_ontology_revision_cannot_reuse_another_current_type_name(tmp_path):
@@ -829,7 +1029,7 @@ def test_ontology_revision_cannot_reuse_another_current_type_name(tmp_path):
                dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('existing')],
                     assignments={'f1': 'existing'}), dict(op='add_article', article=article())]
     verdict = grooming(repo, tmp_path, changes)
-    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[1]: type 'existing' already exists"]
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[1]: type 'existing' already exists"]
 
 
 @pytest.mark.parametrize('citations', [['frame-1', 'frame-2'], ['frame-1', 'frame-2', 'current']])
@@ -838,16 +1038,16 @@ def test_grooming_merge_inherits_older_evidence_and_uses_its_recorded_seen(tmp_p
     changes = [dict(op='add_type', type=kind()),
                dict(op='add_fact', fact=fact('f1')),
                dict(op='add_fact', fact=fact('f2', citations=['frame-2']))]
-    assert run(repo, submission(tmp_path, changes, name='older'))['accepted']
+    assert run(repo, submission(tmp_path, changes, name='older'))['status'] == 'published'
     positions = {'current': dict(session='s2', actor='001', step=1, order=[2, '001', 1])}
     stamp = {**COVERAGE, 'session': 's2'}
     assert gate(repo, submission(tmp_path, [dict(op='add_type', type=kind('new'))], name='latest', base_version='v1'),
-                session_id='latest', window_frames=positions, coverage=stamp, session_kind='admission')['accepted']
+                session_id='latest', window_frames=positions, coverage=stamp, session_kind='admission')['status'] == 'published'
     changes = [dict(op='supersede_fact', ids=['f1', 'f2'], fact=fact('merged', citations=citations)),
                dict(op='add_article', article=article(facts=['merged']))]
     verdict = gate(repo, submission(tmp_path, changes, name='merge', base_version='v2'), session_id='groom',
                    window_frames=positions, coverage=stamp, session_kind='grooming')
-    assert verdict['accepted'], verdict
+    assert (verdict['status'] == 'published'), verdict
     expected = positions['current'] if 'current' in citations else repo.provenance()['frames']['frame-2']
     assert repo.facts()[-1]['seen'] == expected
     assert repo.articles()[0]['last_confirmed'] == expected
@@ -858,11 +1058,11 @@ def test_replacement_cannot_inherit_unrelated_citations_or_inherit_during_admiss
     repo = make_repo(tmp_path)
     assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind()), dict(op='add_fact', fact=fact()),
                                           dict(op='add_fact', fact=fact('other', citations=['unrelated']))], name='seed'),
-               frames={'frame-1', 'unrelated'})['accepted']
+               frames={'frame-1', 'unrelated'})['status'] == 'published'
     changes = [dict(op='supersede_fact', ids=['f1'], fact=fact('replacement', citations=[citation])),
                dict(op='add_article', article=article(facts=['replacement', 'other']))]
     verdict = run(repo, submission(tmp_path, changes, base_version='v1'), frames={'current'}, session_kind=session_kind)
-    assert not verdict['accepted']
+    assert not (verdict['status'] == 'published')
     assert len(verdict['diagnostics']) == 1 and f"citation {citation!r} is outside" in verdict['diagnostics'][0]
 
 
@@ -872,7 +1072,7 @@ def test_retype_assignments_require_a_source_type_and_a_surviving_fact(tmp_path,
     if removal == 'unrelated-type':
         assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind('other')),
                                               dict(op='add_fact', fact=fact('f2', type_name='other'))],
-                                   name='extra', base_version='v1'))['accepted']
+                                   name='extra', base_version='v1'))['status'] == 'published'
         assignments, facts = {'f1': 'renamed', 'f2': 'renamed'}, ['f1', 'f2']
         changes, expected = [], 'type outside names before the revision'
     else:
@@ -887,7 +1087,7 @@ def test_retype_assignments_require_a_source_type_and_a_surviving_fact(tmp_path,
     if facts:
         changes.append(dict(op='add_article', article=article(facts=facts)))
     verdict = grooming(repo, tmp_path, changes)
-    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
+    assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
     assert expected in verdict['diagnostics'][0], verdict
 
 
@@ -905,13 +1105,13 @@ def test_retyping_records_software_history_and_preserves_prior_versions(tmp_path
     assert len(repo.facts('v2')[0]['retyped']) == 1
     verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('forged', type_name='observed', retyped=[]))],
                                    name='forged', base_version='v3'))
-    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[0].fact: unexpected field 'retyped'"]
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[0].fact: unexpected field 'retyped'"]
 
 
 def test_article_cannot_link_to_itself(tmp_path):
     repo = seeded(tmp_path)
     verdict = grooming(repo, tmp_path, [dict(op='add_article', article=article(links=['A subject']))])
-    assert not verdict['accepted'] and verdict['diagnostics'] == ["article 'a1': link to itself is not allowed"]
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["article 'a1': link to itself is not allowed"]
 
 
 @pytest.mark.parametrize('first, second', [('retire_article', 'retire_article'), ('retire_article', 'revise_article'),
@@ -919,27 +1119,27 @@ def test_article_cannot_link_to_itself(tmp_path):
 @pytest.mark.parametrize('same_submission', [True, False])
 def test_article_target_cannot_be_changed_twice_or_after_retirement(tmp_path, first, second, same_submission):
     repo = seeded(tmp_path)
-    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['accepted']
+    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['status'] == 'published'
     def change(op, identity):
         return dict(op=op, id='a1', **(dict(reason='no longer useful') if op == 'retire_article' else
                                       dict(article=article(identity, title=identity))))
     changes = [change(first, 'a2'), change(second, 'a3')]
     if not same_submission:
-        assert run(repo, submission(tmp_path, changes[:1], name='first', base_version='v2'))['accepted']
+        assert run(repo, submission(tmp_path, changes[:1], name='first', base_version='v2'))['status'] == 'published'
         changes = changes[1:]
     verdict = run(repo, submission(tmp_path, changes, name='again', base_version=repo.published()))
-    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
+    assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
     assert 'already superseded or retired' in verdict['diagnostics'][0]
 
 
 @pytest.mark.parametrize('op', ['retire_fact', 'supersede_fact'])
 def test_fact_operations_cannot_target_articles(tmp_path, op):
     repo = seeded(tmp_path)
-    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['accepted']
+    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['status'] == 'published'
     change = dict(op=op, **(dict(id='a1', reason='x', citations=['frame-1']) if op == 'retire_fact' else
                             dict(ids=['a1'], fact=fact('f2'))))
     verdict = run(repo, submission(tmp_path, [change], base_version='v2'))
-    assert not verdict['accepted'] and verdict['diagnostics'] == ["changes[0]: fact 'a1' does not exist"]
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[0]: fact 'a1' does not exist"]
 
 
 @pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/3', None])
@@ -952,7 +1152,7 @@ def test_repository_refuses_other_layout_schemas_for_every_reader_and_writer(tmp
         with pytest.raises(KnowledgeError, match='expected curator-knowledge/2; start a new repository'):
             action()
     verdict = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())], base_version='v1'))
-    assert not verdict['accepted'] and 'start a new repository' in verdict['diagnostics'][0]
+    assert not (verdict['status'] == 'published') and 'start a new repository' in verdict['diagnostics'][0]
     assert snapshot(repo) == before
 
 
@@ -1002,8 +1202,8 @@ def test_inherited_citations_require_recorded_frame_positions(tmp_path):
     verdict = run(repo, submission(tmp_path, [dict(op='supersede_fact', ids=['f1'], fact=fact('replacement')),
                                              dict(op='add_article', article=article(facts=['replacement']))],
                                    base_version='v2'), frames=set(), session_kind='grooming')
-    assert not verdict['accepted'] and verdict['diagnostics'] == [
-        "changes[0]: inherited citation 'frame-1' has no recorded provenance"]
+    assert verdict['status'] == 'rejected' and verdict['diagnostics'] == [
+        'publication failed: incompatible history at v2']
 
 
 def test_grooming_without_a_configured_brief_aborts_before_host_start(tmp_path, monkeypatch):
@@ -1014,7 +1214,7 @@ def test_grooming_without_a_configured_brief_aborts_before_host_start(tmp_path, 
     citation = frame_id(1, 1)
     assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind()),
                                           dict(op='add_fact', fact=fact(citations=[citation]))]),
-               frames={citation})['accepted']
+               frames={citation})['status'] == 'published'
     started = []
     def forbidden(*args, **kwargs):
         started.append(True)
@@ -1042,7 +1242,7 @@ def test_unreadable_knowledge_metadata_is_an_unsupported_schema_and_gate_rejecti
         with pytest.raises(KnowledgeError, match='unsupported knowledge schema:.*start a new repository'):
             read()
     verdict = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())], base_version='v1'))
-    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
+    assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
     assert 'unsupported knowledge schema:' in verdict['diagnostics'][0]
     assert 'start a new repository' in verdict['diagnostics'][0]
     assert snapshot(repo) == before
@@ -1059,5 +1259,5 @@ def test_grooming_citation_diagnostic_mentions_replaced_facts_only_for_supersedi
             change['ids'] = ['f1']
     verdict = grooming(repo, tmp_path, [change])
     suffix = ' and the replaced facts' if op == 'supersede_fact' else ''
-    assert not verdict['accepted'] and verdict['diagnostics'] == [
+    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == [
         "changes[0]: citation 'outside' is outside the trace window" + suffix]
