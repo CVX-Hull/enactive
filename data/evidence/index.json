@@ -691,6 +691,20 @@
       },
       "visibility": "private"
     },
+    "post-adoption-backlog-grooming": {
+      "availability": "present",
+      "bytes": 3859687,
+      "cited_by": [
+        "docs/acceptance/2026-11-16-post-adoption-backlog-grooming.md"
+      ],
+      "files": 55,
+      "manifest_sha256": "4d71bcb1997df9b3343af0a2dc8ce68eb51d27fea9e64966d051ee3d273ae70b",
+      "note": "Full backlog before/after snapshots, two reviewed Ready briefs, native relations, verification and scoped cleanup inventory. No runtime implementation or provider spend. Duplicate original snapshot folder is retired only after full evidence hash verification; saves, builds, shared dependencies and all sealed evidence are retained.",
+      "sources": {
+        "tracker": ".runtime/backlog-grooming-after-adoption, base fa1bc4ad2857f611169dd85ad9f9255cd420aca9"
+      },
+      "visibility": "private"
+    },
     "process-measures-620": {
       "availability": "present",
       "bytes": 161736263,
