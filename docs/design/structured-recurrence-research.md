@@ -27,9 +27,10 @@ structure. More types, shorter notes and plausible explanations are not success.
 - Compare **replay**, **fixed recurrence**, and **representation search** under the
   same resource ceilings, with an editing-disabled ablation for a structure-specific
   claim. Charge unsuccessful search and report actual usage as well as allowances.
-- Engineering agents build and audit the study. A bounded model instance performs
-  candidate generation or recurrent updates. An isolated evaluator scores it. None
-  gains gameplay custody or hidden-state access.
+- The gameplaying player chooses actions; its curator updates fallible memory, and a
+  slower curator mode proposes structural revisions. Retrieval turns that state into
+  usable advice. The independent evaluator scores outcomes without feeding answers
+  into those roles. The curator and retrieval service hold no input custody.
 - This is an alternative research path alongside the existing memory design. It does
   not revise the adopted memory direction, choose a belief calculus, enable the context
   cut, or introduce live curation. Current contracts remain authoritative.
@@ -209,6 +210,33 @@ and claims that an agent “understands” do not establish emergence.
 
 ## Experiment sequence and stopping decisions
 
+### What testing without real games establishes
+
+There are three distinct questions. The **no-model fixture** tests packet construction,
+reset, update validation, the editing-disabled fallback and scoring/accounting. It
+tests our apparatus, not model learning. The **controlled-game model trial** runs the
+player, curator and retrieval loop against a small interactive environment. It can
+test a named memory mechanism with known counterexamples. **Real-game play** tests
+whether that mechanism earns its cost amid perception, exploration, menus and long
+histories. A positive answer to either earlier question cannot answer the last one.
+
+For example, a diagnostic shows a cue, introduces unrelated observations, and later
+offers choices whose consequences depend on the cue. Paired worlds have the same
+recent view but different earlier cues. Another variant changes the rule and supplies
+visible counterevidence. The learner receives observations and ordinary trial actions;
+only the evaluator knows the generating state. Measure actual task choices, advance
+predictions and revisions. A successful stand-in only verifies scoring; a successful
+model still establishes only this diagnostic mechanism.
+
+These tests are cheap and interpretable but can favor the representational primitives
+we chose when designing them. Keep their scope small. After packet feasibility, price
+an **early development real-game integration pilot** through #291 as well as the
+controlled model pilot. It need not wait for the full generated screen. That pilot
+tests the same player/curator loop, delivery lag and useful readouts on a development
+game; it supplies no final transfer result and does not expose the final target games.
+Both pilots still require frozen packages and their own priced admission. The $20
+controlled-pilot proposal below does not cover a real-game run.
+
 ### Fixture and measurement feasibility: no model or game launch
 
 Build a minimal, project-local diagnostic package. It renders finite observation games
@@ -330,16 +358,38 @@ semantics enter the shared computer harness. Keep natural player context/handoff
 rules the same in every arm; do not silently introduce the deferred context cut to
 make the memory comparison easier.
 
-A proposed split is CDDA development, **NetHack** integration/selection, and untouched
-**Brogue Community Edition** and **Dungeon Crawl Stone Soup** targets. These are
-candidates, not chosen installations or qualified ports: source/build/license,
-windowed rendering, basic-input control and reset/seed feasibility are checked first.
-Official repositories were inspected on 16 November 2026:
-[NetHack](https://github.com/NetHack/NetHack), [Brogue CE](https://github.com/tmewett/BrogueCE),
-[DCSS](https://github.com/crawl/crawl). Related variants of the same engine, such as
-NetHack tasks in MiniHack, do not count as independent real-game codebases. Broader
-puzzle/survival benchmarks may be diagnostics; this proposal does not expand the
-charter's supported game class.
+Choose games for **different structural demands**, not just independent engines.
+NetHack, Brogue CE and DCSS remain useful within-class candidates, but a portfolio of
+only dungeon crawlers is weak evidence for broad representational discovery. The
+following shortlist uses developer/project descriptions read on **16 November 2026**;
+the proposed representation demands are our hypotheses, not demonstrated agent results.
+
+| Candidate and primary source | Different demand to investigate | Research placement / practical issue |
+| --- | --- | --- |
+| [Caves of Qud](https://www.cavesofqud.com/) | Body/mutation changes, faction relations and interacting physical/social systems | Persistent roguelike contrast within the current class; commercial build, visibility and reset feasibility need checking |
+| [Slay the Spire](https://store.steampowered.com/app/646570/Slay_the_Spire/) | Deck/relic interactions, conditional effects, changing composition and risk over a run | Turn-based deckbuilder contrast; possible class adjacency must be decided explicitly, not inferred from its roguelike label; commercial build |
+| [Baba Is You](https://hempuli.com/baba/) | Rules are manipulable objects; track scope and consequences as rules change | Broader puzzle research candidate; short level horizons may reward immediate reasoning rather than recurrence, so include memory-light controls |
+| [The Battle for Wesnoth](https://github.com/wesnoth/wesnoth) | Multiple agents/units, terrain-dependent relations and persistent campaign resources | Broader tactical-strategy research candidate; open source, but multi-unit UI and scenario scoring need feasibility work |
+| [OpenTTD](https://www.openttd.org/about) | Transport networks, conditional orders and delayed economic consequences | Broader simulation research candidate; open source, with time progression and a substantial UI as additional confounds |
+| [Crafter](https://github.com/danijar/crafter) | Resource dependencies, survival and tool progression in a smaller visual world | Useful benchmark bridge; its Gym API is not evidence for ordinary computer control; qualify its GUI separately |
+
+A useful broad research portfolio would combine survival, deck construction, rule
+manipulation and either multi-unit tactics or transport networks. This is a shortlist
+for a priced feasibility decision, not four simultaneous installations. The current
+charter covers persistent turn-based survival/roguelike games; listing broader research
+candidates does not amend that product scope or admit their runs. #291 continues to
+own the in-class second-game port. A broader research track needs an explicit scope
+and game/build/task decision before implementation or play; it may yield research
+findings without qualifying production support.
+
+The final protocol chooses development/selection games and at least two untouched
+target codebases from the admitted portfolio, recording which mechanics each adds.
+Related tasks in one engine (for example MiniHack and NetHack) do not count as two
+independent games. Freeze tasks as well as games: success on a fully visible puzzle
+can be evidence against needing memory, not a reason to invent hidden information.
+Existing LLM game knowledge and memorized levels are confounds. Keep the backbone
+fixed, record prior instructions/knowledge, use new configurations or appropriately
+held-out content where feasible, and do not call the result discovery from scratch.
 
 Use a selection-game pilot of three paired starts to test native reliability, reset
 and scoring. Then price and power a comparison of the selected search learner and the
@@ -355,33 +405,99 @@ not increase the number of independent games. If only one new game is feasible, 
 a single-game pilot and stop short of the cross-game research claim. No native run or
 second game is authorized by this proposal.
 
-## Practical operation with our agents
+## Practical operation inside the gameplaying system
 
-### Logical roles and information flow
+### Player, curator and retrieval loop
 
-| Role | Inputs and outputs | Authority and limits |
+These are **gameplaying responsibilities**, not development-agent assignments or a
+requirement for a separate model process per box. The initial research configuration
+uses one deciding player and one logical curator writer. Retrieval can be a bounded
+curator/read call using the existing recall design. The slower proposer is a mode of
+the curator, not a second actor with game control.
+
+```text
+visible observations + delivered-action receipts
+        |                         |
+        v                         v
+   deciding player <--- readout --- curator state M, schema S, version v
+        |                            ^
+        | basic input                | update / revise from visible evidence
+        v                            |
+       game -------- new observations+
+
+slower curator mode: propose S', migrate a copy, check visible-prefix predictions,
+                    publish one complete version or retain the current version
+independent evaluator: score sealed outputs; no return path to gameplaying agents
+```
+
+| Gameplay responsibility | Inputs and outputs | Learning / authority boundary |
 | --- | --- | --- |
-| Engineering lead | Research brief, source, costs, integration and final evidence | Sole integrator, native scheduler and admission owner; never supplies gameplay tactics |
-| Explorer | Bounded source/research or artifact inventory | Read-only; no game input or study-model spending |
-| Implementation workers | Disjoint study-runner and candidate/scorer paths in separate worktrees | At most two; no shared native runtime, provider key or environment changes |
-| Candidate proposer | Training-visible prefixes and generic representation language; emits candidate artifact | No hidden fixture state, final outcomes or live game access; every proposal charged |
-| Research curator/updater | Prior state and current visible batch; emits new state/schema or typed edit | One logical writer per trial; fallible; no evaluator imports or custody |
-| Reader and fixed actor | Query/current observations, frozen objective and bounded memory readout | Actor decides actions through the current port in real play; updater/reader never send input |
-| Evaluator and independent reviewer | Sealed assignments, outputs and later outcomes | Score after the prefix/episode; no final labels returned to player or curator |
+| Deciding player | Current view, ongoing objective, recent history and retrieved memory; chooses basic input and may ask a memory question | Owns all real game actions and tactics; may choose an informative action when worthwhile, but no curator request forces one |
+| Curator: recurrent update | Previous state/schema and newly available player-visible observations/action receipts; emits cited revisions and uncertainty | Learns an episode/world model and mechanics hypotheses from observed effects; no saves, engine facts or evaluator labels |
+| Curator: slower representation search | Its visible-evidence archive, unresolved contradictions, retrieval misses and predictions compared with later visible outcomes | Proposes split/merge/new relation or update/read rules within the frozen language and allowance; no arbitrary generated-code execution |
+| Retrieval/readout | Player query/objective, published memory version and recent context | Returns relevant claims, supports, applicability, unknowns and coverage; can be the same curator model, not an obligatory extra agent |
+| Independent evaluator | Sealed trial outputs and later outcomes | Reports research scores outside the playing system; never teaches the operating curator with judge answers |
 
-The **outer research selector** is an engineering function: it ranks generic candidate
-algorithms using training/selection scores. Final outcome scores are opened only after
-all final outputs are sealed. It never sends judge facts, hidden state or task-specific
-answer keys into a playing agent. Giving an operating curator access to evaluator
-labels would be a different boundary and is outside this proposal. Current
+The curator can propose representations for current episode state, reusable mechanics,
+or ongoing work, but these are example uses, not mandatory game-specific slots. A
+useful distinction may be an entity relation in one game, a conditional rule in another,
+or simply a well-maintained record. The reader and the player must be able to consume
+what is learned: a schema that only its author can interpret has not improved play.
+
+**One update cycle.** The player observes and acts. The curator receives the delivered
+prefix, revises values and explicitly records hypotheses about later observations.
+When the corresponding visible outcome arrives, the curator can compare it with its
+prediction and revise its own hypotheses. This is ordinary learning from game feedback,
+not access to the independent evaluator. An unexpected observation or an unanswerable
+query can motivate a structural proposal. The curator migrates a scratch copy, checks
+its references and revisits visible-prefix examples, then publishes the whole version
+atomically. A failed migration leaves the prior published version usable; it is still
+charged as an unsuccessful proposal and follows the frozen invalid-candidate/ending
+rule, without silent repair. Retrospective fit is not held-out evidence.
+
+**Two learning timescales.** Episode state and its schema can adapt online under
+the frozen learner's policy; generic updater/reader/search-policy configuration changes
+only on development data through the outer research selector. A final game's visible
+feedback may change its own memory, but never its prompt/configuration in response to
+final judge scores. Reset to frozen initial bytes for independent final worlds. A
+later continual-learning study would explicitly test carrying generic operations
+across games; it must separate reusable operations from game-specific facts and price
+order effects. That is a different condition from this reset-based transfer test.
+Online rule proposals are state data in M/S, interpreted by the same frozen updater
+and reader within the admitted grammar. They do not rewrite host prompts, tool
+permissions, budgets or the generic interpreter. Searching those generic updater/reader
+definitions is the outer development loop, not unbounded self-modification in play.
+
+### Delivery cadence and staged integration
+
+Start in controlled games with the declared three-observation curator cadence and a
+readout at each player decision. The player is identical across arms; its memory path
+changes. Query, observation, token and cost permissions are equal. Tests include a
+stale memory read, failed edit, contradicted mechanics hypothesis and a query whose
+answer remains unknown, followed by an actual player decision.
+
+For the first real-game integration, keep existing admitted session boundaries: curate
+a sealed development prefix between finite admissions and deliver the published version
+to the next player. That tests persistent learning and usability, **not** online
+recurrence within an admission. The within-admission updater/scheduler remains proposed
+work through #664 and the appropriate schema path; this research document does not
+turn the existing fixed fact/article gate into an arbitrary-schema runtime.
+
+When a live research integration is separately built and admitted, it should publish
+source coverage/version with each readout and measure update-to-use lag. The player
+continues with recent observations and available fallible memory while a slow curator
+works; curator delay cannot silently become a context cut or a second input writer.
+Do not treat an inter-admission result as evidence that this live loop works.
+
+The outer selector ranks generic candidate algorithms with development/selection
+scores; final outcomes are opened only after outputs are sealed. Current
 [ADR 008](../decisions/008-evaluation-and-spectator.md) isolation remains in force.
-
-For no-spend document/fixture work, use our coding agents. For measured model arms,
-use the same explicitly pinned model/provider/effort and bounded host profile. A fresh
-agent's prior conversation, repository access or private reasoning must not become an
-unaccounted memory channel. Host agents without comparable usage or model identity
-can help develop examples but cannot establish matched-cost model superiority. “No
-new provider bill” is not zero compute or quota consumption.
+Measured roles use explicitly pinned model/provider/effort profiles, equal across arms
+for each corresponding role; they need not all use the same model. Charge player,
+curator, retrieval and search requests, including failed proposals. No private LLM
+conversation or repository tools become an unaccounted memory channel. Development
+agents only implement and review these interfaces under S-AGENT; their workflow does
+not constitute the agent architecture under test.
 
 ### Minimal research interface and artifact ownership
 
