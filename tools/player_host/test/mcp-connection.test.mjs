@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join, resolve } from 'node:path';
+import { mkdtemp, rm, readdir, mkdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { deliveryScenario } from './delivery-scenario.mjs';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { createHash } from 'node:crypto';
@@ -17,11 +20,20 @@ test('frozen MCP config rejects disabled and malformed fields', ()=>{
 
 const root=fileURLToPath(new URL('../../../',import.meta.url));
 const productionRoot=process.env.ENACTIVE_TEST_PRODUCTION_ROOT ?? root;
-function productionMcp(enabled_tools, actorId) {
-  return {command:resolve(python),args:[join(productionRoot,'tests/player_service_fixture.py'),'--stdio',...(actorId ? ['--actor-id',actorId] : [])],
+async function fixtureWorkspace(t) {
+  const workspace=await mkdtemp(join(tmpdir(),'enactive-player-fixture-'));
+  t.after(async()=>{
+    await rm(workspace,{recursive:true,force:true});
+    await assert.rejects(readdir(workspace),{code:'ENOENT'});
+  });
+  return workspace;
+}
+function productionMcp(workspace, enabled_tools, actorId) {
+  return {command:resolve(python),args:[join(productionRoot,'tests/player_service_fixture.py'),'--stdio','--workspace',workspace,...(actorId ? ['--actor-id',actorId] : [])],
     cwd:productionRoot,enabled:true,enabled_tools,startup_timeout_sec:5,tool_timeout_sec:2};
 }
-test('real production MCP discovery forwards all exact current actor-only tool schemas', async ()=>{
+test('real production MCP discovery forwards all exact current actor-only tool schemas', async t=>{
+  const workspace=await fixtureWorkspace(t);
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
   const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({name:{"schema":schema,"description":description} for name,(description,schema) in tool_specs().items()}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
@@ -30,7 +42,7 @@ test('real production MCP discovery forwards all exact current actor-only tool s
   assert.equal(chosen.length,10);
   assert.ok(chosen.includes('player_hint'));
   assert.ok(chosen.every(name=>!name.startsWith('player_memory_')&&!name.startsWith('player_program_')));
-  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(chosen),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,chosen),
     context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
     timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{bodies.push(init.body);payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
@@ -64,9 +76,10 @@ test('missing allowlisted tool fails before provider call and closes child',asyn
   assert.equal(result.ok,false);assert.equal(result.reason,'missing-required-tools');assert.equal(payloads.length,0);
 });
 
-test('production MCP preserves actual source JSON and PNG through Pi while event images are references',async()=>{
+test('production MCP preserves actual source JSON and PNG through Pi while event images are references',async t=>{
+  const workspace=await fixtureWorkspace(t);
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe','player_source']),
     context:'Offline current pixel fixture',prompt:'Read actual source pixels.',model:model.id,
     effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -106,9 +119,10 @@ test('production MCP preserves actual source JSON and PNG through Pi while event
   assert.ok(!JSON.stringify(events).includes(pngBytes.toString('base64')));
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
-test('production MCP sealed handoff settles after earlier ordinary tool without followup inference or dispatch',async()=>{
+test('production MCP sealed handoff settles after earlier ordinary tool without followup inference or dispatch',async t=>{
+  const workspace=await fixtureWorkspace(t);
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe','player_handoff'],'3'.repeat(32)),
     context:'Offline current actor handoff fixture',prompt:'Retain unfinished context and hand off.',
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -131,14 +145,47 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
 
-test('production MCP foreign actor handoff cannot settle or dispatch later input',async()=>{
+test('production MCP foreign actor handoff cannot settle or dispatch later input',async t=>{
+  const workspace=await fixtureWorkspace(t);
   const events=[];
   const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'2'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),
-    mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),context:'Offline foreign actor fixture',
+    mcpConfig:productionMcp(workspace,['computer_observe','player_handoff'],'3'.repeat(32)),context:'Offline foreign actor fixture',
     prompt:'Retain unfinished context.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async()=>reply(null,[['player_handoff',{summary:'Foreign actor'}],['computer_observe',{}]]),onEvent:event=>events.push(event)});
   assert.equal(result.ok,false);assert.equal(result.reason,'invalid-handoff-receipt');assert.equal(result.requests,1);
   assert.deepEqual(events.filter(event=>event.type==='tool-start').map(event=>event.tool),['player_handoff']);
   assert.equal(events.filter(event=>event.type==='handoff').length,0);
   assert.throws(()=>process.kill(events.find(event=>event.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
+});
+
+// The caller owns the workspace even when the child cannot run Python teardown.
+test('fixture workspace is removed after a terminated MCP child',async t=>{
+  let workspace;
+  await t.test('terminate child',async child=>{
+    workspace=await fixtureWorkspace(child);
+    let childPid;
+    const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},
+      finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),
+      configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe']),context:'Fixture',prompt:'Observe.',
+      model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
+      fetch:async()=>reply(null,[['computer_observe',{}]]),
+      onEvent:event=>{if(event.type==='mcp-connected') {childPid=event.child_pid;process.kill(childPid,'SIGKILL');}}});
+    assert.equal(result.ok,false);
+    assert.ok(childPid);
+    assert.throws(()=>process.kill(childPid,0),{code:'ESRCH'});
+  });
+  await assert.rejects(readdir(workspace),{code:'ENOENT'});
+});
+
+test('delivery fixture removes its nested workspace on success and failure',async t=>{
+  const directory=await mkdtemp(join(tmpdir(),'enactive-delivery-test-'));
+  t.after(()=>rm(directory,{recursive:true,force:true}));
+  const check=async()=>assert.deepEqual((await readdir(directory)).filter(name=>name.startsWith('enactive-player-fixture-')),[]);
+  const {result}=await deliveryScenario(directory);
+  assert.equal(result.ok,true);
+  await check();
+  await rm(join(directory,'actors','001','host.jsonl'));
+  await mkdir(join(directory,'actors','001','host.jsonl'));
+  await assert.rejects(deliveryScenario(directory),{code:'EISDIR'});
+  await check();
 });
