@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from harness.computer.protocol import ControlError
+from harness.computer.protocol import MAX_FRAME_BYTES, ControlError
 from tools import campaign_package as packages
 from tools import campaign_run
 from tools.configure_player_tools import configuration
@@ -82,6 +82,84 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     for i in range(1000):(unrelated/f'{i}.json').write_text('{unsupported partial old data')
     assert validate(directory,tmp_path)[0]==profile
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
+
+
+def test_capture_plan_catches_the_failed_evacuee_start(tmp_path):
+    _, profile = package(tmp_path)
+    profile['limits']['max_bytes'] = 64 * 1024 * 1024
+    profile['ending_reserve']['frame_bytes'] = 8 * 1024 * 1024
+    with pytest.raises(ControlError, match=r'work capture with 12802 retained bytes, 67096062 remaining bytes, '
+                       r'67108864 pending capture bytes'):
+        packages.capture_headroom(profile, work_before_bytes=12802)
+
+
+def test_capture_plan_hard_reservation_allows_equality(tmp_path):
+    _, profile = package(tmp_path)
+    profile['limits']['max_bytes'] = MAX_FRAME_BYTES + 12802
+    plan = packages.capture_headroom(profile, work_before_bytes=12802)
+    assert plan['checkpoints']['work']['remaining_bytes'] == MAX_FRAME_BYTES
+    with pytest.raises(ControlError, match='Insufficient pending capture headroom'):
+        packages.capture_headroom(profile, work_before_bytes=12803)
+
+
+def test_capture_plan_distinguishes_the_ending_threshold_from_the_capture_floor(tmp_path):
+    _, profile = package(tmp_path)
+    profile['limits']['max_bytes'] = 3 * MAX_FRAME_BYTES
+    profile['ending_reserve']['frame_bytes'] = MAX_FRAME_BYTES
+    at_reserve = 2 * MAX_FRAME_BYTES
+    with pytest.raises(ControlError, match='Ending reserve reached before planned work capture'):
+        packages.capture_headroom(profile, work_before_bytes=at_reserve)
+    plan = packages.capture_headroom(profile, work_before_bytes=at_reserve - 1, ending_before_bytes=at_reserve)
+    assert plan['checkpoints']['work']['remaining_bytes'] == MAX_FRAME_BYTES + 1
+    assert plan['checkpoints']['ending']['remaining_bytes'] == MAX_FRAME_BYTES
+    with pytest.raises(ControlError, match='Insufficient pending capture headroom for ending capture'):
+        packages.capture_headroom(profile, work_before_bytes=12802, ending_before_bytes=at_reserve + 1)
+
+
+def test_offline_capture_check_uses_the_frozen_manifest_without_launching(tmp_path, capsys):
+    directory, profile = package(tmp_path)
+    profile['limits']['max_bytes'] = 3 * MAX_FRAME_BYTES
+    profile['ending_reserve']['frame_bytes'] = MAX_FRAME_BYTES
+    manifest = directory/'manifest.json'
+    manifest.write_text(json.dumps(profile))
+    with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run') as adapter:
+        assert packages.main(['--run', str(directory), '--work-before-bytes', '12802',
+                              '--ending-before-bytes', '524288']) == 0
+        adapter.assert_called_once()
+        assert adapter.call_args.args[0][2] == 'validate'
+        assert adapter.call_args.kwargs['env'].keys() == {'PATH', 'LANG'}
+    result = json.loads(capsys.readouterr().out)
+    assert result == dict(session=profile['session'], manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),
+                          total_bytes=3*MAX_FRAME_BYTES, pending_capture_bytes=MAX_FRAME_BYTES,
+                          ending_reserve_bytes=MAX_FRAME_BYTES, checkpoints={
+                              'work': {'retained_bytes': 12802, 'remaining_bytes': 3*MAX_FRAME_BYTES-12802},
+                              'ending': {'retained_bytes': 524288, 'remaining_bytes': 3*MAX_FRAME_BYTES-524288},
+                          })
+    assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
+
+
+def test_capture_plan_rejects_a_backwards_retained_byte_forecast(tmp_path):
+    _, profile = package(tmp_path)
+    with pytest.raises(ControlError):
+        packages.capture_headroom(profile, work_before_bytes=8, ending_before_bytes=7)
+
+
+def test_capture_plan_hash_names_the_manifest_bytes_it_validated(tmp_path, capsys):
+    directory, profile = package(tmp_path)
+    profile['limits']['max_bytes'] = 3 * MAX_FRAME_BYTES
+    manifest = directory/'manifest.json'
+    manifest.write_text(json.dumps(profile))
+    original_hash = hashlib.sha256(manifest.read_bytes()).hexdigest()
+
+    def replace_manifest(*args, **kwargs):
+        replacement = {**profile, 'limits': {**profile['limits'], 'max_bytes': MAX_FRAME_BYTES}}
+        manifest.write_text(json.dumps(replacement))
+
+    with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run', replace_manifest):
+        assert packages.main(['--run', str(directory), '--work-before-bytes', '12802']) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result['total_bytes'] == 3 * MAX_FRAME_BYTES
+    assert result['manifest_sha256'] == original_hash != hashlib.sha256(manifest.read_bytes()).hexdigest()
 
 
 def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both_bounds(tmp_path):
