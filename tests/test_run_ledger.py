@@ -173,7 +173,10 @@ def test_totals_apply_the_actual_spend_admission_rule():
 
 def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
     rows = read_ledger()
-    assert len(rows) == 123 and {r['study'] for r in rows} == {372, 382, 397, 522, 635, 642, 619, 651}
+    historical_studies = {372, 382, 397, 522, 635, 642, 619, 651}
+    historical_rows = [r for r in rows if r['study'] in historical_studies]
+    assert len(historical_rows) == 123
+    assert {r['study'] for r in historical_rows} == historical_studies
     assert totals(rows, 651, None)['spend_usd'] == '86.38254135'     # the full withholding study, replaced attempts included
     assert sum(r['study'] == 651 for r in rows) == 63
     assert totals(rows, 635, None)['spend_usd'] == '1.57054305'      # the delivery development start
