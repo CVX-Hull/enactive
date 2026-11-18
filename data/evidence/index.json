@@ -646,6 +646,24 @@
       },
       "visibility": "private"
     },
+    "fresh-world-screen-441": {
+      "availability": "present",
+      "bytes": 5998310,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-fresh-world-campaign-screen-441.md"
+      ],
+      "files": 160,
+      "manifest_sha256": "24c21b9ab40b703ef12d79be6462861e655c78ce84010c9adc5ee02ea23ece25",
+      "note": "Two original fresh-world initial admissions, both stopped at unverified Evacuee setup. Retains the owned userdirs, logs, receipts, journals, visible captures and final evaluator stores. Prepared app and bridge remain installed separately.",
+      "sources": {
+        "a-evaluation": ".runtime/evaluations/0ee9f831f013422fb357f6da94946a17@e9b851448ef2e81f155fc2d2f0b3fb6dd431892e",
+        "a-package": ".runtime/computer-sessions/fresh-world-screen-441-0ee9f831f013422fb357f6da94946a17@e9b851448ef2e81f155fc2d2f0b3fb6dd431892e",
+        "archived-worlds": ".runtime/archive/fresh-world-screen-441@e9b851448ef2e81f155fc2d2f0b3fb6dd431892e",
+        "b-evaluation": ".runtime/evaluations/6063ace03a77497497353307bed45f68@e9b851448ef2e81f155fc2d2f0b3fb6dd431892e",
+        "b-package": ".runtime/computer-sessions/fresh-world-screen-441-6063ace03a77497497353307bed45f68@e9b851448ef2e81f155fc2d2f0b3fb6dd431892e"
+      },
+      "visibility": "private"
+    },
     "memory-screen-gates-460-386": {
       "availability": "present",
       "bytes": 117383888,
