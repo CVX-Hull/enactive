@@ -64,6 +64,14 @@ def test_repeat_origin_and_question_boundaries_are_preserved(fixture):
     assert tank['numerical'] == repeated['numerical']
     assert tank['fixture_views']['opinion_mean'] == repeated['fixture_views']['beta_mean'] == Fraction(2, 3)
     assert '17.25 L' in tank['input']['observations'][-1]['detail']
+    assert [report['event'] for report in tank['input']['observations'][-1]['reports']] == [
+        'rooftop-tank-drink', 'rooftop-tupperware-fill']
+    assert [report['event'] for report in repeated['input']['observations'][-1]['reports']] == ['rooftop-tupperware-fill']
+    partial = deepcopy(tank['input'])
+    partial['observations'][-1]['reports'].pop()
+    partial_result = compare(partial)
+    assert partial_result['qualitative']['answer'] is partial_result['numerical']['answer'] is None
+    assert partial_result['fixture_counts'] == {'r': 0, 's': 0}
     assert cases['plastic-bottle'][0]['fixture_counts'] == {'r': 0, 's': 0}
 
     _, title = cases['save-return-to-title']
@@ -72,9 +80,12 @@ def test_repeat_origin_and_question_boundaries_are_preserved(fixture):
     assert compare(reload_input)['qualitative']['answer'] is None
     assert compare(reload_input)['numerical']['answer'] is None
 
-    _, _, quit = cases['application-quit-delivery']
+    before, original, quit = cases['application-quit-delivery']
     assert quit['qualitative']['answer'] is quit['numerical']['answer'] is None
     assert quit['fixture_counts'] == {'r': 0, 's': 0}
+    for method in ('qualitative', 'numerical'):
+        assert before[method]['source_ids'] == []
+        assert original[method]['source_ids'] == quit[method]['source_ids'] == ['11bec1e74ac54c2a96292b6947718618']
     exit_input = {**quit['input'], 'question': 'Did the native process exit normally?',
                   'applicable_events': ['normal-native-exit-zero']}
     assert compare(exit_input)['qualitative']['answer'] is True
@@ -96,6 +107,21 @@ def test_synthetic_conflict_is_distinct_from_ignorance_after_retraction(fixture)
         assert result['qualitative'] == result['numerical']
         assert (result['qualitative']['state'], result['qualitative']['answer']) == (expected, answer)
         assert result['fixture_counts'] == counts
+
+
+def test_inventory_observation_refutes_the_complementary_stand_in(fixture):
+    case = fixture['cases'][0]
+    case['question'] = 'Does the inventory show no weapon held?'
+    slot = case['exposure'][-1]
+    # The same visible slot refutes the complementary proposition.
+    case['observations'][slot]['reports'][0]['polarity'] = 'refute'
+    before, after = replay(fixture)['cases'][0]['checkpoints']
+    assert before['qualitative']['answer'] is before['numerical']['answer'] is None
+    assert after['qualitative'] == after['numerical'] == {
+        'state': 'refutation-only', 'answer': False, 'source_ids': [slot],
+    }
+    assert after['fixture_counts'] == {'r': 0, 's': 1}
+    assert after['fixture_views']['opinion_mean'] == after['fixture_views']['beta_mean'] == Fraction(1, 3)
 
 
 def test_report_cannot_borrow_a_future_or_unestablished_origin(fixture):

@@ -120,9 +120,11 @@ inventory questions in their two dependent development groups. Run it offline wi
 Both methods receive the same scoped prefix of the hand-authored extraction. The
 readout keeps source-linked answers and abstentions alongside the numerical fixture
 state. It retains scope distinctions between the title return and same-character
-reload, and between native exit and Quit delivery. Repeated descriptions retain the
-same canonical event and origin. Excluded results and adjudication stay outside the
-input and readout. Unit evidence weights exercise the mechanics of the replay.
+reload, and between native exit and Quit delivery. It cites applicable unknown
+receipts. Repeated descriptions retain the same canonical event and origin. The
+tank question requires both reports, which share one frame and contribute one unit.
+Excluded results and adjudication stay outside the input and readout. The supplied
+unit weights exercise the mechanics of the replay.
 The later priced pilot may stop at insufficient observable cases; do not fabricate a
 conflict or label an unseen outcome false to make a method testable.
 

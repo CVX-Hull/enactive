@@ -6,7 +6,7 @@ from fractions import Fraction
 import json
 from pathlib import Path
 
-from tools.recurrence_research.belief import evidence_views, revision_state
+from tools.recurrence_research.belief import active_alternatives, evidence_views, revision_state
 
 
 def exposed_input(case: dict, checkpoint: dict) -> dict:
@@ -33,7 +33,8 @@ def exposed_input(case: dict, checkpoint: dict) -> dict:
     if not set(withdrawn) <= visible:
         raise ValueError('withdrawal references an unexposed origin')
     return dict(question=case['question'], scope=case['scope'], dependence_group=case['dependence_group'],
-                applicable_events=list(case['applicable_events']), observations=observations,
+                applicable_events=list(case['applicable_events']), required_support=list(case.get('required_support', ())),
+                observations=observations,
                 withdrawn_origins=list(withdrawn))
 
 
@@ -58,12 +59,19 @@ def compare(shared: dict) -> dict:
                 raise ValueError(f'missing original report for event {event}')
             if events.setdefault(event, identity) != identity:
                 raise ValueError(f'inconsistent origin or polarity for event {event}')
-    support = {origin for origin, polarity in events.values() if polarity == 'support'}
-    refute = {origin for origin, polarity in events.values() if polarity == 'refute'}
-    sources = [origin for origin in active if origin in support or origin in refute]
+    support = {event: origin for event, (origin, polarity) in events.items() if polarity == 'support'}
+    refute = [(origin,) for origin, polarity in events.values() if polarity == 'refute']
+    required = shared['required_support']
+    if required:
+        support_alternatives = [tuple(support[event] for event in required)] if set(required) <= support.keys() else []
+    else:
+        support_alternatives = [(origin,) for origin in support.values()]
+    applicable_origins = {origin for origin, _ in events.values()}
+    sources = [origin for origin in active if origin in applicable_origins]
 
-    qualitative_state = revision_state(((origin,) for origin in support), ((origin,) for origin in refute), active)
-    r, s = len(support.intersection(active)), len(refute.intersection(active))
+    qualitative_state = revision_state(support_alternatives, refute, active)
+    r = len(set().union(*active_alternatives(support_alternatives, active)))
+    s = len(set().union(*active_alternatives(refute, active)))
     numerical_state = {(True, False): 'support-only', (False, True): 'refutation-only',
                        (True, True): 'conflicting', (False, False): 'unknown'}[bool(r), bool(s)]
     numbers = evidence_views(r, s, 2, Fraction(1, 2))

@@ -73,14 +73,19 @@
       ],
       "observations": {
         "d1f27714d8684654945e288f09cbcc73/request-24/intent-and-action": {
-          "detail": "Request 24 intent and mechanical action only."
+          "detail": "Request 24 intended to top up the existing clean-water container and sent Enter."
         },
         "d1f27714d8684654945e288f09cbcc73-733": {
           "detail": "The frame reports drinking and filling the tupperware. The last-drops wording appears with a 17.25 L display, leaving an empty-tank claim unresolved.",
           "reports": [
             {
               "origin": "d1f27714d8684654945e288f09cbcc73-733",
-              "event": "rooftop-drink-and-tupperware-fill",
+              "event": "rooftop-tank-drink",
+              "polarity": "support"
+            },
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73-733",
+              "event": "rooftop-tupperware-fill",
               "polarity": "support"
             }
           ]
@@ -90,7 +95,7 @@
           "reports": [
             {
               "origin": "d1f27714d8684654945e288f09cbcc73-733",
-              "event": "rooftop-drink-and-tupperware-fill",
+              "event": "rooftop-tupperware-fill",
               "polarity": "support"
             }
           ]
@@ -100,7 +105,12 @@
         }
       },
       "applicable_events": [
-        "rooftop-drink-and-tupperware-fill"
+        "rooftop-tank-drink",
+        "rooftop-tupperware-fill"
+      ],
+      "required_support": [
+        "rooftop-tank-drink",
+        "rooftop-tupperware-fill"
       ]
     },
     {
@@ -129,13 +139,13 @@
           "reports": [
             {
               "origin": "d1f27714d8684654945e288f09cbcc73-733",
-              "event": "rooftop-drink-and-tupperware-fill",
+              "event": "rooftop-tupperware-fill",
               "polarity": "support"
             }
           ]
         },
         "d1f27714d8684654945e288f09cbcc73/request-26/intent-and-action": {
-          "detail": "Request 26 intent and mechanical action only."
+          "detail": "Request 26 intended to fill the empty plastic bottle with additional clean water and sent 1, c, Down and Enter."
         },
         "d1f27714d8684654945e288f09cbcc73-810": {
           "detail": "The returned frame explicitly reports filling the plastic bottle.",
@@ -211,7 +221,7 @@
       ],
       "exposure": [
         "d1f27714d8684654945e288f09cbcc73-939",
-        "d1f27714d8684654945e288f09cbcc73/request-31/intent-and-action",
+        "d1f27714d8684654945e288f09cbcc73/request-31/intent",
         "11bec1e74ac54c2a96292b6947718618",
         "d1f27714d8684654945e288f09cbcc73/request-32/original-result",
         "d1f27714d8684654945e288f09cbcc73/custodian-receipt"
@@ -220,8 +230,8 @@
         "d1f27714d8684654945e288f09cbcc73-939": {
           "detail": "The separate application Quit prompt is visible."
         },
-        "d1f27714d8684654945e288f09cbcc73/request-31/intent-and-action": {
-          "detail": "Request 31 intent and action to confirm Quit."
+        "d1f27714d8684654945e288f09cbcc73/request-31/intent": {
+          "detail": "Request 31 stated the intent to confirm the main-menu quit prompt."
         },
         "11bec1e74ac54c2a96292b6947718618": {
           "detail": "The original operation returned unknown and no new frame.",
