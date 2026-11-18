@@ -253,10 +253,12 @@ def test_summary_projects_only_the_selected_current_custodian_receipt(archive):
     path = runs / 'base2' / 'receipt.json'
     manifest_path = path.with_name('manifest.json')
     manifest = json.loads(manifest_path.read_text())
+    accounting = dict(reported_usd='0.102442', spent_usd='0.102442', unpriced_requests=0, unpriced_recall_requests=0)
     expected = dict(outcome='player_task_complete_unassessed', normal_native_exit_zero=False,
-        native_absence_verified=True, deciding_hosts_quiescent=None, input_authority_revoked=True)
+        native_absence_verified=True, deciding_hosts_quiescent=None, input_authority_revoked=True, accounting=accounting)
     receipt = dict(expected, schema=RECEIPT_SCHEMA, session=session, source_commit=manifest['source_commit'],
-        deciding_hosts_quiescent=1, cleanup=dict(pid=123), reason='private fixture')
+        deciding_hosts_quiescent=1, cleanup=dict(pid=123), reason='private fixture',
+        accounting=dict(accounting, spend_complete=True, spend_limit_usd='4.50'))
     route = f'/api/view/run/{session}/summary'
     baseline = client.get(route).json()
     assert baseline['custodian_receipt'] is None
@@ -273,6 +275,31 @@ def test_summary_projects_only_the_selected_current_custodian_receipt(archive):
     for change in (dict(schema=MANIFEST_SCHEMA + '-invalid'), dict(session='c' * 32), dict(source_commit='different')):
         manifest_path.write_text(json.dumps(dict(manifest, **change)))
         assert client.get(route).json() == baseline
+
+
+def test_summary_reports_complete_provider_cost_and_unpriced_attempts(archive):
+    client, _, runs = archive
+    path = runs / 'base2' / 'receipt.json'
+    manifest = json.loads(path.with_name('manifest.json').read_text())
+    receipt = dict(schema=RECEIPT_SCHEMA, session=manifest['session'], source_commit=manifest['source_commit'],
+        outcome='incomplete')
+    route = f"/api/view/run/{manifest['session']}/summary"
+    zero = dict(reported_usd='0', spent_usd='0', unpriced_requests=0, unpriced_recall_requests=0)
+    unpriced = dict(reported_usd='1.64493095', spent_usd='2.11597095', unpriced_requests=1, unpriced_recall_requests=1)
+    for values in (zero, unpriced):
+        path.write_text(json.dumps(dict(receipt, accounting=dict(values, spend_complete=True))))
+        payload = client.get(route).json()['custodian_receipt']
+        assert payload['outcome'] == 'incomplete'
+        assert payload['accounting'] == values
+
+    for invalid in (None, [], dict(zero, spend_complete=False), dict(zero, spend_complete=1),
+                    *(dict(zero, spend_complete=True, **change) for change in (
+                        dict(reported_usd='1e-7'), dict(spent_usd=0), dict(reported_usd='-1'),
+                        dict(spent_usd='0.01'), dict(reported_usd='1'),
+                        dict(unpriced_requests=True), dict(unpriced_recall_requests=-1)))):
+        path.write_text(json.dumps(dict(receipt, accounting=invalid)))
+        payload = client.get(route).json()['custodian_receipt']
+        assert payload['outcome'] == 'incomplete' and payload['accounting'] is None
 
 
 def test_tools_aggregate_calls_and_transitions(archive):

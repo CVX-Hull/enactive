@@ -51,6 +51,16 @@ function CustodianReceipt({receipt}) {
       : html`<p class="note">Receipt unavailable for this run.</p>`}<//>`;
 }
 
+function ProviderCost({accounting}) {
+  if (!accounting) return html`<dt>Provider-reported cost</dt><dd>Unavailable</dd>`;
+  const player = accounting.unpriced_requests, recall = accounting.unpriced_recall_requests;
+  const hasUnpriced = player > 0 || recall > 0;
+  return html`<dt>${hasUnpriced ? 'Provider-reported subtotal' : 'Provider-reported cost'}</dt>
+    <dd>$${accounting.reported_usd} <${Pv} source="recorded" detail="custodian receipt" /></dd>
+    ${hasUnpriced ? html`<dt>Unpriced attempts</dt><dd>${player} player · ${recall} recall</dd>
+      <dt>Counted toward run limit</dt><dd>$${accounting.spent_usd} <${Pv} source="recorded" detail="custodian receipt" /></dd>` : null}`;
+}
+
 function Overview() {
   const s = store.summary;
   if (!s) return html`<${Panel} title="Overview" span="s12"><${Waiting} store=${store} what="the run summary" /><//>`;
@@ -71,7 +81,8 @@ function Overview() {
       <dl class="kv"><dt>Survival</dt><dd>${fmtH(out.hours)} game h <${Pv} source="derived" /></dd>
         <dt>Episodes</dt><dd>${out.episodes ?? '—'}</dd>
         <dt>Decisions</dt><dd>${s.decisions ?? '—'} <${Pv} source="recorded" /></dd>
-        <dt>Spend</dt><dd>${fmtMoney(s.dollars)} <${Pv} source="recorded" detail="configured rate" /></dd>
+        <dt>Estimated spend</dt><dd>${fmtMoney(s.dollars)} <${Pv} source="recorded" detail="configured rate" /></dd>
+        ${!s.live || s.custodian_receipt ? html`<${ProviderCost} accounting=${s.custodian_receipt?.accounting} />` : null}
         <dt>Arm · start</dt><dd>${labels.arm || '—'} · ${labels.start || '—'} <${Pv} source="recorded" detail="assignment" /></dd>
         <dt>Scenario</dt><dd>${labels.scenario || '—'}</dd>
         <dt>Source commit</dt><dd>${String(facts.source_commit || '').slice(0, 7) || '—'}</dd>
