@@ -268,7 +268,7 @@ before a successor. Pause, uncertainty or failed closure cannot become a handoff
 
 ## Telemetry
 
-Stdout is JSONL telemetry version6. Each line has `type`; the driver ignores event
+Stdout is JSONL telemetry version 7. Each line has `type`; the driver ignores event
 kinds it does not account for, and observers project only known kinds.
 
 | Event | Contract |

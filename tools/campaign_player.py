@@ -350,13 +350,12 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         if record.get('orchestration_error'):break
     reported=usd_sum(Decimal(r['reported_usd']) for r in records);unpriced=sum(r['unpriced_requests'] for r in records)
     recall_unpriced=sum(r['unpriced_recall_requests'] for r in records)
-    # `spent_usd` is what counts toward the limit: reported cost plus each unpriced request at the bound.
-    # It is complete only when every actor's trace was read to its settlement.
+    # The subtotal covers all costs observed, even if a trace could not be reconciled.
     return dict(schema='player-driver/6',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
                 attempts_charged=total_attempts,recall_attempts_charged=total_recall_attempts,host_seconds_used=host_seconds_used,
                 reported_usd=usd_text(reported),unpriced_requests=unpriced,unpriced_request_usd=usd_text(bound),
                 unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),
-                spent_usd=usd_text(usd_sum([reported,EXACT.multiply(Decimal(unpriced),bound),EXACT.multiply(Decimal(recall_unpriced),recall_bound)])),
+                spent_usd=usd_text(reported),
                 spend_complete=all(r['spend_complete'] for r in records),
                 configured_estimate_usd=sum(r.get('configured_estimate_usd',0) for r in records),
                 missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged']) for r in records))

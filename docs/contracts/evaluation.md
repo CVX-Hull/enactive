@@ -373,7 +373,7 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   - **The spend-limit session.** The owner added `spend-limit-run-555` on 13 November 2026: `campaign-run/6`, `campaign-receipt/4`, `player-driver/4`, `player-host/4` telemetry 4 and `campaign-watch-terminal/4`. It is read-only in those versions. Its manifest supplies `spend_limit_usd` rather than the earlier reservation; receipt/driver ending fields and host evidence are read as recorded. No archive is admitted for play.
   - **The five combinations.** The index holds 135 sessions in five combinations of versions.
     The memory adoption migration (#463) adds the 80 exact sealed `campaign-run/7`
-    packages with `campaign-receipt/6`, `player-driver/6`, `player-host/5` telemetry 5
+    packages with `campaign-receipt/5`, `player-driver/5`, `player-host/5` telemetry 5
     and `campaign-watch-terminal/4`. Missing records stay missing; an allowed version
     does not establish that a host ran or that a terminal was recorded. Only the old
     manifest and host versions differ from current for this combination; their
@@ -975,8 +975,10 @@ Development-run quantities live as data in git, and pages render them or cite th
   count describes observed attempts with an unknown charge.
 - **Incomplete trace.** `--record-upper-bound` records the observed subtotal
   and counts under basis `incomplete-trace`. The separate
-  `spend_upper_bound_usd` covers the declared limit and possible in-flight
-  attempts. The budget check uses that explicitly recorded bound. See the
+  `spend_upper_bound_usd` is a planning amount for admission. It uses the
+  larger of the declared limit and observed subtotal, plus allowances for
+  possible in-flight attempts. Ledger totals show the provider subtotal and
+  the admission amounts separately. See the
   [campaign procedure](../operations/campaign-run.md#start-and-close).
 - **Historical basis.** The one-time ledger migration from `dev-run/2`
   preserves every historical number with basis `historical` and a null

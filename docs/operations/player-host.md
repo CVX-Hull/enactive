@@ -26,8 +26,8 @@ allowance.
 The package freezes `route.json` (`player-host/7`), `delivered-knowledge.json`, `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
-timeout, request cap, the dollar limit and the bound a request with no cost record
-counts for, credential environment name, image peak, eviction block and
+timeout, request cap, the dollar limit, the planning bound for an in-flight
+request, credential environment name, image peak, eviction block and
 required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
 one image at a time (rolling); a larger block keeps the prompt prefix cacheable
@@ -94,10 +94,11 @@ references, not private reasoning or raw request/image histories. Missing usage
 stays unknown. Attempts include failures and permitted provider-only retries: one
 shared retry per logical request for 429, 502/503/504, a pre-header fetch rejection
 or OpenRouter's transient in-flight 402, as the host reference defines. Allocate
-attempts with that retry in mind; unknown accounting charges the allocated bound.
-The host stops at the route's dollar limit (`spend-limit`) and on a successful
-response it cannot price (`cost-unreported`); a request with no cost record counts
-at the route's bound ([contract](../contracts/player-host.md#spend)). Context projection marks older
+attempts with that retry in mind. An incomplete trace consumes the actor's
+attempt allocation. The dollar subtotal adds up provider-returned charges, and
+an attempt with unavailable cost keeps an unknown charge. The host stops at the
+route's dollar limit (`spend-limit`) and on a successful response it cannot
+price (`cost-unreported`) ([contract](../contracts/player-host.md#spend)). Context projection marks older
 omitted pixels and preserves text/IDs; no automatic tool reread or replay occurs.
 An oversized protected current image group stops before inference.
 

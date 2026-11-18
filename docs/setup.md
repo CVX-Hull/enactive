@@ -61,7 +61,7 @@ Installation needs network; checks never install dependencies.
 ### Install the generic gameplay host
 
 The current player host adapter, [Pi](../tools/player_host/README.md), implements the
-[player host contract](contracts/player-host.md) (`player-host/6`) and uses its own pinned npm lock:
+[player host contract](contracts/player-host.md) (`player-host/7`) and uses its own pinned npm lock:
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund

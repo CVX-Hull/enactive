@@ -265,6 +265,8 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   event or until about 64 KiB (checked per chunk). Keep-alive comments are skipped;
   once a normal event has been read the stream is replayed unchanged, so a later
   error stays terminal. Abort and timeout cancel a stalled read, as for refusal bodies.
+  A usable cost in the first error event or the bounded JSON refusal is recorded
+  on the failed attempt before a retry.
 - `in-flight-budget`: HTTP 402 only when its metadata has both
   `limit_source:openrouter_in_flight_budget` and `reason:in_flight_budget_exhausted`
   (OpenRouter's documented [transient hold](https://openrouter.ai/docs/api-reference/limits))

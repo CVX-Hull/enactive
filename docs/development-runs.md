@@ -202,8 +202,9 @@ Each admission gets one row in the [tracked ledger](../data/evaluation/runs.json
 written by `tools/run_ledger.py record` ([campaign procedure](operations/campaign-run.md#start-and-close)).
 That row is the one numeric record of the run. The study's dated record holds the
 run's notes and presents its numbers through generated tables or by citing the ledger
-(`python -m tools.run_ledger totals --study ISSUE` gives a study's attempts, wall
-seconds and spend); it keeps no second hand-typed copy of attempts, spend or duration.
+(`python -m tools.run_ledger totals --study ISSUE` gives attempts, wall seconds,
+the provider subtotal and separate amounts used for admission). The dated record
+links to those values.
 A short issue comment may announce the run and link its ledger row.
 Evaluator headlines go into the [metrics snapshot](../data/evaluation/run-metrics.jsonl)
 with `python -m tools.evaluate evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl`,

@@ -136,7 +136,8 @@ def package_row(package: Path, *, study: int, label: str, upper_bound: bool = Fa
         attempts=spend['attempts_charged']
         player_count=min(1,attempts)
         recall_count=int(bool(Knowledge(package/'delivered-knowledge.json').records) and attempts>player_count)
-        bound = plain(spend_of(spend['spend_limit_usd'], player_count, spend['unpriced_request_usd'],
+        observed_or_limit = max(Decimal(spend['reported_usd']), Decimal(spend['spend_limit_usd']))
+        bound = plain(spend_of(str(observed_or_limit), player_count, spend['unpriced_request_usd'],
                                recall_count, spend['unpriced_recall_request_usd']))
     ended = datetime.fromtimestamp(receipt['ended_wall'], timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     return dict(schema=SCHEMA, study=study, run=package.name, label=label, arm=labels['arm'], start=labels['start'],
@@ -174,18 +175,21 @@ def record(arguments: argparse.Namespace) -> dict:
 
 
 def totals(rows: list[dict], study: int, envelope: Decimal | None, forecast: Decimal | None = None) -> dict:
-    """Spend so far; with an envelope, headroom = envelope - spend - 2 x largest admission. Before any admission the
-    largest is the stated forecast (e.g. #382's $6.50), or 0 when none is given."""
+    """Provider subtotal and separately the amounts used to calculate study headroom."""
     chosen = [r for r in rows if r['study'] == study]
     amounts = [Decimal(r['spend_upper_bound_usd'] or r['spend_usd']) for r in chosen]
+    reported = [Decimal(r['provider_usd']) for r in chosen if r['provider_usd'] is not None]
     with localcontext(EXACT):
-        spend = sum(amounts, Decimal(0))
+        admission_total = sum(amounts, Decimal(0))
+        provider_subtotal = sum(reported, Decimal(0))
     largest = max(amounts, default=forecast or Decimal(0))
     result = dict(study=study, admissions=len(chosen), attempts=sum(r['attempts'] for r in chosen),
-                  wall_seconds=sum(r['wall_seconds'] for r in chosen), spend_usd=str(spend), largest_usd=str(largest))
+                  wall_seconds=sum(r['wall_seconds'] for r in chosen), provider_usd=str(provider_subtotal),
+                  admissions_without_provider_subtotal=len(chosen)-len(reported),
+                  admission_usd=str(admission_total), largest_admission_usd=str(largest))
     if envelope is not None:
         with localcontext(EXACT):
-            headroom = envelope - spend - 2 * largest
+            headroom = envelope - admission_total - 2 * largest
         result.update(envelope_usd=str(envelope), headroom_usd=str(headroom), admit=headroom >= 0)
     return result
 
@@ -199,8 +203,8 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument('--study', type=int, required=True)
     add.add_argument('--label', help="the run's short name in its study's dated record (default: the package name)")
     add.add_argument('--record-upper-bound', action='store_true', help='for a receipt whose spend is incomplete only: '
-                     'record the limit plus possible player/recall bounds, limited by charged attempts and delivered units')
-    total = commands.add_parser('totals', help="a study's spend, optionally against an envelope")
+                     'record an admission amount based on the limit, observed charges and possible in-flight attempts')
+    total = commands.add_parser('totals', help="a study's provider subtotal and admission amounts, optionally against an envelope")
     total.add_argument('--study', type=int, required=True)
     total.add_argument('--envelope', help='decimal envelope in dollars')
     total.add_argument('--forecast-largest', help='decimal largest admission assumed before the first one completes')

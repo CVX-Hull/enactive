@@ -210,11 +210,10 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
         raise ControlError('Recall attempts exceed original campaign allowance')
     reserve_bound=usd_sum([bound,recall_bound if knowledge.records else Decimal(0)])
     # A rate-derived bound must reserve resources for a pending request.
-    if bound<=0:raise ControlError("The route's configured rates give no bound for a request with no cost record")
+    if bound<=0:raise ControlError("The route's configured rates give no in-flight request bound")
     if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:
         raise ControlError(f"route.json unpriced_request_usd must be {usd_text(bound)} for this route's rates")
-    # With less than one unpriced request's bound left, a single failed request would end the run abruptly instead
-    # of in order. The reserve is below the limit, so the limit exceeds the bound too.
+    # Allow for in-flight player and recall requests before an orderly finish.
     if Decimal(reserve['usd'])<reserve_bound:
         raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(reserve_bound)}, "
             'so an in-flight attempt still leaves an orderly finish')

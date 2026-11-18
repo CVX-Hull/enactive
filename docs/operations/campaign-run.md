@@ -340,11 +340,12 @@ lead has done both of these:
 
 1. Recorded the run with `--record-upper-bound` added to the command above. The
    provider subtotal and observed unpriced counts stay as recorded. The ledger
-   stores a separate admission bound, using the declared limit and up to one
-   in-flight player and one in-flight recall bound. The number of possible
+   stores a separate planning amount for admission. It uses the larger of the
+   declared limit and observed subtotal, plus up to one in-flight player and
+   one in-flight recall bound. The number of possible
    in-flight attempts is capped by the charged attempts and recall requires
    delivered units. The flag is refused for a complete trace.
-2. Marked the row as an upper bound in the run's dated record and stated which
+2. Identified the separate admission amount in the run's dated record and stated which
    cost evidence was unavailable. The provider's charge remains unknown when the
    run could not establish it. The record supplies that context for the
    `dev-run/3` row.

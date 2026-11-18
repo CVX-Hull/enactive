@@ -177,9 +177,16 @@ recall_made = int('WITH_RECALL' in prompt and route['recall']['max_requests']>0)
 if recall_made:
     emit(type='request-start',request_id='recall-1',request_role='recall')
     emit(type='response-complete',request_id='recall-1',reported_cost_usd='0',counted_cost_usd='0',cost_counted_as='provider-reported')
-emit(type='request-start', request_id='request-1')
+unpriced = int('WITH_UNPRICED' in prompt)
+if unpriced:
+    emit(type='request-start',request_id='recall-1',request_role='recall')
+    emit(type='response-complete',request_id='recall-1',reported_cost_usd=None,counted_cost_usd=None,cost_counted_as='unpriced')
+    emit(type='request-start',request_id='request-1')
+    emit(type='response-complete',request_id='request-1',reported_cost_usd=None,counted_cost_usd=None,cost_counted_as='unpriced')
+request_id = f'request-{1+unpriced}'
+emit(type='request-start', request_id=request_id)
 spent = '0.0034500000000000004' if 'LONG_COST' in prompt else '0.004'
-emit(type='response-complete', request_id='request-1', reported_cost_usd=spent, counted_cost_usd=spent, cost_counted_as='provider-reported')
+emit(type='response-complete', request_id=request_id, reported_cost_usd=spent, counted_cost_usd=spent, cost_counted_as='provider-reported')
 ending = 'READ_CONTROL' in prompt
 handoff = 'HANDOFF_RACE' in prompt and flags['--actor-id'] == 'a'*32
 control = json.loads(sys.stdin.readline()) if ending else None
@@ -195,7 +202,7 @@ else:
     if 'WRONG_CONTROL' in prompt: control_id='f'*32
     if 'NO_FINISH' not in prompt:
         emit(type='player-finish',disposition=reason,control_id=control_id,report='report',source_ids=[])
-    emit(type='settled',unpriced_recall_requests=0,ok=True,reason=reason,control_id=control_id,requests=1+recall_made,spent_usd=spent,unpriced_requests=0)
+    emit(type='settled',unpriced_recall_requests=unpriced,ok=True,reason=reason,control_id=control_id,requests=1+recall_made+2*unpriced,spent_usd=spent,unpriced_requests=unpriced)
 open(flags['-o'], 'w').write('report\\n')
 """
 
@@ -244,6 +251,16 @@ def test_driver_cleanup_retains_full_charge_after_invalid_consumed_trace(tmp_pat
     assert (result['reported_usd'],result['spent_usd'],result['spend_complete'])==('0.004','0.004',False)
     assert application.runtime.add_actor.call_count==1 and not application.runtime.confirm_quiescent.called
     assert actor['cleanup']['process_absent'] and actor['cleanup']['group_absent']
+
+
+def test_driver_total_keeps_unknown_attempts_separate_from_spend(tmp_path):
+    profile,route,application=driver_case(tmp_path,'Frozen mission WITH_UNPRICED')
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert result['attempts_charged']==3 and result['recall_attempts_charged']==1
+    for receipt in (result,result['actors'][0]):
+        assert receipt['spend_complete']
+        assert receipt['unpriced_requests']==receipt['unpriced_recall_requests']==1
+        assert receipt['spent_usd']==receipt['reported_usd']=='0.004'
 
 
 @pytest.mark.parametrize('trigger',['seconds','http_attempts','usd','inputs','requests','frames','frame_bytes'])

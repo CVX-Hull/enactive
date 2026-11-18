@@ -82,19 +82,22 @@ def test_record_derives_a_row_from_the_package_and_refuses_repeats_and_missing_r
     assert len(read_ledger(ledger)) == 1
 
 
-def test_an_incomplete_receipt_preserves_observed_cost_beside_the_explicit_upper_bound(tmp_path, capsys):
+@pytest.mark.parametrize(('reported', 'bound'), [('0.3', '5.4096'), ('5.45', '5.8596')])
+def test_an_incomplete_receipt_preserves_observed_cost_beside_the_explicit_upper_bound(tmp_path, capsys, reported, bound):
     """The flag retains the observed provider subtotal and records the separate admission bound."""
     ledger = write(tmp_path / 'runs.jsonl')
-    incomplete = package(tmp_path / 'packages', spend_complete=False, reported_usd='0.3', unpriced_requests=0,
-                         spent_usd='0.3', attempts_charged=40)
+    incomplete = package(tmp_path / 'packages', spend_complete=False, reported_usd=reported, unpriced_requests=0,
+                         spent_usd=reported, attempts_charged=40)
     arguments = ['--ledger', str(ledger), 'record', str(incomplete), '--study', '999']
     assert main(arguments) == 1
     assert 'spend as incomplete' in capsys.readouterr().err and read_ledger(ledger) == []
     assert main([*arguments, '--record-upper-bound']) == 0
     recorded = read_ledger(ledger)
-    assert recorded == [row(attempts=40, provider_usd='0.3', unpriced_attempts=0, spend_usd='0.3',
-                            accounting_basis='incomplete-trace',spend_upper_bound_usd='5.4096')]
-    assert totals(recorded, 999, None)['spend_usd'] == '5.4096'
+    assert recorded == [row(attempts=40, provider_usd=reported, unpriced_attempts=0, spend_usd=reported,
+                            accounting_basis='incomplete-trace',spend_upper_bound_usd=bound)]
+    accounting = totals(recorded, 999, None)
+    assert accounting['provider_usd'] == reported
+    assert accounting['admission_usd'] == bound
     complete = package(tmp_path / 'more', name='lh9a2')
     assert main(['--ledger', str(ledger), 'record', str(complete), '--study', '999', '--record-upper-bound']) == 1
     assert 'spend as complete' in capsys.readouterr().err and len(read_ledger(ledger)) == 1
@@ -168,12 +171,15 @@ def test_totals_apply_the_actual_spend_admission_rule():
     rows = [row(run='a', accounting_basis='historical', spend_usd='5', provider_usd=None, unpriced_attempts=None, unpriced_attempt_usd=None,unpriced_recall_attempts=None,unpriced_recall_attempt_usd=None),
             row(run='b', accounting_basis='historical', spend_usd='7', provider_usd=None, unpriced_attempts=None, unpriced_attempt_usd=None,unpriced_recall_attempts=None,unpriced_recall_attempt_usd=None)]
     result = totals(rows, 999, Decimal('30'))
-    assert (result['spend_usd'], result['largest_usd'], result['headroom_usd'], result['admit']) == ('12', '7', '4', True)
+    assert (result['admission_usd'], result['largest_admission_usd'], result['headroom_usd'], result['admit']) == ('12', '7', '4', True)
+    assert result['provider_usd'] == '0'
+    assert result['admissions_without_provider_subtotal'] == 2
     assert totals(rows, 999, Decimal('25'))['admit'] is False
-    assert totals(rows, 1, None) == dict(study=1, admissions=0, attempts=0, wall_seconds=0, spend_usd='0', largest_usd='0')
+    assert totals(rows, 1, None) == dict(study=1, admissions=0, attempts=0, wall_seconds=0, provider_usd='0',
+                                        admissions_without_provider_subtotal=0, admission_usd='0', largest_admission_usd='0')
     first = totals([], 1, Decimal('150'), Decimal('6.50'))  # #382's forecast before any admission completes
-    assert (first['largest_usd'], first['headroom_usd']) == ('6.50', '137.00')
-    assert totals(rows, 999, Decimal('30'), Decimal('100'))['largest_usd'] == '7'  # actual admissions replace it
+    assert (first['largest_admission_usd'], first['headroom_usd']) == ('6.50', '137.00')
+    assert totals(rows, 999, Decimal('30'), Decimal('100'))['largest_admission_usd'] == '7'
 
 
 def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
@@ -182,19 +188,19 @@ def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
     historical_rows = [r for r in rows if r['study'] in historical_studies]
     assert len(historical_rows) == 123
     assert {r['study'] for r in historical_rows} == historical_studies
-    assert totals(rows, 651, None)['spend_usd'] == '86.38254135'     # the full withholding study, replaced attempts included
+    assert totals(rows, 651, None)['admission_usd'] == '86.38254135'     # the full withholding study, replaced attempts included
     assert sum(r['study'] == 651 for r in rows) == 63
-    assert totals(rows, 635, None)['spend_usd'] == '1.57054305'      # the delivery development start
-    assert totals(rows, 642, None)['spend_usd'] == '1.5896732'       # the delivery check start of the recall fix
-    assert totals(rows, 619, None)['spend_usd'] == '8.85651610'      # the withholding pilot's six starts
+    assert totals(rows, 635, None)['admission_usd'] == '1.57054305'      # the delivery development start
+    assert totals(rows, 642, None)['admission_usd'] == '1.5896732'       # the delivery check start of the recall fix
+    assert totals(rows, 619, None)['admission_usd'] == '8.85651610'      # the withholding pilot's six starts
     assert {r['start'] for r in rows if r['study'] == 619} == {'S1', 'S2', 'S3', 'S4', 'S5', 'S6'}
-    assert totals(rows, 382, None)['spend_usd'] == '30.46049960'
-    assert totals(rows, 397, None)['spend_usd'] == '38.39958335'
-    assert totals(rows, 522, None)['spend_usd'] == '30.11036530'     # the lost lh4a1 ($1.2343105) included
+    assert totals(rows, 382, None)['admission_usd'] == '30.46049960'
+    assert totals(rows, 397, None)['admission_usd'] == '38.39958335'
+    assert totals(rows, 522, None)['admission_usd'] == '30.11036530'     # the lost lh4a1 ($1.2343105) included
     screen = [r for r in rows if r['study'] == 441]
     assert {r['accounting_basis'] for r in screen} == {'historical'}
-    assert sum(Decimal(r['provider_usd']) for r in screen) == Decimal('0.11674225')
-    assert totals(screen, 441, None)['spend_usd'] == '0.93594225'
+    assert totals(screen, 441, None)['provider_usd'] == '0.11674225'
+    assert totals(screen, 441, None)['admission_usd'] == '0.93594225'
     snapshot = read_snapshot(run_ledger.ROOT / 'data/evaluation/run-metrics.jsonl')
     assert {r['session'] for r in rows} == {r['session'] for r in snapshot}
     text = ''.join(Path(p).read_text() for p in (run_ledger.LEDGER, run_ledger.ROOT / 'data/evaluation/run-metrics.jsonl'))
