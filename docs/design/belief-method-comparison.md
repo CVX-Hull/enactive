@@ -111,6 +111,9 @@ R-REGRESSION by catching projection and support bookkeeping errors.
 
 Prepare CDDA packets through #668. All previously inspected lineages are development
 material. No LLM extraction, replay or new-start creation is authorized by preparation.
+The [matched case inventory](../acceptance/2026-11-17-belief-replay-case-inventory.md)
+supplies the scoped development fixtures and identifies the source and observation-model
+gaps to resolve before a priced comparison.
 The later priced pilot may stop at insufficient observable cases; do not fabricate a
 conflict or label an unseen outcome false to make a method testable.
 
@@ -192,9 +195,8 @@ before any claim-deciding batch; otherwise label the pilot exploratory or stop.
 
 #668 owns common source/packet/specification/price preparation. #677 under #666
 owns the later frozen replay protocol and evidence, with an explicit
-priced envelope before calls. It reuses `tools/recurrence_research/` if that package is
-built; no second corpus, judge stack or knowledge history is created. Any code ownership
-and validation are assigned by its bounded brief after the shared interfaces exist.
+priced envelope before calls. It reuses `tools/recurrence_research/` and the existing
+source packets. The bounded brief assigns any additional code ownership and validation.
 
 #457 owns the production schema, belief choice and gate; this study informs rather than
 automatically blocks it. The adopted #463 migration is complete, and #689 supplies the
