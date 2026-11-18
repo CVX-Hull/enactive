@@ -177,7 +177,7 @@ export function FeedPlayer({run, step}) {
   }, []);
   const where = !shown ? 'waiting for the first frame'
     : shown.following ? `live · control path${shown.source ? ` · capture ${shown.source.capture_id} at ${clockTime(shown.source.presented_ms)}` : ''}`
-    : `recorded step ${shown.seq}${typeof shown.wall === 'number' ? ` at ${clockTime(shown.wall * 1000)}` : ''} · viewer · original frame · sha-256 checked`;
+    : `${recordedPage ? 'recorded step' : 'step'} ${shown.seq}${typeof shown.wall === 'number' ? ` at ${clockTime(shown.wall * 1000)}` : ''} · viewer · original frame · sha-256 checked`;
   const missing = !following && step && !step.source_id ? ` · no frame at step ${step.seq}` : '';
   // The caption names the decision on screen: the step for a recorded frame, the newest step while following live.
   const shownStep = shown && !shown.following ? steps.find(s => s.seq === shown.seq) : null;
