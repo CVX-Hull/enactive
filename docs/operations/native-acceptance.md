@@ -14,7 +14,11 @@ project-local windowed target and original resources; retain failures.
 
 1. Build the sole [mechanical adapter](../../tools/build_computer.py) with pinned local resources; preserve original bytes/build receipt and exact source/config hashes.
 2. Exercise actual compiled socket/SDL delivery, backpressure/Pause, original expiry, duplicate IDs, EOF and inherited shared-lock lifetime. Record actual commands/results; fakes are separate evidence.
-3. Freeze a fresh finite `campaign-run/7` package with its player host adapter. Qualify actual key, text and pointer effects during authentic useful player-selected work, not just delivered events or repeated PNGs.
+3. [Freeze a fresh finite campaign package](campaign-run.md#construct-a-package) with its
+   player host adapter, then launch it through
+   [finite-test supervision](campaign-supervision.md#freeze-launch-and-inspect).
+   Qualify actual key, text and pointer effects during authentic useful
+   player-selected work, using visible game effects as evidence.
 4. Exercise current memory/program/correction/context and fresh actor handoff through useful work when in scope. No staged bad routine, lead tactics or automatic success inference.
 5. Let the player save through visible controls, reload the same character in a fresh owned native-child session, and finish with a separate normal application exit. Preserve save-to-menu versus process-exit differences and player claims versus mechanical receipts.
 6. Record scope, interventions, original unknowns, failures, actual cleanup, unrun gaps and exact source/route/native bytes. Independent review and protected CI remain required for formal acceptance.

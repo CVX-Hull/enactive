@@ -6,20 +6,24 @@ status: active
 
 # Start and observe
 
-Use a prepared windowed project target and a fresh explicit package. The sole
-current launch command is the [finite campaign custodian](campaign-run.md), which
-validates `campaign-run/7` before effects. Do not invoke old controller, mission or
-experimental proof commands or launch an unprepared/fullscreen application.
+Use a prepared windowed project target and freeze a fresh explicit package
+following the [finite campaign procedure](campaign-run.md). The custodian
+validates the selected package before launch. Do not invoke old controller,
+mission or experimental proof commands or launch an unprepared/fullscreen
+application.
 
-Observe a run through [finite-test supervision](campaign-supervision.md): launch it
-and open its printed gateway URL. Nobody is required to watch; run limits and your
+[Launch through finite-test supervision](campaign-supervision.md#freeze-launch-and-inspect)
+and open the printed gateway URL. Nobody is required to watch; run limits and your
 Pause are what stop a run. The
 gateway serves the page, relays the custodian's status and source reads and owns
 Pause; the custodian serves no page of its own.
 
 1. Finish [local setup](../setup.md), retain native/app/adapter bytes and source provenance.
 2. Select normal project-local CDDA input options before freezing; mouse is enabled and fullscreen disabled. The primitive layer does not override settings.
-3. Freeze the exact clean source, native/adapter/initial-config hashes, target argv/cwd/environment, player host argv, route/context/prompt and original limits in a fresh `.runtime/computer-sessions/` package.
+3. [Freeze the package](campaign-run.md#construct-a-package) with the exact clean source,
+   native, adapter and initial-config hashes, target argv, cwd and environment,
+   player host argv, route, context, prompt and original limits in a fresh
+   `.runtime/computer-sessions/` directory.
 4. Launch only that selected package through supervision, which starts the custodian
    (`tools/campaign_run.py --run`), the gateway, keep-awake and the viewer.
 5. Open the printed gateway URL. Inspect actual images and status, including original
