@@ -976,6 +976,20 @@
       },
       "visibility": "private"
     },
+    "retained-memory-replay-765": {
+      "availability": "present",
+      "bytes": 3821575,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-retained-memory-replay-765.md"
+      ],
+      "files": 62,
+      "manifest_sha256": "0bde8c0c6f3cdd8bd4d3226e9ec7154331d76dde84c59fefabdc26471e848a14",
+      "note": "Zero-spend retained decision feasibility, including exact public readbacks, blinded review packets, paired serializer, reproduction and full-window overflow fixture. All evidence is development-only; original source packages remain in their named seals.",
+      "sources": {
+        "audit": "tools/recurrence_research/prepare.py@4a3e7db753905266c150a0388d05defe4f15ac5b"
+      },
+      "visibility": "private"
+    },
     "seven-day-recap-video": {
       "availability": "present",
       "bytes": 2722183,
