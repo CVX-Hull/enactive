@@ -1,13 +1,15 @@
 """Read one frozen current campaign package; never inspect unrelated history."""
 from __future__ import annotations
 
+import argparse
 from decimal import ROUND_DOWN,Context,Decimal,DivisionByZero,Inexact,InvalidOperation,Overflow
+import json
 import os
 from pathlib import Path
 import re
 import subprocess
 
-from harness.computer.protocol import ControlError,closed,integer,read_json
+from harness.computer.protocol import MAX_FRAME_BYTES,ControlError,closed,integer,read_json
 from harness.jsonio import file_sha256
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
@@ -218,3 +220,49 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
         raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(reserve_bound)}, "
             'so an in-flight attempt still leaves an orderly finish')
     return profile,route,target
+
+
+def capture_headroom(profile: dict, *, work_before_bytes: int, ending_before_bytes: int | None = None) -> dict:
+    """Check cumulative retained bytes before the last planned capture in each phase."""
+    total = profile['limits']['max_bytes']
+    reserve = profile['ending_reserve']['frame_bytes']
+    checkpoints = [('work', work_before_bytes)]
+    integer(work_before_bytes, 0, 2**40)
+    if ending_before_bytes is not None:
+        integer(ending_before_bytes, work_before_bytes, 2**40)
+        checkpoints.append(('ending', ending_before_bytes))
+
+    results = {}
+    for phase, retained in checkpoints:
+        remaining = total - retained
+        detail = (f'{phase} capture with {retained} retained bytes, {remaining} remaining bytes, '
+                  f'{MAX_FRAME_BYTES} pending capture bytes and a {reserve}-byte ending reserve')
+        if remaining < MAX_FRAME_BYTES:
+            raise ControlError(f'Insufficient pending capture headroom for {detail}')
+        if phase == 'work' and remaining <= reserve:
+            raise ControlError(f'Ending reserve reached before planned {detail}')
+        results[phase] = dict(retained_bytes=retained, remaining_bytes=remaining)
+    return dict(total_bytes=total, pending_capture_bytes=MAX_FRAME_BYTES, ending_reserve_bytes=reserve,
+                checkpoints=results)
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description='Validate one frozen package and check planned capture headroom offline.')
+    parser.add_argument('--run', type=Path, required=True)
+    parser.add_argument('--work-before-bytes', type=int, required=True,
+                        help='cumulative retained PNG bytes before the last planned work capture')
+    parser.add_argument('--ending-before-bytes', type=int,
+                        help='cumulative retained PNG bytes before the last planned finish-up capture, if any')
+    args = parser.parse_args(argv)
+    try:
+        profile, _, _ = preflight(args.run)
+        plan = capture_headroom(profile, work_before_bytes=args.work_before_bytes,
+                                ending_before_bytes=args.ending_before_bytes)
+        print(json.dumps(dict(session=profile['session'], manifest_sha256=file_sha256(args.run/'manifest.json'), **plan)))
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+        parser.exit(1, f'Capture plan refused: {error}\n')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

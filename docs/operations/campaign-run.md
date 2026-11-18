@@ -126,6 +126,31 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 }
 ```
 
+### Check planned capture headroom
+
+Before asking approval for a paid interactive package, run the offline validator
+with the planned cumulative retained PNG bytes immediately before the last work
+capture and, if planned, immediately before the last finish-up capture. Include
+earlier retained frames and the possible result of work already dispatched at
+the start of finish-up. Use measured comparable PNG sizes or a documented
+conservative forecast. With one planned capture, its prior retained total is zero.
+
+```sh
+.venv/bin/python -m tools.campaign_package \
+  --run .runtime/computer-sessions/SELECTED_FRESH_PACKAGE \
+  --work-before-bytes 42991616 --ending-before-bytes 115343360
+```
+
+The byte counts above are examples. Omit `--ending-before-bytes` when the planned
+ending requires no capture. The check binds its result to the package manifest
+hash and reports the remaining bytes at each declared checkpoint. Each planned
+capture needs at least the runtime's full pending reservation. Work also needs
+strictly more than the ending byte reserve at dispatch. Remaining bytes decline as
+PNGs are retained, so the last checkpoint covers earlier captures in its phase.
+Keep the byte forecast with the approval proposal. The runtime still enforces
+actual bytes, other resource limits and input custody during the run. Observation-only
+diagnostics can use the existing package preflight for their declared scope.
+
 ### Freeze delivered knowledge
 
 Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order. A withholding study's starts are exported from one study draw instead, with `--study-draw FILE --start-index I`: the draw withholds each unit in half of each block's starts ([study design](../contracts/evaluation.md#the-withholding-studys-design-withholding-study-draw1)). The sealed pilot's starts each took their own seed ([pilot analysis](../contracts/evaluation.md#the-withholding-pilots-analysis-withholding-pilot1)). An article's unit lists only the facts exclusive to it; `private/units.json` records other cited facts under `shared` with their citing article IDs. Shared facts follow any delivered citing article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
