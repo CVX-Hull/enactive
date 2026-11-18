@@ -1,0 +1,51 @@
+{
+  "assignment_sha256": "f18727d8f45d40b4928ede514320a38df48d011561591c3db6c7b089a30a78bc",
+  "cases": [
+    {
+      "case": "cupboard-water",
+      "common_context": "The frozen successor prompt carried the cupboard and sealed water from the prior actor. Exact sent context is unavailable.",
+      "decision_and_effect": "Movement precedes the re-observation of five sealed bottles. Later frames show departure without verified water acquisition.",
+      "fact_age_seconds": null,
+      "game_seconds_between_timed_views": 148,
+      "identity": "Timothy Lowery at 782. The handoff used a different surname. The exact world name and strict named endpoint are unresolved.",
+      "natural_actor_boundary": true,
+      "strict_named_living_endpoint": "unknown",
+      "verdict": "Redundancy and input evidence gap. The assigned earlier view does not show the water."
+    },
+    {
+      "case": "pot-search",
+      "common_context": "The cited Work record was already in the successor prompt. Full historical payload and all omitted images are unknown.",
+      "decision_and_effect": "Query, repeated pot search and earlier image lookup, followed by a clay recipe with missing requirements. No verified acquisition or craft in the window.",
+      "fact_age_seconds": null,
+      "game_seconds_between_timed_views": null,
+      "identity": "The 362 dialogue names an NPC. The frozen handoff's survivor and world claims lack direct assigned identity evidence.",
+      "natural_actor_boundary": true,
+      "strict_named_living_endpoint": "unknown",
+      "verdict": "Redundancy and process-only endpoint. The earlier inventory shows supplies but no established viable pot."
+    },
+    {
+      "case": "return-to-companion",
+      "common_context": "The exact manifest confirms the earlier upstairs view was sent at the return decision.",
+      "decision_and_effect": "Return upstairs, re-observe Fernando Parr and recruit him. The active dialogue never names Morgan.",
+      "fact_age_seconds": 16,
+      "game_seconds_between_timed_views": 16,
+      "identity": "Morgan Hale at 284, linked through one uninterrupted Landover actor chain.",
+      "natural_actor_boundary": false,
+      "strict_named_living_endpoint": "unknown",
+      "verdict": "Visible benefit and recent-context redundancy in one session."
+    },
+    {
+      "case": "return-to-washroom",
+      "common_context": "The exact manifest confirms earlier washroom images were sent. The visible cutoff log still lists the soap.",
+      "decision_and_effect": "Go back, recheck the sink and collect ten soap bars. The endpoint is active gameplay without a named survivor.",
+      "fact_age_seconds": null,
+      "game_seconds_between_timed_views": 12,
+      "identity": "Morgan Hale at 284, linked through one uninterrupted Landover actor chain.",
+      "natural_actor_boundary": false,
+      "strict_named_living_endpoint": "unknown",
+      "verdict": "Visible benefit and both current-view and recent-context redundancy."
+    }
+  ],
+  "disposition": "defer-matched-comparison-acquire-later-waking-decision",
+  "issue": 757
+}
