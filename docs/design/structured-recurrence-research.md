@@ -40,6 +40,8 @@ cross-game generality remains untested.
 
 GitHub owns ownership, capacity and stage: [research outcome #666](https://github.com/CVX-Hull/enactive/issues/666)
 and [no-model feasibility slice #668](https://github.com/CVX-Hull/enactive/issues/668).
+The [delayed-memory assessment proposal](delayed-memory-assessment.md) specifies
+how to select decisions, compare context budgets and acquire a later waking period.
 The [work map](../work.md) routes to the curated-player parent;
 [work-item flow](../workflows/work-items.md) governs execution.
 
@@ -508,9 +510,11 @@ Pair arms by copied source moment; randomize/counterbalance their execution orde
 Reset memory and model session at each independent source assignment. Give each arm
 the same permitted visible setup history, initial source information and natural player
 context; only the memory treatment differs. Do not seed an inherited player store
-with an arm's earlier outputs. Current starts prepare a fresh supported journal;
-never activate a copied legacy store or edit the sealed source. Repeated samples, saved moments and query windows remain
-nested in their source world/lineage.
+with an arm's earlier outputs. Fresh and legacy-derived starts prepare a fresh
+supported journal. Arms paired at a current prospective checkpoint take separate
+verified copies of the same supported closed pre-arm journal and preserve equal
+permitted source access. Keep each sealed source immutable. Repeated samples,
+saved moments and query windows remain nested in their source world or lineage.
 
 **Primary live outcome:** a source-specific, predeclared **visible task-progress bundle
 achieved while still alive at the finite allowance's end**, with each source weighted equally within profile and
