@@ -646,6 +646,23 @@
       },
       "visibility": "private"
     },
+    "evacuee-setup-check-737": {
+      "availability": "present",
+      "bytes": 689378,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-evacuee-setup-check-737.md"
+      ],
+      "files": 50,
+      "manifest_sha256": "ad5b5dba0d529124b72ac6b69a447ac230d27017943dbc179c41430b37306d58",
+      "note": "One approved menu-only Evacuee admission. The first capture used part of the fixed byte allowance and the runtime fenced the first input before dispatch. No world or survivor save was created. Owned watcher, actor, native and evaluator evidence is retained.",
+      "sources": {
+        "archived-userdir": ".runtime/archive/userdir-20261118T025940936812Z",
+        "evaluation": ".runtime/evaluations/993dfda863db4282ad5981fd623467cf",
+        "package": ".runtime/computer-sessions/evacuee-setup-check-993dfda863db4282ad5981fd623467cf@5dfdd5c25c4bdf46b64464685af6f39fac184eca",
+        "supervisor.log": "tools/campaign_supervision.py@5dfdd5c25c4bdf46b64464685af6f39fac184eca"
+      },
+      "visibility": "private"
+    },
     "fresh-world-screen-441": {
       "availability": "present",
       "bytes": 5998310,
