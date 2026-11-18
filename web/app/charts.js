@@ -33,7 +33,7 @@ const axisBase = C => ({axisLine: {lineStyle: {color: C.line}}, axisLabel: {colo
 const tooltipBase = C => ({backgroundColor: C.surface, borderColor: C.line, textStyle: {color: C.fg, fontSize: 11}});
 
 /* ---------------------------------------------------------------- Supervise timeline */
-export function timelineOption({steps, requests, markers, t0, cursorSeq}) {
+export function timelineOption({steps, requests, markers, t0, cursorSeq, accessibleName}) {
   const C = palette(), base = axisBase(C);
   const rel = wall => (wall - t0) / 60;
   const clocked = steps.filter(s => s.game_time !== null && s.game_time !== undefined);
@@ -50,7 +50,7 @@ export function timelineOption({steps, requests, markers, t0, cursorSeq}) {
   const grids = [{top: 14, height: 100}, {top: 134, height: 20}, {top: 174, height: 80}, {top: 276, height: 46}];
   const yname = n => ({name: n, nameLocation: 'middle', nameRotate: 0, nameGap: 54, nameTextStyle: {color: C.muted, fontSize: 10, align: 'right'}});
   return {
-    animation: false, aria: {enabled: true}, textStyle: {fontFamily: C.mono},
+    animation: false, aria: {enabled: true, label: {description: accessibleName}}, textStyle: {fontFamily: C.mono},
     axisPointer: {link: [{xAxisIndex: 'all'}], lineStyle: {color: C.muted}},
     tooltip: {trigger: 'axis', ...tooltipBase(C), formatter: ps => {
       const x = ps[0].axisValue;
