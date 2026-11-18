@@ -125,8 +125,12 @@ was available. The
 [evidence index](../../data/evidence/index.json) identifies the original
 packages and captures, closed userdir copies, authority and provider
 receipts, exact cutoff readbacks, evaluator records and operator checks.
-The final byte-verified userdir snapshot held 82 files. The live
-working userdir retains the final Townsend save. See
+The final byte-verified userdir snapshot held 82 files. After all 959
+sealed file hashes passed verification, the lead compared the three
+working run packages and three archive directories listed as origins
+in the evidence index against the sealed copies, then retired those
+duplicates under the game lock. The working userdir retains the final
+Townsend save. See
 [#762](https://github.com/CVX-Hull/enactive/issues/762),
 [#666](https://github.com/CVX-Hull/enactive/issues/666), and
 [#681](https://github.com/CVX-Hull/enactive/issues/681).
