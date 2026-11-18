@@ -109,12 +109,17 @@ samples the claims in each arm.
   carried) or shelter (secured and used for rest). Claims without a confirming
   frame do not count.
 - **Death cause**, if shown.
-- **Cost:** dollars, charged attempts, setup attempts (until the first in-play
-  frame) and wall seconds. The **$ upper bound** column is provider-reported usage
-  plus $0.4096 for every attempt without a provider record, so it is an upper bound,
-  not an invoice. The generated evaluator tables in the dated records report
-  configured-rate dollars per decision from host usage instead; their columns are
-  defined beside the [#383 table](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383).
+- **Cost:** record the provider-returned subtotal, attempts, setup attempts (until
+  the first in-play frame) and wall seconds. A settled player or recall attempt
+  without a usable charge consumes an attempt, leaves its cost unknown, and adds
+  nothing to the subtotal. The [campaign procedure](operations/campaign-run.md#spend-limit)
+  defines the in-flight and ending allowances and the separate
+  [admission amount for an incomplete trace](operations/campaign-run.md#start-and-close).
+  The [owner manages OpenRouter billing](operator-permissions.md#finite-gameplay-budget-delegation).
+  Earlier dated records keep their original accounting, including any historical
+  **$ upper bound** column. Generated evaluator tables report configured-rate
+  dollars per decision as defined beside the
+  [#383 table](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383).
 
 ## Long-horizon method (#382)
 

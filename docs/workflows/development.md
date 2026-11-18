@@ -64,11 +64,13 @@ scope; this policy itself grants no provider spending or data-export permission.
 Choose models/context/harnesses by observed useful outcomes and apparent time to
 useful progress, including useful local execution while inference is pending.
 Call count, API duration, cache hits and token cost remain diagnostic measures.
-Report configured API estimates, provider-reported cost, provider invoices and
-requests with no cost record separately; a request counted at its bound is not
-measured spending. Include setup/review/rework burden and explicitly unknown labor when
-judging the whole workflow. No labor database, cost-saving quota or per-action
-approval ceremony is required.
+Report configured API estimates and provider-returned charges separately. Record
+settled attempts without a usable charge as unknown. The
+[campaign procedure](../operations/campaign-run.md#spend-limit) defines the
+planning allowances, and the [owner manages OpenRouter billing](../operator-permissions.md#finite-gameplay-budget-delegation).
+Include setup/review/rework burden and explicitly unknown labor when judging the
+whole workflow. No labor database, cost-saving quota or per-action approval
+ceremony is required.
 
 Keep the existing Issue's next action grounded in what the trajectory revealed.
 Freeze each new admission's data and original limits; use maintained launch/control
