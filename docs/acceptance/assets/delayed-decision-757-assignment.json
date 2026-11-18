@@ -1,0 +1,388 @@
+{
+  "excluded": "Reserved #382/#522 sources unopened. Published Brokaw report and #755 results are references only.",
+  "issue": 757,
+  "method_source": "404362539b3303cc82ff7f954afc0e299c3760cc",
+  "packets": [
+    {
+      "action_refs": [
+        {
+          "call": "call_PDqahE1oe8u17VPAIZZO03uO",
+          "request": "request-16",
+          "tool": "computer_input"
+        },
+        {
+          "call": "call_HM2eJNhyKzG9xz5uvPvXmVWT",
+          "request": "request-17",
+          "tool": "computer_input"
+        },
+        {
+          "call": "call_D5trWHwqeBvSseZyDB7IbxZH",
+          "request": "request-19",
+          "tool": "computer_input"
+        }
+      ],
+      "cutoff_request": "request-16",
+      "cutoff_utc": "2026-11-06T13:13:28.222Z",
+      "decision_actor": "316662c286624a6a84aca254c27d89a2",
+      "eligibility": "development #449 retained aid arm. Use only the annotated Evacuee segment after setup restart.",
+      "event_window": "actor 001 request 67 observation through natural handoff to actor 002 requests 15\u201319",
+      "fact_to_check": "Previously observed sealed drinking water in the shelter cupboard.",
+      "frames": [
+        {
+          "actor_id": "283f5b52f0544f598fd00cb76e42385a",
+          "actor_operation": 25,
+          "operation_id": "9b4b72cb8de94446ac1fd55b8ac116cf",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidB3/sources/20d51b154e0077ab83109060223075c2-782.png",
+          "role": "earlier_named_identity",
+          "sha256": "a2b04179f599baec533cada0e356d18cd799165806292e52f7b06f3da4ce64d8",
+          "source_id": "20d51b154e0077ab83109060223075c2-782",
+          "status": "completed"
+        },
+        {
+          "actor_id": "283f5b52f0544f598fd00cb76e42385a",
+          "actor_operation": 67,
+          "operation_id": "e7deaacdfda3480b82022ea34e983f2b",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidB3/sources/20d51b154e0077ab83109060223075c2-2729.png",
+          "role": "earlier_sighting",
+          "sha256": "f37d345f0d5cc15a94e3a8a4ec0d7d4bb853f6309ffc84b4c6aa596ce489fc0d",
+          "source_id": "20d51b154e0077ab83109060223075c2-2729",
+          "status": "completed"
+        },
+        {
+          "actor_id": "316662c286624a6a84aca254c27d89a2",
+          "actor_operation": 15,
+          "operation_id": "f026507c9efd4a6e9601f057e8f5675d",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidB3/sources/20d51b154e0077ab83109060223075c2-4747.png",
+          "role": "cutoff_view",
+          "sha256": "f49d1b03be0c6b70884378a84c1f4f6b15e4a3b5b1a158c4aade7c4addb0e2ae",
+          "source_id": "20d51b154e0077ab83109060223075c2-4747",
+          "status": "completed"
+        },
+        {
+          "actor_id": "316662c286624a6a84aca254c27d89a2",
+          "actor_operation": 16,
+          "operation_id": "2a4ed3ffcc594ab2aba697d9532611c2",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidB3/sources/20d51b154e0077ab83109060223075c2-4835.png",
+          "role": "re-observation",
+          "sha256": "e5e01de424b44be155dd0a319fd4ffe8892e8a9d21081d1d53e91516474ef8d4",
+          "source_id": "20d51b154e0077ab83109060223075c2-4835",
+          "status": "completed"
+        },
+        {
+          "actor_id": "316662c286624a6a84aca254c27d89a2",
+          "actor_operation": 17,
+          "operation_id": "4ae131401c77459ba965f08d2cfcb269",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidB3/sources/20d51b154e0077ab83109060223075c2-4918.png",
+          "role": "later_option",
+          "sha256": "3f738d795559bf4fdd473a240045acb5a7a34bec14b5cecb446059dd5fd476d6",
+          "source_id": "20d51b154e0077ab83109060223075c2-4918",
+          "status": "completed"
+        },
+        {
+          "actor_id": "316662c286624a6a84aca254c27d89a2",
+          "actor_operation": 19,
+          "operation_id": "974a46b8ba844ceb8dbb75c5fa9ee621",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidB3/sources/20d51b154e0077ab83109060223075c2-5020.png",
+          "role": "endpoint",
+          "sha256": "964fce0f86d76fee5c2e0808a08f755ff54fc8ff72ed14b319abc94f90b52a49",
+          "source_id": "20d51b154e0077ab83109060223075c2-5020",
+          "status": "completed"
+        }
+      ],
+      "host_trace": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidB3/actors/002/host.jsonl",
+      "host_trace_sha256": "e676688c85a05c2161fe7cf7b22eeeff42511a7c9d646ea9eb4c55537b462eda",
+      "packet": "cupboard-water",
+      "session": "20d51b154e0077ab83109060223075c2",
+      "source_group": "aidB3",
+      "source_manifest_sha256": "00b75a6b54b8d1fce0f8761a34c00f4c769124a45050c1cca0bfa428fc2ba09f",
+      "source_study": 372
+    },
+    {
+      "action_refs": [
+        {
+          "call": "call_Cfpe8zQNTeQnIw1g5MGgpDPX",
+          "request": "request-88",
+          "tool": "player_memory_query"
+        },
+        {
+          "call": "call_4LH41U8kaEzKMzg2TXgUVD4h",
+          "request": "request-89",
+          "tool": "computer_input"
+        },
+        {
+          "call": "call_LOAMth8sziqa2QPbekef42ga",
+          "request": "request-91",
+          "tool": "player_source"
+        },
+        {
+          "call": "call_jYM1mZdDl49T8xZz4srem33Y",
+          "request": "request-92",
+          "tool": "computer_input"
+        }
+      ],
+      "cutoff_request": "request-88",
+      "cutoff_utc": "2026-11-06T19:16:00.557Z",
+      "decision_actor": "2d3ce1adb8b740889c3872eba436e22f",
+      "eligibility": "development #594 inspected reflection-aid arm",
+      "event_window": "actor 001 request 61 observation through natural handoff to actor 002 requests 87\u201392",
+      "fact_to_check": "Earlier cited stock and work source during later search for a practical container.",
+      "frames": [
+        {
+          "actor_id": "30b17def81a84424bbb0f06343e36ab0",
+          "actor_operation": 27,
+          "operation_id": "121bf3be12bc45bb8a562a5b6d1e7236",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidC5/sources/3f763f128c636eb36f35bb229a9fb30d-362.png",
+          "role": "earlier_identity_candidate",
+          "sha256": "96ead89a875809f787d85da015e2800bfdd7906c13d8b3dbb705b77a33ccc417",
+          "source_id": "3f763f128c636eb36f35bb229a9fb30d-362",
+          "status": "completed"
+        },
+        {
+          "actor_id": "30b17def81a84424bbb0f06343e36ab0",
+          "actor_operation": 61,
+          "operation_id": "0f0fff11f2684542acf0ee903fb0cf43",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidC5/sources/3f763f128c636eb36f35bb229a9fb30d-1553.png",
+          "role": "earlier_cited_view",
+          "sha256": "112ce74d1346e62af08998525282427e51738c73d17957b36d035113285c2189",
+          "source_id": "3f763f128c636eb36f35bb229a9fb30d-1553",
+          "status": "completed"
+        },
+        {
+          "actor_id": "2d3ce1adb8b740889c3872eba436e22f",
+          "actor_operation": 88,
+          "operation_id": "9d2cc2a88c5a4e47963b07320bf64845",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidC5/sources/3f763f128c636eb36f35bb229a9fb30d-8148.png",
+          "role": "cutoff_view",
+          "sha256": "f9eaf0e26d0bb39649f006b301dd0cf2c155e7b40a06dff03815478dcb23a354",
+          "source_id": "3f763f128c636eb36f35bb229a9fb30d-8148",
+          "status": "completed"
+        },
+        {
+          "actor_id": "2d3ce1adb8b740889c3872eba436e22f",
+          "actor_operation": 89,
+          "operation_id": "cf4a0514b3954c51adb61abcad571c51",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidC5/sources/3f763f128c636eb36f35bb229a9fb30d-8152.png",
+          "role": "search_result",
+          "sha256": "734894e2e7d53b939d2ec0b67f31e9e21db712e8f529c2ee6115e3ee018fe970",
+          "source_id": "3f763f128c636eb36f35bb229a9fb30d-8152",
+          "status": "completed"
+        },
+        {
+          "actor_id": "2d3ce1adb8b740889c3872eba436e22f",
+          "actor_operation": 90,
+          "operation_id": "941610b20c384ad29db56cac252b2c6b",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidC5/sources/3f763f128c636eb36f35bb229a9fb30d-8156.png",
+          "role": "pre_lookup",
+          "sha256": "0106845bfd9a72a2842b05ab198ecb15285032c0a9f0b0a432fc23a83a2b4785",
+          "source_id": "3f763f128c636eb36f35bb229a9fb30d-8156",
+          "status": "completed"
+        },
+        {
+          "actor_id": "2d3ce1adb8b740889c3872eba436e22f",
+          "actor_operation": 91,
+          "operation_id": "14f43972e0c843d0b074dcf2499c4a84",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidC5/sources/3f763f128c636eb36f35bb229a9fb30d-8160.png",
+          "role": "endpoint",
+          "sha256": "d20988939eb8102f90bc6d1bae4904dfd75ef63a9a0121589f6f6fe386b226da",
+          "source_id": "3f763f128c636eb36f35bb229a9fb30d-8160",
+          "status": "completed"
+        }
+      ],
+      "host_trace": ".runtime/evidence/372-382-dev-loop/computer-sessions/aidC5/actors/002/host.jsonl",
+      "host_trace_sha256": "09290ce40e6620106b0897c88a61f0fc25c701212e5b242dc28ae0ac59779fcd",
+      "packet": "pot-search",
+      "session": "3f763f128c636eb36f35bb229a9fb30d",
+      "source_group": "aidC5",
+      "source_manifest_sha256": "6e3ba973860bbe9b893fb0e981f0a5a599a80cb029807fe24201f2d6dd90a277",
+      "source_study": 372
+    },
+    {
+      "action_refs": [
+        {
+          "call": "call_8627366baa764f63ba593cc59ee6402a",
+          "request": "request-35",
+          "tool": "computer_input"
+        }
+      ],
+      "cutoff_request": "request-35",
+      "cutoff_utc": "2026-11-18T05:21:09.579Z",
+      "decision_actor": "406634c00ebe4d5f92b6dc39614e406d",
+      "eligibility": "development #753 independently created fresh world",
+      "event_window": "one actor, first playable view through return upstairs and companion agreement",
+      "fact_to_check": "A companion was seen upstairs before the player went to the basement.",
+      "frames": [
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 18,
+          "operation_id": "6e904ac7e7214ceabc07a61c5be462cc",
+          "operation_kind": "observe",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-264.png",
+          "role": "earlier_sighting",
+          "sha256": "570b1111cf3e7edaee61018b33e41de1d2a0fb00d5a33b9326fa93a89b6aadb5",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-264",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 19,
+          "operation_id": "13b73c6ff6f9412ca9d809da506cae59",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-284.png",
+          "role": "earlier_named_identity",
+          "sha256": "233f20c1cfa991592814a451db1f387d38abafe50793e8ec10159ca4e78d7f0f",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-284",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 34,
+          "operation_id": "20b3214614234e7ebc3b90e4c7662e0e",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-553.png",
+          "role": "cutoff_view",
+          "sha256": "1cf4a362ebb36242f697f0ab9a6d7092d1a7820bc59402bf7cdef75e5eea1c2b",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-553",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 35,
+          "operation_id": "acab8002968d44f99301d3eb467f56fa",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-594.png",
+          "role": "re-observation",
+          "sha256": "dc4829c0a5e4c7e86ef6e7da61ffe64daab37af80b8f3f950c56248556cbe038",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-594",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 39,
+          "operation_id": "dd1e17dddc304ba8aba1595a0f689e0b",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-696.png",
+          "role": "endpoint",
+          "sha256": "fa07a91fb68684cb5f177024f10778041e4c87ee7b9b65aa17265e139330b0e0",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-696",
+          "status": "completed"
+        }
+      ],
+      "host_trace": ".runtime/evidence/evacuee-sustained-progress-753/package/actors/001/host.jsonl",
+      "host_trace_sha256": "0819bd797a3c954e66f776a348e62790b2aac70e645583f2ec48e17dfcca91ba",
+      "packet": "return-to-companion",
+      "session": "1b65b732b8ab5d159b8c976b220074b5",
+      "source_group": "Landover",
+      "source_manifest_sha256": "2242b827aa2ae3adc5c38c68be4a575f28ee90b852a0a604498a52d6dd10829f",
+      "source_study": 753
+    },
+    {
+      "action_refs": [
+        {
+          "call": "call_dXkNN1xp1R0JXvWHvPcz4wTK",
+          "request": "request-41",
+          "tool": "computer_input"
+        }
+      ],
+      "cutoff_request": "request-41",
+      "cutoff_utc": "2026-11-18T05:21:40.673Z",
+      "decision_actor": "406634c00ebe4d5f92b6dc39614e406d",
+      "eligibility": "development #753 independently created fresh world",
+      "event_window": "one actor, first washroom inspection through companion recruitment and later washroom pickup",
+      "fact_to_check": "Soap seen with medical supplies in the basement washroom.",
+      "frames": [
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 19,
+          "operation_id": "13b73c6ff6f9412ca9d809da506cae59",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-284.png",
+          "role": "earlier_named_identity",
+          "sha256": "233f20c1cfa991592814a451db1f387d38abafe50793e8ec10159ca4e78d7f0f",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-284",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 32,
+          "operation_id": "3c4fd133a25c478aafdf0008b589f0ca",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-547.png",
+          "role": "earlier_sighting",
+          "sha256": "034371c164d4be1e9b5f1c54c4912115b8fd38e43fcbbf35fd4617c2a3b0aefa",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-547",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 34,
+          "operation_id": "20b3214614234e7ebc3b90e4c7662e0e",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-553.png",
+          "role": "earlier_pickup_and_clock",
+          "sha256": "1cf4a362ebb36242f697f0ab9a6d7092d1a7820bc59402bf7cdef75e5eea1c2b",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-553",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 40,
+          "operation_id": "d0a1736a5170454da486ce2bcc603e36",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-697.png",
+          "role": "cutoff_view",
+          "sha256": "62ddfcfc592eca0632321c8c38acbc9bcbb65ec712ee1fa847bb9225e329ed4c",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-697",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 42,
+          "operation_id": "497f0e33ddb042dd8f76c254a55aec75",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-772.png",
+          "role": "recheck",
+          "sha256": "c79697895d6f06e6078e1b2a43c4abb8a459eceec6f886d88b8a282315689a3f",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-772",
+          "status": "completed"
+        },
+        {
+          "actor_id": "406634c00ebe4d5f92b6dc39614e406d",
+          "actor_operation": 43,
+          "operation_id": "fd36654856c641ff9c3d867c7f0143da",
+          "operation_kind": "input",
+          "path": ".runtime/evidence/evacuee-sustained-progress-753/package/sources/1b65b732b8ab5d159b8c976b220074b5-774.png",
+          "role": "endpoint",
+          "sha256": "7fa25705757767871910a55f3aadc81dd58bcb078b240c17bc8966e79e76476e",
+          "source_id": "1b65b732b8ab5d159b8c976b220074b5-774",
+          "status": "completed"
+        }
+      ],
+      "host_trace": ".runtime/evidence/evacuee-sustained-progress-753/package/actors/001/host.jsonl",
+      "host_trace_sha256": "0819bd797a3c954e66f776a348e62790b2aac70e645583f2ec48e17dfcca91ba",
+      "packet": "return-to-washroom",
+      "session": "1b65b732b8ab5d159b8c976b220074b5",
+      "source_group": "Landover",
+      "source_manifest_sha256": "2242b827aa2ae3adc5c38c68be4a575f28ee90b852a0a604498a52d6dd10829f",
+      "source_study": 753
+    }
+  ],
+  "rules": {
+    "decisions": "Identify a feasible choice, alternative or verification and visible consequence. A lookup without a task effect stays a process observation. Earlier fact already visible or in ordinary context is a redundancy case. Do not infer a miss from lack of a query.",
+    "exposure": "Check ordinary images, handoff, player context manifests or documented partial reconstruction, and relevant memory deliveries. Preserve unknown where actual sent content cannot be established.",
+    "identity": "Verify source and episode identity before grouping. For a strict living endpoint require the survivor named and living in the endpoint. Treat a continuous living view with an earlier linked identity as exploratory. Candidates and repeated windows are not independent trials.",
+    "minimum": "At least two independent development worlds with scoreable decisions and a credible common-context comparison. At least one feasible earlier-fact decision needs the discriminating fact absent from ordinary context. Report natural boundaries and later waking-period coverage separately.",
+    "temporal": "Freeze immediately before the named deciding request. Candidate input ends at that cutoff. Every later view is evaluation only. Use comparable visible clocks from frozen sources. Preserve unmeasurable delays."
+  }
+}
