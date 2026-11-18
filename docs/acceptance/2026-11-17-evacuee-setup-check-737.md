@@ -63,8 +63,17 @@ no created world or survivor save.
 
 The [private evidence seal](../../data/evidence/index.json) preserves the
 package, frame and operation stores, player and terminal receipts, launch log,
-evaluation store and owned userdir. Every sealed hash was checked before
-removing the duplicate working copies. The next setup check needs enough byte
+evaluation store and owned userdir. The lead verified every hash before retiring
+the four duplicate working paths.
+
+- `.runtime/computer-sessions/evacuee-setup-check-993dfda863db4282ad5981fd623467cf`
+- `.runtime/evaluations/993dfda863db4282ad5981fd623467cf`
+- `.runtime/archive/userdir-20261118T025940936812Z`
+- `.runtime/user`, which matched the archive's `user` directory
+
+The launch log came from `/tmp/enactive-evacuee-live.sD2t4j/supervisor.log`.
+The evidence index gives the supervisor's source checkpoint for that log.
+The next setup check needs enough byte
 headroom for already retained PNGs and the runtime's original pending-capture
 reservation, and separate approval for a fresh package.
 [#738](https://github.com/CVX-Hull/enactive/issues/738) owns the offline follow-up.
