@@ -14,6 +14,9 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | [Sustained progress in a fresh Evacuee world (#753)](2026-11-18-evacuee-sustained-progress-753.md) | run | One supervised fresh Evacuee start with a meaningful activity switch and return, with visible clock, custody and delivery evidence | historical |
+| 2026-11-18 | [Food progress and living endpoint feasibility (#754)](2026-11-18-evacuee-food-progress-754.md) | review | Six frozen retained packets test scoring ration acquisition and use with a strict named living endpoint and an exploratory linked endpoint | historical |
+| 2026-11-18 | [Delayed observation cueing in retained CDDA decisions (#755)](2026-11-18-delayed-observation-cueing-755.md) | measurement | A twelve-response paired probe of earlier visible observations and later proposed CDDA decisions in one retained lineage | historical |
 | 2026-11-17 | [Current Terra player rehearsal (#711)](2026-11-17-terra-rehearsal-711.md) | run | One supervised run of the current Terra player with curated knowledge and a fresh journal, using a verified copy of a previously inspected development save | historical |
 | 2026-11-17 | [Stated intent in the Terra rehearsal (#714)](2026-11-17-stated-intent-review-711.md) | review | Offline review of public intent in the single sealed Terra rehearsal admission | historical |
 | 2026-11-17 | [Recorded knowledge in the spectator](2026-11-17-recorded-knowledge-spectator.md) | measurement | Recorded knowledge/public-report reader: retained #642 replay through the real viewer, synthetic current-journal browser acceptance and focused portable checks; no new CDDA play, native build or provider call | historical |

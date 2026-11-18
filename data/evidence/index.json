@@ -586,6 +586,20 @@
       },
       "visibility": "private"
     },
+    "delayed-observation-cueing-755": {
+      "availability": "present",
+      "bytes": 1173676,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-delayed-observation-cueing-755.md"
+      ],
+      "files": 43,
+      "manifest_sha256": "1c99c328112768d8eee67122a9399f1fe06b7e38349a72857568ead23ae085be",
+      "note": "Frozen raw source-matched request and response data from the bounded developmental endpoint probe. No credentials or save contents.",
+      "sources": {
+        "replay": "overnight-evidence/replay"
+      },
+      "visibility": "private"
+    },
     "delivery-check-642": {
       "availability": "present",
       "bytes": 30406381,
@@ -697,6 +711,23 @@
         "evaluation": ".runtime/evaluations/993dfda863db4282ad5981fd623467cf",
         "package": ".runtime/computer-sessions/evacuee-setup-check-993dfda863db4282ad5981fd623467cf@5dfdd5c25c4bdf46b64464685af6f39fac184eca",
         "supervisor.log": "tools/campaign_supervision.py@5dfdd5c25c4bdf46b64464685af6f39fac184eca"
+      },
+      "visibility": "private"
+    },
+    "evacuee-sustained-progress-753": {
+      "availability": "present",
+      "bytes": 6804139,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-evacuee-sustained-progress-753.md"
+      ],
+      "files": 155,
+      "manifest_sha256": "4fe2d4f6ca9a271bd9077744212acd5ef5a1247172084ee0a9aaee545d26425b",
+      "note": "Exact one-slot package, original evidence, evaluations, closed Landover userdir and terminal supervision.",
+      "sources": {
+        "evaluation": ".runtime/evaluations/1b65b732b8ab5d159b8c976b220074b5",
+        "land-over-userdir": ".runtime/archive/userdir-20261118T052814736295Z",
+        "package": ".runtime/computer-sessions/evacuee-sustained-progress-753-1b65b732b8ab5d159b8c976b220074b5@68a6cc129954cb6f079e5e50a7985fc641c71820",
+        "supervisor": "tools/campaign_supervision.py"
       },
       "visibility": "private"
     },
