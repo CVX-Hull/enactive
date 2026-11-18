@@ -1,0 +1,296 @@
+{
+  "schema": "belief-replay-fixture/1",
+  "cases": [
+    {
+      "id": "wooden-club",
+      "dependence_group": "507f7c538191fedb29b11639ed137b70",
+      "question": "Does the inventory show a wooden club held?",
+      "scope": "Inventory slot at operation 7 of #397/sd1a2.",
+      "checkpoints": [
+        {
+          "id": "before",
+          "through": 3
+        },
+        {
+          "id": "revision",
+          "through": 4
+        }
+      ],
+      "exposure": [
+        "507f7c538191fedb29b11639ed137b70-188",
+        "507f7c538191fedb29b11639ed137b70-208",
+        "507f7c538191fedb29b11639ed137b70/supplied-stand-in",
+        "507f7c538191fedb29b11639ed137b70-210"
+      ],
+      "observations": {
+        "507f7c538191fedb29b11639ed137b70-188": {
+          "detail": "Shelter observation."
+        },
+        "507f7c538191fedb29b11639ed137b70-208": {
+          "detail": "Character observation."
+        },
+        "507f7c538191fedb29b11639ed137b70/supplied-stand-in": {
+          "detail": "Supplied stand-in assertion that no weapon is held, without any observation origin."
+        },
+        "507f7c538191fedb29b11639ed137b70-210": {
+          "detail": "Inventory explicitly lists Weapon held: wooden club.",
+          "reports": [
+            {
+              "origin": "507f7c538191fedb29b11639ed137b70-210",
+              "event": "held-weapon-slot-at-operation-7",
+              "polarity": "support"
+            }
+          ]
+        }
+      },
+      "applicable_events": [
+        "held-weapon-slot-at-operation-7"
+      ]
+    },
+    {
+      "id": "drink-and-tupperware",
+      "dependence_group": "d1f27714d8684654945e288f09cbcc73",
+      "question": "Does the returned view report both a drink and a tupperware fill?",
+      "scope": "Two visible reports in the #711 rooftop-tank sequence. The displayed remaining volume is a separate observation.",
+      "checkpoints": [
+        {
+          "id": "before",
+          "through": 1
+        },
+        {
+          "id": "revision",
+          "through": 2
+        },
+        {
+          "id": "later",
+          "through": 3
+        }
+      ],
+      "exposure": [
+        "d1f27714d8684654945e288f09cbcc73/request-24/intent-and-action",
+        "d1f27714d8684654945e288f09cbcc73-733",
+        "d1f27714d8684654945e288f09cbcc73-810"
+      ],
+      "observations": {
+        "d1f27714d8684654945e288f09cbcc73/request-24/intent-and-action": {
+          "detail": "Request 24 intended to top up the existing clean-water container and sent Enter."
+        },
+        "d1f27714d8684654945e288f09cbcc73-733": {
+          "detail": "The frame reports drinking and filling the tupperware. The last-drops wording appears with a 17.25 L display, leaving an empty-tank claim unresolved.",
+          "reports": [
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73-733",
+              "event": "rooftop-tank-drink",
+              "polarity": "support"
+            },
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73-733",
+              "event": "rooftop-tupperware-fill",
+              "polarity": "support"
+            }
+          ]
+        },
+        "d1f27714d8684654945e288f09cbcc73-810": {
+          "detail": "The tupperware message repeats alongside a separate plastic-bottle fill.",
+          "reports": [
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73-733",
+              "event": "rooftop-tupperware-fill",
+              "polarity": "support"
+            }
+          ]
+        },
+        "d1f27714d8684654945e288f09cbcc73-694": {
+          "detail": "Excluded result for request 24."
+        }
+      },
+      "applicable_events": [
+        "rooftop-tank-drink",
+        "rooftop-tupperware-fill"
+      ],
+      "required_support": [
+        "rooftop-tank-drink",
+        "rooftop-tupperware-fill"
+      ]
+    },
+    {
+      "id": "plastic-bottle",
+      "dependence_group": "d1f27714d8684654945e288f09cbcc73",
+      "question": "Does the next returned frame report filling the plastic bottle?",
+      "scope": "This container and #711 request sequence only.",
+      "checkpoints": [
+        {
+          "id": "before",
+          "through": 2
+        },
+        {
+          "id": "revision",
+          "through": 3
+        }
+      ],
+      "exposure": [
+        "d1f27714d8684654945e288f09cbcc73-733",
+        "d1f27714d8684654945e288f09cbcc73/request-26/intent-and-action",
+        "d1f27714d8684654945e288f09cbcc73-810"
+      ],
+      "observations": {
+        "d1f27714d8684654945e288f09cbcc73-733": {
+          "detail": "The tupperware report does not establish a bottle fill.",
+          "reports": [
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73-733",
+              "event": "rooftop-tupperware-fill",
+              "polarity": "support"
+            }
+          ]
+        },
+        "d1f27714d8684654945e288f09cbcc73/request-26/intent-and-action": {
+          "detail": "Request 26 intended to fill the empty plastic bottle with additional clean water and sent 1, c, Down and Enter."
+        },
+        "d1f27714d8684654945e288f09cbcc73-810": {
+          "detail": "The returned frame explicitly reports filling the plastic bottle.",
+          "reports": [
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73-810",
+              "event": "rooftop-plastic-bottle-fill",
+              "polarity": "support"
+            }
+          ]
+        }
+      },
+      "applicable_events": [
+        "rooftop-plastic-bottle-fill"
+      ]
+    },
+    {
+      "id": "save-return-to-title",
+      "dependence_group": "d1f27714d8684654945e288f09cbcc73",
+      "question": "Did Save and quit return to the title and display Whitethorn in Load?",
+      "scope": "The title and the target world entry only. Same-character reload requires a separate new-child Load and identity check.",
+      "checkpoints": [
+        {
+          "id": "before",
+          "through": 1
+        },
+        {
+          "id": "revision",
+          "through": 2
+        }
+      ],
+      "exposure": [
+        "d1f27714d8684654945e288f09cbcc73-883",
+        "d1f27714d8684654945e288f09cbcc73-938"
+      ],
+      "observations": {
+        "d1f27714d8684654945e288f09cbcc73-883": {
+          "detail": "In-game confirmation view. The game has yet to return to the title in this prefix."
+        },
+        "d1f27714d8684654945e288f09cbcc73-938": {
+          "detail": "Returned title view with Whitethorn listed in Load.",
+          "reports": [
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73-938",
+              "event": "save-and-quit-return",
+              "polarity": "support"
+            }
+          ]
+        }
+      },
+      "applicable_events": [
+        "save-and-quit-return"
+      ]
+    },
+    {
+      "id": "application-quit-delivery",
+      "dependence_group": "d1f27714d8684654945e288f09cbcc73",
+      "question": "Was the final application Quit input reported delivered?",
+      "scope": "Original operation delivery only. Normal native exit is a separate custody observation.",
+      "checkpoints": [
+        {
+          "id": "before",
+          "through": 2
+        },
+        {
+          "id": "revision",
+          "through": 3
+        },
+        {
+          "id": "later",
+          "through": 5
+        }
+      ],
+      "exposure": [
+        "d1f27714d8684654945e288f09cbcc73-939",
+        "d1f27714d8684654945e288f09cbcc73/request-31/intent",
+        "11bec1e74ac54c2a96292b6947718618",
+        "d1f27714d8684654945e288f09cbcc73/request-32/original-result",
+        "d1f27714d8684654945e288f09cbcc73/custodian-receipt"
+      ],
+      "observations": {
+        "d1f27714d8684654945e288f09cbcc73-939": {
+          "detail": "The separate application Quit prompt is visible."
+        },
+        "d1f27714d8684654945e288f09cbcc73/request-31/intent": {
+          "detail": "Request 31 stated the intent to confirm the main-menu quit prompt."
+        },
+        "11bec1e74ac54c2a96292b6947718618": {
+          "detail": "The original operation returned unknown and no new frame.",
+          "reports": [
+            {
+              "origin": "11bec1e74ac54c2a96292b6947718618",
+              "event": "application-quit-input-delivery",
+              "polarity": "unknown"
+            }
+          ]
+        },
+        "d1f27714d8684654945e288f09cbcc73/request-32/original-result": {
+          "detail": "Exact-ID collection still reports unknown without a new frame.",
+          "reports": [
+            {
+              "origin": "11bec1e74ac54c2a96292b6947718618",
+              "event": "application-quit-input-delivery",
+              "polarity": "unknown"
+            }
+          ]
+        },
+        "d1f27714d8684654945e288f09cbcc73/custodian-receipt": {
+          "detail": "Independent custody evidence records a normal native exit with code zero and an interrupted run. This does not resolve the delivery acknowledgement.",
+          "reports": [
+            {
+              "origin": "d1f27714d8684654945e288f09cbcc73/custodian-receipt",
+              "event": "normal-native-exit-zero",
+              "polarity": "support"
+            }
+          ]
+        }
+      },
+      "applicable_events": [
+        "application-quit-input-delivery"
+      ]
+    }
+  ],
+  "adjudication": {
+    "wooden-club": {
+      "before": "unknown",
+      "revision": "support-only"
+    },
+    "drink-and-tupperware": {
+      "before": "unknown",
+      "revision": "support-only",
+      "later": "support-only"
+    },
+    "plastic-bottle": {
+      "before": "unknown",
+      "revision": "support-only"
+    },
+    "save-return-to-title": {
+      "before": "unknown",
+      "revision": "support-only"
+    },
+    "application-quit-delivery": {
+      "before": "unknown",
+      "revision": "unknown",
+      "later": "unknown"
+    }
+  }
+}
