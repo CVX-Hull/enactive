@@ -65,6 +65,35 @@ for (const [name, width, scheme, mobile] of [CONFIGS[0], CONFIGS[2]]) {
   });
 }
 
+test('recorded viewer opens Overview and follows findings without a control path', {timeout: 30000}, async () => {
+  await fx.viewer('nolive');
+  const page = await S.open(browser, 'about:blank', {width: 390, mobile: true});
+  const requests = [];
+  page.on('request', request => requests.push([request.method(), new URL(request.url()).pathname]));
+  try {
+    await page.goto(`${fx.url}recorded/`, {waitUntil: 'load'});
+    await S.until(page, () => document.querySelector('[data-view="run"] .custodian-receipt dl'));
+    const first = await page.$eval('#runpick', el => el.value);
+    assert.equal(first, 'aidA1');
+    assert.equal(await page.$('#pause, #sheet, #statusline, #frame'), null);
+    const playback = '[data-nav="live"]';
+    assert.equal(await page.$eval(playback, el => el.textContent), 'Recorded playback');
+    await page.click(playback);
+    await S.until(page, () => document.querySelector('#findings button[data-jump]'));
+    const step = await page.$eval('#findings button[data-jump]', el => el.dataset.jump);
+    await page.click('#findings button[data-jump]');
+    await S.until(page, seq => document.querySelector('#playinfo')?.textContent.includes(`Playhead at step ${seq} ·`), step);
+    await S.until(page, () => document.querySelector('#feed:not([hidden])')?.width > 0);
+    assert.equal(await page.$eval('#runpick', el => el.value), first);
+    assert.equal(await page.$('#feed-live, .pausebox'), null);
+    assert.equal(await page.$eval('#backlive', el => el.textContent), 'return to latest recorded step');
+    assert.equal(await S.overflow(page), 0);
+    assert.deepEqual(page.problems, []);
+    assert.ok(requests.some(([,path]) => path.startsWith('/api/view/run/aidA1/frame/')));
+    assert.deepEqual(requests.filter(([method,path]) => method !== 'GET' || /^\/api\/(?:status|source|pause)\b|\/app\/control\.js/.test(path)), []);
+  } finally { await page.close(); await fx.viewer('up'); }
+});
+
 test('frame: an episode anchor opens the live view at its step, and a container opens its manifest', {timeout: 60000}, async () => {
   const page = await S.open(browser, `${fx.url}#frame/actor`, {scheme: 'light'});
   try {

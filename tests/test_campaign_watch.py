@@ -193,6 +193,7 @@ def test_gateway_serves_the_page_unchanged_and_accepts_no_mutation_but_pause(tmp
     with fixture(tmp_path) as f:
         code, page = f.call('/')
         assert code == 200 and page == INDEX
+        assert f.call('/recorded/')[0] == 404
         for path in ('/api/tool', '/record', '/api/status', '/'):
             assert f.call(path, {})[0] == 403, path
         assert f.call('/api/pause', {'reason': 'other'}, origin=False)[0] == 403

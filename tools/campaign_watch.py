@@ -13,8 +13,8 @@ import time
 from urllib.parse import urlsplit
 
 from harness.computer.protocol import read_json
+from harness.spectator_assets import PAGE_POLICY, WEB, static_file
 
-WEB = Path(__file__).resolve().parents[1]/'web'
 PAGES = {'/api/status'}
 MAX_BODY = 4 * 1024 * 1024
 # Owner Pause reasons (ADR008 item 5). The reason is recorded; the custodian never sees it. A Pause is
@@ -28,30 +28,6 @@ VIEW_MEDIA = {'application/json', 'image/png'}
 VIEW_STATUSES = {200, 400, 404, 409, 413}  # spectator-view/2: 409 ambiguous request, 413 too large; the rest is 503
 VIEW_SLOTS = 8
 VIEW_PATH = re.compile(r'/api/view/[A-Za-z0-9_./=&?%,|:+~-]*')
-STATIC_PART = re.compile(r'[A-Za-z0-9_][A-Za-z0-9._-]*')
-STATIC_TYPES = {'.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
-                '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml',
-                '.png': 'image/png', '.woff2': 'font/woff2', '.html': 'text/html; charset=utf-8'}
-
-
-def static_file(web: Path, path: str) -> tuple[bytes, str] | None:
-    """The page and its `app/` and `vendor/` files; nothing else under web/ is served."""
-    if path == '/':
-        parts = ['index.html']
-    elif path.startswith(('/app/', '/vendor/')):
-        parts = path[1:].split('/')
-    else:
-        return None
-    media = STATIC_TYPES.get(Path(parts[-1]).suffix)
-    if media is None or not all(STATIC_PART.fullmatch(part) for part in parts):
-        return None
-    candidate = web.joinpath(*parts)
-    try:
-        if candidate.is_symlink() or not candidate.is_file() or not candidate.resolve().is_relative_to(web.resolve()):
-            return None
-        return candidate.read_bytes(), media
-    except OSError:
-        return None
 
 
 def bind_pause_receiver(connection: HTTPConnection, upstream: int, receiver_pid: int) -> None:
@@ -156,8 +132,7 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
             self.send_response(status)
             for key, value in {'Content-Type': media or 'application/octet-stream',
                 'Content-Length': str(len(data)), 'Cache-Control': 'no-store',
-                'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy':
-                "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'"}.items():
+                'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': PAGE_POLICY}.items():
                 self.send_header(key, value)
             self.end_headers()
             self.wfile.write(data)

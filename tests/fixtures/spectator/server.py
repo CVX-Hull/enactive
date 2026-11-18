@@ -21,6 +21,7 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 import threading
 import time
 import urllib.error
@@ -31,10 +32,10 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
-WEB = ROOT / 'web'
-CSP = "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'"
-TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
-         '.md': 'text/markdown', '.json': 'application/json', '.png': 'image/png'}
+# The browser runner launches the fixture with isolated Python and no installed dependencies.
+sys.path.insert(0, str(ROOT))
+from harness.spectator_assets import PAGE_POLICY as CSP, WEB, static_file
+
 SESSION = 'c6c09be0b7d43fba2839147651a4f6a5'    # the live run's real session id
 REASONS = {'loop', 'fault', 'spend', 'other'}
 
@@ -127,13 +128,11 @@ def make_handler(state: State):
             self.static(path)
 
         def static(self, path):
-            name = 'index.html' if path == '/' else path.lstrip('/')
-            target = (WEB / name).resolve()
-            # The gateway serves only the page, web/app/* and web/vendor/*; so does this server.
-            allowed = name == 'index.html' or name.startswith(('app/', 'vendor/'))
-            if not allowed or not target.is_relative_to(WEB) or not target.is_file():
+            recorded = path == '/recorded/'
+            found = static_file(WEB, '/' if recorded else path, recorded=recorded)
+            if found is None:
                 self.send_error(404); return
-            self.reply(200, target.read_bytes(), TYPES.get(target.suffix, 'application/octet-stream'))
+            self.reply(200, *found)
 
         # ------------------------------------------------------------ viewer routes
         def forward(self, upstream, path):

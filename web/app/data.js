@@ -4,6 +4,7 @@
 // strip or Pause (those live in control.js).
 import {useState, useEffect} from './ui.js';
 
+export const recordedPage = location.pathname === '/recorded/';
 const VIEW_TIMEOUT_MS = 4000;
 export const SUMMARY_MS = 2000;
 export const RUNS_MS = 10000;

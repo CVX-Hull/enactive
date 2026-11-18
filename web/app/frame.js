@@ -2,7 +2,7 @@
 // the forgetting episodes; Curator, Knowledge and Programs say which phase brings them; Containers is the inventory.
 // Read-only: every value comes from /api/view/frame/* (spectator-frame/1); anchors open the existing per-run views.
 import {html, useState, useEffect, Panel, Pv, Waiting, Table, Insufficient, Callout, fmtMoney, trim, label} from './ui.js';
-import {store, framePath, runPath, selectRun, set, useStore, useView} from './data.js';
+import {store, framePath, runPath, selectRun, set, useStore, useView, recordedPage} from './data.js';
 import {SubNav} from './diagnose.js';
 
 const SCHEMA = 'spectator-frame/1';
@@ -185,7 +185,7 @@ function Anchor({name, anchor, busy, setBusy, failed, setFailed}) {
   const where = `${anchor.chunk}${anchor.run ? ` · run ${anchor.run}` : ''} · actor ${anchor.actor}`;
   return html`<div class="anchor" data-anchor=${name.toLowerCase()}><b>${name}</b><span class="mono wrapany">${where}</span>
     ${anchor.available ? html`<span class="acts">
-        <button type="button" class="btn" disabled=${busy !== null} onClick=${() => openAnchor(anchor, setBusy, setFailed)}>${busy === anchor.source_id ? 'Opening…' : 'Open in Live view'}</button>
+        <button type="button" class="btn" disabled=${busy !== null} onClick=${() => openAnchor(anchor, setBusy, setFailed)}>${busy === anchor.source_id ? 'Opening…' : recordedPage ? 'Open in recorded playback' : 'Open in Live view'}</button>
         <a href=${framePath(anchor.run, anchor.source_id)} target="_blank" rel="noopener">Original frame</a>
         <span class="note mono wrapany">${anchor.source_id}</span>
         ${failed === anchor.source_id ? html`<span class="state watch">the run's steps did not load in time; try again or open the original frame</span>` : null}</span>`

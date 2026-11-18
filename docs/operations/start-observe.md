@@ -43,6 +43,9 @@ interpretation of the live run and of archived runs when you pass
 ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). Its
 displays inform you and gate nothing; the Pause conditions it computes are advice.
 
+After the supervisor exits, open completed runs through the
+[recorded browser entry](../components/observer-operations.md#recorded-browser-entry).
+
 For recorded curator results, repeat `--curator-results LABEL=FILE` on the supervisor
 command, naming existing current result files or snapshots. The Curator tab selects
 those labels and displays recorded submission/restore status and versions. No source

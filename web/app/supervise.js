@@ -1,6 +1,6 @@
 // Supervise: should I Pause, what is on screen, and where is the playhead.
 import {html, useEffect, useMemo, useRef, useState, Panel, Pv, ReadChip, Waiting, fmtMoney, mmss, gameClock, label, pct, trim} from './ui.js';
-import {store, framePath, selectedRun, setCursorIndex, cursorIndex, goLive, isLive, runStart, setFeedWide} from './data.js';
+import {store, framePath, selectedRun, setCursorIndex, cursorIndex, goLive, isLive, runStart, setFeedWide, recordedPage} from './data.js';
 import {Chart, timelineOption, legendItems, nearestStep} from './charts.js';
 
 const CONDITION_TEXT = {
@@ -80,7 +80,7 @@ function caption(step, prefix = '') {
   if (!step) return '';
   return `${prefix}decision ${step.decision} · ${gameClock(step.game_time)} · ${label(step.mode || 'unknown')} · keys ${keysText(step)}`;
 }
-const SHORTCUTS = [['Space', 'hold or resume the view'], ['← / →', 'previous or next recorded frame'], ['L', 'live'],
+const SHORTCUTS = [['Space', 'hold or resume the view'], ['← / →', 'previous or next recorded frame'], ...(recordedPage ? [] : [['L', 'live']]),
   ['T', 'wide player'], ['F', 'full screen'], ['0 1 2 3', 'Fit, 1:1, 2×, 3×']];
 /** Shortcuts never take a key that the focused element itself uses. Fields, the timeline, the Pause button and the
  *  open Pause sheet keep every key; Space also stays with anything it activates (buttons, links, disclosure
@@ -177,7 +177,7 @@ export function FeedPlayer({run, step}) {
   }, []);
   const where = !shown ? 'waiting for the first frame'
     : shown.following ? `live · control path${shown.source ? ` · capture ${shown.source.capture_id} at ${clockTime(shown.source.presented_ms)}` : ''}`
-    : `step ${shown.seq}${typeof shown.wall === 'number' ? ` at ${clockTime(shown.wall * 1000)}` : ''} · viewer · original frame · sha-256 checked`;
+    : `recorded step ${shown.seq}${typeof shown.wall === 'number' ? ` at ${clockTime(shown.wall * 1000)}` : ''} · viewer · original frame · sha-256 checked`;
   const missing = !following && step && !step.source_id ? ` · no frame at step ${step.seq}` : '';
   // The caption names the decision on screen: the step for a recorded frame, the newest step while following live.
   const shownStep = shown && !shown.following ? steps.find(s => s.seq === shown.seq) : null;
@@ -193,11 +193,11 @@ export function FeedPlayer({run, step}) {
   const canExpand = typeof document !== 'undefined' && document.fullscreenEnabled;
   const wide = store.feedWide;
   return html`<div class=${`${wide ? 's12' : 's7'} frame-col`}><div class="player" ref=${shell} data-scale=${scale} data-held=${held ? 'yes' : 'no'} data-wide=${wide ? 'yes' : 'no'}>
-    <div class="player-bar" role="toolbar" aria-label="Feed player (view only; never pauses the run)">
+    <div class="player-bar" role="toolbar" aria-label=${recordedPage ? 'Recorded frame player' : 'Feed player (view only; never pauses the run)'}>
       <button type="button" id="feed-back" aria-label="Previous recorded frame" title="Previous recorded frame (←)" disabled=${index <= 0} onClick=${actions.back}>◀</button>
-      <button type="button" id="feed-hold" aria-pressed=${held} title="Freeze this view; the run keeps going (Space)" onClick=${actions.hold}>Hold view</button>
+      <button type="button" id="feed-hold" aria-pressed=${held} title=${recordedPage ? 'Freeze this view (Space)' : 'Freeze this view; the run keeps going (Space)'} onClick=${actions.hold}>Hold view</button>
       <button type="button" id="feed-forward" aria-label="Next recorded frame" title="Next recorded frame (→)" disabled=${index < 0 || index >= steps.length - 1} onClick=${actions.forward}>▶</button>
-      <button type="button" id="feed-live" title=${liveRunSelected ? 'Follow the live frame (L)' : 'This run is not live'} disabled=${!liveRunSelected || (following && !held)} onClick=${actions.live}>Live</button>
+      ${!recordedPage ? html`<button type="button" id="feed-live" title=${liveRunSelected ? 'Follow the live frame (L)' : 'This run is not live'} disabled=${!liveRunSelected || (following && !held)} onClick=${actions.live}>Live</button>` : null}
       ${age !== null ? html`<span class="badge ${feedStale ? 'stale' : ''}" id="feed-age" title="Time since this frame reached the page">frame ${age} s old</span>` : null}
       ${behind > 0 ? html`<button type="button" class="badge behind" id="feed-behind" title="Jump to the live frame" onClick=${actions.live}>${behind} step${behind === 1 ? '' : 's'} behind live</button>` : null}
       <span class="player-gap"></span>
@@ -257,7 +257,9 @@ export function Timeline({summary}) {
   const chartRef = useRef(null);
   const index = cursorIndex();
   const step = steps[index];
-  const live = isLive();
+  const live = !recordedPage && isLive();
+  const latestLabel = recordedPage ? 'latest recorded step' : 'live';
+  const atLatest = recordedPage ? index === steps.length - 1 : live;
   const move = delta => setCursorIndex(index + delta);
   const onKeyDown = e => {
     if (e.key === 'ArrowLeft') { e.preventDefault(); move(e.shiftKey ? -10 : -1); }
@@ -278,22 +280,24 @@ export function Timeline({summary}) {
   return html`<${Panel} title="Timeline" note="viewer · click or use ← → to move the playhead" span="s12">
     <div class="legend" id="tl-legend">${legend.map(([n, c]) => html`<span><i style=${{background: c}}></i>${n}</span>`)}</div>
     ${option ? html`<${Chart} option=${option} epoch=${store.themeEpoch} onReady=${onReady} onKeyDown=${onKeyDown} tabindex="0" className="tl" role="slider"
-      label="Timeline of game clock, mode, cache writes with evictions, findings and spend. Left and right arrows move the playhead, End returns to live."
+      label=${`Timeline of game clock, mode, cache writes with evictions, findings and spend. Left and right arrows move the playhead, End returns to ${latestLabel}.`}
       extra=${{id: 'tl', 'aria-valuemin': 0, 'aria-valuemax': Math.max(0, steps.length - 1), 'aria-valuenow': Math.max(0, index), 'aria-valuetext': step ? `Step ${step.seq}${live ? ', live' : ''}` : 'no steps'}} />`
       : html`<${Waiting} store=${store} what="the timeline" />`}
-    <div class="note" id="playinfo" role="status">${step ? html`Playhead at step ${step.seq}${live ? ' (live)' : ''} · ${mode} · keys ${keys}${live ? '' : html` · <button type="button" class="link" id="backlive" onClick=${goLive}>return to live</button>`}` : 'No steps yet.'}</div><//>`;
+    <div class="note" id="playinfo" role="status">${step ? html`Playhead at step ${step.seq}${live ? ' (live)' : ''} · ${mode} · keys ${keys}${atLatest ? '' : html` · <button type="button" class="link" id="backlive" onClick=${goLive}>return to ${latestLabel}</button>`}` : 'No steps yet.'}</div><//>`;
 }
 
 export function Supervise() {
   const s = store.summary, run = store.runId;
-  if (!s) return html`<section class="grid" data-view="live" aria-label="Supervise"><${Panel} title="Supervise" span="s12"><${Waiting} store=${store} what="the run" /><//></section>`;
+  const name = recordedPage ? 'Recorded playback' : 'Supervise';
+  if (!s) return html`<section class="grid" data-view="live" aria-label=${name}><${Panel} title=${name} span="s12"><${Waiting} store=${store} what="the run" /><//></section>`;
   const step = store.steps[cursorIndex()];
+  const pause = recordedPage ? null : html`<${PauseConditions} summary=${s} />`;
   // Wide (#437): the feed leads the page at full width and the panels follow it.
-  if (store.feedWide) return html`<section class="grid" data-view="live" aria-label="Supervise">
-    <${FeedPlayer} run=${run} step=${step} /><${PauseConditions} summary=${s} /><${GameState} summary=${s} />
+  if (store.feedWide) return html`<section class="grid" data-view="live" aria-label=${name}>
+    <${FeedPlayer} run=${run} step=${step} />${pause}<${GameState} summary=${s} />
     <${Timeline} summary=${s} /><${Findings} summary=${s} /></section>`;
-  return html`<section class="grid" data-view="live" aria-label="Supervise">
-    <${PauseConditions} summary=${s} /><${GameState} summary=${s} />
+  return html`<section class="grid" data-view="live" aria-label=${name}>
+    ${pause}<${GameState} summary=${s} />
     <${FeedPlayer} run=${run} step=${step} /><${Findings} summary=${s} />
     <${Timeline} summary=${s} /></section>`;
 }

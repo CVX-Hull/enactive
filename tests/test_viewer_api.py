@@ -78,6 +78,32 @@ CROSS_ROUTES = ['/api/view/runs', '/api/view/improve/changes', '/api/view/improv
     '/api/view/compare?group=start&runs=base1,aid1', '/api/view/explore', '/api/view/explore?arm=base&metric=stall.longest']
 
 
+def test_recorded_page_is_opt_in_read_only_and_loopback(archive):
+    api, catalog, _ = archive
+    assert api.get('/recorded/').status_code == 404
+    assert api.get('/app/main.js').status_code == 404
+    base = 'http://127.0.0.1:8765'
+    with TestClient(create_app(catalog, recorded_page=True), base_url=base) as client:
+        response = client.get('/recorded/', headers={'Origin': base})
+        assert response.status_code == 200
+        assert response.headers['content-type'].startswith('text/html')
+        assert response.headers['cache-control'] == 'no-store'
+        assert response.headers['x-content-type-options'] == 'nosniff'
+        assert "default-src 'self'" in response.headers['content-security-policy']
+        assert '/app/main.js' in response.text and '/app/theme.js' in response.text
+        assert all(markup not in response.text for markup in ('/app/control.js', 'id="pause"', 'id="sheet"'))
+        for path in ('/app/main.js', '/app/app.css', '/vendor/preact.js', '/api/view/runs'):
+            assert client.get(path).status_code == 200, path
+        for path in ('/', '/index.html', '/README.md', '/app/%2e%2e/index.html', '/vendor/PROVENANCE.md',
+                     '/api/status', '/api/source/unknown', '/api/pause'):
+            assert client.get(path).status_code == 404, path
+        assert client.post('/api/pause', json={'reason': 'other'}).status_code == 404
+        assert client.post('/recorded/').status_code == 405
+        for path in ('/recorded/', '/api/view/runs'):
+            assert client.get(path, headers={'Origin': 'https://other.example'}).status_code == 403
+            assert client.get(path, headers={'Host': 'other.example:8765'}).status_code == 403
+
+
 def test_every_json_route_has_the_schema_and_stays_bounded(archive):
     client, catalog, _ = archive
     session = 'a' * 32
