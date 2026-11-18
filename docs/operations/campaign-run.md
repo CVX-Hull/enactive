@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/8` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/9` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -37,7 +37,7 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/6` with text/image input and explicit
+`route.json` uses current `player-host/7` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. It repeats the package's `spend_limit_usd` and carries
 `unpriced_request_usd` ([Spend limit](#spend-limit)). The selected route is OpenRouter /
@@ -101,7 +101,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/8",
+  "schema": "campaign-run/9",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "START", "scenario": "SCENARIO", "lineage": null, "admission": null},
@@ -143,24 +143,24 @@ Nothing is carried over from earlier packages.
   exponent, a sign or a non-finite word refuses the package. The limit is above zero.
 - **The route repeats the limit.** `route.json` has the same `spend_limit_usd`. The
   driver gives each actor a copy whose value is the dollars the run has left.
-- **The route carries the bound.** `unpriced_request_usd` is what one request with no
-  cost record counts for:
-  `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
-  from the frozen route's configured dollar rates. The validator computes it and
-  refuses a route that states another value, naming the value it expects. It also
-  refuses a route whose rates give a bound of zero, which would count a failed
-  request as free.
+- **The route carries the planning bound.** `unpriced_request_usd` is
+  `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`.
+  The validator recomputes it from the frozen rates and refuses a mismatch or zero.
+  An in-flight request occupies this allowance while the outcome is pending.
 - **The dollar reserve covers both in-flight bounds.** `ending_reserve.usd` is at least
-  the player bound plus the recall bound (the latter contributes zero with empty knowledge); the validator refuses less, naming both amounts. With less
-  than one request's bound left, a single failed request would end the run abruptly
-  instead of in order. The reserve is below the limit, so the limit exceeds the bound.
-- **What counts.** A response counts at the cost the provider reported for it. A
-  request with no cost record (refused, timed out, cut off, aborted at a deadline)
-  counts at the bound, because the provider may still bill it.
-- **Overshoot.** The host checks before each request, so a run can pass its limit by
-  at most what one player request and one recall request count; each unpriced request counts at its own bound.
-- **A player response the host cannot price ends the run.** A successful player response with no
-  usable cost stops the host with reason `cost-unreported`. A failed or unpriced recall ends recall for that actor only. A valid provider cost is counted even on a rejected selection or a length stop; only missing/invalid cost counts at the recall bound.
+  the player bound plus the recall bound, with the recall contribution zero for
+  empty knowledge. The reserve is below the declared limit.
+- **What counts.** The dollar total is the sum of usable provider-reported response
+  charges. A refused, timed-out or cut-off attempt without a usable cost consumes
+  an attempt and leaves its charge unknown. The provider may bill such an attempt.
+  Preserve unpriced counts and apply the original request and time ceilings.
+- **Overshoot.** The host checks before each request. The reported total can pass
+  the limit by the charges returned for the final in-flight player and recall
+  requests.
+- **Successful response without cost.** A successful player response with no usable
+  cost stops the host with reason `cost-unreported`. A failed or unpriced recall
+  ends recall for that actor. A usable charge is counted even on a rejected
+  selection or a length stop.
 - **The hard cap is the key's credit limit**, set by the owner on the OpenRouter key
   ([operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)).
   The code cannot read it.
@@ -172,7 +172,7 @@ the receipt records the counted figures.
 The [operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)
 assign provider billing to the owner. Before paid play, the lead verifies the
 approved envelope against the frozen package. Preserve provider credit refusals
-as run evidence and count a refusal without a usable cost at the frozen bound.
+as run evidence with the attempt's returned cost or explicit unknown.
 
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked
@@ -291,7 +291,7 @@ for or adopts unrelated processes. Normal native exit zero is sampled before
 forced cleanup. Save-to-menu, player save/success claims, native exit and absence
 are separate evidence.
 
-`receipt.json` (`campaign-receipt/5`) reports driver disposition, host quiescence,
+`receipt.json` (`campaign-receipt/6`) reports driver disposition, host quiescence,
 native absence, input revocation, cleanup and the run's spend. Its `accounting`
 block is closed:
 
@@ -300,8 +300,8 @@ block is closed:
 | `spend_limit_usd` | The package's declared limit |
 | `reported_usd` | The sum of the cost the provider reported, over the responses that reported one |
 | `unpriced_requests` | Requests with no cost record |
-| `unpriced_request_usd` | What each of those counts for: the route's bound |
-| `spent_usd` | What counted toward the limit: `reported_usd` plus `unpriced_requests` × `unpriced_request_usd` |
+| `unpriced_request_usd` | Player in-flight and ending planning bound from the route |
+| `spent_usd` | Provider subtotal counted toward the dollar limit, equal to `reported_usd` |
 | `attempts_charged` | HTTP attempts charged against the request allowance |
 | `allocated_max_attempts` | The package's `max_http_attempts` |
 | `spend_complete` | Whether every actor's trace was read to its settlement and the host's own totals equal the driver's sums; when false the spend is unknown |
@@ -315,7 +315,7 @@ fence remains `interrupted`; later expected adapter closure cannot erase it.
 Normal native exit is reported separately; its absence is not a save certificate
 or an automatic failure of generic stop control. Apply any separately frozen
 game-persistence/exit criterion to its own evidence lane.
-The embedded driver result is `player-driver/5`, with the retained ending request
+The embedded driver result is `player-driver/6`, with the retained ending request
 (its `trigger`, and the dollars and attempts left when it was sent), per-actor direct
 player-finish/settlement, original attempt charges and each actor's `allocated_usd`,
 `reported_usd`, `unpriced_requests`, `spent_usd` and `spend_complete`. Its totals
@@ -328,7 +328,7 @@ A development admission is recorded once its receipt exists, with
 `.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL`,
 where `LABEL` is the
 run's short name in its study's dated record (default: the package name). That command appends one
-[`dev-run/2`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
+[`dev-run/3`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
 `data/evaluation/runs.jsonl`, the one numeric record of the run: the study's record cites
 that row or a generated table and keeps no hand-typed copy of attempts, spend or duration.
 The spend figures are the receipt's; none is typed in. A package without a receipt
@@ -338,13 +338,17 @@ gets no row, and no further admission is made until the lead resolves it.
 and `record` refuses the package. No further run of that study is admitted until the
 lead has done both of these:
 
-1. Recorded the run with `--record-upper-bound` added to the command above. The row
-   then holds the most the run can have spent: `provider_usd` is the receipt's
-   `spend_limit_usd`; the player unpriced count is `min(1, attempts)`, and the recall unpriced count is 1 only when delivered knowledge has units and at least two attempts were charged. The two bounds come from the receipt. Thus `spend_usd` is the limit plus the possible in-flight bounds, and combined unpriced counts never exceed attempts. The flag is refused for a receipt whose spend is complete.
-2. Marked the row as an upper bound in the run's dated record and stated which
+1. Recorded the run with `--record-upper-bound` added to the command above. The
+   provider subtotal and observed unpriced counts stay as recorded. The ledger
+   stores a separate planning amount for admission. It uses the larger of the
+   declared limit and observed subtotal, plus up to one in-flight player and
+   one in-flight recall bound. The number of possible
+   in-flight attempts is capped by the charged attempts and recall requires
+   delivered units. The flag is refused for a complete trace.
+2. Identified the separate admission amount in the run's dated record and stated which
    cost evidence was unavailable. The provider's charge remains unknown when the
    run could not establish it. The record supplies that context for the
-   `dev-run/2` row.
+   `dev-run/3` row.
 
 `run_ledger totals --study ISSUE --envelope USD` applies the
 [actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),

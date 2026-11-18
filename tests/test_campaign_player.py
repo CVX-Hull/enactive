@@ -15,87 +15,85 @@ from tools.campaign_player import HostEvents,ending_trigger,finish_interruption,
 from tools.configure_player_tools import configuration
 
 
-BOUND=Decimal('0.25')
-START=dict(type='host-start',telemetry_version=6,schema='player-host/6')
+START=dict(type='host-start',telemetry_version=7,schema='player-host/7')
 
 
 def cost(request,amount,how='provider-reported',kind='response-complete'):
-    return dict(type=kind,request_id=request,counted_cost_usd=amount,cost_counted_as=how)
+    return dict(type=kind,request_id=request,reported_cost_usd=amount,counted_cost_usd=amount,cost_counted_as=how)
 
 
 def finished(tmp_path,rows,allowance=10):
     path=tmp_path/'host.jsonl'
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,allowance,BOUND,Decimal('0.2'))
+    events=HostEvents(path,allowance)
     try:return events.finish()
     finally:events.close()
 
 
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
-    """Three requests: two priced by the provider and one counted at the bound. A trace that cannot be read to its
+    """Three requests: two priced by the provider and one unknown. A trace that cannot be read to its
     end is incomplete."""
     path=tmp_path/'host.jsonl'
     rows=[START,
           dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
-          dict(type='request-start',request_id='request-2'),cost('request-2','0.25','unpriced-bound'),
+          dict(type='request-start',request_id='request-2'),cost('request-2',None,'unpriced'),
           dict(type='request-start',request_id='request-3'),cost('request-3','0.7'),
-          dict(type='settled',unpriced_recall_requests=0,requests=3,ok=False,spent_usd='1.05',unpriced_requests=1)]
+          dict(type='settled',unpriced_recall_requests=0,requests=3,ok=False,spent_usd='0.8',unpriced_requests=1)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,10,BOUND,Decimal('0.2'))
+    events=HostEvents(path,10)
     try:
         result=events.finish()
         assert result['attempts_charged']==3 and result['accounting_complete']
         # 0.1 + 0.7 is exactly 0.8 here; the floating-point sum is 0.7999999999999999.
-        assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.8',1,'1.05',True)
-        assert events.counted_usd()==Decimal('1.05')
+        assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.8',1,'0.8',True)
+        assert events.counted_usd()==Decimal('0.8')
         with path.open('a') as stream:stream.write('{"partial":')
         result=events.finish()
         assert not result['accounting_complete'] and result['attempts_charged']==10
-        assert (result['spent_usd'],result['spend_complete'])==('1.05',False)
+        assert (result['spent_usd'],result['spend_complete'])==('0.8',False)
     finally:events.close()
 
 
-def test_recall_attempts_share_allowance_but_keep_their_own_bound(tmp_path):
+def test_recall_attempts_share_allowance_and_keep_unknown_cost_separate(tmp_path):
     path=tmp_path/'host.jsonl'
     rows=[START,dict(type='request-start',request_id='recall-1',request_role='recall'),
-          cost('recall-1','0.2','unpriced-bound'),dict(type='request-start',request_id='request-1'),
-          cost('request-1','0.1'),dict(type='settled',requests=2,unpriced_requests=0,unpriced_recall_requests=1,spent_usd='0.3')]
+          cost('recall-1',None,'unpriced'),dict(type='request-start',request_id='request-1'),
+          cost('request-1','0.1'),dict(type='settled',requests=2,unpriced_requests=0,unpriced_recall_requests=1,spent_usd='0.1')]
     path.write_text(''.join(json.dumps(r)+'\n' for r in rows))
-    events=HostEvents(path,2,BOUND,Decimal('0.2'))
+    events=HostEvents(path,2)
     try:
         value=events.finish()
-        assert events.counted_usd()==Decimal('0.3')
+        assert events.counted_usd()==Decimal('0.1')
         assert value['accounting_complete'] and value['attempts_charged']==2
-        assert value['unpriced_requests']==0 and value['unpriced_recall_requests']==1 and value['spent_usd']=='0.3'
+        assert value['unpriced_requests']==0 and value['unpriced_recall_requests']==1 and value['spent_usd']=='0.1'
     finally:events.close()
     with path.open('a') as stream:stream.write(json.dumps(dict(type='request-start',request_id='recall-2'))+'\n')
-    events=HostEvents(path,2,BOUND,Decimal('0.2'))
+    events=HostEvents(path,2)
     try:
         with pytest.raises(ControlError,match='accounting'):events.finish()
     finally:events.close()
 
 
-def test_a_started_request_with_no_cost_record_counts_at_the_bound_and_leaves_the_spend_incomplete(tmp_path):
-    """A host killed mid-request leaves a request with no cost record and no settlement. The request counts at
-    the bound, and nothing vouches for the total."""
+def test_a_started_request_without_a_cost_record_keeps_the_subtotal_and_flags_incomplete_trace(tmp_path):
+    """A host killed mid-request preserves the observed provider subtotal and lacks a complete trace."""
     rows=[START,dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
           dict(type='request-start',request_id='request-2')]
     result=finished(tmp_path,rows)
-    assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.1',1,'0.35',False)
+    assert (result['reported_usd'],result['unpriced_requests'],result['spent_usd'],result['spend_complete'])==('0.1',1,'0.1',False)
     assert not result['accounting_complete'] and result['attempts_charged']==10
 
 
-@pytest.mark.parametrize('totals',[dict(spent_usd='0.1',unpriced_requests=1),dict(spent_usd='0.35',unpriced_requests=0),
-    dict(spent_usd='0.35'),dict(unpriced_requests=1),dict(spent_usd=0.35,unpriced_requests=1),dict(spent_usd='0.35',unpriced_requests=True),{}])
+@pytest.mark.parametrize('totals',[dict(spent_usd='0.35',unpriced_requests=1),dict(spent_usd='0.1',unpriced_requests=0),
+    dict(spent_usd='0.1'),dict(unpriced_requests=1),dict(spent_usd=0.1,unpriced_requests=1),dict(spent_usd='0.1',unpriced_requests=True),{}])
 def test_host_totals_that_differ_from_the_drivers_own_sums_leave_the_spend_incomplete(tmp_path,totals):
     rows=[START,dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
-          dict(type='request-start',request_id='request-2'),cost('request-2','0.25','unpriced-bound')]
-    agreed=finished(tmp_path,[*rows,dict(type='settled',unpriced_recall_requests=0,requests=2,ok=True,spent_usd='0.35',unpriced_requests=1)])
+          dict(type='request-start',request_id='request-2'),cost('request-2',None,'unpriced')]
+    agreed=finished(tmp_path,[*rows,dict(type='settled',unpriced_recall_requests=0,requests=2,ok=True,spent_usd='0.1',unpriced_requests=1)])
     assert agreed['accounting_complete'] and agreed['spend_complete'] and agreed['attempts_charged']==2
     (tmp_path/'host.jsonl').unlink()
     result=finished(tmp_path,[*rows,dict(type='settled',unpriced_recall_requests=0,requests=2,ok=True,**totals)])
     assert not result['accounting_complete'] and not result['spend_complete'] and result['attempts_charged']==10
-    assert result['spent_usd']=='0.35'
+    assert result['spent_usd']=='0.1'
 
 
 def test_a_reported_cost_longer_than_a_declared_amount_may_be_is_counted_exactly(tmp_path):
@@ -117,18 +115,18 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
     path=tmp_path/'host.jsonl'
     rows=[START,dict(type='request-start',request_id='request-1'),record,dict(type='settled',unpriced_recall_requests=0,requests=1,ok=True)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,10,BOUND,Decimal('0.2'))
+    events=HostEvents(path,10)
     try:
         with pytest.raises(ControlError):events.finish()
-        assert events.spend(False)==dict(reported_usd='0',unpriced_requests=1,unpriced_recall_requests=0,spent_usd='0.25',spend_complete=False)
+        assert events.spend(False)==dict(reported_usd='0',unpriced_requests=1,unpriced_recall_requests=0,spent_usd='0',spend_complete=False)
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/3',3),('player-host/3',4),('player-host/6',3),(None,4)])
+@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/6',6),('player-host/3',3),('player-host/3',4),('player-host/7',3),(None,4)])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
-    events=HostEvents(path,10,BOUND,Decimal('0.2'))
+    events=HostEvents(path,10)
     try:
         with pytest.raises(ControlError,match='Unsupported'):events.finish()
     finally:events.close()
@@ -155,7 +153,7 @@ def test_invalid_consumed_trace_cannot_become_valid_during_cleanup(tmp_path):
           dict(type='player-finish',disposition='task_complete'),
           dict(type='handoff')]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,20,BOUND,Decimal('0.2'))
+    events=HostEvents(path,20)
     try:
         with pytest.raises(ControlError,match='Conflicting'):events.read()
         with pytest.raises(ControlError,match='trace failed validation'):events.finish()
@@ -174,14 +172,21 @@ assert prompt.startswith('Frozen mission') and 'Software actor/resource note' no
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
-emit(type='host-start', telemetry_version=6, schema='player-host/6', spend_limit_usd=route['spend_limit_usd'])
+emit(type='host-start', telemetry_version=7, schema='player-host/7', spend_limit_usd=route['spend_limit_usd'])
 recall_made = int('WITH_RECALL' in prompt and route['recall']['max_requests']>0)
 if recall_made:
     emit(type='request-start',request_id='recall-1',request_role='recall')
-    emit(type='response-complete',request_id='recall-1',counted_cost_usd='0',cost_counted_as='provider-reported')
-emit(type='request-start', request_id='request-1')
+    emit(type='response-complete',request_id='recall-1',reported_cost_usd='0',counted_cost_usd='0',cost_counted_as='provider-reported')
+unpriced = int('WITH_UNPRICED' in prompt)
+if unpriced:
+    emit(type='request-start',request_id='recall-1',request_role='recall')
+    emit(type='response-complete',request_id='recall-1',reported_cost_usd=None,counted_cost_usd=None,cost_counted_as='unpriced')
+    emit(type='request-start',request_id='request-1')
+    emit(type='response-complete',request_id='request-1',reported_cost_usd=None,counted_cost_usd=None,cost_counted_as='unpriced')
+request_id = f'request-{1+unpriced}'
+emit(type='request-start', request_id=request_id)
 spent = '0.0034500000000000004' if 'LONG_COST' in prompt else '0.004'
-emit(type='response-complete', request_id='request-1', counted_cost_usd=spent, cost_counted_as='provider-reported')
+emit(type='response-complete', request_id=request_id, reported_cost_usd=spent, counted_cost_usd=spent, cost_counted_as='provider-reported')
 ending = 'READ_CONTROL' in prompt
 handoff = 'HANDOFF_RACE' in prompt and flags['--actor-id'] == 'a'*32
 control = json.loads(sys.stdin.readline()) if ending else None
@@ -197,7 +202,7 @@ else:
     if 'WRONG_CONTROL' in prompt: control_id='f'*32
     if 'NO_FINISH' not in prompt:
         emit(type='player-finish',disposition=reason,control_id=control_id,report='report',source_ids=[])
-    emit(type='settled',unpriced_recall_requests=0,ok=True,reason=reason,control_id=control_id,requests=1+recall_made,spent_usd=spent,unpriced_requests=0)
+    emit(type='settled',unpriced_recall_requests=unpriced,ok=True,reason=reason,control_id=control_id,requests=1+recall_made+2*unpriced,spent_usd=spent,unpriced_requests=unpriced)
 open(flags['-o'], 'w').write('report\\n')
 """
 
@@ -246,6 +251,16 @@ def test_driver_cleanup_retains_full_charge_after_invalid_consumed_trace(tmp_pat
     assert (result['reported_usd'],result['spent_usd'],result['spend_complete'])==('0.004','0.004',False)
     assert application.runtime.add_actor.call_count==1 and not application.runtime.confirm_quiescent.called
     assert actor['cleanup']['process_absent'] and actor['cleanup']['group_absent']
+
+
+def test_driver_total_keeps_unknown_attempts_separate_from_spend(tmp_path):
+    profile,route,application=driver_case(tmp_path,'Frozen mission WITH_UNPRICED')
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert result['attempts_charged']==3 and result['recall_attempts_charged']==1
+    for receipt in (result,result['actors'][0]):
+        assert receipt['spend_complete']
+        assert receipt['unpriced_requests']==receipt['unpriced_recall_requests']==1
+        assert receipt['spent_usd']==receipt['reported_usd']=='0.004'
 
 
 @pytest.mark.parametrize('trigger',['seconds','http_attempts','usd','inputs','requests','frames','frame_bytes'])
@@ -347,9 +362,12 @@ def test_driver_copies_delivered_knowledge_as_exact_bytes(tmp_path):
     assert frozen['files']['delivered-knowledge.json']==hashlib.sha256(data).hexdigest()
 
 
-def test_host_events_requires_the_recall_bound(tmp_path):
-    with pytest.raises(TypeError,match='recall_bound'):
-        HostEvents(tmp_path/'unused.jsonl',10,BOUND)
+def test_missing_response_record_cannot_pass_as_an_unpriced_settlement(tmp_path):
+    rows=[START,dict(type='request-start',request_id='request-1'),
+          dict(type='settled',requests=1,spent_usd='0',unpriced_requests=1,unpriced_recall_requests=0)]
+    result=finished(tmp_path,rows)
+    assert result['spent_usd']=='0' and result['unpriced_requests']==1
+    assert not result['accounting_complete'] and result['attempts_charged']==10
 
 
 def test_controller_retains_control_intent_and_checks_direct_finish_identity(tmp_path):

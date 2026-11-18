@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/6` is the one current boundary between the
+`player-host/7` is the one current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -20,7 +20,7 @@ its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/8` package freezes `host:{"argv":[...]}` with1–8 strings.
+A `campaign-run/9` package freezes `host:{"argv":[...]}` with1–8 strings.
 The first is an absolute existing executable/interpreter regular file; later
 entries are canonical project-local regular files tracked by the clean source.
 No registry, resumed host, fallback or old `node` alias is supported.
@@ -46,7 +46,7 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/6"`, `model`, `api_key_env`,
+The closed route has `schema:"player-host/7"`, `model`, `api_key_env`,
 `max_requests`, `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
 `context_image_block`, `context_reserve_tokens`, `request_timeout_seconds` and
 `service_tier`, and the closed `recall` object (`model`, `every`, `max_requests`, `unpriced_request_usd`).
@@ -97,17 +97,15 @@ The host stops a run at a dollar limit, from the cost the provider reports for e
 response ([R-OVERSPEND](../risks.md#operating-risks)).
 
 - **What the route carries.** `spend_limit_usd` is the dollars this actor may still
-  count. `unpriced_request_usd` is what one request with no cost record counts for:
-  the whole context window at the route's most expensive input rate (the largest of
-  the input, cache-read and cache-write rates) plus the output limit at the output
-  rate, in dollars per million tokens. The package check computes it
-  (`tools/campaign_package.py`, `unpriced_request_usd`), and the host and the driver
-  take it from the route and never recompute it.
-- **What counts.** Every HTTP attempt counts once, when it ends. A response whose
-  `reported_cost_usd` is not null counts at that amount. Any other attempt counts at
-  `unpriced_request_usd`: a refusal, a timeout, a stream cut off, an abort at a
-  deadline, or a successful response with no usable cost. A retry is a separate
-  attempt.
+  count. The route's `unpriced_request_usd` is a planning bound for an in-flight
+  request. The package check computes it from the full context window at the largest
+  configured input/cache rate plus the configured output limit at its output rate.
+  The host uses it for the in-flight and ending allowances.
+- **What counts.** Every started HTTP request consumes an attempt, including a
+  retry. It adds only a usable provider-reported cost to the dollar total. A
+  refusal, timeout, cutoff or abort without a usable cost keeps an unknown charge
+  and an explicit unpriced attempt. A successful response without such a cost
+  keeps the integration stop below.
 - **The reported cost** is read from the response's usage records. On a route that is
   not on the caller's own provider key it is the larger of `cost` and
   `cost_details.upstream_inference_cost`; on an own-key route it is their sum. A
@@ -117,8 +115,8 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
 - **Exact sums.** Amounts are summed as decimals, never as floating-point numbers.
 - **Stop at the limit.** Before each HTTP attempt, a retry included, the host stops
   with reason `spend-limit` when the total has reached `spend_limit_usd`. A request
-  already sent is not cancelled, so the total can pass the limit by at most what one
-  request counts.
+  already sent finishes. The provider subtotal can pass the limit by the returned
+  charges for final in-flight player and recall requests.
 - **Stop on an unpriced player success.** After a player response that did not fail and whose
   `reported_cost_usd` is null, the host stops with reason `cost-unreported` and
   dispatches no tool call from it. This keys on the cost, not on `usage_available`:
@@ -126,16 +124,15 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
 - **No notice.** The host sends no tail notice for dollars. The driver's ending
   reserve asks for an orderly finish before the limit ([External control](#external-control)).
 
-The driver counts the same way from the trace: per `request-start`, the amount on
-that attempt's cost record, else the bound. A request that started and left no
-record, because the host was killed, therefore counts at the bound. The driver's sum
-is the run's record. It is complete only when the host's own `spent_usd` and
-`unpriced_requests` in `settled` equal the driver's sums; a difference, like a trace
-that cannot be read, marks the run's spend incomplete and admits no successor.
+The driver reconciles each `request-start` with its cost record and sums returned
+charges. A trace is complete when every attempt has a cost record, including
+explicit unknowns, and settlement agrees on the subtotal and both unpriced
+counts. A lost terminal record or a mismatch marks the trace incomplete and
+admits no successor. The observed subtotal still records only provider charges.
 
 ### Delivered knowledge and recall
 
-Every `campaign-run/8` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
+Every `campaign-run/9` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
 
 The host appends a briefing to the first user message: recall-selected article leads or standalone fact text, an index line for every other article and standalone fact, and the coverage stamp. It labels the text as fallible data granting no authority. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
 
@@ -143,9 +140,9 @@ Every `recall.every` completed `computer_input` result offers a reminder request
 
 Recall uses the player's provider and credential variable, with the pinned `recall.model`. Each HTTP attempt has a `recall-N` identity and `request_role:recall`; player identities remain `request-N`. Both roles count against the same package attempt allowance and dollar limit. Before an attempt, spent plus every in-flight attempt's bound must be below the limit. The finish reserve covers the player and recall bounds; the recall bound contributes zero when knowledge is empty. `recall.max_requests` is a per-run allowance. For each actor the driver passes `min(route recall max - recall attempts used by earlier actors, attempts left)`. It counts earlier actors' `recall-*` starts from their events; incomplete accounting conservatively charges that actor's whole allocated recall allowance. A host counts a recall attempt, assigns its `recall-N` identity and emits `request-start` only when fetch starts. Both total and recall-only attempt limits are re-checked there. Recall is refused when the actor has at most one attempt left, preserving the player's final attempt. An unstarted recall has no request ID.
 
-No new recall begins with an orderly stop pending or accepted, or when `spent + in-flight player bound + finish reserve >= limit`. The pre-check and fetch check both apply this rule. A spend refusal, a failed attempt or an unpriced recall ends recall for that actor alone; so does a provider or client failure before the attempt starts. A recall refused for any other reason before its attempt starts (finish reserve, orderly stop, attempt limit, allowance) leaves later opportunities to be checked again. The exception among failed attempts is an invalid selection that arrived with a valid provider cost: that opportunity fails (a briefing holds index lines only, a reminder delivers nothing) and later reminders are still requested within `recall.max_requests` and every spend and attempt check. A valid provider cost is counted at that cost even if selection is invalid or the response stopped for length, and only a response without a valid cost counts at the recall bound. Every recall in flight at actor end is aborted and counted, including normal finish and handoff. Player requests retain the unpriced-success stop. Settlement, driver and receipt report `unpriced_requests`/`unpriced_request_usd` for the player and `unpriced_recall_requests`/`unpriced_recall_request_usd` for recall; provider-reported costs from both roles are summed.
+No new recall begins with an orderly stop pending or accepted, or when `spent + in-flight player bound + finish reserve >= limit`. The pre-check and fetch check both apply this rule. A spend refusal, a failed attempt or an unpriced recall ends recall for that actor alone; so does a provider or client failure before the attempt starts. A recall refused for any other reason before its attempt starts (finish reserve, orderly stop, attempt limit, allowance) leaves later opportunities to be checked again. The exception among failed attempts is an invalid selection that arrived with a valid provider cost: that opportunity fails (a briefing holds index lines only, a reminder delivers nothing) and later reminders are still requested within `recall.max_requests` and every spend and attempt check. A valid provider cost is counted at that cost even if selection is invalid or the response stopped for length, while a response without a valid cost adds an unpriced attempt. Every recall in flight at actor end is aborted and counted, including normal finish and handoff. Player requests retain the unpriced-success stop. Settlement, driver and receipt report `unpriced_requests`/`unpriced_request_usd` for the player and `unpriced_recall_requests`/`unpriced_recall_request_usd` for recall; provider-reported costs from both roles are summed.
 
-The recall request's user text is one JSON object whose first key is `index`, then `kind`, then `first_message` (briefing) or `recent_calls` (reminder), so its stable prefix is shared across actors and reminders. When the recall model's provider is `openrouter` the request asks for structured output (`response_format` of type `json_schema`, strict, an object with exactly the key `articles`, an array of strings); other providers get no `response_format`. Because an OpenRouter route requires `require_parameters:true`, an OpenRouter recall route's pinned upstream must accept that strict `json_schema`; otherwise every recall is refused and counted at its bound, which the real-model check of a new route shows before it is used. The reply's text parts, joined and trimmed, must be exactly one JSON object, bare or inside exactly one Markdown code fence (optionally tagged `json`) with only whitespace outside it; anything else is an invalid selection.
+The recall request's user text is one JSON object whose first key is `index`, then `kind`, then `first_message` (briefing) or `recent_calls` (reminder), so its stable prefix is shared across actors and reminders. When the recall model's provider is `openrouter` the request asks for structured output (`response_format` of type `json_schema`, strict, an object with exactly the key `articles`, an array of strings); other providers get no `response_format`. Because an OpenRouter route requires `require_parameters:true`, an OpenRouter recall route's pinned upstream must accept that strict `json_schema`; otherwise the recall is refused and any missing cost stays unknown. The real-model check of a new route covers that capability before it is used. The reply's text parts, joined and trimmed, must be exactly one JSON object, bare or inside exactly one Markdown code fence (optionally tagged `json`) with only whitespace outside it; anything else is an invalid selection.
 
 Recall accepts only IDs and titles on the delivered index (articles and standalone facts). An article named by both ID and title is selected once; a repeated selection entry is invalid. A standalone fact is accepted as a lead carrying its text; IDs/titles absent from the index are refused, including facts filed under articles.
 
@@ -271,16 +268,16 @@ before a successor. Pause, uncertainty or failed closure cannot become a handoff
 
 ## Telemetry
 
-Stdout is JSONL telemetry version6. Each line has `type`; the driver ignores event
+Stdout is JSONL telemetry version 7. Each line has `type`; the driver ignores event
 kinds it does not account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:6` and `schema:"player-host/6"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:7` and `schema:"player-host/7"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
 | `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). An archived trace recorded before the event existed has none, and readers report its absence explicitly. |
-| `response-complete` | One per HTTP attempt, a failed or aborted one included. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` is what this attempt counted toward the limit, and `cost_counted_as` says which: `provider-reported` (the reported cost) or `unpriced-bound` (the route's `unpriced_request_usd`). `spent_usd` is the host's running total after it. |
+| `response-complete` | One per HTTP attempt, a failed or aborted one included. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` matches the provider cost, or is `null` when the attempt has unknown cost. `cost_counted_as` is `provider-reported` or `unpriced`. `spent_usd` is the running provider subtotal. |
 | `tool-result` | The MCP result as the host received it, with each image replaced by an `image_reference`: `content` is what the model reads, and `structuredContent`, where the tool server supplies one, is the full operation record of a computer observe, input or handoff that the model reads short. Readers take the operation and frame from the record where there is one, else from the text; a trace recorded before the short form holds the full record in the text. `result` is the tool server's payload and is versioned by the `schema` inside it, not by the telemetry version: the short form is `player-computer-result/2` and the record `player-computer-operation/1`. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |

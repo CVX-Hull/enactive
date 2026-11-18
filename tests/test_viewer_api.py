@@ -285,7 +285,7 @@ def test_summary_reports_complete_provider_cost_and_unpriced_attempts(archive):
         outcome='incomplete')
     route = f"/api/view/run/{manifest['session']}/summary"
     zero = dict(reported_usd='0', spent_usd='0', unpriced_requests=0, unpriced_recall_requests=0)
-    unpriced = dict(reported_usd='1.64493095', spent_usd='2.11597095', unpriced_requests=1, unpriced_recall_requests=1)
+    unpriced = dict(reported_usd='1.64493095', spent_usd='1.64493095', unpriced_requests=1, unpriced_recall_requests=1)
     for values in (zero, unpriced):
         path.write_text(json.dumps(dict(receipt, accounting=dict(values, spend_complete=True))))
         payload = client.get(route).json()['custodian_receipt']
@@ -593,9 +593,9 @@ def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
     from harness.viewer.catalog import ViewError
     (tmp_path / 'runs').mkdir()
     current, unversioned, future, replaced = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future', 'replaced'))
-    # A campaign-run/5 manifest is read only for a session the closed archive index lists; this one is not listed.
-    for directory, manifest in ((current, dict(schema='campaign-run/8', session='1' * 32)), (unversioned, dict(session='2' * 32)),
-            (future, dict(schema='campaign-run/9', session='3' * 32)), (replaced, dict(schema='campaign-run/5', session='4' * 32))):
+    # The immediately prior manifest is refused and the closed archive does not gain any session here.
+    for directory, manifest in ((current, dict(schema='campaign-run/9', session='1' * 32)), (unversioned, dict(session='2' * 32)),
+            (future, dict(schema='campaign-run/10', session='3' * 32)), (replaced, dict(schema='campaign-run/8', session='4' * 32))):
         directory.mkdir()
         (directory / 'manifest.json').write_text(json.dumps(manifest))
     catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))
@@ -615,7 +615,7 @@ def test_the_live_session_comes_from_a_supported_manifest(tmp_path):
     (run_dir / 'manifest.json').write_text(json.dumps(dict(session=SESSION)))
     evaluator = LiveEvaluator(run_dir, tmp_path / 'root', FakeBinding())
     assert evaluator.session() is None
-    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/8', session=SESSION)))
+    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/9', session=SESSION)))
     assert evaluator.session() == SESSION
 
 

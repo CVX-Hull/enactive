@@ -83,10 +83,8 @@ function listenControl(input, session, actorId, accept, fail) {
 export function validateConfiguration(configuration, selectedModel, effort, nested = false) {
   bounded(configuration);
   closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall']);
-  requireThat(configuration.schema === 'player-host/6');
-  // Dollars this actor may still spend, and what one request with no cost record counts for.
-  // Both are plain decimal text computed by the driver and above zero; a JSON number is refused.
-  // A zero bound would count a failed request as free.
+  requireThat(configuration.schema === 'player-host/7');
+  // Positive decimal text for this actor's spend limit and one in-flight request allowance.
   const spendLimit = amountFromText(configuration.spend_limit_usd), bound = amountFromText(configuration.unpriced_request_usd);
   requireThat(spendLimit !== null && spendLimit[0] > 0n && bound !== null && bound[0] > 0n);
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
@@ -408,15 +406,12 @@ function diagnosticId(value, secret) {
   return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:/ -]{0,159}$/.test(value)
     && !value.includes(secret) ? value : null;
 }
-function refusalDiagnostic(body, secret) {
-  try {
-    const error = JSON.parse(body)?.error;
-    return {error_type:diagnosticId(error?.metadata?.error_type ?? error?.type, secret),
-      error_code:diagnosticId(Number.isSafeInteger(error?.code) ? String(error.code) : error?.code, secret),
-      provider_error_code:diagnosticId(error?.metadata?.provider_code, secret),
-      limit_source:diagnosticId(error?.metadata?.limit_source, secret),
-      reason:diagnosticId(error?.metadata?.reason, secret)};
-  } catch { return {error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null}; }
+function refusalDiagnostic(error, secret) {
+  return {error_type:diagnosticId(error?.metadata?.error_type ?? error?.type, secret),
+    error_code:diagnosticId(Number.isSafeInteger(error?.code) ? String(error.code) : error?.code, secret),
+    provider_error_code:diagnosticId(error?.metadata?.provider_code, secret),
+    limit_source:diagnosticId(error?.metadata?.limit_source, secret),
+    reason:diagnosticId(error?.metadata?.reason, secret)};
 }
 
 // The provider's own statement of what one response cost, in US dollars (#555). The host
@@ -537,10 +532,11 @@ async function peekFirstEvent(response, signal) {
   } finally {
     signal.removeEventListener('abort', cancel);
   }
-  let errorEvent = false;
+  let event = null;
   if (first !== null && first.trim() !== '[DONE]') {
-    try { errorEvent = object(JSON.parse(first)?.error); } catch { errorEvent = false; }
+    try { event = JSON.parse(first); } catch { /* Leave malformed events for the SDK. */ }
   }
+  const errorEvent = object(event?.error);
   // A partial data event that then breaks stays terminal, as before.
   const noData = !/(?:^|\n)data:/.test(text);
   const failed = errorEvent || first?.trim() === '[DONE]' || ((broken || done) && noData);
@@ -552,12 +548,12 @@ async function peekFirstEvent(response, signal) {
     },
     cancel(reason) { return reader.cancel(reason); },
   });
-  return {failed, cancel:() => reader.cancel().catch(() => {}),
+  const usage = errorEvent ? event.usage ?? event.choices?.[0]?.usage : null;
+  return {failed, reported:object(usage) ? withUsageRecord(null, usage) : null, cancel:() => reader.cancel().catch(() => {}),
     response:new Response(replay, {status:response.status, statusText:response.statusText, headers:response.headers})};
 }
 
-function retryableRefusal(body) {
-  const error = JSON.parse(body)?.error;
+function retryableRefusal(error) {
   if (!object(error)) return false;
   const kind = [error.type, error.code, error.metadata?.error_type, error.metadata?.provider_code,
     error.metadata?.limit_source].filter(text).join(' ');
@@ -578,11 +574,9 @@ function retryableRefusal(body) {
 
 // OpenRouter's documented transient in-flight hold, a narrow exception to the
 // budget/credit exclusion above. Every other 402, including credits, is terminal.
-function inFlightBudgetRefusal(body) {
-  try {
-    const metadata = JSON.parse(body)?.error?.metadata;
-    return metadata?.limit_source === 'openrouter_in_flight_budget' && metadata?.reason === 'in_flight_budget_exhausted';
-  } catch { return false; }
+function inFlightBudgetRefusal(error) {
+  const metadata = error?.metadata;
+  return metadata?.limit_source === 'openrouter_in_flight_budget' && metadata?.reason === 'in_flight_budget_exhausted';
 }
 
 // This actual MCP receipt ends this host only. The driver independently checks
@@ -650,19 +644,19 @@ export async function runHost(options) {
     }
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false, requestReportedCost = null;
-  // The dollar limit (docs/contracts/player-host.md, Spend). Every HTTP attempt counts once, when it
-  // ends: at the cost the provider reported, else at the route's bound for a request with no cost
-  // record. Every attempt ends in a `response-complete`, which carries its count.
+  // Every HTTP attempt gets a response-complete record. Only provider prices debit the dollar limit.
+  // A completed attempt without a usable price stays unknown and still uses the attempt allowance.
   let spent = [0n, 0], unpricedRequests = 0, unpricedRecallRequests = 0, spendLimit, unpricedBound;
   let recallRequests = 0, recallDisabled = false, recallFlight, recallTask, recallController, recallAttemptInFlight = false, actorEnding = false, knowledge, finishReserve, recallBound;
   let briefing, pendingReminders = [], unsentDeliveries = [], completedInputs = 0, latestResult;
   const recentCalls = [];
   const countAttempt = (reported, role = "player") => {
     const priced = reported !== null && reported !== MALFORMED_COST;
-    const amount = priced ? reported : role === "recall" ? recallBound : unpricedBound;
-    if (!priced) { if (role === "recall") unpricedRecallRequests++; else unpricedRequests++; }
-    spent = addAmounts(spent, amount);
-    return {counted_cost_usd:amountText(amount), cost_counted_as:priced ? 'provider-reported' : 'unpriced-bound', spent_usd:amountText(spent)};
+    if (priced) spent = addAmounts(spent, reported);
+    else if (role === "recall") unpricedRecallRequests++;
+    else unpricedRequests++;
+    return {counted_cost_usd:priced ? amountText(reported) : null,
+      cost_counted_as:priced ? 'provider-reported' : 'unpriced', spent_usd:amountText(spent)};
   };
   const lessThan = (a, b) => { const [x,y] = alignedUnits(a,b); return x < y; };
   const canSpend = () => lessThan(addAmounts(spent, recallAttemptInFlight ? recallBound : [0n,0]), spendLimit);
@@ -841,7 +835,7 @@ export async function runHost(options) {
     affinityId = sessionAffinityId(options.session);
     spendLimit = amountFromText(configuration.spend_limit_usd);
     unpricedBound = amountFromText(configuration.unpriced_request_usd);
-    emit('host-start', {telemetry_version:6, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
+    emit('host-start', {telemetry_version:7, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -1051,8 +1045,6 @@ export async function runHost(options) {
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
-          requestUsageAvailable = false;
-          requestReportedCost = null;
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
           const backendModels = new Set(), observedServiceTiers = new Set();
@@ -1063,13 +1055,13 @@ export async function runHost(options) {
           // End an eligible first attempt and hand its server delay to the SDK
           // helper. Status is omitted so only the host's declared classes decide.
           const retry = (attemptId, retryClass, status, headers) => {
-            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, reported_cost_usd:null, ...countAttempt(null), response_progress:progressSnapshot()});
+            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, reported_cost_usd:amountText(requestReportedCost), ...countAttempt(requestReportedCost), response_progress:progressSnapshot()});
             requestInFlight = false;
             if (requests + recallRequests >= configuration.max_requests) {
               stop('request-limit');
               throw new HostError(fatal);
             }
-            // The failed attempt counted at the bound, so the retry is refused once the limit is reached.
+            // A retry still needs room under the observed spend and in-flight reservation.
             if (!canSpend()) {
               stop('spend-limit');
               throw new HostError(fatal);
@@ -1112,6 +1104,8 @@ export async function runHost(options) {
               provider_events:0, content_bytes:0, reasoning_bytes:0,
               tool_argument_bytes:0, response_id:null, reported_provider:null, ...progressTimes()};
             requestInFlight = true;
+            requestUsageAvailable = false;
+            requestReportedCost = null;
             attempts++;
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
             emit('request-start', {request_id:attemptId, request_role:'player', logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
@@ -1145,12 +1139,12 @@ export async function runHost(options) {
             }}));
             response = new Response(body ?? null, {status:response.status, statusText:response.statusText, headers:response.headers});
             if (response.status < 400) {
-              if (attempts !== 1 || !response.body || response.headers.get('x-should-retry') === 'false'
-                  || !/event-stream/i.test(response.headers.get('content-type') ?? '')) return response;
+              if (!response.body || !/event-stream/i.test(response.headers.get('content-type') ?? '')) return response;
               let peeked;
               try { peeked = await peekFirstEvent(response, requestSignal); }
               catch (error) { if (!fatal && !requestSignal.aborted) stop('provider-error'); throw new HostError(fatal ?? 'provider-error'); }
-              if (peeked.failed && !fatal && !requestSignal.aborted) {
+              requestReportedCost = peeked.reported;
+              if (peeked.failed && attempts === 1 && response.headers.get('x-should-retry') !== 'false' && !fatal && !requestSignal.aborted) {
                 await peeked.cancel();
                 emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:true, stream_start_error:true,
                   error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null});
@@ -1163,12 +1157,18 @@ export async function runHost(options) {
             // unreadable; 402 and 429 need their bounded body classifiers.
             try { errorBody = await refusalBody(response, requestSignal); }
             catch (error) { if (!server || fatal || requestSignal.aborted) throw error; }
-            emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:errorBody !== null, ...refusalDiagnostic(errorBody ?? '', apiKey)});
+            let refusal = null;
+            if (errorBody) {
+              try { refusal = JSON.parse(errorBody); } catch { /* Unrecognized refusal body. */ }
+            }
+            if (object(refusal?.usage)) requestReportedCost = withUsageRecord(null, refusal.usage);
+            const error = refusal?.error;
+            emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:errorBody !== null, ...refusalDiagnostic(error, apiKey)});
             // One shared retry per logical request, whatever the first class was.
             if (attempts === 1 && response.headers.get('x-should-retry') !== 'false') {
               if (server) retry(attemptId, 'server-error', response.status, response.headers);
-              if (response.status === 429 && retryableRefusal(errorBody)) retry(attemptId, 'rate-limit', 429, response.headers);
-              if (response.status === 402 && Number.isFinite(retryAfterMs(response.headers.get('retry-after'))) && inFlightBudgetRefusal(errorBody)) retry(attemptId, 'in-flight-budget', 402, response.headers);
+              if (response.status === 429 && retryableRefusal(error)) retry(attemptId, 'rate-limit', 429, response.headers);
+              if (response.status === 402 && Number.isFinite(retryAfterMs(response.headers.get('retry-after'))) && inFlightBudgetRefusal(error)) retry(attemptId, 'in-flight-budget', 402, response.headers);
             }
             if (errorBody === null) throw new HostError('provider-error');
             return new Response(errorBody, {status:response.status, headers:response.headers});

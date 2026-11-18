@@ -31,6 +31,18 @@ test('a stream that fails before its first data event is retried once',async t=>
     assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'stream-start-error');
   }
 });
+test('a retry retains the charge returned by the failed first attempt',async t=>{
+  const body=JSON.stringify({error:{message:'Upstream error',code:502},usage:{cost:0.25}});
+  for (const failed of [eventStream(`data: ${body}\n\n`),new Response(body,{status:502,headers:{'retry-after-ms':'0'}})]) {
+    const {result,events}=await scenario(t,[failed,reply()]);
+    assert.equal(result.ok,true);
+    assert.equal(result.requests,2);
+    const settlement=events.find(e=>e.type==='settled');
+    assert.equal(settlement.spent_usd,'0.250038');
+    assert.equal(settlement.unpriced_requests,0);
+    assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.reported_cost_usd),['0.25','0.000038']);
+  }
+});
 test('a stream error after delivered data is not retried',async t=>{
   const first={id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',content:'partial'},finish_reason:null}]};
   const late=eventStream('data: '+JSON.stringify(first)+'\n\ndata: {"error":{"message":"Upstream error","code":502}}\n\n');
@@ -39,9 +51,11 @@ test('a stream error after delivered data is not retried',async t=>{
   assert.ok(!events.some(e=>e.type==='provider-retry'));
 });
 test('repeated stream-start errors stop after two charged attempts',async t=>{
-  const failed=()=>eventStream('data: {"error":{"message":"Upstream error","code":502}}\n\n');
-  const {result,payloads}=await scenario(t,[failed(),failed(),reply()]);
+  const failed=()=>eventStream('data: {"error":{"message":"Upstream error","code":502},"usage":{"cost":0.25}}\n\n');
+  const {result,payloads,events}=await scenario(t,[failed(),failed(),reply()]);
   assert.equal(result.ok,false);assert.equal(result.requests,2);assert.equal(payloads.length,2);
+  assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.reported_cost_usd),['0.25','0.25']);
+  assert.equal(events.find(e=>e.type==='settled').spent_usd,'0.5');
 });
 test('message-less OpenRouter admission-control 429 is retried once',async t=>{
   const {result,events}=await scenario(t,[

@@ -209,7 +209,7 @@ def make_handler(state: State):
                     body['custodian_receipt'] = dict(outcome='player_external_stop_complete_unassessed',
                         normal_native_exit_zero=True, native_absence_verified=True,
                         deciding_hosts_quiescent=None, input_authority_revoked=False,
-                        accounting=dict(reported_usd='1.64493095', spent_usd='2.11597095',
+                        accounting=dict(reported_usd='1.64493095', spent_usd='1.64493095',
                                         unpriced_requests=1, unpriced_recall_requests=1))
                 if run in ('aidA3', 'aidA4'):
                     body['custodian_receipt'] = dict(outcome='incomplete', accounting=None)

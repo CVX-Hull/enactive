@@ -104,7 +104,7 @@ def receipt_accounting(value: object) -> dict | None:
     if any(type(count) is not int or count < 0 for count in unpriced.values()):
         return None
     reported, counted = map(Decimal, amounts.values())
-    if counted < reported or (counted != reported and not any(unpriced.values())):
+    if counted != reported:
         return None
     return {**amounts, **unpriced}
 

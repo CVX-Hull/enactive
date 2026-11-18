@@ -70,7 +70,7 @@ traits, location, tactic, target item or hint.
 | S2 | The player chooses every setup option, including the scenario. |
 
 Runs alternate S1, S2, S1, S2, S1 within an arm. Each run is frozen as a fresh
-`campaign-run/8` package from merged main, with these limits outside the
+`campaign-run/9` package from merged main, with these limits outside the
 player's context:
 
 | Setting | Value |
@@ -83,10 +83,10 @@ player's context:
 
 The window stays below OpenRouter's 272,000-token long-prompt threshold, so the
 short-prompt rates apply: $1.00/M input, $1.25/M cache write, $0.05/M cache read
-and $5.00/M output (read from the public model list on 5 November 2026). A request
-with no cost record counts for (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096,
-the route's `unpriced_request_usd`. Each package declares a dollar limit, and its
-receipt records the cost OpenRouter reported
+and $5.00/M output (read from the public model list on 5 November 2026). The
+route's in-flight planning bound is (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096
+in `unpriced_request_usd`. Each package declares a dollar limit. Its receipt
+records the provider subtotal and unknown-cost attempts separately
 ([campaign procedure](operations/campaign-run.md#spend-limit)).
 
 **Admission rule.** A run is admitted on actual provider-reported spend under the
@@ -202,8 +202,9 @@ Each admission gets one row in the [tracked ledger](../data/evaluation/runs.json
 written by `tools/run_ledger.py record` ([campaign procedure](operations/campaign-run.md#start-and-close)).
 That row is the one numeric record of the run. The study's dated record holds the
 run's notes and presents its numbers through generated tables or by citing the ledger
-(`python -m tools.run_ledger totals --study ISSUE` gives a study's attempts, wall
-seconds and spend); it keeps no second hand-typed copy of attempts, spend or duration.
+(`python -m tools.run_ledger totals --study ISSUE` gives attempts, wall seconds,
+the provider subtotal and separate amounts used for admission). The dated record
+links to those values.
 A short issue comment may announce the run and link its ledger row.
 Evaluator headlines go into the [metrics snapshot](../data/evaluation/run-metrics.jsonl)
 with `python -m tools.evaluate evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl`,

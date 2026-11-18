@@ -23,11 +23,11 @@ SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 #: The current versions. Any other version of these records is an error naming the file and version, except where
 #: the closed archive index below lists that exact version for that session.
-HOST_SCHEMA = 'player-host/6'
-HOST_TELEMETRY = 6
-MANIFEST_SCHEMA = 'campaign-run/8'
-RECEIPT_SCHEMA = 'campaign-receipt/5'
-DRIVER_SCHEMA = 'player-driver/5'
+HOST_SCHEMA = 'player-host/7'
+HOST_TELEMETRY = 7
+MANIFEST_SCHEMA = 'campaign-run/9'
+RECEIPT_SCHEMA = 'campaign-receipt/6'
+DRIVER_SCHEMA = 'player-driver/6'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/2'
@@ -77,6 +77,8 @@ _RECEIPT_3 = ('session', 'source_commit', 'outcome', 'normal_save_claimed_by_har
 #: takes the rest.
 _DRIVER_3 = ('schema', 'outcome', 'attempts_charged', 'host_seconds_used', 'configured_estimate_usd',
              'missing_usage_attempts', 'actors', 'ending_request')
+_DRIVER_4 = (*_DRIVER_3, 'reported_usd', 'unpriced_requests', 'unpriced_request_usd', 'spent_usd', 'spend_complete')
+_DRIVER_5 = (*_DRIVER_4, 'unpriced_recall_requests', 'unpriced_recall_request_usd')
 #: An old host trace is returned whole, event by event, as a current one is. These are the `host-start` fields
 #: the reader checks (`schema`, `telemetry_version`, `session`) and the ones the reader and `facts.run_facts` take.
 #: Nothing else differs for a reader: the dollar-limit fields a current trace adds are read by no evaluator code.
@@ -108,12 +110,13 @@ ARCHIVE_COMBINATIONS = (
         dict(manifest='campaign-run/6', receipt='campaign-receipt/4', driver='player-driver/4', host='player-host/4',
              host_telemetry=4, run_ending='campaign-watch-terminal/4'),
         dict(manifest=(*(key for key in _MANIFEST_5 if key != 'accounting'), 'spend_limit_usd'),
-             receipt=_RECEIPT_3, driver=(*_DRIVER_3, 'reported_usd', 'unpriced_requests', 'unpriced_request_usd', 'spent_usd', 'spend_complete'), host=_HOST_3)),
+             receipt=_RECEIPT_3, driver=_DRIVER_4, host=_HOST_3)),
     # Memory adoption #463 preserves these exact sealed pre-migration sessions.
     ArchiveCombination(
         dict(manifest='campaign-run/7', receipt='campaign-receipt/5', driver='player-driver/5', host='player-host/5',
              host_telemetry=5, run_ending='campaign-watch-terminal/4'),
-        dict(manifest=(*(key for key in _MANIFEST_5 if key != 'accounting'), 'spend_limit_usd'), host=_HOST_3)),
+        dict(manifest=(*(key for key in _MANIFEST_5 if key != 'accounting'), 'spend_limit_usd'),
+             receipt=_RECEIPT_3, driver=_DRIVER_5, host=_HOST_3)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
 MANIFEST_SCHEMAS = (*sorted({c.versions['manifest'] for c in ARCHIVE_COMBINATIONS} - {MANIFEST_SCHEMA}), MANIFEST_SCHEMA)
@@ -367,7 +370,7 @@ class HostTraceUnsupported(EvaluationError):
 
 def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
               entry: ArchiveSession | None = None) -> Iterator[HostEvent]:
-    """Stream one current player-host/6 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+    """Stream one current player-host/7 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
     host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
     evaluation never gates the control path (ADR008).
 
@@ -421,7 +424,7 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
 
 
 def read_host(path: Path, actor_hint: str, entry: ArchiveSession | None = None) -> tuple[str, tuple[HostEvent, ...]]:
-    """One whole current player-host/6 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    """One whole current player-host/7 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
     still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final.
     `entry` is its session's archive index entry, as in `iter_host`."""
     events = tuple(iter_host(path, actor_hint, partial_tail=True, entry=entry))
@@ -494,7 +497,7 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
 
 
 def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
-    """`receipt.json` (campaign-receipt/5, with its player-driver/5 record) and `watch-terminal.json`
+    """`receipt.json` (campaign-receipt/6, with its player-driver/6 record) and `watch-terminal.json`
     (campaign-watch-terminal/4), when the run has ended. An older receipt, driver record or terminal is read only
     for a session the archive index lists with this manifest's version and that record's version, and then only
     the fields its combination names: a terminal's `session`, when named, must be the manifest's. The owner Pause

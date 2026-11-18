@@ -15,17 +15,17 @@ Before changing a deployment:
 
 1. Close writers and verify exact owned native/host/MCP cleanup. Never migrate under a live actor/game.
 2. Preserve original saves, SQLite/JSON/PNG, configuration, source checkpoint and binary bytes as inert evidence. Keep failed/abandoned chains intact.
-3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/8` package under `.runtime/computer-sessions/`.
+3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/9` package under `.runtime/computer-sessions/`.
 4. Use a fresh `computer-session/1` store and launch marker. A selected partial directory refuses even with no DB; do not delete markers to rearm it.
 5. Select a `player-journal/1` store (`user_version=1`); a supported journal can span fresh native-child sessions. Unsupported or unrecognized nonempty stores are refused before native launch without conversion.
 6. Requalify the affected native/gameplay boundary. Earlier test/demo results remain bound to their source and cannot qualify the replacement.
 
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
-callers move together with `player-host/6`, telemetry 6, `campaign-run/8`,
-`player-driver/5`, `campaign-receipt/5` and `player-host-inputs/3`. The versions
-these replaced are read only by the evaluator, for the sealed sessions of its
-[closed archive index](../standards/migration.md). Native wire,
+callers move together with `player-host/7`, telemetry 7, `campaign-run/9`,
+`player-driver/6`, `campaign-receipt/6` and `player-host-inputs/3`. The evaluator
+reads older versions only for sealed sessions individually pinned to those
+versions in its [closed archive index](../standards/migration.md). Native wire,
 canonical `computer-operation/1`, `computer-source/1` and computer-session storage
 are separate versions; the actor projection does not migrate the canonical database.
 

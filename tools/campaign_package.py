@@ -64,7 +64,7 @@ def usd_text(amount: Decimal) -> str:
 
 
 def unpriced_request_usd(route: dict) -> Decimal:
-    """What one request with no cost record counts for: the whole context window at the route's most expensive
+    """Planning bound for a pending request: the whole context window at the route's most expensive
     input rate plus the output limit at the output rate, from the configured dollars per million tokens. The one
     place this bound is computed; the route file carries it to the host and the driver."""
     model=route['model'];costs=model['cost']
@@ -98,7 +98,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/6` adapter selection and return its argv."""
+    """Validate the closed `player-host/7` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -116,7 +116,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/8':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/9':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     labels(profile['labels'])
@@ -165,7 +165,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/6':
+    if type(route) is not dict or route.get('schema')!='player-host/7':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
@@ -209,13 +209,12 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if route['recall']['max_requests']>profile['max_http_attempts']:
         raise ControlError('Recall attempts exceed original campaign allowance')
     reserve_bound=usd_sum([bound,recall_bound if knowledge.records else Decimal(0)])
-    # A route whose rates are all zero would count a failed request as free.
-    if bound<=0:raise ControlError("The route's configured rates give no bound for a request with no cost record")
+    # A rate-derived bound must reserve resources for a pending request.
+    if bound<=0:raise ControlError("The route's configured rates give no in-flight request bound")
     if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:
         raise ControlError(f"route.json unpriced_request_usd must be {usd_text(bound)} for this route's rates")
-    # With less than one unpriced request's bound left, a single failed request would end the run abruptly instead
-    # of in order. The reserve is below the limit, so the limit exceeds the bound too.
+    # Allow for in-flight player and recall requests before an orderly finish.
     if Decimal(reserve['usd'])<reserve_bound:
         raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(reserve_bound)}, "
-            'so that one request with no cost record still leaves an orderly finish')
+            'so an in-flight attempt still leaves an orderly finish')
     return profile,route,target

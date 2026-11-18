@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/6`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/7`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -91,14 +91,14 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/6"`, `model`,
+The closed route has exactly `schema: "player-host/7"`, `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
 `context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
 amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
 text ([the dollar limit](#the-dollar-limit)).
-`pi-player-host/1` through `/4`, `player-host/1` through `/3` and
+`pi-player-host/1` through `/4`, `player-host/1` through `/6` and
 missing/invalid fields are rejected; closed historical configurations and traces are
 evidence, not runnable current inputs.
 `model` contains Pi's
@@ -265,6 +265,9 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   event or until about 64 KiB (checked per chunk). Keep-alive comments are skipped;
   once a normal event has been read the stream is replayed unchanged, so a later
   error stays terminal. Abort and timeout cancel a stalled read, as for refusal bodies.
+  A usable cost in the player's first error event or bounded JSON refusal is
+  recorded on that attempt. The SDK can end a stream before exposing a later
+  error event's usage. An attempt with no usable cost observed stays unpriced.
 - `in-flight-budget`: HTTP 402 only when its metadata has both
   `limit_source:openrouter_in_flight_budget` and `reason:in_flight_budget_exhausted`
   (OpenRouter's documented [transient hold](https://openrouter.ai/docs/api-reference/limits))
@@ -379,7 +382,7 @@ post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
 cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 6 retains request text/UTF8 counts,
+call IDs where applicable. Telemetry version 7 retains request text/UTF8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -412,13 +415,11 @@ The host stops at the route's `spend_limit_usd`, counted from what the provider
 reports; the [contract](../../docs/contracts/player-host.md#spend) states the rule.
 In this adapter:
 
-- **Counting.** Each HTTP attempt counts once, when its `response-complete` is
-  written: at `reported_cost_usd` when that is not null, otherwise at the route's
-  `unpriced_request_usd`. The event carries `counted_cost_usd`, `cost_counted_as`
-  (`provider-reported` or `unpriced-bound`) and the running `spent_usd`. Every attempt
-  ends in a `response-complete`, a failed or aborted one included. `settled` carries
-  the total `spent_usd` and the count of `unpriced_requests`, which the driver checks
-  against its own sums from the trace.
+- **Counting.** Every HTTP attempt uses the attempt allowance. Its
+  `response-complete` adds a usable provider price to `spent_usd`. An unknown
+  charge has null `reported_cost_usd` and `counted_cost_usd`, with
+  `cost_counted_as: "unpriced"`. The driver checks the settled subtotal and both
+  unpriced counts against all attempt records.
 - **`spend-limit`.** The check sits beside the `max_requests` check: on entering a
   logical request, before every fetch, and after a first attempt fails and before its
   retry. When the total has reached the limit the host stops and sends nothing. A
@@ -426,7 +427,7 @@ In this adapter:
   request counts.
 - **`cost-unreported`.** A response that did not fail (stop reason other than `error`,
   `aborted`, `length` or `deferred`) with a null `reported_cost_usd` stops the host
-  before any tool call from it is dispatched. It has counted at the bound.
+  before any tool call from it is dispatched. Its charge stays unknown.
 - **The bound is not computed here.** `unpriced_request_usd` comes from the route;
   the package check computes it from the route's configured rates.
 - **No notice** is added for dollars. The driver's ending reserve asks for an orderly
@@ -489,7 +490,7 @@ progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 6 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 7 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings
@@ -528,4 +529,4 @@ to analyze traces; future telemetry versions are not silently interpreted.
 
 The required `--delivered-knowledge` file is `delivered-knowledge/1`; it has no text-size cap. `--finish-reserve-usd` is the frozen reserve from the package. The closed route additionally requires `recall:{model,every,max_requests,unpriced_request_usd}` with the same provider and credential variable as the player. `max_requests` limits all player and recall HTTP attempts together; the nested maximum is a per-run recall allowance that the driver reduces by prior actors' recall attempts (their whole recall allocation when accounting is incomplete). Recall counts and request IDs begin at fetch, where both attempt limits are checked again; it never takes the player's final attempt.
 
-The first user message carries a labelled fallible briefing and complete remaining index, including standalone facts and coverage. Recall reminders run beside play, become separate labelled messages, and preserve the sent prefix. Recall asks for one JSON object (structured output on OpenRouter), puts the index first in its request, and accepts one object, bare or in one code fence. An invalid selection with a valid cost fails that opportunity only; any other recall failure or absent cost disables recall alone. `knowledge-recall` keeps the bounded reply text and the precise refusal reason. A valid reported cost is retained when selection is rejected or a response stops for length; only missing or invalid cost uses the bound. `recall-N` attempts share counted spend and limits, include every in-flight bound in admission, and never begin after an orderly stop or when spent plus an in-flight player bound plus the finish reserve reaches the limit. Empty knowledge makes no recall request. The host aborts and counts an in-flight recall at actor end. Settlement carries separate `unpriced_requests` and `unpriced_recall_requests` counts; telemetry 6 records `knowledge-delivery`, `knowledge-recall` (including silence/failure/not-made) and `knowledge-undelivered`. The full boundary is in the player-host contract.
+The first user message carries a labelled fallible briefing and complete remaining index, including standalone facts and coverage. Recall reminders run beside play, become separate labelled messages, and preserve the sent prefix. Recall asks for one JSON object (structured output on OpenRouter), puts the index first in its request, and accepts one object, bare or in one code fence. An invalid selection with a valid cost fails that opportunity only; any other recall failure or absent cost disables recall alone. `knowledge-recall` keeps the bounded reply text and the precise refusal reason. A valid reported cost is retained when selection is rejected or a response stops for length; missing or invalid cost stays unknown. `recall-N` attempts share counted spend and limits, include every in-flight bound in admission, and never begin after an orderly stop or when spent plus an in-flight player bound plus the finish reserve reaches the limit. Empty knowledge makes no recall request. The host aborts and counts an in-flight recall at actor end. Settlement carries separate `unpriced_requests` and `unpriced_recall_requests` counts; telemetry 7 records `knowledge-delivery`, `knowledge-recall` (including silence/failure/not-made) and `knowledge-undelivered`. The full boundary is in the player-host contract.

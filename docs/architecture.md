@@ -52,7 +52,7 @@ Its text equivalent is below.
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/8` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/9` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -225,14 +225,14 @@ Direct player finish is a claim, not saving or game acceptance.
 The main current formats (not an exhaustive list; the contracts own every field)
 are `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/1`, `computer-operation/1`, `computer-source/1`,
-`player-journal/1`, `player-hint/1`, `player-handoff/1`, `player-host/6`,
-`campaign-run/8` and `delivered-knowledge/1`. Model-facing operation,
+`player-journal/1`, `player-hint/1`, `player-handoff/1`, `player-host/7`,
+`campaign-run/9` and `delivered-knowledge/1`. Model-facing operation,
 error and transport envelopes are `player-computer-result/2`, `player-computer-operation/1`, `player-error/2`
 and `player-transport/2`; canonical operations/HTTP records are unchanged.
 The [host contract](contracts/player-host.md) and [campaign procedure](operations/campaign-run.md)
-own telemetry6, `player-driver/5`, `campaign-receipt/5` and `player-host-inputs/3`.
+own telemetry version 7, `player-driver/6`, `campaign-receipt/6` and `player-host-inputs/3`.
 The [evaluation contract](contracts/evaluation.md) owns `evaluation-record/1` and the
-tracked `dev-run/2` ledger and `run-metrics/1` snapshot; the
+tracked `dev-run/3` ledger and `run-metrics/1` snapshot; the
 [evidence procedure](operations/evidence-cleanup.md) owns `evidence-index/1` and its
 `shasum -a 256` manifests for the sealed raw-evidence store.
 The exact contracts own the complete fields.

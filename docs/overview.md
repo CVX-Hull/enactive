@@ -31,7 +31,7 @@ custodian serializes basic actions through the SDL adapter; the game determines
 effects. The user can Pause independently. Curated knowledge and hints never grant custody.
 
 Each finite run freezes one [player host](components/player-interface.md) adapter
-behind the substitutable [`player-host/6` contract](contracts/player-host.md). The selected
+behind the substitutable [`player-host/7` contract](contracts/player-host.md). The selected
 finite configuration is OpenRouter / pinned OpenAI provider / GPT-6.1 Terra at medium
 effort. DeepSeek and other cheaper models are future candidates under #25; none is
 the current player. Its exact route, metadata, context and limits are frozen per run; this

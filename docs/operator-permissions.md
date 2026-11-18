@@ -34,8 +34,10 @@ Changes outside the user's authorized scope still require the applicable decisio
 
 The owner manages the OpenRouter account balance, auto-recharge and key credit
 limit. The lead checks the approved envelope and frozen run limit at admission
-and tracks the costs OpenRouter reports with inference responses. The campaign
-procedure governs accounting when a response carries no usable cost.
+and tracks only the returned OpenRouter costs. A lost campaign request with
+no usable cost consumes an attempt and leaves its charge unknown. The campaign
+procedure describes the original request limits, in-flight allowance and
+separate handling for an incomplete trace.
 
 **The hard cap** is the credit limit the owner keeps on the OpenRouter key, $1,500. It
 is outside the code, which cannot read it. It is the one overall cap: there is no
@@ -44,9 +46,10 @@ its own envelope from the owner, and each run its own dollar limit.
 
 **Actual-spend admission.** Inside an open envelope, and for no other spend, the lead
 admits a run or admission without per-run owner approval only while the study's actual
-provider-reported new spend plus twice its largest single admission so far stays within
-that envelope. The lead records each run's spend in its run-ledger row and stops to ask
-the owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
+provider subtotal plus twice its largest single admission so far stays within
+that envelope. An incomplete trace has a separately recorded admission bound
+under the campaign procedure. The lead records each run's subtotal and unpriced
+counts and stops to ask the owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
 A new envelope needs its own owner decision.
 
 **Real-model checks before merge.** A change to how a model is prompted or how its reply

@@ -253,7 +253,7 @@ continue or finish. The original actor fence, quiescence and finite limits remai
 ## Composed operations and telemetry
 
 Native intent/send/receipt timestamps retain their original wall/monotonic values.
-Late collection never renews a source's `received_wall`. Host telemetry version 6
+Late collection never renews a source's `received_wall`. Host telemetry version 7
 records public call metadata, payload hashes/counts, image references and bounded
 ordinary assistant text; it excludes private reasoning and base64 history. Stable
 frozen system context and the ongoing user objective are reused across actors.

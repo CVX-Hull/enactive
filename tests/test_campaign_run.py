@@ -23,7 +23,7 @@ def package(root):
     values={
         'delivered-knowledge.json':empty(),
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
-        'route.json':dict(schema='player-host/6',service_tier='default',max_requests=10,context_reserve_tokens=200,
+        'route.json':dict(schema='player-host/7',service_tier='default',max_requests=10,context_reserve_tokens=200,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
@@ -33,7 +33,7 @@ def package(root):
     values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,max_requests=3,unpriced_request_usd='0.00063')
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/8',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/9',session='a'*32,source_commit='f'*40,
         labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
         files={name:artifact(directory/name)['sha256'] for name in values},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')},
@@ -131,7 +131,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
     if fault in ('old_route','previous_route','reservation_route'):
-        rewrite_route(directory,profile,schema=dict(old_route='pi-player-host/6',previous_route='player-host/2',reservation_route='player-host/3')[fault])
+        rewrite_route(directory,profile,schema=dict(old_route='pi-player-host/7',previous_route='player-host/2',reservation_route='player-host/3')[fault])
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')
     if fault=='different_lock':profile['shared_lock']=str(tmp_path/'another.lock')
@@ -227,7 +227,7 @@ def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path
             patch.dict(os.environ,{'OFFLINE_KEY':'fixture-secret'}),patch.object(campaign_run,'run_hosts') as host:
         result=campaign_run.run_campaign(directory)
     assert calls==([] if when=='before' else ['start']) and not host.called
-    assert result['schema']=='campaign-receipt/5'
+    assert result['schema']=='campaign-receipt/6'
     # No host was started, so nothing was spent and the record is complete.
     assert result['accounting']==dict(spend_limit_usd='1',reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,unpriced_request_usd='0.00063',unpriced_recall_request_usd='0.00063',
         spent_usd='0',attempts_charged=0,allocated_max_attempts=10,spend_complete=True)
@@ -235,11 +235,11 @@ def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path
     assert 'Cancelled' in result['reason']
 
 
-def test_receipt_spend_is_reported_cost_plus_unpriced_requests_at_the_bound():
+def test_receipt_spend_preserves_reported_cost_and_unknown_attempt_counts():
     profile=dict(spend_limit_usd='5',max_http_attempts=40);route=dict(recall=dict(unpriced_request_usd='0'),unpriced_request_usd='0.4096')
     driver=dict(reported_usd='0.1337',unpriced_requests=2,unpriced_recall_requests=0,attempts_charged=31,spend_complete=True)
     assert campaign_run.accounting(profile,route,driver,True)==dict(spend_limit_usd='5',reported_usd='0.1337',unpriced_requests=2,unpriced_recall_requests=0,
-        unpriced_request_usd='0.4096',unpriced_recall_request_usd='0',spent_usd='0.9529',attempts_charged=31,allocated_max_attempts=40,spend_complete=True)
+        unpriced_request_usd='0.4096',unpriced_recall_request_usd='0',spent_usd='0.1337',attempts_charged=31,allocated_max_attempts=40,spend_complete=True)
     # Hosts were started but the driver left no record: the whole allowance is charged and the spend is unknown.
     lost=campaign_run.accounting(profile,route,None,True)
     assert (lost['attempts_charged'],lost['spent_usd'],lost['spend_complete'])==(40,'0',False)
@@ -267,9 +267,8 @@ def test_a_dollar_reserve_that_is_not_below_the_limit_refuses_before_effects(tmp
     assert not validator.called
 
 
-def test_a_reserve_below_one_unpriced_request_or_a_zero_bound_refuses_the_package(tmp_path):
-    """With less than one request's bound in reserve, a single failed request would end the run abruptly; with a
-    zero bound a failed request would count as free."""
+def test_a_reserve_below_one_in_flight_request_or_a_zero_bound_refuses_the_package(tmp_path):
+    """The package needs a positive planning bound and enough reserve for an in-flight request."""
     directory,profile=package(tmp_path)
     profile['ending_reserve']['usd']='0.0006'
     (directory/'manifest.json').write_text(json.dumps(profile))
@@ -283,7 +282,7 @@ def test_a_reserve_below_one_unpriced_request_or_a_zero_bound_refuses_the_packag
     rewrite_route(directory,profile,unpriced_request_usd='0',model=dict(model,cost=dict(input=0,cacheRead=0,cacheWrite=0,output=0)))
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run'),\
-            pytest.raises(ControlError,match='give no bound for a request with no cost record'):
+            pytest.raises(ControlError,match='give no in-flight request bound'):
         packages.preflight(directory)
 
 

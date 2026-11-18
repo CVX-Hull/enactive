@@ -23,7 +23,7 @@ const model = {id:'recorded-offline-model',name:'Offline fixture',api:'openai-co
   baseUrl:'https://fixture.invalid/v1',reasoning:false,input:['text','image'],
   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:1000000,maxTokens:1024,
   compat:{supportsDeveloperRole:false,supportsStore:false,supportsUsageInStreaming:true}};
-const configuration = () => ({schema:'player-host/6',service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,max_requests:2,unpriced_request_usd:'0.25'},
+const configuration = () => ({schema:'player-host/7',service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,max_requests:2,unpriced_request_usd:'0.25'},
   api_key_env:'OFFLINE_TEST_KEY',max_requests:2,spend_limit_usd:'100',unpriced_request_usd:'0.25',max_context_images:30,context_image_block:1,
   context_reserve_tokens:4096,request_timeout_seconds:2});
 const finish = ['player_finish',{intent:'Report the recorded assessment',disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];

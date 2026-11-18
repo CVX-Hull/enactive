@@ -1,4 +1,4 @@
-"""The tracked development-run ledger (dev-run/2), the run-metrics/1 snapshot and the generated run tables."""
+"""The tracked development-run ledger (dev-run/3), the run-metrics/1 snapshot and the generated run tables."""
 from __future__ import annotations
 
 import json
@@ -16,26 +16,27 @@ COMMIT = 'b' * 40
 
 
 def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounting) -> Path:
-    """A finished package whose receipt counted $1.0 of reported cost and one request at the $0.4096 bound."""
+    """A finished package with $1.0 reported and one unknown-cost attempt."""
     directory = root / name
     directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/8', session=SESSION,
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/9', session=SESSION,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
     (directory/'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/1',version=None,coverage=None,articles=[],facts=[])))
     if receipt:
-        (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/5', session=SESSION,
+        (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/6', session=SESSION,
             source_commit=COMMIT, outcome='player_cannot_continue_unassessed', ended_wall=1794038818.1,
             elapsed_seconds=99.6, accounting=dict(unpriced_recall_requests=0,unpriced_recall_request_usd='0',spend_limit_usd='5', reported_usd='1.0', unpriced_requests=1,
-                unpriced_request_usd='0.4096', spent_usd='1.4096', attempts_charged=10, allocated_max_attempts=40,
+                unpriced_request_usd='0.4096', spent_usd='1.0', attempts_charged=10, allocated_max_attempts=40,
                 spend_complete=True) | accounting)))
     return directory
 
 
 def row(**changes) -> dict:
-    base = dict(schema='dev-run/2', study=999, run='lh9a1', label='lh9a1', arm='long-horizon', start='S1',
+    base = dict(schema='dev-run/3', study=999, run='lh9a1', label='lh9a1', arm='long-horizon', start='S1',
         lineage='L9', admission=1, session=SESSION, source_commit=COMMIT, ended='2026-11-07T08:06:58Z',
-        outcome='player_cannot_continue_unassessed', attempts=10, wall_seconds=100, spend_usd='1.4096',
-        provider_usd='1.0', unpriced_attempts=1, unpriced_attempt_usd='0.4096',unpriced_recall_attempts=0,unpriced_recall_attempt_usd='0')
+        outcome='player_cannot_continue_unassessed', attempts=10, wall_seconds=100, spend_usd='1.0',
+        provider_usd='1.0', unpriced_attempts=1, unpriced_attempt_usd=None,unpriced_recall_attempts=0,unpriced_recall_attempt_usd=None,
+        accounting_basis='provider-reported',spend_upper_bound_usd=None)
     return base | changes
 
 
@@ -44,16 +45,18 @@ def write(path: Path, *rows: dict) -> Path:
     return path
 
 
-def test_separate_recall_bounds_are_exact_and_the_previous_row_contract_is_refused(tmp_path):
-    from tools.run_ledger import package_row, spend_of
+def test_unknown_player_and_recall_costs_leave_spend_unchanged_and_old_rows_are_refused(tmp_path):
+    from tools.run_ledger import package_row
     directory=package(tmp_path/'packages',unpriced_requests=2,unpriced_request_usd='0.4',
-        unpriced_recall_requests=1,unpriced_recall_request_usd='0.2',reported_usd='0',spent_usd='1')
-    value=package_row(directory,study=999,label='separate-bounds')
-    assert value['unpriced_recall_attempts']==1 and value['unpriced_recall_attempt_usd']=='0.2'
-    assert spend_of('0',2,'0.4',1,'0.2')==Decimal('1')
+        unpriced_recall_requests=1,unpriced_recall_request_usd='0.2',reported_usd='0',spent_usd='0')
+    value=package_row(directory,study=999,label='unknown-charges')
+    assert value['unpriced_attempts']==2 and value['unpriced_recall_attempts']==1
+    assert value['unpriced_attempt_usd'] is None and value['unpriced_recall_attempt_usd'] is None
+    assert value['provider_usd']==value['spend_usd']=='0'
+    assert totals([value],999,Decimal('0.3'))['headroom_usd']=='0.3'
     assert read_ledger(write(tmp_path/'current.jsonl',value))==[value]
     with pytest.raises(LedgerError,match='unsupported row version'):
-        read_ledger(write(tmp_path/'old.jsonl',dict(value,schema='dev-run/1')))
+        read_ledger(write(tmp_path/'old.jsonl',dict(value,schema='dev-run/2')))
     with pytest.raises(LedgerError,match='more unpriced attempts'):
         read_ledger(write(tmp_path/'too-many.jsonl',dict(value,attempts=2)))
 
@@ -64,13 +67,12 @@ def test_record_derives_a_row_from_the_package_and_refuses_repeats_and_missing_r
     arguments = ['--ledger', str(ledger), 'record', str(directory), '--study', '999', '--label', 'lh9a1']
     assert main(arguments) == 0
     recorded = read_ledger(ledger)
-    # Rounded wall time, UTC end and labels are derived; the spend and its split are the receipt's, and the row
-    # passes the ledger's own identity: spend is provider cost plus unpriced attempts at their charge.
+    # Rounded wall time, UTC end, provider subtotal and unknown attempt count are derived from the receipt.
     assert recorded == [row()]
     assert main(arguments) == 1 and 'already recorded' in capsys.readouterr().err
     assert main(['--ledger', str(ledger), 'record', str(package(tmp_path / 'other', receipt=False)), '--study', '999']) == 1
     assert 'no receipt.json' in capsys.readouterr().err
-    for name, accounting, message in (('lh9a4', dict(spent_usd='1.5'), 'not its reported_usd plus unpriced requests'),
+    for name, accounting, message in (('lh9a4', dict(spent_usd='1.5'), 'must equal provider_usd'),
                                       ('lh9a5', dict(reported_usd=1.0), 'derived row is invalid')):
         assert main(['--ledger', str(ledger), 'record', str(package(tmp_path / name, name, **accounting)), '--study', '999']) == 1
         assert message in capsys.readouterr().err
@@ -80,19 +82,22 @@ def test_record_derives_a_row_from_the_package_and_refuses_repeats_and_missing_r
     assert len(read_ledger(ledger)) == 1
 
 
-def test_an_incomplete_receipt_is_recorded_only_as_its_upper_bound(tmp_path, capsys):
-    """Spend that could not be counted is refused by default. With the flag the row holds the most the run can have
-    spent: its declared limit plus one request at the bound."""
+@pytest.mark.parametrize(('reported', 'bound'), [('0.3', '5.4096'), ('5.45', '5.8596')])
+def test_an_incomplete_receipt_preserves_observed_cost_beside_the_explicit_upper_bound(tmp_path, capsys, reported, bound):
+    """The flag retains the observed provider subtotal and records the separate admission bound."""
     ledger = write(tmp_path / 'runs.jsonl')
-    incomplete = package(tmp_path / 'packages', spend_complete=False, reported_usd='0.3', unpriced_requests=0,
-                         spent_usd='0.3', attempts_charged=40)
+    incomplete = package(tmp_path / 'packages', spend_complete=False, reported_usd=reported, unpriced_requests=0,
+                         spent_usd=reported, attempts_charged=40)
     arguments = ['--ledger', str(ledger), 'record', str(incomplete), '--study', '999']
     assert main(arguments) == 1
     assert 'spend as incomplete' in capsys.readouterr().err and read_ledger(ledger) == []
     assert main([*arguments, '--record-upper-bound']) == 0
-    recorded = read_ledger(ledger)  # reading checks the identity: 5 + 1 x 0.4096
-    assert recorded == [row(attempts=40, provider_usd='5', unpriced_recall_attempts=0, unpriced_attempts=1, unpriced_attempt_usd='0.4096', spend_usd='5.4096')]
-    assert totals(recorded, 999, None)['spend_usd'] == '5.4096'
+    recorded = read_ledger(ledger)
+    assert recorded == [row(attempts=40, provider_usd=reported, unpriced_attempts=0, spend_usd=reported,
+                            accounting_basis='incomplete-trace',spend_upper_bound_usd=bound)]
+    accounting = totals(recorded, 999, None)
+    assert accounting['provider_usd'] == reported
+    assert accounting['admission_usd'] == bound
     complete = package(tmp_path / 'more', name='lh9a2')
     assert main(['--ledger', str(ledger), 'record', str(complete), '--study', '999', '--record-upper-bound']) == 1
     assert 'spend as complete' in capsys.readouterr().err and len(read_ledger(ledger)) == 1
@@ -102,15 +107,16 @@ def test_an_incomplete_receipt_is_recorded_only_as_its_upper_bound(tmp_path, cap
 @pytest.mark.parametrize('has_units',[False,True])
 def test_upper_bound_counts_fit_attempts_and_recall_requires_delivered_units(tmp_path,attempts,has_units):
     from tools.run_ledger import package_row
-    directory=package(tmp_path/'packages',spend_complete=False,attempts_charged=attempts,unpriced_recall_request_usd='0.2')
+    directory=package(tmp_path/'packages',spend_complete=False,attempts_charged=attempts,unpriced_requests=0,unpriced_recall_request_usd='0.2')
     if has_units:
         path=directory/'delivered-knowledge.json';value=json.loads(path.read_text())
         value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(order=1))]
         path.write_text(json.dumps(value))
     value=package_row(directory,study=999,label='upper-bound',upper_bound=True)
-    assert value['unpriced_attempts']==min(1,attempts)
-    assert value['unpriced_recall_attempts']==int(has_units and attempts==2)
-    assert value['unpriced_attempts']+value['unpriced_recall_attempts']<=attempts
+    assert value['unpriced_attempts']==value['unpriced_recall_attempts']==0
+    assert value['provider_usd']==value['spend_usd']=='1.0'
+    expected=Decimal('5')+min(1,attempts)*Decimal('0.4096')+int(has_units and attempts==2)*Decimal('0.2')
+    assert Decimal(value['spend_upper_bound_usd'])==expected
     assert read_ledger(write(tmp_path/'ledger.jsonl',value))==[value]
 
 
@@ -129,10 +135,12 @@ def test_record_defaults_the_label_and_refuses_earlier_package_versions(tmp_path
 
 @pytest.mark.parametrize('bad, message', [
     (dict(schema='dev-run/0'), 'unsupported row version'),
-    (dict(spend_usd='2'), 'spend_usd is not provider_usd plus'),
-    (dict(provider_usd=None), 'recorded together or not at all'),
+    (dict(spend_usd='2'), 'must equal provider_usd'),
+    (dict(provider_usd=None), 'must equal provider_usd'),
     (dict(attempts=-1), 'attempts'),
-    (dict(unpriced_attempts=11, spend_usd='5.5056'), 'more unpriced attempts'),
+    (dict(unpriced_attempts=11), 'more unpriced attempts'),
+    (dict(unpriced_attempt_usd='0.4096'), 'without assigned charges'),
+    (dict(spend_upper_bound_usd='5'), 'only an incomplete trace'),
     (dict(label=None), 'label'),
     (dict(start='S0'), 'S0'),
     (dict(start='S01'), 'S01'),
@@ -160,15 +168,18 @@ def test_a_repeated_run_is_rejected(tmp_path):
 
 
 def test_totals_apply_the_actual_spend_admission_rule():
-    rows = [row(run='a', spend_usd='5', provider_usd=None, unpriced_attempts=None, unpriced_attempt_usd=None,unpriced_recall_attempts=None,unpriced_recall_attempt_usd=None),
-            row(run='b', spend_usd='7', provider_usd=None, unpriced_attempts=None, unpriced_attempt_usd=None,unpriced_recall_attempts=None,unpriced_recall_attempt_usd=None)]
+    rows = [row(run='a', accounting_basis='historical', spend_usd='5', provider_usd=None, unpriced_attempts=None, unpriced_attempt_usd=None,unpriced_recall_attempts=None,unpriced_recall_attempt_usd=None),
+            row(run='b', accounting_basis='historical', spend_usd='7', provider_usd=None, unpriced_attempts=None, unpriced_attempt_usd=None,unpriced_recall_attempts=None,unpriced_recall_attempt_usd=None)]
     result = totals(rows, 999, Decimal('30'))
-    assert (result['spend_usd'], result['largest_usd'], result['headroom_usd'], result['admit']) == ('12', '7', '4', True)
+    assert (result['admission_usd'], result['largest_admission_usd'], result['headroom_usd'], result['admit']) == ('12', '7', '4', True)
+    assert result['provider_usd'] == '0'
+    assert result['admissions_without_provider_subtotal'] == 2
     assert totals(rows, 999, Decimal('25'))['admit'] is False
-    assert totals(rows, 1, None) == dict(study=1, admissions=0, attempts=0, wall_seconds=0, spend_usd='0', largest_usd='0')
+    assert totals(rows, 1, None) == dict(study=1, admissions=0, attempts=0, wall_seconds=0, provider_usd='0',
+                                        admissions_without_provider_subtotal=0, admission_usd='0', largest_admission_usd='0')
     first = totals([], 1, Decimal('150'), Decimal('6.50'))  # #382's forecast before any admission completes
-    assert (first['largest_usd'], first['headroom_usd']) == ('6.50', '137.00')
-    assert totals(rows, 999, Decimal('30'), Decimal('100'))['largest_usd'] == '7'  # actual admissions replace it
+    assert (first['largest_admission_usd'], first['headroom_usd']) == ('6.50', '137.00')
+    assert totals(rows, 999, Decimal('30'), Decimal('100'))['largest_admission_usd'] == '7'
 
 
 def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
@@ -177,15 +188,19 @@ def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
     historical_rows = [r for r in rows if r['study'] in historical_studies]
     assert len(historical_rows) == 123
     assert {r['study'] for r in historical_rows} == historical_studies
-    assert totals(rows, 651, None)['spend_usd'] == '86.38254135'     # the full withholding study, replaced attempts included
+    assert totals(rows, 651, None)['admission_usd'] == '86.38254135'     # the full withholding study, replaced attempts included
     assert sum(r['study'] == 651 for r in rows) == 63
-    assert totals(rows, 635, None)['spend_usd'] == '1.57054305'      # the delivery development start
-    assert totals(rows, 642, None)['spend_usd'] == '1.5896732'       # the delivery check start of the recall fix
-    assert totals(rows, 619, None)['spend_usd'] == '8.85651610'      # the withholding pilot's six starts
+    assert totals(rows, 635, None)['admission_usd'] == '1.57054305'      # the delivery development start
+    assert totals(rows, 642, None)['admission_usd'] == '1.5896732'       # the delivery check start of the recall fix
+    assert totals(rows, 619, None)['admission_usd'] == '8.85651610'      # the withholding pilot's six starts
     assert {r['start'] for r in rows if r['study'] == 619} == {'S1', 'S2', 'S3', 'S4', 'S5', 'S6'}
-    assert totals(rows, 382, None)['spend_usd'] == '30.46049960'
-    assert totals(rows, 397, None)['spend_usd'] == '38.39958335'
-    assert totals(rows, 522, None)['spend_usd'] == '30.11036530'     # the lost lh4a1 ($1.2343105) included
+    assert totals(rows, 382, None)['admission_usd'] == '30.46049960'
+    assert totals(rows, 397, None)['admission_usd'] == '38.39958335'
+    assert totals(rows, 522, None)['admission_usd'] == '30.11036530'     # the lost lh4a1 ($1.2343105) included
+    screen = [r for r in rows if r['study'] == 441]
+    assert {r['accounting_basis'] for r in screen} == {'historical'}
+    assert totals(screen, 441, None)['provider_usd'] == '0.11674225'
+    assert totals(screen, 441, None)['admission_usd'] == '0.93594225'
     snapshot = read_snapshot(run_ledger.ROOT / 'data/evaluation/run-metrics.jsonl')
     assert {r['session'] for r in rows} == {r['session'] for r in snapshot}
     text = ''.join(Path(p).read_text() for p in (run_ledger.LEDGER, run_ledger.ROOT / 'data/evaluation/run-metrics.jsonl'))

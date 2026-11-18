@@ -157,7 +157,7 @@ test('normal finish aborts and counts an in-flight recall without a stop event',
   assert.equal(result.reason,'task_complete');assert.equal(aborted,true);
   assert.ok(events.every(e=>e.type!=='abort'));
   const cost=events.find(e=>e.type==='response-complete'&&e.request_id==='recall-2');
-  assert.equal(cost.counted_cost_usd,'0.2');assert.equal(events.at(-1).unpriced_recall_requests,1);
+  assert.equal(cost.counted_cost_usd,null);assert.equal(events.at(-1).unpriced_recall_requests,1);
   assert.equal(events.find(e=>e.type==='knowledge-recall'&&e.request_id==='recall-2').reason,'actor-ended');
 });
 
@@ -170,7 +170,7 @@ test('handoff also aborts and counts the actor\'s in-flight recall',async t=>{
       init.signal.addEventListener('abort',()=>{aborted=true;reject(new Error('fixture aborted'));},{once:true});
     })});
   assert.equal(result.reason,'handoff');assert.equal(aborted,true);
-  assert.equal(events.find(e=>e.type==='response-complete'&&e.request_id==='recall-2').counted_cost_usd,'0.2');
+  assert.equal(events.find(e=>e.type==='response-complete'&&e.request_id==='recall-2').counted_cost_usd,null);
   assert.equal(events.find(e=>e.type==='knowledge-recall'&&e.request_id==='recall-2').reason,'actor-ended');
 });
 

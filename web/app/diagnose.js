@@ -57,8 +57,7 @@ function ProviderCost({accounting}) {
   const hasUnpriced = player > 0 || recall > 0;
   return html`<dt>${hasUnpriced ? 'Provider-reported subtotal' : 'Provider-reported cost'}</dt>
     <dd>$${accounting.reported_usd} <${Pv} source="recorded" detail="custodian receipt" /></dd>
-    ${hasUnpriced ? html`<dt>Unpriced attempts</dt><dd>${player} player · ${recall} recall</dd>
-      <dt>Counted toward run limit</dt><dd>$${accounting.spent_usd} <${Pv} source="recorded" detail="custodian receipt" /></dd>` : null}`;
+    ${hasUnpriced ? html`<dt>Unpriced attempts</dt><dd>${player} player · ${recall} recall</dd>` : null}`;
 }
 
 function Overview() {
