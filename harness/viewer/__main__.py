@@ -15,7 +15,7 @@ from typing import Sequence
 
 import uvicorn
 
-from .app import create_app
+from .app import LOOPBACK_HOSTS, create_app
 from .curator import parse_sources
 from .frame import FrameSources
 from .catalog import Catalog
@@ -27,6 +27,7 @@ BINDINGS = {'cdda': ('harness.evaluation.cdda', 'CddaBinding')}
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--run', type=Path, help='the live run directory to evaluate incrementally')
+    parser.add_argument('--recorded-page', action='store_true', help='serve the recorded spectator at /recorded/ without --run')
     parser.add_argument('--root', type=Path, required=True, help='evaluation record root, e.g. .runtime/evaluations')
     parser.add_argument('--runs', type=Path, action='append', default=[], help='a directory of archived run directories')
     parser.add_argument('--binding', default='cdda', choices=sorted(BINDINGS))
@@ -40,8 +41,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         curator_sessions = parse_sources(arguments.curator_sessions)
     except ValueError as exc:
         parser.error(str(exc))
-    if arguments.host not in ('127.0.0.1', 'localhost', '::1'):
+    if arguments.host not in LOOPBACK_HOSTS:
         parser.error('the viewer serves loopback only')
+    if arguments.recorded_page and arguments.run is not None:
+        parser.error('--recorded-page cannot be combined with --run')
     evaluator = None
     if arguments.run is not None:
         module, attribute = BINDINGS[arguments.binding]
@@ -49,7 +52,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         evaluator.start()
     catalog = Catalog(arguments.root, tuple(arguments.runs), arguments.run)
     try:
-        uvicorn.run(create_app(catalog, evaluator, frame_sources=FrameSources(curator_results=curator_results, curator_sessions=curator_sessions)), host=arguments.host, port=arguments.port, log_level='warning')
+        app = create_app(catalog, evaluator, frame_sources=FrameSources(curator_results=curator_results,
+            curator_sessions=curator_sessions), recorded_page=arguments.recorded_page)
+        uvicorn.run(app, host=arguments.host, port=arguments.port, log_level='warning')
     finally:
         if evaluator is not None:
             evaluator.stop()

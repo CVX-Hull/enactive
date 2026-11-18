@@ -83,6 +83,29 @@ beside the evaluator's outcome. A normally exited process and an unresolved inpu
 acknowledgement can occur in the same run. The live Pause display uses its own
 sources.
 
+### Recorded browser entry
+
+After supervisor shutdown, start the recorded viewer from the project checkout.
+
+```sh
+.venv/bin/python -m harness.viewer --recorded-page --root .runtime/evaluations --runs .runtime/computer-sessions
+```
+
+Open `http://127.0.0.1:8765/recorded/`. `--root` holds evaluation databases in
+session-named subdirectories. `--runs` names a parent directory of campaign
+packages with their manifests and original sources. For a sealed admission,
+point `--runs` to the parent of its package and use a session-named copy of its
+final evaluation files under a separate evaluation root. The viewer opens
+Run Overview. Select a run and open **Recorded playback** to inspect its
+findings and original frames with the shared playhead.
+
+The recorded page reads existing records, labels unfinished stores, and offers
+recorded playback controls. The CLI reserves the live evaluation option `--run`
+for the separate API entry. The supervisor continues to serve the live page,
+including the control path and independent Pause.
+
+### Playback and live relay
+
 The page's feed player shows the live control-path frame or the playhead's recorded
 frame:
 - Each frame is decoded before it replaces the last, and is drawn at its own pixel size. It never blanks or rescales as frames arrive.

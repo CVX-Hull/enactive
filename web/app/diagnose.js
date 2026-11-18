@@ -1,6 +1,6 @@
 // Diagnose: one run, every number drills down to its instances.
 import {html, useState, useMemo, Panel, Pv, Unvalidated, Waiting, Table, Insufficient, Callout, fmtH, fmtMoney, pct, trim, bytes, mmss, shortId, scalar, label, compact} from './ui.js';
-import {store, useView, runPath, framePath, runStart} from './data.js';
+import {store, useView, runPath, framePath, runStart, recordedPage} from './data.js';
 import {Chart, requestsOption, transitionsOption} from './charts.js';
 import {findingText} from './supervise.js';
 
@@ -80,7 +80,7 @@ function Overview() {
     ${!s.live || s.custodian_receipt ? html`<${CustodianReceipt} receipt=${s.custodian_receipt} />` : null}
     ${[...groups.entries()].map(([name, list]) => html`<${Panel} title=${name} span="s4"><dl class="kv">${list.map(m => html`<dt>${label(m.name.split('.').slice(1).join('.'))}${m.key ? ` · ${m.key}` : ''} <${Pv} source=${m.source} /><${Unvalidated} metric=${m} /></dt>
       <dd title=${metricNote(m)}>${metricText(m)} <span class="note sub">${metricNote(m)}</span></dd>`)}</dl><//>`)}
-    <${Panel} title="Findings in this run" note="every row opens its evidence on Supervise · newest first, up to 100" span="s12">
+    <${Panel} title="Findings in this run" note=${`newest first, up to 100 · open ${recordedPage ? 'Recorded playback' : 'Live'} to jump to a finding`} span="s12">
       ${listed.length ? html`<${Table} columns=${[{title: 'Finding', render: f => findingText(f)}, {title: 'When', render: f => (f.wall === null ? '—' : mmss(f.wall - t0))}, {title: 'Step', num: true, render: f => f.seq_start}, {title: 'Source', render: f => html`<${Pv} source=${f.source} />`}]} rows=${listed} />`
         : html`<${Insufficient}>No findings recorded for this run.<//>`}
       ${evictions ? html`<p class="note">${evictions} routine image evictions among the newest findings are not listed; they are the dotted lines on the Requests chart.</p>` : null}<//>

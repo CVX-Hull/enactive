@@ -1033,6 +1033,15 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/curator-session-sources?after=&limit=` | Operator-configured receipt labels |
 | `/api/view/frame/curator-session?source=&after=&limit=&snapshot=` | One terminal curator session receipt and its paged gate results |
 
+### Recorded browser entry
+
+The standalone viewer with `--recorded-page` serves the shared spectator page
+at `/recorded/` and its allowlisted assets under `/app/` and `/vendor/`. The
+page and existing viewer API stay on the same loopback origin. This mode reads
+existing evaluation stores and recorded sources and opens Run Overview. Its
+browser code makes viewer requests only. The supervised gateway owns live status,
+native captures and Pause. See the [recorded viewer procedure](../components/observer-operations.md#recorded-browser-entry).
+
 ### Recorded custodian receipt
 
 `custodian_receipt` projects the current package's `campaign-receipt/5` when the

@@ -1,7 +1,7 @@
 // Spectator page: the interpretive viewer UI. The control strip (Pause, status and frame)
 // is static markup driven by control.js and does not depend on this module.
 import {html, render, useState, useEffect, Pv, fmtMoney, runName} from './ui.js';
-import {store, useStore, startPolling, selectRun, liveRun, selectedRun} from './data.js';
+import {store, useStore, startPolling, selectRun, liveRun, selectedRun, recordedPage} from './data.js';
 import {Supervise} from './supervise.js';
 import {Diagnose} from './diagnose.js';
 import {Improve} from './improve.js';
@@ -9,9 +9,10 @@ import {Explore, Compare} from './crossrun.js';
 import {Frame} from './frame.js';
 
 const VIEWS = ['live', 'run', 'improve', 'explore', 'compare', 'frame'];
+const defaultView = recordedPage ? 'run' : 'live';
 function parse() {
-  const [view, section] = (location.hash || '#live').slice(1).split('/');
-  return {view: VIEWS.includes(view) ? view : 'live', section: section || ''};
+  const [view, section] = location.hash.slice(1).split('/');
+  return {view: VIEWS.includes(view) ? view : defaultView, section: section || ''};
 }
 function useRoute() {
   const [route, setRoute] = useState(parse());
@@ -26,7 +27,7 @@ function useRoute() {
 function Banner() {
   if (store.viewerOk) return null;
   return html`<div class="banner down" role="status"><span class="state alert">viewer unavailable</span>
-    <span>Interpretive panels show the last data received, greyed, or wait for the viewer. The control strip and Pause do not use the viewer and are unaffected.</span></div>`;
+    <span>Interpretive panels show the last data received, greyed, or wait for the viewer.${recordedPage ? '' : ' The control strip and Pause do not use the viewer and are unaffected.'}</span></div>`;
 }
 
 function App() {
@@ -56,8 +57,9 @@ function StripViewer() {
   const s = store.summary;
   const facts = s && s.facts ? s.facts : null;
   const live = liveRun();
+  const viewerTitle = recordedPage ? 'Reads existing evaluation records' : 'The viewer computes interpretive values; Pause and checks never depend on it';
   return html`<div class="strip-viewer">
-    <span class="viewer ${store.viewerOk ? '' : 'down'}" id="viewer" title="The viewer computes interpretive values; Pause and checks never depend on it" role="status">${store.viewerOk ? (store.viewerSeen ? 'viewer · connected' : 'viewer · connecting') : 'viewer unavailable'}</span>
+    <span class="viewer ${store.viewerOk ? '' : 'down'}" id="viewer" title=${viewerTitle} role="status">${store.viewerOk ? (store.viewerSeen ? 'viewer · connected' : 'viewer · connecting') : 'viewer unavailable'}</span>
     <label class="note">Run <select class="runpick" id="runpick" aria-label="Run to show" value=${store.runId || ''} disabled=${!runs.length} onChange=${e => selectRun(e.target.value)}>
       ${runs.length ? runs.map(r => html`<option value=${r.run} selected=${r.run === store.runId}>${runName(r)} · ${r.labels.arm || 'no arm'}${r.state === 'live' ? ' · live' : r.state === 'unfinished' ? ' · not finalized' : ''}${r.outcome.lost ? ' · lost' : ''}</option>`) : html`<option>no runs</option>`}</select></label>
     <div class="vfacts ${store.viewerOk ? '' : 'greyed'}" id="viewer-facts">${store.viewerOk && facts && run ? html`<span>${runName(run)} ${run.state === 'live' ? 'running' : run.state === 'unfinished' ? 'ended, not finalized' : 'final'} · decision ${s.decisions}</span>
@@ -65,6 +67,11 @@ function StripViewer() {
       <span>${(s.labels && s.labels.arm) || 'no arm'} · ${(s.labels && s.labels.start) || 'no start'} · ${String(facts.source_commit || '').slice(0, 7)}</span>${live && run.run !== live.run ? html`<span class="state watch">not the live run</span>` : null}` : null}</div></div>`;
 }
 
+if (recordedPage) {
+  document.body.dataset.recorded = '';
+  document.getElementById('watch').closest('header').setAttribute('aria-label', 'Recorded spectator');
+  document.querySelector('[data-nav="live"]').textContent = 'Recorded playback';
+}
 document.getElementById('app').replaceChildren();
 render(html`<${App} />`, document.getElementById('app'));
 render(html`<${StripViewer} />`, document.getElementById('strip-viewer'));

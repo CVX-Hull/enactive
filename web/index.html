@@ -6,7 +6,10 @@
   <title>Enactive Spectator</title>
   <link rel="stylesheet" href="/app/app.css">
   <link rel="icon" href="/app/icon.png">
+  <script type="module" src="/app/theme.js"></script>
+  <!-- live only -->
   <script type="module" src="/app/control.js"></script>
+  <!-- end live only -->
   <script type="module" src="/app/main.js"></script>
 </head>
 <body>
@@ -14,6 +17,7 @@
        /api/source/<id>; app/control.js never reads the viewer. -->
   <header class="ctl" aria-label="Control path">
     <div class="wrap" id="watch">
+      <!-- live only -->
       <button class="pause" id="pause" type="button" aria-describedby="pause-hint">Pause run…<span class="fillbar" id="fillbar"></span></button>
       <div class="status" aria-live="polite">
         <div class="line" id="statusline">Waiting for the control path…</div>
@@ -29,11 +33,12 @@
         <div class="frame-shell" tabindex="0" role="region" aria-label="Live frame from the control path"><img id="frame" alt="Live game screen from the control path" hidden><span class="frame-note" id="frame-note">No frame yet</span></div>
         <details class="src-details"><summary>Frame source</summary><pre id="source-details">No displayed source.</pre></details>
       </div>
+      <!-- end live only -->
       <div class="ctl-right" id="strip-viewer"></div>
     </div>
   </header>
   <nav class="jobs wrap" aria-label="Views">
-    <div class="grp"><span>Supervise</span><a href="#live" data-nav="live">Live</a></div>
+    <div class="grp"><!-- live only --><span>Supervise</span><!-- end live only --><a href="#live" data-nav="live"><!-- live only -->Live<!-- end live only --></a></div>
     <div class="grp"><span>Diagnose</span><a href="#run" data-nav="run">Run</a></div>
     <div class="grp"><span>Improve</span><a href="#improve" data-nav="improve">Changes and failures</a></div>
     <div class="grp"><span>Cross-run</span><a href="#explore" data-nav="explore">Explore</a><a href="#compare" data-nav="compare">Compare</a></div>
@@ -44,6 +49,7 @@
 
   <main class="wrap" id="app" aria-live="off"><p class="note">Loading the viewer…</p></main>
 
+  <!-- live only -->
   <div class="sheet-bg" id="sheet" hidden>
     <form class="sheet" id="sheetform" role="dialog" aria-modal="true" aria-labelledby="sheet-title" novalidate>
       <h2 id="sheet-title">Pause this run?</h2>
@@ -60,5 +66,6 @@
       <div class="row"><button type="button" class="btn" id="sheetcancel">Keep running</button><button type="submit" class="pause small" id="sheetsubmit">Pause permanently</button></div>
     </form>
   </div>
+  <!-- end live only -->
 </body>
 </html>

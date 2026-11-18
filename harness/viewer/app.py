@@ -11,9 +11,12 @@ import json
 from typing import Any, Callable
 
 from starlette.applications import Starlette
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
+
+from harness.spectator_assets import PAGE_POLICY, WEB, static_file
 
 from . import cross, views, knowledge, curator
 from . import frame as frame_view
@@ -24,6 +27,7 @@ MAX_BYTES = 4 * 1024 * 1024
 MAX_LIMIT = 500
 DEFAULT_LIMIT = 100
 HEADERS = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}
+LOOPBACK_HOSTS = ('127.0.0.1', 'localhost', '::1')
 
 
 def reply(payload: dict, status: int = 200, schema: str = API) -> Response:
@@ -49,7 +53,7 @@ def paging(request: Request) -> tuple[int, int]:
 
 
 def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Callable[[], float] | None = None,
-               frame_sources: frame_view.FrameSources | None = None) -> Starlette:
+               frame_sources: frame_view.FrameSources | None = None, *, recorded_page: bool = False) -> Starlette:
     import time
     clock = now or time.time
     sources = frame_sources or frame_view.FrameSources()
@@ -218,7 +222,33 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         Route(f'{prefix}/improve/failures', plain(failures), methods=['GET']),
         Route(f'{prefix}/compare', plain(compare), methods=['GET']),
         Route(f'{prefix}/explore', plain(explore), methods=['GET'])]
+    if recorded_page:
+        if evaluator is not None:
+            raise ValueError('Recorded page requires an offline viewer')
+
+        def asset(request: Request) -> Response:
+            page = request.url.path == '/recorded/'
+            found = static_file(WEB, '/' if page else request.url.path, recorded=page)
+            if found is None:
+                return Response(status_code=404)
+            data, media = found
+            return Response(data, media_type=media, headers={**HEADERS, 'Content-Security-Policy': PAGE_POLICY})
+
+        routes.extend(Route(path, asset, methods=['GET']) for path in (
+            '/recorded/', '/app/{file:path}', '/vendor/{file:path}'))
+
     app = Starlette(routes=routes)
+    if recorded_page:
+        async def local_only(request: Request, call_next):
+            host = request.headers.get('host', '')
+            try:
+                local = bool(host) and request.url.hostname in LOOPBACK_HOSTS
+            except ValueError:
+                local = False
+            if not local or request.headers.get('origin', f'http://{host}') != f'http://{host}':
+                return Response(status_code=403)
+            return await call_next(request)
+        app.add_middleware(BaseHTTPMiddleware, dispatch=local_only)
     app.state.catalog = catalog
     app.state.evaluator = evaluator
     return app
