@@ -6,6 +6,7 @@ JSON-able dict (the app adds the schema field and bounds the size). Values keep 
 """
 from __future__ import annotations
 
+from decimal import Decimal
 import hashlib
 from pathlib import Path
 import re
@@ -87,6 +88,25 @@ RECEIPT_OUTCOMES = ('incomplete', 'interrupted', 'player_task_complete_unassesse
     'player_cannot_continue_unassessed', 'player_external_stop_complete_unassessed')
 RECEIPT_FLAGS = ('normal_native_exit_zero', 'native_absence_verified', 'deciding_hosts_quiescent',
     'input_authority_revoked')
+RECEIPT_AMOUNTS = ('reported_usd', 'spent_usd')
+RECEIPT_UNPRICED = ('unpriced_requests', 'unpriced_recall_requests')
+USD_TEXT = re.compile(r'(0|[1-9][0-9]*)(\.[0-9]+)?')
+
+
+def receipt_accounting(value: object) -> dict | None:
+    """Read complete receipt accounting without rounding or substituting budget bounds for cost."""
+    if not isinstance(value, dict) or value.get('spend_complete') is not True:
+        return None
+    amounts = {key: value.get(key) for key in RECEIPT_AMOUNTS}
+    unpriced = {key: value.get(key) for key in RECEIPT_UNPRICED}
+    if any(not isinstance(text, str) or not USD_TEXT.fullmatch(text) for text in amounts.values()):
+        return None
+    if any(type(count) is not int or count < 0 for count in unpriced.values()):
+        return None
+    reported, counted = map(Decimal, amounts.values())
+    if counted < reported or (counted != reported and not any(unpriced.values())):
+        return None
+    return {**amounts, **unpriced}
 
 
 def custodian_receipt(info: RunInfo) -> dict | None:
@@ -106,6 +126,7 @@ def custodian_receipt(info: RunInfo) -> dict | None:
         return None
     disposition = receipt.get('outcome')
     return dict(outcome=disposition if disposition in RECEIPT_OUTCOMES else None,
+        accounting=receipt_accounting(receipt.get('accounting')),
         **{key: receipt[key] if type(receipt.get(key)) is bool else None for key in RECEIPT_FLAGS})
 
 

@@ -200,12 +200,19 @@ def make_handler(state: State):
             if sub == 'summary':
                 body = load('summary.json')
                 body['custodian_receipt'] = None
-                if run in ('aidA1', 'aidA2'):
+                if run in ('aidA1', 'aidA2', 'aidA3', 'aidA4'):
                     body.update(run=run, state='final', live=False, pause=None)
                 if run == 'aidA1':
                     body['custodian_receipt'] = dict(outcome='player_external_stop_complete_unassessed',
                         normal_native_exit_zero=True, native_absence_verified=True,
-                        deciding_hosts_quiescent=None, input_authority_revoked=False)
+                        deciding_hosts_quiescent=None, input_authority_revoked=False,
+                        accounting=dict(reported_usd='1.64493095', spent_usd='2.11597095',
+                                        unpriced_requests=1, unpriced_recall_requests=1))
+                if run in ('aidA3', 'aidA4'):
+                    body['custodian_receipt'] = dict(outcome='incomplete', accounting=None)
+                if run == 'aidA3':
+                    body['custodian_receipt']['accounting'] = dict(reported_usd='0', spent_usd='0',
+                        unpriced_requests=0, unpriced_recall_requests=0)
                 body['decisions'] = state.steps[visible - 1]['decision']
                 body['findings'] = [f for f in body['findings'] if f['seq_start'] <= state.steps[visible - 1]['seq']]
                 self.json(200, body); return

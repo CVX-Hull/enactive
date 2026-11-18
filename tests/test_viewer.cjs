@@ -65,6 +65,38 @@ for (const [name, width, scheme, mobile] of [CONFIGS[0], CONFIGS[2]]) {
   });
 }
 
+test('recorded Overview shows exact receipt cost, unpriced amounts and unavailable accounting', {timeout: 30000}, async () => {
+  await fx.viewer('nolive');
+  const page = await S.open(browser, `${fx.url}recorded/`, {width: 390, mobile: true});
+  try {
+    const amount = label => page.$$eval('#app .kv dt', (terms, label) =>
+      terms.find(term => term.textContent === label)?.nextElementSibling.textContent.trim(), label);
+    const waitForAmount = (label, value) => S.until(page, ([label, value]) =>
+      Array.from(document.querySelectorAll('#app .kv dt')).some(term => term.textContent === label &&
+        term.nextElementSibling.textContent.trim().startsWith(value)), [label, value]);
+    await waitForAmount('Provider-reported subtotal', '$1.64493095');
+    assert.match(await amount('Provider-reported subtotal'), /custodian receipt/);
+    assert.match(await amount('Counted toward run limit'), /^\$2\.11597095\b.*custodian receipt/s);
+    assert.equal(await amount('Unpriced attempts'), '1 player · 1 recall');
+    assert.match(await amount('Estimated spend'), /configured rate/);
+
+    await page.select('#runpick', 'aidA3');
+    await waitForAmount('Provider-reported cost', '$0');
+    assert.match(await amount('Provider-reported cost'), /^\$0\s.*custodian receipt/s);
+    assert.equal(await amount('Counted toward run limit'), undefined);
+
+    await page.select('#runpick', 'aidA4');
+    await waitForAmount('Provider-reported cost', 'Unavailable');
+    assert.equal(await amount('Provider-reported cost'), 'Unavailable');
+    assert.ok(await page.$('.custodian-receipt dl'));
+    await page.select('#runpick', 'aidA2');
+    await S.until(page, () => document.querySelector('.custodian-receipt p')?.textContent.includes('unavailable'));
+    assert.equal(await amount('Provider-reported cost'), 'Unavailable');
+    assert.equal(await S.overflow(page), 0);
+    assert.deepEqual(page.problems, []);
+  } finally { await page.close(); await fx.viewer('up'); }
+});
+
 test('recorded viewer opens Overview and follows findings without a control path', {timeout: 30000}, async () => {
   await fx.viewer('nolive');
   const page = await S.open(browser, 'about:blank', {width: 390, mobile: true});

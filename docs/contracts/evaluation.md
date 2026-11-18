@@ -1054,6 +1054,14 @@ facts are `null`. The evaluator's outcome and Pause conditions use their existin
 sources. Input acknowledgement, save persistence and wrapper cleanup each require
 their own evidence.
 
+`custodian_receipt.accounting` is `null` when receipt accounting is missing,
+incomplete or invalid. When `spend_complete` is true and the amounts and counts
+are valid, the projection gives `reported_usd` and `spent_usd` as exact decimal
+strings, with `unpriced_requests` and `unpriced_recall_requests` as counts.
+Run Overview shows the reported amount as a subtotal when any attempts are
+unpriced and labels `spent_usd` as the amount counted toward the run limit.
+The evaluator's `dollars` field remains the configured-rate estimate.
+
 ### Recorded knowledge and public reports
 
 The `knowledge` route is a pure viewer projection over the selected run. Without
