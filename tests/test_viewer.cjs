@@ -41,11 +41,13 @@ for (const [name, width, scheme, mobile] of [CONFIGS[0], CONFIGS[2]]) {
     try {
       await S.ready(page);
       await S.until(page, () => document.querySelector('#runpick')?.value === 'ceil09' && document.querySelector('#app dl'));
+      assert.equal(await page.$eval('[data-view="run"] .panel header .note', el => el.textContent), 'live');
       assert.equal(await page.$('.custodian-receipt'), null);
       const pause = () => page.$eval('#pause', b => [b.textContent, b.disabled]);
       const before = await pause();
       await page.select('#runpick', 'aidA1');
       await S.until(page, () => document.querySelector('.custodian-receipt dl'));
+      assert.equal(await page.$eval('[data-view="run"] .panel header .note', el => el.textContent), 'final record');
       assert.equal(await page.$eval('#runpick', el => el.value), 'aidA1');
       assert.match(await page.$eval('.custodian-receipt', el => el.innerText), /recorded process and input state/);
       const facts = await page.$$eval('.custodian-receipt dd', rows => rows.map(row => row.textContent));
@@ -98,13 +100,14 @@ test('recorded Overview shows exact receipt cost, unpriced amounts and unavailab
 });
 
 test('recorded viewer opens Overview and follows findings without a control path', {timeout: 30000}, async () => {
-  await fx.viewer('nolive');
+  await fx.viewer('stale-recorded');
   const page = await S.open(browser, 'about:blank', {width: 390, mobile: true});
   const requests = [];
   page.on('request', request => requests.push([request.method(), new URL(request.url()).pathname]));
   try {
     await page.goto(`${fx.url}recorded/`, {waitUntil: 'load'});
     await S.until(page, () => document.querySelector('[data-view="run"] .custodian-receipt dl'));
+    assert.equal(await page.$eval('[data-view="run"] .panel header .note', el => el.textContent), 'evaluation unfinished');
     const first = await page.$eval('#runpick', el => el.value);
     assert.equal(first, 'aidA1');
     assert.equal(await page.$('#pause, #sheet, #statusline, #frame'), null);

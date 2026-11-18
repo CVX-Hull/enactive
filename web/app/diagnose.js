@@ -77,7 +77,8 @@ function Overview() {
   const listed = (s.findings || []).filter(f => f.kind !== 'context_eviction');
   const evictions = (s.findings || []).length - listed.length;
   const verdict = out.lost ? 'lost' : out.died ? 'died' : out.censor_reason ? `censored (${label(out.censor_reason)})` : s.live ? 'running' : 'ended';
-  return html`<${Panel} title=${`${shortId(s.run)} · ${verdict}`} note=${s.live ? 'live' : 'final record'} span="s4">
+  const evaluationNote = s.state === 'final' ? 'final record' : (s.live ? 'live' : 'evaluation unfinished');
+  return html`<${Panel} title=${`${shortId(s.run)} · ${verdict}`} note=${evaluationNote} span="s4">
       <dl class="kv"><dt>Survival</dt><dd>${fmtH(out.hours)} game h <${Pv} source="derived" /></dd>
         <dt>Episodes</dt><dd>${out.episodes ?? '—'}</dd>
         <dt>Decisions</dt><dd>${s.decisions ?? '—'} <${Pv} source="recorded" /></dd>

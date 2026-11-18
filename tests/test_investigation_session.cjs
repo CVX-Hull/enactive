@@ -475,6 +475,9 @@ test('a run whose live store was never finalized is labelled and not followed (#
   assert.match(options.find(o => o.startsWith('ceil09')), / · live$/);
   await page.select('#runpick', 'aidA1');
   await until(() => /ended, not finalized/.test(document.getElementById('viewer-facts').textContent));
+  await page.click('[data-nav="run"]');
+  await until(() => document.querySelector('[data-view="run"] .custodian-receipt dl'));
+  assert.equal(await text('[data-view="run"] .panel header .note'), 'evaluation unfinished');
   assert.deepEqual(page.problems, []);
 });
 

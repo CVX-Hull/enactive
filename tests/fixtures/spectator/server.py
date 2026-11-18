@@ -12,7 +12,7 @@ It imitates only the parts of the supervised gateway that the page depends on:
 
 With `--viewer URL` the view routes go to a real viewer process instead (the control path stays stubbed).
 
-Test hooks (never part of the product): GET /__fixture/state, POST /__fixture/viewer?mode=down|up|nolive|stale,
+Test hooks (never part of the product): GET /__fixture/state, POST /__fixture/viewer?mode=down|up|nolive|stale|stale-recorded,
 POST /__fixture/advance?n=5. Standard library only.
 """
 from __future__ import annotations
@@ -203,6 +203,9 @@ def make_handler(state: State):
                 if run in ('aidA1', 'aidA2', 'aidA3', 'aidA4'):
                     body.update(run=run, state='final', live=False, pause=None)
                 if run == 'aidA1':
+                    if state.stale:
+                        # Summary exposes the stored state separately from live evaluation.
+                        body['state'] = 'live'
                     body['custodian_receipt'] = dict(outcome='player_external_stop_complete_unassessed',
                         normal_native_exit_zero=True, native_absence_verified=True,
                         deciding_hosts_quiescent=None, input_authority_revoked=False,
@@ -269,11 +272,11 @@ def make_handler(state: State):
             raw = self.rfile.read(length) if length else b''
             if url.path == '/__fixture/viewer':
                 with state.lock:
-                    mode = parse_qs(url.query).get('mode')
-                    state.viewer_down = mode == ['down']
+                    mode = parse_qs(url.query).get('mode', [''])[0]
+                    state.viewer_down = mode == 'down'
                     # nolive: the viewer is up but has not yet listed the live run (its first pass is still running).
-                    state.no_live = mode == ['nolive']
-                    state.stale = mode == ['stale']
+                    state.no_live = mode in ('nolive', 'stale-recorded')
+                    state.stale = mode in ('stale', 'stale-recorded')
                 self.json(200, {'viewer_down': state.viewer_down, 'no_live': state.no_live, 'stale': state.stale}); return
             if url.path == '/__fixture/advance':
                 with state.lock:
