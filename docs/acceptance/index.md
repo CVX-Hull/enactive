@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | [Current Terra player rehearsal (#711)](2026-11-17-terra-rehearsal-711.md) | run | One supervised run of the current Terra player with curated knowledge and a fresh journal, using a verified copy of a previously inspected development save | historical |
 | 2026-11-17 | [Recorded knowledge in the spectator](2026-11-17-recorded-knowledge-spectator.md) | measurement | Recorded knowledge/public-report reader: retained #642 replay through the real viewer, synthetic current-journal browser acceptance and focused portable checks; no new CDDA play, native build or provider call | historical |
 | 2026-11-17 | [Backlog grooming after the recorded reader](2026-11-17-post-reader-backlog-grooming.md) | review | All open issues, Project reconciliation, Ready selection and owned cleanup after the recorded reader and outcome-feasibility deliveries; no implementation or gameplay | historical |
 | 2026-11-17 | [Backlog grooming after the process-report repair](2026-11-17-post-process-report-backlog-grooming.md) | review | Full open-backlog reconciliation after process-measures/2; source-only gate-contract discovery selected for Ready, dependency/integration review and owned cleanup; no implementation or gameplay | historical |

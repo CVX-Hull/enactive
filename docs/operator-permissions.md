@@ -32,6 +32,11 @@ missing usage, original failures and retired unused allowances. A failed actor c
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
+The owner manages the OpenRouter account balance, auto-recharge and key credit
+limit. The lead checks the approved envelope and frozen run limit at admission
+and tracks the costs OpenRouter reports with inference responses. The campaign
+procedure governs accounting when a response carries no usable cost.
+
 **The hard cap** is the credit limit the owner keeps on the OpenRouter key, $1,500. It
 is outside the code, which cannot read it. It is the one overall cap: there is no
 separate cumulative cap across studies and no hand-kept running total. Each study needs
@@ -53,19 +58,13 @@ short campaign package whose dollar limit is at most \$1 and recorded in the pul
 study envelope: it is the one standing approval for spend outside an envelope, and
 anything larger is asked with its price.
 
-**No envelope is open.** The five envelopes, for the development loop (study 372),
-the long-horizon arm (382), the seven-day lineage (397), the held-out lineage (522)
-and the memory screen's gates (590), are closed. The last was \$65 for curator sessions
-only: it spent \$15.86 on the [brief gate](acceptance/2026-11-13-curator-brief-gate.md)
-and \$2.34 on the [session price pilot](acceptance/2026-11-13-session-price-pilot.md),
-\$18.20 in all, taken from the curator proxy's ledger because curator spend is not in
-the run ledger. An
-unspent remainder is not carried to other work. Each envelope and the decision that set
-it is a row in the [owner decision log](decisions/owner-decisions.md). The run ledger,
-`data/evaluation/runs.jsonl`, holds those studies' runs, and
-`tools/run_ledger.py totals --study` reports one study's spend against its envelope.
-Spend outside a study is stated in the dated record of the work that spent it, except a
-real-model check before merge, which its pull request records.
+**No envelope is open.** Each envelope and the decision that set it are in the
+[owner decision log](decisions/owner-decisions.md). Unused funds expire when the
+approved scope ends. The run ledger, `data/evaluation/runs.jsonl`, holds gameplay
+spend, and `tools/run_ledger.py totals --study` reports it against the chosen
+envelope. Standalone curator session costs come from the curator proxy ledger in
+their dated records. Spend outside a study goes in the dated record for that work,
+or in the pull request for a premerge real-model check.
 
 ## Engineering decision and merge delegation
 

@@ -1009,6 +1009,21 @@
       },
       "visibility": "private"
     },
+    "terra-rehearsal-711": {
+      "availability": "present",
+      "bytes": 16893622,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-terra-rehearsal-711.md"
+      ],
+      "files": 405,
+      "manifest_sha256": "82cc58ea6a32d71f3aa36de96acce16693454613639701fccd90d108dea2d18d",
+      "note": "Copied source withholding-pilot-619-start-12 is no longer held out. Start terra-rehearsal-711; manifest 41629f6a56f3c6445c67ec4deeb50be272f7959f5099a2695581a21ec998d0ca. One approved frozen campaign-run/8 rehearsal of the current Terra player. Package and evaluation are byte-verified copies from the selected computer session and evaluator paths. Seal retains original unknown Quit receipt, independently observed native exit, final installed userdir, full accounting and owned cleanup.",
+      "sources": {
+        "start": ".runtime/starts/terra-rehearsal-711",
+        "user": ".runtime/user"
+      },
+      "visibility": "private"
+    },
     "withholding-measure-653": {
       "availability": "present",
       "bytes": 53900874,
