@@ -104,7 +104,7 @@ of CDDA efficacy, calibration or production adoption. Polarity and dependencies 
 supplied; distinct IDs do not establish independent observations. No source reliability,
 observation-to-weight conversion or numerical evidence is inferred from the graph.
 Qualitative unknown is not converted to probability .5; the numerical prior is a
-separate supplied fixture. The #677 method comparison owns this apparatus; reassess it
+separate supplied fixture. The #677 method comparison uses this apparatus; reassess it
 at #677 completion, stop or method abandonment and remove it and its tests if no named
 consumer continues to need them. The bounded offline checks reduce R-FALSE-CLAIM and
 R-REGRESSION by catching projection and support bookkeeping errors.
@@ -114,6 +114,15 @@ material. No LLM extraction, replay or new-start creation is authorized by prepa
 The [matched case inventory](../acceptance/2026-11-17-belief-replay-case-inventory.md)
 supplies the scoped development fixtures and identifies the source and observation-model
 gaps to resolve before a priced comparison.
+The [#735 replay](https://github.com/CVX-Hull/enactive/issues/735) checks the five
+inventory questions in their two dependent development groups. Run it offline with
+`.venv/bin/python -m tools.recurrence_research.belief_replay data/recurrence-research/belief-replay-cases.json`.
+Both methods receive the same scoped prefix of the hand-authored extraction. The
+readout keeps source-linked answers and abstentions alongside the numerical fixture
+state. It retains scope distinctions between the title return and same-character
+reload, and between native exit and Quit delivery. Repeated descriptions retain the
+same canonical event and origin. Excluded results and adjudication stay outside the
+input and readout. Unit evidence weights exercise the mechanics of the replay.
 The later priced pilot may stop at insufficient observable cases; do not fabricate a
 conflict or label an unseen outcome false to make a method testable.
 
