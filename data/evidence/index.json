@@ -1166,6 +1166,27 @@
       },
       "visibility": "private"
     },
+    "wilderness-delayed-memory-762": {
+      "availability": "present",
+      "bytes": 105395011,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-wilderness-delayed-memory-762.md"
+      ],
+      "files": 959,
+      "manifest_sha256": "c33359a2b8fb1052520d9d10fab910f9209b5747177e7a23f97413618e2b2bfd",
+      "note": "One original fresh Wilderness run and two same-survivor reloads. All three frozen packets, captures, custody, actual ledger and scoped operator checks retained locally; matched development controls only.",
+      "sources": {
+        "evaluations": "tools/evaluate.py@99c87aa0d4e3251941f5ef8457a79507e59bdb56",
+        "final-userdir": ".runtime/archive/userdir-20261118T192809494681Z@99c87aa0d4e3251941f5ef8457a79507e59bdb56",
+        "first-reload": ".runtime/computer-sessions/wilderness-memory-762-reload-2-ca5d388f69044b289fbb4c012d034f0c@99c87aa0d4e3251941f5ef8457a79507e59bdb56",
+        "initial": ".runtime/computer-sessions/wilderness-memory-762-33f14ec4c320474fa086ffc954641605@99c87aa0d4e3251941f5ef8457a79507e59bdb56",
+        "initial-userdir": ".runtime/archive/userdir-20261118T181231131314Z@99c87aa0d4e3251941f5ef8457a79507e59bdb56",
+        "morning-userdir": ".runtime/archive/userdir-20261118T190009386838Z@99c87aa0d4e3251941f5ef8457a79507e59bdb56",
+        "operator": "tools/campaign_supervision.py@99c87aa0d4e3251941f5ef8457a79507e59bdb56",
+        "second-reload": ".runtime/computer-sessions/wilderness-memory-762-reload-3-6c7424d2e1654ebf8149dcba3cd34259@99c87aa0d4e3251941f5ef8457a79507e59bdb56"
+      },
+      "visibility": "private"
+    },
     "withholding-measure-653": {
       "availability": "present",
       "bytes": 53900874,
