@@ -51,9 +51,11 @@ test('a stream error after delivered data is not retried',async t=>{
   assert.ok(!events.some(e=>e.type==='provider-retry'));
 });
 test('repeated stream-start errors stop after two charged attempts',async t=>{
-  const failed=()=>eventStream('data: {"error":{"message":"Upstream error","code":502}}\n\n');
-  const {result,payloads}=await scenario(t,[failed(),failed(),reply()]);
+  const failed=()=>eventStream('data: {"error":{"message":"Upstream error","code":502},"usage":{"cost":0.25}}\n\n');
+  const {result,payloads,events}=await scenario(t,[failed(),failed(),reply()]);
   assert.equal(result.ok,false);assert.equal(result.requests,2);assert.equal(payloads.length,2);
+  assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.reported_cost_usd),['0.25','0.25']);
+  assert.equal(events.find(e=>e.type==='settled').spent_usd,'0.5');
 });
 test('message-less OpenRouter admission-control 429 is retried once',async t=>{
   const {result,events}=await scenario(t,[

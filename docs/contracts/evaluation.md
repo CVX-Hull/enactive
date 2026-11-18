@@ -375,8 +375,7 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     The memory adoption migration (#463) adds the 80 exact sealed `campaign-run/7`
     packages with `campaign-receipt/5`, `player-driver/5`, `player-host/5` telemetry 5
     and `campaign-watch-terminal/4`. Missing records stay missing; an allowed version
-    does not establish that a host ran or that a terminal was recorded. Only the old
-    manifest and host versions differ from current for this combination; their
+    does not establish that a host ran or that a terminal was recorded. The
     recorded labels, spend limit and public events remain evidence.
     The original 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
     `player-driver/3` and `player-host/3` with telemetry version 3, beside a

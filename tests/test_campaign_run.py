@@ -267,9 +267,8 @@ def test_a_dollar_reserve_that_is_not_below_the_limit_refuses_before_effects(tmp
     assert not validator.called
 
 
-def test_a_reserve_below_one_unpriced_request_or_a_zero_bound_refuses_the_package(tmp_path):
-    """With less than one request's bound in reserve, a single failed request would end the run abruptly; with a
-    zero bound a failed request would count as free."""
+def test_a_reserve_below_one_in_flight_request_or_a_zero_bound_refuses_the_package(tmp_path):
+    """The package needs a positive planning bound and enough reserve for an in-flight request."""
     directory,profile=package(tmp_path)
     profile['ending_reserve']['usd']='0.0006'
     (directory/'manifest.json').write_text(json.dumps(profile))
@@ -283,7 +282,7 @@ def test_a_reserve_below_one_unpriced_request_or_a_zero_bound_refuses_the_packag
     rewrite_route(directory,profile,unpriced_request_usd='0',model=dict(model,cost=dict(input=0,cacheRead=0,cacheWrite=0,output=0)))
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run'),\
-            pytest.raises(ControlError,match='give no bound for a request with no cost record'):
+            pytest.raises(ControlError,match='give no in-flight request bound'):
         packages.preflight(directory)
 
 

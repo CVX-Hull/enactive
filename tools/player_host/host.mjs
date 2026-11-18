@@ -1139,16 +1139,15 @@ export async function runHost(options) {
             }}));
             response = new Response(body ?? null, {status:response.status, statusText:response.statusText, headers:response.headers});
             if (response.status < 400) {
-              if (attempts !== 1 || !response.body || response.headers.get('x-should-retry') === 'false'
-                  || !/event-stream/i.test(response.headers.get('content-type') ?? '')) return response;
+              if (!response.body || !/event-stream/i.test(response.headers.get('content-type') ?? '')) return response;
               let peeked;
               try { peeked = await peekFirstEvent(response, requestSignal); }
               catch (error) { if (!fatal && !requestSignal.aborted) stop('provider-error'); throw new HostError(fatal ?? 'provider-error'); }
-              if (peeked.failed && !fatal && !requestSignal.aborted) {
+              requestReportedCost = peeked.reported;
+              if (peeked.failed && attempts === 1 && response.headers.get('x-should-retry') !== 'false' && !fatal && !requestSignal.aborted) {
                 await peeked.cancel();
                 emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:true, stream_start_error:true,
                   error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null});
-                requestReportedCost = peeked.reported;
                 retry(attemptId, 'stream-start-error', response.status, response.headers);
               }
               return peeked.response;

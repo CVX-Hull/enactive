@@ -61,7 +61,7 @@ test('briefing, standalone index, concurrent reminder, silence, read and exact s
 });
 
 // R-OVERSPEND / R-REGRESSION: offline provider failures preserve accounting and response provenance.
-for (const failure of ['failed','rejected-fetch','unpriced']) test(`${failure} recall counts its bound and ends recall only`,async t => {
+for (const failure of ['failed','rejected-fetch','unpriced']) test(`${failure} recall records unknown cost and ends recall only`,async t => {
   const {result,events} = await scenario(t,{recallFetch:() => failure === 'unpriced' ? recallReply([],null)
     : failure === 'rejected-fetch' ? Promise.reject(new Error('fixture fetch rejection'))
     : new Response('{}',{status:403,headers:{'content-type':'application/json'}})});

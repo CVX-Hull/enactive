@@ -23,9 +23,9 @@ Before changing a deployment:
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
 callers move together with `player-host/7`, telemetry 7, `campaign-run/9`,
-`player-driver/6`, `campaign-receipt/6` and `player-host-inputs/3`. The versions
-these replaced are read only by the evaluator, for the sealed sessions of its
-[closed archive index](../standards/migration.md). Native wire,
+`player-driver/6`, `campaign-receipt/6` and `player-host-inputs/3`. The evaluator
+reads older versions only for sealed sessions individually pinned to those
+versions in its [closed archive index](../standards/migration.md). Native wire,
 canonical `computer-operation/1`, `computer-source/1` and computer-session storage
 are separate versions; the actor projection does not migrate the canonical database.
 

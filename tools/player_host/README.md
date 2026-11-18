@@ -98,7 +98,7 @@ integer `max_context_images` and the required integer `context_image_block`
 `context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
 amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
 text ([the dollar limit](#the-dollar-limit)).
-`pi-player-host/1` through `/4`, `player-host/1` through `/3` and
+`pi-player-host/1` through `/4`, `player-host/1` through `/6` and
 missing/invalid fields are rejected; closed historical configurations and traces are
 evidence, not runnable current inputs.
 `model` contains Pi's
@@ -265,8 +265,9 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   event or until about 64 KiB (checked per chunk). Keep-alive comments are skipped;
   once a normal event has been read the stream is replayed unchanged, so a later
   error stays terminal. Abort and timeout cancel a stalled read, as for refusal bodies.
-  A usable cost in the first error event or the bounded JSON refusal is recorded
-  on the failed attempt before a retry.
+  A usable cost in the player's first error event or bounded JSON refusal is
+  recorded on that attempt. The SDK can end a stream before exposing a later
+  error event's usage. An attempt with no usable cost observed stays unpriced.
 - `in-flight-budget`: HTTP 402 only when its metadata has both
   `limit_source:openrouter_in_flight_budget` and `reason:in_flight_budget_exhausted`
   (OpenRouter's documented [transient hold](https://openrouter.ai/docs/api-reference/limits))
