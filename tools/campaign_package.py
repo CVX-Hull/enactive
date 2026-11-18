@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import argparse
 from decimal import ROUND_DOWN,Context,Decimal,DivisionByZero,Inexact,InvalidOperation,Overflow
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 
-from harness.computer.protocol import MAX_FRAME_BYTES,ControlError,closed,integer,read_json
+from harness.computer.protocol import MAX_FRAME_BYTES, ControlError, closed, decode_json, integer, read_json
 from harness.jsonio import file_sha256
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
@@ -114,10 +115,19 @@ def host_argv(host) -> list[str]:
 
 
 def preflight(directory: Path) -> tuple[dict,dict,dict]:
+    profile, route, target, _ = _preflight(directory)
+    return profile, route, target
+
+
+def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     directory=directory.resolve(strict=True)
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
-    profile=read_json(directory/'manifest.json',1048576)
+    manifest = local_file(str(directory/'manifest.json'))
+    manifest_limit = 1048576
+    with manifest.open('rb') as stream:
+        manifest_bytes = stream.read(manifest_limit + 1)
+    profile = decode_json(manifest_bytes, manifest_limit)
     if type(profile) is not dict or profile.get('schema')!='campaign-run/9':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
@@ -219,7 +229,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if Decimal(reserve['usd'])<reserve_bound:
         raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(reserve_bound)}, "
             'so an in-flight attempt still leaves an orderly finish')
-    return profile,route,target
+    return profile, route, target, sha256(manifest_bytes).hexdigest()
 
 
 def capture_headroom(profile: dict, *, work_before_bytes: int, ending_before_bytes: int | None = None) -> dict:
@@ -255,10 +265,10 @@ def main(argv=None) -> int:
                         help='cumulative retained PNG bytes before the last planned finish-up capture, if any')
     args = parser.parse_args(argv)
     try:
-        profile, _, _ = preflight(args.run)
+        profile, _, _, manifest_digest = _preflight(args.run)
         plan = capture_headroom(profile, work_before_bytes=args.work_before_bytes,
                                 ending_before_bytes=args.ending_before_bytes)
-        print(json.dumps(dict(session=profile['session'], manifest_sha256=file_sha256(args.run/'manifest.json'), **plan)))
+        print(json.dumps(dict(session=profile['session'], manifest_sha256=manifest_digest, **plan)))
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         parser.exit(1, f'Capture plan refused: {error}\n')
     return 0

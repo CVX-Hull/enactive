@@ -144,6 +144,24 @@ def test_capture_plan_rejects_a_backwards_retained_byte_forecast(tmp_path):
         packages.capture_headroom(profile, work_before_bytes=8, ending_before_bytes=7)
 
 
+def test_capture_plan_hash_names_the_manifest_bytes_it_validated(tmp_path, capsys):
+    directory, profile = package(tmp_path)
+    profile['limits']['max_bytes'] = 3 * MAX_FRAME_BYTES
+    manifest = directory/'manifest.json'
+    manifest.write_text(json.dumps(profile))
+    original_hash = hashlib.sha256(manifest.read_bytes()).hexdigest()
+
+    def replace_manifest(*args, **kwargs):
+        replacement = {**profile, 'limits': {**profile['limits'], 'max_bytes': MAX_FRAME_BYTES}}
+        manifest.write_text(json.dumps(replacement))
+
+    with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run', replace_manifest):
+        assert packages.main(['--run', str(directory), '--work-before-bytes', '12802']) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result['total_bytes'] == 3 * MAX_FRAME_BYTES
+    assert result['manifest_sha256'] == original_hash != hashlib.sha256(manifest.read_bytes()).hexdigest()
+
+
 def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both_bounds(tmp_path):
     directory,profile=package(tmp_path)
     # Empty knowledge contributes zero to the recall part of the reserve.
