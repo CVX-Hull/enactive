@@ -646,6 +646,26 @@
       },
       "visibility": "private"
     },
+    "evacuee-continuity-744": {
+      "availability": "present",
+      "bytes": 10346299,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-evacuee-continuity-744.md"
+      ],
+      "files": 291,
+      "manifest_sha256": "c0dde81f648ec0f0dc995e6a26bbbb5df247714faa5c621928fddd830737de7a",
+      "note": "Exact approved initial Evacuee continuity checkpoint, one eligible reload, original outcomes and archived userdirs.",
+      "sources": {
+        "final-userdir": ".runtime/archive/userdir-20261118T041217970017Z",
+        "initial-evaluation": ".runtime/evaluations/e616d75958c04150bce0ac60e7c89f14",
+        "initial-package": ".runtime/computer-sessions/evacuee-continuity-743-e616d75958c04150bce0ac60e7c89f14@607dc866a7d6a2df3ac1fce137bb6e71d5961308",
+        "initial-userdir": ".runtime/archive/userdir-20261118T040949524931Z",
+        "reload-evaluation": ".runtime/evaluations/5d465243ce5c45489ac2f6c7f758a8ad",
+        "reload-package": ".runtime/computer-sessions/evacuee-reload-743-5d465243ce5c45489ac2f6c7f758a8ad@607dc866a7d6a2df3ac1fce137bb6e71d5961308",
+        "supervisor-logs": "tools/campaign_supervision.py@607dc866a7d6a2df3ac1fce137bb6e71d5961308"
+      },
+      "visibility": "private"
+    },
     "evacuee-editor-check-741": {
       "availability": "present",
       "bytes": 2174093,
