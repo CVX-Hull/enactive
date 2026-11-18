@@ -1,0 +1,372 @@
+{
+  "issue": 754,
+  "packets": [
+    {
+      "evidence": "development, already inspected",
+      "frames": [
+        {
+          "accepted_clock_seconds": 5212800,
+          "kind": "observe",
+          "mode": "in_play",
+          "operation": "40bbe4243d0b499ab6bc1df7cd243283",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-239.png",
+          "role": "start",
+          "seq": 17,
+          "sha256": "3a1fb94943e1374707f80fab2ca47a2b07b9ff862bccba56320694cc66122a75",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-239"
+        },
+        {
+          "accepted_clock_seconds": 5212800,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "9964bc99fede4f51830166072bf4280f",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-277.png",
+          "role": "identity",
+          "seq": 18,
+          "sha256": "7cdcbb77d7dc7a291698cd9b9e5b867c1da32957aa2b0d3f542202863dd174c2",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-277"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "e5b36fcea8ff40b08e0f13866ace6c30",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-282.png",
+          "role": "baseline_stock",
+          "seq": 21,
+          "sha256": "723fc866c9dbf81bb334429cc34d144696f38e1e010fa167f9461cddc79cb9dc",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-282"
+        },
+        {
+          "accepted_clock_seconds": 5212807,
+          "kind": "input",
+          "mode": "in_play",
+          "operation": "d9bfeb1235d0400e88ef20044101bea0",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-432.png",
+          "role": "acquisition",
+          "seq": 27,
+          "sha256": "31e6a15bc8cc33ec1b2ce05a5815576564eb2c0889b697c0bdf63d04b8050117",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-432"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "69001847dcbe4e5c9272b8274ff6f8cd",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-505.png",
+          "role": "selected_carried_stock",
+          "seq": 30,
+          "sha256": "ff64418bd8c1ba3269cd9f6e5d5b6199c2945299732a671d87e0073e212aa9fe",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-505"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "21aaeaf31fe34388819d89bbfc9ee148",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-507.png",
+          "role": "use",
+          "seq": 31,
+          "sha256": "08ef95a6002e4a78b74456ab8c72812a37d631c11b280a2d90911fc5e0563db6",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-507"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "a87cb17ed2c64a46b4fc70d8a16f7dba",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-509.png",
+          "role": "endpoint",
+          "seq": 32,
+          "sha256": "f1b560ad42edb7b439bfa27b902864422a32f4822b7e3a84ded04de6e820eaf3",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-509"
+        }
+      ],
+      "group": "evacuee-747-a-b3d2a06b",
+      "id": "bowdle-full",
+      "operation_interval": [
+        17,
+        32
+      ]
+    },
+    {
+      "evidence": "development, already inspected",
+      "frames": [
+        {
+          "accepted_clock_seconds": 5212800,
+          "kind": "observe",
+          "mode": "in_play",
+          "operation": "40bbe4243d0b499ab6bc1df7cd243283",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-239.png",
+          "role": "start",
+          "seq": 17,
+          "sha256": "3a1fb94943e1374707f80fab2ca47a2b07b9ff862bccba56320694cc66122a75",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-239"
+        },
+        {
+          "accepted_clock_seconds": 5212800,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "9964bc99fede4f51830166072bf4280f",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-277.png",
+          "role": "identity",
+          "seq": 18,
+          "sha256": "7cdcbb77d7dc7a291698cd9b9e5b867c1da32957aa2b0d3f542202863dd174c2",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-277"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "e5b36fcea8ff40b08e0f13866ace6c30",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-282.png",
+          "role": "baseline_stock",
+          "seq": 21,
+          "sha256": "723fc866c9dbf81bb334429cc34d144696f38e1e010fa167f9461cddc79cb9dc",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-282"
+        },
+        {
+          "accepted_clock_seconds": 5212800,
+          "kind": "input",
+          "mode": "in_play",
+          "operation": "92de0baf8e134a7d8801e87d52fd4c78",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/bowdle-package/sources/b3d2a06b4d244cbaba0a55a38dad9080-389.png",
+          "role": "endpoint",
+          "seq": 24,
+          "sha256": "aae028dacdb18b3f069ac85bcdc93e75dcfe7dc31e630497b6e365d4e15c2195",
+          "source_id": "b3d2a06b4d244cbaba0a55a38dad9080-389"
+        }
+      ],
+      "group": "evacuee-747-a-b3d2a06b",
+      "id": "bowdle-early",
+      "operation_interval": [
+        17,
+        24
+      ]
+    },
+    {
+      "evidence": "development, already inspected",
+      "frames": [
+        {
+          "accepted_clock_seconds": 5212800,
+          "kind": "observe",
+          "mode": "in_play",
+          "operation": "060c726a7d85480193d2d7efc333da77",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-232.png",
+          "role": "start",
+          "seq": 18,
+          "sha256": "893905b42f3445d4ef6cb60d1e39853c92df658c6d69161b9a0f7c97d37a3b1c",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-232"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "733f9cdcec394a79bdbfc4cbe76b2816",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-271.png",
+          "role": "identity",
+          "seq": 19,
+          "sha256": "28613ed76d87ee359ce1354208d45a8130c0ab525adae91ad12ce2be55546fc1",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-271"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "733f9cdcec394a79bdbfc4cbe76b2816",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-271.png",
+          "role": "baseline_stock",
+          "seq": 19,
+          "sha256": "28613ed76d87ee359ce1354208d45a8130c0ab525adae91ad12ce2be55546fc1",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-271"
+        },
+        {
+          "accepted_clock_seconds": 5212882,
+          "kind": "input",
+          "mode": "in_play",
+          "operation": "f29d92c86e11463c8e3f9138f0c2ab7e",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-1079.png",
+          "role": "acquisition",
+          "seq": 47,
+          "sha256": "4068ce65fd9c09883045f385776bf88490cf812032d80c49f81c233efac86478",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-1079"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "b69814e301ef4cafa25bd65b1bc3fdb6",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-1111.png",
+          "role": "selected_carried_stock",
+          "seq": 48,
+          "sha256": "b56d897c3140ec80c575c4644991eb8098d8b4f887c98d798e91244f8dd18b4b",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-1111"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "9120bd36fd044db29ca7a493049a5932",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-1113.png",
+          "role": "use",
+          "seq": 49,
+          "sha256": "75d0a365cac0d4fe35d7f91db015e75431ab20615da2afdf5922b8f616524231",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-1113"
+        },
+        {
+          "accepted_clock_seconds": 5212924,
+          "kind": "input",
+          "mode": "in_play",
+          "operation": "e38527ba0d9d4acc8a4769d9f3a3b76d",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-1127.png",
+          "role": "endpoint",
+          "seq": 51,
+          "sha256": "20b99816a0189905feb9f41746e9a406058cd2367d05a72bbdcd9cd33ff24e63",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-1127"
+        }
+      ],
+      "group": "evacuee-747-b-e9cc9deb",
+      "id": "nancy-full",
+      "operation_interval": [
+        18,
+        51
+      ]
+    },
+    {
+      "evidence": "development, already inspected",
+      "frames": [
+        {
+          "accepted_clock_seconds": 5212800,
+          "kind": "observe",
+          "mode": "in_play",
+          "operation": "060c726a7d85480193d2d7efc333da77",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-232.png",
+          "role": "start",
+          "seq": 18,
+          "sha256": "893905b42f3445d4ef6cb60d1e39853c92df658c6d69161b9a0f7c97d37a3b1c",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-232"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "733f9cdcec394a79bdbfc4cbe76b2816",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-271.png",
+          "role": "identity",
+          "seq": 19,
+          "sha256": "28613ed76d87ee359ce1354208d45a8130c0ab525adae91ad12ce2be55546fc1",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-271"
+        },
+        {
+          "accepted_clock_seconds": null,
+          "kind": "input",
+          "mode": "prompt",
+          "operation": "733f9cdcec394a79bdbfc4cbe76b2816",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-271.png",
+          "role": "baseline_stock",
+          "seq": 19,
+          "sha256": "28613ed76d87ee359ce1354208d45a8130c0ab525adae91ad12ce2be55546fc1",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-271"
+        },
+        {
+          "accepted_clock_seconds": 5212804,
+          "kind": "input",
+          "mode": "in_play",
+          "operation": "59bf26df7c994cfe98922eb659150314",
+          "path": ".runtime/evidence/fresh-evacuee-progress-751/nancy-package/sources/e9cc9deb2d7544778fdf0c2e08325ebd-348.png",
+          "role": "endpoint",
+          "seq": 22,
+          "sha256": "7b32ad80f80f491a8fbba469cc8b3b70c2c4d1d0e3ee582f032d657b9f3a23e1",
+          "source_id": "e9cc9deb2d7544778fdf0c2e08325ebd-348"
+        }
+      ],
+      "group": "evacuee-747-b-e9cc9deb",
+      "id": "nancy-early",
+      "operation_interval": [
+        18,
+        22
+      ]
+    },
+    {
+      "evidence": "already inspected #690 first-last control",
+      "frames": [
+        {
+          "actor_id": "6e8a51dad41a4d5fabad8ce21aedbb4c",
+          "actor_sequence": 1,
+          "created_wall": 1794108074.710271,
+          "exists": true,
+          "operation_id": "3788472a11ed4d698ba5885f4d90f6de",
+          "operation_kind": "observe",
+          "operation_status": "completed",
+          "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a7/sources/bf01a9f1ca634ea63144b01cd8debe8d-2.png",
+          "role": "baseline",
+          "sha256": "e376bb632dc5a7d0b8fb2eb9409f9e74b04fed87b9fcc865e10948d26002a2d3",
+          "source_id": "bf01a9f1ca634ea63144b01cd8debe8d-2"
+        },
+        {
+          "actor_id": "6d1edf495d4a47e2a908697dc7e0d606",
+          "actor_sequence": 53,
+          "created_wall": 1794109721.545811,
+          "exists": true,
+          "operation_id": "4894a63b95804bd2ae848abc4282714b",
+          "operation_kind": "input",
+          "operation_status": "completed",
+          "path": ".runtime/evidence/397-seven-day/computer-sessions/sd1a7/sources/bf01a9f1ca634ea63144b01cd8debe8d-12318.png",
+          "role": "endpoint",
+          "sha256": "50b1ce87e27ef04fc718e40c8f2171b6f0fc6ea6d7a7faba90ed9292511a5949",
+          "source_id": "bf01a9f1ca634ea63144b01cd8debe8d-12318"
+        }
+      ],
+      "group": "related #397/#642 cluster",
+      "id": "sd1a7",
+      "operation_interval": [
+        "3788472a11ed4d698ba5885f4d90f6de",
+        "4894a63b95804bd2ae848abc4282714b"
+      ]
+    },
+    {
+      "evidence": "already inspected #690 first-last control",
+      "frames": [
+        {
+          "actor_id": "e1f02db82b0542fa82fa609939ba1841",
+          "actor_sequence": 1,
+          "created_wall": 1794638892.441212,
+          "exists": true,
+          "operation_id": "06217653376d42389f6463e89c452c0d",
+          "operation_kind": "observe",
+          "operation_status": "completed",
+          "path": ".runtime/evidence/delivery-check-642/computer-sessions/delivery-check-642/sources/d073e0e4acac4303841bf92e0e3155c8-2.png",
+          "role": "baseline",
+          "sha256": "b30c4f774240527620215254ce0787b674d4faa9ac0dabcda9e5cad846c50363",
+          "source_id": "d073e0e4acac4303841bf92e0e3155c8-2"
+        },
+        {
+          "actor_id": "1010717b8fa942eba2255865ca2efaf6",
+          "actor_sequence": 7,
+          "created_wall": 1794640352.589161,
+          "exists": true,
+          "operation_id": "12feaf35936b4b45ade3567e13094aab",
+          "operation_kind": "input",
+          "operation_status": "completed",
+          "path": ".runtime/evidence/delivery-check-642/computer-sessions/delivery-check-642/sources/d073e0e4acac4303841bf92e0e3155c8-9735.png",
+          "role": "endpoint",
+          "sha256": "37639193a02b2e6d5bd8651994452b81b056d627f971200189ef61beb9dfc01e",
+          "source_id": "d073e0e4acac4303841bf92e0e3155c8-9735"
+        }
+      ],
+      "group": "related #397/#642 cluster",
+      "id": "delivery-check-642",
+      "operation_interval": [
+        "06217653376d42389f6463e89c452c0d",
+        "12feaf35936b4b45ade3567e13094aab"
+      ]
+    }
+  ],
+  "rules": {
+    "analysis": "Early windows exercise boundary distinctions and share source group with full packet. Two #690 controls share a related cluster. All are development. Report task, strict alive/composite, linked alive/composite and uncertainty separately.",
+    "exploratory_alive": "A named identity view and living endpoint linked through the same session and exact operation interval with no observed identity change. Attend to whether the endpoint shows living gameplay or active survivor menu rather than save/title/death. Attribute unknown on any unresolved linkage.",
+    "strict_alive": "Named same survivor and visible living state at the assigned endpoint. A named death makes the composite negative, leaving task separate. Title/load/exit is an unknown living endpoint.",
+    "task": "Acquisition of a usable ration in the assigned interval followed by observed consumption of that acquired stock and a visible change. Track baseline, carried, nearby and selected stock separately. Show absence or incompletion at baseline. Score unknown for missing comparability or unresolved acquisition/use; show boundary for early/partial episodes. A positive in the composite requires alive."
+  },
+  "source_commit": "68a6cc129954cb6f079e5e50a7985fc641c71820"
+}
