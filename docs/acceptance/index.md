@@ -15,6 +15,7 @@ states. Records are dated evidence, not current instructions; the
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | [Waking-period decisions in a fresh Wilderness world (#762)](2026-11-18-wilderness-delayed-memory-762.md) | run | One fresh Wilderness Campground start and two same-survivor reloads observing naturally delayed decisions | historical |
+| 2026-11-18 | [Matched memory replay on retained CDDA decisions (#765)](2026-11-18-retained-memory-replay-765.md) | review | Offline readback, blind visible ratings and equal-context memory replay packing across five retained CDDA decision windows | historical |
 | 2026-11-18 | [Sustained progress in a fresh Evacuee world (#753)](2026-11-18-evacuee-sustained-progress-753.md) | run | One supervised fresh Evacuee start with a meaningful activity switch and return, with visible clock, custody and delivery evidence | historical |
 | 2026-11-18 | [Food progress and living endpoint feasibility (#754)](2026-11-18-evacuee-food-progress-754.md) | review | Six frozen retained packets test scoring ration acquisition and use with a strict named living endpoint and an exploratory linked endpoint | historical |
 | 2026-11-18 | [Delayed decisions in a fresh Evacuee world (#759)](2026-11-18-evacuee-delayed-decision-759.md) | run | One fresh Evacuee start and one same-survivor reload seeking a clock-linked decision after a context boundary | historical |
