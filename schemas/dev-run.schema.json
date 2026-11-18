@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "dev-run/2: one development-run admission in data/evaluation/runs.jsonl",
-  "description": "Derived from a current campaign-run/8 or explicitly indexed historical package and campaign-receipt/5 receipt. Player and recall attempts have separate unpriced bounds. Spend is provider-reported cost plus both unpriced charges; no local paths, ports or secrets.",
+  "title": "dev-run/3: one development-run admission in data/evaluation/runs.jsonl",
+  "description": "Development-run accounting. Current rows separate provider subtotals, unknown-cost attempts and explicit incomplete-trace admission bounds. Historical rows preserve the original accounting basis and figures.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -24,11 +24,13 @@
     "unpriced_attempts",
     "unpriced_attempt_usd",
     "unpriced_recall_attempts",
-    "unpriced_recall_attempt_usd"
+    "unpriced_recall_attempt_usd",
+    "accounting_basis",
+    "spend_upper_bound_usd"
   ],
   "properties": {
     "schema": {
-      "const": "dev-run/2"
+      "const": "dev-run/3"
     },
     "study": {
       "description": "The GitHub issue that owns the study, e.g. 372 or 382.",
@@ -98,12 +100,12 @@
       "minimum": 0
     },
     "spend_usd": {
-      "description": "Decimal string: provider_usd plus player and recall unpriced counts times their respective bounds when recorded.",
+      "description": "Received provider subtotal for current rows. Historical rows retain the frozen amount.",
       "type": "string",
       "pattern": "^[0-9]+(\\.[0-9]+)?$"
     },
     "provider_usd": {
-      "description": "Decimal string of provider-reported cost over the attempts that have a provider record, or null when the split was not recorded.",
+      "description": "Provider-reported subtotal on current rows. Historical rows retain the original decomposition, when recorded.",
       "type": [
         "string",
         "null"
@@ -119,7 +121,7 @@
       "minimum": 0
     },
     "unpriced_attempt_usd": {
-      "description": "Decimal string: the worst-case charge per unpriced attempt, or null when not recorded.",
+      "description": "Historical per-attempt bound when recorded. Current unpriced attempts retain unknown charges.",
       "type": [
         "string",
         "null"
@@ -134,6 +136,23 @@
       "minimum": 0
     },
     "unpriced_recall_attempt_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+(\\.[0-9]+)?$",
+      "description": "Historical per-attempt recall bound when recorded. Current unpriced attempts retain unknown charges."
+    },
+    "accounting_basis": {
+      "description": "Historical frozen figures, complete trace with provider-reported subtotal, or incomplete trace with a separate explicit admission bound.",
+      "enum": [
+        "historical",
+        "provider-reported",
+        "incomplete-trace"
+      ]
+    },
+    "spend_upper_bound_usd": {
+      "description": "Optional explicit admission bound for an incomplete trace. This field does not report provider cost.",
       "type": [
         "string",
         "null"

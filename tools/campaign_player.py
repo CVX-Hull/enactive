@@ -27,50 +27,48 @@ def write_new(path: Path,value,*,text=False) -> None:
 
 
 class HostEvents:
-    """Incremental JSONL; a partial final line never becomes an uncharged request.
-
-    Spend is counted per started request (docs/contracts/player-host.md, Spend): at the cost the provider
-    reported on its `response-complete`, else at `bound`, the route's `unpriced_request_usd`. A request that
-    started and left no cost record, because the host was killed, counts at the bound too. A trace is complete
-    only when the host's own totals in `settled` equal these sums."""
-    def __init__(self,path: Path,allowance: int,bound: Decimal,recall_bound: Decimal):
-        self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance;self.bound=bound;self.recall_bound=recall_bound
+    """Reconcile reported charges and unpriced attempts with a complete host settlement."""
+    def __init__(self,path: Path,allowance: int):
+        self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance
         self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
-        # Request number -> the amount its cost record reported, or None when it counted at the bound.
+        # A present key with value None has a finished attempt and unknown provider cost.
         self.costs={}
 
     def counted_usd(self) -> Decimal:
         """Dollars counted by the cost records read so far; a request still in flight is not in it."""
-        return usd_sum((self.recall_bound if key.startswith('recall-') else self.bound) if amount is None else amount
-                       for key,amount in self.costs.items())
+        return usd_sum(amount for amount in self.costs.values() if amount is not None)
 
     def _count(self,value: dict) -> None:
         identity=value.get('request_id')
         if identity not in self.requests or identity in self.costs:raise ControlError('Host cost record lacks its one request')
+        if not {'reported_cost_usd','counted_cost_usd'}<=value.keys():raise ControlError('Host cost record lacks its cost fields')
         # The host writes the provider's own digits, so a counted amount has no cap on its length.
-        amount=counted_usd(value.get('counted_cost_usd'),'counted_cost_usd')
-        bound=self.recall_bound if identity.startswith('recall-') else self.bound
-        if value.get('cost_counted_as')=='provider-reported':self.costs[identity]=amount
-        elif value.get('cost_counted_as')=='unpriced-bound' and amount==bound:self.costs[identity]=None
-        else:raise ControlError('Host cost record differs from the route bound')
+        reported=value['reported_cost_usd']
+        counted=value['counted_cost_usd']
+        kind=value.get('cost_counted_as')
+        if kind=='provider-reported' and counted==reported:
+            self.costs[identity]=counted_usd(reported,'reported_cost_usd')
+        elif kind=='unpriced' and counted is None and reported is None:
+            self.costs[identity]=None
+        else:
+            raise ControlError('Host cost record differs from the provider charge')
 
-    def _sums(self) -> tuple[Decimal,int,int,Decimal]:
-        reported=usd_sum(amount for amount in self.costs.values() if amount is not None)
+    def _sums(self) -> tuple[Decimal,int,int]:
+        reported=self.counted_usd()
         unpriced=sum(key.startswith('request-') and self.costs.get(key) is None for key in self.requests)
         recall_unpriced=sum(key.startswith('recall-') and self.costs.get(key) is None for key in self.requests)
-        spent=usd_sum([reported,EXACT.multiply(Decimal(unpriced),self.bound),
-                       EXACT.multiply(Decimal(recall_unpriced),self.recall_bound)])
-        return reported,unpriced,recall_unpriced,spent
+        return reported,unpriced,recall_unpriced
 
     def spend(self,complete: bool) -> dict:
-        reported,unpriced,recall_unpriced,spent=self._sums()
-        return dict(reported_usd=usd_text(reported),unpriced_requests=unpriced,unpriced_recall_requests=recall_unpriced,
-                    spent_usd=usd_text(spent),spend_complete=complete)
+        reported,unpriced,recall_unpriced=self._sums()
+        amount=usd_text(reported)
+        return dict(reported_usd=amount,unpriced_requests=unpriced,unpriced_recall_requests=recall_unpriced,
+                    spent_usd=amount,spend_complete=complete)
 
     def _host_agrees(self) -> bool:
         """The host's own totals in `settled` are the driver's sums from the trace."""
-        _,unpriced,recall_unpriced,spent=self._sums()
+        spent,unpriced,recall_unpriced=self._sums()
         try:total=counted_usd(self.settled.get('spent_usd'),'settled spent_usd')
         except ControlError:return False
         return total==spent and type(self.settled.get('unpriced_recall_requests')) is int and self.settled['unpriced_recall_requests']==recall_unpriced and type(self.settled.get('unpriced_requests')) is int and self.settled['unpriced_requests']==unpriced
@@ -97,8 +95,8 @@ class HostEvents:
             value=json.loads(line)
             kind=value.get('type')
             if kind=='host-start':
-                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=6
-                        or value.get('schema')!='player-host/6'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=7
+                        or value.get('schema')!='player-host/7'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'(request|recall)-([1-9][0-9]*)',value.get('request_id',''))
@@ -125,7 +123,7 @@ class HostEvents:
 
     def finish(self) -> dict:
         while self.read():pass
-        valid=(not self.buffer and self.started and self.settled is not None
+        valid=(not self.buffer and self.started and self.settled is not None and self.requests==self.costs.keys()
                and all({int(k.split('-')[1]) for k in self.requests if k.startswith(role+'-')}==set(range(1,1+sum(k.startswith(role+'-') for k in self.requests))) for role in ('request','recall'))
                and self.settled.get('requests')==len(self.requests) and self._host_agrees())
         # Uncertain trace accounting reserves the entire original host allocation.
@@ -250,7 +248,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors:
                 child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=subprocess.PIPE,stdout=output,stderr=errors,start_new_session=True)
                 write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
-                events=HostEvents(target/'host.jsonl',allowance,bound,recall_bound)
+                events=HostEvents(target/'host.jsonl',allowance)
                 if ending_request is not None:
                     _send_control(child,target,profile['session'],actor['actor_id'],ending_request)
                     record['ending_control_id']=ending_request['id']
@@ -354,7 +352,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
     recall_unpriced=sum(r['unpriced_recall_requests'] for r in records)
     # `spent_usd` is what counts toward the limit: reported cost plus each unpriced request at the bound.
     # It is complete only when every actor's trace was read to its settlement.
-    return dict(schema='player-driver/5',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
+    return dict(schema='player-driver/6',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
                 attempts_charged=total_attempts,recall_attempts_charged=total_recall_attempts,host_seconds_used=host_seconds_used,
                 reported_usd=usd_text(reported),unpriced_requests=unpriced,unpriced_request_usd=usd_text(bound),
                 unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),

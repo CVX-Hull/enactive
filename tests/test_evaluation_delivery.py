@@ -31,11 +31,11 @@ def test_judged_facts_builder_resolves_shared_facts_from_the_recorded_citing_art
     full=store()
     seed=next(s for s in range(100) if len(draw(full,s)[0]['articles'])==articles_delivered)
     package=tmp_path/'package';hashes=export(package,full,seed)
-    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/8',session='a'*32,
+    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/9',session='a'*32,
         files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={n:hashes['private/'+n] for n in ('knowledge-full.json','units.json')})))
     actor=package/'actors/001';actor.mkdir(parents=True)
-    (actor/'host.jsonl').write_text(json.dumps(dict(type='host-start',schema='player-host/6',telemetry_version=6,actor_id='actor'))+'\n')
+    (actor/'host.jsonl').write_text(json.dumps(dict(type='host-start',schema='player-host/7',telemetry_version=7,actor_id='actor'))+'\n')
     value=build_facts(tmp_path/'memory-measure/result',[package])['admissions']['package']['001']
     route='index' if articles_delivered else 'withheld'
     assert any(f['id']=='fact-3' for f in value[route])
@@ -68,10 +68,10 @@ def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp
                   for x in ('brief','read-first','lead-first','withheld')])
     seed=next(n for n in range(1000) if {f['id'] for f in draw(full,n)[0]['facts']}=={'brief','read-first','lead-first','index'})
     hashes=export(package,full,seed)
-    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/8',session='a'*32,
+    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/9',session='a'*32,
         files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')})))
-    events=[dict(type='host-start',schema='player-host/6',telemetry_version=6,session='a'*32,actor_id='b'*32),
+    events=[dict(type='host-start',schema='player-host/7',telemetry_version=7,session='a'*32,actor_id='b'*32),
             dict(type='request-start',request_id='recall-1',request_role='recall'),
             dict(type='response-complete',request_id='recall-1',stop_reason='stop'),
             dict(type='knowledge-delivery',kind='briefing',text='briefing',fact_ids=['brief'],receiving_player_request_id='request-1')]

@@ -622,8 +622,8 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     admissions, recall_events = {}, []
     for directory in runs:
         manifest = read_manifest(directory)
-        if manifest.get('schema') not in ('campaign-run/8','campaign-run/7'):
-            raise MeasureError(f'{directory}: delivery requires campaign-run/8 or indexed historical /7')
+        if manifest.get('schema') not in ('campaign-run/9','campaign-run/7'):
+            raise MeasureError(f'{directory}: delivery requires campaign-run/9 or indexed historical /7')
         for name, digest in {**manifest['files'], **{'private/'+k:v for k,v in manifest['private_files'].items()}}.items():
             if name in ('delivered-knowledge.json','private/knowledge-full.json','private/units.json') and file_sha256(directory/name) != digest:
                 raise MeasureError(f'{directory/name}: frozen knowledge hash differs')
@@ -1371,9 +1371,9 @@ def pilot_units(package: Path, *, independent: bool = True) -> dict:
     try:
         manifest = read_manifest(package)
     except EvaluationError as exc:
-        raise MeasureError(f'{package}: pilot requires campaign-run/8 or indexed historical /7 ({exc})') from exc
-    if manifest.get('schema') not in ('campaign-run/8','campaign-run/7'):
-        raise MeasureError(f'{package}: pilot requires campaign-run/8 or indexed historical /7')
+        raise MeasureError(f'{package}: pilot requires campaign-run/9 or indexed historical /7 ({exc})') from exc
+    if manifest.get('schema') not in ('campaign-run/9','campaign-run/7'):
+        raise MeasureError(f'{package}: pilot requires campaign-run/9 or indexed historical /7')
     path = package / 'private' / 'units.json'
     value = read_json(path)
     if not isinstance(value, dict) or value.get('schema') not in ('knowledge-units/1', 'knowledge-units/2'):

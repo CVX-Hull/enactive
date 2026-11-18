@@ -83,7 +83,7 @@ function listenControl(input, session, actorId, accept, fail) {
 export function validateConfiguration(configuration, selectedModel, effort, nested = false) {
   bounded(configuration);
   closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall']);
-  requireThat(configuration.schema === 'player-host/6');
+  requireThat(configuration.schema === 'player-host/7');
   // Dollars this actor may still spend, and what one request with no cost record counts for.
   // Both are plain decimal text computed by the driver and above zero; a JSON number is refused.
   // A zero bound would count a failed request as free.
@@ -650,19 +650,19 @@ export async function runHost(options) {
     }
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false, requestReportedCost = null;
-  // The dollar limit (docs/contracts/player-host.md, Spend). Every HTTP attempt counts once, when it
-  // ends: at the cost the provider reported, else at the route's bound for a request with no cost
-  // record. Every attempt ends in a `response-complete`, which carries its count.
+  // Every HTTP attempt gets a response-complete record. Only provider prices debit the dollar limit.
+  // A completed attempt without a usable price stays unknown and still uses the attempt allowance.
   let spent = [0n, 0], unpricedRequests = 0, unpricedRecallRequests = 0, spendLimit, unpricedBound;
   let recallRequests = 0, recallDisabled = false, recallFlight, recallTask, recallController, recallAttemptInFlight = false, actorEnding = false, knowledge, finishReserve, recallBound;
   let briefing, pendingReminders = [], unsentDeliveries = [], completedInputs = 0, latestResult;
   const recentCalls = [];
   const countAttempt = (reported, role = "player") => {
     const priced = reported !== null && reported !== MALFORMED_COST;
-    const amount = priced ? reported : role === "recall" ? recallBound : unpricedBound;
-    if (!priced) { if (role === "recall") unpricedRecallRequests++; else unpricedRequests++; }
-    spent = addAmounts(spent, amount);
-    return {counted_cost_usd:amountText(amount), cost_counted_as:priced ? 'provider-reported' : 'unpriced-bound', spent_usd:amountText(spent)};
+    if (priced) spent = addAmounts(spent, reported);
+    else if (role === "recall") unpricedRecallRequests++;
+    else unpricedRequests++;
+    return {counted_cost_usd:priced ? amountText(reported) : null,
+      cost_counted_as:priced ? 'provider-reported' : 'unpriced', spent_usd:amountText(spent)};
   };
   const lessThan = (a, b) => { const [x,y] = alignedUnits(a,b); return x < y; };
   const canSpend = () => lessThan(addAmounts(spent, recallAttemptInFlight ? recallBound : [0n,0]), spendLimit);
@@ -841,7 +841,7 @@ export async function runHost(options) {
     affinityId = sessionAffinityId(options.session);
     spendLimit = amountFromText(configuration.spend_limit_usd);
     unpricedBound = amountFromText(configuration.unpriced_request_usd);
-    emit('host-start', {telemetry_version:6, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
+    emit('host-start', {telemetry_version:7, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -1069,7 +1069,7 @@ export async function runHost(options) {
               stop('request-limit');
               throw new HostError(fatal);
             }
-            // The failed attempt counted at the bound, so the retry is refused once the limit is reached.
+            // A retry still needs room under the observed spend and in-flight reservation.
             if (!canSpend()) {
               stop('spend-limit');
               throw new HostError(fatal);

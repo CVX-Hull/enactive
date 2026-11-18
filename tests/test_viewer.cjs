@@ -67,7 +67,7 @@ for (const [name, width, scheme, mobile] of [CONFIGS[0], CONFIGS[2]]) {
   });
 }
 
-test('recorded Overview shows exact receipt cost, unpriced amounts and unavailable accounting', {timeout: 30000}, async () => {
+test('recorded Overview shows exact provider cost, unknown attempts and unavailable accounting', {timeout: 30000}, async () => {
   await fx.viewer('nolive');
   const page = await S.open(browser, `${fx.url}recorded/`, {width: 390, mobile: true});
   try {
@@ -78,7 +78,7 @@ test('recorded Overview shows exact receipt cost, unpriced amounts and unavailab
         term.nextElementSibling.textContent.trim().startsWith(value)), [label, value]);
     await waitForAmount('Provider-reported subtotal', '$1.64493095');
     assert.match(await amount('Provider-reported subtotal'), /custodian receipt/);
-    assert.match(await amount('Counted toward run limit'), /^\$2\.11597095\b.*custodian receipt/s);
+    assert.equal(await amount('Counted toward run limit'), undefined);
     assert.equal(await amount('Unpriced attempts'), '1 player · 1 recall');
     assert.match(await amount('Estimated spend'), /configured rate/);
 

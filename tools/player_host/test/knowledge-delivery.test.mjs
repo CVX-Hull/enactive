@@ -68,7 +68,7 @@ for (const failure of ['failed','rejected-fetch','unpriced']) test(`${failure} r
   assert.equal(result.ok,true);
   assert.equal(events.filter(e => e.type === 'request-start' && e.request_role === 'recall').length,1);
   const cost = events.find(e => e.type === 'response-complete' && e.request_role === 'recall');
-  assert.equal(cost.counted_cost_usd,'0.2');assert.equal(cost.cost_counted_as,'unpriced-bound');
+  assert.equal(cost.counted_cost_usd,null);assert.equal(cost.cost_counted_as,'unpriced');
   assert.equal(events.at(-1).unpriced_recall_requests,1);
   const recall=events.find(e => e.type === 'knowledge-recall' && e.request_id === 'recall-1');
   assert.equal(Object.hasOwn(recall,'reply_text'),failure === 'unpriced');
@@ -158,7 +158,7 @@ test('an in-flight recall bound refuses the next player attempt and actor end ab
   assert.equal(result.reason,'spend-limit');
   assert.equal(events.filter(e => e.type === 'request-start' && e.request_role === 'player').length,1);
   const failed = events.find(e => e.type === 'response-complete' && e.request_id === 'recall-2');
-  assert.equal(failed.counted_cost_usd,'0.2');assert.equal(events.at(-1).unpriced_recall_requests,1);
+  assert.equal(failed.counted_cost_usd,null);assert.equal(events.at(-1).unpriced_recall_requests,1);
 });
 
 test('article and fact injection stays quoted fallible data and recall cannot invent control',() => {

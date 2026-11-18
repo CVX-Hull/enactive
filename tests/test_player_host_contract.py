@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/6` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/7` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -78,7 +78,7 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/6", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/7", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
@@ -226,7 +226,7 @@ class Hosted:
         return int(self.paths["mcp-pid"].read_text())
 
     def accounted(self) -> dict:
-        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE, Decimal(UNPRICED_REQUEST_USD), Decimal(UNPRICED_REQUEST_USD))
+        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE)
         try:
             return reader.finish()
         finally:
@@ -293,7 +293,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/6", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
+    for schema in ("pi-player-host/7", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -344,7 +344,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/6" and events[0]["telemetry_version"] == 6
+    assert events[0]["schema"] == "player-host/7" and events[0]["telemetry_version"] == 7
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
@@ -386,7 +386,7 @@ def test_a_successful_response_without_a_cost_stops_the_run_and_counts_at_the_bo
     assert hosted.start().wait() != 0
     assert hosted.settled()["reason"] == "cost-unreported" and len(hosted.provider.requests) == 1
     actor = hosted.accounted()
-    assert (actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"]) == ("0", 1, "0.25")
+    assert (actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"]) == ("0", 1, "0")
 
 
 def test_plain_report_requires_a_direct_finish_call(adapter, host_factory):

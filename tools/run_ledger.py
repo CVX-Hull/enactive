@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-"""The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/2); see docs/contracts/evaluation.md.
+"""The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/3); see docs/contracts/evaluation.md.
 
-record derives one admission's row from its package alone (campaign-run/8 manifest and campaign-receipt/5, whose
-accounting holds the provider-reported cost and the requests counted at the bound) and appends it; a package
-without a receipt gets no row, and one whose receipt says its spend is incomplete gets a row only with
---record-upper-bound, at its declared limit plus possible in-flight bounds, limited by charged attempts and delivered units. totals reports a
-study's spend against an envelope under the actual-spend admission rule (new spend plus twice the largest
-admission). check validates every row. The ledger is the one numeric record of a run: a dated record presents
+record appends the provider subtotal and unknown-cost counts from a current receipt. An incomplete trace
+requires --record-upper-bound, which records the separate study admission bound. Historical rows retain
+their original recorded basis and numbers. totals uses the row's admission amount against the envelope.
+check validates every row. The ledger is the one numeric record of a run: a dated record presents
 numbers through the generated run tables (tools/evaluate.py evaluate-table) or by citing the ledger.
 """
 from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-from decimal import Context, Decimal, DivisionByZero, Inexact, InvalidOperation, Overflow
+from decimal import Context, Decimal, DivisionByZero, Inexact, InvalidOperation, Overflow, localcontext
 import json
 from pathlib import Path
 import sys
@@ -22,7 +20,7 @@ import sys
 EXACT = Context(prec=4000, traps=[Inexact, InvalidOperation, DivisionByZero, Overflow])
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / 'data' / 'evaluation' / 'runs.jsonl'
-SCHEMA = 'dev-run/2'
+SCHEMA = 'dev-run/3'
 
 
 class LedgerError(ValueError):
@@ -56,14 +54,10 @@ def read_ledger(path: Path = LEDGER) -> list[dict]:
         if (row['study'], row['run']) in seen:
             raise LedgerError(f'{path.name}:{number}: duplicate run {row["run"]} in study {row["study"]}')
         seen.add((row['study'], row['run']))
-        parts = (row['provider_usd'], row['unpriced_attempts'], row['unpriced_attempt_usd'], row['unpriced_recall_attempts'], row['unpriced_recall_attempt_usd'])
-        if all(part is not None for part in parts):
-            if spend_of(*parts) != Decimal(row['spend_usd']):
-                raise LedgerError(f'{path.name}:{number}: spend_usd is not provider_usd plus unpriced attempts at their charge')
-        elif any(part is not None for part in parts):
-            raise LedgerError(f'{path.name}:{number}: provider_usd, unpriced_attempts and unpriced_attempt_usd are recorded together or not at all')
-        if row['unpriced_attempts'] is not None and row['unpriced_attempts'] + row['unpriced_recall_attempts'] > row['attempts']:
-            raise LedgerError(f'{path.name}:{number}: more unpriced attempts than charged attempts')
+        try:
+            validate_accounting(row)
+        except LedgerError as error:
+            raise LedgerError(f'{path.name}:{number}: {error}') from None
         if row['session'] in sessions:
             raise LedgerError(f'{path.name}:{number}: session {row["session"]} is already recorded')
         sessions.add(row['session'])
@@ -79,9 +73,31 @@ def _json(path: Path) -> dict:
 
 
 def spend_of(provider_usd: str, unpriced_attempts: int, unpriced_attempt_usd: str, unpriced_recall_attempts: int = 0, unpriced_recall_attempt_usd: str = "0") -> Decimal:
-    """A row's spend: provider cost plus unpriced attempts at their charge, summed without rounding."""
+    """The legacy counted amount or the explicit incomplete-trace bound."""
     return EXACT.add(EXACT.add(Decimal(provider_usd), EXACT.multiply(Decimal(unpriced_attempts), Decimal(unpriced_attempt_usd))),
                      EXACT.multiply(Decimal(unpriced_recall_attempts), Decimal(unpriced_recall_attempt_usd)))
+
+
+def validate_accounting(row: dict) -> None:
+    basis = row['accounting_basis']
+    spent = Decimal(row['spend_usd'])
+    reported = row['provider_usd']
+    player, recall = row['unpriced_attempts'], row['unpriced_recall_attempts']
+    player_bound, recall_bound = row['unpriced_attempt_usd'], row['unpriced_recall_attempt_usd']
+    upper = row['spend_upper_bound_usd']
+    if basis == 'historical':
+        parts = (reported, player, player_bound, recall, recall_bound)
+        if all(part is not None for part in parts):
+            if spend_of(*parts) != spent:
+                raise LedgerError('historical spend_usd differs from the recorded provider and bound components')
+        elif any(part is not None for part in parts):
+            raise LedgerError('historical provider and unpriced components are recorded together or not at all')
+    elif reported is None or player is None or recall is None or spent != Decimal(reported) or player_bound is not None or recall_bound is not None:
+        raise LedgerError('current spend_usd must equal provider_usd and retain unknown counts without assigned charges')
+    if (upper is not None) != (basis == 'incomplete-trace') or (upper is not None and Decimal(upper) < spent):
+        raise LedgerError('only an incomplete trace has a separate upper bound at least as large as the observed subtotal')
+    if player is not None and player + recall > row['attempts']:
+        raise LedgerError('more unpriced attempts than charged attempts')
 
 
 def plain(amount: Decimal) -> str:
@@ -90,22 +106,19 @@ def plain(amount: Decimal) -> str:
 
 
 def package_row(package: Path, *, study: int, label: str, upper_bound: bool = False) -> dict:
-    """One dev-run/2 row from a finished campaign-run/8 package (receipt campaign-receipt/5). Its spend is the
-    receipt's: the provider-reported cost plus each request with no cost record at the route's bound.
-
-    A receipt whose spend is incomplete gets a row only with `upper_bound`, which records the most the run can have
-    spent: its declared limit plus the bounds of the possible in-flight player and recall attempts,
-    limited by charged attempts; recall contributes only with delivered units. The row has no field that marks it; the run's dated record says so."""
-    from harness.evaluation.core.sources import EvaluationError, read_manifest
+    """Derive observed cost and unknown attempts from a current, owned campaign receipt."""
+    from harness.evaluation.core.sources import MANIFEST_SCHEMA, RECEIPT_SCHEMA, EvaluationError, read_manifest
     try:
         manifest = read_manifest(package)
     except EvaluationError as exc:
         raise LedgerError(str(exc)) from exc
+    if manifest['schema'] != MANIFEST_SCHEMA:
+        raise LedgerError(f'{package.name}: archived manifests cannot produce new ledger rows')
     receipt_path = package / 'receipt.json'
     if not receipt_path.is_file():
         raise LedgerError(f'{package.name}: no receipt.json; reconcile the admission before recording it')
     receipt = _json(receipt_path)
-    if receipt.get('schema') != 'campaign-receipt/5':
+    if receipt.get('schema') != RECEIPT_SCHEMA:
         raise LedgerError(f'{package.name}: unsupported receipt {receipt.get("schema")!r}')
     labels = manifest['labels']
     if receipt['session'] != manifest['session'] or receipt['source_commit'] != manifest['source_commit']:
@@ -117,21 +130,22 @@ def package_row(package: Path, *, study: int, label: str, upper_bound: bool = Fa
     if spend['spend_complete'] is True and upper_bound:
         raise LedgerError(f'{package.name}: the receipt records its spend as complete; --record-upper-bound is only for '
             'a receipt whose spend is incomplete')
+    bound = None
     if upper_bound:
         from harness.player.knowledge import Knowledge
         attempts=spend['attempts_charged']
         player_count=min(1,attempts)
         recall_count=int(bool(Knowledge(package/'delivered-knowledge.json').records) and attempts>player_count)
-        spend = dict(spend, reported_usd=spend['spend_limit_usd'], unpriced_requests=player_count, unpriced_recall_requests=recall_count,
-            spent_usd=plain(spend_of(spend['spend_limit_usd'], player_count, spend['unpriced_request_usd'], recall_count, spend['unpriced_recall_request_usd'])))
+        bound = plain(spend_of(spend['spend_limit_usd'], player_count, spend['unpriced_request_usd'],
+                               recall_count, spend['unpriced_recall_request_usd']))
     ended = datetime.fromtimestamp(receipt['ended_wall'], timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     return dict(schema=SCHEMA, study=study, run=package.name, label=label, arm=labels['arm'], start=labels['start'],
         lineage=labels.get('lineage'), admission=labels.get('admission'), session=receipt['session'],
         source_commit=receipt['source_commit'], ended=ended, outcome=receipt['outcome'],
         attempts=spend['attempts_charged'], wall_seconds=round(receipt['elapsed_seconds']),
+        accounting_basis='incomplete-trace' if upper_bound else 'provider-reported', spend_upper_bound_usd=bound,
         spend_usd=spend['spent_usd'], provider_usd=spend['reported_usd'], unpriced_attempts=spend['unpriced_requests'],
-        unpriced_attempt_usd=spend['unpriced_request_usd'], unpriced_recall_attempts=spend['unpriced_recall_requests'],
-        unpriced_recall_attempt_usd=spend['unpriced_recall_request_usd'])
+        unpriced_attempt_usd=None, unpriced_recall_attempts=spend['unpriced_recall_requests'], unpriced_recall_attempt_usd=None)
 
 
 def decimal_text(value: str, name: str) -> str:
@@ -153,8 +167,7 @@ def record(arguments: argparse.Namespace) -> dict:
     errors = list(validator().iter_errors(row))
     if errors:
         raise LedgerError(f'derived row is invalid: {errors[0].message}')
-    if spend_of(row['provider_usd'], row['unpriced_attempts'], row['unpriced_attempt_usd'], row['unpriced_recall_attempts'], row['unpriced_recall_attempt_usd']) != Decimal(row['spend_usd']):
-        raise LedgerError(f'{row["run"]}: the receipt\'s spent_usd is not its reported_usd plus unpriced requests at the bound')
+    validate_accounting(row)
     with arguments.ledger.open('a') as stream:
         stream.write(json.dumps(row, sort_keys=True) + '\n')
     return row
@@ -164,12 +177,15 @@ def totals(rows: list[dict], study: int, envelope: Decimal | None, forecast: Dec
     """Spend so far; with an envelope, headroom = envelope - spend - 2 x largest admission. Before any admission the
     largest is the stated forecast (e.g. #382's $6.50), or 0 when none is given."""
     chosen = [r for r in rows if r['study'] == study]
-    spend = sum((Decimal(r['spend_usd']) for r in chosen), Decimal(0))
-    largest = max((Decimal(r['spend_usd']) for r in chosen), default=forecast or Decimal(0))
+    amounts = [Decimal(r['spend_upper_bound_usd'] or r['spend_usd']) for r in chosen]
+    with localcontext(EXACT):
+        spend = sum(amounts, Decimal(0))
+    largest = max(amounts, default=forecast or Decimal(0))
     result = dict(study=study, admissions=len(chosen), attempts=sum(r['attempts'] for r in chosen),
                   wall_seconds=sum(r['wall_seconds'] for r in chosen), spend_usd=str(spend), largest_usd=str(largest))
     if envelope is not None:
-        headroom = envelope - spend - 2 * largest
+        with localcontext(EXACT):
+            headroom = envelope - spend - 2 * largest
         result.update(envelope_usd=str(envelope), headroom_usd=str(headroom), admit=headroom >= 0)
     return result
 
