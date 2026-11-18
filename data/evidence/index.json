@@ -680,6 +680,25 @@
       },
       "visibility": "private"
     },
+    "evacuee-delayed-decision-759": {
+      "availability": "present",
+      "bytes": 64321824,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-evacuee-delayed-decision-759.md"
+      ],
+      "files": 608,
+      "manifest_sha256": "24586e61903807b10087b479003652e33c3abe720179b2e6ca4f9a3ebbc80b45",
+      "note": "Both Scipio packages, original tool and host evidence, checkpoint and closed terminal userdirs, operator reconciliation, and maintained same-lineage evaluation. Final reloadability was unverified. The operator and evaluation originals were kept in /tmp/enactive-759-live.Ds4Wv1.",
+      "sources": {
+        "continuation": ".runtime/computer-sessions/evacuee-delayed-decision-759-reload-2bbf1dfe64ee46378f97cb559c25a111@b6149e303121748ee20f8c601f5b49450e8c5bec",
+        "evaluations": "tools/evaluate.py@b6149e303121748ee20f8c601f5b49450e8c5bec",
+        "initial": ".runtime/computer-sessions/evacuee-delayed-decision-759-ebbc7598e352f68bf9f0f69b238465ac@b6149e303121748ee20f8c601f5b49450e8c5bec",
+        "initial-userdir": ".runtime/archive/userdir-20261118T144055712848Z",
+        "operator": "tools/campaign_supervision.py@b6149e303121748ee20f8c601f5b49450e8c5bec",
+        "terminal-userdir": ".runtime/archive/userdir-20261118T153854795381Z"
+      },
+      "visibility": "private"
+    },
     "evacuee-editor-check-741": {
       "availability": "present",
       "bytes": 2174093,
