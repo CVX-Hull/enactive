@@ -16,7 +16,8 @@ from harness.evaluation.core import context as ctx
 from harness.evaluation.core.host import host_facts
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError, loads
-from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_carry, read_host, read_json_file, read_manifest, read_historical_memory, read_player_store, run_archive_entry
+from harness.evaluation.core.sources import (MANIFEST_SCHEMA, RECEIPT_SCHEMA, read_carry, read_host, read_json_file,
+    read_manifest, read_historical_memory, read_player_store, run_archive_entry)
 
 from .catalog import Catalog, RunInfo, ViewError
 from . import pause
@@ -80,6 +81,32 @@ def outcome(info: RunInfo) -> dict:
     return dict(hours=None if value is None else value['hours'], died=None if value is None else value['outcome'] == 'died',
         outcome=None if value is None else value['outcome'], censor_reason=None if value is None else value.get('censor_reason'),
         episodes=None if value is None else value.get('episodes'), lost=info.lost)
+
+
+RECEIPT_OUTCOMES = ('incomplete', 'interrupted', 'player_task_complete_unassessed',
+    'player_cannot_continue_unassessed', 'player_external_stop_complete_unassessed')
+RECEIPT_FLAGS = ('normal_native_exit_zero', 'native_absence_verified', 'deciding_hosts_quiescent',
+    'input_authority_revoked')
+
+
+def custodian_receipt(info: RunInfo) -> dict | None:
+    """Recorded ending facts from the current package belonging to this evaluation store."""
+    commit = info.facts.get('source_commit')
+    if info.run_dir is None or not isinstance(commit, str) or not commit:
+        return None
+    try:
+        manifest = read_manifest(info.run_dir)
+        if (manifest['schema'], manifest.get('session'), manifest.get('source_commit')) != (MANIFEST_SCHEMA, info.session, commit):
+            return None
+        receipt = read_json_file(info.run_dir / 'receipt.json')
+    except (OSError, EvaluationError):
+        return None
+    if not isinstance(receipt, dict) or (receipt.get('schema'), receipt.get('session'), receipt.get('source_commit')) != (
+            RECEIPT_SCHEMA, info.session, commit):
+        return None
+    disposition = receipt.get('outcome')
+    return dict(outcome=disposition if disposition in RECEIPT_OUTCOMES else None,
+        **{key: receipt[key] if type(receipt.get(key)) is bool else None for key in RECEIPT_FLAGS})
 
 
 def headline(info: RunInfo) -> dict:
@@ -180,7 +207,7 @@ def summary(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, liv
         ROUTINE_FINDINGS).fetchone()[0]
     return dict(run=info.run, session=info.session, state=info.state, facts=info.facts, labels=info.labels,
         started_wall=started, routine_findings=dict(context_eviction=routine), outcome=outcome(info), decisions=info.decisions, dollars=info.dollars, versions=versions(info), live=live,
-        evaluator=evaluator,
+        evaluator=evaluator, custodian_receipt=custodian_receipt(info),
         pause=pause.conditions(connection, info.facts, time.time() if now is None else now) if live else None,
         game_state=game_state(connection, validation), findings=findings(connection), ladder=ladder,
         metrics=[metric_json(row, validation) for _, row in sorted(info.metrics.items())],

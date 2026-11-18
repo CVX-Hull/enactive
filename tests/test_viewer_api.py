@@ -16,6 +16,7 @@ from starlette.testclient import TestClient
 
 from harness.evaluation.core.pipeline import evaluate
 from harness.evaluation.core.records import CORE_VERSION, open_readonly, read_metadata
+from harness.evaluation.core.sources import MANIFEST_SCHEMA, RECEIPT_SCHEMA
 from harness.viewer.app import MAX_BYTES, create_app
 from harness.viewer.catalog import API, Catalog
 from harness.viewer.live import LiveEvaluator
@@ -218,6 +219,34 @@ def test_summary_carries_game_state_findings_ladder_metrics_and_validation(archi
     coverage = {c['reader']: c for c in summary['reader_coverage']}
     assert coverage['mode']['validation']['pass'] is False and coverage['clock']['validation']['pass'] is True
     assert coverage['ate']['validation'] is None and coverage['mode']['denominator'] == 14
+
+
+def test_summary_projects_only_the_selected_current_custodian_receipt(archive):
+    client, _, runs = archive
+    session = 'b' * 32
+    path = runs / 'base2' / 'receipt.json'
+    manifest_path = path.with_name('manifest.json')
+    manifest = json.loads(manifest_path.read_text())
+    expected = dict(outcome='player_task_complete_unassessed', normal_native_exit_zero=False,
+        native_absence_verified=True, deciding_hosts_quiescent=None, input_authority_revoked=True)
+    receipt = dict(expected, schema=RECEIPT_SCHEMA, session=session, source_commit=manifest['source_commit'],
+        deciding_hosts_quiescent=1, cleanup=dict(pid=123), reason='private fixture')
+    route = f'/api/view/run/{session}/summary'
+    baseline = client.get(route).json()
+    assert baseline['custodian_receipt'] is None
+    path.write_text(json.dumps(receipt))
+    assert client.get(route).json() == dict(baseline, custodian_receipt=expected)
+    assert client.get('/api/view/run/aid1/summary').json()['custodian_receipt'] is None
+
+    for invalid in ('{', '[]', *(json.dumps(dict(receipt, **change)) for change in (
+            dict(schema='campaign-receipt/4'), dict(session='c' * 32), dict(source_commit='different')))):
+        path.write_text(invalid)
+        assert client.get(route).json() == baseline
+    path.write_text(json.dumps(dict(receipt, outcome='private fixture')))
+    assert client.get(route).json() == dict(baseline, custodian_receipt=dict(expected, outcome=None))
+    for change in (dict(schema=MANIFEST_SCHEMA + '-invalid'), dict(session='c' * 32), dict(source_commit='different')):
+        manifest_path.write_text(json.dumps(dict(manifest, **change)))
+        assert client.get(route).json() == baseline
 
 
 def test_tools_aggregate_calls_and_transitions(archive):

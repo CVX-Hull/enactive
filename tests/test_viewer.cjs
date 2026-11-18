@@ -35,6 +35,36 @@ for (const [name, width, scheme, mobile] of CONFIGS) {
   });
 }
 
+for (const [name, width, scheme, mobile] of [CONFIGS[0], CONFIGS[2]]) {
+  test(`Overview shows the selected recorded custodian receipt: ${name}`, {timeout: 30000}, async () => {
+    const page = await S.open(browser, `${fx.url}#run/overview`, {width, scheme, mobile});
+    try {
+      await S.ready(page);
+      await S.until(page, () => document.querySelector('#runpick')?.value === 'ceil09' && document.querySelector('#app dl'));
+      assert.equal(await page.$('.custodian-receipt'), null);
+      const pause = () => page.$eval('#pause', b => [b.textContent, b.disabled]);
+      const before = await pause();
+      await page.select('#runpick', 'aidA1');
+      await S.until(page, () => document.querySelector('.custodian-receipt dl'));
+      assert.equal(await page.$eval('#runpick', el => el.value), 'aidA1');
+      assert.match(await page.$eval('.custodian-receipt', el => el.innerText), /recorded process and input state/);
+      const facts = await page.$$eval('.custodian-receipt dd', rows => rows.map(row => row.textContent));
+      assert.deepEqual(facts, ['Player reported external stop complete (unassessed)', 'Yes', 'Yes', 'Unavailable', 'No']);
+      assert.equal(await S.overflow(page), 0);
+      await S.shot(page, `custodian-receipt-${name}`);
+
+      await page.focus('.src-details summary');
+      await page.keyboard.press('Tab');
+      assert.equal(await page.$eval('#runpick', el => el === document.activeElement), true);
+      await page.select('#runpick', 'aidA2');
+      await S.until(page, () => document.querySelector('.custodian-receipt p')?.textContent.includes('unavailable'));
+      assert.equal(await page.$eval('#runpick', el => el.value), 'aidA2');
+      assert.deepEqual(await pause(), before);
+      assert.deepEqual(page.problems, []);
+    } finally { await page.close(); }
+  });
+}
+
 test('frame: an episode anchor opens the live view at its step, and a container opens its manifest', {timeout: 60000}, async () => {
   const page = await S.open(browser, `${fx.url}#frame/actor`, {scheme: 'light'});
   try {

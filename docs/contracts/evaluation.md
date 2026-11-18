@@ -1010,7 +1010,7 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | Route | Returns |
 | --- | --- |
 | `/api/view/runs` | One summary per known run: facts, state (`live` only for the run this viewer evaluates; `unfinished` for any other run whose store is still `live`, because its final pass never ran; otherwise `final`; `versions.state` and the summary's `state` stay the store's own `live` or `final`), outcome (hours, died, `censor_reason`), decisions, dollars, headline metrics, versions. Built by scanning record stores read-only and cached in memory. |
-| `/api/view/run/<run>/summary` | Facts; outcome; the Pause conditions (below); game state with provenance; findings; ladder; metrics with `source`, `count`, `denominator`, `missing`; reader coverage with held-out validation status |
+| `/api/view/run/<run>/summary` | Facts, evaluator outcome, recorded `custodian_receipt`, Pause conditions (below), game state with provenance, findings, ladder, metrics with `source`, `count`, `denominator`, `missing`, and reader coverage with held-out validation status |
 | `/api/view/run/<run>/steps?after=&limit=` | Steps: `seq`, `decision`, `wall`, `kind`, `mode`, `game_time`, `source_id`, `frame_changed`, `dollars`, `keys` |
 | `/api/view/run/<run>/frame/<source_id>` | The original PNG (`image/png`), only after its SHA-256 matches the record |
 | `/api/view/run/<run>/tools` | Per-tool aggregates (calls, p50 and p95 latency, refused, errors, result bytes) and transitions `[from, to, n]` |
@@ -1032,6 +1032,18 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/curator-results?source=&after=&limit=&snapshot=` | One source’s recorded current submission/restore results and read-snapshot provenance (`spectator-frame/1`, below) |
 | `/api/view/frame/curator-session-sources?after=&limit=` | Operator-configured receipt labels |
 | `/api/view/frame/curator-session?source=&after=&limit=&snapshot=` | One terminal curator session receipt and its paged gate results |
+
+### Recorded custodian receipt
+
+`custodian_receipt` projects the current package's `campaign-receipt/5` when the
+catalogued directory's current manifest and receipt agree with the summary's session
+and source commit. A missing, unreadable, unsupported or mismatched source yields
+`null`. The projection contains `outcome` (the custodian's disposition) and the
+booleans `normal_native_exit_zero`, `native_absence_verified`,
+`deciding_hosts_quiescent` and `input_authority_revoked`. Unavailable individual
+facts are `null`. The evaluator's outcome and Pause conditions use their existing
+sources. Input acknowledgement, save persistence and wrapper cleanup each require
+their own evidence.
 
 ### Recorded knowledge and public reports
 

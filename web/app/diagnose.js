@@ -36,6 +36,21 @@ const metricText = m => {
 };
 const metricNote = m => [m.count !== null && m.count !== undefined ? `n ${trim(m.count)}${m.denominator ? `/${trim(m.denominator)}` : ''}` : '', m.missing ? (typeof m.missing === 'number' ? `${trim(m.missing)} missing` : (/missing/i.test(label(m.missing)) ? label(m.missing) : `missing: ${label(m.missing)}`)) : ''].filter(Boolean).join(' · ');
 
+const RECEIPT_DISPOSITIONS = {
+  incomplete: 'Incomplete', interrupted: 'Interrupted', player_task_complete_unassessed: 'Player reported task complete (unassessed)',
+  player_cannot_continue_unassessed: 'Player reported unable to continue (unassessed)',
+  player_external_stop_complete_unassessed: 'Player reported external stop complete (unassessed)'
+};
+const RECEIPT_FIELDS = [['normal_native_exit_zero', 'Normal native exit (code 0)'], ['native_absence_verified', 'Native absence verified'],
+  ['deciding_hosts_quiescent', 'Deciding hosts quiescent'], ['input_authority_revoked', 'Input authority revoked']];
+
+function CustodianReceipt({receipt}) {
+  return html`<${Panel} title="Custodian receipt" note="recorded process and input state" span="s4" className="custodian-receipt">
+    ${receipt ? html`<dl class="kv"><dt>Disposition</dt><dd>${RECEIPT_DISPOSITIONS[receipt.outcome] ?? 'Unavailable'}</dd>
+      ${RECEIPT_FIELDS.map(([key, text]) => html`<dt>${text}</dt><dd>${receipt[key] === true ? 'Yes' : receipt[key] === false ? 'No' : 'Unavailable'}</dd>`)}</dl>`
+      : html`<p class="note">Receipt unavailable for this run.</p>`}<//>`;
+}
+
 function Overview() {
   const s = store.summary;
   if (!s) return html`<${Panel} title="Overview" span="s12"><${Waiting} store=${store} what="the run summary" /><//>`;
@@ -62,6 +77,7 @@ function Overview() {
         <dt>Source commit</dt><dd>${String(facts.source_commit || '').slice(0, 7) || '—'}</dd>
         <dt>Model · effort</dt><dd>${facts.model || '—'} · ${facts.effort || '—'}</dd>
         <dt>Evaluator</dt><dd>core ${s.versions?.core_version} · ${s.versions?.binding_id} ${s.versions?.binding_version}</dd></dl><//>
+    ${!s.live || s.custodian_receipt ? html`<${CustodianReceipt} receipt=${s.custodian_receipt} />` : null}
     ${[...groups.entries()].map(([name, list]) => html`<${Panel} title=${name} span="s4"><dl class="kv">${list.map(m => html`<dt>${label(m.name.split('.').slice(1).join('.'))}${m.key ? ` · ${m.key}` : ''} <${Pv} source=${m.source} /><${Unvalidated} metric=${m} /></dt>
       <dd title=${metricNote(m)}>${metricText(m)} <span class="note sub">${metricNote(m)}</span></dd>`)}</dl><//>`)}
     <${Panel} title="Findings in this run" note="every row opens its evidence on Supervise · newest first, up to 100" span="s12">

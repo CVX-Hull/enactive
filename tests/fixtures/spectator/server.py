@@ -200,6 +200,13 @@ def make_handler(state: State):
                 self.reply(200, state.png, 'image/png'); return
             if sub == 'summary':
                 body = load('summary.json')
+                body['custodian_receipt'] = None
+                if run in ('aidA1', 'aidA2'):
+                    body.update(run=run, state='final', live=False, pause=None)
+                if run == 'aidA1':
+                    body['custodian_receipt'] = dict(outcome='player_external_stop_complete_unassessed',
+                        normal_native_exit_zero=True, native_absence_verified=True,
+                        deciding_hosts_quiescent=None, input_authority_revoked=False)
                 body['decisions'] = state.steps[visible - 1]['decision']
                 body['findings'] = [f for f in body['findings'] if f['seq_start'] <= state.steps[visible - 1]['seq']]
                 self.json(200, body); return

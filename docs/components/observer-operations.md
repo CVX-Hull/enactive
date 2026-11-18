@@ -78,6 +78,11 @@ The viewer lists only its own live run as `live`. Another run whose store is sti
 page cannot follow it in place of the real live run
 ([#435](https://github.com/CVX-Hull/enactive/issues/435)).
 
+Diagnose → Overview shows [recorded custodian receipt facts](../contracts/evaluation.md#recorded-custodian-receipt)
+beside the evaluator's outcome. A normally exited process and an unresolved input
+acknowledgement can occur in the same run. The live Pause display uses its own
+sources.
+
 The page's feed player shows the live control-path frame or the playhead's recorded
 frame:
 - Each frame is decoded before it replaces the last, and is drawn at its own pixel size. It never blanks or rescales as frames arrive.
