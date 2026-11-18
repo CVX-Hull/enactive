@@ -646,6 +646,23 @@
       },
       "visibility": "private"
     },
+    "evacuee-editor-check-741": {
+      "availability": "present",
+      "bytes": 2174093,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-evacuee-editor-check-741.md"
+      ],
+      "files": 70,
+      "manifest_sha256": "295bf696a4506912ff5aaf3d595edde8652c17ce85bb643d27ae86072be6ddaa",
+      "note": "Approved menu-only Evacuee editor check. Original run, evaluation, archived world setup and supervisor log.",
+      "sources": {
+        "archived-userdir": ".runtime/archive/userdir-20261118T034025128887Z",
+        "evaluation": ".runtime/evaluations/f69d4efd27e2429aab1e2b0abb4c85fc",
+        "package": ".runtime/computer-sessions/evacuee-setup-check-f69d4efd27e2429aab1e2b0abb4c85fc@569a1c5a2bb2c4ce0168ef2227571613b011614b",
+        "supervisor.log": "tools/campaign_supervision.py@569a1c5a2bb2c4ce0168ef2227571613b011614b"
+      },
+      "visibility": "private"
+    },
     "evacuee-setup-check-737": {
       "availability": "present",
       "bytes": 689378,
