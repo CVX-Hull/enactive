@@ -700,6 +700,26 @@
       },
       "visibility": "private"
     },
+    "fresh-evacuee-progress-751": {
+      "availability": "present",
+      "bytes": 11722796,
+      "cited_by": [
+        "docs/acceptance/2026-11-17-fresh-evacuee-progress-751.md"
+      ],
+      "files": 332,
+      "manifest_sha256": "dd0370c04d02d261e6deed7f23cb74ebcb074e037d5b14a85f274b5559c16ea2",
+      "note": "Exact two approved independent Evacuee starts, original evidence, closed userdirs and terminal receipts.",
+      "sources": {
+        "bowdle-evaluation": ".runtime/evaluations/b3d2a06b4d244cbaba0a55a38dad9080",
+        "bowdle-package": ".runtime/computer-sessions/evacuee-progress-747-a-b3d2a06b4d244cbaba0a55a38dad9080@47f868c85bcafd29df5ae4c442a5b2f7cd7a055c",
+        "bowdle-userdir": ".runtime/archive/userdir-20261118T044418277025Z",
+        "nancy-evaluation": ".runtime/evaluations/e9cc9deb2d7544778fdf0c2e08325ebd",
+        "nancy-package": ".runtime/computer-sessions/evacuee-progress-747-b-e9cc9deb2d7544778fdf0c2e08325ebd@47f868c85bcafd29df5ae4c442a5b2f7cd7a055c",
+        "nancy-userdir": ".runtime/archive/userdir-20261118T044955648959Z",
+        "supervisor-logs": "tools/campaign_supervision.py@47f868c85bcafd29df5ae4c442a5b2f7cd7a055c"
+      },
+      "visibility": "private"
+    },
     "fresh-world-screen-441": {
       "availability": "present",
       "bytes": 5998310,
