@@ -248,18 +248,23 @@ export function Findings({summary}) {
       <span class="t">${mmss(f.wall - t0)}</span><span>${findingText(f)}</span><${Pv} source=${f.source} detail=${f.confidence ? pct(f.confidence) : ''} /></button></li>`)}</ul>` : html`<div class="insuf" id="findings">No findings recorded yet.</div>`}<//>`;
 }
 
+const TIMELINE_NAME = 'Timeline playhead';
+
 export function Timeline({summary}) {
   const t0 = runStart();
   const steps = store.steps;
   const cursorSeq = store.cursor;
-  const option = useMemo(() => (steps.length ? timelineOption({steps, requests: store.requests, markers: store.markers, t0, cursorSeq}) : null),
-    [steps, store.requests, store.markers, t0, cursorSeq, store.themeEpoch]);
+  const option = useMemo(() => (steps.length ? timelineOption({steps, requests: store.requests, markers: store.markers,
+    t0, cursorSeq, accessibleName: TIMELINE_NAME}) : null), [steps, store.requests, store.markers, t0, cursorSeq, store.themeEpoch]);
   const chartRef = useRef(null);
   const index = cursorIndex();
   const step = steps[index];
-  const live = !recordedPage && isLive();
-  const latestLabel = recordedPage ? 'latest recorded step' : 'live';
-  const atLatest = recordedPage ? index === steps.length - 1 : live;
+  const followsLive = !recordedPage && selectedRun()?.state === 'live';
+  const live = followsLive && isLive();
+  const latestLabel = followsLive ? 'live' : 'latest recorded step';
+  const atLatest = followsLive ? live : index === steps.length - 1;
+  const edge = followsLive ? 'the live edge' : 'the latest recorded step';
+  const keyboardHelp = `Left and right arrows move one step. Hold Shift to move ten. Home goes to the first step. End goes to ${edge}.`;
   const move = delta => setCursorIndex(index + delta);
   const onKeyDown = e => {
     if (e.key === 'ArrowLeft') { e.preventDefault(); move(e.shiftKey ? -10 : -1); }
@@ -279,9 +284,11 @@ export function Timeline({summary}) {
   const mode = step ? label(step.mode || 'unknown') : '';
   return html`<${Panel} title="Timeline" note="viewer · click or use ← → to move the playhead" span="s12">
     <div class="legend" id="tl-legend">${legend.map(([n, c]) => html`<span><i style=${{background: c}}></i>${n}</span>`)}</div>
+    <span id="timeline-help" hidden>${keyboardHelp}</span>
     ${option ? html`<${Chart} option=${option} epoch=${store.themeEpoch} onReady=${onReady} onKeyDown=${onKeyDown} tabindex="0" className="tl" role="slider"
-      label=${`Timeline of game clock, mode, cache writes with evictions, findings and spend. Left and right arrows move the playhead, End returns to ${latestLabel}.`}
-      extra=${{id: 'tl', 'aria-valuemin': 0, 'aria-valuemax': Math.max(0, steps.length - 1), 'aria-valuenow': Math.max(0, index), 'aria-valuetext': step ? `Step ${step.seq}${live ? ', live' : ''}` : 'no steps'}} />`
+      label=${TIMELINE_NAME}
+      extra=${{id: 'tl', 'aria-describedby': 'timeline-help', 'aria-valuemin': 0, 'aria-valuemax': Math.max(0, steps.length - 1),
+        'aria-valuenow': Math.max(0, index), 'aria-valuetext': step ? `Step ${step.seq}${live ? ', live' : ''}` : 'no steps'}} />`
       : html`<${Waiting} store=${store} what="the timeline" />`}
     <div class="note" id="playinfo" role="status">${step ? html`Playhead at step ${step.seq}${live ? ' (live)' : ''} · ${mode} · keys ${keys}${atLatest ? '' : html` · <button type="button" class="link" id="backlive" onClick=${goLive}>return to ${latestLabel}</button>`}` : 'No steps yet.'}</div><//>`;
 }

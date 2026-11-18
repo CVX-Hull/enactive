@@ -112,26 +112,62 @@ test('Pause is never refused over its reason: a missing or unknown one is record
   assert.deepEqual((await fx.state()).pauses.map(p => p.reason), ['unspecified', 'unspecified', 'unspecified']);
 });
 
-test('timeline keyboard: arrows move one step, shift moves ten, Home and End jump', async () => {
-  await start();
-  const now = () => page.$eval('#tl', n => Number(n.getAttribute('aria-valuenow')));
-  const last = await now();
-  assert.ok(last >= 100);
-  await page.focus('#tl');
-  await page.keyboard.press('ArrowLeft');
-  assert.equal(await now(), last - 1);
-  assert.doesNotMatch(await text('#playinfo'), /\(live\)/);
-  await page.keyboard.press('ArrowRight');
-  assert.equal(await now(), last);
-  assert.match(await text('#playinfo'), /\(live\)/);
-  await page.keyboard.down('Shift'); await page.keyboard.press('ArrowLeft'); await page.keyboard.up('Shift');
-  assert.equal(await now(), last - 10);
-  await page.keyboard.press('Home');
-  assert.equal(await now(), 0);
-  await page.keyboard.press('End');
-  assert.equal(await now(), last);
-  assert.match(await page.$eval('#tl', n => n.getAttribute('aria-valuetext')), /live/);
-});
+for (const mode of ['live', 'recorded']) {
+  test(`timeline keyboard and accessible name survive a redraw: ${mode}`, async () => {
+    if (mode === 'live') {
+      await start();
+    } else {
+      fx = await S.startFixture();
+      await fx.viewer('nolive');
+      page = await S.open(browser, `${fx.url}recorded/#live`);
+      await until(() => document.querySelector('#tl canvas'));
+    }
+
+    const cdp = await page.createCDPSession();
+    try {
+      const {root} = await cdp.send('DOM.getDocument');
+      const {nodeId} = await cdp.send('DOM.querySelector', {nodeId: root.nodeId, selector: '#tl'});
+      const checkAccessibility = async (edge) => {
+        const {nodes: [control]} = await cdp.send('Accessibility.getPartialAXTree', {nodeId, fetchRelatives: false});
+        assert.equal(control.role.value, 'slider');
+        assert.equal(control.name.value, 'Timeline playhead');
+        assert.equal(control.description.value,
+          `Left and right arrows move one step. Hold Shift to move ten. Home goes to the first step. End goes to ${edge}.`);
+      };
+      const edge = mode === 'live' ? 'the live edge' : 'the latest recorded step';
+      await checkAccessibility(edge);
+      const now = () => page.$eval('#tl', n => Number(n.getAttribute('aria-valuenow')));
+      const last = await now();
+      assert.ok(last >= 100);
+      await page.focus('#tl');
+      await page.keyboard.press('ArrowLeft');
+      assert.equal(await now(), last - 1);
+      assert.doesNotMatch(await text('#playinfo'), /\(live\)/);
+      await page.keyboard.press('ArrowRight');
+      assert.equal(await now(), last);
+      assert.equal(/\(live\)/.test(await text('#playinfo')), mode === 'live');
+      await page.keyboard.down('Shift'); await page.keyboard.press('ArrowLeft'); await page.keyboard.up('Shift');
+      assert.equal(await now(), last - 10);
+      await page.keyboard.press('Home');
+      assert.equal(await now(), 0);
+      await page.keyboard.press('End');
+      assert.equal(await now(), last);
+      assert.equal(/live/.test(await page.$eval('#tl', n => n.getAttribute('aria-valuetext'))), mode === 'live');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'tl');
+      await checkAccessibility(edge);
+
+      if (mode === 'live') {
+        await page.select('#runpick', 'aidA1');
+        await until(() => document.querySelector('#tl canvas') &&
+          document.querySelector('#timeline-help')?.textContent.endsWith('the latest recorded step.'));
+        const {nodeId: archivedId} = await cdp.send('DOM.querySelector', {nodeId: root.nodeId, selector: '#tl'});
+        const {nodes: [archived]} = await cdp.send('Accessibility.getPartialAXTree', {nodeId: archivedId, fetchRelatives: false});
+        assert.match(archived.description.value, /End goes to the latest recorded step/);
+        assert.doesNotMatch(await text('#playinfo'), /\(live\)/);
+      }
+    } finally { await cdp.detach(); }
+  });
+}
 
 test('Pause: Enter opens the sheet, a reason is required, the reason is posted', async () => {
   await start();
