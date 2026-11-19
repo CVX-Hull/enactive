@@ -181,15 +181,15 @@ handoff successor and a new admission's first actor, with no provider call:
 - **Notices** go at the end of the request in which they are first sent, and then stay
   in the history there unchanged. A retry resends the same body below the notice step,
   so it adds no notice. Once a threshold is passed, every later request adds a new
-  notice. Only the first notice of each kind says how to wrap up; later ones only
-  update the figure, because every notice stays in the context.
-  Each warns before a stop the
-  host itself enforces, naming how to wrap up: the context notice (latched once the
-  `context_reserve_tokens` line is crossed, with the tokens of room left before the
-  stop), the request notice (when `requestWarningAt(max_requests)` requests remain,
-  that is a tenth of them and at least two but at most half), and the time notice
-  (when the work deadline is within a tenth of the allowance, at least a minute but
-  at most half). Each emission is a `tail-notice` event with `request_id` and
+  notice. The first context and time notices explain how to wrap up. The context
+  notice latches when the `context_reserve_tokens` line is crossed and reports the
+  tokens of room before the stop. The time notice starts when the work deadline is
+  within a tenth of the allowance, at least a minute and at most half. The request
+  notice starts at `requestWarningAt(max_requests)`, a tenth of the allowance
+  bounded by two and half the allowance. It counts down to the actual request cap.
+  Its first message explains what counts and when the host stops. An accepted
+  ending control carries its own ending instruction. Later notices update the
+  applicable figures. Each emission is a `tail-notice` event with `request_id` and
   `kinds`; the notice text itself is not telemetry. Provider errors cannot be warned
   of before they happen, and the dollar limit has no notice.
 

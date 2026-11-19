@@ -142,16 +142,12 @@ test('the request-limit notice is added on every request near the limit and kept
   const withNotice = payloads.map(payload => isNotice(payload.messages.at(-1)));
   assert.equal(requestWarningAt(10), 2);
   assert.deepEqual(withNotice, [false, false, false, false, false, false, false, false, true, true]);
-  assert.match(text(payloads[8].messages.at(-1)), /2 of 10 model requests remain, this one included/);
-  assert.match(text(payloads[9].messages.at(-1)), /1 of 10 model requests remain/);
+  assert.equal(text(payloads[8].messages.at(-1)),
+    'Host request allowance: 2 of 10 model requests remain, this one included (a retried request counts again). The host stops when none remain.');
+  assert.equal(text(payloads[9].messages.at(-1)), 'Host request allowance: 1 of 10 model requests remain, this one included.');
   assertStablePrefixes(payloads);
   assert.deepEqual(events.filter(event => event.type === 'tail-notice').map(event => [event.request_id, event.kinds]),
     [['request-9', ['request-limit']], ['request-10', ['request-limit']]]);
-  // The first notice names the way out the model has, handoff or finish; it stays in the context, so a
-  // later one only updates the figure.
-  assert.match(text(payloads[8].messages.at(-1)), /player_handoff/);
-  assert.match(text(payloads[8].messages.at(-1)), /player_finish/);
-  assert.doesNotMatch(text(payloads[9].messages.at(-1)), /player_handoff|player_finish/);
   assert.equal(payloads[9].messages.filter(isNotice).length, 2, 'both notices are in the last request');
 });
 

@@ -972,8 +972,9 @@ export async function runHost(options) {
           // and is never rewritten, so every request extends the previous one byte for byte (#489: the
           // provider's cache reuses only a request that a later one extends; a tail rewritten each
           // request is never reused). Once a threshold is passed, every later request adds a new notice
-          // (the context one is latched; the others only grow nearer). The first notice of each kind
-          // says how to wrap up; later ones only update the figure, because they stay in the context.
+          // (the context one is latched; the others only grow nearer). The first context and time
+          // notices explain how to wrap up. Request notices report the allowance without directing
+          // the player to end before the separate ending control or the actual cap.
           // A retry resends the same body below this hook (the fetch wrapper), so it adds no notice.
           const at = messages.length;
           const lines = [], kinds = [];
@@ -996,7 +997,7 @@ export async function runHost(options) {
           const requestsLeft = configuration.max_requests - requests - recallRequests;
           if (requestsLeft > 0 && requestsLeft <= requestWarningAt(configuration.max_requests)) {
             lines.push(first('request-limit')
-              ? `Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included (a retried request counts again). The host stops when none remain. ${wrapUp}`
+              ? `Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included (a retried request counts again). The host stops when none remain.`
               : `Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included.`);
             kinds.push('request-limit');
           }
