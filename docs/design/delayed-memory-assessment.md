@@ -14,9 +14,10 @@ Test whether episode memory helps the player make a consequential choice after
 its ordinary context has stopped supplying a useful world-specific fact. Start
 by auditing retained decision packets. Replay eligible packets with the current
 and a smaller context. Where existing evidence cannot supply eligible packets,
-acquire one fresh naturally played lineage through a later waking period. Use
-the first acquisition to test the procedure, then check it in other planned
-CDDA start profiles before sizing a matched live comparison.
+acquire one fresh naturally played lineage through two waking periods, with
+work after each wake. Aim for two completed development lineages in distinct
+start profiles, with one conditional fresh start to address an observed
+coverage gap. Use those outcomes to size a matched live comparison.
 Episode memory means a source-linked readout from earlier play in that world.
 The [research proposal](structured-recurrence-research.md) owns the eventual
 comparison of editable memory, fixed recurrence and episodic replay. This design
@@ -27,6 +28,20 @@ its own frozen package and numerical owner envelope before dispatch.
 
 ## What the runs say about pacing and context
 
+- #767 obtained three same-survivor reloads across two fresh Evacuee
+  starts. Early voluntary saves, water availability and active threats
+  limited play to 1h 12m 44s and 11m 39s in game. Neither world reached
+  a natural wake. The final second-world Save showed the clock without
+  a co-timed named view, and pursuit displaced the later objective.
+  [Targeted capture](../acceptance/2026-11-18-targeted-tool-memory-767.md)
+- Townsend reached a natural wake at 21h 38m 52s and two wakes by
+  44h 22m 15s across three admissions and about 81 custody minutes.
+  The swamp route choice produced food after the first wake, with the
+  relevant earlier fact in the ordinary handoff. About 42.4 game hours
+  were attributed to long activities. Provider-reported player input
+  peaked at 136,910 tokens in one slot. This gives a useful reference
+  for pacing and ordinary cue redundancy.
+  [Townsend record](../acceptance/2026-11-18-wilderness-delayed-memory-762.md)
 - Scipio reached 7h 50m 22s in about 76 minutes of total custody. Two waits
   supplied five game hours, and one digging-stick craft added about 87 minutes.
   The reload actor made a real roof-water decision at roughly 5h 18m fact age.
@@ -80,15 +95,43 @@ memory demands. Hash-verified copies supply matched comparisons within a world.
 [Fresh-start progress](../acceptance/2026-11-17-fresh-evacuee-progress-751.md),
 [Source inventory](../acceptance/2026-11-16-cdda-recurrence-preparation.md)
 
-Use retained shelter evidence to dry-check capture. Favor an exposed,
-unfamiliar start for the first new acquisition if a normal setup offers a
-plausible later return decision and a bounded path to a waking-period
-endpoint. If that profile is infeasible during package preparation, prefer
-the capabilities or equipment contrast. Freeze the selected profile and
-ordinary setup before launch. Keep world rules, model route and scoring
-criteria fixed. Specify the intended scenario, kit or environmental contrast
-in the profile. Keep failed starts and record missing coverage within the
-finite acquisition allowance.
+Use retained shelter evidence to dry-check capture. For the first new
+acquisition, stage a fresh Safe Place / Farm candidate on ordinary world
+rules. The installed scenario lists Farm as an allowed start. Verify it in
+the rendered setup. The intended contrast is a sheltered rural location
+with plausible supply, unfinished-work and return choices. Actual resources
+and nearby threats are learned through play. For independent replication,
+prefer a fresh Wilderness / Campground world with the same model and
+capture protocol. Its exposed start supports navigation and alternate-source
+choices, and Townsend established that the profile can reach two natural
+wakes. Both worlds start with empty episode state. Keep failed starts as
+assigned feasibility outcomes.
+
+Plan for **two completed worlds from up to three fresh starts**, priced
+and run serially. Stage the Farm first. Use its settled evidence to
+confirm the protocol before dispatching the fresh Campground contrast.
+Retain the third overnight block as contingency. Each start uses the
+same finite per-world limits, with up to eight custody hours plus
+between-slot review. Two completed worlds are a feasibility target.
+
+| Observation during acquisition or after the first two starts | Use the remaining time or start for |
+| --- | --- |
+| Named checkpoint, visible progress and a concrete older fact still relevant to a feasible choice | Continue that world under its remaining slots. Use the third game day, up to 72 hours from entry, only when the recorded choice can occur there. |
+| One profile ended in an early gameplay loss before it could yield a later choice, and capture and ending worked | Use the third fresh start once in the missing profile. Preserve the failed assignment. |
+| Both worlds reached waking endpoints, but the observed choices omit a specific decision family | Use the third start only for a predeclared contrast with a concrete opportunity, such as a different starting capability for an unfinished tool task. Verify the setup and keep that world in development. |
+| Capture, accounting or continuity failed in a way likely to recur | Repair and verify that failure offline before dispatching the next start. |
+| Both worlds yielded scoreable choices, and the facts remained in ordinary context | Close the acquisition unless a specific new decision family is missing. Test the retained packets at the smaller budget and use ordinary-cue cases as controls. |
+
+For each assignment record whether it reached a first wake, a second
+wake, a scoreable later choice and a gap under the declared context.
+Count these at the world level alongside the packet count. Reloads and
+multiple choices from one survivor give richer within-world evidence.
+A deciding comparison needs independent reserved worlds, with the number
+set from observed feasibility, paired outcome variability and the
+declared practical effect. A three-day or longer follow-up earns its
+time by targeting an older fact that naturally becomes useful again,
+such as a return after relocation or a deferred repair after finding
+a missing tool. The current pilot seeks earlier evidence of that kind.
 
 After feasibility, the broader coverage target also considers changed
 environmental conditions, an established survivor or base, and a later return
@@ -117,8 +160,8 @@ evidence of change or a genuine reason to doubt continued applicability.
 | Horizon | What would make it informative |
 | --- | --- |
 | About 30–90 game minutes | A useful activity switch and a return to a task or resource. Include ordinary-context controls and measure which pixels and text remain. |
-| Next natural waking period, budget roughly 18–36 game hours from fresh entry | After ordinary rest and a real actor or Save/reload boundary, seek a relevant choice tied to an earlier observation roughly 8–24 game hours old. Use the actual fact age and record earlier or later cases as observed. Prioritize a useful action after waking. |
-| Two to three game days | Seek a fact from a prior day whose scope or validity might have changed, with intervening work and a new decision. Add this horizon if the waking-period work finds useful cases and their decay or revision remains an open question. |
+| First natural wake, budget roughly 18–36 game hours from fresh entry | After ordinary rest, seek a consequential choice tied to an earlier observation roughly 8–24 game hours old. Include a later choice across a real actor or Save/reload boundary where ordinary play supplies one. |
+| Second natural wake and ensuing work, plan 48–60 game hours from entry | Seek a decision using a roughly 24–48-hour-old fact after intervening work. Capture the actual age, choice and effect. Allow up to 72 game hours when a specific prospectively recorded issue remains actionable. |
 
 At a candidate, retain the original operation, scene and clock; the ongoing
 objective and intervening activities; the later pre-action frame, claim age and
@@ -217,15 +260,39 @@ replay result concerns proposed decisions. For a representation claim,
 compare the selected episode-memory policy with matched episodic retrieval and
 fixed recurrence using the [parent design](structured-recurrence-research.md).
 
-### Acquire and replicate a waking-period case
+### Acquire through two wakes in one continuous world
 
-Price **one fresh development world with up to three serial admissions**, an
-initial play slot and at most two eligible same-survivor reloads. The sizing
-proposal is up to 80 custody minutes and 70 actor minutes per slot, including
-10 actor minutes reserved for an ordinary endpoint and ending, and up to 400
-combined player and recall attempts per slot. This allows four custody hours
-and up to 1,200 attempts for the lineage. Freeze the exact time, attempt,
-capture and charge limits only after a trace-based forecast and validation.
+Price **one fresh development world with up to six serial admissions**.
+Plan one start and up to three normal reloads, with up to two contingent
+reloads. Retain the proven per-slot shape as the sizing basis. Each slot
+has up to 80 custody minutes and 70 actor minutes, including ten reserved
+for the endpoint and ending, and up to 400 combined player and recall
+attempts. Four slots allow 5h 20m of custody and six allow eight custody
+hours and 2,400 attempts. Schedule one lineage per overnight block with
+separate time for between-slot review. Townsend reached nearly two
+game days in roughly 81 custody minutes. Whitethorn reached about 46.3
+game hours after six slots and ended at 47.79 hours with a death in the
+seventh, after about 4.3 wall hours. Six slots are a finite feasibility
+allowance and may end before the target. Freeze the exact time, attempt,
+capture and charge limits after trace-based forecasting and validation.
+
+The common brief gives the player an ongoing objective from the outset.
+Establish a sustainable place to work and sleep, pursue an ordinary
+project or replenishment need, and work through two natural wakes when
+feasible. A routine checkpoint or one completed chore counts as interim
+progress. The player chooses all projects, routes and actions and can end
+for survival or inability to continue. A useful endpoint after a wake
+includes a genuine choice and its visible consequence. Track settled
+needs, work deferred and resumed, and the feasible alternatives when
+judging progress between slots. Before either contingent slot, record a
+verified named Save, visible progress toward the next wake or toward
+resolving an earlier observation, and a specific feasible choice or
+remaining task within the slot allocation. For example, a first wake
+followed by work on a known supply problem supports investigating it
+after the next wake. Record repeated threat response or menu work with
+no feasible recovery or task path as no opportunity or inability to
+continue, according to the visible outcome.
+
 Freeze the initial manifest and a hashed conditional reload recipe. Each
 reload binds a new manifest to the actual closed save, userdir and supported
 journal. Preserve the full ordinary report when supplied and record its absence
@@ -234,30 +301,50 @@ and per-slot limits. Admit a reload only after a verified ordinary Save to title
 a separate Quit with independently verified normal native exit, released custody,
 reconciled ledger and a useful open objective or later opportunity. Preserve any
 uncertainty in the Quit acknowledgement. After dispatch, verify the visible world,
-survivor and clock at Load before meaningful play. End after capturing a
-sufficient waking-period candidate at a normal checkpoint,
-or at the finite limits. Record death, a lost checkpoint, no opportunity,
-unknown exposure and time exhaustion as assigned results. Keep one writer and
-one native game lane throughout.
+survivor and clock at Load before meaningful play. Capture the name and clock
+close to the effect for scoring, and at the saved checkpoint for continuity.
+The feasibility endpoint is two natural wakes, meaningful work after each,
+and a later consequential choice with a visibly scored effect and named
+living checkpoint. Ordinary cues can remain present. The 48–60 hours size
+the expected span. An endpoint reached earlier can close the world. Beyond
+60 hours continue only for the documented candidate, with an ending at
+72 hours or an earlier finite stop. If an ordinary activity crosses the
+game-time limit, record the actual clock and begin ending at the next
+safe opportunity within the original wall and request limits. Record
+death, a lost checkpoint, no opportunity, unknown exposure and time
+exhaustion as assigned results. Keep one writer and one native game lane.
 
 Use ordinary context and delivery settings in acquisition. Retain the actor's
-own report across reloads. A naturally concluded objective can supply progress
-evidence even if the delayed opportunity fails. Use an independent world from
-a second profile when the first world yields a clock-linked fact, a natural later
-decision with verified absence from ordinary context, feasible alternatives
-and a named living endpoint. If the first world reaches a valid endpoint but
-its ordinary context supplies the fact or its situation offers no consequential
-choice, a contrasting profile can test that specific limitation under its own
-priced package. If capture, continuity or ending fails, fix that procedure
-before another acquisition. Use the third profile where it supplies a missing
-capability or decision contrast. Before a cross-profile matched comparison,
-demonstrate scoreable opportunities in at least two independent worlds from
-distinct development profiles.
+own report across reloads. Aim to retain three to five decision packets per
+world, spanning ordinary controls, a post-wake choice and any older or
+changed-state candidate. Classify each packet by opportunity, fact age,
+ordinary sent exposure, ordinary lookup or fresh search, effect and named
+living evidence. A delayed decision whose answer appears in the handoff
+is an ordinary-context control. Follow the start portfolio after each
+settled world. A repeatable capture, continuity or ending failure needs
+offline repair before further dispatch. Early gameplay losses remain
+assigned results and inform the choice of contingency start.
+
+Before paying for the crossed replay, use retained traces to dry-check exact
+cutoff reconstruction, the 64k packer and blind before/effect scoring.
+Retain an ordinary-context redundancy control and an actionable gap under
+the question's declared context condition. Tag a gap introduced by smaller
+context as a context-efficiency case. If the fact remains ordinarily
+available under both context budgets, keep the packet as a control and
+reassess the proposed comparison before further acquisition. Mark exposure
+or ordinary access unknown when the corresponding evidence is missing.
+Two independent worlds with scoreable cases support a development pilot.
+That milestone tests the delayed-memory procedure. The parent proposal
+retains its separate multi-profile, three-arm procedure. Size a deciding
+comparison later from paired, whole-world variability and feasible costs.
 
 ### Confirm on independent live pairs
 
-After feasibility in independent development profiles, assign held-out worlds
-by profile before opening them. Acquire each starting checkpoint through
+Seek a current-context live pair only after the development profiles
+show prospectively enrolled, scoreable opportunities with an actionable
+gap under ordinary current context. Gaps that appear only with the 64k
+budget support the smaller-context efficiency question. Assign held-out
+worlds by profile before opening them. Acquire each starting checkpoint through
 normal play at a safe point before any assigned target choice or outcome. Use
 the first qualifying checkpoint under the frozen selection rule. Freeze the treatment
 readout from the shared authorized pre-save prefix. Pair the conditions on
