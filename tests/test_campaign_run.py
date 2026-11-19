@@ -84,6 +84,18 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
+@pytest.mark.parametrize('start', ['home-mechanic-open-shelter', 'S0', 'S01', 'S100'])
+def test_preflight_rejects_invalid_ledger_start_codes_without_dispatch(tmp_path, start):
+    directory, profile = package(tmp_path)
+    profile['labels']['start'] = start
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages, 'ROOT', tmp_path), patch.object(packages.subprocess, 'run') as adapter:
+        with pytest.raises(ControlError, match='valid development run ledger start code'):
+            packages.preflight(directory)
+    adapter.assert_not_called()
+    assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
+
+
 def test_capture_plan_catches_the_failed_evacuee_start(tmp_path):
     _, profile = package(tmp_path)
     profile['limits']['max_bytes'] = 64 * 1024 * 1024
@@ -272,7 +284,7 @@ def test_invalid_operator_labels_refuse_before_effects(tmp_path,labels):
 
 
 @pytest.mark.parametrize('labels',[
-    dict(arm='a'*40,start='S'*40,scenario='x'*80,lineage='l'*40,admission=10000),
+    dict(arm='a'*40,start='S99',scenario='x'*80,lineage='l'*40,admission=10000),
     dict(arm='long-horizon',start='S2',scenario='Mixed printable ~!@# punctuation',lineage='survivor-1',admission=1),
     dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
 ])

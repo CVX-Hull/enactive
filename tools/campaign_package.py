@@ -14,6 +14,7 @@ from harness.computer.protocol import MAX_FRAME_BYTES, ControlError, closed, dec
 from harness.jsonio import file_sha256
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
+from tools.run_ledger import validator as ledger_validator
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json','delivered-knowledge.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
@@ -88,6 +89,10 @@ def labels(value) -> None:
         if text is None and name=='lineage':continue
         if type(text) is not str or not 1<=len(text)<=high or PRINTABLE_ASCII.fullmatch(text) is None:
             raise ControlError('Operator label must be 1 to its bound of printable ASCII characters')
+    ledger = ledger_validator()
+    start_schema = ledger.schema['properties']['start']
+    if not ledger.evolve(schema=start_schema).is_valid(value['start']):
+        raise ControlError('Operator start label must be a valid development run ledger start code')
     if value['admission'] is not None:integer(value['admission'],1,10000)
     if (value['lineage'] is None)!=(value['admission'] is None):
         raise ControlError('Lineage and admission position are both set or both null')
