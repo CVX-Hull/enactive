@@ -20,13 +20,12 @@ future alternatives to test under #25, not current defaults. Freeze the verified
 full endpoint tag and supported parameters
 in `route.json`; use no fallback. The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency
-attestation. New live calls remain bounded by the package's dollar limit and request
-allowance.
+attestation. New live calls remain bounded by the package's dollar limit and operational capacities.
 
-The package freezes `route.json` (`player-host/7`), `delivered-knowledge.json`, `mcp-template.json`,
+The package freezes `route.json` (`player-host/8`), `delivered-knowledge.json`, `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
-timeout, request cap, the dollar limit, the planning bound for an in-flight
+timeout, the dollar limit, the planning bound for an in-flight
 request, credential environment name, image peak, eviction block and
 required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
@@ -44,7 +43,7 @@ context, ongoing-objective/knowledge prompt and `player-host-inputs/3` hashes.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/9`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/10`.
 Each actor's route carries the requests and the dollars the run has left; no actor
 is started when either is used up.
 Every actor gets the same tool table and the same system prompt, so their request
@@ -84,7 +83,7 @@ provider token guarantee. No compaction, restore or fallback is added.
 The host serializes tools. A direct sealed `player_handoff` issuance (its `player-computer-operation/1` record),
 or exact collection of its own pending original handoff, settles that actor.
 The driver verifies canonical context/digest and actual old host/MCP process-group
-quiescence before minting a successor under original time/attempt/input resources.
+quiescence before minting a successor under remaining time, spend and mechanical resources.
 No game save/menu/identity condition applies. User Pause, uncertain input, failed
 host closure or unexpected cancellation stop succession. A sealed actor's reads
 never restore authority.
@@ -93,9 +92,8 @@ Host JSONL retains bounded visible narration and mechanical request/result
 references, not private reasoning or raw request/image histories. Missing usage
 stays unknown. Attempts include failures and permitted provider-only retries: one
 shared retry per logical request for 429, 502/503/504, a pre-header fetch rejection
-or OpenRouter's transient in-flight 402, as the host reference defines. Allocate
-attempts with that retry in mind. An incomplete trace consumes the actor's
-attempt allocation. The dollar subtotal adds up provider-returned charges, and
+or OpenRouter's transient in-flight 402, as the host reference defines. Forecast attempts with that retry in mind. An incomplete trace keeps the observed
+counts and prevents a successor. The dollar subtotal adds up provider-returned charges, and
 an attempt with unavailable cost keeps an unknown charge. The host stops at the
 route's dollar limit (`spend-limit`) and on a successful response it cannot
 price (`cost-unreported`) ([contract](../contracts/player-host.md#spend)). Context projection marks older

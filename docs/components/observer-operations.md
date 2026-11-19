@@ -29,7 +29,7 @@ records and can fail without effect. [Architecture](../architecture.md) and
 
 ## Control path
 
-**Custodian routes.** `GET /api/status` is passive `computer-status/1`;
+**Custodian routes.** `GET /api/status` is passive `computer-status/2`;
 `/api/source/ID` serves current session PNGs with retained identity/digest
 verification. A failed spectator image read reports unavailable without calling
 actor-side source-failure fencing, so it never affects actor capture or input integrity.

@@ -348,7 +348,7 @@ def run_root(path: Path) -> Path:
 
 #: The driver record's totals. A current record adds the counted spend; `configured_estimate_usd` stays an
 #: estimate from the route's configured rates.
-DRIVER_KEYS = ("schema", "outcome", "attempts_charged", "host_seconds_used", "configured_estimate_usd", "missing_usage_attempts")
+DRIVER_KEYS = ("schema", "outcome", "host_seconds_used", "configured_estimate_usd", "missing_usage_attempts")
 DRIVER_SPEND_KEYS = ("reported_usd", "unpriced_requests", "unpriced_request_usd", "unpriced_recall_requests", "unpriced_recall_request_usd", "spent_usd", "spend_complete")
 
 
@@ -380,8 +380,8 @@ def campaign_evidence(path: Path, entry: ArchiveSession | None = None) -> dict:
                             coverage = "unsupported_driver_version"
                         else:
                             result[relative]["driver"] = {key: driver.get(key) for key in
-                                (DRIVER_KEYS + DRIVER_SPEND_KEYS if driver["schema"] == DRIVER_SCHEMA else
-                                 DRIVER_KEYS + tuple(key for key in DRIVER_SPEND_KEYS if key in entry.combination.fields["driver"]))}
+                                (DRIVER_KEYS + ("observed_attempts", "observed_recall_attempts") + DRIVER_SPEND_KEYS if driver["schema"] == DRIVER_SCHEMA else
+                                 DRIVER_KEYS + ("attempts_charged",) + tuple(key for key in DRIVER_SPEND_KEYS if key in entry.combination.fields["driver"]))}
             except (ValueError, OSError, UnicodeError, RecursionError):
                 coverage = "invalid"
         result["metadata_coverage"][relative] = coverage

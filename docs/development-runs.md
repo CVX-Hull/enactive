@@ -70,14 +70,14 @@ traits, location, tactic, target item or hint.
 | S2 | The player chooses every setup option, including the scenario. |
 
 Runs alternate S1, S2, S1, S2, S1 within an arm. Each run is frozen as a fresh
-`campaign-run/9` package from merged main, with these limits outside the
+`campaign-run/10` package from merged main, with these limits outside the
 player's context:
 
 | Setting | Value |
 | --- | --- |
 | Route | OpenRouter, `openai/gpt-6.1-terra`, pinned `openai`, no fallback, medium effort, default tier |
 | Context | 262,144-token window, 16,384 output tokens, 32,768 reserve (successor handoff when reached); 39 images, evicted in blocks of 20 |
-| Requests | 250 charged HTTP attempts including retries, across at most 2 hosts |
+| Host count | Up to 2 hosts. Forecast HTTP attempts including retries for planning, and record actual starts. |
 | Time | 7,200 host seconds; 7,800 custodian seconds |
 | Supervision | [Supervised launch](operations/campaign-supervision.md); nobody is required to watch |
 
@@ -102,7 +102,7 @@ samples the claims in each arm.
 
 - **Survival hours (primary):** in-game time from the first in-play clock to the
   last frame showing the survivor alive, or to the death screen.
-- **Status:** died, alive at stop (attempt allowance, time or context capacity
+- **Status:** died, alive at stop (budget, time or context capacity
   ended the run), or player finished. Dates are UTC.
 - **Verified improvements:** distinct visible changes that improve needs (thirst,
   hunger, fatigue or pain reduced), supplies (new food, water or tools confirmed
@@ -111,7 +111,7 @@ samples the claims in each arm.
 - **Death cause**, if shown.
 - **Cost:** record the provider-returned subtotal, attempts, setup attempts (until
   the first in-play frame) and wall seconds. A settled player or recall attempt
-  without a usable charge consumes an attempt, leaves its cost unknown, and adds
+  without a usable charge remains observed with unknown cost and adds
   nothing to the subtotal. The [campaign procedure](operations/campaign-run.md#spend-limit)
   defines the in-flight and ending allowances and the separate
   [admission amount for an incomplete trace](operations/campaign-run.md#start-and-close).

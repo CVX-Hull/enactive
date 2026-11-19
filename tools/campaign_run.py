@@ -33,8 +33,8 @@ def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool
     return dict(spend_limit_usd=profile['spend_limit_usd'],reported_usd=usd_text(reported),unpriced_requests=unpriced,
         unpriced_request_usd=usd_text(bound),unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),
         spent_usd=usd_text(reported),
-        attempts_charged=driver['attempts_charged'] if driver else (profile['max_http_attempts'] if hosts_started else 0),
-        allocated_max_attempts=profile['max_http_attempts'],
+        observed_attempts=driver['observed_attempts'] if driver else 0,
+        observed_recall_attempts=driver['observed_recall_attempts'] if driver else 0,
         spend_complete=driver['spend_complete'] if driver else not hosts_started)
 
 
@@ -47,7 +47,7 @@ def run_campaign(directory: Path) -> dict:
     owner=OwnedTarget(directory,profile['session'],target,Path(profile['library']['path']),Path(profile['shared_lock']),deadline)
     runtime=memory=server=server_thread=None
     stopped=threading.Event();driver=None
-    report=dict(schema='campaign-receipt/6',session=profile['session'],source_commit=profile['source_commit'],
+    report=dict(schema='campaign-receipt/7',session=profile['session'],source_commit=profile['source_commit'],
                 started_wall=time.time(),outcome='incomplete',normal_save_claimed_by_harness=False,
                 deciding_hosts_quiescent=False,native_absence_verified=False,input_authority_revoked=False)
     def cancel(signum,frame):

@@ -351,27 +351,12 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
   request as its own delimited message labelled as fallible knowledge, never joined to a
   control or limit notice, and stays in the history where it was first sent, so the
   cache holds.
-- **Accounting.** Recall attempts are their own request role: `request-start`,
-  `response-complete` and cost events under `recall-N`, with their own allowance, summed
-  into the same `spent` as the player's. Before any attempt the host checks the limit
-  against what is spent plus the bound of every attempt in flight, so the run can pass
-  its limit by at most one player request and one recall request, and the package's
-  finish reserve covers both bounds. The host makes no new recall request once an
-  orderly stop is pending or received, or once what remains is at or below the finish
-  reserve, so recall never spends the player's way to an orderly finish; a recall
-  request the spend check refuses ends recall for that actor and never stops it. A
-  recall request still in flight when the actor ends is aborted and counted. Each recall
-  HTTP attempt counts against the package's attempt allowance and the driver's attempt
-  ending like a player attempt; the driver narrows `recall.max_requests` per actor from
-  what remains, as it does `max_requests`. The driver's event reader
-  (`tools/campaign_player.py`) and the evaluator's host reader
-  (`harness/evaluation/core/host.py`) learn the role; recall requests are never player
-  decisions.
-- **The route.** A closed `recall` object: `model` (same provider and key as the
-  player), `every` (`N`), `max_requests` and `unpriced_request_usd`, the bound computed
-  by the package check from that model's rates as for the player. The model and `N` are
-  pinned per run; for the pilot the lead chooses both and states them before anything
-  is spent.
+- **Accounting.** Recall request starts and costs have their own `recall-N`
+  identities and share the player's provider-reported dollar budget. The
+  [host contract](../contracts/player-host.md#delivered-knowledge-and-recall) governs related
+  admission and ending. The driver and evaluator retain recall as its own role.
+- **The route.** The same contract defines the pinned recall model, cadence and
+  in-flight planning bound.
 - **Replies.** The model is asked for one JSON object (structured output where the route
   supports it: on OpenRouter, whose pinned upstream must then accept a strict JSON schema),
   and the host accepts one object, bare or in one code

@@ -280,7 +280,7 @@ function checkManifests({events,payloads}) {
   return {manifests,lists,omitted};
 }
 test('context manifest replays the exact ordered parts of every request, retry and eviction',async t=>{
-  const configuration=route();configuration.max_context_images=2;configuration.max_requests=12;
+  const configuration=route();configuration.max_context_images=2;
   const sequence=[...sourceReplies(2),rateLimit(),reply(null,[['observe_source',{n:3}]],true,undefined,'c3'),
     reply(null,[['observe_source',{n:4}]],true,undefined,'c4'),reply(null,[['observe_source',{n:5}]],true,'Historical thinking','c5'),reply()];
   const observed=await scenario(t,sequence,{configuration,enabledTools:sourceTools});
@@ -303,7 +303,7 @@ test('context manifest replays the exact ordered parts of every request, retry a
   assert.ok(observed.events.some(event=>event.type==='context-image-projection'&&event.omitted_images>0&&event.omissions.length>0));
 });
 test('context manifest stays small over a long image history',async t=>{
-  const configuration=route();configuration.max_context_images=8;configuration.context_image_block=4;configuration.max_requests=40;
+  const configuration=route();configuration.max_context_images=8;configuration.context_image_block=4;
   const turns=30;
   const observed=await scenario(t,[...sourceReplies(turns),reply()],{configuration,enabledTools:sourceTools});
   assert.equal(observed.result.ok,true);assert.equal(observed.payloads.length,turns+1);

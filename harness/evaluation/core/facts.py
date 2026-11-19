@@ -1,8 +1,8 @@
 """The `run_facts` table: what the run was configured to do (docs/contracts/evaluation.md).
 
-From `manifest.json` (campaign-run/9, or an archived campaign-run/4 or /5) and the first host-start event.
+From `manifest.json` (campaign-run/10, or an archived campaign-run/4 or /5) and the first host-start event.
 Operator labels come from the manifest; an archived campaign-run/4 run has none, so the caller may supply them.
-The spend allowance of a campaign-run/9 run is its declared dollar limit, `spend_limit_usd`. An archived run
+The spend allowance of a campaign-run/10 run is its declared dollar limit, `spend_limit_usd`. An archived run
 declared a worst-case reservation instead: its allowance is the manifest's ceiling minus what earlier admissions
 had reserved, and only an archived run has `declared_ceiling_usd` and `prior_reserved_usd`.
 """
@@ -11,7 +11,7 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Mapping, Sequence
 
-from .sources import HostEvent
+from .sources import MANIFEST_SCHEMA, HostEvent
 
 LABEL_KEYS = ('arm', 'start', 'scenario', 'lineage', 'admission')
 
@@ -41,7 +41,9 @@ def run_facts(manifest: dict, host: Mapping[str, Sequence[HostEvent]], actors: S
         guide_sha256=files.get('context.txt'), assignment_sha256=files.get('prompt.txt'),
         limits=manifest.get('limits'), ending_reserve=manifest.get('ending_reserve'),
         wall_seconds=manifest.get('wall_seconds'), host_seconds=manifest.get('host_seconds'),
-        max_hosts=manifest.get('max_hosts'), max_http_attempts=manifest.get('max_http_attempts'),
+        max_hosts=manifest.get('max_hosts'),
+        **({'max_http_attempts': manifest['max_http_attempts']}
+           if manifest.get('schema') != MANIFEST_SCHEMA and 'max_http_attempts' in manifest else {}),
         declared_ceiling_usd=None if ceiling is None else float(ceiling),
         prior_reserved_usd=None if prior is None else float(prior),
         spend_allowance_usd=None if allowance is None else float(allowance))

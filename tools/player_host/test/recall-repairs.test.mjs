@@ -17,12 +17,12 @@ async function scenario(t, options) {
 }
 
 test('both admission phases include the player in-flight bound in the finish reserve',()=>{
-  const state={hasUnits:true,disabled:false,ending:false,stopping:false,recalls:1,recallMax:5,requests:1,max:10,
-    spent:[1n,1],playerInFlight:true,playerBound:[2n,1],reserve:[3n,1],limit:[6n,1]};
+  const state={hasUnits:true,disabled:false,ending:false,stopping:false,
+    spent:[1n,1],playerInFlight:true,playerBound:[2n,1],reserve:[3n,1],recallBound:[2n,1],limit:[8n,1]};
   for (const phase of ['preparation','fetch']) {
     assert.equal(recallRefusal(state),'finish-reserve',phase);
     assert.equal(recallRefusal({...state,playerInFlight:false}),null,phase);
-    assert.equal(recallRefusal({...state,limit:[6000000000000000001n,19]}),null,phase);
+    assert.equal(recallRefusal({...state,limit:[8000000000000000001n,19]}),null,phase);
   }
 });
 
@@ -40,7 +40,7 @@ test('reminder fetch refuses the finish reserve in flight and later recall remai
     // Let the later reminder fetch while no player bound is in flight.
     if(context.options.body.model==='fixture-model' && ++playerPrepared===3) await laterReminderStarted;
   });
-  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.8'},finishReserveUsd:'0.5',
+  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.9'},finishReserveUsd:'0.5',
     recallFetch:()=>recallReply(['article-a'],0),
     playerFetch:async n=>{
       if(n===1) return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]],
@@ -95,58 +95,30 @@ test('provider failure before recall fetch disables later reminders without star
   assert.equal(events.filter(e=>e.type==='request-start' && e.request_role==='recall').length,0);
 });
 
-test('attempt-limit pre-check refuses before preparing the recall model and reserves the last attempt',async t=>{
+test('finish reserve refuses before preparing recall and leaves enough budget to finish',async t=>{
   let armed=false,reads=0;
   const recallModel={...structuredClone(model),id:'recall-fixture'};
   Object.defineProperty(recallModel,'api',{enumerable:true,get(){if(armed)reads++;return model.api;}});
-  const {result,events}=await scenario(t,{configuration:{max_requests:1,
-    recall:{model:recallModel,every:1,max_requests:10,unpriced_request_usd:'0.2'}},
+  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.8',
+    recall:{model:recallModel,every:1,unpriced_request_usd:'0.2'}},
+    finishReserveUsd:'0.65',
     onEvent:e=>{if(e.type==='mcp-connected')armed=true;if(e.type==='settled')armed=false;},playerFetch:()=>reply('Done')});
   assert.equal(reads,0,'the pre-check must not enter recall preparation');
   assert.equal(result.reason,'task_complete');
   const refusal=events.find(e=>e.type==='knowledge-recall');
-  assert.equal(refusal.reason,'attempt-limit');assert.ok(!Object.hasOwn(refusal,'request_id'));
+  assert.equal(refusal.reason,'finish-reserve');assert.ok(!Object.hasOwn(refusal,'request_id'));
 });
 
 test('unstarted recall preparation consumes no attempt or request id and cannot stop the player prematurely',async t=>{
   let armed=false;
   const recallModel={...structuredClone(model),id:'recall-fixture'};
   Object.defineProperty(recallModel,'maxTokens',{enumerable:true,get(){if(armed)throw new Error('fixture preparation failure');return model.maxTokens;}});
-  const {result,events}=await scenario(t,{configuration:{max_requests:2,
-    recall:{model:recallModel,every:1,max_requests:10,unpriced_request_usd:'0.2'}},
+  const {result,events}=await scenario(t,{configuration:{recall:{model:recallModel,every:1,unpriced_request_usd:'0.2'}},
     onEvent:e=>{if(e.type==='mcp-connected')armed=true;if(e.type==='settled')armed=false;},
     playerFetch:n=>n===1?reply(null,[['player_knowledge_read',{id_or_title:'article-a'}]]):reply('Done')});
   assert.equal(result.reason,'task_complete');assert.equal(result.requests,2);
   assert.deepEqual(events.filter(e=>e.type==='request-start').map(e=>e.request_id),['request-1','request-2']);
   assert.ok(events.filter(e=>e.type==='knowledge-recall').every(e=>!Object.hasOwn(e,'request_id')));
-});
-
-for (const limit of ['total','recall']) test(`fetch re-checks the ${limit} attempt allowance after preparation`,async t=>{
-  let armed=false,configuration;
-  const recallModel={...structuredClone(model),id:'recall-fixture'};
-  Object.defineProperty(recallModel,'maxTokens',{enumerable:true,get(){
-    if(armed) {
-      if(limit==='total')configuration.max_requests=1;
-      else configuration.recall.max_requests=0;
-    }
-    return model.maxTokens;
-  }});
-  const {result,events}=await scenario(t,{configuration:{max_requests:2,
-    recall:{model:recallModel,every:1,max_requests:10,unpriced_request_usd:'0.2'}},
-    onEvent:(e,_control,c)=>{configuration=c;if(e.type==='mcp-connected')armed=true;if(e.type==='settled')armed=false;},
-    playerFetch:()=>reply('Done')});
-  assert.equal(result.reason,'task_complete');
-  assert.ok(events.every(e=>!(e.type==='request-start'&&e.request_role==='recall')));
-  const refusal=events.find(e=>e.type==='knowledge-recall');
-  assert.equal(refusal.reason,limit==='total'?'attempt-limit':'allowance');
-  assert.ok(!Object.hasOwn(refusal,'request_id'));
-});
-
-test('a reminder leaves the last attempt for a normal player finish',async t=>{
-  const {result,events}=await scenario(t,{configuration:{max_requests:3},
-    playerFetch:n=>n===1?reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]]):reply('Done')});
-  assert.equal(result.reason,'task_complete');assert.equal(result.requests,3);
-  assert.deepEqual(events.filter(e=>e.type==='request-start').map(e=>e.request_id),['recall-1','request-1','request-2']);
 });
 
 test('normal finish aborts and counts an in-flight recall without a stop event',async t=>{

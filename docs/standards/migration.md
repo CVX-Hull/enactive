@@ -50,7 +50,7 @@ Second, an evidence-only event (one that no admission, control or player-visible
 reads) may be added inside an unchanged telemetry version when it changes no existing
 field and every reader that uses it marks its absence in older traces as not recorded,
 never as a failure or as a value presented as recorded. The current player-host
-telemetry is version 7. It includes `context-manifest` and the reported-cost
+telemetry is version 8. It includes `context-manifest` and the reported-cost
 contract. The additive case still governs the archived telemetry version 3
 traces: `context-manifest` was added inside that version, so the evaluator records its
 absence from an older trace as `manifest: absent` and the context view rebuilds as

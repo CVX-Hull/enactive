@@ -24,7 +24,7 @@ def test_delivered_reminder_is_a_notice_for_prompt_composition_pairs(tmp_path):
                   usage=dict(input=10,output=1,cacheRead=0,cacheWrite=0)),
             event('tool-start',at+2,request_id=key,tool_call_id='call',tool='x',arguments={}),
             event('tool-result',at+3,request_id=key,tool_call_id='call',result={'content':[{'type':'text','text':'x'}]})]
-    events=[event('host-start',0,schema='player-host/7',telemetry_version=7),*request('request-1',1),
+    events=[event('host-start',0,schema='player-host/8',telemetry_version=8),*request('request-1',1),
         event('knowledge-delivery',5,kind='reminder',receiving_player_request_id='request-2'),
         *request('request-2',6),event('settled',10)]
     path=tmp_path/'host.jsonl';path.write_text(''.join(json.dumps(e)+'\n' for e in events))
@@ -45,7 +45,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def event(self, kind, at, **fields):
         if kind == "host-start":
-            fields = {"schema": "player-host/7", "telemetry_version": 7, **fields}
+            fields = {"schema": "player-host/8", "telemetry_version": 8, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
@@ -244,9 +244,9 @@ class HostAnalysisTests(unittest.TestCase):
                        {"schema": "player-host/1", "telemetry_version": 2},
                        {"schema": "player-host/3", "telemetry_version": 3},
                        {"schema": "player-host/3", "telemetry_version": 6},
-                       {"schema": "player-host/7", "telemetry_version": 3},
-                       {"schema": "player-host/7", "telemetry_version": 1},
-                       {"schema": "player-host/7", "telemetry_version": True}):
+                       {"schema": "player-host/8", "telemetry_version": 3},
+                       {"schema": "player-host/8", "telemetry_version": 1},
+                       {"schema": "player-host/8", "telemetry_version": True}):
             row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
             self.assertEqual(row["coverage"], "unsupported_version")
             self.assertNotIn("requests", row)
@@ -298,15 +298,15 @@ class HostAnalysisTests(unittest.TestCase):
         actor.mkdir(parents=True)
         path = actor / "host.jsonl"
         path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
-        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/9", source_commit="abc")))
-        receipt = dict(schema="campaign-receipt/6", outcome="player_task_complete_unassessed",
-            normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/6", attempts_charged=1,
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/10", source_commit="abc")))
+        receipt = dict(schema="campaign-receipt/7", outcome="player_task_complete_unassessed",
+            normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/7", observed_attempts=1,
                 reported_usd="0.004", unpriced_requests=0, unpriced_request_usd="0.25", spent_usd="0.004", spend_complete=True))
         (self.root / "receipt.json").write_text(json.dumps(receipt))
         row = analyze_trace(path)["campaign_evidence"]
         self.assertEqual(row["receipt.json"]["outcome"], "player_task_complete_unassessed")
         self.assertFalse(row["receipt.json"]["normal_save_claimed_by_harness"])
-        self.assertEqual(row["receipt.json"]["driver"]["attempts_charged"], 1)
+        self.assertEqual(row["receipt.json"]["driver"]["observed_attempts"], 1)
         self.assertEqual((row["receipt.json"]["driver"]["spent_usd"], row["receipt.json"]["driver"]["spend_complete"]), ("0.004", True))
         # The driver record the dollar limit replaced is refused beside a current receipt, as any other version is.
         for old in ("player-driver/3", "player-driver/1"):

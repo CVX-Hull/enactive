@@ -43,7 +43,7 @@ class Trace:
 
     def __init__(self, actor: str, start: float) -> None:
         self.actor, self.wall, self.requests, self.images, self.omitted = actor, start, 0, 0, 0
-        self.events = [dict(type='host-start', schema='player-host/7', telemetry_version=7, session=SESSION,
+        self.events = [dict(type='host-start', schema='player-host/8', telemetry_version=8, session=SESSION,
             actor_id=actor, wall_time=self.iso(), monotonic_ms=0)]
 
     def iso(self) -> str:

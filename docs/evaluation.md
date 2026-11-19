@@ -15,7 +15,7 @@ menu Save is not application exit; a local routine's done is not game success.
 
 ## Player host events
 
-Current [`player-host/7`](contracts/player-host.md) uses telemetry version 7,
+Current [`player-host/8`](contracts/player-host.md) uses telemetry version 8,
 one JSONL trace per actor at
 `actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
 correlate request construction, fetch, headers, first body, completed response,
@@ -69,7 +69,7 @@ total PNGs are checked before serving. Source and focused tests own the executab
 format. Each new paid assessment needs its own frozen protocol and agreement
 ([rationale](changes/074-recorded-player-assessment.md)). Offline tests establish the
 fixture boundary only; provider compatibility, grounded proposals and actual
-game usefulness require separate evidence. Host request-limit failure remains a
+game usefulness require separate evidence. An unsuccessful host stop remains a
 failure even if complete bounded assessment evidence was collected.
 
 The [two-case candidate record](acceptance/2026-11-05-recorded-player-assessment.md)
@@ -83,7 +83,7 @@ These commands are offline and read-only, writing summaries to stdout:
 .venv/bin/python -m tools.evaluate control-summary .runtime/computer-sessions/SELECTED
 ```
 
-The selected actor traces and current `campaign-run/9` / `campaign-receipt/6`
+The selected actor traces and current `campaign-run/10` / `campaign-receipt/7`
 sidecars supply scoped provenance. The control reader opens a current
 `computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
 it neither migrates data nor reconstructs authority. The browser page produces no

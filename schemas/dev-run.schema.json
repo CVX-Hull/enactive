@@ -90,7 +90,7 @@
       "minLength": 1
     },
     "attempts": {
-      "description": "The receipt's accounting.attempts_charged.",
+      "description": "Observed HTTP starts for current runs, possibly a lower bound when the trace is incomplete. Historical rows retain the count from their original evidence.",
       "type": "integer",
       "minimum": 0
     },

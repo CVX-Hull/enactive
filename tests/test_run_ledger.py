@@ -19,14 +19,14 @@ def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounti
     """A finished package with $1.0 reported and one unknown-cost attempt."""
     directory = root / name
     directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/9', session=SESSION,
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/10', session=SESSION,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
     (directory/'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/1',version=None,coverage=None,articles=[],facts=[])))
     if receipt:
-        (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/6', session=SESSION,
+        (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/7', session=SESSION,
             source_commit=COMMIT, outcome='player_cannot_continue_unassessed', ended_wall=1794038818.1,
             elapsed_seconds=99.6, accounting=dict(unpriced_recall_requests=0,unpriced_recall_request_usd='0',spend_limit_usd='5', reported_usd='1.0', unpriced_requests=1,
-                unpriced_request_usd='0.4096', spent_usd='1.0', attempts_charged=10, allocated_max_attempts=40,
+                unpriced_request_usd='0.4096', spent_usd='1.0', observed_attempts=10,
                 spend_complete=True) | accounting)))
     return directory
 
@@ -87,7 +87,7 @@ def test_an_incomplete_receipt_preserves_observed_cost_beside_the_explicit_upper
     """The flag retains the observed provider subtotal and records the separate admission bound."""
     ledger = write(tmp_path / 'runs.jsonl')
     incomplete = package(tmp_path / 'packages', spend_complete=False, reported_usd=reported, unpriced_requests=0,
-                         spent_usd=reported, attempts_charged=40)
+                         spent_usd=reported, observed_attempts=40)
     arguments = ['--ledger', str(ledger), 'record', str(incomplete), '--study', '999']
     assert main(arguments) == 1
     assert 'spend as incomplete' in capsys.readouterr().err and read_ledger(ledger) == []
@@ -105,9 +105,9 @@ def test_an_incomplete_receipt_preserves_observed_cost_beside_the_explicit_upper
 
 @pytest.mark.parametrize('attempts',[0,1,2])
 @pytest.mark.parametrize('has_units',[False,True])
-def test_upper_bound_counts_fit_attempts_and_recall_requires_delivered_units(tmp_path,attempts,has_units):
+def test_upper_bound_covers_possible_inflight_attempts_even_when_none_observed(tmp_path,attempts,has_units):
     from tools.run_ledger import package_row
-    directory=package(tmp_path/'packages',spend_complete=False,attempts_charged=attempts,unpriced_requests=0,unpriced_recall_request_usd='0.2')
+    directory=package(tmp_path/'packages',spend_complete=False,observed_attempts=attempts,unpriced_requests=0,unpriced_recall_request_usd='0.2')
     if has_units:
         path=directory/'delivered-knowledge.json';value=json.loads(path.read_text())
         value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(order=1))]
@@ -115,7 +115,8 @@ def test_upper_bound_counts_fit_attempts_and_recall_requires_delivered_units(tmp
     value=package_row(directory,study=999,label='upper-bound',upper_bound=True)
     assert value['unpriced_attempts']==value['unpriced_recall_attempts']==0
     assert value['provider_usd']==value['spend_usd']=='1.0'
-    expected=Decimal('5')+min(1,attempts)*Decimal('0.4096')+int(has_units and attempts==2)*Decimal('0.2')
+    expected=Decimal('5')+Decimal('0.4096')+int(has_units)*Decimal('0.2')
+    assert value['attempts']==attempts
     assert Decimal(value['spend_upper_bound_usd'])==expected
     assert read_ledger(write(tmp_path/'ledger.jsonl',value))==[value]
 

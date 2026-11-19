@@ -61,7 +61,7 @@ function renderSub() {
     const rem = latest.remaining;
     if (rem) parts.push(el('span', '', `${minutes(rem.custodian_seconds)} left · ${val(rem.inputs)} inputs`));
     const host = latest.host;
-    if (host) parts.push(el('span', '', `${val(host.model)} · ${val(host.requests_total)}/${val(host.max_requests_total)} requests`));
+    if (host) parts.push(el('span', '', `${val(host.model)} · ${val(host.observed_attempts)} observed attempts`));
   }
   sub.replaceChildren(...parts);
 }
@@ -159,7 +159,7 @@ async function poll() {
   busy = true;
   try {
     const status = await getJSON('/api/status');
-    if (status.schema !== 'computer-status/1' || typeof status.session !== 'string' || !status.session) {
+    if (status.schema !== 'computer-status/2' || typeof status.session !== 'string' || !status.session) {
       throw new Error('Unsupported status schema');
     }
     if (session !== status.session) {

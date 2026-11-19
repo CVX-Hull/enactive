@@ -100,15 +100,26 @@ test('pending control supersedes the unsent pre-control batch without cancelling
   assert.deepEqual(events.filter(event=>event.type==='tool-refused').map(event=>[event.tool,event.delivery,event.dispatched]),
     [['mutate','undelivered',false],['player_handoff','undelivered',false]]);
 });
-test('control arriving during a provider response fences that whole old response',async t=>{
+test('orderly stop fences a pre-control response and leaves budget for finishing input',async t=>{
   let control;
-  const {result,calls,events}=await scenario(t,[reply(null,[['mutate',{mode:'ok'}]]),
-    reply(null,[['player_finish',finishArgs('external_stop_complete',stopCommand.id)]])],{
-    controlReady:value=>{control=value;},onEvent:event=>{
-      if(event.type==='response-headers'&&event.request_id==='request-1') control.write(JSON.stringify(stopCommand)+'\n');
+  const configuration={...route(),spend_limit_usd:'0.00012'};
+  const {result,calls,events,payloads}=await scenario(t,[
+    reply(null,[['mutate',{mode:'ok',index:1}]]),
+    reply(null,[['mutate',{mode:'ok',index:2}]]),
+    reply(null,[['player_finish',finishArgs('external_stop_complete',stopCommand.id)]]),
+  ],{
+    configuration,
+    controlReady:value=>{control=value;},
+    onEvent:event=>{
+      if(event.type==='response-headers'&&event.request_id==='request-1') {
+        control.write(JSON.stringify(stopCommand)+'\n');
+      }
     }});
-  assert.equal(result.reason,'external_stop_complete');assert.equal(calls.length,0);
+  assert.equal(result.reason,'external_stop_complete');
+  assert.equal(payloads.length,3);
   assert.equal(events.find(event=>event.type==='tool-refused').delivery,'undelivered');
+  assert.deepEqual(calls.map(call=>[call.phase,call.index]),[['start',2],['end',2]]);
+  assert.equal(events.find(event=>event.type==='settled').spent_usd,'0.000114');
 });
 test('an already dispatched sealed handoff can settle with the accepted control identity',async t=>{
   let control;

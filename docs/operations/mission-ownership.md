@@ -20,7 +20,7 @@ partial/unknown delivery permanently stop input and cannot become a resumable tr
 
 Handoff persists canonical immutable context before sealing. The driver verifies
 its issuance/digest and actual old host/MCP group quiescence before minting a
-successor under the original run/host/attempt limits. No game menu, save, identity
+successor under the remaining spend, time and mechanical resources. No game menu, save, identity
 or memory assertion is an authority predicate. [Custody contract](../contracts/computer-control.md#computer-operations-and-custody).
 
 ## Permissions and player ownership

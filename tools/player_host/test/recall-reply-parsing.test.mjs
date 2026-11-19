@@ -70,7 +70,7 @@ for (const provider of ['fixture', 'openrouter']) test(`${provider} recall paylo
     ...(provider === 'openrouter' ? {baseUrl:'https://openrouter.ai/api/v1',
       compat:{...model.compat, openRouterRouting:{only:['fixture'], order:['fixture'], allow_fallbacks:false, require_parameters:true}}} : {})};
   const {result, payloads} = await scenario(t, {configuration:{model:routeModel,
-    recall:{model:{...routeModel, id:'recall-fixture'}, every:1, max_requests:10, unpriced_request_usd:'0.2'}}});
+    recall:{model:{...routeModel, id:'recall-fixture'}, every:1, unpriced_request_usd:'0.2'}}});
   assert.equal(result.ok, true);
   const recalls = payloads.filter(p => p.model === 'recall-fixture');
   assert.ok(recalls.length >= 2);

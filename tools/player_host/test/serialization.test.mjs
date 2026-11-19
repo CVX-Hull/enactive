@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
-import { runHost, projectImageContext, requestWarningAt, wallWarningMs, sessionAffinityId } from '../host.mjs';
+import { runHost, projectImageContext, wallWarningMs, sessionAffinityId } from '../host.mjs';
 
 const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
@@ -19,8 +19,8 @@ const openRouterModel = { id: 'vendor/fixture', name: 'OpenRouter fixture', api:
   contextWindow: 100000, maxTokens: 1024,
   compat: { supportsDeveloperRole: false, supportsStore: false, supportsUsageInStreaming: true,
     openRouterRouting: { only: ['fixture-backend'], order: ['fixture-backend'], allow_fallbacks: false, require_parameters: true } } };
-const route = (overrides = {}) => ({ schema: 'player-host/7', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,max_requests:4,unpriced_request_usd:'0.25'},
-  api_key_env: 'OFFLINE_TEST_KEY', max_requests: 40, spend_limit_usd: '100', unpriced_request_usd: '0.25', max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
+const route = (overrides = {}) => ({ schema: 'player-host/8', context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,unpriced_request_usd:'0.25'},
+  api_key_env: 'OFFLINE_TEST_KEY', spend_limit_usd: '100', unpriced_request_usd: '0.25', max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
 
 function reply(content, calls = [], prefix = 'call') {
   const message = { role: 'assistant', ...(calls.length ? { tool_calls: calls.map(([name, args], index) => ({ index, id: `${prefix}-${index}`, type: 'function',
@@ -134,21 +134,12 @@ test('first request, appends, eviction and a retried request keep a byte-identic
   assert.equal(new Set(captured.map(item => item.headers.get('x-session-id'))).size, 1);
 });
 
-test('the request-limit notice is added on every request near the limit and kept where it was sent', async t => {
-  const configuration = route({ max_requests: 10 });
-  const { result, payloads, events } = await host(t, [...Array.from({ length: 9 }, (_, turn) => look(turn + 1)), finish()], { configuration });
-  assert.equal(result.ok, true);
+test('budget-led continuations preserve the prefix through ten requests', async t => {
+  const { result, payloads, events } = await host(t, [...Array.from({ length: 9 }, (_, turn) => look(turn + 1)), finish()]);
+  assert.equal(result.reason, 'task_complete');
   assert.equal(payloads.length, 10);
-  const withNotice = payloads.map(payload => isNotice(payload.messages.at(-1)));
-  assert.equal(requestWarningAt(10), 2);
-  assert.deepEqual(withNotice, [false, false, false, false, false, false, false, false, true, true]);
-  assert.equal(text(payloads[8].messages.at(-1)),
-    'Host request allowance: 2 of 10 model requests remain, this one included (a retried request counts again). The host stops when none remain.');
-  assert.equal(text(payloads[9].messages.at(-1)), 'Host request allowance: 1 of 10 model requests remain, this one included.');
   assertStablePrefixes(payloads);
-  assert.deepEqual(events.filter(event => event.type === 'tail-notice').map(event => [event.request_id, event.kinds]),
-    [['request-9', ['request-limit']], ['request-10', ['request-limit']]]);
-  assert.equal(payloads[9].messages.filter(isNotice).length, 2, 'both notices are in the last request');
+  assert.ok(events.every(event => event.type !== 'tail-notice'));
 });
 
 test('the context notice persists on every request once passed and warns before the capacity stop', async t => {

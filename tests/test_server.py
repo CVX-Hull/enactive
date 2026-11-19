@@ -88,7 +88,7 @@ def test_custodian_serves_only_status_source_pause_and_actor_routes(service):
         assert get(port,path)[0]==404,path
     assert post(port,'/api/investigation',{})[0]==400
     status,body,reply=get(port,'/api/status')
-    assert status==200 and json.loads(body)['schema']=='computer-status/1'
+    assert status==200 and json.loads(body)['schema']=='computer-status/2'
     assert reply.getheader('Content-Security-Policy')=="default-src 'none'; frame-ancestors 'none'"
     assert get(port,'/api/source/'+app.runtime.session+'-1')[0]==400
     assert len(channel.calls)==before and not channel.stopped.is_set()

@@ -5,7 +5,7 @@ import { model, route, usageRecord, reply, rateLimit, scenario } from './host-sc
 
 test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.doesNotThrow(()=>validateConfiguration(route(),model.id,'off'));
-  for (const change of [{schema:'old'}, {unknown:true}, {max_requests:Infinity}, {api_key_env:'bad-key'}, {model:{...model,input:['text']}}, {model:{...model,headers:{authorization:'secret'}}}]) {
+  for (const change of [{schema:'player-host/7'}, {unknown:true}, {max_requests:1}, {api_key_env:'bad-key'}, {model:{...model,input:['text']}}, {model:{...model,headers:{authorization:'secret'}}}]) {
     assert.throws(()=>validateConfiguration({...route(),...change},model.id,'off'));
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));

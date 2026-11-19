@@ -253,7 +253,7 @@ continue or finish. The original actor fence, quiescence and finite limits remai
 ## Composed operations and telemetry
 
 Native intent/send/receipt timestamps retain their original wall/monotonic values.
-Late collection never renews a source's `received_wall`. Host telemetry version 7
+Late collection never renews a source's `received_wall`. Host telemetry version 8
 records public call metadata, payload hashes/counts, image references and bounded
 ordinary assistant text; it excludes private reasoning and base64 history. Stable
 frozen system context and the ongoing user objective are reused across actors.
@@ -267,7 +267,9 @@ The custodian serves these loopback routes to the spectator and serves no page. 
 supervision the gateway ([observer operations](../components/observer-operations.md))
 serves the page and relays them.
 
-`GET /api/status` remains `computer-status/1`. `GET /api/source/ID` verifies and
+`GET /api/status` is `computer-status/2`. When a host is present,
+`host.observed_attempts` reports observed HTTP starts across this admission.
+`GET /api/source/ID` verifies and
 serves this session's original retained PNG. A public read failure is unavailable
 observer evidence, not a stop request; actor-side source integrity, input validation
 and capture/publication fencing remain unchanged. The spectator creates no source
