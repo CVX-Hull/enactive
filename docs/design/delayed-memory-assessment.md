@@ -298,11 +298,22 @@ reload binds a new manifest to the actual closed save, userdir and supported
 journal. Preserve the full ordinary report when supplied and record its absence
 when missing. Validate the manifest before dispatch against the original lineage
 and per-slot limits. Admit a reload only after a verified ordinary Save to title,
-a separate Quit with independently verified normal native exit, released custody,
-reconciled ledger and a useful open objective or later opportunity. Preserve any
-uncertainty in the Quit acknowledgement. After dispatch, verify the visible world,
-survivor and clock at Load before meaningful play. Capture the name and clock
-close to the effect for scoring, and at the saved checkpoint for continuity.
+a separate Quit with independently verified normal native exit before forced
+cleanup, released custody, a reconciled ledger and a feasible task or opportunity
+within the next slot.
+
+Use that evidence rule in the frozen reload recipe and player brief. For an
+uncertain Quit, collect the result on the original operation ID and preserve its
+delivery status and the driver disposition. Input stays fenced and the action is
+never resent. A second identical read of the same terminal result is observational
+and leaves reload eligibility unchanged. Conflicting results leave delivery
+unknown. If the conflict prevents verification of any required reload evidence,
+withhold the reload. Use the independent Save, exit, custody and accounting
+evidence to decide eligibility.
+
+After dispatch, verify the visible world, survivor and clock at Load before
+meaningful play. Capture the name and clock close to the effect for scoring, and
+at the saved checkpoint for continuity.
 The feasibility endpoint is two natural wakes, meaningful work after each,
 and a later consequential choice with a visibly scored effect and named
 living checkpoint. Ordinary cues can remain present. The 48–60 hours size
