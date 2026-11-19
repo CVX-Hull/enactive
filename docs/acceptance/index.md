@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | [Oceana Farm delayed-memory acquisition (#788)](2026-11-19-oceana-farm-memory-788.md) | run | One corrected fresh Farm start, five qualifying same-survivor reloads, and ordinary evidence for delayed choices | historical |
 | 2026-11-19 | [Farm equipment-return acquisition stopped at setup (#785)](2026-11-19-farm-setup-stop-785.md) | run | One approved fresh Farm acquisition admission stopped during unassigned random-start loading; custody, accounting and userdir restored | historical |
 | 2026-11-19 | [Farm setup selection checked against retained frames (#786)](2026-11-19-farm-setup-selection-786.md) | review | Retained negative and positive setup cases checked for the next Farm package; no game launch or provider dispatch | historical |
 | 2026-11-18 | [Waking-period decisions in a fresh Wilderness world (#762)](2026-11-18-wilderness-delayed-memory-762.md) | run | One fresh Wilderness Campground start and two same-survivor reloads observing naturally delayed decisions | historical |

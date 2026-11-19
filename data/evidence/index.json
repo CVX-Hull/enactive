@@ -822,6 +822,36 @@
       },
       "visibility": "private"
     },
+    "oceana-farm-memory-788": {
+      "availability": "present",
+      "bytes": 291881578,
+      "cited_by": [
+        "docs/acceptance/2026-11-19-oceana-farm-memory-788.md"
+      ],
+      "files": 2761,
+      "manifest_sha256": "c3846b36d00cd8649d0b04d9afab76cf0469807525226ef8ce582f15d34ce3bd",
+      "note": "Owner-approved Oceana Farm acquisition. Six original finite admissions, five matched reload checkpoints, returned-cost settlements, scoped before and effect evidence, exact offline prefix fitting, and verified original userdir restoration. No original userdir contents are stored here.",
+      "sources": {
+        "admission-1": ".runtime/computer-sessions/farm-788-equipment-return-e3da8d1f2714@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "admission-2": ".runtime/computer-sessions/farm-788-oceana-reload-2-28c285bd8682@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "admission-3": ".runtime/computer-sessions/farm-788-oceana-reload-3-9613db5a6424@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "admission-4": ".runtime/computer-sessions/farm-788-oceana-reload-4-bc5d04d07c3e@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "admission-5": ".runtime/computer-sessions/farm-788-oceana-reload-5-813c7e1ed845@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "admission-6": ".runtime/computer-sessions/farm-788-oceana-reload-6-ec996e567417@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "checkpoint-after-1": ".runtime/archive/userdir-20261119T155002639542Z@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "checkpoint-after-2": ".runtime/archive/userdir-20261119T161404684119Z@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "checkpoint-after-3": ".runtime/archive/userdir-20261119T170318508696Z@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "checkpoint-after-4": ".runtime/archive/userdir-20261119T172137269059Z@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "checkpoint-after-5": ".runtime/archive/userdir-20261119T183524697451Z@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "effect-packets": "operator separate visible effect windows",
+        "final-study-userdir": ".runtime/archive/userdir-20261119T191004934494Z@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "fresh-config": ".runtime/archive/userdir-farm-788-fresh-e3da8d1f2714@894a33596bd4a78fa3699fefc1c6e1432f6a7da9",
+        "measurements": "CDDA evaluator on original admissions",
+        "offline-packing": "operator exact-prefix dry fit and reconstruction",
+        "operator": ".runtime/farm-acquisition-788-e3da8d1f2714@894a33596bd4a78fa3699fefc1c6e1432f6a7da9"
+      },
+      "visibility": "private"
+    },
     "p1-grounded-completion-178": {
       "availability": "present",
       "bytes": 65349350,
