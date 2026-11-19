@@ -1165,6 +1165,37 @@
       },
       "visibility": "private"
     },
+    "targeted-tool-memory-767": {
+      "availability": "present",
+      "bytes": 67056092,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-targeted-tool-memory-767.md"
+      ],
+      "files": 1142,
+      "manifest_sha256": "a6bd883c10afe031b1be14b2ee48b5804676ebb73aa9ef850c80250444f51c64",
+      "note": "Five closed admissions in two distinct Evacuee lineages, six archived userdirs, complete accounting, exact cutoff evidence, derived observations and terminal custody. The sixth slot was ineligible.",
+      "sources": {
+        "admission-1": ".runtime/computer-sessions/tool-memory-767-home-mechanic-499bb1a9389849a38b91f60171fd66f4@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "admission-2": ".runtime/computer-sessions/tool-memory-767-mechanic-2-537a6c09ae6e44f5866fdc140025b600@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "admission-3": ".runtime/computer-sessions/tool-memory-767-mechanic-3-b438bc1127054ac6a4662277c370be93@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "admission-4": ".runtime/computer-sessions/tool-memory-767-electrician-1-e3c8aeb37e804c8787d31bc3d8f4ad66@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "admission-5": ".runtime/computer-sessions/tool-memory-767-electrician-2-2c50abea682d472fb59bf55cbf9e20de@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "derived-observations": "operator/derived-observations@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "operator": "operator/retained@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "spectator-1": ".runtime/evaluations/499bb1a9389849a38b91f60171fd66f4@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "spectator-2": ".runtime/evaluations/537a6c09ae6e44f5866fdc140025b600@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "spectator-3": ".runtime/evaluations/b438bc1127054ac6a4662277c370be93@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "spectator-4": ".runtime/evaluations/e3c8aeb37e804c8787d31bc3d8f4ad66@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "spectator-5": ".runtime/evaluations/2c50abea682d472fb59bf55cbf9e20de@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "userdir-1": ".runtime/archive/userdir-20261118T230749700279Z@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "userdir-2": ".runtime/archive/userdir-20261118T231633683220Z@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "userdir-3": ".runtime/archive/userdir-20261118T232242343376Z@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "userdir-4": ".runtime/archive/userdir-20261118T233104788495Z@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "userdir-5": ".runtime/archive/userdir-20261118T234400860657Z@260d98ce8a20fb37c9d202d3d6087c35fbba34b4",
+        "userdir-6": ".runtime/archive/userdir-20261118T235936019231Z@260d98ce8a20fb37c9d202d3d6087c35fbba34b4"
+      },
+      "visibility": "private"
+    },
     "terra-rehearsal-711": {
       "availability": "present",
       "bytes": 16893622,
