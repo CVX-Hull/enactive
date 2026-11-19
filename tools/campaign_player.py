@@ -105,6 +105,9 @@ class HostEvents:
             value=json.loads(line)
             kind=value.get('type')
             if self.settled is not None:raise ControlError('Host event follows settlement')
+            if kind in ('handoff','player-finish','settled'):
+                # These records are copied into the receipt. Reject data the writer cannot retain.
+                canonical(value).encode('utf-8')
             if kind=='host-start':
                 if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=8
                         or value.get('schema')!='player-host/8'):raise ControlError('Unsupported/repeated current host trace')

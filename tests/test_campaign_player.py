@@ -260,6 +260,20 @@ def test_driver_cleanup_retains_observations_after_invalid_consumed_trace(tmp_pa
 
 
 
+
+@pytest.mark.parametrize('invalid_value',['1e309',r"'\ud800'"])
+def test_invalid_terminal_diagnostic_keeps_incomplete_receipt_writable(tmp_path,invalid_value):
+    profile,route,application=driver_case(tmp_path)
+    (tmp_path/'adapter.py').write_text(FAKE_HOST.replace(
+        "emit(type='settled',", f"emit(type='settled',event_output={{'max_callback_ms': {invalid_value}}},"))
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    actor=result['actors'][0]
+    assert (actor['observed_attempts'],actor['spent_usd'],actor['spend_complete'])==(1,'0.004',False)
+    assert result['outcome']=='incomplete'
+    assert (tmp_path/'actors/001/driver-receipt.json').is_file()
+    json.dumps(result,allow_nan=False)
+
+
 def test_overflowing_configured_estimate_leaves_actual_spend_intact(tmp_path):
     profile,route,application=driver_case(tmp_path,'Frozen mission HANDOFF_RACE',two_actors=True)
     (tmp_path/'adapter.py').write_text(FAKE_HOST.replace(
