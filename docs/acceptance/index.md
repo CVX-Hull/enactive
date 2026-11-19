@@ -15,6 +15,7 @@ states. Records are dated evidence, not current instructions; the
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | [Waking-period decisions in a fresh Wilderness world (#762)](2026-11-18-wilderness-delayed-memory-762.md) | run | One fresh Wilderness Campground start and two same-survivor reloads observing naturally delayed decisions | historical |
+| 2026-11-18 | [Farm and Campground two-wake memory acquisition (#772)](2026-11-18-two-wake-memory-772.md) | run | Two fresh CDDA starts across Farm and Campground, with two verified Farm reloads and exact readback of later choices | historical |
 | 2026-11-18 | [Delayed tool and supply decisions in two Evacuee worlds (#767)](2026-11-18-targeted-tool-memory-767.md) | run | Two fresh Evacuee equipment contrasts and three same-survivor reloads seeking a consequential delayed tool or supply choice | historical |
 | 2026-11-18 | [Matched memory replay on retained CDDA decisions (#765)](2026-11-18-retained-memory-replay-765.md) | review | Offline readback, blind visible ratings and equal-context memory replay packing across five retained CDDA decision windows | historical |
 | 2026-11-18 | [Sustained progress in a fresh Evacuee world (#753)](2026-11-18-evacuee-sustained-progress-753.md) | run | One supervised fresh Evacuee start with a meaningful activity switch and return, with visible clock, custody and delivery evidence | historical |
