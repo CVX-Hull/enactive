@@ -5,6 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 import hashlib
 import json
+from math import isfinite
 import os
 from pathlib import Path
 import re
@@ -24,6 +25,15 @@ def write_new(path: Path,value,*,text=False) -> None:
     with path.open('x') as stream:
         stream.write(value if text else canonical(value)+'\n')
     path.chmod(0o600)
+
+
+def configured_estimate(amounts) -> float | None:
+    """Keep optional diagnostics from blocking the provider subtotal."""
+    total=0.0
+    for amount in amounts:
+        if amount is None:return None
+        total+=amount
+    return total if isfinite(total) else None
 
 
 class HostEvents:
@@ -113,9 +123,12 @@ class HostEvents:
                 if value.get('usage_available') is True:
                     usage=value.get('usage')
                     rates=usage.get('cost',{}) if isinstance(usage,dict) else None
-                    if not isinstance(rates,dict) or type(rates.get('total',0)) not in (int,float):
+                    total=rates.get('total',0) if isinstance(rates,dict) else None
+                    try:estimate=float(total) if type(total) in (int,float) else None
+                    except OverflowError:estimate=None
+                    if estimate is None or not isfinite(estimate) or estimate<0:
                         raise ControlError('Malformed host usage record')
-                    self.usage[value['request_id']]=usage
+                    self.usage[value['request_id']]=estimate
             elif kind=='handoff':
                 if self.handoff is not None or self.player_finish is not None:raise ControlError('Conflicting host terminal signal')
                 self.handoff=value
@@ -142,7 +155,7 @@ class HostEvents:
         # These are lower bounds when the trace cannot be reconciled to settlement.
         return dict(observed_attempts=len(self.requests),
             observed_recall_attempts=sum(k.startswith('recall-') for k in self.requests),
-            configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
+            configured_estimate_usd=configured_estimate(self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
     def close(self):self.stream.close()
@@ -370,5 +383,5 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),
                 spent_usd=usd_text(reported),
                 spend_complete=all(r['spend_complete'] for r in records),
-                configured_estimate_usd=sum(r.get('configured_estimate_usd',0) for r in records),
+                configured_estimate_usd=configured_estimate(r.get('configured_estimate_usd',0) for r in records),
                 missing_usage_attempts=sum(r.get('missing_usage_attempts',0) for r in records))

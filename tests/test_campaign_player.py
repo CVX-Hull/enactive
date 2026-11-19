@@ -238,15 +238,15 @@ def test_driver_launches_selected_host_without_experimental_prompt_additions(tmp
     assert result['ending_request'] is None
 
 
-@pytest.mark.parametrize('malformed_usage',[False,True])
-def test_driver_cleanup_retains_observations_after_invalid_consumed_trace(tmp_path,malformed_usage):
+@pytest.mark.parametrize('invalid_usage',[None,'None',"{'cost': {'total': 10**400}}"])
+def test_driver_cleanup_retains_observations_after_invalid_consumed_trace(tmp_path,invalid_usage):
     profile,route,application=driver_case(tmp_path,two_actors=True)
     adapter=tmp_path/'adapter.py'
     script = FAKE_HOST+"\nemit(type='handoff')\n"
-    if malformed_usage:
+    if invalid_usage is not None:
         script=FAKE_HOST.replace(
             "emit(type='response-complete', request_id=request_id,",
-            "emit(type='response-complete', request_id=request_id, usage_available=True, usage=None,")
+            f"emit(type='response-complete', request_id=request_id, usage_available=True, usage={invalid_usage},")
     adapter.write_text(script)
     result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
     actor=result['actors'][0]
@@ -257,6 +257,20 @@ def test_driver_cleanup_retains_observations_after_invalid_consumed_trace(tmp_pa
     assert (result['reported_usd'],result['spent_usd'],result['spend_complete'])==('0.004','0.004',False)
     assert application.runtime.add_actor.call_count==1 and not application.runtime.confirm_quiescent.called
     assert actor['cleanup']['process_absent'] and actor['cleanup']['group_absent']
+
+
+
+def test_overflowing_configured_estimate_leaves_actual_spend_intact(tmp_path):
+    profile,route,application=driver_case(tmp_path,'Frozen mission HANDOFF_RACE',two_actors=True)
+    (tmp_path/'adapter.py').write_text(FAKE_HOST.replace(
+        "emit(type='response-complete', request_id=request_id,",
+        "emit(type='response-complete', request_id=request_id, usage_available=True, usage={'cost': {'total': 1e308}},"))
+    with patch('tools.campaign_player._handoff_context',return_value='{}'):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert [actor['configured_estimate_usd'] for actor in result['actors']]==[1e308,1e308]
+    assert result['configured_estimate_usd'] is None
+    assert (result['spent_usd'],result['spend_complete'])==('0.008',True)
+    json.dumps(result,allow_nan=False)
 
 
 def test_driver_total_keeps_unknown_attempts_separate_from_spend(tmp_path):
