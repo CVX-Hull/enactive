@@ -14,8 +14,8 @@ The approved capture ran five admissions across two fresh worlds. Both
 survivors saved alive. Villa Heights advanced 1h 12m 44s and Cheneyville
 advanced 11m 39s in game. Neither reached a natural waking period or a
 qualifying delayed choice. The longest in-game interval was a one-hour
-wait in Villa Heights. OpenRouter returned $1.94488080 across 437
-attempts. Five settled HTTP 429 attempts have unknown charges.
+wait in Villa Heights. The [run ledger](../../data/evaluation/runs.jsonl)
+records OpenRouter returns and unpriced attempts.
 
 ## Frozen study and amendments
 
@@ -75,9 +75,9 @@ equipment and Morgan's identity in 210 and 242. The game log records
 Rosaura's death at 08:05:51 (823), and the original pursuer's death by
 08:06:14 (1030). Visible threats blocked the shelter return. The actor
 sought another place to recover and saved alive at 08:11:39, injured and
-still pursued (4799, 4849 and 4851). Those final frames establish the
-time and Save. Morgan's last displayed name was earlier. Independent
-review found no displayed name tied to the final checkpoint and no
+still pursued (4799 and 4849). Frame 4851 shows the Save prompt and
+4947 shows the return to title. Morgan's last displayed name was
+earlier. Independent review found no name tied to the final checkpoint and no
 feasible delayed objective from that state. The sixth slot stayed closed.
 
 | Candidate | Earlier observation | Later input and outcome |
@@ -88,34 +88,32 @@ feasible delayed objective from that state. The sixth slot stayed closed.
 
 Villa Heights first-reload request 31 also had all 124 sent parts
 reconstructed. The prior report and current conversation supplied
-ordinary cues for the short recruitment interaction. The maintained
-lineage evaluator counted 145 decisions and 4,364 game seconds in
-Villa Heights, including the one-hour wait. It counted 210 decisions
-and 699 game seconds in Cheneyville. Named game views supply the
-manual identity evidence for the three completed reloads. Per-slot peak
-provider-reported player input ranged from 40,090 to 67,384 tokens,
-including cached inputs, within the configured window. Distinct starts
+ordinary cues for the short recruitment interaction.
+`python -m tools.evaluate evaluate-lineage` counted 145 decisions and
+4,364 game seconds in Villa Heights, including the one-hour wait, and
+210 decisions and 699 game seconds in Cheneyville. The sealed outputs
+are `operator/evaluate-primary-lineage.json` and
+`operator/evaluate-fallback-lineage.json`. Its three boundary readings
+gave zero clock gaps and unknown identity. Named game views supply
+the manual identity evidence for those reloads. The sealed
+`operator/terminal-audit.py` sums provider-reported input, cache reads
+and cache writes on each player call. The per-slot maxima ranged from
+40,090 to 67,384 tokens within the configured window. Distinct starts
 and exact input reconstruction improved development coverage. The short
 game horizons and displaced objectives yielded zero qualifying decisions
 and leave the memory comparison unresolved.
 
 ## Charges and custody
 
-| Admission | Attempts | Wall time | OpenRouter returned | Unpriced |
-| --- | ---: | ---: | ---: | ---: |
-| Villa Heights fresh start | 69 | 5m 12s | $0.27424635 | 0 |
-| Villa Heights first reload | 44 | 3m 49s | $0.13083345 | 0 |
-| Villa Heights second reload | 70 | 6m 38s | $0.26408955 | 0 |
-| Cheneyville fresh start | 132 | 11m 25s | $0.65640890 | 1 |
-| Cheneyville first reload | 122 | 13m 35s | $0.61930255 | 4 |
-| Total | 437 | 40m 39s | $1.94488080 | 5 |
-
-Every attempt reconciled to one completion. The settled 429s lacked
-provider-returned amounts and remain unknown in the
-[run ledger](../../data/evaluation/runs.jsonl). Preflight accepted a
-descriptive primary start label that the ledger rejected. The lead
-verified the settled receipts and recorded the derived row under the
-ledger's `S1` code, preserving the original manifest and receipt.
+The [run ledger](../../data/evaluation/runs.jsonl) contains the five
+study 767 rows, with attempts, wall seconds and reported and unpriced
+charges. Run `python -m tools.run_ledger totals --study 767` to derive
+the reported subtotal. Every attempt reconciled to one completion. The
+settled HTTP 429s lacked provider-returned amounts and remain unknown.
+Preflight accepted a descriptive primary start label that the ledger
+rejected. The lead verified the settled receipts and recorded the
+derived row under the ledger's `S1` code, preserving the original
+manifest and receipt.
 Successors used native-valid `S1` and `S2`. The validation gap is
 tracked in [#768](https://github.com/CVX-Hull/enactive/issues/768).
 
