@@ -990,6 +990,23 @@
       },
       "visibility": "private"
     },
+    "retained-two-wake-decision-audit-777": {
+      "availability": "present",
+      "bytes": 5287380,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-retained-two-wake-decision-audit-777.md"
+      ],
+      "files": 61,
+      "manifest_sha256": "734a3dfe61fd54d64e957ee5a9e22960328bd480a6ea29e58f02e07ef0786cb8",
+      "note": "Offline #777 audit. Readback of four #772 cutoffs, the #765 packing method, separated pre-action and effect bundles, and equal common-input evidence. No live dispatch.",
+      "sources": {
+        "before": "operator/777-before",
+        "effect": "operator/777-effect",
+        "packing": "operator/777-packing",
+        "rating": "operator/777-ratings"
+      },
+      "visibility": "private"
+    },
     "seven-day-recap-video": {
       "availability": "present",
       "bytes": 2722183,
