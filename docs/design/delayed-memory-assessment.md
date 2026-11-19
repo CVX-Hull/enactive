@@ -264,17 +264,28 @@ fixed recurrence using the [parent design](structured-recurrence-research.md).
 
 Price **one fresh development world with up to six serial admissions**.
 Plan one start and up to three normal reloads, with up to two contingent
-reloads. Retain the proven per-slot shape as the sizing basis. Each slot
-has up to 80 custody minutes and 70 actor minutes, including ten reserved
-for the endpoint and ending, and up to 400 combined player and recall
-attempts. Four slots allow 5h 20m of custody and six allow eight custody
-hours and 2,400 attempts. Schedule one lineage per overnight block with
-separate time for between-slot review. Townsend reached nearly two
+reloads. Size the proposed work under the approved dollar envelope and
+use provider-reported costs under the [existing admission rule](../operator-permissions.md#finite-gameplay-budget-delegation).
+An incomplete trace keeps its separate recorded admission bound.
+For time planning, the prior slots allowed 80 custody minutes and
+70 actor minutes including ten for the endpoint and ending. At that
+size four slots allow 5h 20m of custody and six allow eight hours.
+Schedule one lineage per overnight block with separate time for
+between-slot review. Townsend reached nearly two
 game days in roughly 81 custody minutes. Whitethorn reached about 46.3
 game hours after six slots and ended at 47.79 hours with a death in the
 seventh, after about 4.3 wall hours. Six slots are a finite feasibility
-allowance and may end before the target. Freeze the exact time, attempt,
-capture and charge limits after trace-based forecasting and validation.
+allowance and may end before the target.
+
+Use estimated attempts to validate context, capture and ending headroom.
+The current package contract still enforces an attempt cap and ending
+reserve. Identify any required setting that would end useful work before
+the approved budget or other operational limits. Freeze validated settings
+in each package and record why the work ended. Keep unpriced
+requests separate from the provider subtotal. The owner's budget direction
+is recorded in the [decision log](../decisions/owner-decisions.md#in-force).
+[#782](https://github.com/CVX-Hull/enactive/issues/782) owns the contract
+work to retire the forecast-based attempt stop.
 
 The common brief gives the player an ongoing objective from the outset.
 Establish a sustainable place to work and sleep, pursue an ordinary
