@@ -104,7 +104,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "schema": "campaign-run/9",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
-  "labels": {"arm": "ARM", "start": "START", "scenario": "SCENARIO", "lineage": null, "admission": null},
+  "labels": {"arm": "ARM", "start": "S1", "scenario": "SCENARIO", "lineage": null, "admission": null},
   "files": {
     "route.json": "SHA256", "mcp-template.json": "SHA256",
     "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256",
@@ -223,14 +223,15 @@ the experiment arm, start and scenario without inferring them from player data.
 | Field | Value |
 |---|---|
 | `arm` | string, 1-40 characters (for example `ceiling`, `long-horizon`) |
-| `start` | string, 1-40 characters (for example `S1`) |
+| `start` | development run ledger start code from `S1` through `S99` |
 | `scenario` | string, 1-80 characters (for example `Evacuee`) |
 | `lineage` | string, 1-40 characters, or `null`; chained admissions of one survivor share it |
 | `admission` | integer 1-10000, or `null`; position within the lineage; `null` exactly when `lineage` is `null` |
 
 Strings are printable ASCII only (space through `~`), with no control or non-ASCII
-characters. A missing field, extra field or out-of-bound value refuses the package
-before effects, like the rest of the manifest. Packages of any earlier schema
+characters. Preflight checks the start code against the current ledger schema
+before dispatch. A missing field, extra field or out-of-bound value refuses the
+package before effects, like the rest of the manifest. Packages of any earlier schema
 have no `labels` and are rejected; there is no conversion or default.
 
 **The labels are not player-visible.** Only the validator, evaluator and spectator
