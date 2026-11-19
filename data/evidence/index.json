@@ -750,6 +750,22 @@
       },
       "visibility": "private"
     },
+    "farm-setup-stop-785": {
+      "availability": "present",
+      "bytes": 2155653,
+      "cited_by": [
+        "docs/acceptance/2026-11-19-farm-setup-stop-785.md"
+      ],
+      "files": 85,
+      "manifest_sha256": "80e8878451edb129dd8dacf0660b68ac2357b8313edd2f06ff4552b3cfc2cfbe",
+      "note": "Approved #785 sole initial admission ended at the unassigned setup. Private seal includes original host and rendered evidence, receipt, approval, custody/accounting closeout and the archived failed userdir. The original reusable userdir was restored and its recovery archive is retained.",
+      "sources": {
+        "admission-1": ".runtime/computer-sessions/farm-781-equipment-return-86c65109a797@24f5d694",
+        "failed-userdir": ".runtime/archive/userdir-20261119T054556430422Z",
+        "operator": ".runtime/farm-acquisition-785-86c65109a797"
+      },
+      "visibility": "private"
+    },
     "fresh-evacuee-progress-751": {
       "availability": "present",
       "bytes": 11722796,
