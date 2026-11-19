@@ -1022,6 +1022,20 @@
       },
       "visibility": "private"
     },
+    "retained-memory-decision-791": {
+      "availability": "present",
+      "bytes": 12831582,
+      "cited_by": [
+        "docs/acceptance/2026-11-19-retained-memory-decision-791.md"
+      ],
+      "files": 108,
+      "manifest_sha256": "bb02960b9374a1ae1402c75f0118a54cb398ccaeeac2032a342294bb81fef496",
+      "note": "Offline frozen six-case review with separated blind packets, exact part bindings, dry current and compact fits, and read-only historical journal access reconstruction.",
+      "sources": {
+        "review": "retained cuts from 397, 762, 765, 772, 777 and 788"
+      },
+      "visibility": "private"
+    },
     "retained-memory-replay-765": {
       "availability": "present",
       "bytes": 3821575,
