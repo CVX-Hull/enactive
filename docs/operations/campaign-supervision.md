@@ -17,7 +17,7 @@ never actor tools. A separate read-only viewer runs outside supervision.
 Nobody is required to watch a run. Supervision asks for no acknowledgement and
 generates none. An unwatched run can loop, or continue after the character dies,
 until a run limit or the operator's Pause stops it. The limits are the package's
-original input, request, frame, byte, HTTP-attempt and host-time allowances, which
+original mechanical input, request, frame and byte limits, host time and dollar budget, which
 the custodian enforces, and the custody deadline: the guardian terminates the
 custodian at the original `wall_seconds` bound, whatever the operator conversation
 is doing. The lead cancels on first observed death or replacement.
@@ -27,7 +27,7 @@ spending or new admission. General unattended operation remains unqualified.
 
 ## Freeze, launch and inspect
 
-1. Prepare the exact clean source and fresh `campaign-run/9` package through the
+1. Prepare the exact clean source and fresh `campaign-run/10` package through the
    [campaign procedure](campaign-run.md). Resolve scope, spending, original
    resources, ending reserves and stop rules before admission. Preserve original
    saves and failed chains; old experiment launchers stay historical evidence.
@@ -107,7 +107,7 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 
 Supervision and the gateway refuse watch records of any other version.
 
-Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/6` must match
+Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/7` must match
 the fresh owned custodian/session/source and chronology. A terminal receipt at or
 after the custody deadline, a substituted receipt/manifest or unresolved cleanup
 cannot certify supervision success. No wrapper receipt accepts gameplay or restores

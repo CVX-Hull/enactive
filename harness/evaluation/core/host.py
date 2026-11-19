@@ -1,4 +1,4 @@
-"""Facts from player-host/7 traces: decisions, cost, tool calls and host-side events.
+"""Facts from player-host/8 traces: decisions, cost, tool calls and host-side events.
 
 Dollars here are the configured-rate estimate of each response (`usage.cost.total`), the one figure every run
 carries. The cost the provider reported, which the host counts toward the dollar limit, is not read. An archived

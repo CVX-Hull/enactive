@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/9` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/10` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -26,7 +26,7 @@ inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.
 It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-journal/1` store (`player_store`), player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
-aggregate HTTP-attempt bound, computer input/request/frame/byte capacities,
+computer input/request/frame/byte capacities,
 `ending_reserve`, the dollar limit `spend_limit_usd` and the operator-only
 [`labels`](#operator-labels). Source/directory mismatch refuses
 before launch. Journals use SQLite `user_version=1`; supported current journals may be reopened.
@@ -37,7 +37,7 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/7` with text/image input and explicit
+`route.json` uses current `player-host/8` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. It repeats the package's `spend_limit_usd` and carries
 `unpriced_request_usd` ([Spend limit](#spend-limit)). The selected route is OpenRouter /
@@ -101,7 +101,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/9",
+  "schema": "campaign-run/10",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "S1", "scenario": "SCENARIO", "lineage": null, "admission": null},
@@ -119,9 +119,9 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "host": {"argv": ["ABSOLUTE_EXISTING_NODE_EXECUTABLE", "ABSOLUTE_PROJECT_ROOT/tools/player_host/run.mjs"]},
   "effort": "medium", "port": 8766,
   "wall_seconds": 9000, "host_seconds": 3600, "total_host_seconds": 7200,
-  "max_hosts": 2, "max_http_attempts": 360,
+  "max_hosts": 2,
   "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
-  "ending_reserve": {"seconds": 120, "http_attempts": 8, "usd": "0.50", "inputs": 128, "requests": 128, "frames": 128, "frame_bytes": 134217728},
+  "ending_reserve": {"seconds": 120, "usd": "0.50", "inputs": 128, "requests": 128, "frames": 128, "frame_bytes": 134217728},
   "spend_limit_usd": "5"
 }
 ```
@@ -155,7 +155,7 @@ diagnostics can use the existing package preflight for their declared scope.
 
 Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order. A withholding study's starts are exported from one study draw instead, with `--study-draw FILE --start-index I`: the draw withholds each unit in half of each block's starts ([study design](../contracts/evaluation.md#the-withholding-studys-design-withholding-study-draw1)). The sealed pilot's starts each took their own seed ([pilot analysis](../contracts/evaluation.md#the-withholding-pilots-analysis-withholding-pilot1)). An article's unit lists only the facts exclusive to it; `private/units.json` records other cited facts under `shared` with their citing article IDs. Shared facts follow any delivered citing article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
 
-The route has a closed `recall` object: the selected model on the player's provider/key, `every` completed inputs per reminder, `max_requests`, and `unpriced_request_usd` computed from that model's rates. The package's attempt limit includes both player and recall HTTP attempts. The model and cadence are pinned before spending.
+The closed `recall` object pins the model on the player's provider and key, `every` completed inputs per reminder, and `unpriced_request_usd` computed from the recall model's rates. Player and recall share the run's dollar budget. Use forecast attempt counts to size the work and ending, and retain observed starts to assess the run.
 
 ### Spend limit
 
@@ -176,9 +176,9 @@ Nothing is carried over from earlier packages.
   the player bound plus the recall bound, with the recall contribution zero for
   empty knowledge. The reserve is below the declared limit.
 - **What counts.** The dollar total is the sum of usable provider-reported response
-  charges. A refused, timed-out or cut-off attempt without a usable cost consumes
-  an attempt and leaves its charge unknown. The provider may bill such an attempt.
-  Preserve unpriced counts and apply the original request and time ceilings.
+  charges. A refused, timed-out or cut-off attempt without a usable cost remains
+  observed with unknown charge. The provider may bill it. Preserve unpriced
+  counts and use the frozen time and mechanical ceilings.
 - **Overshoot.** The host checks before each request. The reported total can pass
   the limit by the charges returned for the final in-flight player and recall
   requests.
@@ -203,11 +203,11 @@ Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 
 the first an absolute regular file and the rest canonical project-local files tracked
 by the clean source commit (ignored `.runtime`, `.worktrees` or dependency files refuse), with
 the frozen adapter's `validate` mode accepting the route and MCP template; port1024–65535;
-wall60–86400s, host/aggregate-host30–86400s, one/two hosts and1–10000 HTTP attempts.
+wall60–86400s, host/aggregate-host30–86400s, one or two hosts.
 Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
-computer capacity is ≤2^40. The route's per-host request maximum cannot exceed the
-campaign aggregate. `spend_limit_usd` is above zero, and `ending_reserve.usd` is
-at least the route's `unpriced_request_usd` and below the limit. The selected directory must have no prior started marker,
+computer capacity is ≤2^40. `spend_limit_usd` is above zero. `ending_reserve.usd`
+covers the player's pending-request bound and, with delivered knowledge, the
+recall bound. It stays below the declared limit. The selected directory must have no prior started marker,
 session DB, native-process receipt, actors or contexts. An existing selected player
 store must be current; it never restores computer custody. The maintained
 validator is authoritative and rejects changed bytes/unsupported fields before
@@ -244,14 +244,14 @@ launched argv, environment and every file written for an actor lack the label va
 
 ### Ending reserve and external stop
 
-`ending_reserve` is closed: `seconds,http_attempts,usd,inputs,requests,frames,frame_bytes`.
+`ending_reserve` is closed: `seconds,usd,inputs,requests,frames,frame_bytes`.
 Every value but `usd` is a positive integer strictly below its corresponding original
-host/route/mechanical limit; `usd` is a decimal string above zero and below
+host or mechanical limit; `usd` is a decimal string above zero and below
 `spend_limit_usd`. The driver requests ending at the first threshold
-crossed in host seconds, remaining attempts, remaining dollars (trigger `spend`) or
+crossed in host seconds, remaining dollars (trigger `spend`) or
 mechanical capacities. Remaining dollars are the limit minus the cost counted so
-far; a request still in flight is not yet counted, so the reserve should cover what
-one more request can count. It retains
+far; a request still in flight is not yet counted, so the reserve should cover pending player and recall requests and the expected
+finish-up. The driver retains
 one command identity for the whole admission. Static validation checks field
 bounds only. Before admission the lead forecasts reserve adequacy for the largest
 already-admitted input burst, the current provider attempt, control
@@ -317,7 +317,7 @@ for or adopts unrelated processes. Normal native exit zero is sampled before
 forced cleanup. Save-to-menu, player save/success claims, native exit and absence
 are separate evidence.
 
-`receipt.json` (`campaign-receipt/6`) reports driver disposition, host quiescence,
+`receipt.json` (`campaign-receipt/7`) reports driver disposition, host quiescence,
 native absence, input revocation, cleanup and the run's spend. Its `accounting`
 block is closed:
 
@@ -325,25 +325,27 @@ block is closed:
 | --- | --- |
 | `spend_limit_usd` | The package's declared limit |
 | `reported_usd` | The sum of the cost the provider reported, over the responses that reported one |
-| `unpriced_requests` | Requests with no cost record |
+| `unpriced_requests` | Observed player attempts without a usable provider charge |
 | `unpriced_request_usd` | Player in-flight and ending planning bound from the route |
+| `unpriced_recall_requests` | Observed recall attempts without a usable provider charge |
+| `unpriced_recall_request_usd` | Recall in-flight and ending planning bound from the route |
 | `spent_usd` | Provider subtotal counted toward the dollar limit, equal to `reported_usd` |
-| `attempts_charged` | HTTP attempts charged against the request allowance |
-| `allocated_max_attempts` | The package's `max_http_attempts` |
+| `observed_attempts` | Player and recall HTTP starts read from the traces |
+| `observed_recall_attempts` | The recall subset |
 | `spend_complete` | Whether every actor's trace was read to its settlement and the host's own totals equal the driver's sums; when false the spend is unknown |
 
 The dollar amounts are decimal text. What the provider reports is what the provider
-says; it is not an invoice. Unknown trace accounting charges the allocated attempts,
-marks the spend incomplete and starts no further actor. Direct finish yields
+says; the invoice is separate. An incomplete trace preserves the observed subtotal
+and counts as lower bounds, marks spend incomplete and prevents succession. Direct finish yields
 `player_task_complete_unassessed`, `player_cannot_continue_unassessed` or
 `player_external_stop_complete_unassessed`. An earlier non-cleanup permanent
 fence remains `interrupted`; later expected adapter closure cannot erase it.
 Normal native exit is reported separately; its absence is not a save certificate
 or an automatic failure of generic stop control. Apply any separately frozen
 game-persistence/exit criterion to its own evidence lane.
-The embedded driver result is `player-driver/6`, with the retained ending request
-(its `trigger`, and the dollars and attempts left when it was sent), per-actor direct
-player-finish/settlement, original attempt charges and each actor's `allocated_usd`,
+The embedded driver result is `player-driver/7`, with the retained ending request
+(its `trigger`, and the dollars and mechanical capacity left when it was sent), per-actor
+direct player-finish/settlement, observed attempts and each actor's `allocated_usd`,
 `reported_usd`, `unpriced_requests`, `spent_usd` and `spend_complete`. Its totals
 carry `reported_usd`, `unpriced_requests`, `unpriced_request_usd`, `spent_usd` and
 `spend_complete`. `configured_estimate_usd` stays beside them as an estimate from the
@@ -367,10 +369,10 @@ lead has done both of these:
 1. Recorded the run with `--record-upper-bound` added to the command above. The
    provider subtotal and observed unpriced counts stay as recorded. The ledger
    stores a separate planning amount for admission. It uses the larger of the
-   declared limit and observed subtotal, plus up to one in-flight player and
-   one in-flight recall bound. The number of possible
-   in-flight attempts is capped by the charged attempts and recall requires
-   delivered units. The flag is refused for a complete trace.
+   declared limit and observed subtotal, plus one possible in-flight player
+   request and, if the package delivers knowledge units, one possible in-flight
+   recall request. These exposures can exist even when no starts were observed.
+   The flag is refused for a complete trace.
 2. Identified the separate admission amount in the run's dated record and stated which
    cost evidence was unavailable. The provider's charge remains unknown when the
    run could not establish it. The record supplies that context for the

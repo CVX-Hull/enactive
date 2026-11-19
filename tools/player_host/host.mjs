@@ -82,13 +82,12 @@ function listenControl(input, session, actorId, accept, fail) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort, nested = false) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall']);
-  requireThat(configuration.schema === 'player-host/7');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall']);
+  requireThat(configuration.schema === 'player-host/8');
   // Positive decimal text for this actor's spend limit and one in-flight request allowance.
   const spendLimit = amountFromText(configuration.spend_limit_usd), bound = amountFromText(configuration.unpriced_request_usd);
   requireThat(spendLimit !== null && spendLimit[0] > 0n && bound !== null && bound[0] > 0n);
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
-  requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
   requireThat(Number.isSafeInteger(configuration.context_image_block) && configuration.context_image_block > 0
     && configuration.context_image_block <= configuration.max_context_images);
@@ -144,9 +143,8 @@ export function validateConfiguration(configuration, selectedModel, effort, nest
   }
   if (!nested) {
     const recall = configuration.recall;
-    closed(recall, ['model', 'every', 'max_requests', 'unpriced_request_usd']);
-    requireThat(Number.isSafeInteger(recall.every) && recall.every > 0
-      && Number.isSafeInteger(recall.max_requests) && recall.max_requests >= 0);
+    closed(recall, ['model', 'every', 'unpriced_request_usd']);
+    requireThat(Number.isSafeInteger(recall.every) && recall.every > 0);
     const bound = amountFromText(recall.unpriced_request_usd);
     requireThat(bound !== null && bound[0] > 0n && recall.model.provider === model.provider
       && recall.model.baseUrl === model.baseUrl);
@@ -162,17 +160,13 @@ export function recallRefusal(state) {
   if (state.disabled) return 'disabled';
   if (state.ending) return 'actor-ended';
   if (state.stopping) return 'orderly-stop';
-  if (state.recalls >= state.recallMax) return 'allowance';
-  if (state.max - state.requests - state.recalls <= 1) return 'attempt-limit';
   const committed = addAmounts(state.spent, state.playerInFlight ? state.playerBound : [0n,0]);
   const below = amount => { const [total,limit] = alignedUnits(amount,state.limit); return total < limit; };
   if (!below(committed)) return 'spend-refused';
-  if (!below(addAmounts(committed,state.reserve))) return 'finish-reserve';
+  if (!below(addAmounts(addAmounts(committed,state.recallBound),state.reserve))) return 'finish-reserve';
   return null;
 }
 
-/** Remaining model requests at or below which the tail notice warns of the request limit. */
-export const requestWarningAt = maxRequests => Math.min(Math.max(2, Math.ceil(maxRequests * 0.1)), Math.floor(maxRequests / 2));
 /** Remaining work time (ms) at or below which the tail notice warns of the host deadline. */
 export const wallWarningMs = workMs => Math.min(Math.max(workMs * 0.1, 60_000), workMs / 2);
 
@@ -645,7 +639,7 @@ export async function runHost(options) {
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false, requestReportedCost = null;
   // Every HTTP attempt gets a response-complete record. Only provider prices debit the dollar limit.
-  // A completed attempt without a usable price stays unknown and still uses the attempt allowance.
+  // A completed attempt without a usable price stays unknown and remains in the observed count.
   let spent = [0n, 0], unpricedRequests = 0, unpricedRecallRequests = 0, spendLimit, unpricedBound;
   let recallRequests = 0, recallDisabled = false, recallFlight, recallTask, recallController, recallAttemptInFlight = false, actorEnding = false, knowledge, finishReserve, recallBound;
   let briefing, pendingReminders = [], unsentDeliveries = [], completedInputs = 0, latestResult;
@@ -664,9 +658,8 @@ export async function runHost(options) {
   const recallUnavailable = () => recallRefusal({
     hasUnits:knowledge.articles.length + knowledge.facts.length > 0, disabled:recallDisabled,
     ending:actorEnding, stopping:control || options.pendingControlId !== null,
-    recalls:recallRequests, recallMax:recallConfiguration.max_requests,
-    requests, max:options.configuration.max_requests, spent, playerInFlight:requestInFlight,
-    playerBound:unpricedBound, reserve:finishReserve, limit:spendLimit});
+    spent, playerInFlight:requestInFlight, playerBound:unpricedBound,
+    recallBound, reserve:finishReserve, limit:spendLimit});
   const recall = async mode => {
     const unavailable = recallUnavailable();
     if (unavailable) {
@@ -736,7 +729,7 @@ export async function runHost(options) {
       return mode === 'reminder' && !articles.length ? null : selectedDelivery;
     } catch (error) {
       failure = recallController.signal.aborted ? 'actor-ended'
-        : ['actor-ended','allowance','attempt-limit','orderly-stop','finish-reserve','spend-refused','cost-unreported','provider-failure','invalid-recall-selection'].includes(error.message)
+        : ['actor-ended','orderly-stop','finish-reserve','spend-refused','cost-unreported','provider-failure','invalid-recall-selection'].includes(error.message)
         ? error.message : 'recall-failed';
       recallDisabled ||= attemptStarted ? failure !== 'invalid-recall-selection' || amountText(reported) === null
         : failure === 'spend-refused' || failure === 'recall-failed' || failure === 'provider-failure';
@@ -835,7 +828,7 @@ export async function runHost(options) {
     affinityId = sessionAffinityId(options.session);
     spendLimit = amountFromText(configuration.spend_limit_usd);
     unpricedBound = amountFromText(configuration.unpriced_request_usd);
-    emit('host-start', {telemetry_version:7, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
+    emit('host-start', {telemetry_version:8, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -994,13 +987,6 @@ export async function runHost(options) {
               : `Host context capacity: about ${room} tokens of room remain before the host must stop.`);
             kinds.push('context-capacity');
           }
-          const requestsLeft = configuration.max_requests - requests - recallRequests;
-          if (requestsLeft > 0 && requestsLeft <= requestWarningAt(configuration.max_requests)) {
-            lines.push(first('request-limit')
-              ? `Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included (a retried request counts again). The host stops when none remain.`
-              : `Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included.`);
-            kinds.push('request-limit');
-          }
           const workLeftMs = totalMs - cleanupBudget - (performance.now() - started);
           if (workLeftMs > 0 && workLeftMs <= wallWarningMs(totalMs - cleanupBudget)) {
             const left = workLeftMs >= 120_000 ? `${Math.ceil(workLeftMs / 60_000)} minutes` : `${Math.ceil(workLeftMs / 1000)} seconds`;
@@ -1041,7 +1027,6 @@ export async function runHost(options) {
       finishTurn:() => fatal || handoff || finish ? {action:'end'} : {action:'continue'},
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
-        if (requests + recallRequests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
         if (!canSpend()) { stop('spend-limit'); return failureStream(model, fatal); }
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
@@ -1058,10 +1043,6 @@ export async function runHost(options) {
           const retry = (attemptId, retryClass, status, headers) => {
             emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, reported_cost_usd:amountText(requestReportedCost), ...countAttempt(requestReportedCost), response_progress:progressSnapshot()});
             requestInFlight = false;
-            if (requests + recallRequests >= configuration.max_requests) {
-              stop('request-limit');
-              throw new HostError(fatal);
-            }
             // A retry still needs room under the observed spend and in-flight reservation.
             if (!canSpend()) {
               stop('spend-limit');
@@ -1081,10 +1062,6 @@ export async function runHost(options) {
           const observedFetch = (url, init) => retryProviderRequest(async () => {
             requestSignal.throwIfAborted();
             if (fatal) throw new HostError(fatal);
-            if (requests + recallRequests >= configuration.max_requests) {
-              stop('request-limit');
-              throw new HostError(fatal);
-            }
             if (!canSpend()) {
               stop('spend-limit');
               throw new HostError(fatal);

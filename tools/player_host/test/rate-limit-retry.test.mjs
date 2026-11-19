@@ -80,13 +80,6 @@ test('repeated 429 stops after exactly two charged attempts',async t=>{
   assert.equal(result.requests,2);assert.equal(payloads.length,2);assert.equal(calls.length,0);
   assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.request_id),['request-1','request-2']);
 });
-test('429 at the request cap stops before backoff or another fetch',async t=>{
-  const configuration=route();configuration.max_requests=1;
-  const {result,payloads,events}=await scenario(t,[rateLimit(),reply()],{configuration});
-  assert.equal(result.reason,'request-limit');assert.equal(result.requests,1);assert.equal(payloads.length,1);
-  assert.equal(events.filter(e=>e.type==='response-complete').length,1);
-  assert.ok(!events.some(e=>e.type==='provider-retry'));
-});
 test('quota, authorization and malformed 429 errors remain terminal despite retry-looking text',async t=>{
   for (const error of [
     {code:'insufficient_quota',message:'Rate limited'},

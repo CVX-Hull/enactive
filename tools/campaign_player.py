@@ -28,8 +28,8 @@ def write_new(path: Path,value,*,text=False) -> None:
 
 class HostEvents:
     """Reconcile reported charges and unpriced attempts with a complete host settlement."""
-    def __init__(self,path: Path,allowance: int):
-        self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance
+    def __init__(self,path: Path):
+        self.stream=path.open('rb');self.buffer=b''
         self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
         # A present key with value None has a finished attempt and unknown provider cost.
@@ -94,22 +94,28 @@ class HostEvents:
             if not line:continue
             value=json.loads(line)
             kind=value.get('type')
+            if self.settled is not None:raise ControlError('Host event follows settlement')
             if kind=='host-start':
-                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=7
-                        or value.get('schema')!='player-host/7'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=8
+                        or value.get('schema')!='player-host/8'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'(request|recall)-([1-9][0-9]*)',value.get('request_id',''))
                 if not self.started or not match:raise ControlError('Host request lacks current origin')
                 identity=value['request_id']
-                if identity in self.requests or len(self.requests)>=self.allowance:raise ControlError('Host request accounting differs')
+                if identity in self.requests:raise ControlError('Host request accounting differs')
                 self.requests.add(identity)
             elif kind=='response-complete':
                 try:
                     if value.get('request_id','').startswith('request-'):self.last_response_wall=datetime.fromisoformat(value['wall_time']).timestamp()
                 except (KeyError,ValueError,TypeError):pass
-                if value.get('usage_available') is True:self.usage[value['request_id']]=value['usage']
                 self._count(value)
+                if value.get('usage_available') is True:
+                    usage=value.get('usage')
+                    rates=usage.get('cost',{}) if isinstance(usage,dict) else None
+                    if not isinstance(rates,dict) or type(rates.get('total',0)) not in (int,float):
+                        raise ControlError('Malformed host usage record')
+                    self.usage[value['request_id']]=usage
             elif kind=='handoff':
                 if self.handoff is not None or self.player_finish is not None:raise ControlError('Conflicting host terminal signal')
                 self.handoff=value
@@ -117,20 +123,25 @@ class HostEvents:
                 if self.player_finish is not None or self.handoff is not None:raise ControlError('Conflicting host terminal signal')
                 self.player_finish=value
             elif kind=='settled':
-                if self.settled is not None:raise ControlError('Repeated host terminal event')
                 self.settled=value
         return True
 
     def finish(self) -> dict:
         while self.read():pass
+        observed=self.observations()
+        recalls=observed['observed_recall_attempts']
+        counts=dict(requests=len(self.requests),player_requests=len(self.requests)-recalls,recall_requests=recalls)
         valid=(not self.buffer and self.started and self.settled is not None and self.requests==self.costs.keys()
                and all({int(k.split('-')[1]) for k in self.requests if k.startswith(role+'-')}==set(range(1,1+sum(k.startswith(role+'-') for k in self.requests))) for role in ('request','recall'))
-               and self.settled.get('requests')==len(self.requests) and self._host_agrees())
-        # Uncertain trace accounting reserves the entire original host allocation.
-        # `configured_estimate_usd` is an estimate from the route's configured rates; it is not counted spend.
-        return dict(observed_attempts=len(self.requests),observed_recall_attempts=sum(k.startswith('recall-') for k in self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
-            accounting_complete=valid,settled=self.settled,handoff=self.handoff,player_finish=self.player_finish,
-            **self.spend(valid),
+               and all(type(self.settled.get(name)) is int and self.settled[name]==count for name,count in counts.items())
+               and self._host_agrees())
+        return dict(accounting_complete=valid,settled=self.settled,handoff=self.handoff,player_finish=self.player_finish,
+                    **observed,**self.spend(valid))
+
+    def observations(self) -> dict:
+        # These are lower bounds when the trace cannot be reconciled to settlement.
+        return dict(observed_attempts=len(self.requests),
+            observed_recall_attempts=sum(k.startswith('recall-') for k in self.requests),
             configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
@@ -152,14 +163,22 @@ def _handoff_context(application,actor,event):
     return data.decode('utf-8')
 
 
-def ending_trigger(reserve: dict,seconds: float,attempts: int,dollars: Decimal,mechanical: dict) -> str | None:
+def ending_trigger(reserve: dict,seconds: float,dollars: Decimal,mechanical: dict) -> str | None:
     """Operator-only soft thresholds; no game interpretation or new allowance."""
     if seconds<=reserve['seconds']:return 'host_seconds'
-    if attempts<=reserve['http_attempts']:return 'http_attempts'
     if dollars<=Decimal(reserve['usd']):return 'spend'
     for name in ('inputs','requests','frames','frame_bytes'):
         if mechanical[name]<=reserve[name]:return name
     return None
+
+
+def _record_ending(directory,reserve,seconds,dollars,remaining):
+    trigger=ending_trigger(reserve,seconds,dollars,remaining)
+    if trigger is None:return None
+    request=dict(id=uuid.uuid4().hex,trigger=trigger,requested_wall=time.time(),remaining=remaining,
+                 spend_remaining_usd=usd_text(dollars))
+    write_new(directory/'orderly-stop.json',request)
+    return request
 
 
 def _send_control(child,target,session,actor_id,request):
@@ -193,17 +212,15 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
     outcome='incomplete';reason='Original actor allowance exhausted'
     for index in range(1,profile['max_hosts']+1):
         seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
-        allowance=min(route['max_requests'],profile['max_http_attempts']-total_attempts)
         # A route's limit is a declared amount, so what remains is cut to the digits one may carry.
         dollars=declared_floor(EXACT.subtract(limit,spent))
-        if stopped.is_set() or seconds<=30 or allowance<1:
+        if stopped.is_set() or seconds<=30:
             reason='Original host/campaign resources or cancellation prevent another actor';break
         if dollars<=0:
             reason='The dollar limit leaves nothing for another actor';break
         target=actors/f'{index:03d}'
         child=None;events=None
-        recall_allowance=min(max(0,route['recall']['max_requests']-total_recall_attempts),allowance)
-        record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance,allocated_recall_attempts=recall_allowance,allocated_usd=usd_text(dollars))
+        record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_usd=usd_text(dollars))
         started=time.monotonic();ending_at=None
         try:
             actor=application.runtime.add_actor()
@@ -212,8 +229,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             actor_file=target/'actor.json'
             write_new(actor_file,dict(schema='player-adapter/2',base_url=f"http://127.0.0.1:{profile['port']}",
                                      session=profile['session'],**actor))
-            selected_route=dict(route,max_requests=allowance,spend_limit_usd=usd_text(dollars),
-                recall=dict(route['recall'],max_requests=recall_allowance))
+            selected_route=dict(route,spend_limit_usd=usd_text(dollars))
             write_new(target/'route.json',selected_route)
             # Every actor gets the same tool table and system prompt, so their request prefixes are
             # byte-identical. The final actor learns it has no successor only when it calls the
@@ -238,6 +254,11 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             write_new(target/'frozen.json',dict(schema='player-host-inputs/3',actor_id=actor['actor_id'],session=profile['session'],
                 finish_reserve_usd=profile['ending_reserve']['usd'],
                 files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt','delivered-knowledge.json')}))
+            # A predecessor may have crossed a reserve after the driver's final live poll.
+            # Bind the ending before a host can fetch or take input in that case.
+            if ending_request is None:
+                ending_request=_record_ending(directory,profile['ending_reserve'],
+                    started+seconds-time.monotonic(),dollars,application.runtime.remaining())
             arguments=[*profile['host']['argv'],'run','--config',str(target/'route.json'),
                 '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--prompt',str(target/'prompt.txt'),
                 '--delivered-knowledge',str(target/'delivered-knowledge.json'),'--finish-reserve-usd',profile['ending_reserve']['usd'],
@@ -248,7 +269,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors:
                 child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=subprocess.PIPE,stdout=output,stderr=errors,start_new_session=True)
                 write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
-                events=HostEvents(target/'host.jsonl',allowance)
+                events=HostEvents(target/'host.jsonl')
                 if ending_request is not None:
                     _send_control(child,target,profile['session'],actor['actor_id'],ending_request)
                     record['ending_control_id']=ending_request['id']
@@ -256,7 +277,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     events.read()
                     now=time.monotonic()
                     application.host=dict(index=index,model=route['model']['id'],provider=route['model']['name'],
-                        requests_total=total_attempts+len(events.requests),max_requests_total=profile['max_http_attempts'],
+                        observed_attempts=total_attempts+len(events.requests),
                         host_seconds_remaining=max(0.,started+seconds-now),latest_response_wall=events.last_response_wall)
                     if stopped.is_set() or now>=min(deadline-30,started+seconds):
                         application.runtime.stop('Original host deadline/operator cancellation');reason='Original host deadline/cancellation';break
@@ -265,16 +286,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                         if ending_at is None:ending_at=now+(45 if code is not None else 30)
                         if now>=ending_at:reason='Original final-report grace exhausted';break
                     elif ending_request is None:
-                        remaining=application.runtime.remaining()
                         dollars_left=EXACT.subtract(dollars,events.counted_usd())
-                        trigger=ending_trigger(profile['ending_reserve'],started+seconds-now,
-                            min(allowance-len(events.requests),profile['max_http_attempts']-total_attempts-len(events.requests)),
-                            dollars_left,remaining)
-                        if trigger is not None:
-                            ending_request=dict(id=uuid.uuid4().hex,trigger=trigger,requested_wall=time.time(),remaining=remaining,
-                                attempts_remaining=profile['max_http_attempts']-total_attempts-len(events.requests),
-                                spend_remaining_usd=usd_text(dollars_left))
-                            write_new(directory/'orderly-stop.json',ending_request)
+                        ending_request=_record_ending(directory,profile['ending_reserve'],
+                            started+seconds-now,dollars_left,application.runtime.remaining())
+                        if ending_request is not None:
                             _send_control(child,target,profile['session'],actor['actor_id'],ending_request)
                             record['ending_control_id']=ending_request['id']
                     time.sleep(.1)
@@ -331,18 +346,16 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     record.update(events.finish())
                 except Exception as exc:
                     # The trace cannot be read to its end: what it showed is recorded, and the spend is incomplete.
-                    record.update(accounting_complete=False,attempts_charged=allowance,trace_error=type(exc).__name__,
-                        **events.spend(False))
+                    record.update(accounting_complete=False,trace_error=type(exc).__name__,
+                        **events.observations(),**events.spend(False))
                 finally:events.close()
             else:
                 # No trace: a host that was started may have spent; one that never started spent nothing.
-                record.update(accounting_complete=False,attempts_charged=allowance if child else 0,
+                record.update(accounting_complete=False,observed_attempts=0,observed_recall_attempts=0,
                     reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,spent_usd='0',spend_complete=child is None)
             record['elapsed_seconds']=time.monotonic()-started
-            record['recall_attempts_charged']=(record['observed_recall_attempts'] if record['accounting_complete']
-                else recall_allowance if child is not None else 0)
-            total_recall_attempts+=record['recall_attempts_charged']
-            total_attempts+=record['attempts_charged'];host_seconds_used+=record['elapsed_seconds']
+            total_recall_attempts+=record['observed_recall_attempts']
+            total_attempts+=record['observed_attempts'];host_seconds_used+=record['elapsed_seconds']
             spent=EXACT.add(spent,Decimal(record['spent_usd']))
             records.append(record)
             try:write_new(target/'driver-receipt.json',record)
@@ -351,11 +364,11 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
     reported=usd_sum(Decimal(r['reported_usd']) for r in records);unpriced=sum(r['unpriced_requests'] for r in records)
     recall_unpriced=sum(r['unpriced_recall_requests'] for r in records)
     # The subtotal covers all costs observed, even if a trace could not be reconciled.
-    return dict(schema='player-driver/6',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
-                attempts_charged=total_attempts,recall_attempts_charged=total_recall_attempts,host_seconds_used=host_seconds_used,
+    return dict(schema='player-driver/7',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
+                observed_attempts=total_attempts,observed_recall_attempts=total_recall_attempts,host_seconds_used=host_seconds_used,
                 reported_usd=usd_text(reported),unpriced_requests=unpriced,unpriced_request_usd=usd_text(bound),
                 unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),
                 spent_usd=usd_text(reported),
                 spend_complete=all(r['spend_complete'] for r in records),
                 configured_estimate_usd=sum(r.get('configured_estimate_usd',0) for r in records),
-                missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged']) for r in records))
+                missing_usage_attempts=sum(r.get('missing_usage_attempts',0) for r in records))

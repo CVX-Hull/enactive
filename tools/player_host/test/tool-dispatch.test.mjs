@@ -44,7 +44,7 @@ test('request metadata hashes exact serialized bodies without retaining forwarde
   const trace=events.filter(e=>e.type==='request-start');
   assert.equal(payloads[1].messages.find(m=>m.role==='assistant').reasoning_content,reasoning);
   assert.ok(JSON.stringify(payloads[1]).includes(png));
-  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,7);
+  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,8);
   assert.deepEqual(events.filter(e=>e.type==='assistant-text').map(e=>[e.text,e.omitted_bytes]),[['Visible plan',0],['finished',0]]);
   for(const secret of [reasoning,png,'fixture-key','UNRELATED_HOST_SECRET','Frozen player guide','Offline mission']) {
     assert.ok(!JSON.stringify(events).includes(secret));
@@ -93,10 +93,10 @@ test('transport loss suppresses queued mutation and subsequent inference',async 
   assert.equal(payloads.length,1);
   assert.deepEqual(calls.map(c=>c.index),[1]);
 });
-test('request maximum is finite and exits unsuccessful if continuation needed',async t=>{
-  const configuration=route(); configuration.max_requests=1;
+test('spend exhaustion exits unsuccessful if continuation is needed',async t=>{
+  const configuration=route(); configuration.spend_limit_usd='0.000038';
   const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],{configuration});
-  assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
+  assert.equal(result.ok,false); assert.equal(result.reason,'spend-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
 test('fixture union schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
@@ -105,7 +105,7 @@ test('fixture union schema refusal gives stable precise feedback, explicit corre
   const fixed=structuredClone(bad);fixed.intent.entry.stage='partial';
   fixed.intent.entry.available[0].subject='small_cardboard_box';
   const mcpError=structuredClone(fixed);mcpError.intent.entry.stage='mcp-error';
-  const configuration=route();configuration.max_requests=6;
+  const configuration=route();
   const {result,calls,payloads,events}=await scenario(t,[
     reply(null,[['fixture_remember',bad]],true,undefined,'bad'),
     reply(null,[['fixture_remember',fixed]],true,undefined,'fixed'),

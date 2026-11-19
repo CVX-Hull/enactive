@@ -23,8 +23,8 @@ const model = {id:'recorded-offline-model',name:'Offline fixture',api:'openai-co
   baseUrl:'https://fixture.invalid/v1',reasoning:false,input:['text','image'],
   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:1000000,maxTokens:1024,
   compat:{supportsDeveloperRole:false,supportsStore:false,supportsUsageInStreaming:true}};
-const configuration = () => ({schema:'player-host/7',service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,max_requests:2,unpriced_request_usd:'0.25'},
-  api_key_env:'OFFLINE_TEST_KEY',max_requests:2,spend_limit_usd:'100',unpriced_request_usd:'0.25',max_context_images:30,context_image_block:1,
+const configuration = () => ({schema:'player-host/8',service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25'},
+  api_key_env:'OFFLINE_TEST_KEY',spend_limit_usd:'100',unpriced_request_usd:'0.25',max_context_images:30,context_image_block:1,
   context_reserve_tokens:4096,request_timeout_seconds:2});
 const finish = ['player_finish',{intent:'Report the recorded assessment',disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];
 const proposal = ['computer_input',{intent:'Propose a bounded recorded action',actions:[{type:'key',key:'x',modifiers:[]}]}];
@@ -59,7 +59,7 @@ async function makePacket(dir, count) {
   return packet;
 }
 
-async function scenario(t, sequence, {count=3, damage}={}) {
+async function scenario(t, sequence, {count=3, damage, spendLimit='100'}={}) {
   assert.ok(python,'Set ENACTIVE_TEST_PYTHON to the project Python with maintained MCP/Pillow');
   const dir = await mkdtemp(join(tmpdir(),'recorded-player-test-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
@@ -77,7 +77,7 @@ async function scenario(t, sequence, {count=3, damage}={}) {
   });
   const payloads=[], bodies=[], events=[];
   const result = await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,
-    control:new PassThrough(),configuration:configuration(),mcpConfig:{
+    control:new PassThrough(),configuration:{...configuration(),spend_limit_usd:spendLimit},mcpConfig:{
       command:resolve(python),args:[fixture,'--packet',packetPath,'--log',log,'--pid',pid],cwd:dir,
       enabled:true,required:true,enabled_tools:Object.keys(expected),startup_timeout_sec:5,tool_timeout_sec:2,
       default_tools_approval_mode:'never',tools:{}},
@@ -86,7 +86,6 @@ async function scenario(t, sequence, {count=3, damage}={}) {
     env:{OFFLINE_TEST_KEY:'offline-test-value',RECORDED_PLAYER_TEST_SENTINEL:'harmless-offline-presence-test'},
     fetch:async(_url,init)=>{
       bodies.push(init.body);payloads.push(JSON.parse(init.body));
-      assert.ok(payloads.length<=2,'never enter a third fetch, including retries');
       assert.ok(sequence.length>=payloads.length,'no unplanned provider attempt');
       return sequence[payloads.length-1];
     },onEvent:event=>events.push(event)});
@@ -112,10 +111,10 @@ function continuationImages(payload) {
     .filter(part=>part.type==='image_url');
 }
 
-test('actual host keeps current schemas and all 30 original images, refusing proposal then exhausting two requests',async t=>{
+test('actual host keeps current schemas and all 30 original images, refusing a proposal before spend exhaustion',async t=>{
   const {result,packet,payloads,events,calls,expected} = await scenario(t,[
-    reply([['computer_observe',{}]]),reply([proposal])],{count:30});
-  assert.deepEqual(result,{ok:false,reason:'request-limit',requests:2,finalText:'',control_id:null});
+    reply([['computer_observe',{}]]),reply([proposal])],{count:30,spendLimit:'0.000075'});
+  assert.deepEqual(result,{ok:false,reason:'spend-limit',requests:2,finalText:'',control_id:null});
   assert.equal(payloads.length,2);
   const tools = payloads[0].tools.map(tool=>tool.function);
   assert.equal(tools.length,Object.keys(expected).length+1,'host alone adds direct finish');
@@ -171,17 +170,19 @@ test('exact member source read grows only its original image continuation',async
   assert.deepEqual(calls.map(call=>[call.name,call.arguments,call.read]),[['player_source',{intent:'Assess the retained fixture',source_id},true]]);
 });
 
-test('retry is charged inside the same two-attempt cap; observation without image continuation stays incomplete',async t=>{
-  const {result,payloads,events,calls} = await scenario(t,[rateLimit(),reply([['computer_observe',{}]])]);
-  assert.equal(result.ok,false);
-  assert.equal(result.reason,'request-limit');
-  assert.equal(result.requests,2);
-  assert.equal(payloads.length,2);
+test('an unpriced retry remains observed and the player can continue past two attempts',async t=>{
+  const {result,payloads,events,calls} = await scenario(t,[rateLimit(),reply([['computer_observe',{}]]),reply([finish])]);
+  assert.equal(result.reason,'task_complete');
+  assert.equal(result.requests,3);
+  assert.equal(payloads.length,3);
   assert.deepEqual(payloads[0],payloads[1],'retry is the same pre-observation request');
-  assert.ok(payloads.every(payload=>continuationImages(payload).length===0));
+  assert.ok(payloads.slice(0,2).every(payload=>continuationImages(payload).length===0));
+  assert.equal(continuationImages(payloads[2]).length,3);
   assert.ok(events.some(event=>event.type==='provider-retry' && event.stage==='started'));
   assert.deepEqual(calls.map(call=>call.name),['computer_observe']);
-  assert.ok(events.find(event=>event.type==='tool-result').result.content.some(part=>part.type==='image_reference'));
+  const settled = events.find(event=>event.type==='settled');
+  assert.equal(settled.spent_usd,'0.000076');
+  assert.equal(settled.unpriced_requests,1);
 });
 
 test('early direct finish preserves actual completion and missing observation facts',async t=>{

@@ -97,7 +97,7 @@ def validate_accounting(row: dict) -> None:
     if (upper is not None) != (basis == 'incomplete-trace') or (upper is not None and Decimal(upper) < spent):
         raise LedgerError('only an incomplete trace has a separate upper bound at least as large as the observed subtotal')
     if player is not None and player + recall > row['attempts']:
-        raise LedgerError('more unpriced attempts than charged attempts')
+        raise LedgerError('more unpriced attempts than recorded attempts')
 
 
 def plain(amount: Decimal) -> str:
@@ -133,17 +133,16 @@ def package_row(package: Path, *, study: int, label: str, upper_bound: bool = Fa
     bound = None
     if upper_bound:
         from harness.player.knowledge import Knowledge
-        attempts=spend['attempts_charged']
-        player_count=min(1,attempts)
-        recall_count=int(bool(Knowledge(package/'delivered-knowledge.json').records) and attempts>player_count)
+        # A lost trace can hide the pending player attempt and any recall, even with no observed starts.
+        recall_count=int(bool(Knowledge(package/'delivered-knowledge.json').records))
         observed_or_limit = max(Decimal(spend['reported_usd']), Decimal(spend['spend_limit_usd']))
-        bound = plain(spend_of(str(observed_or_limit), player_count, spend['unpriced_request_usd'],
+        bound = plain(spend_of(str(observed_or_limit), 1, spend['unpriced_request_usd'],
                                recall_count, spend['unpriced_recall_request_usd']))
     ended = datetime.fromtimestamp(receipt['ended_wall'], timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     return dict(schema=SCHEMA, study=study, run=package.name, label=label, arm=labels['arm'], start=labels['start'],
         lineage=labels.get('lineage'), admission=labels.get('admission'), session=receipt['session'],
         source_commit=receipt['source_commit'], ended=ended, outcome=receipt['outcome'],
-        attempts=spend['attempts_charged'], wall_seconds=round(receipt['elapsed_seconds']),
+        attempts=spend['observed_attempts'], wall_seconds=round(receipt['elapsed_seconds']),
         accounting_basis='incomplete-trace' if upper_bound else 'provider-reported', spend_upper_bound_usd=bound,
         spend_usd=spend['spent_usd'], provider_usd=spend['reported_usd'], unpriced_attempts=spend['unpriced_requests'],
         unpriced_attempt_usd=None, unpriced_recall_attempts=spend['unpriced_recall_requests'], unpriced_recall_attempt_usd=None)

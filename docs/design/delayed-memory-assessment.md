@@ -277,15 +277,12 @@ game hours after six slots and ended at 47.79 hours with a death in the
 seventh, after about 4.3 wall hours. Six slots are a finite feasibility
 allowance and may end before the target.
 
-Use estimated attempts to validate context, capture and ending headroom.
-The current package contract still enforces an attempt cap and ending
-reserve. Identify any required setting that would end useful work before
-the approved budget or other operational limits. Freeze validated settings
-in each package and record why the work ended. Keep unpriced
-requests separate from the provider subtotal. The owner's budget direction
-is recorded in the [decision log](../decisions/owner-decisions.md#in-force).
-[#782](https://github.com/CVX-Hull/enactive/issues/782) owns the contract
-work to retire the forecast-based attempt stop.
+Estimate attempts to validate context, capture and ending headroom. Freeze
+the dollar limit and operational capacities in each package, then record its
+observed attempts, provider subtotal, unpriced requests and ending reason.
+The [budget-led campaign contract](../operations/campaign-run.md#spend-limit)
+and [owner decision](../decisions/owner-decisions.md#in-force) govern the final
+package freeze.
 
 The common brief gives the player an ongoing objective from the outset.
 Establish a sustainable place to work and sleep, pursue an ordinary
@@ -332,7 +329,7 @@ the expected span. An endpoint reached earlier can close the world. Beyond
 60 hours continue only for the documented candidate, with an ending at
 72 hours or an earlier finite stop. If an ordinary activity crosses the
 game-time limit, record the actual clock and begin ending at the next
-safe opportunity within the original wall and request limits. Record
+safe opportunity within the original time, budget and mechanical limits. Record
 death, a lost checkpoint, no opportunity, unknown exposure and time
 exhaustion as assigned results. Keep one writer and one native game lane.
 

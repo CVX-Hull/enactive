@@ -90,7 +90,7 @@ class ComputerRuntime:
     def status(self) -> dict[str, Any]:
         with self._custody:
             actors = [dict(actor_id=k, stage=v['stage']) for k, v in self._actors.items()]
-        return dict(schema='computer-status/1', session=self.session, target=self.channel.target(),
+        return dict(schema='computer-status/2', session=self.session, target=self.channel.target(),
                     stop=self.channel.stop_status(), remaining=self.remaining(), actors=actors,
                     last_operation=copy.deepcopy(self._last), latest_source=copy.deepcopy(self._latest_source),
                     native_returncode=self.process.poll())

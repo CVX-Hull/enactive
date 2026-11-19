@@ -32,8 +32,7 @@ export async function deliveryScenario(directory, overrides = {}) {
   const path = directory+'/delivered-knowledge.json';
   if (!overrides.preserveKnowledgeFile) await writeFile(path,JSON.stringify(value));
   const configuration = route();
-  configuration.max_requests = 20;
-  configuration.recall = {model:{...structuredClone(model),id:'recall-fixture'},every:1,max_requests:10,unpriced_request_usd:'0.2'};
+  configuration.recall = {model:{...structuredClone(model),id:'recall-fixture'},every:1,unpriced_request_usd:'0.2'};
   Object.assign(configuration,overrides.configuration);
   const events = [], payloads = [];
   let player = 0, recall = 0;

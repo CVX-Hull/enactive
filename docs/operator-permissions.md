@@ -35,8 +35,8 @@ Changes outside the user's authorized scope still require the applicable decisio
 The owner manages the OpenRouter account balance, auto-recharge and key credit
 limit. The lead checks the approved envelope and frozen run limit at admission
 and tracks only the returned OpenRouter costs. A lost campaign request with
-no usable cost consumes an attempt and leaves its charge unknown. The campaign
-procedure describes the original request limits, in-flight allowance and
+no usable cost is recorded as an observed, unpriced attempt. The campaign
+procedure describes the spending limit, in-flight allowance and
 separate handling for an incomplete trace.
 
 **The hard cap** is the credit limit the owner keeps on the OpenRouter key, $1,500. It

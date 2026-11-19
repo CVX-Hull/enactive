@@ -18,7 +18,7 @@ from tools.run_ledger import validator as ledger_validator
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json','delivered-knowledge.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
-        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','ending_reserve',
+        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','limits','ending_reserve',
         'spend_limit_usd','labels','private_files'}
 LABEL_FIELDS={'arm','start','scenario','lineage','admission'}
 PRINTABLE_ASCII=re.compile('[ -~]+')
@@ -106,7 +106,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/7` adapter selection and return its argv."""
+    """Validate the closed `player-host/8` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -133,7 +133,7 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     with manifest.open('rb') as stream:
         manifest_bytes = stream.read(manifest_limit + 1)
     profile = decode_json(manifest_bytes, manifest_limit)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/9':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/10':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     labels(profile['labels'])
@@ -177,24 +177,23 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     closed(profile['limits'],{'max_inputs','max_requests','max_frames','max_bytes'})
     for value in profile['limits'].values():integer(value,1,2**40)
     for name,low,high in (('port',1024,65535),('wall_seconds',60,86400),('host_seconds',30,86400),
-                         ('total_host_seconds',30,86400),('max_hosts',1,2),('max_http_attempts',1,10000)):
+                         ('total_host_seconds',30,86400),('max_hosts',1,2)):
         integer(profile[name],low,high)
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/7':
+    if type(route) is not dict or route.get('schema')!='player-host/8':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
-    if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
     # The dollar limit: the most this run may count as spent. The route repeats it, and the driver
-    # narrows it to what remains for each actor, as it narrows the request allowance.
+    # narrows it to what remains for each actor.
     limit=usd(profile['spend_limit_usd'],'spend_limit_usd')
     if limit<=0:raise ControlError('spend_limit_usd must be above zero')
     if usd(route.get('spend_limit_usd'),'route.json spend_limit_usd')!=limit:
         raise ControlError(f"route.json spend_limit_usd must be the package's spend_limit_usd, {profile['spend_limit_usd']}")
     reserve=profile['ending_reserve']
-    closed(reserve,{'seconds','http_attempts','inputs','requests','frames','frame_bytes','usd'})
-    bounds=dict(seconds=profile['host_seconds'],http_attempts=route['max_requests'],
+    closed(reserve,{'seconds','inputs','requests','frames','frame_bytes','usd'})
+    bounds=dict(seconds=profile['host_seconds'],
                 inputs=profile['limits']['max_inputs'],requests=profile['limits']['max_requests'],
                 frames=profile['limits']['max_frames'],frame_bytes=profile['limits']['max_bytes'])
     for name,maximum in bounds.items():integer(reserve[name],1,maximum-1)
@@ -223,8 +222,6 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     recall_bound=unpriced_request_usd(route['recall'])
     if recall_bound<=0 or usd(route['recall']['unpriced_request_usd'],'recall.unpriced_request_usd')!=recall_bound:
         raise ControlError('Recall unpriced_request_usd differs from its model rates')
-    if route['recall']['max_requests']>profile['max_http_attempts']:
-        raise ControlError('Recall attempts exceed original campaign allowance')
     reserve_bound=usd_sum([bound,recall_bound if knowledge.records else Decimal(0)])
     # A rate-derived bound must reserve resources for a pending request.
     if bound<=0:raise ControlError("The route's configured rates give no in-flight request bound")

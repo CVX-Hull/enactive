@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/7` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/8` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -32,7 +32,6 @@ ROOT = Path(__file__).resolve().parents[1]
 MCP_DOUBLE = ROOT / "tests" / "fixtures" / "player_host_mcp.py"
 CREDENTIAL_ENV = "FIXTURE_PROVIDER_KEY"
 CREDENTIAL = "contract-credential-4f1c9a7e"
-ALLOWANCE = 4
 @dataclass(frozen=True)
 class Adapter:
     """One listed adapter. The suite appends only a mode and contract flags to
@@ -78,11 +77,11 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/7", max_requests=ALLOWANCE, spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/8", spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
-    return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
+    return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
-                max_context_images=4, context_image_block=1, context_reserve_tokens=512, request_timeout_seconds=10, model=adapter.model(base_url),recall=dict(model=adapter.model(base_url),every=5,max_requests=max_requests,unpriced_request_usd=UNPRICED_REQUEST_USD))
+                max_context_images=4, context_image_block=1, context_reserve_tokens=512, request_timeout_seconds=10, model=adapter.model(base_url),recall=dict(model=adapter.model(base_url),every=5,unpriced_request_usd=UNPRICED_REQUEST_USD))
 
 
 # ---------------------------------------------------------------- reference provider
@@ -226,7 +225,7 @@ class Hosted:
         return int(self.paths["mcp-pid"].read_text())
 
     def accounted(self) -> dict:
-        reader = HostEvents(self.paths["host.jsonl"], ALLOWANCE)
+        reader = HostEvents(self.paths["host.jsonl"])
         try:
             return reader.finish()
         finally:
@@ -293,7 +292,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/7", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
+    for schema in ("pi-player-host/7", "player-host/7", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -344,11 +343,11 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/7" and events[0]["telemetry_version"] == 7
+    assert events[0]["schema"] == "player-host/8" and events[0]["telemetry_version"] == 8
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
-    assert accounting["attempts_charged"] == len(hosted.provider.requests) == 1
+    assert accounting["observed_attempts"] == len(hosted.provider.requests) == 1
     assert (accounting["reported_usd"], accounting["unpriced_requests"], accounting["spent_usd"]) == ("0.004", 0, "0.004")
     assert accounting["settled"]["reason"] == "task_complete" and accounting["settled"]["ok"] is True
     assert CREDENTIAL in hosted.provider.requests[0]["authorization"]
@@ -370,11 +369,11 @@ def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow
     assert counted == [("request-1", "0.004", "provider-reported", "0.004"), ("request-2", "0.004", "provider-reported", "0.008"),
                        ("request-3", "0.004", "provider-reported", "0.012")]
     actor = hosted.accounted()
-    assert (actor["attempts_charged"], actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"],
+    assert (actor["observed_attempts"], actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"],
             actor["spend_complete"]) == (3, "0.012", 0, "0.012", True)
-    receipt = campaign_run.accounting(dict(spend_limit_usd="0.01", max_http_attempts=ALLOWANCE), hosted.route, actor, True)
+    receipt = campaign_run.accounting(dict(spend_limit_usd="0.01"), hosted.route, actor, True)
     assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.25", unpriced_recall_requests=0,unpriced_recall_request_usd="0.25",
-                           spent_usd="0.012", attempts_charged=3, allocated_max_attempts=ALLOWANCE, spend_complete=True)
+                           spent_usd="0.012", observed_attempts=3, observed_recall_attempts=0, spend_complete=True)
     # The overshoot is less than one response: the limit was not yet reached when the third request was sent.
     assert Decimal(receipt["spent_usd"]) - Decimal(receipt["spend_limit_usd"]) < Decimal("0.004")
 
@@ -441,7 +440,7 @@ def test_handoff_settles_once_leaves_final_unchanged_and_closes_the_mcp_child(ad
     assert hosted.final() == "reserved"
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True and accounting["handoff"]["handoff_id"] == "1" * 32
-    assert accounting["attempts_charged"] == len(hosted.provider.requests) == 1
+    assert accounting["observed_attempts"] == len(hosted.provider.requests) == 1
     assert process_gone(hosted.mcp_pid())
 
 

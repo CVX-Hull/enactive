@@ -3,7 +3,7 @@
 It imitates only the parts of the supervised gateway that the page depends on:
 - serves web/index.html, web/app/* and web/vendor/* unchanged (as the gateway does);
 - sends the gateway's Content-Security-Policy on every response;
-- answers the control path: GET /api/status (computer-status/1), GET /api/source/<id>
+- answers the control path: GET /api/status (computer-status/2), GET /api/source/<id>
   (PNG), POST /api/pause with a reason;
 - answers `/api/view/*` from the JSON files beside this script (real viewer responses for one run and the
   cross-run routes, trimmed; `refresh.py` regenerates them),
@@ -71,7 +71,7 @@ class State:
                       presented_ms=int((now - 4) * 1000), received_wall=now - 3.9, width=640, height=360,
                       window_width=640, window_height=360, viewport=[0, 0, 640, 360])
         paused = bool(self.pauses)
-        return dict(schema='computer-status/1', session=SESSION,
+        return dict(schema='computer-status/2', session=SESSION,
                     target=dict(pid=4242, window_id=7, paused=False, takeover_generation=0),
                     stop=dict(stop_requested=paused, native_pause_confirmed=False,
                               reason='Operator Pause' if paused else None),
@@ -80,7 +80,7 @@ class State:
                     last_operation=dict(kind='input', operation_id='op-91', status='ok', reason=None),
                     latest_source=source, native_returncode=None,
                     host=dict(index=2, model='terra-1', provider='openrouter', host_seconds_remaining=2300,
-                              requests_total=61, max_requests_total=2000, latest_response_wall=now - 5),
+                              observed_attempts=61, latest_response_wall=now - 5),
                     player_claims=[])
 
 

@@ -18,10 +18,10 @@ rule still decide acceptance. No value on this page reaches the player.
 The evaluator reads one run directory read-only:
 - `session.sqlite3` (`computer-session/1`);
 - `sources/*.png`;
-- each `actors/NNN/host.jsonl` (`player-host/7`), including its per-request context
+- each `actors/NNN/host.jsonl` (`player-host/8`), including its per-request context
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
-- `manifest.json` (`campaign-run/9`), including its operator labels;
+- `manifest.json` (`campaign-run/10`), including its operator labels;
 - for the closed set of archived sessions only, the older versions of the manifest,
   host traces, receipt and run-ending record that the archive index lists for each
   session (see "Implementation rules");
@@ -42,13 +42,13 @@ input format is an error naming the file and version. Nothing is guessed.
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
   forbid the computer importing evaluation.
-- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/7`), used by
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/8`), used by
   the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
   `tools/campaign_player.py` stays separate because evaluation never gates the control path
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/7` telemetry 7. The one exception is a trace of an
+  `host-start` is not `player-host/8` telemetry 8. The one exception is a trace of an
   archived session: its caller passes that session's index entry, and the trace is then
   also read in the version the entry lists, when its `host-start` names that session.
   `host-summary` finds the entry from the manifest of the run directory the trace sits in,
@@ -369,7 +369,7 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     record in an older version is read only for a session the index lists with exactly
     that version, beside a manifest in the version the index lists for that session. Any
     other old version is an error naming the file and version. This reads historical
-    evidence; it is not an admission, and admission still requires `campaign-run/9`.
+    evidence; it is not an admission, and admission still requires `campaign-run/10`.
   - **The spend-limit session.** The owner added `spend-limit-run-555` on 13 November 2026: `campaign-run/6`, `campaign-receipt/4`, `player-driver/4`, `player-host/4` telemetry 4 and `campaign-watch-terminal/4`. It is read-only in those versions. Its manifest supplies `spend_limit_usd` rather than the earlier reservation; receipt/driver ending fields and host evidence are read as recorded. No archive is admitted for play.
   - **The five combinations.** The index holds 135 sessions in five combinations of versions.
     The memory adoption migration (#463) adds the 80 exact sealed `campaign-run/7`
@@ -963,12 +963,13 @@ Development-run quantities live as data in git, and pages render them or cite th
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/3`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/9` manifest and `campaign-receipt/6` alone |
+| `runs.jsonl` | One [`dev-run/3`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, observed attempts for current runs, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/10` manifest and `campaign-receipt/7` alone |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
-- **Origin.** `record` accepts the current `campaign-run/9` and
-  `campaign-receipt/6` pair. It copies the receipt's provider subtotal and
-  unknown player and recall counts. A complete trace has basis
+- **Origin.** `record` accepts the current `campaign-run/10` and
+  `campaign-receipt/7` pair. It copies the receipt's provider subtotal,
+  observed attempts and unpriced player and recall counts. Incomplete traces
+  preserve the observed starts as a lower bound. A complete trace has basis
   `provider-reported` and equal `spend_usd` and `provider_usd`. The per-attempt
   charge fields are null for current rows. On a complete trace the unpriced
   count describes observed attempts with an unknown charge.
@@ -985,7 +986,7 @@ Development-run quantities live as data in git, and pages render them or cite th
   any original split. Earlier counted totals can contain per-attempt bounds
   or configured estimates. Sealed reports keep their original contracts.
 - **Rejection.** A row without `schema: dev-run/3`, a schema violation (a label is required),
-  a repeated study and run, a repeated session, more combined player and recall unpriced attempts than charged attempts, or an
+  a repeated study and run, a repeated session, more combined player and recall unpriced attempts than recorded attempts, or an
   inconsistent spend split is an error naming the line. Snapshot rows are validated against
   their schema when read and before they are written.
 - **Generated tables.** A `<!-- evaluate-table study=N [lineage=L] core=C binding=ID:V -->` …
@@ -1047,7 +1048,7 @@ native captures and Pause. See the [recorded viewer procedure](../components/obs
 
 ### Recorded custodian receipt
 
-`custodian_receipt` projects the current package's `campaign-receipt/6` when the
+`custodian_receipt` projects the current package's `campaign-receipt/7` when the
 catalogued directory's current manifest and receipt agree with the summary's session
 and source commit. A missing, unreadable, unsupported or mismatched source yields
 `null`. The projection contains `outcome` (the custodian's disposition) and the

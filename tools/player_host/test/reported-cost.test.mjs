@@ -10,7 +10,7 @@ import { route, reply, rateLimit, scenario } from './host-scenario.mjs';
 const vectors = JSON.parse(await readFile(new URL('../../../tests/fixtures/provider-usage-cost.json', import.meta.url), 'utf8'));
 const tokens = {prompt_tokens:11, completion_tokens:5, total_tokens:16};
 const pilot = vectors.cases[0].usage;
-const limited = (spend_limit_usd, unpriced_request_usd = '0.25') => ({...route(), max_requests:8, spend_limit_usd, unpriced_request_usd});
+const limited = (spend_limit_usd, unpriced_request_usd = '0.25') => ({...route(), spend_limit_usd, unpriced_request_usd});
 const look = cost => reply(null, [['observe', {}]], {...tokens, cost});
 const counted = events => events.filter(event => event.type === 'response-complete')
   .map(event => [event.request_id, event.counted_cost_usd, event.cost_counted_as, event.spent_usd]);
@@ -36,7 +36,7 @@ test('a reported cost is counted as the provider reported it, beside the unchang
   const {result, events} = await scenario(t, [reply('finished', [], {...pilot, ...tokens})], {configuration});
   assert.equal(result.ok, true);
   const start = events.find(event => event.type === 'host-start');
-  assert.deepEqual([start.schema, start.telemetry_version, start.spend_limit_usd, start.unpriced_request_usd], ['player-host/7', 7, '100', '0.25']);
+  assert.deepEqual([start.schema, start.telemetry_version, start.spend_limit_usd, start.unpriced_request_usd], ['player-host/8', 8, '100', '0.25']);
   const {wall_time, monotonic_ms, response_progress, ...completed} = events.find(event => event.type === 'response-complete');
   // 11 input tokens at $1 and 5 output at $2 per million: the estimate keeps its floating-point value and its label.
   assert.deepEqual(completed, {type:'response-complete', request_id:'request-1', model:'fixture-model', provider:'fixture',
@@ -103,7 +103,7 @@ test('a refused request is unknown, and its retry uses a separate attempt', asyn
   assert.equal(terminal.result.reason, 'provider-error');
   assert.deepEqual(counted(terminal.events), [['request-1', null, 'unpriced', '0']]);
 });
-test('a loss below the attempt cap leaves room to retry even when its planning bound exceeds the dollar limit', async t => {
+test('an unpriced loss leaves room to retry even when its planning bound exceeds the dollar limit', async t => {
   const {result, payloads, events} = await scenario(t, [rateLimit(), reply('finished', [], pilot)], {configuration:limited('0.1')});
   assert.equal(result.ok, true);
   assert.equal(payloads.length, 2); assert.equal(result.requests, 2);

@@ -14,7 +14,7 @@ or milestone. GitHub owns findings, decisions and follow-ups; retained gameplay
 artifacts supply evidence. A campaign is not automatically a learning experiment.
 
 Before Ready, record the campaign objective/scenario, success and failure criteria,
-source/configuration, player/executor, finite attempt and cumulative resource limits,
+source/configuration, player/executor, finite run and cumulative resource limits,
 stop/save/handoff rules, evidence retention, and review checkpoints and effort.
 Distinguish development evidence from any held-out assessment before using it to
 choose changes. Keep campaign-specific observed facts separate from reusable lesson
@@ -37,7 +37,7 @@ coverage remain necessary before banking optional work on that supply.
 Prefer one cohesive functional admission and rolling evidence/needs review over
 serial short probe–cleanup–amendment–publication cycles. Retire redundant internal
 class limits prospectively when their measured cost no longer serves the outcome;
-retain every prior limit/result/cost and finite new total/segment/attempt ceilings.
+retain every prior limit/result/cost and finite new spending, segment and operational limits.
 Never change user guarantees or original whole ceilings through an internal exception.
 [Operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)
 owns the standing delegation and its limits. Record finite revised ceilings/
