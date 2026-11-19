@@ -1211,6 +1211,34 @@
       },
       "visibility": "private"
     },
+    "two-wake-memory-772": {
+      "availability": "present",
+      "bytes": 318416379,
+      "cited_by": [
+        "docs/acceptance/2026-11-18-two-wake-memory-772.md"
+      ],
+      "files": 1821,
+      "manifest_sha256": "37254be66b09d1ffe9da0857d85629be1073203762401424137bf1b7dba5c4b8",
+      "note": "Two independent #772 assignments and four settled receipts. Includes the approved frozen proposal, verified Farm continuations, Campground hold, exact cutoffs, provider returns and original userdir restoration.",
+      "sources": {
+        "admission-1": ".runtime/computer-sessions/two-wake-772-farm-58ee9279783f45ba8ffd469e1c6357b9@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "admission-2": ".runtime/computer-sessions/two-wake-772-s1-2-e95969f3326945d693ba017531ed040c@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "admission-3": ".runtime/computer-sessions/two-wake-772-s1-3-2bfa0eb2d8534a0a9df874625c1238cc@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "admission-4": ".runtime/computer-sessions/two-wake-772-s2-1-133c009bf107439f91c32e4eb1243ac8@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "offline-evaluations": "operator/offline-evaluations@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "operator": "operator/retained@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "spectator-1": ".runtime/evaluations/58ee9279783f45ba8ffd469e1c6357b9@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "spectator-2": ".runtime/evaluations/e95969f3326945d693ba017531ed040c@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "spectator-3": ".runtime/evaluations/2bfa0eb2d8534a0a9df874625c1238cc@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "spectator-4": ".runtime/evaluations/133c009bf107439f91c32e4eb1243ac8@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "userdir-1": ".runtime/archive/userdir-20261119T004922522188Z@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "userdir-2": ".runtime/archive/userdir-20261119T013223766114Z@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "userdir-3": ".runtime/archive/userdir-20261119T021314476974Z@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "userdir-4": ".runtime/archive/userdir-20261119T030444137354Z@a833d977cc27bf81453cdc0c14d80d449561665b",
+        "userdir-5": ".runtime/archive/userdir-20261119T034851787333Z@a833d977cc27bf81453cdc0c14d80d449561665b"
+      },
+      "visibility": "private"
+    },
     "wilderness-delayed-memory-762": {
       "availability": "present",
       "bytes": 105395011,
