@@ -478,6 +478,23 @@
       },
       "visibility": "private"
     },
+    "campground-opening-menu-799": {
+      "availability": "present",
+      "bytes": 958947,
+      "cited_by": [
+        "docs/acceptance/2026-11-19-campground-opening-menu-799.md"
+      ],
+      "files": 83,
+      "manifest_sha256": "199ad26bea8b284e9b09c2372fe04df69558347d53f4c756296ad8844e99037a",
+      "note": "Approved Campground opening-menu stop on 7a9579726776c8459f912c9829978cb6c5ff76d1. Includes the original package, receipts, operator approval and working ledger, readback, configuration archive and nine-file closed study userdir. The original 82-file userdir was restored and its separate recovery archive retained.",
+      "sources": {
+        "admission-1": ".runtime/computer-sessions/wilderness-797-first-eligible-d16ea238c279",
+        "fresh-config": ".runtime/archive/campground-799-fresh-config-d16ea238c279",
+        "operator": ".runtime/evaluations/campground-memory-799",
+        "study-userdir": ".runtime/archive/userdir-20261120T003609760330Z"
+      },
+      "visibility": "private"
+    },
     "cdda-outcome-feasibility": {
       "availability": "present",
       "bytes": 73511,
