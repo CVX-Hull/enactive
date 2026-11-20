@@ -47,6 +47,16 @@ async function until(predicate, what) {
 }
 // Real time only lets the host's promise continuations run; the controlled clock is unchanged.
 const settleMicrotasks = () => realDelay(40);
+// A failed stage would otherwise leave the host waiting on frozen timers and hang the test.
+// Run the controlled clock far past every host deadline so the host settles, then rethrow.
+const releaseOnFailure = (t, stages) => async (...args) => {
+  try {
+    await stages(...args);
+  } catch (error) {
+    for (let step = 0; step < 20; step += 1) { t.mock.timers.tick(1_000_000); await realDelay(10); }
+    throw error;
+  }
+};
 
 function watch(clock, state) {
   return event => {
@@ -73,7 +83,7 @@ test('a 60-second delay requested 34 seconds into a 60-second request is cut off
     () => { secondFetchAtMs = clock.ms; return reply(null,[['mutate',{mode:'ok'}]]); },
   ],{configuration,timeoutSeconds:3600,expectedAbort:'request-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     onEvent:watch(clock,state),
-    synchronize:async()=>{
+    synchronize:releaseOnFailure(t,async()=>{
       await until(() => fetchStarted, 'first fetch');
       assert.equal(clock.at('request-start','request-1'),0);
       clock.advance(REFUSAL_AT_MS - 1); await settleMicrotasks();
@@ -89,7 +99,7 @@ test('a 60-second delay requested 34 seconds into a 60-second request is cut off
       // Run the clock past the instant the backoff would have ended (34 s + 60 s = 94 s).
       clock.advance(40_000); await settleMicrotasks();
       assert.equal(secondFetchAtMs,undefined,'the abort cancelled the sleep; nothing is dispatched at 94 s');
-    },
+    }),
   });
   assert.equal(result.ok,false);assert.equal(result.reason,'request-timeout');
   assert.equal(result.requests,1);assert.equal(payloads.length,1);assert.equal(calls.length,0);
@@ -118,7 +128,7 @@ test('an accepted orderly stop during the backoff does not shorten it; the reque
     () => reply(null,[['mutate',{mode:'ok'}]]),
   ],{configuration,timeoutSeconds:3600,expectedAbort:'request-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     controlReady:stream=>{control=stream;},onEvent:watch(clock,state),
-    synchronize:async()=>{
+    synchronize:releaseOnFailure(t,async()=>{
       await until(() => fetchStarted, 'first fetch');
       clock.advance(REFUSAL_AT_MS); await until(() => state.eligible, 'eligible refusal');
       clock.advance(6000); // 40 s into the request, 6 s into the backoff
@@ -129,7 +139,7 @@ test('an accepted orderly stop during the backoff does not shorten it; the reque
       assert.equal(state.aborted,undefined,'the stop does not interrupt the backoff');
       clock.advance(1); await until(() => state.aborted, 'request timer');
       assert.equal(clock.at('abort'),60_000);
-    },
+    }),
   });
   assert.equal(result.ok,false);assert.equal(result.reason,'request-timeout');
   assert.equal(payloads.length,1);assert.equal(calls.length,0);
@@ -151,21 +161,22 @@ test('when the host allowance ends before the request timer, the actor limit cut
     () => reply(null,[['mutate',{mode:'ok'}]]),
   ],{configuration,timeoutSeconds:50,expectedAbort:'host-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     onEvent:watch(clock,state),
-    synchronize:async()=>{
+    synchronize:releaseOnFailure(t,async()=>{
       await until(() => fetchStarted, 'first fetch');
       clock.advance(REFUSAL_AT_MS); await until(() => state.eligible, 'eligible refusal');
       clock.advance(49_000 - REFUSAL_AT_MS - 1); await settleMicrotasks();
       assert.equal(state.aborted,undefined);
       clock.advance(1); await until(() => state.aborted, 'host work timer');
       assert.equal(clock.at('abort'),49_000);
-    },
+    }),
   });
   assert.equal(result.reason,'host-timeout');assert.equal(payloads.length,1);assert.equal(calls.length,0);
   assert.equal(events.filter(e=>e.type==='provider-retry'&&e.stage==='started').length,0);
   assert.equal(summary(events).settled.unpriced_requests,1);
 });
 
-test('a 20-second delay fits: the second attempt starts at 54 s with the identical body and completes under the shared timer',async t=>{
+// An instant reply would also complete under a renewed timer; the next test tells the two apart.
+test('a 20-second delay fits: the second attempt starts at 54 s with the identical body and completes before 60 s',async t=>{
   const clock = controlledClock(t), state = {};
   const configuration = route(); configuration.request_timeout_seconds = REQUEST_DEADLINE_SECONDS;
   let fetchStarted = false, secondFetchAtMs;
@@ -173,13 +184,13 @@ test('a 20-second delay fits: the second attempt starts at 54 s with the identic
     init => { fetchStarted = true; return after(REFUSAL_AT_MS, () => badGateway(20))(init); },
     () => { secondFetchAtMs = clock.ms; return reply(); },
   ],{configuration,timeoutSeconds:3600,onEvent:watch(clock,state),
-    synchronize:async()=>{
+    synchronize:releaseOnFailure(t,async()=>{
       await until(() => fetchStarted, 'first fetch');
       clock.advance(REFUSAL_AT_MS); await until(() => state.eligible, 'eligible refusal');
       clock.advance(19_999); await settleMicrotasks();
       assert.equal(secondFetchAtMs,undefined,'never redispatch before the provider permits');
       clock.advance(1); await until(() => secondFetchAtMs !== undefined, 'second fetch');
-    },
+    }),
   });
   assert.equal(secondFetchAtMs,54_000);
   assert.equal(result.ok,true);assert.equal(result.requests,2);assert.equal(bodies[0],bodies[1]);assert.deepEqual(payloads[0],payloads[1]);
@@ -200,7 +211,7 @@ test('a 20-second delay that fits still leaves the second attempt only the remai
     init => { secondFetchAtMs = clock.ms; return after(10_000, () => reply(null,[['mutate',{mode:'ok'}]]))(init); },
   ],{configuration,timeoutSeconds:3600,expectedAbort:'request-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     onEvent:watch(clock,state),
-    synchronize:async()=>{
+    synchronize:releaseOnFailure(t,async()=>{
       await until(() => fetchStarted, 'first fetch');
       clock.advance(REFUSAL_AT_MS); await until(() => state.eligible, 'eligible refusal');
       clock.advance(20_000); await until(() => secondFetchAtMs !== undefined, 'second fetch');
@@ -208,7 +219,7 @@ test('a 20-second delay that fits still leaves the second attempt only the remai
       assert.equal(state.aborted,undefined);
       clock.advance(1); await until(() => state.aborted, 'request timer');
       assert.equal(clock.at('abort'),60_000);
-    },
+    }),
   });
   assert.equal(secondFetchAtMs,54_000);
   assert.equal(result.reason,'request-timeout');assert.equal(result.requests,2);

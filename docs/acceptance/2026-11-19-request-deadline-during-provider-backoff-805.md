@@ -19,15 +19,17 @@ second attempt only the time the first one left unused, even when the wait fits.
 
 Three behaviours were compared: keep the current one, skip a wait that cannot fit,
 or honour the full delay inside the remaining actor and custody time. Skipping the
-wait changes nothing but the moment of the stop: 34 seconds instead of 60, the same
-unsaved state, no extra attempt and no extra charge. Honouring the delay is the only
-choice that can avoid the unsaved stop. On this timing the request would run until
+wait changes the moment and the reason of the stop: `provider-error` at 34 seconds
+instead of `request-timeout` at 60, with the same unsaved state, no extra attempt and
+no extra charge. Honouring the delay is the only
+choice that can avoid the unsaved stop, and only when the second reply is usable. On this timing the request would run until
 94 to 154 seconds instead of ending at 60, with one more provider attempt, and it needs
 five points the current code does not settle: the SDK's own timeout, the ending control,
 a floor for the second attempt, a once-per-actor bound and the ending reserve. The evidence is one
 observed refusal and no measurement of whether a provider answers after such a wait.
 It supports skipping the wait if an earlier, equally unsaved stop is wanted. It does
-not yet support honouring the delay. The lead decides.
+not yet support honouring the delay. The lead keeps the current contract
+([decision](#the-leads-decision)).
 [Backoff review #805](https://github.com/CVX-Hull/enactive/issues/805) · [Observed run #803](2026-11-19-joanna-campground-memory-803.md)
 
 ## What was measured and what was derived
@@ -46,7 +48,7 @@ from the start of logical request 1.
 | Same, with an orderly stop accepted at 40 s | The stop did not interrupt the wait. The timer still decided at 60 s with `request-timeout`. The player never answered the stop. |
 | Same, host allowance 50 s | Work stopped at 49 s with `host-timeout`, 15 s after the refusal, before the request timer. One request, no second fetch. |
 | 502 at 34 s, `Retry-After: 20`, instant reply | Nothing sent at 53.999 s. Second request at 54 s with a byte-identical body. It completed under the shared timer: two requests, one unpriced and one priced at the provider-reported cost. |
-| Same, second reply needing 10 s | Second request at 54 s, aborted by the original timer at 60 s with `request-timeout`: only the 6 s the first attempt left. Two requests, both unpriced, no tool call. |
+| Same, second reply needing 10 s | Second request at 54 s. The host emitted `request-timeout` at 60 s, on the original timer: only the 6 s the first attempt left. The delayed fixture reply ignores the abort signal. Two requests, both unpriced, no tool call. |
 
 Existing tests already show the neighbouring facts: cancellation interrupts a backoff
 ([retry-deadlines](../../tools/player_host/test/retry-deadlines.test.mjs)), and a delay over
@@ -76,18 +78,20 @@ Refusal at 34 s, delay 60 s, request deadline 60 s, generous allowance.
 | Stop or second fetch | `request-timeout` at 60 s | `provider-error` at 34 s, the stop an over-cap delay already gets | Second fetch at 94 s, never earlier; fresh deadline of at most 60 s for it |
 | Provider attempts | 1 | 1 | 2 |
 | Time the actor waits | 26 s of dead time after the refusal | None | 60 s wait, then up to 60 s for the second attempt: the request ends between 94 s and 154 s. Worst case over any refusal time is about 180 s (refusal at 59.9 s) against a current worst case of 60 s |
-| Tool call | None | None | One only if the second attempt completes. A tool call in a cut-off stream cannot reach MCP, as for the existing stream recovery |
-| Actor or custody limit | Never crossed | Never crossed | Crossed unless guarded. With a 50 s allowance the delay cannot fit (15 s left at the refusal), so it must fall back to the skip stop at 34 s |
+| Tool call | None | None | Only from a completed second reply, which may carry more than one call. A tool call in a cut-off stream cannot reach MCP, as for the existing stream recovery |
+| Actor or custody limit | Never crossed | Never crossed | Not crossed: the host and driver deadlines still apply. A guard is needed only to avoid a futile wait or a retry with too little time. With a 50 s allowance the delay cannot fit (15 s left at the refusal), so the useful behaviour is the skip stop at 34 s |
 | Unpriced attempts | 1 | 1 | 1, plus a second only if it ends without a usable cost |
-| Extra charge | None | None | At most one attempt: the provider-reported cost of one inference if it completes, else the route's `unpriced_request_usd` bound. See below |
-| Outcome for the run | Unsaved stop, no successor | Unsaved stop, no successor, earlier | The run continues if the provider answers; unsaved stop if it does not |
+| Extra charge | None | None | At most one more attempt: its provider-reported cost if one is usable, otherwise a charge that stays unknown. See below |
+| Outcome for the run | Unsaved stop, no successor | Unsaved stop, no successor, earlier | Play can continue if the second reply is usable and priced; unsaved stop otherwise |
 | Properties at risk | None | Stop reason differs; text in the contract and adapter reference that says the original deadline covers the backoff changes | Boundaries, stop propagation, the ending, the SDK timeout (below) |
 
-**Charge.** The contract counts every started attempt. A reported cost counts at that
-cost and any other attempt counts at the route's bound `unpriced_request_usd`
-([counting rule](2026-11-12-provider-reported-spend-limit.md#the-counting-rule)). The
-bound is $0.4096 for the route described in [development runs](../development-runs.md);
-the files read do not show whether the #803 route used the same bound. The ledger
+**Charge.** The [contract](../contracts/player-host.md#spend) records every started attempt and adds only a
+usable provider-reported cost to the dollar total, including a cost reported on a
+failure. An attempt without one keeps an unknown charge and is counted as unpriced. The
+route's `unpriced_request_usd` is a planning bound for the in-flight and ending
+allowances, not an amount added to spend. That bound is $0.4096 for the route described
+in [development runs](../development-runs.md); the files read do not show whether the
+#803 route used the same one. The ledger
 ([runs.jsonl](../../data/evaluation/runs.jsonl)) records $310.08 of provider spend over
 32,135 attempts in its 158 rows, about $0.0096 per recorded attempt. The two #803
 admissions show about $0.0074 and $0.0027. The ledger may count recall attempts too,
@@ -128,10 +132,11 @@ All paths are read-only here and none was edited. Neither change touches the req
   every row above, and a contract change from "the original request deadline covers the backoff"
   to a bounded second deadline.
 
-**Fixture gap.** The existing fixtures control `setTimeout` only. A change that computes time
+**Fixture gap.** The new test file controls `setTimeout` only. A change that computes time
 left reads `performance.now()`, so its tests also need that clock driven from the same counter
 (`t.mock.method(performance, 'now', …)` worked on the scratch copy), and a fixture that
-inspects `init.signal` to see the SDK's abort. Neither is in the repository's fixtures today.
+sees an already aborted `init.signal` at redispatch. Other tests in the suite already
+mock `performance.now()` and listen to `init.signal`; the new file does neither.
 The measured part of this record needed neither.
 
 ## Preserved properties under honouring the delay
@@ -178,6 +183,28 @@ documented. It costs the run, not just time, whenever a provider asks for a long
   floor fits the host allowance, a control or cancellation ends the wait, the SDK timeout lifted
   and the ending-reserve check applied. Collect a second observed refusal first if the delay and
   the provider's behaviour after it matter to the decision.
+
+## The lead's decision
+
+The current contract stays: the original request deadline covers the backoff and the
+retry. An eligible refusal whose delay is within the 60-second cap but outlasts the time
+left ends the actor with `request-timeout` when that timer fires first; a longer delay
+fails at once, and a host timeout or cancellation can end it sooner.
+
+- **Skipping the wait is not adopted.** It saves at most the dead wait before a stop
+  that is unsaved either way, 26 seconds in the one observed case. It would change the
+  stop reason a reader sees, and the readers of that reason were not checked.
+- **Honouring the delay is not adopted.** Nothing measured shows that a provider
+  answers after such a wait, and one refusal gives no rate. It would also lengthen a
+  request and admit a possible extra charge, which is the owner's to approve.
+- **The cost is accepted and stated:** a long provider wait late in a request ends the
+  run without a new Save, as it did in #803.
+- **Revisit** when a second refusal of this kind is observed, or when the owner asks
+  for runs to survive a long provider wait. The five new tests then show what the host
+  does today and fail if that changes.
+
+The worker measured and reported; the lead reran the host suite (298 tests) and made
+this decision.
 
 ## Unknown
 
