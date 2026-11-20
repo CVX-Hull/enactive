@@ -12,7 +12,7 @@ scope: 'One fresh Campground world, a same-session handoff, a named reload and a
 
 Morgan Reed reached the assigned campground, used a matchbox found there to
 light a cooking fire, slept naturally and resumed useful work. The first
-eligible choice used a five-minute-old observation. The survivor’s name was
+eligible cutoff occurred five game minutes after the matchbox was found. The survivor’s name was
 absent from the fire’s effect window. The named reload verified the saved
 checkpoint, then stopped on a provider refusal before another Save. At the
 last visible clock even the earliest world observation was 36 minutes and
@@ -58,8 +58,10 @@ prefix SHA-256 was `b27892f2bda45e1ff2584c11e47d5c917f79e1a2c1e8ba073e1a6d04c572
   inventory and brazier images were omitted. An inventory inspection was
   available. Attention and lookup success remained unknown to the before reader.
 - **Effect.** A separate reader saw the executed project from request 88 onward.
-  Source 3377 showed wood on the fire ring. The ordinary item menu in 3415
-  showed nine matches in the matchbox and twenty in the matchbook. Source 3805
+  Source 3377 showed wood on the fire ring. In request 109 the player stated
+  an intent to use the matchbox before opening the ordinary item menu. That
+  single tool call returned in 0.417 seconds. Source 3415 showed nine matches
+  in the matchbox and twenty in the matchbook before the actual selection. Source 3805
   showed successful ignition and a visible flame at 08:10:58. Later source
   4493 distinguished the used item by its changed count of eight, with twenty
   still in the matchbook. The survivor was alive, but no name appeared at
