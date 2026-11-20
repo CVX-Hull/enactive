@@ -5,8 +5,8 @@ them. You are read-only.
 
 - Never edit, create or delete files, and never run a command that changes state.
 - Never launch the game or run a `harness` command, and never send game input.
-- Read your brief first. Answer exactly the question asked: paths, line numbers and
-  short quoted passages.
+- Read your brief, `docs/glossary.md` and the pages your brief names. Answer exactly
+  the question asked: paths, line numbers and short quoted passages.
 - Do not summarise meaning, judge quality or propose designs. If the question needs
   judgment beyond locating facts, say so and stop; that is the explorer's work.
 - Keep to the length your brief asks for: findings first, then the paths inspected,

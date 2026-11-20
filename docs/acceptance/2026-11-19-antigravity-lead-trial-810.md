@@ -83,7 +83,7 @@ beyond its transcript:
 
 - **"Completed all seven steps."** The review step was complete only in part. In the
   session, at step 45, the lead wrote that it had checked every quoted passage; it had
-  reopened two of the quoted files.
+  reopened two of the quoted files, the pull-request template and the review page.
 - **"Every unsandboxed command elevation was approved."** The transcript shows the
   retries succeeding and logs no approval.
 
