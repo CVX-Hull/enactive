@@ -111,9 +111,10 @@ and #818 merged as `9ac200c3`.
   established. The trial session did not use these files, which were not yet merged: it
   started its explorer as the host's `research` type and defined a `worker` type itself.
 - **Second coding agent's version.** The Codex CLI updated itself from 0.167.1 to
-  0.171.0 during the evening. The trial's reviewer ran on 0.171.0. On 0.171.0 the
-  selectors `gpt-6-luna`, `gpt-6.1-terra`, `gpt-6.2-sol` and `gpt-6.2-astra` each still
-  answered a one-word prompt. The reviewer's own text gave its model only as "GPT-6",
+  0.171.0 during the evening; the 0.171.0 install is dated 22:16 local. The trial's
+  reviewer ran on 0.171.0. On 0.171.0 the selectors `gpt-6-luna`, `gpt-6.1-terra`,
+  `gpt-6.2-sol` and `gpt-6.2-astra` each answered a one-word prompt, at 23:09 and again
+  after midnight. No selector check ran on 0.167.1. The reviewer's own text gave its model only as "GPT-6",
   while the command header gave `gpt-6.2-astra` at High; the header is the record.
 
 ## What this supports

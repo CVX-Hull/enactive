@@ -77,8 +77,8 @@ the pull request.
   delegation call's model override. The `reviewer` and `Explore` files have each run
   once as a sub-agent; `locator` and `worker` have not.
 - **Codex** reads `.codex/agents/` in a checkout the user trusts. All four model
-  selectors answered a one-word prompt on CLI 0.167.1 and again on 0.171.0; the role
-  files themselves were not exercised as sub-agents.
+  selectors answered a one-word prompt on CLI 0.171.0, twice; the role files themselves
+  were not exercised as sub-agents.
 - **Antigravity** role files use its native aliases; a full model identifier in a
   role file was not tested. `agy agents` (CLI 1.5.13) listed all four files from the
   main checkout, and none from a worktree of it or from a scratch copy; no other place

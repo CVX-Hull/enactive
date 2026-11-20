@@ -148,6 +148,9 @@ The intervals of the top six overlap.
 On 19 November 2026 (20 November UTC), on the owner's machine:
 
 - **Versions.** Claude Code 2.1.329, Codex CLI 0.167.1, Antigravity CLI 1.5.13.
+  Correction of 20 November 2026: 0.167.1 was read early in the evening. The Codex
+  CLI's 0.171.0 install is dated 22:16 local, before the selector check below at 23:09,
+  so that check and every review that evening ran on 0.171.0.
 - **Claude Code models.** The delegation call offers the selectors `fable`, `opus`,
   `sonnet` and `haiku`.
 - **Codex selectors.** `gpt-6-luna`, `gpt-6.1-terra`, `gpt-6.2-sol` and `gpt-6.2-astra`
