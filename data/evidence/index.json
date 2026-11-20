@@ -538,6 +538,20 @@
       },
       "visibility": "private"
     },
+    "coding-agent-lead-backlog-grooming": {
+      "availability": "present",
+      "bytes": 689713,
+      "cited_by": [
+        "docs/acceptance/2026-11-19-coding-agent-lead-backlog-grooming.md"
+      ],
+      "files": 49,
+      "manifest_sha256": "5427b9f4aaaf366ee52f1fdb00aa01000978bb5ce1f052d87d04ea2ebf90f238",
+      "note": "Open-backlog and Project snapshots before and after the 19 November 2026 grooming, native sub-issue and dependency edges, and issue descriptions before the audit and as written for #136, #805 and #807 to #813. Baseline 3529c31a4d4bd5a3c1bd9bf24e9be1a56ac6d4d6. No game, provider call or outcome claim.",
+      "sources": {
+        ".": "lead scratch tracker snapshots at 3529c31a"
+      },
+      "visibility": "private"
+    },
     "curated-memory-adoption-463": {
       "availability": "present",
       "bytes": 441043,
