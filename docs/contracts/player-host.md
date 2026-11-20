@@ -82,7 +82,7 @@ permanently fences native input on Pause, including during final-report grace. A
 session and custody deadlines stay fixed. Missing charges remain unknown. The
 [adapter reference](../../tools/player_host/README.md) defines the eligible failures. For an eligible pre-output refusal, the original request deadline covers the
 backoff and the retry. Actor time and custodian mechanical resources are separate.
-[Pre-output retry contract](https://github.com/CVX-Hull/enactive/issues/308) · [Live refusal evidence](../acceptance/2026-11-19-joanna-campground-memory-803.md).
+[Pre-output retry contract](https://github.com/CVX-Hull/enactive/issues/308) · [Live refusal evidence](../acceptance/2026-11-19-joanna-campground-memory-803.md) · [Backoff review and the unsaved-stop tradeoff](../acceptance/2026-11-19-request-deadline-during-provider-backoff-805.md).
 These operator counts do not enter the assignment, repeated model messages or
 actor tool results.
 
