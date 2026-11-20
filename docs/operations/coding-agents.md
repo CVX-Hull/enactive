@@ -23,17 +23,30 @@ deciding player host or a fallback for one: gameplay runs only through the
 | Claude Code | [`CLAUDE.md`](../../CLAUDE.md) | Imports `@AGENTS.md`; adds no rules. |
 | Antigravity | [`AGENTS.md`](../../AGENTS.md), loaded without being asked | Single instruction source. |
 
-Change instructions only in `AGENTS.md` and the documents it links.
+Change instructions only in `AGENTS.md`, the documents it links and the shared role
+instructions in `.agents/roles/`.
 
 ## Delegation roles
 
 [S-AGENT](../standards/agents.md) names roles; each host supplies the mechanism.
-Role definitions (model, tools, read-only mode) live in each user's host profile,
-not in this repository.
+Role definitions are tracked in this repository, as the owner decided
+([decision log](../decisions/owner-decisions.md)): one shared instruction per role in
+`.agents/roles/`, and a thin wrapper per host that names the model and points to it, in
+`.claude/agents/`, `.codex/agents/` and `.agents/agents/`. On Claude Code a project
+definition takes precedence over a user's own definition of the same name. The
+Antigravity wrappers are not yet listed by its CLI
+([Choosing a model](model-routing.md#roles-and-their-default-models)).
+[Choosing a model](model-routing.md) owns each role's default model and when the lead
+overrides it.
+
+The explorer role has two forms. Locating (where a file, rule or name is) runs on the
+smallest model. Synthesis (a question answered from evidence across files) runs on a
+larger one.
 
 | Role | Codex | Claude Code |
 | --- | --- | --- |
-| Explorer, read-only | `agent_type` explorer | `subagent_type` `Explore` |
+| Explorer, locating | `agent_type` locator | `subagent_type` `locator` |
+| Explorer, synthesis | `agent_type` explorer | `subagent_type` `Explore` |
 | Worker, owned paths | `agent_type` worker with `fork_turns=none`, separate worktree | `subagent_type` worker, fresh agent (not a fork), `isolation: worktree` |
 | Reviewer, clean context | `agent_type` reviewer with `fork_turns=none` | `subagent_type` reviewer, fresh agent |
 

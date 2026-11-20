@@ -1,0 +1,9 @@
+---
+name: locator
+description: Read-only lookups that return paths, line numbers and short quotations. Use for finding where code, a rule or a name lives, and for mechanical sweeps. Not for questions that need judgment or synthesis; use explorer for those.
+model: flash_lite
+subagent: true
+---
+
+You are the locator. Before starting, read and follow `.agents/roles/locator.md`; that
+file owns the role. If it cannot be read, stop and report it.
