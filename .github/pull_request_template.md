@@ -38,7 +38,14 @@ docs/decisions/owner-decisions.md, and the design note or research page it settl
 historical; a dated record is added only for evidence from a run, study, measurement or
 review, with its kind and "At a glance"; issue descriptions are replaced, not appended to. Write "none" if no document changed. -->
 
+## Models
+
+Models:
+
+<!-- State the author's coding agent, model and effort (or human). -->
+
 ## Review
 
-<!-- For a boundary or outcome change: who reviewed (human or agent), which commit, the
-findings and their disposition. Do not present agent review as human approval. -->
+<!-- For a boundary or outcome change: which commit was reviewed. For each review: the
+reviewer's coding agent, model and effort (or human), and each finding marked confirmed
+or rejected. Do not present agent review as human approval. -->
