@@ -11,14 +11,15 @@ scope: 'A price proposal for one bounded live development run of the curator bes
 ## At a glance
 
 One admission of about 200 decisions, with the curator following play as the
-[live integration design](../design/live-curator-integration.md) describes, should cost
-about **$3.50**: about $1.50 of play and about $2.00 for ten curator sessions. The
-proposed maximum is **$10.00**. Nothing here is approved, and the run cannot be made
-until the live trace reader and the runner exist.
+[live integration design](../design/live-curator-integration.md) describes, is forecast
+at about **$3.50**: about $1.50 of play and about $2.00 for ten curator sessions. The
+proposed maximum is **$10.00**, made of two limits that are each enforced before a
+request is sent. Nothing here is approved, and the run cannot be made until the live
+trace reader and the runner exist.
 
-The figures are existing measurements read again, not a new one. The pilot's sessions
-ran over sealed windows, one after another; a session beside live play has never been
-priced, and that is what the run would measure.
+The figures are existing measurements read again, not new ones. The pilot's sessions ran
+over sealed windows, one after another; a session beside live play has never been priced,
+and that is what the run would measure.
 
 No game, no model request, $0 spent.
 [Session price pilot](2026-11-13-session-price-pilot.md) · [Free checks](2026-11-13-memory-screen-free-checks.md) · [Live integration design](../design/live-curator-integration.md)
@@ -27,97 +28,130 @@ No game, no model request, $0 spent.
 
 | Input | Figure | Source |
 | --- | --- | --- |
-| Cost of a curator session over 20 steps | median $0.20, from $0.11 to $0.57 | the price pilot, ten sessions |
-| Time of that session | median 99 s, from 57 to 153 s | the price pilot |
-| Lag in the pilot | 8 to 20 decisions behind when a session ended; about 23 on average | the price pilot |
-| Size of a recent run | median 199 decisions, 1,532 s | the run ledger, below |
+| Cost of a curator session | median $0.20, from $0.11 to $0.57 | the price pilot's ten sessions; nine over 20 operations and one over 16 |
+| Time of that session | median 99 s over all ten, 107 s over the nine full windows; from 57 to 153 s | the price pilot |
+| Lag in the pilot | inferred from the sealed player's pace, not observed beside play: 8 to 20 decisions behind when a session ended, about 23 averaged over a cycle | the price pilot |
+| Size of a recent run | median 199 decisions, 1,532.5 s | the run ledger, below |
 | Cost of that play | median $1.49; the largest, $5.37 | the run ledger |
 | Player pace | median 7.69 decisions a minute | the run ledger |
 
-The ledger figures come from joining `data/evaluation/runs.jsonl` with
-`data/evaluation/run-metrics.jsonl` on the run, over the 60 most recent ledger rows, and
-keeping the 46 that have a wall time and at least 50 decisions. No tracked command
-produces them; the join was a short read-only script.
+**The ledger figures.** They come from the last 60 rows, in file order, of
+`data/evaluation/runs.jsonl` as it stands at this change, joined on `run` with
+`data/evaluation/run-metrics.jsonl`, keeping the 46 rows that have a positive
+`wall_seconds` and at least 50 `decisions`. Ordering the ledger by its `ended` field
+selects a slightly different set and changes the medians. No tracked command produces
+them; the join was a short read-only script.
 
-At 7.69 decisions a minute, 20 decisions take about 156 seconds. The median pilot session
-took 99 seconds, so a session over one window ends before the next window fills. The
-slowest pilot session took 153 seconds, which is on the edge.
+**A forecast, not a measurement.** At 7.69 decisions a minute, 20 decisions take about
+156 seconds. The median pilot session took 99 seconds, so a session over one window
+would end before the next window fills; the slowest took 153 seconds, which is on the
+edge. A window counts an actor's computer operations and the ledger counts decisions,
+and the two are not the same unit.
 
-## What lag costs, from the simulation
+## The lag simulation, run again
 
-The lag simulation removes covered turns from recorded requests and reports the prompt
-sizes that result. It was run again on 20 November 2026 over the sealed seven-day
-lineage, with coverage arriving in sessions:
+The simulation removes covered turns from recorded requests and reports the prompt sizes
+that result. With `--coverage sessions` the number given is the **length of a session in
+player request turns**, and coverage then trails play by one to two sessions. It is not
+a lag the curator is held to.
 
 ```
 .venv/bin/python -m tools.memory_screen_checks cut .runtime/evidence/397-seven-day/computer-sessions --lags 10 20 23 47 --coverage sessions
 ```
 
-| Lag in decisions | Median prompt | 95th percentile | Requests held back | Image blocks dropped | Share under 40,000 tokens |
-| --- | --- | --- | --- | --- | --- |
-| 10 | 29,200 | 40,600 | 0 | 0 | 0.93 |
-| 20 | 30,342 | 40,600 | 0 | 0 | 0.921 |
-| 23 | 36,042 | 46,440 | 68 | 68 | 0.69 |
-| 47 | 40,884 | 55,126 | 61 | 76 | 0.472 |
+Run on 20 November 2026 over the sealed seven-day lineage, sessions `sd1a1` to `sd1a7`:
+seven runs, 14 actors, 1,978 requests.
 
-Seven runs, 14 actors, 1,978 requests. The rows are from the simulation's model, not
-measured, and the model has no briefing in it. They agree with the free checks' tables.
-The step between 20 and 23 is the point of the run: a curator that trails by 20 costs
-the cut nothing, and one that trails by 23 already holds back requests.
+| Session length in turns | Median prompt | 95th percentile | Requests held back | Image blocks dropped | Share under 40,000 tokens | Cache writes against recorded |
+| --- | --- | --- | --- | --- | --- | --- |
+| 10 | 29,200 | 40,600 | 0 | 0 | 0.93 | 0.13 |
+| 20 | 30,342 | 40,600 | 0 | 0 | 0.921 | 0.151 |
+| 23 | 36,042 | 46,440 | 68 | 68 | 0.69 | 0.245 |
+| 47 | 40,884 | 55,126 | 61 | 76 | 0.472 | 0.198 |
+
+The rows for 10, 20 and 47 match the free checks' table. The row for 23 is new here. The
+rows are from the simulation's model, not measured, and the model has no briefing in it.
+A session length of 20 holds back no request and drops no image block; 23 already does.
+The lengths differ in prompt size and cache writes even where neither does.
 
 ## The run proposed
 
-- **One admission** of the current player, of about 200 decisions, with the curator
-  runner following it: windows of 20 finished steps, a ceiling of 40, one session at a
-  time.
+- **One admission** of the current player, of about 200 decisions, in one world, with
+  the curator runner following it as the design says: one actor's range at a time, 20
+  finished steps to start a session, a ceiling of 40, one session at a time, one last
+  session over the tail after the admission ends.
 - **No delivery inside the admission.** The player receives the package's frozen
   knowledge, as today.
-- **It measures** the lag at the start and end of each session and its tail, the time
-  from a step to the version covering it, whether the backlog grows, the curator's
-  dollars per session beside the player's, the player's pace, and how long each copy of
-  the store takes.
+- **It measures** what the design lists: lag at the start and end of each session, time
+  from a step to the version covering it, backlog, the curator's dollars beside the
+  player's, how long each snapshot's read holds, and the player's pace beside named
+  sealed admissions.
 
-## Price
+## Price and its bounds
 
-| Part | Expected | Cap |
+| Part | Forecast | Limit, and what enforces it |
 | --- | --- | --- |
-| Play, one admission | $1.49 | $3.00, the package's dollar limit |
-| Curator, ten sessions | $2.00 at the pilot's median | $6.00, above ten sessions at the pilot's largest, $5.70 |
-| Margin for a charge in flight | | $1.00 |
+| Play, one admission | $1.49 | **$3.00**: the package's `spend_limit_usd`. The player host checks it before each request, and the package's ending reserve, which is below the limit, covers the in-flight player and recall requests |
+| Curator, ten sessions | $2.00 at the pilot's median | **$6.00**: the runner's run cap, with a cap for each session. The curator proxy reserves the remaining budget before it forwards a request, as it does for the shadow runner |
+| Not allocated | | $1.00 |
 | **Total** | **about $3.50** | **$10.00** |
 
-**Stop rules.** The player host stops the admission at the package's limit, as it does
-now. The runner stops for the admission when its own ledger reaches $6.00, or after two
-consecutive failed sessions; play continues without it. The run is one admission and is
-not repeated on its own result. A missing charge is recorded as unknown.
+Ten sessions at the pilot's largest displayed cost, $0.57, would be $5.70, under the
+curator's cap.
+
+**What the bounds rest on, to be shown before the owner is asked.** The package's
+reserve must be at least the player's and the recall's in-flight bounds, computed from
+the frozen route; the reported total can pass the limit by the charges of those final
+requests, and the $1.00 not allocated must exceed them. If it does not, the player's
+limit is lowered until it does. The key's own credit limit, which the owner sets,
+remains the hard cap.
+
+**Stop rules.**
+
+- The player host stops the admission at the package's limit, on a successful response
+  with no usable cost, and on its time and mechanical ceilings, as now.
+- The runner stops for the admission when its run cap is reached; when the proxy is
+  revoked, breached or unsettled; when cleanup of a session is not confirmed; when a
+  charge is unknown; or after two consecutive failed sessions. Play continues without
+  it.
+- The runner makes at most twelve sessions and does nothing after its one tail session.
+- The run is one admission and is not repeated on its own result.
 
 ## What each result would change
 
+The run does not by itself answer whether the cut is affordable. Its lag is in the
+curator's operations, and the simulation is in player request turns. So the first step
+after a run is offline and free: map each publication's coverage to the request turn at
+which it would have applied, and **replay that observed schedule through the
+simulation**. The table below is read from that replay and from the run's own measures.
+
 | Result | Reading | Next |
 | --- | --- | --- |
-| Sessions keep within 20 decisions of play | Live curation is close enough for the cut to free what the simulation says | Delivery inside an admission becomes worth building, and the cut can be put to the owner with these figures |
-| Lag settles between 20 and 47 | Curation follows play but too far behind for the cut at this window | Try a smaller window or a faster model in a second priced run, before any work on the cut |
-| The backlog grows across the admission | A session cannot keep up with play at this window | Live curation at this price is not workable; curation stays between admissions |
-| Copies fail or slow play | The reader is not safe beside the custodian | The design falls back to copies made by the writer, and the run is repeated only after that |
+| The replayed schedule holds back no request and drops no image block | Curation is close enough for the cut to free what the simulation says | Delivery inside an admission becomes worth building, and the cut can be put to the owner with these figures |
+| It holds back some requests | Curation follows play, too far behind for the cut at this window | A smaller window or a faster model, in a second priced run, before any work on the cut |
+| The backlog grows across the admission, or the tail is never examined | A session cannot keep up with play at this window | Live curation at this price is not workable; curation stays between admissions |
+| No version is published | Nothing can be said about lag | The sessions are read before anything else is tried |
+| Snapshots fail, hold their read long, or the player's pace falls far below the sealed admissions' | The reader is not safe beside the custodian | The design falls back to captures made by the writer, and the run is repeated only after that |
+| Cost and lag disagree: close behind but far over the forecast, or cheap and far behind | The window and the model are wrong for each other | The owner is shown both figures before another run |
 | The run stops early | Partial figures are reported as partial | The owner is asked before another run |
 
 None of these says whether the knowledge helps the player.
 
 ## What must exist first
 
-- [The live trace reader](https://github.com/CVX-Hull/enactive/issues/837), including the
-  offline test that a copy can be taken while a writer holds the store.
+- [The live trace reader](https://github.com/CVX-Hull/enactive/issues/837), with its
+  offline test against a writer that holds the store.
 - The curator runner, which is not yet a registered leaf.
+- The package's frozen route bounds, shown to fit the table above.
 - The owner's approval of the design, this price and the envelope
   ([operator permissions](../operator-permissions.md)). No envelope is open.
 
 ## Limits
 
 - Every figure is from sealed play and sessions run one after another. None is from a
-  curator beside live play.
+  curator beside live play, and the pilot's lag was inferred from pace.
 - The pilot's sessions used one model at one effort over one lineage's last admission.
-- The ledger's decisions and the curator's steps are not the same unit: a window counts
-  an actor's computer operations. The run would report both.
-- The simulation models prompt size only. It prices no curator dollars and has no
-  briefing.
+- The simulation models prompt size only. It prices no curator dollars, has no
+  briefing, and its unit is player request turns.
 - The price assumes ten sessions. A slower player or a faster curator changes the count.
+- One admission cannot show that the runner did not slow play.
