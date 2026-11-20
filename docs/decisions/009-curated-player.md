@@ -165,8 +165,8 @@ snapshot differences and program controls remain proposals ([below](#reaching-th
   [field table](../design/general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
   of 20 November 2026 supersedes this list for the store: it carries no game time or
   wall time, no asserter field until a second kind of asserter exists, and no belief
-  state, and it scopes a fact about one world to the lineage that saw it. The
-  two-world promotion rule below is deferred there, not dropped.
+  state, and it scopes a fact to a world or to the game. The two-world promotion rule
+  below is deferred there, not dropped.
 - **Domain ontology (proposed, fitted, per game).** The curator proposes types.
   A new game starts with the core and an empty domain layer. No domain type is
   seeded from recalled game knowledge (D13).
@@ -231,9 +231,12 @@ readers (ADR008).
 **Not in the fact store.** The owner decided on 20 November 2026 that a fact carries
 no belief value (the row on what the field table does about belief, in the
 [decision log](owner-decisions.md)). What follows stays a research candidate;
-adopting it would be a second migration with its own justification. Where this ADR
-later lists belief as remaining acceptance of #457, or as a field of the spectator's
-knowledge view, read it with that decision: neither is planned for the store.
+adopting it would be a second migration with its own justification. Two later
+sentences of this ADR still name belief: the one that keeps "#457's remaining belief
+and program-disable acceptance" tracked, and the spectator's knowledge view, which
+lists belief among a fact's fields. Belief is outside the fact store migration's
+acceptance and outside what a fact carries; it remains a research candidate under
+[#677](https://github.com/CVX-Hull/enactive/issues/677).
 
 **Candidate, pending research (R3).** Represent belief in each assertion as a
 subjective-logic opinion (belief, disbelief, uncertainty, base rate), which maps

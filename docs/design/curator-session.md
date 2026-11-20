@@ -78,30 +78,39 @@ does not parse or judge their prose.
 ### Readers that move with the fact and type contract
 
 The [field table](general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
-changes the fact, type and repository schemas in one migration. These are the readers
-that move with it, and what each reads today.
+changes the fact, type and repository schemas and the campaign manifest in one
+migration. It owns the rules; this table lists what reads them today and what moves.
 
 | Reader | Reads | What changes |
 | --- | --- | --- |
-| `harness/curator/gate.py` | fact, article and type records, provenance and the stored history; it writes all of them | key sets, the scope, article, supersession and type checks, provenance's lineage for each session, the stored-repository validator, restore, the schema names |
+| `harness/curator/gate.py` | fact, article and type records, provenance and the stored history; it writes all of them | key sets, the scope, article, supersession and type checks, provenance's session map, the stored-repository validator, restore, the schema names |
 | `harness/curator/knowledge.py` | the repository layout: it starts the metadata at the first version and reads records, types, provenance and snapshots | the schema name it writes and refuses on; provenance's new part |
-| `harness/curator/session.py` | the whole store, which it exports into the workspace; provenance, for grooming and window positions; the result journal, for its brief; and the fact schema, to refuse a foreign store | the schema name; the brief's description of a fact and a type |
-| `tools/knowledge_export.py` | current fact and article records; it writes the delivered file and the private full file | takes a lineage; exports `lineage` facts of that lineage only; the copied field list does not change |
-| `tools/memory_screen_checks.py` | fact and article records straight from the repository, with its own schema checks; it compares whole records across versions and reports fact text, citations, type and session | both schema names, and the new fields in whatever it compares or prints |
-| `tools/memory_measure.py` | the delivered file and the private full file, not the repository | nothing, while the delivered shape holds and the filter precedes the draw |
-| `tools/curator_host/prompt.md` | describes a fact and a type to the curator model | the field lists, the scope levels, the article rule and the type rules |
-| `tools/curator_host/grooming.md` | describes operations in prose, with no schema name | the filing rule, which now covers game facts only, and the type revision wording |
-| `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing; its repository path is not a source of lineage |
+| `harness/curator/session.py` | the whole store, which it exports into the workspace; provenance, for grooming and window positions; the result journal, for its brief; and the fact schema, to refuse a foreign store | passes each session's world, lineage and position to the gate; the schema name; the brief's description of a fact and a type |
+| `harness/trace/projection.py`, `harness/curator/window.py`, and the projection contract in `docs/design/trace-workbench.md` | sessions, their sealed identifiers and frame positions | carry each session's world, lineage and position from its package, under a new projection version ([the identity leaf](https://github.com/CVX-Hull/enactive/issues/834)) |
+| `tools/campaign_package.py` | the closed label set of the campaign manifest | the `world` label and its rule with `lineage`; the manifest version |
+| `harness/evaluation/core/sources.py` | the manifest, by version | the new current version; earlier ones stay readable as archived evidence |
+| `tools/knowledge_export.py` | current fact and article records; it writes the delivered file, the private full file and study draws | reads the world from the package it writes into; exports `world` facts of that world only, on both paths; a draw records its snapshot's identity. The copied field list does not change |
+| `tools/memory_screen_checks.py` | fact and article records straight from the repository, with its own schema checks; it compares whole records across versions, reports fact text, citations, type and session, and its replay estimates when a fact is first delivered | both schema names; the new fields in what it compares or prints; the replay estimate, which must take the receiving admission's world into account or be labelled as publication timing only |
+| `tools/memory_measure.py` | the delivered file and the private full file, not the repository | nothing, while the delivered shape holds and the selection precedes the draw |
+| `tools/curator_host/prompt.md` | describes a fact and a type to the curator model | the field lists, the scope levels, the article rule, the instruction to keep article prose and `game` facts true in any world, and the type rules |
+| `tools/curator_host/grooming.md` | describes operations in prose, with no schema name | the filing rule, which covers game facts only, and the type revision wording |
+| `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing; its repository path is not a source of world or lineage |
 | `harness/viewer/knowledge.py` | the delivered file, after verifying the actor's frozen inputs, with host events and tool results | nothing, while the delivered shape holds |
 | `harness/viewer/curator.py` | the gate's result journal, session receipts and the coverage stamp | nothing |
-| `harness/trace/projection.py`, `harness/curator/window.py` | sessions and frame positions | carry each session's lineage ([the identity leaf](https://github.com/CVX-Hull/enactive/issues/834)) |
-| `docs/components/curator.md`, `docs/contracts/evaluation.md`, `docs/design/player-context.md` | name the current contract | the names |
-| `docs/operations/campaign-run.md` | the step that freezes delivered knowledge into a package | the exporter's lineage input |
-| `tests/curator_stand_in.py`, `tests/test_curator_gate.py`, `tests/test_curator_session.py`, `tests/test_knowledge_export.py`, `tests/test_evaluation_memory_screen_checks.py`, `tests/test_memory_measure*.py`, `tests/test_viewer_api.py` | fixtures in the current format | the fixtures |
+| `docs/components/curator.md`, `docs/contracts/evaluation.md`, `docs/contracts/player-host.md`, `docs/design/player-context.md` | name the current fact contract or manifest version | the names |
+| `docs/operations/campaign-run.md` | the label table, the rule that no player-visible input comes from a label, and the step that freezes delivered knowledge | the `world` label, the one exception to that rule, and the manifest version |
+
+Tests and fixtures that move: `tests/curator_stand_in.py`, `tests/test_curator_gate.py`,
+`tests/test_curator_session.py`, `tests/test_curator_host.py`,
+`tests/test_knowledge_export.py`, `tests/test_evaluation_memory_screen_checks.py`,
+`tests/test_viewer_frame.py` (gate and restore fixtures), the trace projection's
+fixtures, and the package fixtures. `tests/test_campaign_run.py` builds packages, so its
+manifests move. `tests/test_evaluation_delivery.py`, `tests/test_memory_measure*.py`,
+`tests/test_viewer_api.py` and `tools/player_host/test/delivery-demo.mjs` consume the
+delivered file, already projected, and move only if they also build a package.
 
 These do not move: `harness/player/knowledge.py` and the player host, which read only
-the delivered file; `tools/campaign_package.py` and the evaluator's manifest reader,
-because the `lineage` label already exists and the closed label set does not change.
+the delivered file.
 
 | Operation | Exact fields beyond `op` |
 | --- | --- |
@@ -229,12 +238,12 @@ brief. Only the gate writes the repository, so no lead text enters published kno
 **Design result of #697; partly implemented.** This section owns the planned gate boundary
 for #457, #664 and #464. Implemented: **operator restore of a compatible published
 snapshot**, below (`restore` in `harness/curator/gate.py`), with the `curator-gate/2`
-result and the `curator-shadow/2` summaries. Everything else in this section is
-proposed, and gate v0 above remains the current implementation of admission. Semantic
-prospective admission stays deferred: no implemented test oracle, utility policy or
-future-source coordinator supports it. This is a bounded design/feasibility conclusion,
-not qualification of a semantic scorer or permission to build a scheduler. A fact
-carries no belief value
+result and the `curator-shadow/2` summaries. Prospective admission, in the subsections
+on evidence identity, lifecycle and the test and utility boundary, is proposed, and gate
+v0 above remains the current implementation of admission. Semantic prospective admission
+stays deferred: no implemented test oracle, utility policy or future-source coordinator
+supports it. This is a bounded design/feasibility conclusion, not qualification of a
+semantic scorer or permission to build a scheduler. Belief is outside the fact store
 ([field table](general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2));
 the rest of #457's acceptance remains.
 

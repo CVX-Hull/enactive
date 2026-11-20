@@ -101,24 +101,46 @@ improve over hand-built knowledge of one game.
 **Designed, not built.** This table fixes, once, what a fact and a type carry after
 the single migration that
 [the schema migration leaf](https://github.com/CVX-Hull/enactive/issues/835)
-implements. Until that merges, `curator-fact/3` above is the contract. It acts on two
-rows of the [decision log](../decisions/owner-decisions.md) dated 20 November 2026:
-the one on which direction the curator's memory work takes first, and the one on what
-the field table does about belief.
+implements. Until that merges, `curator-fact/3` above is the contract, and every rule
+in this section is a rule of the next format only. It acts on three owner decisions of
+20 November 2026 in the [decision log](../decisions/owner-decisions.md):
+[world memory first](../decisions/owner-decisions.md#world-memory-first),
+[no belief value](../decisions/owner-decisions.md#no-belief-value-in-the-fact-store) and
+[a separate world label](../decisions/owner-decisions.md#a-separate-world-label).
 
-**Why it changes.** The only scope the gate validates today is a game, and no part of
-a trace names a world. A fact such as "the trunk of this car held an extinguisher" is
-true of one world and has no place to say so.
+**Why it changes.** The only scope the gate validates today is a game, and nothing the
+curator reads names a world. A fact such as "the trunk of this car held an
+extinguisher" is true of one world and has no place to say so.
 
-**A world is reached through its lineage.** A lineage is a chain of admissions that
-continue one survivor ([glossary](../glossary.md)), and one survivor lives in one
-world. So a fact about one world is scoped to the lineage that saw it. The run
-package already freezes a `lineage` label, and nothing records a world. Scoping to the
-lineage needs no new package label and no change to the closed campaign manifest. Its
-cost: two lineages that share a world do not share its facts. Letting them is a later
-part, and it is the part that would need a world label.
+#### World and lineage
 
-**A fact.** New or changed fields are marked.
+- **A lineage** is a chain of admissions that continue one survivor
+  ([glossary](../glossary.md)). The run package already freezes it as the `lineage`
+  label, with the admission's position in it.
+- **A world** is the game world a lineage plays in. It is named by an opaque label,
+  printable ASCII of 1 to 40 characters, that the operator chooses when the world is
+  created and that is unique among the worlds of one game's repository. The package
+  gains a `world` label for it. Several lineages may share a world.
+- **Who writes them.** The operator, in the frozen package's labels. A package with a
+  lineage must name a world; a package may name a world with no lineage; both may be
+  null, as in a study that wants neither.
+- **Not verified against the game.** Recognising a world from a screen is the playing
+  system's business, and nothing here does it. What software can check is consistency
+  across what the repository has cited, below. A wrong label that is consistent is not
+  caught.
+- **A closed manifest changes.** The label set is closed, so adding `world` makes a new
+  campaign manifest version, `campaign-run/11`. The validator, the package fixtures and
+  the campaign procedure move with it; the driver accepts only the new version. The
+  evaluator keeps reading sealed runs of earlier manifest versions as archived evidence,
+  as it does now, and those sessions have no world.
+- **Sealed sessions.** A session sealed before this migration names no world. It
+  supports `game` facts only, unless
+  [the identity leaf](https://github.com/CVX-Hull/enactive/issues/834) finds a
+  trustworthy way to give it one.
+
+#### A fact
+
+New or changed fields are marked.
 
 | Field | Written by | Rule the gate checks |
 | --- | --- | --- |
@@ -126,9 +148,9 @@ part, and it is the part that would need a world label.
 | `record`, `id`, `type`, `text`, `citations`, `subject` | curator | as in `curator-fact/3` |
 | `known` (new) | curator | one of `observed`, `inferred`, `hinted`. `observed`: the cited frames show it. `inferred`: the curator concluded it from what the cited frames show. `hinted`: it rests on a player hint visible in the cited steps. The gate checks the value is one of the three and nothing more |
 | `scope.game` | curator | equals the repository's game, as now |
-| `scope.level` (new) | curator | `lineage` or `game`. `lineage`: true of the world the citing lineage plays in. `game`: true of the game in any world. A submitted `scope` holds exactly `game` and `level` |
-| `scope.lineage` (new) | software | present on a `lineage` fact only. It is the one lineage label shared by every cited frame's session, read from the trace and never from a submission. The fact is refused if its citations name two lineages, or cite a session whose lineage is absent |
-| `seen` | software | unchanged, in shape and meaning: the trace position of the latest cited frame, an order and not an age. It carries no lineage |
+| `scope.level` (new) | curator | `world` or `game`. `world`: true of the world it was seen in. `game`: true of the game in any world. A submitted `scope` holds exactly `game` and `level` |
+| `scope.world` (new) | software | present on a `world` fact only: the one world label shared by every cited frame's session, read from provenance and never from a submission. The fact is refused if its citations name two worlds, or cite a session with no world. A stored `scope` holds exactly `game` and `level`, and `world` on a `world` fact |
+| `seen` | software | unchanged, in shape and meaning: the trace position of the latest cited frame, an order and not an age. It carries no world |
 | `published_in`, `session`, `retyped` | software | unchanged |
 | `superseded_by`, `retired` | software | the fields are unchanged; which facts may replace or retire which is ruled below |
 
@@ -148,38 +170,47 @@ part, and it is the part that would need a world label.
   frames. If the belief comparison
   ([#677](https://github.com/CVX-Hull/enactive/issues/677)) later supports a model,
   adding one is a second migration with its own justification.
-- **Where the lineage comes from.** The operator declares it in the frozen run
-  package's `lineage` label, which may be null. It is not verified against the game:
-  recognising a world from a screen is the playing system's business. The trace
-  projection carries each session's lineage, and the gate reads it through a cited
-  frame's session.
-  [The identity leaf](https://github.com/CVX-Hull/enactive/issues/834) builds that,
-  and decides whether a sealed session with no label can be given one. Until it can,
-  such a session supports `game` facts only.
-- **Provenance and restore.** The repository's provenance keeps, for each session it
-  has cited, that session's lineage, written by software at publication. Frame
-  positions keep their four keys. Grooming, which inherits citations it cannot see in
-  its window, reads a citation's lineage from there. The stored-repository validator
-  and restore check that a `lineage` fact's `scope.lineage` equals the recorded
-  lineage of every session it cites, and that a `game` fact has none.
-- **Replacing and retiring across scopes.** A fact may supersede only facts of its own
-  level and, for `lineage` facts, its own lineage. A `game` fact cannot replace a
-  `lineage` fact, a `lineage` fact cannot hide a `game` fact from other lineages, and
-  one lineage cannot replace another's fact. A `lineage` fact is retired only on
-  citations from its own lineage. The validator enforces the same on a stored
-  repository. Turning a `lineage` fact into a `game` fact is promotion, and is not
-  possible until promotion is designed.
-- **Articles hold game facts only.** An article's claims may cite only `game` facts,
-  and the gate refuses one that cites a `lineage` fact. Grooming must file every
-  current `game` fact in an article, as it does every fact today; `lineage` facts
-  stand alone. So no article carries one world's content, and delivery never has to
-  split an article.
-- **Promotion across worlds is not designed here.** ADR 009 has the gate accept a
-  game-level scope only with evidence from two worlds. Until that later part exists,
-  a `game` fact is accepted as it is today, on the curator's word. What changes now
-  is that a fact about one world can be said at all, and reaches only its lineage.
 
-**A type.**
+#### Provenance, and the checks it allows
+
+- **The join.** A frame's source identifier begins with the sealed identifier of its
+  session. The repository's provenance gains a map from that sealed identifier to the
+  session's directory name, world, lineage and admission position, written by software
+  at publication from the trace projection. Frame positions keep their four keys, so
+  `seen` and an article's `last_confirmed` keep their shape. A current citation and a
+  citation inherited by grooming resolve the same way: through the identifier in the
+  citation itself.
+- **Consistency the gate enforces.** A publication is refused when a session is
+  already recorded with a different world, lineage or position; when two sessions
+  claim the same lineage and position; or when one lineage appears with two worlds. A
+  session recorded with no world stays so.
+- **The stored-repository validator and restore** check the stored shape of `scope`,
+  which differs from the submitted shape by the software-written `world`, and that a
+  `world` fact's `scope.world` equals the recorded world of every session it cites.
+- **Replacing and retiring across scopes.** A fact may supersede only facts of its own
+  level and, for `world` facts, its own world. A `game` fact cannot replace a `world`
+  fact, a `world` fact cannot hide a `game` fact from other worlds, and one world
+  cannot replace another's fact. A `world` fact is retired only on citations from its
+  own world. The validator enforces the same on a stored repository. Turning a `world`
+  fact into a `game` fact is promotion, and is not possible until promotion is
+  designed.
+
+#### Articles, and what the gate cannot see
+
+- **An article's claims may cite only `game` facts.** The gate refuses an article that
+  cites a `world` fact, at publication and on restore. In the next format grooming must
+  file every current `game` fact in an article; `world` facts stand alone. Under
+  `curator-fact/3` grooming files every fact, and that stays true until the migration.
+- **This is a structural guarantee, not a semantic one.** The gate checks references.
+  It does not read prose, so it cannot stop a curator writing one world's detail into
+  an article's title, lead or claim text, or marking a fact `game` that is true of one
+  world. The curator's instructions say to keep article prose and `game` facts true of
+  the game in any world. The gate's check of a `game` scope is deferred with promotion:
+  ADR 009 has it accept a game-level scope only with evidence from two worlds, and
+  until that later part exists a `game` fact is accepted on the curator's word, as
+  today.
+
+#### A type
 
 | Field | Written by | Rule |
 | --- | --- | --- |
@@ -187,58 +218,65 @@ part, and it is the part that would need a world label.
 | `name` | curator | the type's own identity, unique in the ontology, as now |
 | `description` | curator | the definition, as now |
 | `fields` | curator | a list of field names, as now |
-| `identity` (new) | curator | names, from `fields`, that the curator says make two facts of this type the same thing; may be empty. The gate checks only that each name is in `fields` |
-| `parent` (new) | curator | optional: the name of a type this one specializes. It must name a type that is current once the submission is applied, and the gate refuses a cycle |
-| `reason` (new) | curator | required when `parent` is absent: why no existing type serves. The gate checks only that it is not blank |
-| `published_in` (new) | software | the knowledge version in which the type was added or last revised |
+| `identity` (new) | curator | a list of names, each from `fields`, that the curator says make two facts of this type the same thing; may be empty. The gate checks only that each name is in `fields` |
+| `reason` (new) | curator | a non-blank string: why this type is needed and how it relates to the existing ones. Required on every type an `add_type` adds and on every type a revision writes. The gate checks only that it is not blank |
+| `published_in` (new) | software | the knowledge version in which the type was added or last written by a revision |
+| usage | computed | the count of current facts of the type. Not stored; shown in the session brief |
 
 - **Identity is guidance.** A fact has no typed values, so the gate cannot compare two
   facts by a type's identity names. They tell the curator and grooming what counts as
   a duplicate.
-- **Reuse, specialize or justify.** The gate can check two of the three: a
-  specialization names its `parent`, and a new root type states a `reason`. It cannot
-  judge the reason, and it cannot see reuse, which is the absence of an `add_type`.
-- **Revising a type.** A revision that removes a type other types name as `parent` is
-  refused unless the same submission revises those children. A revision under the same
-  name sets the type's `published_in` to the new version. A fact keeps its own
-  `published_in`, so a reader can tell a fact written before its type's current
-  definition; `retyped` records a change of type name, as now. Restore keeps
-  `published_in` as stored, and the validator checks that it names a version no later
-  than the snapshot.
+- **Reuse, specialize or justify.** The gate can require that a new type says why it
+  exists, and that is all. It cannot judge the reason. It cannot see reuse, since a
+  revision can also write a type. A specialization is stated in `reason`.
+- **No parent field.** ADR 009's optional parent type is not in this table. A parent
+  needs a revision operation that can change a parent and its children together, and
+  the revision actions the gate has (merge, split, rename, deprecate) cannot. It is a
+  later part with that operation.
+- **Type versions.** A fact does not store the version of its type. The definition in
+  force when a fact was written is recovered from the tagged snapshot named by the
+  fact's `published_in`, with `retyped` recording later changes of type name. A
+  player's query result carries the snapshot version and the type name, as now.
 - **Where the rest of ADR 009's list goes.**
-  - Shown in the session brief, computed at read time and not stored: the count of
-    current facts of each type, flags for types with none, and the nearest existing
-    types ([the brief leaf](https://github.com/CVX-Hull/enactive/issues/833)). The gate
-    does not return nearest types for a proposal.
-  - Replaced: a type version on each instance and query result, by comparing the two
-    `published_in` values.
+  - Shown in the session brief, computed at read time: flags for types with no current
+    fact and the nearest existing types
+    ([the brief leaf](https://github.com/CVX-Hull/enactive/issues/833)). The gate does
+    not return nearest types for a proposal.
+  - Later parts, not in this migration: the parent type, the actor's ontology card and
+    definition lookup.
   - Dropped, because nothing writes or reads them: the staleness hint, stored examples,
-    and usage statistics beyond that count.
+    and usage statistics beyond the count.
 
-**What moves, and what does not.**
+#### What moves, and what does not
 
 - **An old repository can be neither read nor written.** The repository schema name
-  moves with the two contracts, to `curator-knowledge/3`. The refusals differ by
-  path: the repository's metadata guard and the session's foreign-record guard say
-  "start a new repository"; a submission is rejected first by the gate's check of the
-  stored history; restore reports an incompatible or unavailable history; the screen
-  checks have their own messages for a wrong layout and a wrong record schema. The
-  migration starts a fresh repository and fresh working state. Sealed stores stay as
-  evidence.
+  moves with the two contracts, to `curator-knowledge/3`. The refusals differ by path.
+  A repository wholly in the old format fails as soon as its published state is read,
+  with the metadata message "start a new repository", which a submission reports as a
+  failed publication. Foreign records behind current metadata are caught by the
+  session's guard and by the gate's check of the stored history. Restore reports an
+  incompatible or unavailable history. The screen checks have their own messages for a
+  wrong layout and a wrong record schema.
+- **A fresh start.** The migration starts a new repository, at its first version, and
+  new working state. Old working repositories, session state and study draws are not
+  carried over; sealed stores stay as evidence.
 - **Delivery keeps its shape.** `delivered-knowledge/1` and the host input contract
   do not change. The exporter copies a fixed list of fact fields (`id`, `type`,
-  `text`, `subject`, `seen`), none of which changes shape, and articles hold game
-  facts only. What changes is which standalone facts it exports.
-- **The lineage is an input at freeze.** The exporter takes the lineage the package
-  will carry, and exports every `game` fact, every article, and the `lineage` facts
-  of that lineage. With no lineage it exports game facts and articles only, as today.
-  The filter applies to the published snapshot before anything is drawn from it, so
-  the private full file, the withholding draw and the delivered file agree as they do
-  now. A study that needs one layout across its starts uses packages with no lineage.
-- **A known gap.** The delivered file does not record the lineage it was exported
-  for, so nothing checks that it matches the package's label. The later delivery
-  migration ([the handoff leaf](https://github.com/CVX-Hull/enactive/issues/838)) can
-  add it; this migration does not, to keep the delivered shape.
+  `text`, `subject`, `seen`), none of which changes shape. What changes is which
+  standalone facts it exports. The world label itself is never written into anything
+  the player sees.
+- **The world is bound at freeze.** The exporter writes into a package directory. It
+  reads the world from that package's own manifest and takes no separate world, so the
+  two cannot differ by a typing slip. It exports every `game` fact, every article and
+  the `world` facts of that world; with no world it exports game facts and articles
+  only, as today. The campaign procedure's rule that no player-visible input is derived
+  from a label gains this one exception. The delivered file still does not record the
+  world, so a file moved by hand between packages is not detected.
+- **Study draws.** The same selection applies on both of the exporter's paths, the
+  package export and the study draw, before anything is drawn. The private full file is
+  that selected current subset. A draw records the identity of the snapshot it was made
+  from, not only its version number, because a new repository starts its version numbers
+  again. A study that needs one layout across its starts uses packages with no world.
 - The [session design](curator-session.md#readers-that-move-with-the-fact-and-type-contract)
   lists every reader that moves.
 
