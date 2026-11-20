@@ -854,6 +854,20 @@
       },
       "visibility": "private"
     },
+    "malvern-trunk-paired-replay-829": {
+      "availability": "present",
+      "bytes": 36002169,
+      "cited_by": [
+        "docs/acceptance/2026-11-20-malvern-trunk-paired-replay-829.md"
+      ],
+      "files": 31,
+      "manifest_sha256": "a7175516a0648bde83ad2a2960e5abed8ef5daf2642f563786ef54d0a396cd97",
+      "note": "Paired proposal replay of the Malvern sedan-trunk cutoff: protocol, script, frozen requests, receipts, responses and blind scores (#829)",
+      "sources": {
+        "replay": ".runtime/malvern-trunk-paired-replay-829-staging/replay"
+      },
+      "visibility": "private"
+    },
     "memory-screen-gates-460-386": {
       "availability": "present",
       "bytes": 117383888,
