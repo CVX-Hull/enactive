@@ -101,6 +101,17 @@ the pull request.
   host's own settings before relying on them.
 - **Spend scarce windows where they lead.** The lead's own model does the hard changes;
   bounded and locating work goes to cheaper models.
+- **Keep the lead's context small.** The lead's context is sent again on every
+  request. In the one lead session measured here the lead's own requests were 72% to
+  74% of the tokens' list-price equivalent, and about half of the lead's part was
+  re-reading a context whose median was 325,920 to 743,067 tokens in each quarter of
+  the session ([token use](../acceptance/2026-11-20-coding-agent-token-use.md)). No
+  session with a smaller context was measured beside it. So: one lead
+  session for one leaf or one batch that merges together; summarize the session or hand
+  the role to a fresh session before the context passes about 300,000 tokens; and send
+  wide reading and long command output to a sub-agent that returns a short report. This
+  is guidance and nothing checks it. The 300,000 figure is a judgment from that one
+  session, not a measured optimum.
 
 ## Matched runs on this repository's leaves
 

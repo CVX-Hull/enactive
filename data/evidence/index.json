@@ -552,6 +552,20 @@
       },
       "visibility": "private"
     },
+    "coding-agent-token-use": {
+      "availability": "present",
+      "bytes": 14234,
+      "cited_by": [
+        "docs/acceptance/2026-11-20-coding-agent-token-use.md"
+      ],
+      "files": 2,
+      "manifest_sha256": "52aaf4007aa7be718ba77a1241c5266fd65be6bd5245be069b3cd6d9e1c592b3",
+      "note": "Script and count-only output of the coding-agent token measurement of 20 November 2026; transcripts are not retained",
+      "sources": {
+        ".": "scratch-usage-measurement"
+      },
+      "visibility": "private"
+    },
     "curated-memory-adoption-463": {
       "availability": "present",
       "bytes": 441043,
