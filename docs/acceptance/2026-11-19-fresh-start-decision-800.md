@@ -86,7 +86,7 @@ that the exact assignment can reach play. Talty and Oceana show that the
 menu and confirmation can be read separately. A menu-only admission would
 duplicate the opening and could never reach the delayed choice. Use the
 existing finite study, setup stop, conditional reloads and independent
-before-and-effect scoring. A failed opening consumes the fresh world. Keep
+before-and-effect scoring. A failed opening uses the study’s one fresh-start slot. Keep
 the pinned full-context route, ordinary tools, sealed handoff and partial
 delivery fence. The next live package requires fresh owner approval.
 [Study design #797](https://github.com/CVX-Hull/enactive/issues/797) · [Review #800](https://github.com/CVX-Hull/enactive/issues/800)
