@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 import sys
 
-from . import images
+from . import images, manifest
 
 
 def _actors(trace: Path, only: str | None):
@@ -67,6 +67,10 @@ def main(argv=None, out=sys.stdout) -> int:
     s.add_argument('--k', type=int, default=5)
     s.add_argument('--max-distance', type=int)
     args = parser.parse_args(argv)
+    try:
+        manifest.read(args.trace)
+    except manifest.ProjectionError as exc:
+        parser.error(str(exc))
 
     def emit(row):
         out.write(json.dumps(row, sort_keys=True, ensure_ascii=False) + '\n')

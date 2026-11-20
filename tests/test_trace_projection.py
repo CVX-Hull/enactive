@@ -13,11 +13,11 @@ from pathlib import Path
 import re
 import sqlite3
 
-from PIL import Image
 import pytest
 
 from harness.trace import memory_reader
 from harness.trace.projection import ProjectionError, _result, project
+from tests.curator_trace import SESSION_ID, make_long_session, png, record_package, world_manifest_schema
 
 ROOT = Path(__file__).resolve().parents[1]
 # A worktree has no evidence store; ENACTIVE_EVIDENCE_ROOT points at a checkout's sealed store.
@@ -25,12 +25,6 @@ EVIDENCE = Path(os.environ.get('ENACTIVE_EVIDENCE_ROOT', ROOT/'.runtime'/'eviden
 TOKEN = 'secret-custody-token-0123456789abcdef'
 BASE_URL = 'http://127.0.0.1:52341'
 ROUTE_KEY = 'provider-route-key-should-never-appear'
-
-
-def png(color) -> bytes:
-    stream = io.BytesIO()
-    Image.new('RGB', (4, 4), color).save(stream, format='PNG')
-    return stream.getvalue()
 
 
 def make_session(root: Path, name='s1') -> Path:
@@ -248,6 +242,103 @@ def test_projection_never_overwrites_an_existing_target(tmp_path):
         project([session], tmp_path/'trace')
 
 
+def test_workbench_refuses_an_old_projection(tmp_path, capsys):
+    from harness.trace import workbench
+
+    trace = tmp_path/'trace'
+    manifest = project([make_session(tmp_path)], trace)
+    (trace/'manifest.json').write_text(json.dumps(dict(manifest, schema='trace-projection/2')))
+    with pytest.raises(SystemExit) as caught:
+        workbench.main(['steps', str(trace)])
+    assert caught.value.code == 2
+    assert 'Expected a trace-projection/3 manifest' in capsys.readouterr().err
+
+
+def test_projection_records_verified_session_labels_from_two_worlds(tmp_path, world_manifest_schema):
+    second_id = 'b' * 32
+    names_and_ids = [('pond', SESSION_ID), ('forest', second_id)]
+    sessions = []
+    expected = []
+    for name, session_id in names_and_ids:
+        session = make_long_session(tmp_path, name, steps=1, actors=('001',), session_id=session_id)
+        labels = dict(world=name, lineage=f'{name} survivor', admission=3)
+        record_package(session, schema=world_manifest_schema, session_id=session_id, labels=labels)
+        sessions.append(session)
+        expected.append(dict(name=name, session_id=session_id, **labels, label_error=None))
+    out = tmp_path/'trace'
+    manifest = project(sessions, out)
+    assert manifest['schema'] == 'trace-projection/3'
+    assert [{key: row[key] for key in expected[0]} for row in manifest['sessions']] == expected
+    assert json.loads((out/'manifest.json').read_text()) == manifest
+    assert not list(out.rglob('watch-start.json'))
+    assert b'raw package sentinel' not in all_bytes(out)
+
+
+@pytest.mark.parametrize('lineage,admission', [('pond survivor', 3), (None, None)])
+def test_current_run_package_supplies_no_world(tmp_path, lineage, admission):
+    session = make_long_session(tmp_path, steps=1, actors=('001',))
+    record_package(session, labels=dict(lineage=lineage, admission=admission))
+    entry, = project([session], tmp_path/'trace')['sessions']
+    assert (entry['world'], entry['lineage'], entry['admission'], entry['label_error']) == (
+        None, lineage, admission, None)
+
+
+@pytest.mark.parametrize('case,diagnostic', [
+    ('missing manifest', 'manifest.json missing or unreadable'),
+    ('bad JSON', 'manifest.json has invalid JSON'),
+    ('unknown schema', 'unsupported run package manifest schema'),
+    ('wrong package session', 'manifest session differs from sealed session'),
+    ('missing launch file', 'watch-start.json missing or unreadable'),
+    ('wrong launch schema', 'unsupported supervisor launch record schema'),
+    ('wrong launch session', 'supervisor launch record session differs from sealed session'),
+    ('missing launch digest', 'manifest SHA-256 differs from supervisor launch record'),
+    ('tampered manifest', 'manifest SHA-256 differs from supervisor launch record'),
+    ('invalid labels', 'run package manifest has an invalid admission position'),
+])
+def test_failed_label_checks_keep_the_trace_and_no_labels(tmp_path, world_manifest_schema, case, diagnostic):
+    session = make_long_session(tmp_path, steps=1, actors=('001',))
+    labels = dict(world='pond', lineage='survivor', admission=True if case == 'invalid labels' else 3)
+    schema = 'campaign-run/99' if case == 'unknown schema' else world_manifest_schema
+    record_package(session, schema=schema, labels=labels,
+                   session_id='b' * 32 if case == 'wrong package session' else SESSION_ID)
+    package = session/'manifest.json'
+    launch = session/'watch-start.json'
+    if case == 'missing manifest':
+        package.unlink()
+    elif case == 'bad JSON':
+        package.write_bytes(b'{')
+    elif case == 'missing launch file':
+        launch.unlink()
+    elif case == 'tampered manifest':
+        package.write_bytes(package.read_bytes().replace(b'pond', b'farm'))
+    elif case in ('wrong launch schema', 'wrong launch session', 'missing launch digest'):
+        opening = json.loads(launch.read_bytes())
+        if case == 'wrong launch schema':
+            opening['schema'] = 'campaign-watch-start/3'
+        elif case == 'wrong launch session':
+            opening['session'] = 'b' * 32
+        else:
+            del opening['manifest_sha256']
+        launch.write_text(json.dumps(opening))
+    manifest = project([session], tmp_path/'trace')
+    entry, = manifest['sessions']
+    assert entry['world'] is entry['lineage'] is entry['admission'] is None
+    assert entry['label_error'] == diagnostic
+    assert entry['actors'][0]['frames'] == 1
+
+
+@pytest.mark.parametrize('name,session_id,diagnostic', [
+    ('s1', 'b' * 32, 'Two sessions share a name'),
+    ('s2', SESSION_ID, 'Two session directories share a sealed identifier'),
+])
+def test_projection_requires_distinct_names_and_sealed_identifiers(tmp_path, name, session_id, diagnostic):
+    first = make_long_session(tmp_path/'first', steps=1, actors=('001',))
+    second = make_long_session(tmp_path/'second', name, steps=1, actors=('001',), session_id=session_id)
+    with pytest.raises(ProjectionError, match=diagnostic):
+        project([first, second], tmp_path/'trace')
+    assert no_output(tmp_path)
+
+
 def make_store(path: Path, schema='player-memory/2'):
     db = sqlite3.connect(path)
     db.executescript('''
@@ -420,7 +511,7 @@ def test_journal_projection_is_public_read_only_and_hashed(tmp_path):
     out = tmp_path/'trace'
     manifest = project([session], out, journal=journal)
     doc = json.loads((out/'journal.json').read_text())
-    assert manifest['schema'] == 'trace-projection/2' and manifest['hints'] == 'journal.json and tool calls'
+    assert manifest['schema'] == 'trace-projection/3' and manifest['hints'] == 'journal.json and tool calls'
     assert doc['hints'][0]['text'] == 'out-of-window journal sentinel'
     assert doc['calls'][0]['arguments']['intent'] == 'remember'
     assert b'private' not in (out/'journal.json').read_bytes()

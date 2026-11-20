@@ -24,6 +24,8 @@ from pathlib import Path
 import re
 import shutil
 
+from harness.trace.manifest import require_current
+
 from .gate import COVERAGE
 
 MANIFEST = 'manifest.json'
@@ -81,6 +83,7 @@ FULL = Window()
 def coverage(window: Window, sessions: list[str], manifest: dict) -> dict:
     """What a session read, for the gate to publish with the version it makes: the session, the actor and
     the last step read (the window's, as clamped to the steps the actor has). A whole-admission session has no single actor or last step."""
+    require_current(manifest)
     if window.full:
         return dict(schema=COVERAGE, session=','.join(sessions), actor=None, last_step=None)
     return dict(schema=COVERAGE, session=window.session, actor=window.actor, last_step=manifest['window']['last'])
@@ -110,6 +113,7 @@ def _owners(calls: list[dict], seq_of: dict[str, int], last: int) -> list[int]:
 
 def restrict(out: Path, manifest: dict, window: Window) -> dict:
     """Narrow the projection in `out` to `window` in place; return the rewritten manifest."""
+    require_current(manifest)
     if window.full:
         return manifest
     out = Path(out)
@@ -152,13 +156,25 @@ def restrict(out: Path, manifest: dict, window: Window) -> dict:
     return manifest
 
 
-def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> dict[str, dict]:
+class FramePositions(dict[str, dict]):
+    """The gate's frame positions, with session provenance keyed by sealed identifier."""
+
+    def __init__(self, sessions: dict[str, dict]):
+        super().__init__()
+        self.sessions = sessions
+
+
+def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> FramePositions:
     """Assign a stable ordered position to each frame, retaining its latest occurrence.
 
-    Session order is the supplied admission order; actor order is directory order;
+    Session order follows the supplied order; actor order is directory order;
     step order is seq. The identity and seq are retained beside the ordinal for inspection.
     """
-    result = {}
+    require_current(manifest)
+    result = FramePositions({
+        session['session_id']: {key: session[key] for key in ('name', 'world', 'lineage', 'admission')}
+        for session in manifest['sessions']
+    })
     admissions = {p['session']: p['order'][0] for p in previous.values()}
     next_admission = max(admissions.values(), default=0)
     for session in manifest['sessions']:
@@ -181,6 +197,7 @@ def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> dict[str,
 
 def citations_only(out: Path, manifest: dict, citations: set[str]) -> dict:
     """Grooming reads the last admission's cited frames, with their trace positions."""
+    require_current(manifest)
     available = {Path(name).stem for name in manifest['files'] if name.startswith('frames/')}
     if citations - available:
         raise WindowError(f'last admission citations missing from trace: {sorted(citations - available)}')

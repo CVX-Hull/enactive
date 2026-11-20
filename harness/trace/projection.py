@@ -1,6 +1,6 @@
 """Allowlisted projection of sealed session stores into a curator `trace/` (#452).
 
-The projection copies what the actor saw and did, and nothing else. Each structured field
+The projection copies what the actor saw and did, with verified session labels. Each structured field
 is named here; a session directory is never copied wholesale. Never projected: custody
 tokens (`actor.json`), routes and provider settings (`route.json`), MCP and host
 configuration, process records, custodian, viewer and watch files, receipts and logs.
@@ -16,7 +16,7 @@ nothing is published. The projection is built in a sibling directory and renamed
 only when complete, so a failure never leaves a partial `trace/`.
 
 Layout written under `out`:
-  manifest.json                          trace-projection/2: what was projected, with hashes
+  manifest.json                          trace-projection/3: session labels and projected file hashes
   frames/<source_id>.png                 frames, verified
   <session>/<actor>/steps.jsonl          operations in order: kind, input actions, status, frame
   <session>/<actor>/tools.jsonl          tool calls: name, allowlisted arguments, outcome
@@ -39,10 +39,14 @@ import shutil
 import sqlite3
 import uuid
 
+from harness.jsonio import strict_loads
+
 from . import journal_reader, memory_reader
+from .manifest import ProjectionError, SCHEMA
 from .stores import SealedStoreError, sealed
 
-SCHEMA = 'trace-projection/2'
+# Label fields supplied by each supported sealed run package version.
+PACKAGE_LABELS = {'campaign-run/10': ('lineage', 'admission')}
 ACTION_FIELDS = ('type', 'key', 'modifiers', 'text', 'seconds', 'x', 'y', 'button')
 RECORD_FIELDS = ('kind', 'text', 'data', 'sources', 'supports', 'supersedes', 'applicability', 'program_id')
 TOOL_ARGUMENTS = {
@@ -68,16 +72,12 @@ RESULT_FIELDS = ('schema', 'operation_id', 'kind', 'status', 'reason', 'id', 'er
 NEVER = ('actor.json', 'route.json', 'mcp.json', 'mcp-template.json', 'host-process.json', 'frozen.json',
          'driver-receipt.json', 'host-stderr.log', 'host.jsonl (raw)', 'custodian-*', 'native-*', 'viewer-*',
          'watch-*', 'receipt.json', 'started.json', 'ready.json', 'target.json', 'orderly-stop.json',
-         'session.sqlite3 (raw)')
+         'session.sqlite3 (raw)', 'manifest.json (raw run package)')
 DROPPED = ('host request and response telemetry', 'contents returned by memory queries and player_result '
            '(the records themselves are in memory.json)', 'receipts and timing of native intents')
 KEY_PATTERN = re.compile(rb'sk-[A-Za-z0-9_-]{16,}|Bearer [A-Za-z0-9._-]{16,}')
 SECRET_FILES = ('actor.json', 'route.json', 'mcp.json', 'mcp-template.json', 'host-process.json')
 GRANTS_NOTHING = ('actor_id', 'session', 'schema')
-
-
-class ProjectionError(ValueError):
-    """A sealed input is missing or inconsistent, or the projection would carry a secret."""
 
 
 def _pick(value: dict, fields) -> dict:
@@ -130,6 +130,72 @@ def _json(path: Path):
         return json.loads(path.read_text())
     except (OSError, ValueError) as exc:
         raise ProjectionError(f'{path}: unreadable JSON') from exc
+
+
+def _evidence_bytes(path: Path, limit: int) -> bytes:
+    try:
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f'{path.name} missing or unreadable')
+        with path.open('rb') as stream:
+            data = stream.read(limit + 1)
+    except OSError as exc:
+        raise ValueError(f'{path.name} unreadable') from exc
+    if len(data) > limit:
+        raise ValueError(f'{path.name} exceeds its byte bound')
+    return data
+
+
+def _evidence_json(data: bytes, name: str) -> object:
+    try:
+        return strict_loads(data)
+    except (ValueError, RecursionError) as exc:
+        raise ValueError(f'{name} has invalid JSON') from exc
+
+
+def _verified_labels(session: Path, session_id: str) -> dict:
+    data = _evidence_bytes(session/'manifest.json', 1048576)
+    package = _evidence_json(data, 'manifest.json')
+    schema = package.get('schema') if isinstance(package, dict) else None
+    if not isinstance(schema, str) or schema not in PACKAGE_LABELS:
+        raise ValueError('unsupported run package manifest schema')
+    if package.get('session') != session_id:
+        raise ValueError('manifest session differs from sealed session')
+
+    opening = _evidence_json(_evidence_bytes(session/'watch-start.json', 65536), 'watch-start.json')
+    if not isinstance(opening, dict) or opening.get('schema') != 'campaign-watch-start/4':
+        raise ValueError('unsupported supervisor launch record schema')
+    if opening.get('session') != session_id:
+        raise ValueError('supervisor launch record session differs from sealed session')
+    if opening.get('manifest_sha256') != hashlib.sha256(data).hexdigest():
+        raise ValueError('manifest SHA-256 differs from supervisor launch record')
+
+    fields = PACKAGE_LABELS[schema]
+    labels = package.get('labels')
+    if not isinstance(labels, dict) or not all(field in labels for field in fields):
+        raise ValueError('run package manifest lacks its required labels')
+    selected = _pick(labels, fields)
+    for field in ('world', 'lineage'):
+        value = selected.get(field)
+        if value is not None and (not isinstance(value, str) or re.fullmatch(r'[ -~]{1,40}', value) is None):
+            raise ValueError(f'run package manifest has an invalid {field} label')
+    admission = selected['admission']
+    if admission is not None and (type(admission) is not int or not 1 <= admission <= 10000):
+        raise ValueError('run package manifest has an invalid admission position')
+    if (selected['lineage'] is None) != (admission is None):
+        raise ValueError('run package manifest must label lineage and admission together')
+    if 'world' in selected and selected['lineage'] is not None and selected['world'] is None:
+        raise ValueError('run package manifest must label the world of a lineage')
+    return selected
+
+
+def _session_labels(session: Path, session_id: str) -> dict:
+    """Read only the label fields bound to this sealed session at launch."""
+    labels = dict(world=None, lineage=None, admission=None, label_error=None)
+    try:
+        labels.update(_verified_labels(session, session_id))
+    except ValueError as exc:
+        labels['label_error'] = str(exc)
+    return labels
 
 
 def _copy(source: Path, dest: Path) -> None:
@@ -259,12 +325,16 @@ def _project_into(sessions: list[Path], out: Path, memory: Path | None, journal:
     if len({s.name for s in sessions}) != len(sessions):
         raise ProjectionError('Two sessions share a name')
     projected = []
+    session_ids = set()
     for session in sessions:
         try:
             with sealed(session/'session.sqlite3') as db:
                 session_id = json.loads(dict(db.execute('SELECT key, value FROM metadata'))['session'])
         except (SealedStoreError, sqlite3.Error, ValueError, KeyError) as exc:
             raise ProjectionError(f'{session}: unreadable session identity') from exc
+        if session_id in session_ids:
+            raise ProjectionError('Two session directories share a sealed identifier')
+        session_ids.add(session_id)
         per_actor, sources = _steps(session, session_id)
         actors = []
         for directory in sorted(p for p in (session/'actors').iterdir() if p.is_dir() and not p.is_symlink()):
@@ -310,7 +380,8 @@ def _project_into(sessions: list[Path], out: Path, memory: Path | None, journal:
             target.write_text(json.dumps(kept, sort_keys=True, ensure_ascii=False, indent=1))
             record_file(target)
             handoffs.append(path.stem)
-        projected.append(dict(name=session.name, session_id=session_id, actors=actors, handoffs=handoffs))
+        projected.append(dict(name=session.name, session_id=session_id, actors=actors, handoffs=handoffs,
+                              **_session_labels(session, session_id)))
     if memory is not None:
         try:
             store = memory_reader.read(memory)

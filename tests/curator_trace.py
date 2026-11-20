@@ -8,20 +8,51 @@ handoff packet.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 from pathlib import Path
 import sqlite3
 
-from tests.test_trace_projection import png
+from PIL import Image
+import pytest
+
+from harness.trace.projection import PACKAGE_LABELS
 
 SESSION_ID = 'a' * 32
 
 
-def frame_id(actor: int, step: int) -> str:
-    return f'{SESSION_ID}-{actor * 1000 + step}'
+@pytest.fixture
+def world_manifest_schema(monkeypatch):
+    """Exercise a schema that supplies a world before the campaign writer adopts one."""
+    schema = 'campaign-run/11'
+    monkeypatch.setitem(PACKAGE_LABELS, schema, ('world', 'lineage', 'admission'))
+    return schema
 
 
-def make_long_session(root: Path, name: str = 's1', steps: int = 12, actors: tuple[str, ...] = ('001', '002')) -> Path:
+def png(color) -> bytes:
+    stream = io.BytesIO()
+    Image.new('RGB', (4, 4), color).save(stream, format='PNG')
+    return stream.getvalue()
+
+
+def frame_id(actor: int, step: int, session_id: str = SESSION_ID) -> str:
+    return f'{session_id}-{actor * 1000 + step}'
+
+
+def record_package(session: Path, *, labels: dict, schema: str = 'campaign-run/10',
+                   session_id: str = SESSION_ID) -> None:
+    source_commit = 'c' * 40
+    package = json.dumps(dict(schema=schema, session=session_id, source_commit=source_commit,
+                              labels=labels, private_files={'private-note': 'raw package sentinel'})).encode()
+    (session/'manifest.json').write_bytes(package)
+    (session/'watch-start.json').write_text(json.dumps(dict(
+        schema='campaign-watch-start/4', session=session_id, source_commit=source_commit,
+        manifest_sha256=hashlib.sha256(package).hexdigest(), started_wall=1.0, started_monotonic=1.0,
+        viewer_port=54321)))
+
+
+def make_long_session(root: Path, name: str = 's1', steps: int = 12, actors: tuple[str, ...] = ('001', '002'),
+                      *, session_id: str = SESSION_ID) -> Path:
     session = root/name
     (session/'sources').mkdir(parents=True)
     (session/'contexts').mkdir()
@@ -33,7 +64,7 @@ def make_long_session(root: Path, name: str = 's1', steps: int = 12, actors: tup
             deadline REAL NOT NULL, input_json TEXT NOT NULL, final_json TEXT);
         CREATE TABLE native_intents(id TEXT PRIMARY KEY, operation TEXT NOT NULL, receipt TEXT, source TEXT, timing TEXT NOT NULL);
         CREATE TABLE collections(native_id TEXT PRIMARY KEY, receipt TEXT NOT NULL, source TEXT);''')
-    db.execute("INSERT INTO metadata VALUES('session', ?)", (json.dumps(SESSION_ID),))
+    db.execute("INSERT INTO metadata VALUES('session', ?)", (json.dumps(session_id),))
     for number, directory in enumerate(actors, 1):
         actor_id = f'{number:x}' * 32
         actor_dir = session/'actors'/directory
@@ -43,7 +74,7 @@ def make_long_session(root: Path, name: str = 's1', steps: int = 12, actors: tup
         (actor_dir/'player-final.txt').write_text(f'Actor {directory} report: everything, including the end.')
         events = []
         for step in range(1, steps + 1):
-            sid, op = frame_id(number, step), f'op-{number}-{step}'
+            sid, op = frame_id(number, step, session_id), f'op-{number}-{step}'
             data = png((step * 7 % 256, number * 40, 90))
             (session/'sources'/f'{sid}.png').write_bytes(data)
             db.execute('INSERT INTO sources VALUES(?,?,?)',
