@@ -14,7 +14,8 @@ Public benchmarks support three things for this repository's engineering work. T
 leading configurations score within a few points of each other on hard changes,
 codebase questions and terminal tasks. For the one model read at every setting, the
 effort setting moved the score by ten points and the highest setting scored lower.
-The two smallest models scored far below the rest on every part that was read. No public
+The two smallest models scored far below the leading configurations on codebase
+questions and terminal tasks, and near the bottom on mergeable patches. No public
 evidence was found for house-style documents, dated records, reading run ledgers or
 C++ in a large codebase, which is most of what this repository merges. Nothing here was
 observed on this repository's own work.
@@ -30,8 +31,9 @@ Every figure below carries one of these marks:
 - **Vendor:** the model's own maker reported it.
 - **Measured here:** run on this machine on the date given.
 
-A public agent score is a coding agent and a model together, each model in its maker's
-own agent. This record treats a gap of a few points as too small to act on. The reason
+A public agent score is a coding agent and a model together, nearly always the model in
+its maker's own agent; one terminal-task row below is a model in another agent. This
+record treats a gap of a few points as too small to act on. The reason
 is a study of 60,000 runs on a different benchmark, where a single run's pass rate
 swung by 2.2 to 6.0 points between identical runs
 ([Bjarnason and others](https://arxiv.org/abs/2602.07150), summariser); it is an
@@ -82,7 +84,7 @@ By effort setting, from the same site's comparison pages (summariser, 19 Novembe
 
 An empty cell was not read. What the table supports:
 
-- **Close at the top.** Neon at 59 and Fable and Opus at 58 are one point apart.
+- **Close at the top.** Neon at 59 leads Fable and Opus, both at 58, by one point.
 - **Effort.** Fable at Max scores below Fable at High at about six times the cost and
   four times the time. Astra reads 52 to 53 from High to Max. Sol at Extra-high reads
   one point above Sol at Max. Fable at Low reads ten points below Fable at High; no

@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: historical
-kind: run
+kind: measurement
 date: '2026-11-19'
 scope: 'One Antigravity session leading one small documentation leaf from brief to a reviewed pull request with auto-merge queued, watched read-only, and the merge completed by the watcher; no gameplay and no paid model call'
 ---
@@ -12,9 +12,10 @@ scope: 'One Antigravity session leading one small documentation leaf from brief 
 
 An Antigravity session on Gemini 4 Neon at High led the pull-request record leaf
 ([#809](https://github.com/CVX-Hull/enactive/issues/809)) from its brief to an open,
-reviewed pull request with a green check and auto-merge queued. Six of the seven duties
-it was asked to show were observed. One was observed in part: it checked the reviewer's
-quoted passages in two of the files the reviewer quoted. Its source edits stayed inside
+reviewed pull request with a green check and auto-merge queued. Five of the seven duties
+it was asked to show were observed. Two were observed in part: it checked the reviewer's
+quoted passages in two of the files the reviewer quoted, and it queued the merge against
+a commit its reviewer had not named. Its source edits stayed inside
 its two owned files and its worktree; it wrote working files only in its own scratch
 folder and the reviewer's output in `/tmp`. It launched no game and used no provider
 key.
@@ -24,8 +25,9 @@ network call and one read outside the project, and each was retried outside the
 sandbox: eleven retries in 47 minutes. The owner reports approving several by hand, and
 creating the pull request took 26 minutes. The session queued the merge and ended; the
 branch was behind `main`, so the watching lead merged `main` into it and completed the
-merge. The result supports Antigravity as
-a lead for engineering work with the owner present. It does not show unattended leading.
+merge. The result shows one Antigravity session leading one small documentation leaf
+with the owner present, as far as a green pull request with the merge queued. It does
+not show unattended leading, and it is one leaf.
 
 ## What ran
 
@@ -36,7 +38,7 @@ a lead for engineering work with the owner present. It does not show unattended 
 | Model and effort | `gemini-4-neon-high` on every response. Effort is read from that selector; the transcript has no separate effort field |
 | Mode | Not recorded. Read from behaviour: commands ran in a terminal sandbox, and a blocked command was retried with a request for the owner's explicit approval |
 | Brief | One pasted message: the leaf's brief in the [brief template](../standards/agents.md#brief-template) shape and seven numbered steps |
-| Leaf | #809, two owned files |
+| Leaf | #809. Two files changed; the brief also allowed the controls page, only if a control row had to change, and it was not touched |
 | Watcher | A second session on another coding agent, read-only until the trial session ended |
 
 The evidence is the session's own local transcript, read by a read-only explorer after
@@ -55,12 +57,13 @@ index for the lead session.
 | Commit through the hook and open a pull request on the template | Observed | Commit `21677a5d`, recorded by git at 04:21:22Z, with the hook's fast check passing, under the repository's configured identity. The push completed by 04:22:48Z. The request to create pull request [#818](https://github.com/CVX-Hull/enactive/pull/818) returned at 04:49:01Z on the new template, with its own `Models:` line, `Refs #809` and a statement that agent review is not human approval |
 | Wait on CI with one watch command | Observed | Step 85: the run found by commit. Step 89: `gh run watch 44676906546 --exit-status`; it ended with `controller` green after about two minutes |
 | Ask the owner one structured question | Observed | Step 93: one question with three options and a recommendation. The owner chose the recommended one: the `Models:` line names only the author, noting a sub-agent only when a worker used a different model or effort |
-| Merge, or stop before it | Observed, then completed by the watcher | Step 97: `gh pr merge 818 --auto --squash --match-head-commit 21677a5d…` was allowed and queued the merge. It did not merge: three other pull requests had merged since the branch was cut, and main's ruleset requires a head that contains main's tip. The session ended there |
+| Merge, or stop before it | Observed in part, then completed by the watcher | Step 97: `gh pr merge 818 --auto --squash --match-head-commit 21677a5d…` was allowed and queued the merge. The brief asked for the commit the review named; the reviewer had examined an uncommitted diff over `44a5ef14` and never named `21677a5d`, which adds the repair and was checked by the lead only. It did not merge: three other pull requests had merged since the branch was cut, and main's ruleset requires a head that contains main's tip. The session ended there |
 
 ## What needed the owner
 
-The transcript records no approval decision, only a blocked command followed by the same
-command retried outside the sandbox and succeeding. Separately, the owner reports
+The transcript records no approval decision, only a blocked operation followed by that
+operation retried outside the sandbox and succeeding; one retry split a chained command
+in two. Separately, the owner reports
 approving several `gh` commands and a write to `/tmp` by hand. Which retries were
 approved by hand and which the app allowed by itself is not recorded.
 
@@ -81,7 +84,8 @@ The session's final message matches the evidence on the branch, commit, pull req
 check result, the owner's answer and "refused or denied: none". Two of its claims go
 beyond its transcript:
 
-- **"Completed all seven steps."** The review step was complete only in part. In the
+- **"Completed all seven steps for issue #809 (trial #810)."** The review step was
+  complete only in part. In the
   session, at step 45, the lead wrote that it had checked every quoted passage; it had
   reopened two of the quoted files, the pull-request template and the review page.
 - **"Every unsandboxed command elevation was approved."** The transcript shows the
@@ -119,14 +123,15 @@ and #818 merged as `9ac200c3`.
 
 ## What this supports
 
-- Antigravity can carry an engineering leaf as lead: delegate with written briefs, keep
-  the worker in a worktree, verify from files and tests, obtain and act on a second
-  family's review, open a pull request on the template, wait on the required check and
-  ask the owner a structured question.
+- On one watched documentation leaf, an Antigravity session delegated with written
+  briefs, kept the worker in a worktree, verified from files and tests, obtained and
+  acted on a second family's review, opened a pull request on the template, waited on
+  the required check and asked the owner a structured question. It checked the
+  reviewer's passages in part, and the watcher completed the merge.
 - It was not shown to do that unattended. Git writes, GitHub calls and a tool outside
   the project were each blocked by the app's sandbox and retried outside it, and the
-  owner approved several by hand.
-- A lead's report is still checked against files: three of this one's claims went
+  owner reports approving several by hand.
+- A lead's report is still checked against files: two of this one's claims went
   beyond its transcript.
 - A branch that sits open while other work merges falls behind `main` and cannot merge
   by itself. The lead that queued the merge had ended; someone has to bring the branch

@@ -5,7 +5,8 @@ claims; you are not given the author's conclusion.
 
 - Never edit files. Never launch the game or run a `harness` command, and never send
   game input by any route.
-- Read the diff or page you were given, the claims to test, and the surrounding source.
+- Read your brief, `docs/glossary.md` and the pages your brief names. Then read the diff
+  or page you were given, the claims to test, and the surrounding source.
 - Verify before asserting: run read-only commands to confirm a claim when you can.
 - Quote the passage each finding is about, copied verbatim with its file and line. A
   quotation that is not in the file makes the finding worthless.
