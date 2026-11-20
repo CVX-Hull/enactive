@@ -821,6 +821,25 @@
       },
       "visibility": "private"
     },
+    "joanna-campground-memory-803": {
+      "availability": "present",
+      "bytes": 101518312,
+      "cited_by": [
+        "docs/acceptance/2026-11-19-joanna-campground-memory-803.md"
+      ],
+      "files": 738,
+      "manifest_sha256": "ceff7b5b0026dc0061ec6a8d602e664a64edad15e6d51a42542f96d4c6cc156f",
+      "note": "One approved fresh Joanna Campground world and one named reload on 236e532a. Includes original player traces and frames, approval, before and effect evidence, saved checkpoint archive, final study userdir and verified restoration. The displaced original 82-file recovery archive is retained separately.",
+      "sources": {
+        "admission-1": ".runtime/computer-sessions/wilderness-803-first-eligible-8a4badef08b9",
+        "admission-2": ".runtime/computer-sessions/wilderness-803-reload-2-747a4e627807",
+        "fresh-config": ".runtime/archive/campground-803-fresh-config-8a4badef08b9",
+        "named-checkpoint": ".runtime/archive/userdir-20261120T015706504504Z",
+        "operator": ".runtime/campground-803-operator",
+        "study-userdir": ".runtime/archive/userdir-20261120T020134269964Z"
+      },
+      "visibility": "private"
+    },
     "memory-screen-gates-460-386": {
       "availability": "present",
       "bytes": 117383888,
