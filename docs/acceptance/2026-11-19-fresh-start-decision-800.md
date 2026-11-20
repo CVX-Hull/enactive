@@ -14,8 +14,7 @@ Talty and #799 both saw **Preset Character** highlighted in New Game. Both
 players tried to establish whether a survivor already existed. Talty waited
 for a rendered result and found a quit dialog. The #799 player included
 Enter in the same batch and lost custody before it could see the result.
-The earliest difference was the extra confirmation across an unseen menu
-transition. The native exit and the effect of Enter remain unexplained.
+The native exit and the effect of Enter remain unexplained.
 
 The original assignment called the world fresh and also asked the player to
 verify that setup had never started. The operator can resolve that question
@@ -50,12 +49,12 @@ subsequent instructions carry forward.
 
 > Your assignment is one fresh world with default world rules and a custom Survivor in Wilderness, starting at Campground. Choose the survivor and all remaining setup options yourself. If you are the first actor on this fresh admission, the operator has verified that it starts with no saved world or survivor. Observe the current screen and begin the assigned setup from the menu you see. If you have a sealed report from a predecessor in this session, observe first and use the report as fallible context to continue the same game or its unfinished setup. If the screen conflicts with the assignment and you cannot establish how to continue, stop and report what you see.
 >
-> When choosing a character creation option, inspect the New Game submenu. If you need to open it, inspect the returned view. After changing menus or moving the selection, read the returned view before confirming a choice.
+> On the title screen, inspect the New Game submenu if it is already open. If you change menus or move a selection during title-screen setup, read the returned view before sending a confirmation.
 >
 
 For each actor above, the review replayed the first three sent request
 manifests. Their first user-text digest matched the frozen actor prompt,
-two newlines and the delivered knowledge text. Each sent image digest
+two newlines and the text from the initial `knowledge-delivery` event. Each sent image digest
 matched its retained PNG. The six original first user texts had different
 digests. The base mission in #794 and #799 had the same SHA-256,
 `0c6557998138f230ec2f5ec8b4e154ef01a02da119a67f1522ae2254cb2c08a3`.
@@ -63,9 +62,12 @@ The driver adds an actor's audit IDs in every case. Only a same-session
 successor gets the separately labelled sealed predecessor context.
 [Driver](../../tools/campaign_player.py) · [Player host](../../tools/player_host/host.mjs)
 
-The offline substitution replaced just the base mission in the two Campground
-opening contexts and in a copy of the actual Oceana successor context.
-Identity, delivered briefing and any sealed report remained byte-identical.
+The offline substitution applied the revised base mission to the two Campground
+opening contexts. In a copy of the Oceana successor context, it replaced only
+the sentence beginning “If you received a handoff inside this admission” with
+the revised sentence beginning “If you have a sealed report”. That preserved
+the actual Oceana Load assignment, survivor, checkpoint and sealed report.
+The actor audit IDs and delivered briefings remained byte-identical.
 The fresh role permits beginning setup from frame 2. It requires another view
 before confirming a changed selection. The successor role at frame 12644
 calls for continuing the existing game using the overmap and the fallible
