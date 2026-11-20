@@ -34,7 +34,8 @@ Role definitions are tracked in this repository, as the owner decided
 `.agents/roles/`, and a thin wrapper per host that names the model and points to it, in
 `.claude/agents/`, `.codex/agents/` and `.agents/agents/`. On Claude Code a project
 definition takes precedence over a user's own definition of the same name. The
-Antigravity CLI listed its wrappers from the main checkout and not from a worktree
+Antigravity CLI listed its wrappers from the main checkout, and not from a worktree
+of it or from a scratch copy
 ([Choosing a model](model-routing.md#roles-and-their-default-models)).
 [Choosing a model](model-routing.md) owns each role's default model and when the lead
 overrides it.

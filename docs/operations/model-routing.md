@@ -23,7 +23,8 @@ every row:
   replaced, its rows read "inherited, not re-observed" until someone observes the
   successor.
 - **A public score is a coding agent and a model together**, each model in its maker's
-  own agent, on tasks that are not this repository's. A gap of a few points is a tie.
+  own agent, on tasks that are not this repository's. A gap of a few points is treated
+  here as too small to act on.
 - **Effort matters as much as the model.** On the one model read at every setting, the
   score moved ten points between Low and High, and the highest setting scored lower at
   several times the cost: start at High.
