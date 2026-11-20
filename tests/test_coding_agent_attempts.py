@@ -1,8 +1,10 @@
 """The matched-run ledger (coding-agent-attempt/1) has the shape its reading rules on the routing page need.
 
 Each row is one attempt; the two attempts at one leaf from one base commit are a pair, read within the routing
-table's kind of work. A row that does not pair, or names a kind of work the table does not have, cannot be read
-under the page's rules, so the check refuses it here rather than when a default is about to move on it.
+table's kind of work. The checks beyond the schema each protect the page's count of wins within one kind of work:
+a leaf with one or three attempts has no pair to count; a kind of work the table does not have, or two kinds in
+one pair, would split or misfile a count; and two blind preferences that do not complement each other mean the
+labels were mapped back wrongly. The check refuses such a row here rather than when a default is about to move.
 """
 from __future__ import annotations
 
@@ -44,10 +46,6 @@ def problems(rows: list[dict], kinds: set[str]) -> list[str]:
         first, second = pair
         if first['kind_of_work'] != second['kind_of_work']:
             found.append(f'issue {issue}: the two attempts name different kinds of work')
-        if all(first[k] == second[k] for k in ('coding_agent', 'model', 'effort')):
-            found.append(f'issue {issue}: both attempts ran the same coding agent, model and effort')
-        if [r['outcome'] for r in pair].count('merged') > 1:
-            found.append(f'issue {issue}: both attempts are merged')
         if sorted(r['blind_preference'] for r in pair) not in (['not_preferred', 'preferred'], ['no_preference'] * 2):
             found.append(f'issue {issue}: the two blind preferences contradict each other')
     return found
@@ -61,7 +59,7 @@ def attempt(**changes) -> dict:
     row = dict(schema='coding-agent-attempt/1', issue=900, kind_of_work='Bounded implementation from a written brief',
                base_commit='b' * 40, coding_agent='first agent', coding_agent_version='1.0.0', model='model-one',
                effort='high', date='2026-11-20', acceptance='passed', repairs=0, wall_seconds=1200,
-               blind_preference='preferred', outcome='merged')
+               blind_preference='preferred', outcome='merged', false_report=None)
     return row | changes
 
 
@@ -94,8 +92,7 @@ def test_a_matched_pair_reads():
     (pair() + [attempt(coding_agent='third agent')], '3 attempts from one base commit'),
     (pair(kind_of_work='Review of code'), 'different kinds of work'),
     ([attempt(kind_of_work='Anything'), pair(kind_of_work='Anything')[1]], 'is not a routing table row'),
-    (pair(coding_agent='first agent', model='model-one', effort='high'), 'same coding agent, model and effort'),
-    (pair(outcome='merged'), 'both attempts are merged'),
+    ([attempt(false_report='')], 'should be non-empty'),
     (pair(blind_preference='preferred'), 'blind preferences contradict'),
     ([attempt(effort='extra-high')], "'extra-high' is not one of"),
     ([attempt(date='20 November 2026')], 'does not match'),

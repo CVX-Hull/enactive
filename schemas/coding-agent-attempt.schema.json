@@ -18,7 +18,8 @@
     "repairs",
     "wall_seconds",
     "blind_preference",
-    "outcome"
+    "outcome",
+    "false_report"
   ],
   "properties": {
     "schema": {
@@ -73,7 +74,7 @@
       "minimum": 0
     },
     "wall_seconds": {
-      "description": "Wall time from handing over the brief to the attempt's hand-back.",
+      "description": "Wall time from handing over the brief to the attempt's last hand-back, repairs included.",
       "type": "integer",
       "minimum": 0
     },
@@ -84,6 +85,11 @@
     "outcome": {
       "description": "Whether the lead merged this attempt or discarded it.",
       "enum": ["merged", "discarded"]
+    },
+    "false_report": {
+      "description": "What the attempt reported that was not so, such as a timeout reported as success or quoted text that exists nowhere in the tree or its cited source; null when its report held.",
+      "type": ["string", "null"],
+      "minLength": 1
     }
   }
 }

@@ -34,7 +34,7 @@ One session's work as lead on a documentation leaf is in the
 [trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md). A row changes on our own evidence
 through a [matched run](#matched-runs-on-this-repositorys-leaves), the same leaf on two
 coding agents, not on a public board alone. Each attempt is a row of
-`data/evaluation/coding-agent-attempts.jsonl`; no matched run is recorded yet.
+`data/evaluation/coding-agent-attempts.jsonl`.
 
 ## Route by kind of work
 
@@ -106,22 +106,25 @@ the pull request.
 
 A matched run gives one leaf to two coding agents and keeps both results, so a row can
 change on how its models did on this repository's own work. It is the control
-C-MATCHED-RUNS on the [controls page](../controls.md): it serves
-[R-DELEGATION-ERROR](../risks.md), and it costs double quota on that leaf.
+C-MATCHED-RUNS on the [controls page](../controls.md), which owns its risk and cost.
 
 ### When and on what
 
-A matched run starts on a [trigger](#keeping-this-page-current), or for a routing row
-never observed here. The lead picks one Ready leaf
+A [trigger](#keeping-this-page-current) may start a matched run on the rows it changes,
+and so may a routing row never observed here; the lead names the row and decides
+whether the run is worth its cost. It applies to rows whose leaf ends in a diff that
+can merge, not to review, research or reading rows. The lead picks one Ready leaf
 ([work items](../workflows/work-items.md#ready-brief-and-execution-capacity)) of that
 row's kind of work that needs no game runtime and no paid model call. At most three
-leaves are run per trigger.
+leaves are run per trigger. Where a row's first choice is a role and not one model, the
+first choice is the model that role runs on in the lead's session.
 
 ### Running it
 
 1. The leaf goes to the row's first choice and to one challenger the lead names. These
    are the two implementation workers
-   [work items](../workflows/work-items.md#ready-brief-and-execution-capacity) allows.
+   [work items](../workflows/work-items.md#ready-brief-and-execution-capacity) allows,
+   under its exception for a matched run: the two share owned paths and one merges.
 2. Both get the same brief and the same base commit, each in its own worktree on its own
    branch ([environment facts](coding-agents.md#environment-facts-for-agents)). The
    branch name says the leaf, not the coding agent.
@@ -129,29 +132,32 @@ leaves are run per trigger.
    attempt reported, and counts the repairs it had to ask for.
 4. A clean-context reviewer compares the two diffs under neutral labels, such as "left"
    and "right", that name no model or coding agent. It gets the diffs as files
-   (`git diff <base> <head>`), not the branches, because commit trailers name the model.
-   The lead alone keeps the mapping from label to attempt.
+   (`git diff <base> <head>`) outside the checkout, and its brief forbids reading
+   branches or history, because commit trailers and branch logs name the model. The lead
+   alone keeps the mapping from label to attempt.
 5. The lead merges one attempt and discards the other. When neither passes, the lead
    discards both and takes the leaf back.
-6. In the pull request that merges the chosen attempt, the lead adds one row per attempt
-   to `data/evaluation/coding-agent-attempts.jsonl`, in the shape of
-   `schemas/coding-agent-attempt.schema.json`: issue, kind of work (the table's first
-   cell), base commit, coding agent and its version, model, effort, date, the rerun's
-   acceptance result, repairs, wall time, the reviewer's blind preference, and merged or
-   discarded. `tests/test_coding_agent_attempts.py` refuses a row that does not pair or
-   names a kind of work the table does not have.
+6. In the pull request that merges the chosen attempt, or in the lead's own pull request
+   for the leaf when both are discarded, the lead adds one row per attempt to
+   `data/evaluation/coding-agent-attempts.jsonl`, in the shape of
+   `schemas/coding-agent-attempt.schema.json`. The kind of work is the table's first
+   cell. `tests/test_coding_agent_attempts.py` refuses a row the reading rules below
+   cannot use.
 
 ### Reading the ledger
 
 - **Count within one kind of work.** Wins and losses are counted for a pair of
   configurations (coding agent, model and effort) within one kind of work, never across
-  kinds.
+  kinds. An attempt wins when its `acceptance` passed and the other's failed. When both
+  passed, the one with `blind_preference` `preferred` wins, and `no_preference` is a
+  tie. When both failed, neither wins.
 - **A default moves on a large one-sided split,** or on equal quality at clearly lower
   quota, as the hosts' own usage readings show. A move is a change to the row and, where
   it names a role's default, to the role file.
 - **One false report is enough to record.** A timeout reported as success, or quoted text
-  that exists nowhere in the tree or its cited source, is written into the row's last
-  cell as a dated fact with its issue, whatever the count.
+  that exists nowhere in the tree or its cited source, is written into that attempt's
+  `false_report` field in the ledger, which carries its date and issue, whatever the
+  count.
 - **Few observations, confounded by the task.** The rows are evidence of fit here, never a
   ranking of models or coding agents.
 
