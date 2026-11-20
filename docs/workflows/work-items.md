@@ -85,7 +85,10 @@ worker handoff is a brief that follows the
 Keep one active integration slice and at most two implementation workers, each in its own
 project-local worktree (`.runtime/worktrees/<leaf>`, or where the host's worktree
 isolation puts it: [environment facts](../operations/coding-agents.md#environment-facts-for-agents))
-with disjoint named paths and one writer per checkout. A worktree installs its own npm
+with disjoint named paths and one writer per checkout. The one exception is a
+[matched run](../operations/model-routing.md#matched-runs-on-this-repositorys-leaves):
+its two attempts are the two workers, they share the leaf's owned paths in separate
+worktrees, and only one of them merges. A worktree installs its own npm
 dependencies with `npm ci` and uses the main checkout's `.venv`; a leaf that changes the
 Python lockfile builds its own. Explorers read only;
 reviewers get fresh context. The lead alone integrates and serializes the game, saves,
