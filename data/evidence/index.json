@@ -1242,6 +1242,23 @@
       },
       "visibility": "private"
     },
+    "talty-campground-stream-stop-794": {
+      "availability": "present",
+      "bytes": 9020935,
+      "cited_by": [
+        "docs/acceptance/2026-11-19-talty-campground-stream-stop-794.md"
+      ],
+      "files": 144,
+      "manifest_sha256": "ea1478aeb8a58f47709b6e562c78ac03c94e416270dcf6def37c0fc2c2f26515",
+      "note": "One approved Campground setup, retained player stream timeout, exact custody and provider accounting with one unknown charge, and the failed study userdir.",
+      "sources": {
+        "admission-1": ".runtime/computer-sessions/wilderness-793-delayed-resource-60715e9f959e",
+        "fresh-config": ".runtime/archive/wilderness-794-fresh-config-60715e9f959e",
+        "operator": ".runtime/wilderness-794-operations-60715e9f959e",
+        "study-userdir": ".runtime/archive/userdir-20261119T235745584156Z"
+      },
+      "visibility": "private"
+    },
     "targeted-tool-memory-767": {
       "availability": "present",
       "bytes": 67056092,

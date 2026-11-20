@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | [Talty Campground acquisition stopped on a player request (#794)](2026-11-19-talty-campground-stream-stop-794.md) | run | Approved Wilderness / Campground acquisition with verified setup, one timed-out player request and restored custody | historical |
 | 2026-11-19 | [Retained evidence for the next delayed-memory decision (#791)](2026-11-19-retained-memory-decision-791.md) | review | Offline adjudication of six retained CDDA decisions, including historical ordinary access and a recommendation for targeted acquisition | historical |
 | 2026-11-19 | [Oceana Farm delayed-memory acquisition (#788)](2026-11-19-oceana-farm-memory-788.md) | run | One corrected fresh Farm start, five qualifying same-survivor reloads, and ordinary evidence for delayed choices | historical |
 | 2026-11-19 | [Farm equipment-return acquisition stopped at setup (#785)](2026-11-19-farm-setup-stop-785.md) | run | One approved fresh Farm acquisition admission stopped during unassigned random-start loading; custody, accounting and userdir restored | historical |
