@@ -30,11 +30,11 @@ every row:
   several times the cost. Starting at High is a judgment carried from that one model to
   the others.
 
-No matched comparison is recorded in this repository yet. One session's work as lead on
-a documentation leaf is in the
+One session's work as lead on a documentation leaf is in the
 [trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md). A row changes on our own evidence
-through [the same leaf run on two coding agents](https://github.com/CVX-Hull/enactive/issues/813),
-not on a public board alone.
+through a [matched run](#matched-runs-on-this-repositorys-leaves), the same leaf on two
+coding agents, not on a public board alone. Each attempt is a row of
+`data/evaluation/coding-agent-attempts.jsonl`; no matched run is recorded yet.
 
 ## Route by kind of work
 
@@ -102,6 +102,59 @@ the pull request.
 - **Spend scarce windows where they lead.** The lead's own model does the hard changes;
   bounded and locating work goes to cheaper models.
 
+## Matched runs on this repository's leaves
+
+A matched run gives one leaf to two coding agents and keeps both results, so a row can
+change on how its models did on this repository's own work. It is the control
+C-MATCHED-RUNS on the [controls page](../controls.md): it serves
+[R-DELEGATION-ERROR](../risks.md), and it costs double quota on that leaf.
+
+### When and on what
+
+A matched run starts on a [trigger](#keeping-this-page-current), or for a routing row
+never observed here. The lead picks one Ready leaf
+([work items](../workflows/work-items.md#ready-brief-and-execution-capacity)) of that
+row's kind of work that needs no game runtime and no paid model call. At most three
+leaves are run per trigger.
+
+### Running it
+
+1. The leaf goes to the row's first choice and to one challenger the lead names. These
+   are the two implementation workers
+   [work items](../workflows/work-items.md#ready-brief-and-execution-capacity) allows.
+2. Both get the same brief and the same base commit, each in its own worktree on its own
+   branch ([environment facts](coding-agents.md#environment-facts-for-agents)). The
+   branch name says the leaf, not the coding agent.
+3. The lead reruns the brief's acceptance check on both final commits, whatever each
+   attempt reported, and counts the repairs it had to ask for.
+4. A clean-context reviewer compares the two diffs under neutral labels, such as "left"
+   and "right", that name no model or coding agent. It gets the diffs as files
+   (`git diff <base> <head>`), not the branches, because commit trailers name the model.
+   The lead alone keeps the mapping from label to attempt.
+5. The lead merges one attempt and discards the other. When neither passes, the lead
+   discards both and takes the leaf back.
+6. In the pull request that merges the chosen attempt, the lead adds one row per attempt
+   to `data/evaluation/coding-agent-attempts.jsonl`, in the shape of
+   `schemas/coding-agent-attempt.schema.json`: issue, kind of work (the table's first
+   cell), base commit, coding agent and its version, model, effort, date, the rerun's
+   acceptance result, repairs, wall time, the reviewer's blind preference, and merged or
+   discarded. `tests/test_coding_agent_attempts.py` refuses a row that does not pair or
+   names a kind of work the table does not have.
+
+### Reading the ledger
+
+- **Count within one kind of work.** Wins and losses are counted for a pair of
+  configurations (coding agent, model and effort) within one kind of work, never across
+  kinds.
+- **A default moves on a large one-sided split,** or on equal quality at clearly lower
+  quota, as the hosts' own usage readings show. A move is a change to the row and, where
+  it names a role's default, to the role file.
+- **One false report is enough to record.** A timeout reported as success, or quoted text
+  that exists nowhere in the tree or its cited source, is written into the row's last
+  cell as a dated fact with its issue, whatever the count.
+- **Few observations, confounded by the task.** The rows are evidence of fit here, never a
+  ranking of models or coding agents.
+
 ## Keeping this page current
 
 There is no calendar pass. A row is re-read when one of these happens:
@@ -113,9 +166,9 @@ There is no calendar pass. A row is re-read when one of these happens:
 - a row is observed here for the first time.
 
 On a trigger the lead re-reads the affected sources, adds a new dated record, and marks
-rows whose model was replaced as inherited. A default in a role file moves on our own
-paired observation, or on a clear change in the public figures when no observation
-exists.
+rows whose model was replaced as inherited. A default in a role file moves on a
+[matched run](#matched-runs-on-this-repositorys-leaves), or on a clear change in the
+public figures when no matched run exists.
 
 What was read of each host's models on 19 November 2026 is in the
 [evidence record](../acceptance/2026-11-19-coding-agent-model-evidence.md#measured-here):

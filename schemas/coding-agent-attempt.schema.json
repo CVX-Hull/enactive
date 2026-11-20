@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "coding-agent-attempt/1: one coding agent's attempt at a matched leaf in data/evaluation/coding-agent-attempts.jsonl",
+  "description": "One row per attempt of a matched run: the same Ready leaf, brief and base commit given to a routing row's first choice and to one challenger, each in its own worktree. The two rows of a pair share issue, base commit and kind of work. The procedure and how to read the rows are on docs/operations/model-routing.md. `model` and `effort` are the names the curator and player-host configurations use; `wall_seconds` is the run ledger's.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "issue",
+    "kind_of_work",
+    "base_commit",
+    "coding_agent",
+    "coding_agent_version",
+    "model",
+    "effort",
+    "date",
+    "acceptance",
+    "repairs",
+    "wall_seconds",
+    "blind_preference",
+    "outcome"
+  ],
+  "properties": {
+    "schema": {
+      "const": "coding-agent-attempt/1"
+    },
+    "issue": {
+      "description": "The GitHub issue of the leaf both attempts were given.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind_of_work": {
+      "description": "The routing table's row for this leaf, its first cell verbatim.",
+      "type": "string",
+      "minLength": 1
+    },
+    "base_commit": {
+      "description": "The commit both worktrees started from.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "coding_agent": {
+      "description": "The coding agent that ran the attempt, as the coding-agent hosts page names it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "coding_agent_version": {
+      "description": "The coding agent's version as it reports it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "description": "The model identifier the coding agent was given for the attempt.",
+      "type": "string",
+      "minLength": 1
+    },
+    "effort": {
+      "description": "The effort the attempt ran at, in the hosts' shared vocabulary; null when the coding agent exposes no effort setting.",
+      "enum": ["off", "minimal", "low", "medium", "high", "xhigh", "max", null]
+    },
+    "date": {
+      "description": "The day the attempt ran, as YYYY-MM-DD.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
+    "acceptance": {
+      "description": "The result of the lead's own rerun of the brief's acceptance check on the attempt's final commit, whatever the attempt reported.",
+      "enum": ["passed", "failed"]
+    },
+    "repairs": {
+      "description": "Repairs the lead had to ask for before the rerun passed, or before giving up.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "wall_seconds": {
+      "description": "Wall time from handing over the brief to the attempt's hand-back.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "blind_preference": {
+      "description": "The clean-context reviewer's verdict on this attempt's diff against its pair's, read under neutral labels and mapped back afterwards.",
+      "enum": ["preferred", "not_preferred", "no_preference"]
+    },
+    "outcome": {
+      "description": "Whether the lead merged this attempt or discarded it.",
+      "enum": ["merged", "discarded"]
+    }
+  }
+}
