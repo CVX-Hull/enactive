@@ -22,14 +22,17 @@ every row:
 - **A figure belongs to the model version and effort it was read on.** When a model is
   replaced, its rows read "inherited, not re-observed" until someone observes the
   successor.
-- **A public score is a coding agent and a model together**, each model in its maker's
-  own agent, on tasks that are not this repository's. A gap of a few points is treated
-  here as too small to act on.
-- **Effort matters as much as the model.** On the one model read at every setting, the
-  score moved ten points between Low and High, and the highest setting scored lower at
-  several times the cost: start at High.
+- **A public score is a coding agent and a model together**, nearly always the model in
+  its maker's own agent, on tasks that are not this repository's. A gap of a few points
+  is treated here as too small to act on.
+- **Effort was read across its range for one model only.** On Claude Fable 5.2 the score
+  moved ten points between Low and High, and the highest setting scored lower at
+  several times the cost. Starting at High is a judgment carried from that one model to
+  the others.
 
-No row has been observed in this repository yet. A row changes on our own evidence
+No matched comparison is recorded in this repository yet. One session's work as lead on
+a documentation leaf is in the
+[trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md). A row changes on our own evidence
 through [the same leaf run on two coding agents](https://github.com/CVX-Hull/enactive/issues/813),
 not on a public board alone.
 
@@ -42,17 +45,17 @@ model to give it.
 
 | Kind of work here | First choice | Substitutes, in order | Avoid | What it rests on |
 | --- | --- | --- | --- | --- |
-| Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku, Luna and Argon | Index 58 at High and at Extra-high; the patch score of 49 was read at Extra-high only |
+| Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku and Luna, read at Max; Argon, effort not read | Index 58 at High and at Extra-high; the patch score of 49 was read at Extra-high only |
 | Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at Extra-high; Claude Opus 5.5 at High (not read) | Claude Sonnet 5.5 at Max as the first choice | Sol's index of 50 at 12.6 minutes, the least time read; no figure isolates work from a brief |
-| Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Sonnet 5.5 at Medium (not read) as a sub-agent | Claude Haiku 5.5; GPT-6 Luna | Codebase question scores of 64 to 68 against 34 and 38 |
+| Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Sonnet 5.5 at Medium (not read) as a sub-agent | Claude Haiku 5.5 and GPT-6 Luna, both read at Max | Codebase question scores of 64 to 68 for the five named here against 34 and 38 |
 | Locating files and mechanical sweeps | the smallest model the host serves | none needed | a large model | Cost only; no figure read |
 | Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations |
 | Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | Judgment; no public evidence found |
 | Standards and pull-request prose | the lead | none known | none known | Judgment; no public evidence found |
 | Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found |
-| Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | Wrong-answer rates read for those two models only |
-| Review of code | the host's reviewer role, clean context | another family's reviewer when the window is spent | acting on a quoted passage before checking it against the tree | Reviewer products on one model, with no effort reported |
-| Review of documents | the host's reviewer role, or a second family's where one has quota | none known | none known | One preprint, read second-hand; weak |
+| Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | The first choice is judgment; wrong-answer rates were read for those two models only |
+| Review of code | the host's reviewer role, clean context | another family's reviewer when the window is spent | acting on a quoted passage before checking it against the tree | The choice is judgment; reviewer products built on two Claude models were read, with no effort reported |
+| Review of documents | one clean-context reviewer: the host's reviewer role, or a second family's where one has quota and its run starts from a clean context | none known | none known | The choice is judgment; one preprint, read second-hand, is weak support |
 
 The rows that rest on judgment are most of what this repository merges.
 
@@ -76,14 +79,15 @@ the pull request.
 - **Claude Code** reads the project's `.claude/agents/` ahead of a user's own
   definitions of the same name. The lead names another model for one task with the
   delegation call's model override. The `reviewer` and `Explore` files have each run
-  once as a sub-agent; `locator` and `worker` have not.
+  as a sub-agent, on 20 November 2026 for pull requests #817 and #819; `locator` and
+  `worker` have not.
 - **Codex** reads `.codex/agents/` in a checkout the user trusts. All four model
   selectors answered a one-word prompt on CLI 0.171.0, twice; the role files themselves
   were not exercised as sub-agents.
 - **Antigravity** role files use its native aliases; a full model identifier in a
   role file was not tested. `agy agents` (CLI 1.5.13) listed all four files from the
-  main checkout, and none from a worktree of it or from a scratch copy; no other place
-  was tried. They have not run as sub-agents: the one Antigravity lead session so far
+  main checkout, and none from a worktree of it, from a scratch copy, or from that copy
+  after `git init`; nothing else was tried. The one recorded trial did not use them: it
   started its explorer as the host's `research` type and defined its own `worker` type
   ([trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md)).
 
@@ -113,8 +117,9 @@ rows whose model was replaced as inherited. A default in a role file moves on ou
 paired observation, or on a clear change in the public figures when no observation
 exists.
 
-The models each host served on 19 November 2026 are listed in the
-[evidence record](../acceptance/2026-11-19-coding-agent-model-evidence.md#measured-here);
-a trigger compares the host's current listing with it.
+What was read of each host's models on 19 November 2026 is in the
+[evidence record](../acceptance/2026-11-19-coding-agent-model-evidence.md#measured-here):
+a full listing for one host, the delegation selectors for another and four selectors that
+answered for the third. A trigger compares the host's current listing with it.
 
 [Operations index](../runbook.md).
