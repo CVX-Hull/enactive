@@ -10,12 +10,13 @@ scope: 'Backlog grooming after the paired replay: what the memory studies suppor
 
 ## At a glance
 
-The grooming reorders the curator's work around one finding. The curator can store only
-facts scoped to the game, and that kind of knowledge showed no benefit in the withholding
-study. The one positive signal, in two small studies, is for a fact about one world: an
-earlier sighting, stated in a sentence, changed what the player proposed every time. The
-store has no place for such a fact, and nothing in a trace says which world a frame came
-from.
+The grooming reorders the curator's work around one finding. The only scope the curator's
+gate validates on a fact is the game, and for that kind of knowledge the withholding
+study's frozen primary result was null: a benefit is suggested there, not confirmed. The
+one positive signal is for a fact about one world. In two cases, Whitethorn's fishing rod
+and the Malvern trunk, an earlier sighting stated in a sentence changed the proposed
+check. The store gives such a fact no defined place, and the trace projection, window
+code and gate carry no world or lineage.
 
 The owner chose "world memory first", left belief out of the fact store, and parked the
 procedures line behind one design brief. Nine issues were registered and three are Ready:
@@ -51,20 +52,20 @@ Each line names its record. "Not established" lines matter as much as the others
 
 | Statement | Status | Record |
 | --- | --- | --- |
-| Delivered knowledge reaches the player and is acted on: in line with a delivered lead in 611 of 724 windows, model-judged | Established | [Withholding study](2026-11-14-withholding-study.md) |
+| Delivered knowledge reaches the player and is acted on: when the lead was delivered, in line with the fact in 611 of 724 windows where it applied, model-judged | Established | [Withholding study](2026-11-14-withholding-study.md) |
 | That knowledge improves play | Not established: the frozen primary result was null | [Withholding study](2026-11-14-withholding-study.md) |
-| One sentence about an earlier sighting in the same world changes the proposed check | Established in two small studies: both fishing proposals in #755; four of four against none of four in #829, at two context sizes | [#755](2026-11-18-delayed-observation-cueing-755.md), [#829](2026-11-20-malvern-trunk-paired-replay-829.md) |
+| One sentence about an earlier sighting in the same world changes the proposed check | Established in two cases: both fishing proposals in #755, whose lighting and food cases did not change in that way; four of four against none of four in #829, at two context sizes | [#755](2026-11-18-delayed-observation-cueing-755.md), [#829](2026-11-20-malvern-trunk-paired-replay-829.md) |
 | That the changed proposal is a better decision | Not established: "A shift is not a benefit" | [#829](2026-11-20-malvern-trunk-paired-replay-829.md) |
-| An ordinary lookup is cheap: one or two calls inside a 5 to 11 second turn | Established | [#804](2026-11-19-lookup-effort-at-retained-resource-choices-804.md) |
+| An ordinary lookup is cheap in the retained cases: one or two calls; a model turn that issued one took about 5 to 11 seconds, and the one two-call lookup took 17.1 seconds of model time | Established for those cases | [#804](2026-11-19-lookup-effort-at-retained-resource-choices-804.md) |
 | A curator forming knowledge during play: its lag, cost and uptake | Not measured: the study used a fixed store and no curator runs during play | [Withholding follow-up](2026-11-16-withholding-follow-up-and-grooming.md), [curator component](../components/curator.md) |
 | Any effect across worlds | Not established: each study is one world or one lineage | [#755](2026-11-18-delayed-observation-cueing-755.md), [#829](2026-11-20-malvern-trunk-paired-replay-829.md) |
-| Stuck or looping play that a monitor would catch | Not found in sealed play | [Process measures](2026-11-14-process-measures.md) |
+| Stuck or looping play | Adjudicators found none in the judged windows; whether a monitor would detect any was not tested | [Process measures](2026-11-14-process-measures.md) |
 
 Three facts about the code, each checked by the lead:
 
-- A fact's scope must hold a game and nothing else (`harness/curator/gate.py`, the scope
-  check), and the trace projection, the window code and the gate mention no world or
-  lineage.
+- The only scope the gate validates on a fact is a non-empty game (`harness/curator/gate.py`,
+  the scope check). It does not reject other keys inside the scope, and it gives none a
+  meaning. The trace projection, the window code and the gate mention no world or lineage.
 - The curator reads only sealed traces: `harness/trace/stores.py` refuses a store with an
   un-checkpointed write-ahead log. The [curator component](../components/curator.md) page
   says sessions triggered during live play are not implemented.
@@ -124,7 +125,9 @@ being written becomes readable. #831 is the next step the paired replay's design
 - `harness/curator/gate.py` is touched by #835 and later by the program leaves #465, #468
   and #469.
 - The delivered-knowledge and host input contracts change in #838 and in the later
-  ontology card. They move as one migration, after #835, not two.
+  ontology card, as one migration. The fact schema migration #835 lands first and keeps
+  those two contracts as they are. If the field table finds that it cannot, #835 and #838
+  become one batch with one integration owner.
 - `harness/viewer/` and `web/app/` are shared by #464, #471 and #336.
 - `harness/player/programs.py`, to be created, is shared by #465, #466, #467 and #469.
 
@@ -154,8 +157,12 @@ review.
 | Closed as not planned, card removed | #42 |
 
 Left as they were: the edges of #464, #465 and #177 on the whole of #457. ADR 009 says to
-keep that blocker until a bounded brief freezes the interface choices; #839 is that brief.
-After the changes the open dependency graph has no edge to a closed issue and is acyclic.
+keep that blocker until a reviewed interface deliverable can replace it. #839 is the first
+design step toward one, not the replacement: the semantic oracle, cohort and utility
+decisions and the migration acceptance stay open, so the program leaves stay parked after
+it. Program disable had been listed in #457's acceptance while #465 waits on #457; it now
+belongs with the program leaves under #177, so the descriptions hold no cycle. After the
+changes the open dependency graph has no edge to a closed issue and is acyclic.
 
 ## Cleanup
 
@@ -183,6 +190,12 @@ were outside the project and were not evidence.
   adopted, and ADR 009 cites a file that no longer exists. #832 owns the corrections in
   the curator session and player context designs.
 - #465's description still depends on the whole of #457, as ADR 009 requires for now.
+- The sealed evidence holds four agents' reports. The fifth, the cleanup audit, was a
+  message to the lead and is not sealed, and the temporary-directory cleanup has no
+  itemized sealed list. The after-snapshots hold the open issues and total card counts,
+  not a receipt for each closure, the closed issues' cards, or the descriptions as
+  published. Five descriptions were corrected again after the review and differ from the
+  sealed drafts.
 - One agent copied sealed session databases into the scratch folder to count repeated
   inputs. The lead first sealed that folder whole, then, before anything was committed,
   removed that seal and sealed only the snapshots, reports and drafts. The copies were
@@ -192,5 +205,5 @@ were outside the project and were not evidence.
 
 Sealed as `curator-path-backlog-grooming` under `.runtime/evidence/`: the before and after
 snapshots of open issues, the parent and dependency graph, Project fields and card counts;
-every open issue's description before the change; the five agents' reports; and the
+every open issue's description before the change; four agents' reports; and the
 drafted and rewritten descriptions with the list of each change and its source.
