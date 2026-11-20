@@ -231,10 +231,13 @@ readers (ADR008).
 **Not in the fact store.** The owner decided on 20 November 2026 that a fact carries
 no belief value ([decision](owner-decisions.md#no-belief-value-in-the-fact-store)).
 What follows stays a research candidate; adopting it would be a second migration with
-its own justification. Three later places in this ADR still name belief: the interface
+its own justification. Besides the research question R3 itself, four later places in
+this ADR's design and decisions still name belief: the interface
 table's statement that belief, ontology and semantic gate changes remain unresolved;
 the sentence that keeps "#457's remaining belief and program-disable acceptance"
-tracked; and the spectator's knowledge view, which lists belief among a fact's fields. Belief is outside the fact store migration's
+tracked; the spectator's knowledge view, which lists belief among a fact's fields; and
+the open owner decision "The belief model, after R3", which stays a later research
+decision. Belief is outside the fact store migration's
 acceptance and outside what a fact carries; it remains a research candidate under
 [#677](https://github.com/CVX-Hull/enactive/issues/677).
 

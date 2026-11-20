@@ -470,7 +470,7 @@ is designed in [running the curator during play](live-curator-integration.md).
 | A coverage stamp on every snapshot: the last decision it has read | The cut rule depends on it |
 | A session at each admission boundary; the next admission waits for it | The game is saved and closed there, so waiting costs no play |
 | A session at each handoff; the successor does not wait | It starts with the latest snapshot and its predecessor's summary as a labelled hint, and gets the difference when the session publishes |
-| A session during play whenever the decisions not yet covered pass a trigger | So that cuts can proceed. The curator does not run in live play today. How short such a session can be, and what it costs, decide whether the cut holds its marks |
+| Enough published coverage during play for cuts to proceed. The [live design](live-curator-integration.md#the-window) owns when a session starts, which is on finished operations and not on uncovered decisions | So that cuts can proceed. The curator does not run in live play today. How short such a session can be, and what it costs, decide whether the cut holds its marks |
 | A failed request charged at zero when the provider refused it | Done ([#556](https://github.com/CVX-Hull/enactive/issues/556)) |
 
 **A first store for a game already in progress** comes from curator sessions over that

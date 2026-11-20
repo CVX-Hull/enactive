@@ -132,10 +132,12 @@ extinguisher" is true of one world and has no place to say so.
   campaign manifest version, `campaign-run/11`. The validator, the package fixtures and
   the campaign procedure move with it; the driver accepts only the new version. The
   evaluator reads an earlier manifest version only for sessions listed in its closed
-  archive index, and `campaign-run/10` has no entry there because it is current. The
-  migration adds entries for the retained `campaign-run/10` sessions that dated records
-  cite, as earlier manifest changes did; the index stays closed. Those sessions have no
-  world.
+  archive index, and `campaign-run/10` has no entry there because it is current. Adding
+  to that index needs an owner decision that names the sessions and their recorded
+  versions ([S-MIGRATION](../standards/migration.md)); the decision for the `world`
+  label does not include one. Until it is made, sealed `campaign-run/10` sessions are
+  not readable through the evaluator once the version moves. The schema migration leaf
+  puts that decision to the owner before it is built. Those sessions have no world.
 - **Sealed sessions.** A session sealed before this migration names no world. It
   supports `game` facts only, unless
   [the identity leaf](https://github.com/CVX-Hull/enactive/issues/834) finds a
@@ -189,7 +191,10 @@ New or changed fields are marked.
   version, the manifest names the same session as the sealed store, and its digest is
   the one the supervisor recorded for the run. When any of that evidence is missing,
   the session has no world. Which module does the checking, given that the trace
-  projection may not import the campaign code, is for the identity leaf.
+  projection may not import the campaign code, is for the identity leaf. A staged
+  snapshot of a session that is still being played carries the same manifest and
+  supervisor record, so its labels are verified in the same way before it first
+  publishes; otherwise the session would be recorded with no world and keep none.
 - **Consistency the gate enforces.** A publication is refused when a session is
   already recorded with a different world, lineage or position; when two sessions
   claim the same lineage and position; when one lineage appears with two worlds; or
@@ -251,9 +256,13 @@ New or changed fields are marked.
   the definitions recoverable. Every fact in a submission must name a type that exists
   once the submission is applied, including a fact added and retired in one batch, so
   the snapshot named by a fact's `published_in` always holds the definition it was
-  written under. And a revision that writes a type under a name that already existed
-  must assign every current fact of that name, so each gets a `retyped` entry even
-  when the name does not change; today such a revision can leave them unassigned. The
+  written under. And whenever a submission replaces a definition under a name the base
+  snapshot already had, by a revision or by deprecating a type and adding one of the
+  same name, it must assign every fact that was current under that name in the base
+  snapshot and is still current once the submission is applied, so each gets a
+  `retyped` entry even when the name does not change. A fact the same submission
+  retires or supersedes is not assigned, and neither is one it adds. Today such a
+  replacement can leave the surviving facts unassigned. The
   definition in effect now is the current type's. A player's query result carries the
   snapshot version and the type name, as now.
 - **Where the rest of ADR 009's list goes.**
@@ -289,11 +298,15 @@ New or changed fields are marked.
   the player sees.
 - **The world is bound at freeze, and checked at preflight.** The exporter exports
   every `game` fact, every article and the `world` facts of one world; with no world it
-  exports game facts and articles only, as today. It writes the world it selected, or
-  that it selected none, into the package's private full file, which the player never
-  receives. Package preflight refuses a package whose private record names a different
-  world from its `world` label. So a manifest edited after the export, or a file moved
-  between packages, is caught. The delivered file itself still does not name a world.
+  exports game facts and articles only, as today. It writes two things into the
+  package's private full file, which the player never receives: the world it selected,
+  or that it selected none, and the digest of the delivered file it wrote. Package
+  preflight refuses a package whose private record names a different world from its
+  `world` label, or a different digest from the delivered file's. So a manifest whose
+  `world` was changed after the export, and a delivered file whose bytes are not the
+  ones the exporter recorded, are both caught. Two exports that produce the same bytes cannot be told
+  apart, and need not be.
+  The delivered file itself still does not name a world.
   The campaign procedure's rule that no player-visible input is derived from a label
   gains this one exception.
 - **Study draws.** The same selection applies on both of the exporter's paths, the
