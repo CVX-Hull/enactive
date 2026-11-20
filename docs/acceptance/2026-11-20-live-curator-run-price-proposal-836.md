@@ -13,9 +13,7 @@ scope: 'A price proposal for one bounded live development run of the curator bes
 One admission of about 200 decisions, with the curator following play as the
 [live integration design](../design/live-curator-integration.md) describes, is forecast
 at about **$3.50**: about $1.50 of play and about $2.00 for ten curator sessions. The
-proposed ceiling is **$18.00**, most of it headroom the curator's proxy needs in order
-to reserve a request and not money expected to be spent. It is a planning ceiling made
-of two limits the software
+proposed ceiling is **$10.00**. It is a planning ceiling made of two limits the software
 enforces, not a hard cap: the only hard cap is the credit limit on the provider key.
 Nothing here is approved, and the run cannot be made until the live trace reader and the
 runner exist.
@@ -46,13 +44,10 @@ selects a slightly different set and changes the medians. No tracked command pro
 them; the join was a short read-only script.
 
 **A forecast, not a measurement.** At 7.69 decisions a minute, 20 decisions take about
-156 seconds. The median pilot session took 99 seconds and the slowest 153. The run's
-trigger counts an actor's finished computer operations, not decisions, and polling and
-staging a snapshot add time before a session starts. The pilot found operations and
-decisions close to one to one in its own admission only. So that a session over one
-window ends before the next fills, and that the run makes about ten sessions, hold only
-if that relation holds and the added time is small. The run reports the operation rate
-itself.
+156 seconds. The median pilot session took 99 seconds, so a session over one window
+would end before the next window fills; the slowest took 153 seconds, which is on the
+edge. A window counts an actor's computer operations and the ledger counts decisions,
+and the two are not the same unit.
 
 ## The lag simulation, run again
 
@@ -98,19 +93,14 @@ The lengths differ in prompt size and cache writes even where neither does.
 | Part | Forecast | Planning limit, and what enforces it |
 | --- | --- | --- |
 | Play, one admission | $1.49 | **$3.00**: the package's `spend_limit_usd`. The player host checks the reported total, plus an allowance for a pending recall, before each request |
-| Curator, ten sessions | $2.00 at the pilot's median | **$14.00**: the runner's run cap, with a cap of $8.00 for each session. The curator proxy reserves an estimated worst case before it forwards a request |
+| Curator, ten sessions | $2.00 at the pilot's median | **$6.00**: the runner's run cap, with a cap for each session. The curator proxy reserves an estimated worst case before it forwards a request |
 | Not allocated | | $1.00 |
-| **Total** | **about $3.50** | **$18.00** |
+| **Total** | **about $3.50** | **$10.00** |
 
-**Why the curator's cap is $14.00 when $2.00 is expected.** The proxy must be able to
-reserve a request's worst case, and each session is given the lesser of its own cap and
-what remains of the run's. The pilot raised its session cap to $8.00 because $6.00
-could let the proxy refuse before the host reached its writing-only phase. For the
-tenth session still to have $8.00 after nine at the pilot's largest displayed cost,
-$0.57, the run's cap must be at least $13.13. Charges that large would total $5.70;
-the rest is reservation headroom.
+Ten sessions at the pilot's largest displayed cost, $0.57, would be $5.70, under the
+curator's cap.
 
-**Why $18.00 is not a hard cap.** Each limit counts what the provider reports.
+**Why $10.00 is not a hard cap.** Each limit counts what the provider reports.
 
 - The player's reported total can pass its limit by the charges of the final in-flight
   player and recall requests. An attempt that returns no usable cost is recorded as
@@ -120,8 +110,8 @@ the rest is reservation headroom.
   the reservation, which is after that charge exists.
 - The $1.00 not allocated is a margin for those cases. It is not shown to cover them.
 
-A hard limit needs a billing cap that belongs to this run: a provider key whose credit
-limit the owner sets for it. The owner manages that key and its limit; the
+A hard $10.00 needs a billing cap that belongs to this run: a provider key whose credit
+limit the owner sets to $10.00 for it. The owner manages that key and its limit; the
 code cannot read it. The request to the owner states which of the two is on offer: the
 planning ceiling above under the existing key, or a key limited for the run.
 
@@ -131,10 +121,8 @@ curator's cap for one session.
 
 **Stop rules.**
 
-- The player host stops at the package's limit, and on a successful player response
-  with no usable cost. A successful recall response with no usable cost ends recall for
-  that actor; the player continues. The driver and the runtime, not the host, enforce the
-  admission's time and mechanical ceilings. All as now.
+- The player host stops the admission at the package's limit, on a successful response
+  with no usable cost, and on its time and mechanical ceilings, as now.
 - The runner stops for the admission when its run cap is reached; when the proxy refuses
   the next reservation, even with counted spend under the cap; when the proxy is
   revoked, breached or unsettled; when cleanup of a session is not confirmed; when a
@@ -159,16 +147,15 @@ inconclusive result comes before a favourable replay.
 
 | Result | Reading | Next |
 | --- | --- | --- |
-| Snapshots fail or pass their time bound, or the session's store is left with a non-empty log | The read is not safe beside the custodian as designed | The design falls back to the writer yielding each prefix, and the run is repeated only after that. This is reported even when the run also stopped early |
 | The run stops early, or the covered prefix cannot be established | Partial figures are reported as partial | The owner is asked before another run |
+| Snapshots fail or pass their time bound | The read is not safe beside the custodian as designed | The design falls back to the writer sealing each window, and the run is repeated only after that |
 | The player's pace is far from the named sealed admissions' | A reason to look, not a finding: one admission cannot show cause | The snapshot timings and the host's log are read before anything is concluded |
 | No version is published | Nothing can be said about lag | The sessions are read before anything else is tried |
 | The backlog grows across the admission | A session cannot keep up with play at this window | Live curation at this price is not workable; curation stays between admissions |
 | Cost and lag disagree: close behind and far over the forecast, or cheap and far behind | The window and the model are wrong for each other | The owner is shown both figures before another run |
 | The replay holds back requests | Curation follows play, too far behind for the cut at this window | A smaller window or a faster model, in a second priced run, before any work on the cut |
 | The replay holds back no request and drops image blocks | The cut would keep its token target and lose images | The image policy is looked at before the cut is proposed |
-| The replay makes no cut at all | The admission gave the cut nothing to do; nothing is shown either way | Inconclusive. A longer admission is needed before anything is said about the cut |
-| The replay makes cuts, holds back no request, drops no image block and keeps prompts at the size the simulation reports | Curation is close enough for the cut to free what the simulation says | Delivery inside an admission becomes worth building, and the cut can be put to the owner with these figures |
+| The replay holds back no request and drops no image block | Curation is close enough for the cut to free what the simulation says | Delivery inside an admission becomes worth building, and the cut can be put to the owner with these figures |
 
 The cutoff for "far from" is fixed with the named admissions before the run. None of
 these says whether the knowledge helps the player.
@@ -183,20 +170,6 @@ these says whether the knowledge helps the player.
   ceiling and a key limited for the run.
 - The owner's approval of the design, this price and the envelope
   ([operator permissions](../operator-permissions.md)). No envelope is open.
-
-## Corrections after merge
-
-A review of the merged text on 20 November 2026 found errors, corrected here the same
-day. The inputs and the simulation's table are unchanged.
-
-- The ceiling was $10.00 with a curator cap of $6.00. That cap gave the proxy too
-  little headroom to reserve a request, by the pilot's own deviation note. It is now
-  $14.00 with $8.00 for a session, and the ceiling $18.00. The forecast is unchanged.
-- The stop rule said the host stops on any successful response with no usable cost and
-  on the time and mechanical ceilings. It now says which component stops what.
-- The pacing forecast is stated as conditional on operations tracking decisions.
-- The outcome table reports a snapshot failure before an early stop, and adds a row for
-  a replay that makes no cut.
 
 ## Limits
 

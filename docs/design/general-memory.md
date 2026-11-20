@@ -258,10 +258,11 @@ New or changed fields are marked.
   the snapshot named by a fact's `published_in` always holds the definition it was
   written under. And whenever a submission replaces a definition under a name the base
   snapshot already had, by a revision or by deprecating a type and adding one of the
-  same name, it must assign every fact of that name that is still current once the
-  submission is applied, so each gets a `retyped` entry even when the name does not
-  change. A fact the same submission retires or supersedes is not assigned. Today such
-  a replacement can leave the surviving facts unassigned. The
+  same name, it must assign every fact that was current under that name in the base
+  snapshot and is still current once the submission is applied, so each gets a
+  `retyped` entry even when the name does not change. A fact the same submission
+  retires or supersedes is not assigned, and neither is one it adds. Today such a
+  replacement can leave the surviving facts unassigned. The
   definition in effect now is the current type's. A player's query result carries the
   snapshot version and the type name, as now.
 - **Where the rest of ADR 009's list goes.**
@@ -302,7 +303,9 @@ New or changed fields are marked.
   or that it selected none, and the digest of the delivered file it wrote. Package
   preflight refuses a package whose private record names a different world from its
   `world` label, or a different digest from the delivered file's. So a manifest edited
-  after the export, and a delivered file taken from another package, are both caught.
+  after the export, and a delivered file whose bytes are not the ones the exporter
+  recorded, are both caught. Two exports that produce the same bytes cannot be told
+  apart, and need not be.
   The delivered file itself still does not name a world.
   The campaign procedure's rule that no player-visible input is derived from a label
   gains this one exception.
