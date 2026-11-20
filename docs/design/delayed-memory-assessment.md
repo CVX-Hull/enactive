@@ -210,6 +210,12 @@ Dry-check that the selected capture can recover the relevant cutoff parts
 before pricing that acquisition. Keep the reserved source worlds closed during
 protocol development. [Retained feasibility](../acceptance/2026-11-18-delayed-decision-feasibility-757.md)
 
+The retained reviews since then found one packet that can carry the crossed
+comparison below: the Malvern sedan-trunk cutoff. Its
+[paired replay design](../acceptance/2026-11-20-malvern-trunk-paired-replay-design-824.md)
+holds the readback and the proposal for that one packet. No further live acquisition is
+made before that replay reports ([decision log](../decisions/owner-decisions.md)).
+
 The first priced replay uses a small crossed comparison on the same decision
 packets. It asks for a proposed next choice and verification plan. Replay
 dispatches no player tools. Both columns can propose the same feasible source
