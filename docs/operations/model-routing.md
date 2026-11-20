@@ -51,7 +51,7 @@ model to give it.
 | Locating files and mechanical sweeps | the smallest model the host serves | none needed | a large model | Cost only; no figure read |
 | Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations |
 | Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | Judgment; no public evidence found |
-| Standards and pull-request prose | the lead | none known | none known | Judgment; no public evidence found |
+| Standards and pull-request prose | the lead | none known | none known | Judgment; no public evidence found. One [matched run](#matched-runs-on-this-repositorys-leaves) here, on 20 November 2026 (issue 811): both attempts passed acceptance with no repair; the lead's model, Claude Fable 5.2 at High, was preferred blind over GPT-6.2 Sol at Extra-high, which took 406 seconds against 710. One observation moves no default |
 | Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found |
 | Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | The first choice is judgment; wrong-answer rates were read for those two models only |
 | Review of code | the host's reviewer role, clean context | another family's reviewer when the window is spent | acting on a quoted passage before checking it against the tree | The choice is judgment; reviewer products built on two Claude models were read, with no effort reported |
