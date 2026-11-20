@@ -11,14 +11,15 @@ scope: 'Token counts by model for the lead and its sub-agents, read from the cod
 ## At a glance
 
 In the one lead session of 19 and 20 November, the lead's own requests used 283 million
-tokens and its 62 sub-agents used 98 million. At list prices that is about $150 to $170,
-of which the lead is about 72%. Nearly all of the lead's tokens (98.9%) were re-reads of
-its own earlier context: the context sat between about 320,000 and 965,000 tokens for
-603 requests, and was summarized twice. The sub-agents were not the main cost.
+tokens and its 37 sub-agents used 98 million. At list prices that is about $150 to $172,
+of which the lead is 72% to 74%. Of the lead's tokens, 98.9% were re-reads of its own
+earlier context, and those re-reads are about half of the lead's price equivalent. Over
+603 requests the lead's context had a median of 325,920 to 743,067 tokens in each
+quarter of the session and a largest size of 965,335, and it was summarized twice. In
+this session the sub-agents were not the main cost.
 
-Over the eight days, a second, longer session led on Claude Opus 5.5 and its
-general-purpose sub-agents on the same model account for most of the tokens: 14,540
-sub-agent requests on that model against 1,777 on Claude Fable 5.2.
+Over the eight days, sub-agents on Claude Opus 5.5 made 14,540 requests against 1,777
+on Claude Fable 5.2, and 1,247 of the 1,306 general-purpose runs were on Opus.
 
 The work was done on subscription quota, so no money was spent; the dollar figure is an
 equivalent at list prices and is a way to compare, not a bill. One session is one
@@ -27,14 +28,18 @@ observation.
 ## What was read
 
 - **Claude Code transcripts** for this repository: every file changed on or after
-  13 November 2026. That is two lead sessions and 1,478 sub-agent files. Each response
-  was counted once by its message identifier; a response written on several lines was
-  counted from the line with the largest token sum. No identifier appeared in two files.
-- **Codex CLI session files** from 13 November whose working directory is at or under
-  this checkout: 126 sessions, 106 of them sub-threads. Each was counted from its last
-  cumulative total and attributed to the model of its last turn.
-- Only counts were read. No transcript content is in this record or in the retained
-  files.
+  13 November 2026, with every qualifying response in each such file, whatever its own
+  time. That is two lead sessions and 1,478 sub-agent files. Only responses that carry
+  a model and usage figures were counted. Each was counted once by its message
+  identifier, or by its request or line identifier where it has none: within a file the
+  line with the largest token sum was kept, and across files the first occurrence. No
+  such identifier appeared in two files.
+- **Codex CLI session files** changed from 13 November whose working directory is at or
+  under this checkout: 126 sessions, 106 of them sub-threads. A session was counted from
+  its last cumulative total and attributed to the model of its last turn. 98 sessions
+  had such a total and are in the table; the other 28 are not counted.
+- The script read usage figures, model names, identifiers and the types of content
+  blocks. It kept no transcript text, and none is in this record or the retained files.
 
 The script and its output are retained as
 [`coding-agent-token-use`](../../data/evidence/coding-agent-token-use.sha256). The
@@ -101,19 +106,24 @@ $10 or $16, $0.20, $40; Opus 5.5 $5 or $8, $0.20, $20; Sonnet 5.5 $2.50 or $4, $
 $10; Haiku 5.5 above 100,000 prompt tokens $0.625 or $1, $0.05, $2.50.
 
 For the lead session of 19 and 20 November that gives $110 to $124 for the lead and $39
-to $48 for the sub-agents; the range is the two cache-write prices, since the
-transcripts' top-level fields do not say which applied. The lead's part divides into
-about $56 of cache reads, $22 to $36 of cache writes and $32 of output.
+to $48 for the sub-agents, $150 to $172 together; the range is the two cache-write
+prices, since the transcripts' top-level fields do not say which applied. The lead's
+share is 74% at the five-minute price and 72% at the one-hour price. The lead's part
+divides into about $56 of cache reads, $22 to $36 of cache writes and $32 of output.
+Uncached input is left out, and the Haiku price above 100,000 prompt tokens is applied
+to all 31 Haiku requests although their sizes were not read one by one.
 
 ## What this supports
 
-- In a long lead session, the lead's own context is the main cost, and it is paid again
-  on every request. Delegating reading to cheaper models saves little while that context
-  stays large.
-- The roles ran on the models their role files name in that session, apart from the
-  workers and general-purpose runs the lead gave a model by hand.
-- On Codex, the automatic approval reviewer used more tokens for this repository than
-  any model the lead chose.
+- In this one lead session the lead's own requests were most of the price equivalent,
+  and re-reading its context was about half of the lead's part. No session with a
+  smaller context or with less delegation was measured beside it, so this does not show
+  how much a smaller context would save.
+- Which model each sub-agent ran on is in the tables. Why is not: the transcripts do
+  not say whether a role file or the lead chose it. One explorer ran on Haiku although
+  the explorer role file names Sonnet.
+- Among the 98 Codex sessions with a total, the automatic approval reviewer is the
+  largest group by tokens.
 
 ## Limits
 
