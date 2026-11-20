@@ -13,9 +13,10 @@ scope: 'A price proposal for one bounded live development run of the curator bes
 One admission of about 200 decisions, with the curator following play as the
 [live integration design](../design/live-curator-integration.md) describes, is forecast
 at about **$3.50**: about $1.50 of play and about $2.00 for ten curator sessions. The
-proposed maximum is **$10.00**, made of two limits that are each enforced before a
-request is sent. Nothing here is approved, and the run cannot be made until the live
-trace reader and the runner exist.
+proposed ceiling is **$10.00**. It is a planning ceiling made of two limits the software
+enforces, not a hard cap: the only hard cap is the credit limit on the provider key.
+Nothing here is approved, and the run cannot be made until the live trace reader and the
+runner exist.
 
 The figures are existing measurements read again, not new ones. The pilot's sessions ran
 over sealed windows, one after another; a session beside live play has never been priced,
@@ -78,8 +79,8 @@ The lengths differ in prompt size and cache writes even where neither does.
 
 - **One admission** of the current player, of about 200 decisions, in one world, with
   the curator runner following it as the design says: one actor's range at a time, 20
-  finished steps to start a session, a ceiling of 40, one session at a time, one last
-  session over the tail after the admission ends.
+  finished steps to start a session, a ceiling of 40, one session at a time. The runner
+  ends with the custodian; what it has not examined is recorded.
 - **No delivery inside the admission.** The player receives the package's frozen
   knowledge, as today.
 - **It measures** what the design lists: lag at the start and end of each session, time
@@ -89,60 +90,84 @@ The lengths differ in prompt size and cache writes even where neither does.
 
 ## Price and its bounds
 
-| Part | Forecast | Limit, and what enforces it |
+| Part | Forecast | Planning limit, and what enforces it |
 | --- | --- | --- |
-| Play, one admission | $1.49 | **$3.00**: the package's `spend_limit_usd`. The player host checks it before each request, and the package's ending reserve, which is below the limit, covers the in-flight player and recall requests |
-| Curator, ten sessions | $2.00 at the pilot's median | **$6.00**: the runner's run cap, with a cap for each session. The curator proxy reserves the remaining budget before it forwards a request, as it does for the shadow runner |
+| Play, one admission | $1.49 | **$3.00**: the package's `spend_limit_usd`. The player host checks the reported total, plus an allowance for a pending recall, before each request |
+| Curator, ten sessions | $2.00 at the pilot's median | **$6.00**: the runner's run cap, with a cap for each session. The curator proxy reserves an estimated worst case before it forwards a request |
 | Not allocated | | $1.00 |
 | **Total** | **about $3.50** | **$10.00** |
 
 Ten sessions at the pilot's largest displayed cost, $0.57, would be $5.70, under the
 curator's cap.
 
-**What the bounds rest on, to be shown before the owner is asked.** The package's
-reserve must be at least the player's and the recall's in-flight bounds, computed from
-the frozen route; the reported total can pass the limit by the charges of those final
-requests, and the $1.00 not allocated must exceed them. If it does not, the player's
-limit is lowered until it does. The key's own credit limit, which the owner sets,
-remains the hard cap.
+**Why $10.00 is not a hard cap.** Each limit counts what the provider reports.
+
+- The player's reported total can pass its limit by the charges of the final in-flight
+  player and recall requests. An attempt that returns no usable cost is recorded as
+  unpriced and may still be billed; the host can retry after one, and the driver gives a
+  successor actor the limit less the *reported* spend only.
+- The curator's proxy reserves an estimate. It revokes itself after a charge exceeds
+  the reservation, which is after that charge exists.
+- The $1.00 not allocated is a margin for those cases. It is not shown to cover them.
+
+A hard $10.00 needs a billing cap that belongs to this run: a provider key whose credit
+limit the owner sets to $10.00 for it. The owner manages that key and its limit; the
+code cannot read it. The request to the owner states which of the two is on offer: the
+planning ceiling above under the existing key, or a key limited for the run.
+
+**To be shown before the owner is asked:** the frozen routes of the player and the
+curator, the player's and the recall's in-flight bounds from the package, and the
+curator's cap for one session.
 
 **Stop rules.**
 
 - The player host stops the admission at the package's limit, on a successful response
   with no usable cost, and on its time and mechanical ceilings, as now.
-- The runner stops for the admission when its run cap is reached; when the proxy is
+- The runner stops for the admission when its run cap is reached; when the proxy refuses
+  the next reservation, even with counted spend under the cap; when the proxy is
   revoked, breached or unsettled; when cleanup of a session is not confirmed; when a
-  charge is unknown; or after two consecutive failed sessions. Play continues without
-  it.
-- The runner makes at most twelve sessions and does nothing after its one tail session.
+  charge is unknown; after two consecutive failed sessions; or after three consecutive
+  failed snapshots. Play continues without it.
+- The runner makes at most twelve sessions, and ends when the custodian ends.
 - The run is one admission and is not repeated on its own result.
 
 ## What each result would change
 
 The run does not by itself answer whether the cut is affordable. Its lag is in the
 curator's operations, and the simulation is in player request turns. So the first step
-after a run is offline and free: map each publication's coverage to the request turn at
-which it would have applied, and **replay that observed schedule through the
-simulation**. The table below is read from that replay and from the run's own measures.
+after a run is offline and free: map the covered prefix, as the design defines it, to
+the request turn at which each part would have applied, and **replay that observed
+schedule through the simulation**. The simulation accepts only a steady or a
+session-shaped coverage today, so this needs a small addition to it, which is not yet a
+registered leaf. The replay keeps the context design's minimum of ten turns for a cut
+and states whether it includes a briefing.
+
+The rows are read in order, and the first that applies decides. A stop or an
+inconclusive result comes before a favourable replay.
 
 | Result | Reading | Next |
 | --- | --- | --- |
-| The replayed schedule holds back no request and drops no image block | Curation is close enough for the cut to free what the simulation says | Delivery inside an admission becomes worth building, and the cut can be put to the owner with these figures |
-| It holds back some requests | Curation follows play, too far behind for the cut at this window | A smaller window or a faster model, in a second priced run, before any work on the cut |
-| The backlog grows across the admission, or the tail is never examined | A session cannot keep up with play at this window | Live curation at this price is not workable; curation stays between admissions |
+| The run stops early, or the covered prefix cannot be established | Partial figures are reported as partial | The owner is asked before another run |
+| Snapshots fail or pass their time bound | The read is not safe beside the custodian as designed | The design falls back to the writer sealing each window, and the run is repeated only after that |
+| The player's pace is far from the named sealed admissions' | A reason to look, not a finding: one admission cannot show cause | The snapshot timings and the host's log are read before anything is concluded |
 | No version is published | Nothing can be said about lag | The sessions are read before anything else is tried |
-| Snapshots fail, hold their read long, or the player's pace falls far below the sealed admissions' | The reader is not safe beside the custodian | The design falls back to captures made by the writer, and the run is repeated only after that |
-| Cost and lag disagree: close behind but far over the forecast, or cheap and far behind | The window and the model are wrong for each other | The owner is shown both figures before another run |
-| The run stops early | Partial figures are reported as partial | The owner is asked before another run |
+| The backlog grows across the admission | A session cannot keep up with play at this window | Live curation at this price is not workable; curation stays between admissions |
+| Cost and lag disagree: close behind and far over the forecast, or cheap and far behind | The window and the model are wrong for each other | The owner is shown both figures before another run |
+| The replay holds back requests | Curation follows play, too far behind for the cut at this window | A smaller window or a faster model, in a second priced run, before any work on the cut |
+| The replay holds back no request and drops image blocks | The cut would keep its token target and lose images | The image policy is looked at before the cut is proposed |
+| The replay holds back no request and drops no image block | Curation is close enough for the cut to free what the simulation says | Delivery inside an admission becomes worth building, and the cut can be put to the owner with these figures |
 
-None of these says whether the knowledge helps the player.
+The cutoff for "far from" is fixed with the named admissions before the run. None of
+these says whether the knowledge helps the player.
 
 ## What must exist first
 
 - [The live trace reader](https://github.com/CVX-Hull/enactive/issues/837), with its
   offline test against a writer that holds the store.
 - The curator runner, which is not yet a registered leaf.
-- The package's frozen route bounds, shown to fit the table above.
+- The addition to the lag simulation that replays a recorded schedule.
+- The frozen routes and bounds listed above, and the choice between the planning
+  ceiling and a key limited for the run.
 - The owner's approval of the design, this price and the envelope
   ([operator permissions](../operator-permissions.md)). No envelope is open.
 
