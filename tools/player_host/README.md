@@ -240,8 +240,8 @@ parsed stream IDs/provider names and optional generation metadata establish only
 what the service actually reports. See [routing](https://openrouter.ai/docs/guides/routing/provider-selection)
 and [tier semantics](https://openrouter.ai/docs/guides/features/service-tiers).
 
-One inference request may recover once from one eligible transient failure before
-assistant output, using Pi's maintained abortable provider-retry helper. The host
+One logical inference admits at most two HTTP attempts. For failures before
+assistant output the host uses Pi's maintained abortable provider-retry helper. The host
 alone decides eligibility; its synthesized retry error carries no status, so Pi's
 broader classifier (which also admits 408, 409 and 500) never widens the set. The
 declared classes, recorded as `provider-retry.retry_class`, are:
@@ -273,20 +273,33 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   including `openrouter_credits`, a missing or mismatched source or reason, or a
   missing, empty or unparseable `Retry-After`, is terminal.
 
+- `incomplete-stream-timeout`: once per actor, the first HTTP 200 event stream of
+  a logical request reaches its request deadline after Pi has parsed content,
+  reasoning or tool arguments and before a provider finish reason or error. The host aborts and settles that attempt privately. Pi receives only the
+  final assistant result, so even a complete-looking tool call in the abandoned
+  stream cannot enter the conversation or reach MCP. The same actor can make one
+  fresh inference with a new request deadline and byte-identical payload. Its
+  projected charge and any in-flight recall must leave the ending reserve intact.
+  A computer stop, pending handoff or earlier computer input/observation without
+  a confirmed completed operation receipt disables this recovery. Pending ending
+  control, cancellation and the original host deadline take precedence. The
+  custodian still fences native input immediately on permanent Pause, including
+  during the driver's bounded final-report grace.
+
 The retry is shared: whatever the first class, a second failure of any kind is
 terminal, so a logical request has at most two observed attempts. A provider
 `x-should-retry:false` suppresses recovery for every class. HTTP 500, 408, 409 and
-other statuses, failures after `<400` headers (inside Pi's stream) and partial-stream
-failures are terminal. The provider stream's own retries remain disabled, so there
+other undeclared statuses and partial-stream failures outside the bounded timeout
+case are terminal. The provider stream's own retries remain disabled, so there
 is no nested retry loop or assistant-turn restart. Error text is neither traced nor
 sent back as model context. Bounded diagnostic identifiers include OpenRouter
 metadata error_type, provider_code, limit_source and reason when present; raw
 metadata, remedy text and provider bodies are excluded.
 
 Each actual provider fetch emits a start, including a retry. A refused attempt
-has no request or completion event. Both attempts send the same serialized
-context under one original request timer, combined abort signal and host deadline.
-Classification, backoff and response reading consume that timer. Pi rejects a
+has no request or completion event. All attempts send the same serialized context. The pre-output classes share the
+original request timer across classification, backoff and response reading.
+Every class stays within the original host and custody deadlines. Pi rejects a
 provider-requested retry delay over60seconds (the pinned helper's maintained default); its bounded default backoff applies
 when no valid delay is supplied. Cancellation interrupts backoff and bounded error
 reading. The first eligible refusal records unknown usage, without a zero-price
@@ -453,10 +466,10 @@ usage records in `tests/fixtures/provider-usage-cost.json`:
 
 HTTP refusal status is retained before SDK rejection. `tool-result`
 text and structured data retain operation/source joins, with image references in
-place of bytes. `tool-refused`, `abort` and `settled` retain refusal and failure outcomes. An eligible first attempt has a transport-derived
-`response-complete` with its `http_status` (null for a pre-header rejection), error
-stop reason, unknown usage, a null reported cost and the bound as its counted cost; the final attempt is completed by the SDK assistant
-message. Backoff aborts and excessive-delay refusals do not duplicate that first
+place of bytes. `tool-refused`, `abort` and `settled` retain refusal and failure outcomes. A pre-output refusal records its
+`http_status` (null before headers). A stalled stream records its parsed progress
+and aborted stop reason. Each attempt counts its own observed provider charge
+or remains explicitly unpriced. Backoff aborts and excessive-delay refusals do not duplicate that first
 receipt. `provider-retry` marks eligibility with its `retry_class` and the
 configured delay ceiling, then a second-attempt start with the preceding request ID; monotonic intervals expose actual waiting without
 inventing the SDK's planned delay. Internal blocked provider attempts create no
@@ -483,8 +496,8 @@ host's monotonic clock; the last field timestamp advances only for a nonempty
 counted fragment. No generated text, reasoning or argument values are added to
 these diagnostics. Missing older diagnostics remain unknown; zero observed bytes
 does not establish absence of backend generation or explain a timeout. Recording
-progress never renews a timer, retries a partial response, changes provider
-context or authorizes tool input. Its observation overhead belongs in subsequent
+progress neither extends the active request deadline nor authorizes tool input.
+The bounded timeout recovery requires observed assistant output before the deadline. Its observation overhead belongs in subsequent
 live measurements.
 
 Telemetry version 8 preserves first/last/max consecutive gaps for body chunks, parsed

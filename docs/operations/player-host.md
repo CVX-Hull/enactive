@@ -90,9 +90,10 @@ never restore authority.
 
 Host JSONL retains bounded visible narration and mechanical request/result
 references, not private reasoning or raw request/image histories. Missing usage
-stays unknown. Attempts include failures and permitted provider-only retries: one
-shared retry per logical request for 429, 502/503/504, a pre-header fetch rejection
-or OpenRouter's transient in-flight 402, as the host reference defines. Forecast attempts with that retry in mind. An incomplete trace keeps the observed
+stays unknown. Attempts include failures and permitted provider-only retries: at most one
+retry per logical request for the failures in the [adapter reference](../../tools/player_host/README.md).
+An incomplete stream that reaches its request deadline may recover once per actor
+from identical context within the existing session and ending reserves. Forecast attempts with that retry in mind. An incomplete trace keeps the observed
 counts and prevents a successor. The dollar subtotal adds up provider-returned charges, and
 an attempt with unavailable cost keeps an unknown charge. The host stops at the
 route's dollar limit (`spend-limit`) and on a successful response it cannot

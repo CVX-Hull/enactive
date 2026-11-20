@@ -71,9 +71,16 @@ rules set its length:
   fractional digits, never up.
 
 The driver sets `spend_limit_usd` to the dollars the run has left ([Spend](#spend)). One
-logical request admits at most two provider attempts; missing usage is
-unknown and retries never renew limits. The adapter reference defines eligible
-transient refusals. The retry is proven by offline fixtures only; no live 5xx response
+logical request admits at most two provider attempts. Once per actor, an HTTP 200 stream may reach its request deadline after
+producing content, reasoning or tool arguments and before a provider finish reason. After aborting and accounting for that attempt, the adapter may
+make one inference with a fresh request deadline from the identical serialized
+context. Only a completed reply reaches the agent or its tools. The next attempt
+must fit below the dollar limit with ending and concurrent recall reserves intact.
+A prior computer stop, unconfirmed computer operation, pending handoff, accepted
+ending control, cancellation or host timeout prevents recovery. The custodian
+permanently fences native input on Pause, including during final-report grace. Actor,
+session and custody deadlines stay fixed. Missing charges remain unknown. The
+[adapter reference](../../tools/player_host/README.md) defines the eligible failures. The retry is proven by offline fixtures only; no live 5xx response
 has exercised it ([#308](https://github.com/CVX-Hull/enactive/issues/308)). Host seconds and custodian mechanical resources are separate.
 These operator counts do not enter the assignment, repeated model messages or
 actor tool results.

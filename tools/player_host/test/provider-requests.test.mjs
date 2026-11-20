@@ -56,7 +56,7 @@ test('partial field output and later heartbeat retain diagnostics without renewi
   const {result,events,payloads,calls}=await scenario(t,[init=>new Response(new ReadableStream({start(c){
     body=c;c.enqueue(new TextEncoder().encode(first));
     init.signal.addEventListener('abort',()=>c.error(new Error('aborted')),{once:true});
-  }}),{headers:{'content-type':'text/event-stream'}})],{configuration,signal:controller.signal,
+  }}),{headers:{'content-type':'text/event-stream','x-should-retry':'false'}})],{configuration,signal:controller.signal,
     expectedAbort:'request-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     onEvent:event=>{if(event.type==='response-backend')parsed=true;},
     synchronize:async()=>{
@@ -82,6 +82,69 @@ test('partial field output and later heartbeat retain diagnostics without renewi
   assert.ok(progress.last_body_chunk_ms>progress.last_field_delta_ms);
   assert.ok(!JSON.stringify(progress).includes(content));assert.ok(!JSON.stringify(progress).includes(argumentsText));
 });
+// Hold a parsed HTTP 200 open until the host cancels that exact request.
+function stalledReply(delta = {content:'unfinished'}, finishReason = null) {
+  const chunk = {model:'fixture-backend', choices:[{index:0, delta, finish_reason:finishReason}],
+    usage:{...usageRecord, cost:0.02}};
+  return init => new Response(new ReadableStream({start(controller) {
+    controller.enqueue(new TextEncoder().encode('data: ' + JSON.stringify(chunk) + '\n\n'));
+    init.signal.addEventListener('abort', () => controller.error(new Error('aborted')), {once:true});
+  }}), {headers:{'content-type':'text/event-stream'}});
+}
+
+test('a priced stall settles before a single same-actor recovery, even across later turns', async t => {
+  const configuration = {...route(), request_timeout_seconds:0.5};
+  const {events, result, calls, bodies} = await scenario(t, [
+    stalledReply(), reply(null, [['integer', {value:7}]]), stalledReply(),
+  ], {configuration});
+  assert.equal(result.reason, 'request-timeout');
+  assert.equal(bodies.length, 3);
+  assert.equal(bodies[0], bodies[1]);
+  assert.deepEqual(calls.map(c => c.tool), ['integer']);
+  const completed = events.filter(e => e.type === 'response-complete');
+  assert.deepEqual(completed.map(e => e.reported_cost_usd), ['0.02','0.000038','0.02']);
+  assert.equal(completed.at(-1).spent_usd, '0.040038');
+  assert.deepEqual(events.filter(e => e.type === 'provider-payload-ready').map(e => e.request_id),
+    ['request-1','request-2','request-3']);
+  assert.deepEqual(events.filter(e => e.type === 'response-backend').map(e => e.request_id),
+    ['request-1','request-2','request-3']);
+});
+
+test('an earlier partial input remains fenced when the next inference stalls', async t => {
+  const configuration = {...route(), request_timeout_seconds:0.5};
+  const {result, calls, events, bodies} = await scenario(t, [
+    reply(null, [['computer_input', {}]]), stalledReply(),
+  ], {configuration, enabledTools:['computer_input']});
+  assert.equal(result.reason, 'request-timeout');
+  assert.equal(bodies.length, 2);
+  assert.deepEqual(calls, [{tool:'computer_input', phase:'partial'}]);
+  assert.equal(events.some(e => e.type === 'provider-retry'), false);
+});
+
+for (const barrier of ['reserve', 'orderly-stop', 'cancel', 'provider-finish', 'usage-only']) {
+  test(`a partial stream cannot recover across ${barrier}`, async t => {
+    const configuration = {...route(), request_timeout_seconds:0.5};
+    if (barrier === 'reserve') configuration.spend_limit_usd = '0.36';
+    const controller = new AbortController();
+    let control;
+    const {events, result, calls, bodies} = await scenario(t, [
+      stalledReply(barrier === 'usage-only' ? {} : {content:'unfinished'}, barrier === 'provider-finish' ? 'content_filter' : null),
+    ], {configuration, finishReserveUsd:'0.10', signal:controller.signal,
+      controlReady:pipe => { control = pipe; },
+      onEvent:event => {
+        if (event.type !== 'response-backend') return;
+        if (barrier === 'cancel') controller.abort();
+        if (barrier === 'orderly-stop') control.write(JSON.stringify({schema:'player-control/1',
+          id:'a'.repeat(32), session:'2'.repeat(32), actor_id:'3'.repeat(32), type:'orderly_stop'}) + '\n');
+      },
+    });
+    assert.equal(result.reason, {reserve:'spend-limit', cancel:'cancelled'}[barrier] ?? 'request-timeout');
+    assert.equal(bodies.length, 1);
+    assert.equal(calls.length, 0);
+    assert.equal(events.some(e => e.type === 'provider-retry'), false);
+    assert.equal(events.find(e => e.type === 'response-complete').reported_cost_usd, '0.02');
+  });
+}
 test('diagnostics skip unsupported choice collections just as the pinned parser does',async t=>{
   const unsupported=[{model:'fixture-backend',choices:{}},123].map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('');
   const valid=await reply('ok').text();
