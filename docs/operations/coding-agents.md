@@ -130,7 +130,10 @@ in the lead's scratch directory, and `BRIEF` the brief text.
   goes in parts, within the shell's argument limit. On 20 November 2026 a print-mode
   review (CLI 1.5.13, `--mode plan`) whose brief pointed at diff files instead of
   carrying them ended with exit code 0 and no output, after a shell command was denied:
-  an empty result is a failed run, whatever the exit code. Antigravity keeps state between
+  an empty result is a failed run, whatever the exit code. The same day, a print-mode
+  review whose brief carried the diff and the command output it needed returned a full
+  review with twelve findings; it opened repository documents by path and ran no
+  command. Antigravity keeps state between
   conversations (summaries, a `brain` directory) and whether a later run reads it is
   not known, so its review is a second family's view and not the clean-context review.
   That one comes from a reviewer that starts clean: the Codex command above, or a
