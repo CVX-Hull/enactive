@@ -83,23 +83,25 @@ that move with it, and what each reads today.
 
 | Reader | Reads | What changes |
 | --- | --- | --- |
-| `harness/curator/gate.py` | fact and type records; it writes both | key sets, the new checks, the stored-repository validator, the schema names |
-| `harness/curator/knowledge.py` | the repository layout and its schema name | the schema name in its refusal |
-| `harness/curator/session.py` | fact schema only, to refuse a foreign store | the schema name; the brief's description of a fact and a type |
-| `tools/knowledge_export.py` | current fact and article records; it writes the delivered file | exports a `world` fact only for the package's world; the copied field list does not change |
-| `tools/memory_screen_checks.py` | fact records straight from the repository, with its own schema checks | both schema names; it reads `superseded_by` and `retired`, which do not change |
-| `tools/memory_measure.py` | the delivered file, not the repository | nothing, while the delivered shape holds |
-| `tools/curator_host/prompt.md` | describes a fact and a type to the curator model | the field lists and the scope and type rules |
-| `tools/curator_host/grooming.md` | describes operations in prose, with no schema name | the type revision wording where it names type fields |
-| `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing in fields; its repository per lineage becomes one way to supply a lineage |
-| `harness/viewer/knowledge.py` | the delivered file | nothing, while the delivered shape holds |
-| `harness/viewer/curator.py` | the gate's result journal and the coverage stamp | nothing |
-| `harness/trace/projection.py`, `harness/curator/window.py` | sessions and frame positions | carry a world and a lineage for each session ([the world identity leaf](https://github.com/CVX-Hull/enactive/issues/834)) |
-| `docs/components/curator.md`, `docs/contracts/evaluation.md`, `docs/operations/campaign-run.md` | state the contract names | the names, and the package's `world` label |
-| `tests/curator_stand_in.py` and the curator, export and viewer tests | fixtures in the current format | the fixtures |
+| `harness/curator/gate.py` | fact, article and type records, provenance and the stored history; it writes all of them | key sets, the scope, article, supersession and type checks, provenance's lineage for each session, the stored-repository validator, restore, the schema names |
+| `harness/curator/knowledge.py` | the repository layout: it starts the metadata at the first version and reads records, types, provenance and snapshots | the schema name it writes and refuses on; provenance's new part |
+| `harness/curator/session.py` | the whole store, which it exports into the workspace; provenance, for grooming and window positions; the result journal, for its brief; and the fact schema, to refuse a foreign store | the schema name; the brief's description of a fact and a type |
+| `tools/knowledge_export.py` | current fact and article records; it writes the delivered file and the private full file | takes a lineage; exports `lineage` facts of that lineage only; the copied field list does not change |
+| `tools/memory_screen_checks.py` | fact and article records straight from the repository, with its own schema checks; it compares whole records across versions and reports fact text, citations, type and session | both schema names, and the new fields in whatever it compares or prints |
+| `tools/memory_measure.py` | the delivered file and the private full file, not the repository | nothing, while the delivered shape holds and the filter precedes the draw |
+| `tools/curator_host/prompt.md` | describes a fact and a type to the curator model | the field lists, the scope levels, the article rule and the type rules |
+| `tools/curator_host/grooming.md` | describes operations in prose, with no schema name | the filing rule, which now covers game facts only, and the type revision wording |
+| `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing; its repository path is not a source of lineage |
+| `harness/viewer/knowledge.py` | the delivered file, after verifying the actor's frozen inputs, with host events and tool results | nothing, while the delivered shape holds |
+| `harness/viewer/curator.py` | the gate's result journal, session receipts and the coverage stamp | nothing |
+| `harness/trace/projection.py`, `harness/curator/window.py` | sessions and frame positions | carry each session's lineage ([the identity leaf](https://github.com/CVX-Hull/enactive/issues/834)) |
+| `docs/components/curator.md`, `docs/contracts/evaluation.md`, `docs/design/player-context.md` | name the current contract | the names |
+| `docs/operations/campaign-run.md` | the step that freezes delivered knowledge into a package | the exporter's lineage input |
+| `tests/curator_stand_in.py`, `tests/test_curator_gate.py`, `tests/test_curator_session.py`, `tests/test_knowledge_export.py`, `tests/test_evaluation_memory_screen_checks.py`, `tests/test_memory_measure*.py`, `tests/test_viewer_api.py` | fixtures in the current format | the fixtures |
 
-`harness/player/knowledge.py` and the player host read only the delivered file and do
-not move.
+These do not move: `harness/player/knowledge.py` and the player host, which read only
+the delivered file; `tools/campaign_package.py` and the evaluator's manifest reader,
+because the `lineage` label already exists and the closed label set does not change.
 
 | Operation | Exact fields beyond `op` |
 | --- | --- |
@@ -231,10 +233,10 @@ result and the `curator-shadow/2` summaries. Everything else in this section is
 proposed, and gate v0 above remains the current implementation of admission. Semantic
 prospective admission stays deferred: no implemented test oracle, utility policy or
 future-source coordinator supports it. This is a bounded design/feasibility conclusion,
-not qualification of a semantic scorer or permission to build a scheduler. The owner
-decided on 20 November 2026 that a fact carries no belief value
-([decision log](../decisions/owner-decisions.md)); the rest of #457's acceptance
-remains.
+not qualification of a semantic scorer or permission to build a scheduler. A fact
+carries no belief value
+([field table](general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2));
+the rest of #457's acceptance remains.
 
 ### Evidence identity and exposure
 
