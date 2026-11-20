@@ -8,25 +8,69 @@ status: active
 
 The lead owns design, briefs, adjudication, escalation, integration and final
 verification. Explorers are read-only; workers own bounded named paths; reviewers
-read fresh context. Always name the role when delegating; workers and reviewers
-start from a clean context without the lead's conversation. These roles are
-host-neutral: [coding-agent hosts](../operations/coding-agents.md) maps them to
-each supported host's delegation mechanism.
-Parallelize reads. Up to two implementation workers may write concurrently in
-separate project-local worktrees with non-overlapping named ownership and agreed
-interfaces. Each checkout has one writer. The lead alone integrates into the main
-checkout and schedules access to shared mutable resources: game, saves, bridge,
-ports, build outputs, dependency environments and caches. Worktrees isolate source,
-not processes or runtime state. Do not launch another game or share writable test
-outputs merely because a separate checkout exists. Briefs follow the
-[brief template](#brief-template). Workers report commits/diffs, checks, risks and unresolved
-questions; they do not merge to main or change shared contracts independently.
-Reduce concurrency when review or integration queues grow; raise the initial
-limit only after recording evidence and updating this standard. Verify returned evidence against files or
-primary sources. After two unsuccessful repair attempts or ownership drift, the
-lead takes work back. Reports never substitute for inspecting a diff or result.
+read fresh context. These roles are host-neutral. The lead role belongs to no one
+coding agent or model family: any supported coding agent may hold it, and a lead may
+pass it to a lead on another. [Coding-agent hosts](../operations/coding-agents.md)
+maps the roles and each of the lead's duties to every supported host: how the duty is
+met there, or the gap and how the lead routes around it.
 
 Read [Structured player tooling and host context](player-tooling.md) for this part of the standard.
+
+## The lead's duties
+
+These are the lead's duties on every host. They are stated here once; other pages link
+to this list.
+
+- **Delegate with clean context.** Always name the role when delegating. Workers and
+  reviewers start from a clean context without the lead's conversation: the brief,
+  written from the [brief template](#brief-template), is all they know. Parallelize
+  reads.
+- **Keep one writer per checkout.** Up to two implementation workers may write
+  concurrently, each in its own project-local worktree, with non-overlapping named
+  ownership and agreed interfaces. Each checkout has one writer. Workers report
+  commits or diffs, checks, risks and unresolved questions; they do not merge to main
+  or change shared contracts independently. Reduce concurrency when review or
+  integration queues grow; raise the initial limit only after recording evidence and
+  updating this standard.
+- **Verify a delegated result from files and tests.** The lead inspects the diff or
+  the result and reruns the brief's acceptance check, and verifies returned evidence
+  against files or primary sources. A report, an exit code or a status line never
+  substitutes for that. A reviewer's finding is a delegated result too: the lead checks
+  each passage it quotes against the tree before acting on it. After two unsuccessful
+  repair attempts or ownership drift, the lead takes the work back.
+- **Commit before review.** The lead commits the work before sending it to review, so
+  that the text a reviewer quotes stays in the tree and can be checked, and the review
+  covers a commit the merge can name. A review of an uncommitted diff names no commit,
+  and the tree that merges may then not be the tree that was reviewed
+  ([R-WRONG-MERGE](../risks.md#development-risks)). The cost is one commit made before
+  the review instead of after it.
+- **Wait on CI.** The lead waits for the required check with the one watch command,
+  never by re-checking by hand, and merges the commit the review named
+  ([procedure](../workflows/development.md#minimum-checks-and-escalation),
+  [merge delegation](../operator-permissions.md#engineering-decision-and-merge-delegation)).
+- **Ask the owner a structured question.** When an owner decision is required, the
+  lead asks once, through the host's structured question tool where it has one, with
+  the recommended option first
+  ([requesting owner approval](../operator-permissions.md#requesting-owner-approval)).
+- **Hold the runtime.** The lead alone integrates into the main checkout and schedules
+  access to shared mutable resources: the game, saves, bridge, ports, build outputs,
+  dependency environments and caches. One lead holds them at a time. Worktrees isolate
+  source, not processes or runtime state: do not launch another game or share writable
+  test outputs merely because a separate checkout exists.
+- **Hand over through the issue.** The lead role passes to another session or another
+  coding agent when, for example, a quota window is spent. The outgoing lead replaces
+  the issue's description so that its current state says what is built, what is
+  decided and what is next
+  ([one current description](../workflows/work-items.md#status-fields-and-dates)),
+  including the branch, the pull request and anything it started that is still
+  running. The incoming lead starts from the issue, the branch, the pull request and
+  the worktree, and verifies them as it would a delegated result. The outgoing lead's
+  conversation and final report are not the handover, because an unverified report
+  would otherwise be accepted ([R-DELEGATION-ERROR](../risks.md#development-risks)).
+  A lead that ends before it can replace the description leaves the branch, the pull
+  request and the worktree as they are, and the incoming lead replaces the description
+  from what it finds. The cost
+  is one edit of the description for each handover.
 
 ## Brief template
 
