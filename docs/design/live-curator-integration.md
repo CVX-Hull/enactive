@@ -336,11 +336,12 @@ does and does not deliver. It is not an implementation. Before each is built:
 - [The reader leaf](https://github.com/CVX-Hull/enactive/issues/837) settles the exact
   cutoff between the store and the host's log, the test against a live writer, and the
   equality of step numbers.
-- **The runner**, not yet a registered leaf, settles its record of examined ranges, its
-  status file, and how it is launched and cancelled by the guardian.
-- **The replay of an observed schedule**, also not yet registered: the lag simulation
-  accepts only a steady or a session-shaped coverage today, and reading a run's result
-  needs it to accept the covered prefix as recorded.
+- [The runner leaf](https://github.com/CVX-Hull/enactive/issues/845) settles its record
+  of examined ranges, its status file, and how it is launched and cancelled by the
+  guardian.
+- [The schedule replay leaf](https://github.com/CVX-Hull/enactive/issues/846): the lag
+  simulation accepts only a steady or a session-shaped coverage today, and reading a
+  run's result needs it to accept the covered prefix as recorded.
 - **The request to the owner** settles the spend bounds, which the
   [price proposal](../acceptance/2026-11-20-live-curator-run-price-proposal-836.md) shows
   are planning limits and not a hard cap.

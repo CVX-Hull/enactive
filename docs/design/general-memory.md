@@ -134,10 +134,13 @@ extinguisher" is true of one world and has no place to say so.
   evaluator reads an earlier manifest version only for sessions listed in its closed
   archive index, and `campaign-run/10` has no entry there because it is current. Adding
   to that index needs an owner decision that names the sessions and their recorded
-  versions ([S-MIGRATION](../standards/migration.md)); the decision for the `world`
-  label does not include one. Until it is made, sealed `campaign-run/10` sessions are
-  not readable through the evaluator once the version moves. The schema migration leaf
-  puts that decision to the owner before it is built. Those sessions have no world.
+  versions ([S-MIGRATION](../standards/migration.md)). The owner
+  [decided the rule](../decisions/owner-decisions.md#archive-index-holds-cited-sessions):
+  only `campaign-run/10` sessions that a dated record cites are eligible. The rule names
+  no session and adds none. The schema migration leaf lists the eligible sessions with
+  their recorded versions and puts that list to the owner before it is built; a session
+  the owner has not approved is not readable through the evaluator once the version
+  moves. Those sessions have no world.
 - **Sealed sessions.** A session sealed before this migration names no world. It
   supports `game` facts only, unless
   [the identity leaf](https://github.com/CVX-Hull/enactive/issues/834) finds a
