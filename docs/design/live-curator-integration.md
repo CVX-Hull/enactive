@@ -91,6 +91,12 @@ range it has examined, by actor, in admission order, with how the session over i
   nothing, and at the next poll it computes the range again from its record.
 - **Backpressure never reaches the player.** A growing backlog is recorded. It does not
   slow play.
+- **This is the home of the trigger.** The [context design](player-context.md) asks for
+  a session during play whenever the decisions not yet covered pass a trigger; that is
+  the requirement a cut depends on. The rule here starts a session on finished
+  operations beyond what was examined, so decisions can stay uncovered after a rejected
+  or empty window without starting another. The covered prefix, below, is what shows
+  it.
 
 ## How a growing trace becomes readable
 
@@ -127,7 +133,15 @@ not protect input from shared disk load or storage errors. So:
 
 - the read transaction has its own time bound, proposed at two seconds, and is cancelled
   when it passes it;
-- the runner opens no read while the custodian is closing, and none after it has ended;
+- **the close needs the custodian's cooperation.** The custodian closes the store
+  before it writes its terminal receipt and exits, and the guardian learns only of the
+  exit, which is too late to stop a read. A read still open at that moment can keep the
+  last connection from clearing the log, and `sealed()` would then refuse the finished
+  session. So, in its close-out and after input authority is revoked, the custodian
+  writes a closing marker and waits for the read bound before it closes the store; the
+  runner opens no read once the marker exists. This is the one change to the custodian.
+  It is in close-out, not in the input loop. If a session's store still has a non-empty
+  log after close, that is reported as a failure of the run's evidence;
 - the claim this design makes is narrow: **curation is not in the input path, and a
   failed runner stops nothing**. It is not that play cannot be affected.
 
@@ -161,6 +175,9 @@ they would for the sealed session.
 - **The host's log, cut to match:** whole lines only, up to the last included operation.
 - **The custody and route metadata** the projection uses to keep secrets out of the
   workspace. That guard runs as it does now, outside the curator's workspace.
+- **The campaign manifest and the supervisor's record of its digest**, so that the
+  session's world and lineage are verified before the first publication, as the
+  [field table](general-memory.md#provenance-and-the-checks-it-allows) requires.
 - **Not the player's journal.** A restricted window drops it, and its writer does not use
   a write-ahead log, so reading it beside the custodian could delay a commit.
 
@@ -172,8 +189,10 @@ a synthetic writer process, at start, under sustained writes and at the writer's
 that the read returns a consistent prefix, how long it holds, that the writer's timeout
 is not hit, and that the step numbers of a snapshot equal those of the sealed trace.
 
-**The fallback** has its own test, not this one's: the custodian seals a prefix at each
-window. If the first architecture fails its test, this page changes before any run.
+**The fallback** has its own test, not this one's: at each window the custodian yields
+a detached, stable copy of the prefix. Checkpointing the live file is not enough, since
+the file stays live. If the first architecture fails its test, this page changes before
+any run.
 
 ## Publication, coverage and age
 
@@ -181,17 +200,22 @@ Each thing measured has a named source. None changes `curator-coverage/2`.
 
 - **Publication time.** The gate tags a version; a tag has no time of its own, and its
   commit's time precedes it. A session can publish several versions before it closes.
-  The runner records, for each version, the wall time at which it first saw the tag.
-  That is an upper bound on when the version was published, and the poll interval is its
-  uncertainty.
+  A session call blocks until the session closes, so the runner watches for tags on its
+  own cadence while a session runs. For each version it records the last time it looked
+  and did not see the tag, and the first time it did. The version was published between
+  the two. A replay treats a version as available from the first request after the
+  later time.
 - **Coverage.** Only an accepted publication carries a stamp: the session, the actor and
   the last step read. The stamp is the latest window's. It makes no claim about earlier
   windows.
 - **The covered prefix.** What the cut needs is not the latest stamp but an unbroken run
-  of covered steps from the admission's first. A window counts toward it only if it was
-  accepted and every window before it was. A rejected window, a window that published
-  nothing, or a restore breaks the run from that point on. Where the run cannot be
-  established it is reported as unknown.
+  of covered steps from the admission's first. It is built from confirmed tagged
+  versions, range by range, and not from the record of examined ranges or the count of
+  failures. A window's range counts when at least one version published from it is
+  confirmed, even if a later submission in the same session was rejected or close-out
+  failed, and when every range before it counts. A window that published nothing breaks
+  the run from that point on. A publication the runner could not confirm, or a restore,
+  makes the prefix unknown from that point on, and it is reported as unknown.
 - **Lag.** Step numbers are local to an actor and cannot be subtracted across a handoff.
   Lag is counted over the admission's finished operations in order, by operation
   identity: the number after the last step of the covered prefix. It is reported beside

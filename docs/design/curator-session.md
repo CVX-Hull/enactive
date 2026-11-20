@@ -90,7 +90,7 @@ migration. It owns the rules; this table lists what reads them today and what mo
 | `tools/campaign_package.py` | the closed label set of the campaign manifest, and the frozen files' hashes at preflight | the `world` label and its rule with `lineage`; the manifest version; the preflight check of the private record's world against the label |
 | `harness/evaluation/core/sources.py` | the manifest, by version, and the closed archive index | the new current version; archive entries for the retained sessions of the version it replaces |
 | `harness/evaluation/core/facts.py`, `harness/evaluation/core/pipeline.py` | a fixed set of five labels, which they project and persist | carry `world` as a sixth |
-| `harness/viewer/views.py` | compares a manifest with the current version for receipts and capabilities | inherits the new version through the shared constant |
+| `harness/viewer/views.py`, `harness/viewer/catalog.py` | compare a manifest with the current version for receipts and capabilities, and return a run's whole label map in listings and summaries | inherit the new version through the shared constant; once the evaluator persists `world`, those responses show it to the operator with no viewer edit |
 | `tools/host_analysis.py`, `tools/run_ledger.py` | the current manifest version, through the shared constant | inherit the new version; the run ledger adds no world column |
 | `tools/knowledge_export.py` | current fact and article records, behind a metadata check only; it writes the delivered file, the private full file and study draws | refuses a record not of the current schema; selects by world on both paths and records the selection in the private full file; the draw's next version. The copied field list does not change |
 | `tools/memory_screen_checks.py` | fact and article records straight from the repository, with its own schema checks; it compares whole records across versions, reports fact text, citations, type and session, and its replay estimates when a fact is first delivered | both schema names; the new fields in what it compares or prints; the replay estimate, which must take the receiving admission's world into account or be labelled as publication timing only |
@@ -100,7 +100,7 @@ migration. It owns the rules; this table lists what reads them today and what mo
 | `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing; its repository path is not a source of world or lineage |
 | `harness/viewer/knowledge.py` | the delivered file, after verifying the actor's frozen inputs, with host events and tool results | nothing, while the delivered shape holds |
 | `harness/viewer/curator.py` | the gate's result journal, session receipts and the coverage stamp | nothing |
-| `docs/components/curator.md`, `docs/contracts/evaluation.md`, `docs/contracts/player-host.md`, `docs/design/player-context.md`, and every current page that names the manifest version | name the current fact contract or manifest version | the names. The migration lists the pages by searching for the version it replaces |
+| `docs/components/curator.md`, `docs/contracts/evaluation.md`, `docs/contracts/player-host.md`, `docs/design/player-context.md`, and every current page that names the manifest version | name the current fact contract or manifest version | the names, in every page a search for the replaced versions finds, the recurrence research proposal among them. Two change in meaning as well: the context design, which calls the private full file the whole version when it becomes the selected subset, and the evaluation contract, which states a draw's contents and checks |
 | `docs/operations/campaign-run.md` | the label table, the rule that no player-visible input comes from a label, and the step that freezes delivered knowledge | the `world` label, the one exception to that rule, and the manifest version |
 
 Tests and fixtures that move: `tests/curator_stand_in.py`, `tests/test_curator_gate.py`,
@@ -112,7 +112,9 @@ manifests move, and so do the manifest fixtures of `tests/test_evaluation_core.p
 `tests/test_host_analysis.py` and `tests/test_run_ledger.py`, and the fixture in
 `tests/test_viewer_api.py` that expects the next version to be refused. `tests/test_evaluation_delivery.py`, `tests/test_memory_measure*.py`,
 `tests/test_viewer_api.py` and `tools/player_host/test/delivery-demo.mjs` consume the
-delivered file, already projected, and move only if they also build a package.
+delivered file, already projected, and move only if they also build a package. The
+study tests among them, `tests/test_memory_measure_study.py`, also build and refuse
+draws, and move with the draw's next version.
 
 These do not move: `harness/player/knowledge.py` and the player host, which read only
 the delivered file.
