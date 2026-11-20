@@ -14,9 +14,10 @@ A review of the merged [price proposal](2026-11-20-live-curator-run-price-propos
 found five things wrong in it. That record is left as it merged. This one states the
 corrections, and where the two differ, this one holds.
 
-The largest: the proposal's ceiling of $10.00 gave the curator a cap of $6.00, which is
-too little for its proxy to reserve a request. The corrected ceiling is **$18.00**, of
-which the forecast spend is unchanged at about $3.50. Nothing here is approved.
+The largest: the proposal's ceiling of $10.00 gave the curator a cap of $6.00, the
+figure the pilot had moved away from because it could let the proxy refuse a request
+late in a session. The corrected ceiling is **$18.00**, of which the forecast spend is
+unchanged at about $3.50. Nothing here is approved.
 
 No game, no model request, $0 spent. The proposal's inputs and its simulation table are
 not changed.
@@ -30,8 +31,9 @@ The proposal gave the curator a run cap of $6.00 "with a cap for each session". 
 curator's proxy reserves a request's estimated worst case before forwarding it, and each
 session is given the lesser of its own cap and what remains of the run's
 (`tools/curator_host/shadow.py`). The pilot raised its session cap to $8.00 because
-$6.00 "would have let the proxy refuse before the host's writing-only phase". Under a
-$6.00 run cap even the first session would have had too little.
+$6.00 "would have let the proxy refuse before the host's writing-only phase". A $6.00
+run cap gives every session at most that, and less as the run spends, so the same
+refusal could end a session before it publishes.
 
 | Part | Forecast | Planning limit |
 | --- | --- | --- |
@@ -43,7 +45,10 @@ $6.00 run cap even the first session would have had too little.
 For the tenth session still to have $8.00 after nine at the pilot's largest displayed
 cost, $0.57, the run's cap must be at least $13.13. Charges that large would total
 $5.70; the rest is headroom to reserve, not money expected to be spent. As the proposal
-says of its own figure, this is a planning ceiling and not a hard cap.
+says of its own figure, this is a planning ceiling and not a hard cap. The proposal
+says a hard $10.00 needs a provider key whose credit limit the owner sets to $10.00 for
+the run. With this correction the figure for such a key is the owner's to set, at or
+above the $18.00 ceiling.
 
 ### What stops the player's side
 
@@ -81,7 +86,7 @@ holds and the added time is small. The run reports the operation rate itself.
 
 ### The fallback's wording
 
-The proposal's table says the design "falls back to captures made by the writer". The
+The proposal's table says the design "falls back to the writer sealing each window". The
 [design](../design/live-curator-integration.md) now says what that must be: at each
 window the custodian yields a detached, stable copy of the prefix; checkpointing the
 live file is not enough.

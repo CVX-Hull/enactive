@@ -302,9 +302,9 @@ New or changed fields are marked.
   package's private full file, which the player never receives: the world it selected,
   or that it selected none, and the digest of the delivered file it wrote. Package
   preflight refuses a package whose private record names a different world from its
-  `world` label, or a different digest from the delivered file's. So a manifest edited
-  after the export, and a delivered file whose bytes are not the ones the exporter
-  recorded, are both caught. Two exports that produce the same bytes cannot be told
+  `world` label, or a different digest from the delivered file's. So a manifest whose
+  `world` was changed after the export, and a delivered file whose bytes are not the
+  ones the exporter recorded, are both caught. Two exports that produce the same bytes cannot be told
   apart, and need not be.
   The delivered file itself still does not name a world.
   The campaign procedure's rule that no player-visible input is derived from a label
