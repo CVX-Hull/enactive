@@ -385,8 +385,10 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
 
 - **New tools, not changed ones.** `player_knowledge_read` and `player_knowledge_query`
   read `delivered-knowledge.json`, which the driver passes to the application. Their results carry
-  `grants_authority: false`. Adoption ([#463](https://github.com/CVX-Hull/enactive/issues/463)) removes
-  them; no tool reads two stores, and no tool changes meaning.
+  `grants_authority: false`. Both remain after adoption
+  ([#463](https://github.com/CVX-Hull/enactive/issues/463)), which removed the earlier
+  player memory and program tools. No tool reads two stores, and no tool changes
+  meaning.
 - **Telemetry.** The host records each briefing and each reminder with its full text,
   the article and fact ids it named, the version of delivered knowledge, the recall
   request it came from, and the player request it was first sent with; and each silence,

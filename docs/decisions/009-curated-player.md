@@ -161,7 +161,11 @@ snapshot differences and program controls remain proposals ([below](#reaching-th
   program or slot binding), how it is known (observed, inferred, hinted), what it
   supersedes, its belief state, and its **scope**: the world and lineage it was
   observed in, or the game as a whole. This replaces the six kinds: their epistemic
-  meanings (claim, correction, candidate advice) become core fields.
+  meanings (claim, correction, candidate advice) become core fields. The
+  [field table](../design/general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
+  of 20 November 2026 supersedes three items of this list for the store: it carries
+  no game time or wall time, no asserter field until a second kind of asserter
+  exists, and no belief state.
 - **Domain ontology (proposed, fitted, per game).** The curator proposes types.
   A new game starts with the core and an empty domain layer. No domain type is
   seeded from recalled game knowledge (D13).
@@ -222,6 +226,10 @@ ends, by the lead or an independent reviewer from frames, never from evaluator
 readers (ADR008).
 
 ### Belief and disagreement
+
+**Not in the fact store.** The owner decided on 20 November 2026 that a fact carries
+no belief value ([decision log](owner-decisions.md)). What follows stays a research
+candidate; adopting it would be a second migration with its own justification.
 
 **Candidate, pending research (R3).** Represent belief in each assertion as a
 subjective-logic opinion (belief, disbelief, uncertainty, base rate), which maps

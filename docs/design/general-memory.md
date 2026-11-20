@@ -88,9 +88,106 @@ improve over hand-built knowledge of one game.
   `text`). `scope.game` stays.
 - **Operations:** `add_fact`, `supersede_fact` with one or more ids, `retire_fact` with
   a reason and citations, and `add_type`.
-- **Migration.** One contract with no shim (S-MIGRATION). The brief gate's
-  `brief-gate` check reads only `curator-fact/2`; it served one finished gate and is
-  retired with the migration (R-TECH-DEBT). Sealed stores stay as evidence.
+- **Migration.** One contract with no shim (S-MIGRATION). `curator-fact/3` is the one
+  current contract and earlier ones are refused. Sealed stores stay as evidence.
+- **Also in a record, not in the table above:** `record` (`fact` or `article`) and
+  `scope`, which the curator writes; and `published_in`, `session`, `superseded_by`,
+  `retired` and `retyped`, which software writes. The
+  [session design](curator-session.md#submissions) gives the exact shapes.
+
+### The next format: the field table for `curator-fact/4` and `curator-type/2`
+
+**Designed, not built.** This table fixes, once, what a fact and a type carry after
+the single migration that
+[the schema migration leaf](https://github.com/CVX-Hull/enactive/issues/835)
+implements. Until that merges, `curator-fact/3` above is the contract. The owner
+decided on 20 November 2026 that memory work starts with facts about one world and
+that a fact carries no belief value
+([decision log](../decisions/owner-decisions.md)).
+
+**Why it changes.** The only scope the gate validates today is a game, and no part of
+a trace names a world. A fact such as "the trunk of this car held an extinguisher" is
+true of one world and has no place to say so.
+
+**A fact.** New or changed fields are marked.
+
+| Field | Written by | Rule the gate checks |
+| --- | --- | --- |
+| `schema` | curator | `curator-fact/4` |
+| `record`, `id`, `type`, `text`, `citations`, `subject` | curator | as in `curator-fact/3` |
+| `known` (new) | curator | one of `observed`, `inferred`, `hinted`. `observed`: the cited frames show it. `inferred`: the curator concluded it from what the cited frames show. `hinted`: it rests on a player hint visible in the cited steps. The gate checks the value is one of the three and nothing more |
+| `scope.game` | curator | equals the repository's game, as now |
+| `scope.level` (new) | curator | `world` or `game`. `world`: true of the world it was seen in. `game`: true of the game in any world |
+| `scope.world`, `scope.lineage` (new) | software | read from the cited frames' sessions, never taken from a submission. A `world` fact whose citations span more than one world, or cite a session with no world, is refused. For a `game` fact both are absent |
+| `seen` | software | unchanged: the trace position of the latest cited frame, an order and not an age |
+| `published_in`, `session`, `superseded_by`, `retired`, `retyped` | software | unchanged |
+
+- **Who asserted it is not a field.** ADR 009 lists four kinds of asserter. Today only
+  a curator session submits, and `session` already names it. The field arrives with
+  the second kind of asserter, in the change that adds that producer.
+- **Time.** The store keeps one time for a fact: `seen`, the order of its latest
+  sighting. It keeps no game time and no wall time. A game clock reading is the
+  playing system's interpretation of a screen, and wall time across a save and a
+  reload says nothing about the world. Where the time matters to the claim, the
+  curator writes it in `text` as the screen showed it. This settles the conflict with
+  ADR 009's sentence that every assertion carries the game time and wall time
+  observed: that sentence is not the plan. A consequence: a fact's age in game time
+  cannot be computed from the store.
+- **No belief value.** A fact has no belief, confidence or weight field, and the table
+  reserves none. A fact is current, superseded or retired, and it links to its source
+  frames. If the belief comparison
+  ([#677](https://github.com/CVX-Hull/enactive/issues/677)) later supports a model,
+  adding one is a second migration with its own justification.
+- **World and lineage.** A lineage is a chain of admissions that continue one
+  survivor ([glossary](../glossary.md)). A world is the game world a lineage plays in,
+  named by an opaque label that is unique within a game's repository. Both are
+  declared by the operator in the frozen run package's labels, where `lineage` exists
+  today and `world` is new. They are not verified against the game: recognising a
+  world from a screen is the playing system's business. The trace projection carries
+  both for each session, and the gate reads them through a cited frame's session.
+  [The world identity leaf](https://github.com/CVX-Hull/enactive/issues/834) builds
+  that, and decides how a sealed session that has no label gets one.
+- **Promotion across worlds is not designed here.** ADR 009 has the gate accept a
+  game-level scope only with evidence from two worlds. Until that later part exists,
+  a `game` fact is accepted as it is today, on the curator's word. What changes now
+  is that a `world` fact can be said at all, and cannot be shown to another world.
+
+**A type.**
+
+| Field | Written by | Rule |
+| --- | --- | --- |
+| `schema` | curator | `curator-type/2` |
+| `name` | curator | the type's own identity, unique in the ontology, as now |
+| `description` | curator | the definition, as now |
+| `fields` | curator | a list of field names, as now |
+| `identity` (new) | curator | the names, from `fields`, that make two facts of this type the same thing; may be empty |
+| `parent` (new) | curator | optional: the name of an existing type this one specializes. The gate refuses an unknown parent and a cycle |
+| `reason` (new) | curator | required when `parent` is absent: why no existing type serves. With `parent` it may be empty |
+| `published_in` (new) | software | the knowledge version that last wrote the type |
+
+- **Reuse, specialize or justify** becomes checkable: reuse adds no type, a
+  specialization names its `parent`, and a new root type states its `reason`.
+- **Computed, not stored:** a type's usage (the count of current facts of the type),
+  its examples (recent facts of the type) and the nearest existing types. The session
+  brief shows them
+  ([the brief leaf](https://github.com/CVX-Hull/enactive/issues/833)).
+- **Dropped from ADR 009's list:** the staleness hint. Nothing writes or reads one.
+- A fact keeps the type history it has today, in `retyped`.
+
+**What moves, and what does not.**
+
+- The repository schema name moves with the two contracts, to `curator-knowledge/3`,
+  so that every reader's refusal fires. A repository in the old format is refused
+  with "start a new repository", as now. Sealed stores stay as evidence.
+- `delivered-knowledge/1` keeps its shape. The exporter copies a fixed list of fact
+  fields (`id`, `type`, `text`, `subject`, `seen`), and none of them changes shape.
+  What changes is which facts it exports: a `world` fact goes only to an actor whose
+  package names that world. The host input contract does not change. The later
+  delivery migration
+  ([the handoff leaf](https://github.com/CVX-Hull/enactive/issues/838)) is therefore
+  separate from this one.
+- The [session design](curator-session.md#readers-that-move-with-the-fact-and-type-contract)
+  lists every reader that moves.
 
 ### Grooming
 

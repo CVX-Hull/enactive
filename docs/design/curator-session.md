@@ -75,6 +75,32 @@ compares sightings, not elapsed time. Replaying earlier windows preserves trace 
 from a submission. Leads are one or two sentences by curator instruction; the gate
 does not parse or judge their prose.
 
+### Readers that move with the fact and type contract
+
+The [field table](general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
+changes the fact, type and repository schemas in one migration. These are the readers
+that move with it, and what each reads today.
+
+| Reader | Reads | What changes |
+| --- | --- | --- |
+| `harness/curator/gate.py` | fact and type records; it writes both | key sets, the new checks, the stored-repository validator, the schema names |
+| `harness/curator/knowledge.py` | the repository layout and its schema name | the schema name in its refusal |
+| `harness/curator/session.py` | fact schema only, to refuse a foreign store | the schema name; the brief's description of a fact and a type |
+| `tools/knowledge_export.py` | current fact and article records; it writes the delivered file | exports a `world` fact only for the package's world; the copied field list does not change |
+| `tools/memory_screen_checks.py` | fact records straight from the repository, with its own schema checks | both schema names; it reads `superseded_by` and `retired`, which do not change |
+| `tools/memory_measure.py` | the delivered file, not the repository | nothing, while the delivered shape holds |
+| `tools/curator_host/prompt.md` | describes a fact and a type to the curator model | the field lists and the scope and type rules |
+| `tools/curator_host/grooming.md` | describes operations in prose, with no schema name | the type revision wording where it names type fields |
+| `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing in fields; its repository per lineage becomes one way to supply a lineage |
+| `harness/viewer/knowledge.py` | the delivered file | nothing, while the delivered shape holds |
+| `harness/viewer/curator.py` | the gate's result journal and the coverage stamp | nothing |
+| `harness/trace/projection.py`, `harness/curator/window.py` | sessions and frame positions | carry a world and a lineage for each session ([the world identity leaf](https://github.com/CVX-Hull/enactive/issues/834)) |
+| `docs/components/curator.md`, `docs/contracts/evaluation.md`, `docs/operations/campaign-run.md` | state the contract names | the names, and the package's `world` label |
+| `tests/curator_stand_in.py` and the curator, export and viewer tests | fixtures in the current format | the fixtures |
+
+`harness/player/knowledge.py` and the player host read only the delivered file and do
+not move.
+
 | Operation | Exact fields beyond `op` |
 | --- | --- |
 | `add_fact` | `fact` |
@@ -198,13 +224,17 @@ brief. Only the gate writes the repository, so no lead text enters published kno
 
 ## Proposed prospective verification and publication contract
 
-**Design result of #697; unimplemented.** This section owns the planned gate boundary
-for #457, #664 and #464. Gate v0 above remains the current implementation. The minimum
-independent implementation recommendation is **operator restore of a compatible published
-snapshot**, below. Defer semantic prospective admission: no implemented test oracle,
-utility policy or future-source coordinator currently supports it. This is a bounded
-design/feasibility conclusion, not qualification of a semantic scorer or permission to
-build a scheduler. #457's complete acceptance and separate owner belief choice remain.
+**Design result of #697; partly implemented.** This section owns the planned gate boundary
+for #457, #664 and #464. Implemented: **operator restore of a compatible published
+snapshot**, below (`restore` in `harness/curator/gate.py`), with the `curator-gate/2`
+result and the `curator-shadow/2` summaries. Everything else in this section is
+proposed, and gate v0 above remains the current implementation of admission. Semantic
+prospective admission stays deferred: no implemented test oracle, utility policy or
+future-source coordinator supports it. This is a bounded design/feasibility conclusion,
+not qualification of a semantic scorer or permission to build a scheduler. The owner
+decided on 20 November 2026 that a fact carries no belief value
+([decision log](../decisions/owner-decisions.md)); the rest of #457's acceptance
+remains.
 
 ### Evidence identity and exposure
 
