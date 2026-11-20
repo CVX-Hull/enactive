@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: historical
-kind: measurement
+kind: study
 date: '2026-11-20'
 scope: 'An eight-response paired proposal replay of the retained Malvern sedan-trunk decision at two context sizes, with and without one sentence stating an earlier sighting (#829)'
 ---
@@ -23,15 +23,16 @@ trunk frame and a hint naming four trunk items, and the original player made the
 at this point. In two ordinary responses here, the replayed player did not.
 
 This shows that the sentence changes what is proposed. It does not show that checking the
-trunk was the better move: the trunk holds tools and an extinguisher, the screen is a
-scarf recipe that is too dark to craft, and the design counts both kinds of answer as
+trunk was the better move: the earlier frame showed tools and an extinguisher in the
+trunk, the screen is a scarf recipe that is too dark to craft, and the design counts both kinds of answer as
 acceptable. All eight requests completed, for a returned $0.40415340 of the $2.00
 maximum. No game was launched.
 [Design #824](2026-11-20-malvern-trunk-paired-replay-design-824.md) · [Lookup-effort review #804](2026-11-19-lookup-effort-at-retained-resource-choices-804.md) · [Delayed-observation cueing #755](2026-11-18-delayed-observation-cueing-755.md)
 
 ## What was run
 
-The run followed the design and the frozen `protocol.md` in the evidence. In short: the
+The run followed the design and the frozen `protocol.md` in the evidence, with the
+departures listed [below](#departures-from-the-design). In short: the
 retained `farm-source-before` packs of the two-wake audit, the context before request 287
 of admission 3, at the current size and the 64k target; an ordinary condition and one
 with the design's observation sentence in the closing text; two responses per cell; eight
@@ -50,6 +51,10 @@ first attempts in a predetermined interleaved order under opaque identifiers; no
 - **Scoring.** One clean-context reader, given the eight answers sorted by opaque
   identifier, the current frame and the sent hint about the trunk, and the design's five
   ordered categories. It was not given conditions, sizes, the protocol or the schedule.
+  The reader's instructions were the lead's delegation message and its reply was a
+  message back; neither is in the sealed evidence, so what passed between them cannot be
+  checked from the seal. The sealed `blind-readout.json` is the answer list the reader
+  opened, and `blind-scores.tsv` is the lead's transcription of the reader's table.
 
 ## Results
 
@@ -77,8 +82,28 @@ observation answer treated the trunk's contents as past and unchecked.
 
 The reader marked one ordinary answer, the fifth sent, as citing an earlier observation
 because it says an earlier inventory showed flashlights. That is the carried inventory,
-not the trunk, and the answer names no trunk item, so this record counts it as "no"; the
-reader named that reading itself.
+not the trunk, and the answer names no trunk item. The reader named that reading itself,
+and the lead recorded "no" for it in `blind-scores.tsv`. That entry is the lead's
+adjudication, not the reader's first mark, and it changes no category or count.
+
+## Departures from the design
+
+None changed a result here. Each is in the sealed `protocol.md`, `assignment.json` or
+`replay.py`.
+
+- **Spend check.** The design gives each request's worst charge as its estimated input at
+  the cache-write rate plus the capped output. The script multiplied the estimated input
+  by 1.5 first, a margin for provider tokenization, and rounded the bound down to a
+  millionth of a dollar. The largest subtotal plus bound reached during the run was
+  $0.66864735.
+- **Model check.** The script accepted any returned model name that begins with the
+  pinned name. All eight responses reported exactly the pinned name.
+- **Unknown charge.** The script would have written a missing charge as "0" with a flag
+  saying it was unknown, not as a blank. Every charge was known.
+- **Shared instructions.** Besides the three-string shape, both conditions were told not
+  to claim that anything was done and to stay under 80 words.
+- **Ordinary condition.** It carries no line about an observation at all, as the design
+  says, where the #755 probe wrote a line saying none was supplied.
 
 ## Cost and tokens
 
@@ -110,9 +135,10 @@ result and on a shift at 64k only do not apply, since neither happened
 ## Limits
 
 - One cutoff from one world. The two responses in a cell are repeats of one request, and
-  the second of each pair was served almost wholly from the provider's cache. The two
-  observation answers at each size are word for word the same action. These are not four
-  independent observations.
+  the second of each pair had all but 75 of its prompt tokens read from the provider's
+  prompt cache. The two observation answers at each size give word for word the same
+  action, with differing evidence and uncertainty text. These are not four independent
+  observations.
 - The sentence was written by hand from the trunk frame and names items. An answer that
   goes to look for those items is partly the sentence read back. Nothing here tests a
   memory forming, choosing or delivering it.
@@ -123,7 +149,11 @@ result and on a shift at 64k only do not apply, since neither happened
 - Two ordinary responses at the current size did not propose the lookup the original
   player made. Two responses do not establish how often the ordinary player would.
 - At the 64k target the sentence supplied both the sighting and the only handle to it.
-- The lead saw the first answer before the blind pass; the scores are the reader's.
+- The lead saw the first answer before the blind pass, as the protocol's first-unit
+  inspection requires. The categories are the reader's; the exchange with the reader is
+  not sealed.
+- The seal fixes the retained bytes. It does not date the freeze before dispatch or prove
+  the folder was unchanged by the move described below.
 - The working folder was first created inside the evidence store's own directory. It was
   moved out, unchanged, before sealing, so the sealed copy is the first sealed state.
 
@@ -133,8 +163,8 @@ Sealed as `malvern-trunk-paired-replay-829` under `.runtime/evidence/`, manifest
 `data/evidence/malvern-trunk-paired-replay-829.sha256`. The `replay` folder holds
 `protocol.md`, `replay.py` (prepare and run), `assignment.json` with the frozen schedule
 and hashes, the eight `requests`, `dispatches.jsonl`, `attempts.jsonl` with each receipt,
-the raw `responses` and parsed answers, `blind-readout.json` as given to the reader, and
-`blind-scores.tsv`. Assignment SHA-256:
+the raw `responses` and parsed answers, `blind-readout.json` (the answer list the reader
+opened) and `blind-scores.tsv`. Assignment SHA-256:
 `be835d36ea1e5790d2c0130243601e1acb3e358e6c99705f4ba7722a06fc05f5`.
 
 The dispatch reused the prepare-then-run pattern, receipt fields and cost handling of the
