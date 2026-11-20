@@ -582,6 +582,20 @@
       },
       "visibility": "private"
     },
+    "curator-path-backlog-grooming": {
+      "availability": "present",
+      "bytes": 385793,
+      "cited_by": [
+        "docs/acceptance/2026-11-20-curator-path-backlog-grooming.md"
+      ],
+      "files": 66,
+      "manifest_sha256": "19ca1250effbf652c2a92824fb8875c6b85d8e675c898751aba61a12cfbf3376",
+      "note": "Backlog grooming of 20 November 2026: before and after snapshots of issues, graph and Project, the agents' reports and the drafted descriptions",
+      "sources": {
+        ".": "scratch/groom2"
+      },
+      "visibility": "private"
+    },
     "curator-scoring-618": {
       "availability": "present",
       "bytes": 35613417,
