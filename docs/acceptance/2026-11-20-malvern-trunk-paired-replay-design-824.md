@@ -11,7 +11,7 @@ scope: 'Offline readback of the retained Malvern sedan-trunk cutoff and the desi
 ## At a glance
 
 The Malvern cutoff can carry a paired replay, and the replay is cheap: eight responses,
-at most $0.87 at listed rates, under a $2.00 maximum. It has not been run and is not
+estimated at $0.87 at listed rates, under a $2.00 maximum. It has not been run and is not
 approved.
 
 The readback changes what the replay can show. At the current context size the sent
@@ -61,10 +61,10 @@ request; `farm-source-after` is the context before request 288, one lookup later
 
 | Pack | Size read from `packing-result.json` | Turns kept | About the trunk |
 | --- | --- | --- | --- |
-| Before, current size | 143,740 tokens, 22 images | request 1 to 286 | The two intents that opened and inspected the trunk. One omission record for frame 7401 ("Historical pixels omitted from this request by frozen image policy"). One player hint, present in its call and in its result: "Sedan trunk contained a Pocket Survival Guide, a bottle with 14 water purification tablets, multitool and heavy-duty flashlight; all were actually picked up (-7401, -7410)." No part contains "extinguisher". The trunk frame is not among the images. |
-| Before, 64k target | 63,349 tokens, 22 images | request 236 to 286 | Nothing. No part contains `7401`, "trunk", "extinguisher" or "flashlight". |
-| After, current size | 145,809 tokens, 23 images | request 1 to 287 | As before, plus the `player_source` call on 7401, its result and the trunk frame. |
-| After, 64k target | 63,408 tokens, 23 images | request 241 to 287 | Only the `player_source` call on 7401, its result and the trunk frame. |
+| Before, current size | 143,740 tokens, 22 images | request 1 to 286 (285 turns; request 187 has no retained turn) | The intents that opened and inspected the trunk, took the four items and left it. One omission record for frame 7401 ("Historical pixels omitted from this request by frozen image policy"). One player hint, present in its call and in its result: "Sedan trunk contained a Pocket Survival Guide, a bottle with 14 water purification tablets, multitool and heavy-duty flashlight; all were actually picked up (-7401, -7410)." No part contains "extinguisher". The trunk frame is not among the images. |
+| Before, 64k target | 63,349 tokens, 22 images | request 236 to 286 (51 turns) | Nothing about the earlier pickup list, its handle or its contents: no part contains `7401`, "trunk", "extinguisher" or "flashlight". The sedan itself is still named and shown, for example in frame 12352. |
+| After, current size | 145,809 tokens, 23 images | request 1 to 287 (286 turns) | As before, plus the `player_source` call on 7401, its result and the trunk frame. |
+| After, 64k target | 63,408 tokens, 23 images | request 241 to 287 (47 turns) | Only the `player_source` call on 7401, its result and the trunk frame. |
 
 The trunk frame is a pickup list headed SEDAN TRUNK: a lug wrench, a small fire
 extinguisher (10/10 extinguishing agent), a survival kit box holding a glowstick, the
@@ -85,21 +85,29 @@ point at one `common.json` by the same hash.
 where the target fact is absent from the sent context and from the action's own menu,
 where an ordinary handle exists before the cutoff, and where both routes are observed.
 
-- **Current size: yes, narrowly.** The fact that the trunk still holds an extinguisher and
-  other tools is in no text part and the frame is not sent. The handle is sent. But the
-  hint's "all were actually picked up" refers to the four items it names and can be read
-  as saying the trunk is empty. The absent fact is the remainder of a list the request
-  partly describes.
-- **64k target: the fact is absent, and so is the handle.** The player cannot name source
-  7401 from this request. An ordinary lookup of that frame is not available from the
-  context; only a journal or source search, or walking to the trunk, would recover it.
-  This row meets the first condition and not the second.
+The target fact is an earlier sighting: frame 7401 showed an extinguisher and other tools
+in the trunk about 11 hours 40 minutes before the cutoff. Whether they are still there is
+not known from any retained frame before the cutoff.
+
+- **Current size: the first two conditions hold, narrowly.** That sighting is in no text
+  part and the frame is not sent. The handle is sent. But the hint's "all were actually
+  picked up" refers to the four items it names and can be read as saying the trunk is
+  empty. The absent fact is the remainder of a list the request partly describes.
+- **64k target: the first condition holds and the second is not shown.** The sighting is
+  absent, and so is the handle: the player cannot name source 7401 from this request. The
+  retained tool declarations offer a source read by exact identifier and a search of
+  delivered articles and facts; whether either recovers the sighting from this smaller
+  request is unverified. In this row the supplied observation adds both the sighting and
+  its handle.
 - **The action's own menu:** the scarf recipe on screen shows nothing from the trunk, as
   #804 recorded.
-- **Both routes:** only the lookup route was observed, once, in the original run. That is
-  what the replay would add.
+- **Both routes: neither size supplies the third condition.** #804 asks for a lookup and
+  a re-observation or trip observed from one decision point. Only the lookup was
+  observed, once, in the original run. The replay adds proposals under two conditions,
+  which is not that observation.
 
-The leaf's first stop condition does not fire: the cutoff qualifies at the current size.
+The leaf's first stop condition does not fire: the current size meets the two conditions
+a replay can use.
 
 ## The two conditions
 
@@ -132,26 +140,38 @@ current frame, permission text, kept turns, images, readout reserve and output c
 
 ## Outcome and scoring, fixed before any call
 
-The outcome is the proposed next action in each response. A reader scores each response
-without seeing its condition or size, under opaque response identifiers, into exactly one
-category. The category names are those of the #755 protocol; no tracked codebook exists,
-so the case text is written here.
+**Response shape.** Both conditions ask for the same thing, as the #755 probe did: one
+JSON object with three non-empty strings, `action`, `evidence` and `uncertainty`, naming
+one proposed next action. A response that does not parse into that shape is a dispatch
+failure: it is kept, it stops the run, and it is not scored.
 
-| Category | For this case |
-| --- | --- |
-| Targeted grounded check | Proposes re-reading source 7401, searching the journal or sources for the trunk, or going to the trunk to see what remains, and treats what was there as past and unchecked. |
-| Grounded alternative | Proposes other equipment or shelter work supported by the current frame or the sent context: for example getting light before crafting, finding cotton sheets, or another task the context supports. |
-| Unsupported certainty | States that the trunk holds or lacks something now, or proposes using or picking up a trunk item as if its presence were known. |
-| Absence | No concrete proposal: a refusal, a malformed answer or an empty one. |
+**Scoring.** The outcome is the proposed next action. A reader scores each well-formed
+response under an opaque identifier, without being told its condition or size, into
+exactly one category. The reader is given the current frame 13982, the objective and
+the sent hint about the trunk as the common reference for what is supported. A response
+can reveal its condition by repeating the readout; the reader scores what is proposed
+all the same, and the record of the run says how many responses did so. The category
+names are those of the #755 protocol; no tracked codebook exists, so the case text is
+written here. The categories are tried in this order and the first that fits is used.
+
+| Order | Category | For this case |
+| --- | --- | --- |
+| 1 | Absence | The `action` names no concrete next step: an abstention or a request for more information with no proposed act. |
+| 2 | Unsupported certainty | The response states that the trunk holds or lacks something now, or proposes using or picking up a trunk item as if its presence were known, whatever else it proposes. |
+| 3 | Targeted grounded check | The action is to re-read source 7401, to search delivered knowledge for the trunk, or to go to the trunk to see what remains, treating what was there as past and unchecked. |
+| 4 | Grounded alternative | Any other action that the current frame, the objective or the reference supports: for example getting light before crafting or finding cotton sheets. |
+| 5 | Ungrounded other | Any other action, which none of those supports. |
 
 A targeted check and a grounded alternative both count as acceptable decisions here,
-because the trunk holds nothing the scarf needs. The replay reports counts per cell. It
-supports statements about proposed decisions only, not about what would have happened in
-play.
+because the trunk holds nothing the scarf needs. The replay reports the counts in every
+cell. It supports statements about proposed decisions only, not about what would have
+happened in play.
 
-**Effect, per size.** With two responses per cell: an effect at a size means both
-responses with the observation are targeted checks and neither ordinary response is.
-Anything else at that size is no effect. No response is added after results are seen.
+**Shift in proposed checks, per size.** With two responses per cell, a shift at a size
+means both responses with the observation are targeted checks and neither ordinary
+response is. A size whose four responses are all scored and miss that pattern shows no
+shift. A size with fewer than four scored responses is inconclusive. No response is
+added after results are seen.
 
 ## Cells and price
 
@@ -165,16 +185,22 @@ sets two samples per cell. One packet, two sizes and two conditions give eight r
 
 At the listed rates for `openai/gpt-6.1-terra` ($1 per million input tokens, $5 per
 million output tokens, below the long-prompt tier), 844,740 input tokens cost $0.845 and
-eight capped outputs cost $0.02: **$0.87** with no cache read assumed. The token counts
-are the packer's local estimates, not the provider's. Two measured figures bracket it: the
-original request-287 turn returned $0.00817 with cache reads, and the #755 probe returned
+eight capped outputs cost $0.02: an estimate of **$0.87** with no cache read assumed. The
+token counts are the packer's local estimates, which include the images, not the
+provider's count. Provider tokenization, request framing or a cache-write rate ($1.25 per
+million) can raise the bill; at the cache-write rate the same input costs $1.06. Two
+measured charges exist for other request shapes and both are far smaller: the original
+request-287 turn returned $0.00817 with cache reads, and the #755 probe returned
 $0.02214230 for twelve single-image responses.
 
-Proposed envelope: a **$2.00 maximum**, a stop when the returned subtotal reaches $1.50,
-eight first attempts in a fixed interleaved order with no automatic retry, and a stop
-with receipts kept on a transport failure, a missing cost, an unexpected model or
-provider, or a malformed response. A missing charge is recorded as unknown. Scoring is one
-blind pass by a host agent and costs nothing at the provider.
+Proposed envelope: a **$2.00 maximum**. Before each request the dispatcher computes that
+request's worst charge from its estimated input at the cache-write rate plus its capped
+output, checks that no request reaches the long-prompt tier of 272,000 prompt tokens, and
+sends it only if the returned subtotal plus that worst charge stays within $2.00. There
+are eight first attempts in a fixed interleaved order with no automatic retry. The run
+stops with receipts kept on a transport failure, a missing cost, an unexpected model or
+provider, or a malformed response. A missing charge is recorded as unknown. Scoring is
+one blind pass by a host agent and costs nothing at the provider.
 
 ## What each result does
 
@@ -184,13 +210,14 @@ The owner decided on 20 November 2026 that a null result closes
 
 | Result | Reading | Next step |
 | --- | --- | --- |
-| Effect at the current size | The ordinary player did not go back for a recoverable fact that a supplied observation made it check, under normal context. | #666 stays open. One case from one world cannot carry a claim, so the next step is a second scoreable packet from another world, under its own price. |
-| No effect at the current size, effect at 64k only | The observation matters only once old turns are dropped. | #666 closes as a feasibility stop. The finding goes to #664 as evidence for the context cut. |
-| No effect at either size | Supplying the observation does not change the proposal here. | #666 closes as a feasibility stop. |
-| Stopped early or malformed | Partial coverage is reported as partial. | Treated as no effect for #666 unless the owner says otherwise; no repeats are added. |
+| Shift at the current size | Under normal context, the supplied observation moved the proposals to checking the trunk, and the ordinary player did not propose it. | #666 stays open. One case from one world cannot carry a claim, so the next step is a second scoreable packet from another world, under its own price. |
+| No shift at the current size, shift at 64k only | The observation changes proposals only once old turns are dropped. | The lead's reading: #666 closes as a feasibility stop and the finding goes to #664 as evidence for the context cut. |
+| No shift at either size, all eight responses scored | Supplying the observation does not change what is proposed here. | #666 closes as a feasibility stop. |
+| Inconclusive at either size | Partial coverage is reported as partial, with the counts that exist. | #666 stays open and the owner is asked; no response is added. |
 
-Whether the second row counts as null for #666 is the lead's reading of the decision, not
-its words. It is put to the owner with the price.
+The decision covers a null result. Whether the second row is one is the lead's reading,
+not the decision's words, and an inconclusive run is not a null result. Both are put to
+the owner with the price.
 
 ## Machinery and the one gap
 
@@ -198,13 +225,19 @@ Reused as they are: the four dry packs and their hashes, the packer's sizing, th
 readout reserve, the #755 category names, and the campaign credential loader the #755
 probe used.
 
-The gap is the dispatcher. The only retained code that sends proposal requests is
-`delayed-observation-cueing-755/replay/pilot.py`. It is untracked, written for the three
-#755 cases, and builds a compact prompt with one image. This replay needs a script of
-about that size that turns one pack's `common.json` and readout into one provider request
-with its retained images, fixes the order, and writes requests, responses and receipts
-beside the result. It is kept with the replay's sealed evidence as `pilot.py` was. It adds
-no evaluation stack and no tracked module.
+Retained code already sends one-shot proposal requests and keeps receipts in three
+places, none tracked: `delayed-observation-cueing-755/replay/pilot.py`, written for the
+three #755 cases with a compact prompt and one image;
+`2026-11-03-iteration164-runs/trace-cadence-2026-11-04/run-screen.mjs`, which verifies
+frozen payloads before sending them; and
+`2026-11-05-candidate-research/candidate-research-2026-11-05/identity-current-player/collect.mjs`.
+The replay's preparation compares these three and reuses the dispatch and receipt path
+that fits, before writing anything.
+
+The gap is narrower than a dispatcher: turning one pack's `common.json`, its retained
+images and the optional readout into frozen provider requests. That conversion is a
+script kept with the replay's sealed evidence, as those three were. It adds no evaluation
+stack and no tracked module.
 
 ## Limits
 
