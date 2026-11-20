@@ -165,6 +165,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.end_headers()
         self.wfile.write(step[1])
+        if step[0] == "stalled-sse":
+            self.wfile.flush()
+            self.server.release.wait(60)
 
 
 # ---------------------------------------------------------------- host harness
@@ -376,6 +379,33 @@ def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow
                            spent_usd="0.012", observed_attempts=3, observed_recall_attempts=0, spend_complete=True)
     # The overshoot is less than one response: the limit was not yet reached when the third request was sent.
     assert Decimal(receipt["spent_usd"]) - Decimal(receipt["spend_limit_usd"]) < Decimal("0.004")
+
+
+@pytest.mark.parametrize("repeat_stall", [False, True])
+def test_incomplete_stream_recovery_in_same_host(adapter, host_factory, repeat_stall):
+    # Valid-looking tool arguments were already parsed in the Talty timeout.
+    # Keep the connection open before a finish reason, price or terminal SSE event.
+    partial = tool_response("integer", {"value": 99})[1].split(b"\n\n", 1)[0] + b"\n\n"
+    stall = ("stalled-sse", partial)
+    finish = tool_response("player_finish", dict(disposition="task_complete", report="Recovered", source_ids=[], control_id=None))
+    hosted = host_factory([tool_response("integer", {"value": 7}), stall, stall if repeat_stall else finish],
+                          enabled_tools=("integer",))
+    hosted.route["request_timeout_seconds"] = 1
+    hosted.paths["route.json"].write_text(json.dumps(hosted.route))
+    code = hosted.start().wait()
+    assert (code != 0) == repeat_stall
+    events = hosted.events()
+    assert [e["arguments"]["value"] for e in events if e["type"] == "tool-start" and e["tool"] == "integer"] == [7]
+    bodies = [r["body"] for r in hosted.provider.requests]
+    assert len(bodies) == 3 and bodies[1] == bodies[2]
+    attempts = [e for e in events if e["type"] == "response-complete"]
+    assert [e["request_id"] for e in attempts] == ["request-1", "request-2", "request-3"]
+    assert attempts[1]["response_progress"]["tool_argument_bytes"] > 0
+    assert attempts[1]["reported_cost_usd"] is None
+    assert hosted.settled()["reason"] == ("request-timeout" if repeat_stall else "task_complete")
+    accounting = hosted.accounted()
+    assert accounting["observed_attempts"] == 3 and accounting["unpriced_requests"] == 1 + repeat_stall
+    assert accounting["spend_complete"] and len([e for e in events if e["type"] == "mcp-connected"]) == 1
 
 
 def test_a_successful_response_without_a_cost_stops_the_run_and_counts_at_the_bound(adapter, host_factory):

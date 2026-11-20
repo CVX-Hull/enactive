@@ -64,6 +64,15 @@ async def mutate(mode: str, index: int = 0) -> str:
     return "done"
 
 @server.tool()
+async def computer_input(intent: str) -> CallToolResult:
+    """One original input with a partial native delivery."""
+    record({"tool": "computer_input", "phase": "partial"})
+    receipt = dict(schema="player-computer-operation/1", kind="input", status="partial",
+                   actor_id="3" * 32, session="2" * 32)
+    return CallToolResult(content=[TextContent(type="text", text=json.dumps(receipt))], structuredContent=receipt)
+
+
+@server.tool()
 async def integer(value: int) -> int:
     record({"tool": "integer", "value": value})
     return value

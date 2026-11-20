@@ -772,6 +772,7 @@ export async function runHost(options) {
   const assistantControls = new WeakMap();
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
+  let streamRecoveryAvailable = true;
   const stopped = new AbortController();
   const endRecall = () => { actorEnding = true; recallController?.abort(); };
   const stop = reason => {
@@ -796,7 +797,6 @@ export async function runHost(options) {
   }
   const cancellation = () => stop('cancelled');
   function failureStream(model, reason) {
-    requestInFlight = false;
     const response = new AssistantMessageEventStream();
     const message = {role:'assistant', content:[], api:model.api, provider:model.provider, model:model.id,
       usage:{input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0, cost:{input:0, output:0, cacheRead:0, cacheWrite:0, total:0}},
@@ -804,6 +804,12 @@ export async function runHost(options) {
     response.push({type:'error', reason:'aborted', error:message});
     response.end(message);
     return response;
+  }
+  function settlePlayerAttempt(message) {
+    const reported = amountText(requestReportedCost);
+    emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? 'configured-rates' : null, reported_cost_usd:reported, ...countAttempt(requestReportedCost), response_progress:progressSnapshot()});
+    requestInFlight = false;
+    return reported;
   }
   try {
     requireThat(positive(options.timeoutSeconds), 'invalid-host-timeout');
@@ -873,6 +879,15 @@ export async function runHost(options) {
         if (fatal) throw new HostError(fatal);
         recentCalls.push({tool:name, arguments:args});
         if (recentCalls.length > configuration.recall.every) recentCalls.shift();
+        // A stop or an unverified input receipt never permits a stalled inference
+        // to earn extra work. Ordinary collection of the original ID stays available.
+        if (name === 'computer_stop') streamRecoveryAvailable = false;
+        if (name === 'computer_input' || name === 'computer_observe') {
+          const record = resultRecord(result);
+          streamRecoveryAvailable &&= record?.schema === 'player-computer-operation/1'
+            && record.status === 'completed' && name === `computer_${record.kind}`
+            && record.actor_id === options.actorId && record.session === options.session;
+        }
         const latest = toLlmContent(result);
         if (latest.some(part => part.type === 'image')) latestResult = latest;
         const sourceId = resultSourceId(result);
@@ -1025,19 +1040,23 @@ export async function runHost(options) {
       // Pi's per-result terminate hint requires every result in the batch to
       // terminate. finishTurn also handles ordinary tools preceding a handoff.
       finishTurn:() => fatal || handoff || finish ? {action:'end'} : {action:'continue'},
-      streamFn:(model, context, streamOptions) => {
+      streamFn:async (model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
         if (!canSpend()) { stop('spend-limit'); return failureStream(model, fatal); }
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
-          requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
-          const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
+          const timeoutMs = configuration.request_timeout_seconds * 1000;
+          let requestSignal, recoverableResponse = false, stalled = false, originalDigest;
           const backendModels = new Set(), observedServiceTiers = new Set();
-          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`;
-          let payloadReadyAt;
+          const logicalRequestId = `request-${requests + 1}`;
+          let streamStarted, payloadReadyAt;
           const actualFetch = options.fetch ?? globalThis.fetch;
           let attempts = 0, previousRequestId;
+          const recoveryHasHeadroom = () => {
+            const reserved = addAmounts(addAmounts(finishReserve, unpricedBound), recallAttemptInFlight ? recallBound : [0n, 0]);
+            return lessThan(addAmounts(spent, reserved), spendLimit);
+          };
           // End an eligible first attempt and hand its server delay to the SDK
           // helper. Status is omitted so only the host's declared classes decide.
           const retry = (attemptId, retryClass, status, headers) => {
@@ -1074,6 +1093,13 @@ export async function runHost(options) {
             const payload = JSON.parse(init.body);
             const sizes = {...payloadSize(payload), payload_bytes:Buffer.byteLength(init.body),
               payload_sha256:createHash('sha256').update(init.body).digest('hex')};
+            if (stalled) {
+              if (control) { stop('request-timeout'); throw new HostError(fatal); }
+              requireThat(sizes.payload_sha256 === originalDigest, 'stream-recovery-context-changed');
+              if (!recoveryHasHeadroom()) { stop('spend-limit'); throw new HostError(fatal); }
+            }
+            originalDigest ??= sizes.payload_sha256;
+            backendModels.clear();
             const inspectionMs = performance.now() - fetchEntered;
             const attemptId = requestId = `request-${++requests}`;
             if (briefing) { emit('knowledge-delivery', {...briefing, receiving_player_request_id:attemptId}); briefing = null; }
@@ -1087,7 +1113,7 @@ export async function runHost(options) {
             attempts++;
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
             emit('request-start', {request_id:attemptId, request_role:'player', logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
-              sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
+              sdk_after_payload_ms:(attempts === 1 || stalled) && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
               host_inspection_ms:inspectionMs, ...sizes});
             emit('context-manifest', nextContextManifest(attemptId, payload));
             let response;
@@ -1128,6 +1154,7 @@ export async function runHost(options) {
                   error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null});
                 retry(attemptId, 'stream-start-error', response.status, response.headers);
               }
+              recoverableResponse = response.status === 200 && !peeked.failed && response.headers.get('x-should-retry') !== 'false';
               return peeked.response;
             }
             let errorBody = null;
@@ -1150,18 +1177,19 @@ export async function runHost(options) {
             }
             if (errorBody === null) throw new HostError('provider-error');
             return new Response(errorBody, {status:response.status, headers:response.headers});
-          }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
-          // The outer request timer includes classification, SDK backoff and
-          // both HTTP attempts. Disable the provider stream's nested retries.
-          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
+          }, {maxRetries:stalled ? 0 : 1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
+          // Transport refusals share one deadline across classification, backoff and retry.
+          // The provider stream itself must never retry.
+          const providerStream = () => stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
             onPayload:payload => {
               payloadReadyAt = performance.now();
-              emit('provider-payload-ready', {request_id:logicalRequestId, sdk_prepare_ms:payloadReadyAt - streamStarted});
+              emit('provider-payload-ready', {request_id:`request-${requests + 1}`, sdk_prepare_ms:payloadReadyAt - streamStarted});
               return model.provider === 'openrouter' ? {...payload, service_tier:'default'}
                 : configuration.service_tier === 'priority' ? {...payload, service_tier:'priority'} : undefined;
             },
             onProviderStreamEvent:chunk => {
             responseProgress.provider_events++;
+            if (chunk?.error || (Array.isArray(chunk?.choices) && chunk.choices.some(choice => choice?.finish_reason != null))) recoverableResponse = false;
             const eventAt = performance.now() - started;
             markProgress(responseProgress, 'provider_event', eventAt);
             responseProgress.response_id ??= diagnosticId(chunk?.id, apiKey);
@@ -1198,6 +1226,51 @@ export async function runHost(options) {
               emit('response-backend', {request_id:requestId, backend_model:chunk.model});
             }
           }});
+          // Only a completed turn crosses into Pi's agent context. In particular,
+          // syntactically complete tool arguments in a timed-out delta have no authority.
+          for (;;) {
+            const deadline = new AbortController();
+            streamStarted = performance.now();
+            requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal, deadline.signal].filter(Boolean));
+            requestTimer = setTimeout(() => {
+              if (attempts === 1 && recoverableResponse && responseProgress?.last_field_delta_ms != null
+                  && streamRecoveryAvailable && !pendingHandoff && !control && !requestSignal.aborted) {
+                stalled = true;
+                deadline.abort();
+              } else stop('request-timeout');
+            }, Math.min(timeoutMs, totalMs));
+            let terminal;
+            for await (const event of providerStream()) {
+              if (event.type === 'done' || event.type === 'error') terminal = event;
+            }
+            clearTimeout(requestTimer);
+            requireThat(terminal, 'incomplete-provider-stream');
+            if (deadline.signal.aborted && !fatal) {
+              // Settle the old stream before sending anything else. Abort races,
+              // new control and exhausted ending headroom retain the conservative stop.
+              if (!recoverableResponse || terminal.type !== 'error' || terminal.error.stopReason !== 'aborted' || control || streamOptions.signal?.aborted) {
+                stop('request-timeout');
+              } else {
+                const previous = requestId;
+                settlePlayerAttempt(terminal.error);
+                if (!recoveryHasHeadroom()) stop('spend-limit');
+                else {
+                  streamRecoveryAvailable = false;
+                  previousRequestId = previous;
+                  emit('provider-retry', {stage:'eligible', request_id:previous, retry_class:'incomplete-stream-timeout', max_retry_delay_ms:0});
+                  continue;
+                }
+              }
+            }
+            if (fatal) {
+              if (requestInFlight) settlePlayerAttempt(terminal.type === 'error' ? terminal.error : terminal.message);
+              return failureStream(model, fatal);
+            }
+            const completed = new AssistantMessageEventStream();
+            completed.push(terminal);
+            completed.end();
+            return completed;
+          }
         } catch {
           stop('provider-error');
           return failureStream(model, fatal);
@@ -1213,8 +1286,7 @@ export async function runHost(options) {
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
         const failed = ['error', 'aborted', 'length', 'deferred'].includes(message.stopReason);
         if (requestInFlight) {
-          const reported = amountText(requestReportedCost);
-          emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? 'configured-rates' : null, reported_cost_usd:reported, ...countAttempt(requestReportedCost), response_progress:progressSnapshot()});
+          const reported = settlePlayerAttempt(message);
           // A run never continues on a successful response it cannot price.
           if (!failed && reported === null && !fatal) stop('cost-unreported');
         }
