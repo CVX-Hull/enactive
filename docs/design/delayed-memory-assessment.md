@@ -213,8 +213,11 @@ protocol development. [Retained feasibility](../acceptance/2026-11-18-delayed-de
 The retained reviews since then found one packet that can carry the crossed
 comparison below: the Malvern sedan-trunk cutoff. Its
 [paired replay design](../acceptance/2026-11-20-malvern-trunk-paired-replay-design-824.md)
-holds the readback and the proposal for that one packet. No further live acquisition is
-made before that replay reports ([decision log](../decisions/owner-decisions.md)).
+holds the readback and the proposal for that one packet, and its
+[replay](../acceptance/2026-11-20-malvern-trunk-paired-replay-829.md) has reported. A
+[screen of the other retained worlds](../acceptance/2026-11-20-second-scoreable-packet-screen-831.md)
+found no second independent packet: a handoff that states the fact carries it into
+every later request.
 
 The first priced replay uses a small crossed comparison on the same decision
 packets. It asks for a proposed next choice and verification plan. Replay
