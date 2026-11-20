@@ -104,7 +104,9 @@ minimum for the second attempt with the time left before work stops. If it does 
 behaviour 3 becomes behaviour 2 at the refusal. On the scratch copy a 50 s allowance
 stopped at 34 s with one attempt, as did a 100 s allowance with a 5 s floor (65 s needed,
 about 64.7 s left). A 105 s allowance honoured the wait and gave the second attempt about
-6.5 s, which a 10 s reply missed. The floor decides whether such a squeezed attempt is
+6.5 s, which a 10 s reply missed. By the schedule alone those two figures are 65 s and
+10 s; the scratch run's figures are lower by its startup and dispatch time, and its
+host-relative timestamps were not kept. The floor decides whether such a squeezed attempt is
 worth its charge.
 
 ## The smallest change for each
@@ -112,7 +114,9 @@ worth its charge.
 All paths are read-only here and none was edited. Neither change touches the request body.
 
 - **Skip.** In `retry()` of [host.mjs](../../tools/player_host/host.mjs), after the
-  `eligible` event, read `retryDiagnostic(headers).requested_retry_delay_ms`. If it is finite
+  `eligible` event, read `retryDiagnostic(headers).requested_retry_delay_ms`, but only when
+  `headers` is present: the pre-header rejection path calls `retry()` with no headers,
+  and `retryDiagnostic` reads them unconditionally. If it is finite
   and not shorter than `min(timeoutMs, totalMs) − (performance.now() − streamStarted)`, call
   `stop('provider-error')` and `throw new HostError(fatal)`, the exit the SDK helper's over-cap
   refusal already takes. About five lines, one test, and the sentence in the
@@ -159,10 +163,13 @@ the remaining reloads were ineligible and the unused authority expired. The play
 during the wait, so even the 26 seconds before the stop could not have been used to save.
 
 For a 60-second delay every refusal in the request is cut off, because the delay equals the
-deadline. For a delay *d* the cut-off window is a refusal later than 60 − *d* seconds into the
-request, and in that window the second attempt, if the wait fits, has only the time left
-(measured: 6 s of 60 s).
-Keeping the contract buys a hard bound: no logical request runs past its original deadline,
+deadline. For a delay *d* there are two cases. A refusal at or after 60 − *d* seconds into
+the request is cut off during the wait. An earlier refusal is retried, and the second
+attempt has only the time left (measured: a 20-second delay after a refusal at 34 s left
+6 s of 60 s).
+Keeping the contract buys a hard bound for these pre-output retries: no such request runs
+past its original deadline (a cut-off stream that qualifies for recovery gets its own
+deadline under the existing contract),
 at most one extra attempt is ever admitted and the spend and ending behaviour stay as
 documented. It costs the run, not just time, whenever a provider asks for a long wait.
 
@@ -198,7 +205,7 @@ fails at once, and a host timeout or cancellation can end it sooner.
   answers after such a wait, and one refusal gives no rate. It would also lengthen a
   request and admit a possible extra charge, which is the owner's to approve.
 - **The cost is accepted and stated:** a long provider wait late in a request ends the
-  run without a new Save, as it did in #803.
+  run with no chance to save during that wait. In #803 that left no new Save.
 - **Revisit** when a second refusal of this kind is observed, or when the owner asks
   for runs to survive a long provider wait. The five new tests then show what the host
   does today and fail if that changes.
