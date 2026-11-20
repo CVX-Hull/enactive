@@ -80,8 +80,9 @@ A prior computer stop, unconfirmed computer operation, pending handoff, accepted
 ending control, cancellation or host timeout prevents recovery. The custodian
 permanently fences native input on Pause, including during final-report grace. Actor,
 session and custody deadlines stay fixed. Missing charges remain unknown. The
-[adapter reference](../../tools/player_host/README.md) defines the eligible failures. The retry is proven by offline fixtures only; no live 5xx response
-has exercised it ([#308](https://github.com/CVX-Hull/enactive/issues/308)). Host seconds and custodian mechanical resources are separate.
+[adapter reference](../../tools/player_host/README.md) defines the eligible failures. For an eligible pre-output refusal, the original request deadline covers the
+backoff and the retry. Actor time and custodian mechanical resources are separate.
+[Pre-output retry contract](https://github.com/CVX-Hull/enactive/issues/308) · [Live refusal evidence](../acceptance/2026-11-19-joanna-campground-memory-803.md).
 These operator counts do not enter the assignment, repeated model messages or
 actor tool results.
 
