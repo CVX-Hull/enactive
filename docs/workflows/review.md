@@ -53,9 +53,10 @@ or new contrary evidence, not the entire project after each edit. Stop reviewing
 when evidence is adequate for the next stage and material findings are resolved;
 unresolved required checks remain explicit blockers, never a green badge.
 
-Record the selection, the reviewer's coding agent, model and effort (when an agent
-reviews), and each finding marked confirmed or rejected in the existing issue or pull
-request. The lead may review a tightly coupled change itself when delegating would
+Record the selection in the existing issue or pull request. For each review, record who
+reviewed: the reviewer's coding agent, model and effort, or that a person did. For each
+finding, record whether it is confirmed or rejected and its disposition: what was done
+about it, or why it was rejected. The lead may review a tightly coupled change itself when delegating would
 add little; independent acceptance remains separate.
 
 **Controls and names.** Review rejects a new or widened control (a test, check,

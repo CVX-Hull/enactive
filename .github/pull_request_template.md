@@ -42,10 +42,12 @@ review, with its kind and "At a glance"; issue descriptions are replaced, not ap
 
 Models:
 
-<!-- State the author's coding agent, model and effort (or human). -->
+<!-- State the author's coding agent, model and effort (or human). Name a sub-agent only
+when a worker used a different model or effort. -->
 
 ## Review
 
 <!-- For a boundary or outcome change: which commit was reviewed. For each review: the
 reviewer's coding agent, model and effort (or human), and each finding marked confirmed
-or rejected. Do not present agent review as human approval. -->
+or rejected with what was done about it: fixed, deferred or followed up, and why if
+rejected. Do not present agent review as human approval. -->

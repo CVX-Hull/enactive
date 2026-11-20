@@ -65,6 +65,7 @@ function watch(clock, state) {
     if (event.type === 'provider-retry' && event.stage === 'started') state.started = true;
     if (event.type === 'abort') state.aborted = true;
     if (event.type === 'control-accepted') state.controlAccepted = true;
+    if (event.type === 'settled') state.settled = true;
   };
 }
 const summary = events => ({
@@ -96,8 +97,14 @@ test('a 60-second delay requested 34 seconds into a 60-second request is cut off
       assert.equal(state.started,undefined);
       clock.advance(1); await until(() => state.aborted, 'request timer');
       assert.equal(clock.at('abort'),REQUEST_DEADLINE_SECONDS * 1000);
-      // Run the clock past the instant the backoff would have ended (34 s + 60 s = 94 s).
-      clock.advance(40_000); await settleMicrotasks();
+      // The backoff would end at 34 s + 60 s = 94 s. A cancelled sleep lets the host settle
+      // before then; a sleep still running would hold it until 94 s.
+      while (!state.settled && clock.ms < 90_000) { clock.advance(1000); await realDelay(10); }
+      assert.equal(state.settled,true,'the host settled while the backoff would still be sleeping');
+      assert.ok(clock.ms < 94_000,`settled at ${clock.ms} ms, before the backoff's end at 94 s`);
+      assert.equal(secondFetchAtMs,undefined);
+      // Run the clock past 94 s as well: nothing is dispatched then either.
+      clock.advance(94_000 - clock.ms + 1000); await settleMicrotasks();
       assert.equal(secondFetchAtMs,undefined,'the abort cancelled the sleep; nothing is dispatched at 94 s');
     }),
   });
@@ -183,7 +190,7 @@ test('a 20-second delay fits: the second attempt starts at 54 s with the identic
   const {result,payloads,bodies,events} = await scenario(t,[
     init => { fetchStarted = true; return after(REFUSAL_AT_MS, () => badGateway(20))(init); },
     () => { secondFetchAtMs = clock.ms; return reply(); },
-  ],{configuration,timeoutSeconds:3600,onEvent:watch(clock,state),
+  ],{configuration,timeoutSeconds:3600,advanceCleanupTimers:()=>t.mock.timers.tick(1000),onEvent:watch(clock,state),
     synchronize:releaseOnFailure(t,async()=>{
       await until(() => fetchStarted, 'first fetch');
       clock.advance(REFUSAL_AT_MS); await until(() => state.eligible, 'eligible refusal');

@@ -12,16 +12,17 @@ scope: 'Offline review of ordinary lookup effort at six retained resource choice
 
 None of the six retained resource choices supports an efficiency comparison yet. Each case
 has one executed branch, and no case shows the same cutoff with and without a lookup. Where
-the historical player made an ordinary lookup, it took one or two tool calls. Tool time ran
-from 8.27 ms for a source read to 0.454 s for a menu. Each model turn that issued a lookup
-took about 5 to 11 s and cost under one cent. The 0.417 s baseline from #803 is
+the historical player made an ordinary lookup, it took one or two tool calls. Per call,
+tool time ran from 8.27 ms for a source read to 0.454 s for a menu call that also dropped
+wood. Per turn, each model turn that issued a lookup took about 5 to 11 s and cost under
+one cent; the one two-call lookup took 0.80 s of tool time and 17.1 s of model time. The 0.417 s baseline from #803 is
 tool time only. The model turn that issued it took 5.0 s.
 
 The second pass disagrees with the #803 record on one point. The ordinary item menu
 showing both the matchbox and the matchbook first opened at request 104, not request 109.
 That frame was still in the sent context when request 109 named the matchbox. In the
-microwave case, the gap came from reading a truncated yield list rather than from lookup
-cost. The comparison still lacks one observation: a prospectively enrolled cutoff where
+microwave case, rereading the captured frame would have left the yield unresolved: its
+list is truncated. What the player inferred from it is not in the trace. The comparison still lacks one observation: a prospectively enrolled cutoff where
 the target fact is missing from the sent context and from the action's own menu, with
 both routes observed from that same cutoff. That is conclusion (b) below.
 
@@ -70,7 +71,7 @@ measure.
 | Sent context | Exact replay: 298 parts, 87 images, 60 omitted. Sources 394, 396, 1441 and 867 omitted (indexes 71, 74, 158, 118). Sources 2821 and 2874 sent. Sent tool-intent text keeps "Pick up the matchbox at Morgan's feet." and "Take the nine-match matchbox." (requests 23 and 24, trace lines 310 and 323). The matchbook is named in no trace text before the cutoff (readback search); only the omitted pixels of 1441 show it. |
 | Handles | `player_source` was enabled (`actors/001/mcp.json`). The omitted sources 1441 (inventory: matchbook 20/20, matchbox 9/32) and 394 (matchbox 9/32) remained addressable. The inventory key and the item menu were both available. Actor 001 never called `player_source` in the whole trace. |
 | Lookup measured | Yes, after the cutoff. Request 104 combined depositing the wood with opening the item menu, intent "Deposit the wood in the ring and select a match to light it." One call, 453.62 ms tool, 4.6 s model, $0.00429, source 3315. Request 109 opened the menu again: one call, 416.66 ms tool, 5.0 s model, $0.00448, source 3415. Both frames show matchbook (20/20) and matchbox (9/32). |
-| Single normal lookup at cutoff | Readback: a `player_source` read of 1441 returns both containers and counts at about 08:02:41–08:02:46. Hypothetical at request 88. Its cost in this admission is unmeasured. The ordinary item menu needed for either ignition shows both alternatives anyway, so in this case a lookup adds no step. |
+| Single normal lookup at cutoff | Readback: a `player_source` read of 1441 returns both containers and counts at about 08:02:41–08:02:46. Hypothetical at request 88. Its cost in this admission is unmeasured. A `player_source` call at request 88 would have been one more tool call. The ordinary item menu needed for either ignition shows both alternatives anyway, without a separate lookup. |
 | Alternative | The carried full matchbook (20/20), shown in 1441, 3315 and 3415. |
 | Span to effect | Requests 88–114: 27 requests and calls, 170.4 s model, 183.3 s wall, $0.18297. Requests 109–114: 6 requests, 37.1 s wall, $0.02674. |
 
@@ -114,7 +115,7 @@ measure.
 
 | Item | Evidence |
 | --- | --- |
-| Cutoff | Request 69. Frame 3594 falls between day 63 04:00:06 and 04:01:55. Prior frames 938 and 939 were captured at requests 37–38, between day 62 17:11:32 and 17:11:42. The fact is about 10 h 49 min old. |
+| Cutoff | Request 69. Frame 3594, which that request returned, falls between day 63 04:00:06 and 04:01:55; a later reader reports that frame 3587, current at the cutoff, has the same bracket. Prior frames 938 and 939 were captured at requests 37–38, between day 62 17:11:32 and 17:11:42. The fact is about 10 h 49 min old. |
 | Intent sent | "Select the farmhouse to recover a sheet of metal from its unused microwave." (line 929). |
 | Sent context | Exact replay: 938 and 939 omitted (indexes 113 and 116). Brazier recipe 3507 and stable list 3587 sent. Earlier intents naming the microwave and "listed disassembly yield" (requests 35, 37 and 38) remain as sent text. |
 | Lookup measured | No `player_source` before the trip. The executed route was map, travel, approach, disassemble and verify: requests 69–73, 5 requests, 36.2 s wall, $0.01997. Disassembly at day 63 04:46:50 (3932) recovered wires, scraps, converters, an amplifier, a motor and a magnetron. 3963 shows no sheet metal. |
@@ -188,7 +189,8 @@ that meets all of the following:
 - the same cutoff is observed under both routes, a lookup and a re-observation or trip,
   by paired replay or a matched second admission.
 
-Malvern meets the first two conditions and shows why the third is the missing one: the
+Malvern meets the first two conditions, taking "the action's own menu" as the menu
+available at the cutoff before any travel, and shows why the third is the missing one: the
 lookup was made and walking to the trunk was feasible, but only one route was observed.
 
 Record the lookup calls, tool time and model time, plus the requests, wall time and
@@ -198,7 +200,8 @@ dollars beside it.
 
 The retained spans give scale only, not estimates of a difference: 5 to 33 requests,
 29 to 303 s of wall time, and $0.020 to $0.183 where a cost was reported. A lookup's own
-tool time (8 ms to 0.45 s) is negligible beside its model turn (4.6 to 10.8 s). Tool latency alone is the wrong unit,
+tool time (8 ms to 0.45 s per call) is negligible beside its model turn (4.6 to 10.8 s
+per turn). Tool latency alone is the wrong unit,
 including the 0.417 s baseline. Any new acquisition or paired replay needs its own priced
 decision.
 
@@ -213,11 +216,14 @@ decision.
 ## Separate reader
 
 A second reader, working from the sealed store without the first pass's scripts,
-recomputed every figure in the six tables with its own script over each `host.jsonl`,
-its own replay of the context manifests and the evaluator databases, and opened 30
-frames. The figures matched except those corrected above: the model-time range, one
-`player_source` latency taken from a later admission, one label, the wall-time range and
-the pooled median. It confirmed the three disagreements with the earlier records.
+recomputed the measured figures in the six tables with its own script over each
+`host.jsonl`, its own replay of the context manifests and the evaluator databases, and
+opened 30 frames. The Whitethorn query ranks are carried from the #791 record and were
+not recomputed. The figures matched except those corrected above: the model-time range,
+one `player_source` latency taken from a later admission, one label, the wall-time range
+and the pooled median. It confirmed three points where this review adds to or differs
+from the earlier records: the item menu already open at request 104 in #803, the grove
+cutoff falling after its map lookup, and the truncated microwave frame.
 
 It also read the frames the first pass had not: Joanna 3877, 3878, 3986, 4137, 4277,
 4452 and 4456, and every Malvern source from 14334 to 14616. No living survivor's name
