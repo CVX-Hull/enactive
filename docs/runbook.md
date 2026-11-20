@@ -81,4 +81,5 @@ frozen explicit host-adapter/MCP/context/route inputs under the
 
 [Coding-agent hosts](operations/coding-agents.md) maps instructions, delegation
 roles, gameplay command allowances and the optional player MCP entry for each
-supported lead-side coding agent.
+supported lead-side coding agent. [Choosing a model](operations/model-routing.md)
+says which model the lead gives each kind of engineering work.
