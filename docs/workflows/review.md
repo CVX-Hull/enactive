@@ -29,8 +29,11 @@ existing scoped review, not another approval stage or authority to reduce CI.
 
 A pull request that changes only the [owner decision log](../decisions/owner-decisions.md)
 or the [current work](../work.md) page gets at most one independent review, a
-clean-context one, and no second-family review (owner decision of 14 November 2026;
-R-CONTROL-BLOAT). Other changes get the review this page selects.
+clean-context one, and no further review from a second model family. Where a document
+change gets its one independent review, that review may come from a second model
+family in place of one from the lead's own. It is still the one clean-context review:
+none is added (owner decisions of 14 and 19 November 2026; R-CONTROL-BLOAT). Other
+changes get the review this page selects.
 
 For maintainer-facing design review, lead with the user outcome, a small boundary
 diagram when useful, important alternatives/tradeoffs, open decisions and evidence
