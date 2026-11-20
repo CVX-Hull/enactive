@@ -90,4 +90,5 @@ The [session design](../design/curator-session.md#admission-and-grooming) owns w
 admission and grooming sessions read and do, their briefs, and publication rules.
 [Host operations](../operations/curator-hosts.md) owns adapter configuration and the
 zero-spend stand-in lane. Curator sessions triggered during live play are not
-implemented.
+implemented; [running the curator during play](../design/live-curator-integration.md)
+is their design.

@@ -19,6 +19,9 @@ evaluation or the curator, and it opens no network or process.
 ## Projection
 
 [`projection.project`](../../harness/trace/projection.py) writes `trace-projection/2`.
+It reads sealed sessions only. A staged snapshot of a session that is still being
+played, which it could read in the same way, is designed in
+[running the curator during play](live-curator-integration.md#the-snapshot).
 
 **What it contains:**
 - **Frames**, copied after their SHA-256 matches the sealed metadata. Frame IDs must

@@ -459,6 +459,9 @@ formats ([player host](../contracts/player-host.md), [evaluation](../contracts/e
 
 ### What the curator must publish, and when
 
+How a curator would run beside play to meet these, and what a first live run measures,
+is designed in [running the curator during play](live-curator-integration.md).
+
 | Requirement | Why |
 | --- | --- |
 | Facts in the game-neutral format `curator-fact/3`: free text with a type, citations, an optional subject and the order of sighting; retire and merge operations ([general memory](general-memory.md#1-the-fact-format-and-the-curator)) | Compound records cannot be kept current; a fixed set of kinds or a required place assumes one genre of game |
