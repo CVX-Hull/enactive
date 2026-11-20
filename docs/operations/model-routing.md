@@ -74,15 +74,17 @@ the pull request.
 
 - **Claude Code** reads the project's `.claude/agents/` ahead of a user's own
   definitions of the same name. The lead names another model for one task with the
-  delegation call's model override. The files were not exercised as sub-agents.
+  delegation call's model override. The `reviewer` and `Explore` files have each run
+  once as a sub-agent; `locator` and `worker` have not.
 - **Codex** reads `.codex/agents/` in a checkout the user trusts. All four model
-  selectors answered a one-word prompt on 19 November 2026 (CLI 0.167.1); the role files
-  themselves were not exercised as sub-agents.
+  selectors answered a one-word prompt on CLI 0.167.1 and again on 0.171.0; the role
+  files themselves were not exercised as sub-agents.
 - **Antigravity** role files use its native aliases; a full model identifier in a
-  role file was not tested. On 19 November 2026 (CLI 1.5.13) `agy agents` listed none of
-  these four files from a worktree or from a scratch copy, and the cause was not found.
-  They are therefore not yet usable as sub-agent roles on that host: a session there is
-  given the role by quoting `.agents/roles/` in its brief.
+  role file was not tested. `agy agents` (CLI 1.5.13) listed all four files from the
+  main checkout, and none from a worktree of it or from a scratch copy; no other place
+  was tried. They have not run as sub-agents: the one Antigravity lead session so far
+  started its explorer as the host's `research` type and defined its own `worker` type
+  ([trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md)).
 
 ## Quota and spending
 
