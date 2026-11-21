@@ -12,7 +12,7 @@ for a piece of engineering work. The choice is the lead's judgment for each task
 kind of work, the [delegate profiles](delegate-profiles.md) say how each coding agent
 and model has done in this repository, and neither is a rule. No tool or check chooses a
 delegate from the table below, and the [delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent)
-starts whatever the lead names. It concerns the lead's own delegation only: the playing actor's, curator's
+starts whatever the lead names. It concerns the lead's own model and delegation only: the playing actor's, curator's
 and judges' models are frozen per run under the
 [player host contract](../contracts/player-host.md).
 
@@ -54,11 +54,11 @@ model to give it.
 | --- | --- | --- | --- | --- |
 | Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku and Luna, read at Max; Argon, effort not read | Index 58 at High and at Extra-high; the patch score of 49 was read at Extra-high only |
 | Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at Extra-high; Claude Opus 5.5 at High (not read) | Claude Sonnet 5.5 at Max as the first choice | Sol's index of 50 at 12.6 minutes, the least time read; no figure isolates work from a brief. One [matched run](#matched-runs-on-this-repositorys-leaves) here, on 20 November 2026 (issue 834): both attempts passed acceptance with no repair; GPT-6.2 Sol at Extra-high was preferred blind over Claude Opus 5.5 at High for how its checks failed, and took 635 seconds against 510, then 502 more for one repair after review. One observation moves no default |
-| Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Sonnet 5.5 at Medium (not read) as a sub-agent | Claude Haiku 5.5 and GPT-6 Luna, both read at Max | Codebase question scores of 64 to 68 for the five named here against 34 and 38 |
+| Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Sonnet 5.5 at Medium (not read) as a sub-agent | Claude Haiku 5.5 and GPT-6 Luna, both read at Max | Codebase question scores of 64 to 68 for the four of these that were read against 34 and 38; Sonnet at Medium was not read |
 | Locating files and mechanical sweeps | the smallest model the host serves | none needed | a large model | Cost only; no figure read |
 | Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations |
 | Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | Judgment; no public evidence found |
-| Standards and pull-request prose | the lead | none known | none known | Judgment; no public evidence found. One [matched run](#matched-runs-on-this-repositorys-leaves) here, on 20 November 2026 (issue 811): both attempts passed acceptance with no repair; the lead's model, Claude Fable 5.2 at High, was preferred blind over GPT-6.2 Sol at Extra-high, which took 406 seconds against 710. One observation moves no default |
+| Standards and pull-request prose | the lead | GPT-6.2 Sol at Extra-high | none known | Judgment; no public evidence found. One [matched run](#matched-runs-on-this-repositorys-leaves) here, on 20 November 2026 (issue 811): both attempts passed acceptance with no repair; the lead's model, Claude Fable 5.2 at High, was preferred blind over GPT-6.2 Sol at Extra-high, which took 406 seconds against 710. One observation moves no default |
 | Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found |
 | Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | The first choice is judgment; wrong-answer rates were read for those two models only |
 | Review of code | the host's reviewer role, clean context | another family's reviewer when the window is spent | acting on a quoted passage before checking it against the tree | The choice is judgment; reviewer products built on two Claude models were read, with no effort reported |
@@ -108,8 +108,9 @@ on the brief's Role line and in the pull request.
 - **Read the remaining quota before a large delegation.** The settings that keep paid
   overflow off on each host have not been read for this project; check them in each
   host's own settings before relying on them.
-- **Spend scarce windows where they lead.** The lead's own model does the hard changes;
-  bounded and locating work goes to cheaper models.
+- **Spend the scarcest window on the work that needs it.** The hard-change row's first
+  choice and substitutes are the candidates to consider for a hard change; bounded and
+  locating work can go to cheaper models.
 - **Keep the lead's context small.** The lead's context is sent again on every
   request. In the one lead session measured here the lead's own requests were 72% to
   74% of the tokens' list-price equivalent, and about half of the lead's part was
@@ -121,6 +122,27 @@ on the brief's Role line and in the pull request.
   wide reading and long command output to a sub-agent that returns a short report. This
   is guidance and nothing checks it. The 300,000 figure is a judgment from that one
   session, not a measured optimum.
+
+## When the lead's model has no quota left
+
+The lead role passes to another session or coding agent
+([handing over through the issue](../standards/agents.md#the-leads-duties)). The
+readers found no comparison of these configurations as leads, here or in public, so
+this is where to start thinking, with its reasons, and not a default
+([evidence read on 20 November 2026](../acceptance/2026-11-20-lead-succession-evidence-866.md)):
+
+| What is spent | Where to start | Then | Why |
+| --- | --- | --- | --- |
+| Only the limit of Claude Fable 5.2 | Claude Code on Claude Opus 5.5, at High or above | Codex on GPT-6.2 Sol at Extra-high, then GPT-6.2 Astra at Extra-high | Opus made more lead requests than Fable in the transcripts sampled here, on the coding agent whose lead workflow is in use. Its effort as lead was not recorded; one public index that is not specific to coding puts it seven points lower at High than at Max |
+| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high; the Antigravity app on Gemini 4 Neon at High with the owner present, for engineering work that needs no gameplay | Sol has the local record of the work a lead does: code preferred blind and nine confirmed review findings. Trying Astra first for a hard change with open design is judgment: no local attempt compares it with Sol, and the maker estimates about a third as many Astra messages as Sol messages in five hours on its smaller plans. The one Antigravity lead session needed the owner and a second session to finish; for a watched documentation leaf it may come before Astra |
+
+- **Check which limit the session shows as spent first.** Each coding agent shows what
+  remains in a session ([delegate profiles](delegate-profiles.md)).
+- **A Codex lead has gaps to route around.** The delegate call has not been run from
+  one, and its sandbox denies the network by default
+  ([hosts page](coding-agents.md#starting-a-delegate-on-any-coding-agent)).
+- **The duty to verify a delegated result does not change with the lead**
+  ([the lead's duties](../standards/agents.md#the-leads-duties)).
 
 ## Matched runs on this repository's leaves
 
