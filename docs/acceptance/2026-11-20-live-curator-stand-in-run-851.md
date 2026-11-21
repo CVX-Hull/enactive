@@ -34,9 +34,9 @@ scope: 'Zero-cost runs of the whole live curator arrangement: the real guardian,
   in any run. The stand-in was changed so that no submission is rejected, so a rejected
   window was not exercised here either.
 - **Owner decision needed.** The price of the paid live run, proposed again in the
-  [last section](#the-price-of-the-paid-run-proposed-again): forecast about $3.50 to
-  $3.90, planning ceiling $18.00, unchanged from the corrected proposal. Nothing is
-  approved by this record.
+  [price section](#the-price-of-the-paid-run-proposed-again): forecast about $3.50 to
+  $3.90, planning ceiling $18.50, which is $0.50 above the corrected proposal's because
+  the forecast now allows twelve sessions. Nothing is approved by this record.
 
 No game, no model request, $0 spent. The stand-in's cost figures are nominal and are not
 money. [Live curator design](../design/live-curator-integration.md) ·
@@ -60,22 +60,28 @@ measure below), `summary.txt`, the run directory `run/stand-in-admission/`, the 
 status file `status-samples.jsonl`, the writer's records and a copy of the knowledge
 repository.
 
-Three earlier runs are kept beside them: `trial-212642`, `2026-11-20-213027` and
+Four earlier runs are kept beside them: `trial-212642`, `2026-11-20-213027` and
 `2026-11-20-213328`, made on the runner before its review fixes (`6bcd15fb`), and
 `2026-11-20-final-runner-head-a`, made on the runner's final head before the script
 required the status's new fields. All four passed the measures the script had at the
-time. The second and third are the runs that showed the status defect.
+time. All three runs on `6bcd15fb` have the status defect; it was measured in the two
+dated ones, since the trial's script did not yet compare the status against the sealed
+store.
 
 Settings: two actors of 45 input steps each, one step a second, with a handoff between
 them; the runner's defaults for the trigger (20 steps), the ceiling (40), the poll (15 s)
 and the look at the tags while a session runs (5 s). The runner's knowledge repository was
-new for each run. Each run took about 91 s with the runner and 90 s more for the writer
-alone.
+new for each run. The runner's configuration: arm `terra`, `cap_usd` 1.00,
+`session_cap_usd` 0.25, and for the host at most 10 requests, 4,096 output tokens and
+120 s a session; a paid run's caps and host bounds differ. Each run took about 91 s with
+the runner and 90 s more for the writer alone.
 
 **Real.** `run_supervised` with its `supervise` loop, teardown and `watch-terminal.json`;
 its `--curator-runner` path (the read lock created before the custodian, the runner
 started after it outside supervision, its termination); the gateway, the viewer and the
-keep-awake helper as the guardian starts them, since none needs the game; the runner
+keep-awake helper as the guardian starts them, since none needs the game (nothing
+listens on the custodian's port, so the gateway's path to the custodian is not
+exercised); the runner
 process `tools.curator_host.live_runner` with `stage`, the sandbox, the Node curator host,
 the proxy and the gate; the custodian's own close-out, `close_store`, and a real
 `SessionStore`.
@@ -86,13 +92,16 @@ the proxy and the gate; the custodian's own close-out, `close_store`, and a real
 | --- | --- | --- |
 | The custodian's process | The guardian's `popen` is wrapped so the custodian's argv starts the script's `writer`. It writes `started.json`, `ready.json` and a `campaign-receipt/7` receipt as the custodian does, appends finished operations through `tests.curator_trace`'s writer (frames, host log, a handoff that seals the actor), starts and reaps a stand-in native process so the receipt's native fields are true of a real process, and closes the store through `close_store` | No game and no player host |
 | Package preflight | A fixed profile and a route naming a dummy credential variable | No frozen package, clean tree or game |
+| The package's manifest | A synthetic `campaign-run/10` manifest with no lineage or admission label and a field naming it a substitute | The guardian checks that the manifest is unchanged |
+| Two fields of the receipt | The writer's receipt asserts that the deciding hosts are quiescent and input authority is revoked; the guardian's terminal coverage reads them | There are no hosts and no input authority here |
 | The route credential | A dummy value in that variable | No provider |
 | The provider | `tests/curator_stand_in.py`'s `StandIn` on loopback. In this process its submission gets a fact identity from the first frame it cites, and adds the `control` type only while the base version lacks it | As it is, the stand-in submits fact `f1` and type `control` each time; the gate rejects the second window as a duplicate, and two consecutive rejections stop the runner by its own rule |
 
 Before running, the script checks that the runner's configuration names only the loopback
 stand-in, that the runner would present only the fixed loopback key, and that the
-configuration is refused with any other upstream; it removes the provider key's variable
-from its own environment.
+runner's configuration reader refuses an upstream that is neither loopback nor the
+provider's own origin (probed with one such address); it removes the provider key's
+variable from its own environment.
 
 ## The measures
 
@@ -105,9 +114,10 @@ are given as first run / second run where they differ.
 | Windows examined, in order | `001` 1–31, `001` 32–46 (the tail after the handoff; 14 frames, the handoff has none), `002` 1–33; all accepted; first and last operation of each equal the sealed trace's step numbering | `curator-runner/examined.jsonl`, the sealed store |
 | Session time (runner's start row to end row) | 1.2, 1.0, 1.5 s / 1.2, 1.6, 1.6 s | `examined.jsonl` |
 | Status at each session's start → end: lag, backlog, covered prefix end (ordinal) | `001` 1–31: 31, 31, none → 0, 0, 31. `001` 32–46: 17, 17, 31 → 2, 2, 46. `002` 1–33: 33, 33, 46 → 0, 0, 79 | `curator-runner/status.json`, sampled every 50 ms |
+| Distance from the latest stamp at each session's start → end (descriptive only) | unknown → 0; 17 → 2; 33 → 0 | `status.json` samples |
 | Lag over time (position, lag at each change) | 1, 1; 16, 16; 31, 31; 31, 0; 48, 17; 48, 2; 64, 18; 79, 33; 79, 0 (both runs) | `status.json` samples |
 | Left unexamined at the end | Runner's final status: lag 0, backlog 0, nothing unexamined, as of operation 79, steps after it unknown. Against the sealed store: `002` 34–45, 12 steps, lag 12 of 91 operations | `status.json`, the sealed store |
-| Snapshots | 6 polls, 6 reads, none failed, over bound or refused; 4.6 reads a minute; 5 of 6 reads saw more operations than the one before | `curator-runner/polls.jsonl` |
+| Snapshots | 6 polls, 6 reads, none failed, over bound or refused; 3.9 reads a minute, from the gaps between poll starts (the two reports' own figure, 4.65 and 4.62, counted six reads over five gaps; the script is corrected); 5 of 6 reads saw more operations than the one before | `curator-runner/polls.jsonl` |
 | Snapshot hold (bound 2 s) | median 1.9 / 0.8 ms, max 2.8 / 2.9 ms | `polls.jsonl` |
 | Read transaction (bound 1.5 s) | median 1.1 / 0.5 ms, max 1.7 / 1.7 ms | `polls.jsonl` |
 | Staging | median 37 / 26 ms, max 49 / 55 ms | `polls.jsonl` |
@@ -166,8 +176,8 @@ No required measure failed in any run. Five things were found.
   passes it that root. Nothing browsed the viewer in these runs. Not changed.
 - **The runner never saw the closing marker.** In every run the writer closed about 12 s
   after the last poll, inside the 15 s interval, and the guardian's termination ended the
-  runner first. The other ending, a read refused as closing, is covered by the runner's
-  tests.
+  runner first. The other endings, a read refused as closing and the runner seeing the
+  custodian's receipt, are covered by the runner's tests.
 - **In the trial run the closed store left an empty `-wal` and a `-shm` file**;
   `sealed()` accepted it, since the log was empty. No later run left either. The cause
   was not found. A read-only connection opened after a clean close leaves exactly these
@@ -183,15 +193,15 @@ No required measure failed in any run. Five things were found.
   polls' growth that reaches 20, up to 40.
 - **Each handoff adds a session.** An actor's tail is taken as its own window however
   short.
-- **One snapshot a poll, 4.6 a minute** at the default 15 s poll, each holding the read
+- **One snapshot a poll, 3.9 a minute** at the default 15 s poll, each holding the read
   lock for milliseconds over a store of up to 79 operations. A real admission's store is
   larger and its frames are real; staging time at that size is not measured.
 - **The end of an admission leaves work for the session after it.** Here the last 12 of
   91 operations, those finished after the last poll, were not examined live. The last
   actor does not hand off, so its remainder is taken live only as a full window.
-- **The proxy reserves far more than it charges.** In the earlier runs it reserved about
-  $0.13 for each request at the `terra` arm's frozen price with `max_output_tokens` 4096,
-  against a nominal charge of $0.0012. A paid run's reservations depend on its own host
+- **The proxy reserves far more than it charges.** In every run it reserved from about
+  $0.07 to $0.13 for a request, rising with the prompt within a session, at the `terra`
+  arm's frozen price with `max_output_tokens` 4096, against a nominal charge of $0.0012. A paid run's reservations depend on its own host
   settings and are not measured here.
 - **The runner adds nothing measurable to teardown** in this arrangement.
 
@@ -201,14 +211,27 @@ The owner decided on 20 November 2026 that the price is proposed again once the 
 the closing marker and the runner are merged and this run has passed
 ([decision log](../decisions/owner-decisions.md)). They are, and it has. The figures are
 those of the [corrected proposal](2026-11-20-live-curator-run-price-correction-836.md),
-changed only where the build changed them.
+changed only where the build changed them: the count of sessions, and the run cap that
+follows from it.
 
 | Part | Forecast | Planning limit, and what enforces it |
 | --- | --- | --- |
 | Play, one admission of about 200 decisions | $1.49 | **$3.00**: the package's `spend_limit_usd` |
-| Curator, ten to twelve sessions | $2.00 to $2.40 at the pilot's median of $0.20 | **$14.00** for the run (`cap_usd`), **$8.00** for a session (`session_cap_usd`), in the runner's configuration |
+| Curator, ten to twelve sessions | $2.00 to $2.40 at the pilot's median of $0.20 | **$14.50** for the run (`cap_usd`), **$8.00** for a session (`session_cap_usd`), in the runner's configuration |
 | Not allocated | | $1.00 |
-| **Total** | **about $3.50 to $3.90** | **$18.00** |
+| **Total** | **about $3.50 to $3.90** | **$18.50** |
+
+**The count of sessions.** About 200 operations in windows of 20 to 22 steps is nine or
+ten windows, and each handoff adds one tail session. Ten to twelve assumes at most two
+handoffs; the last actor's remainder after the runner's last read is not examined live.
+
+**The run cap.** The correction sized it so that the last session still has its $8.00
+after every earlier one cost the pilot's largest, $0.57: for ten sessions, $13.13. For
+twelve it is $8.00 + 11 × $0.57 = $14.27, so the cap rises from $14.00 to $14.50 and the
+ceiling from $18.00 to $18.50. The forecast spend does not rise with it: the cap is
+room to reserve. With more than two handoffs, or sessions dearer than the pilot's
+largest, a late session starts with less than $8.00 and may be refused a reservation,
+which stops the runner and not play.
 
 **What the build changed.**
 
@@ -216,17 +239,20 @@ changed only where the build changed them.
   makes at most twelve sessions. The runner as built has no limit on the number of
   sessions: it is bounded by its run cap, by a refused reservation, and by its failure
   rules. The forecast rises from ten sessions to ten to twelve because each handoff
-  adds a tail session; an admission with more handoffs has more.
+  adds a tail session, and the run cap rises with it, as above.
 - **Windows can be larger than 20 steps.** At the ledger's median pace of 7.69 decisions
   a minute a 15 s poll adds about two steps, so a window is 20 to 22 steps if operations
   and decisions stay close to one to one. A faster player gives larger windows, up to 40,
   and fewer sessions, each reading more.
 - **A request in flight when the runner is killed is not counted toward its cap.** It is
-  one request, bounded by its reservation, and falls within the $1.00 not allocated.
+  one request, bounded by its reservation. It falls within the $1.00 not allocated only
+  while one reservation is under $1.00, which depends on the paid run's
+  `max_output_tokens`; that setting is shown with the runner's configuration before the
+  run.
 - **The last steps of the admission are not examined live.** The run's figures for lag
   and coverage end at the runner's last read, and its status says so.
 
-**What is unchanged.** $18.00 is a planning ceiling made of limits the software enforces
+**What is unchanged.** $18.50, like the $18.00 before it, is a planning ceiling made of limits the software enforces
 on what the provider reports; it is not a hard cap. A hard cap needs a provider key whose
 credit limit the owner sets for the run. The run is one admission, with no delivery
 inside it, and is not repeated on its own result. The reading of each result is the
@@ -246,5 +272,12 @@ needed to make the run.
 - The stand-in's sessions take about a second and three requests. A real session took a
   median of 99 s in the pilot, during which play goes on and the tags are watched; that
   timing is not exercised here.
+- Some of the script's required measures are weaker than their names, though none
+  passed emptily in these runs: the check on the final status requires that it names a
+  read, not that it names the last one (it did: operation 79); the check on reads after
+  the marker counts successful reads only; and the check on the runner's ending does not
+  accept the ending in which the runner sees the receipt. That the writer was never
+  delayed rests on its busy count and on one overlapping step, which are reported and
+  not required.
 - The forecast is the pilot's and the ledger's figures read again. No curator session
   beside live play has been priced.

@@ -34,7 +34,8 @@ The writer is also run alone once, with no guardian and no runner, for the pace 
 outputs go under the named output directory (refused if it exists), inside the main checkout's
 `.runtime/`, except the runner's knowledge repository: the guardian starts the runner without
 `--runtime-root`, so its runtime root is this code checkout's `.runtime/`, and the repository is
-made fresh there and copied into the output directory at the end.
+made fresh there and copied into the output directory at the end. The viewer the guardian starts
+also writes its evaluations under this code checkout's `.runtime/evaluations/<session>`.
 
 Every measure is read from the files a live run writes: the runner's `status.json` (sampled while
 it runs), `examined.jsonl`, `versions.jsonl`, `polls.jsonl` and session summaries and proxy
@@ -456,8 +457,9 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
         staging_seconds=spread([p['staging_seconds'] for p in reads]),
         hold_bound_seconds=READ_HOLD_BOUND_SECONDS, transaction_bound_seconds=TRANSACTION_BOUND_SECONDS,
         poll_seconds=status['settings']['poll_seconds'], positions=[(p.get('position') or {}).get('ordinal') for p in reads])
-    span = (polls[-1]['ended_wall'] - polls[0]['began_wall']) / 60 if len(polls) > 1 else None
-    report['snapshots']['reads_per_minute'] = round(len(reads) / span, 2) if span else None
+    # A rate over the gaps between poll starts: n polls span n-1 gaps.
+    span = (polls[-1]['began_wall'] - polls[0]['began_wall']) / 60 if len(polls) > 1 else None
+    report['snapshots']['reads_per_minute'] = round((len(polls) - 1) / span, 2) if span else None
     growing = [p for p in reads if marker is None or p['ended_wall'] < marker['closing_wall']]
     positions = [(p.get('position') or {}).get('ordinal') for p in growing]
     report['snapshots']['reads_while_growing'] = sum(1 for a, b in zip(positions, positions[1:]) if b > a)
