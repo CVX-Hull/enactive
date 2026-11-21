@@ -23,7 +23,7 @@ from harness.server import serve
 from tools.campaign_package import preflight,usd_text
 from tools.campaign_player import run_hosts,write_new
 
-# A curator read admitted before the closing marker must end within this bound.
+# A curator reader's whole hold of the admission lock, from taking it to releasing it, fits this bound.
 READ_BOUND_SECONDS=2.0
 
 

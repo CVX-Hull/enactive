@@ -470,8 +470,14 @@ def live_store(directory):
 
 def reader(directory,hold):
     process=subprocess.Popen([sys.executable,'-c',READER,str(directory),str(hold)],stdout=subprocess.PIPE,text=True)
-    assert process.stdout.readline()=='admitted\n'
+    try:assert process.stdout.readline()=='admitted\n'
+    except BaseException:
+        stop(process);raise
     return process
+
+
+def stop(process):
+    process.kill();process.wait(5);process.stdout.close()
 
 
 def close_out(directory,store):
@@ -490,8 +496,9 @@ def test_close_out_waits_for_an_admitted_read_and_leaves_a_sealed_store(tmp_path
     try:
         before=time.time();elapsed,errors=close_out(tmp_path,store)
         assert process.wait(5)==0 and errors=={}
-    finally:process.kill()
-    assert .3<elapsed<campaign_run.READ_BOUND_SECONDS
+    finally:stop(process)
+    # No lower limit on the wait: had it not waited, the log below would be non-empty.
+    assert elapsed<campaign_run.READ_BOUND_SECONDS
     wal=tmp_path/'session.sqlite3-wal'
     assert not wal.exists() or wal.stat().st_size==0
     with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT id FROM actors').fetchall()==[('actor',)]
@@ -511,8 +518,17 @@ def test_close_out_stops_waiting_at_the_read_bound_and_still_closes(tmp_path):
         # The residual: a read held past the bound keeps the log, and the sealed check refuses it.
         assert (tmp_path/'session.sqlite3-wal').stat().st_size>0
         with pytest.raises(SealedStoreError),sealed(tmp_path/'session.sqlite3'):pass
-    finally:process.kill();process.wait(5)
+    finally:stop(process)
     assert (tmp_path/'store-closing.json').exists()
+
+
+def test_a_failed_marker_or_lock_step_is_recorded_and_the_store_still_closes(tmp_path):
+    from harness.trace.stores import sealed
+    store=live_store(tmp_path);(tmp_path/'curator-read.lock').touch(mode=0);(tmp_path/'store-closing.json').write_text('{}')
+    elapsed,errors=close_out(tmp_path,store)
+    assert errors=={'store_closing_marker_error':'FileExistsError','curator_read_wait_error':'PermissionError'}
+    assert elapsed<campaign_run.READ_BOUND_SECONDS
+    with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT id FROM actors').fetchall()==[('actor',)]
 
 
 def test_close_out_without_a_configured_reader_writes_no_marker_and_does_not_wait(tmp_path):

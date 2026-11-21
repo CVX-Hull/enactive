@@ -136,35 +136,41 @@ machine, and if it outlived the writer it could interfere with the checkpoint an
 at close. The custodian's own quarter-second timeout does not bound the read, and does
 not protect input from shared disk load or storage errors. So:
 
-- the read transaction has its own time bound, proposed at two seconds, and is cancelled
-  when it passes it;
+- the read has its own time bound, proposed at two seconds for the reader's whole hold
+  of the admission lock described below, from taking it to releasing it. The read
+  transaction inside it is cancelled a second and a half after the lock is taken, so
+  that cancelling and closing fit within the two seconds;
 - **the close needs the custodian's cooperation.** The custodian closes the store
   before it writes its terminal receipt and exits, and the guardian learns only of the
   exit, which is too late to stop a read. A read still open at that moment can keep the
   last connection from clearing the log, and `sealed()` would then refuse the finished
   session. So, in its close-out and after input authority is revoked, the custodian
-  writes a closing marker and waits for the read bound before it closes the store; the
+  writes a closing marker and waits up to the read bound before it closes the store; the
   runner opens no read once the marker exists. This is the one change to the custodian
   (`close_store` in `tools/campaign_run.py`). It is in close-out, not in the input loop:
   input is revoked at once, and only the store's closing waits;
 - **the admission protocol.** Both files are in the run directory, beside
   `session.sqlite3`. `curator-read.lock` is the read admission lock. It exists only
-  when a reader is configured, is created before the custodian starts, and is never
-  created by the custodian. The marker is `store-closing.json`, created exclusively and
+  when a reader is configured, is created before the custodian starts, is never
+  created by the custodian, and is not removed or replaced while the session is live:
+  a replaced file is a different file, and its locks would never meet. The marker is `store-closing.json`, created exclusively and
   never removed:
   `{"schema":"store-closing/1","session":<session>,"closing_wall":<wall seconds>}`.
   The runner admits a read in this order: it opens the existing lock file, takes a
   shared, non-blocking `flock` on it, checks that the marker does not exist, and only
-  then opens its connection; it holds the shared lock until the connection is closed. A
-  refused lock or an existing marker refuses the read. The custodian, only when the lock
+  then opens its connection; it holds the shared lock until the connection is closed.
+  Closed means every cursor is closed first and then the connection: a connection
+  closed with a cursor still part-way through its results keeps its read transaction
+  and its files open. A refused lock or an existing marker refuses the read. The custodian, only when the lock
   file exists, writes the marker, then polls an exclusive, non-blocking `flock` until it
   is acquired or the two-second bound has passed, and closes the store either way,
   holding the lock until the store is closed. Without the lock file there is no marker
   and no wait. Because a reader takes its lock before it checks for the marker, a read
   is either admitted before the marker exists, and holds the lock the custodian waits
   for, or it is refused: a reader held up between its check and its connection still
-  holds the lock. What remains is a reader that stalls past the bound with its
-  connection open: the store is closed anyway and can keep a non-empty log. If a
+  holds the lock. What remains is a reader that holds its lock past the bound, or
+  releases it with its connection not fully closed: the store is closed anyway and can
+  keep a non-empty log. If a
   session's store still has a non-empty log after close, the sealed session cannot be
   read, and that is reported, whatever caused it;
 - the claim this design makes is narrow: **curation is not in the input path, and a
