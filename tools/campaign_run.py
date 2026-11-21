@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from decimal import Decimal
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -22,6 +23,9 @@ from harness.server import serve
 from tools.campaign_package import preflight,usd_text
 from tools.campaign_player import run_hosts,write_new
 
+# A curator read admitted before the closing marker must end within this bound.
+READ_BOUND_SECONDS=2.0
+
 
 def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool) -> dict:
     """Preserve the observed provider subtotal and the unknown cost counts separately."""
@@ -36,6 +40,33 @@ def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool
         observed_attempts=driver['observed_attempts'] if driver else 0,
         observed_recall_attempts=driver['observed_recall_attempts'] if driver else 0,
         spend_complete=driver['spend_complete'] if driver else not hosts_started)
+
+
+def close_store(directory: Path,session: str,close,attempt) -> None:
+    """Close-out only, after input is revoked: refuse new curator reads, wait within the bound for admitted ones, then close.
+
+    Without a configured reader (no `curator-read.lock`) the store closes at once. A reader
+    holds a shared lock from admission until its connection closes and is refused once the
+    marker exists; the exclusive lock is held, when acquired, until the store is closed.
+    """
+    lock=directory/'curator-read.lock'
+    if not attempt('curator_read_lock',lock.exists):
+        attempt('store_close',close);return
+    attempt('store_closing_marker',lambda:write_new(directory/'store-closing.json',
+        dict(schema='store-closing/1',session=session,closing_wall=time.time())))
+    def wait():
+        descriptor=os.open(lock,os.O_RDONLY);end=time.monotonic()+READ_BOUND_SECONDS
+        try:
+            while True:
+                try:fcntl.flock(descriptor,fcntl.LOCK_EX|fcntl.LOCK_NB);return descriptor
+                except BlockingIOError:
+                    if time.monotonic()>=end:return descriptor
+                    time.sleep(.01)
+        except BaseException:
+            os.close(descriptor);raise
+    descriptor=attempt('curator_read_wait',wait)
+    attempt('store_close',close)
+    if descriptor is not None:attempt('curator_read_release',lambda:os.close(descriptor))
 
 
 def run_campaign(directory: Path) -> dict:
@@ -92,7 +123,8 @@ def run_campaign(directory: Path) -> dict:
         if server is not None:
             attempt('server_shutdown',server.shutdown);attempt('server_close',server.server_close)
             attempt('server_join',lambda:server_thread.join(2))
-        if runtime is not None:attempt('store_close',runtime.store.close)
+        # Input is revoked above; only the store's closing may wait for an admitted curator read.
+        if runtime is not None:close_store(directory,profile['session'],runtime.store.close,attempt)
         if memory is not None:attempt('player_store_close',memory.close)
         if driver is None:
             # Without a completed driver report, do not call an actor absent.

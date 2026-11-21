@@ -142,14 +142,29 @@ not protect input from shared disk load or storage errors. So:
   last connection from clearing the log, and `sealed()` would then refuse the finished
   session. So, in its close-out and after input authority is revoked, the custodian
   writes a closing marker and waits for the read bound before it closes the store; the
-  runner opens no read once the marker exists. This is the one change to the custodian.
-  It is in close-out, not in the input loop: input is revoked at once, and only the
-  store's closing waits. A marker and a wait still leave a race, if the runner checks
-  for the marker, is held up, and opens its connection after the wait. Closing that
-  race needs the admission of a read and the closing transition to be one coordinated
-  step, and the reader leaf settles how. If a session's store still has a non-empty log
-  after close, the sealed session cannot be read, and that is reported, whatever caused
-  it;
+  runner opens no read once the marker exists. This is the one change to the custodian
+  (`close_store` in `tools/campaign_run.py`). It is in close-out, not in the input loop:
+  input is revoked at once, and only the store's closing waits;
+- **the admission protocol.** Both files are in the run directory, beside
+  `session.sqlite3`. `curator-read.lock` is the read admission lock. It exists only
+  when a reader is configured, is created before the custodian starts, and is never
+  created by the custodian. The marker is `store-closing.json`, created exclusively and
+  never removed:
+  `{"schema":"store-closing/1","session":<session>,"closing_wall":<wall seconds>}`.
+  The runner admits a read in this order: it opens the existing lock file, takes a
+  shared, non-blocking `flock` on it, checks that the marker does not exist, and only
+  then opens its connection; it holds the shared lock until the connection is closed. A
+  refused lock or an existing marker refuses the read. The custodian, only when the lock
+  file exists, writes the marker, then polls an exclusive, non-blocking `flock` until it
+  is acquired or the two-second bound has passed, and closes the store either way,
+  holding the lock until the store is closed. Without the lock file there is no marker
+  and no wait. Because a reader takes its lock before it checks for the marker, a read
+  is either admitted before the marker exists, and holds the lock the custodian waits
+  for, or it is refused: a reader held up between its check and its connection still
+  holds the lock. What remains is a reader that stalls past the bound with its
+  connection open: the store is closed anyway and can keep a non-empty log. If a
+  session's store still has a non-empty log after close, the sealed session cannot be
+  read, and that is reported, whatever caused it;
 - the claim this design makes is narrow: **curation is not in the input path, and a
   failed runner stops nothing**. It is not that play cannot be affected.
 
