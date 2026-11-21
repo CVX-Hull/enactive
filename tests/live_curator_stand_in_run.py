@@ -427,7 +427,11 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
                            for s in samples]
     report['final_status'] = {k: status.get(k) for k in ('state', 'stop_reason', 'position', 'covered_prefix', 'lag',
                                                          'stamp_distance', 'backlog', 'unexamined', 'unconfirmed',
-                                                         'failures', 'last_confirmed', 'look_error')}
+                                                         'failures', 'last_confirmed', 'look_error',
+                                                         'as_of', 'after_last_read')}
+    # The runner cannot know steps finished after its last read; its final status must say so.
+    checks['final_status_says_what_it_is_as_of'] = (isinstance(status.get('as_of'), dict)
+                                                     and status.get('after_last_read') == 'unknown')
     checks['every_publication_confirmed'] = status.get('unconfirmed') == []
     # The runner's own `unexamined` and `lag` count only what its last snapshot saw; against the
     # sealed store, the steps finished after that snapshot were never examined either.
@@ -570,7 +574,8 @@ def summarize(result: dict) -> str:
                   f"alone {result['writer']['alone']['operations_per_minute']} ops/min; step max "
                   f"{result['writer']['with_runner']['step_seconds'].get('max')} s vs {result['writer']['alone']['step_seconds'].get('max')} s",
                   f"  runner's final lag {result['final_status']['lag']}, backlog {result['final_status']['backlog']}, "
-                  f"unexamined {result['final_status']['unexamined']}",
+                  f"unexamined {result['final_status']['unexamined']}, as of operation "
+                  f"{(result['final_status']['as_of'] or {}).get('ordinal')}, after it {result['final_status']['after_last_read']}",
                   f"  against the sealed store: lag {result['left_at_end_against_sealed_store']['lag']}, unexamined "
                   f"{result['left_at_end_against_sealed_store']['unexamined']}",
                   f"  nominal cost {result['cost']['total_usd']} (not money), per examined step {result['cost']['per_examined_step_usd']}",
