@@ -176,8 +176,8 @@ def distinct_facts(knowledge_root: Path):
 def write_manifest(run: Path, session: str, commit: str) -> None:
     """The run package's manifest under the current contract, as the snapshot and projection read it."""
     run.mkdir(parents=True)
-    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/10', session=session, source_commit=commit,
-                                                     labels=dict(lineage=None, admission=None),
+    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11', session=session, source_commit=commit,
+                                                     labels=dict(world=None, lineage=None, admission=None),
                                                      substitute='no frozen package: tests.live_curator_stand_in_run')))
 
 

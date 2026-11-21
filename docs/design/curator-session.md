@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: active
-scope: 'Current curator-fact/3 structural publication, sessions and drafts; compatible-snapshot restore and proposed prospective gate'
+scope: 'Current curator-fact/4 structural publication, sessions and drafts; compatible-snapshot restore and proposed prospective gate'
 review_trigger: A change to the knowledge repository layout, the submission or fact shapes, the gate checks, the draft lifecycle or the session close-out
 ---
 
@@ -23,7 +23,7 @@ The [curator source](../../harness/curator) implements the session and gate.
 
 ## Layout
 
-The repository layout is `curator-knowledge/2`, recorded in `knowledge.json`. Readers and
+The repository layout is `curator-knowledge/3`, recorded in `knowledge.json`. Readers and
 writers refuse other repository schemas with “start a new repository”; there is no
 layout migration. The knowledge repository's location is set by the
 [decision on the project-local knowledge repository](../decisions/owner-decisions.md#knowledge-repository-local-and-sealed-per-study).
@@ -75,20 +75,23 @@ A submission is a directory `submissions/<id>/` with `submission.json`:
 
 ```json
 {"schema": "curator-submission/1", "base_version": "v3", "summary": "…",
- "changes": [{"op": "add_fact", "fact": {"schema": "curator-fact/3", "record": "fact", "id": "f12",
-              "type": "relation", "text": "…", "scope": {"game": "example"}, "citations": ["frame-id"]}}]}
+ "changes": [{"op": "add_fact", "fact": {"schema": "curator-fact/4", "record": "fact", "id": "f12",
+              "type": "relation", "text": "…", "known": "observed",
+              "scope": {"game": "example", "level": "game"}, "citations": ["frame-id"]}}]}
 ```
 
-The [world-scoped memory design](world-scoped-memory.md#the-format-curator-fact3) owns the field
+The [world-scoped memory design](world-scoped-memory.md#field-table-for-curator-fact4-and-curator-type2) owns the field
 meanings. These are the gate's exact submission shapes:
 
 | Record | Fields |
 | --- | --- |
-| Fact | `schema: curator-fact/3`, `record: fact`, `id`, `type`, `text`, `scope` (at least a non-empty `game`), non-empty distinct `citations`, optional non-empty `subject` |
-| Article | `schema: curator-fact/3`, `record: article`, `id`, `title`, `lead`, `body` (a non-empty list of `{text, facts: [ids]}` claims, each with at least one distinct fact id), `links` (distinct article titles; may be empty) |
-| Type | `schema: curator-type/1`, non-empty `name`, text `description`, `fields` (a list of strings) |
+| Fact | `schema: curator-fact/4`, `record: fact`, `id`, `type`, `text`, `known` (`observed`, `inferred` or `hinted`), `scope` (exactly `game` and `level`, which is `game` or `world`), non-empty distinct `citations`, optional non-empty `subject` |
+| Article | `schema: curator-fact/4`, `record: article`, `id`, `title`, `lead`, `body` (a non-empty list of `{text, facts: [ids]}` claims, each with one or more distinct current game fact ids), `links` (distinct article titles; may be empty) |
+| Type | `schema: curator-type/2`, non-empty `name`, text `description`, `fields` (a list of strings), `identity` (distinct strings from `fields`, possibly empty), non-blank `reason` |
 
-Software adds `published_in` and `session` to each record. It writes a fact's `seen`
+Software adds `published_in` and `session` to facts and articles, and `published_in`
+to each added or revised type. It writes a world fact's `scope.world` from its cited
+sessions. It writes a fact's `seen`
 from the latest cited frame's trace position, and an article's `last_confirmed` from
 the latest `seen` of its cited facts. Positions carry `session`, `actor`, `step` and
 `order` (an ordered triple of admission ordinal, actor directory and step); order
@@ -110,15 +113,20 @@ does not parse or judge their prose.
 `revise_types` is grooming-only. A merge takes at least two existing names and one
 new type; a split takes one name and at least two new types; a rename takes one name
 and one new type; deprecation takes one name and no new types. Every current fact must
-end with a current type. Each revision publishes a new version, so at most one type
+end with a current type. Each new fact also needs a final type, even if the submission
+retires or supersedes it. Each revision publishes a new version, so at most one type
 revision is allowed per submission. An assignment's fact must be current, have a type
 in `names` before the revision, and survive the submission (neither retired nor
-superseded). Software appends `{from, to, version}` to that fact's `retyped` list;
+superseded). Rewriting an existing name requires an assignment for every surviving
+fact that had that type at the base version, including a same-name assignment.
+Software appends `{from, to, version}` to that fact's `retyped` list;
 submissions cannot supply it. Git retains the prior ontology and fact history at each
 version.
 
 Superseding or revising marks every target with `superseded_by`; retiring marks it
-with `retired` (reason, citations for facts, publication and session). Historical
+with `retired` (reason, citations for facts, publication and session). A replacement
+fact shares the scope level and, for world facts, the world of every target. A world
+fact’s retirement citations must come from its own world. Historical
 records remain evidence. Only records without either marker are current. Record ids
 are new across both kinds, including history; each target can change once per
 submission. Articles cannot link to themselves. Current article titles are unique
@@ -126,25 +134,24 @@ submission. Articles cannot link to themselves. Current article titles are uniqu
 Split or merge articles by replacing/retiring predecessors and adding the resulting
 articles, repairing incoming links and fact references in the same submission.
 
-One current contract, no shim: the gate and session runner refuse stores containing
-records outside `curator-fact/3`. The read-only `store` and `replay` commands also accept
-only this record contract and the `/2` repository layout. They read fact `text` and
-separate facts from articles. `store` reports total and current counts for each kind
-and the bytes of `facts.jsonl` per version, so grooming size is measurable. Sealed earlier
-stores stay available as evidence.
+The gate and session runner require `curator-fact/4` and `curator-type/2` records.
+The read-only `store` and `replay` commands require `curator-fact/4` and the
+`curator-knowledge/3` repository layout. `store` reports total and current counts
+for each record kind and the bytes of `facts.jsonl` per version. Sealed earlier stores
+stay available as evidence.
 
 ### Readers that move with the fact and type contract
 
-The [world-scope field table](world-scoped-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
-changes the fact, type and repository schemas and the campaign manifest in one
-migration. It owns the rules; this table lists what reads them today and what moves.
+The [world-scope field table](world-scoped-memory.md#field-table-for-curator-fact4-and-curator-type2)
+owns the fact, type and repository rules. The readers below share those contracts
+and the campaign manifest.
 
 | Reader | Reads | What changes |
 | --- | --- | --- |
-| `harness/curator/gate.py` | fact, article and type records, provenance and the stored history; it writes all of them | key sets, the scope, article, supersession and type checks, provenance's session map, the stored-repository validator, restore, the schema names |
-| `harness/curator/knowledge.py` | the repository layout: it starts the metadata at the first version and reads records, types, provenance and snapshots | the schema name it writes and refuses on; provenance's new part |
-| `harness/curator/session.py` | the whole store, which it exports into the workspace; provenance, for grooming and window positions; the result journal, for its brief; and the fact schema, to refuse a foreign store | passes each session's world, lineage and position to the gate; the schema name; the brief's description of a fact and a type |
-| `harness/trace/projection.py`, `harness/curator/window.py`, and the projection contract in [measurement tools](../contracts/measurement-tools.md#trace-projection) | sessions, their sealed identifiers and frame positions | carry each session's world, lineage and position from its package, under a new projection version ([verified trace identity, #834](https://github.com/CVX-Hull/enactive/issues/834)) |
+| `harness/curator/gate.py` | facts, articles, types, provenance and tagged history | enforces scope, article, supersession, type and session identity rules at publication and restore |
+| `harness/curator/knowledge.py` | metadata, records, types, provenance and tagged snapshots | initializes `curator-knowledge/3` with empty frame and session maps |
+| `harness/curator/session.py` | the store for workspace export, provenance for grooming and window positions, and the result journal for the brief | checks the current fact and type schema names and passes each session's verified labels to the gate |
+| `harness/trace/projection.py`, `harness/curator/window.py`, and the projection contract in [measurement tools](../contracts/measurement-tools.md#trace-projection) | sessions, their sealed identifiers and frame positions | carry each session's world, lineage and position from its package, under `trace-projection/3` ([verified trace identity, #834](https://github.com/CVX-Hull/enactive/issues/834)) |
 | `tools/campaign_package.py` | the closed label set of the campaign manifest, and the frozen files' hashes at preflight | the `world` label and its rule with `lineage`; the manifest version; the preflight checks of the private record's world against the label and of its digest against the delivered file |
 | `harness/evaluation/core/sources.py` | the manifest, by version, and the closed archive index | the new current version. Archive entries are added only for retained sessions of the version it replaces that a dated record cites ([owner decision](../decisions/owner-decisions.md#archive-index-holds-cited-sessions)), and only once the owner has approved the list of them |
 | `harness/evaluation/core/facts.py`, `harness/evaluation/core/pipeline.py` | a fixed set of five labels, which they project and persist | carry `world` as a sixth |
@@ -154,7 +161,7 @@ migration. It owns the rules; this table lists what reads them today and what mo
 | `tools/memory_screen_checks.py` | fact and article records straight from the repository, with its own schema checks; it compares whole records across versions, reports fact text, citations, type and session, and its replay estimates when a fact is first delivered | both schema names; the new fields in what it compares or prints; the replay estimate, which must take the receiving admission's world into account or be labelled as publication timing only |
 | `tools/memory_measure.py` | the delivered file, the private full file, the study draw and its unit records, and the manifest version, which it names in two places | the draw's next version and its checks; the manifest version; the private record's new part |
 | `tools/curator_host/prompt.md` | describes a fact and a type to the curator | the field lists, the scope levels, the article rule, the instruction to keep article prose and `game` facts true in any world, and the type rules |
-| `tools/curator_host/grooming.md` | describes operations in prose, with no schema name | the filing rule, which covers game facts only, and the type revision wording |
+| `tools/curator_host/grooming.md` | describes grooming under `curator-fact/4` and `curator-type/2` | game-only article filing, scope-preserving changes and assignments under rewritten type names |
 | `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing; its repository path is not a source of world or lineage |
 | `harness/viewer/knowledge.py` | the delivered file, after verifying the actor's frozen inputs, with host events and tool results | nothing, while the delivered shape holds |
 | `harness/viewer/curator.py` | the gate's result journal, session receipts and the coverage stamp | nothing |
@@ -190,11 +197,10 @@ record. A grooming session without that configured path aborts before the host s
 It cannot take a restricted window; the supplied sealed trace sessions
 must match the last published admission's names, and every retained citation must exist.
 
-`provenance.json` keeps software-derived frame positions and the last admission's
-coverage and citations. Once a frame's position is recorded in `provenance.json`,
-later windows preserve that recorded position rather than overwriting it; a frame
-new to the repository records its earliest occurrence in the window. Citations
-accumulate across accepted windows of the same
+The `provenance.json` file keeps software-derived frame positions, session labels keyed
+by sealed identifier and the last admission's coverage and citations. Later windows
+preserve recorded frame positions. A frame new to the repository records its earliest
+occurrence in the window. Citations accumulate across accepted windows of the same
 admission. A grooming publication retains that admission stamp. Grooming replacement
 facts may cite the union of the superseded facts' citations and the current window's
 frames; other fact operations and retirements require window citations. Software
@@ -202,9 +208,10 @@ looks up inherited frame positions in recorded provenance and writes `seen` from
 latest cited position. Citations of unrelated facts do not qualify, even if recorded
 provenance contains them. The curator merges
 and retires facts, normalizes subjects through replacements, revises types, and writes
-articles, leads and links. Every grooming publication must file every current fact in
-at least one current article. Submission and host resource limits apply without a
-hard cap on the store. [Zero-spend grooming verification](../operations/curator-hosts.md#zero-spend-grooming-verification)
+articles, leads and links. Every grooming publication files every current game fact
+in at least one current article. World facts stand alone. Submission and host resource
+limits apply without a hard cap on the store.
+[Zero-spend grooming verification](../operations/curator-hosts.md#zero-spend-grooming-verification)
 
 ## Windows of decisions and the coverage stamp
 
@@ -249,9 +256,9 @@ The gate applies its checks in this order, and the first failure rejects:
    exist, ids are new, scope matches, and citations belong to the window or, for a
    grooming replacement, to the facts it supersedes. Software derives sighting positions
    from the trace projection and recorded provenance.
-4. **References and filing.** Every article claim cites current facts and every link
+4. **References and filing.** Every article claim cites current game facts and every link
    names a current article in the final candidate. Titles are unique. Grooming files
-   every current fact; admission may leave facts unfiled. This checks structure only,
+   every current game fact. An admission may leave new game facts unfiled. This checks structure only,
    never what an article says. These tests address R-GAME-COUPLING and R-REGRESSION;
    they require no semantic model calls.
 
@@ -281,7 +288,8 @@ The gate publishes the exact target tree as a new monotone version, including re
 of files absent at the target, such as `coverage.json` at v0. Facts, articles, types,
 coverage and provenance move together. Restored records keep their original `seen`,
 `last_confirmed`, `published_in`, session and citations. Submissions reserve record
-IDs across compatible tagged history, including records absent from the restored tree.
+IDs and session labels across compatible tagged history, including identities absent
+from the restored tree.
 Frozen admissions keep their version and digest.
 
 The gate reconciles unpublished writes to the highest tag before writing, then commits
@@ -376,7 +384,7 @@ This proposal adds source-separated verification to the
 [knowledge store and gate contract (#457)](https://github.com/CVX-Hull/enactive/issues/457).
 [Gate v0](#gate-v0) governs current admissions. Prospective publication requires an
 independent test oracle, a utility policy and a coordinator for later evidence.
-The [field table](world-scoped-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
+The [field table](world-scoped-memory.md#field-table-for-curator-fact4-and-curator-type2)
 covers the scope of facts and types.
 
 ### Evidence identity and exposure

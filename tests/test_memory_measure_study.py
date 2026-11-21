@@ -7,7 +7,7 @@ import pytest
 
 from test_memory_measure import admission, save
 from test_memory_measure_withholding import pilot_fixture
-from test_knowledge_export import store
+from test_knowledge_export import COMMIT, store
 from tools import knowledge_export as ke, memory_measure as mm
 
 
@@ -15,7 +15,7 @@ def study_fixture(tmp_path):
     run, packages = pilot_fixture(tmp_path)
     old = mm.pilot_units(packages[0])
     layout = dict(units=[{k: v for k, v in u.items() if k != 'withheld'} for u in old['units']], shared=old['shared'])
-    design = ke.layout_draw(old['version'], layout, 2, ['save:2'], 653, ['lone'])
+    design = ke.layout_draw(old['version'], layout, 2, ['save:2'], 653, ['lone'], commit=COMMIT)
     path = save(tmp_path / 'draw.json', design)
     facts = json.loads((run / 'judged-facts.json').read_text())
     for index, package in enumerate(packages):
@@ -24,7 +24,7 @@ def study_fixture(tmp_path):
             units=[dict(u, withheld=index in next(r['withheld'] for r in design['assignment'] if r['unit_id'] == u['id']),
                         placebo=u['id'] == 'lone') for u in layout['units']])
         unit_path = save(package / 'private/units.json', record)
-        save(package / 'manifest.json', dict(schema='campaign-run/10', session=json.loads((package / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
+        save(package / 'manifest.json', dict(schema='campaign-run/11', session=json.loads((package / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
         available = ke.delivered_fact_ids(record)
         for actor, entry in facts['admissions'][package.name].items():
             all_facts = [fact for route in mm.ROUTES for fact in entry.get(route, [])]
@@ -89,7 +89,7 @@ def test_study_rejects_bad_draw_provenance_and_use_packets(tmp_path, fault):
         else:
             r['units'][0]['placebo'] = not r['units'][0]['placebo']
         unit_path = save(packages[1] / 'private/units.json', r)
-        save(packages[1] / 'manifest.json', dict(schema='campaign-run/10', session=json.loads((packages[1] / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
+        save(packages[1] / 'manifest.json', dict(schema='campaign-run/11', session=json.loads((packages[1] / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
     with pytest.raises(mm.MeasureError):
         mm.study(run, packages, path, draws=10)
     assert not (run / 'study.json').exists()
@@ -213,9 +213,9 @@ def test_facts_builder_reads_both_unit_record_versions_and_refuses_others(tmp_pa
     if version == 1:
         hashes = ke.export(package, value, 12)
     else:
-        path = save(tmp_path / 'draw.json', ke.study_draw(value, 4, ['save:4'], 653))
-        hashes = ke.export(package, value, study=path, start_index=0)
-    manifest = dict(schema='campaign-run/10', session='a' * 32,
+        path = save(tmp_path / 'draw.json', ke.study_draw(value, 4, ['save:4'], 653, commit=COMMIT))
+        hashes = ke.export(package, value, study=path, start_index=0, commit=COMMIT)
+    manifest = dict(schema='campaign-run/11', session='a' * 32, labels=dict(world=None),
         files={'delivered-knowledge.json': hashes['delivered-knowledge.json']},
         private_files={n: hashes['private/' + n] for n in ('knowledge-full.json', 'units.json')})
     save(package / 'manifest.json', manifest)
@@ -254,7 +254,7 @@ def test_study_unit_records_refuse_malformed_units(tmp_path, units):
 
 
 @pytest.mark.parametrize('contents', ['{', '{}', '{"schema": "withholding-study-draw/1"}',
-    '{"schema": "withholding-study-draw/1", "version": "v1", "layout": {}, "seed": 1, "blocks": ["a"], '
+    '{"schema": "withholding-study-draw/2", "version": "v1", "layout": {}, "seed": 1, "blocks": ["a"], '
     '"starts": 3, "placebo": [], "assignment": []}'])
 def test_study_wraps_malformed_draw_as_measure_error(tmp_path, contents):
     path = tmp_path / 'malformed-draw.json'

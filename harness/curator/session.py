@@ -29,7 +29,7 @@ from harness.trace.sidecar import validate
 
 from . import sandbox, type_usage
 from .containers import Drafts, UnsafeTree, read_tree, write_tree
-from .gate import FACT, gate, journal as gate_journal
+from .gate import FACT, TYPE, gate, journal as gate_journal
 from .window import FULL, Window, coverage as window_coverage, restrict, positions, citations_only
 from .knowledge import Repository
 
@@ -237,8 +237,10 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         home.mkdir()
         home = home.resolve()
         version = repo.published()
-        if any(item.get('schema') != FACT for item in repo.records()):
+        if any(item.get('schema') != FACT for item in repo.records(version)):
             raise SessionError(f'published store is not {FACT}; start a new repository')
+        if any(item.get('schema') != TYPE for item in repo.types(version)):
+            raise SessionError(f'published types are not {TYPE}; start a new repository')
         repo.export(version, workspace/'knowledge')
         trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory, journal=journal), window)
         provenance = repo.provenance()
@@ -358,7 +360,8 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         if not aborted and gated.is_dir() and not any(r.startswith('submissions:') for r in refused):
             for submission in sorted(p for p in gated.iterdir() if p.is_dir()):
                 try:
-                    verdict = gate(repo, submission, session_id=session_id, window_frames=window_frames, coverage=coverage, session_kind=session_kind)
+                    verdict = gate(repo, submission, session_id=session_id, window_frames=window_frames,
+                                   coverage=coverage, session_kind=session_kind, session_labels=window_frames.sessions)
                     verdicts.append(verdict)
                     if verdict['status'] == 'published' and verdict['operation'] == 'submission':
                         drafts.promote(verdict.get('from_drafts', []), session_id)

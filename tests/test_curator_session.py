@@ -21,7 +21,7 @@ from harness.curator import sandbox
 from harness.curator.knowledge import Repository
 from harness.curator.session import SessionConfig, SessionError, run_session
 from harness.curator.window import Window
-from tests.curator_trace import frame_id, make_long_session
+from tests.curator_trace import SESSION_ID, frame_id, make_long_session, record_package
 from tests.test_trace_projection import make_session
 
 PYTHON = Path(os.path.realpath(sys.executable))
@@ -39,11 +39,11 @@ cite = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != '-' else frame
 os.makedirs('submissions/s1')
 json.dump(dict(schema='curator-submission/1', base_version=version, summary='first fact',
                from_drafts=[d for d in os.listdir('drafts')],
-               changes=[dict(op='add_type', type=dict(schema='curator-type/1', name='container',
-                                                    description='a place that holds items', fields=['holds'])),
-                        dict(op='add_fact', fact=dict(schema='curator-fact/3', record='fact', id='f1', type='container',
-                                                      text='the cupboard holds bottles',
-                                                      scope=dict(game='testgame'), citations=[cite],
+               changes=[dict(op='add_type', type=dict(schema='curator-type/2', name='container',
+                                                    description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')),
+                        dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id='f1', type='container',
+                                                      text='the cupboard holds bottles', known='observed',
+                                                      scope=dict(game='testgame', level='game'), citations=[cite],
                                                       subject='cupboard'))]),
           open('submissions/s1/submission.json', 'w'))
 '''
@@ -85,6 +85,17 @@ def test_a_scripted_session_submits_a_fact_and_leaves_a_draft(tmp_path, world):
     second = run_session(repo, trace, host(tmp_path, 'idle', IDLE))
     brief = (repo.state/'sessions'/second['manifest']['id']/'brief.md').read_text()
     assert '`v1`' in brief and '`plan`' in brief and 'published as `v1`' in brief
+
+
+def test_a_scripted_session_publishes_verified_world_provenance(tmp_path, world):
+    repo, traces = world
+    trace, = traces
+    labels = dict(world='pond', lineage='survivor', admission=1)
+    record_package(trace, labels=labels)
+    record = run_session(repo, traces, host(tmp_path, 'world', SUBMIT.replace("level='game'", "level='world'")))
+    assert [v['status'] for v in record['verdicts']] == ['published'], record
+    assert repo.facts()[0]['scope'] == dict(game='testgame', level='world', world='pond')
+    assert repo.provenance()['sessions'] == {SESSION_ID: dict(name=trace.name, **labels)}
 
 
 def test_out_of_window_citations_are_rejected_and_reported_in_the_next_brief(tmp_path, world):

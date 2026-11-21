@@ -1,5 +1,5 @@
 {
-  "note": "Closed allowlist of exact sealed pre-migration sessions. The existing 55 sessions retain their declared combinations; memory adoption #463 preserves 80 campaign-run/7 packages before active contracts advance. Listed versions authorize read-only evidence interpretation, never active execution; unlisted old versions remain unsupported.",
+  "note": "Closed allowlist of exact sealed pre-migration sessions. Listed versions authorize read-only evidence interpretation; unlisted old sessions and versions remain unsupported.",
   "schema": "archive-sessions/1",
   "sessions": {
     "0ba4db48e9152860533d97fde608ccc4": {
@@ -198,6 +198,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "28c285bd86824a8793ec9d398ce27eb8": {
+      "run": "farm-788-oceana-reload-2-28c285bd8682",
+      "study": "oceana-farm-memory-788",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "29b35709c3b22cffcf27a5c2b4da19b8": {
       "run": "lh4b7",
       "study": "522-held-out",
@@ -243,6 +255,18 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "2cda0867c34442f394299555aece7009": {
+      "run": "live-curator-run-859-2cda0867c344",
+      "study": "live-curator-run-859",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },
@@ -679,6 +703,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "60715e9f959e4fc1844ee8d1a327f061": {
+      "run": "wilderness-793-delayed-resource-60715e9f959e",
+      "study": "talty-campground-stream-stop-794",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "63c4cd0b2c32f8e429cff356fbb736fd": {
       "run": "withholding-study-651-48",
       "study": "withholding-study-651",
@@ -755,6 +791,18 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "747a4e62780740e9bab2e83a12d3d466": {
+      "run": "wilderness-803-reload-2-747a4e627807",
+      "study": "joanna-campground-memory-803",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },
@@ -868,6 +916,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "813c7e1ed845445e966cedb0a85b82d1": {
+      "run": "farm-788-oceana-reload-5-813c7e1ed845",
+      "study": "oceana-farm-memory-788",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "83087353758bc74f93843fa37dc031c2": {
       "run": "withholding-651-b-load",
       "study": "withholding-study-651-load-check-package",
@@ -959,6 +1019,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "86c65109a79743ed9fd60d9cdadcc5bd": {
+      "run": "farm-781-equipment-return-86c65109a797",
+      "study": "farm-setup-stop-785",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "87a7a51bdf6a6069310381d052bf7f22": {
       "run": "withholding-study-651-11",
       "study": "withholding-study-651",
@@ -992,6 +1064,18 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "8a4badef08b94ed78a8a031bf6751354": {
+      "run": "wilderness-803-first-eligible-8a4badef08b9",
+      "study": "joanna-campground-memory-803",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },
@@ -1079,6 +1163,18 @@
         "manifest": "campaign-run/4",
         "receipt": "campaign-receipt/3",
         "run_ending": "campaign-watch-terminal/2"
+      }
+    },
+    "9613db5a64244830b0a7865fa09e8d00": {
+      "run": "farm-788-oceana-reload-3-9613db5a6424",
+      "study": "oceana-farm-memory-788",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
       }
     },
     "98ad79d5e6efe544f8e35a07e0387b8d": {
@@ -1382,6 +1478,18 @@
         "run_ending": "campaign-watch-terminal/2"
       }
     },
+    "bc5d04d07c3e454d96447f3f05e22002": {
+      "run": "farm-788-oceana-reload-4-bc5d04d07c3e",
+      "study": "oceana-farm-memory-788",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "be0a571314aa44aa4913fe1ea0a97db9": {
       "run": "withholding-study-651-46",
       "study": "withholding-study-651",
@@ -1578,6 +1686,18 @@
         "run_ending": "campaign-watch-terminal/2"
       }
     },
+    "d16ea238c2794897a7839549df297a69": {
+      "run": "wilderness-797-first-eligible-d16ea238c279",
+      "study": "campground-opening-menu-799",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "d2e9d382a82912443bcc3de60638e5d1": {
       "run": "withholding-study-651-32",
       "study": "withholding-study-651",
@@ -1650,6 +1770,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "e3da8d1f2714457da32a0f8ec812209d": {
+      "run": "farm-788-equipment-return-e3da8d1f2714",
+      "study": "oceana-farm-memory-788",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "e7638809125d26dd19015d50450966b3": {
       "labels": {
         "admission": 4,
@@ -1702,6 +1834,18 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "ec996e56741745bb9f99b485cfdc13f6": {
+      "run": "farm-788-oceana-reload-6-ec996e567417",
+      "study": "oceana-farm-memory-788",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/8",
+        "host_telemetry": 8,
+        "manifest": "campaign-run/10",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },

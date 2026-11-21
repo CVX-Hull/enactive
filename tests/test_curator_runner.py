@@ -575,11 +575,11 @@ def test_three_runner_windows_publish_when_the_first_two_share_a_frame(tmp_path,
         step = json.loads((workspace/'trace'/RUN/'001'/'steps.jsonl').read_text())
         changes = []
         if base == 'v0':
-            changes.append(dict(op='add_type', type=dict(schema='curator-type/1', name='container',
-                                                        description='a place that holds items', fields=['holds'])))
-        changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/3', record='fact', id=f'f{step["seq"]}',
-                                                     type='container', text='the cupboard holds bottles',
-                                                     scope=dict(game=repo.game), citations=[step['frame']])))
+            changes.append(dict(op='add_type', type=dict(schema='curator-type/2', name='container',
+                                                        description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')))
+        changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id=f'f{step["seq"]}',
+                                                     type='container', text='the cupboard holds bottles', known='observed',
+                                                     scope=dict(game=repo.game, level='game'), citations=[step['frame']])))
         directory = workspace/'submissions'/'s1'
         directory.mkdir()
         (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/1', base_version=base,
@@ -594,7 +594,7 @@ def test_three_runner_windows_publish_when_the_first_two_share_a_frame(tmp_path,
     run = tmp_path/RUN
     run.mkdir()
     (run/CURATOR_READ_LOCK).touch()
-    record_package(run, labels=dict(lineage=None, admission=None))
+    record_package(run, labels=dict(world=None, lineage=None, admission=None))
     runner = Runner(tmp_path/'runner', RUN, snapshot=live.staged(run), session_call=session, look=TagLook(repo),
                     settings=Settings(trigger_steps=1, ceiling_steps=1))
     writer = _Writer(run, SESSION_ID)
@@ -636,10 +636,10 @@ frame = sorted(k[7:-4] for k in manifest['files'] if k.startswith('frames/'))[0]
 version = open('brief.md').read().split('`')[1]
 os.makedirs('submissions/s1')
 json.dump(dict(schema='curator-submission/1', base_version=version, summary='first fact', from_drafts=[],
-               changes=[dict(op='add_type', type=dict(schema='curator-type/1', name='container',
-                                                    description='a place that holds items', fields=['holds'])),
-                        dict(op='add_fact', fact=dict(schema='curator-fact/3', record='fact', id='f1', type='container',
-                                                      text='the cupboard holds bottles', scope=dict(game='testgame'),
+               changes=[dict(op='add_type', type=dict(schema='curator-type/2', name='container',
+                                                    description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')),
+                        dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id='f1', type='container',
+                                                      text='the cupboard holds bottles', known='observed', scope=dict(game='testgame', level='game'),
                                                       citations=[frame], subject='cupboard'))]),
           open('submissions/s1/submission.json', 'w'))
 '''

@@ -253,7 +253,7 @@ class Run:
             (directory / 'actor.json').write_text(json.dumps(dict(schema='player-adapter/1' if self.historical else 'player-adapter/2', actor_id=actor)))
             (directory / 'context.txt').write_text('GUIDE')
             (directory / 'prompt.txt').write_text(f'ASSIGNMENT {index}')
-        self.manifest = dict(schema='campaign-run/7' if self.historical else 'campaign-run/10', session=self.session, source_commit='fixture', **manifest)
+        self.manifest = dict(schema='campaign-run/7' if self.historical else 'campaign-run/11', session=self.session, source_commit='fixture', **manifest)
         if memory is not None:
             self.manifest['player_store'] = str(memory)
         (self.directory / 'manifest.json').write_text(json.dumps(self.manifest))
@@ -342,7 +342,8 @@ def test_record_follows_the_contract_tables(tmp_path):
         'output_tokens', 'dollars', 'retry_class', 'omitted_images', 'manifest']
     assert [r[1] for r in connection.execute("PRAGMA table_info(metrics)") if r[5]] == ['name', 'key']
     meta = read_metadata(connection)
-    assert meta['state'] == 'final' and meta['labels'] == dict(arm=None, start=None, scenario=None, lineage=None, admission=None)
+    assert meta['state'] == 'final' and meta['labels'] == dict(
+        arm=None, start=None, scenario=None, lineage=None, admission=None, world=None)
     assert (meta['schema'], meta['core_version'], meta['binding_id'], meta['binding_version'], meta['session']) == (
         'evaluation-record/1', CORE_VERSION, 'fake', 3, SESSION)
     assert meta['last_seq'] == 14 and meta['first_in_play_seq'] == 3 and meta['created_wall'] == 1.0
@@ -1151,7 +1152,7 @@ def test_unsupported_input_versions_are_errors(tmp_path):
     (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION)))
     with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/5.*not listed'):
         evaluate(directory, FakeBinding(), tmp_path / 'e1')
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/10', session=SESSION)))
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11', session=SESSION)))
     host = directory / 'actors' / '001' / 'host.jsonl'
     original = host.read_text()
     host.write_text(original.replace('"schema": "player-host/8", "telemetry_version": 8', '"schema": "player-host/3", "telemetry_version": 3'))
@@ -1406,7 +1407,7 @@ def test_censor_reasons(tmp_path, name, options, reason):
 def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path, monkeypatch):
     from harness.evaluation.core.sources import read_end_facts
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
-    current = dict(schema='campaign-run/10', session=SESSION)
+    current = dict(schema='campaign-run/11', session=SESSION)
     archived = dict(schema='campaign-run/4', session=SESSION)
     directory = tmp_path / 'end'
     directory.mkdir()
@@ -1538,31 +1539,32 @@ def as_archived(directory: Path, versions: tuple, *, receipt: bool = False) -> P
     return directory
 
 
-def test_the_shipped_archive_index_preserves_exact_pre_adoption_sessions():
+def test_the_shipped_archive_index_preserves_exact_approved_sessions():
     from collections import Counter
     import harness.evaluation.core.sources as sources
     sessions = sources.archive_sessions()
-    assert len(sessions) == 135 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
+    assert len(sessions) == 147 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
     assert all(key == item.session for key, item in sessions.items())
-    assert len({(item.study, item.run) for item in sessions.values()}) == 135
+    assert len({(item.study, item.run) for item in sessions.values()}) == 147
     spend_limit = ('campaign-run/6','campaign-receipt/4','player-driver/4','player-host/4',4,'campaign-watch-terminal/4')
     memory_adoption = ('campaign-run/7','campaign-receipt/5','player-driver/5','player-host/5',5,'campaign-watch-terminal/4')
-    # Exact allowed combinations, including pre-adoption delivery traces.
+    pre_world = ('campaign-run/10', 'campaign-receipt/7', 'player-driver/7', 'player-host/8', 8, 'campaign-watch-terminal/4')
+    # Exact allowed combinations, including the sessions whose only older record is the manifest.
     assert [tuple(c.versions.items()) for c in sources.ARCHIVE_COMBINATIONS] == [
-        tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit, memory_adoption)]
+        tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (
+            OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit, memory_adoption, pre_world)]
     assert Counter(tuple(item.combination.versions.values()) for item in sessions.values()) == {
-        OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2, spend_limit: 1, memory_adoption: 80}
-    # A combination names the fields read from exactly the records the reader takes in an old version. Every
-    # archived session predates the dollar limit, so its manifest, receipt, driver record and host traces all do.
+        OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2, spend_limit: 1, memory_adoption: 80, pre_world: 12}
+    # A combination names the fields read from exactly the records the reader takes in an old version.
     current = dict(manifest=sources.MANIFEST_SCHEMA, receipt=sources.RECEIPT_SCHEMA, driver=sources.DRIVER_SCHEMA,
                    host=sources.HOST_SCHEMA, run_ending=sources.WATCH_TERMINAL_SCHEMA)
     for combination in sources.ARCHIVE_COMBINATIONS:
         assert set(combination.fields) == {key for key, value in current.items() if combination.versions[key] != value}
-        assert {'manifest', 'host'} <= set(combination.fields)
-        assert combination.versions['host_telemetry'] != sources.HOST_TELEMETRY
+        assert 'manifest' in combination.fields
+        assert (combination.versions['host_telemetry'] == sources.HOST_TELEMETRY) == (tuple(combination.versions.values()) == pre_world)
     assert [c.fields.get('run_ending') for c in sources.ARCHIVE_COMBINATIONS] == [
-        ('reason',), ('session', 'reason', 'pause_reason'), None, None, None]
-    assert ['labels' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True]
+        ('reason',), ('session', 'reason', 'pause_reason'), None, None, None, None]
+    assert ['labels' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True, True]
     assert all('accounting' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS[:3])
     assert 'spend_limit_usd' in sources.ARCHIVE_COMBINATIONS[3].fields['manifest']
     # The operator labels are on the 30 older sessions and nowhere else.
@@ -1570,8 +1572,15 @@ def test_the_shipped_archive_index_preserves_exact_pre_adoption_sessions():
     assert labelled == {key for key, item in sessions.items() if item.combination.versions['manifest'] == 'campaign-run/4'}
     assert len(labelled) == 30
     assert all(set(sessions[key].labels) == {'arm', 'start', 'scenario', 'lineage', 'admission'} for key in labelled)
-    assert Counter(item.study for item in sessions.values() if item.combination.versions['manifest'] != 'campaign-run/7') == {
+    assert Counter(item.study for item in sessions.values() if item.combination.versions['manifest'] in (
+            'campaign-run/4', 'campaign-run/5', 'campaign-run/6')) == {
         '372-382-dev-loop': 37, '522-held-out': 8, '397-seven-day': 7, 'supervised-launch-check-558': 2, 'spend-limit-run-555': 1}
+    assert {session for session, item in sessions.items() if tuple(item.combination.versions.values()) == pre_world} == {
+        'd16ea238c2794897a7839549df297a69', '86c65109a79743ed9fd60d9cdadcc5bd', '8a4badef08b94ed78a8a031bf6751354',
+        '747a4e62780740e9bab2e83a12d3d466', '60715e9f959e4fc1844ee8d1a327f061', 'e3da8d1f2714457da32a0f8ec812209d',
+        '28c285bd86824a8793ec9d398ce27eb8', '9613db5a64244830b0a7865fa09e8d00', 'bc5d04d07c3e454d96447f3f05e22002',
+        '813c7e1ed845445e966cedb0a85b82d1', 'ec996e56741745bb9f99b485cfdc13f6', '2cda0867c34442f394299555aece7009',
+    }
 
 
 def sealed_store() -> Path:
@@ -1604,7 +1613,9 @@ def recorded_versions(directory: Path) -> dict:
                     reason='sealed evidence store not on this checkout')
 def test_the_archive_index_matches_the_sealed_store():
     import harness.evaluation.core.sources as sources
+    from tools.run_ledger import read_ledger
     store, sessions = sealed_store(), sources.archive_sessions()
+    ledger = {row['session']: row for row in read_ledger()}
     listed = set()
     manifests = {}
     for path in store.rglob('manifest.json'):
@@ -1613,10 +1624,20 @@ def test_the_archive_index_matches_the_sealed_store():
             manifests[value['session']] = path.parent
     for session, item in sessions.items():
         directory = manifests[session]
-        assert directory.relative_to(store).parts[0] == item.study and directory.name == item.run
+        assert directory.relative_to(store).parts[0] == item.study
         manifest = sources.read_manifest(directory)
         assert manifest['session'] == session, directory
-        assert all(item.combination.versions[key] == value for key, value in recorded_versions(directory).items()), directory
+        versions = recorded_versions(directory)
+        if manifest['schema'] == 'campaign-run/10':
+            row = ledger[session]
+            assert item.run == row['run'] and manifest['labels']['admission'] == row['admission']
+            assert directory.name == (f"admission-{row['admission']}" if row['admission'] is not None else 'run')
+            assert versions == item.combination.versions
+            inputs = sources.read_run(directory, digests=False)
+            assert all(not ids for ids in inputs.carry.values())
+        else:
+            assert directory.name == item.run
+            assert all(item.combination.versions[key] == value for key, value in versions.items()), directory
         facts = sources.read_end_facts(directory, manifest)
         assert isinstance(facts.paused, bool) and (facts.pause_reason is None or facts.paused)
         listed.add(directory)
@@ -1710,7 +1731,8 @@ def test_a_campaign_run_4_manifest_is_read_only_for_a_listed_session(tmp_path, m
     archive_of(tmp_path, monkeypatch, {SESSION: listed})
     path = evaluate(archived_run(tmp_path / 'old01'), FakeBinding(), tmp_path / 'evals', created_wall=1.0)
     connection = open_readonly(path)
-    assert read_run_facts(connection)['labels'] == dict(arm='pilot', start='S1', scenario='Evacuee', lineage=None, admission=None)
+    assert read_run_facts(connection)['labels'] == dict(
+        arm='pilot', start='S1', scenario='Evacuee', lineage=None, admission=None, world=None)
     assert read_run_facts(connection)['manifest_schema'] == 'campaign-run/4'
     connection.close()
     # The directory name is not the key: a renamed run directory is the same listed session.
@@ -1742,7 +1764,7 @@ def test_a_current_run_with_a_v2_terminal_is_an_error(tmp_path, monkeypatch):
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
     directory = ended_run(tmp_path / 'current', files={'watch-terminal.json': dict(
         schema='campaign-watch-terminal/2', reason='operator_pause')})
-    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/10'
+    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/11'
     with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*unsupported version.*campaign-watch-terminal/2'):
         evaluate(directory, FakeBinding(), tmp_path / 'evals')
 
@@ -1782,7 +1804,7 @@ def test_an_archived_session_of_each_combination_is_read_in_the_versions_the_ind
     connection.close()
     # The spend allowance of an archived run is still its ceiling minus what earlier admissions had reserved.
     assert (facts['manifest_schema'], facts['labels'], facts['declared_ceiling_usd'], facts['prior_reserved_usd'],
-            facts['spend_allowance_usd'], facts['limits']) == (versions[0], labels, 25.5, 10.0, 15.5, LIMITS)
+            facts['spend_allowance_usd'], facts['limits']) == (versions[0], dict(labels, world=None), 25.5, 10.0, 15.5, LIMITS)
     assert survival_of(path)['censor_reason'] == 'owner_pause'
     # The same files under a session the index does not list are refused, and so is a listed session's trace that
     # names another session.
@@ -1820,20 +1842,20 @@ def test_run_facts_labels_and_host_rows(tmp_path):
         run.host[a].append(run.event(a, 'provider-retry', iso(BASE + 21), stage='eligible', request_id='request-1',
             retry_class='stream-start-error'))
         run.host[a].append(run.event(a, 'context-image-projection', iso(BASE + 22), request_id='request-1', omitted_images=2))
-        run.finish(labels=dict(arm='X', start='S1', scenario='s', lineage=None, admission=None),
+        run.finish(labels=dict(arm='X', start='S1', scenario='s', lineage=None, admission=None, world='farm'),
             effort='medium', files={'context.txt': 'g' * 64, 'prompt.txt': 'p' * 64},
             spend_limit_usd='15.5', limits=LIMITS)
         return directory
     path = run_and_evaluate(tmp_path, build)
     connection = open_readonly(path)
     facts = read_run_facts(connection)
-    assert facts['labels'] == dict(arm='X', start='S1', scenario='s', lineage=None, admission=None)
+    assert facts['labels'] == dict(arm='X', start='S1', scenario='s', lineage=None, admission=None, world='farm')
     assert (facts['model'], facts['provider'], facts['route'], facts['effort']) == ('m/x', 'p', dict(only=['p']), 'medium')
     assert (facts['guide_sha256'], facts['assignment_sha256']) == ('g' * 64, 'p' * 64)
     # A current run's allowance is its declared dollar limit; it has no ceiling and no earlier reservation.
-    assert (facts['manifest_schema'], facts['spend_allowance_usd'], facts['limits']) == ('campaign-run/10', 15.5, LIMITS)
+    assert (facts['manifest_schema'], facts['spend_allowance_usd'], facts['limits']) == ('campaign-run/11', 15.5, LIMITS)
     assert (facts['declared_ceiling_usd'], facts['prior_reserved_usd']) == (None, None)
-    assert read_metadata(connection)['labels']['arm'] == 'X' and read_metadata(connection)['arm'] == 'X'
+    assert read_metadata(connection)['labels'] == facts['labels'] and read_metadata(connection)['arm'] == 'X'
     calls = read_tool_calls(connection)
     by_status = {c.status: c for c in calls}
     assert len(calls) == 3 and set(by_status) == {'ok', 'error', 'refused'} and {c.tool for c in calls} == {'computer_input'}

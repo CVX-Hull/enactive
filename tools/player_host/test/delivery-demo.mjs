@@ -15,7 +15,7 @@ const python=process.env.ENACTIVE_TEST_PYTHON;
 execFileSync(python,['-c',
   'import json,sys; from pathlib import Path; from tools.knowledge_export import export; p=Path(sys.argv[1]); export(p,json.loads((p/"full-input.json").read_text()))',directory]);
 const digest=async name => createHash('sha256').update(await readFile(join(directory,name))).digest('hex');
-await writeFile(join(directory,'manifest.json'),JSON.stringify({schema:'campaign-run/10',session:'a'.repeat(32),
+await writeFile(join(directory,'manifest.json'),JSON.stringify({schema:'campaign-run/11',session:'a'.repeat(32),labels:{world:null},
   files:{'delivered-knowledge.json':await digest('delivered-knowledge.json')},
   private_files:{'knowledge-full.json':await digest('private/knowledge-full.json'),'units.json':await digest('private/units.json')}}));
 const {result,events}=await deliveryScenario(directory,{preserveKnowledgeFile:true});

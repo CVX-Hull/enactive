@@ -13,6 +13,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from harness.evaluation.core.pipeline import evaluate
+from harness.evaluation.core.sources import MANIFEST_SCHEMA
 from harness.trace.sidecar import INDEX_SCHEMA, SCHEMA
 from harness.viewer.app import MAX_BYTES, create_app
 from harness.viewer.catalog import Catalog
@@ -52,11 +53,20 @@ def episodes_document() -> dict:
             episode('elsewhere', anchor(ABSENT, 5, chunk='gone-001'), anchor(ABSENT, 6, chunk='gone-001'))])
 
 
+def evaluate_frame_scenario(run: Path, root: Path, *, session: str, created_wall: float) -> None:
+    main_scenario(run, session=session)
+    package = run / 'manifest.json'
+    document = json.loads(package.read_text())
+    document['schema'] = MANIFEST_SCHEMA
+    document['labels'] = dict(document.get('labels', {}), world=None)
+    package.write_text(json.dumps(document))
+    evaluate(run, FakeBinding(), root, created_wall=created_wall)
+
+
 @pytest.fixture
 def frame(tmp_path):
     runs = tmp_path / 'runs'
-    main_scenario(runs / 'base1', session=SESSION)
-    evaluate(runs / 'base1', FakeBinding(), tmp_path / 'root', created_wall=1.0)
+    evaluate_frame_scenario(runs / 'base1', tmp_path / 'root', session=SESSION, created_wall=1.0)
     containers = tmp_path / 'containers'
     containers.mkdir()
     index = dict(schema=INDEX_SCHEMA, study='syn', containers=[manifest('base1', SESSION), manifest('gone', ABSENT)])
@@ -208,8 +218,7 @@ def test_a_run_name_shared_by_two_sessions_is_not_reported_available(frame):
     _, _, sources, tmp_path = frame
     other = 'b' * 32
     twin = tmp_path / 'twin-runs'
-    main_scenario(twin / 'base1', session=other)                  # a second archived run with the same name
-    evaluate(twin / 'base1', FakeBinding(), tmp_path / 'root', created_wall=2.0)
+    evaluate_frame_scenario(twin / 'base1', tmp_path / 'root', session=other, created_wall=2.0)
     catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs', twin), data_dir=data_directory(tmp_path))
     document = episodes_document()
     document['episodes'][0]['needed'] = anchor(other, 3)

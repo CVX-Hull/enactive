@@ -14,7 +14,7 @@ import pytest
 
 from harness.curator.window import FULL, Window, WindowError, citations_only, coverage, positions, restrict, session_labels
 from harness.trace.projection import ProjectionError, project
-from tests.curator_trace import SESSION_ID, frame_id, make_long_session, record_package, world_manifest_schema
+from tests.curator_trace import SESSION_ID, frame_id, make_long_session, record_package
 
 
 def steps(out: Path, actor='001', session='s1') -> list[dict]:
@@ -149,14 +149,14 @@ def test_coverage_names_the_session_actor_and_last_step_read(tmp_path):
     assert whole == {'schema': 'curator-coverage/2', 'session': 'sd1a1,sd1a2', 'actor': None, 'last_step': None}
 
 
-def test_gate_input_keeps_session_labels_separate_from_the_four_frame_position_keys(tmp_path, world_manifest_schema):
+def test_gate_input_keeps_session_labels_separate_from_the_four_frame_position_keys(tmp_path):
     second_id = 'b' * 32
     first = make_long_session(tmp_path, 'pond', steps=1, actors=('001',))
     second = make_long_session(tmp_path, 'forest', steps=1, actors=('001',), session_id=second_id)
     pond = dict(world='pond', lineage='first survivor', admission=9)
     forest = dict(world='forest', lineage='second survivor', admission=3)
-    record_package(first, schema=world_manifest_schema, labels=pond)
-    record_package(second, schema=world_manifest_schema, session_id=second_id, labels=forest)
+    record_package(first, labels=pond)
+    record_package(second, session_id=second_id, labels=forest)
     out = tmp_path/'trace'
     manifest = restrict(out, project([first, second], out), FULL)
     gate_input = positions(out, manifest, {})
@@ -174,24 +174,24 @@ def test_session_labels_are_available_from_the_manifest_after_copying_positions(
     first = make_long_session(tmp_path, 'pond', steps=1, actors=('001',))
     second_id = 'b' * 32
     second = make_long_session(tmp_path, 'forest', steps=1, actors=('001',), session_id=second_id)
-    record_package(second, session_id=second_id, labels=dict(lineage='survivor', admission=3))
+    record_package(second, session_id=second_id, labels=dict(world='forest', lineage='survivor', admission=3))
     out = tmp_path/'trace'
     manifest = project([first, second], out)
     frame_positions = positions(out, manifest, {})
     assert session_labels(manifest) == frame_positions.sessions == {
         SESSION_ID: dict(name='pond', world=None, lineage=None, admission=None,
                          label_check='manifest-schema', label_error='manifest.json missing or unreadable'),
-        second_id: dict(name='forest', world=None, lineage='survivor', admission=3, label_check=None, label_error=None),
+        second_id: dict(name='forest', world='forest', lineage='survivor', admission=3, label_check=None, label_error=None),
     }
     for copy in (dict(frame_positions), frame_positions | {}, json.loads(json.dumps(frame_positions))):
         assert copy == frame_positions
         assert not hasattr(copy, 'sessions')
 
 
-def test_sightings_follow_trace_order_even_when_windows_are_replayed_backwards(tmp_path, world_manifest_schema):
+def test_sightings_follow_trace_order_even_when_windows_are_replayed_backwards(tmp_path):
     trace = make_long_session(tmp_path/'evidence')
     labels = dict(world='pond', lineage='survivor', admission=3)
-    record_package(trace, schema=world_manifest_schema, labels=labels)
+    record_package(trace, labels=labels)
     later = tmp_path/'later'
     later_manifest = restrict(later, project([trace], later), Window('s1', '001', 7, 9))
     known = positions(later, later_manifest, {})
@@ -225,7 +225,7 @@ def test_a_new_frame_uses_its_earliest_position_when_it_repeats_in_one_window(tm
 
 def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path):
     trace = make_long_session(tmp_path/'evidence')
-    record_package(trace, labels=dict(lineage='survivor', admission=3))
+    record_package(trace, labels=dict(world='pond', lineage='survivor', admission=3))
     out = tmp_path/'trace'
     from tests.test_trace_projection import make_journal
 
@@ -247,7 +247,7 @@ def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path
     gate_input = positions(out, reduced, {})
     assert gate_input.keys() == cited
     assert gate_input.sessions == {
-        SESSION_ID: dict(name='s1', world=None, lineage='survivor', admission=3, label_check=None, label_error=None),
+        SESSION_ID: dict(name='s1', world='pond', lineage='survivor', admission=3, label_check=None, label_error=None),
     }
     with pytest.raises(WindowError, match='missing from trace'):
         citations_only(out, reduced, {'absent'})

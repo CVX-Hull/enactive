@@ -102,7 +102,9 @@ this rule before its first start. A change to the rule requires a new version.
   withheld"), `rho` (the spread's point value) and `wrong` (the point value, used as the
   judge error at the interval ends too), in the form `simulate-withholding --pilot` reads.
 
-### The withholding study's design (`withholding-study-draw/1`)
+<a id="the-withholding-studys-design-withholding-study-draw1"></a>
+
+### The withholding study's design (`withholding-study-draw/2`)
 
 A withholding study fixes one draw for all starts before play, under the
 [withholding measure revision (#653)](https://github.com/CVX-Hull/enactive/issues/653).
@@ -110,11 +112,12 @@ Each unit is its own comparison, withheld in half of each block's starts and del
 in the other half, with odd counts rounded as described below.
 
 - `knowledge_export draw-study REPOSITORY --version V --starts N --blocks LABEL:COUNT...
-  --seed S [--placebo UNIT_ID...] --out FILE` writes the draw: the store version, the unit
-  layout (units and shared facts, as the [unit rule](measurement-tools.md#the-facts-to-judge-judged-facts1) builds
-  it), the seed, the starts in order (index `0`…`N−1`, each with its block), the blocks,
-  the placebo unit IDs, and per unit and block the half size and the withheld start
-  indices.
+  --seed S [--world WORLD] [--placebo UNIT_ID...] --out FILE` draws from the same
+  [world selection](../operations/campaign-run.md#freeze-delivered-knowledge) as the
+  package export. The draw records the store version, its tag's 40-hex commit SHA,
+  the world label or null, the unit layout, the seed, ordered starts (index
+  `0`…`N−1`), blocks, placebo unit IDs, and each unit and block's half size and
+  withheld start indices.
 - **Blocks** are the saved moments the starts copy: a block's label names the source
   study (`starts create --from`), and the counts, each at least 2, sum to `N`. Within each block, each unit
   takes its own random permutation that withholds it in exactly half of the block's
@@ -131,6 +134,8 @@ in the other half, with odd counts rounded as described below.
   against the draw but not which saved moment the start copied. The study's record lists
   each start's source study and start manifest hash.
 - `--study-draw FILE --start-index I` exports start `I`'s package. Its
+  export checks the version, commit, world and unit layout against the draw.
+  Readers refuse `withholding-study-draw/1`. The start's
   `private/units.json` is `knowledge-units/2`: the `knowledge-units/1` fields with the
   draw's seed, plus `draw_sha256`, `start_index`, `block` and each unit's `placebo`. The
   facts builder, `study` and `study-inputs` read `knowledge-units/1` (the sealed pilot's

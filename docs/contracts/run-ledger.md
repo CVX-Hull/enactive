@@ -15,10 +15,10 @@ Development-run quantities live as data in git, and pages render them or cite th
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/3`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, observed attempts for current runs, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/10` manifest and `campaign-receipt/7` alone |
+| `runs.jsonl` | One [`dev-run/3`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, observed attempts for current runs, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/11` manifest and `campaign-receipt/7` alone |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
-- **Origin.** `record` accepts the current `campaign-run/10` and
+- **Origin.** `record` accepts the current `campaign-run/11` and
   `campaign-receipt/7` pair. It copies the receipt's provider subtotal,
   observed attempts and unpriced player and recall counts. Incomplete traces
   preserve the observed starts as a lower bound. A complete trace has basis

@@ -85,7 +85,7 @@ class Repository:
             'knowledge.json': _dump({'schema': SCHEMA, 'game': self.game}),
             'facts.jsonl': b'',
             'ontology/types.json': b'[]\n',
-            'provenance.json': _dump({'frames': {}}),
+            'provenance.json': _dump({'frames': {}, 'sessions': {}}),
             'programs/.keep': b'',
             'tests/.keep': b'',
         }

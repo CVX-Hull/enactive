@@ -143,7 +143,16 @@ admits no successor. The observed subtotal still records only provider charges.
 
 ### Delivered knowledge and recall
 
-Every `campaign-run/10` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
+Every `campaign-run/11` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
+
+`private/knowledge-full.json` holds the world-selected facts and articles before
+withholding, plus a top-level `selection` object with `world` (the selected label
+or null) and `delivered_sha256` (the SHA-256 of the delivered file). The delivered
+knowledge is the one player-visible input whose contents depend on an
+[operator label](../operations/campaign-run.md#operator-labels).
+Preflight checks `selection.world` against `labels.world` and
+`selection.delivered_sha256` against the verified digest of `delivered-knowledge.json`.
+The delivered file carries the selected content without the selection object.
 
 The host uses the same frozen version for briefing and recall throughout the
 admission, including handoffs. A later admission can package a newer publication.

@@ -179,8 +179,8 @@ The [session design](../design/curator-session.md#submissions) states the record
 operation shapes the [gate](../../harness/curator/gate.py) accepts, the
 [frozen submission instructions](../../tools/curator_host/prompt.md#submission-contract)
 give the whole `curator-submission/1` envelope, and
-[world-scoped memory](../design/world-scoped-memory.md#the-format-curator-fact3) owns the
-`curator-fact/3` field meanings.
+[world-scoped memory](../design/world-scoped-memory.md#field-table-for-curator-fact4-and-curator-type2) owns the
+`curator-fact/4` and `curator-type/2` field meanings.
 
 The [session design](../design/curator-session.md#admission-and-grooming) owns what
 admission and grooming sessions read and do, their briefs and publication rules, and

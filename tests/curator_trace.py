@@ -28,21 +28,11 @@ import time
 import uuid
 
 from PIL import Image
-import pytest
 
-from harness.trace.projection import PACKAGE_LABELS
 from harness.trace.stores import CURATOR_READ_LOCK
 
 SESSION_ID = 'a' * 32
 ROOT = Path(__file__).resolve().parents[1]
-
-
-@pytest.fixture
-def world_manifest_schema(monkeypatch):
-    """Exercise a schema that supplies a world before the campaign writer adopts one."""
-    schema = 'campaign-run/11'
-    monkeypatch.setitem(PACKAGE_LABELS, schema, ('world', 'lineage', 'admission'))
-    return schema
 
 
 def png(color) -> bytes:
@@ -55,7 +45,7 @@ def frame_id(actor: int, step: int, session_id: str = SESSION_ID) -> str:
     return f'{session_id}-{actor * 1000 + step}'
 
 
-def record_package(session: Path, *, labels: dict, schema: str = 'campaign-run/10',
+def record_package(session: Path, *, labels: dict, schema: str = 'campaign-run/11',
                    session_id: str = SESSION_ID) -> None:
     source_commit = 'c' * 40
     package = json.dumps(dict(schema=schema, session=session_id, source_commit=source_commit,
@@ -123,7 +113,7 @@ class LiveWriter:
         run.mkdir()
         if read_lock:
             (run/CURATOR_READ_LOCK).touch()  # the runner creates it before the custodian starts
-        record_package(run, labels=dict(lineage=None, admission=None), session_id=session_id)
+        record_package(run, labels=dict(world=None, lineage=None, admission=None), session_id=session_id)
         self.run = run
         self.process = subprocess.Popen([sys.executable, '-m', 'tests.curator_trace', str(run), session_id],
                                         cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)

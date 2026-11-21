@@ -4,8 +4,9 @@ import pytest
 
 from harness.evaluation.core.host import host_facts
 from harness.evaluation.core.sources import read_host
+from harness.jsonio import file_sha256
 from tools.knowledge_export import draw, export
-from tools.memory_measure import build_facts, recall_measure, read_facts
+from tools.memory_measure import MeasureError, build_facts, recall_measure, read_facts
 from tools.memory_screen_checks import read_lineage
 
 
@@ -31,7 +32,7 @@ def test_judged_facts_builder_resolves_shared_facts_from_the_recorded_citing_art
     full=store()
     seed=next(s for s in range(100) if len(draw(full,s)[0]['articles'])==articles_delivered)
     package=tmp_path/'package';hashes=export(package,full,seed)
-    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/10',session='a'*32,
+    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11',session='a'*32, labels=dict(world=None),
         files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={n:hashes['private/'+n] for n in ('knowledge-full.json','units.json')})))
     actor=package/'actors/001';actor.mkdir(parents=True)
@@ -44,6 +45,30 @@ def test_judged_facts_builder_resolves_shared_facts_from_the_recorded_citing_art
 def test_end_facts_docstring_names_the_current_receipt_and_driver_versions():
     from harness.evaluation.core.sources import read_end_facts,RECEIPT_SCHEMA,DRIVER_SCHEMA
     assert RECEIPT_SCHEMA in read_end_facts.__doc__ and DRIVER_SCHEMA in read_end_facts.__doc__
+
+
+@pytest.mark.parametrize('schema, session', [
+    ('campaign-run/11', 'a' * 32),
+    ('campaign-run/10', '2cda0867c34442f394299555aece7009'),
+])
+def test_facts_builder_requires_private_selection_only_on_current_packages(tmp_path, schema, session):
+    from harness.player.knowledge import empty
+    package = tmp_path/'package'
+    hashes = export(package, empty())
+    full = package/'private/knowledge-full.json'
+    legacy = json.loads(full.read_text())
+    del legacy['selection']
+    full.write_text(json.dumps(legacy))
+    (package/'manifest.json').write_text(json.dumps(dict(schema=schema, session=session, labels=dict(world=None),
+        files={'delivered-knowledge.json': hashes['delivered-knowledge.json']},
+        private_files={'knowledge-full.json': file_sha256(full), 'units.json': hashes['private/units.json']})))
+    (package/'actors').mkdir()
+    run = tmp_path/'memory-measure/result'
+    if schema == 'campaign-run/11':
+        with pytest.raises(MeasureError, match='private knowledge selection differs'):
+            build_facts(run, [package])
+    else:
+        assert build_facts(run, [package])['admissions'] == {'package': {}}
 
 
 def test_the_newly_archived_spend_limit_run_retains_its_recorded_spend(tmp_path):
@@ -68,7 +93,7 @@ def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp
                   for x in ('brief','read-first','lead-first','withheld')])
     seed=next(n for n in range(1000) if {f['id'] for f in draw(full,n)[0]['facts']}=={'brief','read-first','lead-first','index'})
     hashes=export(package,full,seed)
-    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/10',session='a'*32,
+    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11',session='a'*32, labels=dict(world=None),
         files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')})))
     events=[dict(type='host-start',schema='player-host/8',telemetry_version=8,session='a'*32,actor_id='b'*32),

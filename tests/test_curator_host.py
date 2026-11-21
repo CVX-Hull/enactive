@@ -340,8 +340,8 @@ def test_the_hosts_node_unit_tests_pass():
 
 def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('curator-submission/1', 'curator-fact/3', 'curator-type/1', 'add_fact', 'supersede_fact', 'add_type', 'base_version',
-                   'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench', 'finish', '256 KiB', '200'):
+    for needed in ('curator-submission/1', 'curator-fact/4', 'curator-type/2', 'add_fact', 'supersede_fact', 'add_type', 'base_version',
+                   'scope.world', 'known', 'identity', 'reason', 'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench', 'finish', '256 KiB', '200'):
         assert needed in prompt, needed
     # P-GENERALITY and the blinding of #449 probes: nothing about the game, its items or the recorded runs.
     lowered = prompt.lower()

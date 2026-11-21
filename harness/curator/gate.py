@@ -16,7 +16,7 @@ import re
 import stat
 import uuid
 
-from harness.curator.knowledge import KnowledgeError, Repository
+from harness.curator.knowledge import SCHEMA, KnowledgeError, Repository
 
 SUBMISSION = 'curator-submission/1'
 FACT = 'curator-fact/4'
@@ -27,9 +27,12 @@ MAX_CHANGES = 200
 MAX_BYTES = 256 * 1024
 _VERSION = re.compile(r'v(0|[1-9][0-9]*)')
 
-_FACT_KEYS = {'schema', 'record', 'id', 'type', 'text', 'scope', 'citations', 'subject'}
+_FACT_KEYS = {'schema', 'record', 'id', 'type', 'text', 'known', 'scope', 'citations', 'subject'}
 _ARTICLE_KEYS = {'schema', 'record', 'id', 'title', 'lead', 'body', 'links'}
-_TYPE_KEYS = {'schema', 'name', 'description', 'fields'}
+_TYPE_KEYS = {'schema', 'name', 'description', 'fields', 'identity', 'reason'}
+_SESSION_KEYS = ('name', 'world', 'lineage', 'admission')
+_SEALED_ID = re.compile(r'[0-9a-f]{32}')
+_LABEL = re.compile(r'[ -~]{1,40}')
 _OPS = {
     'add_fact': {'op', 'fact'}, 'supersede_fact': {'op', 'ids', 'fact'},
     'retire_fact': {'op', 'id', 'reason', 'citations'}, 'add_type': {'op', 'type'},
@@ -77,8 +80,54 @@ def journal(repo: Repository) -> list[dict]:
         raise KnowledgeError('unsupported active gate journal; use fresh state') from error
 
 
+def _merge_sessions(recorded: dict[str, dict], sessions: dict[str, dict]) -> None:
+    """Reserve verified session identities across the tagged history, including restores."""
+    names = {row['name']: session_id for session_id, row in recorded.items()}
+    worlds = {row['lineage']: row['world'] for row in recorded.values() if row['lineage'] is not None}
+    slots = {(row['lineage'], row['admission']): session_id for session_id, row in recorded.items()
+             if row['lineage'] is not None}
+    for session_id, row in sessions.items():
+        if (not isinstance(session_id, str) or not _SEALED_ID.fullmatch(session_id)
+                or not isinstance(row, dict) or set(row) != set(_SESSION_KEYS) or not _text(row['name'])):
+            raise ValueError('invalid session provenance')
+        name, world, lineage, admission = (row[key] for key in _SESSION_KEYS)
+        if (any(value is not None and (not isinstance(value, str) or not _LABEL.fullmatch(value))
+                for value in (world, lineage))
+                or (lineage is None) != (admission is None)
+                or (admission is not None and (type(admission) is not int or not 1 <= admission <= 10000))):
+            raise ValueError('invalid session labels')
+        if session_id in recorded and recorded[session_id] != row:
+            raise ValueError(f'session {session_id!r} has different recorded labels or name')
+        if name in names and names[name] != session_id:
+            raise ValueError(f'session directory {name!r} has two sealed identifiers')
+        if lineage is not None:
+            slot = (lineage, admission)
+            if slot in slots and slots[slot] != session_id:
+                raise ValueError(f'lineage {lineage!r} admission {admission} has two sealed identifiers')
+            if lineage in worlds and worlds[lineage] != world:
+                raise ValueError(f'lineage {lineage!r} has two different worlds')
+            slots[slot] = session_id
+            worlds[lineage] = world
+        names[name] = session_id
+        recorded[session_id] = row
+
+
+def _citation_world(citations: list[str], sessions: dict[str, dict]) -> str:
+    worlds = set()
+    for citation in citations:
+        session_id, _, number = citation.partition('-')
+        world = sessions.get(session_id, {}).get('world') if number.isascii() and number.isdecimal() else None
+        if world is None:
+            raise ValueError(f'citation {citation!r} has no recorded world')
+        worlds.add(world)
+    if len(worlds) != 1:
+        raise ValueError('citations span two worlds')
+    return worlds.pop()
+
+
 def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
-                       records_by_version: dict[str, dict[str, dict]]) -> dict[str, dict]:
+                       records_by_version: dict[str, dict[str, dict]],
+                       recorded_sessions: dict[str, dict]) -> dict[str, dict]:
     """Validate the snapshot against its version and the previously validated versions."""
     required = {'knowledge.json', 'facts.jsonl', 'ontology/types.json', 'provenance.json',
                 'programs/.keep', 'tests/.keep'}
@@ -88,18 +137,21 @@ def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
     if files['programs/.keep'] or files['tests/.keep']:
         raise ValueError('unsupported program or test content')
     metadata = json.loads(files['knowledge.json'])
-    if metadata != {'schema': 'curator-knowledge/2', 'game': game}:
+    if metadata != {'schema': SCHEMA, 'game': game}:
         raise ValueError('foreign knowledge metadata')
     types = json.loads(files['ontology/types.json'])
-    if not isinstance(types, list) or any(_check_type('type', t) for t in types):
+    if not isinstance(types, list) or any(_check_stored_type(t, versions) for t in types):
         raise ValueError('unsupported types')
-    type_names = [t['name'] for t in types]
-    if len(set(type_names)) != len(type_names):
+    type_names = {t['name'] for t in types}
+    if len(type_names) != len(types):
         raise ValueError('duplicate types')
     provenance = json.loads(files['provenance.json'])
-    if (not isinstance(provenance, dict) or set(provenance) - {'frames', 'last_admission'}
-            or not isinstance(provenance.get('frames'), dict)):
+    if (not isinstance(provenance, dict) or set(provenance) - {'frames', 'sessions', 'last_admission'}
+            or not isinstance(provenance.get('frames'), dict)
+            or not isinstance(provenance.get('sessions'), dict)):
         raise ValueError('invalid provenance')
+    sessions = provenance['sessions']
+    _merge_sessions(recorded_sessions, sessions)
     for frame, position in provenance['frames'].items():
         if (not _text(frame) or not isinstance(position, dict)
                 or set(position) != {'session', 'actor', 'step', 'order'}
@@ -108,6 +160,9 @@ def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
                 or len(position['order']) != 3 or type(position['order'][0]) is not int
                 or not isinstance(position['order'][1], str) or type(position['order'][2]) is not int):
             raise ValueError('invalid frame position')
+        labels = sessions.get(frame.partition('-')[0])
+        if labels is not None and position['session'] != labels['name']:
+            raise ValueError('frame position has a different session name from its sealed identifier')
     if 'last_admission' in provenance:
         admission = provenance['last_admission']
         if (not isinstance(admission, dict) or set(admission) != {'coverage', 'citations'}
@@ -129,7 +184,7 @@ def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
         if set(record) - fields - added or ('retired' in record and 'superseded_by' in record):
             raise ValueError('unsupported record metadata')
         item = {k: v for k, v in record.items() if k in fields}
-        if (_check_fact('fact', item) if kind == 'fact' else _check_article('article', item)):
+        if (_check_stored_fact(item) if kind == 'fact' else _check_article('article', item)):
             raise ValueError('invalid record')
         if record.get('schema') != FACT or not _text(record.get('session')) or not _VERSION.fullmatch(record.get('published_in', '')):
             raise ValueError('invalid record provenance')
@@ -141,6 +196,11 @@ def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
         if kind == 'fact':
             if record['scope']['game'] != game or any(c not in provenance['frames'] for c in record['citations']):
                 raise ValueError('invalid fact scope or citations')
+            if record['published_in'] == version and record['type'] not in type_names:
+                raise ValueError('unknown type at fact publication')
+            if (record['scope']['level'] == 'world'
+                    and record['scope']['world'] != _citation_world(record['citations'], sessions)):
+                raise ValueError('fact scope world differs from its citations')
             if record.get('seen') != max((provenance['frames'][c] for c in record['citations']),
                                          key=lambda p: p['order']):
                 raise ValueError('invalid fact position')
@@ -157,17 +217,28 @@ def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
                     or not _strings(retired['citations'], nonempty=kind == 'fact')
                     or any(c not in provenance['frames'] for c in retired['citations'])):
                 raise ValueError('invalid retirement')
-    if any('superseded_by' in r and
-           (r['superseded_by'] not in by_id or by_id[r['superseded_by']]['record'] != r['record'])
-           for r in records):
-        raise ValueError('invalid supersession')
+            if (kind == 'fact' and record['scope']['level'] == 'world'
+                    and record['scope']['world'] != _citation_world(retired['citations'], sessions)):
+                raise ValueError('retirement citations must belong to the fact\'s world')
+    for record in records:
+        if 'superseded_by' not in record:
+            continue
+        replacement = by_id.get(record['superseded_by'])
+        if replacement is None or replacement['record'] != record['record']:
+            raise ValueError('invalid supersession')
+        if record['record'] == 'fact' and replacement['scope'] != record['scope']:
+            raise ValueError('supersession requires the same fact scope')
     facts = {i: r for i, r in by_id.items() if r['record'] == 'fact' and current(r)}
-    articles = [r for r in records if r['record'] == 'article' and current(r)]
-    titles = [r['title'] for r in articles]
+    articles = [r for r in records if r['record'] == 'article']
+    titles = [r['title'] for r in articles if current(r)]
     if len(titles) != len(set(titles)) or any(f['type'] not in type_names for f in facts.values()):
         raise ValueError('invalid current types or titles')
     for article in articles:
         cited = {i for claim in article['body'] for i in claim['facts']}
+        if any(by_id.get(i, {}).get('scope', {}).get('level') != 'game' for i in cited):
+            raise ValueError('articles may cite only game facts')
+        if not current(article):
+            continue
         if (not cited <= facts.keys() or any(t == article['title'] or t not in titles for t in article['links'])
                 or article.get('last_confirmed') != max((facts[i]['seen'] for i in cited), key=lambda p: p['order'])):
             raise ValueError('invalid article references')
@@ -181,19 +252,20 @@ def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
     return by_id
 
 
-def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], dict[str, dict[str, dict]]]:
-    """Validate compatible published snapshots and reserve their record identities."""
-    snapshots, identities, records_by_version = {}, set(), {}
+def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str],
+                                       dict[str, dict[str, dict]], dict[str, dict]]:
+    """Validate compatible published snapshots and reserve their record and session identities."""
+    snapshots, identities, records_by_version, sessions = {}, set(), {}, {}
     for version in sorted(repo._tags(), key=lambda v: int(v[1:])):
         try:
             files = repo.snapshot(version)
-            records = _validate_snapshot(files, repo.game, version, records_by_version)
+            records = _validate_snapshot(files, repo.game, version, records_by_version, sessions)
         except (ValueError, KeyError, TypeError, UnicodeError, RecursionError, KnowledgeError) as error:
             raise KnowledgeError(f'incompatible history at {version}') from error
         snapshots[version] = files
         records_by_version[version] = records
         identities.update(records)
-    return snapshots, identities, records_by_version
+    return snapshots, identities, records_by_version, sessions
 
 
 def _failed_publication(repo: Repository, version: str) -> tuple[str, str | None]:
@@ -227,6 +299,14 @@ def _extra(label: str, value: dict, allowed: set[str], required: set[str]) -> li
 
 
 def _check_fact(label: str, fact: object) -> list[str]:
+    return _check_fact_fields(label, fact, stored=False)
+
+
+def _check_stored_fact(fact: object) -> list[str]:
+    return _check_fact_fields('fact', fact, stored=True)
+
+
+def _check_fact_fields(label: str, fact: object, *, stored: bool) -> list[str]:
     if not isinstance(fact, dict):
         return [f'{label}: must be an object']
     found = _extra(label, fact, _FACT_KEYS, _FACT_KEYS - {'subject'})
@@ -237,9 +317,18 @@ def _check_fact(label: str, fact: object) -> list[str]:
     for key in ('id', 'type', 'text', 'subject'):
         if key in fact and not _text(fact[key]):
             found.append(f'{label}: {key} must be a non-empty string')
+    if 'known' in fact and fact['known'] not in ('observed', 'inferred', 'hinted'):
+        found.append(f'{label}: known must be observed, inferred or hinted')
     scope = fact.get('scope')
-    if 'scope' in fact and not (isinstance(scope, dict) and _text(scope.get('game'))):
-        found.append(f'{label}: scope must be an object with a non-empty string "game"')
+    if 'scope' in fact:
+        keys = {'game', 'level'}
+        if isinstance(scope, dict) and stored and scope.get('level') == 'world':
+            keys.add('world')
+        if not (isinstance(scope, dict) and set(scope) == keys and _text(scope['game'])
+                and scope['level'] in ('game', 'world')
+                and ('world' not in keys or isinstance(scope['world'], str) and _LABEL.fullmatch(scope['world']))):
+            found.append(f'{label}: scope must be an object with exactly {", ".join(sorted(keys))}'
+                         ' and level must be game or world')
     if 'citations' in fact and not _strings(fact['citations']):
         found.append(f'{label}: citations must be a non-empty list of distinct frame source ids')
     return found
@@ -267,9 +356,20 @@ def _check_article(label: str, article: object) -> list[str]:
 
 
 def _check_type(label: str, kind: object) -> list[str]:
+    return _check_type_fields(label, kind, _TYPE_KEYS)
+
+
+def _check_stored_type(kind: object, versions: set[str]) -> list[str]:
+    found = _check_type_fields('type', kind, _TYPE_KEYS | {'published_in'})
+    if not found and (not isinstance(kind['published_in'], str) or kind['published_in'] not in versions):
+        found.append('type: published_in must name a version no later than the snapshot')
+    return found
+
+
+def _check_type_fields(label: str, kind: object, keys: set[str]) -> list[str]:
     if not isinstance(kind, dict):
         return [f'{label}: must be an object']
-    found = _extra(label, kind, _TYPE_KEYS, _TYPE_KEYS)
+    found = _extra(label, kind, keys, keys)
     if kind.get('schema', TYPE) != TYPE:
         found.append(f'{label}: schema must be {TYPE!r}')
     if 'name' in kind and not _text(kind['name']):
@@ -280,6 +380,14 @@ def _check_type(label: str, kind: object) -> list[str]:
     if 'fields' in kind and not (isinstance(fields, list)
                                  and all(isinstance(item, str) for item in fields)):
         found.append(f'{label}: fields must be a list of strings')
+    identity = kind.get('identity')
+    if 'identity' in kind and not (isinstance(identity, list)
+                                   and all(isinstance(item, str) for item in identity)
+                                   and len(set(identity)) == len(identity)
+                                   and (not identity or isinstance(fields, list) and all(item in fields for item in identity))):
+        found.append(f'{label}: identity must be a list of distinct strings from fields')
+    if 'reason' in kind and not _text(kind['reason']):
+        found.append(f'{label}: reason must be a non-empty string')
     return found
 
 
@@ -385,20 +493,24 @@ def _well_formed(submission_dir: Path) -> tuple[dict | None, list[str]]:
 
 
 def _apply(repo: Repository, data: dict, version: str, session_id: str,
-           frames: dict[str, dict], session_kind: str, reserved: set[str]) -> tuple[list[dict], list[dict], list[str]]:
+           frames: dict[str, dict], session_kind: str, reserved: set[str],
+           provenance: dict) -> tuple[list[dict], list[dict], list[str]]:
     """Build a candidate snapshot; inspect its references only, never the meaning of prose.
 
     Structural controls address R-GAME-COUPLING and R-REGRESSION without a semantic judge.
     """
     records = repo.records()
     types = {item['name']: item for item in repo.types()}
+    base_types = set(types)
     by_id = {item['id']: item for item in records}
     original = {item['id']: dict(item) for item in records}
-    recorded_frames = repo.provenance()['frames']
+    recorded_frames = provenance['frames']
+    sessions = provenance['sessions']
     removed = {identity for change in data['changes'] for identity in
                (change['ids'] if change['op'] == 'supersede_fact' else
                 [change['id']] if change['op'] == 'retire_fact' else [])}
     found = []
+    assigned: set[str] = set()
     touched: set[str] = set()
     for index, change in enumerate(data['changes']):
         op = change['op']
@@ -407,7 +519,7 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
             item = change['type']
             if item['name'] in types:
                 found.append(f'{label}: type {item["name"]!r} already exists')
-            types[item['name']] = dict(item)
+            types[item['name']] = dict(item, published_in=version)
         elif op == 'revise_types':
             if session_kind != 'grooming':
                 found.append(f'{label}: type revisions require a grooming session')
@@ -418,7 +530,7 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
             for item in change['types']:
                 if item['name'] in types:
                     found.append(f'{label}: type {item["name"]!r} already exists')
-                types[item['name']] = dict(item)
+                types[item['name']] = dict(item, published_in=version)
             for identity, name in change['assignments'].items():
                 target = by_id.get(identity)
                 if target is None or target.get('record') != 'fact' or not current(target):
@@ -428,6 +540,7 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
                 elif identity in removed:
                     found.append(f'{label}: assignment fact {identity!r} is retired or superseded in this submission')
                 else:
+                    assigned.add(identity)
                     target['retyped'] = [*target.get('retyped', []),
                                          {'from': target['type'], 'to': name, 'version': version}]
                     target['type'] = name
@@ -463,9 +576,17 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
                 found.append(f'{label}: citation {citation!r} is outside the trace window'
                              + (' and the replaced facts' if session_kind == 'grooming' and op == 'supersede_fact' else ''))
         if op.startswith('retire_'):
-            if change['id'] in by_id:
-                by_id[change['id']]['retired'] = dict(reason=change['reason'], citations=citations,
-                                                     published_in=version, session=session_id)
+            target = by_id.get(change['id'])
+            if target is not None:
+                if (target.get('scope', {}).get('level') == 'world' and len(cited_positions) == len(citations)
+                        and op == 'retire_fact'):
+                    try:
+                        if _citation_world(citations, sessions) != target['scope']['world']:
+                            raise ValueError('retirement citations must belong to the fact\'s world')
+                    except ValueError as error:
+                        found.append(f'{label}: {error}')
+                target['retired'] = dict(reason=change['reason'], citations=citations,
+                                         published_in=version, session=session_id)
             continue
         item = dict(change[expected], published_in=version, session=session_id)
         identity = item['id']
@@ -476,37 +597,57 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
                 found.append(f'{label}: scope game {item["scope"]["game"]!r} is not {repo.game!r}')
             if len(cited_positions) == len(citations):
                 item['seen'] = max(cited_positions.values(), key=lambda p: p['order'])
+                if item['scope']['level'] == 'world':
+                    try:
+                        item['scope'] = dict(item['scope'], world=_citation_world(citations, sessions))
+                    except ValueError as error:
+                        found.append(f'{label}: {error}')
         for target in targets:
             if target in by_id:
+                if expected == 'fact' and 'scope' in by_id[target] and item['scope'] != by_id[target]['scope']:
+                    found.append(f'{label}: supersession requires the same fact scope')
                 by_id[target]['superseded_by'] = identity
         records.append(item)
         by_id[identity] = item
     if found:
         return records, list(types.values()), found
     facts = {item['id']: item for item in records if item['record'] == 'fact' and current(item)}
+    game_facts = {identity: item for identity, item in facts.items() if item['scope']['level'] == 'game'}
     articles = [item for item in records if item['record'] == 'article' and current(item)]
-    for item in facts.values():
-        if item['type'] not in types:
+    redefined = {name for name in base_types & types.keys() if types[name]['published_in'] == version}
+    for item in records:
+        if item['record'] != 'fact':
+            continue
+        identity = item['id']
+        if (identity in facts or item['published_in'] == version) and item['type'] not in types:
             found.append(f'fact {item["id"]!r}: unknown type {item["type"]!r}')
+        if identity in facts and identity in original and identity not in assigned and original[identity]['type'] in redefined:
+            found.append(f'fact {identity!r}: assignment required for redefined type {original[identity]["type"]!r}')
     titles = [item['title'] for item in articles]
     if len(titles) != len(set(titles)):
         found.append('articles: current titles must be unique (one article per subject)')
     filed: set[str] = set()
-    for article in articles:
+    for article in (item for item in records if item['record'] == 'article'):
         cited = {identity for claim in article['body'] for identity in claim['facts']}
+        if not current(article):
+            if any(by_id.get(i, {}).get('scope', {}).get('level') != 'game' for i in cited):
+                found.append(f'article {article["id"]!r}: articles may cite only game facts')
+            continue
         for identity in sorted(cited):
             if identity not in facts:
                 found.append(f'article {article["id"]!r}: fact {identity!r} is not current')
+            elif identity not in game_facts:
+                found.append(f'article {article["id"]!r}: articles may cite only game facts')
         for title in article['links']:
             if title == article['title']:
                 found.append(f'article {article["id"]!r}: link to itself is not allowed')
             elif title not in titles:
                 found.append(f'article {article["id"]!r}: link {title!r} does not resolve')
         filed.update(cited)
-        if cited <= facts.keys():
+        if cited <= game_facts.keys():
             article['last_confirmed'] = max((facts[f]['seen'] for f in cited), key=lambda p: p['order'])
-    if session_kind == 'grooming' and facts.keys() - filed:
-        found.append(f'grooming: unfiled current facts {sorted(facts.keys() - filed)!r}')
+    if session_kind == 'grooming' and game_facts.keys() - filed:
+        found.append(f'grooming: unfiled current facts {sorted(game_facts.keys() - filed)!r}')
     return records, list(types.values()), found
 
 
@@ -518,10 +659,9 @@ def _coverage(coverage: object) -> dict:
     return coverage
 
 
-def _publication(repo: Repository, records: list[dict], types: list[dict], coverage: dict,
+def _publication(provenance: dict, records: list[dict], types: list[dict], coverage: dict,
                  frames: dict[str, dict], session_kind: str, data: dict) -> dict[str, bytes]:
     coverage = _coverage(coverage)
-    provenance = repo.provenance()
     for frame_id, position in frames.items():
         provenance['frames'].setdefault(frame_id, position)
     if session_kind == 'admission':
@@ -538,11 +678,14 @@ def _publication(repo: Repository, records: list[dict], types: list[dict], cover
 
 
 def gate(repo: Repository, submission_dir: Path, *, session_id: str,
-         window_frames: dict[str, dict], coverage: dict, session_kind: str) -> dict:
+         window_frames: dict[str, dict], coverage: dict, session_kind: str,
+         session_labels: dict[str, dict] | None = None) -> dict:
     """Check and publish one submission. `coverage` is the runner's stamp of what the session read;
     it is written beside the facts with the version, and a submission has no way to set it."""
     if session_kind not in ('admission', 'grooming'):
         raise KnowledgeError('unknown session kind')
+    if session_labels is None:
+        session_labels = getattr(window_frames, 'sessions', None)
     journal(repo)
     submission_dir = Path(submission_dir)
     data, diagnostics = _well_formed(submission_dir)
@@ -565,23 +708,25 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
     try:
         if data is not None:
             current = repo.published()
-            snapshots, reserved, records_by_version = _history(repo)
-            foreign = sorted(str(item.get('id')) for item in repo.records() if item.get('schema') != FACT)
-            if foreign:
-                # One current contract: a store that holds facts of another contract is not published into.
-                diagnostics.append(f'publication refused: published facts {foreign[:5]} are not {FACT}; '
-                                   'start a new repository')
-            elif data['base_version'] != current:
+            snapshots, reserved, records_by_version, recorded_sessions = _history(repo)
+            if data['base_version'] != current:
                 diagnostics.append(f'stale base: submission is based on {data["base_version"]}'
                                    f' but the published version is {current}')
             else:
                 version = f'v{int(current[1:]) + 1}'
                 try:
-                    records, types, problems = _apply(repo, data, version, session_id, window_frames, session_kind, reserved)
+                    provenance = json.loads(snapshots[current]['provenance.json'])
+                    sessions = {identity: {field: row[field] for field in _SESSION_KEYS}
+                                for identity, row in (session_labels or {}).items()}
+                    _merge_sessions(recorded_sessions, sessions)
+                    provenance['sessions'].update(sessions)
+                    records, types, problems = _apply(repo, data, version, session_id, window_frames,
+                                                      session_kind, reserved, provenance)
                     diagnostics.extend(problems)
                     if not problems:
-                        files = _publication(repo, records, types, coverage, window_frames, session_kind, data)
-                        _validate_snapshot(snapshots[current] | files, repo.game, version, records_by_version)
+                        files = _publication(provenance, records, types, coverage, window_frames, session_kind, data)
+                        _validate_snapshot(snapshots[current] | files, repo.game, version,
+                                           records_by_version, recorded_sessions)
                 except KnowledgeError:
                     raise
                 except (ValueError, KeyError, TypeError, RecursionError) as error:
@@ -628,7 +773,7 @@ def restore(repo: Repository, *, expected_base: str, target: str) -> dict:
         failure = 'incompatible or unavailable history'
         try:
             current = repo.published()
-            snapshots, _, _ = _history(repo)
+            snapshots, _, _, _ = _history(repo)
             if expected_base != current:
                 failure = 'stale base'
                 raise KnowledgeError('stale base')

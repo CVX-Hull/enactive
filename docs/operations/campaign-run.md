@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/10` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/11` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -102,10 +102,10 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/10",
+  "schema": "campaign-run/11",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
-  "labels": {"arm": "ARM", "start": "S1", "scenario": "SCENARIO", "lineage": null, "admission": null},
+  "labels": {"arm": "ARM", "start": "S1", "scenario": "SCENARIO", "lineage": null, "admission": null, "world": null},
   "files": {
     "route.json": "SHA256", "mcp-template.json": "SHA256",
     "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256",
@@ -154,7 +154,25 @@ diagnostics can use the existing package preflight for their declared scope.
 
 ### Freeze delivered knowledge
 
-Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order. A withholding study's starts are exported from one study draw instead, with `--study-draw FILE --start-index I`: the draw withholds each unit in half of each block's starts ([study design](../contracts/withholding-study.md#the-withholding-studys-design-withholding-study-draw1)). The sealed pilot's starts each took their own seed ([pilot analysis](../contracts/withholding-study.md#the-withholding-pilots-analysis-withholding-pilot1)). An article's unit lists only the facts exclusive to it; `private/units.json` records other cited facts under `shared` with their citing article IDs. Shared facts follow any delivered citing article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
+Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`.
+Pass `--world WORLD` with the exact value of `labels.world` when it is set. The
+exporter selects current articles, game facts and facts of that world before drawing
+units. Omit `--world` to select current articles and game facts alone.
+`--empty --package DIR` creates the required files with no units or coverage and
+takes the same world option. Freeze the returned hashes in `files` and
+`private_files`. Preflight verifies the private selection against `labels.world`
+and the delivered file's SHA-256. The
+[host contract](../contracts/player-host.md#delivered-knowledge-and-recall) specifies
+which files reach the player.
+
+With `--withhold-seed S`, each unit is withheld independently with probability one
+half in ID order. For a withholding study, use `--study-draw FILE --start-index I`
+and the world named in the draw. The
+[study design](../contracts/withholding-study.md#the-withholding-studys-design-withholding-study-draw2)
+defines the blocked assignment. The sealed pilot's starts each took their own seed.
+[Pilot analysis](../contracts/withholding-study.md#the-withholding-pilots-analysis-withholding-pilot1)
+defines that measure. See the [unit rule](../contracts/measurement-tools.md#the-facts-to-judge-judged-facts1)
+for shared facts and article units.
 
 The closed `recall` object pins the model on the player's provider and key, `every` completed inputs per reminder, and `unpriced_request_usd` computed from the recall model's rates. Player and recall share the run's dollar budget. Use forecast attempt counts to size the work and ending, and retain observed starts to assess the run.
 
@@ -200,10 +218,8 @@ effects. Do not remove markers to reuse a failed package.
 
 ### Operator labels
 
-`labels` is required and closed: `arm`, `start`, `scenario`, `lineage`, `admission`.
-They are operator-only analysis labels frozen with the admission so the evaluator
-and spectator ([ADR008](../decisions/008-evaluation-and-spectator.md)) can name
-the experiment arm, start and scenario without inferring them from player data.
+The required `labels` object contains exactly the fields below. The evaluator and
+spectator use these values to describe the admission.
 
 | Field | Value |
 |---|---|
@@ -212,20 +228,17 @@ the experiment arm, start and scenario without inferring them from player data.
 | `scenario` | string, 1-80 characters (for example `Evacuee`) |
 | `lineage` | string, 1-40 characters, or `null`; chained admissions of one survivor share it |
 | `admission` | integer 1-10000, or `null`; position within the lineage; `null` exactly when `lineage` is `null` |
+| `world` | string, 1-40 characters, or `null`; required when a lineage is set; may be set for an admission without a lineage |
 
 Strings are printable ASCII only (space through `~`), with no control or non-ASCII
 characters. Preflight checks the start code against the current ledger schema
 before dispatch. A missing field, extra field or out-of-bound value refuses the
-package before effects, like the rest of the manifest. Packages of any earlier schema
-have no `labels` and are rejected; there is no conversion or default.
+package before effects, like the rest of the manifest. Preflight accepts only
+`campaign-run/11`.
 
-**The labels are not player-visible.** Only the validator, evaluator and spectator
-read them. The driver builds every player-visible input (host argv, route, prompt,
-context, MCP configuration, actor identity, control command and host environment)
-from other manifest fields, and never from `labels`. Do not copy a label into the
-prompt, context, route or target files, which are frozen and hashed separately. A
-negative test (`test_operator_labels_never_reach_the_player_host`) asserts that the
-launched argv, environment and every file written for an actor lack the label values.
+Keep the label values out of the player's argv, prompt, context, route, target,
+MCP configuration and environment. The sole effect of the labels on a player-visible
+input is that `labels.world` determines the [frozen knowledge selection](#freeze-delivered-knowledge).
 
 ### Ending reserve and external stop
 

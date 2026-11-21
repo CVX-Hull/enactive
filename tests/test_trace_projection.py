@@ -20,7 +20,7 @@ import pytest
 
 from harness.trace import memory_reader
 from harness.trace.projection import ProjectionError, _result, project
-from tests.curator_trace import SESSION_ID, make_long_session, png, record_package, world_manifest_schema
+from tests.curator_trace import SESSION_ID, make_long_session, png, record_package
 
 ROOT = Path(__file__).resolve().parents[1]
 # A worktree has no evidence store; ENACTIVE_EVIDENCE_ROOT points at a checkout's sealed store.
@@ -271,13 +271,13 @@ def test_workbench_refuses_an_old_projection(tmp_path, capsys):
 
 
 @pytest.fixture
-def labelled_sessions(tmp_path, world_manifest_schema):
+def labelled_sessions(tmp_path):
     sessions = []
     expected = []
     for name, session_id in [('pond', SESSION_ID), ('forest', 'b' * 32)]:
         session = make_long_session(tmp_path, name, steps=1, actors=('001',), session_id=session_id)
         labels = dict(world=name, lineage=f'{name} survivor', admission=3)
-        record_package(session, schema=world_manifest_schema, session_id=session_id, labels=labels)
+        record_package(session, session_id=session_id, labels=labels)
         sessions.append(session)
         expected.append(dict(name=name, session_id=session_id, **labels, label_check=None, label_error=None))
     return sessions[0], sessions[1], expected
@@ -295,18 +295,18 @@ def test_projection_records_verified_session_labels_from_two_worlds(tmp_path, la
 
 
 @pytest.mark.parametrize('lineage,admission', [('pond survivor', 3), (None, None)])
-def test_current_run_package_supplies_no_world(tmp_path, lineage, admission):
+def test_sealed_version_ten_package_supplies_no_world(tmp_path, lineage, admission):
     session = make_long_session(tmp_path, steps=1, actors=('001',))
-    record_package(session, labels=dict(lineage=lineage, admission=admission))
+    record_package(session, schema='campaign-run/10', labels=dict(lineage=lineage, admission=admission))
     entry, = project([session], tmp_path/'trace')['sessions']
     assert (entry['world'], entry['lineage'], entry['admission'], entry['label_check'], entry['label_error']) == (
         None, lineage, admission, None, None)
 
 
-def test_world_label_can_have_null_lineage_and_admission(tmp_path, world_manifest_schema):
+def test_world_label_can_have_null_lineage_and_admission(tmp_path):
     session = make_long_session(tmp_path, steps=1, actors=('001',))
     labels = dict(world='pond', lineage=None, admission=None)
-    record_package(session, schema=world_manifest_schema, labels=labels)
+    record_package(session, labels=labels)
     entry, = project([session], tmp_path/'trace')['sessions']
     assert {key: entry[key] for key in labels} == labels
     assert entry['label_check'] is entry['label_error'] is None

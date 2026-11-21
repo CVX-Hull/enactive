@@ -18,14 +18,13 @@ from tools import campaign_run
 from tools.configure_player_tools import configuration
 
 
-def package(root):
+def package(root, *, world=None, knowledge=None):
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     from harness.player.knowledge import empty
     from tools.knowledge_export import export
-    hashes=export(directory,empty())
+    hashes=export(directory,empty() if knowledge is None else knowledge,world=world)
     values={
-        'delivered-knowledge.json':empty(),
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
         'route.json':dict(schema='player-host/8',service_tier='default',context_reserve_tokens=200,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
@@ -37,9 +36,9 @@ def package(root):
     values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,unpriced_request_usd='0.00063')
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/10',session='a'*32,source_commit='f'*40,
-        labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
-        files={name:artifact(directory/name)['sha256'] for name in values},
+    profile=dict(schema='campaign-run/11',session='a'*32,source_commit='f'*40,
+        labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None,world=world),
+        files={name:artifact(directory/name)['sha256'] for name in (*values, 'delivered-knowledge.json')},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
         native=artifact(root/'native'),library=artifact(root/'library'),shared_lock=str(root/'.runtime/bridge/game.lock'),
@@ -186,8 +185,9 @@ def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both
     assert validate(directory,tmp_path)
     knowledge=dict(schema='delivered-knowledge/1',version='v1',coverage=None,articles=[],
                    facts=[dict(id='fact',type='claim',text='Fallible data',seen=dict(order=1))])
-    path=directory/'delivered-knowledge.json';path.write_text(json.dumps(knowledge))
-    profile['files']['delivered-knowledge.json']=hashlib.sha256(path.read_bytes()).hexdigest()
+    tmp_path = tmp_path/'with-knowledge'
+    directory,profile=package(tmp_path, knowledge=knowledge)
+    profile['ending_reserve']['usd']='0.00063'
     (directory/'manifest.json').write_text(json.dumps(profile))
     with pytest.raises(ControlError,match='ending_reserve.usd'):validate(directory,tmp_path)
     profile['ending_reserve']['usd']='0.00126'
@@ -210,12 +210,13 @@ def test_private_knowledge_hash_mismatch_refuses_preflight(tmp_path,name):
         validate(directory,tmp_path)
 
 
-@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','reservation_package','pre_delivery_package','attempt_limited_package','old_node','old_route','previous_route',
+@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','reservation_package','pre_delivery_package','attempt_limited_package','unscoped_package','old_node','old_route','previous_route',
                                   'reservation_route','untracked_adapter','partial','changed','dirty','credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     directory,profile=package(tmp_path)
     if fault=='old':profile['schema']='campaign-run/1'
     if fault=='attempt_limited_package':profile['schema']='campaign-run/9'
+    if fault=='unscoped_package':profile['schema']='campaign-run/10';profile['labels'].pop('world')
     if fault=='pre_delivery_package':profile['schema']='campaign-run/6'
     if fault=='previous_package':profile['schema']='campaign-run/3'
     if fault=='previous_labelless':profile['schema']='campaign-run/4';del profile['labels']
@@ -235,7 +236,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
         path.write_text(json.dumps(target));profile['files']['target.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
     expected={'old':'inert history','previous_package':'inert history','previous_labelless':'inert history','reservation_package':'inert history',
-              'attempt_limited_package':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history','reservation_route':'inert history',
+              'attempt_limited_package':'inert history','unscoped_package':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history','reservation_route':'inert history',
               'untracked_adapter':'tracked by the clean source commit'}.get(fault)
     # Ignored files never appear in porcelain status; only tracking binds them to the commit.
     with patch.object(packages,'ROOT',tmp_path),\
@@ -248,7 +249,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
 
 def test_labels_are_required_and_current_schema_only(tmp_path):
     directory,profile=package(tmp_path)
-    assert validate(directory,tmp_path)[0]['labels']==dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None)
+    assert validate(directory,tmp_path)[0]['labels']==dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None,world=None)
     del profile['labels']
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,\
@@ -257,27 +258,31 @@ def test_labels_are_required_and_current_schema_only(tmp_path):
 
 
 @pytest.mark.parametrize('labels',[
-    'text',None,[],dict(arm='a',start='S1',scenario='x',lineage=None),
-    dict(arm='a',start='S1',scenario='x',lineage=None,admission=None,extra=1),
-    dict(arm='',start='S1',scenario='x',lineage=None,admission=None),
-    dict(arm='a'*41,start='S1',scenario='x',lineage=None,admission=None),
-    dict(arm='a',start='S'*41,scenario='x',lineage=None,admission=None),
-    dict(arm='a',start='S1',scenario='x'*81,lineage=None,admission=None),
-    dict(arm='a',start='S1',scenario='',lineage=None,admission=None),
-    dict(arm='a',start='S1',scenario='x',lineage='',admission=1),
-    dict(arm='a',start='S1',scenario='x',lineage='l'*41,admission=1),
-    dict(arm=None,start='S1',scenario='x',lineage=None,admission=None),
-    dict(arm=1,start='S1',scenario='x',lineage=None,admission=None),
-    dict(arm='café',start='S1',scenario='x',lineage=None,admission=None),
-    dict(arm='a\nb',start='S1',scenario='x',lineage=None,admission=None),
-    dict(arm='a',start='S1\x00',scenario='x',lineage=None,admission=None),
-    dict(arm='a',start='S1',scenario='x\x7f',lineage=None,admission=None),
-    dict(arm='a',start='S1',scenario='x',lineage='l',admission=None),
-    dict(arm='a',start='S1',scenario='x',lineage=None,admission=1),
-    dict(arm='a',start='S1',scenario='x',lineage='l',admission=0),
-    dict(arm='a',start='S1',scenario='x',lineage='l',admission=10001),
-    dict(arm='a',start='S1',scenario='x',lineage='l',admission=True),
-    dict(arm='a',start='S1',scenario='x',lineage='l',admission='1'),
+    'text',None,[],dict(arm='a',start='S1',scenario='x',lineage=None,world=None),
+    dict(arm='a',start='S1',scenario='x',lineage=None,admission=None,world=None,extra=1),
+    dict(arm='a',start='S1',scenario='x',lineage=None,admission=None),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=1,world=None),
+    *[dict(arm='a',start='S1',scenario='x',lineage=None,admission=None,world=world)
+      for world in ('', 'w'*41, 'forêt', 'town\n', 2)],
+    dict(arm='',start='S1',scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm='a'*41,start='S1',scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm='a',start='S'*41,scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm='a',start='S1',scenario='x'*81,lineage=None,admission=None,world='w'),
+    dict(arm='a',start='S1',scenario='',lineage=None,admission=None,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage='',admission=1,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage='l'*41,admission=1,world='w'),
+    dict(arm=None,start='S1',scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm=1,start='S1',scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm='café',start='S1',scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm='a\nb',start='S1',scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm='a',start='S1\x00',scenario='x',lineage=None,admission=None,world='w'),
+    dict(arm='a',start='S1',scenario='x\x7f',lineage=None,admission=None,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=None,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage=None,admission=1,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=0,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=10001,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=True,world='w'),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission='1',world='w'),
 ])
 def test_invalid_operator_labels_refuse_before_effects(tmp_path,labels):
     directory,profile=package(tmp_path)
@@ -289,15 +294,38 @@ def test_invalid_operator_labels_refuse_before_effects(tmp_path,labels):
 
 
 @pytest.mark.parametrize('labels',[
-    dict(arm='a'*40,start='S99',scenario='x'*80,lineage='l'*40,admission=10000),
-    dict(arm='long-horizon',start='S2',scenario='Mixed printable ~!@# punctuation',lineage='survivor-1',admission=1),
-    dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
+    dict(arm='a'*40,start='S99',scenario='x'*80,lineage='l'*40,admission=10000,world='w'*40),
+    dict(arm='long-horizon',start='S2',scenario='Mixed printable ~!@# punctuation',lineage='survivor-1',admission=1,world='A'),
+    dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None,world=None),
+    dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None,world='World !@#'),
 ])
 def test_valid_operator_labels_are_admitted(tmp_path,labels):
-    directory,profile=package(tmp_path)
+    directory,profile=package(tmp_path,world=labels['world'])
     profile['labels']=labels
     (directory/'manifest.json').write_text(json.dumps(profile))
     assert validate(directory,tmp_path)[0]['labels']==labels
+
+
+@pytest.mark.parametrize('fault', ['missing', 'world', 'delivered'])
+def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_hashes(tmp_path, fault):
+    directory, profile = package(tmp_path, world='the farm')
+    path = directory/'private/knowledge-full.json'
+    full = json.loads(path.read_text())
+    if fault == 'missing':
+        del full['selection']
+    elif fault == 'world':
+        profile['labels']['world'] = 'another world'
+    else:
+        delivered = directory/'delivered-knowledge.json'
+        delivered.write_bytes(delivered.read_bytes() + b'\n')
+        profile['files'][delivered.name] = hashlib.sha256(delivered.read_bytes()).hexdigest()
+    path.write_text(json.dumps(full))
+    profile['private_files'][path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run') as validator:
+        with pytest.raises(ControlError, match='Private knowledge selection differs'):
+            packages.preflight(directory)
+    validator.assert_not_called()
 
 
 @pytest.mark.parametrize('when',['before','during'])
