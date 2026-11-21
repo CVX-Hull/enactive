@@ -8,8 +8,11 @@ status: active
 
 The curator reads projected traces and holds no custody or direct player access.
 The player and computer do not import curator code. The runner supports windowed
-sessions beside an admission. Its behavior in real play remains unverified. Evidence
-comes from offline tests and the [stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md).
+sessions beside an admission. Live evidence is partial ([first paid live run](../acceptance/2026-11-21-live-curator-run-859.md)),
+and a reused frame across adjacent windows can currently invalidate gate history
+([#886](https://github.com/CVX-Hull/enactive/issues/886)); full multi-window and
+handoff behavior in real play remains unverified beyond offline tests and the
+[stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md).
 Publications during an admission leave the running actor on its
 [frozen knowledge export](../contracts/player-host.md#delivered-knowledge-and-recall).
 
@@ -161,8 +164,9 @@ explains which lag, cost, staging and player-pace questions require real play.
   [prompt-cache stability record (#489)](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)
   and the curator memory study's
   [completion and registered no-go](../acceptance/2026-11-12-p1-descriptive-completion-178.md).
-- **Standing:** Real play with the runner requires owner approval under the
-  [live-run decision](../decisions/owner-decisions.md#one-paid-live-curator-run).
+- **Standing:** The [first paid live run approval](../decisions/owner-decisions-archive.md#one-paid-live-curator-run)
+  is used ([run record](../acceptance/2026-11-21-live-curator-run-859.md)); any further
+  paid live play with the runner requires a new owner approval.
   Curator ownership of the store follows the
   [“Let's keep the dedicated curator” decision](../decisions/owner-decisions.md#curator-keeps-writing-memory).
   Any claim of benefit needs a fresh prospective protocol and owner decision and

@@ -19,7 +19,7 @@ replacement: docs/components/curator.md
 - **Unknown.** Lag, cost, snapshot timing and player pace beside a real custodian
   are unmeasured. Curation stays outside the input path and shares disk work.
 - **Decisions needed.** None for this design. The paid live run's conditions are in
-  the [owner decision log](../decisions/owner-decisions.md#one-paid-live-curator-run).
+  the [owner decision log](../decisions/owner-decisions-archive.md#one-paid-live-curator-run).
 
 ## Who starts a session, and when
 
