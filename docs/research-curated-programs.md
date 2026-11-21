@@ -387,7 +387,7 @@ miscalibrated. Expectation as a **side effect on the actor's behaviour** is unte
 measured for skills, not expectations).
 
 **Recommendation for ADR 009 (expectations and prediction error).**
-1. Under ["Intent now, rest later"](decisions/owner-decisions.md#in-force), expectation
+1. Under ["Intent now, rest later"](decisions/owner-decisions.md#tool-intent-required-and-cites-optional), expectation
    emissions are deferred until a consumer needs them. Their proposed use is as a
    measurable signal for the curator or program predicates. Their effect on the actor's
    play is unproven. A development comparison could use short, same-seed runs with and
