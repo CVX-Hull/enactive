@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "coding-agent-attempt/1: one coding agent's attempt at a matched leaf in data/evaluation/coding-agent-attempts.jsonl",
-  "description": "One row per attempt of a matched run: the same Ready leaf, brief and base commit given to a routing row's first choice and to one challenger, each in its own worktree. The two rows of a pair share issue, base commit and kind of work. The procedure and how to read the rows are on docs/operations/model-routing.md. `model` and `effort` are the names the curator and player-host configurations use; `wall_seconds` is the run ledger's.",
+  "title": "coding-agent-attempt/2: one delegated attempt in data/evaluation/coding-agent-attempts.jsonl",
+  "description": "One row per delegated attempt: a worker, reviewer or explorer the lead chose for one task. A matched run's two attempts are a pair: the same Ready leaf, brief and base commit given to a routing row's first choice and to one challenger, each in its own worktree; the two rows share issue, base commit and kind of work, and only they carry a blind preference. The procedure and how to read the rows are on docs/operations/model-routing.md. `model` and `effort` are the names the curator and player-host configurations use; `wall_seconds` is the run ledger's.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,36 +9,44 @@
     "issue",
     "kind_of_work",
     "base_commit",
+    "role",
     "coding_agent",
     "coding_agent_version",
     "model",
     "effort",
+    "reason",
     "date",
+    "hand_back",
     "acceptance",
     "repairs",
     "wall_seconds",
     "blind_preference",
     "outcome",
+    "findings",
     "false_report"
   ],
   "properties": {
     "schema": {
-      "const": "coding-agent-attempt/1"
+      "const": "coding-agent-attempt/2"
     },
     "issue": {
-      "description": "The GitHub issue of the leaf both attempts were given.",
+      "description": "The GitHub issue of the task the delegate was given; a matched run's two attempts share it.",
       "type": "integer",
       "minimum": 1
     },
     "kind_of_work": {
-      "description": "The routing table's row for this leaf, its first cell verbatim.",
+      "description": "The routing table's row for this task, its first cell verbatim.",
       "type": "string",
       "minLength": 1
     },
     "base_commit": {
-      "description": "The commit both worktrees started from.",
+      "description": "The commit the delegate started from; a matched run's two worktrees share it.",
       "type": "string",
       "pattern": "^[0-9a-f]{40}$"
+    },
+    "role": {
+      "description": "The role the delegate was given.",
+      "enum": ["worker", "reviewer", "explorer"]
     },
     "coding_agent": {
       "description": "The coding agent that ran the attempt, as the coding-agent hosts page names it.",
@@ -59,14 +67,23 @@
       "description": "The effort the attempt ran at, in the hosts' shared vocabulary; null when the coding agent exposes no effort setting.",
       "enum": ["off", "minimal", "low", "medium", "high", "xhigh", "max", null]
     },
+    "reason": {
+      "description": "The reason the lead gave for choosing this delegate, as on the brief's Role line.",
+      "type": "string",
+      "minLength": 1
+    },
     "date": {
       "description": "The day the attempt ran, as YYYY-MM-DD.",
       "type": "string",
       "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
     },
+    "hand_back": {
+      "description": "How the delegate's last start ended, as the delegate call (tools/delegate.py) reported it.",
+      "enum": ["handed_back", "failed_start", "empty_reply", "refused", "failed", "timed_out", "unavailable"]
+    },
     "acceptance": {
-      "description": "The result of the lead's own rerun of the brief's acceptance check on the attempt's final commit, whatever the attempt reported.",
-      "enum": ["passed", "failed"]
+      "description": "The result of the lead's own rerun of the brief's acceptance check on the attempt's final commit, whatever the attempt reported; null for a reviewer or explorer and for a worker that handed nothing back.",
+      "enum": ["passed", "failed", null]
     },
     "repairs": {
       "description": "Repairs the lead had to ask for before the rerun passed, or before giving up.",
@@ -79,17 +96,48 @@
       "minimum": 0
     },
     "blind_preference": {
-      "description": "The clean-context reviewer's verdict on this attempt's diff against its pair's, read under neutral labels and mapped back afterwards.",
-      "enum": ["preferred", "not_preferred", "no_preference"]
+      "description": "For one of a matched run's two attempts, the clean-context reviewer's verdict on this attempt's diff against its pair's, read under neutral labels and mapped back afterwards; null for every other attempt.",
+      "enum": ["preferred", "not_preferred", "no_preference", null]
     },
     "outcome": {
-      "description": "Whether the lead merged this attempt or discarded it.",
-      "enum": ["merged", "discarded"]
+      "description": "For a worker, whether the lead merged this attempt or discarded it; for a reviewer or explorer, whether the lead acted on what it returned.",
+      "enum": ["merged", "discarded", "used", "not_used"]
+    },
+    "findings": {
+      "description": "A reviewer's findings as the lead dispositioned them; null for a worker or explorer.",
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["confirmed", "rejected"],
+          "properties": {
+            "confirmed": {"type": "integer", "minimum": 0},
+            "rejected": {"type": "integer", "minimum": 0}
+          }
+        }
+      ]
     },
     "false_report": {
       "description": "What the attempt reported that was not so, such as a timeout reported as success or quoted text that exists nowhere in the tree or its cited source; null when its report held.",
       "type": ["string", "null"],
       "minLength": 1
+    }
+  },
+  "if": {
+    "properties": {"role": {"const": "worker"}}
+  },
+  "then": {
+    "properties": {
+      "outcome": {"enum": ["merged", "discarded"]},
+      "findings": {"type": "null"}
+    }
+  },
+  "else": {
+    "properties": {
+      "outcome": {"enum": ["used", "not_used"]},
+      "acceptance": {"type": "null"},
+      "blind_preference": {"type": "null"}
     }
   }
 }
