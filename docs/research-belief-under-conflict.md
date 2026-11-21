@@ -45,7 +45,7 @@ specified numerical belief model.
   last-write-wins 72.46 / 36.27. Bayesian updating adds little over latest-write-wins
   on conversational data. Also a 27.5-point gap between strict token-F1 and
   LLM-judge scores on identical outputs, and the A-MEM and MemGPT baseline scores come
-  from another paper on a different backbone (gemini-2.5-flash here), so comparison with
+  from another paper on a different backbone (gemini-2.5-flash in S09), so comparison with
   those is indicative.
   (b) **No-LLM belief-layer micro-benchmark:** with constant reliability LWW beat the
   Bayesian rule (73.5 vs 67.1); with varying reliability Bayesian 100, LWW 74.3,
@@ -67,12 +67,12 @@ specified numerical belief model.
   model 55.2% overall; one model detected stale state 92.0% (Type I) but rejected a
   premise built on the stale state only 30.0%; propagated (Type II) conflicts harder.
   A write-time adjudication step (KEEP, STALE, REPLACE, UNKNOWN) plus propagation-aware
-  search plus constrained readout lifted GPT-4o-mini from 8.7% to 68.0% on the
+  search plus constrained readout lifted GPT-4o-mini from 8.7% to 68.0% (S10) on the
   authors' own benchmark, with an LLM judge (95.8% agreement with humans), a
   predefined state schema, one-shot transitions only. Vendor-neutral but
   **author-built benchmark and author-built fix**; not independently replicated.
 - *Over-trust of stale memory* (S11, extractor). Synthetic frozen benchmark, 300
-  templated scenarios, Qwen3 0.6B to 8B plus Llama; stale-value reliance 0.92 to 1.00;
+  templated scenarios, Qwen3 0.6B to 8B plus Llama (S11); stale-value reliance 0.92 to 1.00;
   a stale note dated newer fooled larger models more; exposing metadata helped at every
   size (+0.30 [0.17, 0.42] at 0.6B, +0.28 at 1.7B, +0.53 at 4B, +0.54 at 8B), more
   at the larger sizes. The **pre-resolved arm is an oracle that removes the stale item
@@ -83,7 +83,7 @@ specified numerical belief model.
   Exploratory factorial analyses, action-scored with no judge, measured at
   consumption time only; one author team (PayPal AI), v1 only (2026-09-01).
 - *LLM as truth-discovery component* (S15, extractor). On three tabular fusion
-  datasets GPT-4o-mini beat majority vote, source-reliability voting, a Bayesian latent
+  datasets GPT-4o-mini (S15) beat majority vote, source-reliability voting, a Bayesian latent
   truth model and a domain-aware method (F1 0.78 to 0.91 vs best baseline 0.70 to 0.82),
   but another model scored 0.3362 on one dataset, single runs, no variance, possible
   memorization of public data; the LLM method did not model source reliability

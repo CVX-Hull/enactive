@@ -72,7 +72,7 @@ knowledge of any particular game.
   3 selected public trials per configuration, task and condition. Curated skills +16.6 pp
   (33.9% to 50.5%; per-configuration +4.1 to +25.7); **self-generated skills were
   evaluated on only 3 of the 18 configurations and fell below no skills on all three**:
-  Anthropic's agent + Opus 4.7 -8.1 pp, OpenAI's agent + GPT-5.5 -11.3 pp, Google's agent + Gemini 3.1
+  in arXiv:2602.12670, Anthropic's agent + Opus 4.7 -8.1 pp, OpenAI's agent + GPT-5.5 -11.3 pp, Google's agent + Gemini 3.1
   Pro -11.5 pp (curated skills +18.2, +19.7, +24.8 on the same three); 13 of 87
   tasks negative with curated skills; 1 skill +18.0, 2-3 skills +19.0, 4+ skills +10.1;
   compact +19.0, standard +21.5, detailed +14.5, "comprehensive" +0.7 pp. **No
@@ -95,7 +95,7 @@ knowledge of any particular game.
   a judge that scores failures as passes at rate at or above (1-tau)/2 retires
   nothing at any sample size; unmaintained libraries drift to worse than no skill.
   Its own result is a rolling gain of +0.328 held-out pass@1 (last ten rounds minus
-  first ten) on a 100-task MBPP+ slice filtered to tasks the base model (Anthropic's Opus
+  first ten) on a 100-task MBPP+ slice (arXiv:2605.22148) filtered to tasks the base model (Anthropic's Opus
   4.7) fails on at least one probe seed, 100 rounds, 3 seeds; the control with injection withheld gains +0.002;
   six other model families single-seed; SWE-bench preliminary; no budget-matched
   baseline; eviction signal associational. **The "LLM-written +0.0 pp, human-written

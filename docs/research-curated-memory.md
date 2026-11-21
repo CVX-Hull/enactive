@@ -89,7 +89,7 @@ abs-page v1 date is used. No game knowledge was used as evidence anywhere in thi
   (70.95; 38.50; 51.00; 85.40). History-based deletion slightly improved three of four
   agents under strict addition. Errors in retrieved records propagate into new
   executions ("experience-following"). Baselines: fixed bank, add-all, coarse judges,
-  an oracle; GPT-4o-mini main backbone; one of four agents synthetic; seed or repeat
+  an oracle; GPT-4o-mini main backbone (S01); one of four agents synthetic; seed or repeat
   count not stated in the text read. Result is an effect of *unfiltered* writes on a
   bank that already works, not a statement that memory beats no memory.
 - *Retention under noise.* TraceRetain (S02, abstract + extractor): on clean ALFWorld
@@ -143,7 +143,7 @@ must approximate*, not that one exists.
 
 **Memory-product comparison (optional; evidence is thin).** Only one independent
 source measured several products (S04, its Table 3, all nine systems printed). One
-benchmark (LongMemEval), one local model (Qwen3-32B), n=300 queries over five
+benchmark (LongMemEval), one local model (Qwen3-32B in S04), n=300 queries over five
 histories, one run, products adapted, not budget-matched; vendor-reported numbers were
 not used. Differences of a few points among the first four rows are within noise.
 
