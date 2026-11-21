@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-19
 scope: Retained incomplete008 medical continuation and separate009 body-status native probe
-review_trigger: Historical correction only; current capability lives in protocol and overview
 status: historical
 kind: run
 ---

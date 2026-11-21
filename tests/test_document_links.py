@@ -49,6 +49,15 @@ class DocumentLinkTests(unittest.TestCase):
         self.write("docs/protocol.md", self.current("[adoption](contracts/leaf.md#lifecycle)"))
         self.assertEqual(check_documents(self.root), [])
 
+    def test_current_decision_must_be_reachable_from_documentation_map(self):
+        self.write("docs/documentation.md", self.current("[Decision records](decisions/index.md)"))
+        self.write("docs/decisions/index.md", self.current("# Decision records"))
+        self.write("docs/decisions/001-proposal.md", self.current("# Proposal"))
+        self.assertIn("Current content is unreachable from docs/documentation.md: docs/decisions/001-proposal.md",
+                      check_documents(self.root))
+        self.write("docs/decisions/index.md", self.current("[Proposal](001-proposal.md)"))
+        self.assertEqual(check_documents(self.root), [])
+
     def test_historical_route_cannot_make_current_content_reachable(self):
         self.write("docs/protocol.md", self.current("[old evidence](old.md)"))
         self.write("docs/old.md", "---\nstatus: historical\n---\n[stale](contracts/leaf.md#removed)")

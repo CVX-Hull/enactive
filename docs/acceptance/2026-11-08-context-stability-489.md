@@ -4,7 +4,6 @@ status: historical
 kind: change
 date: '2026-11-08'
 scope: 'Request stability and clarity for the actor and curator hosts, the no-spend serialization proof, and one paid curator session checking whether session affinity raises the cached share (#489)'
-review_trigger: None; dated record
 ---
 
 # Context stability and clarity (#489)

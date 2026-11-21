@@ -76,6 +76,7 @@ def test_new_records_and_proposed_designs_open_with_at_a_glance(tmp_path):
 def test_index_lists_records_newest_first_and_detects_staleness(tmp_path):
     (tmp_path / "docs/acceptance").mkdir(parents=True)
     (tmp_path / "docs/changes").mkdir()
+    (tmp_path / "docs/decisions").mkdir()
     record(tmp_path, "2026-01-01-old.md", "2026-01-01", "First | piped", "Old record")
     record(tmp_path, "2026-02-01-new.md", "2026-02-01", "Second", "New record")
     assert documents.check_indexes(tmp_path) == [f"{i}: stale; run python -m tools.documents --write"
@@ -88,6 +89,35 @@ def test_index_lists_records_newest_first_and_detects_staleness(tmp_path):
     assert new < old and "First \\| piped" in text and "index.md)" not in text.split("| --- |")[-1]
     record(tmp_path, "2026-03-01-added.md", "2026-03-01", "Third", "Added")
     assert documents.check_indexes(tmp_path) == ["docs/acceptance/index.md: stale; run python -m tools.documents --write"]
+
+
+def test_decision_index_lists_only_numbered_records_and_links_replacements(tmp_path):
+    index = "docs/decisions/index.md"
+    directory = tmp_path / "docs/decisions"
+    for generated in documents.INDEXES:
+        (tmp_path / generated).parent.mkdir(parents=True)
+    older = directory / "002-old.md"
+    older.write_text("---\nowner: lead\nstatus: superseded\ndate: '2026-01-01'\nscope: First\n"
+                     "replacement: docs/decisions/001-new.md\n---\n\n# Earlier ADR\n")
+    (directory / "001-new.md").write_text(
+        "---\nowner: lead\nstatus: historical\ndate: '2026-02-01'\nscope: Second\n---\n\n# Later ADR\n")
+    for name in ("owner-decisions.md", "owner-decisions-archive.md", "1234-other.md", "other.md"):
+        (directory / name).write_text("---\nowner: [bad\n---\n# Ignored\n")
+    for generated in documents.INDEXES:
+        (tmp_path / generated).write_text(documents.render_index(tmp_path, generated))
+    text = (tmp_path / index).read_text()
+    assert "# Decision records" in text
+    assert [line for line in text.splitlines() if line.startswith("| ")] == [
+        "| Date | Record | Status | Scope | Replaced by |",
+        "| --- | --- | --- | --- | --- |",
+        "| 2026-02-01 | [Later ADR](001-new.md) | historical | Second |  |",
+        "| 2026-01-01 | [Earlier ADR](002-old.md) | superseded | First | [Later ADR](001-new.md) |",
+    ]
+    assert documents.check_indexes(tmp_path) == []
+    (tmp_path / "docs/replacement reference.md").write_text("No heading.\n")
+    older.write_text(older.read_text().replace("docs/decisions/001-new.md", "docs/replacement reference.md"))
+    assert "[replacement reference.md](../replacement%20reference.md)" in documents.render_index(tmp_path, index)
+    assert documents.check_indexes(tmp_path) == [f"{index}: stale; run python -m tools.documents --write"]
 
 
 def test_undated_or_statusless_records_sort_last_without_crashing(tmp_path):

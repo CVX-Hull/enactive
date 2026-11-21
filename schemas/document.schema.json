@@ -71,6 +71,28 @@
     },
     {
       "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "historical",
+              "superseded"
+            ]
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "review_trigger"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
         "properties": {
           "status": {
             "const": "historical"

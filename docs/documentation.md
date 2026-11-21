@@ -41,7 +41,7 @@ approval stages.
 | Evidence and remaining work | [Public Project](https://github.com/users/CVX-Hull/projects/2) and its issues | Run method in [development runs](development-runs.md); dated records in the [acceptance index](acceptance/index.md) and [change index](changes/index.md) |
 | Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
 | What can go wrong and what is done about it | [Risk register](risks.md) | [Controls](controls.md), then the [control rule](standards/authority.md#control-review) for adding or removing one |
-| What the owner decided | [Owner decision log](decisions/owner-decisions.md) | The record or issue its row links |
+| What the owner decided | [Owner decision log](decisions/owner-decisions.md) | The record or issue its row links; numbered decision records in the [decision record index](decisions/index.md) |
 | What may be done without asking | [Operator permissions](operator-permissions.md) | [Owner decision log](decisions/owner-decisions.md) |
 | Where a kind of fact belongs | [One authoritative home](#one-authoritative-home-per-kind-of-fact) | [S-DOCS](standards/documentation.md#current-pages-records-and-decisions), [authority and review surfaces](workflows/authority.md) |
 | What a term means | [Glossary](glossary.md) | The owning page each entry links |

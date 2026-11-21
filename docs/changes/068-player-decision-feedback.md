@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Player preparation feedback, typed context projection or exact-detail access changes
 status: historical
 date: 2026-10-25
 scope: MCP6.1 and player-view5; mission/native contracts and authority unchanged

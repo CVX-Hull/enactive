@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Investigation evidence boundary, shared reader or delivery scope changes
 status: historical
 date: 2026-10-30
 scope: Implemented investigation design and owner-directed live attachment amendment

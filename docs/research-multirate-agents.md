@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Changes to active/background roles, executable learning, memory consolidation or responsiveness claims
 status: historical
 date: 2026-11-07
 scope: 2026-10-24 literature synthesis behind the multi-level player direction, which was not adopted

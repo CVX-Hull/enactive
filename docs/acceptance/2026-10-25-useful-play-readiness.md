@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Correction to closed005/006 evidence or newly recovered records
 status: historical
 kind: run
 date: 2026-10-25
