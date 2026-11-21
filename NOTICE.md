@@ -9,7 +9,7 @@ status: active
 ## License scope
 
 Original standalone harness/viewer code, tooling, tests and documentation are
-provided under the [MIT license](LICENSE). The CDDA integration
+provided under the [MIT license](LICENSE). This does not relicense upstream material. The CDDA integration
 `native/cdda_harness.cpp`, `native/cdda_harness.h` and upstream modifications in
 `tools/patch_game.py` are distributed under CDDA's CC BY-SA 3.0 terms; third-party
 artwork, embedded fonts and notices retain their own terms below. Source release
@@ -112,13 +112,14 @@ credits filler trees to Yar (original) and I-am-Erk (edits), with per-tile credi
 in the [upstream tileset](https://github.com/I-am-Erk/CDDA-Tilesets/tree/dfd8d69f388e6b9c2719b250845e51d8d30eb2cb/gfx/UltimateCataclysm).
 The [upstream license notice](https://github.com/I-am-Erk/CDDA-Tilesets/blob/dfd8d69f388e6b9c2719b250845e51d8d30eb2cb/LICENSE.txt)
 identifies CC BY-SA 3.0. The depicted game artwork retains
-[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) and is not covered
+by the project's MIT grant.
 
 The additional [seven-day endpoint image](docs/assets/seven-day-endpoint-2026-10-19.png)
 is an unchanged actual CDDA/UltiCa capture from 2026-10-19. Its source and byte identity
 are recorded in the [campaign report](docs/acceptance/2026-10-19-seven-day-survival.md)
 and manifest. It retains the same upstream game and art attribution and CC BY-SA 3.0
-terms.
+terms, and is not covered by the project's MIT grant.
 
 The CDDA evaluation binding's glyph atlas (`harness/evaluation/cdda/atlas.json`) is derived from the
 Terminus font (SIL OFL 1.1) as rendered by Cataclysm: DDA at 8x16 pixels. Each glyph is a 128-pixel ink

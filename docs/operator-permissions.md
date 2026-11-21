@@ -39,7 +39,7 @@ covers the ledger and the separate admission bound for an incomplete trace.
 is parsed may spend up to \$1 of provider credit before merge without a separate
 approval. The lead runs a short campaign package capped at \$1 on the pinned route
 and records the check in the pull request. The spend counts against the key's
-credit limit and opens no study envelope.
+credit limit and opens no study envelope. Anything larger is asked with its price.
 
 See the [in-force owner decisions](decisions/owner-decisions.md#in-force) for
 specific spending approvals and their conditions. Record other spend outside a
@@ -56,6 +56,8 @@ When only that check is pending, the lead may queue
 `gh pr merge --auto --squash --match-head-commit SHA` using the commit named in review.
 Follow the [merge and wait procedure](workflows/development.md#minimum-checks-and-escalation)
 and the [host's CI wait instructions](operations/coding-agents.md#waiting-on-ci).
+Agent review is evidence, not human approval; say so in the pull request rather
+than waiting for one.
 
 Escalate to the owner only for exceptional situations:
 
@@ -119,7 +121,8 @@ Follow the [host's activation instructions](operations/coding-agents.md#per-user
 
 The deciding actor gets the [player guide](player-guide.md), frozen task context
 and current tools. Its authority is limited to player-visible observations and
-actor tools. The [player host procedure](operations/player-host.md) owns context
+actor tools: no engineering source, hidden game state, raw credentials, shell,
+arbitrary process tools or save editing. The [player host procedure](operations/player-host.md) owns context
 and credential isolation.
 
 ### Preflight for every campaign
