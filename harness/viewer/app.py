@@ -18,7 +18,7 @@ from starlette.routing import Route
 
 from harness.spectator_assets import PAGE_POLICY, WEB, static_file
 
-from . import cross, views, knowledge, curator
+from . import cross, views, knowledge, curator, curator_runner
 from . import frame as frame_view
 from .catalog import API, Catalog, RunInfo, ViewError
 from .live import LiveEvaluator
@@ -197,8 +197,12 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         return frame_reply(curator.session(sources.curator_sessions, request.query_params.get('source'),
                                            after, limit, request.query_params.get('snapshot')))
 
+    def curator_runner_status(request: Request) -> Response:
+        return frame_reply(curator_runner.status(sources.curator_runner_status, clock()))
+
     prefix = '/api/view'
-    routes = [Route(f'{prefix}/frame/curator-session-sources', plain(curator_session_sources), methods=['GET']),
+    routes = [Route(f'{prefix}/frame/curator-runner', plain(curator_runner_status), methods=['GET']),
+        Route(f'{prefix}/frame/curator-session-sources', plain(curator_session_sources), methods=['GET']),
         Route(f'{prefix}/frame/curator-session', plain(curator_session), methods=['GET']),
         Route(f'{prefix}/frame/curator-sources', plain(curator_sources), methods=['GET']),
         Route(f'{prefix}/frame/curator-results', plain(curator_results), methods=['GET']),

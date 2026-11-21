@@ -31,6 +31,7 @@ class FrameSources:
     probes: Path = DATA_ROOT / 'evaluation' / 'probes'
     curator_results: tuple[tuple[str, Path], ...] = ()
     curator_sessions: tuple[tuple[str, Path], ...] = ()
+    curator_runner_status: Path | None = None  # the curator runner's status.json, read at each request
 
 
 # The health strip's slots (ADR 009's spectator direction) and the phase that first delivers each. `actor_cadence` is measured from sealed

@@ -1036,6 +1036,7 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/curator-results?source=&after=&limit=&snapshot=` | One source’s recorded current submission/restore results and read-snapshot provenance (`spectator-frame/1`, below) |
 | `/api/view/frame/curator-session-sources?after=&limit=` | Operator-configured receipt labels |
 | `/api/view/frame/curator-session?source=&after=&limit=&snapshot=` | One terminal curator session receipt and its paged gate results |
+| `/api/view/frame/curator-runner` | The curator runner's status file, read at this request: how far the curator trails play (`spectator-frame/1`, [below](#curator-runner-status)) |
 
 ### Recorded browser entry
 
@@ -1192,12 +1193,52 @@ collection events are historical, not current draft states or complete promotion
 history. Empty verdicts establish no result, not zero publications or acceptance.
 The reader uses no producer lock, writes no records and makes no Git or provider call.
 
+### Curator runner status
+
+`--curator-runner-status FILE` on the standalone viewer names the curator runner's
+`status.json` (`curator-runner-status/1`, owned by `harness/curator/runner.py`). The
+supervisor passes `<run>/curator-runner/status.json` when it starts the runner with
+`--curator-runner`, and passes nothing otherwise. The file shows what the curator has
+done since the actor's delivered version; the actor's delivered version stays in the
+[knowledge view](#recorded-knowledge-and-public-reports), and the two are never merged.
+
+`GET /api/view/frame/curator-runner` opens the file for reading at each request, with
+the same bounded regular-file read as recorded results, no lock and no write, and
+returns `source_status`, `snapshot` (`{sha256, bytes}` of the bytes read, or `null`),
+`read_wall` (when the viewer read it) and `status`:
+
+- `source_status` is `available`, `not_configured`, `missing`, `unreadable`,
+  `too_large`, `empty`, `malformed` (not complete JSON, as a partly written file
+  would be) or `unsupported` (not a `curator-runner-status/1` object). Every state
+  but `available` has `status: null`, so no figure is shown; a missing or partly
+  written file is never read as zero lag.
+- `status` projects, by allowlist: `session`, `state` (`polling`, `in-session`,
+  `stopped` or `ended`), `updated_wall`, `stop_reason`, `look_error`, `settings`,
+  `position` (actor, step, operation, ordinal among the admission's finished
+  operations, and the snapshot's `read_wall`), `as_of` (the same for the last
+  successful read), `after_last_read`, `snapshot` timings, `current` (the session in
+  flight), `covered_prefix` (`end` as a placed step, and `restore`), `lag`,
+  `stamp_distance`, `backlog`, `last_confirmed` (version, label, window and its
+  coverage stamp's session, actor and last step), `latest_version`, `failures`,
+  `unconfirmed` (how many publications could not be confirmed), `examined` (the
+  latest 100 ranges with `total` and `omitted`; each has its window, outcome, whether
+  the cursor advanced and its wall times) and `unexamined` (null until the runner has
+  stopped or ended).
+- A value that is absent, the runner's `unknown`, or of another type is `unknown`,
+  never zero. `after_last_read` is therefore `unknown`. A null the runner wrote (no
+  session in flight, nothing confirmed, no stop reason) stays null. Text that looks
+  like a path or exceeds the identifier limit is withheld whole, with
+  `omitted_characters`.
+
+The page polls this route every five seconds. Nothing is sent to the curator, and no
+figure is derived beyond what the file states.
+
 ### Spectator frame (`spectator-frame/1`)
 
 The `/api/view/frame/*` routes are the spectator's frame
 ([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18)). They follow the rules above (`GET` only, under 4 MiB, nothing written) but carry
 `"schema": "spectator-frame/1"`. Errors keep the `spectator-view/2` envelope. They read
-tracked data, the catalog's stores and explicitly configured curator result files, and nothing they compute reaches the player or the
+tracked data, the catalog's stores, explicitly configured curator result files and the curator runner's status file, and nothing they compute reaches the player or the
 curator (ADR008). The container and probe directories default to the repository's
 `data/containers` and `data/evaluation/probes`; `create_app(frame_sources=)` overrides
 them for tests.

@@ -308,6 +308,57 @@ test('curator results select and show escaped recorded detail on a phone', {time
   } finally { await page.close(); }
 });
 
+test('curator runner status shows a present, a missing and a partly written file as such', {timeout: 30000}, async () => {
+  const page = await S.open(browser, `${fx.url}#live`, {width:390,height:900,mobile:true});
+  const place = (step, ordinal) => ({actor:'actor-a',step,operation:`op-${step}`,ordinal});
+  const walls = {began:1700000000,ended:1700000001};
+  const stamp = {session:'run',actor:'actor-a',last_step:25};
+  const status = {session:'run',state:'polling',updated_wall:1700000002,stop_reason:null,look_error:null,
+    position:{...place(30,30),read_wall:walls},as_of:{...place(30,30),read_wall:walls},after_last_read:'unknown',
+    current:null,covered_prefix:{end:place(25,25),restore:null},lag:5,stamp_distance:'unknown',backlog:5,
+    last_confirmed:{version:'v1',label:'actor-a-1-25-x',window:{session:'run',actor:'actor-a',first:1,last:25},coverage:stamp},
+    latest_version:{version:'v1',coverage:stamp},failures:{sessions:0,snapshots:0},unconfirmed:0,
+    examined:{items:[{label:'actor-a-1-25-x',window:{session:'run',actor:'actor-a',first:1,last:25},session_id:'s',
+      outcome:'accepted',advanced:true,started_wall:1699999990,ended_wall:1699999999}],total:1,omitted:0},
+    unexamined:{items:null,total:0,omitted:0}};
+  let state = 'available';
+  try {
+    await S.ready(page);
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      if (!new URL(request.url()).pathname.endsWith('/frame/curator-runner')) return request.continue();
+      const body = {schema:'spectator-frame/1',source_status:state,read_wall:1700000003,
+        snapshot:state === 'missing' ? null : {sha256:'a'.repeat(64),bytes:state === 'available' ? 900 : 40},
+        status:state === 'available' ? status : null};
+      request.respond({status:200,contentType:'application/json',body:JSON.stringify(body)});
+    });
+    await page.evaluate(() => { location.hash='#frame/curator'; });
+    await S.until(page, () => document.querySelector('[data-runner-facts]'));
+    const facts = await page.$$eval('[data-runner-facts] dt', dts => Object.fromEntries(dts.map(dt => [dt.textContent, dt.nextElementSibling.textContent])));
+    assert.match(facts['Play has reached'], /actor actor-a · step 30 · operation op-30 · finished operation 30/);
+    assert.match(facts['As of'], /2023-11-14T22:13:21Z/);
+    assert.equal(facts['After the last read'], 'unknown');
+    assert.match(facts['Covered prefix ends at'], /step 25/);
+    assert.equal(facts['Lag (finished operations after the covered prefix)'], '5');
+    assert.equal(facts['Distance from the latest stamp'], 'unknown');
+    assert.equal(facts['Last confirmed version'], 'v1 · stamp: session run · actor actor-a · last step 25');
+    assert.match(await page.$eval('table.data', n => n.innerText), /actor actor-a · steps 1–25\s+accepted\s+yes/);
+    assert.equal(await S.overflow(page), 0);
+    await S.shot(page, 'curator-runner-status-phone');
+    for (const [next, text] of [['missing', 'missing'], ['malformed', 'partly written']]) {
+      state = next;
+      await page.evaluate(() => { location.hash='#frame/actor'; });
+      await S.until(page, () => !document.querySelector('[data-runner-status]'));
+      await page.evaluate(() => { location.hash='#frame/curator'; });
+      await S.until(page, t => document.querySelector('[data-runner-status]')?.textContent.includes(t), text);
+      assert.equal(await page.$('[data-runner-facts]'), null, `${next} shows no figures`);
+      assert.doesNotMatch(await page.$eval('[data-runner-status]', n => n.closest('.panel').innerText), /Lag \(|Backlog \(|Play has reached/);
+      await S.shot(page, `curator-runner-status-${next}`);
+    }
+    assert.deepEqual(page.problems, []);
+  } finally { await page.close(); }
+});
+
 test('curator paging and refresh keep empty, changed and failed sources distinct', {timeout: 30000}, async () => {
   const page = await S.open(browser, `${fx.url}#live`);
   let digest = 'a'.repeat(64), fail = true, failedRequests = 0;

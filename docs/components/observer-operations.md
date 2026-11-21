@@ -21,7 +21,7 @@ records and can fail without effect. [Architecture](../architecture.md) and
 | [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive `/api/status` and `/api/source/ID` routes, independent Pause and the actor tool routes. It serves no page and no derived view. |
 | [Gateway](../../tools/campaign_watch.py) | The page origin and static files, relayed status and source reads, Pause with a reason, and bounded forwarding of view reads. Its exit ends supervision, so it stays minimal. |
 | [Page](../../web/) | Source presentation, labels, resource status, Pause feedback and the viewer's views. Served by the gateway. |
-| Viewer (`harness/viewer`) | Read-only evaluator views and operator-selected curator result records ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). A separate process outside supervision. |
+| Viewer (`harness/viewer`) | Read-only evaluator views, operator-selected curator result records and the curator runner's status ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). A separate process outside supervision. |
 | [Supervisor](../../tools/campaign_supervision.py) | Starts and stops the custodian, gateway, keep-awake and viewer children; the guardian owns the custody deadline and the Pause receipt ([procedure](../operations/campaign-supervision.md)). |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |
@@ -68,7 +68,8 @@ verify absence stays unknown. No unrelated process scan/adoption is supported.
 
 The supervisor starts `python -m harness.viewer` as an **unsupervised** child on a free
 loopback port, with the live run directory, the evaluation root
-(`.runtime/evaluations`), optionally a directory of archived runs and labelled curator result files. It runs the
+(`.runtime/evaluations`), optionally a directory of archived runs and labelled curator result files, and,
+when it starts the curator runner, the runner's `curator-runner/status.json`. It runs the
 evaluator incrementally over the live run's records and serves `spectator-view/2`. It
 writes only the live run's `live` evaluation store and never reaches the custodian, the
 player context or any input.
@@ -145,13 +146,19 @@ frame verifier; missing links, ages and journals stay unavailable. The
 [view contract](../contracts/evaluation.md#recorded-knowledge-and-public-reports)
 owns fields and bounds. Historical #397 forgetting episodes remain alongside it,
 with anchors opening Live at that step or explaining why the frame is unavailable.
-*Containers* lists the sidecar inventory with each manifest. *Curator* also selects
+*Containers* lists the sidecar inventory with each manifest. *Curator* first shows what
+the curator has done since the actor's delivered version, from the curator runner's
+status file read at each request without a lock: the position play has reached, the
+covered prefix, lag, backlog, the last confirmed version with its stamp, the session in
+flight, the examined ranges and the read they are as of. Steps after that read are
+unknown, and a missing or partly written file shows no figures
+([status contract](../contracts/evaluation.md#curator-runner-status)). *Curator* also selects
 configured terminal session receipts and displays recorded metadata, historical draft
 collection events and paged gate results ([session contract](../contracts/evaluation.md#recorded-curator-sessions)).
 *Curator* selects
 operator-configured current result journals and shows recorded submission/restore
 statuses and versions with a digest/byte cutoff. It provides no verified run link,
-semantic verdict, present-head assertion or lag measure. Missing, empty, unsupported,
+semantic verdict, present-head assertion or lag measure from those journals. Missing, empty, unsupported,
 malformed and changed sources remain distinct. The
 [result contract](../contracts/evaluation.md#recorded-curator-results) owns fields,
 bounds and snapshot paging. Broader curator timelines/diffs and current draft states, *Knowledge*
