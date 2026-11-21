@@ -3,6 +3,7 @@ owner: maintainer
 status: historical
 date: '2026-10-17'
 scope: Documentation metadata, lifecycle records and visual tooling selection for brief 002
+replacement: docs/decisions/010-streamlined-delivery.md
 ---
 
 # ADR 004 — Local metadata and visual documentation controls

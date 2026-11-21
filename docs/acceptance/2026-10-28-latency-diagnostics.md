@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Endpoint selection, diagnostic format or latency interpretation changes
 status: historical
 kind: measurement
 date: 2026-10-28

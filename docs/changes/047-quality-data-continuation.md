@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Prospective025 quality-data-driven water and remaining-survival continuation
 status: historical
-review_trigger: Resource outcome, evidence quality, time/input fit or safety uncertainty
 ---
 
 # Continue toward seven days while collecting useful development evidence

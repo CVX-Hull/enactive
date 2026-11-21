@@ -2,7 +2,8 @@
 date: '2026-10-17'
 owner: maintainer
 scope: ADR 002 — Local serialized bridge and small service
-status: historical
+status: superseded
+replacement: docs/decisions/006-computer-control-boundary.md
 ---
 
 # ADR 002 — Local serialized bridge and small service

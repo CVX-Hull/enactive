@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-19
 scope: Closed018 finite water-readiness investigation; failed result retained
-review_trigger: Supply evidence, remaining allocation, lifecycle cost or input ownership changes
 ---
 
 # Potable-water readiness before further survival play

@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Pilot findings, campaign handoff, first-day scope or resource limits change
 status: historical
 date: 2026-10-18
 scope: Original first-day rehearsal001 proposal, admitted and stopped with required human Escape

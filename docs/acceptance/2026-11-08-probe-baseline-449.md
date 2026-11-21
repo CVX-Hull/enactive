@@ -4,7 +4,6 @@ status: historical
 kind: measurement
 date: '2026-11-08'
 scope: 'Probe suite and baseline carry and rediscovery rates from the sealed #397 lineage and a seeded #372 sample, with inter-rater agreement and annotation cost (#449)'
-review_trigger: None; dated record
 ---
 
 # Probe baseline from sealed traces (#449)

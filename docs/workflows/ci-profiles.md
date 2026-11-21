@@ -73,10 +73,8 @@ each profile, and `tests/test_ci.py` pins the workflow's shape: the job set, the
 `controller` rule, the absence of job conditions, a timeout on every job, and the
 installs each lane needs.
 
-On a throwaway workflow with this job shape, five full-profile runs on 12 November
-2026 took 108 to 132 seconds (median 117), against about 240 seconds with every lane
-in one job. These are measurements, not guarantees; the
-[dated record](../acceptance/2026-11-12-parallel-check-jobs.md) has every run.
+The lanes run as separate jobs because that roughly halved a full run in a
+[measurement](../acceptance/2026-11-12-parallel-check-jobs.md).
 
 Every hosted profile runs selected Ruff (including parse errors), import contracts, JavaScript
 syntax, document links and checks (`tools/documents.py`), the run ledger, evidence
@@ -85,7 +83,7 @@ same structural checks and nothing else; it is not a hosted profile.
 
 | Profile | Runs on | Additional checks | Supported claim |
 | --- | --- | --- | --- |
-| Full (also the default local command) | A pull request with any change outside the other profiles | Complete pytest collection on four xdist processes with work stealing and the 20 slowest durations, and the browser suites: viewer and investigation | Full portable regression; native build and gameplay remain separate |
+| Full (also the default local command) | A pull request with any change outside the other profiles | Complete pytest collection on four xdist processes with work stealing and the 20 slowest durations, and every suite of the `browser` lane | Full portable regression; native build and gameplay remain separate |
 | Editorial | A pull request changing only eligible documents | None | Document and structural validation only |
 | Viewer | A pull request confined to the viewer allowlist, optionally with eligible documents | Server and fixed boundary smoke on four xdist processes grouped by file, and the browser suites | Contained viewer and boundary regression; no browser layout or full regression claim |
 | Main | Every push to main | None; tests already ran on this tree | The tree main received is the pull request head whose run passed |

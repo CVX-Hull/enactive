@@ -4,7 +4,6 @@ status: historical
 kind: study
 date: '2026-11-06'
 scope: 'Development loop #372 (ceiling benchmark and grounding aids A–C) and its evaluator re-score #383: owner decisions, hand-scored run tables, loop result, generated metrics and power check'
-review_trigger: None; dated record
 ---
 
 # Development loop: ceiling benchmark and grounding aids (#372, #383)

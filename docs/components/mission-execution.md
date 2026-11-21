@@ -1,6 +1,6 @@
 ---
-owner: harness maintainer
-review_trigger: Responsibility, supported behavior, interfaces or qualification change
+owner: lead
+review_trigger: Execution composition, mechanical custody, actor handoff or close-out changes
 status: active
 ---
 
@@ -51,10 +51,7 @@ handoff record restores authority after restart. [Migration](../operations/migra
 
 ## Assurance and evidence
 
-[Runtime](../../tests/test_computer_runtime.py), [application](../../tests/test_player_application.py),
-journal (`tests/test_player_journal.py`), [MCP](../../tests/test_player_host_adapter.py)
-and [campaign](../../tests/test_campaign_run.py) assertions cover distinct custody,
-composition, journal, transport and cleanup boundaries. Check actual assertions
-against the changed invariant; fixtures do not qualify real game usefulness or
-save/reload/ending. The [production report](../acceptance/2026-10-29-computer-control.md)
-owns those actual outcomes and their limits.
+Tests cover distinct custody, composition, journal, transport and cleanup boundaries.
+Check the assertions against the changed invariant. Fixtures do not qualify real game
+usefulness or save/reload/ending. Those outcomes and their limits are in the
+[production report](../acceptance/2026-10-29-computer-control.md).

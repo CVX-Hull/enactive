@@ -1,28 +1,28 @@
 ---
 owner: lead
 status: active
-date: 2026-11-08
-scope: 'Trace projection, sealed-memory evidence reader, workbench commands and sidecar container manifests over sealed traces (ADR 009''s directions for a curator workbench and for managed containers; #452)'
+scope: 'Trace projection, sealed-memory evidence reader, workbench commands and sidecar container manifests'
 review_trigger: A change to what a trace projection may contain, to the session or memory store formats, to the workbench commands, or to the container manifest shape
 ---
 
 # Trace projection and workbench
 
-The curator, the probe protocol and the spectator need sealed traces in a safe, uniform
-shape ([ADR 009](../decisions/009-curated-player.md#workbench-d6)). A session directory
-mixes what the actor saw and did with custody tokens, routes, host configuration and
-process records. The game-neutral package [`harness/trace`](../../harness/trace) builds
-an allowlisted projection, reads sealed memory stores as evidence, provides workbench
-commands and writes sidecar manifests. It imports nothing from the player, the computer,
-evaluation or the curator, and it opens no network or process.
+## At a glance
+
+- **Question.** How do trace readers examine player-visible evidence without
+  receiving custody data?
+- **Answer.** The [trace package](../../harness/trace) projects an allowlisted,
+  secret-checked copy and provides read-only evidence and frame tools.
+- **Unknown.** A missing or unverifiable label is unknown. A visual distance measures
+  similarity and needs calibration for a same-screen claim.
+- **Owner decisions.** This reference identifies no pending owner decision.
 
 ## Projection
 
 [`projection.project`](../../harness/trace/projection.py) writes `trace-projection/3`.
-The workbench and curator window require this version.
-It reads sealed sessions only. A staged snapshot of a session that is still being
-played, which it could read in the same way, is designed in
-[running the curator during play](live-curator-integration.md#the-snapshot).
+The workbench and curator window require this version. The projection reads sealed
+sessions and closed [staged snapshots](live-curator-integration.md#the-snapshot)
+through the same immutable store reader.
 
 **What it contains:**
 - **Frames**, copied after their SHA-256 matches the sealed metadata. Frame IDs must
@@ -41,10 +41,10 @@ entry per session. Each entry pairs the session's directory `name` with its seal
 `session_id`. Both are unique within a projection. The entry records `world`,
 `lineage` and `admission` (position within the lineage), each of which can be null.
 
-The projection reads `manifest.json` and `watch-start.json` in the run directory as
-evidence. It checks that the package schema is supported, the session identifiers
-in both records match the sealed store, and the SHA-256 of the package manifest's
-bytes matches the digest in the supervisor's `campaign-watch-start/4` launch record.
+For a sealed session or staged snapshot, the projection checks `manifest.json` and
+`watch-start.json`. It requires supported package and launch record schemas, matching
+session IDs in both records and the store, and a manifest SHA-256 matching the digest
+in the supervisor's `campaign-watch-start/4` launch record.
 If a record is missing or a check fails, all three labels are null. `label_check`
 identifies the failed check as `manifest-schema` for the package file, schema or
 label shape, `manifest-session` for the package's session identifier, or
@@ -53,15 +53,10 @@ fixed explanation without quoting either record. With verified evidence and vali
 labels, both diagnostic fields are null.
 The trace reads these files directly without the campaign tooling.
 
-The supported `campaign-run/10` manifest carries lineage and admission position.
-Retained `campaign-run/9` and `campaign-run/10` manifests carry no `world` label.
-A continuation admission's manifest freezes the game's save files under
-`initial_files`. A first admission's `initial_files` omits them. Admissions 1 and 2
-show both cases in [the retained `/9` evidence](../acceptance/2026-11-18-two-wake-memory-772.md#accounting-custody-and-retained-evidence)
-and [the retained `/10` evidence](../acceptance/2026-11-19-oceana-farm-memory-788.md).
-Reading a world from a save path would introduce a game binding that the trace may
-not hold. Sessions sealed before the `world` label have no world and support `game`
-facts only, by the [owner's decision](../decisions/owner-decisions.md).
+The projection verifies lineage and admission position for `campaign-run/10` and
+leaves `world` null. An unsupported manifest version leaves all labels null with a
+diagnostic. A save path cannot establish a game-neutral world label.
+[World-scope field table](general-memory.md#world-and-lineage)
 
 The curator window carries the directory name, world, lineage, admission position
 and label diagnostics keyed by sealed session identifier. The map is available in
@@ -85,37 +80,18 @@ MCP and host configuration, process records, custodian, viewer and watch files, 
 raw run package manifests, raw `host.jsonl` and the raw session store. Session, actor and operation IDs stay, because
 they grant nothing and are how frames are cited.
 
-**Tests** ([`tests/test_trace_projection.py`](../../tests/test_trace_projection.py)):
-- **Synthetic fixture.** It plants a token, a route key and the custodian URL in
-  structured places a careless copy would carry: argument extras, result extras, unknown
-  operation fields, process records and custodian output. None reaches the projection.
-- **Guard.** Separate cases plant a secret in each free-text channel: the final report,
-  handoff knowledge and summary, a memory record, an error reason, and a bearer string.
-  Each projection is refused and leaves nothing behind.
-- **Integrity.** A frame whose bytes differ from its sealed hash is refused.
-- **Session labels.** Verified manifests label sessions independently. Invalid evidence
-  leaves the affected session unlabelled with the failed check and its reason. The
-  [window tests](../../tests/test_curator_window.py) cover the label map and refusal
-  of the previous projection version, and an isolated import checks the copied workbench.
-- **Real lineages.** The sealed #397 lineage and the six sampled #372 runs are
-  projected and scanned for every custody token, custodian URL and route value of
-  their actors, plus key-like patterns ([result](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)).
-  The tests skip when the evidence store is absent;
-  `ENACTIVE_EVIDENCE_ROOT` points a worktree at a checkout's store.
-
-The #382 traces are held out and are not projected. #452's secret-scan acceptance
-covers #397 and #372 instead.
+The [projection tests](../../tests/test_trace_projection.py) cover credential
+omission, free-text refusal, frame integrity and label diagnostics. The
+[window tests](../../tests/test_curator_window.py) cover the label map and version
+refusal. [Retained secret-scan evidence](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)
 
 ## Evidence reader
 
-[`memory_reader.read`](../../harness/trace/memory_reader.py) reads a sealed
-`player-memory/2` store as data: records with their supports and sources, programs, and
-source metadata. It is not the player's memory contract. Sealed stores stay readable after
-the live contract migrates. The reader accepts only `player-memory/2` and never writes
-beside the store: it opens SQLite immutable, and a test proves this on a write-ahead-log
-store. Immutable mode would silently ignore an un-checkpointed log, so a store with a
-non-empty `-wal` is refused rather than read incomplete. What it read from the sealed #397
-store is in [the moved results](../acceptance/2026-11-09-moved-results.md#trace-workbench-evidence-reader).
+[`memory_reader.read`](../../harness/trace/memory_reader.py) reads sealed
+`player-memory/2` stores as data. It returns records with supports and sources,
+programs and source metadata. It opens SQLite in immutable mode and refuses a
+non-empty write-ahead log because that mode would ignore the log.
+[Retained reader evidence](../acceptance/2026-11-09-moved-results.md#trace-workbench-evidence-reader)
 
 ## Workbench
 
@@ -129,31 +105,16 @@ store is in [the moved results](../acceptance/2026-11-09-moved-results.md#trace-
 | `diff` | Per-cell change between two frames on a grid ([`images.region_diff`](../../harness/trace/images.py)) |
 | `similar` | Nearest frames by 64-bit difference hash |
 
-**Perceptual-hash reliability is measured, not assumed** (ADR 009's
-[research area](../decisions/009-curated-player.md#research-agenda) on novelty and anomaly
-detection; its synthesis is #448).
-On the sealed #397 frames, consecutive and random pairs' difference-hash distances overlap
-heavily, so a difference hash separates "next frame" from "any frame" only weakly
-([measurement](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)).
-**The workbench reports distances and does not call two frames the same screen.** Any threshold has to be calibrated on labelled pairs from development lineages
-first, as the research page recommends.
+The workbench reports hash distance. A threshold for asserting screen equivalence
+needs calibration on labelled frame pairs.
+[Perceptual-hash measurement](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)
 
 ## Containers and sidecars
 
-[`sidecar.py`](../../harness/trace/sidecar.py) defines `container-manifest/1`, one shape for
-every container kind ([ADR 009's containers](../decisions/009-curated-player.md#containers-d17),
-which start from the owner's direction that drafts be managed containers). Its fields are identity, kind, owner role, inputs and
-pinned versions, budgets, lifecycle state, provenance and retention. The kinds adopted so
-far are actor sessions (sealed) and, for #453, curator sessions, submissions and drafts.
+[`sidecar.py`](../../harness/trace/sidecar.py) defines `container-manifest/1` for
+actor sessions, curator sessions, submissions and drafts. It records identity, kind,
+owner role, inputs and pinned versions, budgets, lifecycle, provenance and retention.
 
-Sealed directories are never rewritten. Their manifests live in an index:
-[`data/containers/397-seven-day.json`](../../data/containers/397-seven-day.json)
-(`container-index/1`), generated with:
-
-```bash
-.venv/bin/python -m harness.trace.sidecar .runtime/evidence/397-seven-day --study 397-seven-day --out data/containers/397-seven-day.json
-```
-
-A test checks the tracked index against the sealed sessions. The index records what each
-actor was given: the digests of its prompt and context. It records no digest of a file that
-holds custody or routes.
+A `container-index/1` records manifests beside the sealed evidence. Its input digests
+cover the actor's prompt and context and exclude files that hold custody or routes.
+[Tracked sidecar example](../../data/containers/397-seven-day.json)

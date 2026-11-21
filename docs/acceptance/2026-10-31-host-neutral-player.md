@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Preserved acceptance evidence; append corrections without relabelling failures
 status: historical
 kind: change
 date: 2026-10-31

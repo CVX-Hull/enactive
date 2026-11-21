@@ -3,35 +3,29 @@ owner: lead
 status: proposed
 date: '2026-11-16'
 scope: 'Compare provenance-aware belief revision and mathematical uncertainty methods on real CDDA visible-trace replay, with staged mechanical checks and later decision-use tests. No production belief choice, paid study or model switch is authorized.'
-review_trigger: Packet/source inventory or priced pilot completes; the owner chooses a belief model; calibration or action-use findings change
+review_trigger: A live run supplies a curator-written fact about an earlier sighting, or the production belief decision or comparison evidence changes
 ---
 
 # Belief methods that earn their cost in CDDA
 
 ## At a glance
 
-**Question.** Which uncertainty/revision mechanism helps the curator retain applicable
-knowledge, retract wrong inferences and deliver useful answers, beyond the existing
-source-linked prose store? Does any improvement reach the Terra player's decisions?
+Which belief method helps the curator retract wrong inferences and give the
+player better answers? The proposal compares source-linked prose, qualitative
+revision and numerical belief on matched CDDA evidence. Whether numerical
+belief improves predictions or changes decisions remains unknown.
 
-**Recommendation to test, not adopt.** Start with origin/dependency tracking and explicit
-support/refutation/unknown handling. Compare numerical belief only on identical evidence
-and targets. Subjective logic is a candidate interface and set of operators, not an
-automatic cure for uncertain extraction, correlated evidence or changing conditions.
-
-CDDA is the only current game. This study uses the source portfolio and prefix packets
-of [structured recurrence](structured-recurrence-research.md) and #668, rather than a
-new game, collector or simulator. #457 owns the production belief/schema decision.
-Terra remains the current player; #25 owns later cheaper-model trials. No envelope is
-open, and this proposal neither resolves the belief choice nor gates #463's adoption.
-The later replay investigation is [#677](https://github.com/CVX-Hull/enactive/issues/677).
+The [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/666)
+is revisited when a live run has a curator-written fact about an earlier sighting.
+Then the owner can reconsider whether the proposed
+[belief-method comparison (#677)](https://github.com/CVX-Hull/enactive/issues/677)
+is warranted. Any claim of benefit from delivered memory comes from
+the [seven-day campaign outcome (#145)](https://github.com/CVX-Hull/enactive/issues/145).
+[Owner decision of 20 November 2026, “No study has shown that delivered memory improves play”](../decisions/owner-decisions.md#in-force)
 
 The [measurement audit](../acceptance/2026-11-16-experiment-measurement-review.md)
-constrains the evaluation: score all assigned targets, preserve unknown evidence and
-actual input exposure, and distinguish justified verification from avoidable lookup.
-Judge agreement and all-negative validation samples cannot qualify correctness or
-positive-case sensitivity. Numeric calibration and gameplay utility remain separate
-claims; reuse the source-grouped packets and qualify only the outcome actually used.
+informs all-assigned scoring, exposure and unknowns, and the distinction between
+justified verification and avoidable lookup.
 
 ## Primary foundations and what they support
 
@@ -92,41 +86,14 @@ provenance algebra are extension candidates only after a concrete baseline failu
 
 ### Mechanical checks: no model, no gameplay
 
-`tools/recurrence_research/belief.py` provides `evidence_views` for exact rational,
-finite Beta/opinion fixtures and `active_alternatives` and `revision_state` for supplied
-origin conjunctions and their alternative supports. The focused tests check matched
-projections, repeat-origin invariance and retraction: `(a AND b) OR (a AND c)`
-survives removal of b but not removal of a. Balanced conflicting evidence and a
-numerical no-support prior can have the same mean and different uncertainty.
-
-These are synthetic definition and bookkeeping checks, not useful learning or evidence
-of CDDA efficacy, calibration or production adoption. Polarity and dependencies are
-supplied; distinct IDs do not establish independent observations. No source reliability,
-observation-to-weight conversion or numerical evidence is inferred from the graph.
-Qualitative unknown is not converted to probability .5; the numerical prior is a
-separate supplied fixture. The #677 method comparison uses this apparatus; reassess it
-at #677 completion, stop or method abandonment and remove it and its tests if no named
-consumer continues to need them. The bounded offline checks reduce R-FALSE-CLAIM and
-R-REGRESSION by catching projection and support bookkeeping errors.
-
-Prepare CDDA packets through #668. All previously inspected lineages are development
-material. No LLM extraction, replay or new-start creation is authorized by preparation.
 The [matched case inventory](../acceptance/2026-11-17-belief-replay-case-inventory.md)
-supplies the scoped development fixtures and identifies the source and observation-model
-gaps to resolve before a priced comparison.
-The [#735 replay](https://github.com/CVX-Hull/enactive/issues/735) checks the five
-inventory questions in their two dependent development groups. Run it offline with
-`.venv/bin/python -m tools.recurrence_research.belief_replay data/recurrence-research/belief-replay-cases.json`.
-Both methods receive the same scoped prefix of the hand-authored extraction. The
-readout keeps source-linked answers and abstentions alongside the numerical fixture
-state. It retains scope distinctions between the title return and same-character
-reload, and between native exit and Quit delivery. It cites applicable unknown
-receipts. Repeated descriptions retain the same canonical event and origin. The
-tank question requires both reports, which share one frame and contribute one unit.
-Excluded results and adjudication stay outside the input and readout. The supplied
-unit weights exercise the mechanics of the replay.
-The later priced pilot may stop at insufficient observable cases; do not fabricate a
-conflict or label an unseen outcome false to make a method testable.
+defines the scoped development fixtures and identifies the observation-model gaps.
+The [matched offline belief replay (#735)](https://github.com/CVX-Hull/enactive/issues/735)
+uses the [replay implementation](../../tools/recurrence_research/belief_replay.py)
+and [fixed input cases](../../data/recurrence-research/belief-replay-cases.json)
+to check projections, repeat-origin invariance and retraction. Supplied weights
+test the mechanics. A predictive comparison needs enough observable cases and
+an observation model that justifies its weights.
 
 ### Matched CDDA prefix replay: first method evidence
 
@@ -149,9 +116,9 @@ Two comparisons answer different questions:
 1. **Evidence/update comparison:** identical inputs and prediction targets, with a fixed
    readout path. Score probability predictions from numerical methods, and answer/revision
    behavior from all methods. Qualitative unknowns are not converted to probability .5.
-2. **Reader-use comparison:** give the same Terra reader the same evidence/model in
-   different presentations (for example matched Beta versus opinion fields), with
-   query/cost allowances fixed. A presentation gain is not a superior posterior.
+2. **Reader-use comparison:** hold the reader, evidence, belief model and query/cost
+   allowances fixed while varying the presentation, such as matching Beta and opinion
+   fields. A presentation gain is not a superior posterior.
 
 Use whole-world/lineage development, selection and final splits; copies, questions and
 multiple moments remain nested. Shared-source transformations remain in one partition.
@@ -189,33 +156,32 @@ No extrapolation to never-revisited facts is identified by those selected logs a
 
 ### Later player decisions: separate benefit test
 
-Only a useful replay candidate advances to a priced, supported integration in the
-CDDA pilot of #666. Hold Terra and other role configurations, natural player context,
-source assignments and resource ceilings equal. Compare source-specific visible progress,
-wrong/stale-advice use, information-request cost, wall latency and complete cost on
-all assigned trials. Hypothetical re-observation value is not inferred where the
-logged player never tried the alternative. Let the player choose ordinary inputs;
-no false memory or bad routine is planted. A model-switch comparison belongs to #25.
+If the memory study is revisited, a supported CDDA pilot is a proposed way to
+test whether a useful replay candidate changes live decisions.
+Hold the player model, effort and route frozen in the package, other role
+configurations, natural player context, source assignments and resource
+ceilings equal across arms. Compare visible progress, wrong or stale advice
+use, information request cost, wall latency and complete cost on all
+assigned trials. A logged choice only supplies an effect for the action
+actually tried. Let the player choose ordinary inputs from genuine evidence.
+Cheaper-player trials follow the
+[responsiveness outcome (#164)](https://github.com/CVX-Hull/enactive/issues/164).
+[Player host operations](../operations/player-host.md)
 
-A belief calculus is adopted only by the owner's #457 decision, with its evidence
-and limits. A replay gain is not a live decision benefit. Freeze the exact analysis,
-cluster-aware uncertainty, practical threshold, multiplicity and affordable power
-before any claim-deciding batch; otherwise label the pilot exploratory or stop.
+The production calculus is an owner decision under the
+[belief, schema and gate work (#457)](https://github.com/CVX-Hull/enactive/issues/457).
+Replay measures proposed decisions. A claim-deciding comparison requires a frozen
+analysis, world-level uncertainty, a practical threshold, multiplicity handling
+and affordable power. A smaller pilot supports exploratory findings.
 
 ## Delivery and existing owners
 
-#668 owns common source/packet/specification/price preparation. #677 under #666
-owns the later frozen replay protocol and evidence, with an explicit
-priced envelope before calls. It reuses `tools/recurrence_research/` and the existing
-source packets. The bounded brief assigns any additional code ownership and validation.
-
-#457 owns the production schema, belief choice and gate; this study informs rather than
-automatically blocks it. The adopted #463 migration is complete, and #689 supplies the
-current recorded knowledge/public-report reader. GitHub owns the next work selection;
-#664 owns later live freshness. #25 retains cheaper-player alternatives after
-memory/context work; Terra is the current baseline and no study here authorizes
-swapping it. No programs, monitor,
-practice instance, context cut or second game is adopted.
+The comparison reuses the [source and packet preparation (#668)](https://github.com/CVX-Hull/enactive/issues/668)
+and needs the [recorded knowledge and public-report reader (#689)](https://github.com/CVX-Hull/enactive/issues/689)
+for its input evidence. The [player-ownership migration (#463)](https://github.com/CVX-Hull/enactive/issues/463)
+defines what the player writes. The replay supplies evidence for the belief choice
+without gating the player-ownership migration. A within-admission condition
+depends on [live memory integration (#664)](https://github.com/CVX-Hull/enactive/issues/664).
 
 These procedures apply existing risks: provenance and common-label/split isolation
 reduce R-FALSE-CLAIM and R-GAME-COUPLING at extraction/review cost; explicit complete

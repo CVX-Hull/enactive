@@ -134,7 +134,8 @@ def check_documents(root: Path) -> list[str]:
     # Each responsibility index must actually lead to its canonical content.
     # This checks reachability, not task comprehension or arbitrary file sizes.
     for index, directory in (("protocol.md", "contracts"), ("engineering.md", "standards"),
-                             ("project-management.md", "workflows"), ("runbook.md", "operations")):
+                             ("project-management.md", "workflows"), ("runbook.md", "operations"),
+                             ("documentation.md", "decisions")):
         reachable, pending = set(), [(root / "docs" / index).resolve()]
         while pending:
             path = pending.pop()

@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Closed evidence assessment or follow-up changes
 status: historical
 kind: run
 date: 2026-10-23

@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Player roles, background memory/procedure updates, latency, evidence or adaptation policy changes
 status: historical
 date: 2026-10-29
 scope: Pre-cutover background archived on this date; not current executable policy or new research qualification

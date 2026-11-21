@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-20
 scope: Native008 local question correction, identity, normal save/exit/stopped Finish
-review_trigger: Reinterpretation of native008 evidence or new deciding admission
 status: historical
 kind: run
 ---
