@@ -119,8 +119,8 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   `cost_details.upstream_inference_cost`. On an own-key route (`is_byok: true`), each
   record must supply both amounts and contributes their sum. When a response carries
   several records, the largest counts. A malformed record, or a response without a
-  usable amount, leaves the cost unknown, never estimated. The curator reads the reported
-  cost by the same rule, and both hosts test it against
+  usable amount, leaves the player's cost unknown, never estimated. The curator computes
+  a usable reported amount with the same arithmetic, and both hosts test it against
   `tests/fixtures/provider-usage-cost.json`
   ([player route cost pilot (#555)](../acceptance/2026-11-12-provider-cost-pilot-555.md)).
 - **Exact sums.** Amounts are summed as decimals, never as floating-point numbers.

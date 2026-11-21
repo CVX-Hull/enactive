@@ -285,8 +285,10 @@ waits for any projection, executor/application/database lock or prior status. Th
 supervised gateway takes `{"reason": "loop" | "fault" | "spend" | "other"}`, records the
 reason in its terminal record (`pause_reason`; a missing or unknown reason is recorded as
 `unspecified`, and the stop is never refused over it) and forwards `{}` here unchanged,
-so the custodian never sees a reason. If the guardian's own Pause datagram carries a
-reason outside that set, supervision ends as `invalid_pause_reason`. A delayed request can stop a replacement custodian; this emergency
+so the custodian never sees a reason. The gateway passes the recorded reason to the
+guardian in its Pause datagram; the guardian records an empty reason as `unspecified`
+and accepts the four reasons above or `unspecified`, and any other reason ends
+supervision as `invalid_pause_reason`. A delayed request can stop a replacement custodian; this emergency
 meaning is explicit. Attribute confirmation to the response's actual session, not a
 stale page/click. The page retains one last identified Pause receiver and its monotone
 stop facts. A receiver outside the current/previous view is named explicitly, without

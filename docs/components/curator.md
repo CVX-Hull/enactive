@@ -23,8 +23,8 @@ Publications during an admission leave the running actor on its
 | [Sidecars](../../harness/trace/sidecar.py) | `container-manifest/1` and `container-index/1` beside sealed evidence (`data/containers/`), which is never rewritten |
 | [Sandbox](../../harness/curator/sandbox.py) | Default-deny Seatbelt profile and polling supervisor: writes only in the workspace's writable directories, one loopback port, and bounded memory, processes, time and size of the session's own files. It does not watch or protect the rest of the disk ([what is bounded](../operations/curator-hosts.md#what-the-sandbox-bounds)). [Research and residual risks](../research-curator-sandbox.md) |
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
-| [Providers](../../tools/curator_host/providers.py) (an adapter) | Model service adapters define routes, key and forwarding headers, request validation and conversion of reported usage to dollars. Provider and model names stay in this adapter. |
-| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions and compatible snapshot restores, under the [session publication rules](../design/curator-session.md#gate-v0). |
+| [Providers](../../tools/curator_host/providers.py) (an adapter) | Model service adapters define routes, key and forwarding headers, request validation and conversion of reported usage to dollars. Provider and model identities stay in the curator host's adapters; the proxy receives them from its caller. |
+| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions, under the [session publication rules](../design/curator-session.md#gate-v0), and through the [operator restore](../design/curator-session.md#minimum-first-slice-operator-restore) of a compatible snapshot. |
 | [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Decision-window and citations-only views remove the entire journal JSON; only filtered in-window calls can carry hints. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | Draft lifecycle (open, stale, abandoned, promoted) and ephemeral sandboxed sessions whose close-out never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
@@ -71,10 +71,12 @@ after its last read as unknown ([runner source](../../harness/curator/runner.py)
 
 ## Facts, articles and grooming
 
-The [session design](../design/curator-session.md#submissions) states the
-[gate](../../harness/curator/gate.py)'s exact `curator-submission/1` shapes, and
-[general memory](../design/general-memory.md#the-format-curator-fact3) the
-`curator-fact/3` format.
+The [session design](../design/curator-session.md#submissions) states the record and
+operation shapes the [gate](../../harness/curator/gate.py) accepts, the
+[frozen submission instructions](../../tools/curator_host/prompt.md#submission-contract)
+give the whole `curator-submission/1` envelope, and
+[general memory](../design/general-memory.md#the-format-curator-fact3) owns the
+`curator-fact/3` field meanings.
 
 The [session design](../design/curator-session.md#admission-and-grooming) owns what
 admission and grooming sessions read and do, their briefs and publication rules, and
