@@ -6,7 +6,8 @@ status: active
 
 # Run evaluation records, metrics and the spectator view
 
-This page owns the current formats ([#383](https://github.com/CVX-Hull/enactive/issues/383)).
+This page owns the current formats. The [evaluator re-score and power check (#383)](https://github.com/CVX-Hull/enactive/issues/383)
+identifies the evidence needs they serve.
 [ADR008](../decisions/008-evaluation-and-spectator.md) owns the rationale.
 
 Every value here is **interpretive**. It is derived from recorded evidence, carries its
@@ -22,9 +23,8 @@ The evaluator reads one run directory read-only:
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
 - `manifest.json` (`campaign-run/10`), including its operator labels;
-- for the closed set of archived sessions only, the older versions of the manifest,
-  host traces, receipt and run-ending record that the archive index lists for each
-  session (see "Implementation rules");
+- `receipt.json` (`campaign-receipt/7`, with `player-driver/7`) and
+  `watch-terminal.json` (`campaign-watch-terminal/4`), when recorded;
 - the run's `player-journal/1` public call and hint store.
 
 Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
@@ -48,14 +48,11 @@ input format is an error naming the file and version. Nothing is guessed.
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/8` telemetry 8. The one exception is a trace of an
-  archived session: its caller passes that session's index entry, and the trace is then
-  also read in the version the entry lists, when its `host-start` names that session.
-  `host-summary` finds the entry from the manifest of the run directory the trace sits in,
-  so an older trace outside such a directory is an unsupported version. An unterminated final line that does not
-  parse is an error for `host-summary`; the evaluator and the viewer ignore it on every
-  pass, live or final, because a trace may still be appending. A newline-terminated
-  malformed line is always an error.
+  `host-start` is not `player-host/8` telemetry 8. For an [archived run](#implementation-rules),
+  the parser also accepts the exact host version and session in its manifest's archive
+  entry. An unterminated final line that does not parse is an error for `host-summary`.
+  The evaluator and viewer ignore it because a trace may still be appending. A malformed
+  line ending in a newline is always an error.
 
 **Sequence and incremental reading.**
 - The operation sequence `seq` is the `operations` table's rowid.
@@ -168,7 +165,8 @@ that reads no frame reader) and the page shows it next to the provenance chip. A
 - the death screen;
 - identity where legible;
 - a 900-second long-activity threshold;
-- #382's severe needs for the day check (binding version 2):
+- severe needs for the day check (binding version 2), as defined for the
+  [long-horizon study (#382)](https://github.com/CVX-Hull/enactive/issues/382):
   - thirst "very thirsty", "dehydrated" or "parched";
   - hunger "very hungry", "famished", "near starving" or "starving";
   - rest "dead tired" or "exhausted", read from the weariness reader's `rest` field (its
@@ -247,7 +245,7 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `reader.coverage` | Non-abstained readings ÷ frames, per reader | frames | — |
 | `lineage.continuity` | Per admission boundary: same identity (or `unknown`) and game-time gap (negative means rewound) | boundaries | — |
 | `lineage.elapsed` | Game time from admission 1's first in-play clock to the lineage's last accepted reading (a rewind lowers it), with total decisions, overall game seconds per decision (null when elapsed is not positive), long-activity hours and their share of elapsed time (null when elapsed is not positive, and above 1 when a reload undid long activities), and `episode_changes` (a restarted clock or another survivor inside an admission) | game seconds | No accepted reading: missing (`no_game_time`) |
-| `lineage.day_check` | The crossing is the first step after the lineage's last reading below one game day from that start, so a rewind below the day undoes an earlier crossing. The needs are scored at the first in-play step from the crossing on whose needs the binding can read, in that admission or a later one (`scored_run`, `lag_hours` past the day). Deaths are compared in lineage order (admission, then step), so a death in an admission a reload later rewound still counts. A death at or before the crossing fails the check (`died_before`). A death after the crossing but before the scored step leaves it unscored (`died_in_lag`). Otherwise `passed` when `severe_needs` reports none; a severe need that was read counts even when another need is unreadable. Also `severe` and `episode_changes`; #382 classifies an episode change as a continuity failure first. If admission 1 never reaches play, a later admission's first in-play clock is the zero | 1 | Not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible`; death in the lag: `died_in_lag` |
+| `lineage.day_check` | The crossing is the first step after the lineage's last reading below one game day from that start, so a rewind below the day undoes an earlier crossing. The needs are scored at the first in-play step from the crossing on whose needs the binding can read, in that admission or a later one (`scored_run`, `lag_hours` past the day). Deaths are compared in lineage order (admission, then step), so a death in an admission a reload later rewound still counts. A death at or before the crossing fails the check (`died_before`). A death after the crossing but before the scored step leaves it unscored (`died_in_lag`). Otherwise `passed` when `severe_needs` reports none. A severe need that was read counts even when another need is unreadable. The metric also reports `severe` and `episode_changes`. The long-horizon study treats an episode change as a continuity failure first. If admission 1 never reaches play, a later admission's first in-play clock is the zero | 1 | Not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible`; death in the lag: `died_in_lag` |
 | `lineage.memory_reuse` | Distinct memory record IDs read in an admission that an earlier admission of the lineage wrote, per admission and in total | records written before the last admission | None written: `no_earlier_writes` |
 
 The four `lineage.*` metrics are written only by `evaluate-lineage` and are the same in every
@@ -283,10 +281,7 @@ their numbers for latency and delivery counts.
 of both diagnostics. A metric named a median (the pace and handoff rows) is the arithmetic
 median, the mean of the middle pair for an even count. The viewer's explore cohort median,
 IQR and bootstrap intervals are not percentiles of this kind: they use numpy's defaults.
-`host-summary` and `control-summary`
-`p50` values are nearest-rank, so on an even count they are the lower middle value, not
-the mean of the middle pair. Records written before #404 and #418 report those `p50`
-values as true medians; compare them with current ones on that basis.
+`host-summary` and `control-summary` `p50` values use the lower middle value on an even count.
 
 ## Control path and viewer
 
@@ -301,23 +296,28 @@ outage therefore cannot block the strip, a Pause or a run.
 
 **Viewer.** The viewer is a separate read-only loopback process. The gateway forwards
 `/api/view/*` to it under these rules:
-- 2-second timeout and 4 MiB cap;
+- 2-second socket timeout for the request and headers, then a body deadline measured
+  2 seconds from forwarding start, with a 4 MiB body cap;
+- at most eight forwards at once;
 - only `application/json` and `image/png` responses, never HTML or script;
 - the viewer's `200`, `400`, `404`, `409` and `413` pass through unchanged, and any other
   status is a forwarding failure;
 - the gateway's own security headers on every response.
 
-A viewer response with a disallowed media type or over the size cap returns `502` with
-`{"error": "Viewer response refused"}`. Any other forwarding failure (a refused connection,
-a timeout, another viewer status, or all eight forwarding slots in use) returns `503` with
-`{"viewer": "unavailable"}`. The page treats both as "viewer unavailable". The page polls;
-there is no streaming connection.
+A viewer response with a disallowed media type, invalid `Content-Length` or body over
+the size cap returns `502` with `{"error": "Viewer response refused"}`. A refused
+connection, timeout, unlisted viewer status or unavailable forwarding slot returns
+`503` with `{"viewer": "unavailable"}`. The page polls and treats both as “viewer unavailable”.
 
 **Launch and lifetime.**
-- The supervisor starts the viewer as an **unsupervised** child: `python -m harness.viewer`.
-- Its exit never ends, pauses or gates the run, and the supervisor stops it at the end.
-- The viewer reads the live run directory and the evaluation root (`.runtime/evaluations`).
-- It writes only the live run's `live` evaluation store.
+- The supervisor starts `python -m harness.viewer` as an **unsupervised** child on a free
+  loopback port with the live run directory and evaluation root (`.runtime/evaluations`).
+  It can also pass archived run directories, labelled curator result and session files,
+  and the configured runner's status file.
+- A launch failure or exit leaves the run running. The supervisor stops the viewer at
+  the end and records its port in `campaign-watch-start/4` and its child entry in
+  `campaign-watch-terminal/4`.
+- The viewer evaluates the live run incrementally and writes only its `live` evaluation store.
 
 ## Further record contents (`evaluation-record/1`)
 
@@ -348,73 +348,11 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
 
 ### Implementation rules
 
-- **Archived runs.** These readers are the closed-archive case that
-  [S-MIGRATION](../standards/migration.md) allows; the `requests.manifest` column applies
-  its additive-event case to `context-manifest`.
-  - **The index.** `data/evaluation/archive-sessions.json` (`archive-sessions/1`) is the
-    one closed index of the sealed sessions the evaluator reads, keyed by **session ID**.
-    Each entry gives the sealed evidence `study`, the `run` directory name and `versions`:
-    the versions that session's files carry for its manifest, its receipt, the receipt's
-    driver record, its host traces with their telemetry version, and its run-ending record
-    (`watch-terminal.json`). The entries of `campaign-run/4` sessions also hold the
-    operator `labels`, which those manifests predate.
-  - **One indexed session does not evaluate.** `522-held-out/computer-sessions/lh4a1`,
-    a session of the fourth held-out lineage that an infrastructure fault ended early,
-    was sealed with its database in write-ahead-log mode and without its log files, so
-    SQLite cannot open it inside the read-only store. Its manifest, receipt and
-    run-ending record read; its operations do not, and evaluating it is an error. The
-    sealed copy stays as it is, because sealed evidence is never rewritten.
-  - **What an entry allows.** An entry does not by itself make an old version readable.
-    A record in its current version is read as current for any session, listed or not. A
-    record in an older version is read only for a session the index lists with exactly
-    that version, beside a manifest in the version the index lists for that session. Any
-    other old version is an error naming the file and version. This reads historical
-    evidence; it is not an admission, and admission still requires `campaign-run/10`.
-  - **The spend-limit session.** The owner added `spend-limit-run-555` on 13 November 2026: `campaign-run/6`, `campaign-receipt/4`, `player-driver/4`, `player-host/4` telemetry 4 and `campaign-watch-terminal/4`. It is read-only in those versions. Its manifest supplies `spend_limit_usd` rather than the earlier reservation; receipt/driver ending fields and host evidence are read as recorded. No archive is admitted for play.
-  - **The five combinations.** The index holds 135 sessions in five combinations of versions.
-    The memory adoption migration (#463) adds the 80 exact sealed `campaign-run/7`
-    packages with `campaign-receipt/5`, `player-driver/5`, `player-host/5` telemetry 5
-    and `campaign-watch-terminal/4`. Missing records stay missing; an allowed version
-    does not establish that a host ran or that a terminal was recorded. The
-    recorded labels, spend limit and public events remain evidence.
-    The original 54 sessions predate the dollar limit: every one carries `campaign-receipt/3`,
-    `player-driver/3` and `player-host/3` with telemetry version 3, beside a
-    `campaign-run/4` or `campaign-run/5` manifest. For each record that is not current,
-    the fields used are fixed.
-    - **Shared by the original three combinations:**
-      - From the receipt: `outcome` and `driver` for the run's ending; `session`,
-        `source_commit`, `normal_save_claimed_by_harness`, `native_absence_verified`,
-        `normal_native_exit_zero`, `deciding_hosts_quiescent` and
-        `input_authority_revoked` for `host-summary`.
-      - From the driver record: `actors` (each one's `settled` and `player_finish`) and
-        `ending_request` for the run's ending; `schema`, `outcome`, `attempts_charged`,
-        `host_seconds_used`, `configured_estimate_usd` and `missing_usage_attempts` for
-        `host-summary`. The driver record's version must be the one the index lists.
-      - From a host trace: every event, as from a current trace. Its `host-start` must
-        carry the listed `schema` and `telemetry_version` and name the session; the
-        evaluator also takes its `actor_id`, `model`, `provider`, `effort` and
-        `provider_routing`. No field the evaluator reads differs between the two trace
-        versions, and these original archived traces have no counted cost.
-      - From the manifest: `schema`, `session`, `player_store`, `source_commit`,
-        `effort`, `files`, `accounting`, `limits`, `ending_reserve`, `wall_seconds`,
-        `host_seconds`, `max_hosts` and `max_http_attempts`. `accounting` is the
-        worst-case reservation these packages declared; the spend allowance of an
-        archived run comes from it.
-    - **30 sessions** with a `campaign-run/4` manifest and a `campaign-watch-terminal/2`
-      run-ending record. The operator labels come from the index. From the run-ending
-      record: `reason` only (it has no `pause_reason`).
-    - **22 sessions** with a `campaign-run/5` manifest and a `campaign-watch-terminal/3`
-      run-ending record. The manifest's own `labels` are read. From the run-ending
-      record: `reason` and `pause_reason`, and its `session`, which must be the
-      manifest's.
-    - **2 sessions** with a `campaign-run/5` manifest and a `campaign-watch-terminal/4`
-      run-ending record. The manifest's own `labels` are read, and the run-ending record
-      is current.
-  - **Refusals.** A `campaign-receipt/3`, a `player-driver/3` record or a `player-host/3`
-    trace of a session the index does not list is an error naming the file and
-    version. An index entry
-    with any other combination of versions, an index in another version and a missing
-    index are each an error naming the index, and nothing is read through it.
+- **Archived runs.** The evaluator reads older records only for a session and exact
+  manifest and record versions listed in the [closed archive index](../../data/evaluation/archive-sessions.json)
+  (`archive-sessions/1`), under [S-MIGRATION's closed-archive rule](../standards/migration.md#s-migration-one-current-contract-coordinated-migration).
+  The index includes `spend-limit-run-555` under the
+  [“Add it to the index” decision](../decisions/owner-decisions.md#in-force).
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.
@@ -431,8 +369,8 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   `run.provider_loss` covers provider-error loss only.
 - **Censor reasons.** The first matching reason applies, in this order:
   1. `died`;
-  2. `owner_pause` (the watch terminal record's `reason` is `operator_pause`;
-     `pause_reason` is read from `/3` only);
+  2. `owner_pause` (the watch terminal record's `reason` is `operator_pause`, with
+     `pause_reason` when recorded);
   3. `custody`;
   4. `infrastructure` (the last actor settled not ok);
   5. `player_stop`;
@@ -445,10 +383,10 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
 - **Derived events.** `stall`, `ineffective_repeat`, `long_activity`, `episode` and
   `continuity` have source `derived`.
 - **Spend allowance** (`run_facts.spend_allowance_usd`) is the manifest's declared
-  dollar limit, `spend_limit_usd`. For an archived run it is the manifest's
-  `ceiling_usd` minus `prior_reserved_usd`, which `run_facts` also holds as
-  `declared_ceiling_usd` and `prior_reserved_usd`; both are null for a run that
-  declares a limit. The spend rate uses the last ten minutes of requests.
+  dollar limit, `spend_limit_usd`. For an archived run that declares a reservation,
+  the allowance is `declared_ceiling_usd` minus `prior_reserved_usd` as recorded in
+  `run_facts`. Both reservation fields are null for a run that declares a limit.
+  The spend rate uses the last ten minutes of requests.
 - **Dollars** in the record (`requests.dollars`, the cumulative dollars of a step and
   the cost metrics) are the configured-rate estimate of each response,
   `usage.cost.total`: the one figure every run, archived or not, carries. The cost the
@@ -477,12 +415,11 @@ beside it.
 
 ## Judge events (`judge-events/2`)
 
-A judge event is one model judge's answer to one closed question about recorded play
-([#386](https://github.com/CVX-Hull/enactive/issues/386)). Judges are host agents the lead
-starts; `python -m tools.memory_measure` builds what they read and counts what they answer,
-and calls no model. `harness/evaluation/core/judge.py` validates the format. The design is
-[general memory](../design/general-memory.md#3-measurement). `judge-events/1`, the format of
-the [measure gate](../acceptance/2026-11-13-memory-measure-gate.md), is not read.
+A judge event is one model judge's answer to one closed question about recorded play.
+The lead starts the judges. `python -m tools.memory_measure` builds what they read and
+counts what they answer without calling a model. `harness/evaluation/core/judge.py`
+validates the format. See the [memory measurement work (#386)](https://github.com/CVX-Hull/enactive/issues/386)
+and [measurement design](../design/general-memory.md#3-measurement).
 
 - **File.** JSON Lines, one event per line, one judge and one kind per file, written once
   and never replaced. Each pair appears at most once. Use verdicts are in
@@ -657,6 +594,8 @@ from 2 to 60 that detects a halving with probability 0.8, the chance of detectin
 one third and the false-alarm rate at that size, and the price: play per start, the same
 with the recall model's inferred overhead (×1.67 and ×2.0), and once a store (about \$23)
 and one grooming session (\$1.16 to \$4.19). The defaults are the measure gate's numbers.
+The [simulation's input record](../acceptance/2026-11-13-withholding-simulation.md#inputs-and-their-intervals)
+attributes the one-time price inputs to the brief gate and session price pilot.
 It is seeded (each rate has its own stream), prints JSON or a table, and writes no file.
 `simulate-withholding --pilot REPORT` takes its inputs from a pilot report (below) in place
 of the gate's numbers and refuses a flag for any of them (`--touched`, `--touched-ends`,
@@ -667,9 +606,9 @@ flags.
 ### The withholding pilot's analysis (`withholding-pilot/1`)
 
 `pilot RUN --runs PACKAGE...` reads a judged run of blind packets over the pilot's starts
-and writes `RUN/pilot.json` ([#638](https://github.com/CVX-Hull/enactive/issues/638)). The
-rule below is fixed before any pilot start is played
-([#619](https://github.com/CVX-Hull/enactive/issues/619)); a change to it is a new version.
+and writes `RUN/pilot.json` ([unit-level pilot analysis (#638)](https://github.com/CVX-Hull/enactive/issues/638)).
+The [withholding pilot (#619)](https://github.com/CVX-Hull/enactive/issues/619) freezes
+this rule before its first start. A change to the rule requires a new version.
 
 - **Inputs.** The run's `adjudicated.json` (`judge-adjudicated/2`, every pair resolved),
   `private/judge-mapping.json` and `judged-facts.json`, and each package's
@@ -729,10 +668,10 @@ rule below is fixed before any pilot start is played
 
 ### The withholding study's design (`withholding-study-draw/1`)
 
-A withholding study draws every start's arm at once, before any start is played
-([#653](https://github.com/CVX-Hull/enactive/issues/653)). The pilot showed that misses
-follow the unit, not the arm, so each unit is its own comparison: it is withheld in half
-of the starts and delivered in the other half.
+A withholding study fixes one draw for all starts before play, under the
+[withholding measure revision (#653)](https://github.com/CVX-Hull/enactive/issues/653).
+Each unit is its own comparison, withheld in half of each block's starts and delivered
+in the other half, with odd counts rounded as described below.
 
 - `knowledge_export draw-study REPOSITORY --version V --starts N --blocks LABEL:COUNT...
   --seed S [--placebo UNIT_ID...] --out FILE` writes the draw: the store version, the unit
@@ -765,9 +704,8 @@ of the starts and delivered in the other half.
 ### The withholding study's analysis (`withholding-study/1`)
 
 `study RUN --runs PACKAGE... --draw FILE [--seed N] [--draws N] [--json]` reads a judged
-run of blind packets over the study's starts and writes `RUN/study.json`. The rule below
-is fixed before any start of a study is played; a change to it is a new version. The
-pilot's rule above stays as it was for the sealed pilot.
+run of blind packets over the study's starts and writes `RUN/study.json`. The rule is
+fixed before any start of a study is played. A change to it requires a new version.
 
 - **Inputs** are the pilot's, with every package's units record as `knowledge-units/2`
   carrying this draw's hash, version, seed and block, and the arms the draw gives. It
@@ -813,11 +751,7 @@ pilot's rule above stays as it was for the sealed pilot.
 
 ### The withholding study's sizing (`withholding-study-simulation/2`)
 
-The [measurement audit](../acceptance/2026-11-16-experiment-measurement-review.md#concrete-sizing-discrepancy)
-identified impossible simulated touches in the previous prospective contract. This
-repair preserves the estimator and other model assumptions; it does not calibrate
-real-game power or size the recurrence proposal's future all-assigned outcome.
-Historical inputs, results and frozen analysis source remain unchanged.
+The simulator estimates power under the withholding study's assumptions.
 
 - `study-inputs RUN --runs PACKAGE... --out FILE` writes `withholding-study-inputs/2`
   from a judged blind run. Every unit carries required boolean `exclusive_scoreable`
@@ -828,8 +762,7 @@ Historical inputs, results and frozen analysis source remain unchanged.
   has zero shrunk touch and missed-when-touched shares; its raw conditional miss is
   null. A scoreable unit with no observed touches retains the usual shrinkage.
   Pooled touch uses all unit-starts as its denominator, including structural and placebo
-  units; pooled miss uses all touched unit-starts. Spread also uses all units. These
-  populations preserve the previous sizing calculation rather than refitting it.
+  units. Pooled miss uses all touched unit-starts. Spread uses all units.
 - `simulate-study --inputs FILE --price USD [--starts …] [--blocks …] [--effect 0.5]
   [--slope-sd …] [--sims 1000] [--seed 653] [--json]` selects only scoreable,
   non-placebo units and reports excluded structural-empty and placebo IDs. It refuses
@@ -841,19 +774,17 @@ Historical inputs, results and frozen analysis source remain unchanged.
   test with 2,000 re-draws. It refuses block counts above half the smallest number of
   starts and effects it cannot solve within 1e-6 at |`log_or`| up to 10⁴. It reports
   power, smallest starts reaching 0.8, and price. It is seeded and writes no file.
-  Historical inputs and results remain frozen; unsupported input versions are rejected.
+  It rejects unsupported input versions.
 
 <a id="process-measures-process-measures1"></a>
 
-Historical `process-measures/1` reports remain sealed; the current report contract is v2 below.
-
 ### Process measures (`process-measures/2`)
 
-`python -m tools.process_measures` measures how play went beyond memory, in game-neutral
-terms ([#620](https://github.com/CVX-Hull/enactive/issues/620)): windows stuck or looping,
-the same failed approach tried again, progress against milestones frozen before scoring,
-and success claims the frames do not support. It reuses this section's packets, budget,
-hashing, agreement and bootstrap, calls no model, launches no game and spends nothing.
+`python -m tools.process_measures` reports [game-neutral process measures (#620)](https://github.com/CVX-Hull/enactive/issues/620).
+It scores windows stuck or looping, repeated failed approaches, progress against
+milestones frozen before scoring, and success claims the frames do not support. It reuses
+this section's packets, budget, hashing, agreement and bootstrap. It calls no model,
+launches no game and spends nothing.
 
 | Kind | Pair | Labels (those that must cite a frame first) |
 | --- | --- | --- |
@@ -951,10 +882,10 @@ viewer cannot serve one. The curator's trace is projected by allowlist from name
 directories, a run package freezes a closed set of files, and the import contracts forbid
 the player, the curator and the trace projection from importing evaluation code or tools.
 
-The owner's labels of the anchor set are the measure gate's sealed `labels.json`
-(`owner-labels/2`, described in the [measure gate](../acceptance/2026-11-13-memory-measure-gate.md)
-and its commit); the anchor reads only that format. No owner labels are made after it, by
-the owner's decision.
+The fixed anchor set is the measure gate's sealed `labels.json` (`owner-labels/2`).
+The anchor reads only that format, and the standing measure uses no further owner
+labels. See the [measure gate record](../acceptance/2026-11-13-memory-measure-gate.md)
+and the [“Judges without audits” decision](../decisions/owner-decisions.md#in-force).
 
 ## Tracked run ledger and metrics snapshot
 
@@ -980,11 +911,9 @@ Development-run quantities live as data in git, and pages render them or cite th
   possible in-flight attempts. Ledger totals show the provider subtotal and
   the admission amounts separately. See the
   [campaign procedure](../operations/campaign-run.md#start-and-close).
-- **Historical basis.** The one-time ledger migration from `dev-run/2`
-  preserves every historical number with basis `historical` and a null
-  `spend_upper_bound_usd`. These rows retain the original counted totals and
-  any original split. Earlier counted totals can contain per-attempt bounds
-  or configured estimates. Sealed reports keep their original contracts.
+- **Historical basis.** Rows with basis `historical` hold the original counted totals
+  and any original split, with a null `spend_upper_bound_usd`. Their totals may include
+  per-attempt bounds or configured estimates.
 - **Rejection.** A row without `schema: dev-run/3`, a schema violation (a label is required),
   a repeated study and run, a repeated session, more combined player and recall unpriced attempts than recorded attempts, or an
   inconsistent spend split is an error naming the line. Snapshot rows are validated against
@@ -1245,8 +1174,7 @@ Nothing is sent to the curator, and no figure is derived beyond what the file st
 
 ### Spectator frame (`spectator-frame/1`)
 
-The `/api/view/frame/*` routes are the spectator's frame
-([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18)). They follow the rules above (`GET` only, under 4 MiB, nothing written) but carry
+The spectator's `/api/view/frame/*` routes follow the view API rules above and carry
 `"schema": "spectator-frame/1"`. Errors keep the `spectator-view/2` envelope. They read
 tracked data, the catalog's stores, explicitly configured curator result files and the curator runner's status file, and nothing they compute reaches the player or the
 curator (ADR008). The container and probe directories default to the repository's
@@ -1264,11 +1192,9 @@ them for tests.
     of the figures.
   - `actor_cadence` is `no-data`, with a `detail`, when no readable run has a game-time
     reading.
-  - Every other slot is
-    `{"state": "not-yet-measured", "phase": "curator-and-memory" | "programs-and-monitor"}`
-    and carries no number until the phase that delivers it. `phase` names the
-    [ADR 009 phase](../decisions/009-curated-player.md#phases); the page shows it as words
-    ("arrives in the curator and memory phase").
+  - Every other slot is a placeholder with `state: "not-yet-measured"` and no numeric
+    value. The page labels it “not yet measured”. See the
+    [health response source](../../harness/viewer/frame.py) for the placeholder fields.
 - **Containers.** Every `data/containers/*.json` index (`container-index/1`), each manifest
   checked with `harness.trace.sidecar.validate`. The list pages like the run list: `items`
   (`id`, `kind`, `owner_role`, `lifecycle_state`, `retention_policy`, `evidence_study`,
@@ -1300,11 +1226,10 @@ them for tests.
       anchor rather than failing the route.
 
   The page opens anchors through the per-run views; frames are served only by that route.
-  Each poll re-checks every anchor's frame digest. That is cheap at the current dozen anchors, and
-  it is the cost to revisit when lineages grow.
+  Each poll re-checks every anchor's frame digest.
 
-The gateway forwards only the statuses listed in the
-[observer component](../components/observer-operations.md#viewer), so a `500` from these
+The gateway forwards only the statuses listed under
+[Control path and viewer](#control-path-and-viewer), so a `500` from these
 routes reaches the page as "viewer unavailable".
 
 ## Pause conditions (supervise)
@@ -1322,9 +1247,5 @@ Each has a value, a threshold, `met`, and the dollars per minute that continuing
 
 Game state (vitals, threat) is information only and never a Pause condition.
 
-**Pause.** The gateway's Pause asks for `{"reason": "loop" | "fault" | "spend" | "other"}`
-but never refuses a stop over it. It stops first (the Pause flag, the guardian datagram,
-then `{}` to the custodian unchanged), and records the reason as given when valid, else
-`unspecified`. Only a malformed datagram or an unknown reason on the guardian's own
-datagram ends supervision as `invalid_pause_reason`. The watch terminal record holds
-`pause_reason`. Pause never waits for the viewer.
+**Pause.** The gateway handles the operator's reason and stops automation independently of
+the viewer under the [operator Pause contract](computer-control.md#passive-spectator-reads-and-operator-pause).
