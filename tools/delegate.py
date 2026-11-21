@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+"""Start the one delegate the lead names, with a brief and a worktree, and return its hand-back.
+
+The lead chooses the coding agent, model, effort and role; this starts exactly that and reports what happened.
+It holds no preference: every argument that selects a delegate is required, nothing has a default, and a run
+that does not start, returns nothing or is refused is reported as that and never tried on another delegate.
+How each coding agent is started is data, in `.agents/delegates.json`; this file knows none of them by name.
+
+Runs on the standard library, so a lead on any coding agent can start it with the main checkout's Python.
+"""
+from __future__ import annotations
+
+import argparse
+from datetime import date
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+DELEGATES = ROOT / ".agents/delegates.json"
+SCHEMA = "delegates/1"
+# The hand-back's own statement of the acceptance check, asked for in the brief when the lead names a check.
+REPORTED = re.compile(r"^Acceptance check: (passed|failed|not run)\s*$", re.MULTILINE)
+REPORT_LINE = ("End your hand-back with one line of exactly this form, saying what you saw when you ran the "
+               "acceptance check: `Acceptance check: passed`, `Acceptance check: failed` or `Acceptance check: not run`.")
+# A reply this short may be the coding agent's own refusal message and not a hand-back.
+SHORT_REPLY = 400
+EXIT_HANDED_BACK, EXIT_NOT_HANDED_BACK, EXIT_USAGE = 0, 1, 2
+
+
+def read_delegates(path: Path) -> dict:
+    definitions = json.loads(path.read_text(encoding="utf-8"))
+    if definitions.get("schema") != SCHEMA:
+        raise SystemExit(f"{path}: expected schema {SCHEMA}, found {definitions.get('schema')!r}")
+    return definitions
+
+
+def fill(template: list[str], values: dict[str, str]) -> list[str]:
+    """Replace `{name}` placeholders; a brace that names no placeholder is left as written."""
+    return [re.sub(r"\{(\w+)\}", lambda match: values.get(match.group(1), match.group(0)), part) for part in template]
+
+
+def git(worktree: Path, *arguments: str) -> str | None:
+    done = subprocess.run(["git", "-C", str(worktree), *arguments], capture_output=True, text=True)
+    return done.stdout.strip() if done.returncode == 0 else None
+
+
+def run(argv: list[str], *, cwd: Path, environment: dict, stdin: str | None, timeout: float | None):
+    """Run to the end or to the time limit. Returns (exit code or None when it timed out, stdout, stderr)."""
+    process = subprocess.Popen(argv, cwd=cwd, env=environment, text=True, start_new_session=True,
+                               stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        out, err = process.communicate(stdin, timeout=timeout)
+        return process.returncode, out, err
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGTERM)
+        try:
+            out, err = process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            out, err = process.communicate()
+        return None, out, err
+
+
+def refusal(patterns: list[str], exit_code: int | None, reply: str, out: str, err: str) -> str | None:
+    """The line that says the coding agent refused the run (quota, sign-in), or None.
+
+    Read from the run's output when it failed or returned nothing, and from the reply itself only when that
+    is short: a long hand-back may discuss quotas without being a refusal."""
+    texts = []
+    if exit_code != 0 or not reply.strip():
+        texts += [err, out]
+    if reply.strip() and len(reply) <= SHORT_REPLY:
+        texts.append(reply)
+    for text in texts:
+        for line in text.splitlines():
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns):
+                return line.strip()[:300]
+    return None
+
+
+def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role: str, brief: str,
+          worktree: Path, out: Path, check: str | None, timeout: float | None) -> dict:
+    """Start the named delegate once and describe what happened. Never starts a different one."""
+    result = {"coding_agent": coding_agent, "coding_agent_version": None, "model": model, "effort": effort,
+              "role": role, "worktree": str(worktree), "date": date.today().isoformat(), "outcome": None,
+              "detail": None, "exit_code": None, "wall_seconds": 0, "hand_back": None, "commits": None,
+              "uncommitted": None, "check": None}
+    agent = definitions["coding_agents"].get(coding_agent)
+    if agent is None:
+        raise SystemExit(f"No coding agent {coding_agent!r} in the delegate definitions; "
+                         f"known: {', '.join(sorted(definitions['coding_agents']))}")
+    how = agent["roles"].get(role)
+    if how is None:
+        raise SystemExit(f"{agent['name']} has no role {role!r}; known: {', '.join(sorted(agent['roles']))}")
+    result["coding_agent"] = agent["name"]
+    if "unavailable" in how:
+        return result | {"outcome": "unavailable", "detail": how["unavailable"]}
+
+    out.mkdir(parents=True, exist_ok=True)
+    reply_file = out / "reply.md"
+    reply_file.unlink(missing_ok=True)
+    sent = definitions["role_instruction"].replace("{role}", role) + "\n\n" + brief.strip() + "\n"
+    if check:
+        sent += "\n" + REPORT_LINE + "\n"
+    (out / "brief.txt").write_text(sent, encoding="utf-8")
+    environment = {name: value for name, value in os.environ.items() if name not in definitions["drop_environment"]}
+    values = {"worktree": str(worktree), "model": model, "effort": effort, "reply_file": str(reply_file), "brief": sent}
+    argv = fill(how["argv"], values)
+
+    if shutil.which(argv[0], path=environment.get("PATH")) is None:
+        return result | {"outcome": "failed_start", "detail": f"{argv[0]} is not on the path"}
+    version = subprocess.run(agent["version"], capture_output=True, text=True, env=environment)
+    result["coding_agent_version"] = (version.stdout.strip().splitlines() or [None])[0]
+    head_before = git(worktree, "rev-parse", "HEAD")
+
+    began = time.monotonic()
+    try:
+        exit_code, stdout, stderr = run(argv, cwd=worktree, environment=environment, timeout=timeout,
+                                        stdin=sent if how["brief"] == "stdin" else None)
+    except OSError as error:
+        return result | {"outcome": "failed_start", "detail": str(error)}
+    result["wall_seconds"] = round(time.monotonic() - began)
+    result["exit_code"] = exit_code
+    (out / "stdout.txt").write_text(stdout, encoding="utf-8")
+    (out / "stderr.txt").write_text(stderr, encoding="utf-8")
+    if how["reply"] == "file":
+        reply = reply_file.read_text(encoding="utf-8") if reply_file.is_file() else ""
+    else:
+        reply = stdout
+        reply_file.write_text(reply, encoding="utf-8")
+
+    refused = refusal(agent["refusals"], exit_code, reply, stdout, stderr)
+    last_line = (stderr.strip().splitlines() or stdout.strip().splitlines() or ["no output"])[-1][:300]
+    if exit_code is None:
+        result |= {"outcome": "timed_out", "detail": f"no hand-back within {timeout:g} seconds"}
+    elif refused:
+        result |= {"outcome": "refused", "detail": refused}
+    elif exit_code != 0:
+        result |= {"outcome": "failed", "detail": f"exit code {exit_code}: {last_line}"}
+    elif not reply.strip():
+        result |= {"outcome": "empty_reply", "detail": f"exit code 0 and no reply, which is a failed run: {last_line}"}
+    else:
+        result |= {"outcome": "handed_back", "hand_back": str(reply_file)}
+
+    head_after = git(worktree, "rev-parse", "HEAD")
+    if head_before and head_after:
+        result["commits"] = (git(worktree, "rev-list", f"{head_before}..{head_after}") or "").split()
+        result["uncommitted"] = [line[3:] for line in (git(worktree, "status", "--porcelain") or "").splitlines()]
+    if check:
+        # Run again here, outside any sandbox the delegate had, whatever it reported: a delegate that could not
+        # run the check, or returned nothing after editing, still leaves a tree the lead needs a result for.
+        reported = REPORTED.findall(reply)
+        rerun = subprocess.run(check, shell=True, cwd=worktree, env=environment, capture_output=True, text=True)
+        (out / "check.txt").write_text(rerun.stdout + rerun.stderr, encoding="utf-8")
+        result["check"] = {"command": check, "delegate_reported": reported[-1] if reported else "not stated",
+                           "rerun": "passed" if rerun.returncode == 0 else "failed", "rerun_exit_code": rerun.returncode,
+                           "rerun_output": str(out / "check.txt")}
+    return result
+
+
+def listing(definitions: dict) -> str:
+    lines = []
+    for key, agent in sorted(definitions["coding_agents"].items()):
+        for role, how in sorted(agent["roles"].items()):
+            state = "unavailable: " + how["unavailable"] if "unavailable" in how else " ".join(how["argv"][:2]) + " …"
+            lines.append(f"{key}\t{role}\t{state}")
+    return "\n".join(lines)
+
+
+def main(arguments: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--delegates", type=Path, default=DELEGATES, help="the delegate definitions (default: this checkout's)")
+    parser.add_argument("--list", action="store_true", help="list every coding agent and role that can be named, and stop")
+    parser.add_argument("--coding-agent", help="the coding agent to start, by its key in the delegate definitions")
+    parser.add_argument("--model", help="the model, as that coding agent names it")
+    parser.add_argument("--effort", help="the effort, as that coding agent names it")
+    parser.add_argument("--role", help="worker, reviewer, explorer or locator")
+    parser.add_argument("--brief", help="a file holding the brief, or - for standard input")
+    parser.add_argument("--worktree", type=Path, help="the worktree the delegate works in")
+    parser.add_argument("--out", type=Path, help="a scratch directory outside the checkout for the reply and the run's output")
+    parser.add_argument("--check", help="the brief's acceptance check, run again here in the worktree after the hand-back")
+    parser.add_argument("--timeout", type=float, help="seconds to wait for the hand-back; no limit when omitted")
+    options = parser.parse_args(arguments)
+    definitions = read_delegates(options.delegates)
+    if options.list:
+        print(listing(definitions))
+        return EXIT_HANDED_BACK
+    missing = [name for name in ("coding_agent", "model", "effort", "role", "brief", "worktree", "out")
+               if getattr(options, name) is None]
+    if missing:
+        parser.error("the lead names each of these; none has a default: " + ", ".join("--" + name.replace("_", "-") for name in missing))
+    if not options.worktree.is_dir():
+        parser.error(f"--worktree {options.worktree} is not a directory")
+    brief = sys.stdin.read() if options.brief == "-" else Path(options.brief).read_text(encoding="utf-8")
+    if not brief.strip():
+        parser.error("the brief is empty")
+    result = start(definitions, coding_agent=options.coding_agent, model=options.model, effort=options.effort,
+                   role=options.role, brief=brief, worktree=options.worktree.resolve(), out=options.out.resolve(),
+                   check=options.check, timeout=options.timeout)
+    if options.out.is_dir():
+        (options.out / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result, indent=2))
+    if result["outcome"] == "handed_back":
+        print("\n--- hand-back ---\n" + Path(result["hand_back"]).read_text(encoding="utf-8").rstrip())
+        return EXIT_HANDED_BACK
+    print(f"\nNo hand-back: {result['outcome']}: {result['detail']}. Nothing else was started; the lead decides what to try next.")
+    return EXIT_NOT_HANDED_BACK
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

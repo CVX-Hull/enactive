@@ -1,0 +1,95 @@
+{
+  "schema": "delegates/1",
+  "role_instruction": "You are the {role}. Before starting, read and follow `.agents/roles/{role}.md`; that file owns the role. If it cannot be read, stop and report it.",
+  "drop_environment": [
+    "OPENROUTER_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY"
+  ],
+  "coding_agents": {
+    "codex": {
+      "name": "Codex",
+      "version": ["codex", "--version"],
+      "refusals": ["usage limit", "rate limit", "quota", "not logged in", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
+      "roles": {
+        "worker": {
+          "argv": ["codex", "exec", "--ignore-rules", "-s", "workspace-write", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "brief": "stdin",
+          "reply": "file"
+        },
+        "reviewer": {
+          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "brief": "stdin",
+          "reply": "file"
+        },
+        "explorer": {
+          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "brief": "stdin",
+          "reply": "file"
+        },
+        "locator": {
+          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "brief": "stdin",
+          "reply": "file"
+        }
+      }
+    },
+    "claude-code": {
+      "name": "Claude Code",
+      "version": ["claude", "--version"],
+      "refusals": ["usage limit", "rate limit", "quota", "not logged in", "/login", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
+      "roles": {
+        "worker": {
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--no-session-persistence", "--output-format", "text"],
+          "brief": "stdin",
+          "reply": "stdout"
+        },
+        "reviewer": {
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--disallowedTools", "Edit Write NotebookEdit", "--no-session-persistence", "--output-format", "text"],
+          "brief": "stdin",
+          "reply": "stdout"
+        },
+        "explorer": {
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--disallowedTools", "Edit Write NotebookEdit", "--no-session-persistence", "--output-format", "text"],
+          "brief": "stdin",
+          "reply": "stdout"
+        },
+        "locator": {
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--disallowedTools", "Edit Write NotebookEdit", "--no-session-persistence", "--output-format", "text"],
+          "brief": "stdin",
+          "reply": "stdout"
+        }
+      }
+    },
+    "antigravity": {
+      "name": "Antigravity",
+      "version": ["agy", "--version"],
+      "refusals": ["usage limit", "rate limit", "quota", "not logged in", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
+      "roles": {
+        "worker": {
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "-p", "{brief}"],
+          "brief": "argument",
+          "reply": "stdout"
+        },
+        "reviewer": {
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "-p", "{brief}"],
+          "brief": "argument",
+          "reply": "stdout"
+        },
+        "explorer": {
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "-p", "{brief}"],
+          "brief": "argument",
+          "reply": "stdout"
+        },
+        "locator": {
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "-p", "{brief}"],
+          "brief": "argument",
+          "reply": "stdout"
+        }
+      }
+    }
+  }
+}
