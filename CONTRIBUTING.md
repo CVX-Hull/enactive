@@ -9,7 +9,8 @@ status: active
 Start with the [overview](docs/overview.md), then the authoritative
 [engineering standards](docs/engineering.md). The
 [project workflow](docs/project-management.md) explains issue tracking and review;
-[active work](docs/work.md) links the authoritative GitHub work and blockers.
+the [public Project](https://github.com/users/CVX-Hull/projects/2) and its issues hold
+the open work and blockers.
 
 ## Propose a focused change
 

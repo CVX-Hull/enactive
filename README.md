@@ -25,8 +25,8 @@ cadence remain unaccepted; GitHub owns protected delivery state.
 
 - [Player guide](docs/player-guide.md): compact working context and tools.
 - [Setup](docs/setup.md) and [runbook](docs/runbook.md): local preparation, frozen runs, Pause and cleanup.
-- [Work and evidence](docs/work.md): scoped results and remaining qualification.
-- [Public Project](https://github.com/users/CVX-Hull/projects/2) and [Issues](https://github.com/CVX-Hull/enactive/issues): live work authority.
+- [Public Project](https://github.com/users/CVX-Hull/projects/2) and [Issues](https://github.com/CVX-Hull/enactive/issues): open work and its status.
+- [Acceptance index](docs/acceptance/index.md): dated records of runs, studies, measurements and reviews, with their results and limits.
 - [Contributing](CONTRIBUTING.md), [engineering](docs/engineering.md), [documentation map](docs/documentation.md) and [controls](docs/controls.md).
 - [Charter](docs/charter.md), [research](docs/research.md), [environment](docs/environment.md) and [third-party provenance](NOTICE.md).
 

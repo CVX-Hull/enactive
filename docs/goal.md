@@ -5,7 +5,7 @@ date: 2026-10-24
 scope: Consolidated user requests through the recorded campaign extensions; historical outcome context, not live acceptance or sequencing
 ---
 
-Historical consolidated request record. The body below preserves prior requests and checkpoints; its uses of “current”, “active” and “next” refer to that recorded context. The [charter](charter.md) owns durable purpose and constraints, [operator permissions](operator-permissions.md#finite-gameplay-budget-delegation) owns the standing finite-budget delegation, and [GitHub Issues/Project](work.md) own live outcomes, acceptance and sequencing. This page is not a second project goal or backlog.
+Historical consolidated request record. The body below preserves prior requests and checkpoints; its uses of “current”, “active” and “next” refer to that recorded context. The [charter](charter.md) owns durable purpose and constraints, [operator permissions](operator-permissions.md#finite-gameplay-budget-delegation) owns the standing finite-budget delegation, and [GitHub Issues/Project](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md) own live outcomes, acceptance and sequencing. This page is not a second project goal or backlog.
 
 
 # Project goal
@@ -46,7 +46,7 @@ Use the first run's water-possession corrections, interrupted craft and uncertai
 rest as development cases. Prefer composed engine activities and bounded travel
 over a model decision per key. Keep optional curator, model-tier comparisons,
 training and broader efficacy studies outside this iteration unless an observed
-blocker makes them necessary. [The work map](work.md#campaign-delivery-path)
+blocker makes them necessary. [The work map](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md#campaign-delivery-path)
 explains the path; GitHub owns live sequencing and allocation. Finite deciding/
 cleanup limits are frozen only after integrated source and native preflight,
 not by this goal.
@@ -60,7 +60,7 @@ Publication verification belongs in the linked PR/Issues; maintenance and broade
 research capabilities remain ongoing work.
 
 The user extended the goal to complete the entire
-[seven-day campaign path](work.md#campaign-delivery-path), outcome
+[seven-day campaign path](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md#campaign-delivery-path), outcome
 [#10](https://github.com/CVX-Hull/enactive/issues/10): bounded pilot/review,
 continuity and first-day rehearsal, independently reviewed readiness, then a real
 normally created fresh character alive after seven elapsed in-game days with
@@ -149,7 +149,7 @@ owners and triggers, not a reason to claim the project is permanently finished.
 
 This document owns the consolidated requested outcome. The [charter](charter.md)
 owns principles; [standards](engineering.md) own requirements; [controls](controls.md)
-expose enforcement and gaps; [work](work.md) links GitHub's current progress and priorities.
+expose enforcement and gaps; [work](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md) links GitHub's current progress and priorities.
 Start at the [overview](overview.md) to assess what currently exists. Dated
 [consolidated acceptance](acceptance/2026-10-17-completion.md) maps the original MVP outcomes;
 [MVP](acceptance/2026-10-17-mvp.md),

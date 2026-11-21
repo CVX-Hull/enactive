@@ -42,7 +42,7 @@ GitHub owns ownership, capacity and stage: [research outcome #666](https://githu
 and [no-model feasibility slice #668](https://github.com/CVX-Hull/enactive/issues/668).
 The [delayed-memory assessment proposal](delayed-memory-assessment.md) specifies
 how to select decisions, compare context budgets and acquire a later waking period.
-The [work map](../work.md) routes to the curated-player parent;
+The curated-player parent is [#445](https://github.com/CVX-Hull/enactive/issues/445);
 [work-item flow](../workflows/work-items.md) governs execution.
 
 ## Research contract and prior evidence

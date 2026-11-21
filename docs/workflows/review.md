@@ -28,7 +28,7 @@ existing scoped review, not another approval stage or authority to reduce CI.
 | Integrated acceptance/publication | Independent outcome/evidence and maintainability review against original requirements, source/configuration and failure/unknown receipts. Appropriate protected CI profiles and required outcome evidence remain. |
 
 A pull request that changes only the [owner decision log](../decisions/owner-decisions.md)
-or the [current work](../work.md) page gets at most one independent review, a
+gets at most one independent review, a
 clean-context one, and no further review from a second model family. Where a document
 change gets its one independent review, that review may come from a second model
 family in place of one from the lead's own. It is still the one clean-context review:

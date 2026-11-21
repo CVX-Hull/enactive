@@ -79,7 +79,8 @@ uses focused checks and coherent committed checkpoints for authentic play.
 Source tests, compiled native interoperability, actual game outcomes, independent
 review and protected CI are separate evidence lanes. A fixture cannot substitute
 for failed gameplay. Keep every failed or abandoned chain and its original limits.
-[Work](work.md) links evidence; GitHub owns execution and remaining gates.
+The [acceptance index](acceptance/index.md) lists the evidence; GitHub owns execution
+and remaining gates.
 
 ## Current direction and decisions
 
@@ -100,8 +101,8 @@ pre-registers a targeted process metric. Each run's result is in its dated recor
 
 ## How you stay in control of the project
 
-Use the [Project](https://github.com/users/CVX-Hull/projects/2) for priorities,
-[work](work.md) for evidence, and the [documentation map](documentation.md) for
+Use the [Project](https://github.com/users/CVX-Hull/projects/2) for priorities and open
+work, the [acceptance index](acceptance/index.md) for evidence, and the [documentation map](documentation.md) for
 review. The lead owns design, integration and verification; the deciding player
 owns routine tactics and interpretation. [Setup](setup.md) and the
 [runbook](runbook.md) explain project-local operation and exact cleanup.

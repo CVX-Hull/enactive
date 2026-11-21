@@ -38,7 +38,7 @@ approval stages.
 | Ownership, state and failures | A component linked from architecture | [Contract index](protocol.md): [computer control](contracts/computer-control.md), [player host](contracts/player-host.md), [evaluation](contracts/evaluation.md); code and assertions |
 | Operate a finite run | [Setup](setup.md), [runbook](runbook.md) | [Campaign procedure](operations/campaign-run.md) |
 | Change scope and acceptance | GitHub Issue/PR | Affected parent/component, contract and [review policy](workflows/review.md) |
-| Evidence and remaining work | [Work](work.md) / public Project | Run method in [development runs](development-runs.md); dated records in the [acceptance index](acceptance/index.md) and [change index](changes/index.md) |
+| Evidence and remaining work | [Public Project](https://github.com/users/CVX-Hull/projects/2) and its issues | Run method in [development runs](development-runs.md); dated records in the [acceptance index](acceptance/index.md) and [change index](changes/index.md) |
 | Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
 | What can go wrong and what is done about it | [Risk register](risks.md) | [Controls](controls.md), then the [control rule](standards/authority.md#control-review) for adding or removing one |
 | What the owner decided | [Owner decision log](decisions/owner-decisions.md) | The record or issue its row links |
@@ -111,7 +111,7 @@ architecture/components own current responsibilities and assurance limits;
 [computer-control](contracts/computer-control.md) owns exact current ports;
 schemas/source own their declared executable interface; operations own tasks.
 GitHub Issues and the linked Project own live priorities, status, owners, blockers
-and exceptions, with [work](work.md) as their navigation page; proposals and designs own
+and exceptions ([work items](workflows/work-items.md)); proposals and designs own
 unadopted scope; ADRs own dated rationale; acceptance reports own original observations;
 research owns external evidence and its limits; setup and the runbook own procedures.
 The charter owns the [scope of use](charter.md#scope-of-use-and-what-is-guaranteed);

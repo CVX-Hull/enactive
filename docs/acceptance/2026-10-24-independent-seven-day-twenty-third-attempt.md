@@ -181,7 +181,7 @@ model, display, populated-handoff or whole-player qualification. Groups containi
 supersession retain the ancestry-aware algorithm. No cache/store/dependency or
 persisted-format change follows from this optimization.
 
-[Issues and the Project](../work.md#campaign-delivery-path) own current scope and
+[Issues and the Project](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md#campaign-delivery-path) own current scope and
 next actions, including SDK ergonomics, progressive reflective context, advice
 allocation, bounded donor-closure scaling and the complete fresh campaign. Git and
 this report retain failure history; later repairs cannot relabel Fresh023.

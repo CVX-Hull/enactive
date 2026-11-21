@@ -13,7 +13,7 @@ The next product result is the user-approved fresh-character seven-day survival
 campaign, [#10](https://github.com/CVX-Hull/enactive/issues/10). This grooming reviews
 all 26 open work Issues and the 63-item existing Project after the Enactive
 migration. Inspected source: `f5efffe2003a198d269e2363d77b14ae01445ecd`.
-The [current work page](../work.md) gives the reviewable path; GitHub owns live
+The [current work page](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md) gives the reviewable path; GitHub owns live
 planning. This report is a scoped decision/acceptance record, not a new tracker.
 
 ## What can be attempted now

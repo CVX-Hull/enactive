@@ -13,12 +13,14 @@ which kind of fact is stated once, in the
 [S-DOCS](../standards/documentation.md#current-pages-records-and-decisions) gives the
 rules that follow; this page
 owns what each summary may restate and the Project's views. Exceptions are issues linked
-to their affected standard; the [work map](../work.md) is the navigation entry point.
+to their affected standard; the Project is the entry point to open work.
 
 Keep summaries purpose-specific: the overview explains capabilities and limits;
-the work map routes to open outcomes and the evidence index; a design note or a pull
-request records a change's design. Do not copy Issue status, assignment, estimates,
-next-action queues or CI receipts into those pages. A concise evidence checkpoint
+a design note or a pull request records a change's design. A current page may link an
+issue; it does not say whether the issue is open, ready, started or built, and it does
+not copy the issue's assignment, estimates, next-action queue or CI receipts. A page
+follows this rule from the next change that touches it; no page is rewritten for it
+alone. A concise evidence checkpoint
 may link a dated record, but detailed attempt chronology belongs in that record, costs
 in the run ledger, and publication receipts in the PR. At integration review, remove
 mirrored fields, stale “current” claims and repeated narratives rather than append
@@ -40,7 +42,7 @@ The Project README links this contract, the overview and these four saved views:
 | --- | --- |
 | Current iteration | What is moving? Board by Status of open leaves that are Ready or In progress (aggregates excluded), sorted by Priority; show owner, Priority, parent issue and linked pull request. GitHub views have no dependency field: an issue blocked through GitHub's issue dependencies carries a Blocked mark on its card |
 | Backlog | What is unselected? Open leaves in Backlog, sorted by Priority; show Priority, parent issue and sub-issue progress |
-| Direction | What outcome comes next and why? Open `outcome` aggregates grouped by Horizon and sorted by Priority; show milestone, priority, outcome and decision needed |
+| Direction | What outcome comes next and why? Open `outcome` aggregates grouped by Horizon; show milestone, Horizon, outcome and decision needed |
 | Needs attention | What needs intervention? Open items labelled blocked or decision-needed, or blocked through an issue dependency (`is:blocked`); a generic risk label alone does not qualify. The lead flags aging In progress work during checkpoint triage |
 
 At a meaningful checkpoint, update the Project with outcomes achieved, next

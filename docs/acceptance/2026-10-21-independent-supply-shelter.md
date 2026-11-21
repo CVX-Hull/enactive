@@ -171,7 +171,7 @@ review and protected candidate/main CI are separate evidence lanes.
 
 This result does not establish unattended survival, a universal shelter policy,
 memory's causal benefit, model efficiency or autonomous reusable-procedure learning.
-[#176–178](../work.md#campaign-delivery-path) retain mixed interaction, player-learned
+[#176–178](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md#campaign-delivery-path) retain mixed interaction, player-learned
 procedures and nonblocking reflection. The
 [seven-day readiness decision](2026-10-21-independent-seven-day-readiness.md)
 uses this functional result without importing optional training/curator studies
