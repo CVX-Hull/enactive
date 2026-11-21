@@ -304,6 +304,130 @@ def test_viewer_exit_never_counts_as_supervision_loss(tmp_path, monkeypatch):
     assert result['cleanup']['viewer']['process_absent']
 
 
+def supervised_with_runner(tmp_path, monkeypatch, runner_code, *, configured=True):
+    """A supervised run whose curator runner child runs `runner_code` (None: its launch fails)."""
+    profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345)
+    monkeypatch.setattr(guard, 'preflight', lambda _: (profile, {'api_key_env': 'WATCH_TEST_KEY'}, {}))
+    monkeypatch.setenv('WATCH_TEST_KEY', 'synthetic-not-a-provider-key')
+    run = tmp_path/'run'
+    run.mkdir()
+    (run/'manifest.json').write_text('{}')
+    config = tmp_path/'runner.json'
+    config.write_text('{}')
+    launched, calls, closed = {}, [], []
+    def launch(argv, **kwargs):
+        if 'tools.campaign_run' in argv:
+            name = 'custodian'
+            assert (run/'curator-read.lock').is_file() == configured  # before the custodian, or never
+        elif 'tools.curator_host.live_runner' in argv:
+            name = 'curator_runner'
+            if runner_code is None:
+                raise OSError('synthetic runner spawn failure')
+        else:
+            name = 'viewer' if 'harness.viewer' in argv else 'gateway' if '--viewer-port' in argv else 'wake'
+        calls.append((name, argv, kwargs))
+        command = gateway_command(argv) if name == 'gateway' else [sys.executable, '-c',
+            runner_code if name == 'curator_runner' else 'import time; time.sleep(20)']
+        launched[name] = subprocess.Popen(command, **kwargs)
+        return launched[name]
+    outcome = {}
+    def supervision(*args, **kwargs):
+        if 'curator_runner' in launched:
+            try:  # long enough for an early exit to happen, while the run goes on
+                launched['curator_runner'].wait(timeout=.5 if 'sleep' in runner_code else 10)
+            except subprocess.TimeoutExpired:
+                pass
+            outcome['runner_alive'] = launched['curator_runner'].poll() is None
+        outcome['others_alive'] = all(h.poll() is None for n, h in launched.items() if n != 'curator_runner')
+        return 'custodian_terminal'
+    monkeypatch.setattr(guard, 'supervise', supervision)
+    original_close = guard.close_group
+    def close(handle):
+        closed.append(next(name for name, h in launched.items() if h is handle))
+        return original_close(handle)
+    monkeypatch.setattr(guard, 'close_group', close)
+    result = guard.run_supervised(run, popen=launch, viewer_port=lambda: 54321,
+                                  curator_runner=config if configured else None)
+    assert all(h.poll() is not None for h in launched.values())
+    return run, result, calls, closed, outcome
+
+
+def test_a_curator_runner_starts_after_the_custodian_outside_supervision_and_is_closed_last(tmp_path, monkeypatch):
+    run, result, calls, closed, outcome = supervised_with_runner(tmp_path, monkeypatch, 'import time; time.sleep(20)')
+    assert [name for name, _, _ in calls] == ['custodian', 'viewer', 'curator_runner', 'gateway', 'wake']
+    assert outcome == dict(runner_alive=True, others_alive=True)
+    assert result['reason'] == 'custodian_terminal' and 'error' not in result and result['cleanup_verified']
+    child = result['children']['curator_runner']
+    assert child['supervised'] is False and child['created_process_group'] is True
+    argv = child['argv']
+    assert argv[1:3] == ['-m', 'tools.curator_host.live_runner']
+    assert argv[argv.index('--run')+1] == str(run) and argv[argv.index('--directory')+1] == str(run/'curator-runner')
+    assert argv[argv.index('--config')+1] == str((tmp_path/'runner.json').resolve())
+    options = calls[2][2]
+    assert options['start_new_session'] is True and 'WATCH_TEST_KEY' not in options['env']
+    cleanup = result['cleanup']['curator_runner']
+    assert cleanup['launched'] and not cleanup['exited_before_teardown']
+    assert cleanup['process_absent'] and cleanup['group_absent']
+    # The custodian's bounded wait comes before anything that waits for the runner.
+    assert closed.index('custodian') < closed.index('curator_runner') and closed[-1] == 'curator_runner'
+    assert (run/'curator-read.lock').is_file() and (run/'curator-runner').is_dir()
+    assert (run/'curator-runner'/'stdout.txt').is_file()
+
+
+@pytest.mark.parametrize('runner_code', ['raise SystemExit(3)', None])
+def test_a_curator_runner_that_exits_early_or_cannot_start_never_ends_or_fails_the_run(tmp_path, monkeypatch, runner_code):
+    _, result, calls, _, outcome = supervised_with_runner(tmp_path, monkeypatch, runner_code)
+    assert outcome['others_alive'] and result['reason'] == 'custodian_terminal' and 'error' not in result
+    assert result['cleanup_verified']
+    if runner_code is None:
+        assert result['children']['curator_runner'] == dict(supervised=False, launch_error='OSError')
+        assert result['cleanup']['curator_runner'] == dict(launched=False)
+    else:
+        assert outcome['runner_alive'] is False
+        assert result['cleanup']['curator_runner']['exited_before_teardown'] is True
+        assert result['cleanup']['curator_runner']['returncode'] == 3
+    assert [name for name, _, _ in calls if name != 'curator_runner'] == ['custodian', 'viewer', 'gateway', 'wake']
+
+
+def test_without_a_curator_runner_nothing_is_created_and_the_launches_are_unchanged(tmp_path, monkeypatch):
+    run, result, calls, _, _ = supervised_with_runner(tmp_path, monkeypatch, 'pass', configured=False)
+    assert [name for name, _, _ in calls] == ['custodian', 'viewer', 'gateway', 'wake']
+    assert 'curator_runner' not in result['children'] and 'curator_runner' not in result['cleanup']
+    assert not (run/'curator-read.lock').exists() and not (run/'curator-runner').exists()
+
+
+def test_a_real_curator_runner_process_exits_promptly_on_sigterm(tmp_path):
+    runtime = tmp_path/'runtime'
+    run = tmp_path/'run'
+    run.mkdir()
+    (run/'curator-read.lock').touch()  # a reader is configured; the store does not exist yet
+    config = tmp_path/'runner.json'
+    config.write_text(json.dumps(dict(schema='curator-runner-config/1', knowledge_root=str(runtime/'knowledge'/'live'),
+                                      arm='terra', cap_usd='1', upstream='http://127.0.0.1:9', poll_seconds=.2)))
+    directory = run/'curator-runner'
+    child = subprocess.Popen([sys.executable, '-m', 'tools.curator_host.live_runner', '--run', str(run), '--directory',
+                              str(directory), '--config', str(config), '--runtime-root', str(runtime)],
+                             cwd=guard.ROOT, start_new_session=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        end = time.monotonic() + 30
+        while not (directory/'polls.jsonl').is_file():
+            assert child.poll() is None, child.communicate()
+            assert time.monotonic() < end
+            time.sleep(.05)
+        sent = time.monotonic()
+        child.send_signal(signal.SIGTERM)
+        assert child.wait(timeout=5) == 130
+        assert time.monotonic() - sent < 5
+    finally:
+        if child.poll() is None:
+            child.kill()
+        child.communicate()
+    status = json.loads((directory/'status.json').read_text())
+    assert status['state'] == 'ended' and status['stop_reason'] == 'interrupted'
+    assert json.loads((directory/'polls.jsonl').read_text().splitlines()[0])['outcome'] == 'refused:no-store'
+    assert not any((directory/'snapshots').iterdir())
+
+
 @pytest.mark.parametrize('first', [b'pause:1.0:loop', b'{"port": 80}', b'[]', b'not json', None])
 def test_gateway_startup_accepts_only_a_listening_port_announcement(tmp_path, monkeypatch, first):
     profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345)
