@@ -215,7 +215,8 @@ The rule does not reach:
   model that a cited outside source studied
   ([decision](../decisions/owner-decisions.md#a-page-may-name-what-a-cited-source-studied));
 - an adapter reference under `tools/`, which is the one page that specifies its player
-  host and may name it and its route; no other current page names a player host
+  host and may name it and its route; no other current page outside `docs/operations/` names a
+  player host
   ([decision](../decisions/owner-decisions.md#the-adapter-reference-may-name-its-player-host));
 - the names of files and directories in the tree;
 - a literal identifier inside a code block or schema example that the page's job is to

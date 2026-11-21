@@ -313,8 +313,8 @@ direct player-finish/settlement, observed attempts and each actor's `allocated_u
 `reported_usd`, `unpriced_requests`, `spent_usd` and `spend_complete`. Its totals
 carry `reported_usd`, `unpriced_requests`, `unpriced_request_usd`, `spent_usd` and
 `spend_complete`. The totals list `configured_estimate_usd` separately as an estimate
-from the route's configured rates. Assess gameplay against its frozen criteria and
-preserve failures and unrun lanes.
+from the route's configured rates. No receipt alone accepts gameplay.
+Preserve failures and unrun lanes.
 
 A development admission is recorded once its receipt exists, with
 `.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL`,

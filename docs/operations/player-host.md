@@ -51,12 +51,12 @@ defines which request fields stay fixed across actors and how images are omitted
 The final actor's `player_handoff` call is refused by the application with no
 state change ("no successor is available"), and the driver marks that actor before it
 starts. Earlier actors can request a handoff by position alone, and a successor can
-still be refused when original resources run out. The run uses the frozen transport
-throughout.
+still be refused when original resources run out. No model, transport, host or
+coding-agent fallback is supported ([isolation](../contracts/player-host.md#isolation)).
 
 Inject only the selected credential environment variable into the provider child. Keep
 the key out of files, argv, configured headers and URLs, and keep it out of the
-native child. Supply it explicitly without credential or profile discovery. The
+MCP and native children. Supply it explicitly without credential or profile discovery. The
 host rejects ambient SDK logging and header configuration. Leave global profiles
 untouched during dedicated child cleanup.
 
