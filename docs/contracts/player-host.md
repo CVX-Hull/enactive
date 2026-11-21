@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/8` is the one current boundary between the
+`player-host/8` is the current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -20,10 +20,11 @@ its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/10` package freezes `host:{"argv":[...]}` with1–8 strings.
+The [campaign package](../operations/campaign-run.md#frozen-data) freezes
+`host:{"argv":[...]}` with 1 to 8 strings.
 The first is an absolute existing executable/interpreter regular file; later
 entries are canonical project-local regular files tracked by the clean source.
-No registry, resumed host, fallback or old `node` alias is supported.
+The driver supports only the explicit frozen invocation.
 
 ## Modes
 
@@ -55,7 +56,7 @@ ID/name/cost/context/output fields, credential variable, the two
 dollar amounts and tier.
 The image block is a positive integer no larger than the image peak.
 `context_reserve_tokens` is a safe integer at least `model.maxTokens` and less
-than `model.contextWindow`. Unsupported routes, including `/7`, do not execute.
+than `model.contextWindow`. The host rejects unsupported route versions.
 
 A dollar amount is plain decimal text such as `"0.4096"`: digits with an optional
 fraction. A JSON number, an exponent, a sign or a non-finite word is refused. Two
@@ -113,12 +114,15 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   refusal, timeout, cutoff or abort without a usable cost keeps an unknown charge
   and an explicit unpriced attempt. A successful response without such a cost
   keeps the integration stop below.
-- **The reported cost** is read from the response's usage records. On a route that is
-  not on the caller's own provider key it is the larger of `cost` and
-  `cost_details.upstream_inference_cost`; on an own-key route it is their sum. A
-  malformed record leaves the cost unknown, never estimated. The curator applies the
-  same rule, and both test suites run one shared file of usage records
-  (`tests/fixtures/provider-usage-cost.json`).
+- **The reported cost** comes from the response's usage records. On a route that is not
+  on the caller's own provider key, each record contributes the larger of `cost` and
+  `cost_details.upstream_inference_cost`. On an own-key route (`is_byok: true`), each
+  record must supply both amounts and contributes their sum. When a response carries
+  several records, the largest counts. A malformed record, or a response without a
+  usable amount, leaves the player's cost unknown, never estimated. The curator computes
+  a usable reported amount with the same arithmetic, and both hosts test it against
+  `tests/fixtures/provider-usage-cost.json`
+  ([player route cost pilot (#555)](../acceptance/2026-11-12-provider-cost-pilot-555.md)).
 - **Exact sums.** Amounts are summed as decimals, never as floating-point numbers.
 - **Stop at the limit.** Before each HTTP attempt, a retry included, the host stops
   with reason `spend-limit` when the total has reached `spend_limit_usd`. A request
@@ -165,7 +169,15 @@ settles its accounting. Player requests retain the unpriced-success stop.
 Settlement, driver and receipt distinguish unpriced player and recall counts.
 The planning bounds are reported separately from the combined provider subtotal.
 
-The recall request's user text is one JSON object whose first key is `index`, then `kind`, then `first_message` (briefing) or `recent_calls` (reminder), so its stable prefix is shared across actors and reminders. When the recall model's provider is `openrouter` the request asks for structured output (`response_format` of type `json_schema`, strict, an object with exactly the key `articles`, an array of strings); other providers get no `response_format`. Because an OpenRouter route requires `require_parameters:true`, an OpenRouter recall route's pinned upstream must accept that strict `json_schema`; otherwise the recall is refused and any missing cost stays unknown. The real-model check of a new route covers that capability before it is used. The reply's text parts, joined and trimmed, must be exactly one JSON object, bare or inside exactly one Markdown code fence (optionally tagged `json`) with only whitespace outside it; anything else is an invalid selection.
+The recall request's user text is one JSON object. The first key is `index`,
+followed by `kind` and then `first_message` (briefing) or `recent_calls` (reminder).
+This keeps the prefix stable across actors and reminders. A route that requests
+strict structured output requires upstream support for the selection schema. Its
+real-model check covers that capability before use. The [adapter reference](../../tools/player_host/README.md#frozen-knowledge-delivery)
+owns provider serialization. The joined, trimmed reply text must contain exactly
+one JSON object with `articles` as its sole key and an array of strings as its value.
+The object may be bare or inside one Markdown code fence, optionally tagged `json`,
+with only whitespace outside the fence.
 
 Recall accepts only IDs and titles on the delivered index (articles and standalone facts). An article named by both ID and title is selected once; a repeated selection entry is invalid. A standalone fact is accepted as a lead carrying its text; IDs/titles absent from the index are refused, including facts filed under articles.
 
@@ -179,9 +191,9 @@ request-serialization tests prove for consecutive requests, a retried request, a
 handoff successor and a new admission's first actor, with no provider call:
 
 - **Prefix.** A request's messages begin with all of the previous request's messages,
-  its notices included. The provider's cache reuses a request only when a later one
-  extends it, so a tail that changes on every request is never reused
-  ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
+  its notices included, because the provider's cache reuses a request only when a later
+  one extends it
+  ([context stability and prompt-cache findings (#489)](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
   The one earlier rewrite is image
   eviction: whole blocks of the oldest pixels become omission markers, each image
   once, and a marker never changes afterwards. Every other request field (tool table,
@@ -216,8 +228,8 @@ handoff successor and a new admission's first actor, with no provider call:
 ## External control
 
 Stdin carries newline-delimited closed `player-control/1` objects containing
-`schema,id,session,actor_id,type`. Type is `orderly_stop`; IDs are32 lowercase
-hexadecimal characters. Each line is bounded to4096 UTF8 bytes before a newline.
+`schema,id,session,actor_id,type`. Type is `orderly_stop`. IDs are 32 lowercase
+hexadecimal characters. Each line is bounded to 4,096 UTF-8 bytes before a newline.
 The pipe is separate from MCP's stdin. Identical duplicates are idempotent.
 Conflicts, malformed/oversized control, wrong identity/version or unexpected EOF
 fail and close owned MCP safely. The driver retains command intent before writing.
@@ -233,7 +245,7 @@ The driver retains pending stop for the whole admission. If an in-flight handoff
 already seals, it may deliver the same command to a verified successor before
 ordinary action under original resources, or record incomplete ending. The required
 `--pending-control-id` is `none` for an actor without inherited control, otherwise
-the pending 32hex command ID. In the latter case the host waits for that matching
+the pending 32-character hexadecimal command ID. In the latter case the host waits for that matching
 control before MCP connection or provider fetch; a wrong ID or unexpected EOF
 fails. Neither sealing nor exit erases the admission's stop request.
 
@@ -254,13 +266,15 @@ need not close merely because a product player stops.
 
 ## Settlement and handoff
 
-The host adds `player_finish` beside the frozen MCP table, rejecting an MCP tool
-with that reserved name. Its closed arguments are `disposition`, `report`
-(≤8192characters), unique `source_ids` (≤16 bounded1..128-character current
-identities) and nullable `control_id`. Disposition is `task_complete`,
-`cannot_continue` or `external_stop_complete`. The external disposition names the
-directly received command; other dispositions require null. References and report
-remain fallible claims, not source-read, save or success certificates.
+The host reserves `player_finish` beside the frozen MCP table and rejects an MCP
+tool with that name. The closed arguments require `disposition`, `report`,
+`source_ids` and `control_id`, plus `intent`. They allow optional `cites` under the
+[common player tool rules](computer-control.md#player-knowledge-and-executable-proposals).
+The report is at most 8,192 characters. `source_ids` contains up to 16 unique
+references of 1 to 128 characters each. Disposition is `task_complete`,
+`cannot_continue` or `external_stop_complete`. The external disposition sets
+`control_id` to the directly received command's ID. Other dispositions require
+null. The report and references remain fallible claims.
 
 Only direct validated tool execution accepts this signal. Remembered text,
 nested results and arbitrary tool JSON cannot impersonate it. No later tool or
@@ -273,32 +287,26 @@ control identity; `accepted_control_id` separately records any latched command.
 Player claims, host settlement, stopped automation, game persistence, normal
 native exit and owned absence remain separate facts.
 
-Handoff settles only for the direct sealed actor-view issuance from
-`player_handoff` or exact collection of this host's pending original handoff.
-The host consumes the operation record `player-computer-operation/1` and
-`player-transport/2`: the record is the structured content of a direct `player_handoff`
-result, whose text is the short `player-computer-result/2` the model reads, and the
-text of a `computer_result` collection, which returns it whole
-([computer control](computer-control.md#computer-operations-and-custody)). The retired
-`player-computer-result/1` is not a receipt. Underlying
-`player-handoff/1` identifies this actor/session and grants no authority. After
-handoff it dispatches no further tool and closes its MCP child. The driver checks
-canonical store issuance, context digest and actual old host/MCP group absence
-before a successor. Pause, uncertainty or failed closure cannot become a handoff.
+The host reads the handoff record from a direct result's `structuredContent` or
+from the text of a collection. A direct unknown `player-transport/2` result
+can establish a pending origin. After accepting handoff, the host ends dispatch
+and closes its MCP child. The [custody contract](computer-control.md#computer-operations-and-custody)
+defines which issuance settles handoff and what the driver verifies before succession.
 
 ## Telemetry
 
-Stdout is JSONL telemetry version 8. Each line has `type`; the driver ignores event
-kinds it does not account for, and observers project only known kinds.
+Stdout is JSONL telemetry version 8. The driver rejects other versions for live
+accounting. Each line has `type`. The driver ignores event kinds it does not
+account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
 | `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:8` and `schema:"player-host/8"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every observed HTTP start, including retries and failures. Each role has a contiguous ID sequence, `request-1` or `recall-1` onward. |
-| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). An archived trace recorded before the event existed has none, and readers report its absence explicitly. |
+| `context-manifest` | Exactly one per player HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). For a sealed archive trace without this event, the evaluator reports the manifest as `absent`. |
 | `response-complete` | One per HTTP attempt, a failed or aborted one included. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` matches the provider cost, or is `null` when the attempt has unknown cost. `cost_counted_as` is `provider-reported` or `unpriced`. `spent_usd` is the running provider subtotal. |
-| `tool-result` | The MCP result as the host received it, with each image replaced by an `image_reference`: `content` is what the model reads, and `structuredContent`, where the tool server supplies one, is the full operation record of a computer observe, input or handoff that the model reads short. Readers take the operation and frame from the record where there is one, else from the text; a trace recorded before the short form holds the full record in the text. `result` is the tool server's payload and is versioned by the `schema` inside it, not by the telemetry version: the short form is `player-computer-result/2` and the record `player-computer-operation/1`. |
+| `tool-result` | The MCP result as the host received it, with each image replaced by an `image_reference`. The operation payload follows the [tool server's result formats](computer-control.md#computer-operations-and-custody). Readers take the full record from `structuredContent` when present and from JSON text otherwise, including for sealed traces with text-only records. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
 | `settled` | Last, with `ok`, reason, control identity where applicable, integer combined, player and recall counts matching the observed starts by role, the host's total `spent_usd` and both unpriced counts. A settlement written before the host started carries neither. |
