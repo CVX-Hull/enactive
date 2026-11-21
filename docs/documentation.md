@@ -151,7 +151,7 @@ rules that follow from this table.
    run `.venv/bin/python -m tools.documents --write` to regenerate the index. A change
    whose only evidence is its diff gets no record: say it in the pull request.
 4. **Is it where work stands?** Replace the issue's description; do not add a section
-   to it. Set Status and Priority in the Project.
+   to it. Set its Project fields as [work items](workflows/work-items.md) says.
 5. **Is it a design for a decision?** Write a `proposed` note under `docs/design/`,
    opening with "At a glance". An architectural decision that will stand for a long
    time is an ADR under `docs/decisions/` instead.

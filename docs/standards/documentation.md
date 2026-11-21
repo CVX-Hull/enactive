@@ -92,8 +92,7 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   - `study`: a designed comparison and its result, gates or stops;
   - `measurement`: a measurement of the system or its evidence that is not a study;
   - `review`: an independent assessment of work, a design or evidence, including the
-    evidence that an issue's outcome is met. A backlog grooming is not a review
-    record ([work items](../workflows/work-items.md)).
+    evidence that an issue's outcome is met.
 
   Two more kinds, `decision` and `change`, label records written before
   14 November 2026; the check refuses them on a later record, because a decision is a

@@ -185,7 +185,7 @@ coverage stamp.
 
 The smallest coherent sequence uses existing work rather than a new stack:
 
-1. **#463, complete:** the adopted ownership/tool migration, intent/hint inputs and rule
+1. **#463:** the adopted ownership/tool migration, intent/hint inputs and rule
    alignment are on main. No positive recurrence result was required. Player
    reasoning/handoff and knowledge reads remain.
 2. **#668:** prepare the real-CDDA source portfolio, deterministic stand-in packets,
