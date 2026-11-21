@@ -15,9 +15,10 @@ delivered knowledge is frozen into a package before the admission starts. This p
 designs the smallest change that lets a curator follow an admission as it is played, so
 that its lag, cost and effect on play can be measured before anything depends on them.
 
-**Designed, and built only in part.** The custodian's closing marker and wait are
-implemented (`close_store` in `tools/campaign_run.py`); nothing else here is, and no run
-is approved. The
+**Designed, and built only in part.** The custodian's closing marker and wait
+(`close_store` in `tools/campaign_run.py`) and the snapshot reader
+(`harness/trace/snapshot.py`) are implemented; nothing else here is, and no run is
+approved. The
 [curator session design](curator-session.md) owns sessions, the gate and the store; this
 page owns only what is new for a session that runs beside play. A first live run is
 priced in a [dated proposal](../acceptance/2026-11-20-live-curator-run-price-proposal-836.md),
@@ -216,11 +217,20 @@ they would for the sealed session.
 
 ### Not yet shown
 
-Nothing here has been tried against a live writer.
-[The reader leaf](https://github.com/CVX-Hull/enactive/issues/837) tests it offline with
-a synthetic writer process, at start, under sustained writes and at the writer's close:
-that the read returns a consistent prefix, how long it holds, that the writer's timeout
-is not hit, and that the step numbers of a snapshot equal those of the sealed trace.
+Nothing here has been tried against a running custodian or a real host. The reader
+(`harness/trace/snapshot.py`, whose module text states the exact cutoff) is tested
+offline with a synthetic writer process, at start, under sustained writes and at the
+writer's close: the read returns a consistent prefix, the writer's timeout is not hit,
+and the step numbers of a snapshot equal those of the sealed trace. The synthetic
+writer closes its store through the custodian's own `close_store` and imitates the
+host's log; it is not the custodian's loop and not the host.
+
+Three things the reader cannot see are left as they are. Step numbers follow wall time,
+so a wall clock that steps back between two operations of one actor renumbers them, in
+the sealed trace as well. Two operations of one actor with identical wall times sort by
+identity, so a later one can sort before one a snapshot had already numbered. And a
+frame linked to an operation after its terminal row would change a step a snapshot had
+already included.
 
 **The fallback** has its own test, not this one's: at each window the custodian yields
 a detached, stable copy of the prefix. Checkpointing the live file is not enough, since
@@ -356,8 +366,8 @@ It settles who runs the curator, the cursor and window rules, the architecture o
 read, what a snapshot contains, what each measure is read from, and what the first run
 does and does not deliver. It is not an implementation. Before each is built:
 
-- [The reader leaf](https://github.com/CVX-Hull/enactive/issues/837) settles the exact
-  cutoff between the store and the host's log, the test against a live writer, and the
+- The reader is built: `harness/trace/snapshot.py` states the exact cutoff between the
+  store and the host's log, and its tests cover a synthetic live writer and the
   equality of step numbers.
 - [The runner leaf](https://github.com/CVX-Hull/enactive/issues/845) settles its record
   of examined ranges, its status file, and how it is launched and cancelled by the

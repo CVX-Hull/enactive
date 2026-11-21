@@ -20,11 +20,9 @@ from harness.computer.launch import OwnedTarget
 from harness.computer.runtime import ComputerRuntime
 from harness.player.journal import Journal
 from harness.server import serve
+from harness.trace.stores import CURATOR_READ_LOCK,READ_HOLD_BOUND_SECONDS,STORE_CLOSING_MARKER
 from tools.campaign_package import preflight,usd_text
 from tools.campaign_player import run_hosts,write_new
-
-# A curator reader's whole hold of the admission lock, from taking it to releasing it, fits this bound.
-READ_BOUND_SECONDS=2.0
 
 
 def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool) -> dict:
@@ -49,13 +47,13 @@ def close_store(directory: Path,session: str,close,attempt) -> None:
     holds a shared lock from admission until its connection closes and is refused once the
     marker exists; the exclusive lock is held, when acquired, until the store is closed.
     """
-    lock=directory/'curator-read.lock'
+    lock=directory/CURATOR_READ_LOCK
     if not attempt('curator_read_lock',lock.exists):
         attempt('store_close',close);return
-    attempt('store_closing_marker',lambda:write_new(directory/'store-closing.json',
+    attempt('store_closing_marker',lambda:write_new(directory/STORE_CLOSING_MARKER,
         dict(schema='store-closing/1',session=session,closing_wall=time.time())))
     def wait():
-        descriptor=os.open(lock,os.O_RDONLY);end=time.monotonic()+READ_BOUND_SECONDS
+        descriptor=os.open(lock,os.O_RDONLY);end=time.monotonic()+READ_HOLD_BOUND_SECONDS
         try:
             while True:
                 try:fcntl.flock(descriptor,fcntl.LOCK_EX|fcntl.LOCK_NB);return descriptor
