@@ -171,6 +171,9 @@ def make_handler(state: State):
                 self.json(200, body); return
             if route in ('frame/curator-sources', 'frame/curator-session-sources'):
                 self.json(200, dict(schema='spectator-frame/1', items=[], total=0, next=None, limit=500)); return
+            if route == 'frame/curator-runner':
+                self.json(200, dict(schema='spectator-frame/1', source_status='not_configured', snapshot=None,
+                                    read_wall=0, status=None)); return
             if route in ('frame/health', 'frame/containers', 'frame/episodes'):
                 self.json(200, load('frame-' + route.split('/')[1] + '.json')); return
             if route.startswith('frame/containers/'):

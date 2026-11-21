@@ -87,7 +87,85 @@ function Metadata({title, data, labels}) {
 }
 
 function CuratorViews() {
-  return html`<${CuratorSession} /><${Curator} />`;
+  return html`<${CuratorRunner} /><${CuratorSession} /><${Curator} />`;
+}
+
+/* What the curator has done since the actor's delivered version: the runner's status file (curator-runner-status/1),
+   read by the viewer at each request. The actor's delivered version stays in the Actor view; the two are not merged. */
+const RUNNER_STATUS = {available:'read.', not_configured:'no curator runner status file is configured for this viewer.',
+  missing:'missing: the runner has not written it, or no runner was started.', unreadable:'unreadable: it cannot be read as a regular file.',
+  too_large:'unreadable: it exceeds the 16 MiB input limit.', empty:'unreadable: the file is empty.',
+  malformed:'unreadable: it is not complete JSON (partly written); the next read tries again.',
+  unsupported:'unreadable: it is not curator-runner-status/1.'};
+const RUNNER_STATES = {polling:'polling', 'in-session':'in a session', stopped:'stopped for the rest of the admission', ended:'ended'};
+
+/* An absent or `unknown` value is unknown, never zero; a recorded null is none; a withheld string says so. */
+function known(obj, key, none = 'none') {
+  if (obj === null) return none;
+  if (!obj || obj === 'unknown') return 'unknown';
+  if (obj.omitted_characters?.[key]) return 'withheld (path-like or too long)';
+  const value = obj[key];
+  return value === undefined || value === 'unknown' ? 'unknown' : value === null ? none : String(value);
+}
+/* A wall time in seconds; a number the browser cannot place as a date (non-finite, out of range) is unknown. */
+function wallText(value) {
+  if (value === null) return 'none';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'unknown';
+  const date = new Date(value * 1000);
+  return Number.isNaN(date.getTime()) ? 'unknown' : date.toISOString().replace('.000Z', 'Z');
+}
+function placeText(place, none = 'none') {
+  if (place === null) return none;
+  if (!place || place === 'unknown') return 'unknown';
+  if (place.step === 0) return 'no finished step yet';
+  return `actor ${known(place, 'actor')} · step ${known(place, 'step')} · operation ${known(place, 'operation')} · finished operation ${known(place, 'ordinal')} of the admission`;
+}
+const stampText = stamp => stamp === null ? 'no stamp' : !stamp || stamp === 'unknown' ? 'unknown'
+  : `session ${known(stamp, 'session')} · actor ${known(stamp, 'actor')} · last step ${known(stamp, 'last_step')}`;
+/* A version, its coverage stamp and the runner's own `baseline` flag for it, each as recorded. */
+const versionText = v => `${known(v, 'version')} · stamp: ${stampText(v.coverage)} · baseline: ${v.baseline === true ? 'yes' : v.baseline === false ? 'no' : 'unknown'}`;
+const windowText = w => !w || w === 'unknown' ? 'unknown' : `actor ${known(w, 'actor')} · steps ${known(w, 'first')}–${known(w, 'last')}`;
+
+/* The recorded end of the covered prefix and, after a restore, that the prefix is unknown past it. */
+function prefixText(prefix) {
+  if (!prefix || prefix === 'unknown') return 'unknown';
+  const end = placeText(prefix.end, 'no step covered yet');
+  if (prefix.restore === 'unknown') return `${end} · whether a restore applies is unknown`;
+  if (!prefix.restore) return end;
+  return `${end} · unknown past the restore of ${known(prefix.restore, 'version')} to ${known(prefix.restore, 'restored_from')} (versions counted through ${known(prefix.restore, 'counted_through')})`;
+}
+
+function CuratorRunner() {
+  const {data, error} = useFrame('frame/curator-runner', 5000);
+  const s = data?.status;
+  const confirmed = s && s.last_confirmed;
+  const latest = s && s.latest_version;
+  const failures = s && s.failures;
+  const examined = s && s.examined;
+  const rows = examined && Array.isArray(examined.items) ? examined.items : [];
+  const unexamined = s && s.unexamined;
+  return html`<${Panel} title="Curator since delivery" note="curator runner status" span="s12">
+    <p class="note">What the curator has done since the actor's delivered version, which the Actor view shows. Read from the curator runner's status file at each request, without a lock; nothing is sent to the curator. Lag, backlog and unexamined steps count only what the runner's last successful read saw (as of); steps finished after it are unknown.</p>
+    ${!data ? html`<${Waiting} store=${store} what="the curator runner status" error=${error} />` : html`<p data-runner-status>Status file: ${RUNNER_STATUS[data.source_status] || 'state unknown.'}</p>
+      ${s ? html`<dl class="kv wide" data-runner-facts>
+        <dt>Runner</dt><dd>${RUNNER_STATES[s.state] || 'unknown'}</dd>
+        <dt>Play has reached</dt><dd class="wrapany">${placeText(s.position)}</dd>
+        <dt>As of</dt><dd class="wrapany">${s.as_of && s.as_of !== 'unknown' ? `the read that ended ${wallText(s.as_of.read_wall?.ended)}` : 'unknown'}</dd>
+        <dt>After the last read</dt><dd>${known(s, 'after_last_read')}</dd>
+        <dt>Covered prefix ends at</dt><dd class="wrapany">${prefixText(s.covered_prefix)}</dd>
+        <dt>Lag (finished operations after the covered prefix)</dt><dd>${known(s, 'lag')}</dd>
+        <dt>Distance from the latest stamp</dt><dd>${known(s, 'stamp_distance')}</dd>
+        <dt>Backlog (finished steps beyond the curator's cursor)</dt><dd>${known(s, 'backlog')}</dd>
+        <dt>Last confirmed version</dt><dd class="wrapany">${confirmed === null ? 'none confirmed yet' : !confirmed || confirmed === 'unknown' ? 'unknown' : versionText(confirmed)}</dd>
+        <dt>Latest version seen</dt><dd class="wrapany">${!latest || latest === 'unknown' ? 'unknown' : versionText(latest)}</dd>
+        <dt>Unconfirmed publications</dt><dd>${known(s, 'unconfirmed')}</dd>
+        <dt>Session in flight</dt><dd class="wrapany">${s.current === null ? 'none' : !s.current || s.current === 'unknown' ? 'unknown' : `${windowText(s.current.window)} · started ${wallText(s.current.started_wall)}`}</dd>
+        <dt>Consecutive failures</dt><dd>${!failures || failures === 'unknown' ? 'unknown' : `${known(failures, 'sessions')} sessions · ${known(failures, 'snapshots')} snapshots`}</dd>
+        <dt>Stop reason</dt><dd class="wrapany">${known(s, 'stop_reason')}</dd>
+        <dt>Status written</dt><dd>${wallText(s.updated_wall)} · read by the viewer ${wallText(data.read_wall)}</dd></dl>
+      <h3>Examined ranges</h3>${!examined || examined.items === 'unknown' ? html`<p>Examined ranges unknown.</p>` : examined.items === null ? html`<p>No examined ranges recorded.</p>` : html`<${Table} columns=${[{title:'Range', render:r => windowText(r.window)}, {title:'Outcome', render:r => known(r, 'outcome')}, {title:'Cursor advanced', render:r => r.advanced === true ? 'yes' : r.advanced === false ? 'no' : 'unknown'}, {title:'Started', render:r => wallText(r.started_wall)}, {title:'Ended', render:r => wallText(r.ended_wall)}]} rows=${rows} empty="No range examined yet." />${examined.omitted ? html`<p class="note">The ${examined.omitted} earliest of ${examined.total} ranges are not shown.</p>` : null}`}
+      ${unexamined && unexamined.items === 'unknown' ? html`<h3>Left unexamined</h3><p>Unknown.</p>` : unexamined && Array.isArray(unexamined.items) ? html`<h3>Left unexamined</h3>${unexamined.items.length ? unexamined.items.map(r => html`<p class="wrapany">actor ${known(r, 'actor')} · steps ${known(r, 'first')}–${known(r, 'last')}</p>`) : html`<p>None as of the last read.</p>`}` : null}
+      <${Omissions} value=${s} />` : null}`}<//>`;
 }
 
 function CuratorSession() {

@@ -275,7 +275,7 @@ their numbers for latency and delivery counts.
 | `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`); `pilot` writes the withholding pilot's unit-level analysis (`withholding-pilot/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
 | `python -m tools.process_measures` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The game-neutral process measures: `milestones packets` and `milestones events` freeze each admission's milestones; `packets`, `events`, `agreement` and `measure` judge windows and report `process-measures/2`. It calls no model and spends nothing; see [process measures](#process-measures-process-measures2). |
 | `python -m tools.memory_reads` | text, or `--json` | For sealed historical traces, per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
-| `python -m tools.memory_screen_checks` | text, or `--json` | Three subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options. Its `recorded` row is from the traces; every other row is simulated, not measured. |
+| `python -m tools.memory_screen_checks` | text, or `--json`; `schedule` writes `curator-coverage-schedule/1` | Four subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options; `--coverage` is `steady`, `sessions` or `schedule`, and `--coverage schedule --schedule FILE` replays one run's recorded covered prefix in place of the lag rows ([replaying a recorded schedule](../design/live-curator-integration.md#replaying-a-recorded-schedule)). Its `recorded` row is from the traces; every other row is simulated, not measured. `schedule RUN [--output FILE]` (a FILE outside RUN): that run's covered prefix from `curator-runner/polls.jsonl` and the final `status.json`, as a schedule. |
 
 **Percentiles.** There is one definition, nearest rank (`metrics.nearest_rank`): the
 `ceil(q·n)`-th smallest value, and the smallest value when that rank is 0. Every `p50` and
@@ -1036,6 +1036,7 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/curator-results?source=&after=&limit=&snapshot=` | One source’s recorded current submission/restore results and read-snapshot provenance (`spectator-frame/1`, below) |
 | `/api/view/frame/curator-session-sources?after=&limit=` | Operator-configured receipt labels |
 | `/api/view/frame/curator-session?source=&after=&limit=&snapshot=` | One terminal curator session receipt and its paged gate results |
+| `/api/view/frame/curator-runner` | The curator runner's status file, read at this request: how far the curator trails play (`spectator-frame/1`, [below](#curator-runner-status)) |
 
 ### Recorded browser entry
 
@@ -1192,12 +1193,62 @@ collection events are historical, not current draft states or complete promotion
 history. Empty verdicts establish no result, not zero publications or acceptance.
 The reader uses no producer lock, writes no records and makes no Git or provider call.
 
+### Curator runner status
+
+`--curator-runner-status FILE` on the standalone viewer names the curator runner's
+`status.json` (`curator-runner-status/1`, owned by `harness/curator/runner.py`). The
+supervisor passes `<run>/curator-runner/status.json` when it starts the runner with
+`--curator-runner`, and passes nothing otherwise. The file shows what the curator has
+done since the actor's delivered version; the actor's delivered version stays in the
+[knowledge view](#recorded-knowledge-and-public-reports), and the two are never merged.
+
+`GET /api/view/frame/curator-runner` opens the file for reading at each request, with
+the same bounded regular-file read as recorded results, no lock and no write, and
+returns `source_status`, `snapshot` (`{sha256, bytes}` of the bytes read, or `null`),
+`read_wall` (when the viewer read it) and `status`:
+
+- `source_status` is `available`, `not_configured`, `missing`, `unreadable`,
+  `too_large`, `empty`, `malformed` (not complete JSON, as a partly written file
+  would be) or `unsupported` (not a `curator-runner-status/1` object). Every state
+  but `available` has `status: null`, so no figure is shown; a missing or partly
+  written file is never read as zero lag.
+- `status` projects, by allowlist: `session`, `state` (`polling`, `in-session`,
+  `stopped` or `ended`), `updated_wall`, `stop_reason`, `look_error`, `settings`,
+  `position` (actor, step, operation, ordinal among the admission's finished
+  operations, and the snapshot's `read_wall`), `as_of` (the same for the last
+  successful read), `after_last_read`, `snapshot` timings, `current` (the session in
+  flight), `covered_prefix` (`end` as a placed step, and `restore`; after a restore the
+  prefix is known through `end` and unknown past the restore), `lag`, `stamp_distance`,
+  `backlog` (finished steps beyond the curator's cursor, counting steps in aborted and
+  in-flight windows), `last_confirmed` (version, label, window and its coverage stamp's
+  session, actor and last step), `latest_version` (version and stamp), `failures`,
+  `unconfirmed` (how many publications could not be confirmed), `examined` (the
+  latest 100 ranges; each has its window, outcome, whether the cursor advanced and its
+  wall times) and `unexamined` (the first 100 ranges the cursor had not passed).
+  `last_confirmed` and `latest_version` also carry `baseline`, the runner's own flag for
+  that version from its list of versions; a null stamp alone does not establish it.
+- `examined` and `unexamined` are `{items, total, omitted}`: `total` is the length of the
+  runner's list and `omitted` how many rows were left out. When the runner wrote null (it
+  writes `unexamined` only once it has stopped or ended) all three are null; when the
+  value is absent or not a list all three are `unknown`. A row that is not an object is a
+  row whose every field is `unknown`.
+- A value that is absent, the runner's `unknown`, or of another type is `unknown`,
+  never zero. `after_last_read` is always `unknown`: it is the runner's sentinel and no
+  other value is projected. A null the runner wrote (no session in flight, nothing
+  confirmed, no stop reason) stays null. Text that looks like a path or exceeds the
+  identifier limit is withheld whole, with `omitted_characters`. Wall times are seconds,
+  passed on as recorded; the page shows one it cannot place as a date as unknown.
+
+The page polls this route every five seconds, and each response replaces the previous
+one: a file that goes missing or is read partly written clears the figures shown.
+Nothing is sent to the curator, and no figure is derived beyond what the file states.
+
 ### Spectator frame (`spectator-frame/1`)
 
 The `/api/view/frame/*` routes are the spectator's frame
 ([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18)). They follow the rules above (`GET` only, under 4 MiB, nothing written) but carry
 `"schema": "spectator-frame/1"`. Errors keep the `spectator-view/2` envelope. They read
-tracked data, the catalog's stores and explicitly configured curator result files, and nothing they compute reaches the player or the
+tracked data, the catalog's stores, explicitly configured curator result files and the curator runner's status file, and nothing they compute reaches the player or the
 curator (ADR008). The container and probe directories default to the repository's
 `data/containers` and `data/evaluation/probes`; `create_app(frame_sources=)` overrides
 them for tests.
