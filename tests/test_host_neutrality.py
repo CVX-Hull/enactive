@@ -1,26 +1,18 @@
-"""Current guidance, harness and tooling name no specific player host or coding agent.
+"""Enforce docs/standards/documentation.md#coding-agents-providers-and-models.
 
-Scanned for host and agent names:
-- the root documents (`ROOT_DOCUMENTS`);
-- every `docs/**/*.md` page whose status is neither historical nor superseded, except
-  `docs/design/` (`UNSCANNED`), the adapter, setup and operator pages (`ALLOWED`) and the
-  generated dated-record indexes (`GENERATED`);
-- source, configuration and Markdown files under `harness/` and `tools/`, except the host
-  adapters `tools/player_host/` and `tools/curator_host/` and installed packages.
-
-Not scanned: `docs/design/` (design and study pages name the hosts they measure),
-historical and superseded records, and every other tree (`data/`, `schemas/`, `tests/`,
-`web/`). External citations and internal link destinations are removed from a line
-before it is checked; internal link text is prose and is checked.
-
-Provider and model names are narrower: they are refused only in the scanned `harness/`
-and `tools/` files. Documents, research pages, ADRs, dated records, data and tests may
-name them (ADR 010).
+Active and proposed root and docs pages avoid coding-agent, provider and model names.
+Operations pages, licence attribution, generated indexes and dated records with historical
+or superseded status are exempt. Linked external citations, URLs, internal link destinations,
+existing tree paths in inline code and fenced code examples are skipped. Internal link text
+and unlinked citations are checked. Owner decision quotes use bracketed descriptions in place
+of product names.
+The harness and tools scan keeps its own vocabulary and scope outside the host adapters.
 """
 from pathlib import Path
 import re
 
 import frontmatter
+from markdown_it import MarkdownIt
 
 ROOT = Path(__file__).resolve().parents[1]
 # `pi` as a lowercase word is not a host name; only the capitalized product name is.
@@ -30,57 +22,78 @@ PRODUCT = re.compile(r"\bPi\b|pi-player-host|pi-agent-core|pi-ai\b|pi-mcp|earend
 PROVIDER = re.compile(r"[Oo]pen[Rr]outer|OPENROUTER|[Aa]nthropic|ANTHROPIC|[Oo]pen[Aa][Ii]|OPENAI|\b[Gg][Pp][Tt]-|\b[Gg]emini\b"
                       r"|\b[Oo]pus\b|\b[Tt]erra\b|\bSonnet\b|\bHaiku\b")
 PROVIDER_SCOPE = ("harness/", "tools/")
+# Document vocabulary comes from the operations pages, delegate config, attempts ledger
+# and named models in current research pages.
+# Opus and Terra are also used as lowercase arm names. `pro` is a generic tier label.
+DOCUMENT_NAMES = re.compile(
+    r"\b(?:Antigravity|ANTIGRAVITY|agy|GPT|[Oo]pus|[Tt]erra|Sonnet|Haiku|Fable|Sol|Astra|Luna"
+    r"|Neon|Carbon|Argon|Flash|flash_lite|Google|Qwen[0-9]*|Llama|Kimi)\b"
+    r"|\b(?i:gpt)-"
+    r"|\b(?i:OpenRouter|Anthropic|OpenAI|Gemini|DeepSeek|DeepInfra)(?=\b|_)"
+    r"|\b(?:google(?=/)|GOOGLE(?=_API_KEY\b))"
+)
 # An external citation (title and URL), an internal link destination, or a bare URL.
 CITATIONS = re.compile(r"\[[^\]]*\]\(https?://[^)]*\)|\]\([^)]*\)|https?://\S+")
-ALLOWED = (
-    "tools/player_host/",     # current adapter
-    "tools/curator_host/",    # the curator's adapter (ADR 009 shadow sessions)
-    "docs/operations/",       # operator procedures, including coding-agent hosts
-    "docs/setup.md",
-    "docs/environment.md",
-    "docs/operator-permissions.md",
-    "docs/runbook.md",        # operations index
-    "NOTICE.md",              # third-party attribution
-)
-ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md")
-# The dated-record indexes list the scopes of historical records verbatim.
-GENERATED = ("docs/acceptance/index.md", "docs/changes/index.md")
-# Design and study pages name the hosts they measure; their prose is not scanned.
-UNSCANNED = ("docs/design/",)
-
-
-def current(path: Path) -> bool:
-    if path.suffix != ".md":
-        return True
-    status = frontmatter.loads(path.read_text(encoding="utf-8")).metadata.get("status")
-    return status not in ("historical", "superseded")
+INLINE_CODE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+EXEMPT_DIRECTORIES = ("tools/player_host/", "tools/curator_host/", "docs/operations/")
+EXEMPT_DOCUMENTS = {"NOTICE.md", "docs/acceptance/index.md", "docs/changes/index.md", "docs/decisions/index.md"}
+MARKDOWN = MarkdownIt("commonmark").enable("table")
 
 
 def scope():
-    paths = [ROOT / name for name in ROOT_DOCUMENTS]
-    paths += sorted((ROOT / "docs").rglob("*.md"))
+    paths = [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]
     for directory in ("harness", "tools"):
-        paths += sorted(p for p in (ROOT / directory).rglob("*")
-                        if p.is_file() and p.suffix in (".py", ".mjs", ".js", ".cjs", ".md", ".json", ".mm", ".cpp", ".h", ".sh")
-                        and "node_modules" not in p.parts and "__pycache__" not in p.parts)
-    for path in paths:
+        paths.extend(p for p in (ROOT / directory).rglob("*")
+                     if p.is_file() and p.suffix in (".py", ".mjs", ".js", ".cjs", ".md", ".json", ".mm", ".cpp", ".h", ".sh")
+                     and "node_modules" not in p.parts and "__pycache__" not in p.parts)
+    for path in sorted(paths):
         relative = path.relative_to(ROOT).as_posix()
-        if (not relative.startswith(ALLOWED + UNSCANNED) and relative not in ALLOWED + GENERATED and current(path)):
-            yield relative, path.read_text(encoding="utf-8").splitlines()
+        if relative.startswith(EXEMPT_DIRECTORIES) or relative in EXEMPT_DOCUMENTS:
+            continue
+        source = path.read_text(encoding="utf-8")
+        if path.suffix == ".md":
+            status = frontmatter.loads(source).metadata.get("status")
+            if relative.startswith(PROVIDER_SCOPE):
+                if status in ("historical", "superseded"):
+                    continue
+            elif status not in ("active", "proposed"):
+                continue
+        yield relative, source
 
 
 def names(relative: str, line: str) -> bool:
-    """Whether the line names a host or agent, or (in `harness/` and `tools/`) a provider or model."""
-    text = CITATIONS.sub("", line)
-    return bool(PRODUCT.search(text) or (relative.startswith(PROVIDER_SCOPE) and PROVIDER.search(text)))
+    """Whether the line names a coding agent, player host, provider or model."""
+    if relative.startswith(PROVIDER_SCOPE):
+        text = CITATIONS.sub("", line)
+        return bool(PRODUCT.search(text) or PROVIDER.search(text))
+
+    text = CITATIONS.sub(" ", line)
+    if relative.startswith("docs/") or ("/" not in relative and relative.endswith(".md")):
+        def omit_tree_path(match: re.Match[str]) -> str:
+            path_text = re.sub(r":\d+$", "", match[2].strip()).rstrip("/")
+            candidate = Path(path_text)
+            if path_text and not candidate.is_absolute():
+                for directory in (ROOT, (ROOT / relative).parent):
+                    path = directory / candidate
+                    if path.exists() and path.resolve().is_relative_to(ROOT):
+                        return " "
+            return match[0]
+
+        text = INLINE_CODE.sub(omit_tree_path, text)
+        return bool(PRODUCT.search(text) or DOCUMENT_NAMES.search(text))
+    return bool(PRODUCT.search(text))
 
 
 def violations():
     found = []
-    for relative, lines in scope():
-        for number, line in enumerate(lines, 1):
-            if names(relative, line):
-                found.append(f"{relative}:{number}: {line.strip()[:160]}")
+    for relative, source in scope():
+        fenced = set()
+        if not relative.startswith(PROVIDER_SCOPE):
+            fenced = {number for token in MARKDOWN.parse(source) if token.type == "fence"
+                      for number in range(*token.map)}
+        for number, line in enumerate(source.splitlines(), 1):
+            if number - 1 not in fenced and names(relative, line):
+                found.append(f"{relative}:{number}: {line}")
     return found
 
 
@@ -88,28 +101,80 @@ def test_current_guidance_and_tooling_are_host_neutral():
     assert violations() == []
 
 
-def test_the_scan_covers_code_and_current_guidance_but_not_design_pages():
+def test_the_scan_covers_code_and_current_guidance():
     scanned = {relative for relative, _ in scope()}
-    assert not any(relative.startswith("docs/design/") for relative in scanned)
     assert {"AGENTS.md", "docs/architecture.md", "docs/contracts/player-host.md",
+            "docs/design/player-context.md", "docs/setup.md", "docs/environment.md",
+            "docs/operator-permissions.md", "docs/runbook.md",
             "harness/player_tools.py", "tools/check.py"} <= scanned
 
 
-def test_checker_sees_names_but_not_citations_or_lowercase_words():
-    assert PRODUCT.search("the generic Pi host") and PRODUCT.search("Codex trust") and PRODUCT.search("Claude Code")
-    assert PRODUCT.search("@earendil-works/pi-agent-core")
-    assert not PRODUCT.search(CITATIONS.sub("", "[Codex issue](https://github.com/openai/codex/issues/1)"))
-    # Internal link text is prose and still checked; only its destination is a path.
-    assert PRODUCT.search(CITATIONS.sub("", "[Pi host](../tools/player_host/README.md)"))
-    assert not PRODUCT.search("api pid pip spin")
+def test_documents_match_product_provider_and_model_names():
+    for line in ("the Pi host", "Codex trust", "Claude Code", "@earendil-works/pi-agent-core",
+                 "Antigravity", "`agy --version`", "OpenRouter", "Anthropic", "OpenAI", "Google's model",
+                 "DeepSeek", "DeepInfra", "GPT-5", "gpt-6.2-sol", "Gemini", "gemini-4-neon", "Opus",
+                 "Sonnet", "Haiku", "Fable", "Terra", "the terra arm", "Sol", "Astra", "Luna",
+                 "Neon", "Carbon", "Argon", "Flash", "flash_lite", "Qwen3-30B-A3B", "Llama", "Kimi",
+                 "`OPENROUTER_API_KEY`"):
+        assert names("docs/design/player-context.md", line), line
+        assert names("docs/setup.md", line), line
 
 
-def test_provider_and_model_names_are_refused_in_harness_and_tools_only():
+def test_document_line_distinguishes_prose_citations_destinations_and_inline_code():
+    relative = "docs/setup.md"
+    assert not names(relative, "[Codex issue](https://github.com/openai/codex/issues/1)")
+    assert not names(relative, "See <https://openrouter.ai/docs/faq>.")
+    assert not names(relative, "[Setup](./Codex.md)")
+    assert not names(relative, "Use `tools/player_host/` and `CLAUDE.md:2`.")
+    assert not names(relative, "See `tools/player_host/:12`.")
+    assert not names(relative, "Use ``../tools/player_host/``.")
+    assert names(relative, "[Pi host](../tools/player_host/README.md)")
+    assert names(relative, "Run `claude -p`.")
+    assert names(relative, "The path `missing/Codex.md` does not exist.")
+    assert names(relative, "Source: Anthropic, Writing effective tools.")
+    assert not names(relative, "sun astral terrace opusculum haikus sonnets pid api pip spin neon light carbon pro")
+    assert not names(relative, "strategy neopencarbon preOpenAI")
+
+
+def test_document_scan_skips_fences_and_exempt_pages(tmp_path, monkeypatch):
+    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+    for relative, status in (
+        ("NOTICE.md", "active"),
+        ("docs/operations/host.md", "active"),
+        ("docs/acceptance/index.md", "active"),
+        ("docs/changes/index.md", "active"),
+        ("docs/decisions/index.md", "active"),
+        ("docs/design/history.md", "historical"),
+        ("docs/design/replaced.md", "superseded"),
+        ("docs/design/no-status.md", ""),
+    ):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"---\nstatus: {status}\n---\nCodex\n", encoding="utf-8")
+
+    design = tmp_path / "docs/design/current.md"
+    design.write_text(
+        "---\nstatus: proposed\n---\n\nClaude Code\n\n"
+        "````Codex\nOpenAI\n```\nDeepSeek\n````\n"
+        "~~~Gemini\nAstra\n~~~\n\nOpenRouter\n",
+        encoding="utf-8",
+    )
+    setup = tmp_path / "docs/setup.md"
+    setup.write_text("---\nstatus: active\n---\n\nAntigravity\n", encoding="utf-8")
+
+    assert violations() == [
+        "docs/design/current.md:5: Claude Code",
+        "docs/design/current.md:16: OpenRouter",
+        "docs/setup.md:5: Antigravity",
+    ]
+
+
+def test_harness_and_tools_keep_their_provider_and_model_vocabulary():
     for line in ("OPENROUTER = Provider(", "an Anthropic request", "set openai_key", "model='gpt-4o'", "the opus arm",
                  "Opus 4", "GPT-5", "the Terra arm", "Gemini Pro", "gemini-pro", "Sonnet and Haiku"):
         assert names("harness/curator/proxy.py", line) and names("tools/diff_cost.py", line), line
-    # Adapters are exempt from the scan itself; documents, research and tests are out of its scope.
-    assert not names("docs/research-curated-programs.md", "OpenAI's agent and Anthropic's agent")
+    assert not names("harness/curator/proxy.py", "Antigravity agy DeepSeek Fable Sol Astra")
+    assert names("tools/example.md", "`CLAUDE.md`")
     assert not names("tests/test_curator_openrouter.py", "from tools.curator_host.providers import OPENROUTER")
     # Ordinary words and external citations are not names.
     assert not names("harness/curator/proxy.py", "a gptq opusculum terrain terrace route geminian haikus sonnets")
