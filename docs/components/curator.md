@@ -9,7 +9,9 @@ status: active
 The curator works over sealed traces and holds no custody or player access. Its
 published knowledge reaches the player through a frozen export; the player and
 computer do not import curator code. Curated memory is adopted with benefit
-unclaimed. There is no live curator scheduler or snapshot-difference delivery.
+unclaimed. A curator runner can run windowed sessions beside an admission in play; it is
+built and tested offline only, and has not run beside a real custodian. Delivery of new
+knowledge inside an admission is not built.
 The baseline and workbench [outcome](../acceptance/2026-11-08-adr009-p0.md)
 is recorded separately.
 
@@ -29,6 +31,8 @@ is recorded separately.
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | The draft lifecycle (open, stale, abandoned, promoted) and one ephemeral sandboxed session per run, with a close-out that never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the #397 and #372 development lineages (never #382's held-out lineages) under a dollar cap |
+| [Curator runner](../../harness/curator/runner.py) | The rules for sessions beside a live admission: one snapshot per poll, the one-actor window and its trigger, the durable record of examined ranges, the publication watch, the covered prefix and lag, the stops, and the status file. [Design](../design/live-curator-integration.md) |
+| [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/1` file, sessions through the shadow runner's proxy under the runner's cap, its own knowledge repository, and signal handling |
 
 ## Failure, bounds and ownership
 
@@ -67,7 +71,9 @@ is recorded separately.
   [baseline and workbench phase outcome](../acceptance/2026-11-08-adr009-p0.md) and the
   curator memory study's
   [completion and registered no-go](../acceptance/2026-11-12-p1-descriptive-completion-178.md).
-- **Standing:** the curator stays gated and does not run in live play. Any renewed
+- **Standing:** the curator stays gated. It runs beside live play only through the
+  curator runner, in a run the owner approves, and the running actor does not receive
+  what it publishes. Any renewed
   claim that it benefits play needs a fresh written protocol and an owner decision
   ([completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)). The
   owner kept it as the writer of the knowledge store
@@ -89,6 +95,6 @@ structure only and refuses earlier contracts; sealed stores remain evidence.
 The [session design](../design/curator-session.md#admission-and-grooming) owns what
 admission and grooming sessions read and do, their briefs, and publication rules.
 [Host operations](../operations/curator-hosts.md) owns adapter configuration and the
-zero-spend stand-in lane. Curator sessions triggered during live play are not
-implemented; [running the curator during play](../design/live-curator-integration.md)
+zero-spend stand-in lane. Curator sessions during live play are built and tested
+offline only; [running the curator during play](../design/live-curator-integration.md)
 is their design.

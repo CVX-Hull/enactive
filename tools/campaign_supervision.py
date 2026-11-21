@@ -14,6 +14,7 @@ import math
 import os
 from pathlib import Path
 import select
+import shutil
 import signal
 import socket
 import subprocess
@@ -23,6 +24,7 @@ import traceback
 
 from harness.computer.launch import close_group
 from harness.computer.protocol import read_json
+from harness.trace.stores import CURATOR_READ_LOCK
 from tools.campaign_package import preflight
 from tools.campaign_player import write_new
 from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
@@ -30,6 +32,7 @@ from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
 ROOT = Path(__file__).resolve().parents[1]
 PAUSE_REPLY = .75
 MARKERS = ('watch-start.json', 'watch-terminal.json')
+RUNNER_DIRECTORY = 'curator-runner'  # the curator runner's own files, in the run directory
 # Optional, git-ignored map from a credential variable to the operator's own
 # macOS keychain item: {"<KEY_VARIABLE>": {"keychain_service": "NAME"}}.
 CREDENTIALS = ROOT/'.runtime'/'credentials.json'
@@ -223,10 +226,19 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
 
 
 def run_supervised(directory: Path, *, runs: Path | None = None, popen=subprocess.Popen,
-                   clock=time, viewer_port: Callable[[], int] = free_loopback_port, curator_results=(), curator_sessions=()) -> dict:
+                   clock=time, viewer_port: Callable[[], int] = free_loopback_port, curator_results=(), curator_sessions=(),
+                   curator_runner: Path | None = None) -> dict:
     directory = directory.resolve(strict=True)
     if any((directory/name).exists() or (directory/name).is_symlink() for name in MARKERS):
         raise ValueError('Selected package has prior/partial supervision; never rearm it')
+    runner_config = None
+    if curator_runner is not None:
+        # Refused before the reservation, so a refused start never leaves the package inert.
+        if any(os.path.lexists(directory/name) for name in (CURATOR_READ_LOCK, RUNNER_DIRECTORY)):
+            raise ValueError('Selected package already holds a curator read lock or runner directory; never rearm it')
+        runner_config = Path(curator_runner).resolve(strict=True)
+        if not runner_config.is_file():
+            raise ValueError('The curator runner configuration must be a regular file')
     profile, route, _ = preflight(directory)
     secret = credential(route['api_key_env'])
     if not secret:
@@ -247,9 +259,10 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
     interrupted = False
     previous = {}
     handles = {}
-    # The viewer is outside supervision: its exit never counts as loss, so it is kept apart
-    # from `handles`, which the startup wait and guard treat as supervised children.
+    # The viewer and the curator runner are outside supervision: their exit never counts as loss,
+    # so they are kept apart from `handles`, which the startup wait and guard treat as supervised children.
     viewer = {}
+    runner = {}
     def stop(signum, frame):
         nonlocal interrupted
         interrupted = True
@@ -270,6 +283,11 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                     result['children'][name] = dict(pid=handle.pid, pgid=handle.pid,
                                                    created_process_group=True, argv=argv)
                     return handle
+                if runner_config is not None:
+                    # The read admission lock exists before the custodian starts and is never created
+                    # by it, nor replaced while the session is live (docs/design/live-curator-integration.md).
+                    os.close(os.open(directory/CURATOR_READ_LOCK, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600))
+                    (directory/RUNNER_DIRECTORY).mkdir(mode=0o700)
                 child = launch('custodian', [sys.executable, '-m', 'tools.campaign_run', '--run', str(directory)],
                     cwd=ROOT, env={**env, route['api_key_env']: secret}, stdout=stdout, stderr=stderr)
                 del secret
@@ -289,6 +307,21 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                                                             created_process_group=True, argv=argv, supervised=False)
                 except OSError as exc:
                     result['children']['viewer'] = dict(port=port, supervised=False, launch_error=type(exc).__name__)
+                if runner_config is not None:
+                    try:
+                        with (directory/RUNNER_DIRECTORY/'stdout.txt').open('xb') as runner_out, \
+                                (directory/RUNNER_DIRECTORY/'stderr.txt').open('xb') as runner_err:
+                            argv = [sys.executable, '-m', 'tools.curator_host.live_runner', '--run', str(directory),
+                                    '--directory', str(directory/RUNNER_DIRECTORY), '--config', str(runner_config)]
+                            # No route credential: the runner resolves its own provider key (HOME for the keychain).
+                            handle = popen(argv, start_new_session=True, cwd=ROOT,
+                                           env={**env, **{k: os.environ[k] for k in ('HOME',) if k in os.environ}},
+                                           stdout=runner_out, stderr=runner_err)
+                        runner['handle'] = handle
+                        result['children']['curator_runner'] = dict(pid=handle.pid, pgid=handle.pid,
+                                                                    created_process_group=True, argv=argv, supervised=False)
+                    except OSError as exc:
+                        result['children']['curator_runner'] = dict(supervised=False, launch_error=type(exc).__name__)
                 gateway = launch('gateway', [sys.executable, '-m', 'tools.campaign_watch', str(directory),
                     profile['session'], profile['source_commit'], str(profile['port']), str(child.pid),
                     str(stop_tx.fileno()), '--viewer-port', str(port)], cwd=ROOT, env=env,
@@ -326,18 +359,40 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                 except OSError as exc:
                     termination[name] = dict(termination_error=type(exc).__name__)
         # close_group is only used for handles launched here with start_new_session.
-        if 'handle' in viewer and viewer['handle'].poll() is None:
-            try:
-                viewer['handle'].terminate()
-            except OSError:
-                pass
-        for name in ('gateway', 'custodian', 'wake', 'viewer'):
-            if name == 'viewer' and 'handle' in viewer:
+        # The unsupervised children are waited for last, after the custodian's own bounded wait.
+        unsupervised = dict(viewer=viewer, curator_runner=runner)
+        early = {}
+        for name, entry in unsupervised.items():
+            if 'handle' in entry:
+                early[name] = entry['handle'].poll()
+                if early[name] is None:
+                    try:
+                        entry['handle'].terminate()
+                    except OSError:
+                        pass
+        for name in ('gateway', 'custodian', 'wake', 'viewer', 'curator_runner'):
+            if name in unsupervised:
+                if name == 'curator_runner' and runner_config is None:
+                    continue
+                if 'handle' not in unsupervised[name]:
+                    result['cleanup'][name] = dict(launched=False)
+                    continue
+                exited = dict(exited_before_teardown=early[name] is not None) if name == 'curator_runner' else {}
                 try:
-                    result['cleanup'][name] = dict(launched=True, **close_group(viewer['handle']))
+                    result['cleanup'][name] = dict(launched=True, **exited, **close_group(unsupervised[name]['handle']))
                 except BaseException as exc:
-                    result['cleanup'][name] = dict(launched=True, process_absent=False, group_absent=False,
+                    result['cleanup'][name] = dict(launched=True, **exited, process_absent=False, group_absent=False,
                         error=type(exc).__name__, error_message=str(exc)[:400])
+                if name == 'curator_runner':
+                    # A runner killed mid-poll can leave a staged snapshot, which holds custody copies.
+                    try:
+                        shutil.rmtree(directory/RUNNER_DIRECTORY/'snapshots', ignore_errors=False)
+                        result['cleanup'][name]['snapshots_removed'] = True
+                    except FileNotFoundError:
+                        result['cleanup'][name]['snapshots_removed'] = True
+                    except BaseException as exc:
+                        result['cleanup'][name]['snapshots_removed'] = False
+                        result['cleanup'][name]['snapshots_error'] = type(exc).__name__
                 continue
             if name not in handles:
                 result['cleanup'][name] = dict(launched=False)
@@ -398,8 +453,11 @@ def main(argv=None) -> int:
         help='directory of archived run directories for the viewer to list beside the live run')
     parser.add_argument('--curator-results', action='append', default=[], metavar='LABEL=FILE')
     parser.add_argument('--curator-sessions', action='append', default=[], metavar='LABEL=FILE')
+    parser.add_argument('--curator-runner', type=Path, default=None, metavar='CONFIG',
+        help='start the curator runner beside the custodian with this curator-runner-config/1 file')
     options = parser.parse_args(argv)
-    result = run_supervised(options.run, runs=options.runs, curator_results=options.curator_results, curator_sessions=options.curator_sessions)
+    result = run_supervised(options.run, runs=options.runs, curator_results=options.curator_results,
+                            curator_sessions=options.curator_sessions, curator_runner=options.curator_runner)
     print(json.dumps(result))
     return 0 if (result['reason'] == 'custodian_terminal' and result['terminal_coverage_verified']
         and result['cleanup_verified'] and result['manifest_unchanged']
