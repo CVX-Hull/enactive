@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: Player-facing tools, context boundaries or assurance limits change
+review_trigger: Player-facing tools, context boundaries, assurance limits, the player journal, hints, handoff context or delivery change
 status: active
 ---
 

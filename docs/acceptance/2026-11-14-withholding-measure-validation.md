@@ -14,7 +14,7 @@ scope: 'The withholding measure revision (#653): the judge codebook (a miss is a
   most misses were passive re-exposure and that misses follow the unit, not the arm: does
   the revised judge codebook label misses consistently and as intended, does it leave
   enough misses to size a study, and what size and price does the blocked within-unit
-  design ([contract](../design/withholding-study-protocol.md#the-withholding-studys-design-withholding-study-draw1))
+  design ([contract](../contracts/withholding-study.md#the-withholding-studys-design-withholding-study-draw1))
   need? This is development evidence about the measure. It does not re-score the pilot,
   whose sealed results stand.
 - **The codebook** (in the judge instructions since `d64128b6`): `found_again` is an

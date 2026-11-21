@@ -1,15 +1,16 @@
 ---
 owner: lead
-status: historical
-date: '2026-11-14'
-scope: 'The completed withholding study and its pilot, including assignment, analysis and sizing'
+review_trigger: Changes to the withholding simulation, study-inputs, simulate-study, pilot or study commands in tools/memory_measure.py, or to draw-study in tools/knowledge_export.py
+status: active
 ---
 
-# Withholding study protocol
+# Withholding study
 
-This page records the simulation, assignment and analysis methods for the completed
-[withholding pilot](../acceptance/2026-11-14-withholding-pilot.md) and
-[full withholding study](../acceptance/2026-11-14-withholding-study.md).
+This contract covers the withholding study's commands and file formats: simulation,
+assignment, analysis and sizing. The
+[withholding pilot](../acceptance/2026-11-14-withholding-pilot.md) and the
+[full withholding study](../acceptance/2026-11-14-withholding-study.md) used them, and
+they size any repeat.
 
 ## Protocol
 

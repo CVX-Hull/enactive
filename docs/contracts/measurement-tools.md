@@ -7,17 +7,14 @@ status: active
 # Measurement tools
 
 This contract covers offline diagnostics, judging and process measures. The
-[withholding study protocol](../design/withholding-study-protocol.md) describes the
-study commands and formats. `draw-study` writes a `withholding-study-draw/1` file
-and study exports write `private/units.json` (`knowledge-units/2`). `pilot` and
-`study` write `pilot.json` (`withholding-pilot/1`) and `study.json`
-(`withholding-study/1`). `study-inputs` writes `withholding-study-inputs/2` and
-`simulate-study` reports `withholding-study-simulation/2`.
+[withholding study contract](withholding-study.md) covers the study's commands and
+file formats. Every value these tools report is interpretive and none reaches the
+player ([evaluation record](evaluation-record.md)).
 
 ## Diagnostics owned by this contract
 
 `tools/evaluate.py` also prints two read-only diagnostics. They report recorded intervals and
-counts, are interpretive like every value here, and give no verdict. The evaluator reuses
+counts, are interpretive like every value these tools report, and give no verdict. The evaluator reuses
 their numbers for latency and delivery counts.
 
 | Command | Output format | Reports |

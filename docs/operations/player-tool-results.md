@@ -35,6 +35,6 @@ Save/load, identity and success are player judgments, not tools.
 admits a successor after actual host/MCP quiescence and canonical verification,
 under original resources. User Pause/unknown input is never handoff-resumable.
 [Host procedure](player-host.md), [custody](run-custody.md),
-[exact contract](../contracts/computer-control.md).
+[exact contract](../contracts/player-ports.md).
 
 [Operations index](../runbook.md).

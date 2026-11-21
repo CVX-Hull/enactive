@@ -7,7 +7,7 @@ status: active
 # Testing: responsibilities, selection and overlap
 
 Start with the changed [responsibility](architecture.md), then the exact
-[computer/player contract](contracts/computer-control.md) and assertions.
+[computer-control](contracts/computer-control.md) or [player-ports](contracts/player-ports.md) contract and assertions.
 [Testing standards](standards/testing.md) and [protected CI policy](workflows/ci-profiles.md#protected-ci-profiles)
 own mandatory checks. This page explains selection, not a passing-run inventory.
 

@@ -6,7 +6,7 @@ status: active
 
 # Operate, recover and retain evidence
 
-Use the [current computer/player contract](contracts/computer-control.md),
+Use the current [computer-control](contracts/computer-control.md) and [player-ports](contracts/player-ports.md) contracts,
 [setup](setup.md) and a fresh frozen finite run.
 
 ## When a mission owns execution

@@ -158,7 +158,7 @@ migration. It owns the rules; this table lists what reads them today and what mo
 | `tools/curator_host/shadow.py` | the gate's result journal and a repository handle, no fact field | nothing; its repository path is not a source of world or lineage |
 | `harness/viewer/knowledge.py` | the delivered file, after verifying the actor's frozen inputs, with host events and tool results | nothing, while the delivered shape holds |
 | `harness/viewer/curator.py` | the gate's result journal, session receipts and the coverage stamp | nothing |
-| `docs/components/curator.md`, `docs/contracts/measurement-tools.md`, `docs/contracts/player-host.md`, and every current page that names the manifest version | name the current fact contract or manifest version | the names, in every page a search for the replaced versions finds, the recurrence research proposal among them. The evaluation contract also changes in meaning: it states a draw's contents and checks |
+| `docs/components/curator.md`, `docs/contracts/measurement-tools.md`, `docs/contracts/withholding-study.md`, `docs/contracts/player-host.md`, and every current page that names the manifest version | name the current fact contract or manifest version | the names, in every page a search for the replaced versions finds, the recurrence research proposal among them. The evaluation contract also changes in meaning: it states a draw's contents and checks |
 | `docs/operations/campaign-run.md` | the label table, the rule that no player-visible input comes from a label, and the step that freezes delivered knowledge | the `world` label, the one exception to that rule, and the manifest version |
 
 Tests and fixtures that move: `tests/curator_stand_in.py`, `tests/test_curator_gate.py`,

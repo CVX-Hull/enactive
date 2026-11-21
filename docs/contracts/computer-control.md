@@ -1,10 +1,10 @@
 ---
 owner: lead
-review_trigger: Mechanical wire, operation/source, custody or player port changes
+review_trigger: Mechanical wire, operation/source or custody changes
 status: active
 ---
 
-# Computer control and player ports
+# Computer control
 
 This contract covers one production backend. The [computer-control boundary decision (ADR 006)](../decisions/006-computer-control-boundary.md)
 owns the rationale. The [production computer-control report (#176)](../acceptance/2026-10-29-computer-control.md)
@@ -182,7 +182,7 @@ observer evidence, not a stop request; actor-side source integrity, input valida
 and capture/publication fencing remain unchanged. The spectator creates no source
 issuance, observation, operation, player record or capability. The custodian has no
 activity, investigation or timing route: derived views come from the separate
-read-only viewer and the offline evaluator ([spectator view contract](spectator-view.md#control-path-and-viewer)),
+read-only viewer ([spectator view contract](spectator-view.md#control-path-and-viewer)) and the offline evaluator ([evaluation record](evaluation-record.md)),
 which have no route into the custodian, the player context or any input.
 
 `POST /api/pause` with `{}` unconditionally stops its actual receiving custodian,

@@ -26,6 +26,7 @@ version and state handling.
 | Host JSONL, recall events and context manifests | [Player host telemetry](contracts/player-host-telemetry.md) |
 | Interpretive run evaluation | [Evaluation records and metrics](contracts/evaluation-record.md) |
 | Offline diagnostics and judging | [Measurement tools](contracts/measurement-tools.md) |
+| Withholding study commands and file formats | [Withholding study](contracts/withholding-study.md) |
 | Run ledger, metrics snapshot and generated tables | [Run ledger](contracts/run-ledger.md) |
 | Spectator control path, viewer and Pause advice | [Spectator view](contracts/spectator-view.md), [spectator component](components/spectator.md) |
 

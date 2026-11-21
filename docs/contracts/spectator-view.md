@@ -1,12 +1,14 @@
 ---
 owner: lead
-review_trigger: Changes to view routes, forwarding or Pause advice in harness/viewer/, tools/campaign_watch.py or web/
+review_trigger: Changes to view routes, forwarding or Pause advice in harness/viewer/, tools/campaign_watch.py, tools/campaign_supervision.py or web/
 status: active
 ---
 
 # Spectator view
 
 This contract covers the control path, the read-only spectator API and the viewer's Pause conditions.
+Every value the view shows is interpretive and none reaches the player
+([evaluation record](evaluation-record.md)).
 
 ## Control path and viewer
 
