@@ -220,12 +220,15 @@ def _replacement_link(root: Path, directory: Path, reference: object) -> str:
     if not isinstance(reference, str) or not local_reference(root, reference):
         return ""  # Metadata validation reports an invalid replacement.
     target = root / reference.split("#", 1)[0]
-    try:
-        _, content = frontmatter.parse(target.read_text())
-    except (OSError, ValueError, YAMLError):
-        content = ""
+    content = ""
+    if target.suffix == ".md":  # only a Markdown page has a title heading
+        try:
+            _, content = frontmatter.parse(target.read_text())
+        except (OSError, ValueError, YAMLError):
+            pass
     heading = _cell(_heading(content, target.name))
-    return f"[{heading}]({quote(relpath(target, directory))})"
+    fragment = f"#{reference.split('#', 1)[1]}" if "#" in reference else ""
+    return f"[{heading}]({quote(relpath(target, directory))}{fragment})"
 
 
 def render_index(root: Path, index: str) -> str:

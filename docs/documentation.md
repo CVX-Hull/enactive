@@ -92,7 +92,7 @@ needs these and the [glossary](glossary.md), not the whole start-here set.
 | `tools/check.py`, `ci.py`, `documents.py`, `document_anchors.mjs`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_devtools.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py`, `test_host_neutrality.py` |
 | `tools/delegate.py`, `.agents/` and each coding agent's own configuration directory | [Starting a delegate](operations/coding-agents.md#starting-a-delegate-on-any-coding-agent), [delegate profiles](operations/delegate-profiles.md) | [S-AGENT](standards/agents.md#the-leads-duties) | `tests/test_delegate.py`, `tests/test_coding_agent_attempts.py`, `tests/test_coding_agent_config.py` |
 | `tools/starts.py` | [Reusable starts](development-runs.md#reusable-starts), [environment](environment.md) | [Evidence retention](operations/evidence-cleanup.md), [controls](controls.md) | `tests/test_start_*.py`, `tests/test_starts_*.py` |
-| `schemas/` | The contract or standard that names each schema | The schema file | The tests of the code that reads it |
+| `schemas/` | The page that names each schema: the [evaluation contract](contracts/evaluation.md) for run metrics and development runs, [model routing](operations/model-routing.md#reading-the-ledger) for the attempts ledger, [S-DOCS](standards/documentation.md) for front matter, and the [context-stability record](acceptance/2026-11-08-context-stability-489.md) for the evidence-only curator cache diagnosis | The schema file | The tests of the code that reads it |
 | `tools/setup.py`, `prepare_game.py`, `patch_game.py`, `build_computer.py`, `harness/prepared_app.py`, `native/` | [Setup](setup.md), [environment](environment.md) | [Native acceptance](operations/native-acceptance.md) | `tests/test_setup.py` |
 | `harness/jsonio.py` | A shared helper with no page of its own | The contract of whichever caller is changed | `tests/test_jsonio.py` |
 
@@ -154,9 +154,9 @@ rules that follow from this table.
    record, `docs/acceptance/YYYY-MM-DD-what-it-is.md`, with front matter `owner`,
    `status: historical`, `kind`, `date` and `scope`, opening with "At a glance", then
    run `.venv/bin/python -m tools.documents --write` to regenerate the index. A change
-   whose only evidence is its diff gets no record: say it in the pull request. A
-   grooming, a proposal or a reading of outside sources is not evidence either; its home
-   is in [S-DOCS](standards/documentation.md#current-pages-records-and-decisions).
+   whose only evidence is its diff gets no record: say it in the pull request. Where
+   a grooming, a proposal or a reading of outside sources goes instead is in
+   [S-DOCS](standards/documentation.md#current-pages-records-and-decisions).
 4. **Is it where work stands?** Replace the issue's description; do not add a section
    to it. Set its Project fields as [work items](workflows/work-items.md) says.
 5. **Is it a design for a decision?** Write a `proposed` note under `docs/design/`,

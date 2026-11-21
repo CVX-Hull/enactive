@@ -58,11 +58,12 @@ reduce optional scope before weakening required quality or evidence.
   keeps the edit history, comments record events, and owner decisions go in the
   [owner decision log](../decisions/owner-decisions.md). A description does not repeat
   Project fields.
-- **Parking** returns an item to Backlog with its reason and resumption trigger.
+- **Parking or deferring** returns an item to Backlog with its reason and resumption
+  trigger.
   Duplicates and cancellations close as not planned and are excluded from delivery.
 - A merged pull request never closes an issue: the repository's "Auto-close issues with
   merged linked pull requests" setting is off, and no merge-to-Done rule is used, so
-  nothing needs checking before a merge. Reference issues with
+  the lead need not check for issue-closing phrases before merging. Reference issues with
   `Refs #N`, and move an item to Done only after merged-main validation and its outcome
   evidence. If the setting is ever turned on again, this rule needs its manual check
   back.
@@ -90,7 +91,7 @@ worker handoff is a brief that follows the
 Keep one active integration slice and at most two implementation workers, each in its own
 project-local worktree (`.runtime/worktrees/<leaf>`, or where the host's worktree
 isolation puts it: [environment facts](../operations/coding-agents.md#environment-facts-for-agents))
-with disjoint named paths and one writer per checkout, except in a matched run
+and one writer per checkout, with disjoint named paths except in a matched run
 ([S-AGENT](../standards/agents.md#the-leads-duties)). A worktree installs its own npm
 dependencies with `npm ci` and uses the main checkout's `.venv`; a leaf that changes the
 Python lockfile builds its own. Explorers read only;

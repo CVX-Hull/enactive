@@ -103,6 +103,11 @@ class DocumentTests(unittest.TestCase):
                 self.assertIn("invalid or missing local replacement", "\n".join(documents.check_metadata(self.root)))
         path.write_text(historical.format("README.md"))
         self.assertEqual(documents.check_metadata(self.root), [])
+        for status in ("active", "proposed"):
+            with self.subTest(status=status):
+                path.write_text(f"---\nowner: lead\nstatus: {status}\nreview_trigger: change\n"
+                                "replacement: docs/missing.md\n---\n# Current guidance\n")
+                self.assertIn("invalid or missing local replacement", "\n".join(documents.check_metadata(self.root)))
 
     def test_non_yaml_front_matter_is_rejected(self):
         (self.root / "README.md").write_text(';;;\n{"owner":"lead","status":"active","review_trigger":"change"}\n;;;\nText\n')

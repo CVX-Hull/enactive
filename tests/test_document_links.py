@@ -57,6 +57,13 @@ class DocumentLinkTests(unittest.TestCase):
                       check_documents(self.root))
         self.write("docs/decisions/index.md", self.current("[Proposal](001-proposal.md)"))
         self.assertEqual(check_documents(self.root), [])
+        # A current archive page reached only through the owner decision log is reachable.
+        self.write("docs/decisions/owner-decisions-archive.md", self.current("# Archive"))
+        self.assertTrue(any("owner-decisions-archive.md" in error for error in check_documents(self.root)))
+        self.write("docs/documentation.md", self.current(
+            "[Decision records](decisions/index.md) [Log](decisions/owner-decisions.md)"))
+        self.write("docs/decisions/owner-decisions.md", self.current("[Archive](owner-decisions-archive.md)"))
+        self.assertEqual(check_documents(self.root), [])
 
     def test_historical_route_cannot_make_current_content_reachable(self):
         self.write("docs/protocol.md", self.current("[old evidence](old.md)"))

@@ -118,6 +118,13 @@ def test_decision_index_lists_only_numbered_records_and_links_replacements(tmp_p
     older.write_text(older.read_text().replace("docs/decisions/001-new.md", "docs/replacement reference.md"))
     assert "[replacement reference.md](../replacement%20reference.md)" in documents.render_index(tmp_path, index)
     assert documents.check_indexes(tmp_path) == [f"{index}: stale; run python -m tools.documents --write"]
+    # A fragment stays on the link, and a file that is not Markdown is named, not titled.
+    older.write_text(older.read_text().replace("docs/replacement reference.md", "docs/decisions/001-new.md#later"))
+    assert "| [Later ADR](001-new.md#later) |" in documents.render_index(tmp_path, index)
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools/x.py").write_text("# a comment\n")
+    older.write_text(older.read_text().replace("docs/decisions/001-new.md#later", "tools/x.py"))
+    assert "[x.py](../../tools/x.py)" in documents.render_index(tmp_path, index)
 
 
 def test_undated_or_statusless_records_sort_last_without_crashing(tmp_path):

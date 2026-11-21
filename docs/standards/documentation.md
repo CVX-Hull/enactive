@@ -32,7 +32,7 @@ describes. Active or proposed pages need a review trigger. Historical and supers
 pages carry none, because nobody reviews them against current behavior. A historical
 page needs date and scope; a superseded one needs scope and a repository-relative
 replacement. A historical page that a later one replaces only in part stays historical
-and names that page as its replacement. Proposals are not implemented contracts. Accepted ADRs are dated rationale;
+and may name that page as its replacement. Proposals are not implemented contracts. Accepted ADRs are dated rationale;
 architecture/protocol remain authoritative about current behavior. Metadata is
 not a claim of accuracy. Review a current page when its own review trigger fires.
 
@@ -89,8 +89,8 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
     check of removed material that the diff cannot show is a measurement;
   - where work stands, a backlog grooming, or the choice of what to do next: the issue
     and the Project;
-  - a proposal, a plan or a design awaiting a decision: a `proposed` note under
-    `docs/design/`;
+  - a design awaiting an owner decision: a `proposed` note under `docs/design/`; a
+    proposal or plan for work: its issue;
   - a reading of outside sources: a research page;
   - an owner decision: a row in the log.
 - **The owner decision log** is the one list of owner decisions: date, question, the
@@ -130,13 +130,13 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   This holds for dated records, change briefs, historical decision records, design
   notes and research pages, and superseded pages. Their front matter may be corrected
   (a wrong status, date, scope or replacement, or a review trigger), and a link in them
-  is repointed when its target moves. A correction of what a record says is a new
+  is repointed when its target moves or is removed. A correction of what a record says is a new
   record that names the one it corrects.
 
 Records and briefs that existed when these rules were adopted, on 13 November 2026,
 are not edited to fit them. Four records dated 19 November 2026 were edited on
-20 November 2026, after they merged and before the rule on historical pages was
-stated; they stay as they are: the
+20 November 2026, after they merged and before the owner's decision of 21 November 2026
+restated the rule; they stay as they are: the
 [lead trial](../acceptance/2026-11-19-antigravity-lead-trial-810.md), the
 [model evidence](../acceptance/2026-11-19-coding-agent-model-evidence.md), the
 [lookup effort study](../acceptance/2026-11-19-lookup-effort-at-retained-resource-choices-804.md)
@@ -206,7 +206,8 @@ A current page is one whose status is `active` or `proposed`.
 The rule does not reach:
 
 - dated records and historical or superseded pages, which are evidence of what ran and
-  are not reworded; a generated index quotes their front matter as it stands;
+  are not reworded; a generated index reproduces their titles and front matter as they
+  stand;
 - attribution that a licence requires;
 - the title, author or publisher of a cited source;
 - the names of files and directories in the tree;
