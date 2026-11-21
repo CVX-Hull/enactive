@@ -46,7 +46,7 @@ Second, an evidence-only event (one that no admission, control or player-visible
 reads) may be added inside an unchanged telemetry version when it changes no existing
 field and every reader that uses it marks its absence in older traces as not recorded,
 never as a failure or as a value presented as recorded. The
-[evaluation contract](../contracts/evaluation.md) states how the evaluator marks such an
+[evaluation contract](../contracts/evaluation-record.md#implementation-rules) states how the evaluator marks such an
 absence in archived traces. Anything else, including another
 archive or a changed existing field, needs a new version and a migration as above.
 

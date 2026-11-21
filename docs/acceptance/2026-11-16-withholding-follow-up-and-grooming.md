@@ -59,7 +59,7 @@ The evaluator's `survival.game_hours` takes the accepted player-visible clock sp
 the last play episode, not the survivor's total lifetime. Each selected row has one
 episode. The existing binding's clock/death reading remains fallible; this review did
 not relabel every frame. See [metric implementation](../../harness/evaluation/core/metrics.py)
-and its [contract](../contracts/evaluation.md). The two moments are the same lineage,
+and its [contract](../contracts/evaluation-record.md#metrics-version-1). The two moments are the same lineage,
 a day apart, in the same shelter; their difference is descriptive, not an independent
 comparison or evidence that the later state is safer.
 
@@ -156,7 +156,7 @@ briefing and nine reminder deliveries, before the finish report. A recorded fact
 means the knowledge was supplied, not that its complete body was read or obeyed.
 The other three death packages do not contain that fact.
 
-The [unit rule](../contracts/evaluation.md#the-facts-to-judge-judged-facts1) permits shared facts to
+The [unit rule](../contracts/measurement-tools.md#the-facts-to-judge-judged-facts1) permits shared facts to
 arrive through a delivered citing article; exclusive unit facts are withheld. S14 is
 therefore not evidence of a withholding leak. It does show why “article absent,”
 “warning absent,” “warning selected,” “warning read” and “action followed it” must be

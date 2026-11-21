@@ -35,7 +35,7 @@ strategies can coexist; no single representation is established as best.
 The assessed Procedure/2 baseline contained advisory descriptions, not evaluated
 code; its runtime recorded selection/outcomes without executing those steps.
 That historical gap motivated the subsequent Procedure/3 execution slice.
-The [current component view](components/memory-learning.md) owns implemented
+The [current component view](components/player-interface.md#journal-and-knowledge) owns implemented
 bounded program support. The [October24 follow-up](research-multirate-agents.md)
 assesses current program coverage and asynchronous learning; it does not infer
 cadence or causal benefit from execution support.

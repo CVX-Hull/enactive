@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: Player-facing tools, context boundaries or assurance limits change
+review_trigger: Player-facing tools, context boundaries, assurance limits, the player journal, hints, handoff context or delivery change
 status: active
 ---
 
@@ -10,7 +10,7 @@ One designated player runs in the player host adapter frozen by its package, wit
 current MCP tools and explicit frozen context/provider route. The player interprets
 actual pixels and owns plans, tactics, knowledge and success claims. The
 [player guide](../player-guide.md) is the compact working document. The
-[computer-control contract](../contracts/computer-control.md) owns player ports; the
+[player ports contract](../contracts/player-ports.md) owns player ports; the
 [player host contract](../contracts/player-host.md) owns the substitutable host boundary;
 the [current adapter reference](../../tools/player_host/README.md) owns its provider details.
 
@@ -27,6 +27,29 @@ the [current adapter reference](../../tools/player_host/README.md) owns its prov
 The host loads no coding-agent shell/file tools, personal configuration, resource
 discovery or resumed session. The route is frozen per finite run and permits no
 fallback; the [selected host configuration](../operations/player-host.md) names it.
+
+## Journal and knowledge
+
+The player journal (`harness/player/journal.py`) retains public calls,
+fallible hints and referenced source images. It is not a player-authored knowledge
+store. The curator writes knowledge through its gate; the player receives a frozen
+briefing, reminders and read tools. A hint can inform later curation but cannot
+publish a fact or grant input authority. Source references show availability, not
+attention. [Player ports](../contracts/player-ports.md#player-knowledge-and-executable-proposals)
+owns the exact journal, hint and handoff contracts.
+
+The [player ports contract](../contracts/player-ports.md#player-journal)
+governs reopening the journal across native sessions. Capacity or source
+registration failure is reported; healthy basic control remains available. Digest
+mismatch refuses source consumption. Unknown or partial physical delivery stops
+further input and is never replayed. Handoff carries a labelled summary hint,
+not a knowledge graph, and does not renew authority.
+
+Journal and application tests cover the supported formats and composition. They do
+not establish learning benefit. Sealed historical evidence retains its original scope.
+The [curator component](curator.md#curator-and-trace-workbench) gives the runner's
+status, and [delivery to a running actor](../design/live-curator-integration.md#delivery-to-a-running-actor)
+says how publication during an admission relates to the frozen briefing.
 
 ## Context and failure boundaries
 
@@ -45,7 +68,7 @@ counts [provider-reported cost](../contracts/player-host.md#spend) toward the
 run's dollar limit. Provider retry follows the [adapter reference](../../tools/player_host/README.md).
 Uncertain tool transport permits neither retry nor replay.
 
-[Host telemetry](../contracts/player-host.md#telemetry) keeps bounded visible
+[Host telemetry](../contracts/player-host-telemetry.md#telemetry) keeps bounded visible
 assistant narration and mechanical request/result references. Original source
 images remain with their owner.
 Host attempt and time counters remain operator data, separate from the custodian's
@@ -58,7 +81,7 @@ disposition through the host's [direct finish tool](../contracts/player-host.md#
 
 The driver verifies [handoff custody](../contracts/computer-control.md#computer-operations-and-custody)
 before starting a successor. The [run package](../operations/campaign-run.md#frozen-data)
-sets the host limit. The [player journal](../contracts/computer-control.md#responsibilities-and-current-data)
+sets the host limit. The [player journal](../contracts/player-ports.md#player-journal)
 can span fresh native-child sessions.
 
 ## Assurance and evidence

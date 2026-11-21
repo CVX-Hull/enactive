@@ -42,7 +42,7 @@ inference, native play, corrected power grid or causal harm test was run.
 
 ## Withholding: arithmetic versus the question answered
 
-The [frozen rule](../contracts/evaluation.md#the-withholding-studys-analysis-withholding-study1)
+The [frozen rule](../contracts/withholding-study.md#the-withholding-studys-analysis-withholding-study1)
 averages per-unit missed shares among starts where the unit was touched, admitting
 only units touched in both arms. The retained Opus report gives primary
 `0.02080351000049142`, one-sided `p=0.3291670832916708`, with 20 of 32 units counted.

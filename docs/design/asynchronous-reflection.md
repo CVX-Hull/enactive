@@ -17,7 +17,7 @@ becoming its slow reasoning path. Use one active player and an advisory backgrou
 trajectory learner. The active path retains its own planning and judgment, uses
 semantic skills where useful and falls back to ordinary interface interaction.
 Reflection can improve future decisions without becoming an approval before each
-action. The [current component view](../components/memory-learning.md) and protocol
+action. The [current component view](../components/player-interface.md#journal-and-knowledge) and protocol
 own the implemented advisory exchange. This page retains broader design proposals;
 it does not define another deployed contract or establish general learning benefit.
 

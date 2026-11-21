@@ -1,0 +1,361 @@
+---
+owner: lead
+review_trigger: Changes to record formats, metrics or game bindings in harness/evaluation/ or tools/evaluate.py
+status: active
+---
+
+# Run evaluation records and metrics
+
+This contract covers the evaluator's inputs, records, binding and metrics
+([evaluation framework proposal (#383)](https://github.com/CVX-Hull/enactive/issues/383)).
+[ADR008](../decisions/008-evaluation-and-spectator.md) owns the rationale.
+
+Every evaluation value is **interpretive**. It is derived from recorded evidence, carries its
+source and confidence, and accepts nothing. Frames, receipts and the issue's decision
+rule still decide acceptance. No evaluation value reaches the player.
+
+## Inputs
+
+The evaluator reads one run directory read-only:
+- `session.sqlite3` (`computer-session/1`);
+- `sources/*.png`;
+- each `actors/NNN/host.jsonl` (`player-host/8`), including its per-request context
+  manifest;
+- the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
+- `manifest.json` (`campaign-run/10`), including its operator labels;
+- `receipt.json` (`campaign-receipt/7`, with `player-driver/7`) and
+  `watch-terminal.json` (`campaign-watch-terminal/4`), when recorded;
+- the run's `player-journal/1` public call and hint store.
+
+Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
+input format is an error naming the file and version. Nothing is guessed.
+
+**One JSON reader, one host parser.**
+- Every JSON document the evaluation side and the viewer read from a run or from
+  `data/evaluation/` goes through `records.loads`: a malformed document, a duplicate key or
+  a non-finite number is an error naming where it came from. Files go through
+  `sources.read_json_file` and `read_json_lines`, which refuse a file over 16 MiB.
+  The exceptions are the binding's own `atlas.json` and `anchors.json` (`atlas.py`), which
+  ship with the code, and the tool-result text embedded in host events (`context.py`,
+  `host.py`), which is probed for JSON and may be anything.
+- The viewer reads a run's `manifest.json` only through `sources.read_manifest`, so an
+  unsupported version is rejected there too.
+- `harness/computer/protocol.py` keeps its own decoder, because the import contracts
+  forbid the computer importing evaluation.
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/8`), used by
+  the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
+  `tools/campaign_player.py` stays separate because evaluation never gates the control path
+  ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
+  per line and two million lines per trace, skips blank lines, and rejects a trace that is
+  empty (or only blank lines), whose first event is not a `host-start`, or whose
+  `host-start` is not `player-host/8` telemetry 8. For an [archived run](#implementation-rules),
+  the parser also accepts the exact host version and session in its manifest's archive
+  entry. An unterminated final line that does not parse is an error for `host-summary`.
+  The evaluator and viewer ignore it because a trace may still be appending. A malformed
+  line ending in a newline is always an error.
+
+**Sequence and incremental reading.**
+- The operation sequence `seq` is the `operations` table's rowid.
+- An incremental pass reads rows with `seq` greater than the last one seen.
+- It also re-reads every earlier row whose `final_json` was still null, because the
+  store settles an operation after inserting it.
+
+## `evaluation-record/1`
+
+One SQLite file per run and version pair:
+`.runtime/evaluations/<session>/<core_version>-<binding_id>-<binding_version>.sqlite3`.
+Its `metadata.state` is `live` or `final`.
+- **Live.** The viewer may write and extend a `live` store while the run moves.
+- **Final.** `evaluate-run` writes a `final` store after the run ends, replacing a
+  `live` store of the same versions. Input digests are taken only then.
+- **No overwrite.** A `final` store is never overwritten by a `live` pass and is never
+  continued incrementally; only an explicit `evaluate-run --replace` (a `final` pass)
+  rewrites it. A `live` pass is refused while a `final` store of the same versions exists,
+  and it never erases the final input digests. The viewer then serves the `final` store
+  read-only, stops live evaluation and reports that in the summary's `evaluator` status
+  (`finished`). Re-scoring under new versions writes a new file. Hand-scored evidence
+  elsewhere is never modified.
+- **Lineage.** `evaluate-lineage` takes one lineage's admission run directories in order. It
+  scores any admission without a `final` store as `evaluate-run` does, then writes
+  `continuity` events and the four `lineage.*` metrics (continuity, elapsed time, the day
+  check and memory reuse) into every admission's store. Stitching again after re-scoring an
+  admission restores them.
+- **Current versions.** Core 2 and CDDA binding 2. Core 2 includes the lineage elapsed time,
+  day check and memory reuse; binding 2 includes `severe_needs`.
+
+| Table | Columns | Meaning |
+| --- | --- | --- |
+| `metadata` | `key`, `value` | `schema` (`evaluation-record/1`), `state`, `core_version`, `binding_id`, `binding_version`, `run`, `session`, `labels` (from the manifest), `last_seq`, `first_in_play_seq`, input paths with SHA-256 digests (final only), `created_wall` |
+| `steps` | `seq`, `operation_id`, `actor`, `kind`, `wall`, `decision`, `tokens`, `dollars`, `game_time`, `mode`, `source_id`, `frame_sha256`, `frame_changed` | One row per computer operation. Three clocks: wall seconds; agent counters (decision index, cumulative tokens and dollars); nullable game time in the binding's unit. |
+| `readings` | `seq`, `reader`, `reader_version`, `value`, `confidence`, `abstain` | One row per reader per step. `abstain` holds a reason, and `value` is then null. Abstention is never counted as zero. |
+| `events` | `id`, `seq_start`, `seq_end`, `kind`, `source`, `confidence`, `payload` | Interval or point events (the kinds are listed below) |
+| `metrics` | `name`, `version`, `value`, `count`, `denominator`, `missing` | One row per metric. `count` and `denominator` are always stored. `missing` names the missing-data rule that applied, or is null. |
+
+**Event envelope.**
+- `source` is one of:
+  - `harness`: a recorded mechanical fact;
+  - `reader`: a binding reader;
+  - `player_claim`: player text or a player record;
+  - `human`.
+- `judge` is a model judge's answer to one closed question. A judge event uses this
+  envelope but is never a row of an evaluation record: the `events` table refuses the
+  source. It lives in its own file ([judge events](measurement-tools.md#judge-events-judge-events2)).
+- `confidence` is 0–1, or null for mechanical facts.
+- `payload` is JSON. Core field names never contain game words; game detail lives in
+  `payload.binding`.
+
+**Core event kinds.** Legacy memory and program events are historical evidence;
+the current journal supplies public calls and hints, with authored-memory and
+program views unavailable for current runs.
+
+Mechanical (from host traces and the session store):
+- `handoff`;
+- `memory_write`, `memory_read` (with the returned record IDs);
+- `program_save`, `program_run`;
+- `tool_refused`;
+- `context_eviction` (images omitted or blocked);
+- `custody_stop`.
+
+Derived from readings:
+- `mode_change`;
+- `long_activity`: consecutive clock readings advancing at least the binding threshold;
+- `stall`: a streak of 15 or more decisions without an `in_play` mode;
+- `ineffective_repeat`: the same binding-declared movement input on three or more
+  consecutive decisions, with under 1% pixel change in the binding's map region;
+- `vital_change`, `threat_change`;
+- `milestone`;
+- `death`;
+- `continuity`.
+
+## Core quantities and the binding interface
+
+The interface is [`harness/evaluation/core/binding.py`](../../harness/evaluation/core/binding.py).
+
+| Quantity | Core meaning | The binding supplies |
+| --- | --- | --- |
+| `mode` | `in_play`, `menu`, `prompt`, `loading`, `dead`, `unknown` | A mode classifier over a frame |
+| `game_time` | Monotonic elapsed time in one unit | A clock reader, its unit and a maximum plausible jump |
+| `vital` | Normalised 0–1 with scope `whole` or `part:<id>`, and a binding-decided `critical` flag | Readers that map labels or bars to vitals |
+| `threat` | Count and bucket (`none`, `low`, `high`, `lethal`) | A threat reader and its bucket rule |
+| `identity` | Text identifying the playing entity, when legible | An identity reader |
+| `milestone` | A rung on an ordered ladder, with first-reached times on all three clocks | The ladder; each rung names the reader evidence that fires it, or `human` |
+| `death` | A death event with a binding-supplied cause string | A death-screen reader |
+| severe needs | The lineage day check's failing needs at one step | `severe_needs(values)`: the needs that fail, `[]` when none does, None when the needs are not legible |
+
+**Plausibility guard.** A clock reading earlier than the last accepted one, or later by
+more than the binding's maximum jump, abstains with `implausible`. The exception is a
+jump the next reading confirms.
+
+**Accuracy floors (a process rule).** Each reader has a held-out validation record in
+`data/evaluation/reader-validation.json` with a floor: clock 98% exact, mode 97%, every
+other reader 95% on non-abstained frames. The record is shown with every reader's values,
+with `pass` of `true` (floor met), `false` (below it) or `null` (unmeasured, with a note).
+Values are never hidden. A metric derived from a reader without `pass: true` is labelled
+unvalidated: the metric JSON carries `validated` (`true`, `false` or `null` for a metric
+that reads no frame reader) and the page shows it next to the provenance chip. At present
+`death` (recall unmeasured: no held-out death screen) and `threat` (empty lists only) are
+`null`.
+
+**The CDDA binding** (`harness/evaluation/cdda`) supplies:
+- a glyph-atlas sidebar reader for date and time;
+- a main-view mode template;
+- need labels for hunger, thirst, weariness and pain;
+- limb bars;
+- monster-list ink;
+- the death screen;
+- identity where legible;
+- a 900-second long-activity threshold;
+- severe needs for the day check (binding version 2), as defined for the
+  [long-horizon study (#382)](https://github.com/CVX-Hull/enactive/issues/382):
+  - thirst "very thirsty", "dehydrated" or "parched";
+  - hunger "very hungry", "famished", "near starving" or "starving";
+  - rest "dead tired" or "exhausted", read from the weariness reader's `rest` field (its
+    `label` is the worse of weariness and rest).
+
+  This is narrower than the readers' `critical` flag, which also covers pain, red labels
+  and limbs;
+- this ladder (evidence in brackets):
+
+| Rung | Evidence | Rung | Evidence |
+| --- | --- | --- | --- |
+| `in_play` | reader | `clean_water` | human |
+| `armed` | human | `slept` | reader |
+| `water_obtained` | human | `survived_first_night` | reader |
+| `drank` | reader | `elapsed_24h` | reader |
+| `food_obtained` | human | `elapsed_72h` | reader |
+| `ate` | reader | `elapsed_168h` | reader |
+| `shelter` | human | `resupplied` | human |
+
+A `human` rung is reported as not assessed until a human or a later reader confirms it.
+
+### How the binding detects a UI change
+
+There is no UI hash check, and no check compares the game's UI with anything. What exists:
+- A frame that is not 960×640 abstains: the `mode` reading carries `frame_size` and no
+  other reader runs.
+- The glyph atlas (`atlas.json`) carries a version and an 8×16 cell size, and loading it
+  fails when either differs from the code's. This guards the atlas data against the code,
+  not the game UI against the atlas.
+- A font change at the same frame and cell size shows as `no_signature`, `label_occluded`
+  and `unknown_glyph` abstentions: label and anchor checks fail before most glyphs are
+  decoded, and the cells' ink masks are not in the atlas.
+- A same-font layout change shows as `label_occluded`, `unknown_label`,
+  `clock_not_legible` or `no_signature` abstentions, depending on what moved. It is not
+  guaranteed to abstain: the clock reader only lowers its confidence to 0.85 when its
+  `Date:` and `Time:` labels are not where it expects but its text still parses.
+
+Abstentions show as lower `reader.coverage`. The atlas is relearned when the game's font,
+size or layout changes (this follows the custom-code table in
+[ADR008](../decisions/008-evaluation-and-spectator.md), whose correction line points here).
+
+## Metrics, version 1
+
+A **decision** is one completed `computer_input` operation. Rates are shown with their
+counts. The pace median built from fewer than five qualifying intervals reports
+`missing: insufficient` (the one name for this rule). Every other rate and median carries
+its `count` and `denominator`, and the viewer shows an insufficient sample as such.
+
+| Name | Definition | Denominator | Missing data |
+| --- | --- | --- | --- |
+| `survival.game_hours` | Last accepted game time minus game time at `first_in_play_seq`, in hours, with `died` (death event) or `censored` (alive at stop) | — | No accepted reading: null |
+| `pace.routine_seconds_per_decision` | Median, over consecutive accepted clock pairs with at least one decision between them and a gap below the long-activity threshold, of (game-time change ÷ decisions between) | pairs | Fewer than five pairs: missing |
+| `pace.long_activities` | Count and total game seconds of `long_activity` events | — | — |
+| `pace.dollars_per_game_hour` | Run dollars ÷ survival game hours | game hours | Zero hours: null |
+| `mode.out_of_play_share` | Decisions whose mode is not `in_play` ÷ decisions with a non-abstained mode | mode readings | Abstentions excluded and counted |
+| `stall.longest` / `stall.count` | Longest streak of decisions without `in_play` (abstentions neither extend nor break a streak); number of `stall` events | decisions | — |
+| `input.actions_per_call` | Key, text and click actions in input operations (`wait` actions excluded) ÷ input operations | input operations | — |
+| `input.unseen_action_share` | 1 − input operations with a capture ÷ actions in input operations | input actions | — |
+| `input.frame_unchanged_rate` | Input operations whose capture SHA-256 equals the previous capture's ÷ input operations with a capture | captured inputs | — |
+| `custody.uncertain_receipts` | Partial or unknown receipts ÷ receipts; a run end or custody stop never counts here | receipts | No receipts: null (`no_receipts`) |
+| `custody.stopped` | Boolean: whether a custody stop ended the run | — | — |
+| `tools.calls` | Calls per tool, with refusals and error results per tool | calls | — |
+| `memory.writes` / `memory.reads` | Append calls; query, read and context calls | — | — |
+| `memory.retrieved_beyond_carry` | Distinct record IDs returned by any read that were not in the reading actor's handoff context ÷ distinct records written (capped at 1) | records written | No writes: null |
+| `memory.late_write_share` | Writes within an actor's last six tool calls ÷ writes | writes | — |
+| `programs.saved` / `programs.runs` / `programs.reused` / `programs.outcomes` | Saves; runs; runs by an actor or run other than the author; runs per status | — | — |
+| `handoff.decisions_to_resume` | Decisions after a handoff until the first input operation with three or more actions and a changed capture | handoffs | — |
+| `handoff.carry_ratio` | Handoff context file bytes ÷ the predecessor's last request text bytes | handoffs | — |
+| `host.dollars_per_decision` | Configured-rate dollars ÷ decisions | decisions | Requests without usage: counted and excluded |
+| `host.cache_write_share` | Cache-write dollars ÷ dollars | dollars | — |
+| `host.large_rewrite_share` | Dollars of requests writing more than 30,000 cache tokens ÷ dollars | dollars | — |
+| `host.latency` | Nearest-rank p50 and p95 of response time and of first-chunk time | requests | — |
+| `host.retry_share` | Retries, aborts and non-tool stops ÷ requests | requests | — |
+| `needs.severe_share` | In-play decisions with any `critical` vital ÷ in-play decisions with vital readings | readings | Abstentions excluded and counted |
+| `ladder.reached` | Highest rung reached and decisions to each rung | — | `human` rungs: not assessed |
+| `reader.coverage` | Non-abstained readings ÷ frames, per reader | frames | — |
+| `lineage.continuity` | Per admission boundary: same identity (or `unknown`) and game-time gap (negative means rewound) | boundaries | — |
+| `lineage.elapsed` | Game time from admission 1's first in-play clock to the lineage's last accepted reading (a rewind lowers it), with total decisions, overall game seconds per decision (null when elapsed is not positive), long-activity hours and their share of elapsed time (null when elapsed is not positive, and above 1 when a reload undid long activities), and `episode_changes` (a restarted clock or another survivor inside an admission) | game seconds | No accepted reading: missing (`no_game_time`) |
+| `lineage.day_check` | The crossing is the first step after the lineage's last reading below one game day from that start, so a rewind below the day undoes an earlier crossing. The needs are scored at the first in-play step from the crossing on whose needs the binding can read, in that admission or a later one (`scored_run`, `lag_hours` past the day). Deaths are compared in lineage order (admission, then step), so a death in an admission a reload later rewound still counts. A death at or before the crossing fails the check (`died_before`). A death after the crossing but before the scored step leaves it unscored (`died_in_lag`). Otherwise `passed` when `severe_needs` reports none. A severe need that was read counts even when another need is unreadable. The metric also reports `severe` and `episode_changes`. The long-horizon study treats an episode change as a continuity failure first. If admission 1 never reaches play, a later admission's first in-play clock is the zero | 1 | Not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible`; death in the lag: `died_in_lag` |
+| `lineage.memory_reuse` | Distinct memory record IDs read in an admission that an earlier admission of the lineage wrote, per admission and in total | records written before the last admission | None written: `no_earlier_writes` |
+
+The four `lineage.*` metrics are written only by `evaluate-lineage` and are the same in every
+admission's store. An incremental pass keeps them; a fresh `--replace` pass drops them until
+the lineage is stitched again.
+
+**Comparison statistics** (across runs, never within the player):
+- Kaplan–Meier survival with Greenwood intervals;
+- restricted mean survival to a horizon inside the observed range;
+- the log-rank test;
+- bootstrap intervals.
+
+Censored runs stay censored.
+
+**Percentiles.** There is one definition, nearest rank (`metrics.nearest_rank`): the
+`ceil(q·n)`-th smallest value, and the smallest value when that rank is 0. Every `p50` and
+`p95` uses it: the `host.latency` metric, the viewer's tool latencies, and the distributions
+of [both diagnostics](measurement-tools.md#diagnostics-owned-by-this-contract). A metric named a median (the pace and handoff rows) is the arithmetic
+median, the mean of the middle pair for an even count. The viewer's explore cohort median,
+IQR and bootstrap intervals are not percentiles of this kind: they use numpy's defaults.
+`host-summary` and `control-summary` `p50` values use the lower middle value on an even count.
+
+## Further record contents (`evaluation-record/1`)
+
+| Table | Columns | Meaning |
+| --- | --- | --- |
+| `run_facts` | `key`, `value` | From `manifest.json` and frozen inputs: `labels` (arm, start, scenario, lineage, admission), `source_commit`, model id, effort, route, guide and assignment SHA-256 digests, limits, and the spend allowance (`spend_allowance_usd`; `declared_ceiling_usd` and `prior_reserved_usd` are filled for an archived run only, see "Spend allowance" below) |
+| `tool_calls` | `request_id`, `tool_call_id`, `actor`, `decision`, `tool`, `status` (`ok`, `error`, `refused`), `latency_ms`, `result_bytes`, `wall` | One row per tool call, from host `tool-start`, `tool-result` and `tool-refused` |
+| `requests` | `request_id`, `actor`, `wall`, `attempt`, `input_tokens`, `cache_read`, `cache_write`, `output_tokens`, `dollars`, `retry_class`, `omitted_images`, `manifest` | One row per HTTP attempt. `manifest` is `exact` when a `context-manifest` event exists, else `absent`. |
+
+`metrics` also has a `key` column for multi-valued metrics, such as per reader, per
+percentile, per status or per handoff. The primary key is (`name`, `key`).
+
+**Also in the record:**
+- `source` also takes `derived`, for values computed from other records.
+- `survival.game_hours` carries `censor_reason`:
+  - `died`;
+  - `budget`;
+  - `player_stop`;
+  - `custody`;
+  - `infrastructure`;
+  - `owner_pause`.
+- **Episodes.** When game time moves backward by more than one day, or the identity
+  reading changes, the evaluator starts a new **episode**. It emits an `episode` event,
+  and survival is measured within the last episode.
+- **Run end.** An orderly stop or a player finish is a `run_end` event with its reason.
+  It is not a `custody_stop`, which is reserved for partial or unknown delivery and
+  custody fences.
+
+### Implementation rules
+
+- **Archived runs.** The evaluator reads older records only for a session and exact
+  manifest and record versions listed in the [closed archive index](../../data/evaluation/archive-sessions.json)
+  (`archive-sessions/1`), under [S-MIGRATION's closed-archive rule](../standards/migration.md#s-migration-one-current-contract-coordinated-migration).
+  The index includes `spend-limit-run-555` under the
+  [“Add it to the index” decision](../decisions/owner-decisions-archive.md#index-the-spend-limit-check). The
+  indexed session `522-held-out/computer-sessions/lh4a1` does not evaluate: its database
+  cannot be opened in the read-only store, evaluating it is an error, and the sealed copy
+  stays as it is ([“Record it as a limit” decision](../decisions/owner-decisions-archive.md#record-the-unreadable-archive-session-as-a-limit)).
+- **Metadata key.** `metadata.last_seq` names the last operation read.
+- **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
+  store needs an explicit replace and is never replaced or continued by a `live` pass.
+  An incremental pass (`after_seq`) continues only a `live` record.
+- **`tool_calls` table.** It also stores `operation_id`, linking a call to the step it produced.
+- **Long-form metric keys:**
+  - `reader.coverage` per reader;
+  - `host.latency` with keys `response.p50`, `response.p95`, `first_chunk.p50` and `first_chunk.p95`;
+  - `programs.outcomes` per status;
+  - `tools.calls` per tool, plus `player_source+zoom`;
+  - `memory.records` per kind;
+  - `handoff.*` as one summary row plus one row per handoff.
+- **Run-loss metrics.** `run.infrastructure_loss` covers infrastructure or custody loss;
+  `run.provider_loss` covers provider-error loss only.
+- **Censor reasons.** The first matching reason applies, in this order:
+  1. `died`;
+  2. `owner_pause` (the watch terminal record's `reason` is `operator_pause`, with
+     `pause_reason` when recorded);
+  3. `custody`;
+  4. `infrastructure` (the last actor settled not ok);
+  5. `player_stop`;
+  6. `budget`.
+- **Episodes.**
+  - A new episode starts when game time moves back by more than one day, or identity
+    changes, and the next reading confirms it.
+  - Survival uses the last episode that has an in-play clock reading.
+  - A death counts if it falls in or after that episode.
+- **Derived events.** `stall`, `ineffective_repeat`, `long_activity`, `episode` and
+  `continuity` have source `derived`.
+- **Spend allowance** (`run_facts.spend_allowance_usd`) is the manifest's declared
+  dollar limit, `spend_limit_usd`. For an archived run that declares a reservation,
+  the allowance is `declared_ceiling_usd` minus `prior_reserved_usd` as recorded in
+  `run_facts`. Both reservation fields are null for a run that declares a limit.
+  The spend rate uses the last ten minutes of requests.
+- **Dollars** in the record (`requests.dollars`, the cumulative dollars of a step and
+  the cost metrics) are the configured-rate estimate of each response,
+  `usage.cost.total`: the one figure every run, archived or not, carries. The cost the
+  provider reported, which the host counts toward the limit, is not in the record; the
+  run's receipt holds it.
+- **Change baselines.** A change record may name `baseline` arms or run patterns to compare against.
+
+## Human labels and change records
+
+Human-authored evaluation data lives in git-tracked files under `data/evaluation/`. The
+evaluator reads them, and nothing writes them at run time.
+
+| File | Content |
+| --- | --- |
+| `taxonomy.json` | `{version, codes: [{code, name, definition, examples}]}` for failure modes |
+| `labels.jsonl` | One label per line: `{id, session, seq_start, seq_end, target, code, verdict, note, author, date, taxonomy_version}`. `target` names an event or record ID, and `verdict` is `confirm`, `reject` or `unsure`. |
+| `changes.json` | `[{id, name, arms, commits, hypothesis, target_failure, target_metric: {name, direction, min_effect}, uptake_metric, guards, verdict, notes}]`, where `verdict` is `moved`, `wrong_way`, `no_effect_detected` or `untested` |
+
+Labels enter records as `human` events. A label never changes a derived value; it sits
+beside it.

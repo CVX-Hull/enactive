@@ -43,7 +43,7 @@ before sampling, matching the primary analysis population; this pilot has no pla
 units. It does not refit a new population model. The observed `withholding-study/1`
 estimator, eligibility reduction, assignment and randomization test are unchanged.
 Old sizing inputs are rejected by the current simulator; frozen historical source
-and results remain evidence. The [evaluation contract](../contracts/evaluation.md#the-withholding-studys-sizing-withholding-study-simulation2)
+and results remain evidence. The [evaluation contract](../contracts/withholding-study.md#the-withholding-studys-sizing-withholding-study-simulation2)
 owns the current interface.
 
 ## Finite diagnostic

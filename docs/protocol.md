@@ -6,8 +6,9 @@ status: active
 
 # Computer control and player contract
 
-The exact contracts are [computer control and player ports](contracts/computer-control.md),
-the [player host](contracts/player-host.md) and [evaluation](contracts/evaluation.md).
+The contract navigation below links the exact rules for [computer control](contracts/computer-control.md),
+[player ports](contracts/player-ports.md), the [player host](contracts/player-host.md)
+and [evaluation](contracts/evaluation-record.md).
 The [computer-control boundary decision](decisions/006-computer-control-boundary.md)
 explains the rationale. The [migration procedure](operations/migration.md) governs
 version and state handling.
@@ -18,10 +19,16 @@ version and state handling.
 | --- | --- |
 | Native packets, images, Pause and backpressure | [Native channel](contracts/computer-control.md#native-channel), [protocol code](../harness/computer/protocol.py) |
 | Operations, actor custody, original collection and handoff | [Computer operations and custody](contracts/computer-control.md#computer-operations-and-custody), [runtime](../harness/computer/runtime.py) |
-| Hints, sources and handoff context | [Player knowledge and executable proposals](contracts/computer-control.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
+| Journal, hints, sources and handoff context | [Player journal](contracts/player-ports.md#player-journal), [player knowledge and executable proposals](contracts/player-ports.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
+| MCP operation results and error envelopes | [MCP projection and envelopes](contracts/player-ports.md#mcp-projection-and-envelopes) |
 | Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
 | Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
-| Interpretive run evaluation and the spectator view | [Evaluation records and metrics](contracts/evaluation.md), [spectator](components/spectator.md) |
+| Host JSONL, recall events and context manifests | [Player host telemetry](contracts/player-host-telemetry.md) |
+| Interpretive run evaluation | [Evaluation records and metrics](contracts/evaluation-record.md) |
+| Offline diagnostics and judging | [Measurement tools](contracts/measurement-tools.md) |
+| Withholding study commands and file formats | [Withholding study](contracts/withholding-study.md) |
+| Run ledger, metrics snapshot and generated tables | [Run ledger](contracts/run-ledger.md) |
+| Spectator control path, viewer and Pause advice | [Spectator view](contracts/spectator-view.md), [spectator component](components/spectator.md) |
 
 ## Controller run ownership
 
@@ -63,7 +70,8 @@ Pause before abandoning the await.
 
 Each run opens a fresh computer session and can use an explicitly selected player
 journal. Immutable sources retain original PNG bytes and digest.
-[Current data treatment](contracts/computer-control.md#responsibilities-and-current-data)
+[Current data treatment](contracts/computer-control.md#responsibilities-and-current-data),
+[player journal](contracts/player-ports.md#player-journal)
 and [migration](operations/migration.md) own versions and historical-state handling.
 
 ## Designated campaign operator

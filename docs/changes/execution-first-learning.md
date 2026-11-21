@@ -9,7 +9,7 @@ scope: Adopted execution-first implementation rationale; current behavior lives 
 
 Parent: [current architecture](../architecture.md), especially
 [mission execution](../components/execution.md) and
-[memory/learning](../components/memory-learning.md). GitHub
+[memory/learning](../components/player-interface.md#journal-and-knowledge). GitHub
 [#164](https://github.com/CVX-Hull/enactive/issues/164),
 [#177](https://github.com/CVX-Hull/enactive/issues/177) and
 [#178](https://github.com/CVX-Hull/enactive/issues/178) own delivery/status.

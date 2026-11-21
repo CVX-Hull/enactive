@@ -15,7 +15,7 @@ closed index of exactly the sealed sessions the evaluator reads, each with the r
 versions it carries. This record holds what replaced what, how the index was derived and
 the evidence that the evaluator's reads did not change. The current rule is in
 [S-MIGRATION](../standards/migration.md) and the reader's contract in
-[the evaluation contract](../contracts/evaluation.md).
+[the evaluation contract](../contracts/evaluation-record.md#implementation-rules).
 
 ## What replaced what
 

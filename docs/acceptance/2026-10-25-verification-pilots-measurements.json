@@ -9,7 +9,7 @@
           "C-RUNTIME"
         ],
         "markers": {
-          "assurance_memory": "advisory C-RUNTIME durable memory provenance and source loss; docs/components/memory-learning.md#failure-bounds-and-ownership"
+          "assurance_memory": "advisory C-RUNTIME durable memory provenance and source loss; docs/components/player-interface.md#journal-and-knowledge"
         },
         "nodeid": "tests/test_campaign_memory.py::CampaignMemoryTests::test_durable_forward_or_cyclic_support_is_rejected_without_projection",
         "unknown_controls": []
@@ -19,7 +19,7 @@
           "C-RUNTIME"
         ],
         "markers": {
-          "assurance_memory": "advisory C-RUNTIME durable memory provenance and source loss; docs/components/memory-learning.md#failure-bounds-and-ownership"
+          "assurance_memory": "advisory C-RUNTIME durable memory provenance and source loss; docs/components/player-interface.md#journal-and-knowledge"
         },
         "nodeid": "tests/test_campaign_memory.py::CampaignMemoryTests::test_newest_loss_never_resurrects_old_stock_after_sqlite_reopen",
         "unknown_controls": []

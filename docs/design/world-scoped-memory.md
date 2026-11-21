@@ -339,7 +339,7 @@ persist in the actor's history, so their text contributes to subsequent requests
 ### Is memory used? On every sealed run
 
 Judges label windows where a delivered, read or indexed fact could matter. The
-[standing use measures](../contracts/evaluation.md#adjudication-and-the-standing-use-measures)
+[standing use measures](../contracts/measurement-tools.md#adjudication-and-the-standing-use-measures)
 define the rates for use, rediscovery, stale or false advice, and recall precision
 and silence. A player's citation is evidence for the judge.
 
@@ -347,9 +347,9 @@ and silence. A player's citation is evidence for the judge.
 
 The study withholds each unit in half the starts copied from the same sealed moment
 and compares the unit with itself. The
-[study design](../contracts/evaluation.md#the-withholding-studys-design-withholding-study-draw1)
+[study design](../contracts/withholding-study.md#the-withholding-studys-design-withholding-study-draw1)
 defines the units, the draw and delivery exclusions. The
-[analysis](../contracts/evaluation.md#the-withholding-studys-analysis-withholding-study1)
+[analysis](../contracts/withholding-study.md#the-withholding-studys-analysis-withholding-study1)
 defines blind judging and the outcome, which separates active lookup from passive
 re-exposure.
 
@@ -357,14 +357,14 @@ This estimates the effect of delivery for the tested units while half the store 
 available. Delivery can change which topics play touches and can add distraction
 beyond the units measured. A handoff, another article's prose or independent
 re-observation can expose withheld knowledge. The
-[study's sizing method](../contracts/evaluation.md#the-withholding-studys-sizing-withholding-study-simulation2)
+[study's sizing method](../contracts/withholding-study.md#the-withholding-studys-sizing-withholding-study-simulation2)
 sizes any repeat. A claim that delivered memory improves play comes only from
 the [seven-day campaign outcome (#145)](https://github.com/CVX-Hull/enactive/issues/145)
 under the [decision on measuring memory benefit](../decisions/owner-decisions.md#memory-benefit-measured-in-campaigns).
 
 ### Game-neutral judging
 
-The [evaluation contract](../contracts/evaluation.md#packets) defines the packets and
+The [evaluation contract](../contracts/measurement-tools.md#packets) defines the packets and
 their token budget. Annotators identify facts from the visible evidence that a later
 actor could use.
 
@@ -372,9 +372,9 @@ actor could use.
 
 Two judges independently label windows and a third adjudicates disputes. Reported
 rates use the adjudicated labels and report agreement, disputes and uncertainty.
-[Adjudication and reporting](../contracts/evaluation.md#adjudication-and-the-standing-use-measures)
+[Adjudication and reporting](../contracts/measurement-tools.md#adjudication-and-the-standing-use-measures)
 
-The [change checks](../contracts/evaluation.md#checks-of-a-changed-judge) use the
+The [change checks](../contracts/measurement-tools.md#checks-of-a-changed-judge) use the
 frozen owner-labelled anchor set for model changes and compare judges' agreement
 on frozen stretches for changes to their instructions. Leniency, missing evidence
 in long contexts and shared errors limit their judgments.

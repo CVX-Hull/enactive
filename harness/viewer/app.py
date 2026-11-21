@@ -1,4 +1,4 @@
-"""The read-only spectator viewer: every `spectator-view/2` route (docs/contracts/evaluation.md).
+"""The read-only spectator viewer: every `spectator-view/2` route (docs/contracts/spectator-view.md).
 
 All routes are GET. JSON responses carry `"schema": "spectator-view/2"`, stay under 4 MiB and are paginated with
 `after` and `limit` (at most 500) where they list. The application writes nothing; the only write in the process

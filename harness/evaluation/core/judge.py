@@ -1,4 +1,4 @@
-"""`judge`-source events: one model judge's answer to one closed question (docs/contracts/evaluation.md, #386).
+"""`judge`-source events: one model judge's answer to one closed question (docs/contracts/measurement-tools.md, #386).
 
 A judge event uses the contract's event envelope (`kind`, `source`, `confidence`, `payload`). It is kept in a
 `judge-events/2` JSON Lines file and never in an `evaluation-record/1` store: `records.EVENT_SOURCES` does not

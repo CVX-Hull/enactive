@@ -16,7 +16,7 @@ retain and review evidence, see the [evidence workflow](workflows/evidence-caden
 
 Separate request construction, provider request and tool execution. Header and
 first-body arrival times include network and provider delays. Use the
-[host telemetry contract](contracts/player-host.md#telemetry) to identify the
+[host telemetry contract](contracts/player-host-telemetry.md#telemetry) to identify the
 recorded events and clock domains.
 
 ## Latency budgets for interactive play
@@ -48,13 +48,13 @@ Run these offline, read-only diagnostics on a selected session.
 .venv/bin/python -m tools.evaluate control-summary .runtime/computer-sessions/SELECTED
 ```
 
-The [evaluation contract](contracts/evaluation.md#diagnostics-owned-by-this-contract)
+The [evaluation contract](contracts/measurement-tools.md#diagnostics-owned-by-this-contract)
 defines the summaries. For what browser evidence establishes, see
 [spectator component](components/spectator.md#assurance-and-evidence).
 
 ## Investigate a selected interval
 
-Select the run and interval in the [recorded viewer](components/spectator.md#recorded-browser-entry).
+Select the run and interval in the [recorded viewer](operations/start-observe.md#recorded-browser-entry).
 Open the original frames beside tool calls, requests and handoffs. Check their
 provenance and coverage before interpreting the interval.
 

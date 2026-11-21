@@ -32,7 +32,7 @@ outcomes in [#164](https://github.com/CVX-Hull/enactive/issues/164),
 
 The existing [player interface](../components/player-interface.md),
 [mission execution](../components/execution.md) and
-[memory/learning architecture](../components/memory-learning.md) explain the roles.
+[memory/learning architecture](../components/player-interface.md#journal-and-knowledge) explain the roles.
 Local programs and background advice operated within those roles. The next repair
 is [#217](https://github.com/CVX-Hull/enactive/issues/217): surface existing
 ordinary-macro recovery at the point of refusal.

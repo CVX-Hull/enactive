@@ -56,7 +56,7 @@ before telemetry tooling is added.
    It becomes a formal protocol when a representative second game is named, as ADR006
    already requires before any portability claim.
 3. **Records are versioned and additive.**
-   - Each evaluation writes a new [`evaluation-record/1`](../contracts/evaluation.md)
+   - Each evaluation writes a new [`evaluation-record/1`](../contracts/evaluation-record.md)
      store, keyed by run and by core and binding versions.
    - Hand-scored rows in the development-run tables are never rewritten.
    - Re-scoring a run under a new version adds a store beside the old one.
@@ -76,7 +76,7 @@ before telemetry tooling is added.
      - So a viewer outage cannot block a required check.
    - **Viewer.** A separate read-only process outside supervision runs the evaluator
      incrementally over the live run's records and serves the
-     [`spectator-view/1`](../contracts/evaluation.md#spectator-view-api-spectator-view2) API. The gateway
+     [`spectator-view/1`](../contracts/spectator-view.md#spectator-view-api-spectator-view2) API. The gateway
      forwards view requests with a short timeout and a size cap.
    - **Failure.** A viewer failure shows "viewer unavailable" on the page. It never
      ends, pauses or gates a run, and Pause never depends on it.
@@ -132,7 +132,7 @@ Custom scope, owner, maintenance cost and retirement trigger:
 | Restricted mean (about 10 lines) | Lead | None beyond its unit test | scipy gains the function |
 | Gateway forwarding (bounded) | Lead | One route with timeout, size cap and media-type allowlist | The viewer reaches the page origin some other way |
 
-Correction (7 November 2026, #404): no UI hash check exists; the [evaluation contract](../contracts/evaluation.md#how-the-binding-detects-a-ui-change) states how the binding detects a UI change.
+Correction (7 November 2026, #404): no UI hash check exists; the [evaluation contract](../contracts/evaluation-record.md#how-the-binding-detects-a-ui-change) states how the binding detects a UI change.
 
 ## Constraints this changes
 

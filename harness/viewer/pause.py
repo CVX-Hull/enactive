@@ -1,4 +1,4 @@
-"""Pause conditions for the live run (docs/contracts/evaluation.md, Pause conditions).
+"""Pause conditions for the live run (docs/contracts/spectator-view.md, Pause conditions).
 
 Computed from the live evaluation store alone. They inform the owner and gate nothing. Each has a value, a
 threshold, `met` and the dollars per minute that continuing costs. No game state (vitals, threat) is a

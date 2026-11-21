@@ -7,7 +7,7 @@ status: active
 # Evidence and documentation cadence
 
 Use the existing issue, immutable admission, ledger and archive. The
-[tracked run ledger](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot)
+[tracked run ledger](../contracts/run-ledger.md#tracked-run-ledger-and-metrics-snapshot)
 (`data/evaluation/runs.jsonl`) is the one numeric record of a development run, which
 gets exactly one row there. The study's dated record presents the run's numbers
 through the generated run tables or by citing the ledger, and keeps no second

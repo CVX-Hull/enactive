@@ -1,4 +1,4 @@
-"""One evaluation pass over a run directory (docs/contracts/evaluation.md).
+"""One evaluation pass over a run directory (docs/contracts/evaluation-record.md).
 
 `evaluate` reads the run read-only, reads each new original frame through the binding,
 appends the raw rows, and rewrites the derived rows (guarded game time, events, metrics)

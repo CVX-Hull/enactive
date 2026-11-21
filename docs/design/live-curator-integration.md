@@ -178,7 +178,7 @@ interfaces.
 ## The spectator view
 
 The viewer keeps the actor's frozen delivered version and the curator's recorded
-progress distinct. The [status contract](../contracts/evaluation.md#curator-runner-status)
+progress distinct. The [status contract](../contracts/spectator-view.md#curator-runner-status)
 defines the viewer fields. The [runner](../../harness/curator/runner.py) owns
 `curator-runner/status.json`, its fields and its write cadence.
 

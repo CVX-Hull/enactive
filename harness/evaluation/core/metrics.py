@@ -1,4 +1,4 @@
-"""Metrics, version 1 (docs/contracts/evaluation.md).
+"""Metrics, version 1 (docs/contracts/evaluation-record.md).
 
 Every row stores `count` and `denominator` (NULL only where the contract's denominator is
 "—") and the name of the missing-data rule that applied. A `value` is a plain number where

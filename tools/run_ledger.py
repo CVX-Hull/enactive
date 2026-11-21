@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/3); see docs/contracts/evaluation.md.
+"""The tracked development-run ledger, data/evaluation/runs.jsonl (dev-run/3); see docs/contracts/run-ledger.md.
 
 record appends the provider subtotal and unknown-cost counts from a current receipt. An incomplete trace
 requires --record-upper-bound, which records the separate study admission bound. Historical rows retain

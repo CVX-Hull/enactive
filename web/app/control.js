@@ -1,7 +1,7 @@
 // Control strip. Vanilla DOM, no framework, no viewer: it reads only the custodian's
 // /api/status and /api/source/<id> (through the supervised gateway) and posts Pause.
 // A viewer or framework failure therefore cannot change what this file shows or does.
-// See docs/contracts/evaluation.md "Control path and viewer".
+// See docs/contracts/spectator-view.md "Control path and viewer".
 const $ = id => document.getElementById(id);
 const POLL_MS = 1000;
 const TIMEOUT_MS = 2500;

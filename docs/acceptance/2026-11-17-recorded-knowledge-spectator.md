@@ -13,7 +13,7 @@ scope: 'Recorded knowledge/public-report reader: retained #642 replay through th
 The reader for [#689](https://github.com/CVX-Hull/enactive/issues/689) exposes recorded
 selection, delivery, explicit reads, verified frozen knowledge and separately labelled
 public player reports and mechanical/evaluator results. Its current fields and limits
-belong to the [view contract](../contracts/evaluation.md#recorded-knowledge-and-public-reports).
+belong to the [view contract](../contracts/spectator-view.md#recorded-knowledge-and-public-reports).
 This is reader/interface evidence, not learning benefit, attention/use, qualified
 outcome accuracy or human-usability efficacy. No CDDA or SDL fixture process and no provider
 request was launched.

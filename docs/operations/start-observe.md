@@ -40,11 +40,11 @@ for the control path and its limits.
 outside supervision, and stops it with the other children. It shows the evaluator's
 interpretation of the live run and of archived runs when you pass
 `--runs DIR` to supervision, each reading labelled with its source and confidence
-([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). Its
+([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view2)). Its
 displays inform you and gate nothing; the Pause conditions it computes are advice.
 
 After the supervisor exits, open completed runs through the
-[recorded browser entry](../components/spectator.md#recorded-browser-entry).
+[recorded browser entry](#recorded-browser-entry).
 
 For recorded curator results, repeat `--curator-results LABEL=FILE` on the supervisor
 command, naming existing current result files or snapshots. The Curator tab selects
@@ -52,12 +52,12 @@ those labels and displays recorded submission/restore status and versions. No so
 is selected by default; labels do not associate a journal with the live player run.
 Files are read only, with a 16 MiB input ceiling and digest-bound paging. Empty,
 unavailable, unsupported and unknown data stay explicit; publication is not factual
-verification or measured lag. See the [result contract](../contracts/evaluation.md#recorded-curator-results).
+verification or measured lag. See the [result contract](../contracts/spectator-view.md#recorded-curator-results).
 
 For recorded curator sessions, repeat `--curator-sessions LABEL=FILE` with individual
 terminal `close-out.json` files. Select the operator-supplied alias in the Curator tab;
 the recorded session and its draft collection events do not establish a run association
-or current draft state. See the [session contract](../contracts/evaluation.md#recorded-curator-sessions).
+or current draft state. See the [session contract](../contracts/spectator-view.md#recorded-curator-sessions).
 
 If the page says **viewer unavailable**, the run, the frame and
 Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
@@ -79,5 +79,49 @@ the front once; never disable native takeover or repeatedly steal focus.
 [Pause/timeout](pause-timeout.md) and [run custody](run-custody.md) cover stops.
 The [production report](../acceptance/2026-10-29-computer-control.md) retains actual
 play and the limits of browser timing evidence.
+
+## Viewer procedures
+
+### Recorded browser entry
+
+After supervisor shutdown, start the recorded viewer from the project checkout.
+
+```sh
+.venv/bin/python -m harness.viewer --recorded-page --root .runtime/evaluations --runs .runtime/computer-sessions
+```
+
+Open `http://127.0.0.1:8765/recorded/`. `--root` holds evaluation databases in
+session-named subdirectories. `--runs` names a parent directory of campaign
+packages with their manifests and original sources. For a sealed admission,
+point `--runs` to the parent of its package and use a session-named copy of its
+final evaluation files under a separate evaluation root. The viewer opens
+Run Overview. Select a run and open **Recorded playback** to inspect its
+findings and original frames with the shared playhead.
+
+The recorded page reads existing records, labels unfinished stores, and offers
+recorded playback controls. The CLI reserves the live evaluation option `--run`
+for the separate API entry. The supervisor continues to serve the live page,
+including the control path and independent Pause.
+
+### Playback and live relay
+
+The page's feed player shows the live control-path frame or the playhead's recorded
+frame:
+- Each frame is decoded before it replaces the last, and is drawn at its own pixel size. It never blanks or rescales as frames arrive.
+- **1:1** (the default), **2×** and **3×** are pixel-exact and scroll instead of scaling. **Fit** scales smoothly within the column and the screen height.
+- **Wide** puts the player first, across the page ([feed player display and controls (#437)](https://github.com/CVX-Hull/enactive/issues/437)).
+- **Hold** freezes the view only. It sends nothing to the run and is separate from Pause.
+- The step buttons move the shared playhead.
+- A caption names the decision on screen: its game clock, mode and the keys the player sent. While following live, it shows the newest step as of the frame on screen, so a held frame keeps its caption.
+- **Liveness:** a frame-age badge turns amber when the "feed alive" Pause condition is met. A "steps behind live" badge jumps back to live.
+- **Shortcuts** never take a key from a text field, the timeline, the Pause button or the open Pause sheet. Space also stays with any button, link or other control it would activate, and holding it down toggles only once:
+  - Space: hold;
+  - ← / →: step;
+  - L: live;
+  - T: wide;
+  - F: full screen;
+  - 0–3: scale.
+
+  The "?" button lists them. The scale and wide choices are remembered per browser.
 
 [Operations index](../runbook.md).

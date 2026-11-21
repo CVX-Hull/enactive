@@ -1,10 +1,10 @@
 ---
 owner: lead
-review_trigger: Mechanical wire, operation/source, custody or player port changes
+review_trigger: Mechanical wire, operation/source or custody changes
 status: active
 ---
 
-# Computer control and player ports
+# Computer control
 
 This contract covers one production backend. The [computer-control boundary decision (ADR 006)](../decisions/006-computer-control-boundary.md)
 owns the rationale. The [production computer-control report (#176)](../acceptance/2026-10-29-computer-control.md)
@@ -24,12 +24,10 @@ Start a fresh explicit session under `.runtime/computer-sessions/`, with a new
 creation. A selected partial directory refuses even without a DB. Never scan or
 drain old inboxes or unrelated retained sessions. The runtime rejects versions
 outside the current formats specified here. Retain upstream saves unchanged and
-load them only through visible controls. The selected `player-journal/1` store
-(SQLite `user_version=1`) may span fresh native-child sessions. A supported current
-journal may be reopened; a nonempty unrecognized or unsupported store is refused
-before native launch. The journal stores public calls, hints and referenced source
-metadata and PNGs, not player-authored durable knowledge or programs. The canonical
+load them only through visible controls. The canonical
 computer store and native wire versions are the ones this contract defines.
+
+The [player ports contract](player-ports.md) defines the journal and the MCP result projection.
 
 ## Native channel
 
@@ -141,54 +139,6 @@ Client assigns the ID before HTTP submission; duplicates collect or refuse, neve
 dispatch. Source/handoff are null unless present. MCP cancellation first requests
 independent permanent Pause, then abandons the await. Result/source reads have no effects.
 
-At MCP serialization, [the actor projection](../../harness/player_view.py) returns
-the operation record `player-computer-operation/1`: the operation identity, status,
-original receipts, source and handoff stay intact, but `deadline_monotonic` and
-global `remaining` are absent. This covers immediate results, exact collection and
-declared nested computer results in `player_result`. Native `computer-receipt/2`
-contents remain original evidence.
-
-**What the model reads of a computer call.** The [MCP adapter](../../harness/player_mcp.py)
-projects the result for the model and retains the full operation record for the host
-and trace.
-
-| Call | The model reads | The host and the trace hold |
-| --- | --- | --- |
-| `computer_observe`, `computer_input`, `player_handoff` | `player-computer-result/2`, the short result below | The operation record, as the result's MCP `structuredContent`, which the host never forwards to the model |
-| `computer_result` | The operation record itself: collecting an original operation is how the player sees its receipts, and it is called only after a result that was pending, partial or unknown | The same record as the result text |
-
-The short result is closed JSON: `schema`, `status`; `source_id`, `width` and
-`height` (the frame's size in the image pixels a click uses) when the operation has a
-frame, and `image_unavailable:true` when its pixels were not returned; `operation_id`
-while the status is `pending`, `partial` or `unknown`; and `reason`, which says what to
-do next, for every status but `completed` and `sealed`. Completed with a frame:
-`{"schema":"player-computer-result/2","status":"completed","source_id":"<session>-<n>","width":1280,"height":720}`.
-An input with no frame omits those three fields. A partial or unknown delivery adds
-`operation_id` and `reason` ("input is stopped and never replayed; call
-`computer_result` with this `operation_id`"). A refused operation adds its `reason`
-and its `operation_id` too: a refusal can follow a batch that was delivered in part,
-and `computer_result` shows which actions were. The full operation record retains
-the session, actor, kind, creation time, receipts, source record and handoff
-issuance. The host reads `source_id` and the full handoff issuance from that record.
-
-Model-facing errors and transport uncertainty use
-`player-error/2` and `player-transport/2`, preserving correction/control facts and
-original collection identity without experiment countdowns. Unknown mechanical
-versions fail with a bounded unsupported-result error, never raw pass-through.
-Player-authored text, code, interpretation and state are opaque; keys named
-`remaining` or `requests` inside them are not deleted. Canonical
-`computer-operation/1`, internal HTTP/client errors and operator accounting remain
-unchanged; the actor projection is not a database migration. An operation's
-`receipts` hold `computer-receipt/2`, `computer-local/1` or `computer-transport/2`
-values (table above).
-
-Internal service envelopes, below the actor projection, are `player-response/1`,
-`player-error/1` and `player-transport/1` ([service](../../harness/server.py),
-[client](../../harness/player_client.py)), plus the per-tool results
-`player-service-result/2` and `player-source-read/1`. [The actor projection](../../harness/player_view.py)
-is their authority. It maps the internal error and transport envelopes to
-`player-error/2` and `player-transport/2` for the model.
-
 `computer-source/1` is immutable: `schema,source_id,session,capture_id,sha256,
 media_type,presented_ms,received_wall,width,height,window_width,window_height,viewport`.
 Source ID is `<session>-<capture_id>`; media is image/png. `received_wall` is the
@@ -218,50 +168,6 @@ stop successors. Store I/O never holds the cancellation lock. The custodian
 checks its stop and lifecycle state before confirming quiescence. Unexpected
 closure or cancellation after sealing permanently pauses input and bars succession.
 
-## Player knowledge and executable proposals
-
-The player receives curated knowledge through the delivered-knowledge tools and
-may submit a fallible `player_hint`. The journal is public trace and hint storage;
-it is separate from the curator's assertions and cannot publish facts. Every
-public player tool call, including host-local `player_finish`, requires `intent`:
-nonempty one-line text of at most 512 characters. Optional `cites` contains at
-most 16 unique nonempty IDs of at most 128 characters each. These are public
-reports, not provider reasoning or input eligibility. The application and host
-validate the metadata; only semantic arguments reach the mechanical runtime.
-
-`player_hint` accepts `text` (1..8192 characters) and optional `source_ids`
-(default empty, at most 16 unique IDs). Unknown source references fail. Its
-`player-hint/1` record contains `id`, `actor_id`, `created_wall`, `text`,
-`source_ids`, `intent` and `cites`. Referenced images establish availability,
-not attention. The bounded source store preserves original PNGs and digests;
-source read verifies the digest. Failure to retain a hint leaves ordinary input
-available when custody is healthy.
-
-The journal records public operation ID, actor, tool and arguments and refuses
-conflicting reuse. Hint authoring is atomic and idempotent. `player_result`
-collects only the actor's original hint as `player-service-result/2`, with
-`operation_id`, `actor_id`, `kind:player_hint`, `status:completed`, `value` and
-`grants_authority:false`. A metadata row alone does not establish submission;
-uncertainty depends on a native operation or stored hint. Mechanical operations
-keep their original collection and no-replay rules.
-
-`player_handoff` accepts only a summary and common metadata. Its immutable
-`player-handoff-context/2` contains `context_id`, `session`, `actor_id`, `summary`,
-`created_wall`, `grants_authority:false` and `summary_is_hint:true`; it has no
-record roots or player knowledge graph. The successor receives the summary as a
-labelled predecessor hint. The final actor gets a refusal before sealing and can
-continue or finish. The original actor fence, quiescence and finite limits remain.
-
-## Composed operations and telemetry
-
-Native intent/send/receipt timestamps retain their original wall/monotonic values.
-Late collection never renews a source's `received_wall`. The host records public
-calls and evidence references in [host telemetry](player-host.md#telemetry).
-Stable frozen system context and the ongoing user objective are reused across actors.
-Experiment quotas, final-actor policy and ending reserves remain in operator
-accounting, outside the player prompt and tool views. Host decision-time and
-custodian horizons stay distinct.
-
 ## Passive spectator reads and operator Pause
 
 The custodian serves these loopback routes to the spectator and serves no page. Under
@@ -276,7 +182,7 @@ observer evidence, not a stop request; actor-side source integrity, input valida
 and capture/publication fencing remain unchanged. The spectator creates no source
 issuance, observation, operation, player record or capability. The custodian has no
 activity, investigation or timing route: derived views come from the separate
-read-only viewer and the offline evaluator ([evaluation contract](evaluation.md)),
+read-only viewer ([spectator view contract](spectator-view.md#control-path-and-viewer)) and the offline evaluator ([evaluation record](evaluation-record.md)),
 which have no route into the custodian, the player context or any input.
 
 `POST /api/pause` with `{}` unconditionally stops its actual receiving custodian,
@@ -302,7 +208,7 @@ authority renewal follows. Pause reasons never reach the actor or native stop in
 
 ## Reuse and qualification limits
 
-The spectator view API ([evaluation contract](evaluation.md#spectator-view-api-spectator-view2))
+The spectator view API ([contract](spectator-view.md#spectator-view-api-spectator-view2))
 is a separate read-only projection of recorded data. It has no actor/native effects,
 grants no authority, replaces no current status/source and cannot block independent
 Pause. No archive, collector or semantic control API is added to these runtime ports.

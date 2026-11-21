@@ -32,7 +32,7 @@ loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 computer input/request/frame/byte capacities,
 `ending_reserve`, the dollar limit `spend_limit_usd` and the operator-only
 [`labels`](#operator-labels). Source/directory mismatch refuses before launch.
-The [computer-control contract](../contracts/computer-control.md#responsibilities-and-current-data)
+The [player ports contract](../contracts/player-ports.md#player-journal)
 governs which journals the package can reopen.
 
 `target.json` has explicit argv/cwd/environment; its first executable and selected
@@ -154,7 +154,7 @@ diagnostics can use the existing package preflight for their declared scope.
 
 ### Freeze delivered knowledge
 
-Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order. A withholding study's starts are exported from one study draw instead, with `--study-draw FILE --start-index I`: the draw withholds each unit in half of each block's starts ([study design](../contracts/evaluation.md#the-withholding-studys-design-withholding-study-draw1)). The sealed pilot's starts each took their own seed ([pilot analysis](../contracts/evaluation.md#the-withholding-pilots-analysis-withholding-pilot1)). An article's unit lists only the facts exclusive to it; `private/units.json` records other cited facts under `shared` with their citing article IDs. Shared facts follow any delivered citing article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
+Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`, optionally with `--withhold-seed S`. Each unit is withheld independently with probability one half in ID order. A withholding study's starts are exported from one study draw instead, with `--study-draw FILE --start-index I`: the draw withholds each unit in half of each block's starts ([study design](../contracts/withholding-study.md#the-withholding-studys-design-withholding-study-draw1)). The sealed pilot's starts each took their own seed ([pilot analysis](../contracts/withholding-study.md#the-withholding-pilots-analysis-withholding-pilot1)). An article's unit lists only the facts exclusive to it; `private/units.json` records other cited facts under `shared` with their citing article IDs. Shared facts follow any delivered citing article, unfiled facts are their own units, and links to withheld articles are removed. `--empty --package DIR` creates the same required files with no units or coverage. Freeze the returned hashes in `files` and the closed `private_files` map shown above. The host/application receive only `delivered-knowledge.json`; judges read the private full version and unit draw. No delivered-text cap is imposed.
 
 The closed `recall` object pins the model on the player's provider and key, `every` completed inputs per reminder, and `unpriced_request_usd` computed from the recall model's rates. Player and recall share the run's dollar budget. Use forecast attempt counts to size the work and ending, and retain observed starts to assess the run.
 
@@ -320,7 +320,7 @@ A development admission is recorded once its receipt exists, with
 `.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL`,
 where `LABEL` is the
 run's short name in its study's dated record (default: the package name). That command appends one
-[`dev-run/3`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
+[`dev-run/3`](../contracts/run-ledger.md#tracked-run-ledger-and-metrics-snapshot) row to
 `data/evaluation/runs.jsonl`, the one numeric record of the run: the study's record cites
 that row or a generated table and keeps no hand-typed copy of attempts, spend or duration.
 The spend figures are the receipt's; none is typed in. A package without a receipt

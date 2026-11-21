@@ -16,7 +16,7 @@ hints in `player-journal/1`. Curated facts/articles retain their existing public
 boundary. This implements the adopted memory phase; it supplies no new evidence
 of gameplay benefit. The cut, live curator, beliefs, programs and practice remain
 outside this change. Current interfaces live in the
-[player contract](../contracts/computer-control.md#player-knowledge-and-executable-proposals).
+[player contract](../contracts/player-ports.md#player-knowledge-and-executable-proposals).
 
 ## Candidate and portable evidence
 
