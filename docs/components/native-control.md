@@ -1,6 +1,6 @@
 ---
-owner: integration maintainer
-review_trigger: Responsibility, supported behavior, interfaces or qualification change
+owner: lead
+review_trigger: Native observation, input delivery, mechanical custody or stop changes
 status: active
 ---
 
@@ -118,12 +118,10 @@ before a run; the computer adapter does not override game settings.
 
 ## Assurance and evidence
 
-[Protocol](../../tests/test_computer_protocol.py), [wire](../../tests/test_computer_wire.py),
-[channel](../../tests/test_computer_channel.py) and [runtime](../../tests/test_computer_runtime.py)
-assert ingress, original expiry/capacity, packet backpressure, stop and uncertainty.
-[Compiled native](../../tests/computer_native_check.py) and
-[inherited lock](../../tests/computer_lock_check.py) checks add actual SDL/descriptor
-behavior. Portable doubles cannot replace these or actual CDDA qualification.
+Protocol, wire, channel and runtime tests assert ingress, original expiry and
+capacity, packet backpressure, stop and uncertainty. Compiled checks exercise actual
+SDL and inherited descriptors. Portable doubles cannot replace these checks or
+actual CDDA qualification.
 
 The [native procedure](../operations/native-acceptance.md) owns actual control,
 useful play, save/new-child reload and normal exit evidence. The [production report](../acceptance/2026-10-29-computer-control.md)
