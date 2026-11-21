@@ -532,3 +532,109 @@ def test_curator_session_grooming_metadata_validation_and_bounds(tmp_path):
     assert client.get(url).json()['source_status'] == 'too_large'
     path.unlink(); path.mkdir()
     assert client.get(url).json()['source_status'] == 'unreadable'
+
+
+# The curator runner's status file. Against R-FALSE-CLAIM: a spectator watching the paid live run must never read
+# a missing or half-written status as a curator that has caught up (zero lag, zero backlog).
+RUNNER_STATUS = '/api/view/frame/curator-runner'
+
+
+def runner_status_client(tmp_path, path):
+    sources = FrameSources(containers=tmp_path / 'none', probes=tmp_path / 'none', curator_runner_status=path)
+    return TestClient(create_app(Catalog(tmp_path / 'root'), frame_sources=sources, now=lambda: 2000.0))
+
+
+def test_the_runner_status_file_shows_how_far_the_curator_trails_play(tmp_path):
+    from tests.test_curator_runner import World, read
+    world = World(tmp_path / 'run' / 'curator-runner')
+    runner = world.runner()
+    world.reading, world.outcomes = read({'actor-a': 25}), ['accepted']
+    runner.poll()  # one session over steps 1-25, which publishes v1 stamped with that window
+    world.reading = read({'actor-a': 30})
+    runner.poll()  # play has reached step 30; five steps wait below the trigger
+    path = world.directory / 'status.json'
+    before = path.read_bytes()
+    body = runner_status_client(tmp_path, path).get(RUNNER_STATUS).json()
+    assert path.read_bytes() == before and not any(p.name.startswith('.') for p in world.directory.iterdir())
+    assert body['schema'] == FRAME and body['source_status'] == 'available' and body['read_wall'] == 2000.0
+    assert body['snapshot']['bytes'] == len(before)
+    status = body['status']
+    assert status['state'] == 'polling' and status['session'] == 'run'
+    assert {k: status['position'][k] for k in ('actor', 'step', 'operation', 'ordinal')} == dict(
+        actor='actor-a', step=30, operation='op-actor-a-30', ordinal=30)
+    assert status['as_of'] == status['position'] and set(status['as_of']['read_wall']) == {'began', 'ended'}
+    assert status['after_last_read'] == 'unknown'
+    assert status['covered_prefix'] == dict(end=dict(actor='actor-a', step=25, operation='op-actor-a-25', ordinal=25),
+                                            restore=None)
+    assert (status['lag'], status['backlog'], status['stamp_distance'], status['unconfirmed']) == (5, 5, 5, 0)
+    stamp = dict(session='run', actor='actor-a', last_step=25)
+    assert status['last_confirmed']['version'] == 'v1' and status['last_confirmed']['coverage'] == stamp
+    assert status['last_confirmed']['baseline'] is False
+    assert status['latest_version'] == dict(version='v1', coverage=stamp, baseline=False)
+    [examined] = status['examined']['items']
+    assert examined['window'] == dict(session='run', actor='actor-a', first=1, last=25)
+    assert (examined['outcome'], examined['advanced'], status['examined']['total']) == ('accepted', True, 1)
+    assert status['current'] is None and status['stop_reason'] is None
+    # Not written while the runner polls: the list and its counts stay null, never an empty list or zero.
+    assert status['unexamined'] == dict(items=None, total=None, omitted=None)
+    assert str(tmp_path) not in json.dumps(body)
+
+
+def test_a_missing_partly_written_or_foreign_status_file_is_shown_as_such_never_as_zero(tmp_path):
+    path = tmp_path / 'curator-runner' / 'status.json'
+    client = runner_status_client(tmp_path, path)
+    get = lambda: client.get(RUNNER_STATUS).json()
+    assert get() == dict(schema=FRAME, source_status='missing', snapshot=None, read_wall=2000.0, status=None)
+    path.parent.mkdir()
+    whole = json.dumps(dict(schema='curator-runner-status/1', state='polling', lag=0, backlog=0))
+    path.write_text(whole[:len(whole) // 2])  # a status read while partly written
+    partial = get()
+    assert partial['source_status'] == 'malformed' and partial['status'] is None and partial['snapshot']['bytes']
+    path.write_text(json.dumps(dict(schema='curator-runner-status/0', lag=0)))
+    assert get()['source_status'] == 'unsupported' and get()['status'] is None
+    path.write_text('')
+    assert get()['source_status'] == 'empty'
+    path.unlink(); path.mkdir()
+    assert get()['source_status'] == 'unreadable'
+    unconfigured = TestClient(create_app(Catalog(tmp_path / 'root'))).get(RUNNER_STATUS).json()
+    assert unconfigured['source_status'] == 'not_configured' and unconfigured['status'] is None
+
+
+def test_an_absent_or_unknown_runner_value_is_unknown_and_a_path_is_withheld(tmp_path):
+    path = tmp_path / 'status.json'
+    path.write_text(json.dumps(dict(schema='curator-runner-status/1', state='polling', position='unknown',
+        lag='unknown', backlog=-1, covered_prefix=dict(end=None, restore=dict(version='v3', restored_from='unknown',
+        counted_through='v2')), last_confirmed=None, stop_reason='host-unavailable: /Users/someone/private',
+        examined=[dict(label=f'l{n}', window=dict(session='s', actor='a', first=n, last=n)) for n in range(150)])))
+    status = runner_status_client(tmp_path, path).get(RUNNER_STATUS).json()['status']
+    assert status['position'] == status['as_of'] == status['lag'] == status['backlog'] == 'unknown'
+    assert status['stamp_distance'] == status['latest_version'] == status['failures'] == 'unknown'
+    assert status['after_last_read'] == status['unconfirmed'] == status['session'] == 'unknown'
+    assert status['covered_prefix']['restore'] == dict(version='v3', restored_from='unknown', counted_through='v2')
+    assert status['last_confirmed'] is None
+    assert status['stop_reason'] is None and status['omitted_characters'] == {'stop_reason': 40}
+    assert '/Users' not in json.dumps(status)
+    examined = status['examined']
+    assert (examined['total'], examined['omitted'], len(examined['items'])) == (150, 50, 100)
+    assert examined['items'][0]['label'] == 'l50' and examined['items'][0]['outcome'] == 'unknown'
+    assert status['unexamined'] == dict(items='unknown', total='unknown', omitted='unknown')
+
+
+def test_invalid_runner_values_never_break_the_projection(tmp_path):
+    path = tmp_path / 'status.json'
+    window = dict(session='s', actor='a', first=1, last=2)
+    path.write_text(json.dumps(dict(schema='curator-runner-status/1', after_last_read=7, updated_wall=1e20,
+        examined=[None, 'row', 3, dict(label='l', window=window, started_wall=1e20, ended_wall=-1)],
+        unexamined=[], latest_version=dict(version='v0', coverage=None),
+        versions=[dict(version='v0', baseline=True, coverage=None)])))
+    status = runner_status_client(tmp_path, path).get(RUNNER_STATUS).json()['status']
+    assert status['after_last_read'] == 'unknown'  # the runner only ever writes its sentinel here
+    unknown_row = {key: 'unknown' for key in ('label', 'window', 'session_id', 'outcome', 'advanced', 'started_wall',
+                                               'ended_wall')}
+    assert status['examined']['items'][:3] == [unknown_row] * 3
+    # A finite wall time far out of range is passed on as recorded; the page shows it as unknown.
+    assert status['examined']['items'][3]['started_wall'] == 1e20 and status['updated_wall'] == 1e20
+    assert status['examined']['items'][3]['ended_wall'] == 'unknown'
+    assert status['unexamined'] == dict(items=[], total=0, omitted=0)
+    # A null stamp is only "no stamp"; whether the version is the runner's baseline is its own flag.
+    assert status['latest_version'] == dict(version='v0', coverage=None, baseline=True)

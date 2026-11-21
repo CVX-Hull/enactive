@@ -375,6 +375,9 @@ def test_a_curator_runner_starts_after_the_custodian_outside_supervision_and_is_
     assert argv[1:3] == ['-m', 'tools.curator_host.live_runner']
     assert argv[argv.index('--run')+1] == str(run) and argv[argv.index('--directory')+1] == str(run/'curator-runner')
     assert argv[argv.index('--config')+1] == str((tmp_path/'runner.json').resolve())
+    # The viewer it starts reads the runner's status file (against R-REGRESSION: a paid run nobody can watch).
+    viewer = result['children']['viewer']['argv']
+    assert viewer[viewer.index('--curator-runner-status')+1] == str(run/'curator-runner'/'status.json')
     options = calls[2][2]
     assert options['start_new_session'] is True and 'WATCH_TEST_KEY' not in options['env']
     cleanup = result['cleanup']['curator_runner']
@@ -440,6 +443,7 @@ def test_without_a_curator_runner_nothing_is_created_and_the_launches_are_unchan
     run, result, calls, _, _ = supervised_with_runner(tmp_path, monkeypatch, 'pass', configured=False)
     assert [name for name, _, _ in calls] == ['custodian', 'viewer', 'gateway', 'wake']
     assert 'curator_runner' not in result['children'] and 'curator_runner' not in result['cleanup']
+    assert '--curator-runner-status' not in result['children']['viewer']['argv']
     assert not (run/'curator-read.lock').exists() and not (run/'curator-runner').exists()
 
 

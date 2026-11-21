@@ -3,7 +3,8 @@
     python -m harness.viewer --run <live run dir> --root <evaluation root> --runs <archived runs dir> --port <p>
 
 With `--run`, a background thread evaluates the live run incrementally into its `live` store under `--root`
-about once a second. Without it, the viewer only reads the stores already under `--root`.
+about once a second. Without it, the viewer only reads the stores already under `--root`. With `--curator-runner-status FILE`, the
+spectator's Curator view reads the curator runner's `status.json` read-only at each request.
 """
 from __future__ import annotations
 
@@ -35,6 +36,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--curator-results', action='append', default=[], metavar='LABEL=FILE')
     parser.add_argument('--curator-sessions', action='append', default=[], metavar='LABEL=FILE')
+    parser.add_argument('--curator-runner-status', type=Path, default=None, metavar='FILE',
+                        help="the curator runner's status.json, read without a lock at each request")
     arguments = parser.parse_args(argv)
     try:
         curator_results = parse_sources(arguments.curator_results)
@@ -53,7 +56,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     catalog = Catalog(arguments.root, tuple(arguments.runs), arguments.run)
     try:
         app = create_app(catalog, evaluator, frame_sources=FrameSources(curator_results=curator_results,
-            curator_sessions=curator_sessions), recorded_page=arguments.recorded_page)
+            curator_sessions=curator_sessions, curator_runner_status=arguments.curator_runner_status),
+            recorded_page=arguments.recorded_page)
         uvicorn.run(app, host=arguments.host, port=arguments.port, log_level='warning')
     finally:
         if evaluator is not None:

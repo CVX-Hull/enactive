@@ -505,8 +505,8 @@ Two things are shown, from two inputs, and kept apart.
   `harness/viewer/knowledge.py` already projects after verifying its digest.
 - **What the curator has done since:** a status file the runner writes, holding the
   position play has reached, the ranges examined, the last confirmed version, its stamp
-  and the covered prefix. No existing input carries this; the viewer's curator options
-  accept configured files only, and reading this file is not part of the viewer yet.
+  and the covered prefix, shown in the Curator view as the
+  [status contract](../contracts/evaluation.md#curator-runner-status) states.
 
 The status file is `curator-runner/status.json` (`curator-runner-status/1`), replaced
 atomically at each poll and at each session's start and end. It holds the runner's
@@ -525,9 +525,9 @@ its last read are counted from the sealed session. Each poll is also a row of
 `curator-runner/polls.jsonl`, with its snapshot's timings or why there was none, the
 position and the same `coverage`, with its `as_of`, as an examined row. `stopped.json` is written whole, by a rename, as the status file is.
 
-A missing or unknown value is written as `unknown`, not guessed, and shown as such.
-The view stays read-only and sends nothing
-to the curator.
+A missing or unknown value is written as `unknown`, not guessed, and shown as such. How
+the viewer reads the file and shows a missing or partly written one is the
+[status contract](../contracts/evaluation.md#curator-runner-status)'s.
 
 ## What a first live run measures
 

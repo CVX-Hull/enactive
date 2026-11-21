@@ -299,7 +299,9 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                                 *(['--runs', str(runs)] if runs is not None else []),
                                 '--port', str(port), '--host', '127.0.0.1',
                                 *[arg for value in curator_results for arg in ('--curator-results', value)],
-                                *[arg for value in curator_sessions for arg in ('--curator-sessions', value)]]
+                                *[arg for value in curator_sessions for arg in ('--curator-sessions', value)],
+                                *(['--curator-runner-status', str(directory/RUNNER_DIRECTORY/'status.json')]
+                                  if runner_config is not None else [])]
                         handle = popen(argv, start_new_session=True, cwd=ROOT, env=env,
                                        stdout=viewer_out, stderr=viewer_err)
                         viewer['handle'] = handle
