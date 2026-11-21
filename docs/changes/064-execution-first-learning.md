@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Local feedback cost, procedure authoring/selection or reflection scheduling changes
 status: historical
 date: 2026-10-24
 scope: Adopted execution-first implementation rationale; current behavior lives in components and protocol

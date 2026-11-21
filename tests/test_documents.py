@@ -80,6 +80,30 @@ class DocumentTests(unittest.TestCase):
         path.write_text(base.replace("scope: old contract\n", ""))
         self.assertTrue(documents.check_metadata(self.root))
 
+    def test_historical_and_superseded_pages_cannot_carry_review_triggers(self):
+        path = self.root / "docs/nested/page.md"
+        for status in ("historical", "superseded"):
+            with self.subTest(status=status):
+                metadata = dict(owner="lead", status=status, date="2026-10-17",
+                                scope="Old guidance", replacement="README.md", review_trigger="New guidance")
+                self.assertTrue(documents.schema_errors(self.root, "document", metadata, "test page"))
+                header = "".join(f"{key}: {value}\n" for key, value in metadata.items())
+                path.write_text(f"---\n{header}---\n# Old guidance\n")
+                errors = "\n".join(documents.check_metadata(self.root))
+                self.assertIn("remove review_trigger from historical or superseded pages", errors)
+                self.assertIn("docs/documentation.md#lifecycle-and-maintenance", errors)
+
+    def test_historical_page_can_name_an_existing_replacement(self):
+        path = self.root / "docs/nested/page.md"
+        historical = ("---\nowner: lead\nstatus: historical\ndate: 2026-10-17\n"
+                      "scope: Old guidance\nreplacement: {}\n---\n# Old guidance\n")
+        for invalid in ("docs/missing.md", "docs/nested/page.md"):
+            with self.subTest(reference=invalid):
+                path.write_text(historical.format(invalid))
+                self.assertIn("invalid or missing local replacement", "\n".join(documents.check_metadata(self.root)))
+        path.write_text(historical.format("README.md"))
+        self.assertEqual(documents.check_metadata(self.root), [])
+
     def test_non_yaml_front_matter_is_rejected(self):
         (self.root / "README.md").write_text(';;;\n{"owner":"lead","status":"active","review_trigger":"change"}\n;;;\nText\n')
         self.assertIn("YAML", "\n".join(documents.check_metadata(self.root)))

@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Historical offline import qualification; supersede with new evidence
 status: historical
 kind: change
 date: 2026-10-27

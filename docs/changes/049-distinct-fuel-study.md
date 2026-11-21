@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Prospective fuel, container-aware treatment and remaining campaign after027
 status: historical
-review_trigger: Actual fuel or treatment result, whole fit, source or authority change
 ---
 
 # Correct the prerequisite error and test a distinct ordinary fuel route

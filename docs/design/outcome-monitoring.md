@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Outcome claims, observation capabilities, model routing or calibration changes
 status: historical
 date: 2026-11-01
 scope: Unimplemented monitor proposal for the retired waypoint harness; rationale only

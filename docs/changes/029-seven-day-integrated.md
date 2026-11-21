@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Campaign scope, resource attribution, actor, source or authority changes
 status: historical
 date: 2026-10-18
 scope: Closed integrated003; original prospective seven-day limits retained without authority
