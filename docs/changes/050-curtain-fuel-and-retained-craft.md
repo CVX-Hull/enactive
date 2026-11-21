@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Small-piece fuel, retained craft continuation and remaining care
 status: historical
-review_trigger: Actual salvage/fuel/craft result, complete-route fit or authority change
 ---
 
 # Residual-stick salvage and remaining-care admission

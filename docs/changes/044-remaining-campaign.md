@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Closed 022; exact reload verified, persistent NPC dialogue stopped play, native cleanup verified
 status: historical
-review_trigger: Admission, actual route/needs/throughput, lost fit or source changes
 ---
 
 # Complete the remaining campaign under the approved extension

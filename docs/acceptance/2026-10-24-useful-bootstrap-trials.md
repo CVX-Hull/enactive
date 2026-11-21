@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Interpreting or repeating the useful-bootstrap trials or selecting the next campaign configuration
 status: historical
 kind: run
 date: 2026-10-24

@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-22
 scope: Frozen campaign004 failure, narrow handoff/cache evidence and exceptional closure
-review_trigger: New evidence about campaign004, its failure or closure
 status: historical
 kind: run
 ---

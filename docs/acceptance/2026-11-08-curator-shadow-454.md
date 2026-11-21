@@ -4,7 +4,6 @@ status: historical
 kind: measurement
 date: '2026-11-08'
 scope: 'Curator shadow sessions over the sealed #397 lineage and the #372 sample: cost, lag, cold start and gate pass rate for one Pi-based host with two OpenRouter models (#454)'
-review_trigger: None; dated record
 ---
 
 # Curator shadow sessions (#454)

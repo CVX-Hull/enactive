@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-19
 scope: Accepted first survival day and independently verified incomplete day-two study012
-review_trigger: Historical correction only; current work lives in GitHub and the current brief
 status: historical
 kind: run
 ---

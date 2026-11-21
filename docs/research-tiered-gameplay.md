@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-29
 scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
-review_trigger: Before gameplay architecture or model selection; weekly recency scan during active design and after relevant model or paper releases
 ---
 
 # Tiered gameplay: research and proposed design

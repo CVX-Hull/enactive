@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-19
 scope: Closed incomplete 019 admission and preserved original limits
-review_trigger: Actual needs margin, functional admission, remaining fit, source or user guarantees change
 ---
 
 # Finish the functional campaign with adaptive essential exploration

@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: First-slice results, or a change to the host, memory, campaign or computer-control contracts
 status: historical
 date: '2026-11-01'
 scope: Direction for a multi-level player (an acting real-time player and a separate asynchronous subgoal level, with designed upper levels), not adopted after its first slice (2026-11-03); not delivered runtime support

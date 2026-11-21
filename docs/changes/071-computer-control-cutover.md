@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Production control/player ports, ownership, persisted formats or cutover scope change
 status: historical
 date: 2026-10-29
 scope: Implemented production cutover brief and retained finite endpoint dispositions

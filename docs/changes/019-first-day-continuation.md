@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-18
 scope: Prospective same-character continuation subsequently executed with recorded cleanup deviation
-review_trigger: Absolute rehearsal limits, desktop input scope, source identity or outcome changes
 ---
 
 # Finish the same rehearsal inside its original envelope

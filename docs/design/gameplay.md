@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-17
 scope: 'Retired first waypoint slice; design rationale and dated evidence only (its components were removed in #289)'
-review_trigger: Gameplay interfaces, supported observations, model adapters, budgets or evaluation criteria change
 ---
 
 # Historical first gameplay slice — waypoint and return

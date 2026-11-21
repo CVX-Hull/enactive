@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-20
 scope: Structured player source, synthetic runtime/SDK fixtures and project-only configuration; actual host/native/no-review acceptance remains unproved
-review_trigger: Historical implementation and setup evidence; supersede through a new dated result
 status: historical
 kind: change
 ---
