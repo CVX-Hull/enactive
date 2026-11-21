@@ -15,9 +15,11 @@ from .gate import current
 
 NEAR_AT_LEAST = Fraction(1, 3)
 MAX_PAIRS = 10
-RULE = ('Two types are near when the lower-cased words of their names and field names overlap by at '
-        f'least {NEAR_AT_LEAST.numerator}/{NEAR_AT_LEAST.denominator} (shared words divided by all words of the two); '
-        f'at most {MAX_PAIRS} pairs are shown, closest first, then by name.')
+LIST_BYTES = 32768  # the type rows shown; the host refuses a brief over 262,144 bytes
+RULE = ("A type's words are the distinct lower-cased runs of letters and digits in its name and field names. "
+        f'Two types are near when the words they share are at least {NEAR_AT_LEAST.numerator}/{NEAR_AT_LEAST.denominator} '
+        f'of all the words of the two; at most {MAX_PAIRS} pairs are shown, closest first, then in order of the '
+        'first name and then the second.')
 _WORD = re.compile(r'[^\W_]+')
 
 
@@ -31,7 +33,7 @@ def counts(types: list[dict], facts: list[dict]) -> dict[str, int]:
     """Current facts per published type name; a type with no current fact counts 0."""
     found = {kind['name']: 0 for kind in types}
     for item in facts:
-        if current(item) and item.get('type') in found:
+        if current(item) and isinstance(item.get('type'), str) and item['type'] in found:
             found[item['type']] += 1
     return found
 
@@ -60,11 +62,27 @@ def section(types: list[dict], facts: list[dict]) -> list[str]:
              'is flagged unused. Check this list before any `add_type`: reuse a type that fits instead of '
              'adding a near duplicate.', '']
     used = counts(types, facts)
-    lines += [f"- {name!r} ({'fields ' + ', '.join(repr(f) for f in kind['fields']) if kind['fields'] else 'no fields'}): "
-              f'{_facts(used[name])}'
-              for name, kind in sorted((kind['name'], kind) for kind in types)] or ['No published types.']
+    rows = [f"- {name!r} ({'fields ' + ', '.join(repr(f) for f in kind['fields']) if kind['fields'] else 'no fields'}): "
+            f'{_facts(used[name])}'
+            for name, kind in sorted(((kind['name'], kind) for kind in types), key=lambda pair: pair[0])]
+    shown, size = 0, 0
+    for row in rows:  # whole rows up to the byte limit, so a large type list cannot push the brief past the host's limit
+        size += len(row.encode()) + 1
+        if size > LIST_BYTES:
+            break
+        shown += 1
+    lines += rows[:shown] or ([] if rows else ['No published types.'])
+    if shown < len(rows):
+        lines += [f'{len(rows) - shown} more types are not shown here; read the published types before any `add_type`.']
     pairs = nearest(types)
     lines += ['', '### Nearest types', '', RULE, '']
-    lines += [f'- {first!r} and {second!r} share {", ".join(shared)} ({len(shared)} of {total} words)'
-              for first, second, shared, total in pairs] or ['None.']
+    for first, second, shared, total in pairs:
+        row = f'- {first!r} and {second!r} share {", ".join(shared)} ({len(shared)} of {total} words)'
+        size += len(row.encode()) + 1
+        if size > 2 * LIST_BYTES:
+            lines.append('Further pairs are not shown here.')
+            break
+        lines.append(row)
+    if not pairs:
+        lines.append('None.')
     return lines

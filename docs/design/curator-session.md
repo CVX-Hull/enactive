@@ -55,13 +55,16 @@ The brief's "Hints and flagged types" section carries a type list computed by
 given. It lists each published type by name with its fields and its count of current facts
 (facts with neither `superseded_by` nor `retired`), flags a type with no current fact as
 unused, and asks the curator to check the list before any `add_type`. Its "Nearest types"
-part names pairs of existing types by one rule, stated in the brief in the same words:
-each type's words are the lower-cased letter-and-digit runs of its name and field names,
-and two types are near when their shared words divided by all words of the two (Jaccard
-overlap) is at least 1/3. At most 10 pairs are shown, closest first, then by name. The
-list is advice only: no model is called, and the gate does not check the curator's choice
-of type. Curator-chosen names and fields are shown `repr`-escaped, like the brief's other
-curator-chosen names.
+part names pairs of existing types by one rule, which the brief also states: a type's
+words are the distinct lower-cased runs of letters and digits in its name and field names,
+and two types are near when the words they share are at least 1/3 of all the words of the
+two (Jaccard overlap). At most 10 pairs are shown, closest first, then in order of the
+first name and then the second. The type rows stop at 32,768 bytes, at a whole row, with a
+line saying how many types are not shown, so a large type list cannot push the brief past
+the host's limit of 262,144 bytes. The list is advice only: no model is called, and the
+gate does not check the curator's choice of type. Curator-chosen names and fields are shown
+`repr`-escaped, like the brief's other curator-chosen names: a name cannot start a line,
+though inline marks such as `*` are shown as written.
 
 ## Submissions
 

@@ -26,16 +26,17 @@ SECTION = '''\
 Each published type with its fields and its count of current facts; a type with no current fact is flagged unused. \
 Check this list before any `add_type`: reuse a type that fits instead of adding a near duplicate.
 
-- 'container' (fields 'holds', 'capacity'): 2 current facts
-- 'control' (fields 'input', 'effect'): 1 current fact
+- 'container' (fields 'holds', 'capacity'): 1 current fact
+- 'control' (fields 'input', 'effect'): 2 current facts
 - 'hazard' (no fields): no current fact (unused)
 - 'key_binding' (fields 'input', 'effect'): no current fact (unused)
 - 'storage_container' (fields 'holds'): no current fact (unused)
 
 ### Nearest types
 
-Two types are near when the lower-cased words of their names and field names overlap by at least 1/3 \
-(shared words divided by all words of the two); at most 10 pairs are shown, closest first, then by name.
+A type's words are the distinct lower-cased runs of letters and digits in its name and field names. \
+Two types are near when the words they share are at least 1/3 of all the words of the two; at most 10 pairs are \
+shown, closest first, then in order of the first name and then the second.
 
 - 'container' and 'storage_container' share container, holds (2 of 4 words)
 - 'control' and 'key_binding' share effect, input (2 of 5 words)
@@ -43,7 +44,8 @@ Two types are near when the lower-cased words of their names and field names ove
 
 
 def synthetic(tmp_path):
-    """v1 adds five types and four facts; v2 retires the storage_container fact."""
+    """v1 adds five types and four facts; v2 retires the storage_container fact and supersedes one container
+    fact with a control fact, so a count that kept retired or superseded facts would differ."""
     repo = make_repo(tmp_path)
     types = [kind('container', ['holds', 'capacity']), kind('storage_container', ['holds']),
              kind('control', ['input', 'effect']), kind('key_binding', ['input', 'effect']), kind('hazard', [])]
@@ -51,7 +53,8 @@ def synthetic(tmp_path):
     first = submission(tmp_path, [*({'op': 'add_type', 'type': t} for t in types),
                                   *({'op': 'add_fact', 'fact': f} for f in facts)], name='seed')
     assert run(repo, first)['version'] == 'v1'
-    second = submission(tmp_path, [{'op': 'retire_fact', 'id': 'f4', 'reason': 'wrong', 'citations': ['frame-1']}],
+    second = submission(tmp_path, [{'op': 'retire_fact', 'id': 'f4', 'reason': 'wrong', 'citations': ['frame-1']},
+                                   {'op': 'supersede_fact', 'ids': ['f2'], 'fact': fact('f5', 'control')}],
                         name='retire', base_version='v1')
     assert run(repo, second)['version'] == 'v2'
     return repo
@@ -98,6 +101,20 @@ def test_curator_chosen_names_are_escaped_in_the_type_list():
     assert "- 'x\\n# Injected' (fields '`tick`'): no current fact (unused)" in lines
 
 
+def test_a_fact_of_a_malformed_or_unpublished_type_is_not_counted():
+    stored = [{'type': []}, {'type': {}}, {'type': 'gone'}, {'type': 'a'}, {'type': 'a', 'retired': {}}]
+    assert type_usage.counts([kind('a', [])], stored) == {'a': 1}
+
+
+def test_a_large_type_list_is_cut_at_whole_rows_and_says_how_many_are_left_out():
+    types = [kind(f'type{index:04d}', ['f' * 1000 + str(index)]) for index in range(100)]
+    lines = type_usage.section(types, [])
+    rows = [line for line in lines if line.startswith("- 'type")]
+    assert 0 < len(rows) < 100 and sum(len(row) + 1 for row in rows) <= type_usage.LIST_BYTES
+    assert f'{100 - len(rows)} more types are not shown here; read the published types before any `add_type`.' in lines
+    assert len('\n'.join(lines).encode()) < 4 * type_usage.LIST_BYTES
+
+
 @native
 def test_a_stand_in_session_is_shown_the_type_list(tmp_path, world):
     repo, trace = world
@@ -113,4 +130,6 @@ def test_a_stand_in_session_is_shown_the_type_list(tmp_path, world):
     brief = (repo.state/'sessions'/record['manifest']['id']/'brief.md').read_text()
     assert "- 'control' (fields 'input', 'effect'): 1 current fact" in brief
     assert '### Nearest types' in brief and type_usage.RULE in brief
-    assert "- 'control' (fields 'input', 'effect'): 1 current fact" in json.dumps(second)
+    section = '### Types' + brief.split('### Types', 1)[1].split('\n\n## Close-out', 1)[0]
+    assert section.endswith(f'### Nearest types\n\n{type_usage.RULE}\n\nNone.')
+    assert json.dumps(section)[1:-1] in json.dumps(second)  # the whole section reaches the model's first request
