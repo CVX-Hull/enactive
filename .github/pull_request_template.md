@@ -32,19 +32,15 @@ rejection tests; no compatibility path or alias. Write "not affected" with the r
 ## Documentation and limitations
 
 <!-- Contracts and guidance updated in this change; remaining uncertainty and follow-up issues.
-One home per fact (docs/documentation.md#before-writing-or-changing-a-document): current pages
-state what is true in the present tense; an owner decision this change acts on has a row in
-docs/decisions/owner-decisions.md, and the design note or research page it settles is marked
-historical; a dated record is added only for evidence from a run, study, measurement or
-review, with its kind and "At a glance"; issue descriptions are replaced, not appended to. Write "none" if no document changed. -->
+Follow the [documentation checklist](../docs/documentation.md#before-writing-or-changing-a-document).
+Write "none" if no document changed. -->
 
 ## Models
 
 Models:
 
-<!-- State the lead's coding agent, model and effort (or human). For each delegated attempt
-(worker, reviewer or explorer): the role, the coding agent, model and effort the lead chose,
-and the reason it gave on the brief's Role line (docs/standards/agents.md#the-leads-duties). -->
+<!-- State the lead's coding agent, model and effort (or human). Record each delegated
+choice and its reason under [S-AGENT](../docs/standards/agents.md#the-leads-duties). -->
 
 ## Review
 
