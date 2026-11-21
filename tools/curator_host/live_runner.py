@@ -125,6 +125,30 @@ def read_config(path: Path, runtime: Path) -> dict:
                 settings=settings, host=host)
 
 
+def counted_spend(out: Path) -> Decimal:
+    """Every session's spend as its proxy left it, whether or not the session returned: the closing
+    snapshot (spent, plus reservations still held, which count as spent) where the proxy closed, else
+    the charges in its ledger. A request still in flight when the runner was killed has no ledger row
+    and is not counted."""
+    total = Decimal(0)
+    for session in sorted(p for p in out.glob('*/*') if p.is_dir()):
+        try:
+            closure = json.loads((session/'proxy-close.json').read_text())
+            total += Decimal(closure['spent_snapshot_usd']) + Decimal(closure['pending_reserved_usd'])
+            continue
+        except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
+            pass
+        total += Decimal(shadow._ledger(session/'proxy-ledger.jsonl')['charged_usd'])
+    return total
+
+
+def _host_ran(summary: dict) -> bool:
+    """The sandboxed host wrote output, so it was launched."""
+    record = summary.get('record')
+    log = Path(record)/'host-output.log' if record else None
+    return log is not None and log.is_file() and log.stat().st_size > 0
+
+
 class Sessions:
     """The session call: one `shadow.run_one` per window, each through its own proxy under what remains of the cap."""
 
@@ -136,8 +160,7 @@ class Sessions:
             raise ConfigError(f'{shadow.ARMS[config["arm"]].model} has no frozen price')
         self.tools = self.model_config = self.config_path = None
         # Spend counted by earlier runs of this runner for the same admission counts against the cap.
-        self.spent = sum((Decimal(json.loads(p.read_text())['cost_usd']) for p in self.out.glob('*/*/summary.json')),
-                         Decimal(0))
+        self.spent = counted_spend(self.out)
 
     def _host(self) -> None:
         host = self.config['host']
@@ -160,15 +183,18 @@ class Sessions:
                 self._host()
             except (shadow.ShadowError, OSError, subprocess.CalledProcessError) as exc:
                 return Outcome(state=None, stop=f'host-unavailable: {exc}')
-        summary = shadow.run_one(
-            arm_name=self.config['arm'], lineage=read.directory.name, name=label, trace=read.directory, repo=self.repo,
-            memory=None, memory_note='a window never reads the sealed memory store', host=self.tools,
-            config_path=self.config_path, config_dir=self.config_dir, model_config=self.model_config,
-            prices=self.prices, key=self.key, upstream=self.config['upstream'],
-            cap=min(remaining, self.config['session_cap'] or remaining), out=self.out,
-            wall_seconds=self.config['host']['wall_seconds'], max_output_tokens=self.config['host']['max_output_tokens'],
-            window=window)
-        self.spent += Decimal(summary['cost_usd'])
+        try:
+            summary = shadow.run_one(
+                arm_name=self.config['arm'], lineage=read.directory.name, name=label, trace=read.directory,
+                repo=self.repo, memory=None, memory_note='a window never reads the sealed memory store',
+                host=self.tools, config_path=self.config_path, config_dir=self.config_dir,
+                model_config=self.model_config, prices=self.prices, key=self.key, upstream=self.config['upstream'],
+                cap=min(remaining, self.config['session_cap'] or remaining), out=self.out,
+                wall_seconds=self.config['host']['wall_seconds'],
+                max_output_tokens=self.config['host']['max_output_tokens'], window=window)
+        finally:
+            # Counted from what the proxy left, also for a session cut short or whose proxy close failed.
+            self.spent = counted_spend(self.out)
         proxy = summary['proxy']
         stop = None
         if proxy.get('revoked') or proxy.get('breaches'):
@@ -179,7 +205,10 @@ class Sessions:
             stop = 'cap-reached'
         elif not proxy.get('settled', True):
             stop = 'proxy-unsettled'
-        elif 'session_id' in summary and summary.get('sandbox', {}).get('survivors') != []:
+        elif 'session_id' in summary and (summary.get('sandbox', {}).get('survivors')
+                                          or (summary.get('sandbox', {}).get('survivors') is None and _host_ran(summary))):
+            # Host processes survived, or the host ran and the sandbox's result is missing. A session that
+            # aborted before its host ran is an ordinary failed session.
             stop = 'cleanup-unconfirmed'
         details = dict(cost_usd=summary['cost_usd'], summary=str(self.out/read.directory.name/label/'summary.json'))
         error = summary['run_state'] if summary['run_state'] != 'completed' else None
@@ -223,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
                 raise ConfigError(f'{shadow.KEY_VARIABLE} is not set and not mapped to a keychain item (docs/setup.md)')
             directory = args.directory.resolve()
             runner = Runner(directory, run.name, snapshot=staged(run), session_call=Sessions(directory, config, repo, key),
-                            look=TagLook(repo), settings=config['settings'])
+                            look=TagLook(repo), settings=config['settings'], run=run)
         except (ConfigError, RunnerError, KnowledgeError, shadow.ShadowError, OSError, ValueError) as error:
             print(f'curator_runner: {error}', file=sys.stderr)
             return FAILED

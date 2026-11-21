@@ -13,24 +13,45 @@ path, and the only lock taken beside the custodian is the shared read lock insid
 
 - `examined.jsonl` (`curator-runner-examined/1`), the cursor: append-only, one `start` row when a
   session begins and one `end` row when it returns, each naming the window (one actor, steps
-  `first` to `last`, with the operations at both ends). An `end` row says how the session ended
-  (`accepted`, `nothing-submitted`, `rejected`, `unconfirmed`, `aborted`, `interrupted`,
-  `lock-refused` or `not-started`), whether the cursor `advanced` and whether it counts as a
-  `failed` session, and the gate's verdicts. The cursor of an actor is the last step of its
-  advanced rows; a `start` with no `end` was interrupted. The file survives a restart.
+  `first` to `last`, with the operations at both ends) and carrying `coverage` (the covered
+  prefix, lag and backlog at that moment). An `end` row says how the session ended, whether the
+  cursor `advanced` and whether it counts as a `failed` session, and the gate's verdicts. The
+  cursor of an actor is the last step of its advanced rows; a `start` with no `end` was
+  interrupted. The file survives a restart.
 - `versions.jsonl` (`curator-runner-version/1`): each version the runner has seen, when its last
   look without the tag began and when its first look with the tag ended, its coverage stamp and,
   for a restore, the version it restored. A later row for a version replaces an earlier one.
   Versions present at the runner's first look ever are its `baseline`.
 - `polls.jsonl` (`curator-runner-poll/1`): one row per poll, with the snapshot's timings or why
-  there was none, and the position.
+  there was none, the position and `coverage`.
 - `status.json` (`curator-runner-status/1`), replaced atomically at each poll and at each
   session's start and end; its fields are listed in `Runner.status`.
-- `stopped.json` (`curator-runner-stopped/1`), written once when the runner stops for a failure;
-  a runner restarted for the same admission finds it and does not work again.
+- `stopped.json` (`curator-runner-stopped/1`), replaced atomically once when the runner stops for
+  a failure; a runner restarted for the same admission finds it and does not work again.
 - `snapshots/`, where each poll's snapshot is staged and removed when the poll ends.
 
-A value that is not known is written as the string `unknown`, never guessed.
+On loading, each append-only file is cut back to its last newline, so a row a killed runner left
+half written is dropped and never joined to the next. A value that is not known is written as
+the string `unknown`, never guessed.
+
+**How a session ends** (`outcome` of an `end` row): `accepted`, `nothing-submitted`, `rejected`
+(a submission was rejected) and `unconfirmed` (a gate result is unknown) close the session and
+advance the cursor, the last two as failures; `aborted` fails and does not advance;
+`interrupted` (the runner was signalled), `lock-refused` (another session held the repository),
+`not-started` (no spend left) and `host-unavailable` (the curator host could not be resolved)
+neither advance nor fail. An interruption that lands after a session returned but before its
+`end` row is written is still recorded as `interrupted`: coverage is then understated, never
+overstated.
+
+**Why it stops** (`stop_reason`). It *ends* with `store-closing` when the closing marker refuses
+its read, `store-closed` when the run directory holds the custodian's `receipt.json`, and
+`interrupted` on a signal. It *stops* for the rest of the admission with
+`2 consecutive failed sessions`, `3 consecutive snapshots failed or passed their bound`,
+`read refused: no-read-lock` (no reader is configured), `error: <type>` (an unexpected exception
+in the runner itself), or a session's own stop reason: `proxy-revoked` (a charge passed its
+reservation), `spend-reservation-refused`, `cap-reached` (the runner's cap is spent),
+`proxy-unsettled` (requests the proxy could not settle), `cleanup-unconfirmed` (host processes
+survived, or the host ran and its result is missing) and `host-unavailable: <why>`.
 
 **Coverage.** A version is confirmed when its tag was seen, an examined session's verdicts report
 it published, and its coverage stamp is that session's window. The covered prefix is the longest
@@ -39,7 +60,9 @@ actor by actor in admission order, passing to the next actor only when an ended 
 to its last finished step. It is computed from confirmed versions alone, never from the cursor or
 the failures. A restore makes it unknown past the restored point: only versions up to the
 restored one count, and lag is then unknown. Lag is the number of the admission's finished
-operations, in order, after the operation that ends the covered prefix, found by identity.
+operations, in order, after the operation that ends the covered prefix: the `last_operation`
+recorded for the window that ends it, found by identity in the latest snapshot, and unknown when
+that snapshot does not hold it.
 """
 from __future__ import annotations
 
@@ -68,7 +91,9 @@ POLL_SCHEMA = 'curator-runner-poll/1'
 STOPPED_SCHEMA = 'curator-runner-stopped/1'
 STATUS, EXAMINED, VERSIONS, POLLS, STOPPED, SNAPSHOTS = (
     'status.json', 'examined.jsonl', 'versions.jsonl', 'polls.jsonl', 'stopped.json', 'snapshots')
+RECEIPT = 'receipt.json'  # the custodian's terminal receipt, written as it exits
 UNKNOWN = 'unknown'
+NOT_RUN = ('lock-refused', 'not-started', 'host-unavailable')  # endings in which no session ran
 SESSION_FAILURES = 2  # consecutive failed sessions that stop the runner
 SNAPSHOT_FAILURES = 3  # consecutive snapshots that failed or passed their bound
 
@@ -243,7 +268,7 @@ def classify(outcome: Outcome) -> tuple[str, bool, bool]:
     if outcome.refused:
         return 'lock-refused', False, False
     if outcome.state is None and outcome.error is None and outcome.stop is not None:
-        return 'not-started', False, False
+        return ('host-unavailable' if outcome.stop.startswith('host-unavailable') else 'not-started'), False, False
     if outcome.state != 'sealed':
         return 'aborted', False, True
     statuses = [v.get('status') for v in outcome.verdicts if v.get('operation', 'submission') == 'submission']
@@ -260,31 +285,49 @@ def _number(version: str) -> int:
     return int(version[1:])
 
 
-def _lines(path: Path) -> list[dict]:
-    """An append-only file's rows; a last line cut short by a killed writer is left out."""
+def _cut(path: Path) -> bytes:
+    """An append-only file's whole lines, after cutting the file itself back to its last newline."""
     if not path.is_file():
-        return []
+        return b''
     data = path.read_bytes()
+    whole = data.rfind(b'\n') + 1
+    if whole < len(data):
+        os.truncate(path, whole)
+    return data[:whole]
+
+
+def _lines(path: Path) -> list[dict]:
+    """An append-only file's rows. A last line cut short by a killed writer is removed from the file
+    before anything appends to it, so it is never joined to the next row."""
     rows = []
-    for line in data.splitlines(keepends=True):
+    for number, line in enumerate(_cut(path).splitlines(), 1):
         try:
             rows.append(json.loads(line))
         except ValueError:
-            if line.endswith(b'\n'):
-                raise RunnerError(f'{path}: unreadable row') from None
+            raise RunnerError(f'{path}:{number}: unreadable row') from None
     return rows
+
+
+def _replace(path: Path, value: dict, *, indent: int | None = None) -> None:
+    """Write a JSON file whole: a temporary file beside it, then a rename over it."""
+    partial = path.with_name(f'.{path.name}.partial')
+    partial.write_text(json.dumps(value, indent=indent, sort_keys=True, default=str) + '\n')
+    os.replace(partial, path)
 
 
 class Runner:
     """One runner over one live run. `poll` does one poll; `run` polls until the runner ends."""
 
     def __init__(self, directory: Path, session: str, *, snapshot: Snapshotter, session_call: Session, look: Look,
-                 settings: Settings = Settings(), clock=time, sleep: Callable[[float], None] = time.sleep):
-        self.directory, self.session = Path(directory), session
+                 settings: Settings = Settings(), clock=time, sleep: Callable[[float], None] = time.sleep,
+                 run: Path | None = None):
+        """`run` is the live run directory, checked at each poll for the custodian's receipt."""
+        self.directory, self.session, self.run_directory = Path(directory), session, run
         self.snapshot, self.session_call, self.look = snapshot, session_call, look
         self.settings, self.clock, self.sleep = settings, clock, sleep
         self.directory.mkdir(parents=True, exist_ok=True)
         shutil.rmtree(self.directory/SNAPSHOTS, ignore_errors=True)  # a killed runner's staged snapshot
+        _cut(self.directory/POLLS)
         self.rows = _lines(self.directory/EXAMINED)
         if any(row.get('schema') != EXAMINED_SCHEMA for row in self.rows):
             raise RunnerError(f'{self.directory/EXAMINED}: not {EXAMINED_SCHEMA}')
@@ -332,7 +375,7 @@ class Runner:
             if row['event'] != 'start':
                 continue
             end = ends.get(row['label'])
-            if end is not None and end['outcome'] in ('lock-refused', 'not-started'):
+            if end is not None and end['outcome'] in NOT_RUN:
                 continue  # nothing ran over this range
             listed.append(dict(label=row['label'], window=row['window'], session_id=end and end['session_id'],
                                outcome=end['outcome'] if end else ('in-session' if self.current and
@@ -344,7 +387,7 @@ class Runner:
     def session_failures(self) -> int:
         count = 0
         for row in reversed(self._ends()):
-            if row['outcome'] in ('lock-refused', 'interrupted', 'not-started'):
+            if row['outcome'] in (*NOT_RUN, 'interrupted'):
                 continue
             if not row['failed']:
                 break
@@ -410,6 +453,7 @@ class Runner:
                 elif verdict.get('status') == 'unknown':
                     unconfirmed.append(dict(version=verdict.get('version') or UNKNOWN, label=row['label'],
                                             reason='the gate result is unknown'))
+        starts = {row['label']: row for row in self.rows if row['event'] == 'start'}
         confirmed = []
         for version, row in sorted(claims.items(), key=lambda item: _number(item[0])):
             entry = self.versions.get(version)
@@ -419,8 +463,9 @@ class Runner:
                 unconfirmed.append(dict(version=version, label=row['label'], coverage=entry['coverage'],
                                         reason='its coverage stamp is not its window'))
             else:
+                start = starts.get(row['label'], {})
                 confirmed.append(dict(version=version, label=row['label'], window=row['window'],
-                                      coverage=entry['coverage']))
+                                      last_operation=start.get('last_operation', UNKNOWN), coverage=entry['coverage']))
         restore = None
         for version, entry in sorted(self.versions.items(), key=lambda item: _number(item[0])):
             if entry['baseline'] or version in claims:
@@ -450,13 +495,28 @@ class Runner:
                     return dict(actor=actor, step=step, operation=operation, ordinal=ordinal)
         return dict(actor=actor, step=step, operation=UNKNOWN, ordinal=UNKNOWN)
 
+    def _identify(self, actor: str, step: int, operation: str) -> dict:
+        """The step that ends the covered prefix, placed among the latest snapshot's finished operations
+        by its recorded operation's identity; unknown when the snapshot does not hold it."""
+        if self.last is not None and operation != UNKNOWN:
+            for ordinal, (_, _, found) in enumerate(self.last.finished(), 1):
+                if found == operation:
+                    return dict(actor=actor, step=step, operation=operation, ordinal=ordinal)
+        return dict(actor=actor, step=step, operation=operation, ordinal=UNKNOWN)
+
     def coverage(self) -> dict:
         """The covered prefix, lag, the distance from the latest stamp, backlog and the last confirmed version."""
         confirmed, unconfirmed, restore = self.publications()
         counted = [c for c in confirmed if restore is None or _number(c['version']) <= _number(restore['counted_through'])]
         end = covered(self._order(), [(c['window']['actor'], c['window']['first'], c['window']['last'])
                                       for c in counted])
-        prefix = dict(end=self._place(*end) if end else None, restore=restore)
+        if end is None:
+            prefix = dict(end=None, restore=restore)
+        else:
+            # The end is the last step of a counted window; that window recorded the operation there.
+            operation = next((c['last_operation'] for c in reversed(counted)
+                              if (c['window']['actor'], c['window']['last']) == end), UNKNOWN)
+            prefix = dict(end=self._identify(*end, operation), restore=restore)
         total = len(self.last.finished()) if self.last is not None else None
         if total is None or restore is not None:
             lag = UNKNOWN
@@ -481,6 +541,12 @@ class Runner:
         return dict(covered_prefix=prefix, lag=lag, stamp_distance=distance, backlog=backlog,
                     last_confirmed=confirmed[-1] if confirmed else None, unconfirmed=unconfirmed,
                     latest_version=dict(version=latest['version'], coverage=latest['coverage']) if latest else UNKNOWN)
+
+    def progress(self) -> dict:
+        """The covered prefix, lag and backlog now: the `coverage` of each poll row and each examined row."""
+        with self.lock:
+            now = self.coverage()
+            return {name: now[name] for name in ('covered_prefix', 'lag', 'backlog')}
 
     def position(self) -> dict | str:
         """The latest finished operation of the last snapshot, and when that snapshot read the store."""
@@ -519,16 +585,12 @@ class Runner:
 
     def _write_status(self) -> None:
         with self.lock:
-            value = self.status()
-            partial = self.directory/f'.{STATUS}.partial'
-            partial.write_text(json.dumps(value, indent=1, sort_keys=True, default=str) + '\n')
-            os.replace(partial, self.directory/STATUS)
+            _replace(self.directory/STATUS, self.status(), indent=1)
 
     def _finish(self, state: str, reason: str) -> None:
         self.state, self.reason = state, reason
         if state == 'stopped' and not (self.directory/STOPPED).exists():
-            (self.directory/STOPPED).write_text(json.dumps(dict(schema=STOPPED_SCHEMA, reason=reason,
-                                                                wall=self.clock.time())) + '\n')
+            _replace(self.directory/STOPPED, dict(schema=STOPPED_SCHEMA, reason=reason, wall=self.clock.time()))
         self._write_status()
 
     # Polling --------------------------------------------------------------------------------------
@@ -556,10 +618,17 @@ class Runner:
     def _poll(self, parent: Path) -> bool:
         began = self.clock.time()
         row = dict(schema=POLL_SCHEMA, began_wall=began)
+        if self.run_directory is not None and os.path.lexists(self.run_directory/RECEIPT):
+            # The custodian has ended, with or without a closing marker (one that died writes none).
+            self._append(POLLS, dict(row, ended_wall=self.clock.time(), outcome='custodian-ended',
+                                     coverage=self.progress()))
+            self._finish('ended', 'store-closed')
+            return False
         try:
             read = self.snapshot(parent)
         except ReadRefused as refused:
-            self._append(POLLS, dict(row, ended_wall=self.clock.time(), outcome=f'refused:{refused.reason}'))
+            self._append(POLLS, dict(row, ended_wall=self.clock.time(), outcome=f'refused:{refused.reason}',
+                                     coverage=self.progress()))
             if refused.reason == 'closing':
                 self._finish('ended', 'store-closing')  # the custodian is closing: no further read
                 return False
@@ -571,7 +640,8 @@ class Runner:
         except SnapshotError as error:
             self.snapshot_failures += 1
             kind = 'over-bound' if isinstance(error, BoundExceeded) else 'failed'
-            self._append(POLLS, dict(row, ended_wall=self.clock.time(), outcome=kind, error=str(error)[:400]))
+            self._append(POLLS, dict(row, ended_wall=self.clock.time(), outcome=kind, error=str(error)[:400],
+                                     coverage=self.progress()))
             if self.snapshot_failures >= SNAPSHOT_FAILURES:
                 self._finish('stopped', f'{SNAPSHOT_FAILURES} consecutive snapshots failed or passed their bound')
                 return False
@@ -582,7 +652,8 @@ class Runner:
             self.last, self.read_wall = read, dict(began=began, ended=self.clock.time())
         self._append(POLLS, dict(row, ended_wall=self.read_wall['ended'], outcome='read',
                                  hold_seconds=read.hold_seconds, transaction_seconds=read.transaction_seconds,
-                                 staging_seconds=read.staging_seconds, position=self.position()))
+                                 staging_seconds=read.staging_seconds, position=self.position(),
+                                 coverage=self.progress()))
         window = choose(read, self.cursor, self.settings)
         if window is None:
             self._write_status()
@@ -593,14 +664,14 @@ class Runner:
         label = f'{window.actor}-{window.first}-{window.last}-{uuid.uuid4().hex[:8]}'
         operations = next(a.operations for a in read.actors if a.directory == window.actor)
         record = window.record()
+        self._look()  # once before the session starts
         start = dict(schema=EXAMINED_SCHEMA, event='start', label=label, window=record,
                      first_operation=operations[window.first - 1], last_operation=operations[window.last - 1],
-                     started_wall=self.clock.time())
+                     started_wall=self.clock.time(), coverage=self.progress())
         with self.lock:
             self.rows.append(start)
             self._append(EXAMINED, start)
             self.current = dict(label=label, window=record, started_wall=start['started_wall'])
-        self._look()  # once before the session starts
         self.state = 'in-session'
         self._write_status()
         stop, watcher = self._watching()
@@ -634,11 +705,13 @@ class Runner:
                    details=outcome.details, ended_wall=self.clock.time())
         with self.lock:
             self.rows.append(end)
-            self._append(EXAMINED, end)
             self.current = None
+            end['coverage'] = self.progress()  # with this session's own result counted
+            self._append(EXAMINED, end)
 
     def run(self) -> str:
-        """Poll until the runner ends or stops; returns why. An interruption is recorded and raised."""
+        """Poll until the runner ends or stops; returns why. An interruption is recorded and raised; so
+        is an unexpected exception, recorded as a stop for `error: <type>` as far as the files allow."""
         if self.done:
             self._write_status()
             return self.reason
@@ -650,5 +723,13 @@ class Runner:
         except KeyboardInterrupt:
             if not self.done:
                 self._finish('ended', 'interrupted')
+            raise
+        except Exception as exc:
+            if not self.done:
+                self.current = None
+                try:
+                    self._finish('stopped', f'error: {type(exc).__name__}')
+                except Exception as failure:  # noqa: BLE001 - the original exception stays primary
+                    exc.add_note(f'Recording the stop failed: {type(failure).__name__}')
             raise
         return self.reason

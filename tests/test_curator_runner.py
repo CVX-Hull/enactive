@@ -3,6 +3,7 @@ beside a synthetic growing trace with the real reader and a real session under t
 """
 from __future__ import annotations
 
+from decimal import Decimal
 import fcntl
 import json
 import os
@@ -247,8 +248,11 @@ def test_an_aborted_session_that_published_before_failing_still_covers_its_range
     assert runner.cursor == {} and status(world)['covered_prefix']['end']['step'] == 20
 
 
-@pytest.mark.parametrize('case', ['tag-never-seen', 'other-stamp', 'unknown-verdict', 'unclaimed-tag'])
-def test_a_publication_that_cannot_be_confirmed_covers_nothing_and_is_recorded(world, case):
+@pytest.mark.parametrize('case, reason', [('tag-never-seen', 'its tag was not seen'),
+                                          ('other-stamp', 'its coverage stamp is not its window'),
+                                          ('unknown-verdict', 'the gate result is unknown'),
+                                          ('unclaimed-tag', 'no examined session reports it')])
+def test_a_publication_that_cannot_be_confirmed_covers_nothing_and_is_recorded(world, case, reason):
     world.reading = read({'001': 30})
 
     def claimed(window):
@@ -269,10 +273,8 @@ def test_a_publication_that_cannot_be_confirmed_covers_nothing_and_is_recorded(w
     runner.poll()
     now = status(world)
     assert now['covered_prefix']['end'] is None and now['lag'] == 30 and now['last_confirmed'] is None
-    assert len(now['unconfirmed']) >= 1
-    reasons = {u['reason'] for u in now['unconfirmed']}
-    assert reasons & {'its tag was not seen', 'its coverage stamp is not its window', 'the gate result is unknown',
-                      'no examined session reports it'}
+    expected = [reason] + (['no examined session reports it'] if case == 'unknown-verdict' else [])
+    assert [u['reason'] for u in now['unconfirmed']] == expected  # an unknown verdict also leaves its tag unclaimed
 
 
 def test_a_restore_makes_the_prefix_unknown_from_the_restored_point(world):
@@ -372,6 +374,96 @@ def test_an_interrupted_session_is_recorded_and_does_not_advance_the_cursor(worl
     assert now['state'] == 'ended' and now['stop_reason'] == 'interrupted' and now['current'] is None
     assert [e['outcome'] for e in now['examined']] == ['interrupted'] and now['cursor'] == {}
     assert not any((world.directory/'snapshots').iterdir())
+
+
+def test_the_custodians_receipt_ends_the_runner_without_another_read(world, tmp_path):
+    run = tmp_path/RUN
+    run.mkdir()
+    world.reading = read({'001': 5})
+    runner = Runner(world.directory, RUN, snapshot=world.snapshot, session_call=world.session, look=world.look,
+                    settings=SETTINGS, clock=world.clock, sleep=lambda seconds: None, run=run)
+    assert runner.poll() and world.snapshots == 1
+    (run/'receipt.json').write_text('{}')  # a custodian that died wrote no closing marker
+    assert not runner.poll() and not runner.poll() and world.snapshots == 1
+    now = status(world)
+    assert now['state'] == 'ended' and now['stop_reason'] == 'store-closed'
+    assert json.loads((world.directory/'polls.jsonl').read_text().splitlines()[-1])['outcome'] == 'custodian-ended'
+
+
+def test_a_host_that_cannot_be_resolved_is_its_own_outcome_and_stops_the_runner(world):
+    world.reading = read({'001': 20})
+    world.outcomes = [lambda window: Outcome(None, stop='host-unavailable: no node')]
+    runner = world.runner()
+    assert not runner.poll()
+    rows = [json.loads(line) for line in (world.directory/'examined.jsonl').read_text().splitlines()]
+    assert (rows[-1]['outcome'], rows[-1]['advanced'], rows[-1]['failed']) == ('host-unavailable', False, False)
+    now = status(world)
+    assert now['stop_reason'] == 'host-unavailable: no node' and now['examined'] == [] and now['cursor'] == {}
+
+
+def test_an_unexpected_error_in_the_runner_is_recorded_as_a_stop_and_raised(world):
+    world.reading = read({'001': 3})
+    runner = world.runner()
+    original = runner._append
+
+    def failing(name, row):
+        if name == 'polls.jsonl':
+            raise OSError('disk full')
+        original(name, row)
+
+    runner._append = failing
+    with pytest.raises(OSError):
+        runner.run()
+    now = status(world)
+    assert now['state'] == 'stopped' and now['stop_reason'] == 'error: OSError'
+    assert json.loads((world.directory/'stopped.json').read_text())['reason'] == 'error: OSError'
+    assert not list(world.directory.glob('.*.partial'))
+
+
+def test_a_row_cut_short_is_dropped_on_load_and_never_joined_to_the_next(world):
+    world.reading = read({'001': 20})
+    world.outcomes = ['accepted', 'accepted']
+    world.runner().poll()
+    whole = (world.directory/'examined.jsonl').read_bytes()
+    for name in ('examined.jsonl', 'versions.jsonl', 'polls.jsonl'):
+        with (world.directory/name).open('ab') as stream:
+            stream.write(b'{"schema": "curator-runner-exa')  # a runner killed mid-write
+    restarted = world.runner()
+    assert (world.directory/'examined.jsonl').read_bytes() == whole
+    assert all((world.directory/n).read_bytes().endswith(b'\n') for n in ('versions.jsonl', 'polls.jsonl'))
+    world.reading = read({'001': 40})
+    restarted.poll()  # appends after the cut
+    again = world.runner()  # the second restart reads every row
+    assert [e['outcome'] for e in again.examined()] == ['accepted', 'accepted'] and again.cursor == {'001': 40}
+
+
+def test_each_poll_and_each_session_row_carries_the_coverage_at_that_moment(world):
+    world.outcomes = ['accepted', 'rejected']
+    runner = world.runner()
+    for steps in (20, 40, 45):
+        world.reading = read({'001': steps})
+        runner.poll()
+    rows = [json.loads(line) for line in (world.directory/'examined.jsonl').read_text().splitlines()]
+    ends = [(r['event'], r['coverage']['covered_prefix']['end'] and r['coverage']['covered_prefix']['end']['step'],
+             r['coverage']['lag'], r['coverage']['backlog']) for r in rows]
+    assert ends == [('start', None, 20, 20), ('end', 20, 0, 0), ('start', 20, 20, 20), ('end', 20, 20, 0)]
+    polls = [json.loads(line)['coverage'] for line in (world.directory/'polls.jsonl').read_text().splitlines()]
+    assert [(p['lag'], p['backlog']) for p in polls] == [(20, 20), (20, 20), (25, 5)]
+
+
+def test_the_prefix_end_is_placed_by_its_operations_identity(world):
+    world.reading = read({'001': 20})
+    world.outcomes = ['accepted']
+    runner = world.runner()
+    runner.poll()
+    assert status(world)['covered_prefix']['end']['operation'] == 'op-001-20'
+    # A later snapshot that no longer holds that operation at all: its place, and so lag, is unknown.
+    world.reading = Reading(Path('/snapshots')/RUN, (ActorSteps('001', tuple(f'other-{n}' for n in range(1, 25)), False),),
+                            .01, .005, .05)
+    runner.poll()
+    now = status(world)
+    assert now['covered_prefix']['end'] == dict(actor='001', step=20, operation='op-001-20', ordinal='unknown')
+    assert now['lag'] == 'unknown'
 
 
 # ---------------------------------------------------------------- the publication watch and the status file
@@ -558,6 +650,95 @@ def test_the_runner_configuration_takes_the_designs_defaults(tmp_path):
     config = live_runner.read_config(runner_config(tmp_path), tmp_path/'runtime')
     assert config['settings'] == Settings() and config['upstream'] == shadow.OPENROUTER_ORIGIN
     assert config['host']['max_requests'] == 120 and config['host']['effort'] is None and config['session_cap'] is None
+
+
+def fake_sessions(tmp_path: Path, monkeypatch, behave) -> live_runner.Sessions:
+    """The process's session call with `shadow.run_one` replaced by `behave(session_dir, kwargs)`; no host runs."""
+    config = live_runner.read_config(runner_config(tmp_path, cap_usd='1'), tmp_path/'runtime')
+    repo = Repository(config['knowledge_root'], shadow.GAME)
+
+    def run_one(**kwargs):
+        directory = kwargs['out']/kwargs['lineage']/kwargs['name']
+        directory.mkdir(parents=True)
+        return behave(directory, kwargs)
+
+    monkeypatch.setattr(shadow, 'run_one', run_one)
+    sessions = live_runner.Sessions(tmp_path/'runner', config, repo, shadow.LOOPBACK_KEY)
+    sessions.tools = {}  # as if the host tools were resolved
+    return sessions
+
+
+def summary(directory: Path, *, survivors=(), state='sealed', host_output=b'', **change) -> dict:
+    record = directory/'record'
+    record.mkdir()
+    (record/'host-output.log').write_bytes(host_output)
+    value = dict(cost_usd='0.1', proxy=dict(revoked=False, breaches=0, settled=True), stopped_by_cap=False,
+                 run_state='completed', session_id='s', session_state=state, verdicts=[], record=str(record),
+                 sandbox=dict(survivors=None if survivors is None else list(survivors)))
+    value.update(change)
+    return value
+
+
+def closed(directory: Path, spent: str, pending: str = '0') -> None:
+    (directory/'proxy-close.json').write_text(json.dumps(dict(schema='curator-proxy-close/1', spent_snapshot_usd=spent,
+                                                              pending_reserved_usd=pending)))
+
+
+def test_spend_is_counted_from_what_the_proxy_left_even_for_a_session_cut_short(tmp_path, monkeypatch):
+    caps = []
+
+    def behave(directory, kwargs):
+        caps.append(kwargs['cap'])
+        if len(caps) == 1:
+            closed(directory, '0.3', '0.05')  # the proxy closed in run_one's finally; then the interruption
+            raise KeyboardInterrupt
+        if len(caps) == 2:  # the proxy's close raised: only its ledger is left
+            (directory/'proxy-ledger.jsonl').write_text(json.dumps(dict(reserved='0.2', charged='0.15')) + '\n')
+            raise RuntimeError('proxy shutdown failed')
+        closed(directory, '0.1')
+        return summary(directory)
+
+    sessions = fake_sessions(tmp_path, monkeypatch, behave)
+    reading = Reading(tmp_path/RUN, (), 0., 0., 0.)
+    with pytest.raises(KeyboardInterrupt):
+        sessions(reading, Window(RUN, '001', 1, 20), 'first')
+    assert sessions.spent == Decimal('0.35')  # spent and still reserved
+    restarted = fake_sessions(tmp_path, monkeypatch, behave)
+    assert restarted.spent == Decimal('0.35')
+    with pytest.raises(RuntimeError):
+        restarted(reading, Window(RUN, '001', 1, 20), 'second')
+    assert restarted.spent == Decimal('0.50') and caps[1] == Decimal('0.65')
+    restarted(reading, Window(RUN, '001', 1, 20), 'third')
+    assert caps[2] == Decimal('0.50') and restarted.spent == Decimal('0.60')
+
+
+@pytest.mark.parametrize('survivors, host_output, stops', [
+    (None, b'', False),  # aborted before its host ran: an ordinary failed session
+    (None, b'{"type":"host-start"}\n', True),  # the host ran and the sandbox's result is missing
+    ((), b'{"type":"host-start"}\n', False), (('4242',), b'', True)])
+def test_cleanup_stops_the_runner_only_when_a_host_may_have_survived(tmp_path, monkeypatch, survivors, host_output, stops):
+    def behave(directory, kwargs):
+        closed(directory, '0')
+        return summary(directory, survivors=survivors, host_output=host_output,
+                       state='aborted' if survivors is None else 'sealed')
+
+    outcome = fake_sessions(tmp_path, monkeypatch, behave)(Reading(tmp_path/RUN, (), 0., 0., 0.),
+                                                           Window(RUN, '001', 1, 20), 'one')
+    assert outcome.stop == ('cleanup-unconfirmed' if stops else None)
+    if survivors is None and not stops:
+        assert live.classify(outcome) == ('aborted', False, True)
+
+
+def test_a_host_that_cannot_be_resolved_is_reported_by_the_process(tmp_path, monkeypatch):
+    sessions = fake_sessions(tmp_path, monkeypatch, lambda directory, kwargs: pytest.fail('no session without a host'))
+    sessions.tools = None
+
+    def missing():
+        raise shadow.ShadowError('Node.js is required for the curator host')
+
+    monkeypatch.setattr(shadow, 'host_tools', missing)
+    outcome = sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), Window(RUN, '001', 1, 20), 'one')
+    assert outcome.stop.startswith('host-unavailable: ') and live.classify(outcome) == ('host-unavailable', False, False)
 
 
 INSTALLED = (shadow.HOST_DIR/'node_modules').is_dir() and shutil.which('node') is not None
