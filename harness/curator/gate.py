@@ -582,6 +582,8 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
                     if not problems:
                         files = _publication(repo, records, types, coverage, window_frames, session_kind, data)
                         _validate_snapshot(snapshots[current] | files, repo.game, version, records_by_version)
+                except KnowledgeError:
+                    raise
                 except (ValueError, KeyError, TypeError, RecursionError) as error:
                     raise KnowledgeError(f'invalid candidate snapshot: {error}') from error
             if not diagnostics:

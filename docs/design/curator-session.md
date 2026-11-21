@@ -191,7 +191,10 @@ It cannot take a restricted window; the supplied sealed trace sessions
 must match the last published admission's names, and every retained citation must exist.
 
 `provenance.json` keeps software-derived frame positions and the last admission's
-coverage and citations. Citations accumulate across accepted windows of the same
+coverage and citations. Once a frame's position is recorded in `provenance.json`,
+later windows preserve that recorded position rather than overwriting it; a frame
+new to the repository records its earliest occurrence in the window. Citations
+accumulate across accepted windows of the same
 admission. A grooming publication retains that admission stamp. Grooming replacement
 facts may cite the union of the superseded facts' citations and the current window's
 frames; other fact operations and retirements require window citations. Software
