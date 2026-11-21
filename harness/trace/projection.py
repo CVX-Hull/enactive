@@ -37,6 +37,7 @@ from pathlib import Path
 import re
 import shutil
 import sqlite3
+from typing import Literal
 import uuid
 
 from harness.jsonio import strict_loads
@@ -132,69 +133,73 @@ def _json(path: Path):
         raise ProjectionError(f'{path}: unreadable JSON') from exc
 
 
-def _evidence_bytes(path: Path, limit: int) -> bytes:
+_LabelCheck = Literal['manifest-schema', 'manifest-session', 'supervisor-digest']
+
+
+class _LabelEvidenceError(ValueError):
+    def __init__(self, check: _LabelCheck, detail: str):
+        super().__init__(detail)
+        self.check = check
+
+
+def _label_evidence(path: Path, limit: int, check: _LabelCheck) -> tuple[bytes, object]:
     try:
         if path.is_symlink() or not path.is_file():
-            raise ValueError(f'{path.name} missing or unreadable')
+            raise _LabelEvidenceError(check, f'{path.name} missing or unreadable')
         with path.open('rb') as stream:
             data = stream.read(limit + 1)
     except OSError as exc:
-        raise ValueError(f'{path.name} unreadable') from exc
+        raise _LabelEvidenceError(check, f'{path.name} unreadable') from exc
     if len(data) > limit:
-        raise ValueError(f'{path.name} exceeds its byte bound')
-    return data
-
-
-def _evidence_json(data: bytes, name: str) -> object:
+        raise _LabelEvidenceError(check, f'{path.name} exceeds its byte bound')
     try:
-        return strict_loads(data)
+        return data, strict_loads(data)
     except (ValueError, RecursionError) as exc:
-        raise ValueError(f'{name} has invalid JSON') from exc
+        raise _LabelEvidenceError(check, f'{path.name} has invalid JSON') from exc
 
 
 def _verified_labels(session: Path, session_id: str) -> dict:
-    data = _evidence_bytes(session/'manifest.json', 1048576)
-    package = _evidence_json(data, 'manifest.json')
+    data, package = _label_evidence(session/'manifest.json', 1048576, 'manifest-schema')
     schema = package.get('schema') if isinstance(package, dict) else None
     if not isinstance(schema, str) or schema not in PACKAGE_LABELS:
-        raise ValueError('unsupported run package manifest schema')
+        raise _LabelEvidenceError('manifest-schema', 'unsupported run package manifest schema')
     if package.get('session') != session_id:
-        raise ValueError('manifest session differs from sealed session')
+        raise _LabelEvidenceError('manifest-session', 'manifest session differs from sealed session')
 
-    opening = _evidence_json(_evidence_bytes(session/'watch-start.json', 65536), 'watch-start.json')
+    _, opening = _label_evidence(session/'watch-start.json', 65536, 'supervisor-digest')
     if not isinstance(opening, dict) or opening.get('schema') != 'campaign-watch-start/4':
-        raise ValueError('unsupported supervisor launch record schema')
+        raise _LabelEvidenceError('supervisor-digest', 'unsupported supervisor launch record schema')
     if opening.get('session') != session_id:
-        raise ValueError('supervisor launch record session differs from sealed session')
+        raise _LabelEvidenceError('supervisor-digest', 'supervisor launch record session differs from sealed session')
     if opening.get('manifest_sha256') != hashlib.sha256(data).hexdigest():
-        raise ValueError('manifest SHA-256 differs from supervisor launch record')
+        raise _LabelEvidenceError('supervisor-digest', 'manifest SHA-256 differs from supervisor launch record')
 
     fields = PACKAGE_LABELS[schema]
     labels = package.get('labels')
     if not isinstance(labels, dict) or not all(field in labels for field in fields):
-        raise ValueError('run package manifest lacks its required labels')
+        raise _LabelEvidenceError('manifest-schema', 'run package manifest lacks its required labels')
     selected = _pick(labels, fields)
     for field in ('world', 'lineage'):
         value = selected.get(field)
         if value is not None and (not isinstance(value, str) or re.fullmatch(r'[ -~]{1,40}', value) is None):
-            raise ValueError(f'run package manifest has an invalid {field} label')
+            raise _LabelEvidenceError('manifest-schema', f'run package manifest has an invalid {field} label')
     admission = selected['admission']
     if admission is not None and (type(admission) is not int or not 1 <= admission <= 10000):
-        raise ValueError('run package manifest has an invalid admission position')
+        raise _LabelEvidenceError('manifest-schema', 'run package manifest has an invalid admission position')
     if (selected['lineage'] is None) != (admission is None):
-        raise ValueError('run package manifest must label lineage and admission together')
+        raise _LabelEvidenceError('manifest-schema', 'run package manifest must label lineage and admission together')
     if 'world' in selected and selected['lineage'] is not None and selected['world'] is None:
-        raise ValueError('run package manifest must label the world of a lineage')
+        raise _LabelEvidenceError('manifest-schema', 'run package manifest must label the world of a lineage')
     return selected
 
 
 def _session_labels(session: Path, session_id: str) -> dict:
     """Read only the label fields bound to this sealed session at launch."""
-    labels = dict(world=None, lineage=None, admission=None, label_error=None)
+    labels = dict(world=None, lineage=None, admission=None, label_check=None, label_error=None)
     try:
         labels.update(_verified_labels(session, session_id))
-    except ValueError as exc:
-        labels['label_error'] = str(exc)
+    except _LabelEvidenceError as exc:
+        labels.update(label_check=exc.check, label_error=str(exc))
     return labels
 
 

@@ -157,11 +157,22 @@ def restrict(out: Path, manifest: dict, window: Window) -> dict:
 
 
 class FramePositions(dict[str, dict]):
-    """The gate's frame positions, with session provenance keyed by sealed identifier."""
+    """The gate's frame positions, with session provenance keyed by sealed identifier.
+
+    The `.sessions` attribute does not survive copying into a plain mapping or
+    JSON serialization. Use `session_labels` to recover it from the projection manifest.
+    """
 
     def __init__(self, sessions: dict[str, dict]):
         super().__init__()
         self.sessions = sessions
+
+
+def session_labels(manifest: dict) -> dict[str, dict]:
+    """Return session labels and their verification diagnostics keyed by sealed identifier."""
+    require_current(manifest)
+    fields = ('name', 'world', 'lineage', 'admission', 'label_check', 'label_error')
+    return {session['session_id']: {key: session[key] for key in fields} for session in manifest['sessions']}
 
 
 def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> FramePositions:
@@ -170,11 +181,7 @@ def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> FramePosi
     Session order follows the supplied order; actor order is directory order;
     step order is seq. The identity and seq are retained beside the ordinal for inspection.
     """
-    require_current(manifest)
-    result = FramePositions({
-        session['session_id']: {key: session[key] for key in ('name', 'world', 'lineage', 'admission')}
-        for session in manifest['sessions']
-    })
+    result = FramePositions(session_labels(manifest))
     admissions = {p['session']: p['order'][0] for p in previous.values()}
     next_admission = max(admissions.values(), default=0)
     for session in manifest['sessions']:
