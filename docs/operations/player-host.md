@@ -31,8 +31,8 @@ required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
 one image at a time (rolling); a larger block keeps the prompt prefix cacheable
 between evictions. Prefer a block of about half the peak, such as 39/20, so evictions are
-rare (the development runs' settings are in [the benchmark route](../development-runs.md#benchmark)). Pi sends a per-session
-`x-session-id` affinity value on the OpenRouter route; the host's
+rare. Follow the [campaign route-selection procedure](campaign-run.md#construct-a-package).
+Pi sends a per-session `x-session-id` affinity value on the OpenRouter route. The host's
 [request-stability rules](../contracts/player-host.md#request-stability-and-tail-notices)
 govern the rest.
 The [host reference](../../tools/player_host/README.md) owns exact closed fields.
@@ -44,70 +44,50 @@ Experiment quotas, host counts and other final-actor policy remain outside playe
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
 Both original and successor start fresh; at most two hosts fit `campaign-run/10`.
-Each actor's route carries the requests and the dollars the run has left; no actor
-is started when either is used up.
-Every actor gets the same tool table and the same system prompt, so their request
-prefixes are byte-identical; the per-actor session and actor IDs go in the first user
-message. The final actor's `player_handoff` call is refused by the application with no
+Each actor's route carries the requests the run has left. The driver starts an
+actor only while requests and dollars remain. The
+[request-stability contract](../contracts/player-host.md#request-stability-and-tail-notices)
+defines which request fields stay fixed across actors and how images are omitted.
+The final actor's `player_handoff` call is refused by the application with no
 state change ("no successor is available"), and the driver marks that actor before it
-starts. Earlier actors are offered the tool by position alone, so a successor can still
-be refused when original resources run out.
-No model, transport, host or coding-agent fallback is supported.
+starts. Earlier actors can request a handoff by position alone, and a successor can
+still be refused when original resources run out. The run uses the frozen transport
+throughout.
 
-Inject only the selected credential environment variable into the provider child.
-No key in files/argv/headers/URLs; no credential/profile discovery. MCP/native
-children receive no provider secret. The host rejects ambient SDK logging/header
-configuration; dedicated child cleanup must not alter global profiles.
+Inject only the selected credential environment variable into the provider child. Keep
+the key out of files, argv, configured headers and URLs, and keep it out of the
+native child. Supply it explicitly without credential or profile discovery. The
+host rejects ambient SDK logging and header configuration. Leave global profiles
+untouched during dedicated child cleanup.
 
-The driver passes the prompt via `--prompt PATH`, explicit `--session` and
-`--actor-id`, and required `--pending-control-id none|32hex`. Host stdin carries
-closed `player-control/1` JSONL, separate from MCP stdin. Keep it open until
-settlement; unexpected EOF is fatal. Identical same-ID commands are idempotent;
-conflicts, malformed lines, wrong identity/version and lines over4096 UTF8 bytes
-before newline fail. Retain command intent before publication. A successor with
-inherited stop waits for its matching command before MCP connection or fetch.
+Keep host stdin open through settlement and retain command intent before writing
+as specified in the [external control contract](../contracts/player-host.md#external-control).
 
-The host uses Pi's maintained steering/turn hooks for optional finish-up, pending
-call suppression and direct finish settlement. It adds `player_finish` beside
-the MCP table, requiring `disposition,report,source_ids,control_id`. External
-completion names the received stop command; task completion/inability use null.
-Only direct validated execution settles; narration or embedded JSON does not.
-No subsequent tool/provider request dispatches after acceptance. Pause and hard
-cleanup act independently of the model or saving. The [campaign reserve procedure](campaign-run.md#ending-reserve-and-external-stop)
-requires a lead forecast; validators check bounds, not ending adequacy.
+The adapter uses its maintained steering and turn hooks for finish-up,
+pending-call suppression and direct finish settlement. The
+[settlement contract](../contracts/player-host.md#settlement-and-handoff) defines
+the `player_finish` signal and when the host accepts it. Forecast ending capacity
+using the [campaign reserve procedure](campaign-run.md#ending-reserve-and-external-stop).
 
-Pi's `estimateContextTokens`, reported usage and a text/image heuristic floor
-request existing sealed handoff when context is pressured. Estimates are not a
-provider token guarantee. No compaction, restore or fallback is added.
+The adapter uses `estimateContextTokens` for the maintained estimate in the
+[context-pressure rules](../contracts/player-host.md#route-envelope).
 
-The host serializes tools. A direct sealed `player_handoff` issuance (its `player-computer-operation/1` record),
-or exact collection of its own pending original handoff, settles that actor.
-The driver verifies canonical context/digest and actual old host/MCP process-group
-quiescence before minting a successor under remaining time, spend and mechanical resources.
-No game save/menu/identity condition applies. User Pause, uncertain input, failed
-host closure or unexpected cancellation stop succession. A sealed actor's reads
-never restore authority.
+The host serializes tools. A successor needs no game save. The
+[custody contract](../contracts/computer-control.md#computer-operations-and-custody)
+defines handoff settlement and verified succession within the original limits.
 
-Host JSONL retains bounded visible narration and mechanical request/result
-references, not private reasoning or raw request/image histories. Missing usage
-stays unknown. Attempts include failures and permitted provider-only retries: at most one
-retry per logical request for the failures in the [adapter reference](../../tools/player_host/README.md).
-An incomplete stream that reaches its request deadline may recover once per actor
-from identical context within the existing session and ending reserves. Forecast attempts with that retry in mind. An incomplete trace keeps the observed
-counts and prevents a successor. The dollar subtotal adds up provider-returned charges, and
-an attempt with unavailable cost keeps an unknown charge. The host stops at the
-route's dollar limit (`spend-limit`) and on a successful response it cannot
-price (`cost-unreported`) ([contract](../contracts/player-host.md#spend)). Context projection marks older
-omitted pixels and preserves text/IDs; no automatic tool reread or replay occurs.
-An oversized protected current image group stops before inference.
+Read host JSONL using the [telemetry contract](../contracts/player-host.md#telemetry).
+Forecast attempts using the [route's retry rules](../contracts/player-host.md#route-envelope).
+Use the [spend contract](../contracts/player-host.md#spend) to read the subtotal
+and interpret trace completeness. An incomplete trace retains the observed counts.
+The host leaves tool rereads to the player and stops before inference if the
+protected current image group is oversized.
 
-A terminal player report yields `player_task_complete_unassessed`,
+A direct `player_finish` yields `player_task_complete_unassessed`,
 `player_cannot_continue_unassessed` or `player_external_stop_complete_unassessed`.
-These are not game acceptance. The report must come from direct `player_finish`
-(`task_complete`, `cannot_continue`
-or `external_stop_complete`); ordinary assistant text alone cannot complete the
-task. The custodian separately samples normal native exit before forced cleanup and reports
-owned absence/authority revocation. The player owns save/success claims. The
+Use the custodian's receipt to check normal native exit, owned absence and
+authority revocation. Assess gameplay outcomes against their own evidence. The
+player owns save and success claims. The
 [production report](../acceptance/2026-10-29-computer-control.md) records bounded
 useful play, program/knowledge/succession and Save/reload/normal ending evidence.
 Whole-player cadence, causal learning and independent survival remain unqualified.

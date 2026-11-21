@@ -97,9 +97,11 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   owner's words, what it settles, and a link to the evidence. A decision is added in
   the change that acts on it, or in a change of its own when it alters nothing else
   (an approval of spend, a limit set outside the repository). An issue or pull request
-  may also carry the agreement; the log row is what current pages cite. A later
-  decision that replaces an earlier one moves the earlier row to the log's replaced section; rows are not
-  deleted.
+  may also carry the agreement. Current pages cite the specific row. The log groups
+  [in-force decisions](../decisions/owner-decisions.md#in-force) by subject. The archive's
+  [Replaced](../decisions/owner-decisions-archive.md#replaced) section holds decisions a later
+  decision replaces. Its [Used approvals and rulings on finished work](../decisions/owner-decisions-archive.md#used-approvals-and-rulings-on-finished-work)
+  section holds approvals and rulings that no longer grant permission. Rows are retained.
 - **A dated record names its kind** in its front matter. The generated index shows it,
   so a reader can find the runs without reading past the reviews, and the document
   check requires it. A new record is one of four kinds:
@@ -209,7 +211,12 @@ The rule does not reach:
   are not reworded; a generated index reproduces their titles and front matter as they
   stand;
 - attribution that a licence requires;
-- the title, author or publisher of a cited source;
+- the title, author or publisher of a cited source, and the coding agent, provider or
+  model that a cited outside source studied
+  ([decision](../decisions/owner-decisions.md#a-page-may-name-what-a-cited-source-studied));
+- an adapter reference under `tools/`, which is the one page that specifies its player
+  host and may name it and its route; no other current page names a player host
+  ([decision](../decisions/owner-decisions.md#the-adapter-reference-may-name-its-player-host));
 - the names of files and directories in the tree;
 - a literal identifier inside a code block or schema example that the page's job is to
   specify.

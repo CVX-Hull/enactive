@@ -332,7 +332,7 @@ The reminder cadence trades off timeliness, request cost and repetition. Reminde
 persist in the actor's history, so their text contributes to subsequent requests.
 [Measured delivery cost and prompt burden](../acceptance/2026-11-14-recall-fix-delivery-check.md)
 
-[Owner decision of 13 November 2026 on knowledge delivery, "Yes, in that order"](../decisions/owner-decisions.md#in-force)
+[Decision on recall for briefings and reminders](../decisions/owner-decisions.md#recall-chooses-briefing-and-reminders)
 
 ## 3. Measurement
 
@@ -358,9 +358,9 @@ available. Delivery can change which topics play touches and can add distraction
 beyond the units measured. A handoff, another article's prose or independent
 re-observation can expose withheld knowledge. The
 [study's sizing method](../contracts/evaluation.md#the-withholding-studys-sizing-withholding-study-simulation2)
-sizes any repeat. Under the [owner's decision of 20 November 2026](../decisions/owner-decisions.md#in-force)
-("Live run, then campaigns"), a claim that delivered memory improves play comes only from
-the seven-day campaign outcome ([#145](https://github.com/CVX-Hull/enactive/issues/145)).
+sizes any repeat. A claim that delivered memory improves play comes only from
+the [seven-day campaign outcome (#145)](https://github.com/CVX-Hull/enactive/issues/145)
+under the [decision on measuring memory benefit](../decisions/owner-decisions.md#memory-benefit-measured-in-campaigns).
 
 ### Game-neutral judging
 

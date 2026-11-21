@@ -55,11 +55,11 @@ hold, such as an inventory or hash verification of local material. Removing anyt
 is not held elsewhere requires an owner decision recorded in the [decision log](../decisions/owner-decisions.md).
 
 Retain curated acceptance artifacts and failure evidence until superseded by
-reviewed equivalent evidence or explicitly selected for removal; if removed,
-record availability as removed in the evidence index for a sealed study, or list it in
-a dated retirement record for evidence that was never sealed. Keep unresolved-incident
-journals until resolved. Routine unreferenced journals/frames can be pruned after
-30 days, only with sessions stopped and after checking references/ownership.
+reviewed equivalent evidence or explicitly selected for removal. On removal,
+record availability as removed in the evidence index for a sealed study. For unsealed
+evidence, use a dated `measurement` only when the diff cannot hold the evidence.
+Keep unresolved-incident journals until resolved. Routine unreferenced journals/frames
+can be pruned after 30 days, only with sessions stopped and after checking references/ownership.
 Checker logs under `.runtime/check-logs/` and spectator-suite screenshots under
 `.runtime/spectator-shots/` are routine local output and can be pruned
 whenever no check is running; a record that relies on one quotes the relevant lines
@@ -72,9 +72,10 @@ Never delete saves as routine cleanup. For user-directed stale-world cleanup,
 stop the owned game/controller first, identify closed test/failed worlds and
 preserve accepted campaign saves and current reusable checkpoints. Prefer an
 ordinary project-local archive outside `.runtime/user/save/`; verify its contents
-before removing the selected active directories, and record the archive location and
-retained worlds in a dated retirement record. Keep campaign evidence separately;
-retiring a save does not renew a failed mission or establish a normal ending.
+before removing the selected active directories. Record the archive location and
+retained worlds in a dated `measurement` only when the diff cannot hold that evidence.
+Keep campaign evidence separately. Retiring a save does not renew a failed mission
+or establish a normal ending.
 Preserve manifests before removing owned build directories/downloads. Identify
 the exact path from the build manifest and verify its checkout ownership marker;
 never use broad /tmp or global-cache cleanup.

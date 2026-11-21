@@ -29,9 +29,9 @@ the primary foundations, including the matched binomial-opinion/Beta equivalence
 
 ### Current: the question is open
 
-Each page answers areas of [ADR 009](decisions/009-curated-player.md)'s
-[research agenda](decisions/009-curated-player.md#research-agenda), with sources
-retrieved on 2026-11-08. The owner's decisions are in the
+The pages below cover open research questions. The historical
+[curated-player research agenda](decisions/009-curated-player.md#research-agenda)
+records their rationale. Current owner decisions are in the
 [decision log](decisions/owner-decisions.md).
 
 | Page | Subject | Open question | Current rule or evidence |

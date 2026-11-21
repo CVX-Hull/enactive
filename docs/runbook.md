@@ -28,6 +28,8 @@ project userdir, fresh package and actual spectator images.
 independent custody deadline and owned wrapper cleanup. Nobody is required to watch a
 run. It runs outside the player context.
 
+[Run a curator shadow session](operations/curator-hosts.md#pi-curator-host-the-shadow-session-host).
+
 ## Pause, timeout and recovery
 
 [Pause/timeout](operations/pause-timeout.md): independent permanent stop, exact

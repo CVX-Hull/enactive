@@ -31,11 +31,11 @@ A pull request that changes only the [owner decision log](../decisions/owner-dec
 gets at most one independent review, a
 clean-context one, and no further review from a second model family. Where a document
 change gets its one independent review, that review may come from a second model
-family in place of one from the lead's own. It is still the one clean-context review:
-none is added (R-CONTROL-BLOAT; the [decision log](../decisions/owner-decisions.md)'s
-rows of 14 November 2026 on one review for document-only changes and of 19 November 2026
-on second-family review of documents). Other
-changes get the review this page selects.
+family in place of one from the lead's own. It is still the one clean-context review
+(R-CONTROL-BLOAT). See the decisions on the
+[decision-log review limit](../decisions/owner-decisions.md#one-review-for-log-or-current-work)
+and [second-family document review](../decisions/owner-decisions.md#independent-document-review-may-use-second-family).
+Other changes get the review this page selects.
 
 For maintainer-facing design review, lead with the user outcome, a small boundary
 diagram when useful, important alternatives/tradeoffs, open decisions and evidence

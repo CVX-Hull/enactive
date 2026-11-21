@@ -352,10 +352,10 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   manifest and record versions listed in the [closed archive index](../../data/evaluation/archive-sessions.json)
   (`archive-sessions/1`), under [S-MIGRATION's closed-archive rule](../standards/migration.md#s-migration-one-current-contract-coordinated-migration).
   The index includes `spend-limit-run-555` under the
-  [“Add it to the index” decision](../decisions/owner-decisions.md#in-force). The
+  [“Add it to the index” decision](../decisions/owner-decisions-archive.md#index-the-spend-limit-check). The
   indexed session `522-held-out/computer-sessions/lh4a1` does not evaluate: its database
   cannot be opened in the read-only store, evaluating it is an error, and the sealed copy
-  stays as it is ([“Record it as a limit” decision](../decisions/owner-decisions.md#in-force)).
+  stays as it is ([“Record it as a limit” decision](../decisions/owner-decisions-archive.md#record-the-unreadable-archive-session-as-a-limit)).
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.
@@ -889,7 +889,7 @@ the player, the curator and the trace projection from importing evaluation code 
 The fixed anchor set is the measure gate's sealed `labels.json` (`owner-labels/2`).
 The anchor reads only that format, and the standing measure uses no further owner
 labels. See the [measure gate record](../acceptance/2026-11-13-memory-measure-gate.md)
-and the [“Judges without audits” decision](../decisions/owner-decisions.md#in-force).
+and the [“Judges without audits” decision](../decisions/owner-decisions.md#two-standing-judges-and-a-dispute-judge).
 
 ## Tracked run ledger and metrics snapshot
 
