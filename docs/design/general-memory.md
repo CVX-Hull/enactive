@@ -141,10 +141,9 @@ extinguisher" is true of one world and has no place to say so.
   their recorded versions and puts that list to the owner before it is built; a session
   the owner has not approved is not readable through the evaluator once the version
   moves. Those sessions have no world.
-- **Sealed sessions.** A session sealed before this migration names no world. It
-  supports `game` facts only, unless
-  [the identity leaf](https://github.com/CVX-Hull/enactive/issues/834) finds a
-  trustworthy way to give it one.
+- **Sealed sessions.** By the owner's decision, a session sealed before the
+  `world` label has no world and supports `game` facts only.
+  [Trace workbench](trace-workbench.md#projection)
 
 #### A fact
 
@@ -193,8 +192,9 @@ New or changed fields are marked.
   package manifest only after checking three things: the manifest is the current
   version, the manifest names the same session as the sealed store, and its digest is
   the one the supervisor recorded for the run. When any of that evidence is missing,
-  the session has no world. Which module does the checking, given that the trace
-  projection may not import the campaign code, is for the identity leaf. A staged
+  the session has no world. The [trace projection](trace-workbench.md#projection) does
+  the checking: it reads the manifest and the supervisor's record as files and imports
+  no campaign code. A staged
   snapshot of a session that is still being played carries the same manifest and
   supervisor record, so its labels are verified in the same way before it first
   publishes; otherwise the session would be recorded with no world and keep none.
@@ -329,10 +329,11 @@ This table settles what a fact and a type carry, who writes each field, the rule
 across scopes, and which contracts move together. It is not the implementation. Two
 leaves must settle these before they are built, and each is briefed from this table:
 
-- [The identity leaf](https://github.com/CVX-Hull/enactive/issues/834): which module
-  verifies a session's manifest against its sealed store and the supervisor's digest;
-  the trace projection's next version; and whether a sealed session can be given a
-  trustworthy world.
+- [The identity leaf](https://github.com/CVX-Hull/enactive/issues/834) is built: the
+  trace projection verifies a session's manifest against its sealed store and the
+  supervisor's digest and records the labels. By the owner's
+  decision, a session sealed before the `world` label has no world and supports
+  `game` facts only. [Trace workbench](trace-workbench.md#projection)
 - [The schema migration leaf](https://github.com/CVX-Hull/enactive/issues/835): the
   exact stored shapes and messages; the archive index entries for retained sessions;
   what each evaluator, viewer and ledger reader does with the `world` label; and the

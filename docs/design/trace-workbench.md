@@ -18,7 +18,8 @@ evaluation or the curator, and it opens no network or process.
 
 ## Projection
 
-[`projection.project`](../../harness/trace/projection.py) writes `trace-projection/2`.
+[`projection.project`](../../harness/trace/projection.py) writes `trace-projection/3`.
+The workbench and curator window require this version.
 It reads sealed sessions only. A staged snapshot of a session that is still being
 played, which it could read in the same way, is designed in
 [running the curator during play](live-curator-integration.md#the-snapshot).
@@ -35,8 +36,37 @@ played, which it could read in the same way, is designed in
 - **Sealed handoff packets.**
 - **The memory store**, read through the evidence reader.
 
-The manifest records a digest for every file, what is never projected, and what is
-dropped.
+The manifest records a digest for every projected file, the exclusions, and one
+entry per session. Each entry pairs the session's directory `name` with its sealed
+`session_id`. Both are unique within a projection. The entry records `world`,
+`lineage` and `admission` (position within the lineage), each of which can be null.
+
+The projection reads `manifest.json` and `watch-start.json` in the run directory as
+evidence. It checks that the package schema is supported, the session identifiers
+in both records match the sealed store, and the SHA-256 of the package manifest's
+bytes matches the digest in the supervisor's `campaign-watch-start/4` launch record.
+If a record is missing or a check fails, all three labels are null. `label_check`
+identifies the failed check as `manifest-schema` for the package file, schema or
+label shape, `manifest-session` for the package's session identifier, or
+`supervisor-digest` for the supervisor record and its digest. `label_error` gives a
+fixed explanation without quoting either record. With verified evidence and valid
+labels, both diagnostic fields are null.
+The trace reads these files directly without the campaign tooling.
+
+The supported `campaign-run/10` manifest carries lineage and admission position.
+Retained `campaign-run/9` and `campaign-run/10` manifests carry no `world` label.
+A continuation admission's manifest freezes the game's save files under
+`initial_files`. A first admission's `initial_files` omits them. Admissions 1 and 2
+show both cases in [the retained `/9` evidence](../acceptance/2026-11-18-two-wake-memory-772.md#accounting-custody-and-retained-evidence)
+and [the retained `/10` evidence](../acceptance/2026-11-19-oceana-farm-memory-788.md).
+Reading a world from a save path would introduce a game binding that the trace may
+not hold. Sessions sealed before the `world` label have no world and support `game`
+facts only, by the [owner's decision](../decisions/owner-decisions.md).
+
+The curator window carries the directory name, world, lineage, admission position
+and label diagnostics keyed by sealed session identifier. The map is available in
+`positions(...).sessions` or through `session_labels(manifest)`. Frame positions
+retain their four keys `session`, `actor`, `step` and `order`.
 
 **Fail-closed secret guard.** Some channels are free text an actor or service wrote:
 reports, handoff summaries and knowledge, memory records and error reasons. No allowlist
@@ -52,7 +82,7 @@ log, frame IDs from another session, and actors without frozen inputs.
 
 **What it never contains:** `actor.json` (custody token), `route.json` (provider route),
 MCP and host configuration, process records, custodian, viewer and watch files, receipts,
-raw `host.jsonl` and the raw session store. Session, actor and operation IDs stay, because
+raw run package manifests, raw `host.jsonl` and the raw session store. Session, actor and operation IDs stay, because
 they grant nothing and are how frames are cited.
 
 **Tests** ([`tests/test_trace_projection.py`](../../tests/test_trace_projection.py)):
@@ -63,6 +93,10 @@ they grant nothing and are how frames are cited.
   handoff knowledge and summary, a memory record, an error reason, and a bearer string.
   Each projection is refused and leaves nothing behind.
 - **Integrity.** A frame whose bytes differ from its sealed hash is refused.
+- **Session labels.** Verified manifests label sessions independently. Invalid evidence
+  leaves the affected session unlabelled with the failed check and its reason. The
+  [window tests](../../tests/test_curator_window.py) cover the label map and refusal
+  of the previous projection version, and an isolated import checks the copied workbench.
 - **Real lineages.** The sealed #397 lineage and the six sampled #372 runs are
   projected and scanned for every custody token, custodian URL and route value of
   their actors, plus key-like patterns ([result](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)).

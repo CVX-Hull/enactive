@@ -11,13 +11,16 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import sqlite3
+import subprocess
+import sys
 
-from PIL import Image
 import pytest
 
 from harness.trace import memory_reader
 from harness.trace.projection import ProjectionError, _result, project
+from tests.curator_trace import SESSION_ID, make_long_session, png, record_package, world_manifest_schema
 
 ROOT = Path(__file__).resolve().parents[1]
 # A worktree has no evidence store; ENACTIVE_EVIDENCE_ROOT points at a checkout's sealed store.
@@ -25,12 +28,6 @@ EVIDENCE = Path(os.environ.get('ENACTIVE_EVIDENCE_ROOT', ROOT/'.runtime'/'eviden
 TOKEN = 'secret-custody-token-0123456789abcdef'
 BASE_URL = 'http://127.0.0.1:52341'
 ROUTE_KEY = 'provider-route-key-should-never-appear'
-
-
-def png(color) -> bytes:
-    stream = io.BytesIO()
-    Image.new('RGB', (4, 4), color).save(stream, format='PNG')
-    return stream.getvalue()
 
 
 def make_session(root: Path, name='s1') -> Path:
@@ -241,11 +238,215 @@ def test_workbench_commands_over_a_projection(tmp_path):
             run(*bad)
 
 
+def test_workbench_entry_imports_from_the_curator_copy(tmp_path):
+    workbench = tmp_path/'workbench'
+    package = workbench/'harness'
+    shutil.copytree(ROOT/'harness'/'trace', package/'trace', ignore=shutil.ignore_patterns('__pycache__'))
+    (package/'__init__.py').write_text('')
+    result = subprocess.run(
+        [sys.executable, '-I', '-B', '-c', "import sys; sys.path.insert(0, '.'); "
+         "from harness.trace import workbench; assert 'harness.trace.projection' not in sys.modules"],
+        cwd=workbench, capture_output=True, text=True, timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_projection_never_overwrites_an_existing_target(tmp_path):
     session = make_session(tmp_path)
     (tmp_path/'trace').mkdir()
     with pytest.raises(ProjectionError, match='must not exist'):
         project([session], tmp_path/'trace')
+
+
+def test_workbench_refuses_an_old_projection(tmp_path, capsys):
+    from harness.trace import workbench
+
+    trace = tmp_path/'trace'
+    manifest = project([make_session(tmp_path)], trace)
+    (trace/'manifest.json').write_text(json.dumps(dict(manifest, schema='trace-projection/2')))
+    with pytest.raises(SystemExit) as caught:
+        workbench.main(['steps', str(trace)])
+    assert caught.value.code == 2
+    assert 'Expected a trace-projection/3 manifest' in capsys.readouterr().err
+
+
+@pytest.fixture
+def labelled_sessions(tmp_path, world_manifest_schema):
+    sessions = []
+    expected = []
+    for name, session_id in [('pond', SESSION_ID), ('forest', 'b' * 32)]:
+        session = make_long_session(tmp_path, name, steps=1, actors=('001',), session_id=session_id)
+        labels = dict(world=name, lineage=f'{name} survivor', admission=3)
+        record_package(session, schema=world_manifest_schema, session_id=session_id, labels=labels)
+        sessions.append(session)
+        expected.append(dict(name=name, session_id=session_id, **labels, label_check=None, label_error=None))
+    return sessions[0], sessions[1], expected
+
+
+def test_projection_records_verified_session_labels_from_two_worlds(tmp_path, labelled_sessions):
+    first, second, expected = labelled_sessions
+    out = tmp_path/'trace'
+    manifest = project([first, second], out)
+    assert manifest['schema'] == 'trace-projection/3'
+    assert [{key: row[key] for key in expected[0]} for row in manifest['sessions']] == expected
+    assert json.loads((out/'manifest.json').read_text()) == manifest
+    assert not list(out.rglob('watch-start.json'))
+    assert b'raw package sentinel' not in all_bytes(out)
+
+
+@pytest.mark.parametrize('lineage,admission', [('pond survivor', 3), (None, None)])
+def test_current_run_package_supplies_no_world(tmp_path, lineage, admission):
+    session = make_long_session(tmp_path, steps=1, actors=('001',))
+    record_package(session, labels=dict(lineage=lineage, admission=admission))
+    entry, = project([session], tmp_path/'trace')['sessions']
+    assert (entry['world'], entry['lineage'], entry['admission'], entry['label_check'], entry['label_error']) == (
+        None, lineage, admission, None, None)
+
+
+def test_world_label_can_have_null_lineage_and_admission(tmp_path, world_manifest_schema):
+    session = make_long_session(tmp_path, steps=1, actors=('001',))
+    labels = dict(world='pond', lineage=None, admission=None)
+    record_package(session, schema=world_manifest_schema, labels=labels)
+    entry, = project([session], tmp_path/'trace')['sessions']
+    assert {key: entry[key] for key in labels} == labels
+    assert entry['label_check'] is entry['label_error'] is None
+
+
+def refresh_launch_digest(session: Path) -> None:
+    launch = session/'watch-start.json'
+    opening = json.loads(launch.read_bytes())
+    opening['manifest_sha256'] = hashlib.sha256((session/'manifest.json').read_bytes()).hexdigest()
+    launch.write_text(json.dumps(opening))
+
+
+def assert_failed_labels(out: Path, labelled_sessions, check: str, diagnostic: str) -> None:
+    first, second, expected = labelled_sessions
+    entry, untouched = project([first, second], out)['sessions']
+    assert entry['world'] is entry['lineage'] is entry['admission'] is None
+    assert (entry['label_check'], entry['label_error']) == (check, diagnostic)
+    assert entry['actors'][0]['frames'] == 1
+    assert {key: untouched[key] for key in expected[1]} == expected[1]
+    assert b'private-diagnostic-sentinel' not in all_bytes(out)
+
+
+@pytest.mark.parametrize('labels,diagnostic', [
+    pytest.param(None, 'run package manifest lacks its required labels', id='missing-labels'),
+    pytest.param(dict(world='pond', admission=None), 'run package manifest lacks its required labels',
+                 id='world-with-missing-lineage-field'),
+    pytest.param(dict(world='private-diagnostic-sentinel\n', lineage='survivor', admission=3),
+                 'run package manifest has an invalid world label', id='non-printable-world'),
+    pytest.param(dict(world='pond', lineage='private-diagnostic-sentinel\n', admission=3),
+                 'run package manifest has an invalid lineage label', id='non-printable-lineage'),
+    pytest.param(dict(world='pond', lineage='survivor', admission=True),
+                 'run package manifest has an invalid admission position', id='invalid-admission'),
+    pytest.param(dict(world='pond', lineage='survivor', admission=0),
+                 'run package manifest has an invalid admission position', id='admission-below-range'),
+    pytest.param(dict(world='pond', lineage='survivor', admission=10001),
+                 'run package manifest has an invalid admission position', id='admission-above-range'),
+    pytest.param(dict(world='pond', lineage='s' * 41, admission=3),
+                 'run package manifest has an invalid lineage label', id='lineage-too-long'),
+    pytest.param(dict(world='pond', lineage=5, admission=3),
+                 'run package manifest has an invalid lineage label', id='lineage-not-text'),
+    pytest.param(dict(world='pond', lineage='survivor', admission=None),
+                 'run package manifest must label lineage and admission together', id='lineage-without-admission'),
+    pytest.param(dict(world='pond', lineage=None, admission=3),
+                 'run package manifest must label lineage and admission together', id='admission-without-lineage'),
+    pytest.param(dict(world=None, lineage='survivor', admission=3),
+                 'run package manifest must label the world of a lineage', id='lineage-without-world'),
+])
+def test_unusable_label_shapes_keep_the_trace_and_no_labels(tmp_path, labelled_sessions, labels, diagnostic):
+    session, _, _ = labelled_sessions
+    package = session/'manifest.json'
+    document = json.loads(package.read_bytes())
+    if labels is None:
+        del document['labels']
+    else:
+        document['labels'] = labels
+    package.write_text(json.dumps(document))
+    refresh_launch_digest(session)
+    assert_failed_labels(tmp_path/'trace', labelled_sessions, 'manifest-schema', diagnostic)
+
+
+@pytest.mark.parametrize('file,check,diagnostic', [
+    ('manifest.json', 'manifest-schema', 'unsupported run package manifest schema'),
+    ('watch-start.json', 'supervisor-digest', 'unsupported supervisor launch record schema'),
+])
+def test_label_evidence_that_is_not_an_object_keeps_the_trace_and_no_labels(
+        tmp_path, labelled_sessions, file, check, diagnostic):
+    session, _, _ = labelled_sessions
+    (session/file).write_bytes(b'[]')
+    assert_failed_labels(tmp_path/'trace', labelled_sessions, check, diagnostic)
+
+
+@pytest.mark.parametrize('file,limit,check', [
+    ('manifest.json', 1048576, 'manifest-schema'),
+    ('watch-start.json', 65536, 'supervisor-digest'),
+])
+@pytest.mark.parametrize('damage,detail', [
+    ('missing', 'missing or unreadable'),
+    ('symlink', 'missing or unreadable'),
+    ('oversize', 'exceeds its byte bound'),
+    ('bad JSON', 'has invalid JSON'),
+    ('duplicate key', 'has invalid JSON'),
+])
+def test_unusable_label_evidence_files_keep_the_trace_and_no_labels(
+        tmp_path, labelled_sessions, file, limit, check, damage, detail):
+    session, _, _ = labelled_sessions
+    path = session/file
+    if damage == 'missing':
+        path.unlink()
+    elif damage == 'symlink':
+        target = path.rename(path.with_suffix('.original.json'))
+        path.symlink_to(target)
+    elif damage == 'oversize':
+        path.write_bytes(path.read_bytes().ljust(limit + 1))
+    elif damage == 'bad JSON':
+        path.write_bytes(b'{')
+    else:
+        path.write_bytes(b'{"private-diagnostic-sentinel":0,"private-diagnostic-sentinel":0,' + path.read_bytes()[1:])
+    if file == 'manifest.json' and path.is_file():
+        refresh_launch_digest(session)
+    assert_failed_labels(tmp_path/'trace', labelled_sessions, check, f'{file} {detail}')
+
+
+@pytest.mark.parametrize('file,field,value,check,diagnostic', [
+    ('manifest.json', 'schema', 'campaign-run/9', 'manifest-schema', 'unsupported run package manifest schema'),
+    ('manifest.json', 'session', 'private-diagnostic-sentinel', 'manifest-session',
+     'manifest session differs from sealed session'),
+    ('watch-start.json', 'schema', 'private-diagnostic-sentinel', 'supervisor-digest',
+     'unsupported supervisor launch record schema'),
+    ('watch-start.json', 'session', 'private-diagnostic-sentinel', 'supervisor-digest',
+     'supervisor launch record session differs from sealed session'),
+    ('watch-start.json', 'manifest_sha256', None, 'supervisor-digest',
+     'manifest SHA-256 differs from supervisor launch record'),
+    ('manifest.json', 'labels', dict(world='farm', lineage='pond survivor', admission=3), 'supervisor-digest',
+     'manifest SHA-256 differs from supervisor launch record'),
+])
+def test_mismatched_label_evidence_keeps_the_trace_and_no_labels(
+        tmp_path, labelled_sessions, file, field, value, check, diagnostic):
+    session, _, _ = labelled_sessions
+    path = session/file
+    document = json.loads(path.read_bytes())
+    if value is None:
+        del document[field]
+    else:
+        document[field] = value
+    path.write_text(json.dumps(document))
+    if file == 'manifest.json' and check != 'supervisor-digest':
+        refresh_launch_digest(session)
+    assert_failed_labels(tmp_path/'trace', labelled_sessions, check, diagnostic)
+
+
+@pytest.mark.parametrize('name,session_id,diagnostic', [
+    ('s1', 'b' * 32, 'Two sessions share a name'),
+    ('s2', SESSION_ID, 'Two session directories share a sealed identifier'),
+])
+def test_projection_requires_distinct_names_and_sealed_identifiers(tmp_path, name, session_id, diagnostic):
+    first = make_long_session(tmp_path/'first', steps=1, actors=('001',))
+    second = make_long_session(tmp_path/'second', name, steps=1, actors=('001',), session_id=session_id)
+    with pytest.raises(ProjectionError, match=diagnostic):
+        project([first, second], tmp_path/'trace')
+    assert no_output(tmp_path)
 
 
 def make_store(path: Path, schema='player-memory/2'):
@@ -420,7 +621,7 @@ def test_journal_projection_is_public_read_only_and_hashed(tmp_path):
     out = tmp_path/'trace'
     manifest = project([session], out, journal=journal)
     doc = json.loads((out/'journal.json').read_text())
-    assert manifest['schema'] == 'trace-projection/2' and manifest['hints'] == 'journal.json and tool calls'
+    assert manifest['schema'] == 'trace-projection/3' and manifest['hints'] == 'journal.json and tool calls'
     assert doc['hints'][0]['text'] == 'out-of-window journal sentinel'
     assert doc['calls'][0]['arguments']['intent'] == 'remember'
     assert b'private' not in (out/'journal.json').read_bytes()
