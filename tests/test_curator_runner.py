@@ -18,15 +18,15 @@ import pytest
 
 from harness.curator import runner as live
 from harness.curator import sandbox
-from harness.curator.gate import COVERAGE
+from harness.curator.gate import COVERAGE, journal as gate_journal
 from harness.curator.knowledge import Repository
 from harness.curator.runner import ActorSteps, Outcome, Reading, Runner, Settings, TagLook, choose, covered
 from harness.curator.session import SessionConfig, SessionError, run_session
 from harness.curator.window import Window
 from harness.trace.snapshot import BoundExceeded, ReadRefused, SnapshotError
-from harness.trace.stores import sealed
+from harness.trace.stores import CURATOR_READ_LOCK, sealed
 from tests.curator_stand_in import StandIn
-from tests.curator_trace import LiveWriter, make_long_session
+from tests.curator_trace import SESSION_ID, LiveWriter, _Writer, make_long_session, record_package
 from tools.curator_host import live_runner, shadow
 
 RUN = 'run'
@@ -562,6 +562,67 @@ def test_the_tag_look_lists_each_version_of_a_real_repository_with_its_stamp(tmp
     repo.ensure()
     look = TagLook(repo)
     assert look() == {'v0': dict(coverage=None, restored_from=None)}
+
+
+def test_three_runner_windows_publish_when_the_first_two_share_a_frame(tmp_path, monkeypatch):
+    repo = Repository(tmp_path/'knowledge', 'testgame')
+    repo.ensure()
+    config = SessionConfig(argv=('scripted',), host=dict(name='scripted'))
+
+    def submit(_argv, layout, **_kwargs):
+        workspace = layout.workspace
+        base = (workspace/'brief.md').read_text().split('`')[1]
+        step = json.loads((workspace/'trace'/RUN/'001'/'steps.jsonl').read_text())
+        changes = []
+        if base == 'v0':
+            changes.append(dict(op='add_type', type=dict(schema='curator-type/1', name='container',
+                                                        description='a place that holds items', fields=['holds'])))
+        changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/3', record='fact', id=f'f{step["seq"]}',
+                                                     type='container', text='the cupboard holds bottles',
+                                                     scope=dict(game=repo.game), citations=[step['frame']])))
+        directory = workspace/'submissions'/'s1'
+        directory.mkdir()
+        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/1', base_version=base,
+                                                                 summary='window fact', changes=changes)))
+        return sandbox.Result(0, None, 0, 0, 0., [])
+
+    def session(reading, window, label):
+        result = run_session(repo, [reading.directory], config, window=window, session_id=label)
+        return Outcome(result['manifest']['lifecycle']['state'], tuple(result['verdicts']), session_id=label)
+
+    monkeypatch.setattr(sandbox, 'run', submit)
+    run = tmp_path/RUN
+    run.mkdir()
+    (run/CURATOR_READ_LOCK).touch()
+    record_package(run, labels=dict(lineage=None, admission=None))
+    runner = Runner(tmp_path/'runner', RUN, snapshot=live.staged(run), session_call=session, look=TagLook(repo),
+                    settings=Settings(trigger_steps=1, ceiling_steps=1))
+    writer = _Writer(run, SESSION_ID)
+    try:
+        writer.new_actor()
+        shared = writer.frame()
+        with monkeypatch.context() as reuse:
+            reuse.setattr(writer, 'frame', lambda: shared)
+            for _ in range(2):
+                writer.step()
+                assert runner.poll()
+        writer.step()
+        assert runner.poll()
+    finally:
+        writer.close()
+
+    verdicts = gate_journal(repo)
+    assert [(v['status'], v['version'], v['diagnostics']) for v in verdicts] == [
+        ('published', 'v1', []), ('published', 'v2', []), ('published', 'v3', [])]
+    now = status_of(runner)
+    assert [e['outcome'] for e in now['examined']] == ['accepted', 'accepted', 'accepted']
+    assert now['covered_prefix']['end']['step'] == 3 and now['lag'] == 0
+    frame = shared[0]['source_id']
+    recorded = dict(session=RUN, actor='001', step=1, order=[1, '001', 1])
+    assert repo.provenance()['frames'][frame] == recorded
+    first, second, third = repo.facts()
+    assert first['citations'] == second['citations'] == [frame]
+    assert first['seen'] == second['seen'] == recorded and third['seen']['step'] == 3
 
 
 # ---------------------------------------------------------------- beside a growing trace, with a real session

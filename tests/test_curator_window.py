@@ -4,9 +4,11 @@ Portable: synthetic sealed sessions projected to a temporary directory; no sandb
 """
 from __future__ import annotations
 
+from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -200,6 +202,25 @@ def test_sightings_follow_trace_order_even_when_windows_are_replayed_backwards(t
     assert positions(later, later_manifest, known | added) == known
     assert added[frame_id(1, 2)] == dict(session='s1', actor='001', step=2, order=[1, '001', 2])
     assert added.sessions == known.sessions == {SESSION_ID: dict(name='s1', **labels, label_check=None, label_error=None)}
+
+
+@pytest.mark.parametrize('recorded_step', [3, 5])
+def test_a_window_preserves_the_recorded_position_of_a_repeated_frame(tmp_path, recorded_step):
+    out, manifest = narrowed(tmp_path, Window('s1', '001', 4, 4))
+    frame = frame_id(1, 4)
+    recorded = dict(session='s1', actor='001', step=recorded_step, order=[1, '001', recorded_step])
+    assert positions(out, manifest, {frame: recorded}) == {frame: recorded}
+
+
+def test_a_new_frame_uses_its_earliest_position_when_it_repeats_in_one_window(tmp_path):
+    trace = make_long_session(tmp_path/'evidence', steps=2, actors=('001',))
+    frame = frame_id(1, 1)
+    with closing(sqlite3.connect(trace/'session.sqlite3')) as db, db:
+        db.execute('UPDATE native_intents SET source = ? WHERE operation = ?', (frame, 'op-1-2'))
+    out = tmp_path/'trace'
+    manifest = restrict(out, project([trace], out), Window('s1', '001', 1, 2))
+    assert [step['frame'] for step in steps(out)] == [frame, frame]
+    assert positions(out, manifest, {}) == {frame: dict(session='s1', actor='001', step=1, order=[1, '001', 1])}
 
 
 def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path):

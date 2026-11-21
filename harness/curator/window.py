@@ -176,7 +176,7 @@ def session_labels(manifest: dict) -> dict[str, dict]:
 
 
 def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> FramePositions:
-    """Assign a stable ordered position to each frame, retaining its latest occurrence.
+    """Keep each frame's recorded position, or its earliest occurrence in this window.
 
     Session order follows the supplied order; actor order is directory order;
     step order is seq. The identity and seq are retained beside the ordinal for inspection.
@@ -191,11 +191,14 @@ def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> FramePosi
         for actor in session['actors']:
             for step in _jsonl(out/session['name']/actor['directory']/'steps.jsonl'):
                 frame = step.get('frame')
-                if frame:
-                    position = dict(session=session['name'], actor=actor['directory'], step=step['seq'],
-                                    order=[admissions[session['name']], actor['directory'], step['seq']])
-                    candidates = [p for p in (previous.get(frame), result.get(frame), position) if p]
-                    result[frame] = max(candidates, key=lambda p: p['order'])
+                if not frame:
+                    continue
+                if frame in previous:
+                    result[frame] = previous[frame]
+                    continue
+                order = [admissions[session['name']], actor['directory'], step['seq']]
+                if frame not in result or order < result[frame]['order']:
+                    result[frame] = dict(session=session['name'], actor=actor['directory'], step=step['seq'], order=order)
     missing = {Path(name).stem for name in manifest['files'] if name.startswith('frames/')} - result.keys()
     if missing:
         raise WindowError(f'frames without trace positions: {sorted(missing)}')
