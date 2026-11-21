@@ -368,8 +368,8 @@ def test_a_listed_newer_knowledge_version_is_delivered_and_an_entry_that_does_no
                           enabled_tools=("integer",))
     version = dict(schema="delivered-knowledge/2", version="v1", commit="c" * 40, repository_id="d" * 40,
                    coverage=dict(schema="curator-coverage/2", session="2" * 32, actor="001", last_step=20),
-                   articles=[dict(id="article-a", title="A subject", lead="A useful lead. More.", body=[dict(text="A claim.", facts=["fact-a"])], links=[])],
-                   facts=[dict(id="fact-a", type="observation", text="A claim.")])
+                   articles=[dict(id="article-a", title="A subject", lead="A useful lead. More.", body=[dict(text="A claim.", facts=["fact-a"])], links=[], last_confirmed=dict(order=1))],
+                   facts=[dict(id="fact-a", type="observation", text="A claim.", seen=dict(order=1))])
     data = json.dumps(version).encode()
     (tmp_path / "knowledge").mkdir()
     (tmp_path / "knowledge" / "v1.json").write_bytes(data)

@@ -373,6 +373,22 @@ def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_h
     validator.assert_not_called()
 
 
+def test_a_current_package_with_a_private_export_of_the_retired_knowledge_version_refuses_preflight(tmp_path):
+    """R-REGRESSION (B5), S-MIGRATION: a `/12` package whose private full export is `delivered-knowledge/1` is
+    refused even when its hashes and selection match the manifest."""
+    directory, profile = package(tmp_path, world='the farm')
+    path = directory/'private/knowledge-full.json'
+    full = json.loads(path.read_text())
+    assert full['schema'] == 'delivered-knowledge/2' and full['selection']['world'] == 'the farm'
+    path.write_text(json.dumps(dict(full, schema='delivered-knowledge/1')))
+    profile['private_files'][path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run') as validator:
+        with pytest.raises(ControlError, match='Unsupported private full knowledge'):
+            packages.preflight(directory)
+    validator.assert_not_called()
+
+
 @pytest.mark.parametrize('when',['before','during'])
 def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path,when):
     directory,profile=package(tmp_path)

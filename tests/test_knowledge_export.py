@@ -148,6 +148,44 @@ def test_delivered_knowledge_names_a_commit_and_repository_exactly_when_it_names
             Knowledge.from_dict({k: v for k, v in value.items() if k != missing})
 
 
+def edited(change):
+    value = store()
+    value['facts'][4]['subject'] = 'Unfiled subject'
+    change(value)
+    return value
+
+
+@pytest.mark.parametrize('label,change', [
+    ('fact without text', lambda v: v['facts'][0].pop('text')),
+    ('fact with an empty type', lambda v: v['facts'][0].update(type='')),
+    ('fact with an extra field', lambda v: v['facts'][0].update(scope={})),
+    ('fact without seen', lambda v: v['facts'][0].pop('seen')),
+    ('fact with an empty subject', lambda v: v['facts'][4].update(subject='')),
+    ('article without links', lambda v: v['articles'][0].pop('links')),
+    ('article with an extra field', lambda v: v['articles'][0].update(record='article')),
+    ('article with an empty body', lambda v: v['articles'][0].update(body=[])),
+    ('claim without facts', lambda v: v['articles'][0]['body'][0].update(facts=[])),
+    ('article with a non-string link', lambda v: v['articles'][0].update(links=[1])),
+    ('article with last_confirmed null', lambda v: v['articles'][0].update(last_confirmed=None)),
+    ('coverage carrying world', lambda v: v['coverage'].update(world='farm')),
+    ('coverage of another schema', lambda v: v['coverage'].update(schema='curator-coverage/1')),
+    ('coverage without a session', lambda v: v['coverage'].update(session='')),
+    ('coverage with a boolean step', lambda v: v['coverage'].update(last_step=True)),
+    ('coverage with an empty actor', lambda v: v['coverage'].update(actor='')),
+])
+def test_the_reader_refuses_a_public_article_fact_or_coverage_outside_its_closed_form(label, change):
+    """R-REGRESSION (B3): the forms `published` writes, checked as `tools/player_host/knowledge.mjs` checks them."""
+    from harness.player.contracts import PlayerError
+    assert Knowledge.from_dict(edited(lambda v: None)).read('fact-4')['records'][0]['subject'] == 'Unfiled subject'
+    with pytest.raises(PlayerError, match='unsupported delivered knowledge'):
+        Knowledge.from_dict(edited(change))
+
+
+def test_the_reader_accepts_coverage_with_an_actor_and_no_step():
+    value = edited(lambda v: v['coverage'].update(actor='actor-1', last_step=None))
+    assert Knowledge.from_dict(value).value['coverage']['actor'] == 'actor-1'
+
+
 @pytest.mark.parametrize('fields', [
     dict(schema='curator-fact/3'),
     dict(scope=dict(game='other', level='game')),

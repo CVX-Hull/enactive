@@ -14,8 +14,7 @@ replacement: docs/components/curator.md
   trail play?
 - **Answer.** A runner stages snapshots, curates one actor's window at a time and
   publishes through the gate. The snapshot reader, runner and schedule replay
-  operate offline. A package can deliver each newly confirmed version to the
-  running actor ([delivery](#delivery-to-a-running-actor)).
+  operate offline, and delivery within an admission belongs to a separate design.
   [Curator component](../components/curator.md)
 - **Unknown.** Lag, cost, snapshot timing and player pace beside a real custodian
   are unmeasured. Curation stays outside the input path and shares disk work.
@@ -95,7 +94,7 @@ guard. The window excludes the player's journal.
 
 The snapshot stages the campaign manifest and supervisor launch record when present.
 The [trace projection](../../harness/trace/projection.py) verifies world, lineage and
-admission position from the current `campaign-run/12` manifest by checking both
+admission position from the current `campaign-run/11` manifest by checking both
 records against the staged store’s session ID and checking
 the manifest bytes against the supervisor's recorded digest. The
 [world-scope design](world-scoped-memory.md#provenance-and-the-checks-it-allows) specifies
@@ -169,22 +168,17 @@ not examine what the runner missed.
 
 ## Delivery to a running actor
 
-A package without [`live_knowledge_updates`](../operations/campaign-run.md#live-knowledge-updates)
-gives each actor its frozen knowledge, as the first live run had. With it, the
-runner [exports each newly confirmed version](../components/curator.md#delivery-to-a-running-actor)
-into the run directory. The driver adopts a verified version for the application's
-knowledge tools and appends it to the running actor's update list. Before its next
-player request, the host adopts it for later recall and states the difference in one
-message. A successor starts from the latest adopted version. Nothing waits for
-publication, and a refused version leaves play on the version already held. The
-[host contract](../contracts/player-host.md#a-newer-version-during-play) owns the
-interfaces, and the [context design](player-context.md#the-delivery-boundary) the
-request shape.
+The first live run uses each actor's frozen knowledge. A later admission can receive
+newly published versions through its package. The
+[within-admission delivery migration (#838)](https://github.com/CVX-Hull/enactive/issues/838)
+selects one recorded version at a request boundary. The briefing, recall and
+knowledge tools use that version for the request. The
+[context design](player-context.md#the-delivery-boundary) owns the current delivery
+interfaces.
 
 ## The spectator view
 
-The viewer keeps the actor's frozen delivered version, the update deliveries its
-trace records and the curator's recorded
+The viewer keeps the actor's frozen delivered version and the curator's recorded
 progress distinct. The [status contract](../contracts/spectator-view.md#curator-runner-status)
 defines the viewer fields. The [runner](../../harness/curator/runner.py) owns
 `curator-runner/status.json`, its fields and its write cadence.

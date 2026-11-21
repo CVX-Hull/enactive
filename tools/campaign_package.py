@@ -173,7 +173,9 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     except (ValueError, RecursionError) as exc:
         raise ControlError('Invalid private full knowledge') from exc
     selection = dict(world=profile['labels']['world'], delivered_sha256=profile['files']['delivered-knowledge.json'])
-    if not isinstance(full, dict) or full.get('selection') != selection:
+    if not isinstance(full, dict) or full.get('schema') != 'delivered-knowledge/2':
+        raise ControlError('Unsupported private full knowledge; expected delivered-knowledge/2')
+    if full.get('selection') != selection:
         raise ControlError('Private knowledge selection differs from the package world or delivered SHA-256')
     if profile['live_knowledge_updates']:
         # A newer version is exported whole, so it would deliver what a draw withheld.

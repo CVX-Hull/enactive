@@ -23,14 +23,51 @@ def version_number(version: object) -> int | None:
     return int(version[1:]) if isinstance(version, str) and VERSION.fullmatch(version) else None
 
 
+# The public record forms `tools/knowledge_export.py` writes; `tools/player_host/knowledge.mjs` checks the same ones.
+COVERAGE_FIELDS = frozenset(('schema', 'session', 'actor', 'last_step'))
+ARTICLE_FIELDS = frozenset(('id', 'title', 'lead', 'body', 'links', 'last_confirmed'))
+FACT_FIELDS, FACT_REQUIRED = frozenset(('id', 'type', 'text', 'subject', 'seen')), frozenset(('id', 'type', 'text', 'seen'))
+
+
+def _filled(value: object) -> bool:
+    return isinstance(value, str) and bool(value)
+
+
+def _names(value: object, *, nonempty: bool) -> bool:
+    return (isinstance(value, list) and (bool(value) or not nonempty) and all(_filled(v) for v in value)
+            and len(set(value)) == len(value))
+
+
+def _coverage(value: object) -> bool:
+    return value is None or (
+        isinstance(value, dict) and set(value) == COVERAGE_FIELDS and value['schema'] == 'curator-coverage/2'
+        and _filled(value['session']) and (value['actor'] is None or _filled(value['actor']))
+        and (value['last_step'] is None or type(value['last_step']) is int))
+
+
+def _article(value: object) -> bool:
+    return (isinstance(value, dict) and set(value) == ARTICLE_FIELDS
+            and all(_filled(value[k]) for k in ('id', 'title', 'lead')) and _names(value['links'], nonempty=False)
+            and isinstance(value['last_confirmed'], dict) and isinstance(value['body'], list) and bool(value['body'])
+            and all(isinstance(c, dict) and set(c) == {'text', 'facts'} and _filled(c['text'])
+                    and _names(c['facts'], nonempty=True) for c in value['body']))
+
+
+def _fact(value: object) -> bool:
+    return (isinstance(value, dict) and FACT_REQUIRED <= set(value) <= FACT_FIELDS
+            and all(_filled(value[k]) for k in ('id', 'type', 'text')) and ('subject' not in value or _filled(value['subject']))
+            and isinstance(value['seen'], dict))
+
+
 def _valid(value: object) -> bool:
-    if not isinstance(value, dict) or set(value) != FIELDS or value['schema'] != SCHEMA:
+    if not isinstance(value, dict) or set(value) != FIELDS or value['schema'] != SCHEMA or not _coverage(value['coverage']):
         return False
     if not all(isinstance(value[name], list) for name in ('articles', 'facts')):
         return False
+    if not all(map(_article, value['articles'])) or not all(map(_fact, value['facts'])):
+        return False
     records = value['articles'] + value['facts']
-    if not all(isinstance(r, dict) and isinstance(r.get('id'), str) for r in records) \
-            or len({r['id'] for r in records}) != len(records):
+    if len({r['id'] for r in records}) != len(records):
         return False
     # A published version names its tag's commit and its repository; the empty file names neither.
     identity = (value['version'], value['commit'], value['repository_id'])

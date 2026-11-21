@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 from decimal import Decimal, InvalidOperation
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -228,10 +229,22 @@ VERSION_FILE = re.compile(r'v(0|[1-9][0-9]*)\.json')
 
 
 def delivery_world(run: Path) -> tuple[bool, str | None]:
-    """Whether the run's package delivers newer versions to a running actor, and the world its facts are selected for."""
-    manifest = json.loads((run/'manifest.json').read_text())
+    """Whether the run's package delivers newer versions to a running actor, and the world its facts are selected for.
+
+    The manifest is trusted only as the supervisor launched it: its bytes must have the SHA-256 that the
+    supervisor's `campaign-watch-start/4` launch record names for the same session, the checks the trace
+    projection makes before it reads labels (`harness/trace/projection.py`). The bytes checked are the bytes read."""
+    data = (run/'manifest.json').read_bytes()
+    manifest = json.loads(data)
     if not isinstance(manifest, dict) or manifest.get('schema') != MANIFEST_SCHEMA:
         raise ValueError(f'{run/"manifest.json"}: not a {MANIFEST_SCHEMA} manifest')
+    opening = json.loads((run/'watch-start.json').read_bytes())
+    if not isinstance(opening, dict) or opening.get('schema') != 'campaign-watch-start/4':
+        raise ValueError(f'{run/"watch-start.json"}: unsupported supervisor launch record schema')
+    if opening.get('session') != manifest.get('session'):
+        raise ValueError(f'{run/"watch-start.json"}: supervisor launch record session differs from the manifest session')
+    if opening.get('manifest_sha256') != hashlib.sha256(data).hexdigest():
+        raise ValueError(f'{run/"manifest.json"}: SHA-256 differs from the supervisor launch record')
     return manifest['live_knowledge_updates'] is True, knowledge_export.world_label(manifest['labels']['world'])
 
 

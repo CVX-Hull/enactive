@@ -40,49 +40,95 @@ class LiveKnowledge:
 
     The curator runner leaves each confirmed version whole as `vN.json` in `source`. `poll` adopts the
     highest one above the current version that is `delivered-knowledge/2`, names version `vN` and comes
-    from the repository of the version already held (any repository after the empty file). For a running
-    actor it copies the file to `knowledge/vN.json` in the actor's directory, appends one
-    `knowledge-update-entry/1` line to the actor's update list and has the application serve the version;
-    the host reads that list. The next actor's frozen file is the latest version adopted.
+    from the repository of the version already held (any repository after the empty file). For the
+    running actor (`begin`) it copies the file to `knowledge/vN.json` in the actor's directory, publishes
+    the actor's update list with one more `knowledge-update-entry/1` line and has the application serve the
+    version; the host reads that list. Between actors (after `end`) a version is adopted for the next
+    actor's frozen file alone, which `begin` returns.
 
-    Nothing here raises or waits. A version that does not verify is reported once on stderr and never
-    tried again, and play goes on with the version already held.
+    During a run `start` makes the looks on a daemon thread, so a slow or stalled read of `source` never
+    holds up the driver's deadline checks, settlement or handoff. The adopted snapshot (`current`,
+    `data`), the running actor and the publication of its list change together under `lock`, held only
+    for the list's rename and the application's swap; `begin` and `end` take it and never read `source`.
+    A version prepared for one actor is discarded, and decided again, if another actor begins first.
+
+    Nothing here raises or waits on `source`. A version that does not verify, or that cannot be
+    published, is reported once on stderr and never tried again, and play goes on with the version
+    already held.
     """
     def __init__(self,source: Path | None,package: Path):
         self.source=source
         self.data=package.read_bytes()
         self.current=Knowledge(package)
         self.refused=set()
+        self.lock=threading.Lock()
+        # One look at a time; held across reads of `source`, so only the looking thread ever waits on it.
+        self.looking=threading.Lock()
+        self.target=None;self.generation=0;self.closed=False
+        self.stopping=threading.Event();self.thread=None
 
     @property
     def number(self) -> int:
         number=version_number(self.current.value['version'])
         return -1 if number is None else number
 
-    def poll(self,application,target: Path | None=None) -> None:
-        """One look at the source. `target` is the running actor's directory; without one (between
-        actors) the version is adopted for the next actor's frozen file alone."""
-        if self.source is None:return
-        try:names=os.listdir(self.source)
-        except OSError:return  # no version has been left yet
-        numbers={int(match[1]) for name in names if (match:=VERSION_FILE.fullmatch(name))}
-        for number in sorted((n for n in numbers if n>self.number and n not in self.refused),reverse=True):
-            try:
-                self._adopt(number,application,target)
-                return
-            except Exception as exc:
-                self.refused.add(number)
-                print(f'campaign_player: live knowledge v{number} refused: {type(exc).__name__}: {str(exc)[:300]}',
-                      file=sys.stderr,flush=True)
+    def begin(self,target: Path) -> bytes:
+        """Attach the running actor and return the adopted version's bytes for its frozen file. `target`
+        holds the actor's update list already (empty). Never reads `source`."""
+        with self.lock:
+            self.target=target;self.generation+=1
+            return self.data
 
-    def _adopt(self,number: int,application,target: Path | None) -> None:
+    def end(self) -> None:
+        """Detach the actor that has stopped; later versions wait for the next actor."""
+        with self.lock:
+            self.target=None;self.generation+=1
+
+    def start(self,application,interval: float=.1) -> None:
+        """Look every `interval` seconds on a daemon thread until `close`."""
+        if self.source is None or self.thread is not None:return
+        def looks():
+            while not self.stopping.is_set():
+                self.poll(application)
+                self.stopping.wait(interval)
+        self.thread=threading.Thread(target=looks,name='live-knowledge',daemon=True)
+        self.thread.start()
+
+    def close(self) -> None:
+        """No adoption after this returns; a look stalled on `source` is left to the daemon thread."""
+        with self.lock:
+            self.closed=True;self.target=None;self.generation+=1
+        self.stopping.set()
+
+    def poll(self,application) -> None:
+        """One look at the source, for the running actor if one is attached."""
+        if self.source is None:return
+        with self.looking:
+            with self.lock:
+                if self.closed:return
+                target,generation,held=self.target,self.generation,self.current
+            try:names=os.listdir(self.source)
+            except OSError:return  # no version has been left yet
+            numbers={int(match[1]) for name in names if (match:=VERSION_FILE.fullmatch(name))}
+            least=version_number(held.value['version'])
+            for number in sorted((n for n in numbers if n>(-1 if least is None else least) and n not in self.refused),reverse=True):
+                try:
+                    self._adopt(number,application,target,generation,held)
+                    return
+                except Exception as exc:
+                    self.refused.add(number)
+                    print(f'campaign_player: live knowledge v{number} refused: {type(exc).__name__}: {str(exc)[:300]}',
+                          file=sys.stderr,flush=True)
+
+    def _adopt(self,number: int,application,target: Path | None,generation: int,held: Knowledge) -> None:
         data=(self.source/f'v{number}.json').read_bytes()
         knowledge=Knowledge.from_dict(strict_loads(data),f'live knowledge v{number}')
         value=knowledge.value
         if value['version']!=f'v{number}':raise ControlError('The file names another version')
-        held=self.current.value['repository_id']
-        if held is not None and value['repository_id']!=held:
+        repository=held.value['repository_id']
+        if repository is not None and value['repository_id']!=repository:
             raise ControlError('The version comes from another knowledge repository')
+        listing=None
         if target is not None:
             (target/'knowledge').mkdir(mode=0o700,exist_ok=True)
             name=f'knowledge/v{number}.json'
@@ -93,11 +139,31 @@ class LiveKnowledge:
             os.replace(temporary,target/name)
             entry=dict(schema=UPDATE_ENTRY_SCHEMA,version=value['version'],commit=value['commit'],
                 repository_id=value['repository_id'],file=name,sha256=hashlib.sha256(data).hexdigest(),coverage=value['coverage'])
-            # One whole line per write, on disk before the application serves the version.
-            with (target/UPDATES_FILE).open('ab') as stream:
-                stream.write((canonical(entry)+'\n').encode('utf-8'));stream.flush();os.fsync(stream.fileno())
-        application.set_knowledge(knowledge)
-        self.current,self.data=knowledge,data
+            # The whole list with one more line, durable beside the list before it replaces it: the host
+            # either sees the list as it was or with the whole new line, and a failed write changes nothing.
+            # This thread is the list's only writer, so its bytes are the published prefix.
+            path=target/UPDATES_FILE
+            try:prefix=path.read_bytes()
+            except FileNotFoundError:prefix=b''
+            listing=(target/f'.{UPDATES_FILE}.tmp',path)
+            try:
+                with listing[0].open('wb') as stream:
+                    stream.write(prefix+(canonical(entry)+'\n').encode('utf-8'));stream.flush();os.fsync(stream.fileno())
+                listing[0].chmod(0o600)
+            except BaseException:
+                listing[0].unlink(missing_ok=True);raise
+        with self.lock:
+            if self.closed or self.generation!=generation:
+                # Another actor began, or this one ended, while the version was prepared: the next look decides again.
+                if listing is not None:listing[0].unlink(missing_ok=True)
+                return
+            if listing is not None:
+                try:os.replace(*listing)
+                except BaseException:
+                    listing[0].unlink(missing_ok=True);raise
+            # Only after the list names the version: the application, the host and the successor move together.
+            application.set_knowledge(knowledge)
+            self.current,self.data=knowledge,data
 
 
 def configured_estimate(amounts) -> float | None:
@@ -341,13 +407,15 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             write_new(target/'prompt.txt',prompt,text=True)
             write_new(target/'player-final.txt','',text=True)
             # The actor starts from the latest version adopted in this run: the package's frozen file
-            # until a newer one arrived. One look here costs a directory listing and delays no handoff.
-            if live is None:live=LiveKnowledge(live_updates,directory/'delivered-knowledge.json')
-            live.poll(application)
-            with (target/'delivered-knowledge.json').open('xb') as stream:
-                stream.write(live.data)
-            (target/'delivered-knowledge.json').chmod(0o600)
+            # until a newer one arrived. The snapshot is in memory; `source` is read only on the looking
+            # thread, so no read of it delays a handoff.
+            if live is None:
+                live=LiveKnowledge(live_updates,directory/'delivered-knowledge.json')
+                live.start(application)
             if live_updates is not None:write_new(target/UPDATES_FILE,'',text=True)
+            with (target/'delivered-knowledge.json').open('xb') as stream:
+                stream.write(live.begin(target))
+            (target/'delivered-knowledge.json').chmod(0o600)
             write_new(target/'frozen.json',dict(schema='player-host-inputs/4',actor_id=actor['actor_id'],session=profile['session'],
                 finish_reserve_usd=profile['ending_reserve']['usd'],
                 knowledge_updates=UPDATES_FILE if live_updates is not None else None,
@@ -374,7 +442,6 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     record['ending_control_id']=ending_request['id']
                 while child.poll() is None:
                     events.read()
-                    live.poll(application,target)
                     now=time.monotonic()
                     application.host=dict(index=index,model=route['model']['id'],provider=route['model']['name'],
                         observed_attempts=total_attempts+len(events.requests),
@@ -433,6 +500,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             reason=f'{type(exc).__name__}: {str(exc)[:500]}'
             record['orchestration_error']=reason
         finally:
+            # Nothing more is listed for an actor that has stopped; a version left now waits for the next one.
+            if live is not None:live.end()
             if 'cleanup' not in record:
                 try:
                     record['cleanup']=close_group(child) if child is not None else dict(process_absent=True,group_absent=True)
@@ -461,6 +530,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             try:write_new(target/'driver-receipt.json',record)
             except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
         if record.get('orchestration_error'):break
+    if live is not None:live.close()
     reported=usd_sum(Decimal(r['reported_usd']) for r in records);unpriced=sum(r['unpriced_requests'] for r in records)
     recall_unpriced=sum(r['unpriced_recall_requests'] for r in records)
     # The subtotal covers all costs observed, even if a trace could not be reconciled.

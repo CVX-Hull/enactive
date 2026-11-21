@@ -122,10 +122,11 @@ def writer_main(args: argparse.Namespace) -> int:
         for actor in range(args.actors):
             writer.new_actor()
             directory = writer.actor['directory']
-            live.poll(Application())
-            (directory/'delivered-knowledge.json').write_bytes(live.data)
+            live.poll(Application())  # between actors: adopted for this actor's frozen file
             write_new(directory/UPDATES_FILE, '', text=True)
-            started[directory.name] = dict(version=live.current.value['version'], wall=time.time())
+            data = live.begin(directory)
+            (directory/'delivered-knowledge.json').write_bytes(data)
+            started[directory.name] = dict(version=json.loads(data)['version'], wall=time.time())
             for _ in range(args.steps):
                 due = first + count * args.pace
                 pause = due - time.monotonic()
@@ -136,7 +137,8 @@ def writer_main(args: argparse.Namespace) -> int:
                 answer = writer.step(hint=count % 3 == 0, split=count % 5 == 0)
                 steps.append(dict(index=count, actor=writer.actor['directory'].name, operation=answer['operation_id'],
                                   began_wall=began_wall, seconds=time.monotonic() - began, late=max(0., -pause)))
-                live.poll(Application(), directory)
+                live.poll(Application())
+            live.end()
             if actor < args.actors - 1:
                 writer.handoff()
     except Exception as exc:  # recorded; the close-out still runs, as the custodian's does
@@ -657,7 +659,9 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
         before = [s['version'] for s in record['served'] if s['wall'] <= actor['started']['wall']]
         starts = starts and actor['frozen_version'] == actor['started']['version'] == (before[-1] if before else None)
     checks['each_actor_started_from_the_latest_adopted_version'] = starts
-    checks['application_served_every_adopted_version_in_order'] = (
+    # The stand-in application records only the driver's `set_knowledge` calls; the real application's tools
+    # answering from the adopted version is tests/test_campaign_player.py's regression.
+    checks['driver_handed_every_adopted_version_to_application'] = (
         [number(v) for v in served] == sorted({number(v) for v in served})
         and {v for a in actors.values() for v in a['listed']} <= set(served) and not record['refused'])
 

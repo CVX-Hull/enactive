@@ -19,6 +19,8 @@ const STOP_TEXT = 'Automation control: orderly stop requested. Finish up and sto
 // Their values can alter request headers or enable raw SDK logging.
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
 const MCP_LIMIT_BYTES = 32 * 1_048_576;
+// How often a running host looks for a newer listed knowledge version between its other refreshes.
+const UPDATE_POLL_MS = 1000;
 const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
 // Adopt the pinned SDK helper's maintained default; original request/host
 // deadlines and one retry remain the outer bounds.
@@ -747,10 +749,12 @@ export async function runHost(options) {
     } finally { recallFlight = null; recallAttemptInFlight = false; }
   };
   // Live delivery of a newer delivered-knowledge version (`--knowledge-updates`). The driver appends one
-  // `knowledge-update-entry/1` line for each version it has verified and written beside the list. The host
-  // reads whole unread lines before it builds a player request and never waits for one. A problem with an
-  // entry or its file is recorded and play goes on with the version already adopted.
-  let updatesOffset = 0;
+  // `knowledge-update-entry/1` line for each version it has verified and written beside the list. A refresh
+  // off the request path reads whole unread lines and their files, verifies them and stages the newest in
+  // memory; building a player request only takes what is staged, so a slow or stalled read never holds up a
+  // request. A problem with an entry or its file is recorded and play goes on with the version already adopted.
+  let updatesOffset = 0, pendingKnowledgeUpdate = null, updateRefresh = null, refreshAgain = false, updatesPoll, updatesClosed = false;
+  const pendingRefusals = [];
   const unreadUpdateLines = async () => {
     let file;
     try { file = await open(options.knowledgeUpdates, 'r'); } catch { return []; }
@@ -770,40 +774,62 @@ export async function runHost(options) {
       return data.subarray(0, end).toString('utf8').split('\n').filter(line => line.trim());
     } finally { await file.close(); }
   };
-  const refuseUpdate = (entry, reason) => emit('knowledge-delivery', {kind:'update', outcome:'refused',
-    version:entry?.version ?? null, previous_version:knowledge.version, coverage:entry?.coverage ?? null, reason});
+  // Refusals wait in memory with the version held when they were decided and are recorded when the next
+  // request is built (or when the actor ends), so the refresh itself never writes telemetry between events.
+  const refuseUpdate = (entry, reason, extra = {}) => { if (!updatesClosed) pendingRefusals.push({kind:'update', outcome:'refused',
+    version:entry?.version ?? null, previous_version:knowledge.version, coverage:entry?.coverage ?? null, reason, ...extra}); };
+  const flushRefusals = () => { for (const event of pendingRefusals.splice(0)) emit('knowledge-delivery', event); };
+  const heldNumber = () => versionNumber(knowledge.version) ?? -1;
   // The listed file as the adopted version would be, or the reason it is refused.
   const verifiedUpdate = async entry => {
-    if (knowledge.repository_id !== null && entry.repository_id !== knowledge.repository_id) return 'repository-mismatch';
+    const foreign = () => knowledge.repository_id !== null && entry.repository_id !== knowledge.repository_id;
+    if (foreign()) return 'repository-mismatch';
     let data, value;
     try { data = await readFile(join(dirname(options.knowledgeUpdates), entry.file)); } catch { return 'file-unreadable'; }
+    if (foreign()) return 'repository-mismatch';
     if (sha256Hex(data) !== entry.sha256) return 'sha256-mismatch';
     try { value = validateKnowledge(JSON.parse(data.toString('utf8'))); } catch { return 'invalid-delivered-knowledge'; }
     return value.version === entry.version && value.commit === entry.commit && value.repository_id === entry.repository_id
       && isDeepStrictEqual(value.coverage, entry.coverage) ? value : 'entry-mismatch';
   };
-  // The newest unread version above the adopted one that verifies, with its message, or null. `room` says
-  // whether the message fits without bringing the context to its capacity warning.
-  const newerKnowledge = async room => {
+  // Unread entries are tried newest first; the first above the held version that verifies is staged, and one
+  // at or below the staged one is passed over. Each is decided on its own, so one bad entry never hides a
+  // newer good one. The checks against the held and staged versions are repeated after each read, because a
+  // request may adopt the staged version while a read is outstanding.
+  const refreshOnce = async () => {
     const entries = [];
     for (const line of await unreadUpdateLines()) {
       const entry = updateEntry(line);
       if (entry) entries.push(entry); else refuseUpdate(null, 'invalid-entry');
     }
     entries.sort((a, b) => b.number - a.number);
-    const current = versionNumber(knowledge.version) ?? -1;
-    let adopted = null;
+    const passedOver = entry => {
+      if (pendingKnowledgeUpdate && entry.number <= pendingKnowledgeUpdate.entry.number) return 'superseded';
+      return entry.number <= heldNumber() ? 'not-newer' : null;
+    };
     for (const entry of entries) {
-      if (adopted) { refuseUpdate(entry, 'superseded'); continue; }
-      if (entry.number <= current) { refuseUpdate(entry, 'not-newer'); continue; }
+      if (updatesClosed) return;
+      let reason = passedOver(entry);
+      if (reason) { refuseUpdate(entry, reason); continue; }
       const value = await verifiedUpdate(entry);
+      if (updatesClosed) return;
       if (typeof value === 'string') { refuseUpdate(entry, value); continue; }
-      const update = updateDelivery(knowledge, value);
-      const message = {role:'user', timestamp:Date.now(), content:[{type:'text', text:update.text}]};
-      if (!room(message)) { refuseUpdate(entry, 'context-capacity'); continue; }
-      adopted = {knowledge:value, update, message};
+      if ((reason = passedOver(entry))) { refuseUpdate(entry, reason); continue; }
+      let update;
+      try { update = updateDelivery(knowledge, value); } catch { refuseUpdate(entry, 'invalid-delivered-knowledge'); continue; }
+      if (pendingKnowledgeUpdate) refuseUpdate(pendingKnowledgeUpdate.entry, 'superseded');
+      pendingKnowledgeUpdate = {entry, knowledge:value, update};
     }
-    return adopted;
+  };
+  // Starts a refresh unless one is outstanding, in which case that one runs once more when it finishes.
+  // Nothing waits for it.
+  const refreshUpdates = () => {
+    if (!options.knowledgeUpdates || updatesClosed) return;
+    if (updateRefresh) { refreshAgain = true; return; }
+    updateRefresh = (async () => {
+      do { refreshAgain = false; await refreshOnce(); } while (refreshAgain && !updatesClosed);
+    })().catch(error => refuseUpdate(null, 'update-check-failed', {error_name:error?.name ?? null}))
+      .finally(() => { updateRefresh = null; });
   };
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
@@ -892,6 +918,12 @@ export async function runHost(options) {
     bounded(options.prompt); bounded(options.context);
     requireThat(options.knowledgeUpdates == null || text(options.knowledgeUpdates), 'invalid-input');
     knowledge = validateKnowledge(options.knowledge);
+    if (options.knowledgeUpdates) {
+      // Refreshes start now, on a timer and after each player response; none keeps the process alive.
+      refreshUpdates();
+      updatesPoll = setInterval(refreshUpdates, UPDATE_POLL_MS);
+      updatesPoll.unref();
+    }
     finishReserve = amountFromText(options.finishReserveUsd);
     requireThat(finishReserve !== null, 'invalid-finish-reserve');
     recallConfiguration = configuration.recall;
@@ -1037,19 +1069,25 @@ export async function runHost(options) {
               ? {...message, usage:{input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0}} : message));
             return {tokens:Math.max(estimate.tokens, heuristic.tokens), usageTokens:estimate.usageTokens, heuristicTokens:heuristic.tokens};
           };
-          // A newer version becomes the adopted one here, between requests, and its difference is one more
-          // placed message. The check has its own failure boundary: it can refuse an update, never stop the host.
+          // A staged newer version becomes the adopted one here, between requests, and its difference is one
+          // more placed message. Only memory is read: the files were read and verified by the refresh. This
+          // has its own failure boundary: it can refuse an update, never stop the host.
           if (options.knowledgeUpdates) {
             try {
-              let before;
-              const newer = await newerKnowledge(message => {
-                before ??= contextTokens(withPlacedNotices(projection.messages, placedNotices)).tokens;
-                return before + estimateContextTokens([message]).tokens + configuration.context_reserve_tokens < configuration.model.contextWindow;
-              });
+              flushRefusals();
+              const newer = pendingKnowledgeUpdate;
+              pendingKnowledgeUpdate = null;
               if (newer) {
-                knowledge = newer.knowledge;
-                placedNotices.push({at:messages.length, message:newer.message});
-                unsentDeliveries.push(newer.update);
+                const message = {role:'user', timestamp:Date.now(), content:[{type:'text', text:newer.update.text}]};
+                const before = contextTokens(withPlacedNotices(projection.messages, placedNotices)).tokens;
+                if (before + estimateContextTokens([message]).tokens + configuration.context_reserve_tokens < configuration.model.contextWindow) {
+                  knowledge = newer.knowledge;
+                  placedNotices.push({at:messages.length, message});
+                  unsentDeliveries.push(newer.update);
+                } else {
+                  refuseUpdate(newer.entry, 'context-capacity');
+                  flushRefusals();
+                }
               }
             } catch (error) {
               emit('knowledge-delivery', {kind:'update', outcome:'refused', version:null, previous_version:knowledge.version,
@@ -1380,6 +1418,8 @@ export async function runHost(options) {
         }
         requestInFlight = false;
         if (failed && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
+        // A version listed during this request is read while the response's tools run.
+        refreshUpdates();
       }
     });
     if (control) agent.steer({role:'user', timestamp:Date.now(), content:[{type:'text', text:`${STOP_TEXT}\ncontrol_id: ${control.id}`}]});
@@ -1390,6 +1430,10 @@ export async function runHost(options) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {
     endRecall();
+    // An outstanding refresh is never awaited: a stalled read must not hold up settlement or the successor.
+    clearInterval(updatesPoll);
+    flushRefusals();
+    updatesClosed = true;
     await recallTask;
     if (briefing) emit('knowledge-undelivered', {...briefing, reason:'actor-ended'});
     for (const value of [...pendingReminders, ...unsentDeliveries]) emit('knowledge-undelivered', {...value, reason:'actor-ended'});

@@ -752,6 +752,30 @@ def test_delivery_is_read_from_the_current_package_manifest(tmp_path):
         live_runner.delivery_world(run)
 
 
+def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch(tmp_path):
+    """R-REGRESSION (B4): replaced manifest bytes, whose SHA-256 differs from the supervisor's launch record,
+    neither enable delivery nor choose its world; nor does a launch record of another session or schema."""
+    run = tmp_path/RUN
+    run.mkdir()
+    record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
+    assert live_runner.delivery_world(run) == (True, 'the farm')
+    original = (run/'manifest.json').read_bytes()
+    replaced = json.loads(original)
+    replaced['labels']['world'] = 'another farm'
+    (run/'manifest.json').write_text(json.dumps(replaced))
+    with pytest.raises(ValueError, match='SHA-256 differs from the supervisor launch record'):
+        live_runner.delivery_world(run)
+    (run/'manifest.json').write_bytes(original)
+    opening = json.loads((run/'watch-start.json').read_text())
+    for change, message in ((dict(session='b' * 32), 'session differs'), (dict(schema='campaign-watch-start/3'), 'unsupported')):
+        (run/'watch-start.json').write_text(json.dumps(dict(opening, **change)))
+        with pytest.raises(ValueError, match=message):
+            live_runner.delivery_world(run)
+    (run/'watch-start.json').unlink()
+    with pytest.raises(OSError):
+        live_runner.delivery_world(run)
+
+
 # ---------------------------------------------------------------- beside a growing trace, with a real session
 native = pytest.mark.skipif(sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists(),
                             reason='Seatbelt lane: macOS only')

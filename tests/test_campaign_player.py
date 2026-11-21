@@ -171,10 +171,11 @@ assert mode == 'run' and sorted(flags) == ['--actor-id', '--config', '--context'
 assert sorted(os.environ) >= ['FIXTURE_KEY', 'LANG', 'PATH'] and os.environ['FIXTURE_KEY'] == 'fixture-secret'
 prompt = open(flags['--prompt']).read()
 assert (updates is not None) == ('LIVE_UPDATES' in prompt), sys.argv
-if updates is not None and flags['--actor-id'] == 'a'*32:
+import time
+if updates is not None and flags['--actor-id'] == 'a'*32 and 'STALLED' not in prompt:
     # The first actor's host stands in for the curator runner: it leaves a version whole in the run's
     # delivery directory, then waits for the driver to list it, as a host would find it before a request.
-    import hashlib, time
+    import hashlib
     actor = os.path.dirname(updates)
     run = os.path.dirname(os.path.dirname(actor))
     assert open(updates).read() == ''
@@ -195,6 +196,7 @@ assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
 emit(type='host-start', telemetry_version=9, schema='player-host/9', spend_limit_usd=route['spend_limit_usd'])
+if 'HANG' in prompt: time.sleep(120)  # a host still playing when the driver must stop it
 recall_made = int('WITH_RECALL' in prompt and flags['--pending-control-id']=='none')
 if recall_made:
     emit(type='request-start',request_id='recall-1',request_role='recall')
@@ -390,7 +392,7 @@ def published(number,*,repository='d'*40,**change):
     """A published version as the exporter writes it, with one fact per version number."""
     return dict(schema='delivered-knowledge/2',version=f'v{number}',commit=f'{number:040x}',repository_id=repository,
         coverage=dict(schema='curator-coverage/2',session='b'*32,actor='001',last_step=number),articles=[],
-        facts=[dict(id=f'fact-{n}',type='observation',text=f'Claim {n}.') for n in range(1,number+1)],**change)
+        facts=[dict(id=f'fact-{n}',type='observation',text=f'Claim {n}.',seen=dict(order=[n,'frame',0])) for n in range(1,number+1)],**change)
 
 
 def test_a_version_left_during_play_is_listed_for_the_running_actor_and_seeds_its_successor(tmp_path):
@@ -439,28 +441,30 @@ def live_case(tmp_path,package=None):
 
 def test_the_highest_verified_version_above_the_current_one_is_adopted_and_a_refused_one_is_never_retried(tmp_path,capsys):
     live,application,actor,leave,listed=live_case(tmp_path,published(2))
-    live.poll(application,actor)  # nothing left yet
+    live.begin(actor)
+    live.poll(application)  # nothing left yet
     for value in (published(1),published(2)):leave(value)  # not above the version held
     (tmp_path/'delivered'/'.v9.json.tmp').write_text('{')  # a file still being written is not a version
     (tmp_path/'delivered'/'notes.txt').write_text('ignored')
-    live.poll(application,actor)
+    live.poll(application)
     assert listed()==[] and not application.set_knowledge.called and capsys.readouterr().err==''
     leave(published(3))
     leave(published(4,repository='e'*40))  # another repository
     leave(published(5),'v6.json')  # names another version than its file
     leave(dict(published(7),schema='delivered-knowledge/1'))
     (tmp_path/'delivered'/'v8.json').write_text('{"schema":"delivered-knowledge/2","schema":"delivered-knowledge/2"}')
-    live.poll(application,actor)
+    live.poll(application)
     assert listed()==['v3'] and live.current.value['version']=='v3' and live.data==(tmp_path/'delivered'/'v3.json').read_bytes()
     assert application.set_knowledge.call_args.args[0].read('fact-3')['version']=='v3'
     refusals=capsys.readouterr().err.splitlines()
     assert [line.split(' refused: ')[0] for line in refusals]==[f'campaign_player: live knowledge v{n}' for n in (8,7,6,4)]
     assert 'another knowledge repository' in refusals[3] and 'another version' in refusals[2]
-    live.poll(application,actor)  # the refused versions stay refused, without another report
+    live.poll(application)  # the refused versions stay refused, without another report
     assert listed()==['v3'] and application.set_knowledge.call_count==1 and capsys.readouterr().err==''
     leave(published(9))
-    live.poll(application,actor)
+    live.poll(application)
     assert listed()==['v3','v9'] and sorted(p.name for p in (actor/'knowledge').iterdir())==['v3.json','v9.json']
+    assert sorted(p.name for p in actor.iterdir())==['knowledge','knowledge-updates.jsonl'],'no temporary list is left'
 
 
 def test_the_first_version_after_an_empty_file_fixes_the_repository_and_between_actors_nothing_is_listed(tmp_path):
@@ -472,15 +476,139 @@ def test_the_first_version_after_an_empty_file_fixes_the_repository_and_between_
     assert application.set_knowledge.call_count==1
     leave(published(1))  # the default repository is not the adopted one
     leave(published(2,repository='e'*40))
-    live.poll(application,actor)
+    assert live.begin(actor)==live.data and json.loads(live.data)['version']=='v0'
+    live.poll(application)
     assert listed()==['v2'] and live.current.value['repository_id']=='e'*40
+    live.end()
+    leave(published(3,repository='e'*40))
+    live.poll(application)  # after the actor ended, nothing more is listed for it
+    assert listed()==['v2'] and live.current.value['version']=='v3'
 
 
 def test_without_a_source_the_driver_never_looks(tmp_path):
     (tmp_path/'delivered-knowledge.json').write_text(json.dumps(empty()))
     live,application=LiveKnowledge(None,tmp_path/'delivered-knowledge.json'),Mock()
-    live.poll(application,tmp_path)
-    assert not application.set_knowledge.called and list(tmp_path.iterdir())==[tmp_path/'delivered-knowledge.json']
+    live.start(application);live.begin(tmp_path)
+    live.poll(application)
+    assert live.thread is None and not application.set_knowledge.called
+    assert list(tmp_path.iterdir())==[tmp_path/'delivered-knowledge.json']
+
+
+def test_a_list_publication_that_fails_to_reach_disk_leaves_the_list_the_application_and_the_successor_on_the_held_version(tmp_path,capsys):
+    """R-REGRESSION (B2): the list is replaced whole only after its new bytes are durable, and the application and
+    the next actor's frozen file move only after that. A failed fsync of the new list changes none of them."""
+    import os
+    live,application,actor,leave,listed=live_case(tmp_path,published(2))
+    (actor/'knowledge-updates.jsonl').write_bytes(b'')
+    live.begin(actor)
+    leave(published(3))
+    live.poll(application)
+    before=(actor/'knowledge-updates.jsonl').read_bytes()
+    assert listed()==['v3'] and application.set_knowledge.call_count==1
+    leave(published(4))
+    real,calls=os.fsync,[]
+    def failing(fd):
+        calls.append(fd)
+        if len(calls)==2:raise OSError(5,'Input/output error')  # the copy reaches disk; the new list does not
+        return real(fd)
+    with patch('tools.campaign_player.os.fsync',side_effect=failing):
+        live.poll(application)
+    assert len(calls)==2
+    assert (actor/'knowledge-updates.jsonl').read_bytes()==before and listed()==['v3']
+    assert not (actor/'.knowledge-updates.jsonl.tmp').exists()
+    assert application.set_knowledge.call_count==1 and application.set_knowledge.call_args.args[0].value['version']=='v3'
+    assert live.current.value['version']=='v3' and live.data==(tmp_path/'delivered'/'v3.json').read_bytes()
+    live.end()
+    assert json.loads(live.begin(tmp_path/'successor'))['version']=='v3','the successor starts where the host and application are'
+    assert 'live knowledge v4 refused: OSError' in capsys.readouterr().err
+
+
+def test_a_version_prepared_for_an_actor_that_ended_is_decided_again_for_the_next(tmp_path):
+    live,application,actor,leave,listed=live_case(tmp_path,published(2))
+    live.begin(actor)
+    leave(published(3))
+    real=LiveKnowledge._adopt
+    def ending_meanwhile(self,*args):
+        self.end()  # the actor stops while its version is read
+        return real(self,*args)
+    with patch.object(LiveKnowledge,'_adopt',ending_meanwhile):
+        live.poll(application)
+    assert listed()==[] and not application.set_knowledge.called and live.current.value['version']=='v2'
+    assert not (actor/'.knowledge-updates.jsonl.tmp').exists()
+    live.poll(application)  # between actors: adopted for the next frozen file
+    assert json.loads(live.begin(tmp_path/'next'))['version']=='v3' and application.set_knowledge.call_count==1
+
+
+def stalled_source(tmp_path):
+    """A version file that is a FIFO without a writer: reading it blocks, as a hung disk read would."""
+    import os
+    source=tmp_path/'curator-runner'/'delivered';source.mkdir(parents=True)
+    os.mkfifo(source/'v3.json')
+    def release():
+        try:os.close(os.open(source/'v3.json',os.O_WRONLY|os.O_NONBLOCK))
+        except OSError:pass
+    return source,release
+
+
+def bounded_run(*args):
+    result={}
+    thread=threading.Thread(target=lambda:result.update(value=run_hosts(*args)),daemon=True)
+    began=time.monotonic();thread.start();thread.join(30)
+    return result.get('value'),time.monotonic()-began
+
+
+def test_a_stalled_read_of_the_delivery_directory_delays_neither_the_deadline_stop_nor_the_successor(tmp_path):
+    """R-REGRESSION (B1): live delivery's reads happen on their own thread. With the only version file stalled,
+    the operator stop still ends a hanging host at once, and a handoff starts the successor at once."""
+    source,release=stalled_source(tmp_path/'stop')
+    try:
+        profile,route,application=driver_case(tmp_path/'stop','Frozen mission LIVE_UPDATES STALLED HANG')
+        stopped=threading.Event();threading.Timer(1,stopped.set).start()
+        result,seconds=bounded_run(tmp_path/'stop',profile,route,application,'fixture-secret',stopped,time.monotonic()+300,source)
+        assert result is not None and seconds<15,'the stop was not held up by the stalled read'
+        application.runtime.stop.assert_any_call('Original host deadline/operator cancellation')
+        assert not application.set_knowledge.called
+    finally:release()
+    source,release=stalled_source(tmp_path/'handoff')
+    try:
+        profile,route,application=driver_case(tmp_path/'handoff','Frozen mission HANDOFF_RACE LIVE_UPDATES STALLED',two_actors=True)
+        with patch('tools.campaign_player._handoff_context',return_value='{}'):
+            result,seconds=bounded_run(tmp_path/'handoff',profile,route,application,'fixture-secret',threading.Event(),
+                                       time.monotonic()+300,source)
+        assert result is not None and seconds<15 and result['outcome']=='player_task_complete_unassessed',result
+        second=tmp_path/'handoff'/'actors'/'002'
+        assert second.joinpath('delivered-knowledge.json').read_bytes()==(tmp_path/'handoff'/'delivered-knowledge.json').read_bytes()
+        assert second.joinpath('knowledge-updates.jsonl').read_text()=='' and not application.set_knowledge.called
+    finally:release()
+
+
+def test_the_applications_knowledge_tools_answer_from_the_version_the_driver_adopts(tmp_path):
+    """R-REGRESSION (N2): the real application's read and query tools, before and after live adoption."""
+    import uuid
+    from harness.application import Application
+    from harness.computer.runtime import ComputerRuntime
+    from harness.player.journal import Journal
+    from tests.test_computer_runtime import Channel,Process
+    live,_,actor,leave,listed=live_case(tmp_path,published(2))
+    (tmp_path/'computer').mkdir()
+    runtime=ComputerRuntime(tmp_path/'computer','a'*32,Channel(),Process(),time.monotonic()+90,
+        dict(max_inputs=10,max_requests=10,max_frames=10,max_bytes=2**20))
+    journal=Journal(tmp_path/'player.sqlite3')
+    try:
+        application=Application(runtime,journal,tmp_path/'contexts',knowledge=tmp_path/'delivered-knowledge.json')
+        token=runtime.add_actor()['token']
+        def tool(name,**args):
+            result,_=application.call(token,name,dict(intent='Check delivered knowledge',cites=[],**args),uuid.uuid4().hex)
+            return result['version'],[r['id'] for r in result['records']]
+        assert tool('player_knowledge_read',id_or_title='fact-3')==('v2',[])
+        assert tool('player_knowledge_query',query='claim')==('v2',['fact-1','fact-2'])
+        live.begin(actor);leave(published(3))
+        live.poll(application)
+        assert listed()==['v3']
+        assert tool('player_knowledge_read',id_or_title='fact-3')==('v3',['fact-3'])
+        assert tool('player_knowledge_query',query='claim')==('v3',['fact-1','fact-2','fact-3'])
+    finally:
+        runtime.close();journal.close()
 
 
 def test_driver_copies_delivered_knowledge_as_exact_bytes(tmp_path):

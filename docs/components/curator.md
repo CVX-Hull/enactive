@@ -149,8 +149,12 @@ publication that is not a restore and is above the last version it exported, res
 included, as `delivered-knowledge/2` for the package's world. It writes the file whole
 to `curator-runner/delivered/vN.json` (temporary name, sync, rename), so the driver
 never sees a partial file. A failed export is reported on stderr once per version and
-error and tried again at the next poll. Delivery never stops the runner or curation:
-a manifest it cannot read turns delivery off and the runner starts. The
+error and tried again at the next poll. The runner reads `live_knowledge_updates`
+and the world only from a manifest whose bytes have the SHA-256 that the supervisor's
+`campaign-watch-start/4` launch record names for the same session, the checks the
+[trace projection](../../harness/trace/projection.py) makes before it reads labels.
+Delivery never stops the runner or curation: a manifest it cannot read or verify
+turns delivery off and the runner starts. The
 [host contract](../contracts/player-host.md#a-newer-version-during-play) owns
 adoption by the driver and the host.
 

@@ -54,7 +54,7 @@ fixed explanation without quoting either record. With verified evidence and vali
 labels, both diagnostic fields are null.
 The trace reads these files directly without the campaign tooling.
 
-The projection verifies world, lineage and admission position for `campaign-run/12`.
+The projection verifies world, lineage and admission position for `campaign-run/11`.
 For sealed `campaign-run/10` sessions it verifies lineage and admission and leaves
 `world` null. An unsupported manifest version leaves all labels null with a
 diagnostic. A save path cannot establish a game-neutral world label.

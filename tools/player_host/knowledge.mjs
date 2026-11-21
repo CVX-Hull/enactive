@@ -7,17 +7,36 @@ export function versionNumber(version) {
   return match && Number.isSafeInteger(Number(match[1])) ? Number(match[1]) : null;
 }
 
+// The public record forms `tools/knowledge_export.py` writes; `harness/player/knowledge.py` checks the same ones.
+const filled = value => typeof value === 'string' && value.length > 0;
+const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const keys = (value, required, optional = []) => Object.keys(value).every(key => required.includes(key) || optional.includes(key))
+  && required.every(key => Object.hasOwn(value, key));
+const names = (value, nonempty) => Array.isArray(value) && (value.length > 0 || !nonempty) && value.every(filled)
+  && new Set(value).size === value.length;
+const validCoverage = value => value === null || (record(value) && keys(value, ['schema','session','actor','last_step'])
+  && value.schema === 'curator-coverage/2' && filled(value.session) && (value.actor === null || filled(value.actor))
+  && (value.last_step === null || Number.isSafeInteger(value.last_step)));
+const validArticle = value => record(value) && keys(value, ['id','title','lead','body','links','last_confirmed'])
+  && filled(value.id) && filled(value.title) && filled(value.lead) && names(value.links, false) && record(value.last_confirmed)
+  && Array.isArray(value.body) && value.body.length > 0
+  && value.body.every(claim => record(claim) && keys(claim, ['text','facts']) && filled(claim.text) && names(claim.facts, true));
+const validFact = value => record(value) && keys(value, ['id','type','text','seen'], ['subject'])
+  && filled(value.id) && filled(value.type) && filled(value.text) && (!Object.hasOwn(value, 'subject') || filled(value.subject))
+  && record(value.seen);
+
 export function validateKnowledge(value) {
-  if (!value || value.schema !== 'delivered-knowledge/2'
+  if (!record(value) || value.schema !== 'delivered-knowledge/2'
       || Object.keys(value).sort().join() !== ['articles','commit','coverage','facts','repository_id','schema','version'].join()
-      || !Array.isArray(value.articles) || !Array.isArray(value.facts)) throw new Error('invalid-delivered-knowledge');
+      || !validCoverage(value.coverage) || !Array.isArray(value.articles) || !Array.isArray(value.facts)
+      || !value.articles.every(validArticle) || !value.facts.every(validFact)) throw new Error('invalid-delivered-knowledge');
   // A published version names its tag's commit and its repository; the empty file names neither.
   const published = value.version !== null;
   if (published ? versionNumber(value.version) === null || !hex(value.commit, 40) || !hex(value.repository_id, 40)
     : value.commit !== null || value.repository_id !== null) throw new Error('invalid-delivered-knowledge');
   const ids = new Set();
   for (const item of [...value.articles, ...value.facts]) {
-    if (typeof item.id !== 'string' || ids.has(item.id)) throw new Error('invalid-delivered-knowledge');
+    if (ids.has(item.id)) throw new Error('invalid-delivered-knowledge');
     ids.add(item.id);
   }
   return value;
@@ -33,7 +52,7 @@ export function updateEntry(line) {
   return Object.keys(value).sort().join() === ['commit','coverage','file','repository_id','schema','sha256','version'].join()
     && value.schema === 'knowledge-update-entry/1' && number !== null && hex(value.commit, 40) && hex(value.repository_id, 40)
     && value.file === `knowledge/${value.version}.json` && hex(value.sha256, 64)
-    && (coverage === null || (typeof coverage === 'object' && !Array.isArray(coverage)))
+    && validCoverage(coverage)
     ? {...value, number} : null;
 }
 

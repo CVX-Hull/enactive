@@ -153,7 +153,17 @@ published version's tag. `repository_id` is the commit of the repository's first
 version `v0`, which every later version of that repository shares. The exporter
 writes both; the empty file has `null` for `version`, `commit` and `repository_id`.
 A version is `vN`. The world label that selected the facts is never written into
-the file.
+the file. Its records have the closed forms the exporter writes, and both readers
+(the host and the application) refuse any other:
+
+- `coverage` is null or exactly `schema` (`curator-coverage/2`), `session` (non-empty
+  text), `actor` (null or non-empty text) and `last_step` (null or an integer).
+- An article is exactly `id`, `title` and `lead` (non-empty text), `body` (a
+  non-empty list of claims, each exactly `text` and a non-empty list of distinct
+  fact IDs `facts`), `links` (a list of distinct titles) and `last_confirmed` (a
+  position object).
+- A fact is `id`, `type`, `text` (non-empty text) and `seen` (a position object),
+  with an optional non-empty `subject` and nothing else.
 
 `player-host-inputs/4` (`actors/NNN/frozen.json`) has `schema`, `actor_id`,
 `session`, `finish_reserve_usd`, `files` (the SHA-256 of `actor.json`, `route.json`,
@@ -166,7 +176,8 @@ withholding, plus a top-level `selection` object with `world` (the selected labe
 or null) and `delivered_sha256` (the SHA-256 of the delivered file). The delivered
 knowledge is the one player-visible input whose contents depend on an
 [operator label](../operations/campaign-run.md#operator-labels).
-Preflight checks `selection.world` against `labels.world` and
+Preflight requires the private file to be `delivered-knowledge/2` and checks
+`selection.world` against `labels.world` and
 `selection.delivered_sha256` against the verified digest of `delivered-knowledge.json`.
 The delivered file carries the selected content without the selection object.
 
@@ -229,10 +240,10 @@ say when a package may set the field.
 | Step | Owner | Rule |
 | --- | --- | --- |
 | Export | [Curator runner](../components/curator.md#delivery-to-a-running-actor) | After a poll in which it confirmed a version, it writes that version as `delivered-knowledge/2` for the package's world to `RUN/curator-runner/delivered/vN.json`, whole (temporary name, sync, rename). It exports a confirmed publication only, never a restore, and only above the last version it exported. |
-| Adoption | [Driver](../../tools/campaign_player.py) | At each poll of a running host, and once before it starts an actor, it takes the highest `vN.json` above the version it holds that is `delivered-knowledge/2`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). It copies the bytes to `actors/NNN/knowledge/vN.json`, appends one line to `actors/NNN/knowledge-updates.jsonl`, synced, and then has the application serve the version. A version that does not verify is reported on the custodian's stderr and never tried again. |
+| Adoption | [Driver](../../tools/campaign_player.py) | A thread of its own looks at `RUN/curator-runner/delivered` every tenth of a second, so no read there delays the driver's deadline checks, settlement or handoff. It takes the highest `vN.json` above the version it holds that is `delivered-knowledge/2`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). For a running actor it copies the bytes to `actors/NNN/knowledge/vN.json`, writes the update list with one more line to a temporary file, synced, and renames it over `actors/NNN/knowledge-updates.jsonl`; only then does the application serve the version and the driver hold it. A version prepared for an actor that has since stopped is decided again. A version that does not verify or cannot be written is reported on the custodian's stderr and never tried again; the list, the application and the next actor stay on the version held. |
 | Reads | Application | `player_knowledge_read` and `player_knowledge_query` answer from the adopted version from then on. Each result names its `version`. |
-| Delivery | Host | Before it builds each player request, it reads the whole unread lines of `--knowledge-updates` and adopts the newest listed version above its own that verifies. |
-| Successor | Driver | A successor's `delivered-knowledge.json` is the latest version adopted in the run, or the package's file when none was. Its update list starts empty. |
+| Delivery | Host | A refresh beside play, at start, every second and after each player response, reads the whole unread lines of `--knowledge-updates` and their files and holds the newest listed version above its own that verifies. Building a player request reads no file: it adopts the version held, if any, so a stalled read never delays a request. |
+| Successor | Driver | A successor's `delivered-knowledge.json` is the latest version adopted in the run, taken from memory, or the package's file when none was. Its update list starts empty. |
 
 An update-list line is `knowledge-update-entry/1`: exactly `schema`, `version`
 (`vN`), `commit`, `repository_id`, `file` (`knowledge/vN.json`, relative to the
@@ -241,10 +252,12 @@ list), `sha256` of that file and its `coverage` stamp.
 The host verifies an entry before it adopts it: the line is a closed entry; the
 version number is above the adopted one; `repository_id` is the adopted version's,
 unless that is the empty file; the file's SHA-256 is the entry's; the file is
-`delivered-knowledge/2`; and its `version`, `commit`, `repository_id` and `coverage`
-are the entry's. It tries unread entries newest first and adopts the first that
-verifies. An entry that fails, an older one and one passed over for a newer are
-each recorded as refused with a reason, and the adopted version stays.
+`delivered-knowledge/2` in its closed form; and its `version`, `commit`,
+`repository_id` and `coverage` are the entry's. It tries unread entries newest first
+and holds the first that verifies, deciding each on its own, so one malformed entry
+never hides another. An entry that fails, an older one and one passed over for a
+newer are each recorded as refused with a reason when the next request is built (or
+when the actor ends), and the adopted version stays.
 
 An adopted version is the host's version for every later recall, reminder and
 delivery of that actor. A recall already in flight keeps the version it was
