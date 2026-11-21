@@ -41,7 +41,9 @@ text byte and 758 per image. In both lineages images accounted for an estimated
 14% of tokens in prompts over 150,000 tokens. The `tool-result` events put
 unabridged tool results at 81% of text and the median `computer_input` result
 at 1,827 bytes. Each ten-image drop in the seven-day trace rewrote a median of
-about 120,000 cached tokens. These comparisons explain why short results and
+about 120,000 cached tokens. The 145 requests written to the cache straight after an
+image drop were 7.3% of the seven-day lineage's requests and 57.9% of its cost at
+configured rates. These comparisons explain why short results and
 grouped image eviction matter. In the same lineage, the 20,000–60,000-token
 band averaged \$0.0062 per request. The association between smaller prompts and
 faster responses may also reflect what the player was doing at that point in play.

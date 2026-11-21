@@ -217,7 +217,7 @@ New or changed fields are marked.
 - **Where the rest of ADR 009's list goes.**
   - Shown in the session brief, computed at read time: flags for types with no current
     fact and the nearest existing types
-    ([the brief leaf](https://github.com/CVX-Hull/enactive/issues/833)). The gate does
+    ([type flags in the session brief, #833](https://github.com/CVX-Hull/enactive/issues/833)). The gate does
     not return nearest types for a proposal.
   - Later parts, not in this migration: the parent type, the actor's ontology card and
     definition lookup, and the flag for a type no reader has used, which needs read
@@ -312,7 +312,7 @@ where a page's lead gives the point and its references and links give the rest.
   [Gate checks and filing rules](curator-session.md#gate-v0)
 - **Reading more.** `player_knowledge_read` returns an article or a fact by its id or
   title; `player_knowledge_query` searches articles and facts together
-  ([the delivery boundary](player-context.md#the-delivery-boundary)).
+  ([player guide](../player-guide.md#delivered-knowledge)).
 - **Format.** Articles are a second record kind in the same knowledge repository, in the
   same contract version as facts (`curator-fact/3`).
 
@@ -332,7 +332,7 @@ The reminder cadence trades off timeliness, request cost and repetition. Reminde
 persist in the actor's history, so their text contributes to subsequent requests.
 [Measured delivery cost and prompt burden](../acceptance/2026-11-14-recall-fix-delivery-check.md)
 
-[Owner decision on knowledge delivery](https://github.com/CVX-Hull/enactive/blob/8326573ffc88f5be923dd8a48fade8468d21dc45/docs/decisions/owner-decisions.md#L92)
+[Owner decision of 13 November 2026 on knowledge delivery, "Yes, in that order"](../decisions/owner-decisions.md#in-force)
 
 ## 3. Measurement
 
@@ -356,8 +356,11 @@ re-exposure.
 This estimates the effect of delivery for the tested units while half the store is
 available. Delivery can change which topics play touches and can add distraction
 beyond the units measured. A handoff, another article's prose or independent
-re-observation can expose withheld knowledge. Size and price a repeat from the
-[study's sizing method](../contracts/evaluation.md#the-withholding-studys-sizing-withholding-study-simulation2).
+re-observation can expose withheld knowledge. The
+[study's sizing method](../contracts/evaluation.md#the-withholding-studys-sizing-withholding-study-simulation2)
+sizes any repeat. Under the [owner's decision of 20 November 2026](../decisions/owner-decisions.md#in-force)
+("Live run, then campaigns"), a claim that delivered memory improves play comes from
+the seven-day campaign outcome ([#145](https://github.com/CVX-Hull/enactive/issues/145)).
 
 ### Game-neutral judging
 

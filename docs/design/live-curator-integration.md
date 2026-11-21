@@ -17,7 +17,8 @@ review_trigger: Live-run evidence changes the reader or runner assumptions, or t
   [Curator component](../components/curator.md)
 - **Unknown.** Lag, cost, snapshot timing and player pace beside a real custodian
   are unmeasured. Curation stays outside the input path and shares disk work.
-- **Run authority.** [Owner's conditions for the paid live run](../decisions/owner-decisions.md#one-paid-live-curator-run)
+- **Decisions needed.** None for this design. The paid live run's conditions are in
+  the [owner decision log](../decisions/owner-decisions.md#one-paid-live-curator-run).
 
 ## Who starts a session, and when
 
@@ -160,7 +161,9 @@ covers the guardian's owned processes and snapshot cleanup.
 The live runner uses admission sessions and a repository of its own for the run's
 world. Handoffs do not trigger grooming. The
 [session publication rules](curator-session.md#admission-and-grooming) govern when
-grooming runs and which sealed source it reads.
+grooming runs and which sealed source it reads. If the live admission published
+nothing, the last published admission is still the one before it, and grooming does
+not examine what the runner missed.
 
 ## Delivery to a running actor
 

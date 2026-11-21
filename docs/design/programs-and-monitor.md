@@ -10,7 +10,7 @@ review_trigger: "The fact store's field table merges (the owner's revisit condit
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The [owner's 20 November 2026 decision](../decisions/owner-decisions.md#in-force) parks this unbuilt proposal in Backlog and calls for review when the fact store's field table merges.
+**Answer.** The [owner's 20 November 2026 decision](../decisions/owner-decisions.md#in-force) keeps this unbuilt proposal parked until the fact store's field table merges.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
@@ -50,7 +50,7 @@ The library tracks invocations, successes, yields, aborts and regressions. Revis
 
 ## Emissions the proposal adds
 
-Under the owner's 13 November 2026 decision, each field joins existing tool calls with the work that first reads it.
+Under the [owner's decision of 13 November 2026, "Intent now, rest later"](../decisions/owner-decisions.md#in-force), each field joins existing tool calls with the work that first reads it.
 
 - `expectation` predicts visible effects. Prediction errors guide curator attention, program success checks and source reliability.
 - `goal` marks the start, finish or abandonment of a subgoal for program induction.
@@ -78,7 +78,7 @@ The bounded interface brief freezes artifact identity and layout, base and versi
 
 ## Pages that change on adoption
 
-Adoption updates the [charter](../charter.md), [player tooling standard](../standards/player-tooling.md), [architecture](../architecture.md), [computer-control contract](../contracts/computer-control.md), [mission ownership](../operations/mission-ownership.md), [player-host contract](../contracts/player-host.md), and [evaluation contract](../contracts/evaluation.md) with [observer operations](../components/observer-operations.md). The computer-control boundary, one-input-sender rule, P-TRUTH, no-lead-hint rule and S-MIGRATION continue to govern the design.
+Adoption updates the [charter](../charter.md), [player tooling standard](../standards/player-tooling.md), [architecture](../architecture.md), [computer-control contract](../contracts/computer-control.md), [mission ownership](../operations/mission-ownership.md), and [evaluation contract](../contracts/evaluation.md) with [observer operations](../components/observer-operations.md). The computer-control boundary, one-input-sender rule, P-TRUTH, no-lead-hint rule and S-MIGRATION continue to govern the design.
 
 ## How it would be judged
 
