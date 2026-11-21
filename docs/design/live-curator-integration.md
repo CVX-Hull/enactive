@@ -217,12 +217,13 @@ they would for the sealed session.
 
 ### Not yet shown
 
-Nothing here has been tried against the real custodian or a real host. The reader
+Nothing here has been tried against a running custodian or a real host. The reader
 (`harness/trace/snapshot.py`, whose module text states the exact cutoff) is tested
 offline with a synthetic writer process, at start, under sustained writes and at the
 writer's close: the read returns a consistent prefix, the writer's timeout is not hit,
-and the step numbers of a snapshot equal those of the sealed trace. The
-synthetic writer imitates the host's log; it is not the host.
+and the step numbers of a snapshot equal those of the sealed trace. The synthetic
+writer closes its store through the custodian's own `close_store` and imitates the
+host's log; it is not the custodian's loop and not the host.
 
 Three things the reader cannot see are left as they are. Step numbers follow wall time,
 so a wall clock that steps back between two operations of one actor renumbers them, in
