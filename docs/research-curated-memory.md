@@ -394,7 +394,8 @@ This section also answers the ADR's
      (S09's 100% to 54%); and **wrong-resolution cost** (inject wrong resolutions and
      measure actor error), which no source measured.
    - *Statistics.* The independent unit is the lineage, and every variant tried is
-     reported. Previously inspected lineages are development data. Freeze a separate
+     reported. Lineages the [curator memory study](acceptance/2026-11-12-p1-descriptive-completion-178.md)
+     inspected are development data. Freeze a separate
      whole-lineage holdout for the trace lane.
      - **Trace lane.** With three clusters a cluster bootstrap has only 10 distinct
        resample compositions. At that size report each lineage descriptively and

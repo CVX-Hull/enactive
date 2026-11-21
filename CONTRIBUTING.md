@@ -40,7 +40,8 @@ for real development runs and formal qualification. Use the
 native boundary.
 
 Preserve real game behavior: no save editing or engine-validation bypass, and only
-the prepared windowed wrapper ([native acceptance](docs/operations/native-acceptance.md),
+the prepared windowed wrapper with an explicit project userdir. Coordinate shared
+game, save, port and build resources before using them ([native acceptance](docs/operations/native-acceptance.md),
 [S-DELIVERY](docs/standards/delivery.md)).
 
 Update affected contracts, tests and guidance in the same change. Follow the

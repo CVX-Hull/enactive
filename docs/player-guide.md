@@ -113,7 +113,7 @@ when you need it.
 
 End your loop by calling `player_finish` with your report and supporting sources.
 If you are finishing in response to an external stop, use the identity in the
-request you received. Ordinary narration alone does not finish the task.
+request you received; otherwise pass a null `control_id`. Ordinary narration alone does not finish the task.
 Distinguish observed effects, claims, failures and unknowns. Tool delivery,
 memory, process absence and host exit do not establish a save or a win. The user
 can Pause independently of your report.

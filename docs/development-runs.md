@@ -31,8 +31,10 @@ traits, location, tactic, target item or hint.
 | Player-chosen scenario (S2) | The player chooses every setup option, including the scenario. |
 
 Each comparison freezes its own route, package limits and schedule in its dated
-record. See the [ceiling arm](acceptance/2026-11-06-development-loop.md) and the
-[long-horizon arm](acceptance/2026-11-07-long-horizon-382.md) for their respective settings.
+record. The [ceiling arm](acceptance/2026-11-06-development-loop.md) ran under
+[this method as it stood at `38a94c4`](https://github.com/CVX-Hull/enactive/blob/38a94c40bb60c13c3aa0ac44bb1903645214bb82/docs/development-runs.md#benchmark),
+which holds its route and limits; the [long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)
+states its own.
 
 **Admission rule.** A run is admitted on actual provider-reported spend under the
 [budget delegation](operator-permissions.md#finite-gameplay-budget-delegation) rule.
@@ -73,7 +75,7 @@ Each lineage gets exactly one class, checked in this order:
 
 1. **Continuity failure:** an admission does not resume the same survivor in the same
    world, or an admission starts a new episode (`lineage.elapsed.episode_changes`).
-2. **Failed:** death before 24 elapsed hours or a failed day check.
+2. **Failed:** death, or a failed day check, before 24 elapsed hours.
 3. **Day-viable:** alive at 24 elapsed hours with the day check passed.
 4. **Slow:** alive under 24 elapsed hours when the decision cap or a stop rule ends it.
 

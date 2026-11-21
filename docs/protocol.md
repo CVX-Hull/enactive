@@ -71,4 +71,4 @@ and [migration](operations/migration.md) own versions and historical-state handl
 One designated player, run by the selected player host, owns routine gameplay interpretation and choices.
 The lead owns source, frozen admission, review and verification. Explorers and
 reviewers send no game input. The [curator runner](components/curator.md) starts
-beside play only when [explicitly configured under supervision](operations/campaign-supervision.md#freeze-launch-and-inspect).
+beside play only in a run the owner approves, when [explicitly configured under supervision](operations/campaign-supervision.md#freeze-launch-and-inspect).

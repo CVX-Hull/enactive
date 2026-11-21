@@ -35,6 +35,12 @@ events across domains, and treat the alignment as approximate.
 
 ## Retained host and browser analysis
 
+The [recorded-screen fixture](../tests/fixtures/recorded_player_mcp.py) serves retained
+labelled PNGs through the current tool schemas to an unchanged player host and refuses
+every effect; it has no live target or player store. Each paid assessment with it needs
+its own frozen protocol and owner agreement, and it qualifies no live game effect
+([two-case record](acceptance/2026-11-05-recorded-player-assessment.md)).
+
 Run these offline, read-only diagnostics on a selected session.
 
 ```sh

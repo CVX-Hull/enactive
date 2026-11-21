@@ -11,7 +11,7 @@ for retention and removal, and the [overview](overview.md) for supported scope.
 This page maps every owned local resource: what it holds, who writes it and when it
 goes. Dated records own individual build, run and cleanup receipts; the
 [environment history](acceptance/2026-11-08-environment-history.md) holds the earlier
-dated exceptions.
+dated exceptions, which are not precedent for new changes.
 
 ## Owned resources
 

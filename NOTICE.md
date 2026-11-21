@@ -77,8 +77,9 @@ notices remain in those installed distributions; no upstream code or binary is
 vendored in Git. Pi MCP includes notices for its SDK-derived OAuth code, which
 this stdio-only integration does not invoke. Preserve upstream notices before
 redistributing a bundled installation. The Python MCP server remains a separate
-dependency. See the [player host procedure](docs/operations/player-host.md) for
-selection and activation.
+dependency. The [player host procedure](docs/operations/player-host.md) names the selected host and
+its activation; the [host brief](docs/changes/069-controllable-player-host.md) records
+why it was chosen and when to reassess it.
 
 ## Player image decoding
 
