@@ -36,13 +36,17 @@ to this list.
   than the author, what quota is left, and how the last attempts of this kind went. The
   nearest delegate is not the default: every supported delegate is started the same way
   ([starting a delegate](../operations/coding-agents.md#starting-a-delegate-on-any-coding-agent)).
-  The lead writes its choice and the reason on the brief's Role line and on the pull
+  Starting any session, sub-agent or delegate to do work is a delegation, whatever tool
+  starts it, and the model it runs on is part of the choice. The lead writes its choice and the reason on the brief's Role line and on the pull
   request's `Models:` line, and adds a row for the attempt to the attempts ledger
   ([reading the ledger](../operations/model-routing.md#reading-the-ledger)), so that
   later choices rest on how earlier ones went here.
 - **Keep one writer per checkout.** Up to two implementation workers may write
   concurrently, each in its own project-local worktree, with non-overlapping named
-  ownership and agreed interfaces. Each checkout has one writer. Workers report
+  ownership and agreed interfaces. The one exception is a
+  [matched run](../operations/model-routing.md#matched-runs-on-this-repositorys-leaves):
+  its two attempts are the two workers, they share the leaf's owned paths in separate
+  worktrees, and only one of them merges. Each checkout has one writer. Workers report
   commits or diffs, checks, risks and unresolved questions; they do not merge to main
   or change shared contracts independently. Reduce concurrency when review or
   integration queues grow; raise the initial limit only after recording evidence and

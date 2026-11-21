@@ -70,6 +70,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `docs/research*.md` | External evidence and its limits, with a dated research cutoff; [research](research.md) indexes the current pages, and pages whose question is closed are `historical`. |
 | `docs/decisions/owner-decisions.md` | The one list of the owner's decisions, including the permissions and limits in force. |
 | `docs/acceptance/`, `changes/`, `decisions/` (ADRs) | Dated evidence/rationale under explicit status, not live commands or permission. `changes/` holds the change briefs written before ADRs and issues took that role; it receives no new briefs. |
+| `schemas/` | JSON Schemas of persisted formats and of document front matter; the code that reads each one and its contract own its meaning. |
 | Ignored `.runtime/` | Frozen inputs, owned stores/saves and raw evidence; no private maintained source framework. |
 
 ### From code to its documents
@@ -82,14 +83,16 @@ needs these and the [glossary](glossary.md), not the whole start-here set.
 | --- | --- | --- | --- |
 | `harness/computer/`, the native bridge | [Native control](components/native-control.md) | [Computer control](contracts/computer-control.md) | `tests/test_computer_*.py`, the compiled `tests/computer_*_check.py` |
 | `harness/player/`, `harness/player_tools.py`, `player_view.py`, `player_mcp.py`, `player_client.py` | [Player interface](components/player-interface.md), [memory and learning](components/memory-learning.md) | [Computer control](contracts/computer-control.md), [player guide](player-guide.md) | `tests/test_player_journal.py`, `test_player_view.py`, `test_player_isolation.py` |
-| `harness/application.py`, `harness/server.py` | [Execution](components/mission-execution.md) | [Computer control](contracts/computer-control.md) | `tests/test_player_application.py`, `tests/test_server.py` |
-| `tools/player_host/`, `tools/campaign_*.py`, `tools/configure_player_tools.py` | [Player host procedure](operations/player-host.md), [campaign procedure](operations/campaign-run.md), [supervision](operations/campaign-supervision.md) | [Player host](contracts/player-host.md) | `tests/test_player_host_*.py`, `tests/test_campaign_*.py`, `tools/player_host/test/` |
-| `harness/curator/`, `tools/curator_host/` | [Curator](components/curator.md), [curator session design](design/curator-session.md) | [Curator hosts](operations/curator-hosts.md) | `tests/test_curator_*.py`, `tools/curator_host/test/` |
-| `harness/evaluation/`, `harness/trace/`, `tools/evaluate.py`, `host_analysis.py`, `control_analysis.py`, `run_ledger.py`, `probe_baseline.py`, `memory_reads.py`, `memory_screen_checks.py`, `memory_measure.py` | [Development runs](development-runs.md); no component page | [Evaluation](contracts/evaluation.md) | `tests/test_evaluation_*.py`, `test_host_analysis.py`, `test_memory_measure*.py`, `test_run_ledger.py`, `test_probes.py`, `test_trace_*.py` |
-| `harness/viewer/`, `web/` | [Observer operations](components/observer-operations.md) | [Evaluation](contracts/evaluation.md) for the view API, [computer control](contracts/computer-control.md#passive-spectator-reads-and-operator-pause) for Pause | `tests/test_viewer_*.py`, the browser suites `tests/test_*.cjs` |
-| `tools/check.py`, `ci.py`, `documents.py`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py` |
-| `tools/delegate.py`, `.agents/` | [Starting a delegate](operations/coding-agents.md#starting-a-delegate-on-any-coding-agent), [delegate profiles](operations/delegate-profiles.md) | [S-AGENT](standards/agents.md#the-leads-duties) | `tests/test_delegate.py`, `tests/test_coding_agent_attempts.py` |
-| `tools/starts.py` | [Reusable starts](development-runs.md#reusable-starts), [environment](environment.md) | [Evidence retention](operations/evidence-cleanup.md), [controls](controls.md) | `tests/test_start_*.py` |
+| `harness/application.py`, `harness/server.py`, `harness/__main__.py` | [Execution](components/mission-execution.md) | [Computer control](contracts/computer-control.md) | `tests/test_player_application.py`, `tests/test_server.py`, `tests/test_cli.py` |
+| `tools/player_host/`, `tools/campaign_*.py`, `tools/configure_player_tools.py` | [Player host procedure](operations/player-host.md), [campaign procedure](operations/campaign-run.md), [supervision](operations/campaign-supervision.md) | [Player host](contracts/player-host.md), the adapter's closed fields in [its reference](../tools/player_host/README.md) | `tests/test_player_host_*.py`, `tests/test_campaign_*.py`, `tests/test_recorded_player_fixture.py`, `tools/player_host/test/` |
+| `harness/curator/`, `tools/curator_host/`, `tools/knowledge_export.py` | [Curator](components/curator.md), [curator session design](design/curator-session.md) | [Curator hosts](operations/curator-hosts.md), [evaluation](contracts/evaluation.md) for the frozen knowledge export | `tests/test_curator_*.py`, `tests/test_knowledge_export.py`, `tools/curator_host/test/` |
+| `harness/evaluation/`, `harness/trace/`, `tools/evaluate.py`, `host_analysis.py`, `control_analysis.py`, `run_ledger.py`, `probe_baseline.py`, `memory_reads.py`, `memory_screen_checks.py`, `memory_measure.py`, `process_measures.py` | [Development runs](development-runs.md), the [measurement guide](evaluation.md); the [curator component](components/curator.md) for `harness/trace/` | [Evaluation](contracts/evaluation.md) | `tests/test_evaluation_*.py`, `test_host_analysis.py`, `test_memory_measure*.py`, `test_process_measures.py`, `test_run_ledger.py`, `test_probes.py`, `test_trace_*.py` |
+| `tools/recurrence_research/` | [Structured recurrence research](design/structured-recurrence-research.md), [belief method comparison](design/belief-method-comparison.md) | The same design notes | `tests/test_recurrence_research_*.py` |
+| `harness/viewer/`, `harness/spectator_assets.py`, `web/` | [Observer operations](components/observer-operations.md) | [Evaluation](contracts/evaluation.md) for the view API, [computer control](contracts/computer-control.md#passive-spectator-reads-and-operator-pause) for Pause | `tests/test_viewer_*.py`, the browser suites `tests/test_*.cjs` |
+| `tools/check.py`, `ci.py`, `documents.py`, `document_anchors.mjs`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_devtools.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py`, `test_host_neutrality.py` |
+| `tools/delegate.py`, `.agents/`, `.claude/`, `.codex/` | [Starting a delegate](operations/coding-agents.md#starting-a-delegate-on-any-coding-agent), [delegate profiles](operations/delegate-profiles.md) | [S-AGENT](standards/agents.md#the-leads-duties) | `tests/test_delegate.py`, `tests/test_coding_agent_attempts.py`, `tests/test_coding_agent_config.py` |
+| `tools/starts.py` | [Reusable starts](development-runs.md#reusable-starts), [environment](environment.md) | [Evidence retention](operations/evidence-cleanup.md), [controls](controls.md) | `tests/test_start_*.py`, `tests/test_starts_*.py` |
+| `schemas/` | The contract or standard that names each schema | The schema file | The tests of the code that reads it |
 | `tools/setup.py`, `prepare_game.py`, `patch_game.py`, `build_computer.py`, `harness/prepared_app.py`, `native/` | [Setup](setup.md), [environment](environment.md) | [Native acceptance](operations/native-acceptance.md) | `tests/test_setup.py` |
 | `harness/jsonio.py` | A shared helper with no page of its own | The contract of whichever caller is changed | `tests/test_jsonio.py` |
 
@@ -104,6 +107,7 @@ needs these and the [glossary](glossary.md), not the whole start-here set.
 | Save/load/exit | [Player guide](player-guide.md#current-registered-cdda-lifecycle) → actual visible ordinary controls. The player judges game state; the harness certifies no save. |
 | Observe play | [Start/observe](operations/start-observe.md) → [observer component](components/observer-operations.md) → [passive reads and Pause contract](contracts/computer-control.md#passive-spectator-reads-and-operator-pause). The viewer's recorded views and the current control target remain distinct. |
 | Select validation | [Testing](testing.md) → [development policy](workflows/development.md) and [CI profiles](workflows/ci-profiles.md). Native/gameplay evidence stays separate. |
+| Measure and diagnose a run | [Measurement guide](evaluation.md) → [evaluation contract](contracts/evaluation.md) for the records and views it reads. A measurement explains part of a run; it does not certify useful progress. |
 
 ## One authoritative home per kind of fact
 
@@ -150,7 +154,9 @@ rules that follow from this table.
    record, `docs/acceptance/YYYY-MM-DD-what-it-is.md`, with front matter `owner`,
    `status: historical`, `kind`, `date` and `scope`, opening with "At a glance", then
    run `.venv/bin/python -m tools.documents --write` to regenerate the index. A change
-   whose only evidence is its diff gets no record: say it in the pull request.
+   whose only evidence is its diff gets no record: say it in the pull request. A
+   grooming, a proposal or a reading of outside sources is not evidence either; its home
+   is in [S-DOCS](standards/documentation.md#current-pages-records-and-decisions).
 4. **Is it where work stands?** Replace the issue's description; do not add a section
    to it. Set its Project fields as [work items](workflows/work-items.md) says.
 5. **Is it a design for a decision?** Write a `proposed` note under `docs/design/`,
@@ -174,10 +180,11 @@ A timestamp or parser pass does not establish truth. Keep original failures inta
 Historical records and superseded pages are evidence, not runnable instructions,
 another supported backend or authority to import old data; they keep their original
 tested scope. This covers acceptance reports, change briefs, superseded ADRs and old
-executable artifacts. Their content is never edited; when a link target moves or is
-removed, only the link is repointed, to the new home or to a commit permalink of the
-old file. A replaced current page is deleted rather than kept as a superseded copy:
-Git keeps it. Historical records carry no `review_trigger`. Current pages describe the
+executable artifacts. Their body does not change after merge, and what may be
+corrected is in [S-DOCS](standards/documentation.md#current-pages-records-and-decisions);
+a link whose target moves or is removed is repointed to the new home or to a commit
+permalink of the old file. A replaced current page is deleted rather than kept as a
+superseded copy: Git keeps it. Current pages describe the
 current system and are not changelogs: what changed, when and what it replaced belongs
 in Git and pull requests, what was observed belongs in dated records, and what the
 owner decided belongs in the owner decision log, not in an active page.
