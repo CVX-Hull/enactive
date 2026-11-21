@@ -61,7 +61,8 @@ spending or new admission. General unattended operation remains unqualified.
    runner after the custodian as an unsupervised child, without the route credential:
    its environment is the gateway's and `HOME`, so it resolves its own provider key
    from the keychain item mapped in `.runtime/credentials.json`.
-   Without the option neither is created. A live run with the runner needs the owner's
+   Without the option neither is created. With it, a package that already holds either
+   is refused before the reservation, so the refusal leaves the package usable. A live run with the runner needs the owner's
    approval of its price ([operator permissions](../operator-permissions.md)).
 
 4. Open the exact printed gateway URL to observe play and reach Pause. The
@@ -101,7 +102,12 @@ is requested before bounded waits. Every launched child, including the viewer an
 start is recorded but is not supervision loss, and never fails startup; the curator
 runner is treated the same way. The viewer and the runner are terminated with the
 first requests and their groups closed last, after the custodian's bounded wait, so
-nothing that waits for them delays the custodian. The shared group helper acts
+nothing that waits for them delays the custodian; a runner that ignores its stop is
+killed by the group helper. The supervisor then removes `curator-runner/snapshots/`,
+which a killed runner can leave holding custody copies, and records a failure to do so
+without raising. The runner's sandboxed curator host runs in a process group of its
+own: it can outlive a forced kill of the runner, cannot spend once the runner's proxy
+is gone, and is not covered by `cleanup_verified`. The shared group helper acts
 only on groups created by those exact launches. Keep-awake is process-scoped.
 Cleanup errors stay visible; arbitrary OS hangs, abrupt supervisor death and
 native application responsiveness remain limits.
@@ -118,7 +124,7 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 | `watch-start.json` | `campaign-watch-start/4`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start and the planned `viewer_port`, which the gateway must match. Prior/partial markers refuse; never delete to rearm. |
 | `watch-terminal.json` | `campaign-watch-terminal/4`; reason, `pause_reason` (`loop`, `fault`, `spend`, `other` or `unspecified`; null when the owner did not press Pause), the Pause clock and whether the custodian's reply was forwarded, exact children (the viewer with its pid, port and `supervised: false`, or its launch error), bounded cleanup and custodian disposition as separate facts. |
 | `viewer-stdout.txt`, `viewer-stderr.txt` | The viewer's own output, created exclusively by the supervisor; diagnostics only. |
-| `curator-read.lock`, `curator-runner/` | Only with `--curator-runner`: the read admission lock, created before the custodian and never replaced, and the runner's own directory (its record, status file and output, `stdout.txt` and `stderr.txt`). `watch-terminal.json` records the runner as `curator_runner` with `supervised: false`, or its launch error, and its cleanup with `exited_before_teardown`. |
+| `curator-read.lock`, `curator-runner/` | Only with `--curator-runner`: the read admission lock, created before the custodian and never replaced, and the runner's own directory (its record, status file and output, `stdout.txt` and `stderr.txt`). `watch-terminal.json` records the runner as `curator_runner` with `supervised: false`, or its launch error, and its cleanup with `exited_before_teardown` and `snapshots_removed`. |
 
 Supervision and the gateway refuse watch records of any other version.
 

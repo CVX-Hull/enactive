@@ -14,6 +14,7 @@ import math
 import os
 from pathlib import Path
 import select
+import shutil
 import signal
 import socket
 import subprocess
@@ -232,6 +233,9 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
         raise ValueError('Selected package has prior/partial supervision; never rearm it')
     runner_config = None
     if curator_runner is not None:
+        # Refused before the reservation, so a refused start never leaves the package inert.
+        if any(os.path.lexists(directory/name) for name in (CURATOR_READ_LOCK, RUNNER_DIRECTORY)):
+            raise ValueError('Selected package already holds a curator read lock or runner directory; never rearm it')
         runner_config = Path(curator_runner).resolve(strict=True)
         if not runner_config.is_file():
             raise ValueError('The curator runner configuration must be a regular file')
@@ -379,6 +383,16 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                 except BaseException as exc:
                     result['cleanup'][name] = dict(launched=True, **exited, process_absent=False, group_absent=False,
                         error=type(exc).__name__, error_message=str(exc)[:400])
+                if name == 'curator_runner':
+                    # A runner killed mid-poll can leave a staged snapshot, which holds custody copies.
+                    try:
+                        shutil.rmtree(directory/RUNNER_DIRECTORY/'snapshots', ignore_errors=False)
+                        result['cleanup'][name]['snapshots_removed'] = True
+                    except FileNotFoundError:
+                        result['cleanup'][name]['snapshots_removed'] = True
+                    except BaseException as exc:
+                        result['cleanup'][name]['snapshots_removed'] = False
+                        result['cleanup'][name]['snapshots_error'] = type(exc).__name__
                 continue
             if name not in handles:
                 result['cleanup'][name] = dict(launched=False)

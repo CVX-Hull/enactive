@@ -328,10 +328,21 @@ def supervised_with_runner(tmp_path, monkeypatch, runner_code, *, configured=Tru
         calls.append((name, argv, kwargs))
         command = gateway_command(argv) if name == 'gateway' else [sys.executable, '-c',
             runner_code if name == 'curator_runner' else 'import time; time.sleep(20)']
-        launched[name] = subprocess.Popen(command, **kwargs)
-        return launched[name]
+        handle = launched[name] = subprocess.Popen(command, cwd=run, **{k: v for k, v in kwargs.items() if k != 'cwd'})
+        if name == 'curator_runner':
+            terminate = handle.terminate
+            handle.terminate = lambda: (events.append('runner-terminate'), terminate())[1]
+        if name == 'custodian':
+            wait = handle.wait
+            handle.wait = lambda *a, **k: (events.append('custodian-wait'), wait(*a, **k))[1]
+        return handle
+    events = []
     outcome = {}
     def supervision(*args, **kwargs):
+        if 'curator_runner' in launched and 'runner-ready' in runner_code:
+            end = time.monotonic() + 10
+            while not (run/'runner-ready').exists() and time.monotonic() < end:
+                time.sleep(.02)
         if 'curator_runner' in launched:
             try:  # long enough for an early exit to happen, while the run goes on
                 launched['curator_runner'].wait(timeout=.5 if 'sleep' in runner_code else 10)
@@ -349,13 +360,14 @@ def supervised_with_runner(tmp_path, monkeypatch, runner_code, *, configured=Tru
     result = guard.run_supervised(run, popen=launch, viewer_port=lambda: 54321,
                                   curator_runner=config if configured else None)
     assert all(h.poll() is not None for h in launched.values())
+    outcome['events'] = events
     return run, result, calls, closed, outcome
 
 
 def test_a_curator_runner_starts_after_the_custodian_outside_supervision_and_is_closed_last(tmp_path, monkeypatch):
     run, result, calls, closed, outcome = supervised_with_runner(tmp_path, monkeypatch, 'import time; time.sleep(20)')
     assert [name for name, _, _ in calls] == ['custodian', 'viewer', 'curator_runner', 'gateway', 'wake']
-    assert outcome == dict(runner_alive=True, others_alive=True)
+    assert outcome['runner_alive'] and outcome['others_alive']
     assert result['reason'] == 'custodian_terminal' and 'error' not in result and result['cleanup_verified']
     child = result['children']['curator_runner']
     assert child['supervised'] is False and child['created_process_group'] is True
@@ -372,6 +384,41 @@ def test_a_curator_runner_starts_after_the_custodian_outside_supervision_and_is_
     assert closed.index('custodian') < closed.index('curator_runner') and closed[-1] == 'curator_runner'
     assert (run/'curator-read.lock').is_file() and (run/'curator-runner').is_dir()
     assert (run/'curator-runner'/'stdout.txt').is_file()
+
+
+RUNNER_IGNORING_SIGTERM = '''
+import os, signal, time
+signal.signal(signal.SIGTERM, signal.SIG_IGN); signal.signal(signal.SIGINT, signal.SIG_IGN)
+os.makedirs('curator-runner/snapshots/killed/run/actors', exist_ok=True)  # a snapshot left mid-poll
+open('curator-runner/snapshots/killed/run/actors/actor.json', 'w').write('{"token": "custody copy"}')
+open('runner-ready', 'w').close()
+time.sleep(60)
+'''
+
+
+def test_a_runner_that_ignores_sigterm_is_asked_first_killed_last_and_its_snapshots_removed(tmp_path, monkeypatch):
+    run, result, _, closed, outcome = supervised_with_runner(tmp_path, monkeypatch, RUNNER_IGNORING_SIGTERM)
+    assert outcome['runner_alive']
+    # Asked to terminate before the custodian's bounded wait is entered; closed after it.
+    assert outcome['events'].index('runner-terminate') < outcome['events'].index('custodian-wait')
+    assert closed.index('custodian') < closed.index('curator_runner')
+    cleanup = result['cleanup']['curator_runner']
+    assert cleanup['signals'][-1] == 'SIGKILL' and cleanup['process_absent'] and cleanup['group_absent']
+    assert result['reason'] == 'custodian_terminal' and result['cleanup_verified'] and 'error' not in result
+    assert cleanup['snapshots_removed'] is True and not (run/'curator-runner'/'snapshots').exists()
+
+
+@pytest.mark.parametrize('left', ['curator-read.lock', 'curator-runner'])
+def test_a_package_that_already_holds_runner_files_is_refused_before_the_reservation(tmp_path, monkeypatch, left):
+    monkeypatch.setattr(guard, 'preflight', lambda _: pytest.fail('refused before preflight'))
+    run = tmp_path/'run'
+    run.mkdir()
+    (run/left).mkdir() if left == 'curator-runner' else (run/left).touch()
+    config = tmp_path/'runner.json'
+    config.write_text('{}')
+    with pytest.raises(ValueError, match='already holds a curator read lock or runner directory'):
+        guard.run_supervised(run, curator_runner=config)
+    assert sorted(p.name for p in run.iterdir()) == [left]  # no reservation: the package is not made inert
 
 
 @pytest.mark.parametrize('runner_code', ['raise SystemExit(3)', None])
