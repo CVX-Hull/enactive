@@ -8,12 +8,11 @@ status: active
 
 The curator reads projected traces and holds no custody or direct player access.
 The player and computer do not import curator code. The runner supports windowed
-sessions beside an admission. Live snapshots and single-actor curation have partial
-evidence from the [first paid live run](../acceptance/2026-11-21-live-curator-run-859.md),
-which stopped early after five sessions because a shared unchanged frame across windows
-broke gate history ([#886](https://github.com/CVX-Hull/enactive/issues/886)); full
-multi-window and handoff behavior in real play remains unverified beyond offline tests
-and the [stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md).
+sessions beside an admission. Live evidence is partial ([first paid live run](../acceptance/2026-11-21-live-curator-run-859.md)),
+and a reused frame across adjacent windows can currently invalidate gate history
+([#886](https://github.com/CVX-Hull/enactive/issues/886)); full multi-window and
+handoff behavior in real play remains unverified beyond offline tests and the
+[stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md).
 Publications during an admission leave the running actor on its
 [frozen knowledge export](../contracts/player-host.md#delivered-knowledge-and-recall).
 

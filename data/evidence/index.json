@@ -890,7 +890,7 @@
       ],
       "files": 343,
       "manifest_sha256": "0867fe22581c9af2174938047d1c33a221e6afe61fbad44d8944e04ac469d2e6",
-      "note": "Paid live curator run (#859) on main 371ed949, session 2cda0867c34442f394299555aece7009: run directory with curator-runner/, runner configuration, before-launch summary, curator knowledge repository (v0-v3 and session records), and saved study userdir (Richwoods). Locks excluded by rule.",
+      "note": "Paid live curator run (#859) on main 371ed949, session 2cda0867c34442f394299555aece7009: run directory with curator-runner/, runner configuration, before-launch summary, curator knowledge repository (v0-v3 and session records), and saved study userdir (Richwoods). curator-read.lock excluded by the .lock suffix rule; empty knowledge/cdda.state/lock retained.",
       "sources": {
         "config": ".runtime/live-curator-run-859/curator-runner-config.json",
         "knowledge": ".runtime/knowledge/live-curator-run-859/cdda@371ed949",
