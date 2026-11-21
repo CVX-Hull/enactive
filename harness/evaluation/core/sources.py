@@ -25,7 +25,7 @@ OPERATION_SCHEMA = 'computer-operation/1'
 #: the closed archive index below lists that exact version for that session.
 HOST_SCHEMA = 'player-host/8'
 HOST_TELEMETRY = 8
-MANIFEST_SCHEMA = 'campaign-run/10'
+MANIFEST_SCHEMA = 'campaign-run/11'
 RECEIPT_SCHEMA = 'campaign-receipt/7'
 DRIVER_SCHEMA = 'player-driver/7'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'

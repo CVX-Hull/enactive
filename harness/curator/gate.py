@@ -19,8 +19,8 @@ import uuid
 from harness.curator.knowledge import KnowledgeError, Repository
 
 SUBMISSION = 'curator-submission/1'
-FACT = 'curator-fact/3'
-TYPE = 'curator-type/1'
+FACT = 'curator-fact/4'
+TYPE = 'curator-type/2'
 VERDICT = 'curator-gate/2'
 COVERAGE = 'curator-coverage/2'
 MAX_CHANGES = 200

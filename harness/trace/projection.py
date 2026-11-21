@@ -47,7 +47,10 @@ from .manifest import ProjectionError, SCHEMA
 from .stores import SealedStoreError, sealed
 
 # Label fields supplied by each supported sealed run package version.
-PACKAGE_LABELS = {'campaign-run/10': ('lineage', 'admission')}
+PACKAGE_LABELS = {
+    'campaign-run/11': ('world', 'lineage', 'admission'),
+    'campaign-run/10': ('lineage', 'admission'),
+}
 ACTION_FIELDS = ('type', 'key', 'modifiers', 'text', 'seconds', 'x', 'y', 'button')
 RECORD_FIELDS = ('kind', 'text', 'data', 'sources', 'supports', 'supersedes', 'applicability', 'program_id')
 TOOL_ARGUMENTS = {

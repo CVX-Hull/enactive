@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 
-SCHEMA = 'curator-knowledge/2'
+SCHEMA = 'curator-knowledge/3'
 BRANCH = 'main'
 IDENTITY = ('-c', 'user.name=enactive-gate', '-c', 'user.email=gate@localhost',
             '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', '-c', 'core.hooksPath=/dev/null')
