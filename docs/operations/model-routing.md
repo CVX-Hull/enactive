@@ -108,8 +108,9 @@ on the brief's Role line and in the pull request.
 - **Read the remaining quota before a large delegation.** The settings that keep paid
   overflow off on each host have not been read for this project; check them in each
   host's own settings before relying on them.
-- **Spend the scarcest window on the work that needs it.** Hard changes go to a model
-  the hard-change row names; bounded and locating work goes to cheaper models.
+- **Spend the scarcest window on the work that needs it.** The hard-change row's first
+  choice and substitutes are the candidates to consider for a hard change; bounded and
+  locating work can go to cheaper models.
 - **Keep the lead's context small.** The lead's context is sent again on every
   request. In the one lead session measured here the lead's own requests were 72% to
   74% of the tokens' list-price equivalent, and about half of the lead's part was
@@ -125,25 +126,23 @@ on the brief's Role line and in the pull request.
 ## When the lead's model has no quota left
 
 The lead role passes to another session or coding agent
-([handing over through the issue](../standards/agents.md#the-leads-duties)). No
-comparison of leads exists here or in public, so this is where to start, with its
-reasons, and not a default
+([handing over through the issue](../standards/agents.md#the-leads-duties)). The
+readers found no comparison of these configurations as leads, here or in public, so
+this is where to start thinking, with its reasons, and not a default
 ([evidence read on 20 November 2026](../acceptance/2026-11-20-lead-succession-evidence-866.md)):
 
 | What is spent | Where to start | Then | Why |
 | --- | --- | --- | --- |
-| Only the limit of Claude Fable 5.2 | Claude Code on Claude Opus 5.5, at High or above | Codex on GPT-6.2 Sol at Extra-high, then GPT-6.2 Astra at Extra-high | Opus has led more requests here than Fable, on the coding agent whose lead workflow is in use. Its effort as lead was not recorded; one public index puts it seven points lower at High than at Max |
-| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high; the Antigravity app on Gemini 4 Neon at High with the owner present | Sol has the local record of the work a lead does: code preferred blind and nine confirmed review findings. Astra goes first for a hard change with open design, at about three times the quota for each message. The one Antigravity lead session needed the owner and a second session to finish |
+| Only the limit of Claude Fable 5.2 | Claude Code on Claude Opus 5.5, at High or above | Codex on GPT-6.2 Sol at Extra-high, then GPT-6.2 Astra at Extra-high | Opus made more lead requests than Fable in the transcripts sampled here, on the coding agent whose lead workflow is in use. Its effort as lead was not recorded; one public index that is not specific to coding puts it seven points lower at High than at Max |
+| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high; the Antigravity app on Gemini 4 Neon at High with the owner present, for engineering work that needs no gameplay | Sol has the local record of the work a lead does: code preferred blind and nine confirmed review findings. Trying Astra first for a hard change with open design is judgment: no local attempt compares it with Sol, and the maker estimates about a third as many Astra messages as Sol messages in five hours on its smaller plans. The one Antigravity lead session needed the owner and a second session to finish; for a watched documentation leaf it may come before Astra |
 
-- **Check what is spent first.** The maker's help page gives Fable a weekly limit of
-  its own beside the one all models share; each coding agent shows what remains in a
-  session ([delegate profiles](delegate-profiles.md)).
+- **Check which limit the session shows as spent first.** Each coding agent shows what
+  remains in a session ([delegate profiles](delegate-profiles.md)).
 - **A Codex lead has gaps to route around.** The delegate call has not been run from
   one, and its sandbox denies the network by default
   ([hosts page](coding-agents.md#starting-a-delegate-on-any-coding-agent)).
-- **Check a delegate's report against the tree under any lead.** Two makers' own
-  system cards report that their newest models leave out obstacles or leave work
-  undone more often than the models they replaced.
+- **The duty to verify a delegated result does not change with the lead**
+  ([the lead's duties](../standards/agents.md#the-leads-duties)).
 
 ## Matched runs on this repository's leaves
 

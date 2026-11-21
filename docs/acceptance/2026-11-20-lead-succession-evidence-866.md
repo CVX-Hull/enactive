@@ -16,20 +16,23 @@ this repository's records, one at public benchmark pages, one at each coding age
 help text and documentation, and one from a second model family at the same records
 with the lead's draft answer withheld.
 
-- **No comparison of leads exists**, here or in public. Every order below is a
-  starting point for a trial, not a finding.
-- **Three configurations have led here.** Claude Code on Claude Opus 5.5 made more lead
-  requests in eight days than Claude Code on Claude Fable 5.2. Codex led earlier work.
-  The Antigravity app on Gemini 4 Neon led one watched documentation leaf.
-- **The top models are within noise on public agentic-coding boards.** What separates
-  the candidates for the lead role is what each coding agent lets a lead session do.
-- **The maker's help page gives Fable a weekly limit of its own** beside the limit all
-  models share, so a spent Fable limit probably leaves Claude Opus 5.5 usable. A second
-  page of the same maker words this differently.
+- **The readers found no comparison of these configurations as leads**, here or in
+  public. Every order below is a starting point for a trial, not a finding.
+- **All three coding agents have led here.** In the sampled transcripts Claude Code on
+  Claude Opus 5.5 made more lead requests than Claude Code on Claude Fable 5.2. Codex
+  led earlier work, on a model that is not recorded. The Antigravity app on Gemini 4
+  Neon led one watched documentation leaf.
+- **The leading models are a few points apart on the public agentic-coding boards
+  read.** The lead's judgment is that what each coding agent lets a lead session do
+  separates the candidates more than those points do.
+- **The maker's help page gives Fable a weekly limit of its own on its larger plans**
+  beside the limit all models share, so a spent Fable limit may leave Claude Opus 5.5
+  usable. A second page of the same maker words this differently, and which plan is
+  held here was not read.
 - **The second-family reader and the lead reached the same order:** Claude Code on
   Opus 5.5 when only Fable's limit is spent; Codex on GPT-6.2 Sol, then on GPT-6.2
   Astra, when the whole Claude window is spent; the Antigravity app on Gemini 4 Neon
-  last and watched.
+  last, watched, and not for a leaf that needs gameplay.
 - **The records favour the lead's own model family** in what was tried, who was
   audited and how four statements were worded. The four are corrected in the change
   that adds this record.
@@ -54,13 +57,19 @@ independent testing of them existed.
 
 | Configuration | What is recorded | What is not |
 | --- | --- | --- |
-| Claude Code, Claude Opus 5.5 | 2,791 lead requests in the eight days to 20 November, against 1,432 for Fable ([token use](2026-11-20-coding-agent-token-use.md#the-eight-days)); 151 commits on `main` name it as co-author against 70 for Fable (`git log`, measured here) | The effort those sessions ran at; any audit of what a session claimed against what it did |
-| Claude Code, Claude Fable 5.2 | The lead of the measured session of 19 and 20 November and of the delegate call's first use ([hosts page](../operations/coding-agents.md#starting-a-delegate-on-any-coding-agent)) | Any audit of its claims |
+| Claude Code, Claude Opus 5.5 | 2,791 lead requests in the two lead transcripts changed from 13 to 20 November, against 1,432 for Fable; every qualifying response in those files was counted, whatever its own date ([token use](2026-11-20-coding-agent-token-use.md#what-was-read)) | The effort those sessions ran at; any audit of what a session claimed against what it did |
+| Claude Code, Claude Fable 5.2 | The lead of the measured session of 19 and 20 November ([token use](2026-11-20-coding-agent-token-use.md#the-lead-session-of-19-and-20-november)), and named as the lead in the pull request that first used the delegate call ([#865](https://github.com/CVX-Hull/enactive/pull/865)) | Any audit of its claims |
 | Codex | The owner's statement of 19 November that it "had already led before" ([decision log](../decisions/owner-decisions.md)) | Which model, at what effort, on what work, and how the session behaved; the delegate call has not been run from a Codex lead |
 | Antigravity app, Gemini 4 Neon at High | One documentation leaf with the owner present, audited claim by claim ([trial record](2026-11-19-antigravity-lead-trial-810.md)) | Source code, unattended work, a merge it completed itself |
 
-Only the Antigravity session was audited against its transcript. "No false report is
-recorded" for the other two means that nobody looked.
+Separately from leading, 151 commits on `main` name Opus as co-author and 70 name Fable
+(`git log`, measured here); a co-author line says a model wrote in the session, not
+that it led.
+
+Only the Antigravity session was audited against its transcript. The readers found no
+comparable audit of a Claude Code or Codex lead session, so the absence of a recorded
+false report by a lead on those two is not evidence either way. Delegates' results on
+all three were checked by the lead that received them.
 
 ## What the public pages say
 
@@ -83,11 +92,12 @@ stated.
 | Claude Haiku 5.5 | 36.36% | $3.12 | not read |
 | GPT-6 Luna | 13.64% | $0.35 | not read |
 
-The top six are within about two points of each other, and the GPT-6.2 models used far
-fewer tokens for each test than the Claude models. The maker's own figure for Sonnet 5.5
-on the same benchmark is 70.6% (vendor, through an
-[aggregator](https://www.morphllm.com/claude-benchmarks)), six points above the
-independent one, which shows what a maker's own harness adds.
+The first six span 3.53 points, from 65.15% to 61.62%; the page's intervals were not
+read, so whether that spread is noise is not established here. The reader reported
+that the GPT-6.2 models used far fewer tokens for each test than the Claude models.
+The maker's own figure for Sonnet 5.5 on the same benchmark is 70.6% (vendor, through
+an [aggregator](https://www.morphllm.com/claude-benchmarks)), six points above the
+independent one; nothing read isolates why.
 
 The Artificial Analysis Intelligence Index, which is not specific to coding, gives
 Claude Opus 5.5 a score of 59 at Max, 57 at Extra-high, 52 at High, 48 at Medium and 35
@@ -99,7 +109,7 @@ index against the model it replaced, mostly on codebase questions
 
 ### Orchestration
 
-No public benchmark ranks these models as orchestrators. One study of eight older
+The reader found no public benchmark that ranks these models as orchestrators. One study of eight older
 models found that a lead which delegated too readily scored below a single agent
 ([MS-Eval](https://arxiv.org/html/2610.22869), 16 October 2026). One maker's own guide
 names its largest model for leading many sub-agents and its next model as the usual
@@ -206,13 +216,17 @@ seconds. It used no knowledge from outside the repository.
 | First | Claude Code, Claude Opus 5.5 at High | Codex, GPT-6.2 Sol at Extra-high |
 | Second | Codex, GPT-6.2 Sol at Extra-high | Codex, GPT-6.2 Astra at Extra-high |
 | Third | Codex, GPT-6.2 Astra at Extra-high | Antigravity app, Gemini 4 Neon at High, watched |
+| Fourth | Antigravity app, Gemini 4 Neon at High, watched | none |
 
 Its reasons: Opus has recorded lead use on the coding agent whose lead workflow is
 established; Sol has the strongest local record of the work a lead must do, with
-Astra ahead only when the task is a hard patch with open design; the Antigravity
-session needed the owner and a second session to finish.
+Astra ahead only when the task is a hard patch with open design, a choice it marked as
+lacking any local comparison with Sol; the Antigravity session needed the owner and a
+second session to finish. It added two conditions: for a watched documentation leaf
+Neon may move ahead of Astra, and for a leaf that needs gameplay Antigravity leaves the
+list. It called all of these orders for trial.
 
-The lead agrees with the order. It differs on one setting: it would start Opus at
+The lead agrees with the order and the conditions. It differs on one setting: it would start Opus at
 Extra-high or Max for a lead that designs, because the one public index read by effort
 puts Opus seven points lower at High than at Max. Neither setting has been compared
 here.
@@ -222,8 +236,8 @@ here.
 | Kind of work | Its order |
 | --- | --- |
 | Bounded implementation | GPT-6.2 Sol at Extra-high, then Claude Opus 5.5 at High, then GPT-6.2 Astra at Extra-high; Opus first when the worker must run the whole suite or commit |
-| Review of code | GPT-6.2 Sol at Extra-high for a change no Codex model wrote; Claude Opus 5.5 at High for one a Codex model wrote |
-| Review of documents | GPT-6.2 Astra at High first, on its one recorded finding |
+| Review of code | GPT-6.2 Sol at Extra-high, then Claude Opus 5.5 at High; the reverse for a change a Codex model wrote when a second family is wanted, or when the reviewer must run checks that write temporary files |
+| Review of documents | For documents a Claude or Gemini model wrote: GPT-6.2 Astra at High, on its one recorded finding, then GPT-6.2 Sol at Extra-high, then Claude Opus 5.5 at High. For documents a GPT model wrote: Opus first when a second family is wanted |
 | Standards and pull-request prose | Claude Fable 5.2 at High, then GPT-6.2 Sol at Extra-high |
 | Exploration across files | Gemini 4 Neon at Extra-high for named files; Claude Sonnet 5.5 at Medium or GPT-6.2 Sol when the brief needs shell searches |
 
@@ -235,9 +249,9 @@ here.
 - **What was tried is uneven.** Six of seven pull requests in one stretch were built by
   the lead's own model family. The matched runs cover one prose leaf and one code
   leaf.
-- **The lead ran the comparisons.** It chose the leaf and the challenger, wrote the
-  brief, reran the check and decided what merged. Who wrote each matched brief and who
-  judged blind is not in the ledger.
+- **The comparisons ran through the lead's workflow.** By the procedure the lead
+  chooses the leaf and the challenger, reruns the check and decides what merges. Who
+  wrote each matched brief and who judged blind is not in the ledger.
 - **Only one lead was audited.** See [who has led here](#who-has-led-here).
 
 ### Statements it found unsupported
@@ -251,18 +265,28 @@ here.
 | "A spent window comes back as `refused`" (delegate profiles) | No real refusal has been seen through the call, and the hosts page already says a refusal can arrive as another outcome | Narrowed |
 | "Five of the seven duties" (trial record) | The record's table has eight rows | Left: a dated record is not edited |
 
-## Two trials that would settle the order
+## Two trials that could change the order
 
-The second-family reader proposed two shared leaves, each with the same issue, base and
-brief for every candidate, separate worktrees, and scoring of the lead's duties from
-what the session left behind, with correct verification and handover ahead of speed.
+The second-family reader proposed two shared leaves, entered in stages, each with the
+same issue, base and brief for every candidate, frozen by the owner or a neutral
+editor, separate worktrees, and scoring of the lead's duties from what the session left
+behind, with correct verification and handover ahead of speed. Each is one leaf of its
+kind, so an unclear result calls for one more leaf in the disputed kind.
 
 1. **A documentation leaf led unattended** by Claude Opus 5.5, GPT-6.2 Sol and Gemini 4
    Neon: one real delegation, a clean review, checked citations, the reviewed head
-   through CI, and a written handover.
+   through CI, and a written handover. The order changes if Sol completes correctly
+   and Opus needs a material intervention or misses a duty. Neon moves up for
+   documentation if it finishes unattended with checked citations and the correct head
+   while a candidate above it fails those duties; otherwise it stays the watched
+   fallback.
 2. **A source leaf with an open design decision** led by Claude Opus 5.5, GPT-6.2 Sol
    and GPT-6.2 Astra, with one seeded wrong citation or misleading passing report for
-   the lead to find.
+   the lead to find; Neon joins only if it passed the first trial. Astra moves ahead
+   of Sol if it verifies and delivers while Sol misses a material issue, or reaches
+   equal verified quality at clearly lower observed quota. Codex moves ahead of Opus,
+   when only Fable is spent, if its candidate is at least as reliable on the
+   documentation leaf and materially better on the source leaf.
 
 Neither is registered as work. Each needs the owner to start a lead session on a coding
 agent other than the one that wrote this record.
@@ -270,7 +294,8 @@ agent other than the one that wrote this record.
 ## No evidence found
 
 - A measured ranking of these models as leads, or of a lead checking a delegate's
-  report against the code.
+  report against the code. The search was one reader's, on one day; it does not show
+  that none exists.
 - A time-horizon figure for any of these models from its measuring body's own page.
 - Context-window sizes for the Gemini 4 models, and any measurement of how a session
   degrades after its context is compacted.
