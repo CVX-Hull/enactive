@@ -76,9 +76,10 @@ Allow rules for these commands were added afterwards
 without the owner present has not been tried, and the trial does not show unattended
 leading. An Antigravity lead session may run unattended
 ([owner decision of 21 November 2026](../decisions/owner-decisions.md#the-lead-trials-run-and-any-lead-may-run-unattended));
-its first unattended session is the documentation trial of
-[#868](https://github.com/CVX-Hull/enactive/issues/868). Until that trial reports, a
-leaf that cannot afford a stalled lead goes to a lead on Codex or Claude Code.
+the documentation trial of [#868](https://github.com/CVX-Hull/enactive/issues/868) is
+planned as one. Because unattended approvals are untried, a lead weighing where to
+send a leaf that cannot afford a stall may prefer Codex or Claude Code until one has
+run.
 
 ## Delegation roles
 
