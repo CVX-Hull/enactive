@@ -78,7 +78,7 @@ digests. [Tracked sidecar example](../../data/containers/397-seven-day.json)
 ## Runner windows
 
 The guardian starts the runner alongside the custodian. Its exit leaves play running.
-The [launch and cleanup procedure](../operations/campaign-supervision.md#freeze-launch-and-inspect)
+The [launch](../operations/campaign-supervision.md#freeze-launch-and-inspect) and [cleanup](../operations/campaign-supervision.md#failure-and-owned-cleanup) procedure
 owns process setup and termination. The runner handles cancellation by interrupting
 the session and closing the proxy and any active read. Input revocation proceeds independently.
 
@@ -127,8 +127,8 @@ final step is covered.
 Lag counts finished operations after that prefix. The runner locates its endpoint
 by operation ID in the latest successful snapshot, across actors. An unplaceable
 endpoint leaves lag unknown. At the first restore, the runner counts versions only through the restore target (through
-the version preceding the restore if the target is unknown). Lag and coverage beyond
-that prefix are unknown. The [spectator status contract](../contracts/spectator-view.md#curator-runner-status)
+the version preceding the restore if the target is unknown). Coverage beyond that
+point and lag are unknown. The [spectator status contract](../contracts/spectator-view.md#curator-runner-status)
 gives the read position, backlog, unexamined ranges and status fields. Later steps
 must be counted from the sealed trace. The [schedule replay](../contracts/measurement-tools.md#runner-records-and-schedule-replay)
 maps this prefix to player requests for the [proposed context cut](../design/coverage-gated-context-cut.md).

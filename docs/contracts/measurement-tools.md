@@ -67,7 +67,7 @@ each boundary. The end row gives the outcome and whether the cursor advanced.
 [curator component](../components/curator.md#publication-and-coverage) defines coverage.
 
 For frame age, match the evaluator's operation by ID and use the source's
-`received_wall` in the snapshot store. A step without a frame has no frame age.
+`received_wall` in the sealed session store. A step without a frame has no frame age.
 A fact's [`seen` position](../design/world-scoped-memory.md#the-format-curator-fact3)
 gives sighting order.
 

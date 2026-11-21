@@ -13,6 +13,9 @@ review_trigger: Measurement of the curator's confirmed coverage lag behind the p
 - **Unknown.** Lag in real play determines how many turns can be released. Whether the briefing preserves the needed distinctions is unmeasured.
 - **Decision.** The owner revisits adoption after [curator lag behind play is measured](../decisions/owner-decisions.md#context-cut-waits-for-curator-lag-measurement).
 
+The alternatives considered and the lag estimates are in the
+[retired context design](player-context.md).
+
 ## The cut
 
 A request is one model call. A turn pairs a tool call with its result. The window

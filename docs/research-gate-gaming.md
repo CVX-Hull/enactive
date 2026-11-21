@@ -12,9 +12,9 @@ This research examines an open question from the [curator sandbox study](researc
 The studies below measure behavior on visible and hidden tests. Their transfer to a gate
 that scores knowledge or programs on later traces remains untested.
 
-## Brief and sources named
+## Question
 
-4. How do agents game pass/fail gates, and which gate designs resist it?
+How do agents game pass/fail gates, and which gate designs resist it?
 
 ## Gate gaming
 

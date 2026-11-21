@@ -39,6 +39,7 @@ records their rationale. Current owner decisions are in the
 | [Memory, ontology and oversight](research-curated-memory.md) | Write and retrieval policies, concurrent consolidation, ontology evaluation and oversight interfaces | Which delivery, ontology grooming and spectator methods help play or supervision? | The [curator](components/curator.md) writes the knowledge store |
 | [Belief under conflicting observations](research-belief-under-conflict.md) | Revision, reliability, staleness and calibration | How do qualitative and numerical representations perform on matched evidence? | [Decision to compare representations](decisions/owner-decisions.md#compare-belief-representations-on-matched-cases) |
 | [Programs, supervision, evaluation and study design](research-curated-programs.md) | Program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design | Do programs and monitoring help in play, and can practice instances support valid trials? | [Curator memory study](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
+| [Curator sandbox](research-curator-sandbox.md) | Isolation mechanisms, host checks, session costs and residual risks | Do the residual risks of the adopted mechanism still hold after a host update or a change to the isolation boundary? | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#claude-code-and-codex-cli-curator-host-rules) |
 | [Gate gaming](research-gate-gaming.md) | Visible tests, feedback and held-out evidence | Can a gate resist gaming when it scores submissions on later traces? | [Prospective gate design](design/curator-session.md#proposed-prospective-verification-and-publication-contract) |
 
 ### Historical: the question is settled
@@ -48,7 +49,6 @@ the conclusion the project acts on is stated.
 
 | Page | Research cutoff | What it informed | Where the conclusion lives |
 | --- | --- | --- | --- |
-| [Curator sandbox](research-curator-sandbox.md) | 2026-11-08 | Isolation mechanisms, host checks, session costs and residual risks | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#claude-code-and-codex-cli-curator-host-rules) |
 | [Engineering research](research-engineering.md) | 2026-10-17 to 2026-10-25 | Principles, standards, controls, documentation, project management, review and the test-selection pilot | The [standards](engineering.md) ([research basis](standards/authority.md)), [project management](project-management.md), [risk-based assurance](workflows/review.md#risk-based-assurance) and [testing](testing.md) |
 | [Spatial grounding](research-spatial-grounding.md) | 2026-10-30 | The spatial-grounding candidate | [Test and decision](acceptance/2026-10-30-spatial-grounding.md) |
 | [Context, prompt and ergonomics](research-context-engineering.md) | 2026-10-26 | Faster player models, checked against small-model and tool studies, memory and compaction counterexamples, provider contracts and player-host context growth | Useful apparent speed needs measured effects in play. See the [cadence assessment](design/cadence-plan.md) |
