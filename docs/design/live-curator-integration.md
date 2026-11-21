@@ -336,6 +336,85 @@ Each thing measured has a named source. None changes `curator-coverage/2`.
 
 The gate is used as it is. The first run is under the current structural contract.
 
+## Replaying a recorded schedule
+
+A finished run's lag result is read by replaying the covered prefix, as the runner
+recorded it, through the lag simulation (`tools/memory_screen_checks.py`, the `cut`
+command). The runner and the simulation count different things, so the replay first
+maps one to the other.
+
+**The two units.** The runner records the covered prefix as an actor, a step and that
+step's operation identity, with the wall time of the row that holds it. The simulation
+works on one actor's player requests in order: its turn *k* holds the tool calls the
+actor's *k*-th request made, with their results, and at each request it asks how many of
+the actor's turns, counted from the first, are covered. A request can create no
+operation, one or several, so a step number is never used as a turn number.
+
+**From a prefix to covered turns.** All of it is read from the sealed run's host logs
+and the schedule; the session store is not needed.
+
+- **The operation finds the request.** The prefix's operation identity is the
+  `operation_id` in the result of a call that creates an operation (an input, an
+  observation, a handoff or a program run) in the actor's host log, and that call's
+  request is the turn the prefix ends in. A call that only collects an earlier
+  operation's result names that operation too and is not used.
+- **A turn is covered only whole.** When the prefix ends at the last operation that
+  request created, the turn it ends in is covered; when it ends at an earlier one, only
+  the turns before it are.
+- **A retried request is one turn**, and it starts when its first attempt starts: a
+  retry sends the same context again, so a publication between attempts cannot change
+  it.
+- **Other actors.** Actors are in admission order, the sorted order of their
+  directories. Every turn of an actor before the prefix's actor is covered, and no turn
+  of an actor after it. An empty prefix covers nothing.
+- **An operation no tool result names**, or one recorded as `unknown`, cannot be placed.
+  That change is left out and the replay reports how many it left out. The earlier
+  prefix stays in force, except that a change with a restore that cannot be placed
+  leaves nothing covered from then on. The replay then covers less than the run did,
+  never more.
+
+**From a time to a request.** A change applies from the first request of an actor that
+starts after the change's time. The time is the wall time of the first poll row that
+shows the new prefix. No poll is written while a session runs, so that row is later
+than the publication's first sighting by up to the rest of the session that published
+it and one poll interval; the replay is late by that much and never early. A request
+with no recorded start time takes the coverage of the request before it, and the first
+request of an actor with none is covered by nothing. The host log, the store and the
+runner use the same wall clock, in seconds since the epoch.
+
+**A restore.** The runner counts only the versions up to the one restored and marks the
+prefix with the restore. The replay uses the prefix so counted, and this is the only
+case in which a prefix may move backwards. A restore takes coverage away, so it is
+timed the other way round: by the last runner row that did not show it, and it applies
+to a request that starts at that time or later. A cut already made is not undone.
+
+**The schedule file** is the simulation's input, `curator-coverage-schedule/1`:
+
+```json
+{"schema": "curator-coverage-schedule/1",
+ "changes": [
+  {"wall": 1795212345.5, "end": null, "restore": false},
+  {"wall": 1795212391.2, "end": {"actor": "001", "step": 20, "operation": "745118b6…"}, "restore": false}]}
+```
+
+Each change is the covered prefix from `wall` on: `end` is `null` for an empty prefix,
+or the actor's directory name, the step and the operation identity (or `unknown`).
+`python -m tools.memory_screen_checks schedule RUN` writes it, to standard output or to
+`--output FILE`, from `RUN/curator-runner/polls.jsonl` and the final `status.json`, which it
+only reads: one change for each row
+whose covered prefix differs from the row before, timed by the poll's `ended_wall` and
+the status file's `updated_wall`, or for a restore by the time of the row before it. It
+refuses an output file inside `RUN`. `cut RUN --coverage schedule --schedule FILE`
+replays it over that one run, in place of the lag rows.
+
+**Refused.** A schedule is refused, with the change named, when its schema or a field
+is missing or of the wrong type, when a step is below one, when its times decrease,
+when a prefix moves backwards without a restore, by its steps or by the turns its
+operations are placed in, when it names an actor the run does not have, or when it is
+given with more than one run. Nothing is repaired or reordered. A runner that was
+restarted and lost its last snapshot can record an earlier prefix with no restore; that
+record is refused too, since nothing in it says what stayed covered.
+
 ## Failure
 
 - **Publication is atomic for each version.** A session can publish one submission and
@@ -486,9 +565,9 @@ does and does not deliver. It is not an implementation. Before each is built:
   one runner beside the synthetic growing trace with a real session through the gate,
   the process's sessions through the proxy and the stand-in curator, and the guardian's
   launch and teardown. It has not run beside a real custodian.
-- [The schedule replay leaf](https://github.com/CVX-Hull/enactive/issues/846): the lag
-  simulation accepts only a steady or a session-shaped coverage today, and reading a
-  run's result needs it to accept the covered prefix as recorded.
+- The schedule replay is built: `tools/memory_screen_checks.py` writes a run's recorded
+  covered prefix as a schedule and replays it, as
+  [above](#replaying-a-recorded-schedule).
 - **The spend bounds** are settled by the owner's approval of one run
   ([decision log](../decisions/owner-decisions.md#one-paid-live-curator-run)). They are
   planning limits and not a hard cap, as the

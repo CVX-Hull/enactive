@@ -4,6 +4,8 @@
   python -m tools.memory_screen_checks replay RUNS... --loss LABEL:need=FRAME[,record=ID][,fact=ID] ...
         [--records ROOT] [--knowledge REPOSITORY] [--lags N ...] [--json]
   python -m tools.memory_screen_checks cut RUNS... [--lags N ...] [--turn-tokens N] [model options] [--json]
+  python -m tools.memory_screen_checks cut RUN --coverage schedule --schedule FILE [model options] [--json]
+  python -m tools.memory_screen_checks schedule RUN [--output FILE]
 
 `store` lists every published version of a curator knowledge repository (its facts, articles and the bytes of `facts.jsonl`)
 and, for each --find pattern, the facts whose ID or text matches: the version and session that first published
@@ -16,7 +18,10 @@ shown it, and when the curator's fact would have reached the actor under session
 at handoffs too.
 
 `cut` simulates the context design's cut over the recorded request sequences. Every figure it prints except the
-`recorded` row is simulated from the model below, not measured.
+`recorded` row is simulated from the model below, not measured. With `--coverage schedule` it replays a run's
+recorded covered prefix (`curator-coverage-schedule/1`) over that one run in place of the lag rows; `schedule`
+writes that file from the run's `curator-runner/polls.jsonl` and final `status.json`. The mapping is in
+docs/design/live-curator-integration.md, "Replaying a recorded schedule".
 
 RUNS are as in `tools.memory_reads`, in lineage order. A lineage request number counts requests over those runs'
 actors in order. The context design is docs/design/player-context.md.
@@ -24,15 +29,18 @@ actors in order. The context design is docs/design/player-context.md.
 from __future__ import annotations
 
 import argparse
+from bisect import bisect_left, bisect_right
 from collections import deque
 from dataclasses import asdict, dataclass
 import json
+import math
 from pathlib import Path
 import re
 from typing import Sequence
 import zlib
 
-from harness.evaluation.core.host import LARGE_REWRITE_CACHE_TOKENS, HostFacts, frame_source, host_facts, memory_reads
+from harness.curator.runner import POLL_SCHEMA, POLLS, STATUS, STATUS_SCHEMA, UNKNOWN
+from harness.evaluation.core.host import CREATING_TOOLS, LARGE_REWRITE_CACHE_TOKENS, HostFacts, frame_source, host_facts, memory_reads
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.sources import read_carry, read_host, run_archive_entry
 from tools.memory_reads import game_clock, run_dirs
@@ -61,6 +69,12 @@ class Run:
     facts: HostFacts
     carry: dict[str, frozenset[str]]
     offset: int  # lineage requests before this run
+    directories: tuple[str, ...]  # each actor's directory name, in the order of `facts.actors`
+
+
+def actor_directories(run: Path) -> list[Path]:
+    """The run's actor directories in admission order: their sorted names."""
+    return sorted(p for p in (run / 'actors').iterdir() if (p / 'host.jsonl').is_file())
 
 
 def read_lineage(runs: Sequence[Path]) -> tuple[list[Run], list[Actor]]:
@@ -68,11 +82,12 @@ def read_lineage(runs: Sequence[Path]) -> tuple[list[Run], list[Actor]]:
     for run in runs:
         entry = run_archive_entry(run)
         host, names = {}, {}
-        for directory in sorted(p for p in (run / 'actors').iterdir() if (p / 'host.jsonl').is_file()):
+        for directory in actor_directories(run):
             actor, events = read_host(directory / 'host.jsonl', directory.name, entry)
             host[actor], names[actor] = events, directory.name
         facts = host_facts(tuple(host), host)
-        lineage.append(Run(run.name, facts, read_carry(run, historical=entry is not None), offset))
+        lineage.append(Run(run.name, facts, read_carry(run, historical=entry is not None), offset,
+            tuple(names[actor] for actor in host)))
         spans: dict[str, list] = {}
         for request in facts.requests:
             if request.role == 'recall':continue
@@ -325,7 +340,8 @@ class CutModel:
     before it writes only the new turn to the cache; a request that cuts or drops images writes everything after
     `cached_head_tokens`. `coverage` says which turns a snapshot covers at lag L when the actor has made t turns:
     `steady` covers the first t - L; `sessions` runs one curator session after another, each L turns long and
-    covering what existed when it started, so the first L * (t // L - 1)."""
+    covering what existed when it started, so the first L * (t // L - 1); `schedule` takes the covered turns at each
+    request from a recorded schedule (`schedule_coverage`) and has no lag."""
 
     head_tokens: int = 4500
     cached_head_tokens: int = 3900
@@ -345,11 +361,13 @@ def covered_turns(turns: int, lag: int, coverage: str) -> int:
     return max(0, turns - lag if coverage == 'steady' else lag * (turns // lag - 1))
 
 
-def simulate(images: Sequence[int], model: CutModel, lag: int | None) -> list[dict]:
+def simulate(images: Sequence[int], model: CutModel, lag: int | None,
+             covered: Sequence[int] | None = None) -> list[dict]:
     """One actor's requests under the model. `images[i]` is the images the conversation held at request i + 1, kept
-    or omitted, so turn i carries `images[i] - images[i - 1]`. `lag` None disables the cut. Each row has the prompt
-    tokens, the tokens written to the cache, `freed` (None when no cut was due, 0 when one was held back, else the
-    turns removed) and whether an image block was dropped."""
+    or omitted, so turn i carries `images[i] - images[i - 1]`. `lag` None disables the cut. `covered`, given in place
+    of a lag, is the number of turns covered at each request. Each row has the prompt tokens, the tokens written to
+    the cache, `freed` (None when no cut was due, 0 when one was held back, else the turns removed) and whether an
+    image block was dropped."""
     text = model.turn_tokens - model.image_tokens
     window: deque[list] = deque()  # [turn number, images, images dropped]
     tokens, held, rows = model.head_tokens + model.briefing_tokens, 0, []
@@ -366,8 +384,9 @@ def simulate(images: Sequence[int], model: CutModel, lag: int | None) -> list[di
             tokens += added
             held += turn[1]
         freed = None
-        if lag is not None and (tokens > model.high_mark or held > model.image_peak):
-            limit, plan, after = covered_turns(index, lag, model.coverage), 0, tokens
+        if (lag is not None or covered is not None) and (tokens > model.high_mark or held > model.image_peak):
+            limit = covered[index] if covered is not None else covered_turns(index, lag, model.coverage)
+            plan, after = 0, tokens
             for turn in window:
                 if after <= model.low_mark or turn[0] > limit:
                     break
@@ -414,8 +433,159 @@ def summarise(label: str, actors: Sequence[Sequence[dict]], recorded_write: floa
         under_60000=round(sum(p < 60000 for p in prompts) / len(prompts), 3) if prompts else None)
 
 
-def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int]) -> dict:
+# --- a recorded coverage schedule -----------------------------------------------------------------------------------
+
+SCHEDULE_SCHEMA = 'curator-coverage-schedule/1'
+
+
+class ScheduleError(ValueError):
+    """A coverage schedule, or the runner files it is written from, that cannot be replayed as they stand."""
+
+
+def check_schedule(value: object, actors: Sequence[str]) -> list[dict]:
+    """A schedule's changes, refused with the change named when a field is missing or of the wrong type, when a step
+    is below one, when a time decreases, when a prefix moves backwards by its steps without a restore or names an
+    actor not in `actors` (the run's actor directories in admission order). Nothing is repaired or reordered."""
+    if not isinstance(value, dict) or value.get('schema') != SCHEDULE_SCHEMA:
+        raise ScheduleError(f'unsupported coverage schedule schema; expected {SCHEDULE_SCHEMA}')
+    changes = value.get('changes')
+    if not isinstance(changes, list):
+        raise ScheduleError('the schedule has no list of changes')
+    before = None
+    for number, change in enumerate(changes, 1):
+        name = f'change {number}'
+        if not isinstance(change, dict):
+            raise ScheduleError(f'{name} is not an object')
+        wall, end = change.get('wall'), change.get('end')
+        if type(wall) not in (int, float) or not math.isfinite(wall):
+            raise ScheduleError(f'{name}: wall is missing or not a number')
+        if type(change.get('restore')) is not bool:
+            raise ScheduleError(f'{name}: restore is missing or not true or false')
+        if 'end' not in change or end is not None and not (isinstance(end, dict) and type(end.get('actor')) is str
+                and type(end.get('step')) is int and type(end.get('operation')) is str):
+            raise ScheduleError(f'{name}: end is missing or not null or an actor, a step and an operation')
+        if end is not None and end['step'] < 1:
+            raise ScheduleError(f'{name}: step {end["step"]} is below one')
+        if end is not None and end['actor'] not in actors:
+            raise ScheduleError(f'{name}: actor {end["actor"]} is not an actor of the run')
+        position = (-1, 0) if end is None else (list(actors).index(end['actor']), end['step'])
+        if before is not None and wall < before[0]:
+            raise ScheduleError(f'{name}: its time is earlier than the change before it')
+        if before is not None and position < before[1] and not change['restore']:
+            raise ScheduleError(f'{name}: the covered prefix moves backwards without a restore')
+        before = (wall, position)
+    return changes
+
+
+def schedule_from_runner(run: Path) -> dict:
+    """The run's recorded covered prefix as a schedule: one change for each row of `curator-runner/polls.jsonl`, then
+    the final `status.json`, whose prefix differs from the row before, timed by the poll's `ended_wall` and the
+    status file's `updated_wall`. A change whose row shows a restore the row before did not show takes coverage away,
+    so it is timed by the row before (by its own row when it is the first). A last line a killed runner left half
+    written is not read. Reads only."""
+    directory = run / 'curator-runner'
+    data = (directory / POLLS).read_text()
+    rows = []
+    for number, line in enumerate(data[:data.rfind('\n') + 1].splitlines(), 1):
+        try:
+            rows.append((f'{POLLS} row {number}', json.loads(line), POLL_SCHEMA, 'ended_wall', 'coverage'))
+        except ValueError:
+            raise ScheduleError(f'{POLLS} row {number}: unreadable') from None
+    try:
+        rows.append((STATUS, json.loads((directory / STATUS).read_text()), STATUS_SCHEMA, 'updated_wall', None))
+    except ValueError:
+        raise ScheduleError(f'{STATUS}: unreadable') from None
+    changes, before = [], None  # before: the previous row's time and restore
+    for name, row, schema, time, holder in rows:
+        if not isinstance(row, dict) or row.get('schema') != schema:
+            raise ScheduleError(f'{name}: unsupported schema; expected {schema}')
+        try:
+            prefix = (row[holder] if holder else row)['covered_prefix']
+            end, restore, wall = prefix['end'], prefix['restore'], row[time]
+            change = dict(wall=wall, end=None if end is None else {key: end[key] for key in ('actor', 'step', 'operation')},
+                          restore=restore is not None)
+        except (KeyError, TypeError):
+            raise ScheduleError(f'{name}: no {time} and covered prefix') from None
+        if type(wall) not in (int, float) or not math.isfinite(wall):
+            raise ScheduleError(f'{name}: {time} is not a number')
+        if not changes or (change['end'], change['restore']) != (changes[-1]['end'], changes[-1]['restore']):
+            if restore is not None and before is not None and restore != before[1]:
+                change['wall'] = before[0]
+            changes.append(change)
+        before = (wall, restore)
+    schedule = dict(schema=SCHEDULE_SCHEMA, changes=changes)
+    check_schedule(schedule, [p.name for p in actor_directories(run)])
+    return schedule
+
+
+def turn_starts(run: Run) -> dict[str, list[tuple[int, float | None]]]:
+    """Each actor's player requests in turn order, by actor ID: the decision and the start wall of its first attempt
+    that has one, since a retry sends the same context again."""
+    found: dict[str, dict[int, float | None]] = {}
+    for request in run.facts.requests:  # the first attempt with a start time
+        if request.role != 'recall' and found.setdefault(request.actor, {}).get(request.decision) is None:
+            found[request.actor][request.decision] = request.wall
+    return {actor: sorted(walls.items()) for actor, walls in found.items()}
+
+
+def schedule_coverage(run: Run, changes: Sequence[dict], requests: dict[str, Sequence[tuple[int, float | None]]]
+                      ) -> tuple[dict[str, list[int]], int]:
+    """The turns covered at each request when checked `changes` are replayed over `run`, by actor ID, and the number
+    of changes left out. `requests` is each actor's (decision, start wall) in turn order, a retried request timed by
+    its first attempt. A prefix's operation is found in the result of a call that creates an operation
+    (`CREATING_TOOLS`) and is not an error in its actor's host log; it covers that call's turn only when it is the last operation that
+    request created, and every turn of an earlier actor. A change no such result places, or whose operation is
+    `unknown`, is left out and the change before it stays in force, except that a restore left out covers nothing. A
+    request takes the latest change timed strictly before its start, or a restore timed at or before it; with no
+    start time it takes the coverage of the request before it. A change without a restore whose placed turns are
+    below those of the change placed before it is refused."""
+    created, last = {}, {}
+    for call in run.facts.calls:
+        if call.tool in CREATING_TOOLS and not call.error and call.operation_id is not None and call.decision is not None:
+            created.setdefault((call.actor, call.operation_id), call.decision)
+            last[(call.actor, call.decision)] = call.operation_id
+    turns = {actor: {decision: turn for turn, (decision, _) in enumerate(rows, 1)} for actor, rows in requests.items()}
+    placed, left_out = [], 0  # (wall, restore, (position of the prefix's actor, its covered turns))
+    for number, change in enumerate(changes, 1):
+        end, reach = change['end'], (-1, 0)
+        if end is not None:
+            position = run.directories.index(end['actor'])
+            actor = run.facts.actors[position]
+            decision = created.get((actor, end['operation']))
+            if end['operation'] == UNKNOWN or decision not in turns.get(actor, {}):
+                left_out += 1
+                if not change['restore']:
+                    continue
+            else:
+                reach = (position, turns[actor][decision] - (last[(actor, decision)] != end['operation']))
+        if placed and not change['restore'] and reach < placed[-1][2]:
+            raise ScheduleError(f'change {number}: its operation is placed before the change before it, without a restore')
+        placed.append((change['wall'], change['restore'], reach))
+    walls = [wall for wall, _, _ in placed]
+    covered = {}
+    for actor, rows in requests.items():
+        position, limits = run.facts.actors.index(actor), []
+        for _, wall in rows:
+            if wall is None:
+                limits.append(limits[-1] if limits else 0)
+                continue
+            at = bisect_left(walls, wall) - 1  # the last change strictly before, or a restore at the same time after it
+            at = max([at, *(index for index in range(at + 1, bisect_right(walls, wall)) if placed[index][1])])
+            reach, count = placed[at][2] if at >= 0 else (-1, 0)
+            limits.append(len(rows) if position < reach else count if position == reach else 0)
+        covered[actor] = limits
+    return covered, left_out
+
+
+def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], schedule: object = None) -> dict:
+    """The cut's table. With `coverage` `schedule`, `schedule` is a `curator-coverage-schedule/1` value replayed over
+    exactly one run, and its row stands in place of the lag rows."""
+    if (model.coverage == 'schedule') != (schedule is not None):
+        raise ScheduleError('a schedule is given with --coverage schedule and only with it')
+    if schedule is not None and len(runs) != 1:
+        raise ScheduleError(f'a schedule is replayed over exactly one run; {len(runs)} were given')
     lineage, actors = read_lineage(runs)
+    changes = None if schedule is None else check_schedule(schedule, lineage[0].directories)
     sequences, recorded = [], []
     for run in lineage:
         by_actor: dict[str, dict[int, dict]] = {}
@@ -428,9 +598,9 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int]) -> di
             if request.usage_available:
                 row.update(prompt=(request.input_tokens or 0) + (request.cache_read_tokens or 0)
                     + int(request.cache_write_tokens or 0), write=int(request.cache_write_tokens or 0))
-        for requests in by_actor.values():
+        for name, requests in by_actor.items():
             ordered = [requests[key] for key in sorted(requests)]
-            sequences.append([row['images'] for row in ordered])
+            sequences.append((name, [row['images'] for row in ordered]))
             was, actor = 0, []
             for row in ordered:
                 if 'prompt' in row:  # a response without usage has no recorded prompt; its turn is still simulated
@@ -440,9 +610,15 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int]) -> di
             recorded.append(actor)
     total = sum(row['write'] for actor in recorded for row in actor)
     table = [summarise('recorded', recorded, total)]
-    for label, lag in [('no cut', None), *((f'lag {lag}', lag) for lag in lags)]:
-        table.append(summarise(label, [simulate(images, model, lag) for images in sequences], total))
-    return dict(runs=len(lineage), actors=len(actors), model=asdict(model), rows=table)
+    for label, lag in [('no cut', None), *((f'lag {lag}', lag) for lag in (lags if changes is None else ()))]:
+        table.append(summarise(label, [simulate(images, model, lag) for _, images in sequences], total))
+    report = dict(runs=len(lineage), actors=len(actors), model=asdict(model), rows=table)
+    if changes is not None:
+        covered, left_out = schedule_coverage(lineage[0], changes, turn_starts(lineage[0]))
+        table.append(summarise('schedule', [simulate(images, model, None, covered[name]) for name, images in sequences],
+            total))
+        report['schedule'] = dict(read=len(changes), applied=len(changes) - left_out, left_out=left_out)
+    return report
 
 
 # --- rendering ------------------------------------------------------------------------------------------------------
@@ -506,6 +682,10 @@ def render_cut(report: dict) -> str:
     lines = [f"{report['runs']} runs, {report['actors']} actors; model {json.dumps(report['model'])}",
         'simulated rows are from the model, not measured; `recorded` is from the traces', ' | '.join(keys)]
     lines.extend(' | '.join(str(row[key]) for key in keys) for row in report['rows'])
+    if 'schedule' in report:
+        count = report['schedule']
+        lines.append(f"schedule: {count['read']} changes read, {count['applied']} applied, {count['left_out']} left out "
+            'because no tool result places them')
     return '\n'.join(lines)
 
 
@@ -527,17 +707,34 @@ def main(argv=None) -> int:
     cut.add_argument('--lags', nargs='+', type=int, default=list(LAGS))
     for name, value in asdict(CutModel()).items():
         cut.add_argument(f"--{name.replace('_', '-')}", type=type(value), default=value,
-            **(dict(choices=('steady', 'sessions')) if name == 'coverage' else {}))
+            **(dict(choices=('steady', 'sessions', 'schedule')) if name == 'coverage' else {}))
+    cut.add_argument('--schedule', type=Path, help='a curator-coverage-schedule/1 file, with --coverage schedule')
     for command in (store, again, cut):
         command.add_argument('--json', action='store_true')
+    recorded = commands.add_parser('schedule', help="a run's recorded covered prefix as a coverage schedule")
+    recorded.add_argument('run', type=Path)
+    recorded.add_argument('--output', type=Path, help='the file to write, outside RUN; standard output when not given')
     args = parser.parse_args(argv)
+    if args.command == 'schedule':
+        if args.output and args.output.resolve().is_relative_to(args.run.resolve()):
+            raise ScheduleError(f'{args.output}: the schedule is not written inside the run it is read from')
+        text = json.dumps(schedule_from_runner(args.run), indent=1) + '\n'
+        if args.output:
+            args.output.write_text(text)
+        else:
+            print(text, end='')
+        return 0
     if args.command == 'store':
         result, text = store_report(args.repositories, args.find, run_dirs(args.runs) if args.runs else []), render_store
     elif args.command == 'replay':
         result, text = replay(run_dirs(args.runs), args.loss, args.records, args.knowledge, args.lags), render_replay
     else:
         model = CutModel(**{name: getattr(args, name) for name in asdict(CutModel())})
-        result, text = cut_report(run_dirs(args.runs), model, args.lags), render_cut
+        try:
+            schedule = None if args.schedule is None else json.loads(args.schedule.read_text())
+        except ValueError:
+            raise ScheduleError(f'{args.schedule}: not a JSON schedule') from None
+        result, text = cut_report(run_dirs(args.runs), model, args.lags, schedule), render_cut
     print(json.dumps(result, indent=1, ensure_ascii=False) if args.json else text(result))
     return 0
 
