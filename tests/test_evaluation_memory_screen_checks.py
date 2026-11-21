@@ -8,7 +8,7 @@ import pytest
 from harness.curator.knowledge import Repository
 from tools.memory_screen_checks import (CutModel, ScheduleError, StoreError, check_schedule, covered_turns, cut_report,
     fact_history, main, read_lineage, read_versions, replay, schedule_coverage, schedule_from_runner, simulate,
-    store_report, summarise)
+    store_report, summarise, turn_starts)
 
 SESSION = 'c' * 32
 RECORD = '5' * 32
@@ -69,20 +69,32 @@ class Trace:
         self.images += 1
         return frame
 
-    def operate(self, *operations: str) -> None:
-        """One request whose calls create `operations`, one `computer_input` call each, each returning an image."""
+    def operate(self, *operations: str | None, collect: tuple[str, ...] = (), retry: float | None = None,
+                failed: bool = False) -> None:
+        """One request whose calls create `operations`, one `computer_input` call each, each returning an image (None:
+        a result that names no operation), then collect the results of the operations in `collect` with
+        `computer_result`. With `retry`, a first attempt starts that many seconds before the attempt that makes the
+        calls. With `failed`, every result is an error."""
         self.requests += 1
         self.wall += 1
-        common = dict(wall_time=self.iso(), monotonic_ms=self.requests * 1000.0, request_id=f'request-{self.requests}')
+        logical = f'request-{self.requests}'
+        common = dict(wall_time=self.iso(), monotonic_ms=self.requests * 1000.0, request_id=logical)
         usage = dict(input=3, output=20, cacheRead=5000 * self.requests, cacheWrite=1000, cost=dict(total=0.01, cacheWrite=0.001))
+        if retry is not None:
+            first = datetime.fromtimestamp(self.wall - retry, timezone.utc).isoformat()
+            self.events.append(dict(common, wall_time=first, type='request-start', request_id=f'{logical}-first',
+                logical_request_id=logical))
         self.events += [dict(common, type='context-image-projection', input_images=self.images, omitted_images=0),
-            dict(common, type='request-start', logical_request_id=common['request_id']),
+            dict(common, type='request-start', logical_request_id=logical),
             dict(common, type='response-complete', stop_reason='toolUse', usage_available=True, usage=usage)]
-        for number, operation in enumerate(operations):
-            self.events += [dict(common, type='tool-start', tool_call_id=f'call-{number}', tool='computer_input',
-                    arguments=dict(actions=[dict(type='key', key='e', modifiers=[])])),
-                dict(common, type='tool-result', tool_call_id=f'call-{number}', tool='computer_input',
-                    result=dict(content=[dict(type='text', text=json.dumps(dict(operation_id=operation)))], isError=False))]
+        calls = [('computer_input', operation) for operation in operations] + [('computer_result', o) for o in collect]
+        for number, (tool, operation) in enumerate(calls):
+            self.events += [dict(common, type='tool-start', tool_call_id=f'call-{number}', tool=tool,
+                    arguments=dict(actions=[dict(type='key', key='e', modifiers=[])]) if tool == 'computer_input'
+                    else dict(operation_id=operation)),
+                dict(common, type='tool-result', tool_call_id=f'call-{number}', tool=tool,
+                    result=dict(content=[dict(type='text', text=json.dumps({} if operation is None else
+                        dict(operation_id=operation)))], isError=failed))]
         self.images += len(operations)
 
     def write(self, directory: Path) -> None:
@@ -323,16 +335,9 @@ def schedule(*changes: dict) -> dict:
     return dict(schema='curator-coverage-schedule/1', changes=list(changes))
 
 
-def starts(run) -> dict[str, list[tuple[int, float]]]:
-    found = {}
-    for request in run.facts.requests:
-        found.setdefault(request.actor, []).append((request.decision, request.wall))
-    return found
-
-
 def covered(path: Path, *changes: dict) -> tuple[dict[str, list[int]], int]:
     run, = read_lineage([path])[0]
-    by_actor, left_out = schedule_coverage(run, check_schedule(schedule(*changes), run.directories), starts(run))
+    by_actor, left_out = schedule_coverage(run, check_schedule(schedule(*changes), run.directories), turn_starts(run))
     return {run.directories[run.facts.actors.index(actor)]: limits for actor, limits in by_actor.items()}, left_out
 
 
@@ -426,6 +431,7 @@ def test_an_operation_no_result_places_is_left_out_and_counted(tmp_path):
     (schedule(change(BASE, '002', 1, 'x'), change(BASE + 1, '001', 9, 'y')), 'change 2: the covered prefix moves backwards'),
     (schedule(change(BASE, '001', 1, 'a1'), change(BASE + 1)), 'change 2: the covered prefix moves backwards'),
     (schedule(change(BASE, '003', 1, 'a1')), 'change 1: actor 003 is not an actor of the run'),
+    (schedule(change(BASE, '001', 0, 'a1')), 'change 1: step 0 is below one'),
 ])
 def test_a_malformed_or_out_of_order_schedule_is_refused(value, refusal):
     with pytest.raises(ScheduleError, match=refusal):
@@ -468,7 +474,8 @@ def test_the_schedule_command_writes_the_runner_record_as_a_schedule(tmp_path):
     directory = runner_files(run, [poll(BASE + 1, None), poll(BASE + 2, None), poll(BASE + 3, b2),
         poll(BASE + 4, b2, outcome='failed')], status, tail='{"schema": "curator-runner-poll/1", "ended')
     before = (directory / 'polls.jsonl').read_bytes()
-    expected = schedule(change(BASE + 1), change(BASE + 3, '001', 3, 'b2'), change(BASE + 5, '001', 1, 'a1', restore=True))
+    # the restore first shown by the status file is timed by the last poll, which did not show it
+    expected = schedule(change(BASE + 1), change(BASE + 3, '001', 3, 'b2'), change(BASE + 4, '001', 1, 'a1', restore=True))
     assert schedule_from_runner(run) == expected
     output = tmp_path / 'schedule.json'
     assert main(['schedule', str(run), '--output', str(output)]) == 0
@@ -481,10 +488,97 @@ def test_the_schedule_command_writes_the_runner_record_as_a_schedule(tmp_path):
     ([{k: v for k, v in poll(BASE, None).items() if k != 'coverage'}], 'polls.jsonl row 1: no ended_wall and covered prefix'),
     ([poll(BASE, None), {k: v for k, v in poll(BASE, None).items() if k != 'ended_wall'}], 'row 2: no ended_wall'),
     ([poll(BASE + 1, None), poll(BASE, dict(actor='001', step=1, operation='a1', ordinal=1))], 'change 2: its time is earlier'),
+    ([poll(BASE + 1, None), dict(poll(BASE + 2, None), ended_wall='later')], 'row 2: ended_wall is not a number'),
 ])
 def test_the_schedule_command_refuses_runner_files_it_cannot_read(tmp_path, polls, refusal):
     run = admission(tmp_path, [['a1']])
     runner_files(run, polls, dict(schema='curator-runner-status/1', updated_wall=BASE + 9,
         covered_prefix=dict(end=None, restore=None)))
     with pytest.raises(ScheduleError, match=refusal):
+        schedule_from_runner(run)
+
+
+def single(root: Path, *requests: tuple[tuple, dict]) -> Path:
+    """A run of one actor `001`; each request is the arguments and options of `Trace.operate`."""
+    trace = Trace('a' * 32, BASE)
+    for operations, options in requests:
+        trace.operate(*operations, **options)
+    trace.write(root / 'run' / 'actors' / '001')
+    return root / 'run'
+
+
+def test_collecting_an_earlier_operation_does_not_make_a_partial_turn_whole(tmp_path):
+    run = single(tmp_path, (('a1',), {}), (('A', 'B'), dict(collect=('A',))), (('c1',), {}))
+    assert covered(run, change(BASE + 2.5, '001', 2, 'A')) == ({'001': [0, 0, 1]}, 0)
+    assert covered(run, change(BASE + 2.5, '001', 3, 'B')) == ({'001': [0, 0, 2]}, 0)
+
+
+def test_only_a_creating_call_that_did_not_fail_places_an_operation(tmp_path):
+    # request 1's input names no operation and request 2 only collects one; request 3's input failed
+    run = single(tmp_path, ((None,), {}), ((), dict(collect=('lost',))), (('broken',), dict(failed=True)), (('d1',), {}))
+    assert covered(run, change(BASE + 0.5), change(BASE + 2.5, '001', 1, 'lost'),
+                   change(BASE + 3.5, '001', 2, 'broken')) == ({'001': [0, 0, 0, 0]}, 2)
+
+
+def test_a_retried_request_takes_its_coverage_at_its_first_attempt(tmp_path):
+    run = single(tmp_path, (('a1',), {}), (('b1',), dict(retry=0.5)), (('c1',), {}))
+    lineage_run, = read_lineage([run])[0]
+    assert [wall for _, wall in turn_starts(lineage_run)['a' * 32]] == [BASE + 1, BASE + 1.5, BASE + 3]
+    assert covered(run, change(BASE + 1.75, '001', 1, 'a1')) == ({'001': [0, 0, 1]}, 0)
+    host = run / 'actors' / '001' / 'host.jsonl'
+    written = host.read_text()
+    for attempt, expected in (('request-2', [0, 0, 1]), ('request-2-first', [0, 1, 1])):
+        # an attempt with no start time leaves the request timed by its other attempt
+        events = [json.loads(line) for line in written.splitlines()]
+        for event in events:
+            if event['type'] == 'request-start' and event['request_id'] == attempt:
+                del event['wall_time']
+        host.write_text(''.join(json.dumps(event) + '\n' for event in events))
+        assert covered(run, change(BASE + 1.75, '001', 1, 'a1')) == ({'001': expected}, 0)
+
+
+def test_a_restore_applies_at_its_time_and_one_left_out_covers_nothing(tmp_path):
+    run = admission(tmp_path, [['a1'], ['b1'], ['c1'], ['d1']])
+    assert covered(run, change(BASE + 0.5, '001', 2, 'b1'), change(BASE + 3, '001', 1, 'a1', restore=True)) == (
+        {'001': [2, 2, 1, 1]}, 0)
+    assert covered(run, change(BASE + 0.5, '001', 2, 'b1'), change(BASE + 2.5, '001', 1, 'unknown', restore=True)) == (
+        {'001': [2, 2, 0, 0]}, 1)
+    assert covered(run, change(BASE + 0.5, '001', 2, 'b1'), change(BASE + 2.5, '001', 1, 'nowhere', restore=True),
+                   change(BASE + 3.5, '001', 3, 'c1')) == ({'001': [2, 2, 0, 3]}, 1)
+
+
+def test_operations_placed_in_reverse_order_are_refused_without_a_restore(tmp_path):
+    run = admission(tmp_path, [['a1'], ['A', 'B'], ['c1']])
+    with pytest.raises(ScheduleError, match='change 2: its operation is placed before the change before it'):
+        covered(run, change(BASE + 0.5, '001', 2, 'B'), change(BASE + 0.75, '001', 2, 'A'))
+    assert covered(run, change(BASE + 0.5, '001', 2, 'B'), change(BASE + 0.75, '001', 2, 'A', restore=True)) == (
+        {'001': [1, 1, 1]}, 0)
+
+
+def test_the_schedule_command_times_a_restore_by_the_row_before_it(tmp_path):
+    run = admission(tmp_path, [['a1'], ['b1'], ['c1']])
+    a1, b1, c1 = (dict(actor='001', step=n, operation=o, ordinal=n) for n, o in ((1, 'a1'), (2, 'b1'), (3, 'c1')))
+    restore = dict(version='v4', restored='v2', counted_through='v2')
+    status = dict(schema='curator-runner-status/1', updated_wall=BASE + 9, covered_prefix=dict(end=c1, restore=restore))
+    runner_files(run, [poll(BASE + 1, None), poll(BASE + 2, b1), poll(BASE + 3, b1), poll(BASE + 4, a1, restore),
+        poll(BASE + 5, a1, restore)], status)
+    assert schedule_from_runner(run)['changes'] == [change(BASE + 1), change(BASE + 2, '001', 2, 'b1'),
+        change(BASE + 3, '001', 1, 'a1', restore=True), change(BASE + 9, '001', 3, 'c1', restore=True)]
+    first = tmp_path / 'first'
+    runner_files(admission(first, [['a1']]), [poll(BASE + 1, a1, restore)], dict(status, covered_prefix=dict(
+        end=a1, restore=restore)))
+    assert schedule_from_runner(first / 'run')['changes'] == [change(BASE + 1, '001', 1, 'a1', restore=True)]
+
+
+def test_the_schedule_command_refuses_an_unreadable_status_file_and_an_output_inside_the_run(tmp_path):
+    run = admission(tmp_path, [['a1']])
+    directory = runner_files(run, [poll(BASE + 1, None)], dict(schema='curator-runner-status/1', updated_wall=BASE + 2,
+        covered_prefix=dict(end=None, restore=None)))
+    before = {path: path.read_bytes() for path in directory.iterdir()}
+    for inside in (directory / 'polls.jsonl', run / 'schedule.json', tmp_path / 'run' / '.' / 'actors' / 'x.json'):
+        with pytest.raises(ScheduleError, match='not written inside the run'):
+            main(['schedule', str(run), '--output', str(inside)])
+    assert {path: path.read_bytes() for path in directory.iterdir()} == before and not (run / 'schedule.json').exists()
+    (directory / 'status.json').write_text('{"schema": ')
+    with pytest.raises(ScheduleError, match='status.json: unreadable'):
         schedule_from_runner(run)

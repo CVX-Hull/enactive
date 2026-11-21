@@ -29,7 +29,7 @@ actors in order. The context design is docs/design/player-context.md.
 from __future__ import annotations
 
 import argparse
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections import deque
 from dataclasses import asdict, dataclass
 import json
@@ -40,7 +40,7 @@ from typing import Sequence
 import zlib
 
 from harness.curator.runner import POLL_SCHEMA, POLLS, STATUS, STATUS_SCHEMA, UNKNOWN
-from harness.evaluation.core.host import LARGE_REWRITE_CACHE_TOKENS, HostFacts, frame_source, host_facts, memory_reads
+from harness.evaluation.core.host import CREATING_TOOLS, LARGE_REWRITE_CACHE_TOKENS, HostFacts, frame_source, host_facts, memory_reads
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.sources import read_carry, read_host, run_archive_entry
 from tools.memory_reads import game_clock, run_dirs
@@ -443,9 +443,9 @@ class ScheduleError(ValueError):
 
 
 def check_schedule(value: object, actors: Sequence[str]) -> list[dict]:
-    """A schedule's changes, refused with the change named when a field is missing or of the wrong type, when a time
-    decreases, when a prefix moves backwards without a restore or names an actor not in `actors` (the run's actor
-    directories in admission order). Nothing is repaired or reordered."""
+    """A schedule's changes, refused with the change named when a field is missing or of the wrong type, when a step
+    is below one, when a time decreases, when a prefix moves backwards by its steps without a restore or names an
+    actor not in `actors` (the run's actor directories in admission order). Nothing is repaired or reordered."""
     if not isinstance(value, dict) or value.get('schema') != SCHEDULE_SCHEMA:
         raise ScheduleError(f'unsupported coverage schedule schema; expected {SCHEDULE_SCHEMA}')
     changes = value.get('changes')
@@ -464,6 +464,8 @@ def check_schedule(value: object, actors: Sequence[str]) -> list[dict]:
         if 'end' not in change or end is not None and not (isinstance(end, dict) and type(end.get('actor')) is str
                 and type(end.get('step')) is int and type(end.get('operation')) is str):
             raise ScheduleError(f'{name}: end is missing or not null or an actor, a step and an operation')
+        if end is not None and end['step'] < 1:
+            raise ScheduleError(f'{name}: step {end["step"]} is below one')
         if end is not None and end['actor'] not in actors:
             raise ScheduleError(f'{name}: actor {end["actor"]} is not an actor of the run')
         position = (-1, 0) if end is None else (list(actors).index(end['actor']), end['step'])
@@ -478,7 +480,9 @@ def check_schedule(value: object, actors: Sequence[str]) -> list[dict]:
 def schedule_from_runner(run: Path) -> dict:
     """The run's recorded covered prefix as a schedule: one change for each row of `curator-runner/polls.jsonl`, then
     the final `status.json`, whose prefix differs from the row before, timed by the poll's `ended_wall` and the
-    status file's `updated_wall`. A last line a killed runner left half written is not read. Reads only."""
+    status file's `updated_wall`. A change whose row shows a restore the row before did not show takes coverage away,
+    so it is timed by the row before (by its own row when it is the first). A last line a killed runner left half
+    written is not read. Reads only."""
     directory = run / 'curator-runner'
     data = (directory / POLLS).read_text()
     rows = []
@@ -487,53 +491,76 @@ def schedule_from_runner(run: Path) -> dict:
             rows.append((f'{POLLS} row {number}', json.loads(line), POLL_SCHEMA, 'ended_wall', 'coverage'))
         except ValueError:
             raise ScheduleError(f'{POLLS} row {number}: unreadable') from None
-    rows.append((STATUS, json.loads((directory / STATUS).read_text()), STATUS_SCHEMA, 'updated_wall', None))
-    changes = []
+    try:
+        rows.append((STATUS, json.loads((directory / STATUS).read_text()), STATUS_SCHEMA, 'updated_wall', None))
+    except ValueError:
+        raise ScheduleError(f'{STATUS}: unreadable') from None
+    changes, before = [], None  # before: the previous row's time and restore
     for name, row, schema, time, holder in rows:
         if not isinstance(row, dict) or row.get('schema') != schema:
             raise ScheduleError(f'{name}: unsupported schema; expected {schema}')
         try:
             prefix = (row[holder] if holder else row)['covered_prefix']
-            end = prefix['end']
-            change = dict(wall=row[time], end=None if end is None else {key: end[key] for key in ('actor', 'step', 'operation')},
-                          restore=prefix['restore'] is not None)
+            end, restore, wall = prefix['end'], prefix['restore'], row[time]
+            change = dict(wall=wall, end=None if end is None else {key: end[key] for key in ('actor', 'step', 'operation')},
+                          restore=restore is not None)
         except (KeyError, TypeError):
             raise ScheduleError(f'{name}: no {time} and covered prefix') from None
+        if type(wall) not in (int, float) or not math.isfinite(wall):
+            raise ScheduleError(f'{name}: {time} is not a number')
         if not changes or (change['end'], change['restore']) != (changes[-1]['end'], changes[-1]['restore']):
+            if restore is not None and before is not None and restore != before[1]:
+                change['wall'] = before[0]
             changes.append(change)
+        before = (wall, restore)
     schedule = dict(schema=SCHEDULE_SCHEMA, changes=changes)
     check_schedule(schedule, [p.name for p in actor_directories(run)])
     return schedule
 
 
+def turn_starts(run: Run) -> dict[str, list[tuple[int, float | None]]]:
+    """Each actor's player requests in turn order, by actor ID: the decision and the start wall of its first attempt
+    that has one, since a retry sends the same context again."""
+    found: dict[str, dict[int, float | None]] = {}
+    for request in run.facts.requests:  # the first attempt with a start time
+        if request.role != 'recall' and found.setdefault(request.actor, {}).get(request.decision) is None:
+            found[request.actor][request.decision] = request.wall
+    return {actor: sorted(walls.items()) for actor, walls in found.items()}
+
+
 def schedule_coverage(run: Run, changes: Sequence[dict], requests: dict[str, Sequence[tuple[int, float | None]]]
                       ) -> tuple[dict[str, list[int]], int]:
     """The turns covered at each request when checked `changes` are replayed over `run`, by actor ID, and the number
-    of changes left out. `requests` is each actor's (decision, start wall) in turn order. A prefix's operation is
-    found in a tool result of its actor's host log; it covers that call's turn only when it is the last call of that
-    request with an operation, and every turn of an earlier actor. A change no result places, or whose operation is
-    `unknown`, is left out and the change before it stays in force. A request takes the latest change timed strictly
-    before its start, or with no start time the coverage of the request before it."""
+    of changes left out. `requests` is each actor's (decision, start wall) in turn order, a retried request timed by
+    its first attempt. A prefix's operation is found in the result of a call that creates an operation
+    (`CREATING_TOOLS`) and is not an error in its actor's host log; it covers that call's turn only when it is the last operation that
+    request created, and every turn of an earlier actor. A change no such result places, or whose operation is
+    `unknown`, is left out and the change before it stays in force, except that a restore left out covers nothing. A
+    request takes the latest change timed strictly before its start, or a restore timed at or before it; with no
+    start time it takes the coverage of the request before it. A change without a restore whose placed turns are
+    below those of the change placed before it is refused."""
     created, last = {}, {}
     for call in run.facts.calls:
-        if call.operation_id is not None and call.decision is not None:
+        if call.tool in CREATING_TOOLS and not call.error and call.operation_id is not None and call.decision is not None:
             created.setdefault((call.actor, call.operation_id), call.decision)
             last[(call.actor, call.decision)] = call.operation_id
     turns = {actor: {decision: turn for turn, (decision, _) in enumerate(rows, 1)} for actor, rows in requests.items()}
-    placed, left_out = [], 0  # (wall, position of the prefix's actor, its covered turns)
-    for change in changes:
-        end = change['end']
-        if end is None:
-            placed.append((change['wall'], -1, 0))
-            continue
-        position = run.directories.index(end['actor'])
-        actor = run.facts.actors[position]
-        decision = created.get((actor, end['operation']))
-        if end['operation'] == UNKNOWN or decision not in turns.get(actor, {}):
-            left_out += 1
-            continue
-        whole = last[(actor, decision)] == end['operation']
-        placed.append((change['wall'], position, turns[actor][decision] - (not whole)))
+    placed, left_out = [], 0  # (wall, restore, (position of the prefix's actor, its covered turns))
+    for number, change in enumerate(changes, 1):
+        end, reach = change['end'], (-1, 0)
+        if end is not None:
+            position = run.directories.index(end['actor'])
+            actor = run.facts.actors[position]
+            decision = created.get((actor, end['operation']))
+            if end['operation'] == UNKNOWN or decision not in turns.get(actor, {}):
+                left_out += 1
+                if not change['restore']:
+                    continue
+            else:
+                reach = (position, turns[actor][decision] - (last[(actor, decision)] != end['operation']))
+        if placed and not change['restore'] and reach < placed[-1][2]:
+            raise ScheduleError(f'change {number}: its operation is placed before the change before it, without a restore')
+        placed.append((change['wall'], change['restore'], reach))
     walls = [wall for wall, _, _ in placed]
     covered = {}
     for actor, rows in requests.items():
@@ -542,8 +569,9 @@ def schedule_coverage(run: Run, changes: Sequence[dict], requests: dict[str, Seq
             if wall is None:
                 limits.append(limits[-1] if limits else 0)
                 continue
-            at = bisect_left(walls, wall) - 1
-            reach, count = (placed[at][1], placed[at][2]) if at >= 0 else (-1, 0)
+            at = bisect_left(walls, wall) - 1  # the last change strictly before, or a restore at the same time after it
+            at = max([at, *(index for index in range(at + 1, bisect_right(walls, wall)) if placed[index][1])])
+            reach, count = placed[at][2] if at >= 0 else (-1, 0)
             limits.append(len(rows) if position < reach else count if position == reach else 0)
         covered[actor] = limits
     return covered, left_out
@@ -558,7 +586,7 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], sched
         raise ScheduleError(f'a schedule is replayed over exactly one run; {len(runs)} were given')
     lineage, actors = read_lineage(runs)
     changes = None if schedule is None else check_schedule(schedule, lineage[0].directories)
-    sequences, recorded, starts = [], [], {}
+    sequences, recorded = [], []
     for run in lineage:
         by_actor: dict[str, dict[int, dict]] = {}
         for request in run.facts.requests:  # a retried player request keeps its last attempt
@@ -566,14 +594,13 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], sched
             images = run.facts.images.get((request.actor, request.key))
             omitted = run.facts.omitted.get((request.actor, request.key), 0)
             row = by_actor.setdefault(request.actor, {}).setdefault(request.decision, dict(images=0, omitted=0))
-            row.update(images=row['images'] if images is None else images, omitted=omitted, wall=request.wall)
+            row.update(images=row['images'] if images is None else images, omitted=omitted)
             if request.usage_available:
                 row.update(prompt=(request.input_tokens or 0) + (request.cache_read_tokens or 0)
                     + int(request.cache_write_tokens or 0), write=int(request.cache_write_tokens or 0))
         for name, requests in by_actor.items():
             ordered = [requests[key] for key in sorted(requests)]
             sequences.append((name, [row['images'] for row in ordered]))
-            starts[name] = [(key, requests[key]['wall']) for key in sorted(requests)]
             was, actor = 0, []
             for row in ordered:
                 if 'prompt' in row:  # a response without usage has no recorded prompt; its turn is still simulated
@@ -587,7 +614,7 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], sched
         table.append(summarise(label, [simulate(images, model, lag) for _, images in sequences], total))
     report = dict(runs=len(lineage), actors=len(actors), model=asdict(model), rows=table)
     if changes is not None:
-        covered, left_out = schedule_coverage(lineage[0], changes, starts)
+        covered, left_out = schedule_coverage(lineage[0], changes, turn_starts(lineage[0]))
         table.append(summarise('schedule', [simulate(images, model, None, covered[name]) for name, images in sequences],
             total))
         report['schedule'] = dict(read=len(changes), applied=len(changes) - left_out, left_out=left_out)
@@ -686,9 +713,11 @@ def main(argv=None) -> int:
         command.add_argument('--json', action='store_true')
     recorded = commands.add_parser('schedule', help="a run's recorded covered prefix as a coverage schedule")
     recorded.add_argument('run', type=Path)
-    recorded.add_argument('--output', type=Path, help='the file to write; standard output when not given')
+    recorded.add_argument('--output', type=Path, help='the file to write, outside RUN; standard output when not given')
     args = parser.parse_args(argv)
     if args.command == 'schedule':
+        if args.output and args.output.resolve().is_relative_to(args.run.resolve()):
+            raise ScheduleError(f'{args.output}: the schedule is not written inside the run it is read from')
         text = json.dumps(schedule_from_runner(args.run), indent=1) + '\n'
         if args.output:
             args.output.write_text(text)
