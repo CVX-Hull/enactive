@@ -42,8 +42,8 @@ and the ones excluded by it; a control exists only for a listed risk.
 
 Run windowed, preserve the global environment and keep new dependencies, data and
 caches project-local or in explicitly recorded temporary builds. Use version control
-and preserve authentic engine behavior. Demonstrations use player-visible state
-and ordinary controls, with saves managed by the game.
+and preserve authentic engine behavior: no hidden state or save editing to win a
+demonstration.
 
 Current product constraint: designs must apply across CDDA-class games, not depend
 on this specific Cataclysm implementation. The working scope is turn-based

@@ -43,7 +43,7 @@ harness stop rule or permission to replay uncertain input.
 | Tool | Use and consequence |
 | --- | --- |
 | `computer_observe` | Capture the actual target. Identical pixels are valid. |
-| `computer_input` | Send basic controls, then inspect the returned frame when available. A refusal can follow some delivered input. Collect the original operation before sending anything again. |
+| `computer_input` | Send basic controls, then inspect the returned frame when available. When the status is not `completed`, the result gives the operation ID and a reason that says what to do next. A refusal can follow some delivered input: collect the original operation before sending anything again. |
 | `computer_result` | Collect the original operation and its delivery receipts without repeating input. |
 | `computer_stop` | Permanently stop further automation. It does not save, quit or permit another actor. |
 | `player_source` | Read exact retained PNG by source ID, including explicitly remembered prior-session evidence. |
@@ -53,14 +53,17 @@ harness stop rule or permission to replay uncertain input.
 | `player_finish` | Report task completion, inability to continue, or completion of a directly received external stop request. This player-host tool stops your loop; it does not certify game success or saving. |
 
 Use the supplied schemas for arguments and limits. State what each call intends
-to accomplish. If a result names a frame but omits the pixels, read it with
-`player_source`.
+to accomplish. A reference shows availability, not that you read it. If a result
+names a frame but omits the pixels, read it with `player_source`.
 
-Choose click targets from the original full image and use its source and
-coordinates. The tool's wait delays wall time. Use ordinary game controls for an
-in-game wait and check the screen when you need to know what finished.
+Choose click targets from the original full image, not a crop or thumbnail, and
+use the source actually returned to you. Inspect the image and choose the target
+yourself. The tool's wait delays wall time and sends no game input; it is not the
+application's own wait and does not certify that a message, animation or save
+finished. Use ordinary game controls for an in-game wait and check the screen.
 
-A completion receipt establishes delivery to the game's input layer. Check the
+Delivered means SDL event handoff, not application consumption or useful effect;
+a `completed` status says the same and nothing more about the game. Check the
 screen for the effect you intended. On partial or unknown delivery, keep the
 original operation ID and collect it with `computer_result`. Input stays
 stopped. Never replay uncertain input or try to regain authority by changing
@@ -109,8 +112,10 @@ when you need it.
 
 End your loop by calling `player_finish` with your report and supporting sources.
 If you are finishing in response to an external stop, use the identity in the
-request you received. Distinguish observed effects, claims, failures and unknowns.
-The user can Pause independently of your report.
+request you received. Ordinary narration alone does not finish the task.
+Distinguish observed effects, claims, failures and unknowns. Tool delivery,
+memory, process absence and host exit do not establish a save or a win. The user
+can Pause independently of your report.
 
 ### Delivered knowledge
 

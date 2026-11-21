@@ -6,7 +6,10 @@ status: active
 
 # Record and review gameplay measurements
 
-Measure elapsed time to useful milestones in real play. For how to freeze,
+Measure elapsed time to useful milestones in real play. Provider speed, tool
+delivery and page timing explain parts of the path; none certifies useful progress.
+Starting inventory is not acquisition, menu Save is not application exit, and a
+finish report is not game success. For how to freeze,
 retain and review evidence, see the [evidence workflow](workflows/evidence-cadence.md).
 
 ## Player host events
