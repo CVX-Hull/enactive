@@ -6,11 +6,9 @@ status: active
 
 # Computer control and player ports
 
-This is the current source contract ([#176](https://github.com/CVX-Hull/enactive/issues/176))
-with one production backend. [ADR006](../decisions/006-computer-control-boundary.md)
-owns the boundary; the [cutover brief](../changes/071-computer-control-cutover.md)
-retains historical rationale. The [production report](../acceptance/2026-10-29-computer-control.md)
-owns scoped actual outcomes; #176 and its linked PR retain the delivery receipts.
+This contract covers one production backend. The [computer-control boundary decision (ADR 006)](../decisions/006-computer-control-boundary.md)
+owns the rationale. The [production computer-control report (#176)](../acceptance/2026-10-29-computer-control.md)
+records actual outcomes and their scope.
 
 ## Responsibilities and current data
 
@@ -24,9 +22,8 @@ All game-specific preparation stays outside the computer package.
 Start a fresh explicit session under `.runtime/computer-sessions/`, with a new
 `computer-session/1` SQLite store and exclusive launch marker **before** DB/native
 creation. A selected partial directory refuses even without a DB. Never scan or
-drain old inboxes or unrelated retained sessions. Existing native7/mission11/DB13,
-proof profiles and executable old player formats are unsupported. Preserve their
-original artifacts/source as inert history; retain upstream saves unchanged and
+drain old inboxes or unrelated retained sessions. The runtime rejects versions
+outside the current formats specified here. Retain upstream saves unchanged and
 load them only through visible controls. The selected `player-journal/1` store
 (SQLite `user_version=1`) may span fresh native-child sessions. A supported current
 journal may be reopened; a nonempty unrecognized or unsupported store is refused
@@ -36,13 +33,10 @@ computer store and native wire versions are the ones this contract defines.
 
 ## Native channel
 
-Use one inherited nonblocking `AF_UNIX/SOCK_STREAM` socketpair. This keeps
-filesystem IPC/publication out of the native event loop, including the
-class of coupling implicated in [#128](https://github.com/CVX-Hull/enactive/issues/128).
-The custodian outside the game owns file/SQLite publication. No native publisher
-thread, detached helper, recovery journal or transport framework is needed.
-Upstream save I/O, SDL readback/PNG CPU and arbitrary OS hangs are outside this
-bounded publication guarantee; the original rename-stall cause remains unknown.
+An inherited nonblocking `AF_UNIX/SOCK_STREAM` socketpair carries native traffic.
+The custodian outside the game owns file and SQLite publication. The bounded
+publication guarantee excludes upstream save I/O, SDL readback, PNG encoding and
+arbitrary OS hangs.
 
 At startup, validate the exact inherited shared-lock descriptor/file identity and
 socket type; retain the locked reference for the native lifetime. Set both FDs
@@ -56,47 +50,54 @@ Environment: `ENACTIVE_COMPUTER_FD`, `ENACTIVE_COMPUTER_SESSION`,
 `ENACTIVE_COMPUTER_LOCK_FD`, `ENACTIVE_COMPUTER_LOCK_FILE`.
 Current launch rejects `ENACTIVE_COMPUTER_DIR` and `CDDA_HARNESS_DIR`.
 
-A packet is four big-endian header-length bytes, UTF-8 JSON header, then raw image
-bytes. Header length is 1..65536; closed header:
+A packet begins with four big-endian bytes specifying the length of its UTF-8
+JSON header, followed by the header and any image bytes. The closed header spans
+1 to 65,536 bytes and has this shape.
 `{schema:"computer-wire/1",kind:"request"|"state"|"receipt",value:object,payload_bytes:int}`.
-Only a capture receipt carries PNG bytes, at most64MiB. Raw pixels are separately
-bounded64MiB. Encode using installed SDL_image `IMG_SavePNG_RW` and bounded owned
-`SDL_RWFromMem` storage, which outlives encoding/transmission; no PNG implementation.
+Only a capture receipt carries PNG bytes, at most 64 MiB. Raw pixels have a separate
+64 MiB limit. The bridge encodes with SDL_image's `IMG_SavePNG_RW` into bounded,
+owned `SDL_RWFromMem` storage that outlives encoding and transmission.
 
-Use one outgoing packet, one deferred Pause receipt and a dirty-state flag.
-Coalesce only unsent passive state. Preserve partial read/write offsets and exact
-pending receipts/images; never replace a terminal receipt or renew its timestamps.
-Each SDL callback does at most256KiB socket work and8 incoming packets, never
-waits for a peer, and returns on `EAGAIN`. An exhausted work budget does not prove
-a queue empty. Backpressure cannot block real SDL polling/presentation or normal
-application execution. A busy response prevents further synthetic command events;
-Pause/EOF is still consumed. No new normal request until the prior receipt is
-fully handed to the socket. Duplicate IDs permanently pause without redispatch or
-relabelled receipts; remember all prior IDs in a bounded65536-entry set, then stop.
+The bridge keeps one outgoing packet, one deferred Pause receipt and a dirty-state
+flag. It coalesces only unsent passive state. It preserves partial read and write
+offsets, pending receipts and images, and original terminal receipts and timestamps.
+
+Each SDL callback processes at most 256 KiB of socket traffic and eight incoming
+packets. It returns on `EAGAIN` without waiting for its peer. The queue may still
+contain data after the callback exhausts its budget. Real SDL polling, presentation
+and normal application execution continue under backpressure.
+
+A busy response prevents further synthetic command events, while the bridge still
+consumes Pause and EOF. A new normal request waits until the prior receipt is fully
+handed to the socket. A duplicate ID permanently pauses without redispatch or a
+relabelled receipt. The bridge remembers up to 65,536 IDs and stops when that set
+cannot accept a new ID.
 
 | Value | Closed fields |
 | --- | --- |
-| `computer-request/3` | `schema,id,session,kind,expires_ms,continue_ms,input`;32hex IDs/session; kind `observe`, `input` or `pause`; null input for observe/Pause; `expires_ms` ≤ `continue_ms`, which Pause sets equal |
+| `computer-request/3` | `schema,id,session,kind,expires_ms,continue_ms,input`. `id` and `session` are 32 hexadecimal characters. Kind is `observe`, `input` or `pause`. Input is null for observe and Pause. `expires_ms` ≤ `continue_ms`, with equality for Pause. |
 | `computer-target/2` | `schema,session,pid,window_id,paused,takeover_generation,latest_frame,error` |
 | Frame | `name,capture_id,presented_ms,width,height,window_width,window_height,viewport`; name is logical `frame-N.png`, never a native filesystem path |
-| `computer-receipt/2` | `schema,id,session,disposition,emitted_events,reason,frame`; disposition delivered/rejected/partial/unknown, emitted0..8, frame null or frame above |
-| `computer-local/1` | Same fields, written by the custodian when the channel refuses publication before any byte is sent: disposition `rejected`, emitted0, frame null ([runtime](../../harness/computer/runtime.py)) |
+| `computer-receipt/2` | `schema,id,session,disposition,emitted_events,reason,frame`. Disposition is `delivered`, `rejected`, `partial` or `unknown`. `emitted_events` is 0 to 8. The frame is null or the frame above. |
+| `computer-local/1` | The custodian writes the same fields if the channel refuses publication before sending any byte. Disposition is `rejected`, `emitted_events` is 0 and the frame is null. [Runtime](../../harness/computer/runtime.py). |
 | `computer-transport/2` | Same fields, written when native delivery cannot be resolved: disposition `unknown`, `emitted_events` null, frame null ([channel](../../harness/computer/channel.py)); input then stops permanently |
 
-At claim, derive two local monotonic bounds once, from the original wall times, and
-check them before every command event without renewal. The **start bound**
-(`expires_ms`, capped5s) refuses a request's first command event. Once one is
-emitted, the remaining events may follow until the **continuation bound**
-(`continue_ms`, capped15s). A game that stalls between a key's down and up events
-([#396](https://github.com/CVX-Hull/enactive/issues/396)) then still receives the
-release. At either bound the request fails: before any event it is rejected; after
-one it latches Pause, neutralizes owned presses and ends partial. A request first
-read after its start bound (the game was busy before polling) is likewise rejected
-with no events; a stale Pause is a protocol fault and fences. The custodian ends
-both bounds at least250ms before its operation deadline and publishes nothing,
-including the post-input capture, inside that margin, so native emission ends before
-receipt collection does. Parent operation/run monotonic deadlines remain independent. Delivered means SDL event handoff, not
-application consumption/success; emitted input cannot become undelivered rejection.
+At claim, the bridge derives two local monotonic bounds from the original wall
+times. It checks the applicable bound before each command event without renewal.
+The **start bound** (`expires_ms`, capped at 5 seconds) limits the first event.
+Once an event is emitted, the remaining events can follow until the **continuation
+bound** (`continue_ms`, capped at 15 seconds). This lets the game receive a key
+release after a stall between press and release. [Input continuation across stalls (#396)](https://github.com/CVX-Hull/enactive/issues/396).
+
+An expired start bound rejects the request without events, even if the bridge
+first reads it after expiry. A stale Pause is a protocol fault and fences input.
+If the continuation bound expires after an event, the bridge latches Pause,
+neutralizes owned presses and ends with a partial result. The custodian ends both
+bounds at least 250 ms before its operation deadline and publishes nothing within
+that margin, including a post-input capture. Native emission ends before receipt
+collection does. The parent operation and run keep independent monotonic deadlines.
+Delivery confirms SDL event handoff. Application consumption and success require
+separate evidence. An emitted event cannot be reported as an undelivered rejection.
 Capture is the last actual default-renderer present, with original time/geometry.
 Keys have no image-age/equality or game-phase predicate. Clicks bind returned
 mechanical geometry; unsupported logical-size/scale transforms refuse explicitly.
@@ -107,7 +108,7 @@ Retain the original pending packet/receipt. Neutralize only owned presses, then
 emit its original partial/delivered result; emit the one separate Pause receipt
 when the original packet drains, then passive state. Never evict either receipt.
 The Python stop path sets its permanent event first and uses a separate send lock,
-with at most250ms to finish framing/send Pause, independent of executor/DB locks.
+with at most 250 ms to frame and send Pause, independent of executor and database locks.
 If it cannot finish, `shutdown(SHUT_WR)` signals native EOF; keep receive open for
 original collection. Report stop-requested separately from native-confirmed Pause.
 
@@ -146,9 +147,9 @@ global `remaining` are absent. This covers immediate results, exact collection a
 declared nested computer results in `player_result`. Native `computer-receipt/2`
 contents remain original evidence.
 
-**What the model reads of a computer call.** Receipts and identifiers say nothing
-about the game and were most of the player's prompt, so the tool server
-([MCP adapter](../../harness/player_mcp.py)) returns only what the player acts on.
+**What the model reads of a computer call.** The [MCP adapter](../../harness/player_mcp.py)
+projects the result for the model and retains the full operation record for the host
+and trace.
 
 | Call | The model reads | The host and the trace hold |
 | --- | --- | --- |
@@ -165,13 +166,9 @@ An input with no frame omits those three fields. A partial or unknown delivery a
 `operation_id` and `reason` ("input is stopped and never replayed; call
 `computer_result` with this `operation_id`"). A refused operation adds its `reason`
 and its `operation_id` too: a refusal can follow a batch that was delivered in part,
-and `computer_result` shows which actions were. The session, actor, kind, creation time, receipts, source record and
-handoff issuance are not in it. The session database and the canonical operation
-are unchanged; the host reads `source_id` and the full handoff issuance from the
-record. `player-computer-result/1` is retired: the host rejects it as a handoff
-receipt. Sealed traces in the old form stay readable by the evidence readers, which
-take the operation and frame from the record where a result has one and from the
-text otherwise.
+and `computer_result` shows which actions were. The full operation record retains
+the session, actor, kind, creation time, receipts, source record and handoff
+issuance. The host reads `source_id` and the full handoff issuance from that record.
 
 Model-facing errors and transport uncertainty use
 `player-error/2` and `player-transport/2`, preserving correction/control facts and
@@ -189,8 +186,7 @@ Internal service envelopes, below the actor projection, are `player-response/1`,
 [client](../../harness/player_client.py)), plus the per-tool results
 `player-service-result/2` and `player-source-read/1`. [The actor projection](../../harness/player_view.py)
 is their authority. It maps the internal error and transport envelopes to
-`player-error/2` and `player-transport/2` for the model. These are layer names,
-not older versions of the `/2` envelopes.
+`player-error/2` and `player-transport/2` for the model.
 
 `computer-source/1` is immutable: `schema,source_id,session,capture_id,sha256,
 media_type,presented_ms,received_wall,width,height,window_width,window_height,viewport`.
@@ -204,17 +200,22 @@ capabilities, with no CORS/public exposure. Browser routes are passive status/so
 plus independent user Pause. The writer validates active custody immediately before
 effects. Memory/progress/identity are never capability tokens.
 
-Handoff seals the actor only with no outstanding/uncertain input or permanent
-Pause. Persist a canonical immutable context snapshot before sealing. The operation
+Handoff requires settled input and active automation. The custodian persists a
+canonical immutable context snapshot before sealing. The operation
 binds `handoff:{schema:"player-handoff/1",operation_id,session,actor_id,context_id,
-context_sha256,sealed_wall,grants_authority:false}`. A sealed token permits original
-result and retained-source reads only. It cannot observe anew,
-input, write a hint or create another handoff.
-The host accepts only its direct handoff or collection of its own pending original
-handoff. The driver verifies canonical issuance/context digest and actual old host/
-MCP process-group quiescence before minting a successor under **original** limits.
-The current sealed actor retains only independent cancellation, never new input. Retired actors cannot stop successors. Store I/O never holds the cancellation lock; a final stopped/stage check precedes quiescence. Unexpected closure/cancellation after sealing still permanently pauses; later
-collection cannot restore succession. No game phase or identity requirement.
+context_sha256,sealed_wall,grants_authority:false}`. A sealed token permits only
+original result and retained-source reads.
+
+The host settles handoff only on a sealed `player-computer-operation/1` record
+from its direct handoff or exact collection of its own pending original handoff.
+The driver verifies the canonical issuance, the context digest and actual
+quiescence of the old host and MCP process group before minting a successor under
+the **original** limits. Game phase and identity do not enter this decision.
+
+The current sealed actor retains independent cancellation. Retired actors cannot
+stop successors. Store I/O never holds the cancellation lock. The custodian
+checks its stop and lifecycle state before confirming quiescence. Unexpected
+closure or cancellation after sealing permanently pauses input and bars succession.
 
 ## Player knowledge and executable proposals
 
@@ -253,10 +254,9 @@ continue or finish. The original actor fence, quiescence and finite limits remai
 ## Composed operations and telemetry
 
 Native intent/send/receipt timestamps retain their original wall/monotonic values.
-Late collection never renews a source's `received_wall`. Host telemetry version 8
-records public call metadata, payload hashes/counts, image references and bounded
-ordinary assistant text; it excludes private reasoning and base64 history. Stable
-frozen system context and the ongoing user objective are reused across actors.
+Late collection never renews a source's `received_wall`. The host records public
+calls and evidence references in [host telemetry](player-host.md#telemetry).
+Stable frozen system context and the ongoing user objective are reused across actors.
 Experiment quotas, final-actor policy and ending reserves remain in operator
 accounting, outside the player prompt and tool views. Host decision-time and
 custodian horizons stay distinct.

@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: Responsibility, supported behavior, interfaces or qualification change
+review_trigger: Adapter invocation, provider serialization, MCP integration or telemetry instrumentation changes
 status: active
 ---
 
@@ -9,19 +9,14 @@ status: active
 This private package is the Pi-based adapter that implements the host-neutral
 [player-host contract](../../docs/contracts/player-host.md) (`player-host/8`);
 the campaign driver selects it only through the package's frozen `host.argv`.
-The [current component](../../docs/components/player-interface.md) owns the player interface;
-[`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
-retains the original offline adoption decision.
+The [player interface component](../../docs/components/player-interface.md) describes
+the adapter's place in the run.
 It uses Pi agent-core, AI serialization and MCP 1.4.0 directly. It loads no coding
 agent application, personal settings, sessions, shell/file tools or resources.
-Host maintenance belongs to the engineering lead.
 The campaign driver invokes the frozen `host.argv` followed by a mode word with
 frozen provider/MCP/context inputs; no coding-agent launch or resumed-host fallback
 is supported. Host choice
 is independent of whether a particular model passes gameplay qualification.
-A separately admitted gameplay adviser, which only proposes, uses this same core
-with its own explicit context, tool profile and budget; the campaign driver does
-not automatically activate it.
 
 From this directory, install and test with project-local dependencies:
 
@@ -73,14 +68,16 @@ node tools/player_host/run.mjs run \
   --context FROZEN/context.txt --prompt FROZEN/prompt.txt \
   --session SESSION_32HEX --actor-id ACTOR_32HEX \
   --pending-control-id none \
+  --delivered-knowledge FROZEN/delivered-knowledge.json \
+  --finish-reserve-usd USD \
   --model MODEL --effort EFFORT --timeout-seconds SECONDS \
   -o DRIVER_RESERVED_FINAL_FILE
 ```
 
-Each frozen input file is limited to 1 MiB and must be regular. Stdin remains an
-open JSONL control pipe, not the initial prompt. For a successor with inherited
-stop, `--pending-control-id` is its 32hex command ID rather than `none`; the host
-waits for that exact command before MCP connection or any provider fetch.
+The runner requires regular files of at most 1 MiB for the route, MCP table,
+context and prompt. The delivered knowledge file has no text-size cap. Stdin
+carries [finish-up control](../../docs/contracts/player-host.md#external-control),
+including a successor's pending command when specified by `--pending-control-id`.
 The driver exclusively reserves the final path; the runner writes that existing
 path only with the report from successful direct `player_finish` settlement and leaves it unchanged after a
 handoff or any failure. JSONL events go to stdout. A missing or unknown mode, or a
@@ -98,9 +95,7 @@ integer `max_context_images` and the required integer `context_image_block`
 `context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
 amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
 text ([the dollar limit](#the-dollar-limit)), and the closed [recall configuration](#frozen-knowledge-delivery).
-`pi-player-host/1` through `/4`, `player-host/1` through `/7` and
-missing/invalid fields are rejected; closed historical configurations and traces are
-evidence, not runnable current inputs.
+The adapter rejects other schema versions and missing or invalid fields.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
 `reasoning`, `input`, `cost`, `contextWindow` and `maxTokens`; optional `type`,
@@ -162,13 +157,10 @@ minute and at most half). See the contract's
 [request-stability rules](../../docs/contracts/player-host.md#request-stability-and-tail-notices).
 Every actor shares one system prompt and tool table. The ongoing user objective
 survives actor turnover; experiment quotas, final-actor policy and ending reserves
-stay in operator accounting. MCP's typed actor projection returns
-`player-computer-result/2` (a short result: status, frame `source_id` and size, and for
-a pending, partial or unknown delivery the operation identifier and next step; the full
-`player-computer-operation/1` record rides in `structuredContent`, which the host reads
-for `source_id` and the handoff receipt, records in the trace and never forwards to the
-model), `player-error/2` and `player-transport/2`, without global
-deadline/remaining fields; canonical operator records retain original accounting.
+stay in operator accounting. The adapter extracts `source_id` from the full MCP
+operation record to label image omission markers. It sends the content defined
+by the [player result projection](../../docs/contracts/computer-control.md#computer-operations-and-custody)
+to the model and keeps `structuredContent` in the trace.
 The host reuses Pi's `estimateContextTokens`, reported usage and a heuristic
 text/image floor to request the existing sealed handoff before critical context
 pressure. These are not exact provider token bounds. Known oversized context
@@ -182,27 +174,10 @@ window, without text summarization, automatic compaction, replay or permission
 renewal. Qualification must include actual continuation and apparent effects;
 reducing images alone is not a latency pass.
 
-Pi1.4.0's full `anyOf` validation can describe an unrelated memory type when a
-selected Work body is invalid. `validation-feedback.mjs` supplies a request-only
-diagnostic using the same `validateToolArguments`, narrowing only the existing
-`intent.entry_type` alternatives and retaining surrounding constraints. It never
-changes arguments, tool schemas, normal SDK validation, execution or collection.
-It requires a unique completed call/result batch, `isError`, absent `durationMs`,
-one text part with the exact SDK validation header, a known unambiguous branch,
-and no parser `argumentsError`. In pinned Pi, executed calls always carry a
-duration, including zero and exceptions. Parser/blocked errors have other headers;
-MCP errors keep their original path. If the narrowed check passes, the original
-refusal stays. No independent validator, successful-call revalidation or SDK fork
-is introduced.
-
-Canonical history stays unchanged. The existing trace's
-`tool-validation-feedback` event retains the original SDK result, exact call ID
-and projected text before forwarding. A weak memo of canonical call/result
-objects avoids repeating diagnostic work and keeps earlier feedback stable in
-later request prefixes; batch pairing is checked anew. This happens before image
-projection clones messages. These diagnostics prove neither semantic truth nor
-gameplay success and grant no input authority. Recheck these SDK assumptions on
-upgrade and retire the helper when upstream supplies precise union feedback.
+`validation-feedback.mjs` narrows model-facing validation feedback for `intent`
+schemas with an `anyOf` union discriminated by `entry_type`. Current player tools
+use a string for `intent`, so the helper never runs its diagnostic for them and
+is a candidate for removal.
 
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a
@@ -308,8 +283,9 @@ assumption; another attempt requires spare capacity before any backoff.
 The MCP config is the driver's current flat server table, with explicit command,
 args, cwd, enabled tools and finite startup/tool timeouts. `enabled` must be true;
 `required`, if present, must be boolean. Missing allowlisted tools fail before
-inference. Codex approval and per-tool presentation dictionaries are accepted as
-presentation settings; they do not change the exact schema or truncate results.
+inference. The validator accepts `default_tools_approval_mode` as a string and
+`tools` as a dictionary of option objects keyed by enabled tool names. This adapter
+uses neither setting for dispatch or result projection.
 The MCP child inherits only PATH and LANG. The maintained transport owns its
 child/process group and performs closure; no native cleanup is implied.
 
@@ -324,67 +300,23 @@ remaining calls and inference. The bounded provider-only recovery above never
 retries a tool/gameplay submission or grants reconnect, replay, fallback,
 automatic compaction or session restoration.
 
-A sealed `player_handoff` response, or collection
-through `computer_result` of this host's one pending original handoff, ends this
-host. The receipt is the operation record `player-computer-operation/1`: the structured
-content of a direct `player_handoff` result (the model reads only its short
-`player-computer-result/2` text) or the first MCP text of a collection. It must bind matching 32-character hex operation/session/actor
-IDs and a current `player-handoff/1` issuance with matching IDs, a 32-character hex context ID,
-64-character hex context digest, positive finite sealing time and `grants_authority:false`.
-There are no game-phase, menu, identity or source-checkpoint requirements.
-Only this host's direct response can establish an origin; collection must request
-that exact operation and return its original session/actor. A direct
-`player-transport/2` unknown receipt establishes only the pending origin.
-Unrelated reads and reads without an origin never settle the host. Local MCP
-`isError` refusals establish no origin and preserve explicit correction. Invalid
-successful direct receipts and incoherent original collection latch a fatal stop.
-Unsupported old mission/player-view receipts are rejected.
+The adapter validates the receipt as part of [custody handoff](../../docs/contracts/computer-control.md#computer-operations-and-custody).
+It reads a collection's JSON from the first MCP text part. Local MCP `isError`
+refusals preserve explicit correction. Invalid successful receipts or incoherent
+collections latch `invalid-handoff-receipt`.
 
-The host latches the issuance, refuses every later call in that sequential batch
-before dispatch, and uses Pi's maintained `finishTurn` hook to end before another
-provider request, including batches with ordinary tools before handoff. The
-`handoff` event carries session/actor, operation as `handoff_id`, context ID/digest
-and `grants_authority:false`. Settlement has reason `handoff`, can end with assistant
-`toolUse`, and leaves the reserved final file unchanged.
-Fatal cancellation, deadlines, transport and cleanup failures still win. The
-host closes its owned MCP child. The driver independently validates canonical
-issuance/context and actual old host/MCP process-group quiescence before minting
-a successor under original limits; host settlement grants no authority.
+The adapter uses Pi's `steer` method to add the labelled finish-up message. It associates each
+assistant reply with the control ID sent in its request, then checks that ID in
+`beforeToolCall` to suppress calls that predate the control.
 
-Stdin carries closed `player-control/1` objects with exactly
-`schema,id,session,actor_id,type`; `type` is `orderly_stop`, with bound 32hex IDs.
-The line limit is 4096 UTF8 bytes before newline. Identical duplicates are
-idempotent. Conflicting or malformed control, wrong identity/version, oversized
-lines and unexpected EOF latch failure and close owned MCP. The driver retains
-intent before writing and preserves pending stop across the whole admission.
+The adapter validates the [direct `player_finish` call](../../docs/contracts/player-host.md#settlement-and-handoff)
+locally. `beforeToolCall` blocks subsequent dispatch in the batch. Pi's `finishTurn`
+hook ends the turn after accepted finish or handoff, including batches with
+ordinary tool results before the accepted call.
 
-Pi's `steer` and turn hooks deliver one fixed labelled finish-up request without
-countdowns, tactics or a Save/Quit mandate. Unsent calls from a pre-control turn
-are withheld; dispatched input is not canceled/replayed for text delivery. New
-handoff is refused before sealing while stop is pending. If a handoff already
-sealed, the driver may deliver the same command to a verified successor under
-original reserves, gated as above, or record incomplete ending. Pause, hard
-deadlines and owned cleanup remain independent of model response or game saving.
-
-All player tools require public `intent` and allow optional `cites` under the same
-bounds as finish below. `player_hint` reports fallible text and optional source IDs
-without publishing knowledge. Active player memory-authoring and program tools are
-retired. Handoff carries a labelled summary hint with no record roots; existing
-briefing, reminders and knowledge reads retain their contracts.
-
-The host adds reserved `player_finish` beside MCP tools, with closed
-`intent,disposition,report,source_ids,control_id` arguments and optional `cites`.
-`intent` is nonempty one-line public text, at most 512 characters; optional citations
-are at most 16 unique IDs (each 1..128 characters). Dispositions are
-`task_complete`, `cannot_continue`, `external_stop_complete`; report≤8192characters,
-unique source IDs≤16 (each1..128characters). External completion must name the
-directly received control; other dispositions require null. Only validated direct
-execution accepts it. Remembered/nested JSON and ordinary narration cannot finish
-the task. Acceptance stops later tool/provider dispatch through Pi's `finishTurn`
-hook and records `player-finish` plus settlement. Supporting claims remain fallible;
-host success, stopped automation, persistence, native exit and owned absence are
-separate facts. The admission's reserve forecast includes the largest burst and
-in-flight delivery delay; field validation does not establish adequate capacity.
+The [player journal](../../docs/contracts/computer-control.md#responsibilities-and-current-data)
+can span fresh native-child sessions. The [run package](../../docs/operations/campaign-run.md#frozen-data)
+sets the host limit.
 
 The host reserves at most one second (one quarter of short runs) from its total
 budget for cleanup. Stdio closure uses at most 500 ms each for stdin grace and
@@ -421,48 +353,10 @@ which `cost_source:"configured-rates"` says; Pi discards any cost the provider r
 
 ### The dollar limit
 
-The host stops at the route's `spend_limit_usd`, counted from what the provider
-reports; the [contract](../../docs/contracts/player-host.md#spend) states the rule.
-In this adapter:
-
-- **Counting.** Every HTTP attempt has a start event. Its
-  `response-complete` adds a usable provider price to `spent_usd`. An unknown
-  charge has null `reported_cost_usd` and `counted_cost_usd`, with
-  `cost_counted_as: "unpriced"`. The driver checks the settled subtotal and both
-  unpriced counts against all attempt records.
-- **`spend-limit`.** The host checks on entering a
-  logical request, before every fetch, and after a first attempt fails and before its
-  retry. When the total has reached the limit the host stops and sends nothing. A
-  request already sent finishes, so the total can pass the limit by at most what one
-  request counts.
-- **`cost-unreported`.** A response that did not fail (stop reason other than `error`,
-  `aborted`, `length` or `deferred`) with a null `reported_cost_usd` stops the host
-  before any tool call from it is dispatched. Its charge stays unknown.
-- **The bound is not computed here.** `unpriced_request_usd` comes from the route;
-  the package check computes it from the route's configured rates.
-- **No notice** is added for dollars. The driver's ending reserve asks for an orderly
-  finish before the limit.
-
-`response-complete.reported_cost_usd` is the cost the provider itself reported
-for that response, read from the same raw usage record of the stream. The rule is the curator's
-(`tools/curator_host/providers.py`, `reported_cost`), and both hosts' tests run the
-usage records in `tests/fixtures/provider-usage-cost.json`:
-
-- A route that is not on the caller's own provider key counts the larger of `cost` and
-  `cost_details.upstream_inference_cost`. On the pinned route the two were equal in the
-  [pilot of 12 November 2026](../../docs/acceptance/2026-11-12-provider-cost-pilot-555.md).
-- An own-key route (`is_byok` true) counts their sum, the fee plus the upstream cost.
-- If a response carries several usage records, the largest counts.
-- A response with no cost, or with a malformed one (negative, non-finite, not a number,
-  an own-key record missing either amount, or one malformed record among several), has
-  `reported_cost_usd:null`. Missing cost stays unknown; it is never estimated. Token
-  counts are not needed for a cost, and a cost is not needed for `usage_available`.
-- The value is a plain decimal string in US dollars, such as `"0.0001893"`: no exponent,
-  no trailing zeros, `"0"` for zero. Each JSON number is turned once into the shortest
-  decimal that reads back as the same number, which is the provider's own digits for up
-  to 15 significant digits, and sums and comparisons use integers, so no floating-point
-  arithmetic touches the amount. The route's two amounts and every counted amount and
-  total use the same text and the same integer arithmetic.
+The adapter reads the raw stream usage records to apply the [reported-cost and spend rules](../../docs/contracts/player-host.md#spend).
+It converts each parsed JSON number to its shortest round-trippable decimal and
+uses scaled `BigInt` values for sums and comparisons. Telemetry writes plain
+decimal text without trailing fractional zeros, with `"0"` for zero.
 
 HTTP refusal status is retained before SDK rejection. `tool-result`
 text and structured data retain operation/source joins, with image references in
@@ -494,7 +388,7 @@ source lengths, and do not count opaque reasoning details or other representatio
 `last_body_chunk_ms`, `last_provider_event_ms` and `last_field_delta_ms` use the
 host's monotonic clock; the last field timestamp advances only for a nonempty
 counted fragment. No generated text, reasoning or argument values are added to
-these diagnostics. Missing older diagnostics remain unknown; zero observed bytes
+these diagnostics. Missing diagnostics remain unknown. Zero observed bytes
 does not establish absence of backend generation or explain a timeout. Recording
 progress neither extends the active request deadline nor authorizes tool input.
 The bounded timeout recovery requires observed assistant output before the deadline. Its observation overhead belongs in subsequent
@@ -511,11 +405,8 @@ settled event; they do not measure disk durability or async drain. Library calle
 without sink instrumentation retain null sink measurements. Observing overhead
 still adds work and must be measured during subsequent play.
 
-`context-manifest` (absent from archived version 3 traces recorded before 6 November 2026)
-records, once per HTTP attempt before the fetch, the ordered parts of the payload as
-roles, kinds, sizes and SHA-256 digests with tool-call, image and source identities,
-delta-encoded against the previous attempt; it stores no text or pixels. The replay rule
-and fields are in [the contract](../../docs/contracts/player-host.md#context-manifest).
+The adapter builds the [context manifest](../../docs/contracts/player-host.md#context-manifest)
+from the serialized player request just before Fetch.
 
 `host-start` records the configured output cap, context window, effort mapping and
 image policy (`max_context_images`, `context_image_block`, also repeated on each
@@ -542,4 +433,8 @@ text-size cap. `--finish-reserve-usd` is the frozen reserve from the package.
 The route pins `recall:{model,every,unpriced_request_usd}` with the same provider
 and credential variable as the player. Recall counts and request IDs begin at fetch.
 
-The first user message carries a labelled fallible briefing and complete remaining index, including standalone facts and coverage. Recall reminders run beside play, become separate labelled messages, and preserve the sent prefix. Recall asks for one JSON object (structured output on OpenRouter), puts the index first in its request, and accepts one object, bare or in one code fence. An invalid selection with a valid cost fails that opportunity only; any other recall failure or absent cost disables recall alone. `knowledge-recall` keeps the bounded reply text and the precise refusal reason. A valid reported cost is retained when selection is rejected or a response stops for length; missing or invalid cost stays unknown. `recall-N` attempts share counted spend and limits, include every in-flight bound in admission, and never begin after an orderly stop or when spent plus an in-flight player bound, the proposed recall bound and the finish reserve reaches the limit. Empty knowledge makes no recall request. The host aborts and counts an in-flight recall at actor end. Settlement carries separate `unpriced_requests` and `unpriced_recall_requests` counts; telemetry 8 records `knowledge-delivery`, `knowledge-recall` (including silence/failure/not-made) and `knowledge-undelivered`. The full boundary is in the player-host contract.
+The [recall contract](../../docs/contracts/player-host.md#delivered-knowledge-and-recall)
+defines selection, delivery and accounting. For OpenRouter the adapter's `onPayload`
+hook sends a strict `response_format` of type `json_schema`, with only `articles`,
+an array of strings. The pinned upstream must accept it because the route sets
+`require_parameters: true`. Direct routes omit `response_format`.
