@@ -18,7 +18,7 @@ own mandatory checks. This page explains selection, not a passing-run inventory.
 | Mechanical schema/wire | [Protocol](../tests/test_computer_protocol.py), [wire](../tests/test_computer_wire.py) and [channel](../tests/test_computer_channel.py) tests | Synthetic packet/socket cases cannot establish real game effects. |
 | Writer and composition | [Runtime](../tests/test_computer_runtime.py), [application](../tests/test_player_application.py), [MCP](../tests/test_player_host_adapter.py) | Exercise original resources/IDs, custody, service isolation and collection using explicit doubles. |
 | Player journal and hints | [Journal](../tests/test_player_journal.py), [application](../tests/test_player_application.py) | Public intent, hint/source provenance, original collection and summary-only handoff; no knowledge-usefulness claim. |
-| Player host and orchestration | [Contract suite](../tests/test_player_host_contract.py), [adapter](../tests/test_player_host_adapter.py), [driver](../tests/test_campaign_player.py), [custodian](../tests/test_campaign_run.py) | Each listed adapter through the current `player-host/8`, plus actual adapter/MCP with synthetic provider/owned children; no paid inference or game quality claim. |
+| Player host and orchestration | [Contract suite](../tests/test_player_host_contract.py), [adapter](../tests/test_player_host_adapter.py), [driver](../tests/test_campaign_player.py), [custodian](../tests/test_campaign_run.py) | Host conformance and actual adapter/MCP with a synthetic provider and owned children. |
 | Finite-test supervision | [Guardian/process](../tests/test_campaign_supervision.py), [HTTP/socket](../tests/test_campaign_watch.py), [control strip](../tests/test_investigation_session.cjs) | Original custody deadline, Pause and its recorded reason, current marker/receipt binding, exact receiver and owned cleanup; synthetic protocol evidence, not physical attention or gameplay. |
 | Compiled adapter | [Native check](../tests/computer_native_check.py), [lock check](../tests/computer_lock_check.py), [pipeline check](../tests/computer_pipeline_check.py) | Actual SDL/socket/inherited-lock behavior in a fixture; separate from CDDA usability. |
 | Spectator control path | [HTTP boundary](../tests/test_server.py), [gateway and viewer forwarding](../tests/test_campaign_watch.py), [player isolation](../tests/test_player_isolation.py) | Custodian routes, forwarding limits and viewer-outage independence, Pause reasons, and that the player driver and host never name the evaluator or viewer; rendered browser/native evidence remains separate. |
@@ -37,16 +37,9 @@ Python tests, the player-host adapter suite, and each browser suite. Add `--lane
 run one lane's part locally, for example
 `.venv/bin/python tools/check.py --lane browser --suite test_viewer`; a lane run is not
 a full pass.
-Each checker run also writes the full output of every subprocess command (all but the
-short stdin-fed syntax checks) to its own directory under `.runtime/check-logs/`, named
-by UTC start time, and a failed command prints the path of its log, so a failure stays
-diagnosable when terminal output was cut short. Output a surviving descendant still
-holds is cut off 10 seconds after the command exits, with a note in the log. With
-`--quiet`, which the commit hook passes, a passing run prints one line (what passed,
-what was not run and the elapsed time) and a failing run prints only the failed command
-and its whole output; the logs are written either way. The
-[cleanup procedure](operations/evidence-cleanup.md) says when logs can be pruned and
-how a record cites one.
+When the checker prints a failure log path, open it under `.runtime/check-logs/`.
+The [cleanup procedure](operations/evidence-cleanup.md) explains retention and
+how to cite a log.
 
 A schema change needs ingress/version/negative cases at each affected consumer.
 A player/test-context change also needs typed nested result projection with opaque
@@ -57,9 +50,8 @@ before successor MCP/fetch and independent stopping without a model reply or sav
 Context estimates and validators do not prove capacity adequacy: before a finite
 test, the lead forecasts burst/in-flight delay against all ending reserves.
 A custody or handoff change needs original collection, cancellation, permanent
-Pause, quiescence and no renewed limits. A program change needs real image-view
-inputs, bounded failures and original child-operation retention. A source/native
-change needs compiled interoperability and real-game qualification as applicable.
+Pause, quiescence and no renewed limits. A source/native change needs compiled
+interoperability and real-game qualification as applicable.
 
 ## Responsibility assurance
 

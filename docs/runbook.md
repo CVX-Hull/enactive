@@ -56,11 +56,6 @@ Preserve failed chains and original binaries/configuration.
 [Migration](operations/migration.md): reject old formats before effects, retain
 inert history, select fresh stores and roll back only as a coherent deployment.
 
-## Passive skill acceptance
-
-Player programs propose basic controls and need their own actual-use evidence;
-see [native acceptance](operations/native-acceptance.md#passive-skill-acceptance).
-
 ## Designated campaign operator
 
 [Assignment](operations/mission-ownership.md#designated-campaign-operator): one

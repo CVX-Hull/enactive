@@ -21,13 +21,12 @@ requires a small understood patch and preserved provenance.
 ## Scope of use and what is guaranteed
 
 Enactive is a local gameplay player. It runs a game on a personal computer that is
-also used for other things, for someone who supplies the game and access to models
-through OpenRouter. It may sit on top of whatever else that person has set up.
+also used for other things. The user supplies the game and access to a model provider.
 
 Inside that use the project handles what is its own:
 
 - the game process it starts, and the saves and user directory it is given;
-- OpenRouter: the key, the money spent, the route, and failures of the service;
+- the model service: the provider key, spend, route and service failures;
 - the shared computer: files stay in the project, nothing global changes, and the game
   never opens fullscreen;
 - what the repository publishes: identities, secrets and licences;
@@ -41,12 +40,10 @@ and the ones excluded by it; a control exists only for a listed risk.
 
 ## Constraints, assumptions and decisions
 
-User constraints: windowed operation; project-local new dependencies, data and
-caches or explicitly recorded temporary builds; preserve the global environment;
-version control; authentic engine behavior; no hidden state or save editing to
-win a demonstration. Historical environment exceptions remain in the
-[environment history](acceptance/2026-11-08-environment-history.md); they are not precedent
-for new changes.
+Run windowed, preserve the global environment and keep new dependencies, data and
+caches project-local or in explicitly recorded temporary builds. Use version control
+and preserve authentic engine behavior. Demonstrations use player-visible state
+and ordinary controls, with saves managed by the game.
 
 Current product constraint: designs must apply across CDDA-class games, not depend
 on this specific Cataclysm implementation. The working scope is turn-based
@@ -68,25 +65,14 @@ Selected architecture constraint: the harness exposes only basic computer
 observation/control and mechanical custody, delivery, cancellation and resource
 limits. The entire playing system owns game semantics, including menus,
 inventory, activities, identity, save/load, progress and loops. A game-specific
-classification cannot be a prerequisite for basic input. [ADR006](decisions/006-computer-control-boundary.md)
-records the migration and limits, and the
-[computer-control contract](contracts/computer-control.md) owns the running behavior.
+classification cannot be a prerequisite for basic input.
 
-Current assumptions: one game/controller and one designated deciding player;
-the active player owns planning and ordinary interpretation; the curator owns
-authored durable knowledge, and player hints are fallible reports. Curated memory
-is adopted with benefit unclaimed. The current route has no live curator scheduler. The engineering lead owns the project,
-admission and verification. This Mac is the validated host. Recheck these before
-additional concurrent games, unattended operation, distribution or platform expansion.
-
-Current validation uses CDDA on this Mac; family-wide support is not yet qualified.
-Current technical decisions are [native Tiles](decisions/001-native-platform.md)
-and a local serialized channel to the game (one inherited socket pair, specified by
-the [computer-control contract](contracts/computer-control.md#native-channel)), the
-backend chosen for the constraint above. They may change when evidence or
-requirements change. They are not permanent principles.
-General autonomous survival, combat policy and cross-platform support remain
-outside current capability; future scope needs explicit acceptance conditions.
+Each run has one game target, one controller and one deciding player at a time.
+Reassess scope before supporting concurrent games, unattended operation,
+distribution or another platform. See [architecture](architecture.md) for the
+deployment, [overview](overview.md#what-works-and-what-the-evidence-means) for
+qualification and the [curator component](components/curator.md) for curated
+memory and its limits.
 
 ## P-AUTHORITY Preserve user authority
 
