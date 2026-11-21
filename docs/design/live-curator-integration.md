@@ -15,7 +15,9 @@ delivered knowledge is frozen into a package before the admission starts. This p
 designs the smallest change that lets a curator follow an admission as it is played, so
 that its lag, cost and effect on play can be measured before anything depends on them.
 
-**Designed, not built.** Nothing here is implemented and no run is approved. The
+**Designed, and built only in part.** The custodian's closing marker and wait are
+implemented (`close_store` in `tools/campaign_run.py`); nothing else here is, and no run
+is approved. The
 [curator session design](curator-session.md) owns sessions, the gate and the store; this
 page owns only what is new for a session that runs beside play. A first live run is
 priced in a [dated proposal](../acceptance/2026-11-20-live-curator-run-price-proposal-836.md),
