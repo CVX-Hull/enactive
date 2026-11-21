@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Closed 020 functional continuation; day three and midpoint accepted, day four incomplete
 status: historical
-review_trigger: Actual remaining fit, actor latency, needs margin or source changes
 ---
 
 # Finish within the existing campaign budget

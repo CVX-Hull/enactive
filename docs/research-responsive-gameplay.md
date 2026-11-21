@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Player host, context, model, control redesign or a new performance claim
 status: historical
 date: 2026-11-07
 scope: '2026-10-22 targeted review for brief 060; its sources predate the #289 cutover'

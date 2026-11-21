@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Monitor implementation, new primary evidence, model or observer changes, active weekly research review
 status: historical
 date: 2026-11-07
 scope: Research for the never-implemented monitor proposal; rationale only

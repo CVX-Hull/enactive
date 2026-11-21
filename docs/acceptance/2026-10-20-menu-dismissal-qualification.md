@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-20
 scope: Native010 source-binding correction and failed item-menu normal ending
-review_trigger: Interpretation of this attempt or a new dismissal qualification
 status: historical
 kind: run
 ---

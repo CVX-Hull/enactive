@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Deciding host, provider requests, tool presentation or process custody changes
 status: historical
 date: 2026-10-25
 scope: Pi offline host conformance; existing mission/native contracts and campaign gates unchanged

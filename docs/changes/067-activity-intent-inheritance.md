@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Activity intent composition or original-root collection changes
 status: historical
 date: 2026-10-25
 scope: Current SDK/MCP activity intent; mission wire and native contracts unchanged

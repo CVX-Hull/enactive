@@ -39,22 +39,15 @@ First, the evaluator reads, read-only, old record versions only for the sealed s
 in one closed index, `data/evaluation/archive-sessions.json`, and for each session only
 the versions the index records for it. The index is closed and never grows. Adding a
 session is a new owner decision, a row in the
-[owner decision log](../decisions/owner-decisions.md). The index holds 135 sessions: 30
-older development-loop sessions, 22 whose run-ending record is
-`campaign-watch-terminal/3`, two from the supervised launch check, the
-`spend-limit-run-555` admission, and 80 pre-adoption sessions kept by #463.
-The index pins the exact versions for each session.
-Every other old version is an error naming the file and version. The evaluator never admits
+[owner decision log](../decisions/owner-decisions.md). The index lists its sessions and
+pins the exact versions for each. Every other old version is an error naming the file and version. The evaluator never admits
 or plays from the archive and never modifies it; it only derives evaluation records.
 Second, an evidence-only event (one that no admission, control or player-visible path
 reads) may be added inside an unchanged telemetry version when it changes no existing
 field and every reader that uses it marks its absence in older traces as not recorded,
-never as a failure or as a value presented as recorded. The current player-host
-telemetry is version 8. It includes `context-manifest` and the reported-cost
-contract. The additive case still governs the archived telemetry version 3
-traces: `context-manifest` was added inside that version, so the evaluator records its
-absence from an older trace as `manifest: absent` and the context view rebuilds as
-`exact: false`. Anything else, including another
+never as a failure or as a value presented as recorded. The
+[evaluation contract](../contracts/evaluation.md) states how the evaluator marks such an
+absence in archived traces. Anything else, including another
 archive or a changed existing field, needs a new version and a migration as above.
 
 Every affected PR identifies the old and new contracts, the migrated callers and

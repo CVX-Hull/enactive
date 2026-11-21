@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Repeating this local execution experiment or interpreting its scope
 status: historical
 kind: study
 date: 2026-10-24

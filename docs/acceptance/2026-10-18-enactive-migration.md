@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Historical migration record; supersede with new evidence rather than rewriting outcomes
 status: historical
 kind: change
 date: 2026-10-18

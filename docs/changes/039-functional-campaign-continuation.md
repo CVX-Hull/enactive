@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-19
 scope: Closed functional continuation proposal; actual outcomes are recorded separately
-review_trigger: Study allowance, survival claim, actual remaining fit or input ownership changes
 ---
 
 # Functional continuation after the failed day-two study

@@ -28,14 +28,10 @@ then affected components, interfaces/state/callers, code/tests and operating doc
 Review from that boundary down, using the [risk-based assurance policy](../workflows/review.md#risk-based-assurance).
 The existing Issue/PR is sufficient for a contained change; a consequential change
 links its brief. This impact record is not a second plan or clause-by-clause matrix.
-Issues own scope, acceptance, accountable owner, blockers and exceptions; Project
-Status owns execution stage: Backlog, Ready, In progress, Done
-([work items](../workflows/work-items.md#status-fields-and-dates)). Review and validation
-state lives on the PR. Parked work returns to Backlog with its reason, owner and
-resumption trigger. Aggregate outcomes do not inherit child execution stages. Reconcile
-the Project when selecting work ([capacity](../workflows/work-items.md#ready-brief-and-execution-capacity)).
-Deferred work needs a reason and revisit trigger. Cancelled or duplicate issues
-are closed as not planned and excluded from accepted delivery counts.
+Each piece of work has one accountable issue, kept current; its fields, stages,
+parking, cancellation and where review state lives are in
+[work items](../workflows/work-items.md#status-fields-and-dates). Reconcile the Project
+when selecting work ([capacity](../workflows/work-items.md#ready-brief-and-execution-capacity)).
 At meaningful discussion, research, review and delivery checkpoints, reconcile
 actionable findings into the existing Issues/Project. Record an accountable owner,
 next action, acceptance and dependencies; disposition duplicates or deferrals.
@@ -53,9 +49,7 @@ and full messages, including co-author trailers. Use explicit repository-local G
 configuration as described in [setup](../setup.md#choose-an-explicit-git-identity);
 never substitute an inferred OS account name or local email for the maintainer's
 public identity. Review all new commits, not only the eventual squash commit.
-A merged pull request does not close an issue; the repository setting that would do
-so is off ([work items](../workflows/work-items.md#status-fields-and-dates)). Update
-Issue/Project only after actual validation.
+Update the issue and Project only after actual validation.
 Before a significant change, write a short review brief in its issue or PR covering problem, visible behavior, alternatives, maintenance/reversibility,
 evidence/uncertainty and decision needed. Routine fixes need only a cohesive diff
 and relevant checks. New boundary/guarantee/dependency changes need design review;

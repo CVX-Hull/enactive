@@ -73,8 +73,7 @@ Retain the starting basis, source/configuration, intent, observations, delivery 
 semantic outcome, costs, interventions and finding disposition in the existing
 admission/ledger/archive/Git/Issues. Show the maintainer a small coverage/findings
 summary with links to those records; do not build a second history or tracker.
-Continuing across admissions is an ordinary player Load of a game save, as in
-#382's chained lineages. It restores no old authority and rolls back no run.
+Continuing across admissions is an ordinary player Load of a game save. It restores no old authority and rolls back no run.
 Source repairs still require closure and a new finite admission; exploratory
 evidence keeps its declared conditions and does not become a fresh assessment.
 

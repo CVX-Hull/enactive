@@ -13,18 +13,26 @@ progressively detailed links. Split by reader, authority, cohesion or change
 frequency; no universal line/page count or documentation-volume target applies.
 Use a diagram only when it clarifies a boundary or interaction. Generate mechanical
 reference from an existing authoritative structure when it reduces duplication.
-On a material documentation change, C-USABILITY walks the intended reader task:
-find the current rule and owner, understand its consequence, and trace the needed
-detail without reconstructing history. Mixed-purpose or oversized references that
-prevent this focused review need decomposition; a table of links alone is insufficient.
+On a material change to the overview or the navigation, C-USABILITY walks the
+intended reader task: find the current rule and owner, understand its consequence,
+and trace the needed detail without reconstructing history. No count makes a page too
+large. A page is too large when a reader cannot do that walk on it, because it mixes
+purposes or holds what has another home; it is then decomposed, and a table of links
+alone is insufficient.
 Documentation generators and checks follow S-CODE's reuse decision and review
 requirement; stewardship/schema rules do not justify rebuilding their parsers.
 
-Stewardship metadata lives in YAML front matter, checked by `tools/documents.py`:
-all Markdown in docs/ and README/AGENTS/NOTICE identifies owner and status. Active
-or proposed material needs a review trigger; historical records need date and
-scope; superseded material needs scope and a repository-relative replacement.
-Proposals are not implemented contracts. Accepted ADRs are dated rationale;
+Stewardship metadata lives in YAML front matter, checked by `tools/documents.py`. The
+pages that carry it are the root documents (README, AGENTS, CONTRIBUTING, NOTICE,
+SECURITY), every Markdown file under `docs/` and `tools/player_host/README.md`; each
+names its owner and status. Other Markdown in the tree is not a page and carries no
+stewardship metadata: role files and their wrappers are configuration a coding agent
+loads, prompts are inputs a program reads, and a provenance file sits beside what it
+describes. Active or proposed pages need a review trigger. Historical and superseded
+pages carry none, because nobody reviews them against current behavior. A historical
+page needs date and scope; a superseded one needs scope and a repository-relative
+replacement. A historical page that a later one replaces only in part stays historical
+and may name that page as its replacement. Proposals are not implemented contracts. Accepted ADRs are dated rationale;
 architecture/protocol remain authoritative about current behavior. Metadata is
 not a claim of accuracy. Review a current page when its own review trigger fires.
 
@@ -56,8 +64,8 @@ Use the [documentation roles and lifecycle](../documentation.md) when deciding w
 an artifact belongs. Dated acceptance/audit records are historical, even when their
 observations remain relevant; the existing metadata check enforces that narrow
 role rule. Per-run quantities live in tracked data (S-EVIDENCE), and generated indexes
-list every dated acceptance record and change brief from its front matter, with a
-staleness check. Incorporate adopted design into current architecture/contracts,
+list every dated acceptance record, change brief and numbered decision record from its
+front matter, with a staleness check. Incorporate adopted design into current architecture/contracts,
 transfer remaining actions to GitHub and retain its brief as dated rationale. Partial
 proposals identify their remaining proposal scope.
 
@@ -74,10 +82,17 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   source. Where a rule rests on a decision or a result, the page links the log row or
   the record once.
 - **A dated record is for evidence a diff cannot hold**: a run, a study, a measurement
-  or a review. A change whose only evidence
-  is its diff and its checks gets no record: its pull request states what changed, why
-  and which checks ran, which is what S-EVIDENCE asks to be recorded. Related results
-  in one piece of work share one record.
+  or a review. Related results in one piece of work share one record. Everything else
+  that is written down has another home and gets no record:
+  - what a change did, a cleanup or removal included, why, and which checks ran: its
+    pull request, which is what S-EVIDENCE asks to be recorded. An inventory or hash
+    check of removed material that the diff cannot show is a measurement;
+  - where work stands, a backlog grooming, or the choice of what to do next: the issue
+    and the Project;
+  - a design awaiting an owner decision: a `proposed` note under `docs/design/`; a
+    proposal or plan for work: its issue;
+  - a reading of outside sources: a research page;
+  - an owner decision: a row in the log.
 - **The owner decision log** is the one list of owner decisions: date, question, the
   owner's words, what it settles, and a link to the evidence. A decision is added in
   the change that acts on it, or in a change of its own when it alters nothing else
@@ -110,8 +125,23 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   ([work items](../workflows/work-items.md#status-fields-and-dates)). GitHub keeps its
   edit history.
 
-Records and briefs that existed when this rule was adopted, on 13 November 2026, stay
-as they are; they are not edited to fit it. C-REVIEW applies it to changed pages.
+- **A historical page's body does not change after it merges**
+  ([decision](../decisions/owner-decisions.md#historical-pages-metadata-may-be-fixed-content-never)).
+  This holds for dated records, change briefs, historical decision records, design
+  notes and research pages, and superseded pages. Their front matter may be corrected
+  (a wrong status, date, scope or replacement, or a review trigger), and a link in them
+  is repointed when its target moves or is removed. A correction of what a record says is a new
+  record that names the one it corrects.
+
+Records and briefs that existed when these rules were adopted, on 13 November 2026,
+are not edited to fit them. Four records dated 19 November 2026 were edited on
+20 November 2026, after they merged and before the owner's decision of 21 November 2026
+restated the rule; they stay as they are: the
+[lead trial](../acceptance/2026-11-19-antigravity-lead-trial-810.md), the
+[model evidence](../acceptance/2026-11-19-coding-agent-model-evidence.md), the
+[lookup effort study](../acceptance/2026-11-19-lookup-effort-at-retained-resource-choices-804.md)
+and the [request deadline record](../acceptance/2026-11-19-request-deadline-during-provider-backoff-805.md).
+C-REVIEW applies these rules to changed pages.
 
 ## Writing for a reviewer
 
@@ -161,8 +191,35 @@ different things.
 Historical records keep the labels of their time, because their content is not
 edited. The [name mapping](../acceptance/2026-11-12-control-review-and-names.md#names) translates
 each retired label to its current name. Review (C-REVIEW) rejects a new name that
-breaks this rule; no lexical check is kept, because a pattern cannot tell a version
-from an ordinal.
+breaks these rules; no lexical check is kept for ordinals, because a pattern cannot
+tell a version from an ordinal.
+
+### Coding agents, providers and models
+
+A current page outside `docs/operations/` names no coding agent, provider or model
+([decision](../decisions/owner-decisions.md#no-agent-provider-or-model-named-outside-operations)).
+It says what the thing does or which role it holds: "the lead's coding agent", "a
+reviewer from another model family", "the model provider". The pages under
+`docs/operations/` map roles to the coding agents, providers and models that hold them.
+A current page is one whose status is `active` or `proposed`.
+
+The rule does not reach:
+
+- dated records and historical or superseded pages, which are evidence of what ran and
+  are not reworded; a generated index reproduces their titles and front matter as they
+  stand;
+- attribution that a licence requires;
+- the title, author or publisher of a cited source;
+- the names of files and directories in the tree;
+- a literal identifier inside a code block or schema example that the page's job is to
+  specify.
+
+The owner decision log quotes the owner's words with a bracketed description in place
+of a name: "[the coding agent tried on 19 November]". Review (C-REVIEW) applies the
+rule. `tests/test_host_neutrality.py` refuses coding-agent and player-host names on
+current pages, except those under `docs/operations/` and `docs/design/` and a few
+setup and operator pages it lists; it does not yet refuse provider or model names on
+pages.
 
 ## Visual explanations
 

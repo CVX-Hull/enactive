@@ -4,7 +4,6 @@ status: historical
 kind: measurement
 date: '2026-11-08'
 scope: 'Blinded probe recall checked against independently found re-observations on #397 and the #372 sample, query probes written and re-checked, a content-matched correction, and the owner decision on P1 probes (#490)'
-review_trigger: None; dated record
 ---
 
 # Probe validation (#490)

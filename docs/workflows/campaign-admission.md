@@ -10,8 +10,10 @@ Every gameplay campaign is both a bounded product outcome and a source of eviden
 for future work. The lead owns this manual workflow for development rehearsals,
 deciding runs and future campaign objectives. Use the existing capability milestone,
 campaign issue and bounded segment children; an attempt does not need a new tracker
-or milestone. GitHub owns findings, decisions and follow-ups; retained gameplay
-artifacts supply evidence. A campaign is not automatically a learning experiment.
+or milestone. GitHub owns findings, the lead's dispositions of them and follow-ups;
+an owner decision is a row in the [owner decision log](../decisions/owner-decisions.md),
+even when an issue also carries the agreement; retained gameplay artifacts supply
+evidence. A campaign is not automatically a learning experiment.
 
 Before Ready, record the campaign objective/scenario, success and failure criteria,
 source/configuration, player/executor, finite run and cumulative resource limits,
