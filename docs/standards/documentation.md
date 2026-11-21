@@ -216,10 +216,12 @@ The rule does not reach:
 
 The owner decision log quotes the owner's words with a bracketed description in place
 of a name: "[the coding agent tried on 19 November]". Review (C-REVIEW) applies the
-rule. `tests/test_host_neutrality.py` refuses coding-agent and player-host names on
-current pages, except those under `docs/operations/` and `docs/design/` and a few
-setup and operator pages it lists; it does not yet refuse provider or model names on
-pages.
+rule, and `tests/test_host_neutrality.py` refuses coding-agent, player-host, provider
+and model names on every current page outside `docs/operations/`, the licence
+attribution page `NOTICE.md` and the generated indexes. It skips fenced code blocks,
+external links, the destinations of internal links, and inline code that is a path in
+the tree. It recognises a cited source only by its link, so a citation in plain text
+is reported.
 
 ## Visual explanations
 
