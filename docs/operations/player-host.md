@@ -52,7 +52,8 @@ The final actor's `player_handoff` call is refused by the application with no
 state change ("no successor is available"), and the driver marks that actor before it
 starts. Earlier actors can request a handoff by position alone, and a successor can
 still be refused when original resources run out. No model, transport, host or
-coding-agent fallback is supported ([isolation](../contracts/player-host.md#isolation)).
+coding-agent fallback is supported ([adapter selection](../contracts/player-host.md#adapter-selection),
+[isolation](../contracts/player-host.md#isolation)).
 
 Inject only the selected credential environment variable into the provider child. Keep
 the key out of files, argv, configured headers and URLs, and keep it out of the
