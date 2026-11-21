@@ -3,7 +3,7 @@ owner: lead
 status: historical
 kind: measurement
 date: '2026-11-20'
-scope: 'Two zero-cost runs of the whole live curator arrangement: the real guardian, runner, snapshot reader, sandbox, curator host, proxy and gate beside a synthetic writer in the custodian''s place, with the loopback stand-in as the provider; no game, no provider, no spend (#851)'
+scope: 'Zero-cost runs of the whole live curator arrangement: the real guardian, runner, snapshot reader, sandbox, curator host, proxy and gate beside a synthetic writer in the custodian''s place, with the loopback stand-in as the provider; no game, no provider, no spend; and the price of the paid live run proposed again from them (#851)'
 ---
 
 # Zero-cost stand-in run of the live curator arrangement (#851)
@@ -14,21 +14,29 @@ scope: 'Two zero-cost runs of the whole live curator arrangement: the real guard
   work together before money is spent: does the guardian start and end the runner beside
   a writing custodian, are snapshots taken while the store grows, do windows get examined
   in order across a handoff, and does the finished session still seal?
-- **Answer.** Yes, in two runs in a row, each with all sixteen required measures
-  passing. In each, three windows were examined in admission order (actor `001` steps 1 to
-  31, its tail 32 to 46 after the handoff, then actor `002` steps 1 to 34), every
-  session was accepted and every version confirmed, every snapshot held the read lock for
-  at most 2.1 ms against a 2 s bound, the writer recorded no busy error, no read began
-  after the closing marker, `sealed()` accepted the finished store with an empty log, and
-  the guardian ended the runner at teardown.
+- **Answer.** Yes, in two runs in a row on merged code, each with all seventeen required
+  measures passing. In each, three windows were examined in admission order (actor `001`
+  steps 1 to 31, its tail 32 to 46 after the handoff, then actor `002` steps 1 to 33),
+  every session was accepted and every version confirmed, every snapshot held the read
+  lock for at most 2.9 ms against a 2 s bound, the writer recorded no busy error, no read
+  began after the closing marker, `sealed()` accepted the finished store with an empty
+  log, and the guardian ended the runner at teardown.
+- **One defect was found and fixed in its own leaf.** In two earlier runs the runner's
+  final status read as caught up while 11 finished steps had never been examined. The
+  runner now states the read its counts are as of and marks later steps unknown
+  ([#856](https://github.com/CVX-Hull/enactive/pull/856)); the runs reported here
+  require it.
 - **What it does not show.** Anything that needs a player or a real provider: the
   player's pace beside sealed admissions, decisions and game time, curator dollars,
   the length and output of a real session, and whether the knowledge helps. The custodian,
   the package preflight, the credential and the provider are substituted. The
   custodian's wait for a read in flight at close was not exercised: no read was in flight
-  in either run.
-- **Owner decisions needed.** None for this record. It is evidence for the price of the
-  paid live run, which this record does not propose.
+  in any run. The stand-in was changed so that no submission is rejected, so a rejected
+  window was not exercised here either.
+- **Owner decision needed.** The price of the paid live run, proposed again in the
+  [last section](#the-price-of-the-paid-run-proposed-again): forecast about $3.50 to
+  $3.90, planning ceiling $18.00, unchanged from the corrected proposal. Nothing is
+  approved by this record.
 
 No game, no model request, $0 spent. The stand-in's cost figures are nominal and are not
 money. [Live curator design](../design/live-curator-integration.md) ·
@@ -37,20 +45,26 @@ money. [Live curator design](../design/live-curator-integration.md) ·
 
 ## What was run
 
-`tests/live_curator_stand_in_run.py`, at source commit `6bcd15fb` (the runner branch of
-pull request #856), from its worktree with the main checkout's Python:
+`tests/live_curator_stand_in_run.py`, at commit `ad59e84a` of its branch, which is merged
+main `89951f37` (the closing marker, the reader and the runner) plus the script, from
+its worktree with the main checkout's Python:
 
 ```
-python -m tests.live_curator_stand_in_run --output .runtime/live-curator-stand-in-runs/2026-11-20-213027
-python -m tests.live_curator_stand_in_run --output .runtime/live-curator-stand-in-runs/2026-11-20-213328
+python -m tests.live_curator_stand_in_run --output .runtime/live-curator-stand-in-runs/2026-11-20-merged-runner-first-run
+python -m tests.live_curator_stand_in_run --output .runtime/live-curator-stand-in-runs/2026-11-20-merged-runner-second-run
 ```
 
 Both exited 0. The outputs are git-ignored, in the main checkout's
 `.runtime/live-curator-stand-in-runs/`: each directory holds `report.json` (every
 measure below), `summary.txt`, the run directory `run/stand-in-admission/`, the sampled
 status file `status-samples.jsonl`, the writer's records and a copy of the knowledge
-repository. A trial run before them, `trial-212642`, also passed; the script then gained
-the measure of what was left unexamined against the sealed store, and nothing else.
+repository.
+
+Three earlier runs are kept beside them: `trial-212642`, `2026-11-20-213027` and
+`2026-11-20-213328`, made on the runner before its review fixes (`6bcd15fb`), and
+`2026-11-20-final-runner-head-a`, made on the runner's final head before the script
+required the status's new fields. All four passed the measures the script had at the
+time. The second and third are the runs that showed the status defect.
 
 Settings: two actors of 45 input steps each, one step a second, with a handoff between
 them; the runner's defaults for the trigger (20 steps), the ceiling (40), the poll (15 s)
@@ -87,33 +101,33 @@ are given as first run / second run where they differ.
 
 | Measure | Result | Source |
 | --- | --- | --- |
-| Guardian's verdict | `custodian_terminal`, terminal coverage verified, cleanup verified, manifest unchanged, custodian exit 0 | `watch-terminal.json` |
-| Windows examined, in order | `001` 1–31, `001` 32–46 (the tail after the handoff; 14 frames, the handoff has none), `002` 1–34; all accepted; first and last operation of each equal the sealed trace's step numbering | `curator-runner/examined.jsonl`, the sealed store |
-| Session time (runner's start row to end row) | 1.2, 1.6, 1.6 s / 1.8, 1.6, 1.7 s | `examined.jsonl` |
-| Status at each session's start → end: lag, backlog, covered prefix end (ordinal) | `001` 1–31: 31, 31, none → 0, 0, 31. `001` 32–46: 17, 17, 31 → 2, 2, 46. `002` 1–34: 34, 34, 46 → 0, 0, 80 | `curator-runner/status.json`, sampled every 50 ms |
-| Lag over time (s from start: position, lag) | 0.2: 1, 1; 15.2: 16, 16; 30.3: 31, 31; 31.4: 31, 0; 46.5: 48, 17; 48.1: 48, 2; 63.1: 64, 18; 78.2: 80, 34; 79.8: 80, 0 (first run; the second differs by under 1 s and one step) | `status.json` samples |
-| Left unexamined at the end | Runner's status: none, lag 0. Against the sealed store: `002` 35–45, 11 steps, lag 11 of 91 operations | `status.json`, the sealed store |
+| Guardian's verdict | `custodian_terminal`, terminal coverage verified, cleanup verified, manifest unchanged | `watch-terminal.json` |
+| Windows examined, in order | `001` 1–31, `001` 32–46 (the tail after the handoff; 14 frames, the handoff has none), `002` 1–33; all accepted; first and last operation of each equal the sealed trace's step numbering | `curator-runner/examined.jsonl`, the sealed store |
+| Session time (runner's start row to end row) | 1.2, 1.0, 1.5 s / 1.2, 1.6, 1.6 s | `examined.jsonl` |
+| Status at each session's start → end: lag, backlog, covered prefix end (ordinal) | `001` 1–31: 31, 31, none → 0, 0, 31. `001` 32–46: 17, 17, 31 → 2, 2, 46. `002` 1–33: 33, 33, 46 → 0, 0, 79 | `curator-runner/status.json`, sampled every 50 ms |
+| Lag over time (position, lag at each change) | 1, 1; 16, 16; 31, 31; 31, 0; 48, 17; 48, 2; 64, 18; 79, 33; 79, 0 (both runs) | `status.json` samples |
+| Left unexamined at the end | Runner's final status: lag 0, backlog 0, nothing unexamined, as of operation 79, steps after it unknown. Against the sealed store: `002` 34–45, 12 steps, lag 12 of 91 operations | `status.json`, the sealed store |
 | Snapshots | 6 polls, 6 reads, none failed, over bound or refused; 4.6 reads a minute; 5 of 6 reads saw more operations than the one before | `curator-runner/polls.jsonl` |
-| Snapshot hold (bound 2 s) | median 0.6 / 0.7 ms, max 2.1 / 0.8 ms | `polls.jsonl` |
-| Read transaction (bound 1.5 s) | median 0.4 / 0.4 ms, max 1.2 / 0.5 ms | `polls.jsonl` |
-| Staging | median 22 / 23 ms, max 51 / 36 ms | `polls.jsonl` |
-| Time to publication (first sight of the version, after the window's newest frame and oldest frame) | v1: 1.3–31.3 / 2.0–32.0 s; v2: 4.0–17.0 / 4.7–17.7 s; v3: 1.6–34.6 / 2.4–35.4 s | `curator-runner/versions.jsonl`, frame `received_wall` in the sealed store |
+| Snapshot hold (bound 2 s) | median 1.9 / 0.8 ms, max 2.8 / 2.9 ms | `polls.jsonl` |
+| Read transaction (bound 1.5 s) | median 1.1 / 0.5 ms, max 1.7 / 1.7 ms | `polls.jsonl` |
+| Staging | median 37 / 26 ms, max 49 / 55 ms | `polls.jsonl` |
+| Time to publication (first sight of the version, after the window's newest frame and oldest frame) | v1: 1.3–31.3 / 1.3–31.3 s; v2: 3.4–16.4 / 3.9–16.9 s; v3: 2.1–34.1 / 2.6–34.6 s | `curator-runner/versions.jsonl`, frame `received_wall` in the sealed store |
 | Writer busy errors | 0 with the runner, 0 alone | the writer's record |
 | Writer pace with the runner / alone | 60.0 / 60.0 operations a minute in both runs (set at one a second) | the writer's record |
-| Writer step time with the runner / alone | median 3.8 / 2.8 ms, max 11.2 / 11.0 ms (first run); median 1.5 / 3.5 ms, max 5.1 / 10.8 ms (second run) | the writer's record |
-| Steps that overlapped a snapshot | 1 in each run, 1.1 / 1.0 ms | the writer's record against `polls.jsonl` |
-| Closing marker | written; no read began after it; the last read ended 12.0 / 11.3 s before it; the close waited 1.3 / 1.1 ms (no read held the lock) | `store-closing.json`, `polls.jsonl`, the writer's record |
+| Writer step time with the runner / alone | median 5.1 / 5.2 ms, max 14.7 / 11.2 ms (first run); median 4.7 / 5.5 ms, max 10.1 / 11.1 ms (second run) | the writer's record |
+| Steps that overlapped a snapshot | 0 / 1, the one taking 0.9 ms | the writer's record against `polls.jsonl` |
+| Closing marker | written; no read began after it; the last read ended 12.6 / 12.1 s before it; the close waited 1.4 / 1.2 ms (no read held the lock) | `store-closing.json`, `polls.jsonl`, the writer's record |
 | Finished store | `sealed()` accepts it; log empty; 91 operations (46 and 45) | `session.sqlite3` |
-| Runner at teardown | terminated by the guardian while it slept between polls: state `ended`, reason `interrupted`, exit 130, process and group absent, no further signal needed; the guardian's whole teardown took 0.15 s | `watch-terminal.json`, `status.json`, `curator-runner/stderr.txt` |
-| Curator cost as the proxy counted it (nominal) | $0.0036 a session (3 requests at the stand-in's $0.0012), $0.0108 a run, $0.000135 an examined step; largest reservation for one request $0.131–$0.134 | session `summary.json`, `proxy-ledger.jsonl` |
+| Runner at teardown | terminated by the guardian while it slept between polls: state `ended`, reason `interrupted`, exit 130, process and group absent, no further signal needed, its snapshots directory removed; the guardian's whole teardown took 0.20 / 0.15 s | `watch-terminal.json`, `status.json` |
+| Curator cost as the proxy counted it (nominal) | $0.0036 a session (3 requests at the stand-in's $0.0012), $0.0108 a run, $0.000137 an examined step | session `summary.json`, `proxy-ledger.jsonl` |
 | Upstream | 9 requests, all to the stand-in's route; the proxies forwarded 9 | the stand-in's request list, `summary.json` |
-| New facts per window | 1, 1, 1 (`f-1`, `f-32`, `f-46` in the first run) | the knowledge repository's versions |
+| New facts per window | 1, 1, 1 (`f-1`, `f-32`, `f-46`) | the knowledge repository's versions |
 
 **What one comparison shows.** With the writer at one step a second, its pace and step
-times with the runner and alone are the same within a few milliseconds, and only one step
-in each run overlapped a snapshot. That is no more than the design says one run can show:
-it does not show that the runner cannot slow play, and the writer is not the custodian's
-loop.
+times with the runner and alone are the same within a few milliseconds, and at most one
+step in a run overlapped a snapshot. That is no more than the design says one run can
+show: it does not show that the runner cannot slow play, and the writer is not the
+custodian's loop.
 
 ### Not measured
 
@@ -125,58 +139,112 @@ loop.
 | Length, requests and output of a real curator session | The stand-in answers at once with a scripted three-request session |
 | Facts later superseded or retired | No grooming runs, and the stand-in never revises a fact |
 | Whether the knowledge helps the player | The design does not measure it |
-| The custodian's wait for a read in flight at close | No read was in flight at close in either run; the reader's own tests cover it |
+| The custodian's wait for a read in flight at close | No read was in flight at close in any run; the reader's own tests cover it |
+| A rejected or unconfirmed window | The stand-in was changed so that every submission is accepted; the runner's own tests cover it |
 | Rate limits shared with the campaign | No provider account is used |
 
 ## Failures and anomalies
 
-No required measure failed. Five things are worth the lead's attention.
+No required measure failed in any run. Five things were found.
 
-- **The runner's final status says nothing is unexamined when 11 finished steps were
-  never examined.** Its `unexamined`, `lag` and `backlog` count only what its last
-  snapshot saw. The steps actor `002` finished after the last poll, 35 to 45, appear
-  nowhere in the runner's files; the status file ends with lag 0 and an empty
-  `unexamined`. The runner's module text states this ("steps finished after it are
-  unexamined too and not counted"), and the runner cannot read after the marker. The
-  design page says every range not examined is recorded as unexamined, and a spectator
-  reading the status file would take lag 0 as caught up. Reproduce: run the script;
-  compare `final_status` with `left_at_end_against_sealed_store` in `report.json`.
+- **The runner's final status read as caught up when it was not.** In the two runs on the
+  runner before its review fixes, the status ended with lag 0 and nothing unexamined while
+  11 steps actor `002` finished after the last poll were never examined. The runner
+  cannot read after the custodian ends, so it cannot count them. It was fixed in the
+  runner's leaf: the status and the coverage in its rows now carry `as_of`, the position
+  and time of the last read, and `after_last_read`, always `unknown`. The script
+  requires both, and the two runs reported here show them.
 - **The guardian starts the runner without `--runtime-root`**, so the runner's runtime
   root is the code checkout's own `.runtime/`. The knowledge repository must be inside
-  it, so in this run it was made under the worktree's `.runtime/knowledge/` and copied
-  into the output directory afterwards. For a paid run started from a worktree, the
-  runner would also look for the credential map in the worktree's `.runtime/` and,
-  finding none, exit at start (status 2), which the guardian records and play ignores.
-  From the main checkout the default is right. Reproduce: `tools/campaign_supervision.py`
-  builds the runner's argv with `--run`, `--directory` and `--config` only, and
-  `live_runner.parser()` defaults `--runtime-root` to the code root's `.runtime`.
+  it, so in these runs it was made under the worktree's `.runtime/knowledge/` and copied
+  into the output directory afterwards. A paid run started from a worktree would look for
+  the credential map in the worktree's `.runtime/` and, finding none, the runner would
+  exit at start, which the guardian records and play ignores. From the main checkout the
+  default is right. Not changed.
 - **The viewer writes its evaluations under the code checkout's
   `.runtime/evaluations/<session>`**, outside the output directory, because the guardian
-  passes it that root. Nothing browsed the viewer in these runs.
-- **The runner never saw the closing marker.** In both runs the writer closed about 12 s
+  passes it that root. Nothing browsed the viewer in these runs. Not changed.
+- **The runner never saw the closing marker.** In every run the writer closed about 12 s
   after the last poll, inside the 15 s interval, and the guardian's termination ended the
-  runner first. The other ending, `refused:closing`, is covered by the runner's tests.
+  runner first. The other ending, a read refused as closing, is covered by the runner's
+  tests.
 - **In the trial run the closed store left an empty `-wal` and a `-shm` file**;
-  `sealed()` accepted it, since the log was empty. The two counted runs left neither, and
-  the cause was not found.
+  `sealed()` accepted it, since the log was empty. No later run left either. The cause
+  was not found. A read-only connection opened after a clean close leaves exactly these
+  two files, and the viewer's evaluator opens the store read-only; that was not shown to
+  be what happened.
 
-## What it means for pricing a paid run
-
-Facts this run supports; no price or ceiling is proposed here.
+## What the run means for a paid run
 
 - **Window size follows the poll, not only the trigger.** A window starts at the first
   poll at which at least 20 steps wait. At 15 steps a poll, that was the second poll after
-  the cursor, so the windows held 31 and 34 steps, and the handoff tail 15. Three
-  sessions examined 80 steps: one session for every 26.7 examined steps. At a different
-  pace the window is the smallest number of polls' growth that reaches 20, up to 40.
+  the cursor, so the windows held 31 and 33 steps, and the handoff tail 15. Three
+  sessions examined 79 steps. At a different pace the window is the smallest number of
+  polls' growth that reaches 20, up to 40.
+- **Each handoff adds a session.** An actor's tail is taken as its own window however
+  short.
 - **One snapshot a poll, 4.6 a minute** at the default 15 s poll, each holding the read
-  lock for milliseconds over a store of up to 80 operations. A real admission's store is
+  lock for milliseconds over a store of up to 79 operations. A real admission's store is
   larger and its frames are real; staging time at that size is not measured.
-- **The end of an admission leaves work for the session after it.** Here the last 11 of
+- **The end of an admission leaves work for the session after it.** Here the last 12 of
   91 operations, those finished after the last poll, were not examined live. The last
   actor does not hand off, so its remainder is taken live only as a full window.
-- **The proxy reserved about $0.13 for each request** at the `terra` arm's frozen price
-  with `max_output_tokens` 4096, against a charge of $0.0012. A paid run's reservations
-  depend on its own host settings and are not measured here.
-- **The runner adds nothing measurable to teardown** in this arrangement: the guardian's
-  whole teardown took 0.15 s.
+- **The proxy reserves far more than it charges.** In the earlier runs it reserved about
+  $0.13 for each request at the `terra` arm's frozen price with `max_output_tokens` 4096,
+  against a nominal charge of $0.0012. A paid run's reservations depend on its own host
+  settings and are not measured here.
+- **The runner adds nothing measurable to teardown** in this arrangement.
+
+## The price of the paid run, proposed again
+
+The owner decided on 20 November 2026 that the price is proposed again once the reader,
+the closing marker and the runner are merged and this run has passed
+([decision log](../decisions/owner-decisions.md)). They are, and it has. The figures are
+those of the [corrected proposal](2026-11-20-live-curator-run-price-correction-836.md),
+changed only where the build changed them.
+
+| Part | Forecast | Planning limit, and what enforces it |
+| --- | --- | --- |
+| Play, one admission of about 200 decisions | $1.49 | **$3.00**: the package's `spend_limit_usd` |
+| Curator, ten to twelve sessions | $2.00 to $2.40 at the pilot's median of $0.20 | **$14.00** for the run (`cap_usd`), **$8.00** for a session (`session_cap_usd`), in the runner's configuration |
+| Not allocated | | $1.00 |
+| **Total** | **about $3.50 to $3.90** | **$18.00** |
+
+**What the build changed.**
+
+- **The count of sessions is a forecast, not a limit.** The proposal said the runner
+  makes at most twelve sessions. The runner as built has no limit on the number of
+  sessions: it is bounded by its run cap, by a refused reservation, and by its failure
+  rules. The forecast rises from ten sessions to ten to twelve because each handoff
+  adds a tail session; an admission with more handoffs has more.
+- **Windows can be larger than 20 steps.** At the ledger's median pace of 7.69 decisions
+  a minute a 15 s poll adds about two steps, so a window is 20 to 22 steps if operations
+  and decisions stay close to one to one. A faster player gives larger windows, up to 40,
+  and fewer sessions, each reading more.
+- **A request in flight when the runner is killed is not counted toward its cap.** It is
+  one request, bounded by its reservation, and falls within the $1.00 not allocated.
+- **The last steps of the admission are not examined live.** The run's figures for lag
+  and coverage end at the runner's last read, and its status says so.
+
+**What is unchanged.** $18.00 is a planning ceiling made of limits the software enforces
+on what the provider reports; it is not a hard cap. A hard cap needs a provider key whose
+credit limit the owner sets for the run. The run is one admission, with no delivery
+inside it, and is not repeated on its own result. The reading of each result is the
+proposal's table as corrected.
+
+**What a paid run still needs before it starts.** A frozen package for the admission and
+the runner's configuration, shown to the owner with their routes and bounds; the run
+started from the main checkout; and source work stopped while it is live. Reading the
+result through the lag simulation needs the schedule replay
+([#846](https://github.com/CVX-Hull/enactive/issues/846)), which costs nothing and is not
+needed to make the run.
+
+## Limits
+
+- Two runs of one synthetic arrangement on one machine. The writer imitates the
+  custodian's writes and the host's log; it is not the custodian's loop or the host.
+- The stand-in's sessions take about a second and three requests. A real session took a
+  median of 99 s in the pilot, during which play goes on and the tags are watched; that
+  timing is not exercised here.
+- The forecast is the pilot's and the ledger's figures read again. No curator session
+  beside live play has been priced.
