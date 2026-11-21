@@ -31,11 +31,12 @@ cover these four selectors and leave the full model list unknown.
 
 | Role and configuration | What the evidence supports |
 | --- | --- |
-| Worker, GPT-6.2 Sol at Extra-high | Both the bounded code change and the prose change pass the lead's checks without repair. Blind review favors Sol on code and Fable on prose. |
+| Worker, GPT-6.2 Sol at Extra-high | The bounded code change passed the lead's checks without repair and needed one repair after review, which the ledger's repair count does not hold. Of three documentation attempts, two passed without repair and one broke a link from another page and was finished by the lead. Blind review favors Sol on code and Fable on prose. |
+| Worker, GPT-6.2 Astra at Extra-high | One documentation cut that needed judgment about which limits to keep passed without repair; the lead restored two decision citations it dropped. |
 | Reviewer, GPT-6.2 Sol at Extra-high | Confirmed code-review findings cover a tool and its tests and documentation. The sample is one change. |
 | Explorer, GPT-6.2 Sol at Extra-high | One exploration supports synthesis across named records. Verification covers a sample of the returned statements. |
 | Reviewer, GPT-6.2 Astra at High | Repeated document reviews yield confirmed findings on factual accuracy and missing conditions. The sample includes a bias check on a brief and excludes code review. |
-| Lead | The owner's account establishes prior use. The model, effort, work and verification are unknown. |
+| Lead | The owner's account of 19 November 2026 in the [decision log](../decisions/owner-decisions.md) establishes prior use. The model, effort, work and verification are unknown. |
 
 Read remaining quota with `/status` or on the account's usage page.
 
@@ -65,7 +66,7 @@ separately, as in `gemini-4-neon` at `xhigh`.
 | Worker | No real worker task is recorded through the delegate call. A print-mode worker can edit and reply when asked to run no command (observed by hand, no retained record). The app's own worker edited two files on one watched documentation leaf using the lead's model. |
 | Explorer, Gemini 4 Neon at Extra-high | One exploration supports cited synthesis from files named in the brief. Verification covers a sample of the citations. |
 | Reviewer, Gemini 4 Carbon at High | The delegate call supports a bias check on a brief and its scoring sheet, with findings the lead confirmed. For review requiring clean context, use the [host guidance](coding-agents.md#delegation-roles). |
-| Reviewer, print mode | A reviewer can use a diff supplied in the brief (observed by hand, no retained review report). |
+| Reviewer, print mode | A reviewer can use a diff supplied in the brief (no retained review report). |
 | App lead, Gemini 4 Neon at High | The [watched documentation leaf](../acceptance/2026-11-19-antigravity-lead-trial-810.md) supports leading as far as a queued merge with the owner present. Verification was partial, the report overstated what was checked, and another lead completed the merge. There is no comparable evidence for source work. |
 
 Quota is per model. The CLI changelog places `/usage`, `/quota` and `/credits` in an

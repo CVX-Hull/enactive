@@ -9,8 +9,9 @@ status: active
 Pause permanently stops further automation for the run. Use the browser's
 [Pause control](campaign-supervision.md#freeze-launch-and-inspect) to request an
 immediate stop through the supervisor's gateway. The gateway forwards `{}` to the
-custodian and records the operator's reason (`loop`, `fault`, `spend` or `other`).
-A missing reason is recorded as `unspecified` and never blocks the stop.
+custodian, and the supervisor records the operator's reason (`loop`, `fault`, `spend`
+or `other`). A missing or unknown reason is recorded as `unspecified` and never blocks
+the stop.
 [Pause contract](../contracts/computer-control.md#passive-spectator-reads-and-operator-pause).
 
 The actor's `computer_stop` and custodian cancellation also stop automation.

@@ -54,7 +54,7 @@ the sandbox under the host's approval. The project-specific rules are under
 [per-user activation](#per-user-activation).
 
 An Antigravity lead session may run unattended, by the owner's decision of
-21 November 2026 in the [decision log](../decisions/owner-decisions.md). None has
+21 November 2026 in the [decision log](../decisions/owner-decisions.md#the-lead-trials-are-not-run). None has
 run, so unattended approvals remain unverified.
 If a leaf cannot afford a wait for approval, prefer Codex or Claude Code.
 
@@ -270,7 +270,7 @@ lets the merge command run. Host permission prompts and refusals still apply.
 | | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
 | The wait | Run the watch in the turn that waits on CI. | Start the watch with `run_in_background` before ending the turn. Its exit notifies the session once. A `/goal` stop check re-prompts the session while CI is pending. In the desktop app, Auto-fix wakes on CI failures, conflicts and review comments. A pass relies on the watch or pinned auto-merge ([incident](../acceptance/2026-11-09-moved-results.md#coding-agent-hosts-the-383-observation)). | In the app, find the run by commit and watch in the waiting turn. The CLI wait is unverified. |
-| The merge | Use the pinned auto-merge command in the [standing delegation](../operator-permissions.md#engineering-decision-and-merge-delegation). | Use the same pinned auto-merge command. | An Antigravity lead may merge ([decision log](../decisions/owner-decisions.md)). The app can queue the pinned auto-merge. The owner's user-wide CLI rule refuses `gh pr merge`. A CLI lead stops at the open pull request and another lead merges. |
+| The merge | Use the pinned auto-merge command in the [standing delegation](../operator-permissions.md#engineering-decision-and-merge-delegation). | Use the same pinned auto-merge command. | An Antigravity lead may merge, by the owner's decision of 19 November 2026 in the [decision log](../decisions/owner-decisions.md). The app can queue the pinned auto-merge. The owner's user-wide CLI rule refuses `gh pr merge`. A CLI lead stops at the open pull request and another lead merges. |
 
 A queued merge needs a head that contains the tip of `main`. If the branch falls
 behind after the session ends, the incoming lead brings it up to date under the
@@ -291,7 +291,7 @@ requires new approval.
 
 The owner's Antigravity settings apply to this project alone. The file under
 `~/.gemini/config/projects/` uses `allow`, `deny` and `ask` lists at
-`permissionGrants.permissionGrants` (observed by hand, no retained record of the file).
+`permissionGrants.permissionGrants`, as reported by the lead that made the edit.
 The git and GitHub rules have the owner's approval of 20 November 2026. The project
 command rules stay under the owner's decision of 21 November 2026 in the [decision log](../decisions/owner-decisions.md).
 
