@@ -12,7 +12,7 @@ The [small manifest](2026-10-18-operator-access-stop-manifest.json) identifies t
 frozen source/native lane and selected local originals without publishing private
 bridge records. Portable checks and real graphical results remain separate.
 
-The [prospective brief020](../changes/020-campaign-operator.md) did **not** establish
+The [prospective brief020](../changes/campaign-operator.md) did **not** establish
 successful delegated play. The designated general-purpose player sent no Resume
 or gameplay input. Its first Observe used the default sandbox, which denied
 loopback with `Operation not permitted`. The required Pause attempt failed the

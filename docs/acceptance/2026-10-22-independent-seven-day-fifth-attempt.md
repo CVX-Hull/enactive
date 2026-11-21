@@ -113,5 +113,5 @@ and full independent survival keep their separate unqualified scopes.
 Exact c76e553 CI39765776174 passed 1,582 tests/full portable checks. That source lane
 did not prevent this real failure and is not a native, campaign or protected-main
 acceptance result. New repair/graphical evidence and the full original outcome
-remain required under [delivery057](../changes/057-discovery-learning-campaign.md)
+remain required under [delivery057](../changes/discovery-learning-campaign.md)
 and [campaign#145](https://github.com/CVX-Hull/enactive/issues/145).

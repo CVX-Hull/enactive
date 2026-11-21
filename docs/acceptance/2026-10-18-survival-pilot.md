@@ -118,7 +118,7 @@ review time/cost is unavailable; admission, cleanup and final outcome reviews ar
 separate scoped passes. No recurrent survival defect or causal improvement can be
 inferred from this one unspawned development attempt.
 
-The [next brief](../changes/015-campaign-continuity-rehearsal.md) specifies the
+The [next brief](../changes/campaign-continuity-rehearsal.md) specifies the
 minimum #79/#80 work and unresolved design/validation gates. Their estimates stay
 M/Low, 2–4 and M/Low, 3–5 focused sessions: this menu-only attempt supplies no survival
 throughput for a tighter forecast. #81/#82 remain blocked on actual rehearsal,

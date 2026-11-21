@@ -23,7 +23,7 @@ view; this image alone does not establish viewer controls or crafting success.
 
 ## Actual sequence
 
-[Scope030](../changes/030-setup-and-sustained-survival.md) admitted the same Ned
+[Scope030](../changes/setup-and-sustained-survival.md) admitted the same Ned
 Meyers/Belgium after protected PR116. Source `d01d4f04087c0943479bd287c86b4c5e9c790d62`,
 installed native `297b443a235af6e4803bb6d2a15bd595f0461124f7fe87c297a59b2382d5f704`
 and recorder `351f0852821bbebc411b7527a3afbdd7a36f95d08d94201b6c6a3664bd6fa493`
@@ -64,7 +64,7 @@ weaken the boundary. No native repair or new build is justified by this evidence
 
 The observed process gap belongs to #82/#100 and maintenance #75: an unsupported
 receipt followed by fresh support currently requires an entire stopped-run lifecycle.
-The [prospective continuation](../changes/031-bounded-reassessment-continuation.md)
+The [prospective continuation](../changes/bounded-reassessment-continuation.md)
 uses existing Pause, Observe and explicit reassignment with finite investigation
 limits. It does not amend004's strict stop, infer an old acknowledgment or claim a
 general outcome monitor. Model comparisons and generalized learning remain separate.

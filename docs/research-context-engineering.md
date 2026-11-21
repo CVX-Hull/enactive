@@ -320,7 +320,7 @@ schema refusals, authority/integrity failures and normal ending separately.
 TTFT, model/API completion, tokens, cache hit share and call count are diagnostics.
 Supported local program decisions may avoid repeated inference; cursor motion
 and program `done` are not independent useful outcomes. Keep
-[the existing latency definitions](evaluation.md#latency-budgets-for-interactive-play).
+[the existing latency definitions](measurement-guide.md#latency-budgets-for-interactive-play).
 
 #164 retains its20 genuine useful decisions, p95≤2s new-decision→visible-effect,
 unexplained routine stall≤5s and supported local useful effects≤500ms. This

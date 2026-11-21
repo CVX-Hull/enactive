@@ -18,7 +18,7 @@ independent review and a real graphical gameplay demonstration.
 
 ## Current independent-player delivery
 
-The active goal is the [discovery-and-learning delivery](changes/057-discovery-learning-campaign.md)
+The active goal is the [discovery-and-learning delivery](changes/discovery-learning-campaign.md)
 and a fresh independent seven-day campaign, including actual retained-memory
 handoff, maintained needs/supplies/shelter, purposeful travel/threat decisions,
 exact normal midpoint reload and final ending, independent assessment and protected
@@ -162,7 +162,7 @@ milestone evidence; they must not be mistaken for fresh execution.
 The user extended the requested work on 2026-10-18: thoroughly explore memory and
 self-learning representations through mathematics, statistics and other applicable
 fields, critically assess their CDDA fit, and simulate competing mechanisms before
-choosing a coherent design. The [investigation brief](changes/013-memory-representation-study.md)
+choosing a coherent design. The [investigation brief](changes/memory-representation-study.md)
 defines the research lenses, operational meaning of elegance, falsifiable
 comparisons, reproducibility, independent review and completion evidence. It
 includes adopt/test/defer decisions and bounded implementation follow-ups; it does

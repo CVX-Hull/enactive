@@ -19,7 +19,7 @@ decision trees and strategies over ordinary visible observations and atomic
 inputs, amortizing reasoning without losing organic adaptation.
 
 This review assessed the advisory Procedure/2 source baseline. The subsequent
-[execution slice](changes/061-player-program-execution.md) owns the current
+[execution slice](changes/player-program-execution.md) owns the current
 Procedure/3 candidate, runtime choice, bounded visible-data view, source checks
 and remaining qualification. The research below is not evidence that this new
 candidate has organically learned, improved total cadence or completed a campaign.

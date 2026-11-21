@@ -26,7 +26,7 @@ signed native SHA-256
 `40acb88b75cabf50a1b8a1134336c210d3f20503dcedd910fa2463019bdbcd56`.
 The existing owned temporary build, bundled dependencies, project app/wrapper and
 explicit userdir were reused. Windowed 960×640, background launch, English default
-Evacuee/Survivor; no global setup change. The [design](../changes/058-capture-provenance-action-preconditions.md)
+Evacuee/Survivor; no global setup change. The [design](../changes/capture-provenance-action-preconditions.md)
 owns the action-specific source policy and unchanged stronger checks.
 
 Independent design/source/artifact review and 337 affected tests passed.

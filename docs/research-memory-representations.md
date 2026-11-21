@@ -19,7 +19,7 @@ then asks what an additional mechanism buys. No candidate below changes the
 [current runtime](architecture.md) or [memory contract](protocol.md).
 
 Research cutoff: **2026-10-18**. This extends the [initial review](research-memory-learning.md)
-under the [study brief](changes/013-memory-representation-study.md). The
+under the [study brief](changes/memory-representation-study.md). The
 [experiment protocol](design/memory-study-protocol.md) defines the comparisons;
 the initial protocol was independently reviewed before implementation, with
 documented clarifications frozen before final collection. Two fresh processes

@@ -17,7 +17,7 @@ improved CDDA player. No native game, save, model API or training was used here.
 
 ## Provenance and collection
 
-The [brief](../changes/013-memory-representation-study.md),
+The [brief](../changes/memory-representation-study.md),
 [protocol](../design/memory-study-protocol.md),
 [literal fixtures](../design/memory-study-cases.json) and
 [exact matrix](../design/memory-study-matrix.json) define the scope. The initial

@@ -39,7 +39,7 @@ This is not the fresh seven-day campaign or causal evidence of learning benefit.
 ![Actual door opening reveals light and Rickey; opening did not move the player.](../assets/discovery-learning009-door.png)
 
 The first world identity Claim used the actual `UILIST` image, exercising the
-generic owned-provenance repair motivated by [closed008](../changes/062-player-decision-context.md#closed008-valid-world-evidence-rejected-by-menu-taxonomy).
+generic owned-provenance repair motivated by [closed008](../changes/player-decision-context.md#closed008-valid-world-evidence-rejected-by-menu-taxonomy).
 Ordinary malformed limits, incomplete handoff/source declarations and a
 cross-session citation were refused and corrected by the players. These are
 retained costs and independent recovery, not error-free operation.

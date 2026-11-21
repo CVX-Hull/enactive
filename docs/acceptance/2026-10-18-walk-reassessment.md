@@ -51,8 +51,8 @@ no rebuild, global setup, paid API or permission expansion occurred.
 
 | Attempt | Actual result and limits |
 | --- | --- |
-| [Probe001](../changes/023-walk-reassessment.md), source32bbae6 | Load004 timed out. The literal cleanup-only clause barred investigation, so no walk occurred.15rows/six charges = two load/four cleanup; zero game advance; normal Save/Quit. Load004, Save009 and Quit013 ACKs remain unknown. |
-| [Prospective probe002](../changes/024-walk-reassessment-probe.md), sourcee8840c6 | Inherited six spent charges and the original clock. Only its single declared load transition could be freshly reconciled for identity/exercise; no load retry or old authority restored.26rows/11charges = two load/two identity/one requested guard step/two inventory/four cleanup. |
+| [Probe001](../changes/walk-reassessment.md), source32bbae6 | Load004 timed out. The literal cleanup-only clause barred investigation, so no walk occurred.15rows/six charges = two load/four cleanup; zero game advance; normal Save/Quit. Load004, Save009 and Quit013 ACKs remain unknown. |
+| [Prospective probe002](../changes/walk-reassessment-probe.md), sourcee8840c6 | Inherited six spent charges and the original clock. Only its single declared load transition could be freshly reconciled for identity/exercise; no load retry or old authority restored.26rows/11charges = two load/two identity/one requested guard step/two inventory/four cleanup. |
 | Combined accounting | 17 charges,856.281seconds through native closeout, zero game seconds advanced, within the original40-input/45-minute/60-game-second ceilings. Review/publication continues on the original clock. Cleanup reserves were preserved; none of these limits was renewed. |
 
 Actual Load list and `@` sheet verified **Ned Meyers/Belgium**. Fresh normal frames

@@ -13,7 +13,7 @@ which replaced its engine-specific authority direction with basic computer contr
 
 Decision accepted after independent review on 2026-10-17 for #6 and #17. This selects future implementation
 interfaces; it does not change current runtime support. The
-[review brief](../changes/004-gameplay-foundation.md) defines acceptance.
+[review brief](../changes/gameplay-foundation.md) defines acceptance.
 
 ## Decisions and reasons
 

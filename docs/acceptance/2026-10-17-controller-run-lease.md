@@ -13,7 +13,7 @@ controller lease portion of #36. One explicit in-process owner can send observed
 semantic actions. Competing remote inputs reject, and Pause revokes ownership.
 The existing spectator shows the owner and preserves operator takeover. The
 service still does not instantiate the passive supervisor or connect a provider.
-[Brief](../changes/011-controller-run-lease.md),
+[Brief](../changes/controller-run-lease.md),
 [current contract](../protocol.md#controller-run-ownership),
 [manifest](2026-10-17-controller-run-lease-manifest.json).
 

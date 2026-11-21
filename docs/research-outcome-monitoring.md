@@ -79,4 +79,4 @@ also review on model/prompt/observer changes, false-success incidents and drift.
 Record which decision changes, exact versions and an accountable follow-up.
 No scheduler or automatic date renewal is installed. Research currency cannot
 substitute for task-specific recalibration. Runtime acceptance remains #42–#44;
-[the round brief](changes/007-recovery-evaluation-monitoring.md) fixes this round.
+[the round brief](changes/recovery-evaluation-monitoring.md) fixes this round.

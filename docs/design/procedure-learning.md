@@ -13,7 +13,7 @@ this page supplies background, not current operating instructions.
 
 
 This records the selected implementation boundary for #177/#178 within
-[delivery057](../changes/057-discovery-learning-campaign.md). It extends the
+[delivery057](../changes/discovery-learning-campaign.md). It extends the
 [organic loop](organic-discovery.md) and [reflection design](asynchronous-reflection.md),
 not the number of game executors. The player chooses current plans, interprets
 outcomes and accepts/revises procedure data. The lead maintains the substrate.
@@ -38,7 +38,7 @@ and advisory path revise data from retained attempts, rather than requiring a
 new engineering handler. #191 owns remaining substrate/portability gaps.
 
 The [October23 executable-policy review](../research-executable-policies.md)
-motivates the [player program boundary](../changes/061-player-program-execution.md).
+motivates the [player program boundary](../changes/player-program-execution.md).
 Procedure/3 keeps descriptive steps advisory and requires an explicit nullable
 `program` artifact. JavaScript `step(view,state)` may branch/loop over the supplied
 visible data and propose ordinary input through the existing writer. Host limits,

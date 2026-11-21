@@ -21,7 +21,7 @@ version and state handling.
 | Hints, sources and handoff context | [Player knowledge and executable proposals](contracts/computer-control.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
 | Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
 | Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
-| Interpretive run evaluation and the spectator view | [Evaluation records and metrics](contracts/evaluation.md), [observer operations](components/observer-operations.md) |
+| Interpretive run evaluation and the spectator view | [Evaluation records and metrics](contracts/evaluation.md), [spectator](components/spectator.md) |
 
 ## Controller run ownership
 

@@ -235,7 +235,7 @@ no feasible recovery or task path as no opportunity or inability to
 continue, according to the visible outcome.
 
 Follow the [finite campaign procedure](../operations/campaign-supervision.md)
-and [original-operation result collection](../operations/mission-requests.md#typed-mission-requests-and-the-player)
+and [original-operation result collection](../operations/player-tool-results.md#typed-mission-requests-and-the-player)
 for admission and ending. For the study, freeze the initial assignment, a hashed
 conditional reload recipe for the same lineage, the named checkpoint and the
 task or memory opportunity that justifies each continuation. Bind each reload

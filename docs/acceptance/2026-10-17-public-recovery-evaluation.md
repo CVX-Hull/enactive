@@ -14,7 +14,7 @@ The reviewed monitoring design specifies how future gameplay can handle unexpect
 outcomes beyond exact movement; that monitor is not implemented by this round.
 
 Scope is #31, #18 and #41 in [PR #45 (historical PR record)](https://github.com/CVX-Hull/enactive/issues/45).
-The [brief](../changes/007-recovery-evaluation-monitoring.md) owns the selected
+The [brief](../changes/recovery-evaluation-monitoring.md) owns the selected
 interfaces and experiment protocol. Runtime source is commit
 `9ad6856601168f1727b9cb5f820252b46b6b12c3` (verify against the manifest); later
 checkpoints add this evidence and guidance without changing runtime behavior.
@@ -136,7 +136,7 @@ images, reran 16 evaluation tests and found no material acceptance blocker.
 
 ## Documentation, maintenance and remaining work
 
-The [evaluation guide](../evaluation.md) links the authoritative schema and frozen
+The [evaluation guide](../measurement-guide.md) links the authoritative schema and frozen
 experiment protocol. The [monitor design](../design/outcome-monitoring.md) and
 [evidence matrix](../research-outcome-monitoring.md) distinguish exact facts,
 fallible interpretations, unknowns, calibration limits and bounded escalation.

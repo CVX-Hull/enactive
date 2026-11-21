@@ -12,7 +12,7 @@ scope: 'The withholding simulation (#386): the size and price of measuring wheth
 
 - **Question.** How many starts, and what spend, would measure whether delivering memory
   helps, with the design the owner chose on 13 November 2026 (withholding within each
-  start, [general memory](../design/general-memory.md#does-memory-help-withholding-within-each-start))?
+  start, [general memory](../design/world-scoped-memory.md#does-memory-help-withholding-within-each-start))?
 - **At the measured values** (8.3 units touched per start, 45% of them missed, a judge
   that swaps a label one time in ten): **37 starts** detect a halving of misses four times
   in five. That is \$132 of play at \$3.58 a start, \$221 to \$265 with the recall model's
@@ -64,7 +64,7 @@ The report is [2026-11-13-withholding-simulation.json](2026-11-13-withholding-si
 | Missed share without delivery | 0.452 | 0.115 to 0.690 (bootstrap over six stretches) | The current player's missed share, same record |
 | Judge error | 0.1 | 0, 0.167, 0.25 | Straight and missed swapped on 1 of 10 checked answers and 1 of 4 first answers where both sides called an item touched |
 | Intra-start correlation | 0.2 | none | The protocol's assumption, never measured |
-| Play per start | \$3.58 | ×1.67 to ×2.0 with recall | The gate's figure for a 200-decision start; recall overhead inferred in [general memory](../design/general-memory.md#2-delivery-making-the-player-use-memory) |
+| Play per start | \$3.58 | ×1.67 to ×2.0 with recall | The gate's figure for a 200-decision start; recall overhead inferred in [general memory](../design/world-scoped-memory.md#2-delivery-making-the-player-use-memory) |
 | Bought once | \$23 store, \$1.16 to \$4.19 grooming | none | Brief gate and price pilot records |
 
 ## Result

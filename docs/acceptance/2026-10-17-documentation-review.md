@@ -8,7 +8,7 @@ scope: Documentation governance, lifecycle checks and visual-review increment on
 
 # Documentation-review acceptance — 2026-10-17
 
-[Brief 002](../changes/002-documentation-review.md) is implemented and verified.
+[Brief 002](../changes/documentation-review.md) is implemented and verified.
 Base: `548220c`. Scope: documentation, development checks, metadata and rendering
 dependencies. No controller, server, viewer, native bridge, installed game or save
 behavior changed. The Git checkpoint containing this report identifies delivered

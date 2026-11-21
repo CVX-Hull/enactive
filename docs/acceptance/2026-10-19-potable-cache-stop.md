@@ -64,7 +64,7 @@ controller23606 remain paused. No final save/shutdown is claimed.
 
 Independent review nevertheless required closure under045's strict native-denial
 rule. **023 is closed incomplete.** Confirmed non-delivery did not waive its frozen
-stop or restore authority. The [prospective046 decision](../changes/046-replan-known-nondelivery.md)
+stop or restore authority. The [prospective046 decision](../changes/replan-known-nondelivery.md)
 can distinguish command capability failures from authority refusals in a new scope;
 no runtime guard, error result or old failed outcome changes. Registered actions
 were already documented as potentially unbound; future play should reuse actual

@@ -28,7 +28,7 @@ Publications during an admission leave the running actor on its
 | [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Decision-window and citations-only views remove the entire journal JSON; only filtered in-window calls can carry hints. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | Draft lifecycle (open, stale, abandoned, promoted) and ephemeral sandboxed sessions whose close-out never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
-| [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/p1-study-3.md#limitations) records that exposure. |
+| [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/curator-memory-study-protocol-revised.md#limitations) records that exposure. |
 | [Curator runner](../../harness/curator/runner.py) | Window triggers, the durable record of examined ranges, publication watching, covered prefix and lag, stops, and status. [Design](../design/live-curator-integration.md) |
 | [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/1` file, sessions through the shadow runner's proxy under the runner's cap, its own knowledge repository, and signal handling |
 
@@ -75,7 +75,7 @@ The [session design](../design/curator-session.md#submissions) states the record
 operation shapes the [gate](../../harness/curator/gate.py) accepts, the
 [frozen submission instructions](../../tools/curator_host/prompt.md#submission-contract)
 give the whole `curator-submission/1` envelope, and
-[general memory](../design/general-memory.md#the-format-curator-fact3) owns the
+[world-scoped memory](../design/world-scoped-memory.md#the-format-curator-fact3) owns the
 `curator-fact/3` field meanings.
 
 The [session design](../design/curator-session.md#admission-and-grooming) owns what

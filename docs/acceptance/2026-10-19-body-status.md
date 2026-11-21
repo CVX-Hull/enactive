@@ -71,7 +71,7 @@ No broader rule, global setup change, paid API or Codex restart was used.
 [#124](https://github.com/CVX-Hull/enactive/issues/124) owns this native repair;
 [#100](https://github.com/CVX-Hull/enactive/issues/100) remains the unaccepted day1
 outcome under[#82](https://github.com/CVX-Hull/enactive/issues/82).
-[038](../changes/038-body-status-input.md) preserves original clocks and costs,
+[038](../changes/body-status-input.md) preserves original clocks and costs,
 requires fresh remaining-day admission and records the prospective lifecycle fit.
 The[manifest](2026-10-19-body-status-manifest.json) retains original evidence hashes;
 private media availability, receipt uncertainty and negative coverage limits are explicit.

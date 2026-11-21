@@ -216,7 +216,7 @@ checks, with no redundant native rebuild or full portable suite.
 The interpretation/latency and executable-policy distinctions follow the prior
 [responsive-gameplay research](../research-responsive-gameplay.md),
 [tiered-gameplay research](../research-tiered-gameplay.md) and
-[execution-first boundary](../changes/064-execution-first-learning.md). This run adds
+[execution-first boundary](../changes/execution-first-learning.md). This run adds
 scoped observations, not a new literature/generalization claim.
 
 Local editorial validation passed in16.25seconds. Its first attempt could not

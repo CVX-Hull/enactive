@@ -115,7 +115,7 @@ ordinary play need not invent a Decision to narrate every action or advice use.
 
 ## Execution and timing lanes
 
-The [evaluation contract](../evaluation.md#latency-budgets-for-interactive-play)
+The [evaluation contract](../measurement-guide.md#latency-budgets-for-interactive-play)
 kept20 genuine useful routine decisions, ready-to-useful-effect p95≤2s,
 no unexplained routine stall>5s, supported local effects≤500ms and novel reasoning
 ≤30s. Repairs keep their original start/cost; keys, program steps, termination and

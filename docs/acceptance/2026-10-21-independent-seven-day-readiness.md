@@ -13,7 +13,7 @@ Decision: the [mission024 evidence](2026-10-21-independent-supply-shelter.md) an
 [bounded current learning006 result](2026-10-22-discovery-learning-sixth-attempt.md) support preparing **one bounded fresh seven-day development assessment** through
 the current player-owned mission system. It does not establish seven-day success,
 general survival competence or measured memory benefit. For the user's selected
-[delivery057](../changes/057-discovery-learning-campaign.md), freeze reviewed
+[delivery057](../changes/discovery-learning-campaign.md), freeze reviewed
 source/interfaces, pass applicable fast/focused checks, and verify the actual
 player's current permission/native readiness before development play. Full review,
 exact candidate/protected-main CI and publication qualify formal acceptance and

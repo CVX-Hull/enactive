@@ -12,7 +12,7 @@ The corrected held-out measurement stopped before grading because Reader 088's
 permitted fresh redo again lacked the complete input. The source-bound review
 found only the first 10,000 of 10,227 text characters in its recorded presentation,
 with no later recovery. Both attempts remain unscored. The
-[approved protocol](../design/p1-study-3.md#prospective-limits) requires an owner
+[approved protocol](../design/curator-memory-study-protocol-revised.md#prospective-limits) requires an owner
 decision after a second output process refusal. No later redo wave, held grader,
 rejudge or remaining Audit context was dispatched.
 
@@ -114,7 +114,7 @@ has been launched on the proposed source.
 
 ## Proposed next decision
 
-The [prospective complete-input recovery](../design/p1-study-3.md#proposed-complete-input-recovery)
+The [prospective complete-input recovery](../design/curator-memory-study-protocol-revised.md#proposed-complete-input-recovery)
 requires a new owner decision before merge or dispatch. Its immutable freeze SHA256
 is `62b27e516b5264d880c9637aee13a88cceb75192c16cf51e42304c968476ffb5`.
 It proposes retaining the 524 admitted first-reader candidates and independent

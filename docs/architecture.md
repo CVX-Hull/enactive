@@ -42,9 +42,9 @@ Its text equivalent is below.
 | Deciding player / player host | Ongoing user objective, visual interpretation, game choices and fallible claims; direct finish reports, explicit provider/context/tools | [Player interface](components/player-interface.md) |
 | Finite test controller | Operator-only quotas and ending reserves, external finish-up request and exact owned process cleanup; no game-save guarantee | [Campaign procedure](operations/campaign-run.md) |
 | Player journal and knowledge | Public calls, hints, source provenance and curated delivery; no custody | [Memory and learning](components/memory-learning.md) |
-| Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
+| Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
-| Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
+| Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Spectator](components/spectator.md) |
 | Run evaluator | Interpretive records and metrics from retained evidence with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
 | Curator | Sandboxed trace sessions and a gate-only knowledge repository; frozen exports reach the player; no custody | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
@@ -71,7 +71,7 @@ The loopback [HTTP server](../harness/server.py) exposes passive status and
 source reads, independent Pause and authenticated per-actor tools; it serves no
 page. Under supervision the [gateway](../tools/campaign_watch.py) serves the page and
 forwards view reads to a separate read-only viewer
-([observer operations](components/observer-operations.md)).
+([spectator](components/spectator.md)).
 The [application](../harness/application.py)
 composes the computer port with journal and delivered-knowledge services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.
@@ -232,7 +232,7 @@ governs storage, preservation of evidence and coherent rollback.
 | Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
 | Journal and hints | Player and composition assertions for provenance, hint isolation and original IDs; [memory](components/memory-learning.md). |
 | Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
-| Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [observer](components/observer-operations.md#assurance-and-evidence). |
+| Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [spectator](components/spectator.md#assurance-and-evidence). |
 | Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation.md). |
 | Curator shadow | The sandbox escape suite against the real listeners (macOS), projection secret guards, gate and close-out negative tests, and proxy allowlist and settlement tests; [curator](components/curator.md#assurance-and-evidence). |
 

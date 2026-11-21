@@ -161,7 +161,7 @@ snapshot differences and program controls remain proposals ([below](#reaching-th
   supersedes, its belief state, and its **scope**: the world and lineage it was
   observed in, or the game as a whole. This replaces the six kinds: their epistemic
   meanings (claim, correction, candidate advice) become core fields. The
-  [field table](../design/general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
+  [field table](../design/world-scoped-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
   of 20 November 2026 supersedes this list for the store: it carries no game time or
   wall time, no asserter field until a second kind of asserter exists, and no belief
   state, and it scopes a fact to a world or to the game. The two-world promotion rule
@@ -220,7 +220,7 @@ acceptance policy exist; structural validity and compression alone do not supply
 query about X should surface Y") is written by the lead from a real episode's
 frames, so it is game-specific lead knowledge. Feeding it to the curator would be a
 lead hint and would let the system be curated toward a known answer
-([mission ownership](../operations/mission-ownership.md)). Probes are offline
+([mission ownership](../operations/run-custody.md)). Probes are offline
 evaluation data only. Probes for held-out lineages are written after the lineage
 ends, by the lead or an independent reviewer from frames, never from evaluator
 readers (ADR008).
@@ -654,7 +654,7 @@ removed.
 ## Spectator (D18)
 
 The spectator is redesigned around the four roles and the containers. The current
-one ([observer component](../components/observer-operations.md)) shows one player:
+one ([observer component](../components/spectator.md)) shows one player:
 a supervised control path and a read-only evaluator view.
 
 | View | Shows |
@@ -752,7 +752,7 @@ the phases:
   ([context stability](../acceptance/2026-11-08-context-stability-489.md),
   [probe validation](../acceptance/2026-11-08-probe-validation-490.md)); the curator
   memory study's protocols
-  ([power gate](../design/p1-study.md), [answer key](../design/p1-study-3.md)), its
+  ([power gate](../design/curator-memory-study-protocol.md), [answer key](../design/curator-memory-study-protocol-revised.md)), its
   gate records ([first](../acceptance/2026-11-09-p1-gate-178.md),
   [with the added lineage](../acceptance/2026-11-10-p1-gate-study-2-178.md)) and its
   [completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md); the
@@ -802,10 +802,10 @@ is described by current contracts; unbuilt proposals remain future work.
 | `player-record/1`, `player-program/2`, `program-view/4`, `player-memory/2`; the custody and program-runner sections | [Computer-control contract](../contracts/computer-control.md); schemas | Their successors in the curator and memory phase and the programs and monitor phase; a resumable program-to-actor handover with a bounded wait |
 | `player_handoff` with an actor-written summary; the previous final report in the admission prompt | [Player-host contract](../contracts/player-host.md); the driver | Successors and admissions start from the published snapshot |
 | One actor and no concurrent host; the active actor writes memory; no second game during an admission | [Campaign run](../operations/campaign-run.md); run procedures | A concurrent curator host; isolated practice instances only after the practice instance phase is adopted |
-| "Optional advisers/programs only propose"; one custodian, "no second writer"; Pause and partial or unknown delivery "cannot become a resumable transfer" | [Mission ownership](../operations/mission-ownership.md) | Programs act in the actor's place under supervision (programs and monitor phase). One input sender at a time, through a new resumable program-to-actor handover; Pause and uncertain delivery stay permanent |
+| "Optional advisers/programs only propose"; one custodian, "no second writer"; Pause and partial or unknown delivery "cannot become a resumable transfer" | [Mission ownership](../operations/run-custody.md) | Programs act in the actor's place under supervision (programs and monitor phase). One input sender at a time, through a new resumable program-to-actor handover; Pause and uncertain delivery stay permanent |
 | A host "hosts one actor" | [Player-host contract](../contracts/player-host.md) | A curator-host contract, or an extension of the player host, so the curator runs on a substitutable host |
 | `harness/player/` has no process, provider or native authority | [Documentation map](../documentation.md); [architecture](../architecture.md) and its components | An owned code location and component pages for the curator process, the gate, the container manager and the sandbox; the player package stays pure |
-| The spectator's view API and the observer's responsibilities | [Evaluation contract](../contracts/evaluation.md); [observer component](../components/observer-operations.md); ADR008's spectator half | Views native to the roles and containers; read-only; Pause unchanged |
+| The spectator's view API and the observer's responsibilities | [Evaluation contract](../contracts/evaluation.md); [observer component](../components/spectator.md); ADR008's spectator half | Views native to the roles and containers; read-only; Pause unchanged |
 | Owned resources and retention | [Environment](../environment.md); [evidence cleanup](../operations/evidence-cleanup.md) | Knowledge repositories, curator sessions and practice forks as owned, managed containers with retention rules |
 | "no separate always-running strategic agent" | [Multi-rate synthesis](../research-multirate-agents.md) | Pointer to this ADR |
 | #178 closeout: optional, deferred reflection | [ADR 007 outcome](../acceptance/2026-11-03-adr007-status-quo.md) | Only the repeated-gap part of its revisit condition is met; on the owner's direction, #178 becomes the curator and memory phase's study gate |

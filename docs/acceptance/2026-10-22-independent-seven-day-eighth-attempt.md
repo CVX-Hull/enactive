@@ -100,7 +100,7 @@ different PNG encoding. Its exact animation trigger is unproved. Preserving a
 healthy root and allowing a new decision did not establish Save liveness.
 
 The player retained failed Work and completed Stop; no normal Save input, owned
-normal exit or Finish followed. The [next boundary design](../changes/058-capture-provenance-action-preconditions.md)
+normal exit or Finish followed. The [next boundary design](../changes/capture-provenance-action-preconditions.md)
 separates native-issued capture provenance from operation-specific image
 preconditions. This failed run supplies no acceptance of that later repair.
 [#176](https://github.com/CVX-Hull/enactive/issues/176) and

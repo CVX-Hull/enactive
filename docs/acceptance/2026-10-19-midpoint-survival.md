@@ -65,7 +65,7 @@ stricter inherited aggregate clocks/reserves never reset. Closed019 remains fail
 
 The game/controller are deliberately owned and paused at supported CRAFTING, all
 actors/tool handles terminal, no queued/scheduled input and null live slots. This
-is not final shutdown. [Prospective reassessment043](../changes/043-transient-boundary-reassessment.md)
+is not final shutdown. [Prospective reassessment043](../changes/transient-boundary-reassessment.md)
 does not reopen020. #129 owns resources, #103/#82/#10 incomplete outcomes and #75
 the control-fit/menu-selection findings. Tests, source publication and partial
 progress do not establish seven-day survival or unattended reliability.

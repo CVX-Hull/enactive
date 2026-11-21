@@ -265,7 +265,7 @@ The spectator scopes status, activity, source and permanent-Pause facts to their
 actual sessions. A fresh admission establishes a new current target while a
 previous selection remains labelled recorded evidence; it is never Resume.
 Reload discards client-retained history and does not grant input authority. The
-[observer component](../components/observer-operations.md) owns current behavior;
+[spectator component](../components/spectator.md) owns current behavior;
 the [Watch/Timeline report](../acceptance/2026-10-29-spectator-watch-timeline.md)
 retains actual same-page admission/Pause evidence and its limits.
 

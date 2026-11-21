@@ -13,7 +13,7 @@ harness owns only computer mechanics; the entire playing system owns game meanin
 [#181](https://github.com/CVX-Hull/enactive/issues/181) investigates one backend,
 not the complete [#176](https://github.com/CVX-Hull/enactive/issues/176)/
 [#284](https://github.com/CVX-Hull/enactive/issues/284) migration. The
-[implementation and reviewed cutover map](../changes/070-computer-control-proof.md)
+[implementation and reviewed cutover map](../changes/computer-control-proof.md)
 separates the isolated experiment from current native7/mission11 production.
 
 ## Backend and evidence lanes

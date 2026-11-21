@@ -132,4 +132,4 @@ eligible as a procedure library; failed004 is evidence only.
 
 The full independent seven-day outcome, new repair qualification and protected
 publication remain outstanding under [#145](https://github.com/CVX-Hull/enactive/issues/145)
-and [delivery057](../changes/057-discovery-learning-campaign.md).
+and [delivery057](../changes/discovery-learning-campaign.md).

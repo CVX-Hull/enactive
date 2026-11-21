@@ -88,7 +88,7 @@ The14jobs charged1,680conservative wall-window seconds; observed claim-to-submit
 intervals total254.994seconds. Neither is model compute time. The retained DB is
 2,764,800bytes, with254Claims (249native facts/five interpretations), two
 Procedures and zero Work records. Tiny returned context does not bound full
-retrieval/reduction cost; the prior [scaling profile](../changes/062-player-decision-context.md#closed018-preserve-organic-correction-and-measure-the-real-hot-path)
+retrieval/reduction cost; the prior [scaling profile](../changes/player-decision-context.md#closed018-preserve-organic-correction-and-measure-the-real-hot-path)
 and owned #164/#177/#178 work remain relevant. This report introduces no new
 memory store, mandatory model tier or approval step.
 

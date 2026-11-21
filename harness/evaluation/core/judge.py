@@ -31,7 +31,7 @@ from .sources import read_json_lines
 SCHEMA = 'judge-events/2'
 SOURCE = 'judge'
 FACT_USE, ANCHOR = 'fact_use_verdict', 'anchor_verdict'
-#: The closed answers about a fact, with the words docs/design/general-memory.md#3-measurement gives them.
+#: The closed answers about a fact, with the words docs/design/world-scoped-memory.md#3-measurement gives them.
 USE_LABELS = ('in_line', 'against', 'found_again', 'did_not_apply', 'cannot_tell')
 USE_LABEL_TEXT = dict(in_line='acted in line with it', against='acted against it', found_again='looked it up',
     did_not_apply='did not apply', cannot_tell='cannot tell')

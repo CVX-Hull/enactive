@@ -138,7 +138,7 @@ Memory, monitoring and tiering receive concrete findings through the existing
 [campaign improvement workflow](../project-management.md#campaign-driven-improvement),
 not an inferred claim of continuous learning.
 
-Any [new functional study](../changes/039-functional-campaign-continuation.md)
+Any [new functional study](../changes/functional-campaign-continuation.md)
 requires its own explicit prospective limits and claim distinction. It cannot
 turn012 or original deciding001 into a successful experiment. The full user goal
 remains active and unfulfilled.

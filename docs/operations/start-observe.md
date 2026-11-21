@@ -33,7 +33,7 @@ Pause; the custodian serves no page of its own.
 Pause, with a reason (loop, fault, spend or other), stops the custodian receiving it,
 even while you inspect the viewer. A fresh admission after permanent Pause is
 separate custody, not Resume. An identical image after an input is a valid capture,
-not a failure. See the [observer component](../components/observer-operations.md)
+not a failure. See the [spectator component](../components/spectator.md)
 for the control path and its limits.
 
 **Viewer.** The supervisor also starts the read-only viewer as a separate process,
@@ -44,7 +44,7 @@ interpretation of the live run and of archived runs when you pass
 displays inform you and gate nothing; the Pause conditions it computes are advice.
 
 After the supervisor exits, open completed runs through the
-[recorded browser entry](../components/observer-operations.md#recorded-browser-entry).
+[recorded browser entry](../components/spectator.md#recorded-browser-entry).
 
 For recorded curator results, repeat `--curator-results LABEL=FILE` on the supervisor
 command, naming existing current result files or snapshots. The Curator tab selects
@@ -76,7 +76,7 @@ original presentation/receipt times and geometry.
 Keep the native game windowed. The prepared SDL startup hints request reduced
 activation but do not guarantee window order. If needed, return the spectator to
 the front once; never disable native takeover or repeatedly steal focus.
-[Pause/timeout](pause-timeout.md) and [ownership](mission-ownership.md) cover stops.
+[Pause/timeout](pause-timeout.md) and [run custody](run-custody.md) cover stops.
 The [production report](../acceptance/2026-10-29-computer-control.md) retains actual
 play and the limits of browser timing evidence.
 

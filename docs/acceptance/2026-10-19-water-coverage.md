@@ -101,7 +101,7 @@ endpoint3903452.292507958 as a closed, uncompleted decision. Whole1665/aggregate
 day5351/lifecycle167 carry forward; no consumption or craft changed02676stock.
 Historical lifecycle7442.818810162135s,101current-v3 plus one archived gameplay/two
 control unknowns remain.027closes incomplete; failed provision is not success or
-new authority. [049](../changes/049-distinct-fuel-study.md) prospectively scopes a
+new authority. [049](../changes/distinct-fuel-study.md) prospectively scopes a
 materially different ordinary fuel-salvage study under user delegation, with all
 197resource inputs from025–027 retained and no refused deconstruction retry.
 
@@ -243,7 +243,7 @@ unchanged unknowns.21inputs/378.839seconds cost1787whole/866aggregate/473day5/
 5562034/rev1555/[8,-13], healthy/Comfortable/blankneeds/SafeON, actual null live slots,
 all handles terminal/noqueue. The immutable heat-stop snapshot binds190rows.
 Exact5f22 push39332128769 andPR39332133314 CI passed separately; no native rebuild.
-[050](../changes/050-curtain-fuel-and-retained-craft.md) first proposed ordinary curtain
+[050](../changes/curtain-fuel-and-retained-craft.md) first proposed ordinary curtain
 fuel and inspection of this same retained craft; that branch is now closed below.
 Days5–7 and remaining coverage are incomplete.
 

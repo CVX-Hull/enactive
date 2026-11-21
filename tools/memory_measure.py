@@ -2,7 +2,7 @@
 checks of a changed judge, and the simulation that sizes withholding.
 
 No game runs, no model is called and nothing is spent: judging is done by host agents the lead starts, and this
-tool only builds what they read and counts what they answer. The design is docs/design/general-memory.md,
+tool only builds what they read and counts what they answer. The design is docs/design/world-scoped-memory.md,
 sections 3 and 4. RUN is a directory whose parent is named `memory-measure` (`.runtime/memory-measure/<run>`);
 everything is written there and nowhere else. ADMISSION is a sealed run directory (it holds
 `actors/NNN/host.jsonl` and `sources/`). In the order the lead runs them:
@@ -2247,7 +2247,7 @@ GATE_TOUCHED, GATE_TOUCHED_ENDS = 8.30, (5.64, 11.78)
 GATE_MISSED, GATE_MISSED_ENDS = 0.452, (0.115, 0.690)
 GATE_WRONG, GATE_BASE_WRONG = (0.0, 0.1, 0.167, 0.25), 0.1
 GATE_PRICE_USD = 3.58
-#: docs/design/general-memory.md, "What it costs": the recall model is inferred to add two thirds to about the
+#: docs/design/world-scoped-memory.md, "What it costs": the recall model is inferred to add two thirds to about the
 #: same again to the cost of play. One first store and one grooming session are bought once.
 RECALL_OVERHEAD = (1.67, 2.0)
 STORE_USD, GROOMING_USD = 23.0, (1.16, 4.19)

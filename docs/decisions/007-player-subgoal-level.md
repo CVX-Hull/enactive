@@ -75,7 +75,7 @@ The recommendations, and the reconciliation that produced them, are on #319.
   and its "one designated deciding player";
 - ADR006: one input sender, and no level state gates basic control;
 - [`architecture.md:111`](../architecture.md);
-- no lead hints ([mission ownership](../operations/mission-ownership.md));
+- no lead hints ([mission ownership](../operations/run-custody.md));
 - P-TRUTH;
 - P-GENERALITY;
 - counted cost.
@@ -322,7 +322,7 @@ with that migration:
 | "no separate always-running strategic agent"; "consolidation is selective and optional" (24 Oct) | [Multi-rate synthesis](../research-multirate-agents.md) and its stale pointer | R2, R3 |
 | "not a mandatory adviser/critic"; "No adviser is required for ordinary gameplay" (lead, 25–29 Oct) | [#177](https://github.com/CVX-Hull/enactive/issues/177), [#178](https://github.com/CVX-Hull/enactive/issues/178), and the corresponding line of [#164](https://github.com/CVX-Hull/enactive/issues/164) (its cadence target stays) | R2 |
 | "no new model tier … by default" (lead, 25 Oct) | [#215](https://github.com/CVX-Hull/enactive/issues/215), [#186](https://github.com/CVX-Hull/enactive/issues/186) | R3, for more calls. #25's tier gate stands |
-| One actor at a time, with no concurrent non-input host; the active actor writes memory | [Campaign run](../operations/campaign-run.md) and the driver; [mission ownership](../operations/mission-ownership.md) lines 11–18; the [computer-control contract](../contracts/computer-control.md) custody and write authority | R2, R3. One concurrent reader host is added. The actor stays the only input writer, and the software commit path becomes the only memory writer |
+| One actor at a time, with no concurrent non-input host; the active actor writes memory | [Campaign run](../operations/campaign-run.md) and the driver; [mission ownership](../operations/run-custody.md) lines 11–18; the [computer-control contract](../contracts/computer-control.md) custody and write authority | R2, R3. One concurrent reader host is added. The actor stays the only input writer, and the software commit path becomes the only memory writer |
 | Draft 1 of this ADR | This file's history | R1 |
 
 **Consistent, not superseded:**

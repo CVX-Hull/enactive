@@ -47,7 +47,7 @@ process curtailed useful data acquisition.
 Future briefs may permit bounded useful development after a cadence miss or
 incomplete cohort, while rejecting responsiveness qualification. The
 [workflow](../project-management.md#minimum-checks-and-escalation) and
-[evaluation rules](../evaluation.md#latency-budgets-for-interactive-play) own this
+[evaluation rules](../measurement-guide.md#latency-budgets-for-interactive-play) own this
 prospective distinction. The015 brief and failed outcome remain unchanged.
 
 ## Representation and timing findings

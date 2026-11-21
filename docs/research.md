@@ -38,7 +38,7 @@ records their rationale. Current owner decisions are in the
 | --- | --- | --- | --- |
 | [Memory, belief, ontology and oversight](research-curated-memory.md) | Write and retrieval policies, concurrent consolidation, belief under conflict, ontology evaluation and oversight interfaces | Which delivery, conflict handling, ontology grooming and spectator methods help play or supervision? | The [curator](components/curator.md) writes the knowledge store |
 | [Programs, supervision, evaluation and study design](research-curated-programs.md) | Program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design | Do programs and monitoring help in play, and can practice instances support valid trials? | [Curator memory study](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
-| [Curator sandbox](research-curator-sandbox.md) | Project-local sandbox mechanisms on this Mac, session cost evidence, residual risks and gate gaming | How can the submission gate resist gaming when it tests knowledge or programs on later traces? | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#both-hosts) |
+| [Curator sandbox](research-curator-sandbox.md) | Project-local sandbox mechanisms on this Mac, session cost evidence, residual risks and gate gaming | How can the submission gate resist gaming when it tests knowledge or programs on later traces? | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#claude-code-and-codex-cli-curator-host-rules) |
 
 ### Historical: the question is settled
 

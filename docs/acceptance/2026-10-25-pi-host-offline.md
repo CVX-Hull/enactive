@@ -10,7 +10,7 @@ scope: Pinned Pi host request/MCP/process conformance; no inference, native game
 
 [#235](https://github.com/CVX-Hull/enactive/issues/235) delivers a project-local
 Pi agent-core host through the existing player MCP boundary. The
-[brief](../changes/069-controllable-player-host.md) owns design/reuse decisions;
+[brief](../changes/controllable-player-host.md) owns design/reuse decisions;
 [player interface](../components/player-interface.md), [setup](../setup.md) and
 [runbook](../runbook.md#bounded-player-host-activation) own current behavior.
 The decision is to adopt this bounded offline capability for the separate

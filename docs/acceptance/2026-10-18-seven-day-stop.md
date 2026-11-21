@@ -15,7 +15,7 @@ guarded walk without a fresh verified observation. The player honored the denial
 paused and handed off; the lead used normal Save and Quit. **This is neither
 first-day nor seven-day survival success.** No user keys, unlock or rescue occurred.
 
-The [frozen protocol](../changes/022-seven-day-campaign.md) and
+The [frozen protocol](../changes/seven-day-campaign.md) and
 [readiness evidence](2026-10-18-seven-day-readiness.md) remain historical inputs.
 Its unused allowance cannot resume this stopped investigation. The actual
 observation/caller gap is tracked in [#108](https://github.com/CVX-Hull/enactive/issues/108),

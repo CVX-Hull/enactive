@@ -265,7 +265,7 @@ custodian horizons stay distinct.
 ## Passive spectator reads and operator Pause
 
 The custodian serves these loopback routes to the spectator and serves no page. Under
-supervision the gateway ([observer operations](../components/observer-operations.md))
+supervision the gateway ([spectator](../components/spectator.md))
 serves the page and relays them.
 
 `GET /api/status` is `computer-status/2`. When a host is present,

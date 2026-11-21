@@ -10,7 +10,7 @@ scope: Pre-#383 spectator walkthrough; Resume, planner and mission-actor panels 
 **Historical.** This walkthrough describes the spectator before the
 [ADR008 redesign](decisions/008-evaluation-and-spectator.md) and names retired
 Resume, planner and mission-actor panels. Use
-[observer operations](components/observer-operations.md) and
+[observer operations](components/spectator.md) and
 [start and observe](operations/start-observe.md#start-and-observe) for the current spectator.
 
 This walkthrough explains what to look for. Use [setup](setup.md) for installation

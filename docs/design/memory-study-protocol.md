@@ -17,7 +17,7 @@ frozen on that date after independent protocol
 review and lead resolution of eligibility, literal fixtures, retrieval specification
 and update-key sampling findings. **No comparison outcomes collected at initial freeze;
 no final-seed outcomes collected before the v1.1 clarifications below.** The
-[study brief](../changes/013-memory-representation-study.md) owns scope and the
+[study brief](../changes/memory-representation-study.md) owns scope and the
 [research synthesis](../research-memory-representations.md) owns rationale/sources.
 This file owns the proposed synthetic experiment. It introduces no live runtime
 contract and does not reproduce an LLM paper's benchmark.
@@ -403,7 +403,7 @@ Finish when all configurations and controls ran, outputs are reproducible, negat
 results and limitations are documented, and independent final review is addressed.
 
 The implementation is a small offline package under `tools/memory_study/`, separate
-from `harness/`, with the [bounded allocation](../changes/013-memory-representation-study.md#implementation-allocation)
+from `harness/`, with the [bounded allocation](../changes/memory-representation-study.md#implementation-allocation)
 fixing interfaces and ownership. At most two writers use separate worktrees;
 the lead owns the shared runner and integration. Re-estimate
 [#62](https://github.com/CVX-Hull/enactive/issues/62) after protocol review.

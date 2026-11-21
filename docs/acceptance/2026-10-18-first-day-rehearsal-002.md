@@ -8,7 +8,7 @@ scope: Rosendo partial22h14m25s rehearsal, autonomous native cleanup, continuity
 
 # Rosendo rehearsal: autonomous recovery, partial day
 
-The [first-day brief](../changes/018-first-day-rehearsal.md) reached **22h14m25s**,
+The [first-day brief](../changes/first-day-rehearsal.md) reached **22h14m25s**,
 then stopped investigation at an unsupported sound-distraction prompt. Rosendo
 Carter/Hotevilla remained alive, was normally saved and the game/controller exited.
 **This is not a completed first day or seven-day readiness.** No human key, unlock
@@ -92,7 +92,7 @@ automatic survival supervisor or campaign-wide budget guarantee is claimed.
 | Unsupported sound-distraction query | Reuse demonstrated existing CUA binding for readable ordinary prompts after Pause, with charged before/after evidence. App discovery's lock/access report did not establish that the existing binding failed. No global unlock/security workaround or new native code selected. In-game source confirms ordinary Y cancels; OS Quit/signals are not safe-save substitutes. |
 | Early sleep and chilly night | Preserve failure; inspect actual fatigue, insulation and elapsed thermal response before sleep. Extra layers impair movement; do not generalize a two-blanket policy from this confounded trial. Route practical context into #79/#80; broader learning remains #70/#71. |
 | Current advisory drift | Refresh at meaningful transitions and before reuse, keep dated checkpoints/unknowns/budgets. This is a procedural correction, not implemented learned memory. |
-| Remaining1h45m35s to24hours | #79/#80 remain open. A [prospective continuation](../changes/019-first-day-continuation.md) retains the original absolute envelope, source/runtime and same saved character. No silent restart or allowance renewal; #81/#82 remain gated. |
+| Remaining1h45m35s to24hours | #79/#80 remain open. A [prospective continuation](../changes/first-day-continuation.md) retains the original absolute envelope, source/runtime and same saved character. No silent restart or allowance renewal; #81/#82 remain gated. |
 
 Review and the first common-check run caught missing date/scope metadata on two
 historical documents. Both were corrected without changing or weakening the

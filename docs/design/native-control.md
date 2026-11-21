@@ -69,7 +69,7 @@ a dismissal proves task completion. [Editable diagram](https://github.com/CVX-Hu
 
 ## Boundary identity and scope
 
-The [direction-menu increment](../changes/017-native-direction-menu.md) instruments
+The [direction-menu increment](../changes/native-direction-menu.md) instruments
 the pinned common `choose_direction` input wait without renaming DEFAULTMODE.
 This preserves the engine's category-local current-tile/custom bindings; its
 binding fallback is global `default`, not DEFAULTMODE. Empty-stack/in-game RAII
@@ -112,7 +112,7 @@ activity questions. Other YESNO prompts are not recovery targets. IDs change on
 entry/exit, native input, question replacement and new session, not every repaint.
 The matching frame/revision is still required when answering or dismissing a prompt.
 
-The [ordinary-menu increment](../changes/026-ordinary-survival-menus.md) reuses that
+The [ordinary-menu increment](../changes/ordinary-survival-menus.md) reuses that
 exact-owner marker as `menu_query(category)`. It additionally marks only the pinned
 item-detail and comparison input waits, preserving lowercase `default` bindings;
 that generic category is never globally admitted. Named nearby-list, crafting and

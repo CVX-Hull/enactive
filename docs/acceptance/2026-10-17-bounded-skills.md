@@ -12,7 +12,7 @@ scope: Dated candidate observations and qualification limits; not current instru
 Round 009 implements passive cardinal movement stages and verifies the existing
 native observation pipeline for this bounded task. A real one-tile outbound and
 return completed with retained per-action evidence. The service still has no
-autonomous supervisor or connected model provider. [Brief](../changes/009-bounded-skills-native-evidence.md),
+autonomous supervisor or connected model provider. [Brief](../changes/bounded-skills-native-evidence.md),
 [manifest](2026-10-17-bounded-skills-manifest.json),
 [current contract](../protocol.md#passive-bounded-movement-skills).
 Common checks pass 263 Python tests plus viewer, import, diagram and governance controls.

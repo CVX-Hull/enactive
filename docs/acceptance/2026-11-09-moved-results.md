@@ -37,7 +37,7 @@ or pinned auto-merge.
 
 ## P1 study: clusters in the #397 sample
 
-From [the P1 study](../design/p1-study.md). In #397's sample, 17 informative probes formed 12
+From [the P1 study](../design/curator-memory-study-protocol.md). In #397's sample, 17 informative probes formed 12
 clusters.
 
 ## Curator hosts: binary sizes
