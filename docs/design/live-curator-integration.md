@@ -162,7 +162,7 @@ The live runner uses admission sessions and a repository of its own for the run'
 world. Handoffs do not trigger grooming. The
 [session publication rules](curator-session.md#admission-and-grooming) govern when
 grooming runs and which sealed source it reads. If the live admission published
-nothing, the last published admission is still the one before it, and grooming does
+nothing, the last published admission is still the earlier one, if any, and grooming does
 not examine what the runner missed.
 
 ## Delivery to a running actor

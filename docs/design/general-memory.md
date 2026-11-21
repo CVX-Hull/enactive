@@ -359,7 +359,7 @@ beyond the units measured. A handoff, another article's prose or independent
 re-observation can expose withheld knowledge. The
 [study's sizing method](../contracts/evaluation.md#the-withholding-studys-sizing-withholding-study-simulation2)
 sizes any repeat. Under the [owner's decision of 20 November 2026](../decisions/owner-decisions.md#in-force)
-("Live run, then campaigns"), a claim that delivered memory improves play comes from
+("Live run, then campaigns"), a claim that delivered memory improves play comes only from
 the seven-day campaign outcome ([#145](https://github.com/CVX-Hull/enactive/issues/145)).
 
 ### Game-neutral judging

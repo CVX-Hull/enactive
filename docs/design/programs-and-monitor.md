@@ -10,7 +10,7 @@ review_trigger: "The fact store's field table merges (the owner's revisit condit
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The [owner's 20 November 2026 decision](../decisions/owner-decisions.md#in-force) keeps this unbuilt proposal parked until the fact store's field table merges.
+**Answer.** The [owner's 20 November 2026 decision](../decisions/owner-decisions.md#in-force) keeps this unbuilt proposal parked; the owner revisits it when the fact store's field table merges.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
