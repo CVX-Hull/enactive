@@ -52,8 +52,8 @@ def test_study_archive_hash_does_not_merge_distinct_saved_payloads(tmp_path):
     assert all(row['parent_moment'].startswith('unknown') for row in rows.values())
     campaign = tmp_path / '.runtime/evidence/397-seven-day/computer-sessions/admission'
     campaign.mkdir(parents=True)
-    (campaign/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/10', files={'route.json': 'a'})))
-    row = next(row for row in portfolio(tmp_path)['sources'] if row['kind'] == 'campaign-run/10')
+    (campaign/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11', files={'route.json': 'a'})))
+    row = next(row for row in portfolio(tmp_path)['sources'] if row['kind'] == 'campaign-run/11')
     assert row['copy_group'].startswith('unknown')
 
 

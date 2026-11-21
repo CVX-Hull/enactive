@@ -47,7 +47,10 @@ from .manifest import ProjectionError, SCHEMA
 from .stores import SealedStoreError, sealed
 
 # Label fields supplied by each supported sealed run package version.
-PACKAGE_LABELS = {'campaign-run/10': ('lineage', 'admission')}
+PACKAGE_LABELS = {
+    'campaign-run/11': ('world', 'lineage', 'admission'),
+    'campaign-run/10': ('lineage', 'admission'),
+}
 ACTION_FIELDS = ('type', 'key', 'modifiers', 'text', 'seconds', 'x', 'y', 'button')
 RECORD_FIELDS = ('kind', 'text', 'data', 'sources', 'supports', 'supersedes', 'applicability', 'program_id')
 TOOL_ARGUMENTS = {
@@ -188,7 +191,8 @@ def _verified_labels(session: Path, session_id: str) -> dict:
         raise _LabelEvidenceError('manifest-schema', 'run package manifest has an invalid admission position')
     if (selected['lineage'] is None) != (admission is None):
         raise _LabelEvidenceError('manifest-schema', 'run package manifest must label lineage and admission together')
-    if 'world' in selected and selected['lineage'] is not None and selected['world'] is None:
+    # Sealed /10 sessions retain their verified lineage with no world.
+    if 'world' in fields and selected['lineage'] is not None and selected['world'] is None:
         raise _LabelEvidenceError('manifest-schema', 'run package manifest must label the world of a lineage')
     return selected
 

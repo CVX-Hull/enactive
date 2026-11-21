@@ -529,7 +529,7 @@ The initial package accepts JSON data and prompt-defined updates. It uses the ex
 `jsonschema` dependency for structural validation and a bounded interpreter only for
 expressions whose grammar the first slice defines and reviews. Arbitrary generated
 Python/JavaScript execution is not part of that slice. No compatibility mode is added
-to `curator-fact/3`: trial artifacts remain inert and cannot be imported as active
+to `curator-fact/4`: trial artifacts remain inert and cannot be imported as active
 player knowledge. Any later deployment needs one coordinated contract migration.
 
 Reuse seams verified against source: `harness/trace/` for sealed prefix projection;

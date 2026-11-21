@@ -16,14 +16,14 @@ Before changing a deployment:
 
 1. Close writers and verify exact owned native/host/MCP cleanup. Never migrate under a live actor/game.
 2. Preserve original saves, SQLite/JSON/PNG, configuration, source checkpoint and binary bytes as inert evidence. Keep failed/abandoned chains intact.
-3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/10` package under `.runtime/computer-sessions/`.
+3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/11` package under `.runtime/computer-sessions/`.
 4. Use a fresh `computer-session/1` store and launch marker. A selected partial directory refuses even with no DB; do not delete markers to rearm it.
 5. Select a `player-journal/1` store (`user_version=1`); a supported journal can span fresh native-child sessions. Unsupported or unrecognized nonempty stores are refused before native launch without conversion.
 6. Requalify the affected native/gameplay boundary. Earlier test/demo results remain bound to their source and cannot qualify the replacement.
 
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
-callers move together with `player-host/8`, telemetry 8, `campaign-run/10`,
+callers move together with `player-host/8`, telemetry 8, `campaign-run/11`,
 `player-driver/7` and `campaign-receipt/7`. The live spectator requires
 `computer-status/2`; its host block carries observed attempts. The evaluator
 reads older versions only for sealed sessions individually pinned to those
@@ -31,6 +31,11 @@ versions in its [closed archive index](../standards/migration.md). Use the origi
 source commit and readers for preserved evidence outside that index. Native wire,
 canonical `computer-operation/1`, `computer-source/1` and computer-session storage
 are separate versions; the actor projection does not migrate the canonical database.
+
+The world-scoped memory migration starts a fresh `curator-knowledge/3` repository
+and fresh curator working state. Preserve older repositories and draws as sealed
+evidence. Build new packages and `withholding-study-draw/2` draws from the new
+repository using the [knowledge export procedure](campaign-run.md#freeze-delivered-knowledge).
 
 Upstream saves are unchanged. Load them only through visible ordinary application
 controls; the player judges identity/continuity from observations. The harness

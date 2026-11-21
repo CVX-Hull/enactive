@@ -22,7 +22,7 @@ The evaluator reads one run directory read-only:
 - each `actors/NNN/host.jsonl` (`player-host/8`), including its per-request context
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
-- `manifest.json` (`campaign-run/10`), including its operator labels;
+- `manifest.json` (`campaign-run/11`), including its operator labels;
 - `receipt.json` (`campaign-receipt/7`, with `player-driver/7`) and
   `watch-terminal.json` (`campaign-watch-terminal/4`), when recorded;
 - the run's `player-journal/1` public call and hint store.
@@ -272,7 +272,7 @@ IQR and bootstrap intervals are not percentiles of this kind: they use numpy's d
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
-| `run_facts` | `key`, `value` | From `manifest.json` and frozen inputs: `labels` (arm, start, scenario, lineage, admission), `source_commit`, model id, effort, route, guide and assignment SHA-256 digests, limits, and the spend allowance (`spend_allowance_usd`; `declared_ceiling_usd` and `prior_reserved_usd` are filled for an archived run only, see "Spend allowance" below) |
+| `run_facts` | `key`, `value` | From `manifest.json` and frozen inputs: `labels` (arm, start, scenario, lineage, admission, world), `source_commit`, model id, effort, route, guide and assignment SHA-256 digests, limits, and the spend allowance (`spend_allowance_usd`; the archive's reservation fields are described under "Spend allowance" below) |
 | `tool_calls` | `request_id`, `tool_call_id`, `actor`, `decision`, `tool`, `status` (`ok`, `error`, `refused`), `latency_ms`, `result_bytes`, `wall` | One row per tool call, from host `tool-start`, `tool-result` and `tool-refused` |
 | `requests` | `request_id`, `actor`, `wall`, `attempt`, `input_tokens`, `cache_read`, `cache_write`, `output_tokens`, `dollars`, `retry_class`, `omitted_images`, `manifest` | One row per HTTP attempt. `manifest` is `exact` when a `context-manifest` event exists, else `absent`. |
 
@@ -300,7 +300,10 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
 - **Archived runs.** The evaluator reads older records only for a session and exact
   manifest and record versions listed in the [closed archive index](../../data/evaluation/archive-sessions.json)
   (`archive-sessions/1`), under [S-MIGRATION's closed-archive rule](../standards/migration.md#s-migration-one-current-contract-coordinated-migration).
-  The index includes `spend-limit-run-555` under the
+  The 12 [approved `campaign-run/10` sessions](../decisions/owner-decisions.md#eleven-version-ten-sessions-join-the-archive-index)
+  use the same host, receipt, driver, terminal, handoff and player journal formats
+  as current runs. The evaluator sets `labels.world` to null for archive versions.
+  The index also includes `spend-limit-run-555` under the
   [“Add it to the index” decision](../decisions/owner-decisions-archive.md#index-the-spend-limit-check). The
   indexed session `522-held-out/computer-sessions/lh4a1` does not evaluate: its database
   cannot be opened in the read-only store, evaluating it is an error, and the sealed copy

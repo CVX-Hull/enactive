@@ -93,12 +93,12 @@ guard. The window excludes the player's journal.
 [Snapshot cutoff and staged files](../../harness/trace/snapshot.py)
 
 The snapshot stages the campaign manifest and supervisor launch record when present.
-The current `campaign-run/10` manifest has no `world` label. The
-[trace projection](../../harness/trace/projection.py) verifies lineage and admission
-position by checking both records against the staged store's session ID and checking
+The [trace projection](../../harness/trace/projection.py) verifies world, lineage and
+admission position from the current `campaign-run/11` manifest by checking both
+records against the staged store’s session ID and checking
 the manifest bytes against the supervisor's recorded digest. The
 [world-scope design](world-scoped-memory.md#provenance-and-the-checks-it-allows) specifies
-how publication uses a future manifest's `world` label.
+how publication uses the verified world label.
 
 Step numbering depends on wall time and operation identity. A backward clock step,
 equal wall times or a late frame association can affect comparisons with a later

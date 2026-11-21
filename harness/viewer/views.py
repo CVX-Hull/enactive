@@ -17,7 +17,7 @@ from harness.evaluation.core import context as ctx
 from harness.evaluation.core.host import host_facts
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError, loads
-from harness.evaluation.core.sources import (MANIFEST_SCHEMA, RECEIPT_SCHEMA, read_carry, read_host, read_json_file,
+from harness.evaluation.core.sources import (JOURNAL_MANIFEST_SCHEMAS, RECEIPT_SCHEMA, read_carry, read_host, read_json_file,
     read_manifest, read_historical_memory, read_player_store, run_archive_entry)
 
 from .catalog import Catalog, RunInfo, ViewError
@@ -110,13 +110,14 @@ def receipt_accounting(value: object) -> dict | None:
 
 
 def custodian_receipt(info: RunInfo) -> dict | None:
-    """Recorded ending facts from the current package belonging to this evaluation store."""
+    """Current-format ending facts from the package belonging to this evaluation store."""
     commit = info.facts.get('source_commit')
     if info.run_dir is None or not isinstance(commit, str) or not commit:
         return None
     try:
         manifest = read_manifest(info.run_dir)
-        if (manifest['schema'], manifest.get('session'), manifest.get('source_commit')) != (MANIFEST_SCHEMA, info.session, commit):
+        if (manifest['schema'] not in JOURNAL_MANIFEST_SCHEMAS
+                or (manifest.get('session'), manifest.get('source_commit')) != (info.session, commit)):
             return None
         receipt = read_json_file(info.run_dir / 'receipt.json')
     except (OSError, EvaluationError):
@@ -345,30 +346,31 @@ def context(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, req
 # Memory, programs, handoffs ------------------------------------------------------------------------
 
 def memory_store(catalog: Catalog, info: RunInfo):
-    path = info.meta.get('memory_store')
-    if not path:
-        try:
-            path = read_manifest(catalog.need_run_dir(info)).get('player_store')
-        except EvaluationError as exc:
-            raise ViewError(500, 'bad_manifest', str(exc)) from exc
+    try:
+        manifest = read_manifest(catalog.need_run_dir(info))
+    except EvaluationError as exc:
+        raise ViewError(500, 'bad_manifest', str(exc)) from exc
+    path = info.meta.get('memory_store') or manifest.get('player_store')
     if not path or not Path(path).is_file():
         return None
-    return (read_historical_memory(Path(path)) if run_archive_entry(catalog.need_run_dir(info)) is not None
-            else read_player_store(Path(path)))
+    return (read_player_store(Path(path)) if manifest['schema'] in JOURNAL_MANIFEST_SCHEMAS
+            else read_historical_memory(Path(path)))
 
 
 def memory(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> dict:
     store = memory_store(catalog, info)
     if store is None:
         return dict(records=[], hints=[], available=False,
-                    store_schema='player-journal/1' if info.facts.get('manifest_schema')==MANIFEST_SCHEMA else None)
+                    store_schema='player-journal/1' if info.facts.get('manifest_schema') in JOURNAL_MANIFEST_SCHEMAS else None)
     reads: dict[str, list[dict]] = {}
     for seq, payload in connection.execute("SELECT seq_start, payload FROM events WHERE kind='memory_read' ORDER BY seq_start"):
         value = loads(payload)
         for record_id in value.get('record_ids', ()):
             reads.setdefault(record_id, []).append(dict(seq=seq, actor=value.get('actor'), tool=value.get('tool')))
     carried: dict[str, list[str]] = {}
-    for actor, ids in read_carry(catalog.need_run_dir(info), historical=run_archive_entry(catalog.need_run_dir(info)) is not None).items():
+    run_dir = catalog.need_run_dir(info)
+    legacy_memory = read_manifest(run_dir)['schema'] not in JOURNAL_MANIFEST_SCHEMAS
+    for actor, ids in read_carry(run_dir, historical=legacy_memory).items():
         for record_id in ids:
             carried.setdefault(record_id, []).append(actor)
     labels = [l for l in catalog.labels() if l.get('session') == info.session]
@@ -410,7 +412,7 @@ def programs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) ->
                     elapsed_seconds=value.get('elapsed_seconds'), reason=value.get('reason'), wall=call.wall))
     saves = [loads(p) for (p,) in connection.execute("SELECT payload FROM events WHERE kind='program_save' ORDER BY seq_start")]
     return dict(programs=docs, runs=runs, saves=saves, provenance='player_claim',
-                capability='retired' if info.facts.get('manifest_schema')==MANIFEST_SCHEMA else 'recorded',
+                capability='retired' if info.facts.get('manifest_schema') in JOURNAL_MANIFEST_SCHEMAS else 'recorded',
                 store_schema=store.schema if store is not None else None)
 
 

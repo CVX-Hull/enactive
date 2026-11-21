@@ -17,7 +17,8 @@ from tests.test_curator_host import native, session_config, world  # noqa: F401 
 
 
 def kind(name, fields):
-    return {'schema': 'curator-type/1', 'name': name, 'description': 'd', 'fields': fields}
+    return {'schema': 'curator-type/2', 'name': name, 'description': 'd', 'fields': fields,
+            'identity': [], 'reason': 'Exercise the type list.'}
 
 
 SECTION = '''\

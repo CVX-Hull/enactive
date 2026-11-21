@@ -43,7 +43,7 @@ context, ongoing-objective/knowledge prompt and `player-host-inputs/3` hashes.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/10`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/11`.
 Each actor's route carries the requests the run has left. The driver starts an
 actor only while requests and dollars remain. The
 [request-stability contract](../contracts/player-host.md#request-stability-and-tail-notices)

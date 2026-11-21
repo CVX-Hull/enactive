@@ -75,6 +75,7 @@ import numpy as np
 from harness.evaluation.core import judge
 from harness.evaluation.core.host import frame_source
 from harness.evaluation.core.records import EvaluationError, dumps, loads
+from harness.evaluation.core.sources import MANIFEST_SCHEMA
 from harness.jsonio import file_sha256
 from harness.trace import images
 from harness.trace.projection import ACTION_FIELDS
@@ -614,6 +615,10 @@ def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
 
 # --- the facts to judge -------------------------------------------------------------------------------------------------
 
+DELIVERY_MANIFESTS = (MANIFEST_SCHEMA, 'campaign-run/10', 'campaign-run/7')
+DELIVERY_VERSIONS = f'{MANIFEST_SCHEMA} or indexed historical /10 or /7'
+
+
 def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     """Build judged-facts from delivered data and the order of actual player exposures."""
     from harness.evaluation.core.host import host_facts, returned_records
@@ -622,16 +627,23 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     admissions, recall_events = {}, []
     for directory in runs:
         manifest = read_manifest(directory)
-        if manifest.get('schema') not in ('campaign-run/10','campaign-run/7'):
-            raise MeasureError(f'{directory}: delivery requires campaign-run/10 or indexed historical /7')
-        for name, digest in {**manifest['files'], **{'private/'+k:v for k,v in manifest['private_files'].items()}}.items():
-            if name in ('delivered-knowledge.json','private/knowledge-full.json','private/units.json') and file_sha256(directory/name) != digest:
+        if manifest['schema'] not in DELIVERY_MANIFESTS:
+            raise MeasureError(f'{directory}: delivery requires {DELIVERY_VERSIONS}')
+        delivered_sha256 = manifest['files']['delivered-knowledge.json']
+        for name, digest in (('delivered-knowledge.json', delivered_sha256),
+                             ('private/knowledge-full.json', manifest['private_files']['knowledge-full.json']),
+                             ('private/units.json', manifest['private_files']['units.json'])):
+            if file_sha256(directory/name) != digest:
                 raise MeasureError(f'{directory/name}: frozen knowledge hash differs')
         full, drawn = read_json(directory/'private/knowledge-full.json'), read_json(directory/'private/units.json')
         delivered = read_json(directory/'delivered-knowledge.json')
         if full.get('schema') != 'delivered-knowledge/1' or delivered.get('schema') != full['schema'] \
                 or drawn.get('schema') not in ('knowledge-units/1', 'knowledge-units/2') or drawn['version'] != full['version']:
             raise MeasureError(f'{directory}: unsupported frozen knowledge')
+        if manifest['schema'] == MANIFEST_SCHEMA:
+            selection = dict(world=manifest['labels']['world'], delivered_sha256=delivered_sha256)
+            if full.get('selection') != selection:
+                raise MeasureError(f'{directory}: private knowledge selection differs from the package world or delivered SHA-256')
         expected = units(full)
         if ([{k:v for k,v in u.items() if k not in (('withheld', 'placebo') if drawn['schema'] == 'knowledge-units/2' else ('withheld',))} for u in drawn['units']] != expected['units']
                 or drawn['shared'] != expected['shared']):
@@ -1371,9 +1383,9 @@ def pilot_units(package: Path, *, independent: bool = True) -> dict:
     try:
         manifest = read_manifest(package)
     except EvaluationError as exc:
-        raise MeasureError(f'{package}: pilot requires campaign-run/10 or indexed historical /7 ({exc})') from exc
-    if manifest.get('schema') not in ('campaign-run/10','campaign-run/7'):
-        raise MeasureError(f'{package}: pilot requires campaign-run/10 or indexed historical /7')
+        raise MeasureError(f'{package}: pilot requires {DELIVERY_VERSIONS} ({exc})') from exc
+    if manifest['schema'] not in DELIVERY_MANIFESTS:
+        raise MeasureError(f'{package}: pilot requires {DELIVERY_VERSIONS}')
     path = package / 'private' / 'units.json'
     value = read_json(path)
     if not isinstance(value, dict) or value.get('schema') not in ('knowledge-units/1', 'knowledge-units/2'):

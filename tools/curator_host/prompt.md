@@ -19,7 +19,7 @@ Your working directory is the workspace. All paths are relative to it.
 | Path | Holds | You can |
 | --- | --- | --- |
 | `knowledge/coverage.json` | Software-owned coverage of the published version, when present | read |
-| `knowledge/provenance.json` | Software-owned frame positions and admission citations | read |
+| `knowledge/provenance.json` | Software-owned frame positions, session labels and admission citations | read |
 | `grooming.md` | The configured instructions, present in grooming sessions | read |
 | `brief.md` | The session brief | read |
 | `trace/` | The window of recorded sessions. The brief says when it is a range of one actor's steps | read |
@@ -81,15 +81,21 @@ Write `submissions/<id>/submission.json`. Each submission has exactly `schema`:
 (a list of draft ids to promote on acceptance). Multiple submissions are gated in directory-name
 order; each must name the version it expects. Rejection diagnostics appear in the next brief.
 
-Facts and articles share `curator-fact/3` and `facts.jsonl`; each has a `record` discriminator.
+Facts and articles share `curator-fact/4` and `facts.jsonl`. Each has a `record` discriminator.
 These are the only record shapes you may submit:
 
-- Fact: `schema`, `record`: `fact`, `id`, `type`, `text`, `scope`: {`game`: the name in
-  `knowledge/knowledge.json`}, `citations`: [frame source ids], and optional `subject`.
+- Fact: `schema`, `record`: `fact`, `id`, `type`, `text`, `known`, `scope`,
+  `citations`: [frame source ids], and optional `subject`.
   `id`, `type`, `text` and an included `subject` are non-empty strings. `type` is a name in
   `knowledge/ontology/types.json` or added in this submission. Propose and maintain types from
-  what the evidence calls for; no predefined categories apply. `text` is one durable claim in
-  your words, including where and when if those matter as shown by the screen. Citations are
+  what the evidence calls for. `text` is one durable claim in your words, including where and
+  when if those matter as shown by the screen. Use `known: observed` when the frames show the
+  claim, `known: inferred` when you conclude it from the frames, or `known: hinted` when it
+  rests on a player hint visible in the cited steps. Submit a `scope` with exactly `game`
+  (the name in `knowledge/knowledge.json`) and `level` (`game` or `world`). Keep game facts
+  true in any world. Use world facts for knowledge of a particular world and cite only frames
+  whose sessions share that verified world. Software derives `scope.world` from those sessions.
+  Do not supply it. Citations are
   distinct, non-empty, and inside this session's trace window. In grooming, a replacement may
   also cite any frame cited by the facts it supersedes; software reads those earlier positions
   from stored provenance. A subject is a short consistent name when the fact concerns one thing. Software writes `seen`: the latest cited frame's trace
@@ -97,7 +103,8 @@ These are the only record shapes you may submit:
 - Article: `schema`, `record`: `article`, `id`, `title`, `lead`, `body`, `links`.
   The title names its subject. The lead is one or two sentences a later actor can act on.
   The body is a non-empty list of {`text`: a non-empty claim, `facts`: [distinct fact ids]}.
-  Every claim cites at least one current fact. Links are distinct titles of other current articles,
+  Every claim cites at least one current game fact. Keep the title, lead and body true in any
+  world. Links are distinct titles of other current articles,
   or an empty list. Current article titles are unique: one article per subject. Software writes
   `last_confirmed`, the latest `seen` among the facts the body cites. Do not supply it or `seen`.
 
@@ -106,11 +113,16 @@ Operations (exact fields):
 - `add_fact`: `op`, `fact`.
 - `supersede_fact`: `op`, `ids` (one or more distinct current fact ids), `fact` (a new record).
   Use this to correct, merge, or make subjects consistent. All replaced ids become non-current.
+  The replacement and all replaced facts must share a scope level and, for world facts, a world.
 - `retire_fact`: `op`, `id`, `reason` (non-empty text), `citations` (distinct frame source ids
   in this window). Retirement preserves the record and its evidence but makes it non-current.
-- `add_type`: `op`, `type`: {`schema`: `curator-type/1`, `name`, `description`, `fields`}.
-  Name is non-empty, description is text, fields is a list of strings. Types describe the
-  ontology; fields do not add keys to fact records.
+  Retire a world fact only with citations from its own world.
+- `add_type`: `op`, `type`: {`schema`: `curator-type/2`, `name`, `description`, `fields`,
+  `identity`, `reason`}. Name is non-empty, description is text, and fields is a list of
+  strings. Use `identity` to name the distinct fields that make two facts of this type about the
+  same thing. It may be empty. Give a non-blank `reason` for needing the type and how it relates
+  to existing types. Fields describe the ontology and add no keys to facts. Software stamps
+  the type's `published_in` version.
 - `add_article`: `op`, `article`.
 - `revise_article`: `op`, `id` (current article), `article` (new id and full replacement).
 - `retire_article`: `op`, `id` (current article), `reason` (non-empty text).
@@ -118,27 +130,32 @@ Operations (exact fields):
   Actions: `merge` (two or more existing names, one new type), `split` (one name, two or more
   new types), `rename` (one name, one new type), `deprecate` (one name, no new types).
   `types` uses the type shape above. `assignments` maps current fact ids to their new type names.
-  Assignments name current facts whose type before the revision is in `names`. Do not assign
-  facts this submission retires or supersedes. Software appends `{from, to, version}` to their
-  `retyped` history; do not supply `retyped`. Reassign, replace or retire every fact whose type
-  goes away. Each revision needs its own published version: at most one `revise_types` operation per submission.
+  Assignments name facts that were current under a type in `names` at the base version and
+  stay current. Reassign, replace or retire every fact whose type goes away. When you rewrite
+  an existing type name, including deprecating and adding it again (put the `revise_types`
+  deprecation before the `add_type` in `changes`), assign every surviving
+  fact that had that type at the base version, even if its name stays the same. Software
+  appends `{from, to, version}` to `retyped`. At most one revision fits in each submission.
 
 Every new record id must be unused across facts and articles, including historical records.
 Targets must be current and changed only once per submission. Every fact's scope must name this
-repository's game. The gate checks form, version, types, citation membership and references. Every
-article claim must cite current facts and every link must resolve after the whole submission is
+repository's game. Every new fact needs a type that exists after the whole submission, including
+a fact you add and retire or supersede in that submission. Every article claim must cite current
+game facts and every link must resolve after the whole submission is
 applied. Update or retire articles when retiring or superseding their evidence or link targets.
-Grooming publication must file every current fact in at least one current article; an admission
-may leave new facts unfiled. The gate never judges what an article says or whether a claim is true.
-It accepts only `curator-fact/3`. `coverage.json` and provenance are software-owned.
+Grooming must file every current game fact in at least one current article. World facts stand
+alone. An admission may leave new game facts unfiled. The gate checks structure and references.
+It accepts only `curator-fact/4` and `curator-type/2`. `coverage.json` and provenance are software-owned.
 
 Example admission submission:
 
 ```json
 {"schema":"curator-submission/1","base_version":"v0","summary":"Record an observed relation",
  "changes":[
-   {"op":"add_type","type":{"schema":"curator-type/1","name":"relation","description":"An observed relation","fields":[]}},
-   {"op":"add_fact","fact":{"schema":"curator-fact/3","record":"fact","id":"f1","type":"relation",
-    "text":"…","scope":{"game":"<game from knowledge/knowledge.json>"},"citations":["<frame source id>"]}}
+   {"op":"add_type","type":{"schema":"curator-type/2","name":"relation","description":"An observed relation",
+    "fields":[],"identity":[],"reason":"The current types do not describe this relation."}},
+   {"op":"add_fact","fact":{"schema":"curator-fact/4","record":"fact","id":"f1","type":"relation",
+    "text":"…","known":"observed","scope":{"game":"<game from knowledge/knowledge.json>","level":"game"},
+    "citations":["<frame source id>"]}}
  ]}
 ```

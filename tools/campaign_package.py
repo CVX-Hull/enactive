@@ -11,7 +11,8 @@ import re
 import subprocess
 
 from harness.computer.protocol import MAX_FRAME_BYTES, ControlError, closed, decode_json, integer, read_json
-from harness.jsonio import file_sha256
+from harness.evaluation.core.sources import MANIFEST_SCHEMA
+from harness.jsonio import file_sha256, strict_loads
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
 from tools.run_ledger import validator as ledger_validator
@@ -20,7 +21,7 @@ FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
         'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','limits','ending_reserve',
         'spend_limit_usd','labels','private_files'}
-LABEL_FIELDS={'arm','start','scenario','lineage','admission'}
+LABEL_FIELDS={'arm','start','scenario','lineage','admission','world'}
 PRINTABLE_ASCII=re.compile('[ -~]+')
 #: A declared dollar amount (a package's limit and reserve, a route's limit and bound): plain decimal text, never a
 #: JSON number, with at most twelve whole and eighteen fractional digits. The player host accepts the same text
@@ -79,14 +80,13 @@ def unpriced_request_usd(route: dict) -> Decimal:
 def labels(value) -> None:
     """Validate the closed operator-only analysis labels.
 
-    The labels are frozen for the evaluator and spectator and never reach the
-    player: no driver input, route, prompt, context, MCP file or environment is
-    derived from them.
+    The evaluator and spectator receive the labels. World also determines which
+    facts the exporter selects for delivery.
     """
     closed(value,LABEL_FIELDS)
-    for name,high in (('arm',40),('start',40),('scenario',80),('lineage',40)):
+    for name,high in (('arm',40),('start',40),('scenario',80),('lineage',40),('world',40)):
         text=value[name]
-        if text is None and name=='lineage':continue
+        if text is None and name in ('lineage','world'):continue
         if type(text) is not str or not 1<=len(text)<=high or PRINTABLE_ASCII.fullmatch(text) is None:
             raise ControlError('Operator label must be 1 to its bound of printable ASCII characters')
     ledger = ledger_validator()
@@ -96,6 +96,8 @@ def labels(value) -> None:
     if value['admission'] is not None:integer(value['admission'],1,10000)
     if (value['lineage'] is None)!=(value['admission'] is None):
         raise ControlError('Lineage and admission position are both set or both null')
+    if value['lineage'] is not None and value['world'] is None:
+        raise ControlError('A lineage requires a world label')
 
 
 def local_file(value: str) -> Path:
@@ -133,7 +135,7 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     with manifest.open('rb') as stream:
         manifest_bytes = stream.read(manifest_limit + 1)
     profile = decode_json(manifest_bytes, manifest_limit)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/10':
+    if type(profile) is not dict or profile.get('schema') != MANIFEST_SCHEMA:
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     labels(profile['labels'])
@@ -155,9 +157,18 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     from harness.player.knowledge import Knowledge
     knowledge=Knowledge(directory/'delivered-knowledge.json')
     closed(profile['private_files'],{'knowledge-full.json','units.json'})
-    for name,sha in profile['private_files'].items():
-        if file_sha256(local_file(str(directory/'private'/name)))!=sha:
-            raise ControlError('Frozen private knowledge differs')
+    full_bytes = local_file(str(directory/'private/knowledge-full.json')).read_bytes()
+    units_path = local_file(str(directory/'private/units.json'))
+    if (sha256(full_bytes).hexdigest() != profile['private_files']['knowledge-full.json']
+            or file_sha256(units_path) != profile['private_files']['units.json']):
+        raise ControlError('Frozen private knowledge differs')
+    try:
+        full = strict_loads(full_bytes, ControlError)
+    except (ValueError, RecursionError) as exc:
+        raise ControlError('Invalid private full knowledge') from exc
+    selection = dict(world=profile['labels']['world'], delivered_sha256=profile['files']['delivered-knowledge.json'])
+    if not isinstance(full, dict) or full.get('selection') != selection:
+        raise ControlError('Private knowledge selection differs from the package world or delivered SHA-256')
     for name in ('native','library'):
         closed(profile[name],{'path','sha256'})
         if file_sha256(local_file(profile[name]['path']))!=profile[name]['sha256']:

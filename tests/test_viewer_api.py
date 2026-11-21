@@ -125,7 +125,7 @@ def test_runs_summarise_facts_outcome_and_versions(archive):
     assert set(rows) == {'base1', 'base2', 'aid1', 'aid2'}
     died, lost = rows['base1'], rows['aid2']
     assert died['outcome']['died'] is True and died['outcome']['censor_reason'] == 'died' and died['state'] == 'final'
-    assert died['labels'] == dict(arm='base', start='S1', scenario='s', lineage=None, admission=None)
+    assert died['labels'] == dict(arm='base', start='S1', scenario='s', lineage=None, admission=None, world=None)
     assert died['versions'] == dict(core_version=CORE_VERSION, binding_id='fake', binding_version=3, state='final', created_wall=1.0)
     assert lost['outcome']['censor_reason'] == 'infrastructure' and lost['outcome']['lost'] is True
     assert rows['aid1']['outcome']['censor_reason'] == 'player_stop' or rows['aid1']['outcome']['censor_reason'] is None
@@ -594,8 +594,8 @@ def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
     (tmp_path / 'runs').mkdir()
     current, unversioned, future, replaced = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future', 'replaced'))
     # The immediately prior manifest is refused and the closed archive does not gain any session here.
-    for directory, manifest in ((current, dict(schema='campaign-run/10', session='1' * 32)), (unversioned, dict(session='2' * 32)),
-            (future, dict(schema='campaign-run/11', session='3' * 32)), (replaced, dict(schema='campaign-run/9', session='4' * 32))):
+    for directory, manifest in ((current, dict(schema='campaign-run/11', session='1' * 32)), (unversioned, dict(session='2' * 32)),
+            (future, dict(schema='campaign-run/12', session='3' * 32)), (replaced, dict(schema='campaign-run/10', session='4' * 32))):
         directory.mkdir()
         (directory / 'manifest.json').write_text(json.dumps(manifest))
     catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))
@@ -615,7 +615,7 @@ def test_the_live_session_comes_from_a_supported_manifest(tmp_path):
     (run_dir / 'manifest.json').write_text(json.dumps(dict(session=SESSION)))
     evaluator = LiveEvaluator(run_dir, tmp_path / 'root', FakeBinding())
     assert evaluator.session() is None
-    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/10', session=SESSION)))
+    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11', session=SESSION)))
     assert evaluator.session() == SESSION
 
 
@@ -635,13 +635,15 @@ def test_the_labels_file_is_bounded_and_a_bad_line_names_its_position(tmp_path):
     assert error.value.code == 'bad_data_file' and 'larger than' in error.value.detail
 
 
-def test_current_journal_hints_are_read_only_public_reports(tmp_path):
+@pytest.mark.parametrize('schema', ['campaign-run/11', 'campaign-run/10'])
+def test_current_journal_hints_are_read_only_public_reports(tmp_path, schema):
     from harness.player.journal import Journal
     directory = tmp_path/'runs'/'current'
-    run = Run(directory)
+    session = SESSION if schema == 'campaign-run/11' else 'd16ea238c2794897a7839549df297a69'
+    run = Run(directory, session=session)
     actor = run.actor()
     operation = run.step(actor, 'input', [key('j')], F('in_play', 3600))
-    source_id = f'{SESSION}-1'
+    source_id = f'{session}-1'
     start = next(e for e in run.host[actor] if e['type'] == 'tool-start')
     start['arguments'].update(intent='Move carefully', cites=['fact-visible'])
     run.host[actor].append(run.event(actor, 'player-finish', request_id='request-1', disposition='task_complete', report='I believe I am done', intent='Finish', cites=['fact-visible'], source_ids=[source_id]))
@@ -651,14 +653,15 @@ def test_current_journal_hints_are_read_only_public_reports(tmp_path):
         journal.record_call('hint-call',actor,'player_hint',args)
         hint = journal.hint('hint-call',actor,args['text'],[],args['intent'],args['cites'])
     run.call(actor,'player_hint',args,hint)
-    run.finish(memory=store)
+    run.finish(memory=store, labels=dict(world='farm') if schema == 'campaign-run/11' else {})
+    (directory/'manifest.json').write_text(json.dumps(dict(run.manifest, schema=schema)))
     before = store.read_bytes()
     evaluate(directory,FakeBinding(),tmp_path/'root',created_wall=1.0)
     client = TestClient(create_app(Catalog(tmp_path/'root',(tmp_path/'runs',),data_dir=data_directory(tmp_path))))
-    value = client.get(f'/api/view/run/{SESSION}/memory').json()
+    value = client.get(f'/api/view/run/{session}/memory').json()
     assert value['store_schema']=='player-journal/1' and value['records']==[]
     assert value['hints']==[hint] and value['provenance']=='player_public_report'
-    reader = client.get(f'/api/view/run/{SESSION}/knowledge', params=dict(actor=actor,request='request-1')).json()
+    reader = client.get(f'/api/view/run/{session}/knowledge', params=dict(actor=actor,request='request-1')).json()
     assert reader['journal_available'] is True and reader['hints'][0]['cites']==['fact-visible']
     call = next(c for c in reader['calls'] if c['tool']=='computer_input')
     assert call['intent']=='Move carefully' and call['cites']==['fact-visible']
@@ -666,16 +669,18 @@ def test_current_journal_hints_are_read_only_public_reports(tmp_path):
     assert call['operation']['receipts'][0]['disposition']=='delivered'
     assert call['anchors']==[dict(run='current',source_id=source_id,available=True,reason=None)]
     assert reader['finishes'][0]['report']=='I believe I am done' and reader['finishes'][0]['disposition']=='task_complete'
-    assert reader['outcome'] == client.get(f'/api/view/run/{SESSION}/summary').json()['outcome']
+    summary = client.get(f'/api/view/run/{session}/summary').json()
+    assert reader['outcome'] == summary['outcome']
+    assert summary['labels']['world'] == ('farm' if schema == 'campaign-run/11' else None)
     assert reader['finishes'][0]['anchors'][0]['available'] is True
-    programs = client.get(f'/api/view/run/{SESSION}/programs').json()
+    programs = client.get(f'/api/view/run/{session}/programs').json()
     assert programs['capability']=='retired' and programs['programs']==[] and programs['runs']==[]
     assert store.read_bytes()==before
     store.unlink()
-    assert client.get(f'/api/view/run/{SESSION}/programs').json()['capability']=='retired'
-    missing = client.get(f'/api/view/run/{SESSION}/memory').json()
+    assert client.get(f'/api/view/run/{session}/programs').json()['capability']=='retired'
+    missing = client.get(f'/api/view/run/{session}/memory').json()
     assert missing['available'] is False and missing['store_schema']=='player-journal/1'
-    assert client.get(f'/api/view/run/{SESSION}/knowledge',params=dict(actor=actor)).json()['journal_available'] is False
+    assert client.get(f'/api/view/run/{session}/knowledge',params=dict(actor=actor)).json()['journal_available'] is False
 
 
 def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls_separate(tmp_path):

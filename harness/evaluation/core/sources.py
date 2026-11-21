@@ -25,7 +25,9 @@ OPERATION_SCHEMA = 'computer-operation/1'
 #: the closed archive index below lists that exact version for that session.
 HOST_SCHEMA = 'player-host/8'
 HOST_TELEMETRY = 8
-MANIFEST_SCHEMA = 'campaign-run/10'
+MANIFEST_SCHEMA = 'campaign-run/11'
+#: These package versions use player-journal/1 and player-handoff-context/2.
+JOURNAL_MANIFEST_SCHEMAS = (MANIFEST_SCHEMA, 'campaign-run/10')
 RECEIPT_SCHEMA = 'campaign-receipt/7'
 DRIVER_SCHEMA = 'player-driver/7'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
@@ -61,12 +63,9 @@ class ArchiveCombination:
     labels: bool = False
 
 
-#: The fields read from the records every archived session shares. All 54 sessions predate the dollar limit, so
-#: their manifest, receipt, driver record and host traces are all read as old versions.
-#:
 #: An old manifest is returned whole, as a current one is; its fields are the ones `read_run`, `facts.run_facts`
-#: and the viewer take from a manifest. Its `accounting` is the worst-case reservation that `facts.run_facts`
-#: turns into the spend allowance of an archived run.
+#: and the viewer take from a manifest. Before the dollar limit, the manifest's `accounting` recorded the
+#: worst-case reservation that `facts.run_facts` uses to derive the spend allowance.
 _MANIFEST_4 = ('schema', 'session', 'player_store', 'source_commit', 'effort', 'files', 'accounting', 'limits',
                'ending_reserve', 'wall_seconds', 'host_seconds', 'max_hosts', 'max_http_attempts')
 _MANIFEST_5 = (*_MANIFEST_4, 'labels')
@@ -117,9 +116,15 @@ ARCHIVE_COMBINATIONS = (
              host_telemetry=5, run_ending='campaign-watch-terminal/4'),
         dict(manifest=(*(key for key in _MANIFEST_5 if key != 'accounting'), 'spend_limit_usd'),
              receipt=_RECEIPT_3, driver=_DRIVER_5, host=_HOST_3)),
+    # #835 preserves 12 sealed sessions whose manifests predate the world label.
+    ArchiveCombination(
+        dict(manifest='campaign-run/10', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/8',
+             host_telemetry=8, run_ending='campaign-watch-terminal/4'),
+        dict(manifest=(*(key for key in _MANIFEST_5 if key not in ('accounting', 'max_http_attempts')),
+                       'spend_limit_usd', 'total_host_seconds', 'private_files'))),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
-MANIFEST_SCHEMAS = (*sorted({c.versions['manifest'] for c in ARCHIVE_COMBINATIONS} - {MANIFEST_SCHEMA}), MANIFEST_SCHEMA)
+MANIFEST_SCHEMAS = (*dict.fromkeys(c.versions['manifest'] for c in ARCHIVE_COMBINATIONS), MANIFEST_SCHEMA)
 
 
 @dataclass(frozen=True)
@@ -567,8 +572,9 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
         candidate = Path(manifest['player_store'])
         candidate = candidate if candidate.is_absolute() else run_dir / candidate
         selected = candidate if candidate.is_file() else None
-    memory = (read_historical_memory(Path(selected)) if entry is not None else read_player_store(Path(selected))) if selected is not None else None
+    legacy_memory = manifest['schema'] not in JOURNAL_MANIFEST_SCHEMAS
+    memory = (read_historical_memory(Path(selected)) if legacy_memory else read_player_store(Path(selected))) if selected is not None else None
     if selected is not None:
         found['player-memory'] = digest(Path(selected))
     return RunInputs(run_dir, session, manifest, tuple(operations), operations[-1].seq if operations else None,
-        tuple(actors), host, read_carry(run_dir, historical=entry is not None), memory, found, read_end_facts(run_dir, manifest))
+        tuple(actors), host, read_carry(run_dir, historical=legacy_memory), memory, found, read_end_facts(run_dir, manifest))

@@ -7,6 +7,8 @@ import pytest
 from harness.player.knowledge import Knowledge, empty
 from tools.knowledge_export import draw, export, main, units
 
+COMMIT = 'a' * 40
+
 
 def store():
     value = empty()
@@ -42,11 +44,13 @@ def test_export_freezes_full_and_draw_privately_and_knowledge_misses_withheld_na
     from harness.jsonio import file_sha256
     value=store()
     seed=next(s for s in range(100) if len(draw(value,s)[0]['articles'])==1)
-    hashes=export(tmp_path,value,seed)
+    hashes=export(tmp_path,value,seed,world='the farm')
     assert set(hashes)=={'delivered-knowledge.json','private/knowledge-full.json','private/units.json'}
     assert all(file_sha256(tmp_path/name)==digest for name,digest in hashes.items())
-    assert json.loads((tmp_path/'private/knowledge-full.json').read_text())==value
+    assert json.loads((tmp_path/'private/knowledge-full.json').read_text()) == dict(value, selection=dict(
+        world='the farm', delivered_sha256=hashes['delivered-knowledge.json']))
     reader=Knowledge(tmp_path/'delivered-knowledge.json')
+    assert 'selection' not in reader.value
     absent=next(a for a in value['articles'] if a not in reader.value['articles'] and a['id'] not in {v['id'] for v in reader.value['articles']})
     for name in (absent['id'],absent['title']):
         assert reader.read(name)['records']==[]
@@ -55,8 +59,9 @@ def test_export_freezes_full_and_draw_privately_and_knowledge_misses_withheld_na
 
 
 def test_empty_is_the_same_required_file_shape_and_old_formats_are_refused(tmp_path,capsys):
-    main(['--empty','--package',str(tmp_path)])
+    main(['--empty','--package',str(tmp_path),'--world','farm'])
     assert Knowledge(tmp_path/'delivered-knowledge.json').value==empty()
+    assert json.loads((tmp_path/'private/knowledge-full.json').read_text())['selection']['world'] == 'farm'
     assert json.loads((tmp_path/'private/units.json').read_text())['units']==[]
     with pytest.raises(FileExistsError):export(tmp_path,empty())
     path=tmp_path/'old.json';path.write_text(json.dumps(dict(empty(),schema='delivered-knowledge/0')))
@@ -73,44 +78,83 @@ def test_fact_text_is_data_and_delivery_has_no_hard_size_cap(tmp_path):
     assert result['grants_authority'] is False
 
 
-def test_published_export_reads_the_selected_version_and_excludes_retired_records(tmp_path,monkeypatch):
+@pytest.mark.parametrize('world', [None, 'farm', 'campground', 'another world'])
+def test_published_export_reads_the_selected_version_and_world(tmp_path,monkeypatch,world):
     from tools import knowledge_export
     from harness.curator import knowledge
     value=store()
-    records=[dict(r,record='article') for r in value['articles']]+[dict(r,record='fact') for r in value['facts']]
-    records.append(dict(record='fact',id='retired',retired=dict(reason='later evidence')))
+    game_scope = dict(game='game', level='game')
+    records = [dict(r, schema='curator-fact/4', record='article') for r in value['articles']]
+    records += [dict(r, schema='curator-fact/4', record='fact', scope=game_scope) for r in value['facts']]
+    records.append(dict(records[-1], id='retired', retired=dict(reason='later evidence')))
+    standalone = {label: dict(value['facts'][-1], id=label) for label in ('farm', 'campground')}
+    records += [dict(fact, schema='curator-fact/4', record='fact', scope=dict(game='game', level='world', world=label))
+                for label, fact in standalone.items()]
     def read_records(self,version):
         assert version=='v8' and self.path==tmp_path/'game'
         return records
     monkeypatch.setattr(knowledge.Repository,'records',read_records)
     monkeypatch.setattr(knowledge,'_git',lambda *args:b'coverage.json\nfacts.jsonl\n')
     monkeypatch.setattr(knowledge.Repository,'_show',lambda self,version,name:json.dumps(value['coverage']).encode())
-    assert knowledge_export.published(tmp_path/'game','v8')==value
+    expected = dict(value, facts=value['facts'] + ([standalone[world]] if world in standalone else []))
+    assert knowledge_export.published(tmp_path/'game','v8',world=world) == expected
+
+
+@pytest.mark.parametrize('fields', [
+    dict(schema='curator-fact/3'),
+    dict(scope=dict(game='other', level='game')),
+    dict(scope=dict(game='game', level='game', world=None)),
+    dict(scope=dict(game='game', level='world')),
+    dict(scope=dict(game='game', level='world', world=None)),
+    dict(scope=dict(game='game', level='world', world='invalid\n')),
+    dict(record='article'),
+])
+def test_published_export_refuses_old_or_invalid_records_even_if_retired(tmp_path, monkeypatch, fields):
+    from harness.curator.knowledge import KnowledgeError, Repository
+    from tools.knowledge_export import published
+    record = dict(schema='curator-fact/4', record='fact', scope=dict(game='game', level='game'), retired={})
+    monkeypatch.setattr(Repository, 'records', lambda self, version: [record | fields])
+    with pytest.raises(KnowledgeError, match='schema|scope'):
+        published(tmp_path/'game', 'v8')
+
+
+def test_tag_commit_resolves_published_git_tag(tmp_path):
+    from harness.curator.knowledge import Repository, _git
+    from tools.knowledge_export import tag_commit
+    repo = Repository(tmp_path, 'game')
+    repo.ensure()
+    assert tag_commit(repo.path, 'v0') == _git(repo.path, 'rev-parse', 'HEAD').decode().strip()
 
 
 def test_study_draw_block_balance_determinism_placebos_and_export(tmp_path, monkeypatch, capsys):
     from tools import knowledge_export as ke
     from tools import memory_measure as mm
     value = store()
-    design = ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 653, ['fact-4'])
-    assert design == ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 653, ['fact-4'])
-    assert design != ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 654, ['fact-4'])
+    design = ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 653, ['fact-4'], commit=COMMIT, world='farm')
+    assert design == ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 653, ['fact-4'], commit=COMMIT, world='farm')
+    assert design != ke.study_draw(value, 9, ['save-a:4', 'save-b:5'], 654, ['fact-4'], commit=COMMIT, world='farm')
     assert design['layout'] == units(value)
+    assert (design['schema'], design['commit'], design['world']) == ('withholding-study-draw/2', COMMIT, 'farm')
     for row in design['assignment']:
         indices = {s['index'] for s in design['starts'] if s['block'] == row['block']}
         assert set(row['withheld']) <= indices
         assert row['half_size'] == len(row['withheld'])
         assert row['half_size'] in ({2} if row['block'] == 'save-a' else {2, 3})
     # Odd-block floor and ceil really are drawn, independently of unit.
-    sizes = {r['half_size'] for seed in range(10) for r in ke.study_draw(value, 3, ['odd:3'], seed)['assignment']}
+    sizes = {r['half_size'] for seed in range(10) for r in ke.study_draw(value, 3, ['odd:3'], seed, commit=COMMIT)['assignment']}
     assert sizes == {1, 2}
     path = tmp_path / 'draw.json'
-    monkeypatch.setattr(ke, 'published', lambda *args: value)
+    def publish(path, version, *, world):
+        assert path.name == 'repository' and version == 'v8' and world == 'farm'
+        return value
+    monkeypatch.setattr(ke, 'published', publish)
+    monkeypatch.setattr(ke, 'tag_commit', lambda *args: COMMIT)
     main(['draw-study', 'repository', '--version', 'v8', '--starts', '9', '--blocks', 'save-a:4', 'save-b:5',
-          '--seed', '653', '--placebo', 'fact-4', '--out', str(path)])
+          '--seed', '653', '--placebo', 'fact-4', '--out', str(path), '--world', 'farm'])
     assert ke.read_study_draw(path) == design
     package = tmp_path / 'package'
-    main(['repository', '--version', 'v8', '--package', str(package), '--study-draw', str(path), '--start-index', '4'])
+    main(['repository', '--version', 'v8', '--package', str(package), '--study-draw', str(path), '--start-index', '4',
+          '--world', 'farm'])
     capsys.readouterr()
     record = json.loads((package / 'private/units.json').read_text())
     assert record['schema'] == 'knowledge-units/2'
@@ -129,22 +173,29 @@ def test_study_draw_block_balance_determinism_placebos_and_export(tmp_path, monk
 def test_study_draw_refusals(n, blocks, placebo):
     from tools.knowledge_export import study_draw
     with pytest.raises(ValueError):
-        study_draw(store(), n, blocks, 653, placebo)
+        study_draw(store(), n, blocks, 653, placebo, commit=COMMIT)
 
 
 def test_study_export_refuses_wrong_version_index_seed_and_changed_draw(tmp_path):
     from tools import knowledge_export as ke
     path = tmp_path / 'draw.json'
     value = store()
-    path.write_text(json.dumps(ke.study_draw(value, 4, ['save:4'], 653)))
+    path.write_text(json.dumps(ke.study_draw(value, 4, ['save:4'], 653, commit=COMMIT)))
     for kwargs in (dict(seed=1, study=path, start_index=0), dict(study=path),
                    dict(study=path, start_index=-1), dict(study=path, start_index=4), dict(start_index=0)):
         with pytest.raises(ValueError):
-            export(tmp_path / 'invalid', value, **kwargs)
-    with pytest.raises(ValueError, match='version or layout'):
-        export(tmp_path / 'invalid', dict(value, version='other'), study=path, start_index=0)
+            export(tmp_path / 'invalid', value, commit=COMMIT, **kwargs)
+    for changed_value, commit, world in ((dict(value, version='other'), COMMIT, None),
+                                         (value, 'b'*40, None), (value, COMMIT, 'farm'),
+                                         (dict(value, facts=value['facts'][:-1]), COMMIT, None)):
+        with pytest.raises(ValueError, match='version, commit, world or layout'):
+            export(tmp_path / 'invalid', changed_value, study=path, start_index=0, commit=commit, world=world)
     changed = json.loads(path.read_text())
     changed['assignment'][0]['half_size'] = 0
     path.write_text(json.dumps(changed))
     with pytest.raises(ValueError, match='seeded blocked assignment'):
+        ke.read_study_draw(path)
+    changed['schema'] = 'withholding-study-draw/1'
+    path.write_text(json.dumps(changed))
+    with pytest.raises(ValueError, match='expected withholding-study-draw/2'):
         ke.read_study_draw(path)

@@ -161,18 +161,18 @@ def read_versions(repository: Path) -> list[dict]:
         if kind != 'commit':
             raise StoreError(f'{repository}: {tag.name} is a {kind}, not a commit')
         files = _entries(objects, body.split(b'\n', 1)[0].split()[1].decode())
-        message = f'{repository} {tag.name}: unsupported knowledge schema: expected curator-knowledge/2; start a new repository'
+        message = f'{repository} {tag.name}: unsupported knowledge schema: expected curator-knowledge/3; start a new repository'
         try:
             metadata = json.loads(_object(objects, files['knowledge.json'])[1])
         except (KeyError, StoreError, OSError, ValueError, RecursionError) as error:
             raise StoreError(message) from error
-        if not isinstance(metadata, dict) or metadata.get('schema') != 'curator-knowledge/2':
+        if not isinstance(metadata, dict) or metadata.get('schema') != 'curator-knowledge/3':
             raise StoreError(message)
         data = _object(objects, files['facts.jsonl'])[1]
         records = [json.loads(line) for line in data.decode('utf-8').splitlines() if line.strip()]
         for record in records:
-            if not isinstance(record, dict) or record.get('schema') != 'curator-fact/3':
-                raise StoreError(f'{repository} {tag.name}: unsupported record schema; expected curator-fact/3')
+            if not isinstance(record, dict) or record.get('schema') != 'curator-fact/4':
+                raise StoreError(f'{repository} {tag.name}: unsupported record schema; expected curator-fact/4')
             if record.get('record') not in ('fact', 'article'):
                 raise StoreError(f'{repository} {tag.name}: unsupported record kind; expected fact or article')
         message_lines = body.partition(b'\n\n')[2].decode('utf-8').splitlines()
@@ -207,7 +207,8 @@ def fact_history(versions: Sequence[dict], identity: str) -> dict | None:
             changed.append(version['version'])
         last = fact
     return None if first is None else dict(id=identity, version=first['version'], session=first.get('session'),
-        type=first.get('type'), text=first.get('text'), citations=first.get('citations') or [],
+        type=first.get('type'), text=first.get('text'), scope=first.get('scope'), known=first.get('known'),
+        citations=first.get('citations') or [],
         changed_in=changed, dropped_in=dropped, latest_text=last.get('text'))
 
 
@@ -306,6 +307,7 @@ def replay(runs: Sequence[Path], losses: Sequence[str], records: Path | None, kn
             covered = sessions.get(history['session'], [])
             cited = sorted(frames[frame] for frame in history['citations'] if frame in frames)
             entry = dict(id=history['id'], text=history['text'], version=history['version'], session=history['session'], covers=covered,
+                estimate='publication timing only',
                 first_cited=moment(*cited[0]) if cited else None)
             order = [run.name for run in lineage]
             last = max((order.index(name) for name in covered if name in order), default=None)
@@ -665,7 +667,7 @@ def render_replay(rows: Sequence[dict]) -> str:
                 f"{' by ' + record['recorded']['how'] if record['recorded'] else ''}")
         if 'fact' in row:
             fact = row['fact']
-            lines.append(f"  curator fact {fact['id']} first in {fact['version']} by {fact['session']} (covers "
+            lines.append(f"  curator fact {fact['id']} ({fact['estimate']}) first in {fact['version']} by {fact['session']} (covers "
                 f"{','.join(fact['covers']) or '-'}); first cited frame returned at {_where(fact['first_cited'])}\n"
                 f"    sessions at admission boundaries only: briefing at {_where(fact['at_admission_boundaries'])}; "
                 f"before the need: {fact['boundary_before_need']}")

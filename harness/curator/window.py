@@ -169,7 +169,7 @@ class FramePositions(dict[str, dict]):
 
 
 def session_labels(manifest: dict) -> dict[str, dict]:
-    """Return session labels and their verification diagnostics keyed by sealed identifier."""
+    """Return labels for the gate and projection diagnostics keyed by sealed identifier."""
     require_current(manifest)
     fields = ('name', 'world', 'lineage', 'admission', 'label_check', 'label_error')
     return {session['session_id']: {key: session[key] for key in fields} for session in manifest['sessions']}

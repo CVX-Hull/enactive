@@ -153,7 +153,7 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
     inputs = read_run(run_dir, memory_path=memory_store, digests=state == 'final')
     final = record_path(Path(root), inputs.session, binding.binding_id, binding.binding_version)
     facts = host_facts(inputs.actors, inputs.host)
-    if labels is None and inputs.manifest.get('schema') != MANIFEST_SCHEMA:  # an archived manifest's labels are the index's
+    if labels is None and inputs.manifest.get('schema') != MANIFEST_SCHEMA:
         entry = archive_entry(inputs.manifest)
         if entry is not None and entry.labels is not None:
             labels = {key: entry.labels.get(key) for key in LABEL_KEYS}

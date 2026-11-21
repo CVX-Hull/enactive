@@ -444,7 +444,7 @@ def test_pending_stop_survives_verified_handoff_before_successor_action(tmp_path
 
 def test_operator_labels_never_reach_the_player_host(tmp_path):
     """Frozen analysis labels are operator data, absent from every player-visible input."""
-    marks=dict(arm='LABEL-ARM-9f3',start='LABEL-START-9f3',scenario='LABEL-SCENARIO-9f3',lineage='LABEL-LINEAGE-9f3',admission=7777)
+    marks=dict(arm='LABEL-ARM-9f3',start='LABEL-START-9f3',scenario='LABEL-SCENARIO-9f3',world='LABEL-WORLD-9f3',lineage='LABEL-LINEAGE-9f3',admission=7777)
     profile,route,application=driver_case(tmp_path,'Frozen mission READ_CONTROL HANDOFF_RACE',two_actors=True)
     profile['labels']=marks
     launches=[];real=subprocess.Popen

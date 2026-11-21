@@ -7,7 +7,7 @@ import pytest
 
 from harness.curator.knowledge import Repository
 from tools.memory_screen_checks import (CutModel, ScheduleError, StoreError, check_schedule, covered_turns, cut_report,
-    fact_history, main, read_lineage, read_versions, replay, schedule_coverage, schedule_from_runner, simulate,
+    fact_history, main, read_lineage, read_versions, render_replay, replay, schedule_coverage, schedule_from_runner, simulate,
     store_report, summarise, turn_starts)
 
 SESSION = 'c' * 32
@@ -16,7 +16,7 @@ BASE = 4_000_000_000.0
 
 
 def fact(identity: str, text: str, version: str, session: str, citations: list[str]) -> dict:
-    return dict(schema='curator-fact/3', record='fact', id=identity, type='resource', text=text, scope=dict(game='cdda'),
+    return dict(schema='curator-fact/4', record='fact', id=identity, type='resource', text=text, scope=dict(game='cdda', level='game'), known='observed',
         citations=citations, published_in=version, session=session)
 
 
@@ -152,6 +152,8 @@ def test_replay_places_the_need_the_record_and_the_fact(tmp_path):
     assert (record['briefing_to_needing_actor']['lineage_request'], record['requests_before_need']) == (8, 2)
     assert record['recorded'] is None  # no read or handoff gave it to an actor from the needing one on
     entry = row['fact']
+    assert entry['estimate'] == 'publication timing only'
+    assert entry['estimate'] in render_replay([row])
     assert (entry['version'], entry['covers'], entry['first_cited']['lineage_request']) == ('v2', ['run-a'], 2)
     assert entry['at_admission_boundaries']['lineage_request'] == 8 and entry['boundary_before_need']
     assert [(e['lag'], e['lineage_request']) for e in entry['with_handoff_sessions']] == [(1, 6), (47, 7)]
@@ -203,7 +205,7 @@ def test_cut_report_and_the_command(tmp_path, capsys):
 
 
 def article(identity='article', title='A subject', **extra):
-    return dict(schema='curator-fact/3', record='article', id=identity, title=title, lead='A hypothesis.',
+    return dict(schema='curator-fact/4', record='article', id=identity, title=title, lead='A hypothesis.',
                 body=[dict(text='A claim.', facts=['roof-tank'])], links=[], published_in='v3', session='groom', **extra)
 
 
@@ -231,7 +233,7 @@ def test_store_reports_fact_and_article_totals_current_counts_and_bytes_per_vers
     assert json.loads(capsys.readouterr().out)[0]['versions'][-1]['articles'] == 1
 
 
-@pytest.mark.parametrize('schema', ['curator-fact/1', 'curator-fact/2', 'curator-fact/4', None])
+@pytest.mark.parametrize('schema', ['curator-fact/1', 'curator-fact/2', 'curator-fact/3', None])
 @pytest.mark.parametrize('command', ['store', 'replay'])
 def test_memory_readers_refuse_other_record_schemas(tmp_path, schema, command):
     runs, tank, need = lineage(tmp_path)
@@ -239,19 +241,19 @@ def test_memory_readers_refuse_other_record_schemas(tmp_path, schema, command):
     repo.ensure()
     invalid = dict(fact('f', 'x', 'v1', 's', [tank]), schema=schema)
     repo.commit({'facts.jsonl': lines(invalid)}, 'unsupported record')
-    with pytest.raises(StoreError, match='unsupported record schema; expected curator-fact/3'):
+    with pytest.raises(StoreError, match='unsupported record schema; expected curator-fact/4'):
         if command == 'store':
             store_report([repo.path], [], [])
         else:
             replay(runs, [f'x:need={need},fact=f'], None, repo.path, [])
 
 
-@pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/3', None])
+@pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/2', None])
 def test_memory_reader_refuses_other_repository_layouts(tmp_path, schema):
     repo = Repository(tmp_path/'knowledge', 'cdda')
     repo.ensure()
     repo.commit({'knowledge.json': json.dumps(dict(schema=schema, game='cdda')).encode()}, 'unsupported layout')
-    with pytest.raises(StoreError, match='expected curator-knowledge/2; start a new repository'):
+    with pytest.raises(StoreError, match='expected curator-knowledge/3; start a new repository'):
         read_versions(repo.path)
 
 

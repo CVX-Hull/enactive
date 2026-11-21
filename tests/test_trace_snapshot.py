@@ -21,7 +21,7 @@ from harness.trace import snapshot
 from harness.trace.projection import project
 from harness.trace.snapshot import TRANSACTION_BOUND_SECONDS, BoundExceeded, ReadRefused, SnapshotError, stage
 from harness.trace.stores import CURATOR_READ_LOCK, READ_HOLD_BOUND_SECONDS, sealed
-from tests.curator_trace import SESSION_ID, LiveWriter, png
+from tests.curator_trace import SESSION_ID, LiveWriter, png, record_package
 
 ENDLESS = 'WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT x FROM c'
 
@@ -69,10 +69,14 @@ class Stager:
 def test_at_the_writers_start_a_snapshot_holds_only_actors_with_frozen_inputs(tmp_path):
     take = Stager(tmp_path/'snapshots')
     with LiveWriter(tmp_path/'run') as writer:
+        labels = dict(world='pond', lineage='survivor', admission=1)
+        record_package(writer.run, labels=labels)
         empty = take(writer.run)
         assert (empty.actors, empty.excluded) == ((), ())
         manifest, steps, _ = _project(empty.directory, tmp_path/'empty')
-        assert steps == {} and manifest['sessions'][0]['label_error'] is None
+        entry, = manifest['sessions']
+        assert steps == {} and entry['label_check'] is entry['label_error'] is None
+        assert {field: entry[field] for field in labels} == labels
         actor = writer(op='new_actor', frozen=False)
         unfrozen = take(writer.run)
         assert unfrozen.actors == ()

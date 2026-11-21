@@ -1,10 +1,9 @@
 """The `run_facts` table: what the run was configured to do (docs/contracts/evaluation-record.md).
 
-From `manifest.json` (campaign-run/10, or an archived campaign-run/4 or /5) and the first host-start event.
-Operator labels come from the manifest; an archived campaign-run/4 run has none, so the caller may supply them.
-The spend allowance of a campaign-run/10 run is its declared dollar limit, `spend_limit_usd`. An archived run
-declared a worst-case reservation instead: its allowance is the manifest's ceiling minus what earlier admissions
-had reserved, and only an archived run has `declared_ceiling_usd` and `prior_reserved_usd`.
+From the campaign manifest and the first host-start event. Operator labels come from the manifest. The caller
+may supply labels for a campaign-run/4 archive without them. Only campaign-run/11 supplies the world.
+The spend allowance comes from `spend_limit_usd` or, for archives predating that field, the ceiling minus
+what earlier admissions had reserved.
 """
 from __future__ import annotations
 
@@ -13,7 +12,7 @@ from typing import Mapping, Sequence
 
 from .sources import MANIFEST_SCHEMA, HostEvent
 
-LABEL_KEYS = ('arm', 'start', 'scenario', 'lineage', 'admission')
+LABEL_KEYS = ('arm', 'start', 'scenario', 'lineage', 'admission', 'world')
 
 
 def _usd(value: object) -> Decimal | None:
@@ -25,7 +24,11 @@ def _usd(value: object) -> Decimal | None:
 
 def run_facts(manifest: dict, host: Mapping[str, Sequence[HostEvent]], actors: Sequence[str],
               fallback_labels: Mapping[str, object] | None = None) -> dict:
-    labels = manifest.get('labels') if isinstance(manifest.get('labels'), dict) else dict(fallback_labels or {})
+    manifest_labels = manifest.get('labels')
+    raw_labels = manifest_labels if isinstance(manifest_labels, dict) else fallback_labels or {}
+    labels = {key: raw_labels.get(key) for key in LABEL_KEYS}
+    labels['world'] = manifest_labels.get('world') if (
+        manifest.get('schema') == MANIFEST_SCHEMA and isinstance(manifest_labels, dict)) else None
     files = manifest.get('files') if isinstance(manifest.get('files'), dict) else {}
     start = host[actors[0]][0].fields if actors and host.get(actors[0]) else {}
     accounting = manifest.get('accounting') if isinstance(manifest.get('accounting'), dict) else {}
@@ -33,7 +36,7 @@ def run_facts(manifest: dict, host: Mapping[str, Sequence[HostEvent]], actors: S
     allowance = _usd(manifest['spend_limit_usd']) if 'spend_limit_usd' in manifest else (
         None if ceiling is None or prior is None else ceiling - prior)
     return dict(
-        labels={key: labels.get(key) for key in LABEL_KEYS},
+        labels=labels,
         manifest_schema=manifest.get('schema'),
         source_commit=manifest.get('source_commit'),
         model=start.get('model'), provider=start.get('provider'), effort=manifest.get('effort', start.get('effort')),
