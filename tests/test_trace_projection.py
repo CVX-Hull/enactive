@@ -339,6 +339,14 @@ def assert_failed_labels(out: Path, labelled_sessions, check: str, diagnostic: s
                  'run package manifest has an invalid lineage label', id='non-printable-lineage'),
     pytest.param(dict(world='pond', lineage='survivor', admission=True),
                  'run package manifest has an invalid admission position', id='invalid-admission'),
+    pytest.param(dict(world='pond', lineage='survivor', admission=0),
+                 'run package manifest has an invalid admission position', id='admission-below-range'),
+    pytest.param(dict(world='pond', lineage='survivor', admission=10001),
+                 'run package manifest has an invalid admission position', id='admission-above-range'),
+    pytest.param(dict(world='pond', lineage='s' * 41, admission=3),
+                 'run package manifest has an invalid lineage label', id='lineage-too-long'),
+    pytest.param(dict(world='pond', lineage=5, admission=3),
+                 'run package manifest has an invalid lineage label', id='lineage-not-text'),
     pytest.param(dict(world='pond', lineage='survivor', admission=None),
                  'run package manifest must label lineage and admission together', id='lineage-without-admission'),
     pytest.param(dict(world='pond', lineage=None, admission=3),
@@ -357,6 +365,17 @@ def test_unusable_label_shapes_keep_the_trace_and_no_labels(tmp_path, labelled_s
     package.write_text(json.dumps(document))
     refresh_launch_digest(session)
     assert_failed_labels(tmp_path/'trace', labelled_sessions, 'manifest-schema', diagnostic)
+
+
+@pytest.mark.parametrize('file,check,diagnostic', [
+    ('manifest.json', 'manifest-schema', 'unsupported run package manifest schema'),
+    ('watch-start.json', 'supervisor-digest', 'unsupported supervisor launch record schema'),
+])
+def test_label_evidence_that_is_not_an_object_keeps_the_trace_and_no_labels(
+        tmp_path, labelled_sessions, file, check, diagnostic):
+    session, _, _ = labelled_sessions
+    (session/file).write_bytes(b'[]')
+    assert_failed_labels(tmp_path/'trace', labelled_sessions, check, diagnostic)
 
 
 @pytest.mark.parametrize('file,limit,check', [

@@ -192,8 +192,9 @@ New or changed fields are marked.
   package manifest only after checking three things: the manifest is the current
   version, the manifest names the same session as the sealed store, and its digest is
   the one the supervisor recorded for the run. When any of that evidence is missing,
-  the session has no world. Which module does the checking, given that the trace
-  projection may not import the campaign code, is for the identity leaf. A staged
+  the session has no world. The [trace projection](trace-workbench.md#projection) does
+  the checking: it reads the manifest and the supervisor's record as files and imports
+  no campaign code. A staged
   snapshot of a session that is still being played carries the same manifest and
   supervisor record, so its labels are verified in the same way before it first
   publishes; otherwise the session would be recorded with no world and keep none.
@@ -328,9 +329,9 @@ This table settles what a fact and a type carry, who writes each field, the rule
 across scopes, and which contracts move together. It is not the implementation. Two
 leaves must settle these before they are built, and each is briefed from this table:
 
-- [The identity leaf](https://github.com/CVX-Hull/enactive/issues/834) covers the
-  module that verifies a session's manifest against its sealed store and the
-  supervisor's digest and the trace projection's next version. By the owner's
+- [The identity leaf](https://github.com/CVX-Hull/enactive/issues/834) is built: the
+  trace projection verifies a session's manifest against its sealed store and the
+  supervisor's digest and records the labels. By the owner's
   decision, a session sealed before the `world` label has no world and supports
   `game` facts only. [Trace workbench](trace-workbench.md#projection)
 - [The schema migration leaf](https://github.com/CVX-Hull/enactive/issues/835): the
