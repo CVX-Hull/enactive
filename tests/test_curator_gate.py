@@ -13,9 +13,9 @@ import sys
 
 import pytest
 
-from harness.curator import containers, knowledge, sandbox, session
+from harness.curator import containers, gate as gate_module, knowledge, sandbox, session
 from harness.curator.containers import Drafts, UnsafeTree, copy_tree
-from harness.curator.gate import gate, restore
+from harness.curator.gate import _history, gate, restore
 from harness.curator.knowledge import KnowledgeError, Repository
 
 FRAMES = {'frame-1', 'frame-2'}
@@ -752,6 +752,58 @@ def test_subject_is_optional_and_seen_is_the_latest_cited_position(tmp_path):
     verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': item}]))
     assert (verdict['status'] == 'published'), verdict['diagnostics']
     assert repo.facts()[0]['seen'] == dict(session='s1', actor='001', step=2, order=[1, '001', 2])
+
+
+@pytest.mark.parametrize('first_step, replay_step', [(41, 42), (42, 41)])
+def test_shared_frame_keeps_its_first_published_position_across_windows(tmp_path, first_step, replay_step):
+    repo = make_repo(tmp_path)
+    windows = [('frame-1', first_step), ('frame-1', replay_step), ('next-frame', 43)]
+    expected_positions = {}
+    for index, (frame, step) in enumerate(windows, 1):
+        position = dict(session='s1', actor='001', step=step, order=[1, '001', step])
+        expected_positions.setdefault(frame, position)
+        changes = [dict(op='add_fact', fact=fact(f'f{index}', citations=[frame]))]
+        if index == 1:
+            changes.insert(0, dict(op='add_type', type=kind()))
+        directory = submission(tmp_path, changes, name=f'window-{index}', base_version=f'v{index - 1}')
+        verdict = gate(repo, directory, session_id=f'curator-{index}', window_frames={frame: position},
+                       coverage={**COVERAGE, 'last_step': step}, session_kind='admission')
+        version = f'v{index}'
+        assert (verdict['status'], verdict['version']) == ('published', version), verdict['diagnostics']
+        assert repo.provenance(version)['frames'] == expected_positions
+        assert [item['seen'] for item in repo.facts(version)] == [expected_positions[frame] for frame, _ in windows[:index]]
+
+    assert set(_history(repo)[0]) == {'v0', 'v1', 'v2', 'v3'}
+
+
+def test_the_gate_rejects_invalid_candidate_frame_positions_before_commit(tmp_path, monkeypatch):
+    repo = seeded(tmp_path)
+    before = snapshot(repo)
+    monkeypatch.setattr(repo, 'commit', lambda *args: pytest.fail('invalid candidate reached commit'))
+    position = dict(session='s1', actor='001', step='42', order=[1, '001', 42])
+    directory = submission(tmp_path, [dict(op='add_fact', fact=fact('f2', citations=['new-frame']))], base_version='v1')
+    verdict = gate(repo, directory, session_id='sess', window_frames={'new-frame': position},
+                   coverage={**COVERAGE, 'last_step': 42}, session_kind='admission')
+    assert (verdict['status'], verdict['version']) == ('rejected', None)
+    assert verdict['diagnostics'] == ['publication failed: invalid candidate snapshot: invalid frame position']
+    assert snapshot(repo) == before
+
+
+def test_the_gate_rejects_a_candidate_that_changes_a_record_origin(tmp_path, monkeypatch):
+    repo = seeded(tmp_path)
+    before = snapshot(repo)
+    publication = gate_module._publication
+
+    def wrong_origin(repo, records, *args):
+        records[0] = dict(records[0], session='different-session')
+        return publication(repo, records, *args)
+
+    monkeypatch.setattr(gate_module, '_publication', wrong_origin)
+    monkeypatch.setattr(repo, 'commit', lambda *args: pytest.fail('invalid candidate reached commit'))
+    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('f2'))], base_version='v1'))
+    assert (verdict['status'], verdict['version']) == ('rejected', None)
+    assert verdict['diagnostics'] == ['publication failed: invalid candidate snapshot: invalid record origin']
+    assert snapshot(repo) == before
 
 
 def old_contract_repository(tmp_path):

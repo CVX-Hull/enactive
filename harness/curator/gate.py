@@ -77,117 +77,123 @@ def journal(repo: Repository) -> list[dict]:
         raise KnowledgeError('unsupported active gate journal; use fresh state') from error
 
 
-def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str]]:
-    """Validate compatible published snapshots and reserve their record identities."""
-    snapshots, identities, records_by_version = {}, set(), {}
+def _validate_snapshot(files: dict[str, bytes], game: str, version: str,
+                       records_by_version: dict[str, dict[str, dict]]) -> dict[str, dict]:
+    """Validate the snapshot against its version and the previously validated versions."""
     required = {'knowledge.json', 'facts.jsonl', 'ontology/types.json', 'provenance.json',
                 'programs/.keep', 'tests/.keep'}
-    tags = set(repo._tags())
-    for version in sorted(tags, key=lambda v: int(v[1:])):
+    versions = records_by_version.keys() | {version}
+    if set(files) not in (required, required | {'coverage.json'}):
+        raise ValueError('unsupported snapshot layout')
+    if files['programs/.keep'] or files['tests/.keep']:
+        raise ValueError('unsupported program or test content')
+    metadata = json.loads(files['knowledge.json'])
+    if metadata != {'schema': 'curator-knowledge/2', 'game': game}:
+        raise ValueError('foreign knowledge metadata')
+    types = json.loads(files['ontology/types.json'])
+    if not isinstance(types, list) or any(_check_type('type', t) for t in types):
+        raise ValueError('unsupported types')
+    type_names = [t['name'] for t in types]
+    if len(set(type_names)) != len(type_names):
+        raise ValueError('duplicate types')
+    provenance = json.loads(files['provenance.json'])
+    if (not isinstance(provenance, dict) or set(provenance) - {'frames', 'last_admission'}
+            or not isinstance(provenance.get('frames'), dict)):
+        raise ValueError('invalid provenance')
+    for frame, position in provenance['frames'].items():
+        if (not _text(frame) or not isinstance(position, dict)
+                or set(position) != {'session', 'actor', 'step', 'order'}
+                or not _text(position['session']) or not _text(position['actor'])
+                or type(position['step']) is not int or not isinstance(position['order'], list)
+                or len(position['order']) != 3 or type(position['order'][0]) is not int
+                or not isinstance(position['order'][1], str) or type(position['order'][2]) is not int):
+            raise ValueError('invalid frame position')
+    if 'last_admission' in provenance:
+        admission = provenance['last_admission']
+        if (not isinstance(admission, dict) or set(admission) != {'coverage', 'citations'}
+                or not _strings(admission['citations'], nonempty=False)
+                or any(c not in provenance['frames'] for c in admission['citations'])):
+            raise ValueError('invalid admission provenance')
+        _coverage(admission['coverage'])
+    if 'coverage.json' in files:
+        _coverage(json.loads(files['coverage.json']))
+    records = [json.loads(line) for line in files['facts.jsonl'].decode().splitlines() if line.strip()]
+    by_id = {}
+    for record in records:
+        if not isinstance(record, dict) or record.get('record') not in ('fact', 'article'):
+            raise ValueError('unsupported record')
+        kind = record['record']
+        fields = _FACT_KEYS if kind == 'fact' else _ARTICLE_KEYS
+        added = {'published_in', 'session', 'superseded_by', 'retired'} | (
+            {'seen', 'retyped'} if kind == 'fact' else {'last_confirmed'})
+        if set(record) - fields - added or ('retired' in record and 'superseded_by' in record):
+            raise ValueError('unsupported record metadata')
+        item = {k: v for k, v in record.items() if k in fields}
+        if (_check_fact('fact', item) if kind == 'fact' else _check_article('article', item)):
+            raise ValueError('invalid record')
+        if record.get('schema') != FACT or not _text(record.get('session')) or not _VERSION.fullmatch(record.get('published_in', '')):
+            raise ValueError('invalid record provenance')
+        if record['published_in'] not in versions:
+            raise ValueError('invalid publication version')
+        if record['id'] in by_id:
+            raise ValueError('duplicate record identity')
+        by_id[record['id']] = record
+        if kind == 'fact':
+            if record['scope']['game'] != game or any(c not in provenance['frames'] for c in record['citations']):
+                raise ValueError('invalid fact scope or citations')
+            if record.get('seen') != max((provenance['frames'][c] for c in record['citations']),
+                                         key=lambda p: p['order']):
+                raise ValueError('invalid fact position')
+            for change in record.get('retyped', []):
+                if (not isinstance(change, dict) or set(change) != {'from', 'to', 'version'}
+                        or not _text(change['from']) or not _text(change['to'])
+                        or not isinstance(change['version'], str) or change['version'] not in versions):
+                    raise ValueError('invalid type history')
+        if 'retired' in record:
+            retired = record['retired']
+            if (not isinstance(retired, dict) or set(retired) != {'reason', 'citations', 'published_in', 'session'}
+                    or not _text(retired['reason']) or not _text(retired['session'])
+                    or not isinstance(retired['published_in'], str) or retired['published_in'] not in versions
+                    or not _strings(retired['citations'], nonempty=kind == 'fact')
+                    or any(c not in provenance['frames'] for c in retired['citations'])):
+                raise ValueError('invalid retirement')
+    if any('superseded_by' in r and
+           (r['superseded_by'] not in by_id or by_id[r['superseded_by']]['record'] != r['record'])
+           for r in records):
+        raise ValueError('invalid supersession')
+    facts = {i: r for i, r in by_id.items() if r['record'] == 'fact' and current(r)}
+    articles = [r for r in records if r['record'] == 'article' and current(r)]
+    titles = [r['title'] for r in articles]
+    if len(titles) != len(set(titles)) or any(f['type'] not in type_names for f in facts.values()):
+        raise ValueError('invalid current types or titles')
+    for article in articles:
+        cited = {i for claim in article['body'] for i in claim['facts']}
+        if (not cited <= facts.keys() or any(t == article['title'] or t not in titles for t in article['links'])
+                or article.get('last_confirmed') != max((facts[i]['seen'] for i in cited), key=lambda p: p['order'])):
+            raise ValueError('invalid article references')
+    for identity, record in by_id.items():
+        published_in = record['published_in']
+        origin_records = by_id if published_in == version else records_by_version[published_in]
+        origin = origin_records.get(identity)
+        if (origin is None or origin['published_in'] != published_in
+                or origin['record'] != record['record'] or origin['session'] != record['session']):
+            raise ValueError('invalid record origin')
+    return by_id
+
+
+def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], dict[str, dict[str, dict]]]:
+    """Validate compatible published snapshots and reserve their record identities."""
+    snapshots, identities, records_by_version = {}, set(), {}
+    for version in sorted(repo._tags(), key=lambda v: int(v[1:])):
         try:
             files = repo.snapshot(version)
-            if set(files) not in (required, required | {'coverage.json'}):
-                raise ValueError('unsupported snapshot layout')
-            if files['programs/.keep'] or files['tests/.keep']:
-                raise ValueError('unsupported program or test content')
-            metadata = json.loads(files['knowledge.json'])
-            if metadata != {'schema': 'curator-knowledge/2', 'game': repo.game}:
-                raise ValueError('foreign knowledge metadata')
-            types = json.loads(files['ontology/types.json'])
-            if not isinstance(types, list) or any(_check_type('type', t) for t in types):
-                raise ValueError('unsupported types')
-            type_names = [t['name'] for t in types]
-            if len(set(type_names)) != len(type_names):
-                raise ValueError('duplicate types')
-            provenance = json.loads(files['provenance.json'])
-            if (not isinstance(provenance, dict) or set(provenance) - {'frames', 'last_admission'}
-                    or not isinstance(provenance.get('frames'), dict)):
-                raise ValueError('invalid provenance')
-            for frame, position in provenance['frames'].items():
-                if (not _text(frame) or not isinstance(position, dict)
-                        or set(position) != {'session', 'actor', 'step', 'order'}
-                        or not _text(position['session']) or not _text(position['actor'])
-                        or type(position['step']) is not int or not isinstance(position['order'], list)
-                        or len(position['order']) != 3 or type(position['order'][0]) is not int
-                        or not isinstance(position['order'][1], str) or type(position['order'][2]) is not int):
-                    raise ValueError('invalid frame position')
-            if 'last_admission' in provenance:
-                admission = provenance['last_admission']
-                if (not isinstance(admission, dict) or set(admission) != {'coverage', 'citations'}
-                        or not _strings(admission['citations'], nonempty=False)
-                        or any(c not in provenance['frames'] for c in admission['citations'])):
-                    raise ValueError('invalid admission provenance')
-                _coverage(admission['coverage'])
-            if 'coverage.json' in files:
-                _coverage(json.loads(files['coverage.json']))
-            records = [json.loads(line) for line in files['facts.jsonl'].decode().splitlines() if line.strip()]
-            by_id = {}
-            for record in records:
-                if not isinstance(record, dict) or record.get('record') not in ('fact', 'article'):
-                    raise ValueError('unsupported record')
-                kind = record['record']
-                fields = _FACT_KEYS if kind == 'fact' else _ARTICLE_KEYS
-                added = {'published_in', 'session', 'superseded_by', 'retired'} | (
-                    {'seen', 'retyped'} if kind == 'fact' else {'last_confirmed'})
-                if set(record) - fields - added or ('retired' in record and 'superseded_by' in record):
-                    raise ValueError('unsupported record metadata')
-                item = {k: v for k, v in record.items() if k in fields}
-                if (_check_fact('fact', item) if kind == 'fact' else _check_article('article', item)):
-                    raise ValueError('invalid record')
-                if record.get('schema') != FACT or not _text(record.get('session')) or not _VERSION.fullmatch(record.get('published_in', '')):
-                    raise ValueError('invalid record provenance')
-                if record['published_in'] not in tags or int(record['published_in'][1:]) > int(version[1:]):
-                    raise ValueError('invalid publication version')
-                if record['id'] in by_id:
-                    raise ValueError('duplicate record identity')
-                by_id[record['id']] = record
-                if kind == 'fact':
-                    if record['scope']['game'] != repo.game or any(c not in provenance['frames'] for c in record['citations']):
-                        raise ValueError('invalid fact scope or citations')
-                    if record.get('seen') != max((provenance['frames'][c] for c in record['citations']),
-                                                 key=lambda p: p['order']):
-                        raise ValueError('invalid fact position')
-                    for change in record.get('retyped', []):
-                        if (not isinstance(change, dict) or set(change) != {'from', 'to', 'version'}
-                                or not _text(change['from']) or not _text(change['to'])
-                                or not isinstance(change['version'], str) or change['version'] not in tags
-                                or int(change['version'][1:]) > int(version[1:])):
-                            raise ValueError('invalid type history')
-                if 'retired' in record:
-                    retired = record['retired']
-                    if (not isinstance(retired, dict) or set(retired) != {'reason', 'citations', 'published_in', 'session'}
-                            or not _text(retired['reason']) or not _text(retired['session'])
-                            or not isinstance(retired['published_in'], str) or retired['published_in'] not in tags
-                            or int(retired['published_in'][1:]) > int(version[1:])
-                            or not _strings(retired['citations'], nonempty=kind == 'fact')
-                            or any(c not in provenance['frames'] for c in retired['citations'])):
-                        raise ValueError('invalid retirement')
-            if any('superseded_by' in r and
-                   (r['superseded_by'] not in by_id or by_id[r['superseded_by']]['record'] != r['record'])
-                   for r in records):
-                raise ValueError('invalid supersession')
-            facts = {i: r for i, r in by_id.items() if r['record'] == 'fact' and current(r)}
-            articles = [r for r in records if r['record'] == 'article' and current(r)]
-            titles = [r['title'] for r in articles]
-            if len(titles) != len(set(titles)) or any(f['type'] not in type_names for f in facts.values()):
-                raise ValueError('invalid current types or titles')
-            for article in articles:
-                cited = {i for claim in article['body'] for i in claim['facts']}
-                if (not cited <= facts.keys() or any(t == article['title'] or t not in titles for t in article['links'])
-                        or article.get('last_confirmed') != max((facts[i]['seen'] for i in cited), key=lambda p: p['order'])):
-                    raise ValueError('invalid article references')
-            snapshots[version] = files
-            records_by_version[version] = by_id
-            identities.update(by_id)
+            records = _validate_snapshot(files, repo.game, version, records_by_version)
         except (ValueError, KeyError, TypeError, UnicodeError, RecursionError, KnowledgeError) as error:
             raise KnowledgeError(f'incompatible history at {version}') from error
-    for version, records in records_by_version.items():
-        for identity, record in records.items():
-            origin = records_by_version[record['published_in']].get(identity)
-            if (origin is None or origin['published_in'] != record['published_in']
-                    or origin['record'] != record['record'] or origin['session'] != record['session']):
-                raise KnowledgeError(f'incompatible history at {version}')
-    return snapshots, identities
+        snapshots[version] = files
+        records_by_version[version] = records
+        identities.update(records)
+    return snapshots, identities, records_by_version
 
 
 def _failed_publication(repo: Repository, version: str) -> tuple[str, str | None]:
@@ -447,7 +453,7 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
         cited_positions = {}
         for citation in citations:
             if citation in frames:
-                cited_positions[citation] = frames[citation]
+                cited_positions[citation] = recorded_frames.get(citation, frames[citation])
             elif citation in inherited:
                 if citation in recorded_frames:
                     cited_positions[citation] = recorded_frames[citation]
@@ -516,7 +522,8 @@ def _publication(repo: Repository, records: list[dict], types: list[dict], cover
                  frames: dict[str, dict], session_kind: str, data: dict) -> dict[str, bytes]:
     coverage = _coverage(coverage)
     provenance = repo.provenance()
-    provenance['frames'].update(frames)
+    for frame_id, position in frames.items():
+        provenance['frames'].setdefault(frame_id, position)
     if session_kind == 'admission':
         citations = {c for change in data['changes'] for c in
                      change.get('citations', change.get('fact', {}).get('citations', []))}
@@ -554,10 +561,11 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
         and all(isinstance(item, str) and DRAFT_ID.fullmatch(item) for item in drafts) else [],
         'diagnostics': diagnostics,
     }
+    attempted_version = None
     try:
         if data is not None:
             current = repo.published()
-            _, reserved = _history(repo)
+            snapshots, reserved, records_by_version = _history(repo)
             foreign = sorted(str(item.get('id')) for item in repo.records() if item.get('schema') != FACT)
             if foreign:
                 # One current contract: a store that holds facts of another contract is not published into.
@@ -568,21 +576,29 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
                                    f' but the published version is {current}')
             else:
                 version = f'v{int(current[1:]) + 1}'
-                records, types, problems = _apply(repo, data, version, session_id, window_frames, session_kind, reserved)
-                diagnostics.extend(problems)
+                try:
+                    records, types, problems = _apply(repo, data, version, session_id, window_frames, session_kind, reserved)
+                    diagnostics.extend(problems)
+                    if not problems:
+                        files = _publication(repo, records, types, coverage, window_frames, session_kind, data)
+                        _validate_snapshot(snapshots[current] | files, repo.game, version, records_by_version)
+                except KnowledgeError:
+                    raise
+                except (ValueError, KeyError, TypeError, RecursionError) as error:
+                    raise KnowledgeError(f'invalid candidate snapshot: {error}') from error
             if not diagnostics:
-                files = _publication(repo, records, types, coverage, window_frames, session_kind, data)
                 summary = data['summary'].strip().splitlines()[0] if data['summary'].strip() \
                     else 'no summary'
                 message = (f'Publish {version}: {summary!r}\n\noperation: {verdict["operation_id"]}\nsession: {session_id}\n'
                            f'submission: {submission_dir.name!r}')
                 repo.reconcile()
+                attempted_version = version
                 published = repo.commit(files, message)
                 verdict['status'] = 'published'
                 verdict['version'] = published
     except (KnowledgeError, OSError, UnicodeError) as error:
-        if 'version' in locals():
-            verdict['status'], verdict['version'] = _failed_publication(repo, version)
+        if attempted_version is not None:
+            verdict['status'], verdict['version'] = _failed_publication(repo, attempted_version)
         diagnostics.append(f'publication failed: {error}')
     repo.state.mkdir(parents=True, exist_ok=True)
     try:
@@ -612,7 +628,7 @@ def restore(repo: Repository, *, expected_base: str, target: str) -> dict:
         failure = 'incompatible or unavailable history'
         try:
             current = repo.published()
-            snapshots, _ = _history(repo)
+            snapshots, _, _ = _history(repo)
             if expected_base != current:
                 failure = 'stale base'
                 raise KnowledgeError('stale base')
