@@ -90,7 +90,7 @@ without becoming a prerequisite to it.
 
 The curator compares predictions with later player-visible observations. A
 prospective publication gate may use private later-trace admission tests under
-#457. The [independent evaluator](../contracts/evaluation.md) scores sealed
+#457. The [independent evaluator](../contracts/evaluation-record.md) scores sealed
 final trials outside both paths. Use development and selection scores to rank
 generic configurations. Keep final evaluator answers outside the learner.
 

@@ -41,11 +41,11 @@ Its text equivalent is below.
 | --- | --- | --- |
 | Deciding player / player host | Ongoing user objective, visual interpretation, game choices and fallible claims; direct finish reports, explicit provider/context/tools | [Player interface](components/player-interface.md) |
 | Finite test controller | Operator-only quotas and ending reserves, external finish-up request and exact owned process cleanup; no game-save guarantee | [Campaign procedure](operations/campaign-run.md) |
-| Player journal and knowledge | Public calls, hints, source provenance and curated delivery; no custody | [Memory and learning](components/memory-learning.md) |
+| Player journal and knowledge | Public calls, hints, source provenance and curated delivery; no custody | [Memory and learning](components/player-interface.md#journal-and-knowledge) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
 | Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Spectator](components/spectator.md) |
-| Run evaluator | Interpretive records and metrics from retained evidence with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
+| Run evaluator | Interpretive records and metrics from retained evidence with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation-record.md) |
 | Curator | Sandboxed trace sessions and a gate-only knowledge repository; frozen exports reach the player; no custody | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
@@ -165,14 +165,14 @@ Current coupling. None of it is in the shared player code. The entries inside
 | --- | --- | --- |
 | CDDA prepared launch script and app paths (`Cataclysm.app`, `cataclysm-tiles`) | [`harness/prepared_app.py`](../harness/prepared_app.py) | [Setup](setup.md) |
 | Game download, verification, patching and installing the built adapter | [`tools/setup.py`](../tools/setup.py), [`tools/patch_game.py`](../tools/patch_game.py), [`tools/prepare_game.py`](../tools/prepare_game.py) | [Setup](setup.md) |
-| CDDA screen readers and the only registered evaluation binding | [`harness/evaluation/cdda/`](../harness/evaluation/cdda), `BINDINGS` in the viewer and in [`tools/evaluate.py`](../tools/evaluate.py) | [Evaluation contract](contracts/evaluation.md) |
-| CDDA-class vocabulary in the game-neutral evaluation core (modes including `dead`, threat buckets) | [`harness/evaluation/core/binding.py`](../harness/evaluation/core/binding.py) | [Evaluation contract](contracts/evaluation.md) |
-| CDDA vitals (`hunger`, `thirst`, `weariness`, `pain`, `vital.limb.*`) hard-coded in the viewer's `NEEDS_READERS` and metric-to-reader map, and in the spectator page's game-state panel | [`harness/viewer/views.py`](../harness/viewer/views.py), [`web/app/supervise.js`](../web/app/supervise.js) | [Evaluation contract](contracts/evaluation.md) |
+| CDDA screen readers and the only registered evaluation binding | [`harness/evaluation/cdda/`](../harness/evaluation/cdda), `BINDINGS` in the viewer and in [`tools/evaluate.py`](../tools/evaluate.py) | [Evaluation contract](contracts/evaluation-record.md) |
+| CDDA-class vocabulary in the game-neutral evaluation core (modes including `dead`, threat buckets) | [`harness/evaluation/core/binding.py`](../harness/evaluation/core/binding.py) | [Evaluation contract](contracts/evaluation-record.md) |
+| CDDA vitals (`hunger`, `thirst`, `weariness`, `pain`, `vital.limb.*`) hard-coded in the viewer's `NEEDS_READERS` and metric-to-reader map, and in the spectator page's game-state panel | [`harness/viewer/views.py`](../harness/viewer/views.py), [`web/app/supervise.js`](../web/app/supervise.js) | [Evaluation contract](contracts/spectator-view.md#spectator-view-api-spectator-view2) |
 | macOS SDL adapter loaded into the game process | [`harness/computer/native/`](../harness/computer/native) | [Native control](components/native-control.md) |
 | Adapter injection through `DYLD_INSERT_LIBRARIES` | [`harness/computer/launch.py`](../harness/computer/launch.py) | [Native control](components/native-control.md) |
 | CDDA-specific play guidance | [Player guide](player-guide.md) | Player guide |
 | Curator: one knowledge repository per game, and the shadow runner over sealed lineages names the game `cdda`; the fact format, articles and briefs name no kind of thing in a game | [`harness/curator/knowledge.py`](../harness/curator/knowledge.py), [`tools/curator_host/shadow.py`](../tools/curator_host/shadow.py) | [Curator](components/curator.md) |
-| Memory measure: the anchor check's frozen prompt and `anchor_verdict` labels are worded for going to a known place with goods, kept only to re-judge the measure gate's 30 owner-labelled pairs; the standing packets, labels and measures name no kind of thing in a game | [`tools/memory_measure.py`](../tools/memory_measure.py), [`harness/evaluation/core/judge.py`](../harness/evaluation/core/judge.py) | [Evaluation contract](contracts/evaluation.md) |
+| Memory measure: the anchor check's frozen prompt and `anchor_verdict` labels are worded for going to a known place with goods, kept only to re-judge the measure gate's 30 owner-labelled pairs; the standing packets, labels and measures name no kind of thing in a game | [`tools/memory_measure.py`](../tools/memory_measure.py), [`harness/evaluation/core/judge.py`](../harness/evaluation/core/judge.py) | [Evaluation contract](contracts/measurement-tools.md#checks-of-a-changed-judge) |
 
 ## Separate recovery and memory boundaries
 
@@ -230,10 +230,10 @@ governs storage, preservation of evidence and coherent rollback.
 | Changed boundary | Evidence to inspect and limit |
 | --- | --- |
 | Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
-| Journal and hints | Player and composition assertions for provenance, hint isolation and original IDs; [memory](components/memory-learning.md). |
+| Journal and hints | Player and composition assertions for provenance, hint isolation and original IDs; [memory](components/player-interface.md#journal-and-knowledge). |
 | Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
 | Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [spectator](components/spectator.md#assurance-and-evidence). |
-| Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation.md). |
+| Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation-record.md). |
 | Curator shadow | The sandbox escape suite against the real listeners (macOS), projection secret guards, gate and close-out negative tests, and proxy allowlist and settlement tests; [curator](components/curator.md#assurance-and-evidence). |
 
 The [testing guide](testing.md) selects lanes. [Production outcome evidence](acceptance/2026-10-29-computer-control.md)

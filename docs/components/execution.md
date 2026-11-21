@@ -32,7 +32,7 @@ none is a game-phase or task-success predicate.
 The player interprets actual images and selects basic controls. It can report
 fallible hints for later curation; no game-semantic eligibility handler or
 structured engine fact is injected. Unknown or partial input stops further input.
-[Memory and learning](memory-learning.md) describes the journal and delivery.
+[Memory and learning](player-interface.md#journal-and-knowledge) describes the journal and delivery.
 Configured estimates, provider-reported cost, actual HTTP attempts and invoices
 stay distinct. Useful cadence and causal learning benefit require authentic outcomes.
 

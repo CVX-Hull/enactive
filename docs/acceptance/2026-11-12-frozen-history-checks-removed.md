@@ -41,7 +41,7 @@ issue comment may announce a run and link its ledger row. The rule is stated in
 [S-EVIDENCE](../standards/evidence.md), the
 [campaign procedure](../operations/campaign-run.md#start-and-close),
 [operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation) and the
-[evaluation contract](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot).
+[evaluation contract](../contracts/run-ledger.md#tracked-run-ledger-and-metrics-snapshot).
 
 ## What still covers the risks
 

@@ -45,12 +45,12 @@ spending or new admission. General unattended operation remains unqualified.
 
    Add `--runs DIR` to let the viewer list archived run directories beside the live run.
    Repeat `--curator-sessions LABEL=FILE` to select terminal curator close-out
-   receipts by operator-supplied alias ([session contract](../contracts/evaluation.md#recorded-curator-sessions)).
+   receipts by operator-supplied alias ([session contract](../contracts/spectator-view.md#recorded-curator-sessions)).
    Repeat `--curator-results LABEL=FILE` to let the Curator tab read explicitly selected
    current result journals or snapshots. Labels are unique and browser selection never
    accepts a filesystem path. These optional arguments go only to the unsupervised
    viewer; they do not change the frozen player package, credential routing, custody
-   or Pause. The [recorded-result contract](../contracts/evaluation.md#recorded-curator-results)
+   or Pause. The [recorded-result contract](../contracts/spectator-view.md#recorded-curator-results)
    owns bounds, source states and snapshot identity.
 
    Add `--curator-runner CONFIG` to run the [curator runner](../design/live-curator-integration.md#who-starts-a-session-and-when)

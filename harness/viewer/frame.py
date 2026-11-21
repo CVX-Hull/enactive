@@ -1,5 +1,5 @@
 """Payload builders for the spectator's frame: `spectator-frame/1` (ADR 009's spectator direction;
-docs/contracts/evaluation.md).
+docs/contracts/spectator-view.md).
 
 The frame is a health strip, the container inventory and the four #397 forgetting episodes over sealed traces. Every
 builder is a pure read: sidecar container indexes (`data/containers/*.json`), tracked probe episodes

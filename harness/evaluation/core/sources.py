@@ -1,4 +1,4 @@
-"""Read-only access to one run directory (docs/contracts/evaluation.md, Inputs).
+"""Read-only access to one run directory (docs/contracts/evaluation-record.md, Inputs).
 
 Opens `session.sqlite3` with `mode=ro` and a one-second busy timeout, reads
 `actors/NNN/host.jsonl`, `manifest.json`, the handoff contexts and the run's

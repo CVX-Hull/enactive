@@ -62,7 +62,7 @@ samples the claims in each arm.
   defines the in-flight and ending allowances and the separate
   [admission amount for an incomplete trace](operations/campaign-run.md#start-and-close).
   The [owner manages provider billing](operator-permissions.md#finite-gameplay-budget-delegation).
-  Generated evaluator tables report [configured-rate dollars per decision](contracts/evaluation.md#metrics-version-1).
+  Generated evaluator tables report [configured-rate dollars per decision](contracts/evaluation-record.md#metrics-version-1).
 
 ## Day-scale survival and pacing
 
@@ -79,7 +79,7 @@ Each lineage gets exactly one class, checked in this order:
 3. **Day-viable:** alive at 24 elapsed hours with the day check passed.
 4. **Slow:** alive under 24 elapsed hours when the decision cap or a stop rule ends it.
 
-The [evaluator's `lineage.day_check`](contracts/evaluation.md#metrics-version-1) checks
+The [evaluator's `lineage.day_check`](contracts/evaluation-record.md#metrics-version-1) checks
 day-scale survival with no severe thirst
 ("very thirsty", "dehydrated", "parched"), hunger ("very hungry", "famished", "near
 starving", "starving") or rest ("dead tired", "exhausted"). The lead confirms every

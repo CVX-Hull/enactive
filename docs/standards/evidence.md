@@ -25,7 +25,7 @@ or tracked reader that produces it from those artifacts, so that a reviewer re-r
 instead of re-deriving it; a figure computed by a one-off script says so and gives the
 method. Record corrections without replacing
 the original evidence. Development-run quantities go in the tracked
-[run ledger and metrics snapshot](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot).
+[run ledger and metrics snapshot](../contracts/run-ledger.md#tracked-run-ledger-and-metrics-snapshot).
 The run ledger is the one numeric record of a run: a dated record presents numbers
 through the generated run tables or by citing the ledger, and keeps no second
 hand-typed copy of attempts, spend or duration. Raw run evidence a

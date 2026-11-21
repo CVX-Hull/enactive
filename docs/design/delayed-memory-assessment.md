@@ -35,7 +35,7 @@ Use the [targeted reload capture](../acceptance/2026-11-18-targeted-tool-memory-
 [day-scale play](../acceptance/2026-11-07-long-horizon-382.md) and
 [Whitethorn extended play](../acceptance/2026-11-07-seven-day-397.md)
 as acquisition references for pace, continuity and capture. For context
-exposure, use [host context manifests](../contracts/player-host.md#context-manifest),
+exposure, use [host context manifests](../contracts/player-host-telemetry.md#context-manifest),
 the [sealed evidence index](../../data/evidence/index.json) and the
 [paired cue probe](../acceptance/2026-11-18-delayed-observation-cueing-755.md).
 

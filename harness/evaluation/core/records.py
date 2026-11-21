@@ -1,4 +1,4 @@
-"""evaluation-record/1 storage (docs/contracts/evaluation.md).
+"""evaluation-record/1 storage (docs/contracts/evaluation-record.md).
 
 One SQLite file per run and version pair. Raw rows (steps, binding readings, the
 core's own `frame` and `input` readings) are appended once; derived rows (guarded

@@ -48,7 +48,7 @@ scope: 'The game-neutral process measures (#620) run once on sealed development 
 ## Method
 
 - **Tooling.** `python -m tools.process_measures` at main `24d22e14` (`tools/process_measures.py`
-  sha256 `053f7fa0…09c6`), as the [evaluation contract](../contracts/evaluation.md#process-measures-process-measures1)
+  sha256 `053f7fa0…09c6`), as the [evaluation contract](../contracts/measurement-tools.md#process-measures-process-measures1)
   states. Run directory `.runtime/memory-measure/process-lineage-620`, seed 620, token
   budget 60,000, up to 12 claim candidates a window.
 - **Play.** The sealed [seven-day lineage](2026-11-07-seven-day-397.md)'s admissions

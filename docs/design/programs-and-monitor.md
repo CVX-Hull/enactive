@@ -79,7 +79,7 @@ The bounded interface brief freezes artifact identity and layout, base and versi
 
 ## Pages that change on adoption
 
-Adoption updates the [charter](../charter.md), [player tooling standard](../standards/player-tooling.md), [architecture](../architecture.md), [computer-control contract](../contracts/computer-control.md), [run custody](../operations/run-custody.md), and [evaluation contract](../contracts/evaluation.md) with the [spectator component](../components/spectator.md). The computer-control boundary, one-input-sender rule, P-TRUTH, no-lead-hint rule and S-MIGRATION continue to govern the design.
+Adoption updates the [charter](../charter.md), [player tooling standard](../standards/player-tooling.md), [architecture](../architecture.md), [computer-control contract](../contracts/computer-control.md), [run custody](../operations/run-custody.md), and [evaluation contract](../contracts/spectator-view.md) with the [spectator component](../components/spectator.md). The computer-control boundary, one-input-sender rule, P-TRUTH, no-lead-hint rule and S-MIGRATION continue to govern the design.
 
 ## How it would be judged
 

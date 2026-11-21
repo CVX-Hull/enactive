@@ -1,4 +1,4 @@
-"""Comparison statistics across runs (docs/contracts/evaluation.md): Kaplan-Meier with
+"""Comparison statistics across runs (docs/contracts/evaluation-record.md): Kaplan-Meier with
 Greenwood intervals, restricted mean survival time, the log-rank test and bootstrap
 intervals. Censored runs stay censored. Statistics come from scipy; the restricted
 mean is the integral of the Kaplan-Meier step function.

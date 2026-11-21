@@ -14,7 +14,7 @@ How can the player keep useful knowledge in context as the prompt grows? Curated
 knowledge delivery is adopted. The player receives a briefing and reminders based
 on a frozen export of the curator's store, as defined by the [player host contract](../contracts/player-host.md#delivered-knowledge-and-recall)
 and demonstrated in the [recall delivery check in play](../acceptance/2026-11-14-recall-fix-delivery-check.md).
-The [evaluation contract](../contracts/evaluation.md) owns how delivery is measured.
+The [evaluation contract](../contracts/measurement-tools.md#adjudication-and-the-standing-use-measures) owns how delivery is measured.
 
 The curator's lag beside real play and the benefit of delivered memory remain
 unknown. The open decision is whether to cut old turns only through the point
@@ -76,7 +76,7 @@ conversation and a rebuilt prompt in a long game.
 
 Short results reduce the cost of every turn while preserving the fields the player
 acts on and retaining full receipts for inspection.
-[Computer operation results](../contracts/computer-control.md#computer-operations-and-custody)
+[Computer operation results](../contracts/player-ports.md#mcp-projection-and-envelopes)
 
 For the seven-day comparison, the free checks measured a median short result
 of 135 bytes. In their simulation, short results and larger image blocks kept
@@ -152,7 +152,7 @@ owns the current store and routes to the grooming rules.
 Public intent helps the curator interpret a tool call and can preserve the
 thread of recent play across a cut. Each extra field costs output tokens and
 then takes space in the window, so the design ties new fields to a reader that
-can use them. The [player knowledge and tool call contract](../contracts/computer-control.md#player-knowledge-and-executable-proposals)
+can use them. The [player knowledge and tool call contract](../contracts/player-ports.md#player-knowledge-and-executable-proposals)
 owns intent, citations and hints. [Stated intent on tool calls (#384)](https://github.com/CVX-Hull/enactive/issues/384)
 
 <a id="the-migration-that-follows"></a>

@@ -1,4 +1,4 @@
-"""The `run_facts` table: what the run was configured to do (docs/contracts/evaluation.md).
+"""The `run_facts` table: what the run was configured to do (docs/contracts/evaluation-record.md).
 
 From `manifest.json` (campaign-run/10, or an archived campaign-run/4 or /5) and the first host-start event.
 Operator labels come from the manifest; an archived campaign-run/4 run has none, so the caller may supply them.

@@ -467,7 +467,7 @@ Line numbers are at commit `0e10e71`.
 | S7 | [Development runs](../development-runs.md#benchmark): route, context and prices, lines 70–84 |
 | S8 | [ADR 009](../decisions/009-curated-player.md): lines 51–56, 241–287, 289–379, 593–601 and 646–686 |
 | S9 | [Curator shadow sessions record](../acceptance/2026-11-08-curator-shadow-454.md): results, lines 71–78 |
-| S10 | [Evaluation contract](../contracts/evaluation.md): the stall event, line 121, and `stall.longest`, line 223 |
+| S10 | [Evaluation contract](../contracts/evaluation-record.md): the stall event, line 121, and `stall.longest`, line 223 |
 | S11 | [Charter](../charter.md): the responsiveness rule, lines 60–65 |
 | S12 | [#164](https://github.com/CVX-Hull/enactive/issues/164), issue body read 13 November 2026: the first and third items under "Remaining qualification", the state block of 9 November 2026 and the cohort feasibility block of 4 November 2026 |
 | S13 | [Observed effects record](../acceptance/2026-10-30-observed-effects.md): the BaseTen route and 30-image context, lines 36–37; complete response p50 and p95, line 164 |

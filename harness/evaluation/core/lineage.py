@@ -1,4 +1,4 @@
-"""Lineage across chained admissions of one survivor (docs/contracts/evaluation.md).
+"""Lineage across chained admissions of one survivor (docs/contracts/evaluation-record.md).
 
 A lineage is an ordered list of runs. For each boundary the core reports whether the
 survivor is the same (from the binding's legible identity, else `unknown`) and the

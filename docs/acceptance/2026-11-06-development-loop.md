@@ -198,7 +198,7 @@ are recorded as fixes #378–#380 and the actual-spend admission rule.
 
 ## Evaluator re-score and power check (#383)
 
-The [run evaluator](../contracts/evaluation.md) (core 2, CDDA binding 2) re-scored all
+The [run evaluator](../contracts/evaluation-record.md) (core 2, CDDA binding 2) re-scored all
 30 runs from their recorded frames, traces and memory stores. These are new,
 generated rows. The hand-scored tables above are unchanged and remain the record of
 the loop's decisions; their attempts, dollars and wall seconds are cross-checked

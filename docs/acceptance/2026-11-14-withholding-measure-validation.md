@@ -14,7 +14,7 @@ scope: 'The withholding measure revision (#653): the judge codebook (a miss is a
   most misses were passive re-exposure and that misses follow the unit, not the arm: does
   the revised judge codebook label misses consistently and as intended, does it leave
   enough misses to size a study, and what size and price does the blocked within-unit
-  design ([contract](../contracts/evaluation.md#the-withholding-studys-design-withholding-study-draw1))
+  design ([contract](../design/withholding-study-protocol.md#the-withholding-studys-design-withholding-study-draw1))
   need? This is development evidence about the measure. It does not re-score the pilot,
   whose sealed results stand.
 - **The codebook** (in the judge instructions since `d64128b6`): `found_again` is an
@@ -227,7 +227,7 @@ custodian run).
 ## Deviations
 
 - The anchor was re-judged with one judge, as the contract's
-  [check of a changed judge](../contracts/evaluation.md#checks-of-a-changed-judge)
+  [check of a changed judge](../contracts/measurement-tools.md#checks-of-a-changed-judge)
   compares one new judge with the gate's. The contract and the controls page's
   judge-shift control call for it on a model change; the owner decision "Judges without
   audits" on a change of "prompt or model", so it was run for this prompt change.

@@ -3,7 +3,7 @@
 
 The telemetry diagnostics report recorded intervals and counts and give no gameplay
 verdict. The evaluator subcommands derive interpretive records and metrics (ADR008,
-docs/contracts/evaluation.md): each value carries its source and confidence, and the
+docs/contracts/evaluation-record.md): each value carries its source and confidence, and the
 evaluator still accepts no run or claim. Acceptance stays with frames, receipts, review
 and the issue's decision rule.
 

@@ -2,7 +2,7 @@
 
 The core imports only this module's types. A binding turns one original frame into
 typed, fallible readings and owns its milestone ladder; the core owns storage,
-derivation, metrics and statistics (docs/contracts/evaluation.md).
+derivation, metrics and statistics (docs/contracts/evaluation-record.md).
 """
 from __future__ import annotations
 
