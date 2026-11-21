@@ -430,6 +430,10 @@ and price, not a route from existing offline judges into the curator.
 
 The gate computes any supported comparison itself; the proposing curator cannot edit
 the plan, expected answers or pass criterion. Curator self-tests remain untrusted inputs.
+Under this proposal the curator may turn a retrieval miss it finds in the trace into a
+test of its own, rerun when memory or the ontology changes; it may add tests but never
+edit the gate's checks, and deleting a test needs a stated reason that the gate reports
+([rationale](../decisions/009-curated-player.md#fitting-and-evaluating-the-ontology-d4)).
 Do not translate an unspecified “utility minus complexity” formula into an arbitrary
 threshold. No utility-based publication is recommended until a concrete finite plan
 meets these requirements. [Approval for paid checks](../operator-permissions.md) is separate

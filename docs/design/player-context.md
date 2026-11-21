@@ -45,18 +45,20 @@ about 120,000 cached tokens. These comparisons explain why short results and
 grouped image eviction matter. In the same lineage, the 20,000–60,000-token
 band averaged \$0.0062 per request. The association between smaller prompts and
 faster responses may also reflect what the player was doing at that point in play.
-[Response time by prompt size](../acceptance/2026-11-13-host-response-time-by-prompt-size.md)
+[Response time by prompt size](../acceptance/2026-11-13-host-response-time-by-prompt-size.md).
+The script that produced the fit, and its full output, are in
+[this page as of commit 8326573f](https://github.com/CVX-Hull/enactive/blob/8326573f/docs/design/player-context.md#appendix-the-script).
 
 ## Outside evidence
 
 | Source | Date | What it says | Limit |
 | --- | --- | --- | --- |
-| Anthropic, [prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) | Undated | The cached prefix runs tools, then system, then messages. A change invalidates everything after it | Evidence from a different route |
-| OpenAI, [prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching) | Undated | A miss follows any change before the cached point, including a compaction setting | Gives no latency figure |
-| OpenRouter, [prompt caching](https://openrouter.ai/docs/features/prompt-caching) | Undated | Requests stay on one provider while a session identifier or the first messages match | Describes routing |
-| Anthropic, [caching announcement](https://claude.com/blog/prompt-caching) | 14 August 2025 | Time to first token for a 100,000-token prompt was 11.5 s uncached and 2.4 s cached | Vendor measurements on another model |
-| Anthropic, [context editing](https://platform.claude.com/docs/en/build-with-claude/context-editing) | Undated | Clearing old tool results invalidates the cache, so clear enough at once to be worth it | Describes cache behavior |
-| Anthropic, [context management](https://claude.com/blog/context-management) | 29 September 2025 | Clearing old tool results with a memory tool scored 39% above baseline in an internal test | Internal test outside games |
+| [Anthropic, prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) | Undated | The cached prefix runs tools, then system, then messages. A change invalidates everything after it | Evidence from a different route |
+| [OpenAI, prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching) | Undated | A miss follows any change before the cached point, including a compaction setting | Gives no latency figure |
+| [OpenRouter, prompt caching](https://openrouter.ai/docs/features/prompt-caching) | Undated | Requests stay on one provider while a session identifier or the first messages match | Describes routing |
+| [Anthropic, caching announcement](https://claude.com/blog/prompt-caching) | 14 August 2025 | Time to first token for a 100,000-token prompt was 11.5 s uncached and 2.4 s cached | Vendor measurements on another model |
+| [Anthropic, context editing](https://platform.claude.com/docs/en/build-with-claude/context-editing) | Undated | Clearing old tool results invalidates the cache, so clear enough at once to be worth it | Describes cache behavior |
+| [Anthropic, context management](https://claude.com/blog/context-management) | 29 September 2025 | Clearing old tool results with a memory tool scored 39% above baseline in an internal test | Internal test outside games |
 | Vercel, [agent evaluations](https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals) | 27 January 2026 | An index always in context scored 100%. The same knowledge behind a tool scored 53%, and the tool was never called in 56% of cases | One coding task family |
 | Bradshaw, [Pokémon research notes](https://www.greaterwrong.com/posts/8aPyKyRrMAQatFSnG/) | 21 April 2025 | Wrong notes misled models for hundreds of actions | Anecdote |
 | Chroma, [Context Rot](https://www.trychroma.com/research/context-rot) | 14 July 2025 | Across 18 models, answers worsened as input grew and short focused prompts beat long ones | Simple recall tasks |

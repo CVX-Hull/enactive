@@ -386,7 +386,9 @@ Pair arms by copied source moment; randomize/counterbalance their execution orde
 Reset memory and model session at each independent source assignment. Give each arm
 the same permitted visible setup history, initial source information and natural player
 context; only the memory treatment differs. Do not seed an inherited player store
-with an arm's earlier outputs. Fresh and legacy-derived starts prepare a fresh
+with an arm's earlier outputs. Nothing an arm learns reaches the game's main knowledge
+repository during the study; promoting it afterwards is a separate, recorded step
+([rationale](../decisions/009-curated-player.md#knowledge-repository-d16)). Fresh and legacy-derived starts prepare a fresh
 supported journal. Arms paired at a current prospective checkpoint take separate
 verified copies of the same supported closed pre-arm journal and preserve equal
 permitted source access. Keep each sealed source immutable. Repeated samples,
