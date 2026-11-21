@@ -42,8 +42,9 @@ review, with its kind and "At a glance"; issue descriptions are replaced, not ap
 
 Models:
 
-<!-- State the author's coding agent, model and effort (or human). Name a sub-agent only
-when a worker used a different model or effort. -->
+<!-- State the lead's coding agent, model and effort (or human). For each delegated attempt
+(worker, reviewer or explorer): the role, the coding agent, model and effort the lead chose,
+and the reason it gave on the brief's Role line (docs/standards/agents.md#the-leads-duties). -->
 
 ## Review
 

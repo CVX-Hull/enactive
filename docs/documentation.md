@@ -60,7 +60,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `harness/application.py` and transport adapters | Compose current ports/tools without granting observer authority. |
 | `harness/evaluation/` | Interpretive run evaluation ([contract](contracts/evaluation.md)): game-neutral `core/` and the `cdda/` binding. It is never imported by player, computer or server code. |
 | `harness/viewer/` | The read-only viewer process the spectator page reads through the gateway; outside supervision. |
-| `data/evaluation/` | Git-tracked human evaluation data: failure taxonomy, labels, change records, the closed archive index and reader validation; and the matched-run ledger of coding-agent attempts. |
+| `data/evaluation/` | Git-tracked human evaluation data: failure taxonomy, labels, change records, the closed archive index and reader validation; and the ledger of delegated coding-agent attempts. |
 | `tools/` | Maintained setup/check/build/campaign entry points and the current player host adapter. |
 | `native/` | Upstream provenance and preparation inputs, not a semantic control backend. |
 | `web/` | The spectator page (served by the supervised gateway) and independent user Pause. |
@@ -88,6 +88,7 @@ needs these and the [glossary](glossary.md), not the whole start-here set.
 | `harness/evaluation/`, `harness/trace/`, `tools/evaluate.py`, `host_analysis.py`, `control_analysis.py`, `run_ledger.py`, `probe_baseline.py`, `memory_reads.py`, `memory_screen_checks.py`, `memory_measure.py` | [Development runs](development-runs.md); no component page | [Evaluation](contracts/evaluation.md) | `tests/test_evaluation_*.py`, `test_host_analysis.py`, `test_memory_measure*.py`, `test_run_ledger.py`, `test_probes.py`, `test_trace_*.py` |
 | `harness/viewer/`, `web/` | [Observer operations](components/observer-operations.md) | [Evaluation](contracts/evaluation.md) for the view API, [computer control](contracts/computer-control.md#passive-spectator-reads-and-operator-pause) for Pause | `tests/test_viewer_*.py`, the browser suites `tests/test_*.cjs` |
 | `tools/check.py`, `ci.py`, `documents.py`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py` |
+| `tools/delegate.py`, `.agents/` | [Starting a delegate](operations/coding-agents.md#starting-a-delegate-on-any-coding-agent), [delegate profiles](operations/delegate-profiles.md) | [S-AGENT](standards/agents.md#the-leads-duties) | `tests/test_delegate.py`, `tests/test_coding_agent_attempts.py` |
 | `tools/starts.py` | [Reusable starts](development-runs.md#reusable-starts), [environment](environment.md) | [Evidence retention](operations/evidence-cleanup.md), [controls](controls.md) | `tests/test_start_*.py` |
 | `tools/setup.py`, `prepare_game.py`, `patch_game.py`, `build_computer.py`, `harness/prepared_app.py`, `native/` | [Setup](setup.md), [environment](environment.md) | [Native acceptance](operations/native-acceptance.md) | `tests/test_setup.py` |
 | `harness/jsonio.py` | A shared helper with no page of its own | The contract of whichever caller is changed | `tests/test_jsonio.py` |

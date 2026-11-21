@@ -52,6 +52,7 @@ session started from the command line, source code, the native lane or the game.
 | Duty | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
 | Delegate with clean context | The role files in `.codex/agents/`; a worker or reviewer starts with `fork_turns=none` ([delegation roles](#delegation-roles)). | The role files in `.claude/agents/`; a worker or reviewer starts as a fresh agent, not a fork ([delegation roles](#delegation-roles)). | Observed in the trial: an explorer (step 17) and a worker (step 23) each ran as its own conversation whose first message was the brief. Gap, 19 November 2026: the session did not use the role files in `.agents/agents/`, which were not yet merged, so a lead session starting them is not shown. Whichever sub-agent type it starts, the lead names the role and gives it the whole brief ([delegation roles](#delegation-roles)). |
+| Choose the delegate for the task | No host mechanism: the lead weighs the task against the [delegate profiles](delegate-profiles.md) and starts its choice with the [delegate call](#starting-a-delegate-on-any-coding-agent). Gap, 20 November 2026: the call has not been run from a Codex lead session. A delegate needs the network, which the Codex sandbox denies, so the lead runs the call outside the sandbox under the host's approval. | No host mechanism: the lead weighs the task against the [delegate profiles](delegate-profiles.md) and starts its choice with the [delegate call](#starting-a-delegate-on-any-coding-agent) from its shell. A lead session did so on 20 November 2026 for an explorer, a worker and a reviewer, one on each coding agent. | No host mechanism: the lead weighs the task against the [delegate profiles](delegate-profiles.md) and starts its choice with the [delegate call](#starting-a-delegate-on-any-coding-agent). Gap, 20 November 2026: the call has not been run from an Antigravity lead session. [The app's terminal sandbox](#the-antigravity-apps-terminal-sandbox) once blocked a reviewer on another coding agent, so the call may need a retry outside it. |
 | Keep one writer per checkout | The lead creates the worker's worktree under `.runtime/worktrees/<leaf>` and names it in the brief. | The worker runs with `isolation: worktree`, or in a worktree the lead creates under `.runtime/worktrees/<leaf>`. | Observed in the trial: the worker edited only its two owned files under `.runtime/worktrees/pull-request-model-record`, and the main checkout's working tree was not edited. `git worktree add` was blocked in [the app's terminal sandbox](#the-antigravity-apps-terminal-sandbox) and retried outside it. |
 | Verify a delegated result from files and tests | No host mechanism: the lead reads the diff and reruns the brief's acceptance check in the worktree. A sub-agent's final message is a report, not the result. | No host mechanism: the lead reads the diff and reruns the brief's acceptance check in the worktree. A sub-agent's final message is a report, not the result. | Observed in the trial for the worker's result: the lead read the diff and ran `tools/check.py --fast` and the document tests, and repeated both after the repair (steps 28 to 31 and 49 to 53). Gap, 19 November 2026: after the review it reopened two of the files the reviewer quoted, not all of them, while writing that it had checked every quoted passage (step 45), and two claims in its final message went beyond its transcript. The lead that takes the leaf over, or merges it, checks the session's report against the files. |
 | Commit before review | The lead commits in the leaf's worktree through the hook, then starts the reviewer on that commit. A Codex worker leaves its changes uncommitted, so the lead inspects and commits them first. | The lead commits in the leaf's worktree through the hook, then starts the reviewer on that commit. | Gap, 19 November 2026: the trial's reviewer examined an uncommitted diff over `44a5ef14` and never named `21677a5d`, the commit the session then queued to merge (step 97). The lead commits first and gives the reviewer the commit. `git add` and `git commit` were blocked in [the app's terminal sandbox](#the-antigravity-apps-terminal-sandbox) and retried outside it. |
@@ -87,8 +88,11 @@ definition takes precedence over a user's own definition of the same name. The
 Antigravity CLI listed its wrappers from the main checkout, and not from a worktree
 of it or from a scratch copy
 ([Choosing a model](model-routing.md#roles-and-their-default-models)).
-[Choosing a model](model-routing.md) owns each role's default model and when the lead
-overrides it.
+[Choosing a model](model-routing.md) owns each role's default model. A wrapper runs its
+role on its own host's default model only. Its description also names the
+[delegate call](#starting-a-delegate-on-any-coding-agent), which runs the same role on
+any of the three coding agents with the model and effort the lead names, so a lead
+looking at its own host's roles sees the others as near.
 
 The explorer role has two forms. Locating (where a file, rule or name is) runs on the
 smallest model. Synthesis (a question answered from evidence across files) runs on a
@@ -99,32 +103,78 @@ larger one.
 | Explorer, locating | `agent_type` locator | `subagent_type` `locator` | The `locator` role file. Not used in the trial. |
 | Explorer, synthesis | `agent_type` explorer | `subagent_type` `Explore` | The `explorer` role file. The trial session started its explorer as the host's `research` type instead (step 17). |
 | Worker, owned paths | `agent_type` worker with `fork_turns=none`, separate worktree | `subagent_type` worker, fresh agent (not a fork), `isolation: worktree` | The `worker` role file, in a separate worktree the lead creates. The trial session defined a `worker` type itself, with write tools and no sub-agent tools (step 23). |
-| Reviewer, clean context | `agent_type` reviewer with `fork_turns=none` | `subagent_type` reviewer, fresh agent | The `reviewer` role file. Not used in the trial. Gap, 19 November 2026: Antigravity keeps state between conversations and whether a later one reads it is not known, so a clean context is not established. The lead takes its clean-context review from the Codex reviewer command [below](#non-interactive-runs-for-a-second-model-family), as the trial session did (step 37), or hands the leaf to a lead on another coding agent. |
+| Reviewer, clean context | `agent_type` reviewer with `fork_turns=none` | `subagent_type` reviewer, fresh agent | The `reviewer` role file. Not used in the trial. Gap, 19 November 2026: Antigravity keeps state between conversations and whether a later one reads it is not known, so a clean context is not established. The lead takes its clean-context review from a reviewer on Codex or Claude Code through the [delegate call](#starting-a-delegate-on-any-coding-agent) (the trial session used the Codex reviewer, step 37), or hands the leaf to a lead on another coding agent. |
 
 No Antigravity lead session is recorded using its role files: the trial session ran on
 19 November 2026, before they were merged. Its two sub-agents each ran as their own
 conversation whose first message was the brief, and both inherited the lead's model.
 
-### Non-interactive runs for a second model family
+### Starting a delegate on any coding agent
 
-A lead on one host may start a worker or reviewer on another, so that a review comes
-from a second model family. Each run is given a brief from the
-[template](../standards/agents.md#brief-template); its final message is the
-hand-back, verified like any other. `WORKTREE` is the leaf's worktree, `OUT` a file
-in the lead's scratch directory, and `BRIEF` the brief text.
+A lead on any of the three coding agents starts a worker, a reviewer or an explorer on
+any of the three with one call, from the main checkout or a worktree:
 
-| Role | Codex (`codex exec`), brief on standard input | Claude Code | Antigravity (`agy`), from the worktree |
+```sh
+.venv/bin/python tools/delegate.py --coding-agent codex|claude-code|antigravity \
+  --model MODEL --effort EFFORT --role worker|reviewer|explorer|locator \
+  --brief BRIEF_FILE --worktree WORKTREE --out OUT [--check 'COMMAND'] [--timeout SECONDS]
+```
+
+- **The lead names the delegate; the call starts it.** The coding agent, model, effort
+  and role have no default, and the call holds no preference among them
+  ([choosing the delegate](../standards/agents.md#the-leads-duties)). `MODEL` and
+  `EFFORT` are that coding agent's own names for them. `--list` prints every coding
+  agent and role that can be named.
+- **Brief and worktree.** `BRIEF_FILE` holds a brief from the
+  [template](../standards/agents.md#brief-template), or is `-` for standard input.
+  The call puts the role's instruction ahead of it: read and follow
+  `.agents/roles/<role>.md`. `WORKTREE` is where the delegate works; a worker gets a
+  worktree of its own that the lead created. `OUT` is a directory in the lead's scratch
+  space, outside the checkout; the call writes the brief as sent, the reply, the run's
+  output and `result.json` there.
+- **What comes back.** The call prints a result and then the hand-back, and exits with
+  0 when there is a hand-back and 1 when there is none. The result names the delegate,
+  its version, the wall time, the commits the delegate made, the paths it left
+  uncommitted and one outcome: `handed_back`; `failed_start` (the command is missing or
+  could not be run); `empty_reply` (exit code 0 and no reply, which is a failed run);
+  `refused` (a quota or sign-in message); `failed` (any other non-zero exit);
+  `timed_out`; or `unavailable` (the role is recorded as having no start that works on
+  that coding agent). After any outcome but the first the call starts nothing else: the
+  lead decides what to try next.
+- **The acceptance check is run again outside.** With `--check`, the brief asks the
+  delegate to end by saying whether it saw the check pass, fail or not run. After the
+  run the call runs the same command in the worktree itself, outside any sandbox the
+  delegate had, and reports both: what the delegate said and what the rerun showed.
+- **The hand-back is a report.** The lead still reads the diff and checks quoted
+  passages against the tree
+  ([verify a delegated result](../standards/agents.md#the-leads-duties)). The call does
+  not commit, merge or push.
+
+How each coding agent is started is data, in
+[`.agents/delegates.json`](../../.agents/delegates.json); the call names no coding
+agent itself. Each cell below gives the start and what was tried on this machine
+(Codex CLI 0.171.0, Claude Code 2.1.329, Antigravity CLI 1.5.13).
+
+| Role | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
-| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only -C WORKTREE -o OUT -` | Gap, 20 November 2026: no command that starts a Claude Code reviewer from another coding agent is recorded here. A lead on another coding agent uses the Codex or Antigravity command in this row. | `agy --mode plan -p BRIEF` |
-| Worker | `codex exec --ignore-rules -s workspace-write -C WORKTREE -o OUT -` | Gap, 20 November 2026: no command that starts a Claude Code worker from another coding agent is recorded here. A lead on another coding agent uses its own worker role or the Codex command in this row. | Gap, 20 November 2026: not used. Print mode refuses any shell command it was not granted. The lead uses its own worker role or the Codex command in this row. |
+| Worker | `codex exec --ignore-rules -s workspace-write`, brief on standard input. It works inside a sandbox that denies loopback connections and process listing, so the whole test suite fails there, and it leaves its changes uncommitted: the call's rerun gives the check's real result, and the lead inspects and commits. Tried through the call on 20 November 2026: a probe wrote a file, ran a command and handed back in 10 seconds. | `claude -p --permission-mode auto`, brief on standard input. It runs commands and commits through the hook without a sandbox. Tried through the call on 20 November 2026: a probe, and one real worker that changed three files, ran both checks, committed and handed back in 125 seconds. | `agy --mode accept-edits -p BRIEF`. It edits files and can run no shell command: a command it tries is denied and the run ends with exit code 0 and no reply, which the call reports as `empty_reply` with the files it changed still listed. The brief tells it to run no command, and `--check` is how its work is checked. Tried on 20 November 2026: through the call a probe that was told to run a command wrote its file and returned nothing; by hand the same mode, told to run none, wrote the file and replied. No real task has been given to it. |
+| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only`, brief on standard input. It starts clean and reads the worktree. | `claude -p --permission-mode auto` with the file-editing tools disallowed, brief on standard input. It starts clean (`--no-session-persistence`) and can run read-only commands. Tried on 20 November 2026 with a one-word brief only. | `agy --mode plan -p BRIEF`. It opens files by path and can run no shell command, so the brief carries the diff and the command output the review needs. Its review is a second family's view and not the clean-context review (see below). |
+| Explorer, both forms | The reviewer's start. | The reviewer's start. | The reviewer's start. |
 
 - **No gameplay allowance** ([R-DELEGATION-ERROR](../risks.md)): `--ignore-rules`
   keeps the tracked [gameplay rules](../../.codex/rules/gameplay.rules), which allow
-  `harness run` without a prompt, out of a delegated run, since reviewers and workers
-  never send game inputs. Cost: one flag.
-- **Commits.** A Codex worker leaves its changes uncommitted and the lead inspects and
-  commits them, as the lead does before every commit; the worker's hand-back is the
-  diff and the commands it ran.
+  `harness run` without a prompt, out of a delegated Codex run, since reviewers and
+  workers never send game inputs. Cost: one flag. A delegated Claude Code run reads the
+  project's settings, whose only allowances are the three
+  [gameplay prefixes](#gameplay-command-allowances); the role instruction and the brief
+  forbid them, and nothing mechanical does.
+- **Refusals.** The call reads a quota or sign-in refusal from wording listed for each
+  coding agent in the definitions file. Gap, 20 November 2026: no real refusal from any
+  of the three has been seen through the call, so a refusal worded differently is
+  reported as `failed` or `empty_reply` instead. Either way nothing else is started.
+- **The lead's own settings reach a delegate.** A delegated Claude Code run loads the
+  user's settings as well as the project's: on 20 November 2026 a worker's hand-back
+  opened in the output style the lead's user had selected.
 - **Antigravity reviewers.** Print mode refuses any shell command it was not granted,
   so the brief carries the diff and the command output the review needs; a large diff
   goes in parts, within the shell's argument limit. On 20 November 2026 a print-mode
@@ -136,16 +186,19 @@ in the lead's scratch directory, and `BRIEF` the brief text.
   command. Antigravity keeps state between
   conversations (summaries, a `brain` directory) and whether a later run reads it is
   not known, so its review is a second family's view and not the clean-context review.
-  That one comes from a reviewer that starts clean: the Codex command above, or a
-  fresh reviewer agent where the lead is on Claude Code or Codex. Which changes get a
+  That one comes from a reviewer that starts clean: a Codex or Claude Code reviewer
+  through the call, or the host's own fresh reviewer agent where the lead is on Claude
+  Code or Codex. Which changes get a
   review, and when the one review of a document change may come from a second family,
   is in [review](../workflows/review.md).
-- **Credentials** ([R-KEY-LEAK](../risks.md)): the shell that starts either tool
-  holds no provider key, since the tool reads its whole environment and would hand
-  the key to a third provider. Cost: none beyond starting it from a clean shell.
-- **Outside the project** each tool keeps its own state (sessions, logs, caches)
-  under its home configuration directory, as it does when used by hand
-  ([R-HOST-CHANGE](../risks.md)); the project changes no configuration of either,
+- **Credentials** ([R-KEY-LEAK](../risks.md)): the shell that starts the call holds no
+  provider key, since a coding agent reads its whole environment and would hand the key
+  to a third provider, or bill it in place of the subscription. The call also starts
+  the delegate without the key variables listed in the definitions file. Cost: none
+  beyond starting it from a clean shell; the list covers only the names written in it.
+- **Outside the project** each coding agent keeps its own state (sessions, logs,
+  caches) under its home configuration directory, as it does when used by hand
+  ([R-HOST-CHANGE](../risks.md)); the project changes no configuration of any of them,
   apart from the one owner-approved edit under
   [per-user activation](#per-user-activation).
 

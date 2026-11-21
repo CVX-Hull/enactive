@@ -70,7 +70,7 @@
       "refusals": ["usage limit", "rate limit", "quota", "not logged in", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
       "roles": {
         "worker": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "accept-edits", "-p", "{brief}"],
           "brief": "argument",
           "reply": "stdout"
         },
