@@ -28,8 +28,8 @@ Explorers/reviewers never send game inputs.
   do not import ceremony without a concrete project need.
 - Apply the charter's CDDA-class portability constraint and P-GENERALITY.
   The selected harness boundary is basic computer observation/control only;
-  game semantics belong in the playing system. Follow [ADR006](docs/decisions/006-computer-control-boundary.md)
-  for the coordinated cutover and the current computer-control contract.
+  game semantics belong in the playing system. The [computer-control contract](docs/contracts/computer-control.md)
+  is current; [ADR006](docs/decisions/006-computer-control-boundary.md) records why.
   Keep shared player/memory/learning/orchestration separate from game bindings;
   document existing coupling rather than claiming unqualified portability.
 - Follow S-MIGRATION: one current contract; migrate every caller and persisted format
