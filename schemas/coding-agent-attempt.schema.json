@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "coding-agent-attempt/2: one delegated attempt in data/evaluation/coding-agent-attempts.jsonl",
-  "description": "One row per delegated attempt: a worker, reviewer or explorer the lead chose for one task. A matched run's two attempts are a pair: the same Ready leaf, brief and base commit given to a routing row's first choice and to one challenger, each in its own worktree; the two rows share issue, base commit and kind of work, and only they carry a blind preference. The procedure and how to read the rows are on docs/operations/model-routing.md. `model` and `effort` are the names the curator and player-host configurations use; `wall_seconds` is the run ledger's.",
+  "description": "One row per delegated attempt: a worker, reviewer or explorer the lead chose for one task. A matched run's two attempts are a pair: the same Ready leaf, brief and base commit given to a routing row's first choice and to one challenger, each in its own worktree; the two rows share issue, base commit and kind of work, and only they carry a blind preference. The procedure is in docs/operations/matched-runs.md and the reading rules are in docs/operations/model-routing.md. `model` and `effort` are the names the curator and player-host configurations use; `wall_seconds` is the run ledger's.",
   "type": "object",
   "additionalProperties": false,
   "required": [

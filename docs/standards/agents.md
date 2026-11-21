@@ -46,7 +46,7 @@ to this list.
 - **Keep one writer per checkout.** Up to two implementation workers may write
   concurrently, each in its own project-local worktree, with non-overlapping named
   ownership and agreed interfaces. The one exception is a
-  [matched run](../operations/model-routing.md#matched-runs-on-this-repositorys-leaves):
+  [matched run](../operations/matched-runs.md#matched-runs-on-this-repositorys-leaves):
   its two attempts are the two workers, they share the leaf's owned paths in separate
   worktrees, and the lead merges at most one passing attempt. Each checkout has one
   writer. Workers report

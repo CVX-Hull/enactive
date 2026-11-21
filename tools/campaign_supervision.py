@@ -285,7 +285,7 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                     return handle
                 if runner_config is not None:
                     # The read admission lock exists before the custodian starts and is never created
-                    # by it, nor replaced while the session is live (docs/design/live-curator-integration.md).
+                    # by it, nor replaced while the session is live (docs/operations/campaign-supervision.md#freeze-launch-and-inspect).
                     os.close(os.open(directory/CURATOR_READ_LOCK, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600))
                     (directory/RUNNER_DIRECTORY).mkdir(mode=0o700)
                 child = launch('custodian', [sys.executable, '-m', 'tools.campaign_run', '--run', str(directory)],

@@ -111,7 +111,7 @@ in the other half, with odd counts rounded as described below.
 
 - `knowledge_export draw-study REPOSITORY --version V --starts N --blocks LABEL:COUNT...
   --seed S [--placebo UNIT_ID...] --out FILE` writes the draw: the store version, the unit
-  layout (units and shared facts, as the [unit rule](../design/player-context.md) builds
+  layout (units and shared facts, as the [unit rule](measurement-tools.md#the-facts-to-judge-judged-facts1) builds
   it), the seed, the starts in order (index `0`…`N−1`, each with its block), the blocks,
   the placebo unit IDs, and per unit and block the half size and the withheld start
   indices.

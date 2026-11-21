@@ -47,15 +47,18 @@ not a knowledge graph, and does not renew authority.
 
 Journal and application tests cover the supported formats and composition. They do
 not establish learning benefit. Sealed historical evidence retains its original scope.
-The [curator component](curator.md#curator-and-trace-workbench) gives the runner's
-status, and [delivery to a running actor](../design/live-curator-integration.md#delivery-to-a-running-actor)
-says how publication during an admission relates to the frozen briefing.
+The application serves knowledge reads from the delivered export. The host selects
+briefings and reminders from that same version under the [delivery contract](../contracts/player-host.md#delivered-knowledge-and-recall).
+The [player guide](../player-guide.md#delivered-knowledge) describes how to check
+fallible leads and reminders against the current view. The
+[curator repository](curator.md#facts-articles-and-grooming) stays outside the player
+runtime. After play, the evaluator reads [delivery evidence](../contracts/measurement-tools.md#adjudication-and-the-standing-use-measures).
 
 ## Context and failure boundaries
 
 Initial context consists of the guide, frozen objective and actual selected tool
 schema. The objective is ongoing; experiment countdowns and final-actor policy
-are absent from supplied prompt and tool views. The typed MCP projection gives the model a
+are absent from supplied prompt and tool views. The [typed MCP projection](../contracts/player-ports.md#mcp-projection-and-envelopes) gives the model a
 short result and keeps the original evidence and uncertainty in the operation record while excluding global resource accounting;
 canonical operator records remain unchanged. The player uses curated knowledge,
 hints and exact source reads as needed; none supplies engine facts. The provider image-history window retains all

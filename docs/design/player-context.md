@@ -1,9 +1,9 @@
 ---
 owner: lead
-status: active
-date: '2026-11-13'
+status: historical
+date: '2026-11-21'
 scope: 'Design rationale for delivering curated knowledge to the player and a proposal for a context cut bounded by the curator’s published coverage'
-review_trigger: Measurement of the curator's lag behind play or changes to the delivery contracts
+replacement: docs/contracts/player-host.md
 ---
 
 # The player's context: delivery of curated knowledge and a bounded prompt

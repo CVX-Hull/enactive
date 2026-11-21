@@ -5,7 +5,7 @@ custodian, outside supervision; it can be run by hand the same way:
 
     python -m tools.curator_host.live_runner --run RUN --directory RUN/curator-runner --config CONFIG
 
-Its rules are `harness.curator.runner`, its design docs/design/live-curator-integration.md. This
+Its rules are `harness.curator.runner`, its component docs/components/curator.md. This
 module supplies the real parts: the snapshot reader on the live run, a session through the shadow
 runner's `run_one` (one `ModelProxy` per session, which reserves spend before each request), the
 look at the knowledge repository's tags, and signal handling. SIGTERM or SIGINT interrupts a

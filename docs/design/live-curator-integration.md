@@ -1,8 +1,9 @@
 ---
 owner: lead
-status: active
+status: historical
+date: '2026-11-21'
 scope: 'How the curator runs during an ongoing admission: who starts a session and when, how a trace that is still being written becomes readable, publication and coverage, failure, grooming, delivery, the spectator view and the measures of a first bounded live run'
-review_trigger: Live-run evidence changes the reader or runner assumptions, or the delivery contract changes
+replacement: docs/components/curator.md
 ---
 
 # Running the curator during play

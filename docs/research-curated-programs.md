@@ -108,7 +108,7 @@ knowledge of any particular game.
   held-out gap persists and grows with code size (about 28 pp per tenfold; it
   reports a 2,900-line solution that memorizes test inputs). Relevance: visible-test
   acceptance of agent-written artifacts can be gamed, which supports the ADR's
-  gate-owned tests the curator cannot see. The [sandbox research](research-curator-sandbox.md)
+  gate-owned tests the curator cannot see. The [gate-gaming research](research-gate-gaming.md#gate-gaming)
   covers gate gaming.
 - *Execution verification of induced programs.* ASI ([2504.06821](https://arxiv.org/html/2504.06821v2),
   v1 Apr 2025, v2 29 Aug 2025; full text extracted): induced Python skills are kept

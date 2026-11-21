@@ -36,9 +36,11 @@ records their rationale. Current owner decisions are in the
 
 | Page | Subject | Open question | Current rule or evidence |
 | --- | --- | --- | --- |
-| [Memory, belief, ontology and oversight](research-curated-memory.md) | Write and retrieval policies, concurrent consolidation, belief under conflict, ontology evaluation and oversight interfaces | Which delivery, conflict handling, ontology grooming and spectator methods help play or supervision? | The [curator](components/curator.md) writes the knowledge store |
+| [Memory, ontology and oversight](research-curated-memory.md) | Write and retrieval policies, concurrent consolidation, ontology evaluation and oversight interfaces | Which delivery, ontology grooming and spectator methods help play or supervision? | The [curator](components/curator.md) writes the knowledge store |
+| [Belief under conflicting observations](research-belief-under-conflict.md) | Revision, reliability, staleness and calibration | How do qualitative and numerical representations perform on matched evidence? | [Decision to compare representations](decisions/owner-decisions.md#compare-belief-representations-on-matched-cases) |
 | [Programs, supervision, evaluation and study design](research-curated-programs.md) | Program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design | Do programs and monitoring help in play, and can practice instances support valid trials? | [Curator memory study](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
-| [Curator sandbox](research-curator-sandbox.md) | Project-local sandbox mechanisms on this Mac, session cost evidence, residual risks and gate gaming | How can the submission gate resist gaming when it tests knowledge or programs on later traces? | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#claude-code-and-codex-cli-curator-host-rules) |
+| [Curator sandbox](research-curator-sandbox.md) | Isolation mechanisms, host checks, session costs and residual risks | Do the residual risks of the adopted mechanism still hold after a host update or a change to the isolation boundary? | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#claude-code-and-codex-cli-curator-host-rules) |
+| [Gate gaming](research-gate-gaming.md) | Visible tests, feedback and held-out evidence | Can a gate resist gaming when it scores submissions on later traces? | [Prospective gate design](design/curator-session.md#proposed-prospective-verification-and-publication-contract) |
 
 ### Historical: the question is settled
 

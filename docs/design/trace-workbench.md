@@ -1,8 +1,9 @@
 ---
 owner: lead
-status: active
+status: historical
+date: '2026-11-21'
 scope: 'Trace projection, sealed-memory evidence reader, workbench commands and sidecar container manifests'
-review_trigger: A change to what a trace projection may contain, to the session or memory store formats, to the workbench commands, or to the container manifest shape
+replacement: docs/components/curator.md
 ---
 
 # Trace projection and workbench
