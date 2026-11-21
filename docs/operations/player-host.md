@@ -15,8 +15,8 @@ mission-driver CLI. Freeze the Pi adapter as
 `"host": {"argv": ["ABSOLUTE_EXISTING_NODE_EXECUTABLE", "ABSOLUTE_PROJECT_ROOT/tools/player_host/run.mjs"]}`.
 
 The selected finite configuration is OpenRouter / pinned OpenAI provider /
-`openai/gpt-6.1-terra`, medium effort. DeepSeek and other cheaper player models are
-future alternatives to test under #25, not current defaults. Freeze the verified
+`openai/gpt-6.1-terra`, medium effort, under the owner's decision of 16 November
+2026 in the [decision log](../decisions/owner-decisions.md). Freeze the verified
 full endpoint tag and supported parameters
 in `route.json`; use no fallback. The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency

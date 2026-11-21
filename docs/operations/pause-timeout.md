@@ -6,9 +6,16 @@ status: active
 
 # Pause, timeout and recovery
 
-Pause permanently stops further automation for the run. Use the browser Pause
-control (`POST /api/pause` with `{}`), the actor's `computer_stop`, or custodian
-cancellation. These paths do not save, quit, win or undo events already delivered.
+Pause permanently stops further automation for the run. Use the browser's
+[Pause control](campaign-supervision.md#freeze-launch-and-inspect) to request an
+immediate stop through the supervisor's gateway. The gateway forwards `{}` to the
+custodian, and the supervisor records the operator's reason (`loop`, `fault`, `spend`
+or `other`). A missing or unknown reason is recorded as `unspecified` and never blocks
+the stop.
+[Pause contract](../contracts/computer-control.md#passive-spectator-reads-and-operator-pause).
+
+The actor's `computer_stop` and custodian cancellation also stop automation.
+These paths do not save, quit, win or undo events already delivered.
 Real input in the native window takes precedence and fences synthetic input.
 
 The Python stop event latches before executor/DB waits. A separate send lock has

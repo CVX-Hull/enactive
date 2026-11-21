@@ -1,20 +1,16 @@
 ---
 owner: lead
-review_trigger: A served model is added, retired or repriced, a quota changes, a coding agent's version changes, a default effort changes, or a row is observed in this repository
+review_trigger: A served model is added, retired or repriced, a quota changes, a coding agent's version changes, a default effort changes, or a row is observed in this repository for the first time
 status: active
 ---
 
 # Choosing a model for engineering work
 
-A lead on any [coding-agent host](coding-agents.md) reads this page to choose the model
-for a piece of engineering work. The choice is the lead's judgment for each task
-([choosing the delegate](../standards/agents.md#the-leads-duties)): this page advises by
-kind of work, the [delegate profiles](delegate-profiles.md) say how each coding agent
-and model has done in this repository, and neither is a rule. No tool or check chooses a
-delegate from the table below, and the [delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent)
-starts whatever the lead names. It concerns the lead's own model and delegation only: the playing actor's, curator's
-and judges' models are frozen per run under the
-[player host contract](../contracts/player-host.md).
+The lead chooses the engineering model for each task and names the delegate. The
+table gives a starting point. The [delegate profiles](delegate-profiles.md) describe
+the local evidence for each configuration. [S-AGENT](../standards/agents.md#the-leads-duties)
+owns the decision. Gameplay, curator and judge models are frozen separately per run
+under the [player host contract](../contracts/player-host.md).
 
 ## How to read a row
 
@@ -34,43 +30,35 @@ every row:
   several times the cost. Starting at High is a judgment carried from that one model to
   the others.
 
-One session's work as lead on a documentation leaf is in the
-[trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md). A row changes on our own evidence
-through a [matched run](#matched-runs-on-this-repositorys-leaves), the same leaf on two
-coding agents, not on a public board alone. Every delegated attempt on a code or review
-leaf, matched or not, is a row of `data/evaluation/coding-agent-attempts.jsonl`
-([reading the ledger](#reading-the-ledger)).
+Use [matched runs](#matched-runs-on-this-repositorys-leaves) to compare candidates on
+the same leaf. [Reading the ledger](#reading-the-ledger) gives the conditions for
+changing a routing row.
 
 ## Route by kind of work
 
-Every choice here is provisional advice with its reason, for the lead to weigh with the
-task in front of it; a first choice is where to start thinking, not what must be used.
-A cell names an effort only where a figure was read at
-that effort; "not read" marks a setting chosen by judgment. Which changes get a review,
-and how many, is owned by [review](../workflows/review.md); this page only says which
-model to give it.
+“Not read” marks an effort chosen by judgment. The [review workflow](../workflows/review.md)
+determines which changes get reviewed and how many reviewers they get.
 
 | Kind of work here | First choice | Substitutes, in order | Avoid | What it rests on |
 | --- | --- | --- | --- | --- |
 | Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku and Luna, read at Max; Argon, effort not read | Index 58 at High and at Extra-high; the patch score of 49 was read at Extra-high only |
-| Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at Extra-high; Claude Opus 5.5 at High (not read) | Claude Sonnet 5.5 at Max as the first choice | Sol's index of 50 at 12.6 minutes, the least time read; no figure isolates work from a brief. One [matched run](#matched-runs-on-this-repositorys-leaves) here, on 20 November 2026 (issue 834): both attempts passed acceptance with no repair; GPT-6.2 Sol at Extra-high was preferred blind over Claude Opus 5.5 at High for how its checks failed, and took 635 seconds against 510, then 502 more for one repair after review. One observation moves no default |
+| Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at Extra-high, then Claude Opus 5.5 at High (not read) | Claude Sonnet 5.5 at Max as the first choice | Sol scores 50 on the public index and has the shortest time among the configurations examined. The index does not isolate work from a brief. |
 | Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Sonnet 5.5 at Medium (not read) as a sub-agent | Claude Haiku 5.5 and GPT-6 Luna, both read at Max | Codebase question scores of 64 to 68 for the four of these that were read against 34 and 38; Sonnet at Medium was not read |
 | Locating files and mechanical sweeps | the smallest model the host serves | none needed | a large model | Cost only; no figure read |
 | Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations |
 | Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | Judgment; no public evidence found |
-| Standards and pull-request prose | the lead | GPT-6.2 Sol at Extra-high | none known | Judgment; no public evidence found. One [matched run](#matched-runs-on-this-repositorys-leaves) here, on 20 November 2026 (issue 811): both attempts passed acceptance with no repair; the lead's model, Claude Fable 5.2 at High, was preferred blind over GPT-6.2 Sol at Extra-high, which took 406 seconds against 710. One observation moves no default |
+| Standards and pull-request prose | the lead | GPT-6.2 Sol at Extra-high | none known | Judgment. No public comparison for this work is recorded. |
 | Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found |
 | Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | The first choice is judgment; wrong-answer rates were read for those two models only |
 | Review of code | the host's reviewer role, clean context | another family's reviewer when the window is spent | acting on a quoted passage before checking it against the tree | The choice is judgment; reviewer products built on two Claude models were read, with no effort reported |
-| Review of documents | one clean-context reviewer: the host's reviewer role, or a second family's where one has quota and its run starts from a clean context | none known | none known | The choice is judgment; one preprint, read second-hand, is weak support |
+| Review of documents | If the [review workflow](../workflows/review.md) selects a review, use the host's clean-context reviewer or a second family's clean-context reviewer with quota. | none known | none known | Judgment, with weak support from one preprint read second-hand. |
 
-The rows that rest on judgment are most of what this repository merges.
+The local code and prose comparisons do not yet meet the [threshold for changing a
+default](#reading-the-ledger).
 
 ## Roles and their default models
 
-Role definitions are tracked in this repository, so a change to a role applies to this
-project alone and every host is given the same instruction text. One shared instruction per role lives
-in `.agents/roles/`; each host has a thin wrapper that names the model and points to it.
+These are the model settings in the repository's native role files.
 
 | Role | Claude Code (`.claude/agents/`) | Codex (`.codex/agents/`) | Antigravity (`.agents/agents/`) |
 | --- | --- | --- | --- |
@@ -79,26 +67,12 @@ in `.agents/roles/`; each host has a thin wrapper that names the model and point
 | Worker | `worker`: Opus at High | `worker`: GPT-6.2 Sol at Extra-high | `worker`: alias `pro` |
 | Reviewer | `reviewer`: Opus at High | `reviewer`: GPT-6.2 Sol at Extra-high | `reviewer`: alias `pro` |
 
-These are what each host's own role file runs when the lead starts the role natively.
-They are not eligibility rules and not the lead's default choice: through the
-[delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent) the lead
-names the coding agent, model and effort for the task, and states them with its reason
-on the brief's Role line and in the pull request.
-
-- **Claude Code** reads the project's `.claude/agents/` ahead of a user's own
-  definitions of the same name. The lead names another model for one task with the
-  delegation call's model override. Sub-agents of all four roles ran in the one lead
-  session measured on 19 and 20 November 2026: 20 explorers, 6 reviewers, 4 workers and 1
-  locator ([token use](../acceptance/2026-11-20-coding-agent-token-use.md)).
-- **Codex** reads `.codex/agents/` in a checkout the user trusts. All four model
-  selectors answered a one-word prompt on CLI 0.171.0, twice; the role files themselves
-  were not exercised as sub-agents.
-- **Antigravity** role files use its native aliases; a full model identifier in a
-  role file was not tested. `agy agents` (CLI 1.5.13) listed all four files from the
-  main checkout, and none from a worktree of it, from a scratch copy, or from that copy
-  after `git init`; nothing else was tried. The one recorded trial did not use them: it
-  started its explorer as the host's `research` type and defined its own `worker` type
-  ([trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md)).
+For a different host, model or effort, name it in the
+[delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent) and give
+the reason in the brief and pull request. The Codex selectors are verified on their
+own. Starting the tracked Codex roles natively is unverified. The Antigravity
+wrappers use native aliases. Full model identifiers in those wrappers are untested.
+See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
 
 ## Quota and spending
 
@@ -111,36 +85,29 @@ on the brief's Role line and in the pull request.
 - **Spend the scarcest window on the work that needs it.** The hard-change row's first
   choice and substitutes are the candidates to consider for a hard change; bounded and
   locating work can go to cheaper models.
-- **Keep the lead's context small.** The lead's context is sent again on every
-  request. In the one lead session measured here the lead's own requests were 72% to
-  74% of the tokens' list-price equivalent, and about half of the lead's part was
-  re-reading a context whose median was 325,920 to 743,067 tokens in each quarter of
-  the session ([token use](../acceptance/2026-11-20-coding-agent-token-use.md)). No
-  session with a smaller context was measured beside it. So: one lead
-  session for one leaf or one batch that merges together; summarize the session or hand
-  the role to a fresh session before the context passes about 300,000 tokens; and send
-  wide reading and long command output to a sub-agent that returns a short report. This
-  is guidance and nothing checks it. The 300,000 figure is a judgment from that one
-  session, not a measured optimum.
+- **Keep the lead's context small.** Use one session for one leaf or a batch that
+  merges together. Summarize or hand over to a fresh session before context passes
+  about 300,000 tokens. Delegate wide reading and long command output with a brief
+  that asks for a short report. The threshold is a judgment from the cost of rereading
+  context in one session. No smaller-context session was measured alongside it.
+  [Token-use measurement](../acceptance/2026-11-20-coding-agent-token-use.md).
 
 ## When the lead's model has no quota left
 
-The lead role passes to another session or coding agent
-([handing over through the issue](../standards/agents.md#the-leads-duties)). The
-readers found no comparison of these configurations as leads, here or in public, so
-this is where to start thinking, with its reasons, and not a default
-([evidence read on 20 November 2026](../acceptance/2026-11-20-lead-succession-evidence-866.md)):
+Hand the lead role over [through the issue](../standards/agents.md#the-leads-duties).
+The [lead succession evidence](../acceptance/2026-11-20-lead-succession-evidence-866.md)
+includes no local or public comparison of these configurations as leads. The order
+below is a starting point.
 
 | What is spent | Where to start | Then | Why |
 | --- | --- | --- | --- |
-| Only the limit of Claude Fable 5.2 | Claude Code on Claude Opus 5.5, at High or above | Codex on GPT-6.2 Sol at Extra-high, then GPT-6.2 Astra at Extra-high | Opus made more lead requests than Fable in the transcripts sampled here, on the coding agent whose lead workflow is in use. Its effort as lead was not recorded; one public index that is not specific to coding puts it seven points lower at High than at Max |
-| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high; the Antigravity app on Gemini 4 Neon at High, for engineering work that needs no gameplay; it has not yet led unattended | Sol has the local record of the work a lead does: code preferred blind and nine confirmed review findings. Trying Astra first for a hard change with open design is judgment: no local attempt compares it with Sol, and the maker estimates about a third as many Astra messages as Sol messages in five hours on its smaller plans. The one Antigravity lead session needed the owner and a second session to finish; for a watched documentation leaf it may come before Astra |
+| Only the limit of Claude Fable 5.2 | Claude Code on Claude Opus 5.5, at High or above | Codex on GPT-6.2 Sol at Extra-high, then GPT-6.2 Astra at Extra-high | Opus accounts for more lead requests than Fable in the sampled transcripts on this host. Its lead effort is unknown. A general public index favors Max over High. |
+| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high, then the Antigravity app on Gemini 4 Neon at High for engineering work that needs no gameplay | Sol has local evidence for bounded implementation and code review. Consider Astra first for a hard change with open design, a judgment without a local comparison to Sol. The maker estimates about a third as many Astra messages as Sol messages in five hours on smaller plans. Neon may come before Astra for a watched documentation leaf. Unattended leading remains unverified. |
 
 - **Check which limit the session shows as spent first.** Each coding agent shows what
   remains in a session ([delegate profiles](delegate-profiles.md)).
-- **A Codex lead has gaps to route around.** The delegate call has not been run from
-  one, and its sandbox denies the network by default
-  ([hosts page](coding-agents.md#starting-a-delegate-on-any-coding-agent)).
+- **Allow for the Codex lead's network requirements** when the leaf needs a delegate.
+  See [the lead's duties on each host](coding-agents.md#the-leads-duties-on-each-coding-agent).
 - **The duty to verify a delegated result does not change with the lead**
   ([the lead's duties](../standards/agents.md#the-leads-duties)).
 
@@ -188,21 +155,21 @@ first choice is the model that role runs on in the lead's session.
 
 ## Reading the ledger
 
-`data/evaluation/coding-agent-attempts.jsonl` holds one row for each delegated attempt
-on a code or review leaf: the worker, reviewer or explorer the lead chose, the reason
-it gave, and how the attempt went. The lead adds the row in the pull request the
+The [attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) holds one row
+for each delegated attempt on a code or review leaf. Each row names the worker,
+reviewer or explorer, the lead's reason for choosing it and the outcome. The lead adds the row in the pull request the
 attempt served. The delegate call's `result.json` supplies the coding agent, its
 version, the model, the effort, the date, the wall time and how the start ended
 (`hand_back`); the lead supplies the reason, its own rerun of the acceptance check, the
-repairs it asked for, whether it merged or used the result, a reviewer's findings as
-dispositioned, and any false report. A row whose `blind_preference` is not null is one
+repairs it requested before the check passed or it gave up, whether it merged or
+used the result, the disposition of review findings, and any false report. A row whose `blind_preference` is not null is one
 of a matched run's two attempts.
 
 - **Read single attempts as a record, not a score.** For one configuration (coding
   agent, model and effort) in one role and kind of work: how often it handed back, how
   often the lead's rerun passed without a repair, how long it took, and for a reviewer
   how many findings were confirmed against how many rejected. The
-  [delegate profiles](delegate-profiles.md) summarize these.
+  [delegate profiles](delegate-profiles.md) give the conclusions each sample supports.
 - **Count matched pairs within one kind of work.** Wins and losses are counted for a pair of
   configurations (coding agent, model and effort) within one kind of work, never across
   kinds. An attempt wins when its `acceptance` passed and the other's failed. When both
@@ -233,9 +200,7 @@ rows whose model was replaced as inherited. A default in a role file moves on a
 [matched run](#matched-runs-on-this-repositorys-leaves), or on a clear change in the
 public figures when no matched run exists.
 
-What was read of each host's models on 19 November 2026 is in the
-[evidence record](../acceptance/2026-11-19-coding-agent-model-evidence.md#measured-here):
-a full listing for one host, the delegation selectors for another and four selectors that
-answered for the third. A trigger compares the host's current listing with it.
+Compare the host's current model listing with the listing or selectors in the
+evidence record linked [above](#how-to-read-a-row).
 
 [Operations index](../runbook.md).
