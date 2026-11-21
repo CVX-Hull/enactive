@@ -45,8 +45,8 @@
       "pattern": "^[0-9a-f]{40}$"
     },
     "role": {
-      "description": "The role the delegate was given.",
-      "enum": ["worker", "reviewer", "explorer"]
+      "description": "The role the delegate was given; locator is the explorer role in its locating form.",
+      "enum": ["worker", "reviewer", "explorer", "locator"]
     },
     "coding_agent": {
       "description": "The coding agent that ran the attempt, as the coding-agent hosts page names it.",
@@ -54,8 +54,8 @@
       "minLength": 1
     },
     "coding_agent_version": {
-      "description": "The coding agent's version as it reports it.",
-      "type": "string",
+      "description": "The coding agent's version as it reports it; null when it could not be started to say.",
+      "type": ["string", "null"],
       "minLength": 1
     },
     "model": {
@@ -124,20 +124,26 @@
       "minLength": 1
     }
   },
-  "if": {
-    "properties": {"role": {"const": "worker"}}
-  },
-  "then": {
-    "properties": {
-      "outcome": {"enum": ["merged", "discarded"]},
-      "findings": {"type": "null"}
+  "allOf": [
+    {
+      "if": {"properties": {"role": {"const": "worker"}}},
+      "then": {"properties": {"outcome": {"enum": ["merged", "discarded"]}}},
+      "else": {
+        "properties": {
+          "outcome": {"enum": ["used", "not_used"]},
+          "acceptance": {"type": "null"},
+          "blind_preference": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"role": {"const": "reviewer"}}},
+      "else": {"properties": {"findings": {"type": "null"}}}
+    },
+    {
+      "$comment": "A matched pair is read by acceptance first, so each of its two attempts has one.",
+      "if": {"properties": {"blind_preference": {"type": "string"}}},
+      "then": {"properties": {"acceptance": {"type": "string"}}}
     }
-  },
-  "else": {
-    "properties": {
-      "outcome": {"enum": ["used", "not_used"]},
-      "acceptance": {"type": "null"},
-      "blind_preference": {"type": "null"}
-    }
-  }
+  ]
 }

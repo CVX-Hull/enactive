@@ -8,10 +8,12 @@ agent offers every role and that every placeholder they use is one the call fill
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -48,7 +50,10 @@ def stand_ins(tmp_path):
         "silent": "NAME = 'silent'\n" + mark + "print('a tool was denied', file=sys.stderr)",
         "refusing": "NAME = 'refusing'\n" + mark + "print('You have hit your usage limit', file=sys.stderr)\nsys.exit(1)",
         "crashing": "NAME = 'crashing'\n" + mark + "print('boom', file=sys.stderr)\nsys.exit(3)",
-        "slow": "NAME = 'slow'\n" + mark + "import time\ntime.sleep(30)",
+        # Never ends, and leaves a child that ignores the request to stop.
+        "slow": "NAME = 'slow'\n" + mark + "import subprocess, time\nchild = subprocess.Popen([sys.executable, '-c', "
+                "'import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)'])\n"
+                f"pathlib.Path({str(tmp_path / 'child')!r}).write_text(str(child.pid))\ntime.sleep(60)",
     }
     commands = {name: script(tmp_path / name, body) for name, body in bodies.items()}
     version = [sys.executable, "-c", "print('9.9.9')"]
@@ -78,7 +83,7 @@ def stand_ins(tmp_path):
         ran = started.read_text().split() if started.exists() else []
         return result, ran
 
-    start.worktree, start.out, start.definitions = worktree, tmp_path / "out", definitions
+    start.worktree, start.out, start.definitions, start.child = worktree, tmp_path / "out", definitions, tmp_path / "child"
     return start
 
 
@@ -110,14 +115,40 @@ def test_a_run_with_no_hand_back_is_reported_as_what_it_was_and_nothing_else_is_
     assert started == ran
 
 
-def test_a_run_past_its_time_limit_is_reported_and_stopped(stand_ins):
-    result, started = stand_ins("slow", timeout=1)
+def test_a_run_past_its_time_limit_is_reported_and_nothing_it_started_is_left_running(stand_ins):
+    result, started = stand_ins("slow", timeout=2)
     assert result["outcome"] == "timed_out" and started == ["slow"] and result["wall_seconds"] < 20
+    child = int(stand_ins.child.read_text())
+    for _ in range(50):  # the kill is sent before the call returns; the process table may take a moment
+        try:
+            os.kill(child, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.1)
+    else:
+        pytest.fail("the delegate's child outlived the time limit")
 
 
-def test_a_long_hand_back_that_mentions_a_quota_is_not_a_refusal(stand_ins):
-    assert delegate.refusal(["usage limit"], 0, "The usage limit note in the page is wrong. " * 20, "", "") is None
-    assert delegate.refusal(["usage limit"], 0, "You have hit your usage limit.", "", "") == "You have hit your usage limit."
+def test_a_hand_back_that_mentions_a_quota_is_not_a_refusal(stand_ins, tmp_path):
+    # Only a run that failed or returned nothing is asked whether it was refused; a reply is never read for it.
+    stand_ins.definitions["coding_agents"]["second"]["refusals"] = ["reviewed"]
+    result, _ = stand_ins("second", role="reviewer")
+    assert result["outcome"] == "handed_back"
+    assert delegate.refusal(["usage limit"], "", "warming up\nYou have hit your usage limit.") == "You have hit your usage limit."
+
+
+def test_changed_paths_are_listed_whole(stand_ins):
+    worktree = stand_ins.worktree
+    (worktree / "tracked.txt").write_text("one")
+    (worktree / "old name.txt").write_text("moved")
+    subprocess.run(["git", "-C", str(worktree), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(worktree), "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit",
+                    "-q", "-m", "tracked"], check=True)
+    (worktree / "tracked.txt").write_text("two")
+    subprocess.run(["git", "-C", str(worktree), "mv", "old name.txt", "new name.txt"], check=True)
+    (worktree / "untracked.txt").write_text("new")
+    assert sorted(delegate.uncommitted(worktree)) == ["new name.txt", "tracked.txt", "untracked.txt"]
+    assert delegate.uncommitted(worktree.parent) is None
 
 
 def test_the_acceptance_check_is_run_again_outside_the_delegate_and_both_results_are_reported(stand_ins):

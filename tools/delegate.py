@@ -29,8 +29,8 @@ SCHEMA = "delegates/1"
 REPORTED = re.compile(r"^Acceptance check: (passed|failed|not run)\s*$", re.MULTILINE)
 REPORT_LINE = ("End your hand-back with one line of exactly this form, saying what you saw when you ran the "
                "acceptance check: `Acceptance check: passed`, `Acceptance check: failed` or `Acceptance check: not run`.")
-# A reply this short may be the coding agent's own refusal message and not a hand-back.
-SHORT_REPLY = 400
+# Seconds a stopped delegate gets to end by itself, and seconds for the version line.
+GRACE, VERSION_WAIT = 10, 30
 EXIT_HANDED_BACK, EXIT_NOT_HANDED_BACK, EXIT_USAGE = 0, 1, 2
 
 
@@ -47,39 +47,65 @@ def fill(template: list[str], values: dict[str, str]) -> list[str]:
 
 
 def git(worktree: Path, *arguments: str) -> str | None:
-    done = subprocess.run(["git", "-C", str(worktree), *arguments], capture_output=True, text=True)
-    return done.stdout.strip() if done.returncode == 0 else None
+    """A git command's output as written, or None when git refuses (the directory is not a repository)."""
+    done = subprocess.run(["git", "-C", str(worktree), *arguments], capture_output=True, text=True, errors="replace")
+    return done.stdout if done.returncode == 0 else None
+
+
+def uncommitted(worktree: Path) -> list[str] | None:
+    """Paths `git status` lists as changed or untracked; a rename is listed under its new path."""
+    status = git(worktree, "status", "--porcelain", "-z")
+    if status is None:
+        return None
+    records, paths = status.split("\0"), []
+    while records:
+        record = records.pop(0)
+        if not record:
+            continue
+        paths.append(record[3:])
+        if record[0] in "RC":
+            records.pop(0)  # the path it was renamed or copied from
+    return paths
+
+
+def stop(process: subprocess.Popen) -> None:
+    """End the delegate's whole process group: ask, wait, then kill whatever is left, whether or not the
+    delegate itself has gone. A child that ignores the request or holds a pipe open does not outlive this."""
+    for sign in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(process.pid, sign)
+        except ProcessLookupError:
+            return
+        if sign == signal.SIGTERM:
+            try:
+                process.wait(timeout=GRACE)
+            except subprocess.TimeoutExpired:
+                pass
 
 
 def run(argv: list[str], *, cwd: Path, environment: dict, stdin: str | None, timeout: float | None):
     """Run to the end or to the time limit. Returns (exit code or None when it timed out, stdout, stderr)."""
-    process = subprocess.Popen(argv, cwd=cwd, env=environment, text=True, start_new_session=True,
+    process = subprocess.Popen(argv, cwd=cwd, env=environment, text=True, errors="replace", start_new_session=True,
                                stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         out, err = process.communicate(stdin, timeout=timeout)
         return process.returncode, out, err
     except subprocess.TimeoutExpired:
-        os.killpg(process.pid, signal.SIGTERM)
+        stop(process)
         try:
-            out, err = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            out, err = process.communicate()
+            out, err = process.communicate(timeout=GRACE)
+        except subprocess.TimeoutExpired:  # something outside the group still holds a pipe; stop reading
+            out, err = "", "output not collected: a pipe stayed open after the delegate was stopped"
         return None, out, err
 
 
-def refusal(patterns: list[str], exit_code: int | None, reply: str, out: str, err: str) -> str | None:
-    """The line that says the coding agent refused the run (quota, sign-in), or None.
+def refusal(patterns: list[str], out: str, err: str) -> str | None:
+    """The line of a run's output that says the coding agent refused it (quota, sign-in), or None.
 
-    Read from the run's output when it failed or returned nothing, and from the reply itself only when that
-    is short: a long hand-back may discuss quotas without being a refusal."""
-    texts = []
-    if exit_code != 0 or not reply.strip():
-        texts += [err, out]
-    if reply.strip() and len(reply) <= SHORT_REPLY:
-        texts.append(reply)
-    for text in texts:
+    Asked only of a run that failed or returned nothing. A reply is never read for it: a hand-back may
+    discuss quotas, so a refusal that arrives as an ordinary reply with exit code 0 reaches the lead as text."""
+    for text in (err, out):
         for line in text.splitlines():
             if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns):
                 return line.strip()[:300]
@@ -117,9 +143,13 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
 
     if shutil.which(argv[0], path=environment.get("PATH")) is None:
         return result | {"outcome": "failed_start", "detail": f"{argv[0]} is not on the path"}
-    version = subprocess.run(agent["version"], capture_output=True, text=True, env=environment)
-    result["coding_agent_version"] = (version.stdout.strip().splitlines() or [None])[0]
-    head_before = git(worktree, "rev-parse", "HEAD")
+    try:  # The version is a detail of the report; failing to read it does not stop the start.
+        version = subprocess.run(agent["version"], capture_output=True, text=True, errors="replace", env=environment,
+                                 timeout=VERSION_WAIT).stdout
+        result["coding_agent_version"] = (version.strip().splitlines() or [None])[0]
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    head_before = (git(worktree, "rev-parse", "HEAD") or "").strip()
 
     began = time.monotonic()
     try:
@@ -132,12 +162,13 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     (out / "stdout.txt").write_text(stdout, encoding="utf-8")
     (out / "stderr.txt").write_text(stderr, encoding="utf-8")
     if how["reply"] == "file":
-        reply = reply_file.read_text(encoding="utf-8") if reply_file.is_file() else ""
+        reply = reply_file.read_text(encoding="utf-8", errors="replace") if reply_file.is_file() else ""
     else:
         reply = stdout
         reply_file.write_text(reply, encoding="utf-8")
 
-    refused = refusal(agent["refusals"], exit_code, reply, stdout, stderr)
+    no_hand_back = exit_code != 0 or not reply.strip()
+    refused = refusal(agent["refusals"], stdout, stderr) if no_hand_back else None
     last_line = (stderr.strip().splitlines() or stdout.strip().splitlines() or ["no output"])[-1][:300]
     if exit_code is None:
         result |= {"outcome": "timed_out", "detail": f"no hand-back within {timeout:g} seconds"}
@@ -150,19 +181,24 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     else:
         result |= {"outcome": "handed_back", "hand_back": str(reply_file)}
 
-    head_after = git(worktree, "rev-parse", "HEAD")
+    head_after = (git(worktree, "rev-parse", "HEAD") or "").strip()
     if head_before and head_after:
+        # Commits the worktree's head reaches now and did not before the run, whoever made them.
         result["commits"] = (git(worktree, "rev-list", f"{head_before}..{head_after}") or "").split()
-        result["uncommitted"] = [line[3:] for line in (git(worktree, "status", "--porcelain") or "").splitlines()]
+        result["uncommitted"] = uncommitted(worktree)
     if check:
         # Run again here, outside any sandbox the delegate had, whatever it reported: a delegate that could not
         # run the check, or returned nothing after editing, still leaves a tree the lead needs a result for.
         reported = REPORTED.findall(reply)
-        rerun = subprocess.run(check, shell=True, cwd=worktree, env=environment, capture_output=True, text=True)
-        (out / "check.txt").write_text(rerun.stdout + rerun.stderr, encoding="utf-8")
         result["check"] = {"command": check, "delegate_reported": reported[-1] if reported else "not stated",
-                           "rerun": "passed" if rerun.returncode == 0 else "failed", "rerun_exit_code": rerun.returncode,
-                           "rerun_output": str(out / "check.txt")}
+                           "rerun": "not run", "rerun_exit_code": None, "rerun_output": str(out / "check.txt")}
+        # What the delegate did is on disk before the rerun starts, so a slow check delays nothing already known.
+        (out / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        rerun_code, rerun_out, rerun_err = run(["sh", "-c", check], cwd=worktree, environment=environment,
+                                               stdin=None, timeout=timeout)
+        (out / "check.txt").write_text(rerun_out + rerun_err, encoding="utf-8")
+        result["check"] |= {"rerun": "timed_out" if rerun_code is None else "passed" if rerun_code == 0 else "failed",
+                            "rerun_exit_code": rerun_code}
     return result
 
 

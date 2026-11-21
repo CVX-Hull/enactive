@@ -112,13 +112,19 @@ conversation whose first message was the brief, and both inherited the lead's mo
 ### Starting a delegate on any coding agent
 
 A lead on any of the three coding agents starts a worker, a reviewer or an explorer on
-any of the three with one call, from the main checkout or a worktree:
+any of the three with one call. This one starts a Codex worker; it runs from the main
+checkout or a worktree, with the main checkout's Python
+([environment facts](#environment-facts-for-agents)):
 
 ```sh
-.venv/bin/python tools/delegate.py --coding-agent codex|claude-code|antigravity \
-  --model MODEL --effort EFFORT --role worker|reviewer|explorer|locator \
-  --brief BRIEF_FILE --worktree WORKTREE --out OUT [--check 'COMMAND'] [--timeout SECONDS]
+"$(git rev-parse --git-common-dir)/../.venv/bin/python" tools/delegate.py \
+  --coding-agent codex --model gpt-6.2-sol --effort xhigh --role worker \
+  --brief "$SCRATCH/brief.txt" --worktree "$WORKTREE" --out "$SCRATCH/worker-run" \
+  --check "$ACCEPTANCE" --timeout 2400
 ```
+
+`--coding-agent` is `codex`, `claude-code` or `antigravity`; `--role` is `worker`,
+`reviewer`, `explorer` or `locator`; `--check` and `--timeout` are optional.
 
 - **The lead names the delegate; the call starts it.** The coding agent, model, effort
   and role have no default, and the call holds no preference among them
@@ -137,14 +143,16 @@ any of the three with one call, from the main checkout or a worktree:
   its version, the wall time, the commits made in the worktree during the run, the paths
   left uncommitted there and one outcome: `handed_back`; `failed_start` (the command is missing or
   could not be run); `empty_reply` (exit code 0 and no reply, which is a failed run);
-  `refused` (a quota or sign-in message); `failed` (any other non-zero exit);
-  `timed_out`; or `unavailable` (the role is recorded as having no start that works on
+  `refused` (a run that failed or returned nothing, whose output carries a quota or
+  sign-in message); `failed` (any other non-zero exit); `timed_out` (the delegate and
+  everything it started are stopped); or `unavailable` (the role is recorded as having no start that works on
   that coding agent). After any outcome but the first the call starts nothing else: the
   lead decides what to try next.
 - **The acceptance check is run again outside.** With `--check`, the brief asks the
   delegate to end by saying whether it saw the check pass, fail or not run. After the
   run the call runs the same command in the worktree itself, outside any sandbox the
   delegate had, and reports both: what the delegate said and what the rerun showed.
+  The rerun has the same time limit as the delegate.
 - **The hand-back is a report.** The lead still reads the diff and checks quoted
   passages against the tree
   ([verify a delegated result](../standards/agents.md#the-leads-duties)). The call does
@@ -158,7 +166,7 @@ agent itself. Each cell below gives the start and what was tried on this machine
 | Role | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
 | Worker | `codex exec --ignore-rules -s workspace-write`, brief on standard input. It works inside a sandbox that denies loopback connections and process listing, so the whole test suite fails there, and it leaves its changes uncommitted: the call's rerun gives the check's real result, and the lead inspects and commits. Tried through the call on 20 November 2026: a probe wrote a file, ran a command and handed back in 10 seconds. | `claude -p --permission-mode auto`, brief on standard input. It runs commands and commits through the hook without a sandbox. Tried through the call on 20 November 2026: a probe, and one real worker that changed three files, ran both checks, committed and handed back in 125 seconds. | `agy --mode accept-edits -p BRIEF`. It edits files and can run no shell command: a command it tries is denied and the run ends with exit code 0 and no reply, which the call reports as `empty_reply` with the files it changed still listed. The brief tells it to run no command, and `--check` is how its work is checked. Tried on 20 November 2026: through the call a probe that was told to run a command wrote its file and returned nothing; by hand the same mode, told to run none, wrote the file and replied. No real task has been given to it. |
-| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only`, brief on standard input. It starts clean and reads the worktree. | `claude -p --permission-mode auto` with the file-editing tools disallowed, brief on standard input. It starts clean (`--no-session-persistence`) and can run read-only commands. Tried on 20 November 2026 with a one-word brief only. | `agy --mode plan -p BRIEF`. It opens files by path and can run no shell command, so the brief carries the diff and the command output the review needs. Its review is a second family's view and not the clean-context review (see below). |
+| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only`, brief on standard input. It starts clean, and its sandbox makes the worktree read-only. A test that writes a temporary directory fails inside it. Tried through the call on 20 November 2026: one real review of this call's own change handed back nine findings in 286 seconds. | `claude -p --permission-mode plan` with the file-editing tools disallowed, brief on standard input. It starts clean (`--no-session-persistence`). Plan mode lets it run read-only commands and has it refuse edits; that is the mode's rule and not a filesystem boundary, so only the Codex reviewer is mechanically read-only. Tried on 20 November 2026: by hand it ran `git status` and declined to create a file, and through the call a probe ran a `git` command and handed back. No real review has been given to it through the call. | `agy --mode plan -p BRIEF`. It opens files by path and can run no shell command, so the brief carries the diff and the command output the review needs. Whether plan mode prevents edits was not tried. Its review is a second family's view and not the clean-context review (see below). |
 | Explorer, both forms | The reviewer's start. | The reviewer's start. | The reviewer's start. Tried through the call on 20 November 2026: one real explorer read six files named in its brief and handed back a cited summary in 598 seconds. |
 
 - **No gameplay allowance** ([R-DELEGATION-ERROR](../risks.md)): `--ignore-rules`
@@ -168,10 +176,13 @@ agent itself. Each cell below gives the start and what was tried on this machine
   project's settings, whose only allowances are the three
   [gameplay prefixes](#gameplay-command-allowances); the role instruction and the brief
   forbid them, and nothing mechanical does.
-- **Refusals.** The call reads a quota or sign-in refusal from wording listed for each
-  coding agent in the definitions file. Gap, 20 November 2026: no real refusal from any
-  of the three has been seen through the call, so a refusal worded differently is
-  reported as `failed` or `empty_reply` instead. Either way nothing else is started.
+- **Refusals.** When a run fails or returns nothing, the call looks in its output for
+  quota or sign-in wording listed for each coding agent in the definitions file. It
+  never reads a reply for that wording, since a hand-back may discuss quotas. Gap, 20
+  November 2026: no real refusal from any of the three has been seen through the call.
+  One worded differently is reported as `failed` or `empty_reply`, and one that arrives
+  as an ordinary reply with exit code 0 is handed back as text for the lead to read.
+  Either way nothing else is started.
 - **The lead's own settings reach a delegate.** A delegated Claude Code run loads the
   user's settings as well as the project's: on 20 November 2026 a worker's hand-back
   opened in the output style the lead's user had selected.

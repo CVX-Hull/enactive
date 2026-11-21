@@ -48,17 +48,17 @@
           "reply": "stdout"
         },
         "reviewer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--disallowedTools", "Edit Write NotebookEdit", "--no-session-persistence", "--output-format", "text"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "text"],
           "brief": "stdin",
           "reply": "stdout"
         },
         "explorer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--disallowedTools", "Edit Write NotebookEdit", "--no-session-persistence", "--output-format", "text"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "text"],
           "brief": "stdin",
           "reply": "stdout"
         },
         "locator": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--disallowedTools", "Edit Write NotebookEdit", "--no-session-persistence", "--output-format", "text"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "text"],
           "brief": "stdin",
           "reply": "stdout"
         }

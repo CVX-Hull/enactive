@@ -105,6 +105,10 @@ def test_a_matched_pair_reads():
 def test_a_single_delegation_reads_without_a_pair():
     assert problems([single()], KINDS) == []
     assert problems([review()], KINDS) == []
+    # A locator that could not be started: no version to report, nothing handed back, nothing used.
+    unstarted = review(role='locator', kind_of_work='Locating files and mechanical sweeps', coding_agent_version=None,
+                       hand_back='failed_start', outcome='not_used', findings=None)
+    assert problems([unstarted], KINDS) == []
 
 
 @pytest.mark.parametrize(('rows', 'message'), [
@@ -122,6 +126,8 @@ def test_a_single_delegation_reads_without_a_pair():
     ([attempt(schema='coding-agent-attempt/1')], "'coding-agent-attempt/2' was expected"),
     ([review(outcome='merged')], "'merged' is not one of ['used', 'not_used']"),
     ([single(findings={'confirmed': 1, 'rejected': 0})], "is not of type 'null'"),
+    ([review(role='explorer')], "is not of type 'null'"),
+    (pair(acceptance=None), "None is not of type 'string'"),
 ])
 def test_a_row_the_reading_rules_cannot_use_is_refused(rows, message):
     assert any(message in problem for problem in problems(rows, KINDS)), problems(rows, KINDS)
