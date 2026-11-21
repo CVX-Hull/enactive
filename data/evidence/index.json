@@ -892,7 +892,7 @@
       "manifest_sha256": "2a4e7b4126f2af906bd337248daece8ad105b9131d6014caab4686876e636f09",
       "note": "Output of the six zero-cost stand-in runs of the live curator arrangement that the record names: the two runs on the merged runner that it reports, and four earlier runs it keeps beside them. Made with python -m tests.live_curator_stand_in_run; no game and no provider.",
       "sources": {
-        ".": ".runtime/live-curator-stand-in-runs@506870a5"
+        ".": ".runtime/live-curator-stand-in-runs"
       },
       "visibility": "private"
     },
