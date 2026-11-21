@@ -134,8 +134,8 @@ any of the three with one call, from the main checkout or a worktree:
   output and `result.json` there.
 - **What comes back.** The call prints a result and then the hand-back, and exits with
   0 when there is a hand-back and 1 when there is none. The result names the delegate,
-  its version, the wall time, the commits the delegate made, the paths it left
-  uncommitted and one outcome: `handed_back`; `failed_start` (the command is missing or
+  its version, the wall time, the commits made in the worktree during the run, the paths
+  left uncommitted there and one outcome: `handed_back`; `failed_start` (the command is missing or
   could not be run); `empty_reply` (exit code 0 and no reply, which is a failed run);
   `refused` (a quota or sign-in message); `failed` (any other non-zero exit);
   `timed_out`; or `unavailable` (the role is recorded as having no start that works on
@@ -159,7 +159,7 @@ agent itself. Each cell below gives the start and what was tried on this machine
 | --- | --- | --- | --- |
 | Worker | `codex exec --ignore-rules -s workspace-write`, brief on standard input. It works inside a sandbox that denies loopback connections and process listing, so the whole test suite fails there, and it leaves its changes uncommitted: the call's rerun gives the check's real result, and the lead inspects and commits. Tried through the call on 20 November 2026: a probe wrote a file, ran a command and handed back in 10 seconds. | `claude -p --permission-mode auto`, brief on standard input. It runs commands and commits through the hook without a sandbox. Tried through the call on 20 November 2026: a probe, and one real worker that changed three files, ran both checks, committed and handed back in 125 seconds. | `agy --mode accept-edits -p BRIEF`. It edits files and can run no shell command: a command it tries is denied and the run ends with exit code 0 and no reply, which the call reports as `empty_reply` with the files it changed still listed. The brief tells it to run no command, and `--check` is how its work is checked. Tried on 20 November 2026: through the call a probe that was told to run a command wrote its file and returned nothing; by hand the same mode, told to run none, wrote the file and replied. No real task has been given to it. |
 | Reviewer | `codex exec --ignore-rules --ephemeral -s read-only`, brief on standard input. It starts clean and reads the worktree. | `claude -p --permission-mode auto` with the file-editing tools disallowed, brief on standard input. It starts clean (`--no-session-persistence`) and can run read-only commands. Tried on 20 November 2026 with a one-word brief only. | `agy --mode plan -p BRIEF`. It opens files by path and can run no shell command, so the brief carries the diff and the command output the review needs. Its review is a second family's view and not the clean-context review (see below). |
-| Explorer, both forms | The reviewer's start. | The reviewer's start. | The reviewer's start. |
+| Explorer, both forms | The reviewer's start. | The reviewer's start. | The reviewer's start. Tried through the call on 20 November 2026: one real explorer read six files named in its brief and handed back a cited summary in 598 seconds. |
 
 - **No gameplay allowance** ([R-DELEGATION-ERROR](../risks.md)): `--ignore-rules`
   keeps the tracked [gameplay rules](../../.codex/rules/gameplay.rules), which allow

@@ -87,9 +87,9 @@ on the brief's Role line and in the pull request.
 
 - **Claude Code** reads the project's `.claude/agents/` ahead of a user's own
   definitions of the same name. The lead names another model for one task with the
-  delegation call's model override. The `reviewer` and `Explore` files have each run
-  as a sub-agent, on 20 November 2026 for pull requests #817 and #819; `locator` and
-  `worker` have not.
+  delegation call's model override. Sub-agents of all four roles ran in the sessions
+  counted from 13 to 20 November 2026: 20 explorers, 6 reviewers, 4 workers and 1
+  locator ([token use](../acceptance/2026-11-20-coding-agent-token-use.md)).
 - **Codex** reads `.codex/agents/` in a checkout the user trusts. All four model
   selectors answered a one-word prompt on CLI 0.171.0, twice; the role files themselves
   were not exercised as sub-agents.
