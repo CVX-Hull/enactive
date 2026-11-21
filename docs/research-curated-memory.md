@@ -2,15 +2,16 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: Primary-source synthesis for five ADR 009 research areas (agent memory, concurrent consolidation, belief under conflict, ontology induction and evaluation, oversight interfaces; issue 447); evidence for method choice, not an implementation or a game claim
-review_trigger: The owner decisions that end the player-context design (issue 591) and ADR 009's open decision on the belief model (issue 457) settle this page, with the ontology and spectator method choices of the curator and memory phase (issues 458 and 464); until then an independent S-EVIDENCE review of this page, new evidence on the weakest areas named below, or model or benchmark changes
+scope: Primary-source synthesis for ADR 009 on agent memory, concurrent consolidation, belief under conflict, ontology induction and evaluation, and oversight interfaces
+review_trigger: Decisions on player context, belief, ontology or spectator methods, or new evidence that changes a recommendation
 ---
 
 # Research synthesis for ADR 009: memory, belief, ontology and oversight
 
-Search and retrieval date: **2026-11-08** (America/New_York). The 18-month recency
-line (S-EVIDENCE) is therefore **2025-05-08**; a conclusion whose newest supporting
-source is older is flagged "RECENCY".
+The literature search cutoff is **2026-11-08** (America/New_York). The 18-month
+recency line (S-EVIDENCE) is **2025-05-08**. Conclusions whose newest supporting
+source is older are flagged "RECENCY". A targeted recheck of the belief-method
+foundations has its own **2026-11-16** retrieval date.
 
 This page builds on, and does not repeat, two earlier pages: the
 [memory architecture assessment](research-memory-architecture.md) (assessed
@@ -22,22 +23,6 @@ provenance semirings, temporal databases, ATMS, information bottleneck). Those
 papers are cited by reference only where this page relies on them; nothing below
 re-reviews them. Neither earlier page covered measured consolidation lag, ontology
 induction, or oversight interfaces.
-
-## Targeted primary-source recheck: 16 November 2026
-
-The 8 November read scopes and conclusions below retain their original date. A
-subsequent primary-text check verified the binomial-opinion/Beta mapping in Jøsang's
-2013 manuscript, §§3.1.1–3.1.3, and fusion assumptions in §4.7. This supersedes the
-mapping's **unverified** status for future decisions; it does not establish a useful
-fusion rule for curator memory. Matched evidence and priors make the basic numerical
-forms an equivalence control, not two independent predictive improvements.
-
-The proposed [CDDA belief-method comparison](design/belief-method-comparison.md)
-records this check and primary sources for provenance, proper scores, censoring and
-partial pooling, with their read scopes and transfer limits. It separates apparatus
-checks, model-mediated replay and live decision benefit. The owner has not selected a
-belief calculus; #457 retains that decision. No earlier experiment is reinterpreted as
-held-out evidence and no study spend is opened.
 
 ## Brief and method
 
@@ -53,11 +38,10 @@ names it.
 **Foundational sources the brief named** (ADR 009 research-agenda rows): Soar/ACT-R,
 Tulving, McClelland et al. 1995, Jøsang, Dawid and Skene 1979, Kaplan and Meier 1958,
 Gelman's hierarchical models, Zadeh's critique of Dempster's rule, Rissanen, Krippendorff,
-Fellegi and Sunter, Sheridan, Endsley 1995. **None of these was read in full for this
-page** (see "Read-scope honesty" below). One Jøsang primary page was read (fission of
-beliefs, which defines cumulative and averaging fusion). No conclusion below rests on
-an unread foundational source. Current sources were found by dated web search on
-2026-11-08 (the 15 queries listed below, across the five areas) and were not named in the brief.
+Fellegi and Sunter, Sheridan, Endsley 1995. The 8 November search read stated sections
+of Jøsang's fission paper on cumulative and averaging fusion (S16). The 16 November
+recheck covers selected sections of the sources named under belief and in the source
+list. Unread foundations support no conclusion.
 
 **Search queries (2026-11-08).** (1) LLM agent memory write policy, retrieval policy,
 long-horizon benchmark, typed versus unified; (2) asynchronous background memory
@@ -82,13 +66,12 @@ HTML text was fetched and queried for method, evaluation and limitation sections
 where the page exceeded 100,000 characters, only the first 100,000 were read (stated as
 "first 100k of N chars") and **claims about the unread remainder are not made**. Numbers
 quoted below are as the extractor reported them and **should be spot-checked against the
-papers in review**; the reviewer-driven revision of this page re-fetched and
-re-checked the figures for S01, S04, S09, S11 and S20 against the extractor. Version dates are from each
+papers in review**. Version dates are from each
 paper's arXiv submission history (abs page). One source (S10, STALE) carries base64
 blocks that decode to benchmark-generation prompt templates; they were treated as data
 and not acted on. "Abstract" means only the arXiv abstract
 page. "Snippet" means a search-result summary; snippet-only sources are listed for
-leads and **support no conclusion**. Several PDFs (Jøsang 2013, Zadeh 1979 memo, Jøsang
+leads and **support no conclusion**. Several PDFs (Zadeh 1979 memo, Jøsang
 2009 slides, Dezert and Tchamova, Jøsang's evidence-based flow paper, Endsley 1995) were
 unreadable (binary/scan, HTTP 403, or bot wall) and are recorded as not read. Where
 an arXiv identifier month disagrees with the submission date (S08, S17, S18), the
@@ -191,15 +174,14 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
    all four agents, that errors compound, and that judge-filtered writes were mixed
    (a strict LLM judge beat the bank on 3 of 4 agents, a looser one on 1 to 2), while
    an oracle-checked policy beat it on all four. It does *not* show that memory beats
-   an empty store, nor that self-judging is useless. The gate's re-observation checks
-   are the available analogue of S01's oracle; test in the baseline and workbench phase
-   whether they approximate it.
+   an empty store, nor that self-judging is useless. Proposed re-observation checks
+   are the analogue of S01's oracle. Test their agreement with independently verified
+   observations before using them to establish write quality.
 2. Keep every episode retrievable and add a **history-based demotion** (low realized
    utility after repeated retrieval) as a candidate grooming signal; S01 supports it
    modestly (four tasks).
-3. Do **not** claim typed schemas help. Treat the ontology as a hypothesis with a
-   mandatory flat/lexical arm in every comparison of the curator and memory phase
-   (BM25-class retrieval over raw
+3. Treat the benefit of typed schemas as a hypothesis. Include a flat/lexical arm
+   in comparisons that test typing (BM25-class retrieval over raw
    episodes plus epistemic-core fields), at matched calls and tokens, where the
    report states the budget beside the outcome whenever it cannot be matched. S04
    supports BM25-class retrieval as a **cheap baseline that heavier designs must beat**
@@ -228,8 +210,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
 - *Cost of consolidation.* The anatomy study (S05, six memory systems plus LoCoMo
   and full-context rows): offline build time 0.60 h (MemSkill) to 15.00 h (A-Mem), 1,308k
   to 7,044k construction tokens; per-turn read latency 0.306 s to 32.372 s, the
-  slowest being MemoryOS (31.2 s of it retrieval). (An earlier draft of this page
-  mislabelled generation latency and build time; corrected from Table 5.) Run counts and variance not stated.
+  slowest being MemoryOS (31.2 s of it retrieval). Run counts and variance are unstated.
 - *Background design with a lag claim.* EngramRAG (S13, extractor): a six-hourly
   "dreaming" cycle off the read path; on a simulated 90-day deployment it kept 100%
   of scaffolding facts versus 60% for standard decay. Single evaluations, ten
@@ -254,22 +235,15 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
   loop.
 
 **Recommendation for ADR 009 (concurrent consolidation).**
-1. The ADR's design (immutable versioned snapshots, labelled "as of decision N",
-   actor never blocked) matches what S04 says is necessary when per-session
-   consolidation time can exceed arrival intervals. Keep it, and **adopt S04's
-   staleness definition** (sessions or boundaries not yet reflected in the published
-   snapshot) as the lag metric in the baseline and workbench phase's curator shadow
-   sessions, reporting the
-   distribution of curator write time and its tail, not the mean.
-2. Because the ADR makes the next admission wait for a covering snapshot, the cost of
-   a slow curator falls on wall-clock only at boundaries; the staleness metric tells
-   whether in-admission snapshots lag far enough to matter. Measure before adding
-   machinery.
+1. Use **S04's staleness definition** for lag: sessions or boundaries the published
+   snapshot has yet to cover. Report the distribution and tail of write time. Immutable
+   versioned snapshots let consolidation run without blocking an actor's decisions.
+2. Measure whether publication lag affects the applicability of the knowledge an
+   admission receives. Measure any extra wait for coverage separately from lag.
 3. Preserve the loser: keep superseded assertions (S12's audit-row idea, already in
    the ADR's "what it supersedes") rather than overwriting.
-4. Weakest area: no measured effect of consolidation on acting-agent task outcomes at
-   matched cost exists in the sources read; treat the baseline and workbench phase's
-   shadow-session lag/cost study as the first real evidence.
+4. The [curator shadow sessions](acceptance/2026-11-08-curator-shadow-454.md) measure
+   lag and cost. Effects on acting-agent outcomes at matched cost lack evidence.
 
 ## Belief under conflicting observations
 
@@ -351,64 +325,47 @@ This section also answers the ADR's
   fusion is non-associative and does not raise uncertainty for conflicting views.
   It proposes discounting by pairwise conflict and reports better conflict detection;
   the size of that gain per dataset was not verified here.
-  This is neural multimodal classification, not agent memory; it supports only the
-  design caution that a fusion operator's independence assumption and conflict behavior
-  must be tested, not assumed. The Beta/Dirichlet equivalence of opinions was
-  *not verified from a readable primary text* (S25 states evidence e = alpha - 1,
-  belief = e/S, uncertainty = K/S for the Dirichlet case, which is the multinomial form;
-  the binomial/Beta statement and base-rate weight W are unverified). Dezert and
-  Tchamova's critique and Jøsang 2013 are **unread**. I found no source that applies
-  subjective logic to LLM agent memory (prior page: BeliefMem uses noisy-OR merging).
+  This neural multimodal classification study supports testing a fusion operator's
+  independence assumptions and its behavior under conflict. Its domain does not
+  establish utility for agent memory. BeliefMem uses noisy-OR merging.
 - *Dempster-Shafer.* I could not read Zadeh's 1979 memorandum (scanned PDF). S25
   supplies a neural-network example of the same pathology (above). Snippets only, no
   conclusion: the controversy is whether the conflict-normalizing rule is flawed or the
   example's modelling is (Haenni). No source read supports choosing Dempster's rule.
-- *Source reliability without ground truth (Dawid-Skene family), staleness as survival
-  analysis, hierarchical pooling, calibration.* No primary text was read for any of
-  these: Dawid-Skene and Kaplan-Meier were not retrieved; Gelman not retrieved; a
-  2024 workshop paper extending Dawid-Skene to LLM annotators appeared only as a snippet. No
-  LLM-agent paper in this sweep estimates per-type staleness rates by survival
-  analysis, and S09 explicitly leaves decay unexercised. **These sub-questions remain
-  unanswered by evidence in this page.** The project's own synthetic Brier numbers
-  (pooled .223 vs scoped .340, scoped better on return) are internal development
-  data, not external evidence.
+- *Source reliability, staleness, pooling and calibration.* Dawid–Skene and
+  Kaplan–Meier were unread. The [targeted primary-source recheck](design/belief-method-comparison.md#primary-foundations-and-what-they-support)
+  covers provenance, proper scoring rules, censoring and partial pooling. No agent
+  study read estimates per-type staleness rates, and S09 leaves decay unexercised
+  on real data. The [synthetic Brier comparison](research-memory-representations.md#what-the-experiments-changed)
+  is internal development evidence.
 
 **Recommendation on the ADR's open decision on the belief model.**
-1. **Do not adopt subjective-logic fusion as a decided model.** No source read compares
-   subjective logic with Beta counts, last-write-wins or Dempster's rule on agent
-   memory, and the only primary operator text (S16) and the one empirical user found by
-   query 15 (S25, neural classifiers) are older than the 18-month line or off-domain. I cannot
-   verify from a readable primary text that a binomial opinion reduces to a Beta
-   distribution (S25 gives the Dirichlet form only); treat any equivalence as a
-   hypothesis to check when the model is specified.
-2. **Adopt a staged model.** *Stage 0 (default, a design default and not an
-   evidence-backed choice):* explicit supersession with provenance (the epistemic core
-   already has it), plus stored positive and negative re-observation counts and
-   timestamps per assertion; aging as a monotone reduction in evidence weight, with an
-   aging-off ablation and a tuned rate in the offline test (no source supports a
-   particular decay form; S09 never exercised its decay on real data).
-   *Stage 1 (candidate, test offline; **RECENCY**: it rests only on S16, a 2007 working
-   paper, and the 2024-25 S25):* evidence-count opinions with a fusion rule chosen by
-   dependence: observations from the same source frames or the same asserter count once
-   (averaging/idempotent behavior), distinct re-observations at distinct times may add
-   (cumulative). S25 warns that cumulative fusion lowers uncertainty even under
-   conflict, so the offline test must include conflict cases. *Alternatives held for the
-   offline test:* (A) LWW with supersession (S09 shows it is hard to beat on real
-   conversational data and under constant reliability), (B) Beta counts with learned
-   reliability (S09's design), (C) subjective logic opinions, (D) Dempster-Shafer (not
-   recommended for the first test: no supporting source read; S25 shows the full-
-   confidence-under-conflict pathology), (E) write-time adjudication labels
-   KEEP/STALE/REPLACE/UNKNOWN (S10's CUPMem, the authors' own fix on their own benchmark).
+1. **Keep explicit provenance, supersession and visible disputes.** The project uses
+   no numerical belief calculus. The 2026-11-16 recheck of Jøsang (2013, §§3.1.1–3.1.3
+   and §4.7) verifies the binomial-opinion/Beta mapping and the fusion assumptions.
+   With matched evidence and priors their projected probabilities agree, so use the
+   mapping as an equivalence control. No source read compares subjective-logic fusion,
+   Beta counts, last-write-wins or Dempster–Shafer on agent memory. Independence in
+   curator observations needs testing before cumulative fusion is justified (S16, S25).
+2. **Test numerical updates, staleness and partial pooling offline.** Compare on
+   matched extractions against the provenance-aware qualitative baseline. Candidate
+   evidence models retain positive and negative re-observations and timestamps, count
+   duplicate origins once, and test whether distinct re-observations add support.
+   Include aging-off and no-pooling controls. S25 motivates explicit conflict cases
+   because cumulative fusion can lower uncertainty under conflict. Other comparators
+   include last-write-wins with supersession (S09) and write-time adjudication labels
+   KEEP/STALE/REPLACE/UNKNOWN (S10). The proposed
+   [CDDA belief-method comparison](design/belief-method-comparison.md) specifies the
+   matched-evidence tests and separates replay from live decision benefit.
 3. **Resolve conflict at the gate, but keep disputes visible.** S10 and S11 both found
    models fail to apply updates even when they detect them, and S11's oracle that
    removes the stale item restored accuracy to 0.95 to 1.00. That shows only that
    **correct** resolution helps; no source measured the cost of a wrong resolution, and
    S09's provenance cap cost accuracy (100% to 54%) on legitimate corrections. So the
-   actor receives a resolved, labelled value with provenance, and an assertion the gate
-   cannot resolve keeps a visible disputed/UNKNOWN label rather than being silently
-   resolved. S11 also found metadata exposure helped even the 0.6B model (+0.30), so
-   labels are not useless at small scale. Keep "current screen overrides" as the ADR
-   states.
+   proposed gate supplies a labelled value with provenance where it can adjudicate
+   the dispute and leaves an explicit disputed/UNKNOWN label otherwise. S11 also
+   found metadata exposure helped the 0.6B model (+0.30). The current screen takes
+   precedence over stored assertions.
 4. **Calibration is reported offline; whether to hide probabilities from the actor is
    a design choice, not an evidenced one.** The ADR's rule that uncalibrated scores are
    not labelled probabilities stands; no source read validates a calibration approach
@@ -424,16 +381,12 @@ This section also answers the ADR's
      entirely in its adversarial one, so no single regime decides. Pre-register
      regime weights from development-lane rates and report every regime separately,
      never only the weighted macro.
-   - *Arms.* A, B, C-with-averaging, C-with-cumulative, E, Stage 0 alone, and a flat
-     raw-episode retrieval arm. **Hold one extracted assertion set fixed across arms**, so
-     differences are in the belief rule and not in LLM extraction. Arms without a native
-     probability (A, E, D and Stage 0) get a pre-registered mapping to a probability
-     stated before running; for Stage 0, for example, a Beta posterior mean under a
-     pre-registered prior. Otherwise they are scored on accuracy only and excluded from
-     the Brier and ECE comparison.
-   - *Budget.* Calls and tokens **cannot be matched** (B's reliability and E's
-     adjudication make LLM calls per write); report calls, tokens and wall time beside
-     each outcome and state that the comparison is not budget-matched.
+   - *Arms.* Compare last-write-wins, learned-reliability Beta counts, averaging and
+     cumulative fusion, write-time adjudication, the qualitative baseline and flat
+     raw-episode retrieval. Hold one extracted assertion set fixed across arms.
+     Score calibration only for methods that produce probabilities.
+   - *Budget.* Report calls, tokens and wall time beside each outcome. Account for
+     extra calls from reliability estimation and adjudication when comparing costs.
    - *Outcomes.* Accuracy of the predicted current value at later re-observation;
      where a probability exists, Brier or log score with a reliability diagram and ECE
      with intervals; retrieval-miss rate; a double-counting stress (replay one
@@ -441,10 +394,11 @@ This section also answers the ADR's
      (S09's 100% to 54%); and **wrong-resolution cost** (inject wrong resolutions and
      measure actor error), which no source measured.
    - *Statistics.* The independent unit is the lineage, and every variant tried is
-     reported. The holdout is #382's three day-scale lineages (ADR 009, Evaluation).
-     - **Trace lane.** With n=3 clusters a cluster bootstrap has only 10 distinct
-       resamples, so its bound means nothing. Report the trace lane per lineage,
-       descriptively, and do not gate on an interval there.
+     reported. Previously inspected lineages are development data. Freeze a separate
+     whole-lineage holdout for the trace lane.
+     - **Trace lane.** With three clusters a cluster bootstrap has only 10 distinct
+       resample compositions. At that size report each lineage descriptively and
+       avoid gating on an interval.
      - **Generator lane.** Interval-based gating is used only here, where the clusters
        are many. **Compute and report the minimum detectable difference by simulation
        before spending.**
@@ -455,8 +409,8 @@ This section also answers the ADR's
        trace lane is the only held-out check of whether those regimes resemble play
        (S-EVIDENCE: generality needs held-out support).
    - Any rule or threshold chosen on development lineages is not evaluated on them.
-6. Weakest-evidence area overall: decay/staleness estimation, pooling and
-   calibration have no primary support in this page.
+6. Staleness, pooling and calibration have mathematical foundations. Their validity
+   and utility for curator memory need evidence from play traces.
 
 ## Ontology/schema induction and evaluation
 
@@ -504,18 +458,16 @@ This section also answers the ADR's
 3. Do **not** use an LLM judge for redundancy or merge quality: S19's judges disagreed
    most there. Use the gate's measured retrieval-miss and duplicate/wrong-merge rates.
 4. Compression (MDL), Krippendorff's alpha and Fellegi-Sunter-style identity scores
-   remain secondary diagnostics with **no evidence they predict utility**. The baseline
-   and workbench phase should record them alongside utility and report their correlation on the lineage set before
-   any is allowed to gate an edit.
+   are secondary diagnostics. In a prospective ontology evaluation, report their
+   association with utility before considering any of them as an edit criterion.
 5. Weakest area: no measured evidence on utility versus complexity or on grooming
    (merge/split) for LLM-induced types in agent memory.
 
 ## Oversight interfaces
 
 **What was measured.**
-- *Oversight strategy experiment* (S20; **v1 2026-04-06 / v2 2026-09-12, results
-  revised**; v2 stated sections via extractor, first 100k of 201,935 chars; v1 figures
-  below are superseded and kept only as a record): N=48, 192 live sessions,
+- *Oversight strategy experiment* (S20, **v2 2026-09-12**, stated sections via
+  extractor, first 100k of 201,935 chars): N=48, 192 live sessions,
   within-subjects, four bundled strategies, one agent (Gemini 3.1 Flash-Lite), six
   web tasks with planted risks.
   *v2 results.* Plan-based strategies had lower odds of encountering a problematic
@@ -527,10 +479,7 @@ This section also answers the ADR's
   (joint Wald chi2(3)=10.02, p=.018): Action Confirmation 64.6%, Risk-Gated 64.6%,
   Supervisory Co-Execution 52.1%, Structurally Enriched 45.8% (lowest). Higher- versus
   lower-consequence tasks: intervention 13.3% vs 30.2% (p=.012), failure 67.7% vs 45.8%,
-  confounded with scenario and risk type. *v1 (superseded):* OR 0.25 [0.13, 0.49];
-  intervention success p=.407; final attack success p=.162 (not significant); 12.8% vs
-  29.4%. The revision changes the oversight-interfaces conclusion: strategy did change final failure,
-  though not conditional intervention.
+  confounded with scenario and risk type.
   *What Structurally Enriched is* (v2): plan inspection and revision before execution;
   non-blocking display during execution of the agent's current focus, rationale,
   execution trace and localized risk labels; approval prompts only for flagged risks
@@ -570,9 +519,9 @@ This section also answers the ADR's
 - Foundational: Sheridan and Endsley were not read.
 
 **Recommendation for ADR 009 (oversight interfaces).**
-1. The Spectator's **intent, expectation and outcome side-by-side** view is supported
-   by S22 (reasoning/plans are unreliable proxies for action) and S20 (judgment cues
-   matter); keep outcomes, not just narration.
+1. Show **intent and observed outcomes side by side**, with expectations if the
+   project adopts them. S22 finds reasoning and plans are unreliable proxies for
+   action, and S20 finds that cues can help users identify steps needing judgment.
 2. Prefer **triage over streams**: flagged moments with the reason and a short, linked
    context (S20), and a capped alert rate (S23's modeled saturation, unconfirmed). The
    S20 v2 evidence is mixed: strategy changed exposure and final failure (the bundled
@@ -596,7 +545,7 @@ This section also answers the ADR's
 
 | Area | Strength | Why |
 | --- | --- | --- |
-| Belief under conflict: decay, pooling, calibration, reliability without ground truth | Very thin | No primary text read for the foundations; no LLM-agent source estimates staleness rates; one benchmark with built-in reliability signal |
+| Belief under conflict: decay, pooling, calibration, reliability without ground truth | Very thin for agent memory | The primary foundations establish methods. No LLM-agent source estimates per-type staleness rates, and one benchmark builds in its reliability signal |
 | Ontology: utility versus complexity, grooming | Very thin | Induction papers measure proxies; no merge/split utility study; no MDL source |
 | Oversight interfaces: multi-role supervision | Thin | N=8 to 48 web/coding tasks; no game or multi-role agents |
 | Concurrent consolidation: acting-agent outcomes | Thin | Lag measured for QA ingestion, outcomes unmatched |
@@ -611,7 +560,12 @@ game. Sources outside the 18-month window (before 2025-05-08): sleep-time comput
 
 ## Sources
 
-All retrieved 2026-11-08. Dates are the arXiv abs-page submission history. "Extractor" =
+The table covers the **2026-11-08 literature search**. The **2026-11-16 targeted
+recheck** covers Jøsang, Green et al., Gneiting and Raftery, the NIST censoring
+guidance and Gelman. Their specific read scopes and transfer limits are in the
+[belief-method comparison](design/belief-method-comparison.md#primary-foundations-and-what-they-support).
+
+Dates are the arXiv abs-page submission history. "Extractor" =
 text retrieved through the fetch tool and queried for stated sections (see Read-scope
 honesty); "first 100k of N" means the remainder was not read and no claim rests on it.
 "Budget matched" = whether compute, calls or tokens were matched across compared arms.
@@ -637,7 +591,7 @@ honesty); "first 100k of N" means the remainder was not read and no claim rests 
 | S17 | SCOPE and SCION, arXiv 2607.21610 | v1 2026-05-20 (only version; identifier month differs) | Stated sections via extractor, first 100k of 182,621 chars | 24 sources, one run per source in main tables; contamination not excluded |
 | S18 | Generative Ontology Induction, arXiv 2607.16201 | v1 2026-05-01 (only version; identifier month differs) | Stated sections via extractor | Presence-only metric; generic-template baseline; single generation |
 | S19 | GrOIL, arXiv 2608.22135 | v1 2026-08-22 (only version) | Stated sections via extractor | One domain, synthetic corpus, LLM-generated and LLM-judged questions |
-| S20 | Comparing Human Oversight Strategies for Computer-Use Agents, arXiv 2604.04918 | v1 2026-04-06 / v2 2026-09-12 (**results revised**) | v2 stated sections via extractor, first 100k of 201,935 chars (Section 6.5 and Appendix I.3 unread); v1 numbers from an earlier read, superseded | N=48, 192 sessions, one agent; strategies are bundles, not factorial |
+| S20 | Comparing Human Oversight Strategies for Computer-Use Agents, arXiv 2604.04918 | v2 2026-09-12 | Stated sections via extractor, first 100k of 201,935 chars (Section 6.5 and Appendix I.3 unread) | N=48, 192 sessions, one agent; strategies are bundles, not factorial |
 | S21 | AgentGUI, arXiv 2607.26300 | v1 2026-07-28 / v2 2026-08-04 / v3 2026-10-23; accepted to EMNLP 2026 System Demonstrations | v1 text via extractor; **v2 and v3 not re-read** | N=8 comprehension study; steering experiment N=50 runs per model |
 | S22 | Human oversight of agentic systems in practice, arXiv 2606.05391 | v1 2026-06-03 (only version; interviews 2025-07 to 08) | Stated sections via extractor, first 100k of 157,810 chars | 17 interviews; qualitative |
 | S23 | Oversight Has a Capacity, arXiv 2606.08919 | v1 2026-06-08 | Abstract only | Modeling; kappa 0.52 on 125 labelled actions |
@@ -645,19 +599,8 @@ honesty); "first 100k of N" means the remainder was not read and no claim rests 
 | S25 | Multimodal Learning with Uncertainty Quantification based on Discounted Belief Fusion, arXiv 2412.18024 | v1 2024-12-23 / v2 2025-03-28; AISTATS 2025 (PMLR 258), peer-reviewed; **RECENCY** | Stated sections via extractor | Five small datasets, 10 seeds per experiment; neural classifiers; hyperparameters tuned on one baseline |
 | X1 | Memory for Autonomous LLM Agents (survey), arXiv 2603.07670 | v1 2026-03-08 | **PDF unreadable; not read** | Leads only |
 | X2 | Search-snippet leads: Mem-T, AdaMem, AutoSchemaKG, 2609.22133, quallmer, CLARIFY, 2506.02509, 2401.03426, Yao et al. 2024, Haenni, Dezert-Tchamova, CHI 2026 dashboard, 2608.20597, Singapore Consensus, Letta/vendor blogs, Jøsang-Pope 2012, 1805.01388 | various | Snippet only (1805.01388 PDF unreadable) | **Support no conclusion**; vendor items excluded |
-| X3 | Unreadable or unretrieved named foundations: Jøsang 2013 (HTTP 403 from the redirect target), Zadeh 1979 memo (scan), Jøsang 2009 slides, Dezert-Tchamova, evidence-based SL flow paper, Dawid-Skene, Kaplan-Meier, Gelman, Rissanen, Krippendorff, Fellegi-Sunter, Sheridan, Endsley, McClelland, Soar/ACT-R, Tulving | various | **Not read** | No conclusion rests on them |
+| X3 | Unreadable or unretrieved foundations: Zadeh 1979 memo (scan), Jøsang 2009 slides, Dezert-Tchamova, evidence-based subjective logic flow paper, Dawid–Skene, Kaplan–Meier, Rissanen, Krippendorff, Fellegi-Sunter, Sheridan, Endsley, McClelland, Soar/ACT-R, Tulving | various | **Not read** | No conclusion rests on them |
 
 Earlier-page sources relied on by reference only (not re-reviewed): AgeMem, MemRL, ACE,
 Useful Memories Become Faulty, BeliefMem and the other sources listed in the two
 earlier pages above, with their stated dates.
-
-Revision record. A first draft of this page was reviewed independently. This revision
-corrected: S20 (v2 results replaced v1 and the oversight-interfaces recommendation changed); S04 (nine
-systems printed, noise statement, "BM25 best" withdrawn); S01 ("fixed" is a populated
-bank, judge-filtered results mixed); S09 (three results separated; adversarial regime
-reported); S11 (pre-resolution is an oracle; metadata helped at 0.6B); S05 (build time
-and latency misreadings); read-scope tags; version dates; the unverified
-subjective-logic/Beta equivalence (now flagged unverified); and the offline-test
-design. Remaining reviewer checks: spot-check all quoted numbers against the papers
-(extractor risk); S21 v2 and v3 and the unread parts of S10, S12, S17 and S20 were not
-read.
