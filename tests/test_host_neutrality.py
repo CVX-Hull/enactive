@@ -7,11 +7,12 @@ tools source scan retains its own vocabulary and host-adapter exclusions.
 from collections import defaultdict
 from contextlib import contextmanager
 from html import unescape
-from itertools import chain
+from itertools import chain, pairwise
 from pathlib import Path
 from posixpath import normpath
 import re
 import subprocess
+import tempfile
 from tempfile import TemporaryDirectory
 from urllib.parse import unquote, urlsplit
 
@@ -22,6 +23,7 @@ import pytest
 from tools.documents import EARLIER_RECORD_KINDS, INDEXES, NEW_RECORD_KINDS, render_index
 
 ROOT = Path(__file__).resolve().parents[1]
+GIT = ("git", "-c", "core.ignorecase=false")
 # Keep the harness and tools vocabulary and exclusions independent of the page rule.
 PRODUCT = re.compile(r"\bPi\b|pi-player-host|pi-agent-core|pi-ai\b|pi-mcp|earendil|[Cc]odex|CODEX|[Cc]laude|CLAUDE")
 PROVIDER = re.compile(r"[Oo]pen[Rr]outer|OPENROUTER|[Aa]nthropic|ANTHROPIC|[Oo]pen[Aa][Ii]|OPENAI|\b[Gg][Pp][Tt]-|\b[Gg]emini\b"
@@ -36,8 +38,11 @@ SOURCE_SUFFIXES = {".py", ".mjs", ".js", ".cjs", ".md", ".json", ".mm", ".cpp", 
 AGENT = re.compile(
     r"(?<![A-Za-z0-9])(?:Codex|CODEX|(?i:Claude(?:Code|CLI)?|agy(?:CLI)?|Antigravity(?:CLI)?|CodexCLI))"
     r"(?![A-Za-z0-9])"
-    r"|\bcodex(?=-[A-Za-z0-9]|\s+(?:--?|(?i:apply|app|app-server|cli|cloud|completion|debug|doctor|exec"
+    r"|(?<![A-Za-z0-9])codex(?=_|-(?!like\b)[A-Za-z0-9]|\s+(?:v?\d|--?"
+    r"|(?i:apply|app|app-server|cli|cloud|command|completion|debug|doctor|exec"
     r"|execpolicy|features|fork|help|login|logout|mcp|mcp-server|plugin|resume|review|sandbox|update)\b))"
+    r"|(?<=_)codex(?![A-Za-z0-9])"
+    r"|\b(?:npx|install)(?:[ \t]+--?[\w-]+)*[ \t]+codex(?![A-Za-z0-9])"
 )
 PLAYER_HOST = re.compile(
     r"(?<![A-Za-z0-9])(?:Pi(?=\d+\.\d+|[^A-Za-z0-9]|$)|PI(?=_)"
@@ -59,14 +64,19 @@ LICENCE_TEXT = {"NOTICE.md", "LICENSE", "LICENSE-CDDA.txt", "web/vendor/LICENSE-
 MARKDOWN = MarkdownIt("commonmark").enable("table")
 WEB_URL = re.compile(r'https?://[^\s<>\])]+', re.IGNORECASE)
 HTML_LINK = re.compile(r"""<a\s[^>]*?(?<!\S)href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.IGNORECASE)
+HTML_LINK_CLOSE = re.compile(r"</a\s*>", re.IGNORECASE)
 FIRST_PARTY_DOMAINS = (
-    "openai.com", "chatgpt.com", "anthropic.com", "claude.ai", "claude.com", "google.com", "google.dev",
+    "openai.com", "openai.github.io", "chatgpt.com", "anthropic.com", "claude.ai", "claude.com", "google.com", "google.dev",
     "google", "googleapis.com", "googleblog.com", "google.github.io", "openrouter.ai", "deepinfra.com",
     "deepseek.com", "baseten.co", "qwen.ai", "kimi.com", "moonshot.ai", "llama.com", "meta.com",
 )
 FIRST_PARTY_GITHUB_OWNERS = {
-    "openai", "anthropics", "anthropic-experimental", "google", "google-deepmind", "deepseek-ai", "qwenlm",
-    "moonshotai", "openrouterteam", "deepinfra", "basetenlabs",
+    "openai", "anthropics", "anthropic-experimental", "google", "google-deepmind", "google-gemini", "meta-llama",
+    "deepseek-ai", "qwenlm", "moonshotai", "openrouterteam", "deepinfra", "basetenlabs",
+}
+FIRST_PARTY_HUGGING_FACE_OWNERS = {
+    "openai", "anthropic", "google", "google-deepmind", "meta-llama", "facebook", "deepseek-ai",
+    "qwen", "moonshotai", "openrouter", "deepinfra", "baseten",
 }
 CITATION_LINK = "\x00"
 SOURCE_ID = re.compile(r"\b[A-Z]\d+\b")
@@ -78,7 +88,8 @@ SOURCE_COLUMN = re.compile(
     r"(?:primary |outside |external )?sources?(?:\s+(?:keys?|ids?)|\s*/.*|\s+and .*|\s*\(.*\))?",
     re.IGNORECASE,
 )
-SENTENCE_END = re.compile(r"""[.!?]+["'”’\])]*(?=\s|$)""")
+SENTENCE_END = re.compile(r"""([.!?]+)["'”’\])]*(?=\s|$)""")
+SENTENCE_ABBREVIATION = re.compile(r"\b(?:[A-Z]|(?i:et al|e\.g|i\.e|cf|fig|vs))$")
 LITERAL = r"[\w.-]+(?:[/:][\w.-]+)*"
 QUOTED_IDENTIFIER = re.compile(rf"""(["'`])({LITERAL})\1""")
 BARE_IDENTIFIER = re.compile(rf"(?<![\w./:-]){LITERAL}(?=\s*(?:[=:,{{}}\[\]()]|$))")
@@ -105,25 +116,27 @@ def source_names(line):
     return PRODUCT.search(text) or PROVIDER.search(text)
 
 
+def tracked_paths(root, *pathspecs):
+    output = subprocess.check_output([*GIT, "ls-files", "--deduplicate", "-z", "--", *pathspecs],
+                                     cwd=root, text=True)
+    return output.split("\0")[:-1]
+
+
 def page_scope():
-    # Project caches, dependencies and secondary worktrees are outside the source tree.
-    excluded = {".git", ".runtime", ".cache", ".venv", ".pytest_cache", "worktrees", "node_modules", "__pycache__"}
-    for directory, dirs, files in ROOT.walk():
-        dirs[:] = sorted(set(dirs) - excluded)
-        for name in sorted(files):
-            relative = (directory / name).relative_to(ROOT).as_posix()
-            if name.endswith(".md") and not relative.startswith("docs/operations/"):
-                yield relative, (directory / name).read_text(encoding="utf-8")
+    for relative in tracked_paths(ROOT, "*.md"):
+        path = ROOT / relative
+        if not relative.startswith("docs/operations/") and path.is_file():
+            yield relative, path.read_text(encoding="utf-8")
 
 
 @contextmanager
 def git_tree_paths(root):
-    tracked = subprocess.check_output(["git", "ls-files", "-z"], cwd=root, text=True).split("\0")[:-1]
+    tracked = tracked_paths(root)
     paths = {path.as_posix() for name in tracked for path in (Path(name), *Path(name).parents)}
     # Use Git's ignore matcher with only the versioned ignore files. The empty
     # checkout keeps ignored files, local excludes and worktree layout out of it.
-    with TemporaryDirectory(dir=root, prefix=".name-check-") as scratch:
-        subprocess.run(["git", "init", "-q", "--template="], cwd=scratch, check=True)
+    with TemporaryDirectory(prefix="name-check-") as scratch:
+        subprocess.run([*GIT, "init", "-q", "--template="], cwd=scratch, check=True)
         for name in tracked:
             if Path(name).name == ".gitignore":
                 target = Path(scratch) / name
@@ -138,7 +151,7 @@ def git_tree_paths(root):
                 # Anchor paths with ./ so a leading colon stays literal. Check
                 # the directory spelling too, even if the directory is absent.
                 result = subprocess.run(
-                    ["git", "-c", "core.excludesFile=/dev/null", "check-ignore", "--no-index", "-z", "--stdin"],
+                    [*GIT, "-c", "core.excludesFile=/dev/null", "check-ignore", "--no-index", "-z", "--stdin"],
                     cwd=scratch, input="".join(f"./{path}\0./{path}/\0" for path in sorted(missing)),
                     capture_output=True, text=True,
                 )
@@ -179,25 +192,27 @@ def inline_paths(relative, inlines):
                 yield from tree_candidates(relative, token.content)
 
 
-def outside_url(target):
+def web_link_text(target):
+    """Represent a web link by its citation marker or a space for provider sites."""
     url = urlsplit(target)
-    if url.scheme not in ("http", "https") or not url.hostname:
-        return False
+    if url.scheme not in ("", "http", "https") or not url.hostname:
+        return None
     host = url.hostname.rstrip(".")
+    path = url.path.lower().rstrip("/")
+    if host == "github.com" and (path == "/cvx-hull/enactive" or path.startswith(
+            ("/cvx-hull/enactive/", "/users/cvx-hull/projects/"))):
+        return None
     if any(host == domain or host.endswith("." + domain) for domain in FIRST_PARTY_DOMAINS):
-        return False
-    if host == "github.com":
-        path = url.path.lower().rstrip("/")
-        owner = path.removeprefix("/").partition("/")[0]
-        if (owner in FIRST_PARTY_GITHUB_OWNERS
-                or path == "/cvx-hull/enactive" or path.startswith("/cvx-hull/enactive/")
-                or path.startswith("/users/cvx-hull/projects/")):
-            return False
-    return True
+        return " "
+    owner = path.removeprefix("/").partition("/")[0]
+    if ((host == "github.com" and owner in FIRST_PARTY_GITHUB_OWNERS)
+            or (host == "huggingface.co" and owner in FIRST_PARTY_HUGGING_FACE_OWNERS)):
+        return " "
+    return CITATION_LINK
 
 
 def citation_context(tokens):
-    """Collect keyed source rows, paragraph spans and table cells."""
+    """Collect source rows with identifiers, paragraph spans and table cells."""
     source_ids = set()
     source_rows = set()
     paragraphs = []
@@ -220,6 +235,8 @@ def citation_context(tokens):
                 if SOURCE_ID.fullmatch(source_id):
                     source_ids.add(source_id)
                     source_rows.add(start)
+                elif ARXIV_ID.search(source_id):
+                    source_rows.add(start)
             cells[start].append(token)
     return source_ids, source_rows, paragraphs, cells
 
@@ -230,20 +247,22 @@ def source_cell_text(cell):
 
 def uncited_text(text, source_ids, *, table_cell=False):
     """Blank cited sentences while preserving physical line breaks."""
-    parts = []
-    start = 0
-    boundaries = [match.end() for match in SENTENCE_END.finditer(text)]
-    for end in (*boundaries, len(text)):
-        sentence = text[start:end]
-        # A label or fragment in a regular table is not a cited sentence.
-        if (not table_cell or end in boundaries) and (
-            CITATION_LINK in sentence or ARXIV_ID.search(sentence)
-            or source_ids.intersection(SOURCE_ID.findall(sentence))
-        ):
-            sentence = re.sub(r"[^\n]", " ", sentence)
-        parts.append(sentence)
-        start = end
-    return "".join(parts)
+    boundaries = [0]
+    for match in SENTENCE_END.finditer(text):
+        if match[1] != "." or not SENTENCE_ABBREVIATION.search(text, 0, match.start()):
+            boundaries.append(match.end())
+    sentences = [text[start:end] for start, end in pairwise(boundaries)]
+    tail = text[boundaries[-1]:]
+    # A citation in unfinished prose applies to its line. In a regular table
+    # a cell fragment cannot cite names outside the link label.
+    if not table_cell:
+        sentences.extend(tail.splitlines(keepends=True))
+        tail = ""
+    for index, sentence in enumerate(sentences):
+        if (CITATION_LINK in sentence or ARXIV_ID.search(sentence)
+                or source_ids.intersection(SOURCE_ID.findall(sentence))):
+            sentences[index] = re.sub(r"[^\n]", " ", sentence)
+    return "".join(sentences) + tail
 
 
 def fence_text(line):
@@ -263,18 +282,25 @@ def fence_text(line):
 def bare_url_text(match):
     url = match[0]
     target = url.rstrip(".,!?;:\"'”’")
-    return (CITATION_LINK if outside_url(target) else " ") + url[len(target):]
+    return (web_link_text(target) or " ") + url[len(target):]
 
 
-def inline_text(relative, tokens, tree_paths, *, schema_example=False):
-    """Read the visible inline text, retaining unresolved file names for the check."""
+def inline_text(relative, tokens, tree_paths, *, schema_example=False, keep_link_labels=False):
+    """Retain checkable inline text, including unresolved file names."""
     parts = []
-    for token in tokens:
+    skip_label = False
+    for index, token in enumerate(tokens):
+        if token.type == "link_close" or (token.type == "html_inline" and HTML_LINK_CLOSE.fullmatch(token.content)):
+            skip_label = False
+            continue
+        if skip_label:
+            continue
         if token.type == "link_open":
             target = token.attrGet("href")
-            if outside_url(target):
-                parts.append(CITATION_LINK)
-            elif not WEB_URL.fullmatch(target) and tree_paths.isdisjoint(tree_candidates(relative, target, link=True)):
+            if (citation := web_link_text(target)) is not None:
+                parts.append(citation)
+                skip_label = not keep_link_labels
+            elif not urlsplit(target).netloc and tree_paths.isdisjoint(tree_candidates(relative, target, link=True)):
                 parts.extend((" ", urlsplit(target).path, " "))
         elif token.type == "text":
             parts.append(WEB_URL.sub(bare_url_text, token.content))
@@ -288,8 +314,12 @@ def inline_text(relative, tokens, tree_paths, *, schema_example=False):
                 parts.append(fence_text(literal) if schema_example else literal)
         elif token.type == "html_inline" and (match := HTML_LINK.match(token.content)):
             target = unescape(next(value for value in match.groups() if value is not None))
-            parts.append(CITATION_LINK if outside_url(target) else " ")
-        elif token.type == "image" or (token.type == "html_inline" and token.content.lower() != "</a>"):
+            citation = web_link_text(target)
+            parts.append(citation or " ")
+            if citation is not None and not keep_link_labels:
+                skip_label = any(later.type == "html_inline" and HTML_LINK_CLOSE.fullmatch(later.content)
+                                 for later in tokens[index + 1:])
+        elif token.type in ("image", "html_inline"):
             parts.append(token.content)
     return "".join(parts)
 
@@ -331,13 +361,16 @@ def page_violations(relative, source, match_paths=None):
     if match_paths:
         cells = (cell.children for row in table_cells.values() for cell in row)
         tree_paths = match_paths(set(inline_paths(relative, chain(inlines, cells))))
+    # The player-host restriction also applies to source labels.
     visible = [
-        line if index in fences else inline_text(relative, inlines[index], tree_paths)
+        line if index in fences else inline_text(relative, inlines[index], tree_paths, keep_link_labels=True)
         for index, line in enumerate(lines)
     ]
-    checked = visible.copy()
-    for index in schema_examples - fences:
-        checked[index] = inline_text(relative, inlines[index], tree_paths, schema_example=True)
+    checked = [
+        line if index in fences else inline_text(relative, inlines[index], tree_paths,
+                                                 schema_example=index in schema_examples)
+        for index, line in enumerate(lines)
+    ]
     if specification:
         for index in fences:
             checked[index] = fence_text(checked[index])
@@ -429,10 +462,14 @@ def test_lowercase_commands_and_joined_products_are_refused():
         "Run codex mcp list.", "Use the codex CLI.", "Run `claude --version`.", "Run `agy --version`.",
         "Run claude mcp list.", "Run agy --version.", "Use the claude CLI.", "Use the agy CLI.",
         "ClaudeCode", "codex-cli", "agy-cli", "antigravity",
+        "codex 0.171.0", "claude 2.1.329", "agy 1.0", "the codex command", "the claude command",
+        "the agy command", "npx codex", "brew install codex", "npm install -g codex", "codex_home",
+        "my_codex", "claude_code",
     )
     for command in commands:
         assert page_violations(relative, current_page(command)) == [f"{relative}:5: {command}"]
-    assert page_violations(relative, current_page("A medieval codex contains a sonnet.")) == []
+    for ordinary in ("A medieval codex contains a sonnet.", "a codex-like book"):
+        assert page_violations(relative, current_page(ordinary)) == []
 
 
 def test_model_tiers_match_in_context_in_any_case():
@@ -561,6 +598,25 @@ The paper studied Opus (S99).
     ]
 
 
+def test_an_arxiv_id_in_the_first_cell_exempts_a_source_row():
+    relative = "docs/research-example.md"
+    body = current_page("""| Source | Flags |
+| --- | --- |
+| TwinRouterBench 2605.18859 | V; router diagnostic = Opus 4.6, one prompt |
+| TwinRouterBench | Opus 4.6 |
+| TwinRouterBench | Opus 4.6 (2605.18859) |
+
+| Role | Model |
+| --- | --- |
+| Lead 2605.18859 | Opus 4.6 |
+""")
+    assert page_violations(relative, body) == [
+        f"{relative}:8: | TwinRouterBench | Opus 4.6 |",
+        f"{relative}:9: | TwinRouterBench | Opus 4.6 (2605.18859) |",
+        f"{relative}:13: | Lead 2605.18859 | Opus 4.6 |",
+    ]
+
+
 def test_a_bare_url_cites_its_own_sentence_only():
     relative = "docs/research-example.md"
     body = "The study used Opus (see https://example.org/x). Our lead uses Opus."
@@ -600,7 +656,65 @@ The project's curator runs on Opus (S1).
     assert page_violations(relative, body) == [f"{relative}:5: - We use Opus."]
 
 
-def test_tree_paths_depend_on_the_index_and_ignore_rules(tmp_path):
+def test_external_link_labels_can_name_their_source():
+    relative = "docs/research-example.md"
+    for line in (
+        "- Context as a budget: [Anthropic, effective context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).",
+        "[Anthropic's paper](https://example.org/study)",
+        '| Source | <a href="https://docs.anthropic.com">Anthropic</a> |\n| --- | --- |',
+    ):
+        assert page_violations(relative, current_page(line)) == []
+    for line in (
+        "Use Anthropic ([Anthropic's paper](https://www.anthropic.com/engineering)).",
+        'Use Anthropic (<a href="https://docs.anthropic.com">Anthropic</a>).',
+        "[OpenAI](https://github.com/CVX-Hull/enactive/issues/873) is the default.",
+        "[Anthropic's paper](https://example.org/study) describes the result for Pi.",
+    ):
+        assert page_violations(relative, current_page(line)) == [f"{relative}:5: {line}"]
+
+
+def test_abbreviations_do_not_end_cited_sentences():
+    relative = "docs/research-example.md"
+    for line in (
+        "[Smith et al.](https://example.org/x) evaluated Opus.",
+        "The paper ([x](https://example.org/x)) tested, e.g. Opus and Sonnet.",
+        "Smith et al. ([paper](https://example.org/x)) evaluated Opus.",
+    ):
+        assert page_violations(relative, current_page(line)) == []
+    for abbreviation in ("et al.", "e.g.", "i.e.", "cf.", "Fig.", "vs.", "A."):
+        study = f"The study ([x](https://example.org/x)) includes {abbreviation}\nOpus."
+        assert page_violations(relative, current_page(study)) == []
+        project = f"{study} Our lead uses Opus."
+        assert page_violations(relative, current_page(project)) == [
+            f"{relative}:6: Opus. Our lead uses Opus."
+        ]
+
+
+def test_citations_in_unpunctuated_prose_apply_to_their_line():
+    relative = "docs/research-example.md"
+    body = current_page("Lead: Opus\nReviewer: Sonnet\nSee [benchmarks](https://example.org/x)")
+    assert page_violations(relative, body) == [f"{relative}:5: Lead: Opus", f"{relative}:6: Reviewer: Sonnet"]
+    body = current_page("1. Our lead uses Opus\n   [x](https://example.org/x)")
+    assert page_violations(relative, body) == [f"{relative}:5: 1. Our lead uses Opus"]
+    assert page_violations(relative, current_page("Lead: Opus ([benchmarks](https://example.org/x))")) == []
+
+
+def test_provider_owned_sites_do_not_cite_names_outside_their_labels():
+    relative = "docs/research-example.md"
+    for line in (
+        "Lead is GPT-5 ([x](https://openai.github.io/x)).",
+        "Lead is GPT-5 ([x](https://github.com/google-gemini/gemini-cli)).",
+        "Lead is GPT-5 ([x](https://github.com/meta-llama/llama)).",
+        "Lead is Qwen ([card](https://huggingface.co/Qwen/Qwen3-32B)).",
+        "Lead is Qwen ([card](https://huggingface.co/DeepSeek-AI/DeepSeek-V3)).",
+    ):
+        assert page_violations(relative, current_page(line)) == [f"{relative}:5: {line}"]
+    for link in ("https://independent-lab.github.io/x", "https://github.com/independent-lab/x",
+                 "https://huggingface.co/independent-lab/Qwen3-study"):
+        assert page_violations(relative, current_page(f"The study used Qwen ([card]({link})).")) == []
+
+
+def test_tree_paths_depend_on_the_index_and_ignore_rules(tmp_path, tmp_path_factory, monkeypatch):
     (tmp_path / "docs").mkdir()
     (tmp_path / "OpenAI").mkdir()
     (tmp_path / "OpenAI" / "tracked.txt").touch()
@@ -608,6 +722,11 @@ def test_tree_paths_depend_on_the_index_and_ignore_rules(tmp_path):
     (tmp_path / ".gitignore").write_text(".claude/settings.local.json\n.claude/worktrees/\n")
     subprocess.run(["git", "init", "-q", "--template="], cwd=tmp_path, check=True)
     subprocess.run(["git", "add", ".gitignore", "Codex.md", "OpenAI/tracked.txt"], cwd=tmp_path, check=True)
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "core.ignorecase")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "true")
+    system_temp = tmp_path_factory.mktemp("name-check-system-temp")
+    monkeypatch.setattr(tempfile, "tempdir", str(system_temp))
     (tmp_path / "Untracked-Codex.md").touch()
     relative = "docs/setup.md"
     body = current_page("""Use `Codex.md:2` and ``../OpenAI/``.
@@ -620,6 +739,8 @@ Generated `.claude/settings.local.json` is ignored.
 See [settings](../.claude/settings.local.json).
 See `.claude/worktrees/`.
 Use `:(glob)Codex.md`.
+Use `.Claude/worktrees/`.
+Use `.CLAUDE/settings.local.json`.
 """)
     expected = [
         f"{relative}:7: [OpenAI](../Codex.md) is the default.",
@@ -627,13 +748,32 @@ Use `:(glob)Codex.md`.
         f"{relative}:9: See [setup](../missing/Codex.md).",
         f"{relative}:10: Use `Untracked-Codex.md`.",
         f"{relative}:14: Use `:(glob)Codex.md`.",
+        f"{relative}:15: Use `.Claude/worktrees/`.",
+        f"{relative}:16: Use `.CLAUDE/settings.local.json`.",
     ]
     with git_tree_paths(tmp_path) as match_paths:
+        scratch, = system_temp.iterdir()
+        assert (scratch / ".git").is_dir()
         assert page_violations(relative, body, match_paths) == expected
+    assert not list(system_temp.iterdir())
     (tmp_path / ".claude" / "worktrees").mkdir(parents=True)
     (tmp_path / ".claude" / "settings.local.json").touch()
     with git_tree_paths(tmp_path) as match_paths:
         assert page_violations(relative, body, match_paths) == expected
+
+
+def test_page_scan_reads_only_tracked_markdown(tmp_path, monkeypatch):
+    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+    (tmp_path / ".worktrees").mkdir()
+    (tmp_path / ".gitignore").write_text(".worktrees/\n")
+    tracked = current_page("Use Codex locally.")
+    (tmp_path / "tracked.md").write_text(tracked)
+    subprocess.run([*GIT, "init", "-q", "--template="], cwd=tmp_path, check=True)
+    subprocess.run([*GIT, "add", ".gitignore", "tracked.md"], cwd=tmp_path, check=True)
+    (tmp_path / ".worktrees" / "ignored.md").write_text(current_page("Use Anthropic locally."))
+    (tmp_path / "untracked.md").write_text(current_page("Use OpenAI locally."))
+    assert list(page_scope()) == [("tracked.md", tracked)]
+    assert violations() == ["tracked.md:5: Use Codex locally."]
 
 
 def test_specifications_allow_literal_identifiers_in_fences_and_schema_examples():

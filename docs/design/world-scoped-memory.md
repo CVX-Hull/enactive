@@ -397,7 +397,7 @@ Read on 13 November 2026, mostly as summaries.
 - Models under-use memory tools: [MemTrack](https://arxiv.org/abs/2510.01353).
 - Editing memory against what exists: [Memory-R1](https://arxiv.org/abs/2508.19828);
   Mem0. Offline consolidation: [Letta sleep-time compute](https://letta.com/blog/sleep-time-compute).
-- Context as a budget: [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).
+- Context as a budget: [Anthropic, effective context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).
 - Stale memory: [STALE](https://arxiv.org/abs/2605.06527);
   [When Memory Lies](https://arxiv.org/abs/2608.04574).
 - Judges: [AgentRewardBench](https://arxiv.org/abs/2504.08942);

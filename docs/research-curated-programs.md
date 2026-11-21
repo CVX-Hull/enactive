@@ -682,7 +682,7 @@ revision before 2025-05-08).
 | SCALAR 2603.09036 | 2026-03-10 | Abstract | Craftax diamond rate | baselines not named; not relied on |
 | Is Escalation Worth It 2605.06350 | 2026-05-07 (v2 10-05) | Abstract | Cascade accuracy vs single model | single author |
 | UCCI 2605.18796 | 2026-05-11 | Full (extr.) | Cost at equal F1, NER; baselines incl. conformal | 1 domain; independent author |
-| TwinRouterBench | 2026-05 (v5 10-24) | Full (extr.), 18k unread | Step-level routing; resolved count and API cost | V (one vendor-built benchmark). The [router diagnostic](https://arxiv.org/html/2605.18859) used Opus 4.6, one prompt, no repeats and 100 locked instances. |
+| TwinRouterBench 2605.18859 | 2026-05 (v5 10-24) | Full (extr.), 18k unread | Step-level routing; resolved count and API cost | V (one vendor-built benchmark); router diagnostic = Opus 4.6, one prompt; no repeats; 100 locked instances |
 | Replay Gap 2608.08239 | 2026-08-08 (v1) | Body (extr.) + Table 1 from PDF text | Branched live rollouts vs replay; same-model control forks; up and down swaps | W (PDF: Efficient Reasoning Workshop, COLM 2026; page said COLM); quantized models; small n |
 | Kang et al. 2505.17612 | 2025-05-23 (v2 11-05) | Abstract | Agent distillation to 0.5-3B | no numbers; not stale |
 | SpecBench 2605.21384 | 2026-05-20 (v2 09-09) | Abstract | Visible vs held-out test gap, 30 coding tasks | Coding benchmark |
