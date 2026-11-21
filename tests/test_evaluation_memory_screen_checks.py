@@ -6,8 +6,9 @@ from pathlib import Path
 import pytest
 
 from harness.curator.knowledge import Repository
-from tools.memory_screen_checks import (CutModel, StoreError, covered_turns, cut_report, fact_history, main,
-    read_lineage, read_versions, replay, simulate, store_report, summarise)
+from tools.memory_screen_checks import (CutModel, ScheduleError, StoreError, check_schedule, covered_turns, cut_report,
+    fact_history, main, read_lineage, read_versions, replay, schedule_coverage, schedule_from_runner, simulate,
+    store_report, summarise)
 
 SESSION = 'c' * 32
 RECORD = '5' * 32
@@ -67,6 +68,22 @@ class Trace:
             dict(operation_id=f'{len(self.events):032x}', source=dict(source_id=frame)))
         self.images += 1
         return frame
+
+    def operate(self, *operations: str) -> None:
+        """One request whose calls create `operations`, one `computer_input` call each, each returning an image."""
+        self.requests += 1
+        self.wall += 1
+        common = dict(wall_time=self.iso(), monotonic_ms=self.requests * 1000.0, request_id=f'request-{self.requests}')
+        usage = dict(input=3, output=20, cacheRead=5000 * self.requests, cacheWrite=1000, cost=dict(total=0.01, cacheWrite=0.001))
+        self.events += [dict(common, type='context-image-projection', input_images=self.images, omitted_images=0),
+            dict(common, type='request-start', logical_request_id=common['request_id']),
+            dict(common, type='response-complete', stop_reason='toolUse', usage_available=True, usage=usage)]
+        for number, operation in enumerate(operations):
+            self.events += [dict(common, type='tool-start', tool_call_id=f'call-{number}', tool='computer_input',
+                    arguments=dict(actions=[dict(type='key', key='e', modifiers=[])])),
+                dict(common, type='tool-result', tool_call_id=f'call-{number}', tool='computer_input',
+                    result=dict(content=[dict(type='text', text=json.dumps(dict(operation_id=operation)))], isError=False))]
+        self.images += len(operations)
 
     def write(self, directory: Path) -> None:
         directory.mkdir(parents=True)
@@ -280,3 +297,194 @@ def test_store_uses_the_commit_session_when_a_version_adds_no_record(tmp_path, o
     report, = store_report([path], [], [])
     assert report['versions'][-1]['session'] == operation
     assert report['versions'][-1]['covers'] == ['run-b']
+
+
+# --- a recorded coverage schedule (R-REGRESSION: the replay that reads the paid live curator run's lag result) ------
+
+MARKED = dict(high_mark=30000, image_peak=99)  # cuts fall due from request 28 of a long actor
+
+
+def admission(root: Path, *actors: list[list[str]], gap: float = 100) -> Path:
+    """A run whose actors (`001`, `002`, ...) start `gap` seconds apart; each request is the operations its calls create."""
+    run = root / 'run'
+    for position, requests in enumerate(actors):
+        trace = Trace(chr(ord('a') + position) * 32, BASE + position * gap)
+        for operations in requests:
+            trace.operate(*operations)
+        trace.write(run / 'actors' / f'{position + 1:03d}')
+    return run
+
+
+def change(wall: float, actor: str | None = None, step: int = 0, operation: str = '', restore: bool = False) -> dict:
+    return dict(wall=wall, end=None if actor is None else dict(actor=actor, step=step, operation=operation), restore=restore)
+
+
+def schedule(*changes: dict) -> dict:
+    return dict(schema='curator-coverage-schedule/1', changes=list(changes))
+
+
+def starts(run) -> dict[str, list[tuple[int, float]]]:
+    found = {}
+    for request in run.facts.requests:
+        found.setdefault(request.actor, []).append((request.decision, request.wall))
+    return found
+
+
+def covered(path: Path, *changes: dict) -> tuple[dict[str, list[int]], int]:
+    run, = read_lineage([path])[0]
+    by_actor, left_out = schedule_coverage(run, check_schedule(schedule(*changes), run.directories), starts(run))
+    return {run.directories[run.facts.actors.index(actor)]: limits for actor, limits in by_actor.items()}, left_out
+
+
+@pytest.mark.parametrize('lag', [10, 25])
+def test_a_schedule_equal_to_a_steady_coverage_reproduces_the_steady_rows(tmp_path, capsys, lag):
+    run = admission(tmp_path, [[f'op-{n}'] for n in range(1, 81)])
+    # turn n is covered from the request that starts after request n + lag began, as steady coverage covers t - lag
+    path = tmp_path / 'schedule.json'
+    path.write_text(json.dumps(schedule(change(BASE), *(change(BASE + n + lag + 0.5, '001', n, f'op-{n}')
+        for n in range(1, 81)))))
+    steady = cut_report([run], CutModel(**MARKED), [lag])
+    assert steady['rows'][2]['cuts'] > 0
+    assert main(['cut', str(run), '--coverage', 'schedule', '--schedule', str(path), '--high-mark', '30000',
+                 '--image-peak', '99', '--json']) == 0
+    replayed = json.loads(capsys.readouterr().out)
+    assert [row['row'] for row in replayed['rows']] == ['recorded', 'no cut', 'schedule']
+    assert replayed['rows'] == [*steady['rows'][:2], dict(steady['rows'][2], row='schedule')]
+    assert replayed['schedule'] == dict(read=81, applied=81, left_out=0)
+    lineage, _ = read_lineage([run])
+    images = [lineage[0].facts.images[(r.actor, r.key)] for r in lineage[0].facts.requests]
+    limits, = covered(run, *json.loads(path.read_text())['changes'])[0].values()
+    assert simulate(images, CutModel(**MARKED, coverage='schedule'), None, limits) == simulate(images, CutModel(**MARKED), lag)
+    assert main(['cut', str(run), '--coverage', 'schedule', '--schedule', str(path)]) == 0
+    assert 'schedule: 81 changes read, 81 applied, 0 left out' in capsys.readouterr().out
+
+
+def test_a_schedule_that_stops_advancing_holds_the_cut_back(tmp_path):
+    run = admission(tmp_path, [[f'op-{n}'] for n in range(1, 81)])
+    stalled = schedule(change(BASE), *(change(BASE + n + 10.5, '001', n, f'op-{n}') for n in range(1, 21)))
+    row = cut_report([run], CutModel(**MARKED, coverage='schedule'), [], stalled)['rows'][2]
+    assert cut_report([run], CutModel(**MARKED), [10])['rows'][2]['requests_held_back'] == 0
+    assert row['cuts'] > 0 and row['requests_held_back'] > 0 and row['cuts_held_back'] >= 1
+    lineage, _ = read_lineage([run])
+    images = [lineage[0].facts.images[(r.actor, r.key)] for r in lineage[0].facts.requests]
+    limits, = covered(run, *stalled['changes'])[0].values()
+    assert limits[-1] == 20
+    rows = simulate(images, CutModel(**MARKED, coverage='schedule'), None, limits)
+    assert rows[-1]['freed'] == 0 and rows[-1]['prompt'] > MARKED['high_mark']
+
+
+def test_a_prefix_covers_a_turn_only_whole_and_applies_after_its_time(tmp_path):
+    run = admission(tmp_path, [['a1'], ['b1', 'b2'], ['c1'], ['d1']])  # requests start at BASE + 1 .. BASE + 4
+    assert covered(run, change(BASE + 3.5, '001', 2, 'b1')) == ({'001': [0, 0, 0, 1]}, 0)
+    assert covered(run, change(BASE + 3.5, '001', 3, 'b2')) == ({'001': [0, 0, 0, 2]}, 0)
+    # a change at exactly a request's start applies from the next request; a restore moves the prefix back
+    assert covered(run, change(BASE + 2, '001', 1, 'a1'), change(BASE + 3.5, '001', 4, 'c1'),
+                   change(BASE + 3.75, '001', 1, 'a1', restore=True)) == ({'001': [0, 0, 1, 1]}, 0)
+
+
+def test_a_request_with_no_start_time_takes_the_coverage_before_it(tmp_path):
+    run = admission(tmp_path, [['a1'], ['b1'], ['c1'], ['d1']])
+    host = run / 'actors' / '001' / 'host.jsonl'
+    events = [json.loads(line) for line in host.read_text().splitlines()]
+    for event in events:
+        if event['type'] == 'request-start' and event['request_id'] == 'request-3':
+            del event['wall_time']
+    host.write_text(''.join(json.dumps(event) + '\n' for event in events))
+    assert covered(run, change(BASE + 1.5, '001', 1, 'a1'), change(BASE + 2.5, '001', 2, 'b1')) == (
+        {'001': [0, 1, 1, 2]}, 0)
+
+
+def test_actors_before_the_prefix_are_covered_and_actors_after_it_are_not(tmp_path):
+    run = admission(tmp_path, *([[f'{actor}-{n}'] for n in range(1, 4)] for actor in ('x', 'y', 'z')))
+    assert covered(run, change(BASE + 0.5, '002', 2, 'y-2')) == ({'001': [3, 3, 3], '002': [2, 2, 2], '003': [0, 0, 0]}, 0)
+    assert covered(run, change(BASE + 0.5)) == ({'001': [0, 0, 0], '002': [0, 0, 0], '003': [0, 0, 0]}, 0)
+
+
+def test_an_operation_no_result_places_is_left_out_and_counted(tmp_path):
+    run = admission(tmp_path, [['a1'], ['b1'], ['c1'], ['d1']])
+    changes = (change(BASE + 0.5, '001', 1, 'a1'), change(BASE + 1.5, '001', 2, 'unknown'),
+               change(BASE + 2.5, '001', 3, 'not-in-any-result'))
+    assert covered(run, *changes) == ({'001': [1, 1, 1, 1]}, 2)
+    report = cut_report([run], CutModel(coverage='schedule'), [], schedule(*changes))
+    assert report['schedule'] == dict(read=3, applied=1, left_out=2)
+
+
+@pytest.mark.parametrize('value, refusal', [
+    (dict(schema='curator-coverage-schedule/2', changes=[]), 'unsupported coverage schedule schema'),
+    (dict(changes=[]), 'unsupported coverage schedule schema'),
+    (dict(schema='curator-coverage-schedule/1'), 'no list of changes'),
+    (schedule({k: v for k, v in change(BASE).items() if k != 'wall'}), 'change 1: wall is missing'),
+    (schedule(change('soon')), 'change 1: wall is missing or not a number'),
+    (schedule(change(True)), 'change 1: wall is missing or not a number'),
+    (schedule({k: v for k, v in change(BASE).items() if k != 'restore'}), 'change 1: restore is missing'),
+    (schedule(change(BASE, restore='no')), 'change 1: restore is missing'),
+    (schedule({k: v for k, v in change(BASE).items() if k != 'end'}), 'change 1: end is missing'),
+    (schedule(change(BASE, '001', '2', 'a1')), 'change 1: end is missing or not null'),
+    (schedule(dict(change(BASE), end=dict(actor='001', step=2))), 'change 1: end is missing or not null'),
+    (schedule(change(BASE), change(BASE - 1)), 'change 2: its time is earlier'),
+    (schedule(change(BASE, '001', 2, 'b1'), change(BASE + 1, '001', 1, 'a1')), 'change 2: the covered prefix moves backwards'),
+    (schedule(change(BASE, '002', 1, 'x'), change(BASE + 1, '001', 9, 'y')), 'change 2: the covered prefix moves backwards'),
+    (schedule(change(BASE, '001', 1, 'a1'), change(BASE + 1)), 'change 2: the covered prefix moves backwards'),
+    (schedule(change(BASE, '003', 1, 'a1')), 'change 1: actor 003 is not an actor of the run'),
+])
+def test_a_malformed_or_out_of_order_schedule_is_refused(value, refusal):
+    with pytest.raises(ScheduleError, match=refusal):
+        check_schedule(value, ['001', '002'])
+
+
+def test_a_backward_prefix_with_a_restore_is_accepted_and_a_schedule_is_given_over_one_run(tmp_path):
+    changes = [change(BASE, '002', 1, 'x'), change(BASE, '001', 1, 'a1', restore=True), change(BASE + 1)]
+    assert check_schedule(schedule(*changes[:2]), ['001', '002']) == changes[:2]
+    with pytest.raises(ScheduleError, match='change 3: the covered prefix moves backwards'):
+        check_schedule(schedule(*changes), ['001', '002'])
+    runs, _, _ = lineage(tmp_path)
+    with pytest.raises(ScheduleError, match='exactly one run; 2 were given'):
+        cut_report(runs, CutModel(coverage='schedule'), [], schedule())
+    with pytest.raises(ScheduleError, match='only with it'):
+        cut_report(runs[:1], CutModel(), [], schedule())
+    with pytest.raises(ScheduleError, match='only with it'):
+        cut_report(runs[:1], CutModel(coverage='schedule'), [])
+
+
+def runner_files(run: Path, polls: list[dict], status: dict, tail: str = '') -> Path:
+    directory = run / 'curator-runner'
+    directory.mkdir()
+    (directory / 'polls.jsonl').write_text(''.join(json.dumps(row) + '\n' for row in polls) + tail)
+    (directory / 'status.json').write_text(json.dumps(status, indent=1))
+    return directory
+
+
+def poll(wall: float, end: dict | None, restore: dict | None = None, outcome: str = 'read') -> dict:
+    return dict(schema='curator-runner-poll/1', began_wall=wall - 0.5, ended_wall=wall, outcome=outcome,
+        coverage=dict(covered_prefix=dict(end=end, restore=restore), lag='unknown', backlog=0, as_of='unknown'))
+
+
+def test_the_schedule_command_writes_the_runner_record_as_a_schedule(tmp_path):
+    run = admission(tmp_path, [['a1'], ['b1', 'b2'], ['c1']])
+    b2 = dict(actor='001', step=3, operation='b2', ordinal=3)
+    restore = dict(version='v4', restored='v2', counted_through='v2')
+    status = dict(schema='curator-runner-status/1', state='ended', updated_wall=BASE + 5, lag='unknown',
+        covered_prefix=dict(end=dict(actor='001', step=1, operation='a1', ordinal=1), restore=restore))
+    directory = runner_files(run, [poll(BASE + 1, None), poll(BASE + 2, None), poll(BASE + 3, b2),
+        poll(BASE + 4, b2, outcome='failed')], status, tail='{"schema": "curator-runner-poll/1", "ended')
+    before = (directory / 'polls.jsonl').read_bytes()
+    expected = schedule(change(BASE + 1), change(BASE + 3, '001', 3, 'b2'), change(BASE + 5, '001', 1, 'a1', restore=True))
+    assert schedule_from_runner(run) == expected
+    output = tmp_path / 'schedule.json'
+    assert main(['schedule', str(run), '--output', str(output)]) == 0
+    assert json.loads(output.read_text()) == expected
+    assert (directory / 'polls.jsonl').read_bytes() == before  # the half-written row is not read and not cut off
+
+
+@pytest.mark.parametrize('polls, refusal', [
+    ([dict(poll(BASE, None), schema='curator-runner-poll/2')], 'polls.jsonl row 1: unsupported schema'),
+    ([{k: v for k, v in poll(BASE, None).items() if k != 'coverage'}], 'polls.jsonl row 1: no ended_wall and covered prefix'),
+    ([poll(BASE, None), {k: v for k, v in poll(BASE, None).items() if k != 'ended_wall'}], 'row 2: no ended_wall'),
+    ([poll(BASE + 1, None), poll(BASE, dict(actor='001', step=1, operation='a1', ordinal=1))], 'change 2: its time is earlier'),
+])
+def test_the_schedule_command_refuses_runner_files_it_cannot_read(tmp_path, polls, refusal):
+    run = admission(tmp_path, [['a1']])
+    runner_files(run, polls, dict(schema='curator-runner-status/1', updated_wall=BASE + 9,
+        covered_prefix=dict(end=None, restore=None)))
+    with pytest.raises(ScheduleError, match=refusal):
+        schedule_from_runner(run)
