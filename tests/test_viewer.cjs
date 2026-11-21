@@ -308,19 +308,21 @@ test('curator results select and show escaped recorded detail on a phone', {time
   } finally { await page.close(); }
 });
 
-test('curator runner status shows a present, a missing and a partly written file as such', {timeout: 30000}, async () => {
+test('curator runner status shows a present, a missing and a partly written file as such', {timeout: 60000}, async () => {
   const page = await S.open(browser, `${fx.url}#live`, {width:390,height:900,mobile:true});
   const place = (step, ordinal) => ({actor:'actor-a',step,operation:`op-${step}`,ordinal});
   const walls = {began:1700000000,ended:1700000001};
   const stamp = {session:'run',actor:'actor-a',last_step:25};
+  const unknownRow = Object.fromEntries(['label','window','session_id','outcome','advanced','started_wall','ended_wall'].map(k => [k, 'unknown']));
   const status = {session:'run',state:'polling',updated_wall:1700000002,stop_reason:null,look_error:null,
     position:{...place(30,30),read_wall:walls},as_of:{...place(30,30),read_wall:walls},after_last_read:'unknown',
-    current:null,covered_prefix:{end:place(25,25),restore:null},lag:5,stamp_distance:'unknown',backlog:5,
-    last_confirmed:{version:'v1',label:'actor-a-1-25-x',window:{session:'run',actor:'actor-a',first:1,last:25},coverage:stamp},
-    latest_version:{version:'v1',coverage:stamp},failures:{sessions:0,snapshots:0},unconfirmed:0,
+    current:null,covered_prefix:{end:place(25,25),restore:{version:'v3',restored_from:'v0',counted_through:'v2'}},
+    lag:'unknown',stamp_distance:'unknown',backlog:5,
+    last_confirmed:{version:'v1',label:'actor-a-1-25-x',window:{session:'run',actor:'actor-a',first:1,last:25},coverage:stamp,baseline:false},
+    latest_version:{version:'v3',coverage:null,baseline:false},failures:{sessions:0,snapshots:0},unconfirmed:0,
     examined:{items:[{label:'actor-a-1-25-x',window:{session:'run',actor:'actor-a',first:1,last:25},session_id:'s',
-      outcome:'accepted',advanced:true,started_wall:1699999990,ended_wall:1699999999}],total:1,omitted:0},
-    unexamined:{items:null,total:0,omitted:0}};
+      outcome:'accepted',advanced:true,started_wall:1699999990,ended_wall:1e20},unknownRow],total:2,omitted:0},
+    unexamined:{items:null,total:null,omitted:null}};
   let state = 'available';
   try {
     await S.ready(page);
@@ -338,21 +340,26 @@ test('curator runner status shows a present, a missing and a partly written file
     assert.match(facts['Play has reached'], /actor actor-a · step 30 · operation op-30 · finished operation 30/);
     assert.match(facts['As of'], /2023-11-14T22:13:21Z/);
     assert.equal(facts['After the last read'], 'unknown');
-    assert.match(facts['Covered prefix ends at'], /step 25/);
-    assert.equal(facts['Lag (finished operations after the covered prefix)'], '5');
+    // The recorded end and, past the restore, unknown.
+    assert.match(facts['Covered prefix ends at'], /step 25 .*· unknown past the restore of v3 to v0 \(versions counted through v2\)/);
+    assert.equal(facts['Lag (finished operations after the covered prefix)'], 'unknown');
     assert.equal(facts['Distance from the latest stamp'], 'unknown');
-    assert.equal(facts['Last confirmed version'], 'v1 · stamp: session run · actor actor-a · last step 25');
-    assert.match(await page.$eval('table.data', n => n.innerText), /actor actor-a · steps 1–25\s+accepted\s+yes/);
+    assert.equal(facts["Backlog (finished steps beyond the curator's cursor)"], '5');
+    assert.equal(facts['Last confirmed version'], 'v1 · stamp: session run · actor actor-a · last step 25 · baseline: no');
+    assert.equal(facts['Latest version seen'], 'v3 · stamp: no stamp · baseline: no');
+    const table = await page.$eval('table.data', n => n.innerText);
+    assert.match(table, /actor actor-a · steps 1–25\s+accepted\s+yes\s+2023-11-14T22:13:10Z\s+unknown/);
+    assert.match(table, /unknown\s+unknown\s+unknown\s+unknown\s+unknown/);
     assert.equal(await S.overflow(page), 0);
     await S.shot(page, 'curator-runner-status-phone');
+    // The panel stays mounted; each later poll alone must clear the figures.
+    await page.$eval('[data-runner-status]', n => { n.closest('.panel').dataset.kept = 'yes'; });
     for (const [next, text] of [['missing', 'missing'], ['malformed', 'partly written']]) {
       state = next;
-      await page.evaluate(() => { location.hash='#frame/actor'; });
-      await S.until(page, () => !document.querySelector('[data-runner-status]'));
-      await page.evaluate(() => { location.hash='#frame/curator'; });
-      await S.until(page, t => document.querySelector('[data-runner-status]')?.textContent.includes(t), text);
+      await S.until(page, t => document.querySelector('[data-runner-status]')?.textContent.includes(t), text, 15000);
+      assert.equal(await page.$eval('[data-runner-status]', n => n.closest('.panel').dataset.kept), 'yes', 'the panel was not remounted');
       assert.equal(await page.$('[data-runner-facts]'), null, `${next} shows no figures`);
-      assert.doesNotMatch(await page.$eval('[data-runner-status]', n => n.closest('.panel').innerText), /Lag \(|Backlog \(|Play has reached/);
+      assert.doesNotMatch(await page.$eval('[data-runner-status]', n => n.closest('.panel').innerText), /Lag \(|Backlog \(|Play has reached|Examined ranges/);
       await S.shot(page, `curator-runner-status-${next}`);
     }
     assert.deepEqual(page.problems, []);

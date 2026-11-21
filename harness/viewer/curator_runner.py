@@ -56,7 +56,7 @@ RANGE = {'actor': _text, 'first': _count, 'last': _count}
 STATUS = {
     'session': _text, 'state': _state, 'updated_wall': _number, 'stop_reason': _text, 'look_error': _text,
     'settings': {'trigger_steps': _count, 'ceiling_steps': _count, 'poll_seconds': _number, 'watch_seconds': _number},
-    'position': POSITION, 'as_of': POSITION, 'after_last_read': _count,
+    'position': POSITION, 'as_of': POSITION,
     'snapshot': {'hold_seconds': _number, 'transaction_seconds': _number, 'staging_seconds': _number,
                  'read_wall': WALLS},
     'current': {'label': _text, 'window': WINDOW, 'started_wall': _number},
@@ -93,15 +93,35 @@ def _project(value, kind):
 
 
 def _rows(value, kind, *, last: bool) -> dict:
-    """A bounded list: at most `LIST_LIMIT` rows (the latest when `last`), with the total and how many were left out."""
-    if value is None or not isinstance(value, list):
-        return dict(items=None if value is None else UNKNOWN, total=0 if value is None else UNKNOWN, omitted=0)
+    """A bounded list: at most `LIST_LIMIT` rows (the latest when `last`), with the total and how many were left out.
+    A null list (not provided by the runner) keeps null counts; anything else that is not a list is unknown. A row
+    that is not an object is a row whose every field is unknown."""
+    if value is None:
+        return dict(items=None, total=None, omitted=None)
+    if not isinstance(value, list):
+        return dict(items=UNKNOWN, total=UNKNOWN, omitted=UNKNOWN)
     kept = value[-LIST_LIMIT:] if last else value[:LIST_LIMIT]
-    return dict(items=[_project(row, kind) for row in kept], total=len(value), omitted=len(value) - len(kept))
+    return dict(items=[_project(row if isinstance(row, dict) else {}, kind) for row in kept], total=len(value),
+                omitted=len(value) - len(kept))
+
+
+def _baselines(document: dict) -> dict:
+    """Each version's `baseline` flag, from the status file's own list of versions."""
+    versions = document.get('versions')
+    if not isinstance(versions, list):
+        return {}
+    return {row['version']: row.get('baseline') for row in versions
+            if isinstance(row, dict) and isinstance(row.get('version'), str)}
 
 
 def projection(document: dict) -> dict:
     out = _project(document, STATUS)
+    # The runner writes only `unknown` here: steps finished after its last read are never known to it.
+    out['after_last_read'] = UNKNOWN
+    baselines = _baselines(document)
+    for key in ('last_confirmed', 'latest_version'):
+        if isinstance(out[key], dict):
+            out[key]['baseline'] = _flag(baselines.get(out[key]['version'], UNKNOWN))
     out['examined'] = _rows(document.get('examined', UNKNOWN), EXAMINED, last=True)
     # Unexamined ranges are written only once the runner has stopped or ended; null before that.
     out['unexamined'] = _rows(document.get('unexamined', UNKNOWN), RANGE, last=False)

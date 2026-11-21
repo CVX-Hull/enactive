@@ -569,11 +569,14 @@ def test_the_runner_status_file_shows_how_far_the_curator_trails_play(tmp_path):
     assert (status['lag'], status['backlog'], status['stamp_distance'], status['unconfirmed']) == (5, 5, 5, 0)
     stamp = dict(session='run', actor='actor-a', last_step=25)
     assert status['last_confirmed']['version'] == 'v1' and status['last_confirmed']['coverage'] == stamp
-    assert status['latest_version'] == dict(version='v1', coverage=stamp)
+    assert status['last_confirmed']['baseline'] is False
+    assert status['latest_version'] == dict(version='v1', coverage=stamp, baseline=False)
     [examined] = status['examined']['items']
     assert examined['window'] == dict(session='run', actor='actor-a', first=1, last=25)
     assert (examined['outcome'], examined['advanced'], status['examined']['total']) == ('accepted', True, 1)
-    assert status['current'] is None and status['stop_reason'] is None and status['unexamined']['items'] is None
+    assert status['current'] is None and status['stop_reason'] is None
+    # Not written while the runner polls: the list and its counts stay null, never an empty list or zero.
+    assert status['unexamined'] == dict(items=None, total=None, omitted=None)
     assert str(tmp_path) not in json.dumps(body)
 
 
@@ -614,4 +617,24 @@ def test_an_absent_or_unknown_runner_value_is_unknown_and_a_path_is_withheld(tmp
     examined = status['examined']
     assert (examined['total'], examined['omitted'], len(examined['items'])) == (150, 50, 100)
     assert examined['items'][0]['label'] == 'l50' and examined['items'][0]['outcome'] == 'unknown'
-    assert status['unexamined'] == dict(items='unknown', total='unknown', omitted=0)
+    assert status['unexamined'] == dict(items='unknown', total='unknown', omitted='unknown')
+
+
+def test_invalid_runner_values_never_break_the_projection(tmp_path):
+    path = tmp_path / 'status.json'
+    window = dict(session='s', actor='a', first=1, last=2)
+    path.write_text(json.dumps(dict(schema='curator-runner-status/1', after_last_read=7, updated_wall=1e20,
+        examined=[None, 'row', 3, dict(label='l', window=window, started_wall=1e20, ended_wall=-1)],
+        unexamined=[], latest_version=dict(version='v0', coverage=None),
+        versions=[dict(version='v0', baseline=True, coverage=None)])))
+    status = runner_status_client(tmp_path, path).get(RUNNER_STATUS).json()['status']
+    assert status['after_last_read'] == 'unknown'  # the runner only ever writes its sentinel here
+    unknown_row = {key: 'unknown' for key in ('label', 'window', 'session_id', 'outcome', 'advanced', 'started_wall',
+                                               'ended_wall')}
+    assert status['examined']['items'][:3] == [unknown_row] * 3
+    # A finite wall time far out of range is passed on as recorded; the page shows it as unknown.
+    assert status['examined']['items'][3]['started_wall'] == 1e20 and status['updated_wall'] == 1e20
+    assert status['examined']['items'][3]['ended_wall'] == 'unknown'
+    assert status['unexamined'] == dict(items=[], total=0, omitted=0)
+    # A null stamp is only "no stamp"; whether the version is the runner's baseline is its own flag.
+    assert status['latest_version'] == dict(version='v0', coverage=None, baseline=True)

@@ -1217,21 +1217,31 @@ returns `source_status`, `snapshot` (`{sha256, bytes}` of the bytes read, or `nu
   `position` (actor, step, operation, ordinal among the admission's finished
   operations, and the snapshot's `read_wall`), `as_of` (the same for the last
   successful read), `after_last_read`, `snapshot` timings, `current` (the session in
-  flight), `covered_prefix` (`end` as a placed step, and `restore`), `lag`,
-  `stamp_distance`, `backlog`, `last_confirmed` (version, label, window and its
-  coverage stamp's session, actor and last step), `latest_version`, `failures`,
+  flight), `covered_prefix` (`end` as a placed step, and `restore`; after a restore the
+  prefix is known through `end` and unknown past the restore), `lag`, `stamp_distance`,
+  `backlog` (finished steps beyond the curator's cursor, counting steps in aborted and
+  in-flight windows), `last_confirmed` (version, label, window and its coverage stamp's
+  session, actor and last step), `latest_version` (version and stamp), `failures`,
   `unconfirmed` (how many publications could not be confirmed), `examined` (the
-  latest 100 ranges with `total` and `omitted`; each has its window, outcome, whether
-  the cursor advanced and its wall times) and `unexamined` (null until the runner has
-  stopped or ended).
+  latest 100 ranges; each has its window, outcome, whether the cursor advanced and its
+  wall times) and `unexamined` (the first 100 ranges the cursor had not passed).
+  `last_confirmed` and `latest_version` also carry `baseline`, the runner's own flag for
+  that version from its list of versions; a null stamp alone does not establish it.
+- `examined` and `unexamined` are `{items, total, omitted}`: `total` is the length of the
+  runner's list and `omitted` how many rows were left out. When the runner wrote null (it
+  writes `unexamined` only once it has stopped or ended) all three are null; when the
+  value is absent or not a list all three are `unknown`. A row that is not an object is a
+  row whose every field is `unknown`.
 - A value that is absent, the runner's `unknown`, or of another type is `unknown`,
-  never zero. `after_last_read` is therefore `unknown`. A null the runner wrote (no
-  session in flight, nothing confirmed, no stop reason) stays null. Text that looks
-  like a path or exceeds the identifier limit is withheld whole, with
-  `omitted_characters`.
+  never zero. `after_last_read` is always `unknown`: it is the runner's sentinel and no
+  other value is projected. A null the runner wrote (no session in flight, nothing
+  confirmed, no stop reason) stays null. Text that looks like a path or exceeds the
+  identifier limit is withheld whole, with `omitted_characters`. Wall times are seconds,
+  passed on as recorded; the page shows one it cannot place as a date as unknown.
 
-The page polls this route every five seconds. Nothing is sent to the curator, and no
-figure is derived beyond what the file states.
+The page polls this route every five seconds, and each response replaces the previous
+one: a file that goes missing or is read partly written clears the figures shown.
+Nothing is sent to the curator, and no figure is derived beyond what the file states.
 
 ### Spectator frame (`spectator-frame/1`)
 
