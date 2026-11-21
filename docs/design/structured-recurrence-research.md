@@ -3,47 +3,30 @@ owner: lead
 status: proposed
 date: '2026-11-16'
 scope: 'CDDA-only research proposal for structured recurrent memory and representation search across diverse real starts and visible-trace replay. Other games and their unforeseen generalization problems are deferred to future versions. No runtime adoption or study spending is authorized.'
-review_trigger: Feasibility or price pilot reports; a representation or cross-game claim changes; the research is adopted, stopped or superseded
+review_trigger: A live run supplies a curator-written fact about an earlier sighting, or the comparison's claims or scope change
 ---
 
 # Structured recurrence through diverse CDDA starts
 
 ## At a glance
 
-**Question.** Can the gameplaying curator discover representations, updates and readouts
-that improve decisions across diverse CDDA starts, at a useful measured cost, without
-engineers supplying the game's ontology?
+Can a curator discover a representation that helps a player make better decisions
+across diverse CDDA starts within a common budget? The proposal compares episodic
+replay, fixed recurrence and editable representations. Whether editable structure
+improves visible play enough to justify its cost remains unknown.
 
-**Current scope: CDDA only.** Keep the shared representation/update mechanisms generic,
-but test them in CDDA now. Other games, new game ports and a synthetic interactive-game
-benchmark are outside this investigation. Unforeseen cross-game problems are work for
-future versions; discovering or solving them is not a prerequisite to this outcome.
-The [owner decision log](../decisions/owner-decisions.md) records that boundary.
+Revisit the [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/666)
+when a live run has a curator-written fact about an earlier sighting. At that
+point, decide whether the comparison is feasible and worth pricing. Claims of
+benefit from delivered memory come from the
+[seven-day campaign outcome (#145)](https://github.com/CVX-Hull/enactive/issues/145).
+[Owner decision of 20 November 2026, “No study has shown that delivered memory improves play”](../decisions/owner-decisions.md#in-force)
 
-**Proposed result.** A reproducible comparison of optimized replay, fixed recurrence
-and editable representations on unseen CDDA worlds/survivors and conditions. More
-fields or persuasive explanations are not success. Within-CDDA transfer is the claim;
-cross-game generality remains untested.
-
-- Start with a **no-model inventory, sealed-prefix packet/scoring check and priced
-  CDDA pilot package**. No new game or diagnostic simulator is built.
-- Separate evidence: deterministic replay checks test the apparatus; model replay
-  tests retained distinctions and prediction under the observed policy; actual CDDA
-  continuations test decision value. None substitutes for the others.
-- The player chooses every game input. Its curator updates memory and proposes
-  structural revisions; retrieval produces relevant, fallible readouts. Evaluator
-  answers do not enter any of those roles.
-- Existing memory adoption, the belief decision and the deferred context cut retain
-  their own scope. This proposal enables no live scheduler or production schema.
-- No study envelope or pilot dollar ceiling is set. Price the complete CDDA package
-  before requesting spend; an unapproved amount from another design funds no play.
-
-GitHub owns ownership, capacity and stage: [research outcome #666](https://github.com/CVX-Hull/enactive/issues/666)
-and [no-model feasibility slice #668](https://github.com/CVX-Hull/enactive/issues/668).
-The [delayed-memory assessment proposal](delayed-memory-assessment.md) specifies
-how to select decisions, compare context budgets and acquire a later waking period.
-The curated-player parent is [#445](https://github.com/CVX-Hull/enactive/issues/445);
-[work-item flow](../workflows/work-items.md) governs execution.
+The proposal tests genuine starts within CDDA and keeps the update and read
+mechanisms game-independent. Its parent is the
+[curated-player outcome (#445)](https://github.com/CVX-Hull/enactive/issues/445).
+The [delayed-memory assessment](delayed-memory-assessment.md) specifies choice
+enrollment, context comparisons and acquisition across waking periods.
 
 ## Research contract and prior evidence
 
@@ -70,9 +53,9 @@ the old sizing forecast is not a qualified sample-size recommendation for this s
 
 | Primary source, read scope | Useful mechanism | Transfer limit |
 | --- | --- | --- |
-| Sun et al., [TTT](https://arxiv.org/html/2407.04620v2), 2024 v2, §§2.1–2.3, 2.7, 4.3 | A recurrent state can itself be a learner; update and readout are optimized in nested loops | Neural sequence learning does not establish that symbolic edits have gradients, sufficient state or useful game transfer |
+| Sun et al., [test-time training (TTT)](https://arxiv.org/html/2407.04620v2), 2024 v2, §§2.1–2.3, 2.7, 4.3 | A recurrent state can itself be a learner; update and readout are optimized in nested loops | Neural sequence learning does not establish that symbolic edits have gradients, sufficient state or useful game transfer |
 | Kemp and Tenenbaum, [structural form](https://pmc.ncbi.nlm.nih.gov/articles/PMC2492756/), 2008, model, inference and examples | Jointly select a representational family and its instance using a likelihood and complexity-sensitive prior | Candidate forms and likelihoods are supplied; entities and datasets are already available |
-| Littman, Sutton and Singh, [predictive state](https://proceedings.neurips.cc/paper_files/paper/2001/file/1e4d36177d71bbb3558e43af9577d70e-Paper.pdf), 2001, tests and Theorem 1 | Represent state by multi-step action-conditioned observation predictions | Finite-POMDP existence is not efficient discovery; selected logs leave untried actions unidentified |
+| Littman, Sutton and Singh, [predictive state](https://proceedings.neurips.cc/paper_files/paper/2001/file/1e4d36177d71bbb3558e43af9577d70e-Paper.pdf), 2001, tests and Theorem 1 | Represent state by multi-step action-conditioned observation predictions | Existence in finite partially observable Markov decision processes (POMDPs) does not establish efficient discovery. Selected logs leave untried actions unidentified |
 | Tishby, Pereira and Bialek, [information bottleneck](https://arxiv.org/html/physics/0004057), 1999, §§2–3 | Compress while retaining information about specified relevant consequences | Relevance and a suitable distribution must be defined; tokens are not mutual information |
 | Ellis et al., [DreamCoder](https://arxiv.org/pdf/2006.08381), 2020 preprint, methods and search analysis | Learn a reusable program language together with the search procedure using it | Primitive language, task likelihood and substantial search are required; uncertain visual worlds are not solved |
 | Battaglia et al., [relational inductive biases](https://arxiv.org/html/1806.01261v3), 2018, §§2.2, 3.2, 5 | Shared relational operations and permutation symmetry support recombination | Entity extraction, useful relations and unseen dynamics remain learning problems |
@@ -84,150 +67,51 @@ All mappings from these methods to curator agents below are **research hypothese
 
 ### Baseline and the missing connection
 
-The initial source and artifact review used `a3d61521`; the adopted journal migration
-subsequently landed through #463 (`7c6c2469`). Distinguish built, measured and proposed.
-Current contracts/source remain the
-runtime authority; this comparison does not adopt the research design.
+The [player host](../operations/player-host.md) runs the deciding player's loop over
+visible frames, its objective, recent turns and basic controls. Treat its recent
+conversation as part of recurrent state and hold it equal across arms.
+The [player-ownership migration (#463)](https://github.com/CVX-Hull/enactive/issues/463)
+defines the boundary for public intent, citations and fallible hints. Historical
+packets may lack those fields. Use recorded sources and public evidence to connect
+a revision to a published version, readout, player input and visible effect.
+Keep missing links unknown.
 
-| Part | What exists | What this research adds or must not assume |
-| --- | --- | --- |
-| Deciding player | The [Pi host](../../tools/player_host/README.md) runs a model/tool loop over visible frames, objective, conversation and basic controls. Context/handoff and original resource limits belong to the [host contract](../contracts/player-host.md). | Treat the actor's recent conversation as part of recurrent state. Extra curator memory is not the whole recurrence, and its benefit is tested with natural actor context held equal. |
-| Player-owned durable state | [Current tools](../../harness/player_tools.py) record public intent/cites and separate fallible hints in `player-journal/1`; authored-memory/program tools are removed. | [#463](https://github.com/CVX-Hull/enactive/issues/463) implements this adopted boundary. Historical sources lack the new emissions. Immediate reasoning, ongoing objectives and summary-only handoff remain the player's responsibility. |
-| Curator | [Sessions](curator-session.md) read sealed visible trace windows and published knowledge, propose facts/articles/types, and groom the store. Sandboxing, model proxy, source references and versioned publication are built. | Reuse them for incremental learning. There is no live scheduler or hidden engine-state feed to assume. A player hint is a fallible learning lead, not an assertion automatically promoted to truth. |
-| Representation | [Gate v0](../../harness/curator/gate.py) supports typed free-text facts, articles and type metadata. [The prompt](../../tools/curator_host/prompt.md) explicitly says type fields do not add fact keys. | New type names do not demonstrate learned typed state. Explicit relation instances, identity rules, constraints and schema migrations need an experimental representation/readout and eventually the coordinated schema path in #457. |
-| Delivery | [Knowledge export](../../tools/knowledge_export.py) freezes a version for a run; [recall](../../tools/player_host/host.mjs) selects briefing/reminder entries, and delivered facts/articles can be read or queried. | Recall is a retrieval role, not a curator updating the store. Arbitrary schema data cannot silently pass through the current closed delivered-knowledge format. |
-| Publication and evaluation | The current gate validates form, source membership, references and base version. The [independent evaluator](../contracts/evaluation.md) reads recorded outcomes and never feeds the player/curator. | Structural validity does not establish truth, sufficient memory or action value. Planned later-trace admission tests in #457 must remain distinct from independent study outcomes. |
+The [curator component](../components/curator.md) owns the published facts and
+articles. The [host contract](../contracts/player-host.md#delivered-knowledge-and-recall)
+owns delivery from the frozen export. The comparison needs a supported
+experimental readout for arbitrary schema data. A revised type or relation is
+useful only when the frozen reader and player can interpret its applicability
+and source support. The [belief, schema and gate work (#457)](https://github.com/CVX-Hull/enactive/issues/457)
+governs any production integration. The [belief-method proposal](belief-method-comparison.md)
+examines those methods on matched prefixes. Its results can inform that choice
+without becoming a prerequisite to it.
 
-The inspected groomed `v18` artifact has 77 current facts, 32 articles and four types
-(procedure, recipe, resource, hazard), all with empty field lists. The
-[curator-scoring record](../acceptance/2026-11-13-curator-scoring.md) establishes the
-store/version provenance and its measured limits. This is a working text-knowledge
-organization, not evidence that a general structured world model emerged. Mechanics
-can already be expressed in prose; structured payloads must earn their extra machinery.
+### Learning feedback, freshness and integration
 
-The [withholding study](../acceptance/2026-11-14-withholding-study.md) and
-[session follow-up](../acceptance/2026-11-16-withholding-follow-up-and-grooming.md)
-measured a fixed store on two saved moments of one lineage. Their null frozen primary,
-short/censored continuations and delivery-to-action gaps motivate the new comparison.
-They neither establish nor refute the value of a continuously revising curator.
+The curator compares predictions with later player-visible observations. A
+prospective publication gate may use private later-trace admission tests under
+#457. The [independent evaluator](../contracts/evaluation.md) scores sealed
+final trials outside both paths. Use development and selection scores to rank
+generic configurations. Keep final evaluator answers outside the learner.
 
-The [owner decision](../decisions/owner-decisions.md) adopts memory with benefit
-unclaimed. #463 aligns current rules and contracts for the implemented journal/hint
-boundary. Later representation, belief, live-update and execution phases remain
-proposals; this research does not adopt them.
+Measure update freshness in decisions, wall time and game time, with coverage
+and version. A coverage stamp records what was read. Applicability still
+depends on the fact and its context. Preserving recent player turns lets the
+player continue while the curator works. The
+[context cut proposal](player-context.md#3-one-cut-tied-to-what-the-store-covers)
+is independent of the comparison.
 
-### One system, several kinds of learned content
+Within-admission research depends on [live memory integration (#664)](https://github.com/CVX-Hull/enactive/issues/664)
+and the applicable schema work. Executable behavior and practice have separate
+requirements under [programs and monitor (#177)](https://github.com/CVX-Hull/enactive/issues/177)
+and [isolated practice (#472)](https://github.com/CVX-Hull/enactive/issues/472).
+The proposed comparison uses the existing player and visible evidence.
 
-The proposed recurrent system consists of **actor context C**, **published knowledge K**,
-its **representation S**, and later optional **programs P**. These are responsibilities,
-not mandatory separate databases, model tiers or hand-written domain types.
-
-- **Immediate working context:** what the actor currently sees, intends and is doing.
-  The player owns decisions and can continue when a helper is unavailable.
-- **World/episode beliefs:** source-linked, revisable interpretations of this survivor's
-  surroundings, possessions and events. Historical observation and current belief differ.
-- **Mechanics hypotheses:** conditional relationships supported by observed effects,
-  including their applicability, alternatives and counterexamples. They do not become
-  universally true because the curator wrote an article about them.
-- **Ongoing work:** unfinished objectives, dependencies and reasons a plan changed.
-  Curator records help continuity; they do not take planning authority from the actor.
-- **Reusable representations and later procedures:** types, relations and bounded
-  rule expressions may be state data; an executable gameplay program is a separate,
-  versioned behavior with its own proposed admission/execution contract.
-
-The existing recurrence equations describe the curator's explicit state and readout.
-The whole loop also updates the actor's conversation after each observation/action.
-A schema change is useful only if the same frozen reader and actor can interpret the
-new version. The reader therefore needs definitions/applicability and source support,
-not just unexplained field names. The proposed ontology card in #457 is a natural
-consumer seam, not proof that the current reader already supports arbitrary schemas.
-
-For example, an observed interaction suggests a rule conditional on some capability.
-A later visible counterexample causes the curator to narrow that rule or preserve two
-alternatives. A subsequent player query retrieves the revised condition and unresolved
-uncertainty. The player chooses whether to act, re-observe or investigate. Success is
-measured from the resulting visible play, not the elegance of the rewritten rule.
-No engineer needs to seed a CDDA capability type to conduct that test.
-
-### Crosswalk from the session's research
-
-| Research/design discussion | Place in this system | Consequence and limit |
-| --- | --- | --- |
-| [Memory representations](../research-memory-representations.md): replay, provenance, constraints, predictive state and compression | Evidence archive, K/S and reader R | Preserve consequential distinctions and origins; prediction under logged actions does not identify untried-action value. Byte length is a complexity penalty, not a sufficiency theorem. |
-| [Curated memory](../research-curated-memory.md): belief revision, truth maintenance, ontology and oversight | Curator update/grooming and #457 | Keep observation, interpretation, contradiction and retraction distinguishable. The belief calculus remains an owner decision; evidence is not converted to calibrated confidence by counting citations. |
-| Structured recurrence / the RNN analogy, including test-time-learning inspiration | Repeated visible-evidence updates plus slower schema proposals | The explicit recurrent state can contain records, graphs or bounded rules. This first experiment is discrete/model-mediated adaptation, not an implemented differentiable learner or automatic gradient through symbolic edits. |
-| Relational structures, predictive tests, information bottleneck and structural-form search | Competing S/U/R candidates under the same evidence/cost permissions | Search for operations that reuse across CDDA situations; retain replay/prose as serious alternatives. A fully expressive text baseline can encode relations, so explicit structure must improve use under resources. |
-| Database/materialized-view, truth-maintenance and compiler analogies from the representation discussion | Original visible evidence, revisable K/S and query views | Preserve source identity while rebuilding derived views; schema migrations should preserve relevant query meaning. These are design analogies, not a mandate for another event store, graph database or compiler framework. |
-| Control/state-estimation, automata and probabilistic-model analogies | Conditional mechanics hypotheses and state uncertainty | A compact state should retain distinctions needed for specified future observations/actions. Unknown hidden conditions remain unknown; a descriptive latent state or invented probability is not validated dynamics or calibrated belief. |
-| [Programs/library learning](../research-curated-programs.md), [executable policies](../research-executable-policies.md) and [organic discovery](organic-discovery.md) | Optional P, after useful memory | Reusable behavior is a later consumer of learned conditions and procedures. #177 owns its program/slot/monitor work; representation editing does not grant execution or prove library reuse. |
-| [Multiple timescales](../research-multirate-agents.md) | Fast actor, batched curator updates, slower grooming | Separate rates where useful; do not add mandatory agents or model tiers. Queueing, stale knowledge and correlated errors can outweigh compression. |
-| [Player context](player-context.md), [general memory](general-memory.md) and the delivery experiments | R, briefings/reminders, handoff and context cost | Store coverage is what was read, not proof of complete recall. A recent citation in an article does not make every claim fresh. The deferred context cut is not needed to test this system. |
-| [Transition study](../acceptance/2026-11-01-transition-corpus.md), [representation experiments](../acceptance/2026-10-18-memory-representations.md) and the latest withholding follow-up | Hypothesis selection and study design | Earlier predictive/toy results and frozen-store use are bounded evidence, not proof of hierarchy, safety or live learning. Diverse genuine CDDA sources and all-assigned outcomes address some of those limits. |
-
-### Learning feedback, freshness and integration order
-
-Keep three feedback paths distinct. The operating curator can compare its own earlier
-predictions with **later player-visible observations**. A future submission gate can
-run the separately specified private later-trace admission tests in #457; their feedback
-policy must not become an unrestricted answer oracle for repeated proposals. The
-independent research evaluator scores sealed final trials and sends no final answers
-into the operating learner. Development/selection scores can rank generic learner
-configurations outside final play, as this protocol already specifies.
-
-Measure freshness in **decisions, wall time and in-game time**, plus source coverage and
-version. The same number of player inputs can represent a short interaction or a long
-in-game activity. Coverage, publication recency and semantic validity are different:
-a mechanics claim may remain useful for a long time while an inventory claim changes
-immediately. Atomic publication avoids half-migrated views; it cannot make stale data
-true. Retrieval must preserve uncertainty and applicability. The player keeps recent
-observations and control while the curator works; no context cut follows from a
-coverage stamp.
-
-The smallest coherent sequence uses existing work rather than a new stack:
-
-1. **#463:** the adopted ownership/tool migration, intent/hint inputs and rule
-   alignment are on main. No positive recurrence result was required. Player
-   reasoning/handoff and knowledge reads remain.
-2. **#668:** prepare the real-CDDA source portfolio, deterministic stand-in packets,
-   candidate/readout comparison protocol and complete prices through current public
-   primitives. This tests the apparatus and defines the question; substantive model
-   replay and learner-failure evidence belong to a later separately approved pilot
-   under #666. Neither preparation nor research changes #463's shared files.
-3. **#457:** settle the open belief decision, later-trace gate semantics and coordinated
-   schema/ontology consumers. Use #668's interface requirements and, when available,
-   failures from the separately approved model-replay pilot to assess what structure
-   is needed. That pilot is not a new prerequisite to #457; do not install every
-   proposed mathematical formalism.
-4. **#664:** integrate new evidence, publication and delivery under the settled contracts;
-   compare inter-admission use with a separately admitted live-update condition. Price
-   total player/curator/recall cost and lag before reconsidering any context cut.
-5. **#177 / #472:** programs/monitor and practice remain their separately decided phases.
-   Offline representation research needs neither executable gameplay libraries nor an
-   extra practice instance. Other games remain future-version work.
-
-For each trial, join **source → claim/schema revision → published version → selected
-readout → delivery/read → player intent/input → observed effect**. Keep missing links
-unknown. This lets a failure be attributed to capture, representation, retrieval,
-timing or action use rather than blaming the curator as a whole. Existing telemetry,
-source IDs and #463's public emissions are the reuse path; retain no private reasoning.
-
-Freeze the complete role configuration per comparison. The current player is
-**GPT-6.1 Terra, medium effort, OpenRouter with the OpenAI provider pinned**, as the
-[owner decision log](../decisions/owner-decisions.md) and
-[host operations](../operations/player-host.md) state. DeepSeek and other cheaper
-player models are future alternatives under #25, not current defaults. The inspected
-full-study package also used Terra for recall (262,144 player context, 32,768 recall
-context, 39 player images evicted in blocks of 20, reminders scheduled every ten
-completed computer-input/program-run calls, subject to availability and budget).
-Curator, recall and judge configurations remain explicitly frozen per package; the
-player selection does not choose every role's model automatically. Hold corresponding
-roles equal across belief/representation arms, charge them all, and test cheaper player
-models separately so a model switch cannot masquerade as a memory improvement.
-
-The [belief-method comparison](belief-method-comparison.md) specifies how provenance,
-qualitative revision, numerical opinions and optional staleness/pooling models can be
-screened on the same CDDA prefixes. It supplies evidence for #457's open choice without
-adopting a calculus or becoming a new prerequisite to the decided #463 migration.
+Freeze the player model, effort and route in each package. Hold the same
+configuration for each corresponding role across arms and include all role
+costs. Cheaper-player trials follow the
+[responsiveness outcome (#164)](https://github.com/CVX-Hull/enactive/issues/164)
+as a separate comparison.
 
 ## Hypotheses and objectives
 
@@ -439,25 +323,16 @@ engine ontology do not establish learning from scratch.
 
 ### No-spend preparation: real-prefix apparatus checks
 
-Inventory sealed sources and visible evidence at $0 new provider spend. Build one
-prefix-only player → curator update → retrieval → player-decision packet cycle using
-deterministic stand-ins and an actual development CDDA trace. Check reset, source
-references, failed edits, stale coverage, explicit unknowns and all-assigned scoring.
-Use one prefix packet/cycle and one deterministic outcome reduction, rather than a
-general scorer or power grid. Outcome-reader qualification belongs to #681 after
-source feasibility; the later #677 comparison reuses these packets. Calibration is
-a plan here, not a result. The old-estimator sizing repair #680 is independent and
-does not become a prerequisite to packet preparation or memory adoption #463.
-Retain failures; do not launch a model or CDDA to pass this slice. No stand-in success
-is evidence of useful learning. Existing traces can establish the apparatus even if
-new independent source acquisition needs later paid setup.
+For the [source and packet preparation (#668)](https://github.com/CVX-Hull/enactive/issues/668),
+a deterministic prefix cycle checks reset, source references, failed edits,
+stale coverage, explicit unknowns and all-assigned scoring. It uses actual
+development traces. Its results concern the apparatus.
 
-Deliver the portfolio manifest/specification, exact candidate language and role prompts,
-resource ceilings, scorer reliability plan and conservative complete pilot price.
-Include acquisition, save/load checks, all arms, search, curator, retrieval, player,
-judges, retries, failed attempts and cleanup. Report what cannot yet be priced. Stop
-or reduce scope if this needs a new generic simulator/framework. Appetite: two worker
-turns plus lead integration/review and at most two CPU-hours; no new dependency.
+The [belief-method replay (#677)](https://github.com/CVX-Hull/enactive/issues/677)
+can reuse the common packets. [Outcome-reader qualification (#681)](https://github.com/CVX-Hull/enactive/issues/681)
+depends on eligible visible outcomes and grouped sources. The
+[earlier sizing-estimator repair (#680)](https://github.com/CVX-Hull/enactive/issues/680)
+is independent of packet preparation and memory adoption.
 
 ### Recorded CDDA replay: representation and reader screening
 
@@ -474,10 +349,11 @@ not only topics the candidate chose to retrieve or the player later touched. Thi
 supports observed-policy prediction/retrieval claims, not alternative-action benefit.
 Model replay itself requires a priced envelope; no-model packet checks do not fund it.
 
-### Small actual-play pilot before the deciding screen
+### Proposed actual-play pilot
 
-A proposed development pilot uses **three independent source-starts from three profiles**
-and three arms: at most nine player continuations before explicitly priced repeats.
+If the study is revisited, one proposed method is an actual-play development pilot
+with **three independent source-starts from three profiles** and three arms,
+for at most nine player continuations before priced repeats.
 Inspect the first complete cycle before admitting the rest. These are pilot sources,
 never final tests. The count is a proposal to price, not an approval or efficacy study.
 If new starts cannot be obtained within the priced acquisition allowance, reduce or
@@ -491,8 +367,8 @@ before any live arm, name and implement a supported research readout path or nar
 the live pilot to current supported facts/articles and limit its claim accordingly.
 No silent flattening can count as an arbitrary-schema integration result.
 
-Within-admission online recurrence is a later integrated condition through #664 and
-the appropriate schema work. Do not change delivery cadence and representation at the
+A within-admission arm depends on live memory integration and the applicable
+schema work. Do not change delivery cadence and representation at the
 same time and attribute the difference to structure. The player keeps natural context,
 ordinary control and its ongoing objective in all arms; no deferred context cut is
 introduced to force dependence on memory.
@@ -510,7 +386,9 @@ Pair arms by copied source moment; randomize/counterbalance their execution orde
 Reset memory and model session at each independent source assignment. Give each arm
 the same permitted visible setup history, initial source information and natural player
 context; only the memory treatment differs. Do not seed an inherited player store
-with an arm's earlier outputs. Fresh and legacy-derived starts prepare a fresh
+with an arm's earlier outputs. Nothing an arm learns reaches the game's main knowledge
+repository during the study; promoting it afterwards is a separate, recorded step
+([rationale](../decisions/009-curated-player.md#knowledge-repository-d16)). Fresh and legacy-derived starts prepare a fresh
 supported journal. Arms paired at a current prospective checkpoint take separate
 verified copies of the same supported closed pre-arm journal and preserve equal
 permitted source access. Keep each sealed source immutable. Repeated samples,
@@ -559,26 +437,9 @@ a generally better learner; otherwise condition conclusions on the selected bank
 
 ### Player, curator and retrieval loop
 
-These are **gameplaying responsibilities**, not development-agent assignments or a
-requirement for a separate model process per box. The initial research configuration
-uses one deciding player and one logical curator writer. Retrieval can be a bounded
-curator/read call using the existing recall design. The slower proposer is a mode of
-the curator, not a second actor with game control.
-
-```text
-visible observations + delivered-action receipts
-        |                         |
-        v                         v
-   deciding player <--- readout --- curator state M, schema S, version v
-        |                            ^
-        | basic input                | update / revise from visible evidence
-        v                            |
-       game -------- new observations+
-
-slower curator mode: propose S', migrate a copy, check visible-prefix predictions,
-                    publish one complete version or retain the current version
-independent evaluator: score sealed outputs; no return path to gameplaying agents
-```
+One player makes decisions and one logical curator writes knowledge. The
+existing recall design can provide the bounded readout. Slower representation
+search is a mode of the curator.
 
 | Gameplay responsibility | Inputs and outputs | Learning / authority boundary |
 | --- | --- | --- |
@@ -626,12 +487,12 @@ changes. Query, observation, token and cost permissions are equal. Tests include
 stale memory read, failed edit, contradicted mechanics hypothesis and a query whose
 answer remains unknown, followed by an actual player decision.
 
-For the first real-game integration, keep existing admitted session boundaries: curate
-a sealed development prefix between finite admissions and deliver the published version
-to the next player. That tests persistent learning and usability, **not** online
-recurrence within an admission. The within-admission updater/scheduler remains proposed
-work through #664 and the appropriate schema path; this research document does not
-turn the existing fixed fact/article gate into an arbitrary-schema runtime.
+A proposed inter-admission comparison curates a sealed development prefix
+and delivers the published version to the next player. The
+[curator runner](../components/curator.md) is built and tested offline only
+and has yet to run beside a real custodian. Delivery of newly published
+knowledge to the running player depends on the within-admission integration
+and the applicable schema path.
 
 When a live research integration is separately built and admitted, it should publish
 source coverage/version with each readout and measure update-to-use lag. The player
@@ -679,81 +540,28 @@ fact/article gate is **not** an arbitrary representation runner. Reuse machinery
 its actual interfaces; document a missing seam before extending it. Do not duplicate
 the campaign custodian, secret proxy, evaluator database or Git source history.
 
-The first implementation brief owns `tools/recurrence_research/`, its inert protocol
-data in `data/recurrence-research/`, and `tests/test_recurrence_research_*.py`, plus
-this proposed document if the design changes. Generic tools consume an explicit
-specification; selected provider/model profiles belong to the study data.
-A minimal package contains source-portfolio metadata, candidate/data validation, real
-prefix packet construction, one deterministic score example and a later calibration
-and reader-qualification plan. It contains no game generator or general scoring stack.
-Worker ownership is split between portfolio/packet
-and candidate/scoring files, with the lead owning the manifest and integration. Exact
-filenames/interfaces are written in the bounded briefs before either worker starts.
-No worker modifies `harness/`, existing host adapters, shared locks, dependencies or
-production schemas. A needed change there returns to the lead as a separate decision.
-All outputs stay in an owned ignored `.runtime/` study directory; reusable sources are
-tracked normally. One-off study tooling is retired when its question is finished.
-
 ### Implemented no-model preparation
 
-[`tools/recurrence_research/prepare.py`](../../tools/recurrence_research/prepare.py)
-prepares one source inventory, selected real-CDDA prefix subset, inert update/readout
-cycle, fixed-question outcome example and proposed role/price worksheet:
+The [preparation record](../acceptance/2026-11-16-cdda-recurrence-preparation.md)
+documents a deterministic update and readout cycle over one visible-trace prefix.
+
+Use the [frozen specification](../../data/recurrence-research/spec.json) to reproduce
+the preparation into a fresh output directory:
 
 ```sh
 .venv/bin/python -m tools.recurrence_research.prepare --root "$PWD" --spec data/recurrence-research/spec.json --out .runtime/recurrence-preparation
 ```
 
-The output directory must be fresh. Retained evidence is optional in a fresh checkout;
-absent sources produce an explicit unavailable packet. The selected development
-subset is three visible frames from #397's second admission, not a complete actor
-history. Historical intent/cites/hints and actual downstream readout use remain
-unknown. Source annotations are manually checked against those frames. This is a
-deterministic stand-in, not a model comparison, learned structure or a qualified
-task/survival reader.
-
-[`spec.json`](../../data/recurrence-research/spec.json) fixes the generic candidate,
-schema/value-edit separation, paired-source metadata, role prompts and proposed
-resource allocations. The worksheet computes conservative configured-price model
-bounds, separately for replay and a nine-continuation pilot, including finite new-world
-acquisition, load/ending requests and failures. It keeps non-provider costs and source
-feasibility unknown. Extra requests, replacements, larger searches and additional
-coverage are excluded and need their own price; no balance or envelope is opened.
-These proposed prompts are inert data; no host or provider runner is added.
-
-The inventory covers retained reusable-source manifests and their source admissions.
-It hashes frozen payload maps to distinguish exact copies from changed payloads;
-neither a payload hash nor a study archive hash proves a new world. Related #397
-sources stay in one conservative cluster. Other properties remain unknown where no
-visible evidence was inspected. Three genuinely independent acquisition slots remain
-unfilled; copies cannot satisfy the diversity proposal. The
-[preparation record](../acceptance/2026-11-16-cdda-recurrence-preparation.md)
-owns the measured output and limits. #681 retains outcome-reader qualification;
-#677 can reuse the packets, while supported live integration remains #664/#457.
-
 ### Visible outcome feasibility
 
-The fixed development comparison in the [feasibility record](../acceptance/2026-11-17-cdda-outcome-feasibility.md)
-**defers** an outcome-reader target: the assigned pairs show visible death and useful
-boundaries but do not support a common before/after task-progress bundle with named
-identity at the endpoint. Existing starting stock and isolated action messages do not
-establish that bundle. The parent primary remains task progress AND alive; clock and
-travel remain separate measurements. The record fixes a provisional codebook and
-retains unknowns and all assignments, not qualified labels or a final estimand.
-
-#681 needs a specified observable task, supporting positive/negative and failure
-cases, endpoint identity and genuinely independent uninspected source groups before
-reader qualification. The inspected #397, #642 and #651 cases are related development
-evidence, not independent held-out worlds. Price acquisition and independent labels
-using the existing worksheet before seeking an envelope. #677 may reuse these cases;
-this decision does not gate #457.
+The [feasibility record](../acceptance/2026-11-17-cdda-outcome-feasibility.md)
+shows that the assigned pairs lack a common, answerable before-and-after
+task-progress measure with named endpoint identity.
 
 ## Resource, evidence and delivery decisions
 
 | Boundary | Proposed allowance or decision |
 | --- | --- |
-| Current change | Proposal, source-backed review and tracker reconciliation only; $0 provider spend |
-| First implementation slice | No model/game launch, no new dependency, two worker turns plus lead integration/review; owned packet/scoring execution capped at two CPU-hours |
 | CDDA replay / play pilot | Price exact inputs, acquisition, role requests, judges and failures before requesting its envelope; no standing $20 pilot allowance |
 | Deciding CDDA screen | Separate priced envelope after pilot; no remainder from another study is reused; no implied $1,500 research allocation |
 | Expansion | No new interpreter, representation family, model tier, game installation or extra concurrent game merely because a pilot passed |
@@ -761,9 +569,7 @@ this decision does not gate #457.
 
 Retain all failed candidates, seeds and starts; use the existing evidence retention,
 ledger and finite-run practices where applicable. Do not reopen a failed admission or
-renew resources through a retry. Paid checks of the research hypothesis are not the
-standing $1 pre-merge prompt check. Pin and inspect source, identities and complete
-commit messages before publication; use the required protected CI profile.
+renew resources through a retry.
 
 These proposed study procedures apply existing controls to named risks; they do not
 change the project's global control set:
@@ -773,21 +579,18 @@ change the project's global control set:
 | R-FALSE-CLAIM | All-assigned outcomes, split isolation, calibrated analysis, source/usage receipts, exact comparisons | Simulation, sealing and independent review; finite CDDA source worlds and noisy visible readers still limit claims |
 | R-GAME-COUPLING | Generic edit operators, no seeded CDDA ontology and whole-world/lineage holdouts | Portfolio acquisition and review; cross-game problems remain unknown and deferred to future versions |
 | R-STUDY-OVERRUN, R-OVERSPEND | One no-spend slice, one capped price pilot, later priced batches and stop rule | Pilot/integration effort; unknown prices and model variance remain |
-| R-DELEGATION-ERROR, R-WRONG-MERGE | Disjoint worker ownership, one integrator, exact-candidate review and protected checks | Review/CI time; agents remain fallible |
 | R-ARCHITECTURE-DRIFT, R-PRIVATE-DATA | Sealed prefix only, no evaluator-to-player path, same existing secret/isolation ownership | Packet/isolation checks; offline replay does not qualify the live boundary |
 | R-TECH-DEBT, R-CONTROL-BLOAT | Reuse existing primitives; keep a small study package and retire it on closure | Maintenance while the question remains open; no general platform is promised |
 
 ## Decisions still required and expected outputs
 
-No research result is claimed by merging this proposal. The lead can scope the
-no-spend CDDA portfolio/packet/price worksheet within ordinary engineering delegation. Before paid
-work, the owner decides the priced CDDA pilot and envelope. #291 and other-game
-feasibility are outside this investigation and are not prerequisites. A live curator, context cut,
-new belief calculus or production replacement has its own evidence and adoption path.
+Any future paid comparison needs the owner's decision on its priced envelope.
+A live curator, context cut, production representation or belief calculus
+has its own adoption decision. The [portability outcome (#191)](https://github.com/CVX-Hull/enactive/issues/191)
+carries the cross-game aim. This proposal tests transfer within CDDA.
 
 The discovery outcome ends with: frozen artifacts and costs; an executable comparison
 or a justified stop; effects and uncertainty by CDDA profile/source world and complete search repeat;
 a structural-contribution reading or an explicit failure to establish it; and an
 adopt/reject/defer recommendation with its scope. A useful negative result can close
-the research outcome without adopting a representation. Further implementation issues
-are created only when a completed slice supplies their prerequisites.
+the research outcome without adopting a representation.

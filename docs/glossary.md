@@ -7,8 +7,9 @@ status: active
 # Glossary
 
 Each entry says what a term means here and links to its exact rule. Where a word
-has two meanings, the entry names both. "Proposed" marks a term for an unadopted
-part of the [curated-player design](decisions/009-curated-player.md).
+has two meanings, the entry names both. "Proposed" marks a term for something not
+adopted; its link is the current proposal or, where there is none, the
+[curated-player decision record](decisions/009-curated-player.md) that introduced it.
 
 | Term | What it is | Owning page |
 | --- | --- | --- |
@@ -38,7 +39,7 @@ part of the [curated-player design](decisions/009-curated-player.md).
 | Lane | A separate kind of evidence, such as source tests, the compiled adapter or actual play. One never stands in for another. In the hosted check, a lane is also one job. | [Testing](testing.md), [CI jobs](workflows/ci-profiles.md#jobs-of-the-check) |
 | Lead, explorer, worker, reviewer | Roles in agent-assisted engineering. The lead owns design, integration and verification. Explorers only read, workers change named paths, and reviewers judge from a clean context. | [S-AGENT](standards/agents.md) |
 | Lineage | A chain of admissions that continue one survivor. In the proposed program design, a program's lineage is its chain of parent versions. | [Operator labels](operations/campaign-run.md#operator-labels) |
-| Monitor | Proposed. A model slot that watches running programs and can only stop them. | [ADR 009](decisions/009-curated-player.md#monitor) |
+| Monitor | Proposed. A model slot that watches running programs and can only stop them. | [Programs and monitor](design/programs-and-monitor.md#risk-classes-and-the-stop-only-monitor) |
 | Native lane | Evidence from running the compiled adapter against the real game. No fixture replaces it. | [Native acceptance](operations/native-acceptance.md) |
 | Outcome, leaf | An outcome is an issue whose child issues carry the work; it owns acceptance. A leaf is one issue for one independently reviewable result. | [Work items](workflows/work-items.md) |
 | Owner | The person who owns the project's direction, constraints and money. The charter calls this person the user. | [Charter](charter.md) |
@@ -48,7 +49,7 @@ part of the [curated-player design](decisions/009-curated-player.md).
 | Portable check | What `tools/check.py` runs without the native build or the game: structure, documents and the test suites. | [Testing](testing.md#select-checks-from-the-changed-responsibility) |
 | Practice instance | Proposed. A one-way copy of the game, forked between admissions, for trials that never become live state. | [ADR 009](decisions/009-curated-player.md#practice-instance-proposal-owner-decision-open) |
 | Probe | An offline evaluation question the lead writes from a real episode: at this boundary, a query about X should surface Y. It never reaches the player or the curator. Elsewhere, a probe is a small test call to an endpoint or a host. | [ADR 009](decisions/009-curated-player.md#fitting-and-evaluating-the-ontology-d4) |
-| Program | Proposed. A curator-authored routine that acts in the actor's place under the curated-player design. | [ADR 009](decisions/009-curated-player.md#programs) |
+| Program | Proposed. A curator-authored routine that acts in the actor's place under the curated-player design. | [Programs and monitor](design/programs-and-monitor.md#what-a-program-is) |
 | Receipt | A record of what actually happened: a delivery receipt for each input, and a run's final `receipt.json`. Neither accepts gameplay. | [Start and close](operations/campaign-run.md#start-and-close) |
 | Record | A dated record is a page under `docs/acceptance/` for evidence a diff cannot hold, such as a run or a study result. Historical player records are sealed evidence, not active authored knowledge. | [S-DOCS](standards/documentation.md#current-pages-records-and-decisions) |
 | Re-observation, rediscovery | A re-observation is the player seeing again something it already observed. It is a rediscovery when the fact was known before a handoff or a new admission. The standing use measure has its own rediscovery definition. | [Curated-player design](decisions/009-curated-player.md#evaluation-and-studies), [standing use measures](contracts/evaluation.md#adjudication-and-the-standing-use-measures) |
