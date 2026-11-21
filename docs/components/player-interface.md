@@ -1,6 +1,6 @@
 ---
-owner: harness maintainer
-review_trigger: Responsibility, supported behavior, interfaces or qualification change
+owner: lead
+review_trigger: Player-facing tools, context boundaries or assurance limits change
 status: active
 ---
 
@@ -19,16 +19,14 @@ the [current adapter reference](../../tools/player_host/README.md) owns its prov
 | Part | Responsibility / limit |
 | --- | --- |
 | [Tool schema](../../harness/player_tools.py) | Basic observe/input/result/stop and source, knowledge, hint and handoff tools; no semantic gameplay API. |
-| [Player client](../../harness/player_client.py) | Per-actor explicit `player-adapter/2`, ID assigned before submission, exact source retrieval and uncertainty; no native/process/provider ownership. |
+| [Player client](../../harness/player_client.py) | Uses the [per-actor configuration](../operations/player-host.md), assigns the operation ID before submission, and handles exact source retrieval and uncertain delivery. |
 | [MCP adapter](../../harness/player_mcp.py) | Official SDK transport and actual image blocks; cancellation requests independent permanent stop. |
-| [Player host](../contracts/player-host.md) | Any conforming adapter: explicit model/context/MCP table, sequential tools, direct `player_finish` and origin-bound handoff settlement, bounded external control and context turnover. |
-| [Campaign driver](../../tools/campaign_player.py) | Operator-only finite quotas/ending reserves, admission-wide stop identity, exact host/MCP groups, canonical handoff/context and verified quiescence before successor. |
+| [Player host](../contracts/player-host.md) | Runs the model loop with frozen context and a fixed tool table. Dispatches tools sequentially. |
+| [Campaign driver](../../tools/campaign_player.py) | Owns the run's limits, the host and MCP process groups, and actor succession. |
 
 The host loads no coding-agent shell/file tools, personal configuration, resource
-discovery or resumed session. No coding-agent fallback is supported. Selected
-OpenRouter / pinned OpenAI provider / GPT-6.1 Terra medium is frozen per finite run
-([selected host configuration](../operations/player-host.md));
-route selection and host conformance are separate from model/gameplay qualification.
+discovery or resumed session. The route is frozen per finite run and permits no
+fallback; the [selected host configuration](../operations/player-host.md) names it.
 
 ## Context and failure boundaries
 
@@ -41,45 +39,32 @@ hints and exact source reads as needed; none supplies engine facts. The provider
 text/IDs, marks omitted older pixels and protects the current result group; an
 oversized protected group stops. Source availability does not prove the actor read it.
 
-Current provider route is closed `player-host/8`, with a dollar limit, an explicit image peak and
-count-only eviction block,
-cost/capacity/effort metadata and default service tier for the current campaign.
-OpenRouter uses exact selected full-tag routing, no fallback and required parameter
-support. Credentials are injected only into the provider host; MCP/native children
-receive no key. A request with missing cost uses an attempt and leaves its charge
-unknown. The host sums provider-returned costs. Configured-rate estimates and
-in-flight bounds remain separate from the reported subtotal. The host reference owns maintained provider-only bounded429 behavior;
-no tool retry/reconnect/replay follows uncertain transport.
+The [route envelope](../contracts/player-host.md#route-envelope) sets the host's
+limits and capabilities. Only the provider host receives credentials. The host
+counts [provider-reported cost](../contracts/player-host.md#spend) toward the
+run's dollar limit. Provider retry follows the [adapter reference](../../tools/player_host/README.md).
+Uncertain tool transport permits neither retry nor replay.
 
-Telemetry version3 keeps bounded visible assistant narration and mechanical
-request/result references. It excludes private reasoning, credentials and raw
-provider request/image histories. Original source images remain with their owner.
-Host attempt/time counters are separate from custodian mechanical resources and
-remain operator data. The route requires `context_reserve_tokens`; maintained
-estimates, reported usage and a heuristic floor can request existing handoff.
-They do not guarantee provider token fit or add compaction, restore or fallback.
+[Host telemetry](../contracts/player-host.md#telemetry) keeps bounded visible
+assistant narration and mechanical request/result references. Original source
+images remain with their owner.
+Host attempt and time counters remain operator data, separate from the custodian's
+mechanical limits. Context estimates can prompt a handoff and give no guarantee
+that the next request fits the provider's token limit.
 
-The driver can request optional finish-up through bounded `player-control/1`
-stdin, separately from immediate permanent Pause and hard cleanup. The host
-suppresses unsent calls from a pre-control turn and refuses new handoff while
-ending is pending. An already sealed handoff carries the same pending command
-to a verified successor, gated before MCP/fetch. Direct `player_finish` reports
-task completion, inability to continue or completion of that external request;
-ordinary assistant narration does not settle the task. None certifies a save,
-paused game or application exit. [Exact control and settlement](../contracts/player-host.md#external-control).
+The driver can request [optional finish-up](../contracts/player-host.md#external-control)
+independently of permanent Pause and hard cleanup. The player reports its
+disposition through the host's [direct finish tool](../contracts/player-host.md#settlement-and-handoff).
 
-Every actor has the same tool table, `player_handoff` included; the final actor of an
-admission is refused a handoff with no state change. `player_handoff` seals this actor with canonical immutable context. Only its direct
-originating issuance or exact original collection settles host handoff. After the
-host closes its owned MCP child, the driver checks actual old process-group
-quiescence and context digest before minting a successor under original limits.
-No menu/save/identity check is required. User Pause, uncertainty or failed closure
-cannot become resumable handoff. At most two hosts are permitted by `campaign-run/10`.
+The driver verifies [handoff custody](../contracts/computer-control.md#computer-operations-and-custody)
+before starting a successor. The [run package](../operations/campaign-run.md#frozen-data)
+sets the host limit. The [player journal](../contracts/computer-control.md#responsibilities-and-current-data)
+can span fresh native-child sessions.
 
 ## Assurance and evidence
 
 The [host contract suite](../../tests/test_player_host_contract.py) drives each listed
-adapter only through `player-host/8`. [Adapter](../../tests/test_player_host_adapter.py),
+adapter through the [current host contract](../contracts/player-host.md). [Adapter](../../tests/test_player_host_adapter.py),
 [driver](../../tests/test_campaign_player.py) and [custodian](../../tests/test_campaign_run.py)
 fixtures exercise real maintained libraries with synthetic provider/owned children.
 They add configuration, image, settlement, accounting and cleanup evidence without
