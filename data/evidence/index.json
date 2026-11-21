@@ -882,6 +882,24 @@
       },
       "visibility": "private"
     },
+    "live-curator-run-859": {
+      "availability": "present",
+      "bytes": 23237547,
+      "cited_by": [
+        "docs/acceptance/2026-11-21-live-curator-run-859.md"
+      ],
+      "files": 343,
+      "manifest_sha256": "0867fe22581c9af2174938047d1c33a221e6afe61fbad44d8944e04ac469d2e6",
+      "note": "Paid live curator run (#859) on main 371ed949, session 2cda0867c34442f394299555aece7009: run directory with curator-runner/, runner configuration, before-launch summary, curator knowledge repository (v0-v3 and session records), and saved study userdir (Richwoods). Locks excluded by rule.",
+      "sources": {
+        "config": ".runtime/live-curator-run-859/curator-runner-config.json",
+        "knowledge": ".runtime/knowledge/live-curator-run-859/cdda@371ed949",
+        "run": ".runtime/computer-sessions/live-curator-run-859-2cda0867c344@371ed949",
+        "study-userdir": ".runtime/user@371ed949",
+        "summary": ".runtime/live-curator-run-859/before-launch-summary.md"
+      },
+      "visibility": "private"
+    },
     "live-curator-stand-in-run-851": {
       "availability": "present",
       "bytes": 5545801,
