@@ -6,8 +6,8 @@ status: active
 
 # Run evaluation records, metrics and the spectator view
 
-This page owns the current formats. The [evaluator re-score and power check (#383)](https://github.com/CVX-Hull/enactive/issues/383)
-identifies the evidence needs they serve.
+This page owns the current formats
+([evaluation framework proposal (#383)](https://github.com/CVX-Hull/enactive/issues/383)).
 [ADR008](../decisions/008-evaluation-and-spectator.md) owns the rationale.
 
 Every value here is **interpretive**. It is derived from recorded evidence, carries its
@@ -352,7 +352,10 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   manifest and record versions listed in the [closed archive index](../../data/evaluation/archive-sessions.json)
   (`archive-sessions/1`), under [S-MIGRATION's closed-archive rule](../standards/migration.md#s-migration-one-current-contract-coordinated-migration).
   The index includes `spend-limit-run-555` under the
-  [“Add it to the index” decision](../decisions/owner-decisions.md#in-force).
+  [“Add it to the index” decision](../decisions/owner-decisions.md#in-force). The
+  indexed session `522-held-out/computer-sessions/lh4a1` does not evaluate: its database
+  cannot be opened in the read-only store, evaluating it is an error, and the sealed copy
+  stays as it is ([“Record it as a limit” decision](../decisions/owner-decisions.md#in-force)).
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.
@@ -597,6 +600,7 @@ and one grooming session (\$1.16 to \$4.19). The defaults are the measure gate's
 The [simulation's input record](../acceptance/2026-11-13-withholding-simulation.md#inputs-and-their-intervals)
 attributes the one-time price inputs to the brief gate and session price pilot.
 It is seeded (each rate has its own stream), prints JSON or a table, and writes no file.
+It sizes the measure under the model's assumptions; it does not calibrate real-game power.
 `simulate-withholding --pilot REPORT` takes its inputs from a pilot report (below) in place
 of the gate's numbers and refuses a flag for any of them (`--touched`, `--touched-ends`,
 `--missed`, `--missed-ends`, `--wrong`, `--base-wrong`, `--rho`). It requires `--price`, the
@@ -1192,9 +1196,10 @@ them for tests.
     of the figures.
   - `actor_cadence` is `no-data`, with a `detail`, when no readable run has a game-time
     reading.
-  - Every other slot is a placeholder with `state: "not-yet-measured"` and no numeric
-    value. The page labels it “not yet measured”. See the
-    [health response source](../../harness/viewer/frame.py) for the placeholder fields.
+  - Every other slot is a placeholder with `state: "not-yet-measured"`, a `phase` of
+    `curator-and-memory` or `programs-and-monitor`, and no numeric value. The page labels
+    it “not yet measured” and names the phase after “arrives in”
+    ([health response source](../../harness/viewer/frame.py)).
 - **Containers.** Every `data/containers/*.json` index (`container-index/1`), each manifest
   checked with `harness.trace.sidecar.validate`. The list pages like the run list: `items`
   (`id`, `kind`, `owner_role`, `lifecycle_state`, `retention_policy`, `evidence_study`,

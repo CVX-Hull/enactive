@@ -79,7 +79,7 @@ cannot accept a new ID.
 | `computer-target/2` | `schema,session,pid,window_id,paused,takeover_generation,latest_frame,error` |
 | Frame | `name,capture_id,presented_ms,width,height,window_width,window_height,viewport`; name is logical `frame-N.png`, never a native filesystem path |
 | `computer-receipt/2` | `schema,id,session,disposition,emitted_events,reason,frame`. Disposition is `delivered`, `rejected`, `partial` or `unknown`. `emitted_events` is 0 to 8. The frame is null or the frame above. |
-| `computer-local/1` | The custodian writes the same fields if the channel refuses publication before sending any byte. Disposition is `rejected`, `emitted_events` is 0 and the frame is null. [Runtime](../../harness/computer/runtime.py). |
+| `computer-local/1` | The custodian writes the same fields if the channel refuses publication before sending any byte. Disposition is `rejected`, `emitted_events` is 0 and the frame is null ([runtime](../../harness/computer/runtime.py)). |
 | `computer-transport/2` | Same fields, written when native delivery cannot be resolved: disposition `unknown`, `emitted_events` null, frame null ([channel](../../harness/computer/channel.py)); input then stops permanently |
 
 At claim, the bridge derives two local monotonic bounds from the original wall
@@ -87,7 +87,8 @@ times. It checks the applicable bound before each command event without renewal.
 The **start bound** (`expires_ms`, capped at 5 seconds) limits the first event.
 Once an event is emitted, the remaining events can follow until the **continuation
 bound** (`continue_ms`, capped at 15 seconds). This lets the game receive a key
-release after a stall between press and release. [Input continuation across stalls (#396)](https://github.com/CVX-Hull/enactive/issues/396).
+release after a stall between press and release
+([input continuation across stalls (#396)](https://github.com/CVX-Hull/enactive/issues/396)).
 
 An expired start bound rejects the request without events, even if the bridge
 first reads it after expiry. A stale Pause is a protocol fault and fences input.
@@ -284,7 +285,8 @@ waits for any projection, executor/application/database lock or prior status. Th
 supervised gateway takes `{"reason": "loop" | "fault" | "spend" | "other"}`, records the
 reason in its terminal record (`pause_reason`; a missing or unknown reason is recorded as
 `unspecified`, and the stop is never refused over it) and forwards `{}` here unchanged,
-so the custodian never sees a reason. A delayed request can stop a replacement custodian; this emergency
+so the custodian never sees a reason. If the guardian's own Pause datagram carries a
+reason outside that set, supervision ends as `invalid_pause_reason`. A delayed request can stop a replacement custodian; this emergency
 meaning is explicit. Attribute confirmation to the response's actual session, not a
 stale page/click. The page retains one last identified Pause receiver and its monotone
 stop facts. A receiver outside the current/previous view is named explicitly, without

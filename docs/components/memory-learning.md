@@ -23,5 +23,6 @@ not a knowledge graph, and does not renew authority.
 
 Journal and application tests cover the supported formats and composition. They do
 not establish learning benefit. Sealed historical evidence retains its original scope.
-See the [curator runner and delivery boundary](curator.md#curator-and-trace-workbench)
-for how publication during an admission relates to the frozen briefing.
+The [curator component](curator.md#curator-and-trace-workbench) gives the runner's
+status, and the [delivery boundary](../design/player-context.md#the-delivery-boundary)
+says how publication during an admission relates to the frozen briefing.

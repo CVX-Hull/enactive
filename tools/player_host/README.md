@@ -314,10 +314,6 @@ locally. `beforeToolCall` blocks subsequent dispatch in the batch. Pi's `finishT
 hook ends the turn after accepted finish or handoff, including batches with
 ordinary tool results before the accepted call.
 
-The [player journal](../../docs/contracts/computer-control.md#responsibilities-and-current-data)
-can span fresh native-child sessions. The [run package](../../docs/operations/campaign-run.md#frozen-data)
-sets the host limit.
-
 The host reserves at most one second (one quarter of short runs) from its total
 budget for cleanup. Stdio closure uses at most 500 ms each for stdin grace and
 post-SIGTERM wait. The provider request count and timeouts are finite. Setup and

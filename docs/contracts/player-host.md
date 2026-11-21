@@ -119,8 +119,9 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   `cost_details.upstream_inference_cost`. On an own-key route (`is_byok: true`), each
   record must supply both amounts and contributes their sum. When a response carries
   several records, the largest counts. A malformed record, or a response without a
-  usable amount, leaves the cost unknown, never estimated. The curator applies the same
-  rule, and both hosts test it against `tests/fixtures/provider-usage-cost.json`
+  usable amount, leaves the cost unknown, never estimated. The curator reads the reported
+  cost by the same rule, and both hosts test it against
+  `tests/fixtures/provider-usage-cost.json`
   ([player route cost pilot (#555)](../acceptance/2026-11-12-provider-cost-pilot-555.md)).
 - **Exact sums.** Amounts are summed as decimals, never as floating-point numbers.
 - **Stop at the limit.** Before each HTTP attempt, a retry included, the host stops
@@ -190,7 +191,9 @@ request-serialization tests prove for consecutive requests, a retried request, a
 handoff successor and a new admission's first actor, with no provider call:
 
 - **Prefix.** A request's messages begin with all of the previous request's messages,
-  its notices included. [Context stability and prompt-cache findings (#489)](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found).
+  its notices included, because the provider's cache reuses a request only when a later
+  one extends it
+  ([context stability and prompt-cache findings (#489)](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
   The one earlier rewrite is image
   eviction: whole blocks of the oldest pixels become omission markers, each image
   once, and a marker never changes afterwards. Every other request field (tool table,
