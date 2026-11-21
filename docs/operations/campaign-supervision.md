@@ -27,7 +27,7 @@ spending or new admission. General unattended operation remains unqualified.
 
 ## Freeze, launch and inspect
 
-1. Prepare the exact clean source and fresh `campaign-run/11` package through the
+1. Prepare the exact clean source and fresh `campaign-run/12` package through the
    [campaign procedure](campaign-run.md). Resolve scope, spending, original
    resources, ending reserves and stop rules before admission. Preserve original
    saves and failed chains; old experiment launchers stay historical evidence.
@@ -61,6 +61,8 @@ spending or new admission. General unattended operation remains unqualified.
    runner after the custodian as an unsupervised child, without the route credential:
    its environment is the gateway's and `HOME`, so it resolves its own provider key
    from the keychain item mapped in `.runtime/credentials.json`.
+   A package that sets [`live_knowledge_updates`](campaign-run.md#live-knowledge-updates)
+   receives the versions the runner leaves in `curator-runner/delivered/`.
    Without the option neither is created. With it, a package that already holds either
    is refused before the reservation, so the refusal leaves the package usable. A live run with the runner needs the owner's
    approval of its price ([operator permissions](../operator-permissions.md)).
@@ -124,7 +126,7 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 | `watch-start.json` | `campaign-watch-start/4`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start and the planned `viewer_port`, which the gateway must match. Prior/partial markers refuse; never delete to rearm. |
 | `watch-terminal.json` | `campaign-watch-terminal/4`; reason, `pause_reason` (`loop`, `fault`, `spend`, `other` or `unspecified`; null when the owner did not press Pause), the Pause clock and whether the custodian's reply was forwarded, exact children (the viewer with its pid, port and `supervised: false`, or its launch error), bounded cleanup and custodian disposition as separate facts. |
 | `viewer-stdout.txt`, `viewer-stderr.txt` | The viewer's own output, created exclusively by the supervisor; diagnostics only. |
-| `curator-read.lock`, `curator-runner/` | Only with `--curator-runner`: the read admission lock, created before the custodian and never replaced, and the runner's own directory (its record, status file and output, `stdout.txt` and `stderr.txt`). `watch-terminal.json` records the runner as `curator_runner` with `supervised: false`, or its launch error, and its cleanup with `exited_before_teardown` and `snapshots_removed`. |
+| `curator-read.lock`, `curator-runner/` | Only with `--curator-runner`: the read admission lock, created before the custodian and never replaced, and the runner's own directory (its record, status file and output, `stdout.txt`, `stderr.txt` and, for a package with live knowledge updates, the exported versions under `delivered/`). `watch-terminal.json` records the runner as `curator_runner` with `supervised: false`, or its launch error, and its cleanup with `exited_before_teardown` and `snapshots_removed`. |
 
 Supervision and the gateway refuse watch records of any other version.
 

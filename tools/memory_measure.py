@@ -629,6 +629,11 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
         manifest = read_manifest(directory)
         if manifest['schema'] not in DELIVERY_MANIFESTS:
             raise MeasureError(f'{directory}: delivery requires {DELIVERY_VERSIONS}')
+        current = manifest['schema'] == MANIFEST_SCHEMA
+        if current and manifest.get('live_knowledge_updates') is True:
+            # The judged facts are the frozen file's; a version adopted during play delivers facts outside it.
+            raise MeasureError(f'{directory}: the facts to judge are those of the frozen delivered file; '
+                               'a run with live_knowledge_updates delivers versions outside it')
         delivered_sha256 = manifest['files']['delivered-knowledge.json']
         for name, digest in (('delivered-knowledge.json', delivered_sha256),
                              ('private/knowledge-full.json', manifest['private_files']['knowledge-full.json']),
@@ -637,10 +642,11 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
                 raise MeasureError(f'{directory/name}: frozen knowledge hash differs')
         full, drawn = read_json(directory/'private/knowledge-full.json'), read_json(directory/'private/units.json')
         delivered = read_json(directory/'delivered-knowledge.json')
-        if full.get('schema') != 'delivered-knowledge/1' or delivered.get('schema') != full['schema'] \
+        # A sealed historical package keeps the knowledge version it was frozen with (closed archive read).
+        if full.get('schema') != ('delivered-knowledge/2' if current else 'delivered-knowledge/1') or delivered.get('schema') != full['schema'] \
                 or drawn.get('schema') not in ('knowledge-units/1', 'knowledge-units/2') or drawn['version'] != full['version']:
             raise MeasureError(f'{directory}: unsupported frozen knowledge')
-        if manifest['schema'] == MANIFEST_SCHEMA:
+        if current:
             selection = dict(world=manifest['labels']['world'], delivered_sha256=delivered_sha256)
             if full.get('selection') != selection:
                 raise MeasureError(f'{directory}: private knowledge selection differs from the package world or delivered SHA-256')

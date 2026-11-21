@@ -8,10 +8,16 @@ from harness.jsonio import file_sha256
 from harness.evaluation.core import context
 from harness.evaluation.core.host import host_facts, returned_records
 from harness.evaluation.core.records import EvaluationError
-from harness.evaluation.core.sources import read_json_file, read_operations
+from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_json_file, read_manifest, read_operations
 from .catalog import ViewError
 from . import frame, views
 
+#: The versions of an actor's frozen inputs and delivered knowledge: the current ones for a current run, and
+#: the ones the sealed sessions of the archive index carry (S-MIGRATION, closed archive reads).
+CURRENT_SNAPSHOT = ('player-host-inputs/4', 'delivered-knowledge/2')
+ARCHIVED_SNAPSHOT = ('player-host-inputs/3', 'delivered-knowledge/1')
+#: The rows of a delivery's text: a briefing's or reminder's leads and index, an update's difference.
+DELIVERY_ROWS = ('leads', 'index', 'added', 'updated', 'removed')
 TEXT_LIMIT = 1024
 ID_LIMIT = 512
 LIST_LIMIT = 100
@@ -116,15 +122,21 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
             continue
         if request_id and request_id not in (f.get('request_id'), f.get('recall_request_id'), f.get('receiving_player_request_id')):
             continue
-        item = fields(f, ('kind', 'status', 'reason', 'version', 'request_id', 'recall_request_id', 'receiving_player_request_id'))
+        item = fields(f, ('kind', 'status', 'outcome', 'reason', 'version', 'previous_version', 'request_id', 'recall_request_id',
+                          'receiving_player_request_id'))
         item.update(type=event.type, line=event.line)
-        for name in ('article_ids', 'fact_ids', 'index_ids'):
+        update = f.get('kind') == 'update'
+        for name in ('article_ids', 'fact_ids', 'index_ids', *(('removed_ids',) if update else ())):
             add_ids(item, name, f.get(name))
+        if update:
+            item['coverage'] = marker(f.get('coverage'))
         if event.type == 'knowledge-delivery' and isinstance(f.get('text'), str):
             try:
                 delivered = json.loads(f['text'].split('\n')[1])
-                for name in ('leads', 'index'):
+                for name in DELIVERY_ROWS:
                     rows = delivered.get(name) if isinstance(delivered, dict) else None
+                    if rows is None and name not in ('leads', 'index'):
+                        continue  # only an update states a difference
                     rows = rows if isinstance(rows, list) else []
                     item[name] = [fields(v, ('id', 'title', 'lead', 'index')) for v in rows[:20] if isinstance(v, dict)]
                     item[name + '_omitted'] = len(rows)-len(item[name])
@@ -135,11 +147,15 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
     snapshot_status = 'unavailable'
     path = actor_dir / 'delivered-knowledge.json'
     frozen_path = actor_dir / 'frozen.json'
+    try:
+        frozen_schema, knowledge_schema = CURRENT_SNAPSHOT if read_manifest(directory)['schema'] == MANIFEST_SCHEMA else ARCHIVED_SNAPSHOT
+    except EvaluationError:
+        frozen_schema = knowledge_schema = None  # no supported manifest says which versions these files are
     if path.is_file() and frozen_path.is_file():
         try:
             frozen = read_json_file(frozen_path)
             expected = frozen.get('files', {}).get('delivered-knowledge.json') if isinstance(frozen, dict) and isinstance(frozen.get('files'), dict) else None
-            if not isinstance(frozen, dict) or frozen.get('schema') != 'player-host-inputs/3' or frozen.get('actor_id') != actor or frozen.get('session') != info.session or not isinstance(expected, str):
+            if not isinstance(frozen, dict) or frozen_schema is None or frozen.get('schema') != frozen_schema or frozen.get('actor_id') != actor or frozen.get('session') != info.session or not isinstance(expected, str):
                 snapshot_status = 'hash_unavailable'
             elif file_sha256(path) != expected:
                 snapshot_status = 'hash_mismatch'
@@ -152,7 +168,7 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
     if snapshot_status == 'verified':
         try:
             value = read_json_file(path)
-            if not isinstance(value, dict) or value.get('schema') != 'delivered-knowledge/1':
+            if not isinstance(value, dict) or value.get('schema') != knowledge_schema:
                 raise ViewError(409, 'unsupported_knowledge')
             articles, fact_rows = value.get('articles'), value.get('facts')
             if not isinstance(articles, list) or not isinstance(fact_rows, list):

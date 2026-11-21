@@ -25,14 +25,13 @@ import traceback
 from harness.computer.launch import close_group
 from harness.computer.protocol import read_json
 from harness.trace.stores import CURATOR_READ_LOCK
-from tools.campaign_package import preflight
+from tools.campaign_package import RUNNER_DIRECTORY, preflight  # the curator runner's own files, in the run directory
 from tools.campaign_player import write_new
 from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
 
 ROOT = Path(__file__).resolve().parents[1]
 PAUSE_REPLY = .75
 MARKERS = ('watch-start.json', 'watch-terminal.json')
-RUNNER_DIRECTORY = 'curator-runner'  # the curator runner's own files, in the run directory
 # Optional, git-ignored map from a credential variable to the operator's own
 # macOS keychain item: {"<KEY_VARIABLE>": {"keychain_service": "NAME"}}.
 CREDENTIALS = ROOT/'.runtime'/'credentials.json'

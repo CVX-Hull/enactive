@@ -19,7 +19,12 @@ Substituted, and named as such in the report:
   operations to a real `SessionStore` at a set pace through `tests.curator_trace._Writer`, with a
   handoff between two actors, starts and reaps a stand-in native process (`/bin/sleep`) so that the
   receipt's native fields are true of a real process, and closes its store through the custodian's
-  own `tools.campaign_run.close_store`;
+  own `tools.campaign_run.close_store`. In the driver's place it runs the driver's own
+  `tools.campaign_player.LiveKnowledge` at each step and between actors, with an application that only
+  records which version it was told to serve;
+- **the player host while the run goes on.** No host runs beside the writer. After the run, the real
+  host (`tools/player_host`) replays one actor's finished update list with a scripted provider and the
+  real application over MCP (`tools/player_host/test/live-update-replay.mjs`);
 - **package preflight** (`tools.campaign_supervision.preflight`), since there is no frozen package,
   clean tree or game: it returns a fixed profile and a route naming a dummy credential variable;
 - **the route credential**: a dummy value in that dummy variable;
@@ -42,6 +47,12 @@ it runs), `examined.jsonl`, `versions.jsonl`, `polls.jsonl` and session summarie
 ledgers, the guardian's `watch-terminal.json`, the closing marker and the sealed store. The writer's
 own record (busy errors and step times) is the one source a live run does not have. The script writes
 `report.json` and `summary.txt` and exits 1 when a required measure fails.
+
+Live delivery of a newer knowledge version (#838) is checked end to end from the same files: the
+manifest sets `live_knowledge_updates` over an empty frozen file; the real runner leaves each version
+it confirms in `curator-runner/delivered/`; the driver's code lists an adopted version in the running
+actor's `knowledge-updates.jsonl` and starts the next actor from the latest; and the host replay
+delivers the newest listed version to its next request.
 """
 from __future__ import annotations
 
@@ -82,7 +93,8 @@ def writer_main(args: argparse.Namespace) -> int:
     """The custodian's substitute: its markers, a growing store at a set pace, its close-out and receipt."""
     from harness.computer.launch import close_group
     from tests.curator_trace import _Writer
-    from tools.campaign_player import write_new
+    from tools.campaign_package import DELIVERED_DIRECTORY, RUNNER_DIRECTORY
+    from tools.campaign_player import UPDATES_FILE, LiveKnowledge, write_new
 
     run = Path(args.run).resolve(strict=True)
     started_monotonic, started_wall = time.monotonic(), time.time()
@@ -96,9 +108,24 @@ def writer_main(args: argparse.Namespace) -> int:
     steps, error = [], None
     first = time.monotonic()
     count = 0
+    # The driver's part of live delivery (#838), with the driver's own code: at each step and between actors it
+    # looks where the runner leaves versions, lists an adopted one for the running actor and starts the next
+    # actor from the latest. The application's part is recorded: which version it was told to serve, and when.
+    served, started = [], {}
+
+    class Application:
+        def set_knowledge(self, knowledge):
+            served.append(dict(version=knowledge.value['version'], wall=time.time()))
+
+    live = LiveKnowledge(run/RUNNER_DIRECTORY/DELIVERED_DIRECTORY, run/'delivered-knowledge.json')
     try:
         for actor in range(args.actors):
             writer.new_actor()
+            directory = writer.actor['directory']
+            live.poll(Application())
+            (directory/'delivered-knowledge.json').write_bytes(live.data)
+            write_new(directory/UPDATES_FILE, '', text=True)
+            started[directory.name] = dict(version=live.current.value['version'], wall=time.time())
             for _ in range(args.steps):
                 due = first + count * args.pace
                 pause = due - time.monotonic()
@@ -109,6 +136,7 @@ def writer_main(args: argparse.Namespace) -> int:
                 answer = writer.step(hint=count % 3 == 0, split=count % 5 == 0)
                 steps.append(dict(index=count, actor=writer.actor['directory'].name, operation=answer['operation_id'],
                                   began_wall=began_wall, seconds=time.monotonic() - began, late=max(0., -pause)))
+                live.poll(Application(), directory)
             if actor < args.actors - 1:
                 writer.handoff()
     except Exception as exc:  # recorded; the close-out still runs, as the custodian's does
@@ -129,8 +157,9 @@ def writer_main(args: argparse.Namespace) -> int:
                                 normal_native_exit_zero=cleanup['returncode'] == 0, native=native_record))
     write_new(run/'receipt.json', receipt)
     Path(args.record).write_text(json.dumps(dict(
-        schema='stand-in-writer-record/1', pace_seconds=args.pace, steps_per_actor=args.steps, actors=args.actors,
-        steps=steps, busy=writer.busy, error=error, close=closed, native=cleanup), indent=1) + '\n')
+        schema='stand-in-writer-record/2', pace_seconds=args.pace, steps_per_actor=args.steps, actors=args.actors,
+        steps=steps, busy=writer.busy, error=error, close=closed, native=cleanup,
+        live=dict(served=served, started=started, refused=sorted(live.refused))), indent=1) + '\n')
     return 0 if error is None and not closed['errors'] else 1
 
 
@@ -174,11 +203,17 @@ def distinct_facts(knowledge_root: Path):
 
 # ------------------------------------------------------------------------------------------- the run
 def write_manifest(run: Path, session: str, commit: str) -> None:
-    """The run package's manifest under the current contract, as the snapshot and projection read it."""
+    """The run package's manifest under the current contract, as the snapshot, the projection and the runner's
+    delivery read it, and the package's frozen knowledge: the empty file, so the first version the runner leaves
+    is the first knowledge an actor holds."""
+    from harness.player.knowledge import empty
+
     run.mkdir(parents=True)
-    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11', session=session, source_commit=commit,
+    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/12', session=session, source_commit=commit,
                                                      labels=dict(world=None, lineage=None, admission=None),
+                                                     live_knowledge_updates=True,
                                                      substitute='no frozen package: tests.live_curator_stand_in_run')))
+    (run/'delivered-knowledge.json').write_text(json.dumps(empty()) + '\n')
 
 
 def writer_argv(run: Path, record: Path, session: str, commit: str, port: int, args: argparse.Namespace) -> list[str]:
@@ -550,7 +585,13 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
                                       for c in costs]
     report['knowledge'] = dict(published=repo.published(), root=live['config']['knowledge_root'])
 
+    delivery_checks, report['live_delivery'] = live_delivery(out, run, repo, windows, writer_live)
+    checks.update(delivery_checks)
+
     report['not_measured'] = {
+        'whether a player uses a delivered update': 'no player model: the host replay answers from a script',
+        'an update reaching a host while it plays': 'the host replays the actor\'s finished update list after the run; '
+                                                    'tools/player_host/test/live-knowledge-update.test.mjs covers arrival between requests',
         'player pace beside sealed admissions of the same player': 'no player: the writer appends at a set pace',
         'decisions a minute and game time': 'no player and no game: there are no decisions and no game clock',
         'curator dollars beside the player': 'the stand-in reports a nominal cost; no provider and no player spend',
@@ -560,6 +601,95 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
         'rate limits shared with the campaign': 'no provider account is used',
     }
     return dict(checks=checks, **report)
+
+
+def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: dict) -> tuple[dict, dict]:
+    """Live delivery (#838) from the files the run left: the versions the real runner exported, what the driver's
+    own code listed for each actor and told the application to serve, and what the real host delivers from one
+    actor's list (replayed offline with a scripted provider: `tools/player_host/test/live-update-replay.mjs`)."""
+    import hashlib
+
+    from harness.curator.knowledge import _git
+    from harness.player.knowledge import Knowledge, version_number
+
+    checks = {}
+    number = lambda version: -1 if version is None else version_number(version)  # noqa: E731
+    published = [v['version'] for w in windows for v in (w['verdicts'] or ()) if v.get('status') == 'published']
+    root = _git(repo.path, 'rev-parse', 'v0^{commit}').decode().strip()
+    exported = {}
+    directory = run/'curator-runner'/'delivered'
+    for path in sorted(directory.glob('v*.json'), key=lambda p: number(p.stem)) if directory.is_dir() else ():
+        try:
+            value = Knowledge.from_dict(json.loads(path.read_text())).value
+            commit = _git(repo.path, 'rev-parse', f'{path.stem}^{{commit}}').decode().strip()
+            valid = (value['version'], value['commit'], value['repository_id']) == (path.stem, commit, root)
+            exported[path.stem] = dict(valid=valid, facts=len(value['facts']), articles=len(value['articles']),
+                                       coverage=value['coverage'], sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+        except Exception as exc:  # noqa: BLE001 - reported as an invalid export
+            exported[path.stem] = dict(valid=False, error=f'{type(exc).__name__}: {exc}')
+    leftovers = sorted(p.name for p in directory.iterdir() if p.name not in {f'{v}.json' for v in exported}) if directory.is_dir() else []
+    # The runner exports after the poll that confirmed a version, so the last one may be cut by the teardown.
+    checks['runner_left_each_confirmed_version_for_the_driver'] = (
+        bool(exported) and all(e['valid'] for e in exported.values()) and not leftovers
+        and list(exported) in (published, published[:-1]))
+
+    record = writer_live['live']
+    actors, listed_ok = {}, True
+    for actor in sorted(p for p in (run/'actors').iterdir() if p.is_dir()):
+        frozen = json.loads((actor/'delivered-knowledge.json').read_text())['version']
+        entries = lines(actor/'knowledge-updates.jsonl')
+        previous = number(frozen)
+        for entry in entries:
+            data = (actor/entry['file']).read_bytes() if (actor/entry['file']).is_file() else b''
+            listed_ok = listed_ok and (
+                entry['schema'] == 'knowledge-update-entry/1' and entry['file'] == f"knowledge/{entry['version']}.json"
+                and hashlib.sha256(data).hexdigest() == entry['sha256'] == exported.get(entry['version'], {}).get('sha256')
+                and number(entry['version']) > previous and entry['repository_id'] == root
+                and entry['coverage'] == exported[entry['version']]['coverage'])
+            previous = number(entry['version'])
+        actors[actor.name] = dict(frozen_version=frozen, listed=[e['version'] for e in entries],
+                                  started=record['started'].get(actor.name))
+    checks['driver_listed_a_verified_version_for_a_running_actor'] = listed_ok and any(a['listed'] for a in actors.values())
+    served = [s['version'] for s in record['served']]
+    # Each actor starts from the version the application was last told to serve before it started (none: the package's).
+    starts = True
+    for name, actor in actors.items():
+        before = [s['version'] for s in record['served'] if s['wall'] <= actor['started']['wall']]
+        starts = starts and actor['frozen_version'] == actor['started']['version'] == (before[-1] if before else None)
+    checks['each_actor_started_from_the_latest_adopted_version'] = starts
+    checks['application_served_every_adopted_version_in_order'] = (
+        [number(v) for v in served] == sorted({number(v) for v in served})
+        and {v for a in actors.values() for v in a['listed']} <= set(served) and not record['refused'])
+
+    # The host: the first actor that had a version listed, replayed through the real host.
+    host = dict(replayed=None)
+    chosen = next((name for name, actor in actors.items() if actor['listed']), None)
+    if chosen is not None:
+        replay = out/'host-delivery'
+        (replay/'actors'/'001').mkdir(parents=True)
+        shutil.copy(run/'actors'/chosen/'delivered-knowledge.json', replay/'delivered-knowledge.json')
+        shutil.copy(run/'actors'/chosen/'knowledge-updates.jsonl', replay/'actors'/'001'/'knowledge-updates.jsonl')
+        shutil.copytree(run/'actors'/chosen/'knowledge', replay/'actors'/'001'/'knowledge')
+        done = subprocess.run(['node', str(ROOT/'tools'/'player_host'/'test'/'live-update-replay.mjs'), str(replay)],
+                              cwd=ROOT, capture_output=True, text=True, timeout=180,
+                              env=dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8',
+                                       ENACTIVE_TEST_PYTHON=sys.executable))
+        host = dict(replayed=chosen, returncode=done.returncode, stderr=done.stderr[-600:])
+        if done.returncode == 0:
+            host.update(json.loads(done.stdout.strip().splitlines()[-1]))
+    newest = actors[chosen]['listed'][-1] if chosen else None
+    delivered = [u for u in host.get('updates', ()) if u.get('outcome') == 'delivered']
+    others = [u for u in host.get('updates', ()) if u.get('outcome') != 'delivered']
+    checks['host_delivered_the_newest_listed_version_to_its_next_request'] = (
+        host.get('ok') is True and host.get('host') == dict(schema='player-host/9', telemetry_version=9)
+        and len(delivered) == 1 and delivered[0]['type'] == 'knowledge-delivery' and delivered[0]['version'] == newest
+        and delivered[0]['previous_version'] == actors[chosen]['frozen_version']
+        and delivered[0]['coverage'] == exported[newest]['coverage']
+        and delivered[0]['delivered_knowledge_schema'] == 'delivered-knowledge/2'
+        and isinstance(delivered[0].get('receiving_player_request_id'), str)
+        and all(u.get('reason') == 'superseded' for u in others) and len(others) == len(actors[chosen]['listed']) - 1)
+    return checks, dict(published=published, exported=exported, leftovers=leftovers, actors=actors,
+                        served=record['served'], host=host)
 
 
 def summarize(result: dict) -> str:
@@ -581,6 +711,11 @@ def summarize(result: dict) -> str:
                   f"  against the sealed store: lag {result['left_at_end_against_sealed_store']['lag']}, unexamined "
                   f"{result['left_at_end_against_sealed_store']['unexamined']}",
                   f"  nominal cost {result['cost']['total_usd']} (not money), per examined step {result['cost']['per_examined_step_usd']}",
+                  f"  live delivery: runner left {', '.join(result['live_delivery']['exported']) or 'nothing'}; listed "
+                  + '; '.join(f"{name} from {a['frozen_version']}: {', '.join(a['listed']) or 'none'}"
+                              for name, a in result['live_delivery']['actors'].items())
+                  + f"; host replay of {result['live_delivery']['host'].get('replayed')}: "
+                  + ', '.join(f"{u.get('version')} {u.get('outcome') or u.get('type')}" for u in result['live_delivery']['host'].get('updates', ())),
                   f"  runner: {result['runner_teardown']['final_state']} ({result['runner_teardown']['stop_reason']})"]
     return '\n'.join(lines_out) + '\n'
 
@@ -605,6 +740,9 @@ def run_main(args: argparse.Namespace) -> int:
         raise SystemExit('refused: the curator sandbox needs macOS Seatbelt')
     if not (shadow.HOST_DIR/'node_modules').is_dir() or shutil.which('node') is None:
         raise SystemExit('refused: install the curator host first (npm ci in tools/curator_host, docs/operations/coding-agents.md)')
+    if not (ROOT/'tools'/'player_host'/'node_modules').is_dir():
+        raise SystemExit('refused: install the player host first (npm ci in tools/player_host, docs/setup.md); '
+                         'the live delivery check replays an update list through it')
     knowledge_root = ROOT/'.runtime'/'knowledge'/'live-curator-stand-in-run'/out.name
     if knowledge_root.exists():
         raise SystemExit(f'refused: {knowledge_root} exists; the runner needs a fresh knowledge repository')
@@ -614,7 +752,7 @@ def run_main(args: argparse.Namespace) -> int:
     alone = writer_alone(out, args)
     result = measure(out, live, alone)
     shutil.copytree(knowledge_root, out/'knowledge')
-    result = dict(schema='live-curator-stand-in-run/1', output=str(out), passed=all(result['checks'].values()),
+    result = dict(schema='live-curator-stand-in-run/2', output=str(out), passed=all(result['checks'].values()),
                   wall_seconds=round(live['ended_wall'] - live['began_wall'], 2), session=live['session'],
                   source_commit=live['commit'], settings=dict(pace_seconds=args.pace, steps_per_actor=args.steps,
                                                               actors=args.actors, arm=args.arm,

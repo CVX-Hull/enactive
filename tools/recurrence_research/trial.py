@@ -72,7 +72,7 @@ def cycle(candidate, ids):
                     ids, editing=False)[1]
     readout = {'query': 'What weapon is listed?', 'version': 'research-v1',
                'records': [r for r in published['records'] if r['id'] == 'inventory'], 'coverage': ids}
-    return {'status': 'available', 'kind': 'inert research publication, not delivered-knowledge/1',
+    return {'status': 'available', 'kind': 'inert research publication, not delivered-knowledge/2',
             'candidate': candidate['id'], 'candidate_sha256': digest(candidate),
             'reset': {'version': 'research-v0', 'state': initial, 'sha256': digest(initial)},
             'update': {'proposal': update, 'sha256': digest(update)},
@@ -90,7 +90,7 @@ def cycle(candidate, ids):
                          'readout_sha256': digest(readout), 'observed_effect': 'unknown; no input dispatched'},
             'production_mapping': 'A future integration maps source citations through curator.window.positions; '
             'harness.curator.gate validates a fact/article submission against the base version and coverage; '
-            'tools.knowledge_export freezes delivered-knowledge/1 for host recall/read. Arbitrary JSON state '
+            'tools.knowledge_export freezes delivered-knowledge/2 for host recall/read. Arbitrary JSON state '
             'cannot be submitted to that closed interface; no gate or production publication was run.',
             'missing_links': ['historical player intent', 'cites', 'hints', 'readout delivery',
                               'historical player decision and effect']}

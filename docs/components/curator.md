@@ -31,7 +31,7 @@ Publications during an admission leave the running actor on its
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/curator-memory-study-protocol-revised.md#limitations) records that exposure. |
 | [Curator runner](../../harness/curator/runner.py) | Window triggers, the durable record of examined ranges, publication watching, covered prefix and lag, stops, and status. [Runner windows](#runner-windows) |
-| [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/1` file, sessions through the shadow runner's proxy under the runner's cap, its own knowledge repository, and signal handling |
+| [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/1` file, sessions through the shadow runner's proxy under the runner's cap, its own knowledge repository, signal handling and [delivery to a running actor](#delivery-to-a-running-actor) |
 
 ## Projection and evidence readers
 
@@ -139,6 +139,20 @@ repository. Handoff does not start grooming. If nothing is published, grooming s
 uses the last published admission, if one exists, under the [grooming rules](../design/curator-session.md#admission-and-grooming).
 The [first-run rationale](../design/live-curator-integration.md#what-a-first-live-run-measures)
 explains which lag, cost, staging and player-pace questions require real play.
+
+### Delivery to a running actor
+
+When the package sets [`live_knowledge_updates`](../operations/campaign-run.md#live-knowledge-updates),
+the [runner process](../../tools/curator_host/live_runner.py) looks once after each
+poll that returned for a newly confirmed version. It exports the highest confirmed
+publication that is not a restore and is above the last version it exported, restarts
+included, as `delivered-knowledge/2` for the package's world. It writes the file whole
+to `curator-runner/delivered/vN.json` (temporary name, sync, rename), so the driver
+never sees a partial file. A failed export is reported on stderr once per version and
+error and tried again at the next poll. Delivery never stops the runner or curation:
+a manifest it cannot read turns delivery off and the runner starts. The
+[host contract](../contracts/player-host.md#a-newer-version-during-play) owns
+adoption by the driver and the host.
 
 ## Failure, bounds and ownership
 

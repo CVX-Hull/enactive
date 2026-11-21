@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/8`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/9`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [player interface component](../../docs/components/player-interface.md) describes
 the adapter's place in the run.
@@ -18,7 +18,7 @@ frozen provider/MCP/context inputs; no coding-agent launch or resumed-host fallb
 is supported. Host choice
 is independent of whether a particular model passes gameplay qualification.
 
-See the [adapter procedure](../../docs/operations/player-host.md#install-and-test-the-adapter) for installation, tests and invocation with the required mode and flags (`validate` with `--config`, `--mcp-config`, `--model` and `--effort`, and `run` with those flags plus `--context`, `--prompt`, `--session`, `--actor-id`, `--pending-control-id`, `--delivered-knowledge`, `--finish-reserve-usd`, `--timeout-seconds` and `-o`).
+See the [adapter procedure](../../docs/operations/player-host.md#install-and-test-the-adapter) for installation, tests and invocation with the required mode and flags (`validate` with `--config`, `--mcp-config`, `--model` and `--effort`, and `run` with those flags plus `--context`, `--prompt`, `--session`, `--actor-id`, `--pending-control-id`, `--delivered-knowledge`, `--finish-reserve-usd`, `--timeout-seconds` and `-o`, and the one optional flag `--knowledge-updates`).
 
 The runner requires regular files of at most 1 MiB for the route, MCP table,
 context and prompt. The delivered knowledge file has no text-size cap. Stdin
@@ -34,7 +34,7 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/8"`, `model`,
+The closed route has exactly `schema: "player-host/9"`, `model`,
 `api_key_env`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
@@ -368,10 +368,15 @@ one retry described above. Use the existing
 [offline evaluator](../../docs/measurement-guide.md#retained-host-and-browser-analysis)
 to analyze traces; future telemetry versions are not silently interpreted.
 
-## Frozen knowledge delivery
+## Knowledge delivery
 
-The required `--delivered-knowledge` file is `delivered-knowledge/1`; it has no
+The required `--delivered-knowledge` file is `delivered-knowledge/2`; it has no
 text-size cap. `--finish-reserve-usd` is the frozen reserve from the package.
+With `--knowledge-updates LIST`, the adapter reads the driver's append-only list
+before it builds each player request and adopts the newest listed version above
+its own that verifies (`updateEntry`, `updateDelivery` in `knowledge.mjs`). The
+[update rules](../../docs/contracts/player-host.md#a-newer-version-during-play)
+own what is checked and recorded. The check never waits and never stops the host.
 The route pins `recall:{model,every,unpriced_request_usd}` with the same provider
 and credential variable as the player. Recall counts and request IDs begin at fetch.
 

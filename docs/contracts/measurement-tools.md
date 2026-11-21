@@ -36,7 +36,7 @@ and `admission` labels.
 
 The projector reads the run's `manifest.json` and `watch-start.json` directly.
 It checks both session IDs against the store and the manifest bytes against the
-SHA-256 in the `campaign-watch-start/4` record. A verified `campaign-run/11`
+SHA-256 in the `campaign-watch-start/4` record. A verified `campaign-run/12`
 manifest supplies world, lineage and admission. A verified `campaign-run/10`
 manifest supplies lineage and admission and leaves world null. A save path supplies
 no world label. Missing or invalid evidence leaves all three labels
@@ -121,10 +121,14 @@ Payload: `start` (`<admission>:<first>-<last>`), `item`, `label` (`straight`, `m
 
 Facts come from the store and the trace, not from a list written in advance. `python -m tools.memory_measure facts RUN --runs PACKAGE...` builds `RUN/judged-facts.json` from the frozen delivered/full knowledge, private unit record, knowledge-tool results and delivery telemetry. It verifies the frozen knowledge hashes and the exporter's unit rule: a unit's fact list is exclusive, and `private/units.json.shared` records multiply cited facts with their citing article IDs; any delivered citing article delivers the shared fact; the player never sees the private inputs.
 
-The facts builder and pilot read `campaign-run/11` and indexed `campaign-run/10`
-and `campaign-run/7` evidence. For `/11` the facts builder also verifies the
+The facts builder and pilot read `campaign-run/12` and indexed `campaign-run/10`
+and `campaign-run/7` evidence. For `/12` the facts builder also verifies the
 [private selection](player-host.md#delivered-knowledge-and-recall) against the
-package's world and delivered file digest. The archive versions predate that field.
+package's world and delivered file digest, and expects `delivered-knowledge/2`; the
+archive versions predate that field and keep `delivered-knowledge/1`. The builder
+refuses a `/12` run that sets [`live_knowledge_updates`](../operations/campaign-run.md#live-knowledge-updates):
+its judged facts are the frozen file's, and a version adopted during play delivers
+facts outside it.
 
     {"schema": "judged-facts/1",
      "admissions": {"<admission directory name>": {"<actor directory name>": {

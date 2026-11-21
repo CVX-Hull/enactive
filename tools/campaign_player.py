@@ -10,21 +10,94 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import threading
 import time
 import uuid
 
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
+from harness.jsonio import strict_loads
+from harness.player.knowledge import Knowledge,version_number
 from harness.player_client import ADAPTER_CLOSE_REASON
 from tools.campaign_package import EXACT,counted_usd,declared_floor,usd_sum,usd_text
 from tools.configure_player_tools import ROOT,configuration
+
+#: An actor's append-only list of the versions the driver adopted while it ran, beside its frozen inputs.
+UPDATES_FILE='knowledge-updates.jsonl'
+UPDATE_ENTRY_SCHEMA='knowledge-update-entry/1'
+VERSION_FILE=re.compile(r'v(0|[1-9][0-9]*)\.json')
 
 
 def write_new(path: Path,value,*,text=False) -> None:
     with path.open('x') as stream:
         stream.write(value if text else canonical(value)+'\n')
     path.chmod(0o600)
+
+
+class LiveKnowledge:
+    """Newer delivered-knowledge versions for the actors of one run (`live_knowledge_updates`).
+
+    The curator runner leaves each confirmed version whole as `vN.json` in `source`. `poll` adopts the
+    highest one above the current version that is `delivered-knowledge/2`, names version `vN` and comes
+    from the repository of the version already held (any repository after the empty file). For a running
+    actor it copies the file to `knowledge/vN.json` in the actor's directory, appends one
+    `knowledge-update-entry/1` line to the actor's update list and has the application serve the version;
+    the host reads that list. The next actor's frozen file is the latest version adopted.
+
+    Nothing here raises or waits. A version that does not verify is reported once on stderr and never
+    tried again, and play goes on with the version already held.
+    """
+    def __init__(self,source: Path | None,package: Path):
+        self.source=source
+        self.data=package.read_bytes()
+        self.current=Knowledge(package)
+        self.refused=set()
+
+    @property
+    def number(self) -> int:
+        number=version_number(self.current.value['version'])
+        return -1 if number is None else number
+
+    def poll(self,application,target: Path | None=None) -> None:
+        """One look at the source. `target` is the running actor's directory; without one (between
+        actors) the version is adopted for the next actor's frozen file alone."""
+        if self.source is None:return
+        try:names=os.listdir(self.source)
+        except OSError:return  # no version has been left yet
+        numbers={int(match[1]) for name in names if (match:=VERSION_FILE.fullmatch(name))}
+        for number in sorted((n for n in numbers if n>self.number and n not in self.refused),reverse=True):
+            try:
+                self._adopt(number,application,target)
+                return
+            except Exception as exc:
+                self.refused.add(number)
+                print(f'campaign_player: live knowledge v{number} refused: {type(exc).__name__}: {str(exc)[:300]}',
+                      file=sys.stderr,flush=True)
+
+    def _adopt(self,number: int,application,target: Path | None) -> None:
+        data=(self.source/f'v{number}.json').read_bytes()
+        knowledge=Knowledge.from_dict(strict_loads(data),f'live knowledge v{number}')
+        value=knowledge.value
+        if value['version']!=f'v{number}':raise ControlError('The file names another version')
+        held=self.current.value['repository_id']
+        if held is not None and value['repository_id']!=held:
+            raise ControlError('The version comes from another knowledge repository')
+        if target is not None:
+            (target/'knowledge').mkdir(mode=0o700,exist_ok=True)
+            name=f'knowledge/v{number}.json'
+            temporary=target/'knowledge'/f'.v{number}.json.tmp'
+            with temporary.open('wb') as stream:
+                stream.write(data);stream.flush();os.fsync(stream.fileno())
+            temporary.chmod(0o600)
+            os.replace(temporary,target/name)
+            entry=dict(schema=UPDATE_ENTRY_SCHEMA,version=value['version'],commit=value['commit'],
+                repository_id=value['repository_id'],file=name,sha256=hashlib.sha256(data).hexdigest(),coverage=value['coverage'])
+            # One whole line per write, on disk before the application serves the version.
+            with (target/UPDATES_FILE).open('ab') as stream:
+                stream.write((canonical(entry)+'\n').encode('utf-8'));stream.flush();os.fsync(stream.fileno())
+        application.set_knowledge(knowledge)
+        self.current,self.data=knowledge,data
 
 
 def configured_estimate(amounts) -> float | None:
@@ -109,8 +182,8 @@ class HostEvents:
                 # These records are copied into the receipt. Reject data the writer cannot retain.
                 canonical(value).encode('utf-8')
             if kind=='host-start':
-                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=8
-                        or value.get('schema')!='player-host/8'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=9
+                        or value.get('schema')!='player-host/9'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'(request|recall)-([1-9][0-9]*)',value.get('request_id',''))
@@ -220,8 +293,11 @@ def finish_interruption(channel):
 
 
 def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
-              stopped: threading.Event,deadline: float) -> dict:
+              stopped: threading.Event,deadline: float,live_updates: Path | None=None) -> dict:
+    """`live_updates` is the directory where newer delivered-knowledge versions arrive during the run,
+    or None when the package does not deliver them (`LiveKnowledge`)."""
     actors=directory/'actors';actors.mkdir(mode=0o700)
+    live=None
     total_attempts=0;total_recall_attempts=0;host_seconds_used=0.;records=[];context=None;ending_request=None
     # The dollar limit: each actor gets what the actors before it left, counted from their traces.
     limit=Decimal(profile['spend_limit_usd']);bound=Decimal(route['unpriced_request_usd']);recall_bound=Decimal(route['recall']['unpriced_request_usd']);spent=Decimal(0)
@@ -264,11 +340,17 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                          'its session and actor_id fields name the previous actor that sealed it, not you):\n'+context)
             write_new(target/'prompt.txt',prompt,text=True)
             write_new(target/'player-final.txt','',text=True)
+            # The actor starts from the latest version adopted in this run: the package's frozen file
+            # until a newer one arrived. One look here costs a directory listing and delays no handoff.
+            if live is None:live=LiveKnowledge(live_updates,directory/'delivered-knowledge.json')
+            live.poll(application)
             with (target/'delivered-knowledge.json').open('xb') as stream:
-                stream.write((directory/'delivered-knowledge.json').read_bytes())
+                stream.write(live.data)
             (target/'delivered-knowledge.json').chmod(0o600)
-            write_new(target/'frozen.json',dict(schema='player-host-inputs/3',actor_id=actor['actor_id'],session=profile['session'],
+            if live_updates is not None:write_new(target/UPDATES_FILE,'',text=True)
+            write_new(target/'frozen.json',dict(schema='player-host-inputs/4',actor_id=actor['actor_id'],session=profile['session'],
                 finish_reserve_usd=profile['ending_reserve']['usd'],
+                knowledge_updates=UPDATES_FILE if live_updates is not None else None,
                 files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt','delivered-knowledge.json')}))
             # A predecessor may have crossed a reserve after the driver's final live poll.
             # Bind the ending before a host can fetch or take input in that case.
@@ -280,7 +362,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 '--delivered-knowledge',str(target/'delivered-knowledge.json'),'--finish-reserve-usd',profile['ending_reserve']['usd'],
                 '--session',profile['session'],'--actor-id',actor['actor_id'],'--model',route['model']['id'],
                 '--pending-control-id',ending_request['id'] if ending_request is not None else 'none',
-                '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt')]
+                '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt'),
+                *(['--knowledge-updates',str(target/UPDATES_FILE)] if live_updates is not None else [])]
             environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{route['api_key_env']:secret})
             with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors:
                 child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=subprocess.PIPE,stdout=output,stderr=errors,start_new_session=True)
@@ -291,6 +374,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     record['ending_control_id']=ending_request['id']
                 while child.poll() is None:
                     events.read()
+                    live.poll(application,target)
                     now=time.monotonic()
                     application.host=dict(index=index,model=route['model']['id'],provider=route['model']['name'],
                         observed_attempts=total_attempts+len(events.requests),

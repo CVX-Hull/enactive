@@ -8,11 +8,13 @@ from harness.player.knowledge import Knowledge, empty
 from tools.knowledge_export import draw, export, main, units
 
 COMMIT = 'a' * 40
+REPOSITORY = 'd' * 40
 
 
 def store():
     value = empty()
-    value.update(version='v8',coverage=dict(schema='curator-coverage/2',session='old',actor=None,last_step=5))
+    value.update(version='v8',commit=COMMIT,repository_id=REPOSITORY,
+                 coverage=dict(schema='curator-coverage/2',session='old',actor=None,last_step=5))
     value['facts'] = [dict(id=f'fact-{i}',type='observation',text=f'Claim {i}',seen=dict(order=i)) for i in range(5)]
     value['articles'] = [dict(id=f'article-{i}',title=f'Subject {i}',lead=f'Lead {i}',
         body=[dict(text=f'Claim {i}',facts=[f'fact-{i}','fact-3'])],links=[f'Subject {1-i}'],last_confirmed=dict(order=3)) for i in range(2)]
@@ -94,10 +96,56 @@ def test_published_export_reads_the_selected_version_and_world(tmp_path,monkeypa
         assert version=='v8' and self.path==tmp_path/'game'
         return records
     monkeypatch.setattr(knowledge.Repository,'records',read_records)
-    monkeypatch.setattr(knowledge,'_git',lambda *args:b'coverage.json\nfacts.jsonl\n')
+    def git(path,*args):
+        assert path==tmp_path/'game'
+        if args[0]=='rev-parse':
+            return {'v8^{commit}':COMMIT,'v0^{commit}':REPOSITORY}[args[1]].encode()+b'\n'
+        assert args==('ls-tree','-r','--name-only','v8')
+        return b'coverage.json\nfacts.jsonl\n'
+    monkeypatch.setattr(knowledge,'_git',git)
     monkeypatch.setattr(knowledge.Repository,'_show',lambda self,version,name:json.dumps(value['coverage']).encode())
     expected = dict(value, facts=value['facts'] + ([standalone[world]] if world in standalone else []))
-    assert knowledge_export.published(tmp_path/'game','v8',world=world) == expected
+    delivered = knowledge_export.published(tmp_path/'game','v8',world=world)
+    # The version names its tag's commit and its repository's first version; the world that selected it is never written.
+    assert delivered == expected and (delivered['commit'],delivered['repository_id']) == (COMMIT,REPOSITORY)
+    assert 'world' not in delivered and Knowledge.from_dict(delivered).value is delivered
+
+
+def test_a_published_version_names_its_commit_and_the_first_version_of_its_repository(tmp_path):
+    """R-REGRESSION: `delivered-knowledge/2` identity from a real repository, which a later version is checked against."""
+    from harness.curator.knowledge import Repository, _git
+    from tools.knowledge_export import published, tag_commit
+    repo = Repository(tmp_path, 'game')
+    repo.ensure()
+    first = published(repo.path, 'v0', world='farm')
+    head = _git(repo.path, 'rev-parse', 'HEAD').decode().strip()
+    assert (first['schema'], first['version'], first['commit'], first['repository_id']) == ('delivered-knowledge/2', 'v0', head, head)
+    assert set(first) == {'schema', 'version', 'commit', 'repository_id', 'coverage', 'articles', 'facts'}
+    _git(repo.path, 'commit', '-q', '--allow-empty', '-m', 'a later version')
+    _git(repo.path, 'tag', 'v1')
+    later = published(repo.path, 'v1')
+    assert later['commit'] == tag_commit(repo.path, 'v1') != head and later['repository_id'] == head
+    other = Repository(tmp_path/'other', 'game')
+    other.ensure()
+    assert published(other.path, 'v0')['repository_id'] == _git(other.path, 'rev-parse', 'HEAD').decode().strip()
+
+
+def test_delivered_knowledge_names_a_commit_and_repository_exactly_when_it_names_a_version():
+    from harness.player.contracts import PlayerError
+    value = store()
+    assert Knowledge.from_dict(value).read('fact-1')['version'] == 'v8'
+    assert Knowledge.from_dict(empty()).value == empty()
+    for change in (dict(schema='delivered-knowledge/1'), dict(commit=None), dict(repository_id=None), dict(commit='A' * 40),
+                   dict(repository_id='d' * 39), dict(version='8'), dict(version='v08'), dict(version=None), dict(world='farm'),
+                   dict(facts={}), dict(facts=[dict(text='no identity')]), dict(facts=value['facts'] + value['facts'][:1])):
+        with pytest.raises(PlayerError, match='unsupported delivered knowledge'):
+            Knowledge.from_dict(dict(value, **change))
+    for change in (dict(commit=COMMIT), dict(repository_id=REPOSITORY)):
+        with pytest.raises(PlayerError):
+            Knowledge.from_dict(dict(empty(), **change))
+    for missing in ('commit', 'repository_id'):
+        with pytest.raises(PlayerError):
+            Knowledge.from_dict({k: v for k, v in value.items() if k != missing})
 
 
 @pytest.mark.parametrize('fields', [

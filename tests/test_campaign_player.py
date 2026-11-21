@@ -11,11 +11,12 @@ from unittest.mock import Mock, patch
 import pytest
 
 from harness.computer.protocol import ControlError
-from tools.campaign_player import HostEvents,ending_trigger,finish_interruption,run_hosts
+from harness.player.knowledge import empty
+from tools.campaign_player import HostEvents,LiveKnowledge,ending_trigger,finish_interruption,run_hosts
 from tools.configure_player_tools import configuration
 
 
-START=dict(type='host-start',telemetry_version=8,schema='player-host/8')
+START=dict(type='host-start',telemetry_version=9,schema='player-host/9')
 
 
 def cost(request,amount,how='provider-reported',kind='response-complete'):
@@ -123,7 +124,7 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/6',6),('player-host/3',3),('player-host/3',4),('player-host/7',7),('player-host/8',3),(None,4)])
+@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/6',6),('player-host/3',3),('player-host/3',4),('player-host/7',7),('player-host/8',8),('player-host/9',8),('player-host/8',9),(None,4)])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
@@ -165,14 +166,35 @@ import json, os, sys
 from datetime import datetime, timezone
 mode, *rest = sys.argv[1:]
 flags = dict(zip(rest[::2], rest[1::2]))
+updates = flags.pop('--knowledge-updates', None)
 assert mode == 'run' and sorted(flags) == ['--actor-id', '--config', '--context', '--delivered-knowledge', '--effort', '--finish-reserve-usd', '--mcp-config', '--model', '--pending-control-id', '--prompt', '--session', '--timeout-seconds', '-o'], sys.argv
 assert sorted(os.environ) >= ['FIXTURE_KEY', 'LANG', 'PATH'] and os.environ['FIXTURE_KEY'] == 'fixture-secret'
 prompt = open(flags['--prompt']).read()
+assert (updates is not None) == ('LIVE_UPDATES' in prompt), sys.argv
+if updates is not None and flags['--actor-id'] == 'a'*32:
+    # The first actor's host stands in for the curator runner: it leaves a version whole in the run's
+    # delivery directory, then waits for the driver to list it, as a host would find it before a request.
+    import hashlib, time
+    actor = os.path.dirname(updates)
+    run = os.path.dirname(os.path.dirname(actor))
+    assert open(updates).read() == ''
+    delivered = os.path.join(run, 'curator-runner', 'delivered')
+    os.makedirs(delivered)
+    data = open(os.path.join(run, 'published-v3.json'), 'rb').read()
+    with open(os.path.join(delivered, '.v3.json.tmp'), 'wb') as stream: stream.write(data)
+    os.replace(os.path.join(delivered, '.v3.json.tmp'), os.path.join(delivered, 'v3.json'))
+    end = time.monotonic() + 20
+    while not open(updates).read().endswith('\\n') and time.monotonic() < end: time.sleep(.02)
+    entry, = map(json.loads, open(updates).read().splitlines())
+    listed = open(os.path.join(actor, entry['file']), 'rb').read()
+    assert listed == data and hashlib.sha256(listed).hexdigest() == entry['sha256'], entry
+    assert sorted(entry) == ['commit', 'coverage', 'file', 'repository_id', 'schema', 'sha256', 'version'], entry
+    assert (entry['schema'], entry['version'], entry['file']) == ('knowledge-update-entry/1', 'v3', 'knowledge/v3.json'), entry
 assert prompt.startswith('Frozen mission') and 'Software actor/resource note' not in prompt
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
-emit(type='host-start', telemetry_version=8, schema='player-host/8', spend_limit_usd=route['spend_limit_usd'])
+emit(type='host-start', telemetry_version=9, schema='player-host/9', spend_limit_usd=route['spend_limit_usd'])
 recall_made = int('WITH_RECALL' in prompt and flags['--pending-control-id']=='none')
 if recall_made:
     emit(type='request-start',request_id='recall-1',request_role='recall')
@@ -210,9 +232,9 @@ open(flags['-o'], 'w').write('report\\n')
 def driver_case(tmp_path,prompt='Frozen mission',*,two_actors=False,low_frames=False):
     adapter=tmp_path/'adapter.py';adapter.write_text(FAKE_HOST)
     (tmp_path/'context.txt').write_text('Frozen context');(tmp_path/'prompt.txt').write_text(prompt)
-    (tmp_path/'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/1',version=None,coverage=None,articles=[],facts=[])))
+    (tmp_path/'delivered-knowledge.json').write_text(json.dumps(empty()))
     actors=[dict(actor_id=c*32,token='t') for c in ('a','c')]
-    application=SimpleNamespace(
+    application=SimpleNamespace(set_knowledge=Mock(),
         runtime=SimpleNamespace(add_actor=Mock(side_effect=actors),stop=Mock(),confirm_quiescent=Mock(),
             remaining=Mock(return_value=dict(inputs=10000,requests=10000,frames=5 if low_frames else 10000,frame_bytes=10**9)),
             process=SimpleNamespace(poll=lambda:None),channel=SimpleNamespace(stopped=threading.Event(),
@@ -357,9 +379,108 @@ def test_recall_can_continue_with_remaining_budget_after_verified_handoff(tmp_pa
         actor=tmp_path/'actors'/name
         assert json.loads((actor/'route.json').read_text()) == dict(route,spend_limit_usd=spend_limit)
         frozen=json.loads((actor/'frozen.json').read_text())
-        assert frozen['schema']=='player-host-inputs/3'
+        assert frozen['schema']=='player-host-inputs/4' and frozen['knowledge_updates'] is None
         assert 'delivered-knowledge.json' in frozen['files']
         assert not any('private' in key for key in frozen['files'])
+        assert not (actor/'knowledge-updates.jsonl').exists() and '--knowledge-updates' not in json.loads((actor/'host-process.json').read_text())['argv']
+    assert not application.set_knowledge.called
+
+
+def published(number,*,repository='d'*40,**change):
+    """A published version as the exporter writes it, with one fact per version number."""
+    return dict(schema='delivered-knowledge/2',version=f'v{number}',commit=f'{number:040x}',repository_id=repository,
+        coverage=dict(schema='curator-coverage/2',session='b'*32,actor='001',last_step=number),articles=[],
+        facts=[dict(id=f'fact-{n}',type='observation',text=f'Claim {n}.') for n in range(1,number+1)],**change)
+
+
+def test_a_version_left_during_play_is_listed_for_the_running_actor_and_seeds_its_successor(tmp_path):
+    """R-REGRESSION: the driver's part of live delivery. The first actor's host leaves v3 as the runner would and
+    finds it listed; the application serves it; the successor starts from it and has nothing listed."""
+    import hashlib
+    profile,route,application=driver_case(tmp_path,'Frozen mission HANDOFF_RACE LIVE_UPDATES',two_actors=True)
+    data=(json.dumps(published(3),sort_keys=True,indent=2)+'\n').encode()
+    (tmp_path/'published-v3.json').write_bytes(data)
+    with patch('tools.campaign_player._handoff_context',return_value='{}'):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300,
+                         tmp_path/'curator-runner'/'delivered')
+    assert result['outcome']=='player_task_complete_unassessed',result
+    first,second=tmp_path/'actors/001',tmp_path/'actors/002'
+    # The first actor's frozen file is the package's; the listed version is beside it, bound by the entry.
+    assert first.joinpath('delivered-knowledge.json').read_bytes()==(tmp_path/'delivered-knowledge.json').read_bytes()
+    entry,=map(json.loads,first.joinpath('knowledge-updates.jsonl').read_text().splitlines())
+    assert entry==dict(schema='knowledge-update-entry/1',version='v3',commit=published(3)['commit'],repository_id='d'*40,
+        file='knowledge/v3.json',sha256=hashlib.sha256(data).hexdigest(),coverage=published(3)['coverage'])
+    assert first.joinpath('knowledge/v3.json').read_bytes()==data
+    served,=application.set_knowledge.call_args_list
+    assert served.args[0].value==published(3)
+    # The successor starts from the adopted version, hashed into its own frozen inputs.
+    assert second.joinpath('delivered-knowledge.json').read_bytes()==data
+    assert second.joinpath('knowledge-updates.jsonl').read_text()=='' and not second.joinpath('knowledge').exists()
+    for actor in (first,second):
+        frozen=json.loads((actor/'frozen.json').read_text())
+        assert (frozen['schema'],frozen['knowledge_updates'])==('player-host-inputs/4','knowledge-updates.jsonl')
+        assert frozen['files']['delivered-knowledge.json']==hashlib.sha256((actor/'delivered-knowledge.json').read_bytes()).hexdigest()
+        assert 'knowledge-updates.jsonl' not in frozen['files']
+        argv=json.loads((actor/'host-process.json').read_text())['argv']
+        assert argv[argv.index('--knowledge-updates')+1]==str(actor/'knowledge-updates.jsonl')
+
+
+def live_case(tmp_path,package=None):
+    source=tmp_path/'delivered';source.mkdir()
+    (tmp_path/'delivered-knowledge.json').write_text(json.dumps(package or empty()))
+    actor=tmp_path/'actor';actor.mkdir()
+    def leave(value,name=None):
+        (source/(name or f"{value['version']}.json")).write_text(json.dumps(value))
+    def listed():
+        path=actor/'knowledge-updates.jsonl'
+        return [json.loads(line)['version'] for line in path.read_text().splitlines()] if path.exists() else []
+    return LiveKnowledge(source,tmp_path/'delivered-knowledge.json'),Mock(),actor,leave,listed
+
+
+def test_the_highest_verified_version_above_the_current_one_is_adopted_and_a_refused_one_is_never_retried(tmp_path,capsys):
+    live,application,actor,leave,listed=live_case(tmp_path,published(2))
+    live.poll(application,actor)  # nothing left yet
+    for value in (published(1),published(2)):leave(value)  # not above the version held
+    (tmp_path/'delivered'/'.v9.json.tmp').write_text('{')  # a file still being written is not a version
+    (tmp_path/'delivered'/'notes.txt').write_text('ignored')
+    live.poll(application,actor)
+    assert listed()==[] and not application.set_knowledge.called and capsys.readouterr().err==''
+    leave(published(3))
+    leave(published(4,repository='e'*40))  # another repository
+    leave(published(5),'v6.json')  # names another version than its file
+    leave(dict(published(7),schema='delivered-knowledge/1'))
+    (tmp_path/'delivered'/'v8.json').write_text('{"schema":"delivered-knowledge/2","schema":"delivered-knowledge/2"}')
+    live.poll(application,actor)
+    assert listed()==['v3'] and live.current.value['version']=='v3' and live.data==(tmp_path/'delivered'/'v3.json').read_bytes()
+    assert application.set_knowledge.call_args.args[0].read('fact-3')['version']=='v3'
+    refusals=capsys.readouterr().err.splitlines()
+    assert [line.split(' refused: ')[0] for line in refusals]==[f'campaign_player: live knowledge v{n}' for n in (8,7,6,4)]
+    assert 'another knowledge repository' in refusals[3] and 'another version' in refusals[2]
+    live.poll(application,actor)  # the refused versions stay refused, without another report
+    assert listed()==['v3'] and application.set_knowledge.call_count==1 and capsys.readouterr().err==''
+    leave(published(9))
+    live.poll(application,actor)
+    assert listed()==['v3','v9'] and sorted(p.name for p in (actor/'knowledge').iterdir())==['v3.json','v9.json']
+
+
+def test_the_first_version_after_an_empty_file_fixes_the_repository_and_between_actors_nothing_is_listed(tmp_path):
+    live,application,actor,leave,listed=live_case(tmp_path)
+    assert live.number==-1
+    leave(published(0,repository='e'*40))
+    live.poll(application)  # between actors: adopted for the next frozen file alone
+    assert live.current.value['version']=='v0' and listed()==[] and not (actor/'knowledge').exists()
+    assert application.set_knowledge.call_count==1
+    leave(published(1))  # the default repository is not the adopted one
+    leave(published(2,repository='e'*40))
+    live.poll(application,actor)
+    assert listed()==['v2'] and live.current.value['repository_id']=='e'*40
+
+
+def test_without_a_source_the_driver_never_looks(tmp_path):
+    (tmp_path/'delivered-knowledge.json').write_text(json.dumps(empty()))
+    live,application=LiveKnowledge(None,tmp_path/'delivered-knowledge.json'),Mock()
+    live.poll(application,tmp_path)
+    assert not application.set_knowledge.called and list(tmp_path.iterdir())==[tmp_path/'delivered-knowledge.json']
 
 
 def test_driver_copies_delivered_knowledge_as_exact_bytes(tmp_path):

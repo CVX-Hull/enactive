@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/8` is the current boundary between the
+`player-host/9` is the current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -33,9 +33,11 @@ accepts only the current route/MCP configuration, exits zero without credentials
 or network within ten seconds and writes nothing to stdout. The validator gives
 it only `PATH` and `LANG`.
 
-`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --delivered-knowledge KNOWLEDGE --finish-reserve-usd USD --model ID --effort EFFORT --timeout-seconds S -o FINAL`
-hosts one actor. Every flag occurs exactly once; unknown, missing or repeated
-flags refuse. Frozen regular files other than knowledge are at most1MiB each. Delivered text has no hard cap. Session/actor IDs are32
+`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --delivered-knowledge KNOWLEDGE --finish-reserve-usd USD --model ID --effort EFFORT --timeout-seconds S -o FINAL [--knowledge-updates LIST]`
+hosts one actor. Every flag but `--knowledge-updates` occurs exactly once; that
+one occurs at most once, only in a run that
+[delivers newer knowledge versions](#a-newer-version-during-play). Unknown, missing
+or repeated flags refuse. Frozen regular files other than knowledge are at most 1 MiB each. Delivered text has no hard cap. Session/actor IDs are 32
 lowercase hexadecimal characters. The driver reserves `FINAL`; successful direct
 player reports write it, while handoff/failure leaves it unchanged.
 
@@ -47,7 +49,7 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/8"`, `model`, `api_key_env`,
+The closed route has `schema:"player-host/9"`, `model`, `api_key_env`,
 `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
 `context_image_block`, `context_reserve_tokens`, `request_timeout_seconds` and
 `service_tier`, and the closed `recall` object (`model`, `every`, `unpriced_request_usd`).
@@ -143,7 +145,21 @@ admits no successor. The observed subtotal still records only provider charges.
 
 ### Delivered knowledge and recall
 
-Every `campaign-run/11` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
+Every `campaign-run/12` package carries `delivered-knowledge.json` (`delivered-knowledge/2`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into the first actor's frozen inputs (`player-host-inputs/4`). It records the finish reserve there too.
+
+`delivered-knowledge/2` has exactly `schema`, `version`, `commit`, `repository_id`,
+`coverage`, `articles` and `facts`. `commit` is the 40-hexadecimal commit of the
+published version's tag. `repository_id` is the commit of the repository's first
+version `v0`, which every later version of that repository shares. The exporter
+writes both; the empty file has `null` for `version`, `commit` and `repository_id`.
+A version is `vN`. The world label that selected the facts is never written into
+the file.
+
+`player-host-inputs/4` (`actors/NNN/frozen.json`) has `schema`, `actor_id`,
+`session`, `finish_reserve_usd`, `files` (the SHA-256 of `actor.json`, `route.json`,
+`mcp.json`, `context.txt`, `prompt.txt` and `delivered-knowledge.json`) and
+`knowledge_updates`: `"knowledge-updates.jsonl"` in a run that delivers newer
+versions, else `null`.
 
 `private/knowledge-full.json` holds the world-selected facts and articles before
 withholding, plus a top-level `selection` object with `world` (the selected label
@@ -154,8 +170,9 @@ Preflight checks `selection.world` against `labels.world` and
 `selection.delivered_sha256` against the verified digest of `delivered-knowledge.json`.
 The delivered file carries the selected content without the selection object.
 
-The host uses the same frozen version for briefing and recall throughout the
-admission, including handoffs. A later admission can package a newer publication.
+Unless the package sets `live_knowledge_updates`, the host uses the same frozen
+version for briefing and recall throughout the admission, including handoffs. A
+later admission can package a newer publication.
 The [withholding unit rule](measurement-tools.md#the-facts-to-judge-judged-facts1)
 defines the export layout. Version changes follow the [migration standard](../standards/migration.md).
 The [journal and knowledge component](../components/player-interface.md#journal-and-knowledge)
@@ -191,7 +208,7 @@ The recall request's user text is one JSON object. The first key is `index`,
 followed by `kind` and then `first_message` (briefing) or `recent_calls` (reminder).
 This keeps the prefix stable across actors and reminders. A route that requests
 strict structured output requires the pinned upstream to support the selection schema. Its
-real-model check covers that capability before use. The [adapter reference](../../tools/player_host/README.md#frozen-knowledge-delivery)
+real-model check covers that capability before use. The [adapter reference](../../tools/player_host/README.md#knowledge-delivery)
 owns provider serialization. The joined, trimmed reply text must contain exactly
 one JSON object with `articles` as its sole key and an array of strings as its value.
 The object may be bare or inside one Markdown code fence, optionally tagged `json`,
@@ -200,6 +217,57 @@ with only whitespace outside the fence.
 Recall accepts only IDs and titles on the delivered index (articles and standalone facts). An article named by both ID and title is selected once; a repeated selection entry is invalid. A standalone fact is accepted as a lead carrying its text; IDs/titles absent from the index are refused, including facts filed under articles.
 
 The [host telemetry contract](player-host-telemetry.md#knowledge-delivery-and-recall-events) defines the delivery and recall events.
+
+### A newer version during play
+
+A package with `live_knowledge_updates: true` delivers versions the curator
+publishes during the admission to the actor that is running. Nothing in this path
+waits, and no failure in it stops play: an actor that receives no update plays on
+with the version it holds. The [package rules](../operations/campaign-run.md#live-knowledge-updates)
+say when a package may set the field.
+
+| Step | Owner | Rule |
+| --- | --- | --- |
+| Export | [Curator runner](../components/curator.md#delivery-to-a-running-actor) | After a poll in which it confirmed a version, it writes that version as `delivered-knowledge/2` for the package's world to `RUN/curator-runner/delivered/vN.json`, whole (temporary name, sync, rename). It exports a confirmed publication only, never a restore, and only above the last version it exported. |
+| Adoption | [Driver](../../tools/campaign_player.py) | At each poll of a running host, and once before it starts an actor, it takes the highest `vN.json` above the version it holds that is `delivered-knowledge/2`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). It copies the bytes to `actors/NNN/knowledge/vN.json`, appends one line to `actors/NNN/knowledge-updates.jsonl`, synced, and then has the application serve the version. A version that does not verify is reported on the custodian's stderr and never tried again. |
+| Reads | Application | `player_knowledge_read` and `player_knowledge_query` answer from the adopted version from then on. Each result names its `version`. |
+| Delivery | Host | Before it builds each player request, it reads the whole unread lines of `--knowledge-updates` and adopts the newest listed version above its own that verifies. |
+| Successor | Driver | A successor's `delivered-knowledge.json` is the latest version adopted in the run, or the package's file when none was. Its update list starts empty. |
+
+An update-list line is `knowledge-update-entry/1`: exactly `schema`, `version`
+(`vN`), `commit`, `repository_id`, `file` (`knowledge/vN.json`, relative to the
+list), `sha256` of that file and its `coverage` stamp.
+
+The host verifies an entry before it adopts it: the line is a closed entry; the
+version number is above the adopted one; `repository_id` is the adopted version's,
+unless that is the empty file; the file's SHA-256 is the entry's; the file is
+`delivered-knowledge/2`; and its `version`, `commit`, `repository_id` and `coverage`
+are the entry's. It tries unread entries newest first and adopts the first that
+verifies. An entry that fails, an older one and one passed over for a newer are
+each recorded as refused with a reason, and the adopted version stays.
+
+An adopted version is the host's version for every later recall, reminder and
+delivery of that actor. A recall already in flight keeps the version it was
+requested from: its index, the check of its reply and its reminder all use that
+version, and the reminder names it.
+
+The host states the difference in one message of its own, delimited
+`BEGIN FALLIBLE KNOWLEDGE UPDATE (vN)` and `END FALLIBLE KNOWLEDGE UPDATE (vN)`
+around one JSON line, labelled as fallible data granting no authority. It covers
+what a briefing can show, the articles and the facts no article files:
+
+- `added` and `updated` carry each entry's ID, title and lead (a fact's subject and
+  text). An article is updated when its title, lead or claims changed.
+- `removed` carries the ID and title of an entry the version no longer has. A fact
+  that an article now files is not removed.
+- From an empty store the line carries `index`, the index line of every entry, in
+  place of a difference.
+
+The message makes no recall request and costs no request of its own. It is placed
+like a reminder: where the next request begins, never joined with another notice
+and never moved or rewritten, so [every request still extends the previous one](#request-stability-and-tail-notices).
+An update whose message would bring the context to its capacity warning is refused
+with reason `context-capacity`; the driver's next actor starts from that version.
 
 ### Request stability and tail notices
 

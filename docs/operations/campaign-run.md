@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/11` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/12` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -30,8 +30,9 @@ It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-journal/1` store (`player_store`), player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 computer input/request/frame/byte capacities,
-`ending_reserve`, the dollar limit `spend_limit_usd` and the operator-only
-[`labels`](#operator-labels). Source/directory mismatch refuses before launch.
+`ending_reserve`, the dollar limit `spend_limit_usd`, whether
+[newer knowledge versions reach a running actor](#live-knowledge-updates)
+(`live_knowledge_updates`) and the operator-only [`labels`](#operator-labels). Source/directory mismatch refuses before launch.
 The [player ports contract](../contracts/player-ports.md#player-journal)
 governs which journals the package can reopen.
 
@@ -40,7 +41,7 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/8` with text/image input and explicit
+`route.json` uses current `player-host/9` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. It repeats the package's `spend_limit_usd` and carries
 `unpriced_request_usd` ([Spend limit](#spend-limit)). Freeze the
@@ -102,7 +103,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/11",
+  "schema": "campaign-run/12",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "S1", "scenario": "SCENARIO", "lineage": null, "admission": null, "world": null},
@@ -123,7 +124,8 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "max_hosts": 2,
   "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
   "ending_reserve": {"seconds": 120, "usd": "0.50", "inputs": 128, "requests": 128, "frames": 128, "frame_bytes": 134217728},
-  "spend_limit_usd": "5"
+  "spend_limit_usd": "5",
+  "live_knowledge_updates": false
 }
 ```
 
@@ -176,6 +178,25 @@ for shared facts and article units.
 
 The closed `recall` object pins the model on the player's provider and key, `every` completed inputs per reminder, and `unpriced_request_usd` computed from the recall model's rates. Player and recall share the run's dollar budget. Use forecast attempt counts to size the work and ending, and retain observed starts to assess the run.
 
+### Live knowledge updates
+
+`live_knowledge_updates` is required and is `true` or `false`. With `false`, every
+actor plays the frozen version for the whole admission. With `true`, a version the
+[curator runner](../components/curator.md#delivery-to-a-running-actor) confirms
+during the admission reaches the actor that is running and becomes the next actor's
+frozen file. The [host contract](../contracts/player-host.md#a-newer-version-during-play)
+specifies adoption, verification and the message the player receives.
+
+Set it only for a run launched with `--curator-runner`
+([supervision](campaign-supervision.md#freeze-launch-and-inspect)); without the
+runner no newer version arrives and play keeps the frozen version. Preflight refuses
+`true` when `private/units.json` records a withholding seed or a study draw: a newer
+version is exported whole and would deliver what the draw withheld. The judged-facts
+builder refuses such a run for the same reason
+([facts to judge](../contracts/measurement-tools.md#the-facts-to-judge-judged-facts1)).
+With `true`, the recall bound counts toward the [ending reserve](#spend-limit) even
+when the frozen file is empty, because a recall can follow a version adopted during play.
+
 ### Spend limit
 
 Each package starts with a fresh spend allowance. Choose a positive
@@ -186,7 +207,8 @@ The validator recomputes `unpriced_request_usd` as
 `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
 from the frozen rates and refuses a mismatch or zero. Set `ending_reserve.usd` at
 or above the player bound plus the recall bound, with zero recall contribution for
-empty knowledge, and below the declared limit.
+empty knowledge in a package without [live knowledge updates](#live-knowledge-updates),
+and below the declared limit.
 
 The host contract defines [spend accounting and stops](../contracts/player-host.md#spend)
 and [recall accounting](../contracts/player-host.md#delivered-knowledge-and-recall).
@@ -209,8 +231,8 @@ the frozen adapter's `validate` mode accepting the route and MCP template; port1
 wall60–86400s, host/aggregate-host30–86400s, one or two hosts.
 Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
 computer capacity is ≤2^40. `spend_limit_usd` is above zero. `ending_reserve.usd`
-covers the player's pending-request bound and, with delivered knowledge, the
-recall bound. It stays below the declared limit. The selected directory must have no prior started marker,
+covers the player's pending-request bound and, with delivered knowledge or live
+knowledge updates, the recall bound. It stays below the declared limit. The selected directory must have no prior started marker,
 session DB, native-process receipt, actors or contexts. An existing selected player
 store must be current; it never restores computer custody. The maintained
 validator is authoritative and rejects changed bytes/unsupported fields before
@@ -234,7 +256,7 @@ Strings are printable ASCII only (space through `~`), with no control or non-ASC
 characters. Preflight checks the start code against the current ledger schema
 before dispatch. A missing field, extra field or out-of-bound value refuses the
 package before effects, like the rest of the manifest. Preflight accepts only
-`campaign-run/11`.
+`campaign-run/12`.
 
 Keep the label values out of the player's argv, prompt, context, route, target,
 MCP configuration and environment. The sole effect of the labels on a player-visible
@@ -270,7 +292,9 @@ The custodian takes shared exclusion and writes `started.json` before native/DB
 creation. Native inherits the exact shared-lock descriptor/socket, retaining
 exclusion for its own lifetime. The custodian writes `ready.json` after starting
 its service. The driver creates exclusive per-actor inputs/host traces and
-operator-only resource notes. `frozen.json` is `player-host-inputs/3`.
+operator-only resource notes. `frozen.json` is `player-host-inputs/4`.
+With [live knowledge updates](#live-knowledge-updates) each actor directory also
+holds `knowledge-updates.jsonl` and the adopted versions under `knowledge/`.
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 

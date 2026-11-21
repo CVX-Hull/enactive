@@ -141,6 +141,10 @@ in the other half, with odd counts rounded as described below.
   facts builder, `study` and `study-inputs` read `knowledge-units/1` (the sealed pilot's
   packages) and `knowledge-units/2`; the pilot analysis reads only `knowledge-units/1`.
   Any other version is refused.
+- A study start's package sets `live_knowledge_updates` to `false`. Preflight refuses
+  [live knowledge updates](../operations/campaign-run.md#live-knowledge-updates) with
+  a withholding seed or a study draw, because a newer version is exported whole and
+  would deliver withheld units.
 
 ### The withholding study's analysis (`withholding-study/1`)
 

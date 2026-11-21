@@ -141,7 +141,7 @@ def pilot_fixture(tmp_path, withheld=None, kind='blind', starts=2, quiet_west=Fa
             units=[dict(unit, withheld=(unit['id'] == 'article-a') if withheld is None else withheld)
                 for unit in units(knowledge)['units']], shared=units(knowledge)['shared'])
         path = save(package / 'private' / 'units.json', record)
-        save(package / 'manifest.json', dict(schema='campaign-run/11', session=json.loads((package / 'manifest.json').read_text())['session'],
+        save(package / 'manifest.json', dict(schema='campaign-run/12', session=json.loads((package / 'manifest.json').read_text())['session'],
             private_files={'units.json': memory_measure.file_sha256(path)}))
         available = delivered_fact_ids(record)
         entry = dict(index=[fact for fact in knowledge['facts'] if fact['id'] in available],
@@ -281,7 +281,7 @@ def test_pilot_refuses_ineligible_or_inconsistent_inputs(tmp_path, fault, messag
             record['seed'] += 1
         save(unit_path, record)
         if fault != 'hash':
-            save(packages[0] / 'manifest.json', dict(schema='campaign-run/11', session=json.loads((packages[0] / 'manifest.json').read_text())['session'],
+            save(packages[0] / 'manifest.json', dict(schema='campaign-run/12', session=json.loads((packages[0] / 'manifest.json').read_text())['session'],
                 private_files={'units.json': memory_measure.file_sha256(unit_path)}))
     else:
         path = run / {'adjudicated-version': 'adjudicated.json', 'facts-version': 'judged-facts.json',
@@ -538,7 +538,7 @@ def test_pilot_refuses_a_resolved_package_path_under_the_held_out_lineage(tmp_pa
 
 
 @pytest.mark.parametrize('fault, message', [
-    ('campaign-schema', 'requires campaign-run/11'), ('facts-hash', 'differs from the judge mapping hash'),
+    ('campaign-schema', 'requires campaign-run/12'), ('facts-hash', 'differs from the judge mapping hash'),
     ('tampered-pair', 'adjudicated pairs differ'), ('shared-in-unit', 'shared facts must be separate'),
     ('holds', 'holds values from the known set')])
 def test_pilot_refuses_invalid_provenance_units_and_holds(tmp_path, fault, message):
@@ -553,7 +553,7 @@ def test_pilot_refuses_invalid_provenance_units_and_holds(tmp_path, fault, messa
         record = json.loads(path.read_text())
         next(unit for unit in record['units'] if unit['id'] == 'article-a')['fact_ids'].append('shared')
         save(path, record)
-        save(packages[0] / 'manifest.json', dict(schema='campaign-run/11', session=json.loads((packages[0] / 'manifest.json').read_text())['session'],
+        save(packages[0] / 'manifest.json', dict(schema='campaign-run/12', session=json.loads((packages[0] / 'manifest.json').read_text())['session'],
             private_files={'units.json': memory_measure.file_sha256(path)}))
     else:
         path = run / 'adjudicated.json'

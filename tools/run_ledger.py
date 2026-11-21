@@ -134,7 +134,8 @@ def package_row(package: Path, *, study: int, label: str, upper_bound: bool = Fa
     if upper_bound:
         from harness.player.knowledge import Knowledge
         # A lost trace can hide the pending player attempt and any recall, even with no observed starts.
-        recall_count=int(bool(Knowledge(package/'delivered-knowledge.json').records))
+        # With live updates a recall can follow a version adopted during play, even from an empty frozen file.
+        recall_count=int(bool(Knowledge(package/'delivered-knowledge.json').records) or manifest.get('live_knowledge_updates') is True)
         observed_or_limit = max(Decimal(spend['reported_usd']), Decimal(spend['spend_limit_usd']))
         bound = plain(spend_of(str(observed_or_limit), 1, spend['unpriced_request_usd'],
                                recall_count, spend['unpriced_recall_request_usd']))

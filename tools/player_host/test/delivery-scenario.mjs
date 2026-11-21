@@ -1,11 +1,12 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { runHost } from '../host.mjs';
 import { model, route, reply, realDelay } from './host-scenario.mjs';
 
-export const knowledge = () => ({schema:'delivered-knowledge/1',version:'v2',
+export const knowledge = () => ({schema:'delivered-knowledge/2',version:'v2',commit:'c'.repeat(40),repository_id:'d'.repeat(40),
   coverage:{schema:'curator-coverage/2',session:'earlier',actor:null,last_step:4},
   articles:[
     {id:'article-a',title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],links:['B subject'],last_confirmed:{order:1}},
@@ -25,6 +26,20 @@ export function recallTextReply(text, cost = .002, finishReason = 'stop') {
     {headers:{'content-type':'text/event-stream'}});
 }
 
+/** A version listed for the scenario's running actor as the driver lists it: the file under `knowledge/`, then one
+ * whole `knowledge-update-entry/1` line. `change` makes the faults a test needs: other `data` in the file, no file
+ * (`skipFile`), other `entry` fields, a raw `line`, or a line still without its newline (`partial`). */
+export async function listUpdate(directory, value, change = {}) {
+  const actor = directory+'/actors/001';
+  await mkdir(actor+'/knowledge',{recursive:true});
+  const data = JSON.stringify(value);
+  if (!change.skipFile) await writeFile(`${actor}/knowledge/${value.version}.json`,change.data ?? data);
+  const entry = {schema:'knowledge-update-entry/1',version:value.version,commit:value.commit,repository_id:value.repository_id,
+    file:`knowledge/${value.version}.json`,sha256:createHash('sha256').update(data).digest('hex'),coverage:value.coverage,...change.entry};
+  await appendFile(actor+'/knowledge-updates.jsonl',(change.line ?? JSON.stringify(entry))+(change.partial ? '' : '\n'));
+  return entry;
+}
+
 export async function deliveryScenario(directory, overrides = {}) {
   const value = overrides.knowledge ?? knowledge();
   const actor = directory+'/actors/001';
@@ -39,7 +54,8 @@ export async function deliveryScenario(directory, overrides = {}) {
   const control = new PassThrough();
   const workspace = await mkdtemp(join(directory,'enactive-player-fixture-'));
   try {
-    const result = await runHost({configuration,knowledge:value,finishReserveUsd:overrides.finishReserveUsd ?? '0.5',
+    const result = await runHost({configuration,knowledge:value,
+      knowledgeUpdates:overrides.knowledgeUpdates ? actor+'/knowledge-updates.jsonl' : null,finishReserveUsd:overrides.finishReserveUsd ?? '0.5',
       session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:overrides.pendingControlId ?? null,control,
       context:'Frozen stand-in guide',prompt:'Inspect the receiver stand-in.',model:model.id,effort:'off',timeoutSeconds:10,
       env:{OFFLINE_TEST_KEY:'stand-in-only'},

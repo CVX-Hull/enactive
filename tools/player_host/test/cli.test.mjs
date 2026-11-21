@@ -11,17 +11,17 @@ import { once } from 'node:events';
 const python=process.env.ENACTIVE_TEST_PYTHON;
 const runner=fileURLToPath(new URL('../run.mjs',import.meta.url));
 const fixture=fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py',import.meta.url));
-async function cli(t, handle, extraEnv = {}, enabledTools = ['observe']) {
+async function cli(t, handle, extraEnv = {}, enabledTools = ['observe'], extraArgs = () => []) {
   const dir=await mkdtemp(join(tmpdir(),'pi-host-cli-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
   const server=createServer(handle); server.listen(0,'127.0.0.1'); await once(server,'listening');
   t.after(()=>{server.closeAllConnections();server.close();});
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:`http://127.0.0.1:${server.address().port}/v1`,input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/8',context_reserve_tokens:512,service_tier:'default',model,recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25'},api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
+  const route={schema:'player-host/9',context_reserve_tokens:512,service_tier:'default',model,recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25'},api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),knowledge:join(dir,'delivered-knowledge.json'),prompt:join(dir,'prompt.txt'),final:join(dir,'final.txt')};
-  await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.prompt,'Offline mission'),writeFile(paths.final,'reserved'),writeFile(paths.knowledge,JSON.stringify({schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]}))]);
-  const child=spawn(process.execPath,[runner,'run','--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--prompt',paths.prompt,'--session','2'.repeat(32),'--actor-id','3'.repeat(32),'--pending-control-id','none','--delivered-knowledge',paths.knowledge,'--finish-reserve-usd','0','--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
+  await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.prompt,'Offline mission'),writeFile(paths.final,'reserved'),writeFile(paths.knowledge,JSON.stringify({schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]}))]);
+  const child=spawn(process.execPath,[runner,'run','--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--prompt',paths.prompt,'--session','2'.repeat(32),'--actor-id','3'.repeat(32),'--pending-control-id','none','--delivered-knowledge',paths.knowledge,'--finish-reserve-usd','0','--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final,...extraArgs(dir)],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
   t.after(()=>{if(child.exitCode===null) child.kill('SIGKILL');});
   let stdout='',stderr='';child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);
   child.stdin.on('error',()=>{});
@@ -57,6 +57,19 @@ test('CLI writes the driver-reserved final path only after terminal success',asy
   const sink=run.read().events.at(-1).event_output;
   assert.ok(sink.events>0&&sink.bytes>0);
   assert.ok(sink.json_ms>=0&&sink.enqueue_ms>=0);
+});
+
+test('CLI accepts the optional update list once, whether or not the file exists yet, and refuses it repeated or misnamed',async t=>{
+  const finish=(_req,res)=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'finish',type:'function',function:{name:'player_finish',arguments:JSON.stringify({intent:'Report the fixture result',disposition:'task_complete',report:'final answer',source_ids:[],control_id:null})}}]},finish_reason:'tool_calls'}],usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16,cost:0.000038}})+'\n\ndata: [DONE]\n\n');};
+  const list=dir=>['--knowledge-updates',join(dir,'knowledge-updates.jsonl')];
+  const accepted=await cli(t,finish,{},['observe'],list);
+  assert.equal((await accepted.finished)[0],0);
+  assert.equal(accepted.read().events.at(-1).reason,'task_complete');
+  for (const args of [dir=>[...list(dir),...list(dir)],dir=>['--knowledge-update',list(dir)[1]],()=>['--knowledge-updates']]) {
+    const refused=await cli(t,()=>assert.fail('no request follows refused arguments'),{},['observe'],args);
+    assert.equal((await refused.finished)[0],1);
+    assert.equal(refused.read().events.at(-1).reason,'invalid-arguments');
+  }
 });
 
 for(const name of ['OPENAI_LOG','OPENAI_CUSTOM_HEADERS','OPENAI_ORG_ID','OPENAI_PROJECT_ID']) test(`CLI refuses ambient SDK ${name} without inference or secret output`, async t=>{
@@ -95,7 +108,7 @@ async function validateFiles(t, mutate = ()=>{}) {
   const dir=await mkdtemp(join(tmpdir(),'pi-host-validate-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:'http://127.0.0.1:1/v1',input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/8',context_reserve_tokens:512,service_tier:'default',model,recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25'},api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
+  const route={schema:'player-host/9',context_reserve_tokens:512,service_tier:'default',model,recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25'},api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture],cwd:dir,enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:3,tool_timeout_sec:1};
   mutate(route,mcp);
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json')};
@@ -107,7 +120,7 @@ test('CLI validate accepts the route and MCP table silently without a credential
   assert.equal(result.code,0);assert.equal(result.stdout,'');
 });
 test('CLI validate refuses an old route schema, a disabled MCP table and repeated or missing flags',async t=>{
-  for (const mutate of [route=>{route.schema='pi-player-host/7';},(_route,mcp)=>{mcp.enabled=false;}]) {
+  for (const mutate of [route=>{route.schema='pi-player-host/7';},route=>{route.schema='player-host/8';},(_route,mcp)=>{mcp.enabled=false;}]) {
     const result=await modeRun(t,await validateFiles(t,mutate));
     assert.equal(result.code,1);assert.equal(result.stdout,'');
   }

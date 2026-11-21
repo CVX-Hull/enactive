@@ -126,13 +126,18 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
 
 - `events` allowlist `knowledge-recall`, `knowledge-delivery` and
   `knowledge-undelivered` fields, selected article/fact/index IDs, delivery leads/index
-  and original trace line. Selection, delivery and an explicit read are distinct.
+  and original trace line. An update event also has `outcome`, `previous_version`,
+  its coverage marker, `removed_ids` and the `added`, `updated` and `removed` rows of
+  its text. Selection, delivery and an explicit read are distinct.
   Missing delivery text or a missing join stays unavailable; proximity proves no use.
 - `snapshot_status` is `verified`, `unavailable`, `hash_unavailable` or
-  `hash_mismatch`. Entries are served only after the actor's `player-host-inputs/3`
+  `hash_mismatch`. Entries are served only after the actor's `player-host-inputs/4`
   `frozen.json` names this actor/session and its `delivered-knowledge.json` digest
-  matches. Missing/mismatched bytes are never presented as the frozen contents.
-  The `delivered-knowledge/1` snapshot exposes only public article/fact fields,
+  matches. A sealed archived session's frozen inputs are `player-host-inputs/3`
+  with `delivered-knowledge/1`; a run with no supported manifest is `hash_unavailable`.
+  Missing/mismatched bytes are never presented as the frozen contents.
+  The snapshot is the version the actor started with, never one adopted during play.
+  The `delivered-knowledge/2` snapshot exposes only public article/fact fields,
   coverage and confirmation markers in their recorded units. It pages `items` with
   `total`, `limit` and `next`. An absent entry is unavailable, not proof of withholding.
   No private full export, withheld-unit file or curator repository is read.
