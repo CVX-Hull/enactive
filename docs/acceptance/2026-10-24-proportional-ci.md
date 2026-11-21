@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Interpreting or repeating the proportional CI qualification
 status: historical
 kind: measurement
 date: 2026-10-24

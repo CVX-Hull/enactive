@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-19
 scope: Same-character reload, accepted functional day two, failed day-three water readiness and normal partial shutdown
-review_trigger: Historical correction only; current work and authority live in GitHub and the admitted protocol
 status: historical
 kind: run
 ---

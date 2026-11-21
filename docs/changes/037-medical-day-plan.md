@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Historical useful-medical-work proposal and its original finite campaign limits
 status: historical
-review_trigger: Actual resource benefit, complete-day fit, campaign costs or input ownership change
 ---
 
 # Complete the day through useful medical work and rest

@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Campaign allocation, whole-day forecast, actor or source changes
 status: historical
 date: 2026-10-18
 scope: Frozen004 admitted and stopped on unsupported filter transition, no new game advance

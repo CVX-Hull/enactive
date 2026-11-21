@@ -44,7 +44,7 @@ ALLOWED = (
 )
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md")
 # The dated-record indexes list the scopes of historical records verbatim.
-GENERATED = ("docs/acceptance/index.md", "docs/changes/index.md")
+GENERATED = ("docs/acceptance/index.md", "docs/changes/index.md", "docs/decisions/index.md")
 # Design and study pages name the hosts they measure; their prose is not scanned.
 UNSCANNED = ("docs/design/",)
 

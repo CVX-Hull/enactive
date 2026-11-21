@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Admission-refusal certification, staging/collection or settlement-clock semantics change
 status: historical
 date: 2026-10-24
 scope: Adopted request receipt and measurement boundary; source and actual gameplay evidence are separate

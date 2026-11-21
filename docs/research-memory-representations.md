@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-29
 scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
-review_trigger: Study protocol, source evidence, observed memory failure or representation decision changes
 ---
 
 # Ways to represent memory and improvement

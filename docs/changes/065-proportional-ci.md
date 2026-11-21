@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: CI profile eligibility, required reporting or evidence reuse changes
 status: historical
 date: 2026-10-24
 scope: Adopted proportional validation rationale; project-management and checker own current requirements

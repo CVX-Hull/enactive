@@ -32,7 +32,9 @@ gets at most one independent review, a
 clean-context one, and no further review from a second model family. Where a document
 change gets its one independent review, that review may come from a second model
 family in place of one from the lead's own. It is still the one clean-context review:
-none is added (owner decisions of 14 and 19 November 2026; R-CONTROL-BLOAT). Other
+none is added (R-CONTROL-BLOAT; the [decision log](../decisions/owner-decisions.md)'s
+rows of 14 November 2026 on one review for document-only changes and of 19 November 2026
+on second-family review of documents). Other
 changes get the review this page selects.
 
 For maintainer-facing design review, lead with the user outcome, a small boundary
