@@ -376,6 +376,26 @@ def test_an_interrupted_session_is_recorded_and_does_not_advance_the_cursor(worl
     assert not any((world.directory/'snapshots').iterdir())
 
 
+def test_a_final_status_says_what_it_is_as_of_and_that_later_steps_are_unknown(world):
+    world.reading = read({'001': 5})
+
+    def interrupted(seconds):
+        raise KeyboardInterrupt  # the signal lands between polls, after the last read
+
+    runner = Runner(world.directory, RUN, snapshot=world.snapshot, session_call=world.session, look=world.look,
+                    settings=SETTINGS, clock=world.clock, sleep=interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        runner.run()
+    now = status(world)
+    assert now['state'] == 'ended' and now['stop_reason'] == 'interrupted'
+    assert now['as_of']['operation'] == 'op-001-5' and now['as_of']['ordinal'] == 5
+    assert set(now['as_of']['read_wall']) == {'began', 'ended'}
+    assert now['after_last_read'] == 'unknown'  # never presented as caught up
+    assert now['unexamined'] == [dict(actor='001', first=1, last=5)] and now['lag'] == 5 and now['backlog'] == 5
+    poll = json.loads((world.directory/'polls.jsonl').read_text().splitlines()[-1])
+    assert poll['coverage']['as_of'] == now['as_of']
+
+
 def test_the_custodians_receipt_ends_the_runner_without_another_read(world, tmp_path):
     run = tmp_path/RUN
     run.mkdir()

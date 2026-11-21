@@ -14,7 +14,8 @@ path, and the only lock taken beside the custodian is the shared read lock insid
 - `examined.jsonl` (`curator-runner-examined/1`), the cursor: append-only, one `start` row when a
   session begins and one `end` row when it returns, each naming the window (one actor, steps
   `first` to `last`, with the operations at both ends) and carrying `coverage` (the covered
-  prefix, lag and backlog at that moment). An `end` row says how the session ended, whether the
+  prefix, lag and backlog at that moment, and `as_of`, the position and wall time of the last
+  successful read they count from). An `end` row says how the session ended, whether the
   cursor `advanced` and whether it counts as a `failed` session, and the gate's verdicts. The
   cursor of an actor is the last step of its advanced rows; a `start` with no `end` was
   interrupted. The file survives a restart.
@@ -543,10 +544,11 @@ class Runner:
                     latest_version=dict(version=latest['version'], coverage=latest['coverage']) if latest else UNKNOWN)
 
     def progress(self) -> dict:
-        """The covered prefix, lag and backlog now: the `coverage` of each poll row and each examined row."""
+        """The covered prefix, lag and backlog, as of the last successful read (`as_of`): the `coverage` of
+        each poll row and each examined row."""
         with self.lock:
             now = self.coverage()
-            return {name: now[name] for name in ('covered_prefix', 'lag', 'backlog')}
+            return dict({name: now[name] for name in ('covered_prefix', 'lag', 'backlog')}, as_of=self.position())
 
     def position(self) -> dict | str:
         """The latest finished operation of the last snapshot, and when that snapshot read the store."""
@@ -568,7 +570,10 @@ class Runner:
                 for a in self.last.actors if len(a.operations) > cursor.get(a.directory, 0)]
 
     def status(self) -> dict:
-        """The status file's content."""
+        """The status file's content. Lag, backlog and `unexamined` count only what the last successful read
+        saw, whose position and wall time are `as_of`; `after_last_read` is always `unknown`, because steps
+        finished after that read are not known to the runner (after the custodian ends it reads no more, and
+        they are counted afterwards from the sealed session)."""
         with self.lock:
             snapshot = UNKNOWN if self.last is None else dict(
                 hold_seconds=self.last.hold_seconds, transaction_seconds=self.last.transaction_seconds,
@@ -580,8 +585,8 @@ class Runner:
                         **self.coverage(), failures=dict(sessions=self.session_failures(),
                                                          snapshots=self.snapshot_failures),
                         versions=sorted(self.versions.values(), key=lambda v: _number(v['version'])),
-                        look_error=self.look_error, stop_reason=self.reason,
-                        unexamined=self.unexamined() if done else None)
+                        look_error=self.look_error, stop_reason=self.reason, as_of=self.position(),
+                        after_last_read=UNKNOWN, unexamined=self.unexamined() if done else None)
 
     def _write_status(self) -> None:
         with self.lock:

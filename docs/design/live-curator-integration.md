@@ -124,10 +124,13 @@ range it has examined, by actor, in admission order, with how the session over i
   before starting its successor, its remaining steps are taken in windows of at most 40,
   however few are left. An empty tail is skipped. The cursor then moves to the next
   actor.
-- **The end of the admission.** The runner does not work after the custodian ends.
-  Every range it has not examined is recorded as unexamined. Those steps are curated
-  afterwards, over the sealed session, by an ordinary session between admissions, as all
-  curation is today.
+- **The end of the admission.** The runner does not work after the custodian ends, and
+  cannot read then, so it cannot know the steps finished after its last read. It records
+  as unexamined every range its last read saw and did not examine, states the position
+  and wall time of that read (`as_of`), and marks what came after it as unknown
+  (`after_last_read`). Steps finished after that read are counted afterwards from the
+  sealed session. All of these are curated afterwards, over the sealed session, by an
+  ordinary session between admissions, as all curation is today.
 - **The lock.** One session runs at a time, and the repository lock refuses a second at
   once (`harness/curator/session.py`). The runner does not queue. On a refusal it does
   nothing, and at the next poll it computes the range again from its record.
@@ -432,9 +435,13 @@ examined range with how it ended, the cursor, the session in flight, the covered
 operations, and any restore), lag, the distance from the latest stamp, backlog, the last
 confirmed version and its stamp, the unconfirmed publications, every version with its
 two times, the consecutive failures, and, once the runner has stopped or ended, why and
-the ranges left unexamined. Each poll is also a row of `curator-runner/polls.jsonl`,
-with its snapshot's timings or why there was none, the position and the same `coverage`
-as an examined row. `stopped.json` is written whole, by a rename, as the status file is.
+the ranges left unexamined. Lag, backlog and the unexamined ranges count only what the
+last successful read saw: `as_of` is that read's position and wall time, and
+`after_last_read` is always `unknown`, because steps finished after it are not known to
+the runner. So a final status never shows the admission as caught up; the steps after
+its last read are counted from the sealed session. Each poll is also a row of
+`curator-runner/polls.jsonl`, with its snapshot's timings or why there was none, the
+position and the same `coverage`, with its `as_of`, as an examined row. `stopped.json` is written whole, by a rename, as the status file is.
 
 A missing or unknown value is written as `unknown`, not guessed, and shown as such.
 The view stays read-only and sends nothing
