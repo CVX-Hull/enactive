@@ -114,13 +114,14 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   refusal, timeout, cutoff or abort without a usable cost keeps an unknown charge
   and an explicit unpriced attempt. A successful response without such a cost
   keeps the integration stop below.
-- **The reported cost** comes from the response's usage records. On a service-managed route,
-  each record contributes the larger of `cost` and
-  `cost_details.upstream_inference_cost`. With the caller's own key (`is_byok: true`),
-  each record must supply both amounts and contributes their sum. The largest usable
-  amount counts unless any cost record is malformed. A malformed record or a response
-  without a usable amount leaves the cost unknown. Both hosts test cost extraction
-  against `tests/fixtures/provider-usage-cost.json`. [Player route cost pilot (#555)](../acceptance/2026-11-12-provider-cost-pilot-555.md).
+- **The reported cost** comes from the response's usage records. On a route that is not
+  on the caller's own provider key, each record contributes the larger of `cost` and
+  `cost_details.upstream_inference_cost`. On an own-key route (`is_byok: true`), each
+  record must supply both amounts and contributes their sum. When a response carries
+  several records, the largest counts. A malformed record, or a response without a
+  usable amount, leaves the cost unknown, never estimated. The curator applies the same
+  rule, and both hosts test it against `tests/fixtures/provider-usage-cost.json`
+  ([player route cost pilot (#555)](../acceptance/2026-11-12-provider-cost-pilot-555.md)).
 - **Exact sums.** Amounts are summed as decimals, never as floating-point numbers.
 - **Stop at the limit.** Before each HTTP attempt, a retry included, the host stops
   with reason `spend-limit` when the total has reached `spend_limit_usd`. A request
