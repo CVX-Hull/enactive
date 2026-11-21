@@ -21,8 +21,11 @@ and original package allowances remain here. Its receipt does not accept gamepla
 ## Frozen data
 
 Select one fresh canonical project-local directory under `.runtime/computer-sessions/`.
-Its manifest binds the exact clean source commit and SHA256 of all five driver
-inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`.
+Its manifest binds the exact clean source commit and SHA256 of six required inputs
+(`route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json` and
+`delivered-knowledge.json`). The five inputs other than `delivered-knowledge.json`
+are each at most 1 MiB. Create the knowledge file in the
+[export step](#freeze-delivered-knowledge), including for empty knowledge.
 It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-journal/1` store (`player_store`), player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
@@ -40,12 +43,9 @@ and inherited mechanical descriptors, not provider credentials.
 `route.json` uses current `player-host/8` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. It repeats the package's `spend_limit_usd` and carries
-`unpriced_request_usd` ([Spend limit](#spend-limit)). The selected route is OpenRouter /
-the pinned OpenAI provider / `openai/gpt-6.1-terra` medium, default service tier, no fallback
-([selected host configuration](player-host.md)). DeepSeek and other cheaper player
-models are future candidates under #25.
-Diagnostic or qualification packages may freeze another conformed route; their
-record names it, and it confers no selection.
+`unpriced_request_usd` ([Spend limit](#spend-limit)). Freeze the
+[selected route](player-host.md) for ordinary runs. Diagnostic or qualification
+packages may freeze another conforming route and name it in their record.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
 Freeze the player guide/current schema and ongoing user objective in context/prompt.
 Keep experiment quotas, ending reserves and host counts in operator files,
@@ -78,7 +78,8 @@ Freeze one explicitly selected route per finite admission, with no hidden fallba
 changed routing requires a fresh package.
 
 This is an engineering preparation step, outside the deciding player's tools.
-Create the five inputs above first. `target.json` is closed:
+Prepare the required inputs before hashing the package. Use the closed `target.json`
+shape
 `{"argv":["ABSOLUTE_PREPARED_WRAPPER"],"cwd":"ABSOLUTE_PROJECT_ROOT","env":{}}`.
 Normal wrapper preparation supplies the windowed project userdir. Optional target
 environment names are only PATH, LANG, SDL_AUDIODRIVER, SDL_VIDEODRIVER,
@@ -282,18 +283,14 @@ its own coherent preparation/launch exclusion rather than bypass this one.
 
 ## Start and close
 
-From the exact clean source checkpoint, with the selected credential injected only
-through its explicit environment name:
-
-```sh
-.venv/bin/python -m tools.campaign_run --run "$PWD/.runtime/computer-sessions/SELECTED_FRESH_PACKAGE"
-```
+Follow the [supervised launch procedure](campaign-supervision.md#freeze-launch-and-inspect)
+and open the gateway URL printed by the supervisor.
 
 The custodian takes shared exclusion and writes `started.json` before native/DB
 creation. Native inherits the exact shared-lock descriptor/socket, retaining
-exclusion for its own lifetime. `ready.json` gives the loopback viewer URL. The
-driver creates exclusive per-actor inputs/host traces and operator-only resource
-notes; `frozen.json` is `player-host-inputs/3`.
+exclusion for its own lifetime. The custodian writes `ready.json` after starting
+its service. The driver creates exclusive per-actor inputs/host traces and
+operator-only resource notes. `frozen.json` is `player-host-inputs/3`.
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
