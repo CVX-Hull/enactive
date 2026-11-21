@@ -13,7 +13,8 @@ and the `scope.game` and `scope.level` fields on each replacement.
 
 Merge, split, rename or deprecate types with `revise_types`. Give each resulting
 `curator-type/2` definition its `identity` and `reason`. When rewriting an existing
-name, assign all facts that were current under that name at the base version and stay current,
+name (if deprecating and re-adding a name, list `revise_types` before `add_type`),
+assign all facts that were current under that name at the base version and stay current,
 even if their type name stays the same. Publish each revision in a new version.
 
 File every current game fact in at least one article. World facts stand alone. Use one article per subject, choosing subjects

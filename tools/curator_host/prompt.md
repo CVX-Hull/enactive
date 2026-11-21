@@ -132,7 +132,8 @@ Operations (exact fields):
   `types` uses the type shape above. `assignments` maps current fact ids to their new type names.
   Assignments name facts that were current under a type in `names` at the base version and
   stay current. Reassign, replace or retire every fact whose type goes away. When you rewrite
-  an existing type name, including deprecating and adding it again, assign every surviving
+  an existing type name, including deprecating and adding it again (put the `revise_types`
+  deprecation before the `add_type` in `changes`), assign every surviving
   fact that had that type at the base version, even if its name stays the same. Software
   appends `{from, to, version}` to `retyped`. At most one revision fits in each submission.
 

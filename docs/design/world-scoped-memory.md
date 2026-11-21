@@ -320,7 +320,7 @@ and silence. A player's citation is evidence for the judge.
 
 The study withholds each unit in half the starts copied from the same sealed moment
 and compares the unit with itself. The
-[study design](../contracts/withholding-study.md#the-withholding-studys-design-withholding-study-draw1)
+[study design](../contracts/withholding-study.md#the-withholding-studys-design-withholding-study-draw2)
 defines the units, the draw and delivery exclusions. The
 [analysis](../contracts/withholding-study.md#the-withholding-studys-analysis-withholding-study1)
 defines blind judging and the outcome, which separates active lookup from passive

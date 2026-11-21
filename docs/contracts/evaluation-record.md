@@ -303,7 +303,7 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   The 12 [approved `campaign-run/10` sessions](../decisions/owner-decisions.md#eleven-version-ten-sessions-join-the-archive-index)
   use the same host, receipt, driver, terminal, handoff and player journal formats
   as current runs. The evaluator sets `labels.world` to null for archive versions.
-  The index also includes `spend-limit-run-555) under the
+  The index also includes `spend-limit-run-555` under the
   [“Add it to the index” decision](../decisions/owner-decisions-archive.md#index-the-spend-limit-check). The
   indexed session `522-held-out/computer-sessions/lh4a1` does not evaluate: its database
   cannot be opened in the read-only store, evaluating it is an error, and the sealed copy
