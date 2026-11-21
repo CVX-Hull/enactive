@@ -45,14 +45,14 @@ Its text equivalent is below.
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
 | Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
-| Run evaluator | Offline, versioned interpretive records and metrics with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
-| Curator | Sealed-trace workbench, sandboxed sessions and gate-only knowledge repository; frozen exports reach the player; no custody or live scheduler | [Curator and trace workbench](components/curator.md) |
+| Run evaluator | Interpretive records and metrics from retained evidence with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
+| Curator | Sandboxed trace sessions and a gate-only knowledge repository; frozen exports reach the player | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/10` package and reserves exclusion before launch. `OwnedTarget` keeps
+run package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -90,9 +90,8 @@ forwards spectator reads and receiver-verified Pause. It adds no player input
 producer or native custody. Supervision, host settlement and game outcomes stay
 separate; source fixtures do not qualify actual play or human attention.
 
-Fresh session stores live under `.runtime/computer-sessions/`. A selected
-`player-journal/1` store may span fresh native-child sessions. Old active formats
-stay inert; explicit data-only readers preserve the closed sealed archive.
+Fresh session stores live under `.runtime/computer-sessions/`. A selected player
+journal may span fresh native-child sessions.
 
 ## Action and recovery views
 
@@ -149,11 +148,9 @@ the application. [Pause procedure](operations/pause-timeout.md).
 ## Observation and deployment boundaries
 
 The supported deployment is a local Mac with a prepared windowed CDDA app and
-project userdir. Captures contain the actual default-renderer presentation and
-original geometry/time; repeated pixels remain valid. The native adapter sends
-bounded image bytes over its inherited socket. File publication is outside its
-callbacks; this does not promise resistance to upstream save I/O, PNG CPU or
-arbitrary OS hangs. The publication-stall cause in [#128](https://github.com/CVX-Hull/enactive/issues/128) remains unknown.
+project userdir. Captures preserve the actual presentation and its original
+geometry and time. The [native channel contract](contracts/computer-control.md#native-channel)
+defines the limits of keeping file publication outside the game callbacks.
 
 ## Game-family portability
 
@@ -222,23 +219,9 @@ Direct player finish is a claim, not saving or game acceptance.
 
 ## Coordinated change
 
-The main current formats (not an exhaustive list; the contracts own every field)
-are `computer-wire/1`, request/target/receipt `/2`,
-`computer-session/1`, `computer-operation/1`, `computer-source/1`,
-`player-journal/1`, `player-hint/1`, `player-handoff/1`, `player-host/8`,
-`campaign-run/10` and `delivered-knowledge/1`. Model-facing operation,
-error and transport envelopes are `player-computer-result/2`, `player-computer-operation/1`, `player-error/2`
-and `player-transport/2`; canonical operations/HTTP records are unchanged.
-The [host contract](contracts/player-host.md) and [campaign procedure](operations/campaign-run.md)
-own telemetry version 8, `player-driver/7`, `campaign-receipt/7` and `player-host-inputs/3`.
-The [evaluation contract](contracts/evaluation.md) owns `evaluation-record/1` and the
-tracked `dev-run/3` ledger and `run-metrics/1` snapshot; the
-[evidence procedure](operations/evidence-cleanup.md) owns `evidence-index/1` and its
-`shasum -a 256` manifests for the sealed raw-evidence store.
-The exact contracts own the complete fields.
-[Migration](operations/migration.md) rejects old stores before effects and preserves
-artifacts/saves as history. Rollback closes writers and selects a coherent earlier
-source/data deployment; mixed readers and replay are unsupported.
+Change producers and consumers together across the boundaries in the
+[contract index](protocol.md#contract-navigation). The [migration procedure](operations/migration.md)
+governs storage, preservation of evidence and coherent rollback.
 
 ## Change boundaries and verification
 

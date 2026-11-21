@@ -20,9 +20,7 @@ python3 tools/setup.py --venv
 
 No flags prints read-only status. The optional `.venv` uses the selected existing
 interpreter. [Requirements](../requirements.in) and the hashed
-[development lock](../requirements-dev.lock) pin runtime/check dependencies,
-including MCP, Pillow image decoding and the evaluation tools. The retired
-player-program runtime is not a current dependency.
+[development lock](../requirements-dev.lock) pin runtime and check dependencies.
 
 ## Install development controls locally
 
@@ -60,51 +58,38 @@ Installation needs network; checks never install dependencies.
 
 ### Install the generic gameplay host
 
-The current player host adapter, [Pi](../tools/player_host/README.md), implements the
-[player host contract](contracts/player-host.md) (`player-host/8`) and uses its own pinned npm lock:
+Install the selected player host adapter from its pinned npm lock.
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
 ```
 
-It loads explicit frozen provider/MCP/context files, not coding-agent settings,
-shell/file tools, personal sessions or global credentials. The selected finite
-route is OpenRouter / pinned OpenAI provider / `openai/gpt-6.1-terra` at medium
-effort. DeepSeek and other cheaper player models are future test candidates (#25).
-The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
-follow actual shared-pool failures, not automatic fallback. Freeze
-its actual endpoint tag, supported parameters, image peak, eviction block,
-`context_reserve_tokens` and configured
-prices before each allocation. No route/model fallback is supported. A selected
-route is not gameplay qualification or invoice evidence.
+For the pinned route, its credential variable and dedicated host configuration,
+see [player host operations](operations/player-host.md).
 
-Supply only the configured credential environment variable to the dedicated host;
-never write its value to files/argv/logs. MCP/native children receive no provider
-secret. On a Mac, the [finite-test supervisor](operations/campaign-supervision.md)
-can read the value from your own login-keychain item instead. Store the key once
-as a generic password (`security add-generic-password -s YOUR_ITEM -a "$USER" -w`
-prompts for it), then map the variable to that item in the checkout's git-ignored
-`.runtime/credentials.json`:
+Keep the provider key out of files, arguments and logs. On a Mac, the
+[finite-test supervisor](operations/campaign-supervision.md#freeze-launch-and-inspect)
+can read your login-keychain item. Store the key as a generic password
+(`security add-generic-password -s YOUR_ITEM -a "$USER" -w` prompts for it).
+Map the credential variable in the frozen `route.json` to your item in the checkout's
+git-ignored `.runtime/credentials.json`.
 
 ```json
-{"OPENROUTER_API_KEY": {"keychain_service": "YOUR_ITEM"}}
+{"YOUR_ROUTE_KEY_VARIABLE": {"keychain_service": "YOUR_ITEM"}}
 ```
 
-An exported variable takes precedence. The map holds only the item name, never
-the key; each operator keeps their own map and item name out of Git. A separate
-worktree needs its own copy of the map. The host rejects ambient OpenAI SDK logging/header/org/project overrides;
-clear those only for the dedicated invocation, without changing global profiles.
+Create this map in the worktree you run from.
 
 ## Configure the structured player tools
 
-Inspect the current schemas without creating a runtime:
+Inspect the current MCP schemas without creating a runtime.
 
 ```sh
 .venv/bin/python -m tools.configure_player_tools --describe
 ```
 
-The campaign driver creates each actor's current `player-adapter/2` and MCP
-configuration. For a separately selected actor configuration, the generator uses
+The campaign driver creates each actor's adapter and MCP configuration.
+For a separately selected actor configuration, the generator uses
 explicit project-local paths and refuses to overwrite the output:
 
 ```sh
@@ -181,12 +166,10 @@ The hosted check runs a profile as separate lane jobs; `--lane` runs one lane's 
 locally and is not a full pass.
 Checks do not compile the adapter or qualify actual game behavior.
 
-The optional `.githooks/pre-commit` runs the fast lane when explicitly enabled
-with `git config --local core.hooksPath .githooks`. It runs with the checkout's
-`.venv` or, in a git worktree, which has none, the main checkout's, and prints one
-summary line unless a command fails. It checks the working tree;
-inspect staged paths/diff separately before committing. Do not treat a partial
-working-tree check as evidence about a different staged candidate.
+Enable the optional fast-check hook with `git config --local core.hooksPath .githooks`.
+The hook checks the working tree and uses the current checkout's `.venv`, with
+the main checkout's `.venv` as a fallback. Inspect the staged diff separately
+before committing.
 
 ## Build metadata migration
 

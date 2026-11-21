@@ -6,9 +6,9 @@ status: active
 
 # Glossary
 
-Each entry says what a term means here; the linked page owns the exact rule. Where pages use one word for two things, the entry names both. "Proposed" marks
-a term from the [curated-player design](decisions/009-curated-player.md), which is
-not adopted.
+Each entry says what a term means here and links to its exact rule. Where a word
+has two meanings, the entry names both. "Proposed" marks a term for an unadopted
+part of the [curated-player design](decisions/009-curated-player.md).
 
 | Term | What it is | Owning page |
 | --- | --- | --- |
@@ -20,16 +20,16 @@ not adopted.
 | CI profile | The set of checks a pull request gets, chosen from its complete diff. | [CI profiles](workflows/ci-profiles.md) |
 | Claim | Anything the player asserts. It is fallible data and never grants custody or certifies a save. | [Memory and learning](components/memory-learning.md) |
 | Control | A test, check, runtime guard, review or procedure step kept to stop a failure. It is not computer control, the harness's input boundary. | [Controls](controls.md) |
-| Curator | A sandboxed coding agent that turns sealed run traces into curated knowledge in short sessions. It holds no custody. A curator runner that starts sessions over snapshots during play is built and tested offline only; no live run has used it. | [Curator](components/curator.md) |
+| Curator | A sandboxed agent that turns run trace evidence into curated knowledge in short sessions. It holds no custody. | [Curator](components/curator.md) |
 | Custodian | The one process that owns a run's game process, socket, lock, store and single input writer. | [Custody contract](contracts/computer-control.md#computer-operations-and-custody) |
 | Custody | Exclusive ownership of the game target and of the right to send it input. | [Run ownership](operations/mission-ownership.md) |
 | Deciding player | The model that reads the screen and chooses every game action. | [Player interface](components/player-interface.md) |
-| Delivered knowledge | The frozen file a run's player reads from the curator's store (`delivered-knowledge.json`, `delivered-knowledge/1`): one published version less any withheld units, with its index and coverage stamp. | [Context design](design/player-context.md#the-delivery-boundary) |
-| Development run | A finite run on a committed development checkpoint, made to learn about the implementation. It supports no acceptance claim. | [Development runs](development-runs.md) |
+| Delivered knowledge | A frozen export of the curator's published knowledge for the player. | [Context design](design/player-context.md#the-delivery-boundary) |
+| Development run | A finite run on a committed development checkpoint, made to learn about the implementation. | [Evidence workflow](workflows/evidence-cadence.md) |
 | Driver | The program that starts a player host for each actor, keeps the run's limits and verifies a handoff before it starts a successor. | [Player host contract](contracts/player-host.md) |
 | Ending reserve (finish reserve) | The part of each run limit held back so that play can end in order. When a limit falls to its reserve, the driver asks the player to finish up. | [Ending reserve](operations/campaign-run.md#ending-reserve-and-external-stop) |
 | Envelope | A dollar amount the owner sets for one study; the lead admits runs only inside it. Also: a route envelope is a host's frozen route settings, and a result or error envelope is a message wrapper. | [Budget delegation](operator-permissions.md#finite-gameplay-budget-delegation) |
-| Evaluator | Offline code that scores a run from its recorded frames and traces. Its values never reach the player and accept nothing. | [Evaluation contract](contracts/evaluation.md) |
+| Evaluator | Code that scores a run from its recorded frames and traces. Its values never reach the player and accept nothing. | [Evaluation contract](contracts/evaluation.md) |
 | Finish-up (orderly stop) | An optional, bounded request for the player to wrap up. It never delays Pause or a hard limit. | [External control](contracts/player-host.md#external-control) |
 | Grooming | A kind of curator session; the session design owns its inputs and responsibilities. | [Curator sessions](design/curator-session.md#admission-and-grooming) |
 | Handoff | An actor's transfer to a fresh successor within one run. The actor saves a bounded context and is sealed; the driver verifies this before a successor starts. | [Architecture](architecture.md#run-ownership-and-operator-takeover) |
@@ -37,7 +37,7 @@ not adopted.
 | Knowledge repository (knowledge store) | The curator's Git repository of facts, articles and system-maintained types, one per game. It is separate from the public player journal of calls, hints and referenced sources. | [Curator](components/curator.md) |
 | Lane | A separate kind of evidence, such as source tests, the compiled adapter or actual play. One never stands in for another. In the hosted check, a lane is also one job. | [Testing](testing.md), [CI jobs](workflows/ci-profiles.md#jobs-of-the-check) |
 | Lead, explorer, worker, reviewer | Roles in agent-assisted engineering. The lead owns design, integration and verification. Explorers only read, workers change named paths, and reviewers judge from a clean context. | [S-AGENT](standards/agents.md) |
-| Lineage | A chain of admissions that continue one survivor. Separately, a program's lineage is its chain of parent versions. | [Operator labels](operations/campaign-run.md#operator-labels) |
+| Lineage | A chain of admissions that continue one survivor. In the proposed program design, a program's lineage is its chain of parent versions. | [Operator labels](operations/campaign-run.md#operator-labels) |
 | Monitor | Proposed. A model slot that watches running programs and can only stop them. | [ADR 009](decisions/009-curated-player.md#monitor) |
 | Native lane | Evidence from running the compiled adapter against the real game. No fixture replaces it. | [Native acceptance](operations/native-acceptance.md) |
 | Outcome, leaf | An outcome is an issue whose child issues carry the work; it owns acceptance. A leaf is one issue for one independently reviewable result. | [Work items](workflows/work-items.md) |
@@ -48,10 +48,10 @@ not adopted.
 | Portable check | What `tools/check.py` runs without the native build or the game: structure, documents and the test suites. | [Testing](testing.md#select-checks-from-the-changed-responsibility) |
 | Practice instance | Proposed. A one-way copy of the game, forked between admissions, for trials that never become live state. | [ADR 009](decisions/009-curated-player.md#practice-instance-proposal-owner-decision-open) |
 | Probe | An offline evaluation question the lead writes from a real episode: at this boundary, a query about X should surface Y. It never reaches the player or the curator. Elsewhere, a probe is a small test call to an endpoint or a host. | [ADR 009](decisions/009-curated-player.md#fitting-and-evaluating-the-ontology-d4) |
-| Program | Proposed. A routine that acts in the actor's place under the curated-player design. | [Computer-control contract](contracts/computer-control.md#player-knowledge-and-executable-proposals) |
+| Program | Proposed. A curator-authored routine that acts in the actor's place under the curated-player design. | [Computer-control contract](contracts/computer-control.md#player-knowledge-and-executable-proposals) |
 | Receipt | A record of what actually happened: a delivery receipt for each input, and a run's final `receipt.json`. Neither accepts gameplay. | [Start and close](operations/campaign-run.md#start-and-close) |
 | Record | A dated record is a page under `docs/acceptance/` for evidence a diff cannot hold, such as a run or a study result. Historical player records are sealed evidence, not active authored knowledge. | [S-DOCS](standards/documentation.md#current-pages-records-and-decisions) |
-| Re-observation, rediscovery | A re-observation is the player seeing again something it already observed. It is a rediscovery when the fact was known before a boundary: a handoff or a new admission. | [ADR 009](decisions/009-curated-player.md#evaluation-and-studies) |
+| Re-observation, rediscovery | A re-observation is the player seeing again something it already observed. It is a rediscovery when the fact was known before a handoff or a new admission. The standing use measure has its own rediscovery definition. | [Curated-player design](decisions/009-curated-player.md#evaluation-and-studies), [standing use measures](contracts/evaluation.md#adjudication-and-the-standing-use-measures) |
 | Risk | A failure that can realistically happen within the project's scope of use. | [Risk register](risks.md) |
 | Run ledger | The tracked file `data/evaluation/runs.jsonl`: one row for each admission, with its attempts, time and spend. | [Evaluation contract](contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) |
 | Run package (frozen package) | A fresh directory whose manifest fixes everything one run uses, from source commit to spend limit. It is used once. | [Frozen data](operations/campaign-run.md#frozen-data) |
