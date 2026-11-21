@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Historical pilot record; supersede with new evidence rather than rewriting outcomes
 status: historical
 kind: run
 date: 2026-10-18

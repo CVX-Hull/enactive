@@ -1,9 +1,9 @@
 ---
 owner: lead
-review_trigger: Native launch, recovery, saved-character identity or campaign autonomy changes
 status: superseded
 scope: Unadmitted desktop-automation pickup recovery proposal
 replacement: docs/changes/017-native-direction-menu.md
+date: '2026-10-18'
 ---
 
 # Remove required human intervention from campaign recovery

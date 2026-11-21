@@ -20,13 +20,9 @@ S-WORK/S-EVIDENCE/S-DOCS. The full user outcome remains the definition of Done.
 | Integration checkpoint | A useful behavior composes end to end, or evidence identifies a concrete blocker; consolidate findings and current contracts | One cohesive independent review and appropriate portable profile/PR validation; broad source changes receive full regression before merge |
 | Formal acceptance and merge | Review the exact frozen candidate and retained run evidence; require the appropriate passed exact PR `controller` profile, full regression for broad source changes, required native/graphical outcomes and finding dispositions | The lead merges through existing main protection under the [standing delegation](../operator-permissions.md#engineering-decision-and-merge-delegation), without waiting for owner approval; Done/release waits for merged-main validation (the pull request's passed run on the tree main receives, plus main's structural checks; see [CI profiles](ci-profiles.md#protected-ci-profiles)) and applicable outcome evidence |
 
-For example, the supply-and-shelter checkpoint required useful
-navigation/replanning, supplies/needs, shelter/rest, genuine memory correction and
-unfinished Work, actual fresh player context, normal same-character save/new-child
-reload and final normal ending. The selected outcome belongs in its GitHub issue.
-An early menu failure is development evidence,
-not a reason to redefine success or publish a new acceptance package before trying
-again. Other iterations name their equivalent meaningful checkpoint in the issue.
+Each iteration names its meaningful checkpoint, the outcome it selects, in its GitHub
+issue. An early menu failure is development evidence, not a reason to redefine success
+or publish a new acceptance package before trying again.
 
 ## Gameplay as the primary feedback loop
 
@@ -67,7 +63,7 @@ Call count, API duration, cache hits and token cost remain diagnostic measures.
 Report configured API estimates and provider-returned charges separately. Record
 settled attempts without a usable charge as unknown. The
 [campaign procedure](../operations/campaign-run.md#spend-limit) defines the
-planning allowances, and the [owner manages OpenRouter billing](../operator-permissions.md#finite-gameplay-budget-delegation).
+planning allowances, and the [owner manages provider billing](../operator-permissions.md#finite-gameplay-budget-delegation).
 Include setup/review/rework burden and explicitly unknown labor when judging the
 whole workflow. No labor database, cost-saving quota or per-action approval
 ceremony is required.

@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-29
 scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
-review_trigger: Player-owned mission design; new relevant memory evidence; observer, engine or model changes; false-memory incidents; issue 26 research review
 ---
 
 # Memory and gameplay architecture assessment

@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Prospective 024 functional continuation; distinguish primitive capability failure from authority denial
 status: historical
-review_trigger: Actual failure classification, delivery uncertainty, resource needs or whole fit
 ---
 
 # Replan after confirmed non-delivery without restarting the mission

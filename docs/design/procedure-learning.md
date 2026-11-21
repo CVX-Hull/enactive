@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Procedure representation, reflection exchange, adaptation policy or source transfer changes
 status: historical
 date: 2026-10-29
 scope: Pre-cutover background archived on this date; not current executable policy or new research qualification

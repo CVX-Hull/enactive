@@ -2,7 +2,6 @@
 owner: lead
 date: 2026-10-22
 scope: Frozen campaign005 tactical failure, blocked normal save, accounting and exceptional closure
-review_trigger: Failure diagnosis, lifecycle correction or campaign qualification changes
 status: historical
 kind: run
 ---

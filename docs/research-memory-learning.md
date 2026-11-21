@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-29
 scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
-review_trigger: Before memory or learning implementation; new relevant evidence, model or observer changes, false-memory incidents; active research review under issue 26
 ---
 
 # Gameplay memory and learning from experience

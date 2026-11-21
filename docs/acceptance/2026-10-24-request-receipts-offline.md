@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Interpreting or repeating the request-refusal and timing experiment
 status: historical
 kind: change
 date: 2026-10-24

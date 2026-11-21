@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-18
 scope: Original finite Rosendo rehearsal admission and stopped prefix before prospective continuation
-review_trigger: Rehearsal scope, resource limits, control access, identity or survival evidence changes
 ---
 
 # Complete one autonomous first-day rehearsal
