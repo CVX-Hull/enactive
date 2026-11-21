@@ -7,8 +7,12 @@ status: active
 # Choosing a model for engineering work
 
 A lead on any [coding-agent host](coding-agents.md) reads this page to choose the model
-for a piece of engineering work. The choice is by kind of work, not by model family and
-not by role. It concerns the lead's own delegation only: the playing actor's, curator's
+for a piece of engineering work. The choice is the lead's judgment for each task
+([choosing the delegate](../standards/agents.md#the-leads-duties)): this page advises by
+kind of work, the [delegate profiles](delegate-profiles.md) say how each coding agent
+and model has done in this repository, and neither is a rule. No tool or check chooses a
+delegate from the table below, and the [delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent)
+starts whatever the lead names. It concerns the lead's own delegation only: the playing actor's, curator's
 and judges' models are frozen per run under the
 [player host contract](../contracts/player-host.md).
 
@@ -33,12 +37,15 @@ every row:
 One session's work as lead on a documentation leaf is in the
 [trial record](../acceptance/2026-11-19-antigravity-lead-trial-810.md). A row changes on our own evidence
 through a [matched run](#matched-runs-on-this-repositorys-leaves), the same leaf on two
-coding agents, not on a public board alone. Each attempt is a row of
-`data/evaluation/coding-agent-attempts.jsonl`.
+coding agents, not on a public board alone. Every delegated attempt on a code or review
+leaf, matched or not, is a row of `data/evaluation/coding-agent-attempts.jsonl`
+([reading the ledger](#reading-the-ledger)).
 
 ## Route by kind of work
 
-Every choice here is provisional. A cell names an effort only where a figure was read at
+Every choice here is provisional advice with its reason, for the lead to weigh with the
+task in front of it; a first choice is where to start thinking, not what must be used.
+A cell names an effort only where a figure was read at
 that effort; "not read" marks a setting chosen by judgment. Which changes get a review,
 and how many, is owned by [review](../workflows/review.md); this page only says which
 model to give it.
@@ -72,15 +79,17 @@ in `.agents/roles/`; each host has a thin wrapper that names the model and point
 | Worker | `worker`: Opus at High | `worker`: GPT-6.2 Sol at Extra-high | `worker`: alias `pro` |
 | Reviewer | `reviewer`: Opus at High | `reviewer`: GPT-6.2 Sol at Extra-high | `reviewer`: alias `pro` |
 
-These are defaults, not eligibility rules. The lead overrides the model for one task
-when the table above says so, and states the coding agent, model and effort it used in
-the pull request.
+These are what each host's own role file runs when the lead starts the role natively.
+They are not eligibility rules and not the lead's default choice: through the
+[delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent) the lead
+names the coding agent, model and effort for the task, and states them with its reason
+on the brief's Role line and in the pull request.
 
 - **Claude Code** reads the project's `.claude/agents/` ahead of a user's own
   definitions of the same name. The lead names another model for one task with the
-  delegation call's model override. The `reviewer` and `Explore` files have each run
-  as a sub-agent, on 20 November 2026 for pull requests #817 and #819; `locator` and
-  `worker` have not.
+  delegation call's model override. Sub-agents of all four roles ran in the one lead
+  session measured on 19 and 20 November 2026: 20 explorers, 6 reviewers, 4 workers and 1
+  locator ([token use](../acceptance/2026-11-20-coding-agent-token-use.md)).
 - **Codex** reads `.codex/agents/` in a checkout the user trusts. All four model
   selectors answered a one-word prompt on CLI 0.171.0, twice; the role files themselves
   were not exercised as sub-agents.
@@ -151,13 +160,28 @@ first choice is the model that role runs on in the lead's session.
 6. In the pull request that merges the chosen attempt, or in the lead's own pull request
    for the leaf when both are discarded, the lead adds one row per attempt to
    `data/evaluation/coding-agent-attempts.jsonl`, in the shape of
-   `schemas/coding-agent-attempt.schema.json`. The kind of work is the table's first
-   cell. `tests/test_coding_agent_attempts.py` refuses a row the reading rules below
-   cannot use.
+   `schemas/coding-agent-attempt.schema.json`, each with its `blind_preference`. The
+   kind of work is the table's first cell. `tests/test_coding_agent_attempts.py`
+   refuses a row the reading rules below cannot use.
 
-### Reading the ledger
+## Reading the ledger
 
-- **Count within one kind of work.** Wins and losses are counted for a pair of
+`data/evaluation/coding-agent-attempts.jsonl` holds one row for each delegated attempt
+on a code or review leaf: the worker, reviewer or explorer the lead chose, the reason
+it gave, and how the attempt went. The lead adds the row in the pull request the
+attempt served. The delegate call's `result.json` supplies the coding agent, its
+version, the model, the effort, the date, the wall time and how the start ended
+(`hand_back`); the lead supplies the reason, its own rerun of the acceptance check, the
+repairs it asked for, whether it merged or used the result, a reviewer's findings as
+dispositioned, and any false report. A row whose `blind_preference` is not null is one
+of a matched run's two attempts.
+
+- **Read single attempts as a record, not a score.** For one configuration (coding
+  agent, model and effort) in one role and kind of work: how often it handed back, how
+  often the lead's rerun passed without a repair, how long it took, and for a reviewer
+  how many findings were confirmed against how many rejected. The
+  [delegate profiles](delegate-profiles.md) summarize these.
+- **Count matched pairs within one kind of work.** Wins and losses are counted for a pair of
   configurations (coding agent, model and effort) within one kind of work, never across
   kinds. An attempt wins when its `acceptance` passed and the other's failed. When both
   passed, the one with `blind_preference` `preferred` wins, and `no_preference` is a

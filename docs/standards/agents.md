@@ -25,6 +25,21 @@ to this list.
   reviewers start from a clean context without the lead's conversation: the brief,
   written from the [brief template](#brief-template), is all they know. Parallelize
   reads.
+- **Choose the delegate for the task.** Which coding agent, model and effort a
+  delegated task goes to is the lead's judgment for that task
+  ([decision log](../decisions/owner-decisions.md#the-lead-chooses-its-delegate-for-each-task)).
+  It is not asked of the owner, not read off a table and not made by a program, and
+  nothing checks it. Before each delegation the lead weighs the task against the
+  [delegate profiles](../operations/delegate-profiles.md): how fully the brief pins the
+  design, how much code changes and how risky it is, whether the task needs the network
+  or the whole test suite, whether a reviewer must come from a different model family
+  than the author, what quota is left, and how the last attempts of this kind went. The
+  nearest delegate is not the default: every supported delegate is started the same way
+  ([starting a delegate](../operations/coding-agents.md#starting-a-delegate-on-any-coding-agent)).
+  The lead writes its choice and the reason on the brief's Role line and on the pull
+  request's `Models:` line, and adds a row for the attempt to the attempts ledger
+  ([reading the ledger](../operations/model-routing.md#reading-the-ledger)), so that
+  later choices rest on how earlier ones went here.
 - **Keep one writer per checkout.** Up to two implementation workers may write
   concurrently, each in its own project-local worktree, with non-overlapping named
   ownership and agreed interfaces. Each checkout has one writer. Workers report
@@ -79,7 +94,8 @@ not apply. The [environment facts](../operations/coding-agents.md#environment-fa
 are part of every worker's brief by reference.
 
 ```text
-Role:            explorer | worker | reviewer
+Role:            explorer | worker | reviewer, on the coding agent, model and effort
+                 the lead chose, and in one clause why that delegate for this task
 Issue:           the issue this serves, or "none" with the reason
 Goal:            one sentence: what is wanted and why
 Base, worktree:  the commit to start from and the worktree or branch to use

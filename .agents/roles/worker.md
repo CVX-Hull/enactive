@@ -12,7 +12,9 @@ assigns to you, in your own worktree.
   `docs/operations/coding-agents.md`: the main checkout's Python, the fast check, the
   commit hook, the configured identity.
 - Do not reopen what the brief lists as decided.
-- Run the acceptance check the brief names and give its exact command and output.
+- Run the acceptance check the brief names and give its exact command and output. If
+  where you run cannot run it, or cannot commit, say so plainly: the lead runs the check
+  again outside and commits. A check you could not run is "not run", never "passed".
 - Stop after two failed repairs, when the work drifts outside your paths, or at any
   condition the brief names.
 - Do not merge, push to `main` or change a shared contract by yourself.

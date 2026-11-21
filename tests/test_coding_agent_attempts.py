@@ -1,10 +1,12 @@
-"""The matched-run ledger (coding-agent-attempt/1) has the shape its reading rules on the routing page need.
+"""The delegated-attempt ledger (coding-agent-attempt/2) has the shape its reading rules on the routing page need.
 
-Each row is one attempt; the two attempts at one leaf from one base commit are a pair, read within the routing
-table's kind of work. The checks beyond the schema each protect the page's count of wins within one kind of work:
-a leaf with one or three attempts has no pair to count; a kind of work the table does not have, or two kinds in
-one pair, would split or misfile a count; and two blind preferences that do not complement each other mean the
-labels were mapped back wrongly. The check refuses such a row here rather than when a default is about to move.
+Each row is one delegated attempt. A row with a blind preference is one of a matched run's two attempts; the two at
+one leaf from one base commit are a pair, read within the routing table's kind of work. A row with no blind
+preference is a single delegation and needs no pair. The schema states each role's shape. The checks beyond it each
+protect the page's count of wins within one kind of work: a matched leaf with one or three attempts has no pair to
+count; a kind of work the table does not have, or two kinds in one pair, would split or misfile a count; and two
+blind preferences that do not complement each other mean the labels were mapped back wrongly. The check refuses
+such a row here rather than when a default is about to move.
 """
 from __future__ import annotations
 
@@ -38,7 +40,8 @@ def problems(rows: list[dict], kinds: set[str]) -> list[str]:
     for row in rows:
         if row['kind_of_work'] not in kinds:
             found.append(f"issue {row['issue']}: kind of work {row['kind_of_work']!r} is not a routing table row")
-        pairs[row['issue'], row['base_commit']].append(row)
+        if row['blind_preference'] is not None:
+            pairs[row['issue'], row['base_commit']].append(row)
     for (issue, _), pair in pairs.items():
         if len(pair) != 2:
             found.append(f'issue {issue}: {len(pair)} attempts from one base commit; a matched run has two')
@@ -56,16 +59,28 @@ def read(path: Path) -> list[dict]:
 
 
 def attempt(**changes) -> dict:
-    row = dict(schema='coding-agent-attempt/1', issue=900, kind_of_work='Bounded implementation from a written brief',
-               base_commit='b' * 40, coding_agent='first agent', coding_agent_version='1.0.0', model='model-one',
-               effort='high', date='2026-11-20', acceptance='passed', repairs=0, wall_seconds=1200,
-               blind_preference='preferred', outcome='merged', false_report=None)
+    row = dict(schema='coding-agent-attempt/2', issue=900, kind_of_work='Bounded implementation from a written brief',
+               base_commit='b' * 40, role='worker', coding_agent='first agent', coding_agent_version='1.0.0',
+               model='model-one', effort='high', reason='Matched run: the routing row\'s first choice',
+               date='2026-11-20', hand_back='handed_back', acceptance='passed', repairs=0, wall_seconds=1200,
+               blind_preference='preferred', outcome='merged', findings=None, false_report=None)
     return row | changes
 
 
+def single(**changes) -> dict:
+    """One delegation outside a matched run: no blind preference and so no pair."""
+    return attempt(reason='The written brief is small and fully pinned', blind_preference=None) | changes
+
+
+def review(**changes) -> dict:
+    return single(role='reviewer', kind_of_work='Review of code', acceptance=None, outcome='used',
+                  findings={'confirmed': 2, 'rejected': 1}) | changes
+
+
 def pair(**second) -> list[dict]:
-    return [attempt(), attempt(coding_agent='second agent', model='model-two', effort=None, acceptance='failed',
-                               repairs=2, blind_preference='not_preferred', outcome='discarded') | second]
+    return [attempt(), attempt(coding_agent='second agent', model='model-two', effort=None,
+                               reason='Matched run: the challenger the lead named', acceptance='failed', repairs=2,
+                               blind_preference='not_preferred', outcome='discarded') | second]
 
 
 KINDS = kinds_of_work(ROUTING.read_text())
@@ -87,6 +102,15 @@ def test_a_matched_pair_reads():
     assert problems(neither, KINDS) == []
 
 
+def test_a_single_delegation_reads_without_a_pair():
+    assert problems([single()], KINDS) == []
+    assert problems([review()], KINDS) == []
+    # A locator that could not be started: no version to report, nothing handed back, nothing used.
+    unstarted = review(role='locator', kind_of_work='Locating files and mechanical sweeps', coding_agent_version=None,
+                       hand_back='failed_start', outcome='not_used', findings=None)
+    assert problems([unstarted], KINDS) == []
+
+
 @pytest.mark.parametrize(('rows', 'message'), [
     (pair()[:1], '1 attempts from one base commit'),
     (pair() + [attempt(coding_agent='third agent')], '3 attempts from one base commit'),
@@ -98,7 +122,12 @@ def test_a_matched_pair_reads():
     ([attempt(date='20 November 2026')], 'does not match'),
     ([attempt(wall_time=3)], 'Additional properties are not allowed'),
     ([{k: v for k, v in attempt().items() if k != 'outcome'}], "'outcome' is a required property"),
-    ([attempt(schema='coding-agent-attempt/0')], "'coding-agent-attempt/1' was expected"),
+    ([attempt(schema='coding-agent-attempt/0')], "'coding-agent-attempt/2' was expected"),
+    ([attempt(schema='coding-agent-attempt/1')], "'coding-agent-attempt/2' was expected"),
+    ([review(outcome='merged')], "'merged' is not one of ['used', 'not_used']"),
+    ([single(findings={'confirmed': 1, 'rejected': 0})], "is not of type 'null'"),
+    ([review(role='explorer')], "is not of type 'null'"),
+    (pair(acceptance=None), "None is not of type 'string'"),
 ])
 def test_a_row_the_reading_rules_cannot_use_is_refused(rows, message):
     assert any(message in problem for problem in problems(rows, KINDS)), problems(rows, KINDS)
