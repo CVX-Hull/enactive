@@ -211,6 +211,23 @@ def select_units(lineage: str, sessions: list[str] | None, windows: list[Window]
     return spec, units
 
 
+def checked_upstream(upstream: str) -> str:
+    """The upstream, which may only be OpenRouter or a local http origin (for tests)."""
+    if upstream != OPENROUTER_ORIGIN and not re.fullmatch(r'http://(127\.0\.0\.1|localhost):[0-9]{1,5}', upstream):
+        raise ShadowError('--upstream may only be OpenRouter or a local http origin (for tests)')
+    return upstream
+
+
+def route_key(upstream: str, runtime_root: Path) -> str | None:
+    """The key the proxy presents upstream. A local test upstream never receives the operator's key.
+    Otherwise the campaign's own resolution: the variable, else the operator's keychain item mapped in
+    the git-ignored credentials map beside the runtime this run uses (not beside this code: from a
+    worktree, the code's own checkout has no .runtime/credentials.json). The value goes only to the proxy."""
+    if upstream != OPENROUTER_ORIGIN:
+        return LOOPBACK_KEY
+    return credential(KEY_VARIABLE, mapping=Path(runtime_root)/'credentials.json')
+
+
 def host_configuration(arm: Arm, prices: dict[str, Price], *, effort: str, max_requests: int, max_output_tokens: int,
                        request_timeout_seconds: int, wall_seconds: int, max_context_images: int,
                        context_image_block: int, workbench_timeout_seconds: int, budget_usd: float) -> dict:
@@ -451,9 +468,7 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         raise ShadowError(f'--out must be inside {runtime/"curator-shadow"}')
     if out.exists():
         raise ShadowError(f'{out} exists; every run writes a fresh directory')
-    upstream = args.upstream
-    if upstream != OPENROUTER_ORIGIN and not re.fullmatch(r'http://(127\.0\.0\.1|localhost):[0-9]{1,5}', upstream):
-        raise ShadowError('--upstream may only be OpenRouter or a local http origin (for tests)')
+    upstream = checked_upstream(args.upstream)
     evidence = Path(args.evidence_root) if args.evidence_root else runtime/'evidence'
     traces = {}
     for name in dict.fromkeys(session for _, session, _ in units):
@@ -644,14 +659,7 @@ def main(argv: list[str] | None = None) -> int:
         args.evidence_root = os.environ['ENACTIVE_EVIDENCE_ROOT']
     try:
         select_units(args.lineage, args.sessions, read_windows(args))  # refuse held-out and unsampled names before anything else
-        # The campaign's own resolution: the variable, else the operator's keychain item mapped in
-        # the git-ignored .runtime/credentials.json. The value goes only to the proxy.
-        # The map lives beside the runtime this run uses, not beside this code: from a worktree,
-        # the code's own checkout has no .runtime/credentials.json.
-        if args.upstream != OPENROUTER_ORIGIN:
-            key = LOOPBACK_KEY  # a local test upstream never receives the operator's key
-        else:
-            key = credential(KEY_VARIABLE, mapping=Path(args.runtime_root)/'credentials.json')
+        key = route_key(args.upstream, Path(args.runtime_root))
         if not key:
             raise ShadowError(f'{KEY_VARIABLE} is not set and not mapped to a keychain item (docs/setup.md)')
         run = run_shadow(args, key)
