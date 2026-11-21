@@ -19,7 +19,9 @@ project-local windowed target and original resources; retain failures.
    [finite-test supervision](campaign-supervision.md#freeze-launch-and-inspect).
    Qualify actual key, text and pointer effects during authentic useful
    player-selected work, using visible game effects as evidence.
-4. Exercise current memory/program/correction/context and fresh actor handoff through useful work when in scope. No staged bad routine, lead tactics or automatic success inference.
+4. When in scope, exercise delivered-knowledge reads and queries, hint submission,
+   original-result collection and handoff to a fresh actor during useful work.
+   Keep tactics with the player and assess outcomes from observed effects.
 5. Let the player save through visible controls, reload the same character in a fresh owned native-child session, and finish with a separate normal application exit. Preserve save-to-menu versus process-exit differences and player claims versus mechanical receipts.
 6. Record scope, interventions, original unknowns, failures, actual cleanup, unrun gaps and exact source/route/native bytes. Independent review and protected CI remain required for formal acceptance.
 
@@ -30,8 +32,8 @@ qualification remain explicit gaps.
 
 ## Passive skill acceptance
 
-Optional player programs receive actual image views and propose the same basic controls; their usefulness
-and corrections need authentic observed effects, not a passing evaluator or
-synthetic displacement. No helper result grants custody or certifies success.
+The current tool table has no player programs, so there is no passive skill lane to
+accept. Earlier program evidence stays bound to its implementation in the
+[production report](../acceptance/2026-10-29-computer-control.md).
 
 [Operations index](../runbook.md).
