@@ -24,7 +24,7 @@ Publications during an admission leave the running actor on its
 | [Sandbox](../../harness/curator/sandbox.py) | Default-deny Seatbelt profile and polling supervisor: writes only in the workspace's writable directories, one loopback port, and bounded memory, processes, time and size of the session's own files. It does not watch or protect the rest of the disk ([what is bounded](../operations/curator-hosts.md#what-the-sandbox-bounds)). [Research and residual risks](../research-curator-sandbox.md) |
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Providers](../../tools/curator_host/providers.py) (an adapter) | Model service adapters define routes, key and forwarding headers, request validation and conversion of reported usage to dollars. |
-| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions and compatible snapshot restores. |
+| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions and compatible snapshot restores, under the [session publication rules](../design/curator-session.md#gate-v0). |
 | [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Decision-window and citations-only views remove the entire journal JSON; only filtered in-window calls can carry hints. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | Draft lifecycle (open, stale, abandoned, promoted) and ephemeral sandboxed sessions whose close-out never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
@@ -74,14 +74,9 @@ after its last read as unknown ([runner source](../../harness/curator/runner.py)
 The gate implementation is authoritative for structural validation of `curator-submission/1`
 and `curator-fact/3`. [Gate source](../../harness/curator/gate.py),
 [frozen submission instructions](../../tools/curator_host/prompt.md#submission-contract).
-Every grooming publication files every current fact in at least one current article.
 
-To restore a compatible snapshot in an existing repository, run
-`python -m harness.curator.gate restore ROOT --game GAME --expected-base VERSION --target VERSION`.
-Under the writer lock, the gate checks the expected base and publishes the exact target
-tree with its coverage and provenance as a new version, or reports `unchanged` without a
-new tag when the trees match ([restore implementation](../../harness/curator/gate.py)).
-
-See the [session design](../design/curator-session.md#admission-and-grooming) for
-admission and grooming inputs and briefs, and [host operations](../operations/curator-hosts.md)
-for adapter configuration and the zero-spend stand-in lane.
+The [session design](../design/curator-session.md#admission-and-grooming) owns what
+admission and grooming sessions read and do, their briefs and publication rules, and
+the [operator restore](../design/curator-session.md#minimum-first-slice-operator-restore)
+of a compatible snapshot. [Host operations](../operations/curator-hosts.md) owns adapter
+configuration and the zero-spend stand-in lane.

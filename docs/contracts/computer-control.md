@@ -282,8 +282,9 @@ which have no route into the custodian, the player context or any input.
 then returns `computer-pause/1` with `session` and original `stop` facts. It never
 waits for any projection, executor/application/database lock or prior status. The
 supervised gateway takes `{"reason": "loop" | "fault" | "spend" | "other"}`, records the
-reason in its terminal record and forwards `{}` here unchanged, so the custodian never
-sees a reason. A delayed request can stop a replacement custodian; this emergency
+reason in its terminal record (`pause_reason`; a missing or unknown reason is recorded as
+`unspecified`, and the stop is never refused over it) and forwards `{}` here unchanged,
+so the custodian never sees a reason. A delayed request can stop a replacement custodian; this emergency
 meaning is explicit. Attribute confirmation to the response's actual session, not a
 stale page/click. The page retains one last identified Pause receiver and its monotone
 stop facts. A receiver outside the current/previous view is named explicitly, without
