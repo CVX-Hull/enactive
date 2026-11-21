@@ -24,7 +24,64 @@ their numbers for latency and delivery counts.
 | `python -m tools.memory_measure` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The memory measure. `packets use` and `packets blind` build packets for model judges from sealed admissions and a `judged-facts/1` file, cut to a token budget; `events` validates a judge's answers into `judge-events/2`; `agreement` adjudicates two judges with a third on disputes; `measure` reports the standing use measures (`memory-use/1`). `packets annotate` and `items` build a matched list of facts two annotators saw. `anchor packets`, `anchor events` and `anchor report` re-judge the measure gate's owner-labelled pairs with its frozen prompt; `prompt-check packets` and `prompt-check report` compare the first two judges' agreement on frozen stretches before and after a prompt change. `simulate-withholding` sizes and prices withholding within each start (`withholding-simulation/1`); `pilot` writes the withholding pilot's unit-level analysis (`withholding-pilot/1`). It calls no model and spends nothing; see [judge events](#judge-events-judge-events2). |
 | `python -m tools.process_measures` | files under `.runtime/memory-measure/<run>/`; text, or `--json` | The game-neutral process measures: `milestones packets` and `milestones events` freeze each admission's milestones; `packets`, `events`, `agreement` and `measure` judge windows and report `process-measures/2`. It calls no model and spends nothing; see [process measures](#process-measures-process-measures2). |
 | `python -m tools.memory_reads` | text, or `--json` | For sealed historical traces, per memory read (`player_memory_query`, `player_memory_read`, `player_memory_context`) in `player-host` traces: the records returned, whether the reading actor already held each, each record's age, and the actor's calls before and after, with later calls that type a record's words, fetch a source it cites or name it marked as references. It lists and counts; it does not judge use. |
-| `python -m tools.memory_screen_checks` | text, or `--json`; `schedule` writes `curator-coverage-schedule/1` | Four subcommands for the [context design](../design/player-context.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options; `--coverage` is `steady`, `sessions` or `schedule`, and `--coverage schedule --schedule FILE` replays one run's recorded covered prefix in place of the lag rows ([replaying a recorded schedule](../design/live-curator-integration.md#replaying-a-recorded-schedule)). Its `recorded` row is from the traces; every other row is simulated, not measured. `schedule RUN [--output FILE]` (a FILE outside RUN): that run's covered prefix from `curator-runner/polls.jsonl` and the final `status.json`, as a schedule. |
+| `python -m tools.memory_screen_checks` | text, or `--json`; `schedule` writes `curator-coverage-schedule/1` | Four subcommands for the [proposed coverage-gated cut](../design/coverage-gated-context-cut.md). `store`: every published version of a curator knowledge repository, read from the repository's loose objects without a Git process: its session, its facts and articles (all and current) and bytes, and the facts whose text matches a pattern. It reads `curator-knowledge/2` repositories of `curator-fact/3` records only and refuses any other, so the sealed stores of the memory screen's gates are not read. `replay`: for a known loss, the request that returned the frame at which play needed the fact, when the player's record was written, and when a briefing or a snapshot difference would first have shown it. `cut`: a simulation of the design's cut over the recorded request sequences for assumed curator lags, with tokens per turn and the marks as options; `--coverage` is `steady`, `sessions` or `schedule`, and `--coverage schedule --schedule FILE` replays one run's recorded covered prefix in place of the lag rows ([schedule replay](#runner-records-and-schedule-replay)). Its `recorded` row is from the traces; every other row is simulated, not measured. `schedule RUN [--output FILE]` (a FILE outside RUN): that run's covered prefix from `curator-runner/polls.jsonl` and the final `status.json`, as a schedule. |
+
+## Trace projection
+
+The [projector](../../harness/trace/projection.py) writes `trace-projection/3`.
+The manifest lists SHA-256 digests of the projected payload files, the exclusions
+and one entry per session. Each entry has a unique directory `name` and unique
+sealed `session_id`, actor and handoff lists, and nullable `world`, `lineage`
+and `admission` labels.
+
+The projector reads the run's `manifest.json` and `watch-start.json` directly.
+It checks both session IDs against the store and the manifest bytes against the
+SHA-256 in the `campaign-watch-start/4` record. A verified `campaign-run/10`
+manifest supplies lineage and admission together and leaves world null. A save
+path supplies no world label. Missing or invalid evidence leaves all three labels
+null. `label_check` is `manifest-schema` for a package file, schema or label error,
+`manifest-session` for a package session mismatch, or `supervisor-digest` for a
+launch-record or digest error. `label_error` gives a fixed explanation. Both
+diagnostics are null on success.
+
+| Payload | Fields or contents |
+| --- | --- |
+| Frames and per-actor steps | Verified PNGs. Each step records `seq`, `operation_id`, `kind`, `created_wall`, allowlisted `actions` (including wait duration), `status` and `frame`. |
+| Per-actor tool calls | `tool`, `wall_time`, arguments allowlisted for that tool, and named outcome fields. Refused and unfinished calls carry their respective flags. |
+| Actor inputs and outputs | Prompt, working guide and final report when present, plus allowlisted sealed handoff fields. |
+| Optional store | Historical `memory.json` or current `journal.json`, as described by the [evidence readers](../components/curator.md#projection-and-evidence-readers). |
+
+The [curator window](../../harness/curator/window.py) exposes the directory name,
+world, lineage, admission and both diagnostics by sealed session ID through
+`positions(...).sessions` or `session_labels(manifest)`. A frame position has
+`session`, `actor`, `step` and `order`.
+
+## Runner records and schedule replay
+
+Under `curator-runner/`, `examined.jsonl` records a session's start and end, its
+actor and step range, both operation endpoints on the start row, and coverage at
+each boundary. The end row gives the outcome and whether the cursor advanced.
+`versions.jsonl` records the publication interval, stamp and restore information.
+`polls.jsonl` and terminal `status.json` supply the recorded schedule. The
+[runner](../../harness/curator/runner.py) defines the record shapes and the
+[curator component](../components/curator.md#publication-and-coverage) defines coverage.
+
+For frame age, match the evaluator's operation by ID and use the source's
+`received_wall` in the snapshot store. A step without a frame has no frame age.
+A fact's [`seen` position](../design/world-scoped-memory.md#the-format-curator-fact3)
+gives sighting order.
+
+The [schedule reader](../../tools/memory_screen_checks.py) joins the recorded
+prefix to operation-creating calls in the sealed host log without opening the session store. Retries count as one
+player request. A prefix covers a request once it includes the last operation
+that request created. It covers all requests of earlier actors. An unplaceable
+change is omitted, except that an unplaceable restore clears coverage.
+
+An advance applies to requests starting strictly after the row that shows it.
+This may be later than publication. A newly observed restore applies at the preceding row's time
+(or its own time for the first row), including requests that start at that time.
+A request without a start time inherits the previous request's coverage for its
+actor, initially zero.
 
 ## Judge events (`judge-events/2`)
 

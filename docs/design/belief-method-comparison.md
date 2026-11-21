@@ -31,7 +31,7 @@ justified verification and avoidable lookup.
 
 Targeted retrieval/read date: **16 November 2026**. These are foundational mechanisms,
 not a new SOTA survey or evidence of CDDA benefit. Earlier agent-memory evidence and
-its limitations remain in [the curated-memory review](../research-curated-memory.md).
+its limitations remain in [the review of belief under conflict](../research-belief-under-conflict.md).
 
 | Source and read scope | Applicable idea | Limit in our system |
 | --- | --- | --- |

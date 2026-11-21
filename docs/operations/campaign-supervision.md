@@ -53,7 +53,7 @@ spending or new admission. General unattended operation remains unqualified.
    or Pause. The [recorded-result contract](../contracts/spectator-view.md#recorded-curator-results)
    owns bounds, source states and snapshot identity.
 
-   Add `--curator-runner CONFIG` to run the [curator runner](../design/live-curator-integration.md#who-starts-a-session-and-when)
+   Add `--curator-runner CONFIG` to run the [curator runner](../components/curator.md#runner-windows)
    beside play, with a `curator-runner-config/1` file
    ([`tools/curator_host/live_runner.py`](../../tools/curator_host/live_runner.py) states its fields).
    The supervisor then creates `curator-read.lock` and the runner's directory

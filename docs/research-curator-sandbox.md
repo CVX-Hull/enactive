@@ -1,15 +1,16 @@
 ---
 owner: lead
-review_trigger: Prospective gate design or evidence, a change to the isolation boundary, a macOS or host update, or an escape-suite failure
+review_trigger: A change to the isolation boundary, a macOS or host update, or an escape-suite failure
 status: active
 date: 2026-11-08
-scope: ADR 009 research on project-local sandbox mechanisms on this Mac, session costs and resistance to gate gaming
+scope: ADR 009 research on project-local sandbox mechanisms on this Mac, session costs and residual risks
 ---
 
 # Curator sandbox
 
 This page compares mechanisms for [ADR 009's isolation boundary](decisions/009-curated-player.md#isolation)
-and asks how a gate that scores submissions on later traces can resist gaming.
+and records their residual risks. The open question about scoring submissions on later
+traces is in [gate gaming](research-gate-gaming.md).
 
 Search and retrieval date: **2026-11-08**. Conclusions whose newest support predates
 2025-05-08 are flagged *stale*. Host: macOS 27.2 (26B123), Apple silicon. This page
@@ -42,7 +43,6 @@ Two caveats:
    against a local proxy, with memory off and no instruction files?
 3. How well do coding agents work in sandboxed ephemeral workspaces? What does a
    session cost in tokens and cold start?
-4. How do agents game pass/fail gates, and which gate designs resist it?
 
 **Foundational sources.** The brief named Dennis and Van Horn (1966) and Saltzer and
 Schroeder (1975). Neither was retrieved or read. They frame the design
@@ -122,30 +122,6 @@ No primary source measured a coding agent in a confined ephemeral workspace.
   [shadow-session record](acceptance/2026-11-08-curator-shadow-454.md) measures first-request tokens and latency for its configuration.
 - **Local startup.** The first host reached a local stand-in in under 0.25 s (L13).
 
-## Gate gaming
-
-The findings (S21 to S26, all 2025-06 to 2026-06, mostly preprints with single
-configurations) are:
-- **Agents exploit visible tests**, and the gap to hidden tests grows with task size.
-  For one host and model, SpecBench reports 43–48 points (S24).
-- **Test editing is the main channel** (S21, S23). Special-casing and reading the
-  scorer follow (S22).
-- **"Don't cheat" prompts barely help** (S22).
-- **Resubmission with feedback raised cheating**, and an explicit "cannot satisfy"
-  option cut it for some models but less for others (S21).
-- **Every detector missed cases**, whether hidden tests, a model judge or file-edit
-  detection (S21, S23).
-
-**Hypotheses for the prospective gate.** The sources do not test a gate that scores
-knowledge or programs on later traces.
-- Score only gate-owned tests the curator cannot see.
-- Flag any change to existing tests mechanically.
-- Return coarse diagnostics, never held-out content.
-- Back off resubmission.
-- Offer a "cannot satisfy" exit in the submission manifest.
-- Combine held-out tests, an independent transcript review and a diff check rather
-  than trusting one.
-
 ## Sources
 
 Read scope: FT full text through the fetch tool; SS stated sections; AB abstract
@@ -173,12 +149,6 @@ Read scope: FT full text through the fetch tool; SS stated sections; AB abstract
 | S18 | Smékal, arXiv 2608.25399v1 | 2026-08-26 | AB + intro | Token-spend spread (Kimi K3, 2,700 runs) | PP, SR |
 | S19 | Vats and Golev, arXiv 2607.22585v1 | 2026-06-08 | AB + intro + related work | Harness effect on tokens per solved task | PP, vendor-affiliated |
 | S20 | Anthropic, "Manage costs effectively" | Undated | FT | Cache-miss behaviour; costs are client estimates | V |
-| S21 | Zhong, Raghunathan and Carlini, "ImpossibleBench", arXiv 2510.20270 | 2025-10-23 | FT (first 100k of 113k chars) | Cheating channels and mitigations | PP |
-| S22 | METR, "Recent frontier models are reward hacking" | 2025-06-05 | FT | Reward-hack rates; prompts barely help | Blog |
-| S23 | "EvilGenie", arXiv 2511.21654v2 | 2026-05-17 | FT | Detector miss rates | PP |
-| S24 | "SpecBench", arXiv 2605.21384v1 | 2026-05-20 | FT | Visible-versus-hidden test gap | PP, SR |
-| S25 | Qwen Team, "The Verification Horizon", arXiv 2606.26300v2 | 2026-06-29 | SS | Trajectory monitor in RL training | PP, vendor |
-| S26 | Lodkaew et al., arXiv 2606.07379v2 | 2026-06-08 | AB + figure 1 | Capped-score detection idea | PP |
 
 S17 (the second host's security pages) held almost no detail and supports nothing.
 

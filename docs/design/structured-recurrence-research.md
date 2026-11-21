@@ -32,7 +32,7 @@ enrollment, context comparisons and acquisition across waking periods.
 
 Research cutoff and primary-source retrieval: **16 November 2026**. This is a mechanism
 proposal, not a new literature leaderboard. The prior [representation synthesis](../research-memory-representations.md),
-[curated memory](../research-curated-memory.md), [programs](../research-curated-programs.md)
+[curated memory](../research-curated-memory.md), [belief under conflict](../research-belief-under-conflict.md), [programs](../research-curated-programs.md)
 and [multiple-timescale review](../research-multirate-agents.md) supply the broader corpus.
 
 The [representation experiments](../acceptance/2026-10-18-memory-representations.md)
@@ -98,7 +98,7 @@ Measure update freshness in decisions, wall time and game time, with coverage
 and version. A coverage stamp records what was read. Applicability still
 depends on the fact and its context. Preserving recent player turns lets the
 player continue while the curator works. The
-[context cut proposal](player-context.md#3-one-cut-tied-to-what-the-store-covers)
+[context cut proposal](coverage-gated-context-cut.md#the-cut)
 is independent of the comparison.
 
 Within-admission research depends on [live memory integration (#664)](https://github.com/CVX-Hull/enactive/issues/664)

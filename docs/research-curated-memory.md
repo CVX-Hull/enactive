@@ -2,11 +2,11 @@
 owner: lead
 status: active
 date: 2026-11-08
-scope: Primary-source synthesis for ADR 009 on agent memory, concurrent consolidation, belief under conflict, ontology induction and evaluation, and oversight interfaces
-review_trigger: Decisions on player context, belief, ontology or spectator methods, or new evidence that changes a recommendation
+scope: Primary-source synthesis for ADR 009 on agent memory, concurrent consolidation, ontology induction and evaluation, and oversight interfaces
+review_trigger: Decisions on player context, ontology or spectator methods, or new evidence that changes a recommendation
 ---
 
-# Research synthesis for ADR 009: memory, belief, ontology and oversight
+# Research synthesis for ADR 009: memory, ontology and oversight
 
 The literature search cutoff is **2026-11-08** (America/New_York). The 18-month
 recency line (S-EVIDENCE) is **2025-05-08**. Conclusions whose newest supporting
@@ -22,7 +22,8 @@ cutoff 2026-10-18; Kaelbling et al., Jøsang 2013 read by an agent, BeliefMem,
 provenance semirings, temporal databases, ATMS, information bottleneck). Those
 papers are cited by reference only where this page relies on them; nothing below
 re-reviews them. Neither earlier page covered measured consolidation lag, ontology
-induction, or oversight interfaces.
+induction, or oversight interfaces. The [belief review](research-belief-under-conflict.md)
+reports the evidence on conflict from the same search.
 
 ## Brief and method
 
@@ -31,17 +32,14 @@ induction, or oversight interfaces.
 names it.
 - Agent memory: write and retrieval policies; typed versus unified stores; what has been measured about when agents should write, what to retrieve, and whether typed schemas help.
 - Concurrent consolidation: concurrent or background memory consolidation (a separate process curating memory while an agent acts): designs and measured effects, including lag and cost.
-- Belief under conflict covers subjective logic, Bayesian and Dempster-Shafer fusion, source reliability, staleness, opinion pooling, calibration and how to test the choice offline. The production choice is open under the [decision to compare belief representations on matched cases](decisions/owner-decisions.md#compare-belief-representations-on-matched-cases).
 - Ontology induction and evaluation: ontology/schema induction and evaluation (including by LLMs): ontology quality measures, grooming/merging of similar types, utility versus complexity.
 - Oversight interfaces: oversight interfaces for human supervision of autonomous agents: what operators need to see, measured effects.
 
 **Foundational sources the brief named** (ADR 009 research-agenda rows): Soar/ACT-R,
 Tulving, McClelland et al. 1995, Jøsang, Dawid and Skene 1979, Kaplan and Meier 1958,
 Gelman's hierarchical models, Zadeh's critique of Dempster's rule, Rissanen, Krippendorff,
-Fellegi and Sunter, Sheridan, Endsley 1995. The 8 November search read stated sections
-of Jøsang's fission paper on cumulative and averaging fusion (S16). The 16 November
-recheck covers selected sections of the sources named under belief and in the source
-list. Unread foundations support no conclusion.
+Fellegi and Sunter, Sheridan, Endsley 1995. The [belief review](research-belief-under-conflict.md#brief-and-method)
+gives the read scope for the fusion sources. Unread foundations support no conclusion.
 
 **Search queries (2026-11-08).** (1) LLM agent memory write policy, retrieval policy,
 long-horizon benchmark, typed versus unified; (2) asynchronous background memory
@@ -55,10 +53,7 @@ discovery, Dawid-Skene, source reliability without ground truth; (10) LLM entity
 resolution, codebook, Krippendorff alpha; (11) Endsley 1995; (12) subjective logic
 Beta mapping, cumulative fusion, critique; (13) MDL/utility-versus-complexity schema
 induction; (14) multi-agent supervisor dashboards, human-on-the-loop timeliness; (15)
-**citing-work search** on Jøsang's fusion operators (cumulative/averaging fusion,
-empirical comparison against Bayesian/Dempster, 2025-2026). Query 15 found no 2025-2026
-empirical comparison; the newest relevant primary text read is a 2024-12 preprint
-(S25, revised 2025-03-28, **RECENCY**).
+[citing work on fusion operators](research-belief-under-conflict.md#brief-and-method).
 
 **Read-scope honesty.** The retrieval tool returns text passed through a small
 summarizing model, not raw files. "Stated sections via extractor" means the paper's
@@ -110,7 +105,7 @@ abs-page v1 date is used. No game knowledge was used as evidence anywhere in thi
   read by index" is learnable; no evidence it beats a plain retrieval policy at
   matched budget.
 - *Memory stale-trust.* Over-trust of stale memory (S10, S11) is covered under
-  [belief under conflicting observations](#belief-under-conflicting-observations).
+  [belief under conflicting observations](research-belief-under-conflict.md#belief-under-conflicting-observations).
 - *Typed versus unified.* No source found a controlled comparison of a typed store
   against a flat store with the retriever, backbone and token budget held fixed.
   Closest: PlugMem (S08, v1 2026-02-06, first 100k of 187,298 chars) uses episodic, semantic and
@@ -188,7 +183,7 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
    (it matched the leading accuracies at about 1/40 of the wall time), not as evidence
    it is best. The only
    defensible argument for typing is the epistemic core's explicit supersession and
-   provenance fields ([belief under conflicting observations](#belief-under-conflicting-observations)),
+   provenance fields ([belief under conflicting observations](research-belief-under-conflict.md#belief-under-conflicting-observations)),
    not domain types.
 4. Budget for **format-failure** in curator-written structure on the model actually
    used (S05), and count it as a gate-reject cause.
@@ -244,176 +239,6 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
    the ADR's "what it supersedes") rather than overwriting.
 4. The [curator shadow sessions](acceptance/2026-11-08-curator-shadow-454.md) measure
    lag and cost. Effects on acting-agent outcomes at matched cost lack evidence.
-
-## Belief under conflicting observations
-
-The production representation remains open. The
-[belief comparison decision](decisions/owner-decisions.md#compare-belief-representations-on-matched-cases)
-calls for replaying matched cases with source-linked qualitative revision and a
-specified numerical belief model.
-
-**Evidence on LLM-agent belief and conflict.**
-- *Bayesian updating with reliability* (S09, Nous; v1 2026-06-20 / v2 2026-07-16;
-  single author; stated sections via extractor). Per entity-attribute categorical
-  posterior; reliability r from an LLM reading epistemic markers. Three separate
-  results, not to be merged:
-  (a) **Real data (LoCoMo, 385-question subset):** the Bayesian update is described
-  as "effectively inert": full engine 69.62 judge / 36.77 token-F1 versus
-  last-write-wins 72.46 / 36.27. Bayesian updating adds little over latest-write-wins
-  on conversational data. Also a 27.5-point gap between strict token-F1 and
-  LLM-judge scores on identical outputs, and the A-MEM and MemGPT baseline scores come
-  from another paper on a different backbone (gemini-2.5-flash here), so comparison with
-  those is indicative.
-  (b) **No-LLM belief-layer micro-benchmark:** with constant reliability LWW beat the
-  Bayesian rule (73.5 vs 67.1); with varying reliability Bayesian 100, LWW 74.3,
-  frequency 48.2.
-  (c) **60-scenario, five-regime synthetic benchmark** (the "realistic" macro averages
-  only the first four regimes and excludes the adversarial one): reliability-aware
-  100, LWW 67, frequency 46, append-and-retrieve 90; in the adversarial regime
-  reliability-aware scored **0**, versus LWW 42, frequency 50, append-and-retrieve 17.
-  Stated limits: the confidence-correctness link is built in for four of five regimes,
-  reliability estimates are near-binary and rubric-based, provenance tiers in the
-  poisoning defense are oracle-assigned, entropy decay is never exercised by the real
-  benchmark, one backbone, **no calibration metric reported**. Provenance-capped
-  poisoning defense: 0% attack success against 100% for LWW in a simulation (400
-  trials per cell), but a legitimate low-tier correction cost accuracy (100% to 54%).
-- *Detection is not application* (S10, STALE, v1 2026-05-07 only, stated sections
-  via extractor: first 100k of 186,845 chars plus an appendix read from 100k onward;
-  the CUPMem results table sits in the first part, the unread middle was not used). 400
-  expert-validated, LLM-generated implicit-conflict scenarios and 1,200 queries; best
-  model 55.2% overall; one model detected stale state 92.0% (Type I) but rejected a
-  premise built on the stale state only 30.0%; propagated (Type II) conflicts harder.
-  A write-time adjudication step (KEEP, STALE, REPLACE, UNKNOWN) plus propagation-aware
-  search plus constrained readout lifted GPT-4o-mini from 8.7% to 68.0% on the
-  authors' own benchmark, with an LLM judge (95.8% agreement with humans), a
-  predefined state schema, one-shot transitions only. Vendor-neutral but
-  **author-built benchmark and author-built fix**; not independently replicated.
-- *Over-trust of stale memory* (S11, extractor). Synthetic frozen benchmark, 300
-  templated scenarios, Qwen3 0.6B to 8B plus Llama; stale-value reliance 0.92 to 1.00;
-  a stale note dated newer fooled larger models more; exposing metadata helped at every
-  size (+0.30 [0.17, 0.42] at 0.6B, +0.28 at 1.7B, +0.53 at 4B, +0.54 at 8B), more
-  at the larger sizes. The **pre-resolved arm is an oracle that removes the stale item
-  entirely** (gains +0.46 to +0.63, accuracy 0.95 to 1.00); it shows what *correct*
-  resolution is worth, not that any real resolver achieves it. An external check on
-  RGB and MisBench reproduced stale reliance on RGB (Delta-memory negative at 4B and
-  8B) and sat near the floor on MisBench because models do not know the facts.
-  Exploratory factorial analyses, action-scored with no judge, measured at
-  consumption time only; one author team (PayPal AI), v1 only (2026-09-01).
-- *LLM as truth-discovery component* (S15, extractor). On three tabular fusion
-  datasets GPT-4o-mini beat majority vote, source-reliability voting, a Bayesian latent
-  truth model and a domain-aware method (F1 0.78 to 0.91 vs best baseline 0.70 to 0.82),
-  but another model scored 0.3362 on one dataset, single runs, no variance, possible
-  memorization of public data; the LLM method did not model source reliability
-  explicitly. Fusion of web tables, not of agent observations.
-- *Contradiction operators* (S12): see concurrent consolidation above; four write-time operators (LWW,
-  evidence-weighted merge, await-confirmation, per-rule policy) with isolation
-  preconditions; evidence thin and underpowered.
-
-**Evidence on formalisms.**
-- *Subjective logic.* Jøsang's fission page (S16, arXiv v1 2007-12-07, working paper,
-  stated sections via ar5iv extractor, **RECENCY**) states: cumulative fusion is for
-  independent evidence (e.g. observations from disjoint time periods; non-idempotent),
-  averaging fusion is for dependent evidence (idempotent, non-associative); fission
-  removes a contribution. The page does not discuss double counting explicitly. A
-  citing-work search (query 15) found one primary text that evaluates these operators
-  empirically, S25 (Bezirganyan et al., arXiv 2412.18024, **v1 2024-12-23, v2
-  2025-03-28, published at AISTATS 2025 (PMLR 258), RECENCY**; stated sections via
-  extractor): multimodal
-  deep-learning classifiers on five small datasets, 10 seeds, in which the fusion
-  operators' behavior under conflict is compared. It reports, as the authors' own
-  analysis, that a Dempster-style constraint fusion can assign full confidence to a class
-  both sources considered unlikely, that cumulative fusion treats views as independent
-  so uncertainty falls when a view is added even under conflict, and that averaging
-  fusion is non-associative and does not raise uncertainty for conflicting views.
-  It proposes discounting by pairwise conflict and reports better conflict detection;
-  the size of that gain per dataset was not verified here.
-  This neural multimodal classification study supports testing a fusion operator's
-  independence assumptions and its behavior under conflict. Its domain does not
-  establish utility for agent memory. BeliefMem uses noisy-OR merging.
-- *Dempster-Shafer.* I could not read Zadeh's 1979 memorandum (scanned PDF). S25
-  supplies a neural-network example of the same pathology (above). Snippets only, no
-  conclusion: the controversy is whether the conflict-normalizing rule is flawed or the
-  example's modelling is (Haenni). No source read supports choosing Dempster's rule.
-- *Source reliability, staleness, pooling and calibration.* Dawid–Skene and
-  Kaplan–Meier were unread. The [targeted primary-source recheck](design/belief-method-comparison.md#primary-foundations-and-what-they-support)
-  covers provenance, proper scoring rules, censoring and partial pooling. No agent
-  study read estimates per-type staleness rates, and S09 leaves decay unexercised
-  on real data. The [synthetic Brier comparison](research-memory-representations.md#what-the-experiments-changed)
-  is internal development evidence.
-
-**Recommendation on the ADR's open decision on the belief model.**
-1. **Keep explicit provenance, supersession and visible disputes.** The project uses
-   no numerical belief calculus. The 2026-11-16 recheck of Jøsang (2013, §§3.1.1–3.1.3
-   and §4.7) verifies the binomial-opinion/Beta mapping and the fusion assumptions.
-   With matched evidence and priors their projected probabilities agree, so use the
-   mapping as an equivalence control. No source read compares subjective-logic fusion,
-   Beta counts, last-write-wins or Dempster–Shafer on agent memory. Independence in
-   curator observations needs testing before cumulative fusion is justified (S16, S25).
-2. **Test numerical updates, staleness and partial pooling offline.** Compare on
-   matched extractions against the provenance-aware qualitative baseline. Candidate
-   evidence models retain positive and negative re-observations and timestamps, count
-   duplicate origins once, and test whether distinct re-observations add support.
-   Include aging-off and no-pooling controls. S25 motivates explicit conflict cases
-   because cumulative fusion can lower uncertainty under conflict. Other comparators
-   include last-write-wins with supersession (S09) and write-time adjudication labels
-   KEEP/STALE/REPLACE/UNKNOWN (S10). The proposed
-   [CDDA belief-method comparison](design/belief-method-comparison.md) specifies the
-   matched-evidence tests and separates replay from live decision benefit.
-3. **Resolve conflict at the gate, but keep disputes visible.** S10 and S11 both found
-   models fail to apply updates even when they detect them, and S11's oracle that
-   removes the stale item restored accuracy to 0.95 to 1.00. That shows only that
-   **correct** resolution helps; no source measured the cost of a wrong resolution, and
-   S09's provenance cap cost accuracy (100% to 54%) on legitimate corrections. So the
-   proposed gate supplies a labelled value with provenance where it can adjudicate
-   the dispute and leaves an explicit disputed/UNKNOWN label otherwise. S11 also
-   found metadata exposure helped the 0.6B model (+0.30). The current screen takes
-   precedence over stored assertions.
-4. **Calibration is reported offline; whether to hide probabilities from the actor is
-   a design choice, not an evidenced one.** The ADR's rule that uncalibrated scores are
-   not labelled probabilities stands; no source read validates a calibration approach
-   or tests how an agent uses a probability for this setting.
-5. **Offline test of the choice (pre-register per S-EVIDENCE before running).**
-   - *Two data lanes, reported separately.* (i) Trace-based: sealed traces split by
-     lineage, development versus a frozen holdout. Re-observation conflates staleness
-     (the world changed) with refutation (the earlier assertion was wrong), so
-     trace-based scores are not read as staleness or reliability estimates. (ii)
-     Generator-based: a synthetic generator with regimes for constant reliability,
-     varying reliability, adversarial/poisoned sources, duplicated observations
-     (dependence) and drift. S09 shows the winner flips across regimes and loses
-     entirely in its adversarial one, so no single regime decides. Pre-register
-     regime weights from development-lane rates and report every regime separately,
-     never only the weighted macro.
-   - *Arms.* Compare last-write-wins, learned-reliability Beta counts, averaging and
-     cumulative fusion, write-time adjudication, the qualitative baseline and flat
-     raw-episode retrieval. Hold one extracted assertion set fixed across arms.
-     Score calibration only for methods that produce probabilities.
-   - *Budget.* Report calls, tokens and wall time beside each outcome. Account for
-     extra calls from reliability estimation and adjudication when comparing costs.
-   - *Outcomes.* Accuracy of the predicted current value at later re-observation;
-     where a probability exists, Brier or log score with a reliability diagram and ECE
-     with intervals; retrieval-miss rate; a double-counting stress (replay one
-     observation n times; the score must not rise); legitimate-correction cost
-     (S09's 100% to 54%); and **wrong-resolution cost** (inject wrong resolutions and
-     measure actor error), which no source measured.
-   - *Statistics.* The independent unit is the lineage, and every variant tried is
-     reported. Lineages the [curator memory study](acceptance/2026-11-12-p1-descriptive-completion-178.md)
-     inspected are development data. Freeze a separate
-     whole-lineage holdout for the trace lane.
-     - **Trace lane.** With three clusters a cluster bootstrap has only 10 distinct
-       resample compositions. At that size report each lineage descriptively and
-       avoid gating on an interval.
-     - **Generator lane.** Interval-based gating is used only here, where the clusters
-       are many. **Compute and report the minimum detectable difference by simulation
-       before spending.**
-     - **Before running, freeze and hash two things.** The generator, with its regime
-       weights. And a rule for when the lanes disagree, for example "adopt only if the
-       generator lane passes and no held-out lineage reverses the direction".
-     - **Claim scope.** The decision claim is scoped to the generator's regimes. The
-       trace lane is the only held-out check of whether those regimes resemble play
-       (S-EVIDENCE: generality needs held-out support).
-   - Any rule or threshold chosen on development lineages is not evaluated on them.
-6. Staleness, pooling and calibration have mathematical foundations. Their validity
-   and utility for curator memory need evidence from play traces.
 
 ## Ontology/schema induction and evaluation
 
@@ -548,7 +373,6 @@ specified numerical belief model.
 
 | Area | Strength | Why |
 | --- | --- | --- |
-| Belief under conflict: decay, pooling, calibration, reliability without ground truth | Very thin for agent memory | The primary foundations establish methods. No LLM-agent source estimates per-type staleness rates, and one benchmark builds in its reliability signal |
 | Ontology: utility versus complexity, grooming | Very thin | Induction papers measure proxies; no merge/split utility study; no MDL source |
 | Oversight interfaces: multi-role supervision | Thin | N=8 to 48 web/coding tasks; no game or multi-role agents |
 | Concurrent consolidation: acting-agent outcomes | Thin | Lag measured for QA ingestion, outcomes unmatched |
@@ -557,16 +381,12 @@ specified numerical belief model.
 
 General: nearly all LLM evidence is 2026 preprints, single backbone, often LLM-judged
 and often author-built benchmarks; none involves a CDDA-class partially observable
-game. Sources outside the 18-month window (before 2025-05-08): sleep-time compute
-(S06), the 2007 Jøsang page (S16) and the 2025-03 belief-fusion paper (S25); S01
-(v1 2025-05-21) is inside it. Conclusions resting only on them are flagged RECENCY.
+game. Sleep-time compute (S06) falls outside the 18-month window. S01
+(v1 2025-05-21) is inside it. Conclusions resting only on older sources are flagged RECENCY.
 
 ## Sources
 
-The table covers the **2026-11-08 literature search**. The **2026-11-16 targeted
-recheck** covers Jøsang, Green et al., Gneiting and Raftery, the NIST censoring
-guidance and Gelman. Their specific read scopes and transfer limits are in the
-[belief-method comparison](design/belief-method-comparison.md#primary-foundations-and-what-they-support).
+The table covers the **2026-11-08 literature search**.
 
 Dates are the arXiv abs-page submission history. "Extractor" =
 text retrieved through the fetch tool and queried for stated sections (see Read-scope
@@ -583,14 +403,11 @@ honesty); "first 100k of N" means the remainder was not read and no claim rests 
 | S06 | Sleep-time Compute, arXiv 2504.13171 | v1 2025-04-17 (only version) | Abstract only | Stateful math benchmarks; **RECENCY (older than 2025-05-08)**; baselines not visible |
 | S07 | Do Language Models Need Sleep?, arXiv 2605.26099 | v1 2026-05-25 / v2 2026-05-27 / v3 2026-06-05 | Abstract only | Synthetic and math tasks; parametric |
 | S08 | PlugMem, arXiv 2603.03296 | v1 2026-02-06 (only version; identifier month differs) | Stated sections via extractor, first 100k of 187,298 chars | LongMemEval, HotpotQA, WebArena; baselines from mixed LLM pairings and prior work; no stated seeds |
-| S09 | When Does Belief-Based Agent Memory Help? (Nous), arXiv 2606.22030 | v1 2026-06-20 / v2 2026-07-16 (page byline 2026-08-24 is not a version date) | Stated sections via extractor (v2) | Single author; one backbone; three separate results (LoCoMo, belief-layer micro-benchmark, five-regime synthetic); not budget matched; no calibration |
 | S10 | STALE, arXiv 2605.06527 | v1 2026-05-07 (only version) | Stated sections via extractor: first 100k of 186,845 chars plus text from 100k onward (appendices); middle not claimed | 400 LLM-generated expert-validated scenarios; authors' own benchmark and fix; LLM judge; page includes base64 prompt templates, treated as data |
 | S11 | The Memory Trust Gap, arXiv 2609.01852 | v1 2026-09-01 (only version) | Stated sections via extractor | Synthetic frozen benchmark, small models; oracle pre-resolution arm; exploratory factorials; RGB/MisBench external check |
 | S12 | TOKI, arXiv 2606.06240 | v1 2026-06-04 (only version) | Stated sections via extractor, first 100k of 269,356 chars | Operator algebra, LoCoMo; ablation definitions and data provenance in the unread appendix; cross-system comparison underpowered |
 | S13 | EngramRAG, arXiv 2609.32049 | v1 2026-09-25 (only version) | Stated sections via extractor | LoCoMo plus simulated 90-day; no compute matching; single evaluations |
 | S14 | Memory Depth, Not Memory Access, arXiv 2606.26806 | v1 2026-06-25 (only version) | Stated sections via extractor | Synthetic protocol, 4 seeds; no latency |
-| S15 | Single and Multi Truth Data Fusion using LLMs, arXiv 2606.28062 | v1 2026-06-26 (only version) | Stated sections via extractor | Three tabular datasets vs classical truth discovery; single runs; model variance |
-| S16 | Jøsang, Cumulative and Averaging Fission of Beliefs, arXiv 0712.1182 | v1 2007-12-07 (only version) | Stated sections via ar5iv extractor | Definitions only; **RECENCY** |
 | S17 | SCOPE and SCION, arXiv 2607.21610 | v1 2026-05-20 (only version; identifier month differs) | Stated sections via extractor, first 100k of 182,621 chars | 24 sources, one run per source in main tables; contamination not excluded |
 | S18 | Generative Ontology Induction, arXiv 2607.16201 | v1 2026-05-01 (only version; identifier month differs) | Stated sections via extractor | Presence-only metric; generic-template baseline; single generation |
 | S19 | GrOIL, arXiv 2608.22135 | v1 2026-08-22 (only version) | Stated sections via extractor | One domain, synthetic corpus, LLM-generated and LLM-judged questions |
@@ -599,7 +416,6 @@ honesty); "first 100k of N" means the remainder was not read and no claim rests 
 | S22 | Human oversight of agentic systems in practice, arXiv 2606.05391 | v1 2026-06-03 (only version; interviews 2025-07 to 08) | Stated sections via extractor, first 100k of 157,810 chars | 17 interviews; qualitative |
 | S23 | Oversight Has a Capacity, arXiv 2606.08919 | v1 2026-06-08 | Abstract only | Modeling; kappa 0.52 on 125 labelled actions |
 | S24 | StepShield, arXiv 2601.22136 | v1 2026-01-29 / v2 2026-07-07 | Stated sections via extractor (v2) | Synthetic trajectories; automated monitors |
-| S25 | Multimodal Learning with Uncertainty Quantification based on Discounted Belief Fusion, arXiv 2412.18024 | v1 2024-12-23 / v2 2025-03-28; AISTATS 2025 (PMLR 258), peer-reviewed; **RECENCY** | Stated sections via extractor | Five small datasets, 10 seeds per experiment; neural classifiers; hyperparameters tuned on one baseline |
 | X1 | Memory for Autonomous LLM Agents (survey), arXiv 2603.07670 | v1 2026-03-08 | **PDF unreadable; not read** | Leads only |
 | X2 | Search-snippet leads: Mem-T, AdaMem, AutoSchemaKG, 2609.22133, quallmer, CLARIFY, 2506.02509, 2401.03426, Yao et al. 2024, Haenni, Dezert-Tchamova, CHI 2026 dashboard, 2608.20597, Singapore Consensus, Letta/vendor blogs, Jøsang-Pope 2012, 1805.01388 | various | Snippet only (1805.01388 PDF unreadable) | **Support no conclusion**; vendor items excluded |
 | X3 | Unreadable or unretrieved foundations: Zadeh 1979 memo (scan), Jøsang 2009 slides, Dezert-Tchamova, evidence-based subjective logic flow paper, Dawid–Skene, Kaplan–Meier, Rissanen, Krippendorff, Fellegi-Sunter, Sheridan, Endsley, McClelland, Soar/ACT-R, Tulving | various | **Not read** | No conclusion rests on them |

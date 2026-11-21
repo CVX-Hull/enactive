@@ -89,7 +89,7 @@ extinguisher" is true of one world and has no place to say so.
   [eligibility rule](../decisions/owner-decisions.md#archive-index-holds-cited-sessions)
   and the [approved sessions](../decisions/owner-decisions.md#eleven-version-ten-sessions-join-the-archive-index).
 - **Sealed sessions.** A session sealed before the `world` label supports only
-  `game` facts. [Trace workbench](trace-workbench.md#projection)
+  `game` facts. [Trace workbench](../contracts/measurement-tools.md#trace-projection)
 
 #### A fact
 
@@ -138,7 +138,7 @@ New or changed fields are marked.
   package manifest only after checking three things: the manifest is the current
   version, the manifest names the same session as the sealed store, and its digest is
   the one the supervisor recorded for the run. When any of that evidence is missing,
-  the session has no world. The [trace projection](trace-workbench.md#projection) does
+  the session has no world. The [trace projection](../contracts/measurement-tools.md#trace-projection) does
   the checking: it reads the manifest and the supervisor's record as files and imports
   no campaign code. A staged
   snapshot of a session that is still being played carries the same manifest and
@@ -326,7 +326,7 @@ play. [Curator scoring method and limits](../acceptance/2026-11-13-curator-scori
 
 The briefing carries selected article leads and an index for the actor's frozen
 knowledge. Recall can add reminders during play. The player can follow a link or search
-for more. [Delivery boundary](player-context.md#the-delivery-boundary)
+for more. [Delivery boundary](../contracts/player-host.md#delivered-knowledge-and-recall)
 
 The reminder cadence trades off timeliness, request cost and repetition. Reminders
 persist in the actor's history, so their text contributes to subsequent requests.

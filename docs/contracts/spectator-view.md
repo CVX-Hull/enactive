@@ -245,7 +245,7 @@ The reader uses no producer lock, writes no records and makes no Git or provider
 `--curator-runner-status FILE` on the standalone viewer names the curator runner's
 `status.json` (`curator-runner-status/1`, owned by `harness/curator/runner.py`). The
 supervisor passes `<run>/curator-runner/status.json` when it starts the runner with
-`--curator-runner`, and passes nothing otherwise. The file shows what the curator has
+`--curator-runner`, and passes nothing otherwise. The runner replaces the file atomically at polls and session boundaries. The file shows what the curator has
 done since the actor's delivered version; the actor's delivered version stays in the
 [knowledge view](#recorded-knowledge-and-public-reports), and the two are never merged.
 

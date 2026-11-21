@@ -129,7 +129,7 @@ The intervals from one request's first tool result to the next: 1,588, median 6.
 
 **The #372 sample.** The six development-loop runs the [probe protocol](../design/probe-protocol.md#data)
 draws with `random.Random(449)` and the
-[curator hosts page](../operations/curator-hosts.md) lists for lineage 372: `aidB3`, `ceil09`,
+[curator hosts page](../operations/curator-shadow-run.md) lists for lineage 372: `aidB3`, `ceil09`,
 `ceil07`, `ceil05`, `aidB9`, `aidA5`. The draw was not repeated. Twelve traces, 1,398 attempts, none censored.
 
 ```

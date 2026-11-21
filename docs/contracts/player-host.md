@@ -145,6 +145,15 @@ admits no successor. The observed subtotal still records only provider charges.
 
 Every `campaign-run/10` package carries `delivered-knowledge.json` (`delivered-knowledge/1`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into each actor's frozen inputs (`player-host-inputs/3`). It records the finish reserve there too.
 
+The host uses the same frozen version for briefing and recall throughout the
+admission, including handoffs. A later admission can package a newer publication.
+The [withholding unit rule](measurement-tools.md#the-facts-to-judge-judged-facts1)
+defines the export layout. Version changes follow the [migration standard](../standards/migration.md).
+The [journal and knowledge component](../components/player-interface.md#journal-and-knowledge)
+describes application reads and evaluation. The [delivery rationale](../design/player-context.md)
+records the prompt measurements and alternatives. The [coverage-gated context cut](../design/coverage-gated-context-cut.md)
+remains a proposal.
+
 The host appends a briefing to the first user message: recall-selected article leads or standalone fact text, an index line for every other article and standalone fact, and the coverage stamp. It labels the text as fallible data granting no authority. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
 
 Every `recall.every` completed `computer_input` result offers a reminder request beside continued play. A completed selection becomes its own delimited user message in the next player request; it is never joined with control or limit notices and stays where first sent. An empty selection is an explicit silence. If another recall is in flight the opportunity is recorded as not made.
@@ -172,7 +181,7 @@ The planning bounds are reported separately from the combined provider subtotal.
 The recall request's user text is one JSON object. The first key is `index`,
 followed by `kind` and then `first_message` (briefing) or `recent_calls` (reminder).
 This keeps the prefix stable across actors and reminders. A route that requests
-strict structured output requires upstream support for the selection schema. Its
+strict structured output requires the pinned upstream to support the selection schema. Its
 real-model check covers that capability before use. The [adapter reference](../../tools/player_host/README.md#frozen-knowledge-delivery)
 owns provider serialization. The joined, trimmed reply text must contain exactly
 one JSON object with `articles` as its sole key and an array of strings as its value.

@@ -8,7 +8,7 @@
 
 `--actor` is `<session>/<actor directory>` as in the trace layout. Frames are cited by
 source ID. Perceptual-hash distances are measurements, not verdicts: on the sealed #397
-frames, consecutive and random pairs overlap heavily (docs/design/trace-workbench.md).
+frames, consecutive and random pairs overlap heavily (docs/acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes).
 """
 from __future__ import annotations
 

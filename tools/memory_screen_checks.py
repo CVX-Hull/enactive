@@ -21,10 +21,10 @@ at handoffs too.
 `recorded` row is simulated from the model below, not measured. With `--coverage schedule` it replays a run's
 recorded covered prefix (`curator-coverage-schedule/1`) over that one run in place of the lag rows; `schedule`
 writes that file from the run's `curator-runner/polls.jsonl` and final `status.json`. The mapping is in
-docs/design/live-curator-integration.md, "Replaying a recorded schedule".
+docs/contracts/measurement-tools.md, "Runner records and schedule replay".
 
 RUNS are as in `tools.memory_reads`, in lineage order. A lineage request number counts requests over those runs'
-actors in order. The context design is docs/design/player-context.md.
+actors in order. The context design is docs/design/coverage-gated-context-cut.md.
 """
 from __future__ import annotations
 

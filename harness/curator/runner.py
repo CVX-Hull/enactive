@@ -1,6 +1,6 @@
 """The curator runner: curator sessions beside an admission that is still being played (#845).
 
-The design is docs/design/live-curator-integration.md; this module is its decision logic. At each
+The runner windows and publication rules are in docs/components/curator.md. At each
 poll the runner stages a snapshot of the live run (`harness.trace.snapshot.stage`, the only read
 it makes of the store), records the position play has reached, and when the actor its cursor is in
 has enough finished steps beyond the cursor it runs one windowed admission session over them. The
