@@ -64,7 +64,8 @@ configuration (`curator-runner-config/1`, whose fields the process module states
 own knowledge repository under `.runtime/knowledge`, the arm, the spend caps, the
 upstream, the trigger, ceiling and poll interval). Only with the option, and before it
 launches the custodian, the guardian creates `curator-read.lock` exclusively and the
-runner's directory `curator-runner/`, both in the run directory. That location passes
+runner's directory `curator-runner/`, both in the run directory; a package that already
+holds either is refused before the supervision reservation. That location passes
 every check of the run directory: package preflight refuses only the named files of a
 started run, the supervision markers are two named files, and the viewer, the evaluator
 and the projection read named files or `actors/`. The evidence copy keeps the directory
@@ -93,15 +94,17 @@ range it has examined, by actor, in admission order, with how the session over i
   different record.
 - **The record** is `curator-runner/examined.jsonl` (`curator-runner-examined/1`),
   append-only: a `start` row when a session begins and an `end` row when it returns, each
-  with the window and the operations at its two ends. The `end` row names how the
-  session ended, whether the cursor advanced and whether it failed, with the gate's
-  verdicts. A sealed session is `rejected` if any submission was rejected, `unconfirmed`
-  if a verdict is unknown, `accepted` if one was published and `nothing-submitted`
-  otherwise; the cursor advances over all four, and the first two are failures. An
-  `aborted` session fails and does not advance. A lock refusal (`lock-refused`) and a
-  session never started for want of spend (`not-started`) neither advance nor fail. A
-  `start` row with no `end` was interrupted, so the record survives a restart of the
-  runner, and the cursor of an actor is the last step of its advanced rows.
+  with the window, the operations at its two ends, and `coverage`: the covered prefix,
+  lag and backlog at that moment, so a finished run reports them over time. The `end`
+  row names how the session ended, whether the cursor advanced and whether it failed,
+  with the gate's verdicts. A sealed session is `rejected` if any submission was
+  rejected, `unconfirmed` if a verdict is unknown, `accepted` if one was published and
+  `nothing-submitted` otherwise; the cursor advances over all four, and the first two
+  are failures. The other endings are listed under [Failure](#failure). A `start` row
+  with no `end` was interrupted, so the record survives a restart of the runner, and the
+  cursor of an actor is the last step of its advanced rows. On loading, each of the
+  runner's append-only files is cut back to its last newline, so a row a killed runner
+  left half written is dropped, never joined to the next.
 
 ### The window
 
@@ -309,8 +312,10 @@ Each thing measured has a named source. None changes `curator-coverage/2`.
   lag as unknown.
 - **Lag.** Step numbers are local to an actor and cannot be subtracted across a handoff.
   Lag is counted over the admission's finished operations in order, by operation
-  identity: the number after the last step of the covered prefix. It is reported beside
-  the distance from the latest stamp, which is descriptive only.
+  identity: the number after the last step of the covered prefix. The runner finds that
+  step by the operation its window recorded there, in the latest snapshot, and reports
+  lag as unknown when the snapshot does not hold it. It is reported beside the distance
+  from the latest stamp, which is descriptive only.
 - **The position play has reached.** The runner writes it at each poll: the identity of
   the latest finished operation and the time, which is the snapshot's store time: the
   wall times at which the snapshot call began and returned, between which it read the
@@ -338,7 +343,39 @@ The gate is used as it is. The first run is under the current structural contrac
   between admissions, as today. A refused read is not a failed snapshot: `closing` ends
   the runner with no further read, `no-store` waits for the next poll, and a missing
   read lock stops it.
-- **A snapshot that fails is discarded.** One is never used partly.
+- **The custodian's end without a marker.** A custodian that died writes no closing
+  marker. So at each poll, before it reads, the runner checks for the custodian's
+  `receipt.json` in the run directory, and ends with no further read if it exists.
+- **Why it ends or stops** (the status file's `stop_reason`). It ends with
+  `store-closing` (the closing marker refused its read), `store-closed` (the receipt
+  exists) or `interrupted` (a signal). It stops for the rest of the admission with
+  `2 consecutive failed sessions`; `3 consecutive snapshots failed or passed their
+  bound`; `read refused: no-read-lock` (no reader is configured); `error: <type>` (an
+  unexpected exception in the runner itself, recorded and raised); or a session's own
+  reason: `proxy-revoked` (a charge passed its reservation, or the proxy revoked
+  itself), `spend-reservation-refused`, `cap-reached` (the runner's whole cap is
+  counted as spent), `proxy-unsettled` (the proxy closed with requests unsettled),
+  `cleanup-unconfirmed` (host processes survived, or the host ran and the sandbox's
+  result is missing) and `host-unavailable: <why>` (the curator host could not be
+  resolved).
+- **How a session ends** (an `end` row's `outcome`). `accepted`, `nothing-submitted`,
+  `rejected` and `unconfirmed` close it and advance the cursor, the last two as
+  failures. `aborted` fails without advancing; a session that aborted before its host
+  ran is an ordinary failed session. `interrupted`, `lock-refused`, `not-started` (no
+  spend left) and `host-unavailable` neither advance nor fail. An interruption that
+  lands after a session returned and before its `end` row is written is recorded as
+  `interrupted`, so coverage is understated, never overstated.
+- **Spend** is counted from what each session's proxy leaves, whether or not the session
+  returned: its closing snapshot, counting reservations it still held as spent, or else
+  the charges in its ledger. A restarted runner counts it again the same way.
+- **A host can outlive a killed runner.** The sandboxed curator host runs in its own
+  process group. If the runner is killed outright, so that its sandbox cleanup never
+  runs, the host can outlive it. It cannot spend once the runner's proxy is gone, since
+  it holds only a session token for that proxy, and it is not covered by the guardian's
+  `cleanup_verified`, which covers the groups the guardian created.
+- **A snapshot that fails is discarded.** One is never used partly. The guardian also
+  removes `curator-runner/snapshots/` after the runner's group is closed, since a runner
+  killed mid-poll can leave one, and it holds custody copies.
 - **What the runner shares with play.** No process, no lock on the repository and no
   place in the input path. It does share the machine's disk, a read connection to the
   session store, and possibly the provider account: the shadow runner can resolve the
@@ -395,7 +432,9 @@ examined range with how it ended, the cursor, the session in flight, the covered
 operations, and any restore), lag, the distance from the latest stamp, backlog, the last
 confirmed version and its stamp, the unconfirmed publications, every version with its
 two times, the consecutive failures, and, once the runner has stopped or ended, why and
-the ranges left unexamined. Each poll is also a row of `curator-runner/polls.jsonl`.
+the ranges left unexamined. Each poll is also a row of `curator-runner/polls.jsonl`,
+with its snapshot's timings or why there was none, the position and the same `coverage`
+as an examined row. `stopped.json` is written whole, by a rename, as the status file is.
 
 A missing or unknown value is written as `unknown`, not guessed, and shown as such.
 The view stays read-only and sends nothing
