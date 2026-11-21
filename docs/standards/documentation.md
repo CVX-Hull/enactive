@@ -223,10 +223,10 @@ The rule does not reach:
   specify.
 
 The owner decision log quotes the owner's words with a bracketed description in place
-of a name: "[the coding agent tried on 19 November]". Review (C-REVIEW) applies the
-rule. `tests/test_host_neutrality.py` refuses coding-agent, provider, model and
-player-host names on current pages within the limits above. It also checks scoped
-harness and tools source for host, agent, provider and model names.
+of a name: "[the coding agent tried on 19 November]". `tests/test_host_neutrality.py`
+refuses the names in its vocabulary on current pages within the limits above.
+Review (C-REVIEW) applies the rule where the check cannot. The test also checks
+scoped harness and tools source for host, agent, provider and model names.
 
 ## Visual explanations
 

@@ -1,13 +1,18 @@
 """Check the naming rule in docs/standards/documentation.md#coding-agents-providers-and-models.
 
-Current pages outside operations avoid coding-agent, provider, model and player-host
-names, subject to the rule's limits. The harness and tools source scan retains its
-own vocabulary and host-adapter exclusions.
+The page scan checks a fixed vocabulary within the rule's limits. The harness and
+tools source scan retains its own vocabulary and host-adapter exclusions.
 """
 
 from collections import defaultdict
+from contextlib import contextmanager
+from html import unescape
+from itertools import chain
 from pathlib import Path
+from posixpath import normpath
 import re
+import subprocess
+from tempfile import TemporaryDirectory
 from urllib.parse import unquote, urlsplit
 
 import frontmatter
@@ -29,8 +34,10 @@ SOURCE_SUFFIXES = {".py", ".mjs", ".js", ".cjs", ".md", ".json", ".mm", ".cpp", 
 # research. Underscores delimit names in constants. Common words keep product case
 # or require model context, such as a version or a named comparison arm.
 AGENT = re.compile(
-    r"(?<![A-Za-z0-9])(?:(?i:Claude|agy)|Codex|CODEX|Antigravity|ANTIGRAVITY)(?![A-Za-z0-9])"
-    r"|\bcodex(?=\s+(?:exec|review|resume)\b)"
+    r"(?<![A-Za-z0-9])(?:Codex|CODEX|(?i:Claude(?:Code|CLI)?|agy(?:CLI)?|Antigravity(?:CLI)?|CodexCLI))"
+    r"(?![A-Za-z0-9])"
+    r"|\bcodex(?=-[A-Za-z0-9]|\s+(?:--?|(?i:apply|app|app-server|cli|cloud|completion|debug|doctor|exec"
+    r"|execpolicy|features|fork|help|login|logout|mcp|mcp-server|plugin|resume|review|sandbox|update)\b))"
 )
 PLAYER_HOST = re.compile(
     r"(?<![A-Za-z0-9])(?:Pi(?=\d+\.\d+|[^A-Za-z0-9]|$)|PI(?=_)"
@@ -39,23 +46,39 @@ PLAYER_HOST = re.compile(
 ADAPTER_ROUTE = re.compile(
     r"(?<![A-Za-z0-9])(?i:OpenAI|OpenRouter|DeepInfra|Baseten)(?![A-Za-z0-9])"
 )
+MODEL_TIERS = r"Opus|Terra|Sonnet|Haiku|Fable|Sol|Astra|Luna|Neon|Carbon|Argon|Flash|Llama"
 PROVIDER_OR_MODEL = re.compile(
     r"(?<![A-Za-z0-9])(?:(?i:OpenRouter|Anthropic|OpenAI|DeepSeek|DeepInfra|Baseten"
-    r"|Google|Gemini|GPT|Qwen\d*|Kimi|flash_lite)"
-    r"|Opus|Terra|Sonnet|Haiku|Fable|Sol|Astra|Luna|Neon|Carbon|Argon|Flash|Llama)(?![A-Za-z0-9])"
-    r"|\b(?:opus|terra)(?=\s+(?:\d|arm\b))"
+    rf"|Google|Gemini|GPT|Qwen\d*|Kimi|flash_lite)|{MODEL_TIERS})(?![A-Za-z0-9])"
+    rf"|(?i:(?<![A-Za-z0-9])(?:{MODEL_TIERS})(?=\s*\d|\s+(?:arm|model|tier)\b|-[A-Za-z0-9])"
+    rf"|(?<=[A-Za-z0-9]-)(?:{MODEL_TIERS})(?![A-Za-z0-9]))"
 )
 PLAYER_ADAPTER = "tools/player_host/README.md"
 LICENCE_TEXT = {"NOTICE.md", "LICENSE", "LICENSE-CDDA.txt", "web/vendor/LICENSE-echarts",
                 "web/vendor/LICENSE-preact", "web/vendor/LICENSE-htm", "web/vendor/NOTICE-echarts"}
 MARKDOWN = MarkdownIt("commonmark").enable("table")
 WEB_URL = re.compile(r'https?://[^\s<>\])]+', re.IGNORECASE)
+HTML_LINK = re.compile(r"""<a\s[^>]*?(?<!\S)href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.IGNORECASE)
+FIRST_PARTY_DOMAINS = (
+    "openai.com", "chatgpt.com", "anthropic.com", "claude.ai", "claude.com", "google.com", "google.dev",
+    "google", "googleapis.com", "googleblog.com", "google.github.io", "openrouter.ai", "deepinfra.com",
+    "deepseek.com", "baseten.co", "qwen.ai", "kimi.com", "moonshot.ai", "llama.com", "meta.com",
+)
+FIRST_PARTY_GITHUB_OWNERS = {
+    "openai", "anthropics", "anthropic-experimental", "google", "google-deepmind", "deepseek-ai", "qwenlm",
+    "moonshotai", "openrouterteam", "deepinfra", "basetenlabs",
+}
+CITATION_LINK = "\x00"
 SOURCE_ID = re.compile(r"\b[A-Z]\d+\b")
 ARXIV_ID = re.compile(
     r"\barXiv\s*:?\s*(?:\d{4}\.\d{4,5}|[a-z.-]+/\d{7})(?:v\d+)?\b"
-    r"|\b\d{2}(?:0[1-9]|1[0-2])\.\d{4,5}v\d+\b", re.IGNORECASE,
+    r"|\b\d{2}(?:0[1-9]|1[0-2])\.\d{4,5}(?:v\d+)?\b", re.IGNORECASE,
 )
-SOURCE_COLUMN = re.compile(r"(?:primary |outside |external )?sources?(?:\s*/.*|\s+and .*|\s*\(.*\))?", re.IGNORECASE)
+SOURCE_COLUMN = re.compile(
+    r"(?:primary |outside |external )?sources?(?:\s+(?:keys?|ids?)|\s*/.*|\s+and .*|\s*\(.*\))?",
+    re.IGNORECASE,
+)
+SENTENCE_END = re.compile(r"""[.!?]+["'”’\])]*(?=\s|$)""")
 LITERAL = r"[\w.-]+(?:[/:][\w.-]+)*"
 QUOTED_IDENTIFIER = re.compile(rf"""(["'`])({LITERAL})\1""")
 BARE_IDENTIFIER = re.compile(rf"(?<![\w./:-]){LITERAL}(?=\s*(?:[=:,{{}}\[\]()]|$))")
@@ -93,89 +116,134 @@ def page_scope():
                 yield relative, (directory / name).read_text(encoding="utf-8")
 
 
-def tree_path(relative, target, *, link=False):
+@contextmanager
+def git_tree_paths(root):
+    tracked = subprocess.check_output(["git", "ls-files", "-z"], cwd=root, text=True).split("\0")[:-1]
+    paths = {path.as_posix() for name in tracked for path in (Path(name), *Path(name).parents)}
+    # Use Git's ignore matcher with only the versioned ignore files. The empty
+    # checkout keeps ignored files, local excludes and worktree layout out of it.
+    with TemporaryDirectory(dir=root, prefix=".name-check-") as scratch:
+        subprocess.run(["git", "init", "-q", "--template="], cwd=scratch, check=True)
+        for name in tracked:
+            if Path(name).name == ".gitignore":
+                target = Path(scratch) / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((root / name).read_bytes())
+        checked = set()
+        ignored = set()
+
+        def match(candidates):
+            missing = candidates - paths - checked
+            if missing:
+                # Anchor paths with ./ so a leading colon stays literal. Check
+                # the directory spelling too, even if the directory is absent.
+                result = subprocess.run(
+                    ["git", "-c", "core.excludesFile=/dev/null", "check-ignore", "--no-index", "-z", "--stdin"],
+                    cwd=scratch, input="".join(f"./{path}\0./{path}/\0" for path in sorted(missing)),
+                    capture_output=True, text=True,
+                )
+                if result.returncode not in (0, 1):
+                    result.check_returncode()
+                ignored.update(path.removeprefix("./").rstrip("/") for path in result.stdout.split("\0") if path)
+                checked.update(missing)
+            return (candidates & paths) | (candidates & ignored)
+
+        yield match
+
+
+def tree_candidates(relative, target, *, link=False):
     if link:
         url = urlsplit(target)
-        if url.scheme or url.netloc:
-            return False
-        if not url.path:
-            return True  # A same-page link carries only a fragment.
+        if url.scheme or url.netloc or not url.path:
+            return
         target = unquote(url.path)
     else:
         target = re.sub(r":\d+$", "", target)
         if target.startswith("/"):
-            return False
-    target = target.rstrip("/")
+            return
+    bases = (Path(relative).parent,) if link else (Path(relative).parent, Path("."))
     if target.startswith("/"):
-        bases = (ROOT,)
-    elif link:
-        bases = ((ROOT / relative).parent,)
-    else:
-        bases = ((ROOT / relative).parent, ROOT)
+        bases = (Path("."),)
     for base in bases:
-        path = base / target.lstrip("/")
-        if path.exists() and path.resolve().is_relative_to(ROOT):
-            return True
-    return False
+        path = normpath((base / target.lstrip("/")).as_posix())
+        if path != ".." and not path.startswith("../"):
+            yield path
+
+
+def inline_paths(relative, inlines):
+    for tokens in inlines:
+        for token in tokens:
+            if token.type == "link_open":
+                yield from tree_candidates(relative, token.attrGet("href"), link=True)
+            elif token.type == "code_inline":
+                yield from tree_candidates(relative, token.content)
 
 
 def outside_url(target):
     url = urlsplit(target)
-    if url.scheme not in ("http", "https") or not url.netloc:
+    if url.scheme not in ("http", "https") or not url.hostname:
         return False
-    if url.hostname == "github.com":
+    host = url.hostname.rstrip(".")
+    if any(host == domain or host.endswith("." + domain) for domain in FIRST_PARTY_DOMAINS):
+        return False
+    if host == "github.com":
         path = url.path.lower().rstrip("/")
-        if (path == "/cvx-hull/enactive" or path.startswith("/cvx-hull/enactive/")
+        owner = path.removeprefix("/").partition("/")[0]
+        if (owner in FIRST_PARTY_GITHUB_OWNERS
+                or path == "/cvx-hull/enactive" or path.startswith("/cvx-hull/enactive/")
                 or path.startswith("/users/cvx-hull/projects/")):
             return False
     return True
 
 
-def citation_lines(tokens):
-    """Mark source rows and the paragraphs or list items that cite an outside source."""
+def citation_context(tokens):
+    """Collect keyed source rows, paragraph spans and table cells."""
     source_ids = set()
-    cited = set()
-    table_rows = defaultdict(list)
-    inlines = defaultdict(list)
-    items = []
-    table = None
+    source_rows = set()
+    paragraphs = []
+    cells = defaultdict(list)
+    table_header = None
+    source_table = False
     for token in tokens:
         if token.type == "table_open":
-            table = token.map[0]
+            table_header = token.map[0]
         elif token.type == "table_close":
-            table = None
-        elif token.type == "list_item_open":
-            items.append(token.map[0])
-        elif token.type == "list_item_close":
-            items.pop()
-        elif token.type == "inline":
-            start, end = token.map
-            if table is not None:
-                table_rows[start].append(token.content)
-                cells = table_rows[table]
-                if start != table and (
-                    SOURCE_COLUMN.fullmatch(cells[0]) or
-                    (len(cells) >= 2 and cells[0].lower() == "id" and SOURCE_COLUMN.fullmatch(cells[1]))
-                ):
-                    cited.add(start)
-                    source_id = table_rows[start][0]
-                    if SOURCE_ID.fullmatch(source_id):
-                        source_ids.add(source_id)
-            group = ("item", items[-1]) if items and table is None else ("line", start)
-            inlines[group].append((start, end, token.children))
+            table_header = None
+        elif token.type == "thead_close":
+            source_table = any(SOURCE_COLUMN.fullmatch(source_cell_text(cell)) for cell in cells[table_header])
+        elif token.type == "paragraph_open":
+            paragraphs.append(token.map)
+        elif token.type == "inline" and table_header is not None:
+            start = token.map[0]
+            if start != table_header and source_table and not cells[start]:
+                source_id = source_cell_text(token)
+                if SOURCE_ID.fullmatch(source_id):
+                    source_ids.add(source_id)
+                    source_rows.add(start)
+            cells[start].append(token)
+    return source_ids, source_rows, paragraphs, cells
 
-    for blocks in inlines.values():
-        # A source key has to be defined in the page. URLs in inline code are literals.
-        children = [child for _, _, children in blocks for child in children]
-        references = [child.content for child in children if child.type in ("text", "code_inline")]
-        if (any(outside_url(child.attrGet("href")) for child in children if child.type == "link_open")
-                or any(outside_url(match[0]) for child in children if child.type == "text"
-                       for match in WEB_URL.finditer(child.content))
-                or any(ARXIV_ID.search(value) or source_ids.intersection(SOURCE_ID.findall(value))
-                       for value in references)):
-            for start, end, _ in blocks:
-                cited.update(range(start, end))
-    return cited
+
+def source_cell_text(cell):
+    return "".join(child.content for child in cell.children if child.type in ("text", "code_inline")).strip()
+
+
+def uncited_text(text, source_ids, *, table_cell=False):
+    """Blank cited sentences while preserving physical line breaks."""
+    parts = []
+    start = 0
+    boundaries = [match.end() for match in SENTENCE_END.finditer(text)]
+    for end in (*boundaries, len(text)):
+        sentence = text[start:end]
+        # A label or fragment in a regular table is not a cited sentence.
+        if (not table_cell or end in boundaries) and (
+            CITATION_LINK in sentence or ARXIV_ID.search(sentence)
+            or source_ids.intersection(SOURCE_ID.findall(sentence))
+        ):
+            sentence = re.sub(r"[^\n]", " ", sentence)
+        parts.append(sentence)
+        start = end
+    return "".join(parts)
 
 
 def fence_text(line):
@@ -192,28 +260,41 @@ def fence_text(line):
                    for index, part in enumerate(parts)) + separator + trailing + hash_comment + comment
 
 
-def page_text(relative, line, env, *, schema_example=False):
+def bare_url_text(match):
+    url = match[0]
+    target = url.rstrip(".,!?;:\"'”’")
+    return (CITATION_LINK if outside_url(target) else " ") + url[len(target):]
+
+
+def inline_text(relative, tokens, tree_paths, *, schema_example=False):
     """Read the visible inline text, retaining unresolved file names for the check."""
     parts = []
-    for token in MARKDOWN.parseInline(line, env)[0].children:
+    for token in tokens:
         if token.type == "link_open":
             target = token.attrGet("href")
-            if not WEB_URL.fullmatch(target) and not tree_path(relative, target, link=True):
-                parts.append(urlsplit(target).path)
+            if outside_url(target):
+                parts.append(CITATION_LINK)
+            elif not WEB_URL.fullmatch(target) and tree_paths.isdisjoint(tree_candidates(relative, target, link=True)):
+                parts.extend((" ", urlsplit(target).path, " "))
         elif token.type == "text":
-            parts.append(WEB_URL.sub(" ", token.content))
+            parts.append(WEB_URL.sub(bare_url_text, token.content))
         elif token.type == "code_inline":
-            if not tree_path(relative, token.content):
+            if not tree_paths.isdisjoint(tree_candidates(relative, token.content)):
+                parts.append(" ")
+            else:
                 literal = token.content
                 if literal in ("codex", "antigravity"):
                     literal = literal.capitalize()
                 parts.append(fence_text(literal) if schema_example else literal)
-        elif token.type in ("image", "html_inline"):
+        elif token.type == "html_inline" and (match := HTML_LINK.match(token.content)):
+            target = unescape(next(value for value in match.groups() if value is not None))
+            parts.append(CITATION_LINK if outside_url(target) else " ")
+        elif token.type == "image" or (token.type == "html_inline" and token.content.lower() != "</a>"):
             parts.append(token.content)
-    return " ".join(parts)
+    return "".join(parts)
 
 
-def page_violations(relative, source):
+def page_violations(relative, source, match_paths=None):
     if relative.startswith("docs/operations/") or relative in LICENCE_TEXT:
         return []
     metadata = frontmatter.loads(source).metadata
@@ -231,7 +312,7 @@ def page_violations(relative, source):
     env = {}
     tokens = MARKDOWN.parse(source, env)
     lines = source.splitlines()
-    cited = citation_lines(tokens)
+    source_ids, source_rows, paragraphs, table_cells = citation_context(tokens)
     fences = {number for token in tokens if token.type == "fence" for number in range(*token.map)}
     schema_examples = set()
     specification = relative.startswith("docs/contracts/")
@@ -242,21 +323,43 @@ def page_violations(relative, source):
                 end = headings[index + 1].map[0] if index + 1 < len(headings) else len(lines)
                 schema_examples.update(range(heading.map[1], end))
 
+    inlines = [
+        [] if index in fences else MARKDOWN.parseInline(line, env)[0].children
+        for index, line in enumerate(lines)
+    ]
+    tree_paths = set()
+    if match_paths:
+        cells = (cell.children for row in table_cells.values() for cell in row)
+        tree_paths = match_paths(set(inline_paths(relative, chain(inlines, cells))))
+    visible = [
+        line if index in fences else inline_text(relative, inlines[index], tree_paths)
+        for index, line in enumerate(lines)
+    ]
+    checked = visible.copy()
+    for index in schema_examples - fences:
+        checked[index] = inline_text(relative, inlines[index], tree_paths, schema_example=True)
+    if specification:
+        for index in fences:
+            checked[index] = fence_text(checked[index])
+    for start, end in paragraphs:
+        checked[start:end] = uncited_text("\n".join(checked[start:end]), source_ids).split("\n")
+    for index, cells in table_cells.items():
+        checked[index] = " ".join(
+            uncited_text(inline_text(relative, cell.children, tree_paths), source_ids, table_cell=True)
+            for cell in cells
+        )
+
     found = []
     adapter = relative == PLAYER_ADAPTER
     for index, line in enumerate(lines):
         if line in reproduced:
             continue
-        text = line if index in fences else page_text(relative, line, env)
-        if not adapter and PLAYER_HOST.search(text):
+        if not adapter and PLAYER_HOST.search(visible[index]):
             found.append(f"{relative}:{index + 1}: {line}")
             continue
-        if index in cited:
+        if index in source_rows:
             continue
-        if index in fences and specification:
-            text = fence_text(text)
-        elif index in schema_examples:
-            text = page_text(relative, line, env, schema_example=True)
+        text = checked[index]
         if adapter:
             text = ADAPTER_ROUTE.sub(" ", text)
         if AGENT.search(text) or PROVIDER_OR_MODEL.search(text):
@@ -265,7 +368,8 @@ def page_violations(relative, source):
 
 
 def violations():
-    found = [hit for relative, source in page_scope() for hit in page_violations(relative, source)]
+    with git_tree_paths(ROOT) as match_paths:
+        found = [hit for relative, source in page_scope() for hit in page_violations(relative, source, match_paths)]
     for relative, source in source_scope():
         for number, line in enumerate(source.splitlines(), 1):
             if source_names(line):
@@ -314,8 +418,36 @@ def test_pages_match_the_supported_hosts_providers_and_models():
     for name in names:
         assert page_violations("docs/setup.md", current_page(name)) == [f"docs/setup.md:5: {name}"]
 
-    ordinary = "pi, a medieval codex, antigravity, a literary opus, a haiku, a fable, carbon, neon and a flash."
+    ordinary = "pi, a medieval codex, a literary opus, a haiku, a fable, carbon, neon and a flash."
     assert page_violations("docs/setup.md", current_page(ordinary)) == []
+
+
+def test_lowercase_commands_and_joined_products_are_refused():
+    relative = "docs/setup.md"
+    commands = (
+        "Run `codex login`.", "Run `codex --version`.", "Run `codex mcp add enactive`.",
+        "Run codex mcp list.", "Use the codex CLI.", "Run `claude --version`.", "Run `agy --version`.",
+        "Run claude mcp list.", "Run agy --version.", "Use the claude CLI.", "Use the agy CLI.",
+        "ClaudeCode", "codex-cli", "agy-cli", "antigravity",
+    )
+    for command in commands:
+        assert page_violations(relative, current_page(command)) == [f"{relative}:5: {command}"]
+    assert page_violations(relative, current_page("A medieval codex contains a sonnet.")) == []
+
+
+def test_model_tiers_match_in_context_in_any_case():
+    relative = "docs/setup.md"
+    for name in (
+        "sonnet 5.5", "haiku 5.5", "fable 5.2", "opus-5-5", "sonnet-5-5", "haiku-5-5",
+        "the sol arm", "the astra arm", "claude-opus-5-5", "gpt-6.2-sol", "gpt-6.2-astra", "gemini-4-neon",
+    ):
+        assert page_violations(relative, current_page(name)) == [f"{relative}:5: {name}"]
+    for tier in ("opus", "terra", "sonnet", "haiku", "fable", "sol", "astra", "luna", "neon",
+                 "carbon", "argon", "flash", "llama"):
+        for name in (f"{tier} 5.2", f"routed-{tier}", f"{tier}-5-2", f"{tier} arm",
+                     f"{tier.upper()} MODEL", f"{tier} tier"):
+            assert page_violations(relative, current_page(name)) == [f"{relative}:5: {name}"]
+        assert page_violations(relative, current_page(f"An ordinary {tier}.")) == []
 
 
 @pytest.mark.parametrize("status", ("historical", "superseded", "active", "proposed", ""))
@@ -358,7 +490,7 @@ def test_the_player_adapter_can_name_its_host_and_route():
     assert page_violations("docs/setup.md", current_page("Pi uses OpenRouter via DeepInfra."))
 
 
-def test_outside_citations_are_limited_to_their_block_or_source_row():
+def test_outside_citations_are_limited_to_their_sentence_or_keyed_source_row():
     relative = "docs/research-example.md"
     body = current_page("""| ID | Source |
 | --- | --- |
@@ -394,6 +526,7 @@ Use Codex locally.
 """)
     expected = (
         "| Project default | OpenAI |",
+        "  The cited result also used Claude Code.",
         "  - A related project should use Anthropic.",
         "- Use Anthropic for new project work (S99).",
         "[Anthropic's paper](https://example.org/study) describes the result for Pi.",
@@ -405,23 +538,102 @@ Use Codex locally.
     ]
 
 
-def test_only_existing_tree_paths_are_exempt(tmp_path, monkeypatch):
-    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+def test_only_keyed_rows_of_source_tables_get_the_row_exemption():
+    relative = "docs/research-example.md"
+    body = current_page("""| Source | Note |
+| --- | --- |
+| S12 | Anthropic, study methods |
+| Our pick: Opus for lead | x |
+
+| Role | Model |
+| --- | --- |
+| Lead | Opus [card](https://x.org) |
+| S99 | OpenAI |
+
+The paper studied Opus (S12).
+The paper studied Opus (S99).
+""")
+    assert page_violations(relative, body) == [
+        f"{relative}:8: | Our pick: Opus for lead | x |",
+        f"{relative}:12: | Lead | Opus [card](https://x.org) |",
+        f"{relative}:13: | S99 | OpenAI |",
+        f"{relative}:16: The paper studied Opus (S99).",
+    ]
+
+
+def test_a_bare_url_cites_its_own_sentence_only():
+    relative = "docs/research-example.md"
+    body = "The study used Opus (see https://example.org/x). Our lead uses Opus."
+    assert page_violations(relative, current_page(body.split(" Our")[0])) == []
+    assert page_violations(relative, current_page(body)) == [f"{relative}:5: {body}"]
+    body = "The study used Opus (see https://docs.anthropic.com)."
+    assert page_violations(relative, current_page(body)) == [f"{relative}:5: {body}"]
+    body = "The study used Opus (see `https://example.org/x`)."
+    assert page_violations(relative, current_page(body)) == [f"{relative}:5: {body}"]
+
+
+def test_citations_allow_names_only_in_their_own_sentence():
+    relative = "docs/research-example.md"
+    for line in (
+        "We use Opus 5.5 for the lead. See [a study](https://example.org/x).",
+        "Our lead model is Opus ([docs](https://docs.anthropic.com)).",
+        "Our lead model is Opus ([docs](https://github.com/openai/codex)).",
+        'Our lead model is Opus (<a href="https://docs.anthropic.com">docs</a>).',
+    ):
+        assert page_violations(relative, current_page(line)) == [f"{relative}:5: {line}"]
+    for line in (
+        'Use Opus <a href="https://x.org">x</a>.',
+        "The paper used Opus (2605.18859).",
+        "We chose Opus; compare arXiv:2601.01234.",
+    ):
+        assert page_violations(relative, current_page(line)) == []
+
+    body = current_page("""- We use Opus.
+  See [a study](https://example.org/x).
+
+| ID | Source |
+| --- | --- |
+| S1 | An outside study |
+
+The project's curator runs on Opus (S1).
+""")
+    assert page_violations(relative, body) == [f"{relative}:5: - We use Opus."]
+
+
+def test_tree_paths_depend_on_the_index_and_ignore_rules(tmp_path):
     (tmp_path / "docs").mkdir()
-    (tmp_path / "Codex.md").touch()
     (tmp_path / "OpenAI").mkdir()
+    (tmp_path / "OpenAI" / "tracked.txt").touch()
+    (tmp_path / "Codex.md").touch()
+    (tmp_path / ".gitignore").write_text(".claude/settings.local.json\n.claude/worktrees/\n")
+    subprocess.run(["git", "init", "-q", "--template="], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", ".gitignore", "Codex.md", "OpenAI/tracked.txt"], cwd=tmp_path, check=True)
+    (tmp_path / "Untracked-Codex.md").touch()
     relative = "docs/setup.md"
     body = current_page("""Use `Codex.md:2` and ``../OpenAI/``.
 See [setup](../Codex.md#claude-code).
 [OpenAI](../Codex.md) is the default.
 Use `OpenAI/missing.json`.
 See [setup](../missing/Codex.md).
+Use `Untracked-Codex.md`.
+Generated `.claude/settings.local.json` is ignored.
+See [settings](../.claude/settings.local.json).
+See `.claude/worktrees/`.
+Use `:(glob)Codex.md`.
 """)
-    assert page_violations(relative, body) == [
+    expected = [
         f"{relative}:7: [OpenAI](../Codex.md) is the default.",
         f"{relative}:8: Use `OpenAI/missing.json`.",
         f"{relative}:9: See [setup](../missing/Codex.md).",
+        f"{relative}:10: Use `Untracked-Codex.md`.",
+        f"{relative}:14: Use `:(glob)Codex.md`.",
     ]
+    with git_tree_paths(tmp_path) as match_paths:
+        assert page_violations(relative, body, match_paths) == expected
+    (tmp_path / ".claude" / "worktrees").mkdir(parents=True)
+    (tmp_path / ".claude" / "settings.local.json").touch()
+    with git_tree_paths(tmp_path) as match_paths:
+        assert page_violations(relative, body, match_paths) == expected
 
 
 def test_specifications_allow_literal_identifiers_in_fences_and_schema_examples():
