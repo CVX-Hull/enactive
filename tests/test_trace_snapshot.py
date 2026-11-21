@@ -19,10 +19,9 @@ import pytest
 
 from harness.trace import snapshot
 from harness.trace.projection import project
-from harness.trace.snapshot import (HOLD_BOUND_SECONDS, LOCK, READ_BOUND_SECONDS, BoundExceeded, ReadRefused,
-                                    SnapshotError, stage)
-from harness.trace.stores import sealed
-from tests.curator_trace import LiveWriter, png
+from harness.trace.snapshot import TRANSACTION_BOUND_SECONDS, BoundExceeded, ReadRefused, SnapshotError, stage
+from harness.trace.stores import CURATOR_READ_LOCK, READ_HOLD_BOUND_SECONDS, sealed
+from tests.curator_trace import SESSION_ID, LiveWriter, png
 
 ENDLESS = 'WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT x FROM c'
 
@@ -78,7 +77,7 @@ def test_at_the_writers_start_a_snapshot_holds_only_actors_with_frozen_inputs(tm
         unfrozen = take(writer.run)
         assert unfrozen.actors == ()
         assert unfrozen.excluded == ('actors/001: no frozen manifest yet',
-                                     f"actor {actor['actor_id']}: in the store without a complete frozen manifest")
+                                     f"actor {actor['actor_id']}: in the store with no frozen manifest yet")
         assert not (unfrozen.directory/'actors'/'001').exists()
         writer(op='freeze')
         operation = writer(op='step')['operation_id']
@@ -103,7 +102,7 @@ def test_under_sustained_writes_every_snapshot_is_a_prefix_numbered_as_the_seale
         played = writer.answer()
         closed = writer(op='close')
     assert played['busy'] == 0 and closed['busy'] == 0  # the writer's quarter-second timeout was never hit
-    assert closed['locked'] and closed['wal'] == 0
+    assert closed['errors'] == {} and closed['wal'] == 0
     _, final, _ = _project(writer.run, tmp_path/'sealed')
     assert min(len(final['001']), len(final['002'])) >= 50
 
@@ -112,7 +111,7 @@ def test_under_sustained_writes_every_snapshot_is_a_prefix_numbered_as_the_seale
     print(f'\n{len(snapshots)} snapshots beside {played["steps"]} steps; read transaction '
           f'max {max(reads) * 1000:.1f} ms, mean {sum(reads) / len(reads) * 1000:.1f} ms; '
           f'lock held max {max(holds) * 1000:.1f} ms, mean {sum(holds) / len(holds) * 1000:.1f} ms')
-    assert len(snapshots) >= 5 and max(reads) < READ_BOUND_SECONDS and max(holds) < HOLD_BOUND_SECONDS
+    assert len(snapshots) >= 5 and max(reads) < TRANSACTION_BOUND_SECONDS and max(holds) < READ_HOLD_BOUND_SECONDS
     assert any(a.directory == '002' and a.steps for s in snapshots for a in s.actors)
     assert any(a.directory == '001' and a.ended for s in snapshots for a in s.actors)
     for number, taken in enumerate(snapshots):
@@ -173,7 +172,7 @@ def test_a_read_admitted_before_the_closing_marker_is_waited_for_and_the_store_t
         assert inside.wait(5)
         closed = writer(op='close')
         reader.join()
-    assert closed['locked'] and .2 < closed['waited'] < HOLD_BOUND_SECONDS
+    assert closed['errors'] == {} and .2 < closed['waited'] < READ_HOLD_BOUND_SECONDS
     assert closed['wal'] == 0 and closed['busy'] == 0
     assert outcome['taken'].actors[0].steps == 1
     with sealed(writer.run/'session.sqlite3') as db:
@@ -222,7 +221,7 @@ def test_a_read_stopped_mid_query_at_the_writers_close_lets_the_store_seal(tmp_p
 
         def read():
             try:
-                stage(writer.run, parent, read_bound=.3 if stop == 'cancelled' else .5, hold_bound=.6)
+                stage(writer.run, parent, transaction_bound=.3 if stop == 'cancelled' else .5, hold_bound=.6)
             except (BoundExceeded, _Broken) as exc:
                 outcome.update(stopped=exc, open_files=_open_store_files(writer.run))
 
@@ -233,7 +232,7 @@ def test_a_read_stopped_mid_query_at_the_writers_close_lets_the_store_seal(tmp_p
         reader.join()
     assert isinstance(outcome['stopped'], BoundExceeded if stop == 'cancelled' else _Broken)
     assert outcome['open_files'] == 0 and list(parent.iterdir()) == []
-    assert closed['locked'] and .05 < closed['waited'] < .6
+    assert closed['errors'] == {} and .05 < closed['waited'] < .6
     assert closed['wal'] == 0 and closed['busy'] == 0
     with sealed(writer.run/'session.sqlite3') as db:
         assert db.execute('SELECT count(*) FROM operations').fetchone() == (50,)
@@ -242,7 +241,7 @@ def test_a_read_stopped_mid_query_at_the_writers_close_lets_the_store_seal(tmp_p
 def test_a_read_is_refused_while_the_custodian_holds_the_lock_and_without_a_lock_file(tmp_path):
     take = Stager(tmp_path/'snapshots')
     with LiveWriter(tmp_path/'run') as writer:
-        descriptor = os.open(writer.run/LOCK, os.O_RDONLY)
+        descriptor = os.open(writer.run/CURATOR_READ_LOCK, os.O_RDONLY)
         fcntl.flock(descriptor, fcntl.LOCK_EX)
         parent = take.parent()
         try:
@@ -258,7 +257,7 @@ def test_a_read_is_refused_while_the_custodian_holds_the_lock_and_without_a_lock
         with pytest.raises(ReadRefused) as refused:
             stage(writer.run, parent)
         assert refused.value.reason == 'no-read-lock' and list(parent.iterdir()) == []
-        assert not (writer.run/LOCK).exists()  # never created by a reader
+        assert not (writer.run/CURATOR_READ_LOCK).exists()  # never created by a reader
         assert writer(op='close')['wal'] == 0
 
 
@@ -272,7 +271,7 @@ def test_a_read_held_past_its_bound_is_cancelled_and_nothing_is_staged(tmp_path,
         writer(op='step')
         parent = take.parent()
         with pytest.raises(BoundExceeded):
-            stage(writer.run, parent, **(dict(read_bound=.1) if bound == 'read' else dict(hold_bound=.2)))
+            stage(writer.run, parent, **(dict(transaction_bound=.1) if bound == 'read' else dict(hold_bound=.2)))
         assert list(parent.iterdir()) == [] and _open_store_files(writer.run) == 0
         monkeypatch.undo()
         assert take(writer.run).actors[0].steps == 1  # the cancelled read released its lock
@@ -304,3 +303,108 @@ def test_a_file_that_differs_from_its_recorded_digest_refuses_the_snapshot(tmp_p
             stage(writer.run, parent)
         assert list(parent.iterdir()) == []
         writer(op='close')
+
+
+def test_an_actor_that_settles_between_the_transaction_and_the_log_read_keeps_only_what_was_read(
+        tmp_path, monkeypatch):
+    """Ended is decided from evidence older than the transaction: a host that collects, plays and settles
+    after it does not make the transaction's unfinished rows finished, and its later calls are cut."""
+    take = Stager(tmp_path/'snapshots')
+    with LiveWriter(tmp_path/'run') as writer:
+        writer(op='new_actor')
+        writer(op='step')
+        unknown = writer(op='step', unknown=True)['operation_id']
+        writer(op='step')
+        real = snapshot._read
+
+        def then_settle(path, deadline):
+            read = real(path, deadline)
+            writer(op='collect', operation_id=unknown)
+            writer(op='step')
+            writer(op='handoff')  # its `settled` line and quiescent stage come after the transaction
+            return read
+
+        monkeypatch.setattr(snapshot, '_read', then_settle)
+        taken = take(writer.run)
+        monkeypatch.undo()
+        closed = writer(op='close')
+    assert closed['errors'] == {} and closed['wal'] == 0 and closed['busy'] == 0
+    assert [(a.steps, a.ended, a.held_back) for a in taken.actors] == [(1, False, 2)]
+    _, steps, tools = _project(taken.directory, tmp_path/'snapshot')
+    _, final, _ = _project(writer.run, tmp_path/'sealed')
+    assert steps['001'] == final['001'][:1]
+    assert {t['outcome'].get('operation_id') for t in tools['001']} - {None} <= {s['operation_id'] for s in steps['001']}
+    assert not any(t['outcome'].get('unfinished') for t in tools['001'])
+
+
+def test_an_exception_raised_in_the_progress_handler_is_raised_again_once_the_connection_is_closed(
+        tmp_path, monkeypatch):
+    real = snapshot._rows
+
+    def endless(db):
+        rows = real(db)
+        snapshot._query(db, ENDLESS)
+        return rows
+
+    def interrupted(deadline):
+        raise KeyboardInterrupt
+
+    take = Stager(tmp_path/'snapshots')
+    with LiveWriter(tmp_path/'run') as writer:
+        writer(op='new_actor')
+        writer(op='step')
+        monkeypatch.setattr(snapshot, '_rows', endless)
+        monkeypatch.setattr(snapshot, '_past', interrupted)
+        parent = take.parent()
+        with pytest.raises(KeyboardInterrupt):
+            stage(writer.run, parent)
+        assert list(parent.iterdir()) == [] and _open_store_files(writer.run) == 0
+        monkeypatch.undo()
+        assert take(writer.run).actors[0].steps == 1
+        closed = writer(op='close')
+    assert closed['errors'] == {} and closed['wal'] == 0
+
+
+@pytest.mark.parametrize('created', ['empty file', 'tables', 'identity'])
+def test_a_store_still_being_created_is_refused_as_no_store(tmp_path, created):
+    from harness.computer.store import SessionStore
+    run, store = tmp_path/'run', None
+    run.mkdir()
+    (run/CURATOR_READ_LOCK).touch()
+    if created == 'empty file':
+        (run/'session.sqlite3').touch()
+    elif created == 'tables':
+        with closing(sqlite3.connect(run/'session.sqlite3')) as db:
+            db.execute('PRAGMA journal_mode=WAL')
+            db.execute('CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)')
+            db.commit()
+    else:
+        store = SessionStore(run, SESSION_ID, dict(max_inputs=1, max_requests=1, max_frames=1, max_bytes=1),
+                             time.monotonic() + 60)
+        with closing(sqlite3.connect(run/'session.sqlite3')) as db:
+            db.execute('DELETE FROM metadata')  # as before the writer's identity commit
+            db.commit()
+    parent = tmp_path/'snapshot'
+    parent.mkdir()
+    try:
+        with pytest.raises(ReadRefused) as refused:
+            stage(run, parent)
+    finally:
+        if store is not None:
+            store.close()
+    assert refused.value.reason == 'no-store' and list(parent.iterdir()) == []
+
+
+def test_an_actor_whose_guard_input_is_not_yet_whole_is_left_out_until_it_is(tmp_path):
+    take = Stager(tmp_path/'snapshots')
+    with LiveWriter(tmp_path/'run') as writer:
+        writer(op='new_actor')
+        writer(op='step')
+        process = writer.run/'actors'/'001'/'host-process.json'
+        process.write_text('{"pid": 1, "argv": ["pla')
+        waiting = take(writer.run)
+        assert waiting.actors == () and waiting.excluded == ('actors/001: host-process.json not complete yet',)
+        assert not (waiting.directory/'actors'/'001').exists()
+        process.write_text(json.dumps(dict(pid=1, pgid=1, argv=['player'])) + '\n')
+        assert take(writer.run).actors[0].steps == 1
+        assert writer(op='close')['errors'] == {}

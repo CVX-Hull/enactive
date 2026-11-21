@@ -4,36 +4,43 @@ The custodian writes `session.sqlite3` in write-ahead-log mode until the run clo
 refuses such a store, and should. `stage` copies its finished rows into a fresh store in one
 bounded read transaction on a read-only, non-immutable connection, and stages a session
 directory under the run directory's own name beside it, which the projection and windows then
-read through `sealed()` unchanged. Nothing here writes beside the live store, and a snapshot that
-fails or passes its bound is discarded whole.
+read through `sealed()` unchanged. The reader writes no file beside the live store (its
+read-only connection can still update the store's shared-memory file, as any reader does), and
+a snapshot that fails or passes its bound is discarded whole.
 
-**Admission against the store's closing.** `curator-read.lock` exists in the run directory only
-when a reader is configured, created before the custodian starts. A read opens that existing
-file and never creates, removes or replaces it (a missing one refuses the read), takes a shared
-non-blocking `flock`, then checks that `store-closing.json` does not exist, then opens its
-connection, and holds the lock until the connection is really closed. In close-out the
-custodian writes the marker, then waits at most two seconds for an exclusive lock, then closes
-the store. A read admitted before the marker is therefore waited for, and none is admitted after
-it. Refusals are `ReadRefused`, not failures of a snapshot.
+**Admission against the store's closing** (the names and the hold bound are in `.stores`).
+`curator-read.lock` exists in the run directory only when a reader is configured, created before
+the custodian starts and never removed or replaced while the session is live. A read opens that
+existing file and never creates it (a missing one refuses the read), takes a shared non-blocking
+`flock`, then checks that `store-closing.json` does not exist, then opens its connection, and
+holds the lock until the connection is really closed. In close-out the custodian writes the
+marker, then waits at most `READ_HOLD_BOUND_SECONDS` for an exclusive lock, then closes the
+store. A read admitted before the marker is therefore waited for, and none is admitted after it.
+Refusals are `ReadRefused`, not failures of a snapshot; a store still being created (an empty
+file, or tables or identity not yet committed) is refused as `no-store`.
 
 Both bounds run from the moment the shared lock is taken, since the custodian's wait starts
-later, at the marker. The whole hold, to the lock's release, is bounded by `HOLD_BOUND_SECONDS`.
-The read transaction is cancelled at `READ_BOUND_SECONDS` (a progress handler, and the busy
-timeout), which leaves the rest of the hold for cancelling, finalizing and closing. A read that
-passes either bound is discarded. "Really closed" matters: a connection closed while a statement
-is still mid-result stays open underneath, with its read transaction and file descriptors, and
-the custodian's close would then leave a non-empty log. So every statement runs on its own
-cursor, closed before the next, and on every path the transaction is ended and the connection
-closed before the lock is released.
+later, at the marker. The whole hold, to the lock's release, is bounded by
+`READ_HOLD_BOUND_SECONDS`. The read transaction is cancelled at `TRANSACTION_BOUND_SECONDS` (a
+progress handler, and the busy timeout), which leaves the rest of the hold for cancelling,
+finalizing and closing. A read that passes either bound is discarded. An exception raised inside
+the progress handler (a `KeyboardInterrupt`, say) cancels the statement and is raised again,
+itself, once the connection is closed. "Really closed" matters: a connection closed while a
+statement is still mid-result stays open underneath, with its read transaction and file
+descriptors, and the custodian's close would then leave a non-empty log. So every statement runs
+on its own cursor, closed before the next, and on every path the transaction is ended and the
+connection closed before the lock is released.
 
 **The cutoff, per actor, by identity across the store and the host's log.** An actor is
-included only when its frozen manifest (`frozen.json`, `player-host-inputs/3`) is complete
-when the snapshot starts; its frozen prompt and guide and the custody and route files the
-secret guard reads are copied, each checked against the manifest's digest where it names one.
-An included actor has *ended* when its whole-line host log holds a `settled` event or the store
-shows it `quiescent`. Its operations are taken in the projection's order (created wall time,
-then operation identity), and the snapshot carries the longest prefix of them in which each
-operation
+included only when, before the read is admitted, its frozen manifest (`frozen.json`,
+`player-host-inputs/3`) is complete and so is every secret-guard input it has. Its frozen prompt
+and guide and the custody and route files are copied, each checked against the manifest's
+digest where it names one; a guard input the manifest does not bind (`host-process.json`,
+`mcp-template.json`) that does not parse yet leaves the actor out of this snapshot. An actor has
+*ended* only on evidence that existed before the read transaction began: the store shows it
+`quiescent` in that transaction, or its host log, read before admission, holds a whole
+`settled` line. Its operations are taken in the projection's order (created wall time, then
+operation identity), and the snapshot carries the longest prefix of them in which each operation
 
 - has its terminal row (`final_json`) in the read transaction, and,
 - unless the actor has ended, has a matching result in the log (a whole `tool-result` line
@@ -41,12 +48,15 @@ operation
   collection outstanding (a native intent without a receipt, or with an unknown-transport
   receipt and no collection row).
 
-The first operation that fails stops the prefix, so step numbers equal the sealed trace's as
-long as one actor's operations are created in wall-time order, which the runtime's serial lock
-gives unless the wall clock steps back. The host log is copied as whole lines only. For an actor
-that has not ended it is cut after the first result line of its last included operation, and a
-`tool-start` left in that cut without its answer is dropped: a call with no included operation
-is not attached to a neighbouring step. An ended actor keeps its whole log.
+The first operation that fails stops the prefix, so step numbers equal the sealed trace's
+except in three cases this reader cannot see: a wall clock that steps back between two of one
+actor's operations; two operations of one actor with identical created wall times, which sort by
+identity, so a later one can sort first; and a frame linked to an operation after its terminal
+row. The host log is read again after the transaction, for the cut only, as whole lines. When
+every operation the transaction holds for an ended actor is included, its whole log is kept.
+Otherwise the log is cut after the first result line of the last included operation, and a
+`tool-start` left in that cut without its answer is dropped, so no call for an operation the
+snapshot does not hold survives and none is attached to a neighbouring step.
 
 **What a snapshot holds:** the fresh store (the live schema; metadata, the included actors and
 their included operations, native intents, collections and the sources those name), the frames
@@ -73,11 +83,9 @@ import time
 import uuid
 
 from .projection import SECRET_FILES, _result
+from .stores import CURATOR_READ_LOCK, READ_HOLD_BOUND_SECONDS, STORE_CLOSING_MARKER
 
-HOLD_BOUND_SECONDS = 2.0  # the custodian's wait for the read lock
-READ_BOUND_SECONDS = 1.5  # the read transaction is cancelled here, from the lock's taking
-LOCK = 'curator-read.lock'
-CLOSING = 'store-closing.json'
+TRANSACTION_BOUND_SECONDS = 1.5  # the read transaction is cancelled here, from the lock's taking
 STORE = 'session.sqlite3'
 STORE_SCHEMA = 'computer-session/1'
 STORE_VERSION = 1
@@ -91,7 +99,8 @@ PROGRESS_STEPS = 1000
 
 class ReadRefused(Exception):
     """The live store does not admit a read now, and nothing was read. `reason` is `no-read-lock`
-    (no reader is configured), `closing` (the custodian is closing the store) or `no-store`."""
+    (no reader is configured), `closing` (the custodian is closing the store) or `no-store` (no
+    store, or one still being created)."""
 
     def __init__(self, reason: str, detail: str):
         super().__init__(detail)
@@ -134,6 +143,7 @@ class _Actor:
     directory: str
     actor_id: str
     session: object
+    settled: bool  # a whole `settled` line in its host log before admission
     files: dict[str, bytes]
 
 
@@ -141,27 +151,42 @@ class _Actor:
 def admitted(run: Path):
     """Hold the shared read lock against the store's closing; yields when the lock was taken."""
     try:
-        descriptor = os.open(run/LOCK, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        descriptor = os.open(run/CURATOR_READ_LOCK, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
     except FileNotFoundError as exc:
-        raise ReadRefused('no-read-lock', f'{run}: no {LOCK}, so no reader is configured') from exc
+        raise ReadRefused('no-read-lock', f'{run}: no {CURATOR_READ_LOCK}, so no reader is configured') from exc
     except OSError as exc:
-        raise SnapshotError(f'{run/LOCK}: cannot open the read lock') from exc
+        raise SnapshotError(f'{run/CURATOR_READ_LOCK}: cannot open the read lock') from exc
     try:
         try:
             fcntl.flock(descriptor, fcntl.LOCK_SH | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise ReadRefused('closing', f'{run}: the custodian holds the read lock to close the store') from exc
         taken = time.monotonic()
-        if os.path.lexists(run/CLOSING):
-            raise ReadRefused('closing', f'{run}: {CLOSING} exists, so the store is closing')
+        if os.path.lexists(run/STORE_CLOSING_MARKER):
+            raise ReadRefused('closing', f'{run}: {STORE_CLOSING_MARKER} exists, so the store is closing')
         yield taken
     finally:
         os.close(descriptor)
 
 
-def _bounded(db: sqlite3.Connection, deadline: float) -> None:
-    """Cancel any statement on `db` that is still running when `deadline` passes."""
-    db.set_progress_handler(lambda: time.monotonic() >= deadline, PROGRESS_STEPS)
+def _past(deadline: float) -> bool:
+    return time.monotonic() >= deadline
+
+
+def _bounded(db: sqlite3.Connection, deadline: float) -> list[BaseException]:
+    """Cancel any statement on `db` still running when `deadline` passes, or when the handler itself
+    raises; the returned list receives what it raised, for the caller to raise once the connection is closed."""
+    raised: list[BaseException] = []
+
+    def handler() -> bool:
+        try:
+            return _past(deadline)
+        except BaseException as exc:
+            raised.append(exc)
+            return True
+
+    db.set_progress_handler(handler, PROGRESS_STEPS)
+    return raised
 
 
 def _query(db: sqlite3.Connection, sql: str) -> tuple[list[str], list[tuple]]:
@@ -174,8 +199,12 @@ def _query(db: sqlite3.Connection, sql: str) -> tuple[list[str], list[tuple]]:
         cursor.close()
 
 
-def _rows(db: sqlite3.Connection) -> dict:
-    """Everything the snapshot may need, read inside the caller's one transaction."""
+def _rows(db: sqlite3.Connection) -> dict | None:
+    """Everything the snapshot may need, read inside the caller's one transaction; None while the
+    store's tables are still being created."""
+    present = {name for (name,) in _query(db, "SELECT name FROM sqlite_master WHERE type='table'")[1]}
+    if not present >= set(TABLES):
+        return None
     version = _query(db, 'PRAGMA user_version')[1][0][0]
     schema = [sql for (sql,) in _query(db, 'SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid')[1]]
     tables = {table: _query(db, f'SELECT * FROM {table} ORDER BY rowid') for table in TABLES}
@@ -192,16 +221,17 @@ def _close(db: sqlite3.Connection) -> None:
         db.close()
 
 
-def _read(path: Path, deadline: float) -> tuple[dict, float]:
+def _read(path: Path, deadline: float) -> tuple[dict | None, float]:
     """One read transaction on a read-only, non-immutable connection, cancelled at `deadline`."""
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise BoundExceeded(f'{path}: the read bound passed before the connection opened')
+    raised: list[BaseException] = []
     try:
         db = sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=remaining,
                              isolation_level=None)
         try:
-            _bounded(db, deadline)
+            raised = _bounded(db, deadline)
             began = time.monotonic()
             _query(db, 'BEGIN')
             rows = _rows(db)
@@ -210,9 +240,13 @@ def _read(path: Path, deadline: float) -> tuple[dict, float]:
         finally:
             _close(db)
     except sqlite3.Error as exc:
+        if raised:
+            raise raised[0] from None
         if time.monotonic() >= deadline:
             raise BoundExceeded(f'{path}: the read passed its bound and was cancelled') from exc
         raise SnapshotError(f'{path}: unreadable live store: {exc}') from exc
+    if raised:
+        raise raised[0]
     if time.monotonic() >= deadline:
         raise BoundExceeded(f'{path}: the read passed its bound')
     return rows, held
@@ -231,13 +265,31 @@ def _file(path: Path) -> bytes:
     return path.read_bytes()
 
 
-def _frozen(run: Path) -> tuple[list[_Actor], list[str]]:
-    """Actors whose frozen manifest is complete, with the files the snapshot copies for them.
+def _host(path: Path) -> list[tuple[bytes, dict | None]]:
+    """The host log's whole lines, each with its event."""
+    data = path.read_bytes() if path.is_file() and not path.is_symlink() else b''
+    lines = []
+    for number, line in enumerate(data[:data.rfind(b'\n') + 1].splitlines(keepends=True), 1):
+        event = _json(line, f'{path}:{number}') if line.strip() else None
+        if event is not None and not isinstance(event, dict):
+            raise SnapshotError(f'{path}:{number}: expected an event object')
+        lines.append((line, event))
+    return lines
+
+
+def _settled(lines: list[tuple[bytes, dict | None]]) -> bool:
+    return any(event is not None and event.get('type') == 'settled' for _, event in lines)
+
+
+def _frozen(run: Path) -> tuple[list[_Actor], list[str], set[str]]:
+    """Actors whose frozen manifest and guard inputs are complete, with the files the snapshot copies
+    for them and whether their host had settled; also why others are left out, and the identities of
+    actors left out with a manifest.
 
     Read before admission: the driver records an actor in the store before it writes the actor's
     files, and writes every file the manifest names before the manifest itself.
     """
-    actors, excluded = [], []
+    actors, excluded, known = [], [], set()
     root = run/'actors'
     for directory in sorted(root.iterdir()) if root.is_dir() else []:
         where = f'actors/{directory.name}'
@@ -256,7 +308,7 @@ def _frozen(run: Path) -> tuple[list[_Actor], list[str]]:
         if (not isinstance(frozen, dict) or frozen.get('schema') != FROZEN_SCHEMA
                 or not isinstance(frozen.get('actor_id'), str) or not isinstance(frozen.get('files'), dict)):
             raise SnapshotError(f'{path}: unsupported frozen manifest; expected {FROZEN_SCHEMA}')
-        files = {'frozen.json': manifest}
+        files, incomplete = {'frozen.json': manifest}, None
         for name in dict.fromkeys((*FROZEN_INPUTS, *SECRET_FILES)):
             digest = frozen['files'].get(name)
             if digest is None and name in FROZEN_INPUTS:
@@ -265,29 +317,29 @@ def _frozen(run: Path) -> tuple[list[_Actor], list[str]]:
                 continue
             data = _file(directory/name)
             if digest is None:
-                _json(data, f'{directory/name}')  # a guard input not yet whole would hide its values
+                try:
+                    json.loads(data)
+                except ValueError:
+                    incomplete = name  # a guard input not yet whole would hide its values
+                    break
             elif hashlib.sha256(data).hexdigest() != digest:
                 raise SnapshotError(f'{directory/name}: SHA-256 differs from the frozen manifest')
             files[name] = data
-        actors.append(_Actor(directory.name, frozen['actor_id'], frozen.get('session'), files))
-    return actors, excluded
+        if incomplete is not None:
+            excluded.append(f'{where}: {incomplete} not complete yet')
+            known.add(frozen['actor_id'])
+            continue
+        try:
+            settled = _settled(_host(directory/'host.jsonl'))
+        except OSError as exc:
+            raise SnapshotError(f'{where}: unreadable host log: {exc}') from exc
+        actors.append(_Actor(directory.name, frozen['actor_id'], frozen.get('session'), settled, files))
+    return actors, excluded, known
 
 
 def _table(rows: dict, name: str) -> list[dict]:
     columns, values = rows['tables'][name]
     return [dict(zip(columns, row, strict=True)) for row in values]
-
-
-def _host(path: Path) -> list[tuple[bytes, dict | None]]:
-    """The host log's whole lines, each with its event."""
-    data = path.read_bytes() if path.is_file() and not path.is_symlink() else b''
-    lines = []
-    for number, line in enumerate(data[:data.rfind(b'\n') + 1].splitlines(keepends=True), 1):
-        event = _json(line, f'{path}:{number}') if line.strip() else None
-        if event is not None and not isinstance(event, dict):
-            raise SnapshotError(f'{path}:{number}: expected an event object')
-        lines.append((line, event))
-    return lines
 
 
 def _receipt_schema(receipt: str) -> object:
@@ -316,9 +368,9 @@ def _cut(operations: list[dict], natives: dict[str, list[dict]], collected: set[
         if not ended and (operation['id'] not in answered or outstanding(operation)):
             break
         included.append(operation)
-    if ended:
+    if ended and len(included) == len(operations):
         return included, [line for line, _ in lines]
-    kept = lines[:max((answered[o['id']] for o in included), default=-1) + 1]
+    kept = lines[:max((answered[o['id']] for o in included if o['id'] in answered), default=-1) + 1]
     closed_calls = {e.get('tool_call_id') for _, e in kept if e and e.get('type') in ('tool-result', 'tool-refused')}
     return included, [line for line, e in kept
                       if not (e and e.get('type') == 'tool-start' and e.get('tool_call_id') not in closed_calls)]
@@ -361,12 +413,15 @@ def _write_new(path: Path, data: bytes) -> None:
     path.chmod(0o600)
 
 
-def stage(run: Path, parent: Path, *, read_bound: float = READ_BOUND_SECONDS,
-          hold_bound: float = HOLD_BOUND_SECONDS) -> Snapshot:
-    """Stage a snapshot of the live run directory `run` as `parent/<run's name>`, which must not exist.
+def stage(run: Path, parent: Path, *, transaction_bound: float = TRANSACTION_BOUND_SECONDS,
+          hold_bound: float = READ_HOLD_BOUND_SECONDS) -> Snapshot:
+    """Stage a snapshot of the live run directory `run` as `parent/<run's name>`.
 
-    Raises `ReadRefused` when the store does not admit a read, `BoundExceeded` when the read
-    passes either bound, and `SnapshotError` for any other failure; in each case nothing is staged.
+    The target must not exist when the call starts. It is built in a hidden sibling and renamed
+    into place: a target that appears meanwhile is replaced by that rename if it is an empty
+    directory, and fails the snapshot otherwise. Raises `ReadRefused` when the store does not admit
+    a read, `BoundExceeded` when the read passes either bound, and `SnapshotError` for any other
+    failure; in each case nothing is staged.
     """
     started = time.monotonic()
     run, parent = Path(run), Path(parent)
@@ -374,23 +429,27 @@ def stage(run: Path, parent: Path, *, read_bound: float = READ_BOUND_SECONDS,
     if target.exists() or target.is_symlink():
         raise SnapshotError(f'{target}: snapshot target must not exist')
     try:
-        frozen, excluded = _frozen(run)
+        frozen, excluded, known = _frozen(run)
         captured = {name: _file(run/name) for name in RUN_FILES if (run/name).exists()}
     except OSError as exc:
         raise SnapshotError(f'{run}: unreadable run directory: {exc}') from exc
     with admitted(run) as taken:
         if not (run/STORE).is_file():
             raise ReadRefused('no-store', f'{run}: no {STORE} yet')
-        rows, transaction = _read(run/STORE, taken + read_bound)
+        rows, transaction = _read(run/STORE, taken + transaction_bound)
     hold = time.monotonic() - taken  # the lock is released by now
     if hold >= hold_bound:
         raise BoundExceeded(f'{run}: the read lock was held {hold:.3f} s, past its bound')
+    if rows is None:
+        raise ReadRefused('no-store', f'{run/STORE}: tables still being created')
 
     metadata = {r['key']: r['value'] for r in _table(rows, 'metadata')}
+    if not {'schema', 'session'} <= metadata.keys():
+        raise ReadRefused('no-store', f'{run/STORE}: session identity not yet committed')
     try:
         schema, session_id = json.loads(metadata['schema']), json.loads(metadata['session'])
-    except (KeyError, ValueError) as exc:
-        raise SnapshotError(f'{run/STORE}: no session identity yet') from exc
+    except ValueError as exc:
+        raise SnapshotError(f'{run/STORE}: unreadable session identity') from exc
     if rows['version'] != STORE_VERSION or schema != STORE_SCHEMA:
         raise SnapshotError(f'{run/STORE}: unsupported store {schema!r} (user_version {rows["version"]}); '
                             f'expected {STORE_SCHEMA}')
@@ -402,9 +461,9 @@ def stage(run: Path, parent: Path, *, read_bound: float = READ_BOUND_SECONDS,
     collections = _table(rows, 'collections')
     collected = {c['native_id'] for c in collections}
     sources = {s['id']: s for s in _table(rows, 'sources')}
-    frozen_ids = {a.actor_id for a in frozen}
-    excluded += [f'actor {identity}: in the store without a complete frozen manifest'
-                 for identity in actors if identity not in frozen_ids]
+    known |= {a.actor_id for a in frozen}
+    excluded += [f'actor {identity}: in the store with no frozen manifest yet'
+                 for identity in actors if identity not in known]
 
     coverage, logs = [], {}
     kept = dict(metadata=_table(rows, 'metadata'), actors=[], operations=[], native_intents=[], collections=[],
@@ -415,11 +474,10 @@ def stage(run: Path, parent: Path, *, read_bound: float = READ_BOUND_SECONDS,
         if actor.session != session_id:
             raise SnapshotError(f'actors/{actor.directory}: frozen manifest names another session')
         try:
-            lines = _host(run/'actors'/actor.directory/'host.jsonl')
+            lines = _host(run/'actors'/actor.directory/'host.jsonl')  # read after the transaction: the cut only
         except OSError as exc:
             raise SnapshotError(f'actors/{actor.directory}: unreadable host log: {exc}') from exc
-        ended = (actors[actor.actor_id]['stage'] == 'quiescent'
-                 or any(e is not None and e.get('type') == 'settled' for _, e in lines))
+        ended = actor.settled or actors[actor.actor_id]['stage'] == 'quiescent'
         own = [o for o in operations if o['actor'] == actor.actor_id]
         included, logs[actor.directory] = _cut(own, natives, collected, lines, ended)
         kept['actors'].append(actors[actor.actor_id])

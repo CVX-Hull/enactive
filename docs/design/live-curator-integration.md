@@ -221,14 +221,15 @@ Nothing here has been tried against the real custodian or a real host. The reade
 (`harness/trace/snapshot.py`, whose module text states the exact cutoff) is tested
 offline with a synthetic writer process, at start, under sustained writes and at the
 writer's close: the read returns a consistent prefix, the writer's timeout is not hit,
-and the step numbers of a snapshot equal those of the sealed trace. Under about a
-thousand synthetic steps a second, a read held its lock for about two milliseconds. The
+and the step numbers of a snapshot equal those of the sealed trace. The
 synthetic writer imitates the host's log; it is not the host.
 
-Two things the reader cannot see are left as they are. Step numbers follow wall time,
+Three things the reader cannot see are left as they are. Step numbers follow wall time,
 so a wall clock that steps back between two operations of one actor renumbers them, in
-the sealed trace as well. And a frame linked to an operation after its terminal row
-would change a step a snapshot had already included.
+the sealed trace as well. Two operations of one actor with identical wall times sort by
+identity, so a later one can sort before one a snapshot had already numbered. And a
+frame linked to an operation after its terminal row would change a step a snapshot had
+already included.
 
 **The fallback** has its own test, not this one's: at each window the custodian yields
 a detached, stable copy of the prefix. Checkpointing the live file is not enough, since

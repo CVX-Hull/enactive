@@ -10,17 +10,15 @@ handoff packet.
 `harness.computer.store.SessionStore` in write-ahead-log mode with the custodian's quarter-second timeout,
 and beside it the files the driver and host write, in their order. Run as `python -m tests.curator_trace
 RUN`, it reads one JSON command per line and answers each with one JSON line that carries `busy`, the
-number of store calls that failed on a locked database. At `close` it does the custodian's side of the
-read admission: it writes `store-closing.json`, waits at most two seconds for an exclusive lock on
-`curator-read.lock`, and closes the store holding it.
+number of store calls that failed on a locked database. At `close` it runs the custodian's own close-out,
+`tools.campaign_run.close_store`, which writes the closing marker, waits within the bound for an admitted
+read and then closes the store.
 """
 from __future__ import annotations
 
-import fcntl
 import hashlib
 import io
 import json
-import os
 from pathlib import Path
 import select
 import sqlite3
@@ -33,6 +31,7 @@ from PIL import Image
 import pytest
 
 from harness.trace.projection import PACKAGE_LABELS
+from harness.trace.stores import CURATOR_READ_LOCK
 
 SESSION_ID = 'a' * 32
 ROOT = Path(__file__).resolve().parents[1]
@@ -123,7 +122,7 @@ class LiveWriter:
     def __init__(self, run: Path, *, read_lock: bool = True, session_id: str = SESSION_ID):
         run.mkdir()
         if read_lock:
-            (run/'curator-read.lock').touch()  # the runner creates it before the custodian starts
+            (run/CURATOR_READ_LOCK).touch()  # the runner creates it before the custodian starts
         record_package(run, labels=dict(lineage=None, admission=None), session_id=session_id)
         self.run = run
         self.process = subprocess.Popen([sys.executable, '-m', 'tests.curator_trace', str(run), session_id],
@@ -328,25 +327,22 @@ class _Writer:
                 self.new_actor()
         return dict(steps=steps)
 
-    def close(self, wait: float = 2.0) -> dict:
-        """The custodian's side of the read admission, then the store's close."""
-        self.write(self.run/'store-closing.json', dict(schema='store-closing/1', session=self.session,
-                                                       closing_wall=time.time()))
-        started, locked, descriptor = time.monotonic(), False, None
-        if (self.run/'curator-read.lock').is_file():
-            descriptor = os.open(self.run/'curator-read.lock', os.O_RDONLY)
-            while not locked and time.monotonic() - started < wait:
-                try:
-                    fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    locked = True
-                except BlockingIOError:
-                    time.sleep(.005)
+    def close(self) -> dict:
+        """The custodian's real close-out: the closing marker, the wait for an admitted read, the store's close."""
+        from tools.campaign_run import close_store
+        errors: dict[str, str] = {}
+
+        def attempt(name, function):
+            try:
+                return function()
+            except BaseException as exc:
+                errors[name] = f'{type(exc).__name__}: {exc}'
+
+        started = time.monotonic()
+        close_store(self.run, self.session, self.store.close, attempt)
         waited = time.monotonic() - started
-        self.store.close()
-        if descriptor is not None:
-            os.close(descriptor)
         wal = self.run/'session.sqlite3-wal'
-        return dict(locked=locked, waited=waited, wal=wal.stat().st_size if wal.exists() else 0)
+        return dict(errors=errors, waited=waited, wal=wal.stat().st_size if wal.exists() else 0)
 
 
 def _serve(run: Path, session_id: str) -> None:

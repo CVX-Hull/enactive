@@ -498,7 +498,7 @@ def test_close_out_waits_for_an_admitted_read_and_leaves_a_sealed_store(tmp_path
         assert process.wait(5)==0 and errors=={}
     finally:stop(process)
     # No lower limit on the wait: had it not waited, the log below would be non-empty.
-    assert elapsed<campaign_run.READ_BOUND_SECONDS
+    assert elapsed<campaign_run.READ_HOLD_BOUND_SECONDS
     wal=tmp_path/'session.sqlite3-wal'
     assert not wal.exists() or wal.stat().st_size==0
     with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT id FROM actors').fetchall()==[('actor',)]
@@ -513,7 +513,7 @@ def test_close_out_stops_waiting_at_the_read_bound_and_still_closes(tmp_path):
     process=reader(tmp_path,60)
     try:
         elapsed,errors=close_out(tmp_path,store)
-        assert errors=={} and campaign_run.READ_BOUND_SECONDS<=elapsed<campaign_run.READ_BOUND_SECONDS+1
+        assert errors=={} and campaign_run.READ_HOLD_BOUND_SECONDS<=elapsed<campaign_run.READ_HOLD_BOUND_SECONDS+1
         with pytest.raises(Exception,match='closed'):store.counts()
         # The residual: a read held past the bound keeps the log, and the sealed check refuses it.
         assert (tmp_path/'session.sqlite3-wal').stat().st_size>0
@@ -527,7 +527,7 @@ def test_a_failed_marker_or_lock_step_is_recorded_and_the_store_still_closes(tmp
     store=live_store(tmp_path);(tmp_path/'curator-read.lock').touch(mode=0);(tmp_path/'store-closing.json').write_text('{}')
     elapsed,errors=close_out(tmp_path,store)
     assert errors=={'store_closing_marker_error':'FileExistsError','curator_read_wait_error':'PermissionError'}
-    assert elapsed<campaign_run.READ_BOUND_SECONDS
+    assert elapsed<campaign_run.READ_HOLD_BOUND_SECONDS
     with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT id FROM actors').fetchall()==[('actor',)]
 
 
