@@ -27,7 +27,7 @@ import uuid
 from harness.trace.projection import project
 from harness.trace.sidecar import validate
 
-from . import sandbox
+from . import sandbox, type_usage
 from .containers import Drafts, UnsafeTree, read_tree, write_tree
 from .gate import FACT, gate, journal as gate_journal
 from .window import FULL, Window, coverage as window_coverage, restrict, positions, citations_only
@@ -144,7 +144,7 @@ def _error(exc: BaseException) -> str:
 
 
 def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dict], session_kind: str = 'admission') -> str:
-    """Software-written brief: what is new, open and stale drafts, recent gate results.
+    """Software-written brief: what is new, open and stale drafts, recent gate results, type usage.
 
     Names the curator chose (submission and draft directories) are shown `repr`-escaped, so a
     name cannot inject Markdown or lines into a later session's brief.
@@ -174,7 +174,8 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
               for v in verdicts] or ['None.']
     lines += ['', '## Hints and flagged types', '',
               'Player hints in the selected trace tool calls are fallible public reports, not published facts. '
-              'Check their source evidence before proposing knowledge. No additional operator hints.', '', '## Close-out', '',
+              'Check their source evidence before proposing knowledge. No additional operator hints.', '',
+              *type_usage.section(repo.types(version), repo.facts(version)), '', '## Close-out', '',
               'Put each proposed change in `submissions/<id>/submission.json`; work to continue later in '
               '`drafts/<id>/`. Everything else is discarded.', '']
     return '\n'.join(lines)

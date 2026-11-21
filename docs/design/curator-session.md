@@ -48,6 +48,21 @@ A session's workspace follows ADR 009's table:
 Open and stale drafts are copied into `drafts/<id>/` so the session can continue them. The
 host runs under the [curator sandbox](../research-curator-sandbox.md).
 
+### The type list in the brief
+
+The brief's "Hints and flagged types" section carries a type list computed by
+[`type_usage.py`](../../harness/curator/type_usage.py) from the version the session is
+given. It lists each published type by name with its fields and its count of current facts
+(facts with neither `superseded_by` nor `retired`), flags a type with no current fact as
+unused, and asks the curator to check the list before any `add_type`. Its "Nearest types"
+part names pairs of existing types by one rule, stated in the brief in the same words:
+each type's words are the lower-cased letter-and-digit runs of its name and field names,
+and two types are near when their shared words divided by all words of the two (Jaccard
+overlap) is at least 1/3. At most 10 pairs are shown, closest first, then by name. The
+list is advice only: no model is called, and the gate does not check the curator's choice
+of type. Curator-chosen names and fields are shown `repr`-escaped, like the brief's other
+curator-chosen names.
+
 ## Submissions
 
 A submission is a directory `submissions/<id>/` with `submission.json`:
