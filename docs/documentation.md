@@ -68,7 +68,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `docs/components/`, `contracts/`, `standards/`, `workflows/`, `operations/` | Explanation, exact rules, mandatory qualities, decisions and supported tasks. |
 | `docs/design/` | Design notes: `proposed` while their owner decisions are open, `active` while one is the working description of something being built, and `historical` once that is built or the decisions went another way. An adopted design's current rules move into components and contracts. |
 | `docs/research*.md` | External evidence and its limits, with a dated research cutoff; [research](research.md) indexes the current pages, and pages whose question is closed are `historical`. |
-| `docs/decisions/owner-decisions.md` | The one list of the owner's decisions, including the permissions and limits in force. |
+| [`docs/decisions/owner-decisions.md`](decisions/owner-decisions.md), [`docs/decisions/owner-decisions-archive.md`](decisions/owner-decisions-archive.md) | The owner's decisions, including permissions and limits in force, and the archive of replaced and used decisions. |
 | `docs/acceptance/`, `changes/`, `decisions/` (ADRs) | Dated evidence/rationale under explicit status, not live commands or permission. `changes/` holds the change briefs written before ADRs and issues took that role; it receives no new briefs. |
 | `schemas/` | JSON Schemas of persisted formats and of document front matter; the code that reads each one and its contract own its meaning. |
 | Ignored `.runtime/` | Frozen inputs, owned stores/saves and raw evidence; no private maintained source framework. |
@@ -188,6 +188,9 @@ superseded copy: Git keeps it. Current pages describe the
 current system and are not changelogs: what changed, when and what it replaced belongs
 in Git and pull requests, what was observed belongs in dated records, and what the
 owner decided belongs in the owner decision log, not in an active page.
+
+The [archived project goal](goal.md) and [archived spectator walkthrough](walkthrough.md)
+are historical entry pages.
 
 Update parent/component/contract/callers/storage/operations together when behavior
 changes. Incorporate adopted design into current pages, transfer remaining work

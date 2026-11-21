@@ -26,7 +26,7 @@ The [curator source](../../harness/curator) implements the session and gate.
 The repository layout is `curator-knowledge/2`, recorded in `knowledge.json`. Readers and
 writers refuse other repository schemas with “start a new repository”; there is no
 layout migration. The knowledge repository's location is set by the
-[owner's decision of 8 November 2026, "Where does the knowledge repository live?"](../decisions/owner-decisions.md#in-force).
+[decision on the project-local knowledge repository](../decisions/owner-decisions.md#knowledge-repository-local-and-sealed-per-study).
 Everything lives under one project-local root, by default
 `.runtime/knowledge/`:
 

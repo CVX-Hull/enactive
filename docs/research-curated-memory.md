@@ -31,7 +31,7 @@ induction, or oversight interfaces.
 names it.
 - Agent memory: write and retrieval policies; typed versus unified stores; what has been measured about when agents should write, what to retrieve, and whether typed schemas help.
 - Concurrent consolidation: concurrent or background memory consolidation (a separate process curating memory while an agent acts): designs and measured effects, including lag and cost.
-- Belief under conflict: belief under conflicting observations: subjective logic, Bayesian and Dempster-Shafer fusion, source reliability, staleness/temporal decay, opinion pooling, calibration; a recommendation on the ADR's [open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions) and how to test the choice offline.
+- Belief under conflict covers subjective logic, Bayesian and Dempster-Shafer fusion, source reliability, staleness, opinion pooling, calibration and how to test the choice offline. The production choice is open under the [decision to compare belief representations on matched cases](decisions/owner-decisions.md#compare-belief-representations-on-matched-cases).
 - Ontology induction and evaluation: ontology/schema induction and evaluation (including by LLMs): ontology quality measures, grooming/merging of similar types, utility versus complexity.
 - Oversight interfaces: oversight interfaces for human supervision of autonomous agents: what operators need to see, measured effects.
 
@@ -247,8 +247,10 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
 
 ## Belief under conflicting observations
 
-This section also answers the ADR's
-[open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions).
+The production representation remains open. The
+[belief comparison decision](decisions/owner-decisions.md#compare-belief-representations-on-matched-cases)
+calls for replaying matched cases with source-linked qualitative revision and a
+specified numerical belief model.
 
 **Evidence on LLM-agent belief and conflict.**
 - *Bayesian updating with reliability* (S09, Nous; v1 2026-06-20 / v2 2026-07-16;

@@ -47,8 +47,10 @@ the [one-turn and shell-tool probes](../research-curator-sandbox.md#local-observ
 **What the host sends.** Five beta flags, all dropped by the proxy unless frozen:
 `claude-code-20250219`, `context-management-2025-06-27`, `effort-2025-11-24`,
 `interleaved-thinking-2025-05-14` and `thinking-token-count-2026-05-13`. It also sends
-a clearing `context_management` field, which the proxy allows. A beta flag joins the
-proxy's frozen allowlist only after it is checked against the real API (#454).
+a clearing `context_management` field, which the proxy allows.
+
+**Allowlist check.** Check a beta flag against the real API before adding it to
+the proxy's frozen allowlist. The check has no recorded run for this host.
 
 **Run the probe:**
 
@@ -73,9 +75,9 @@ allowlist checked against a dated source, and the same probe runs with a stand-i
 
 ## Pi curator host (the shadow-session host)
 
-The [finished curator shadow study (#454)](../acceptance/2026-11-08-curator-shadow-454.md)
-ran this project-controlled host with two models through OpenRouter under a spend cap.
-The owner approved that arrangement on 8 November 2026 ([decision log](../decisions/owner-decisions.md)).
+The [curator shadow study (#454)](../acceptance/2026-11-08-curator-shadow-454.md)
+records this project-controlled host's sessions under the
+[shadow-run cap and model decision](../decisions/owner-decisions-archive.md#cap-and-host-for-curator-shadow-sessions).
 [`tools/curator_host`](../../tools/curator_host) is a private Node package
 on `@earendil-works/pi-agent-core` and `pi-ai` 1.4.0, the versions the actor's
 [`tools/player_host`](../../tools/player_host/README.md) uses. It has no MCP, no shell and no

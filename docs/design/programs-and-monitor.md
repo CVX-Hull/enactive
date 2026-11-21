@@ -10,7 +10,7 @@ review_trigger: "The fact store's field table merges (the owner's revisit condit
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The [owner's 20 November 2026 decision](../decisions/owner-decisions.md#in-force) keeps this unbuilt proposal parked; the owner revisits it when the fact store's field table merges.
+**Answer.** The [decision on the bounded program interface brief](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief) keeps this unbuilt proposal parked. The owner revisits it when the fact store's field table merges.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
@@ -50,7 +50,8 @@ The library tracks invocations, successes, yields, aborts and regressions. Revis
 
 ## Emissions the proposal adds
 
-Under the [owner's decision of 13 November 2026, "Intent now, rest later"](../decisions/owner-decisions.md#in-force), each field joins existing tool calls with the work that first reads it.
+Each field joins existing tool calls with the work that first reads it, under the
+[decision on tool intent and citations](../decisions/owner-decisions.md#tool-intent-required-and-cites-optional).
 
 - `expectation` predicts visible effects. Prediction errors guide curator attention, program success checks and source reliability.
 - `goal` marks the start, finish or abandonment of a subgoal for program induction.

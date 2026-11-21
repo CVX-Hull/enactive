@@ -31,9 +31,9 @@ shared-lock path, explicit `player-journal/1` store (`player_store`), player hos
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 computer input/request/frame/byte capacities,
 `ending_reserve`, the dollar limit `spend_limit_usd` and the operator-only
-[`labels`](#operator-labels). Source/directory mismatch refuses
-before launch. Journals use SQLite `user_version=1`; supported current journals may be reopened.
-Unsupported or unrecognized nonempty stores are refused without conversion.
+[`labels`](#operator-labels). Source/directory mismatch refuses before launch.
+The [computer-control contract](../contracts/computer-control.md#responsibilities-and-current-data)
+governs which journals the package can reopen.
 
 `target.json` has explicit argv/cwd/environment; its first executable and selected
 working directory are absolute. Keep the prepared wrapper/windowed project userdir
@@ -160,40 +160,24 @@ The closed `recall` object pins the model on the player's provider and key, `eve
 
 ### Spend limit
 
-`spend_limit_usd` is the most this run may count as spent. The player host stops the
-run when the counted total reaches it ([host contract](../contracts/player-host.md#spend)).
-Nothing is carried over from earlier packages.
+Each package starts with a fresh spend allowance. Choose a positive
+`spend_limit_usd` from the realistic cost of the planned run, inside the owner's
+envelope, and put the same value in the manifest and `route.json`. Use the
+[route envelope](../contracts/player-host.md#route-envelope) for the decimal format.
+The validator recomputes `unpriced_request_usd` as
+`(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
+from the frozen rates and refuses a mismatch or zero. Set `ending_reserve.usd` at
+or above the player bound plus the recall bound, with zero recall contribution for
+empty knowledge, and below the declared limit.
 
-- **Amounts are decimal text.** `spend_limit_usd`, `ending_reserve.usd` and the
-  route's two amounts are strings such as `"5"` or `"0.4096"`. A JSON number, an
-  exponent, a sign or a non-finite word refuses the package. The limit is above zero.
-- **The route repeats the limit.** `route.json` has the same `spend_limit_usd`. The
-  driver gives each actor a copy whose value is the dollars the run has left.
-- **The route carries the planning bound.** `unpriced_request_usd` is
-  `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`.
-  The validator recomputes it from the frozen rates and refuses a mismatch or zero.
-  An in-flight request occupies this allowance while the outcome is pending.
-- **The dollar reserve covers both in-flight bounds.** `ending_reserve.usd` is at least
-  the player bound plus the recall bound, with the recall contribution zero for
-  empty knowledge. The reserve is below the declared limit.
-- **What counts.** The dollar total is the sum of usable provider-reported response
-  charges. A refused, timed-out or cut-off attempt without a usable cost remains
-  observed with unknown charge. The provider may bill it. Preserve unpriced
-  counts and use the frozen time and mechanical ceilings.
-- **Overshoot.** The host checks before each request. The reported total can pass
-  the limit by the charges returned for the final in-flight player and recall
-  requests.
-- **Successful response without cost.** A successful player response with no usable
-  cost stops the host with reason `cost-unreported`. A failed or unpriced recall
-  ends recall for that actor. A usable charge is counted even on a rejected
-  selection or a length stop.
-- **The hard cap is the key's credit limit**, set by the owner on the OpenRouter key
-  ([operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)).
-  The code cannot read it.
+The host contract defines [spend accounting and stops](../contracts/player-host.md#spend)
+and [recall accounting](../contracts/player-host.md#delivered-knowledge-and-recall).
+The provider may bill attempts with unknown charges. Preserve unpriced counts and
+use the frozen time and mechanical ceilings. Read the counted figures from the
+receipt.
 
-Choose the limit from the realistic cost of the planned run, inside the owner's
-envelope. The configured-rate estimate in a trace (`usage.cost`) is not what counts;
-the receipt records the counted figures.
+The credit limit the owner sets on the provider key is the hard cap, and the code
+cannot read it.
 
 The [operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)
 assign provider billing to the owner. Before paid play, the lead verifies the
@@ -247,33 +231,16 @@ launched argv, environment and every file written for an actor lack the label va
 
 `ending_reserve` is closed: `seconds,usd,inputs,requests,frames,frame_bytes`.
 Every value but `usd` is a positive integer strictly below its corresponding original
-host or mechanical limit; `usd` is a decimal string above zero and below
-`spend_limit_usd`. The driver requests ending at the first threshold
-crossed in host seconds, remaining dollars (trigger `spend`) or
-mechanical capacities. Remaining dollars are the limit minus the cost counted so
-far; a request still in flight is not yet counted, so the reserve should cover pending player and recall requests and the expected
-finish-up. The driver retains
-one command identity for the whole admission. Static validation checks field
-bounds only. Before admission the lead forecasts reserve adequacy for the largest
-already-admitted input burst, the current provider attempt, control
-delivery and any permitted successor, under the original limits. The example
-numbers above are placeholders, not a proof that a particular ending fits.
+host or mechanical limit. Use the [spend limit rules](#spend-limit) for the dollar
+reserve. Before admission the lead forecasts reserve adequacy for the largest
+already-admitted input burst, pending player and recall requests, control delivery,
+any permitted successor and the expected finish-up under the original limits.
+Set these values for the planned run in place of the example numbers.
 
-The driver retains `control.json` intent before writing a closed
-`player-control/1` `orderly_stop` command to host stdin. The initial prompt is
-passed by `--prompt PATH`; `--session`, `--actor-id` and
-`--pending-control-id none|32hex` bind each actor. The pipe stays open until
-settlement. Duplicate identical commands are idempotent; malformed, oversized,
-conflicting or wrong-identity input and unexpected EOF fail the host.
-
-Finish-up is optional bounded player-chosen game work. It mandates no Save or
-Quit and never delays independent permanent Pause, hard limits or cleanup. Unsent
-pre-control tool calls are withheld; dispatched input is not canceled/replayed
-to deliver text. New handoff is refused while stop is pending. If an in-flight
-handoff has already sealed, a verified successor receives the same command ID
-before MCP connection or provider fetch, or ending stays incomplete. Sealing
-and host exit never erase the request. Direct `player_finish` and its command
-identity are retained separately from game saving, native exit and owned absence.
+The driver applies the time reserve to host seconds, uses `spend` as the trigger
+for the dollar reserve and records command intent in `control.json`. The
+[external control contract](../contracts/player-host.md#external-control) defines when
+finish-up is requested, how the command is delivered and how it survives handoff.
 
 The current CDDA launch binding requires the canonical absolute
 `.runtime/bridge/game.lock`, shared with install/preparation and the project
@@ -329,25 +296,25 @@ block is closed:
 | `spent_usd` | Provider subtotal counted toward the dollar limit, equal to `reported_usd` |
 | `observed_attempts` | Player and recall HTTP starts read from the traces |
 | `observed_recall_attempts` | The recall subset |
-| `spend_complete` | Whether every actor's trace was read to its settlement and the host's own totals equal the driver's sums; when false the spend is unknown |
+| `spend_complete` | Whether [trace reconciliation](../contracts/player-host.md#spend) is complete. When false, the spend is unknown. |
 
-The dollar amounts are decimal text. What the provider reports is what the provider
-says; the invoice is separate. An incomplete trace preserves the observed subtotal
-and counts as lower bounds, marks spend incomplete and prevents succession. Direct finish yields
-`player_task_complete_unassessed`, `player_cannot_continue_unassessed` or
+The dollar amounts are decimal text. The invoice is separate from the reported cost.
+For an incomplete trace, treat the observed subtotal and counts as lower bounds.
+A direct finish yields `player_task_complete_unassessed`,
+`player_cannot_continue_unassessed` or
 `player_external_stop_complete_unassessed`. An earlier non-cleanup permanent
 fence remains `interrupted`; later expected adapter closure cannot erase it.
-Normal native exit is reported separately; its absence is not a save certificate
-or an automatic failure of generic stop control. Apply any separately frozen
-game-persistence/exit criterion to its own evidence lane.
+Generic stop control can succeed without a normal native exit. Apply any separately
+frozen game-persistence or exit criterion to its own evidence lane, using
+[the settlement contract](../contracts/player-host.md#settlement-and-handoff).
 The embedded driver result is `player-driver/7`, with the retained ending request
 (its `trigger`, and the dollars and mechanical capacity left when it was sent), per-actor
 direct player-finish/settlement, observed attempts and each actor's `allocated_usd`,
 `reported_usd`, `unpriced_requests`, `spent_usd` and `spend_complete`. Its totals
 carry `reported_usd`, `unpriced_requests`, `unpriced_request_usd`, `spent_usd` and
-`spend_complete`. `configured_estimate_usd` stays beside them as an estimate from the
-route's configured rates; it is not counted. No receipt
-alone accepts gameplay. Preserve failures and unrun lanes.
+`spend_complete`. The totals list `configured_estimate_usd` separately as an estimate
+from the route's configured rates. No receipt alone accepts gameplay.
+Preserve failures and unrun lanes.
 
 A development admission is recorded once its receipt exists, with
 `.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --label LABEL`,

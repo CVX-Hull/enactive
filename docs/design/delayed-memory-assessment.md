@@ -21,7 +21,7 @@ when a live run has a curator-written fact about an earlier sighting. At that
 point, decide whether the evidence supports a comparison of later choices.
 Claims of benefit from delivered memory come from the
 [seven-day campaign outcome (#145)](https://github.com/CVX-Hull/enactive/issues/145).
-[Owner decision of 20 November 2026, “No study has shown that delivered memory improves play”](../decisions/owner-decisions.md#in-force)
+[Decision on measuring memory benefit in campaigns](../decisions/owner-decisions.md#memory-benefit-measured-in-campaigns)
 
 The [structured recurrence proposal](structured-recurrence-research.md) owns
 the comparison of replay, fixed recurrence and editable representations. This

@@ -19,7 +19,7 @@ The [evaluation contract](../contracts/evaluation.md) owns how delivery is measu
 The curator's lag beside real play and the benefit of delivered memory remain
 unknown. The open decision is whether to cut old turns only through the point
 the store covers. The owner revisits the cut once lag in play is measured.
-[Owner decision of 15 November 2026, “Asked again with adoption”](../decisions/owner-decisions.md#in-force)
+[Decision on measuring curator lag before the cut](../decisions/owner-decisions.md#context-cut-waits-for-curator-lag-measurement)
 
 A **request** is one call to the model. A **turn** is a tool call and its result.
 The **window** is the turns still in the prompt. [Glossary](../glossary.md)
