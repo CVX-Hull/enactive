@@ -9,7 +9,8 @@ status: active
 The [computer/player contract](../contracts/computer-control.md) is the current
 production boundary. Unsupported formats and versions refuse before effects; there
 is no compatibility shim, alternate backend or automatic reader.
-[ADR006](../decisions/006-computer-control-boundary.md) owns rationale.
+The [computer-control boundary decision](../decisions/006-computer-control-boundary.md)
+explains the rationale.
 
 Before changing a deployment:
 

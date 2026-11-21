@@ -3,7 +3,6 @@ owner: lead
 date: 2026-10-19
 scope: Post025 water coverage and remaining survival budget
 status: historical
-review_trigger: User budget delegation, acquisition or treatment result, care costs or whole fit
 ---
 
 # Reforecast from actual water output and measured care costs

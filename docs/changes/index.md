@@ -77,6 +77,7 @@ states. Records are dated evidence, not current instructions; the
 | 2026-10-18 | [A dedicated player with explicit takeover](020-campaign-operator.md) | Prospective operator001 admission retained unchanged after access-stop outcome | historical |
 | 2026-10-18 | [Finish the same rehearsal inside its original envelope](019-first-day-continuation.md) | Prospective same-character continuation subsequently executed with recorded cleanup deviation | historical |
 | 2026-10-18 | [Complete one autonomous first-day rehearsal](018-first-day-rehearsal.md) | Original finite Rosendo rehearsal admission and stopped prefix before prospective continuation | historical |
+| 2026-10-18 | [Remove required human intervention from campaign recovery](016-autonomous-native-recovery.md) | Unadmitted desktop-automation pickup recovery proposal | superseded |
 | 2026-10-18 | [Enactive repository migration](015-enactive-migration.md) | Reviewed repository identity migration; GitHub owns live work and current controls own future publication | historical |
 | 2026-10-18 | [Continuity and a first-day survival rehearsal](015-campaign-continuity-rehearsal.md) | Original first-day rehearsal001 proposal, admitted and stopped with required human Escape | historical |
 | 2026-10-18 | [Waypoint evaluation readiness](014-waypoint-readiness.md) | Round014 frozen design, implementation allocation and gated readiness decision; current contracts and GitHub own behavior and live work | historical |
@@ -88,4 +89,3 @@ states. Records are dated evidence, not current instructions; the
 | 2026-10-17 | [Public project workflow](003-public-workflow.md) | Implemented public workflow and verification increment | historical |
 | 2026-10-17 | [Change brief 002 — Documentation that supports review](002-documentation-review.md) | Implemented documentation lifecycle and visual-review increment | historical |
 | 2026-10-17 | [Change brief 001 — A maintainable, reviewable engineering system](001-engineering-system.md) | Change brief 001 — A maintainable, reviewable engineering system | historical |
-| undated | [Remove required human intervention from campaign recovery](016-autonomous-native-recovery.md) | Unadmitted desktop-automation pickup recovery proposal | superseded |

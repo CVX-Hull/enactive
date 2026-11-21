@@ -35,10 +35,10 @@ total bytes, no write permission) and the full profile (every hash). The store l
 the main checkout and every worktree reads it there. A sealed study missing from a
 present store is an error. Once a clone has held the store, its local Git configuration
 records `enactive.evidenceStore=expected`, and a missing store is an error too; a fresh
-clone or CI without the store reports each study as not present. The store is the only
-copy: there is no off-machine backup, and raw evidence is not published (owner decisions,
-kept by [ADR 010](../decisions/010-streamlined-delivery.md); restic to
-object storage is the researched option if a backup is chosen). A source checkout inside
+clone or CI without the store reports each study as not present. The store holds the only
+copy, with no off-machine backup or publication of raw evidence, under the owner's decisions
+of 7 November 2026 and 8 November 2026 ([decision log](../decisions/owner-decisions.md)).
+Restic to object storage is the researched option if a backup is chosen. A source checkout inside
 a sealed folder is reproducible from the commit the study's note names, so only its
 `.runtime` evidence is copied; symbolic links are never copied.
 
@@ -47,10 +47,12 @@ removing-an-original rule below to starts and their working outputs.
 
 **Removing an original.** Once every file of an original has been found, by path and
 hash, in a sealed study and `verify --full` passes, the original is a second copy and is
-removed; the study's `sources` and note stay its tracked provenance. Removal of anything
-not held elsewhere is an owner decision. Each removal is listed in a dated retirement
-record in the [acceptance index](../acceptance/index.md); [the environment](../environment.md)
-lists what remains.
+removed; the study's `sources` and note stay its tracked provenance. The
+[evidence index](../../data/evidence/index.json) and [environment page](../environment.md)
+show what remains, and the removal's pull request states what was removed and which checks
+ran. Use a dated `measurement` record only when the removal has evidence a diff cannot
+hold, such as an inventory or hash verification of local material. Removing anything that
+is not held elsewhere requires an owner decision recorded in the [decision log](../decisions/owner-decisions.md).
 
 Retain curated acceptance artifacts and failure evidence until superseded by
 reviewed equivalent evidence or explicitly selected for removal; if removed,

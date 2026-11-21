@@ -3,7 +3,6 @@ owner: lead
 status: historical
 date: 2026-10-29
 scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
-review_trigger: Pinned engine input, activity, debug prompt, bridge protocol or recovery control changes
 ---
 
 # Native interruption and error-screen design

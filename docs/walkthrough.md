@@ -3,7 +3,6 @@ owner: maintainer
 status: historical
 date: 2026-11-07
 scope: Pre-#383 spectator walkthrough; Resume, planner and mission-actor panels it names were retired
-review_trigger: Spectator controls, observation authority or first-session workflow changes
 ---
 
 # Understand your first spectator session

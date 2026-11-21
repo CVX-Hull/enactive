@@ -11,6 +11,10 @@ Host-specific facts for running a coding-agent curator inside the
 research pages stay host-neutral; this operator page names the hosts. The host versions checked
 are in the [dated record](../acceptance/2026-11-08-moved-measurements.md#curator-hosts-versions-footprint-and-body-limit).
 
+To run a shadow session, go to [The shadow runner](#pi-curator-host-the-shadow-session-host)
+for the command, inputs and outputs. The rest of this page is the adapter, proxy and
+accounting reference.
+
 ## Claude Code (first host)
 
 **Configuration.**
@@ -38,7 +42,7 @@ synthetic.
 - **Footprint.** A run leaves no surviving process.
 
 The home contents, tool result, time and memory the probe observed are in
-[the sandbox research](../research-curator-sandbox.md#local-observations) (L13 and L14).
+the [one-turn and shell-tool probes](../research-curator-sandbox.md#local-observations).
 
 **What the host sends.** Five beta flags, all dropped by the proxy unless frozen:
 `claude-code-20250219`, `context-management-2025-06-27`, `effort-2025-11-24`,
@@ -69,9 +73,10 @@ allowlist checked against a dated source, and the same probe runs with a stand-i
 
 ## Pi curator host (the shadow-session host)
 
-The shadow host is one host the project controls (ADR 009's
-[owner decision on the curator's spend cap and model](../decisions/009-curated-player.md#open-owner-decisions)), run with two models
-through OpenRouter ([#454 record](../acceptance/2026-11-08-curator-shadow-454.md)). [`tools/curator_host`](../../tools/curator_host) is a private Node package
+The [finished curator shadow study (#454)](../acceptance/2026-11-08-curator-shadow-454.md)
+ran this project-controlled host with two models through OpenRouter under a spend cap.
+The owner approved that arrangement on 8 November 2026 ([decision log](../decisions/owner-decisions.md)).
+[`tools/curator_host`](../../tools/curator_host) is a private Node package
 on `@earendil-works/pi-agent-core` and `pi-ai` 1.4.0, the versions the actor's
 [`tools/player_host`](../../tools/player_host/README.md) uses. It has no MCP, no shell and no
 coding-agent application. [`tools/curator_host/shadow.py`](../../tools/curator_host/shadow.py) runs it over
@@ -314,6 +319,8 @@ byte for byte, so:
   ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
 
 ## Both hosts
+
+These rules apply to the Claude Code and Codex CLI hosts and exclude the Pi host.
 
 - **Binaries.** Both are single native binaries linking only system libraries:
   `claude` under `~/.local/share/claude/versions/` and `codex` under the Homebrew Caskroom. The profile allows reads of the one binary each session uses.

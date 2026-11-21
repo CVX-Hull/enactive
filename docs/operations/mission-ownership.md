@@ -13,15 +13,17 @@ input under original capacities/deadlines. It issues per-actor bearer capabiliti
 no second writer is admitted. Retained actor names, process IDs, source images,
 player claims or SQLite records cannot reconstruct authority after restart.
 
-A live actor can observe/input through its current tools. A sealed actor can only
-collect originals and read retained source/knowledge/context. It cannot capture
-anew, write hints or create another handoff. User Pause and
-partial/unknown delivery permanently stop input and cannot become a resumable transfer.
+A live actor can observe and send input through its current tools. A sealed token
+permits only original-result and retained-source reads. The current sealed actor
+retains independent cancellation until retirement, when it loses the ability to
+stop a successor. [Custody contract](../contracts/computer-control.md#computer-operations-and-custody).
+User Pause and partial/unknown delivery permanently stop input and cannot become a
+resumable transfer.
 
 Handoff persists canonical immutable context before sealing. The driver verifies
 its issuance/digest and actual old host/MCP group quiescence before minting a
 successor under the remaining spend, time and mechanical resources. No game menu, save, identity
-or memory assertion is an authority predicate. [Custody contract](../contracts/computer-control.md#computer-operations-and-custody).
+or memory assertion is an authority predicate.
 
 ## Permissions and player ownership
 
@@ -48,9 +50,10 @@ final-actor policy; the only final-actor signal is the refusal of its
 The driver retains any orderly-stop identity across turnover and gates a successor
 before MCP/fetch; independent Pause and owned cleanup never wait for a save or reply.
 Do not inject lead tactics or curate memory to manufacture a successful outcome.
-The player must be self-sufficient, because the project will generalize beyond
-this game (owner decision). No lead tactical nudge or game-specific hint
-enters any run: not mid-run, not in the frozen context, and not as a labelled
-diagnostic arm. Record interventions, failures and unknowns. [Campaign procedure](campaign-run.md).
+The player must be self-sufficient because the project will generalize beyond
+this game, per the owner's decision of 31 October 2026 in the
+[decision log](../decisions/owner-decisions.md). Keep lead tactical nudges and
+game-specific hints out of live play, frozen context and labelled diagnostic arms.
+Record interventions, failures and unknowns. [Campaign procedure](campaign-run.md).
 
 [Operations index](../runbook.md).

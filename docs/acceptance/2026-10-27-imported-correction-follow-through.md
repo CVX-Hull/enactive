@@ -1,6 +1,5 @@
 ---
 owner: lead
-review_trigger: Imported correction follow-through evidence; supersede with new evidence
 status: historical
 kind: run
 date: 2026-10-27
