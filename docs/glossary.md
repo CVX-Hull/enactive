@@ -20,7 +20,7 @@ not adopted.
 | CI profile | The set of checks a pull request gets, chosen from its complete diff. | [CI profiles](workflows/ci-profiles.md) |
 | Claim | Anything the player asserts. It is fallible data and never grants custody or certifies a save. | [Memory and learning](components/memory-learning.md) |
 | Control | A test, check, runtime guard, review or procedure step kept to stop a failure. It is not computer control, the harness's input boundary. | [Controls](controls.md) |
-| Curator | A sandboxed coding agent that turns sealed run traces into curated knowledge in short sessions. It holds no custody and does not run in live play. | [Curator](components/curator.md) |
+| Curator | A sandboxed coding agent that turns sealed run traces into curated knowledge in short sessions. It holds no custody. A curator runner that starts sessions over snapshots during play is built and tested offline only; no live run has used it. | [Curator](components/curator.md) |
 | Custodian | The one process that owns a run's game process, socket, lock, store and single input writer. | [Custody contract](contracts/computer-control.md#computer-operations-and-custody) |
 | Custody | Exclusive ownership of the game target and of the right to send it input. | [Run ownership](operations/mission-ownership.md) |
 | Deciding player | The model that reads the screen and chooses every game action. | [Player interface](components/player-interface.md) |
