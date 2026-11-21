@@ -1,9 +1,8 @@
 ---
 owner: lead
-review_trigger: A change to the direction this ADR proposes, or the adoption of one of its phases
-status: proposed
+status: historical
 date: '2026-11-08'
-scope: Proposed direction for an acting player with a coding-agent curator in ephemeral sessions, a player-fitted ontology in one knowledge repository per game, programs on the actor's interface, managed containers and a spectator native to the design; nothing adopted, and current contracts govern the running system
+scope: The direction proposed on 8 November 2026, and amended in place until 20 November 2026, for an acting player with a curator in ephemeral sessions, a player-fitted ontology in one knowledge repository per game, programs on the actor's interface, managed containers and a spectator native to the design. Rationale only; its status notes, backlog and owner decisions are superseded by the owner decision log, the issues and the current components and contracts
 ---
 
 # ADR 009 — A curated player: actor, curator, ontology and programs
