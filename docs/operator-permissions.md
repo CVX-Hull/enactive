@@ -6,93 +6,60 @@ review_trigger: Launcher, provider delegation, permission or actor-custody chang
 
 # Gameplay permissions and player ownership
 
-Routine admitted gameplay uses the player host frozen by the package (currently
-the Pi adapter) and its explicit current MCP actor configuration. The user has authorized gameplay API spending,
-player-visible screenshots/observations/mission-context export to the selected
-provider, and applicable source/evidence/tracker publication to GitHub. Do not
-request those permissions again for each basic action or clean actor succession.
-The selected frozen package still owns finite scope, its dollar limit, route and actual
-resources; prior approval does not create input custody or resume a stopped run.
+Routine admitted gameplay uses the [player host and route](operations/player-host.md)
+frozen in the package. The owner's standing permission covers gameplay API spending
+within the approved scope, sending player-visible observations and mission context to
+the selected provider, and applicable source, evidence and tracker publication to
+GitHub. That permission covers basic actions and clean actor succession within the
+original limits. Input custody and permanent Pause follow the
+[computer-control contract](contracts/computer-control.md#computer-operations-and-custody).
 
-The owner also authorized bounded endpoint tests using selected retained gameplay
-images with the current player guide and tool declarations. Freeze destinations,
-context and original finite allowances before testing; dispatch no game tools in
-an eligibility probe and count refusals/missing usage. This is scoped gameplay
-evaluation, not permission to export unrelated engineering or personal data.
-Actual tool-policy rejections still require resolution; retain the refusal and
-the owner's specific authorization rather than disguising a test as live play.
+The owner also allows bounded endpoint tests with selected retained gameplay images,
+the current player guide and tool declarations. Freeze destinations, context and
+finite allowances before testing. Run eligibility probes without game tools and
+record refusals and missing usage. Unrelated engineering or personal data requires
+separate export approval.
 
 ## Finite gameplay budget delegation
 
-The lead may select finite gameplay allocations, and admits a run only inside an
-owner-set envelope below. A run package declares a dollar limit, which the player
-host enforces from the cost the provider reports
-([campaign procedure](operations/campaign-run.md#spend-limit)). Preserve spent costs,
-missing usage, original failures and retired unused allowances. A failed actor cannot
-automatically renew resources. User Pause remains permanent for that admission.
-Changes outside the user's authorized scope still require the applicable decision.
+The owner manages the provider account balance, auto-recharge and key credit limit.
+The key's credit limit is the overall hard cap and is outside the code. Each study
+needs an owner-set envelope, and each run needs its own dollar limit. The lead checks
+the approval and frozen limit at admission and tracks provider-reported costs and
+unpriced attempts under the [campaign spend procedure](operations/campaign-run.md#spend-limit).
 
-The owner manages the OpenRouter account balance, auto-recharge and key credit
-limit. The lead checks the approved envelope and frozen run limit at admission
-and tracks only the returned OpenRouter costs. A lost campaign request with
-no usable cost is recorded as an observed, unpriced attempt. The campaign
-procedure describes the spending limit, in-flight allowance and
-separate handling for an incomplete trace.
-
-**The hard cap** is the credit limit the owner keeps on the OpenRouter key, $1,500. It
-is outside the code, which cannot read it. It is the one overall cap: there is no
-separate cumulative cap across studies and no hand-kept running total. Each study needs
-its own envelope from the owner, and each run its own dollar limit.
-
-**Actual-spend admission.** Inside an open envelope, and for no other spend, the lead
-admits a run or admission without per-run owner approval only while the study's actual
-provider subtotal plus twice its largest single admission so far stays within
-that envelope. An incomplete trace has a separately recorded admission bound
-under the campaign procedure. The lead records each run's subtotal and unpriced
-counts and stops to ask the owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
-A new envelope needs its own owner decision.
+**Actual-spend admission.** Within an open envelope, the lead allocates and admits
+runs without per-run approval only while the study's actual provider subtotal plus
+twice its largest admission so far stays within the envelope. The lead stops and
+asks the owner when the envelope is reached. Unused funds expire when the approved
+scope ends. The [campaign procedure](operations/campaign-run.md#start-and-close)
+covers the ledger and the separate admission bound for an incomplete trace.
 
 **Real-model checks before merge.** A change to how a model is prompted or how its reply
-is parsed may spend up to \$1 of provider credit, without a separate approval, on a
-handful of real requests on the pinned route before it merges, run by the lead as a
-short campaign package whose dollar limit is at most \$1 and recorded in the pull request
-([owner decision](decisions/owner-decisions.md); control `C-MODEL-CHECK` on the
-[controls page](controls.md)). It counts against the key's credit limit and opens no
-study envelope: it is the one standing approval for spend outside an envelope, and
-anything larger is asked with its price.
+is parsed may spend up to \$1 of provider credit before merge without a separate
+approval ([owner decision](decisions/owner-decisions.md#one-dollar-for-prompt-and-parser-checks)). The lead runs a
+short campaign package on the pinned route whose dollar limit and in-flight allowance
+together keep the spend within that \$1 ([spend limit](operations/campaign-run.md#spend-limit)),
+and records the check in the pull request. The spend counts against the key's
+credit limit and opens no study envelope. Anything larger is asked with its price.
 
-**No envelope is open.** Each envelope and the decision that set it are in the
-[owner decision log](decisions/owner-decisions.md). Unused funds expire when the
-approved scope ends. The run ledger, `data/evaluation/runs.jsonl`, holds gameplay
-spend, and `tools/run_ledger.py totals --study` reports it against the chosen
-envelope. Standalone curator session costs come from the curator proxy ledger in
-their dated records. Spend outside a study goes in the dated record for that work,
-or in the pull request for a premerge real-model check.
+See the [in-force owner decisions](decisions/owner-decisions.md#in-force) for
+specific spending approvals and their conditions. Record other spend outside a
+study in the dated record for that work.
 
 ## Engineering decision and merge delegation
 
-The owner is not a routine gate. The lead carries ordinary engineering work through
-to merge: design within the charter, delegation, commits, branches, pull requests
-and merging. Merge once the [formal acceptance checkpoint](workflows/development.md)
-holds: the exact candidate's protected `controller` profile passed (full regression
-for broad source changes), independent review findings are dispositioned and any
-required native or gameplay evidence is recorded. When only the check is
-still running, queue auto-merge pinned to the validated head (`gh pr merge --auto
---squash --match-head-commit SHA`); main protection then merges it only if the
-required `controller` check passes, and `controller` reports only after every other
-job of the check has ended. The SHA given to `--match-head-commit` is the commit the review named,
-not merely the head the check ran on: an approved text once failed to reach the pushed
-branch, and its first draft merged instead
-([#530](https://github.com/CVX-Hull/enactive/pull/530)). Agent review stays evidence,
-not human approval; say so in the pull request rather than waiting for one.
-
-**Waiting on CI.** The lead waits for PR
-validation with one watch command, `gh run watch` on the pull request's run, until
-`controller` has reported
-([procedure](workflows/development.md#minimum-checks-and-escalation)). The lead may
-run it in the background
-([waiting on CI](operations/coding-agents.md#waiting-on-ci)), instead of re-checking
-by hand. This authorizes the wait only; host tool permissions still apply.
+The lead may design within the charter, [delegate under S-AGENT](standards/agents.md),
+create branches, commit, open pull requests and merge without routine owner approval.
+Merge only the commit named in review, once
+[formal acceptance](workflows/development.md#development-first-delivery) holds,
+including a passed required [`controller` check](workflows/ci-profiles.md#jobs-of-the-check).
+When only that check is pending, the lead may queue
+`gh pr merge --auto --squash --match-head-commit SHA` using the commit named in review.
+Follow the [merge and wait procedure](workflows/development.md#minimum-checks-and-escalation)
+and the [host's CI wait instructions](operations/coding-agents.md#waiting-on-ci).
+Agent review is evidence, not human approval; say so in the pull request rather
+than waiting for one.
 
 Escalate to the owner only for exceptional situations:
 
@@ -101,7 +68,7 @@ Escalate to the owner only for exceptional situations:
   user data.
 - Changes to repository protection, access, secrets or credentials, or new external
   accounts and services.
-- Spending or data export beyond the standing authorizations on this page.
+- Spending or data export beyond the standing permissions and applicable owner decisions.
 - A suspected vulnerability, or a licensing or legal question.
 - A change to the charter's purpose, to this delegation or to other owner-held authority.
 - A failed required check or unresolved review disagreement that could only proceed
@@ -141,62 +108,38 @@ permission refusals and report the exact action and stated reason.
 
 ## Command permissions
 
-Engineering process/network permission, mechanical input custody and player
-judgment are separate boundaries. Current CLI commands are `run --run`, `status
---url` and `pause --url`; the [campaign runbook](operations/campaign-run.md)
-explains frozen admission. Setup,
-Keychain retrieval, source/GitHub operations and arbitrary shell code retain their
-own tool policies; do not hide them behind an allowed command.
-
-Project-local coding-agent allowances provide narrow stable CLI allowances for the
-same three prefixes in each lead host that holds a gameplay allowance: [Codex rules](../.codex/rules/gameplay.rules)
-and [Claude Code settings](../.claude/settings.json). They do not confine filesystem
-access, pin source, load provider keys, prove active-chat policy loading or grant a
-per-agent sandbox. Use the inspected trusted checkout and freeze source during play.
-Managed or more restrictive policies still win. Test changed allowances with each
-host's maintained checker or headless attempt and the harmless matching/nonmatching
-examples, without a custom policy parser; [coding-agent hosts](operations/coding-agents.md)
-gives the commands. No global trust/profile change is part of this setup.
+Project-local [gameplay command allowances](operations/coding-agents.md#gameplay-command-allowances)
+authorize only the listed commands on eligible hosts. Managed policies and separate
+tool permissions still govern setup, credential retrieval, source and GitHub
+operations, and shell code. A matching command confers neither filesystem confinement
+nor gameplay custody, and establishes neither source identity nor credential loading.
 
 ### Verified loading
 
-An earlier policy-loading observation does not prove newly edited rules are loaded. No restart is
-required merely to repeat a known unchanged setup; use actual execution evidence for
-the selected route.
+Confirm that changed rules load with execution evidence for the selected route.
+Follow the [host's activation instructions](operations/coding-agents.md#per-user-activation).
 
 ## Dedicated gameplay context
 
-The deciding actor receives the compact player guide, frozen goal/context and
-current tool schemas. It receives no engineering source/hidden game state, raw
-credentials, shell, arbitrary process tools or save editing. The provider key is
-read only from the selected Keychain item into the launcher/host environment,
-never printed or written. Game/MCP environments exclude it and inherited native
-FDs. A host owns only its bounded actor tools; all game semantics belong to it.
+The deciding actor gets the [player guide](player-guide.md), frozen task context
+and current tools. Its authority is limited to player-visible observations and
+actor tools: no engineering source, hidden game state, raw credentials, shell,
+arbitrary process tools or save editing. The [player host procedure](operations/player-host.md) owns context
+and credential isolation.
 
 ### Preflight for every campaign
 
-Before real input: verify the exact clean source, current package/schema and frozen
-bytes, original finite time/HTTP/input/frame/byte resources, the declared dollar limit
-and finish reserve, selected provider authorization, shared target exclusion, owned
-process lifecycle and independent Stop path. Preserve prior partial markers; never
-reopen them. Use existing fast/focused checks and proportionate independent review
-under [development-first delivery](workflows/development.md#development-first-delivery).
-The lead alone schedules the shared runtime. Actual permission failure is evidence,
-not a passing mock or an invitation to evade tool review. Resolve it before play.
+Before real input, follow the [campaign procedure](operations/campaign-run.md#frozen-data)
+and resolve any permission refusal. [S-AGENT](standards/agents.md#delegated-campaign-operation)
+governs who may operate the run and who retains authority.
 
 ### Scoped verification
 
-Source, sandbox, native build, real game and provider outcomes are distinct lanes.
-A prefix match or test double does not prove live permissions, normal ending,
-provider competence, human takeover or second-game portability. Dated evidence
-is indexed in the [acceptance index](acceptance/index.md); retain failed observations and unknown causes.
+Use the relevant evidence lane under the [testing guide](testing.md) and retain
+failed observations and unknown causes in the [dated records](acceptance/index.md).
 
 ### Constructing player requests
 
-Use only the current [computer/player contract](contracts/computer-control.md) and
-explicit per-actor MCP profile. Actor capabilities are ephemeral and are not player
-identity or stored knowledge. Unknown input is collected by original ID, never
-replayed. Handoff seals the actor; only actual host/MCP group quiescence permits a
-successor under original limits. Unexpected cancellation after sealing stops the
-run; a retired actor cannot stop its successor. Save/load/menus/identity/success are
-player judgments over visible behavior, never harness eligibility primitives.
+Use the explicit per-actor tool profile and follow the
+[custody contract](contracts/computer-control.md#computer-operations-and-custody)
+for requests, unknown delivery and handoff.

@@ -31,11 +31,10 @@ custodian serializes basic actions through the SDL adapter; the game determines
 effects. The user can Pause independently. Curated knowledge and hints never grant custody.
 
 Each finite run freezes one [player host](components/player-interface.md) adapter
-behind the substitutable [`player-host/8` contract](contracts/player-host.md). The selected
-finite configuration is OpenRouter / pinned OpenAI provider / GPT-6.1 Terra at medium
-effort. DeepSeek and other cheaper models are later candidates (#164); none is
-the current player. Its exact route, metadata, context and limits are frozen per run; this
-selection is not a claim of model quality or provider performance.
+behind the substitutable [player host contract](contracts/player-host.md). The selected
+route, model and effort are in [player host activation](operations/player-host.md); the
+exact route, metadata, context and limits are frozen per run, and the selection is not a
+claim of model quality or provider performance.
 
 The player keeps an ongoing user objective. Finite tests retain their quotas,
 ending reserves and final-actor policy outside its supplied context. A separate
@@ -46,7 +45,7 @@ action, and stopping automation certifies neither persistence nor a paused game.
 The [host contract](contracts/player-host.md#external-control) owns this current
 source behavior; real-play qualification is a separate claim.
 
-No cheaper replacement for Terra is adopted; the
+No cheaper player model is adopted; the
 [acceptance index](acceptance/index.md) holds each investigation and its limits.
 Successful serving does not qualify useful cadence, and the player stays
 self-sufficient: the lead gives no gameplay hints.
@@ -60,11 +59,11 @@ The [architecture](architecture.md) explains ownership, the
 | Boundary | Current scope and limit |
 | --- | --- |
 | Mechanical control | Actual CDDA key/text/pointer effects, useful stock, deliberate Save/new-child reload and separate normal exit are documented in the [production evidence](acceptance/2026-10-29-computer-control.md). Original uncertain exit ACKs remain unknown. |
-| Player services | Curated knowledge is delivered to the player and hints are retained for curation. Benefit and safe-navigation guarantees are unclaimed; historical program evidence remains bound to its original implementation. |
+| Player services | Curated knowledge is delivered to the player and hints are retained for curation. Benefit and safe-navigation guarantees are unclaimed. Player-authored programs are retired. |
 | Player context | The [player guide](player-guide.md#play-from-observed-effects) works from observed effects. The player's spatial and search claims can exceed the evidence. No causal prompt benefit or general reliability is qualified. |
 | Actor replacement | Actual old host/MCP quiescence and immutable context preceded a fresh successor under original limits. No game menu, save or identity condition grants authority. |
-| Spectator | The [spectator](components/observer-operations.md) separates a supervised control path (frame, status, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames, plus hand-checked night and day-rollover frames. No held-out clock falls between 7:50 PM and 6:00 AM, popup-covered clocks and severe need labels have no held-out examples, and creature counting and death recall are not yet validated ([reader validation](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383)). Human-usability efficacy remains unqualified. |
-| Day-scale play | Screened on one diagnostic route rather than the selected configuration ([long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)), not qualified; seven-day survival and cadence remain open. |
+| Spectator | The [spectator](components/observer-operations.md) separates a supervised control path (frame, status, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames, with gaps in night clocks, popups, need labels, creature counting and death recall ([reader validation](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383)). Human-usability efficacy remains unqualified. |
+| Day-scale play | Screened by one diagnostic arm with its own frozen configuration ([long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)); neither seven-day survival nor cadence is qualified. |
 | Not yet qualified | Useful apparent cadence, causal learning benefit, independent seven-day survival, second-game control, broader geometry, Unicode/IME and actual-human takeover are not qualified. |
 
 Delivered means SDL events were handed over. It does not mean the application
@@ -90,14 +89,10 @@ and remaining gates.
 [#145](https://github.com/CVX-Hull/enactive/issues/145) own cadence, curated memory and
 programs, and independent survival outcomes, which the boundary does not imply.
 
-Development runs freeze the selected current route and configuration under the
-[development-run method](development-runs.md). The [run evaluator and
-spectator](decisions/008-evaluation-and-spectator.md) score runs from recorded frames and
-traces; whole-run survival cannot separate arms at affordable run counts, so each change
-pre-registers a targeted process metric. Each run's result is in its dated record
-([acceptance index](acceptance/index.md)).
-
-#145's seven-day gate remains the north star, and #164's cadence criteria remain unqualified.
+Each development run freezes its route and configuration; the
+[development-run method](development-runs.md) says how comparisons are measured and
+recorded. The [run evaluator](contracts/evaluation.md) scores runs from recorded frames
+and traces, and the [spectator](components/observer-operations.md) presents them.
 
 ## How you stay in control of the project
 

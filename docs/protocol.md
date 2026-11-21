@@ -6,13 +6,11 @@ status: active
 
 # Computer control and player contract
 
-The exact contracts are [Computer control and player ports](contracts/computer-control.md),
+The exact contracts are [computer control and player ports](contracts/computer-control.md),
 the [player host](contracts/player-host.md) and [evaluation](contracts/evaluation.md).
-Unsupported versions refuse; there is no compatibility backend.
-[ADR006](decisions/006-computer-control-boundary.md) explains the boundary decision, and
-[migration](operations/migration.md) explains state treatment. Other pages in
-`contracts/` are superseded; [documentation](documentation.md#lifecycle-and-maintenance)
-says how to read them.
+The [computer-control boundary decision](decisions/006-computer-control-boundary.md)
+explains the rationale. The [migration procedure](operations/migration.md) governs
+version and state handling.
 
 ## Contract navigation
 
@@ -23,7 +21,7 @@ says how to read them.
 | Hints, sources and handoff context | [Player knowledge and executable proposals](contracts/computer-control.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
 | Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
 | Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
-| Interpretive run evaluation and the spectator view | [Evaluation records, metrics and spectator view](contracts/evaluation.md); rationale in [ADR008](decisions/008-evaluation-and-spectator.md). Nothing in it reaches the player or gates input. |
+| Interpretive run evaluation and the spectator view | [Evaluation records and metrics](contracts/evaluation.md), [observer operations](components/observer-operations.md) |
 
 ## Controller run ownership
 
@@ -46,22 +44,13 @@ The player supplies a summary with `player_handoff`. Canonical
 issuance seals its actor. The player host settles only its direct originating handoff
 or exact original collection; the driver verifies context digest and actual
 old host/MCP group quiescence before a successor. Original limits persist.
-The [player host contract](contracts/player-host.md) owns the substitutable
-`player-host/8` invocation, telemetry, settlement and isolation rules.
+The [player host contract](contracts/player-host.md#settlement-and-handoff) owns
+settlement and handoff. The [computer-control contract](contracts/computer-control.md#computer-operations-and-custody)
+owns the actor-facing projection and full operation records.
 
-The player keeps its ongoing user objective. Experiment quotas and final-actor
-policy remain outside its guide, prompt and MCP results. MCP emits
-`player-computer-result/2` (a short result; the full `player-computer-operation/1`
-record stays with the host and the trace) without global deadline/remaining data, plus
-`player-error/2` and `player-transport/2`; canonical operation/HTTP records remain
-unchanged.
-
-The driver owns bounded `player-control/1` stdin and admission-wide pending stop
-identity. A successor declared with a pending ID waits for its matching command
-before MCP connection or provider fetch. Optional finish-up and direct
-`player_finish` settlement do not gate independent Pause, hard limits or owned
-cleanup. Ordinary narration is not completion; stopping does not certify game
-saving, paused state or application exit.
+The driver carries a pending stop across actor replacement. Optional finish-up
+and direct `player_finish` settlement operate independently of Pause, hard limits
+and owned cleanup. See the [external-control contract](contracts/player-host.md#external-control).
 
 ## Transport and state
 
@@ -72,8 +61,8 @@ The client gives each submission its ID before sending. `computer_result` and
 neither delivery nor nondelivery. MCP cancellation requests independent permanent
 Pause before abandoning the await.
 
-Current storage is fresh `computer-session/1` plus explicitly selected
-`player-journal/1`. Immutable sources retain original PNG bytes and digest.
+Each run opens a fresh computer session and can use an explicitly selected player
+journal. Immutable sources retain original PNG bytes and digest.
 [Current data treatment](contracts/computer-control.md#responsibilities-and-current-data)
 and [migration](operations/migration.md) own versions and historical-state handling.
 
@@ -81,4 +70,5 @@ and [migration](operations/migration.md) own versions and historical-state handl
 
 One designated player, run by the selected player host, owns routine gameplay interpretation and choices.
 The lead owns source, frozen admission, review and verification. Explorers and
-reviewers send no game input. The current route has no live curator scheduler or hidden game-state feed.
+reviewers send no game input. The [curator runner](components/curator.md) starts
+beside play only in a run the owner approves, when [explicitly configured under supervision](operations/campaign-supervision.md#freeze-launch-and-inspect).

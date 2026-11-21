@@ -6,83 +6,58 @@ status: active
 
 # Contributing
 
-Start with the [overview](docs/overview.md), then the authoritative
-[engineering standards](docs/engineering.md). The
-[project workflow](docs/project-management.md) explains issue tracking and review;
-the [public Project](https://github.com/users/CVX-Hull/projects/2) and its issues hold
-the open work and blockers.
+Start with the [overview](docs/overview.md) and [engineering standards](docs/engineering.md).
+Find work in the [public Project](https://github.com/users/CVX-Hull/projects/2) and
+its issues. The [project workflow](docs/project-management.md) explains issue tracking
+and review.
 
 ## Propose a focused change
 
-Search existing issues before opening a bug report or work proposal. Describe the
-user-visible problem, intended outcome, scope, exclusions and acceptance evidence.
-Start at the highest changed responsibility, then name affected components,
-contracts/state/callers, implementation, tests and operating docs. The
-[documentation map](docs/documentation.md) links the hierarchy; an unchanged parent
-needs a link and impact statement, not another approval.
-Discuss consequential boundary, dependency or guarantee changes before implementing
-them. Routine fixes need a cohesive diff and relevant checks. Select the
-[assurance tier](docs/workflows/review.md#risk-based-assurance) by consequence and
-uncertainty; use cheap feedback throughout and consolidate expensive qualification
-around one coherent outcome.
+Search existing issues before opening one. Describe the user-visible problem,
+intended outcome, scope, exclusions and acceptance evidence. Use the
+[documentation map](docs/documentation.md) to identify affected responsibilities,
+contracts and callers. Discuss consequential boundary, dependency or guarantee
+changes before implementation under the [review workflow](docs/workflows/review.md#risk-based-assurance).
 
-Use a normal Git branch in your checkout, or fork the repository and branch there.
-Keep each PR small enough to review and link its issue with `Refs #123`. Split
-independent outcomes; explain dependencies and uncertainty. Closing a duplicate or
-cancelled issue does not mean its proposed outcome was delivered.
+Branch in your checkout or in a fork. Keep each pull request focused on one
+reviewable outcome.
 
 ## Develop and verify
 
-Follow [setup](docs/setup.md) for pinned, project-local dependencies and tools.
-Keep new environments, caches, saves and build outputs project-local or in an
-explicitly recorded owned temporary build; do not install global tools or profiles.
+Follow [setup](docs/setup.md) for pinned, project-local dependencies, tools and builds.
 
-For a development checkpoint, run fast checks and the relevant focused behavioral
-tests (name those commands/results in the issue or PR):
+For a development checkpoint, run the fast check and the relevant focused tests
+from the [testing guide](docs/testing.md).
 
 ```sh
 .venv/bin/python tools/check.py --fast
 ```
 
-Use [development-first delivery](docs/workflows/development.md)
-for finite real development runs before comprehensive qualification. The optional
-commit hook runs the fast checks ([setup](docs/setup.md#common-checks-and-local-hook)). At a coherent integration/acceptance checkpoint, resolve
-independent review and require the appropriate successful exact-candidate protected
-CI profile under [the delivery policy](docs/workflows/ci-profiles.md#protected-ci-profiles).
-Broad source changes require full regression before merge; an existing valid hosted
-full result satisfies that lane without a duplicate local run. The hosted check
-reports several jobs; `controller` is the required one and passes only if every other
-job succeeded. The default local
-`.venv/bin/python tools/check.py` remains full. Use [the testing guide](docs/testing.md) to choose focused cases and review overlap.
-Report editorial, viewer component and main results with their
-narrower scope. Portable checks do not establish native build
-or graphical gameplay acceptance. Native bridge, input, renderer, compiler, source-pin or protocol changes
-need the relevant [native acceptance](docs/runbook.md#native-acceptance-lane).
-The current native scope is one tested macOS host; other hosts remain unverified.
+The [CI profiles](docs/workflows/ci-profiles.md) explain hosted scope and the required
+`controller` check. Follow [development-first delivery](docs/workflows/development.md#development-first-delivery)
+for real development runs and formal qualification. Use the
+[native acceptance procedure](docs/operations/native-acceptance.md) for changes to the
+native boundary.
 
-Preserve real game behavior and player-visible observation boundaries. Never edit
-saves or bypass engine validation to produce acceptance evidence. Launch only the
-prepared windowed wrapper with an explicit project userdir. Coordinate shared game,
-save, port and build resources before using them.
+Preserve real game behavior: no save editing or engine-validation bypass, and only
+the prepared windowed wrapper with an explicit project userdir. Coordinate shared
+game, save, port and build resources before using them ([native acceptance](docs/operations/native-acceptance.md),
+[S-DELIVERY](docs/standards/delivery.md)).
 
-Update affected contracts, tests and user guidance in the same change. Link to
-authoritative documents rather than copying their full requirements. See the
-[controls page](docs/controls.md) for check coverage and gaps.
+Update affected contracts, tests and guidance in the same change. Follow the
+[documentation checklist](docs/documentation.md#before-writing-or-changing-a-document).
 
 ## Submit and review
 
-Explain the problem and resulting behavior, issue reference, exact checks actually
-run and their results. Record candidate identity, environment and limitations when
-relevant; distinguish portable tests, native builds and observed gameplay. Disclose
-failures and unexecuted checks. Redact tokens, personal paths and private data from
-logs and screenshots; do not upload saves by default.
+Use the [pull request template](.github/pull_request_template.md) to describe the
+result, link the issue with `Refs #123`, and record exact checks, outcomes and gaps.
+Report portable tests, native builds and observed gameplay separately. Redact
+tokens, personal paths and private data from logs and screenshots. Saves stay local
+by default.
 
-Consequential changes need independent review with fresh context under the
-engineering standards. Record who or what reviewed which candidate, material
-findings and their disposition. An agent review is not human approval. The lead
-verifies the final candidate and its evidence before merging; under the owner's
-[standing delegation](docs/operator-permissions.md#engineering-decision-and-merge-delegation),
-non-exceptional changes do not wait for maintainer approval.
+Follow the [review workflow](docs/workflows/review.md) for independent review and
+record the reviewed candidate and finding dispositions. The lead merges under the
+[standing delegation](docs/operator-permissions.md#engineering-decision-and-merge-delegation).
 
 ## Licensing and security
 

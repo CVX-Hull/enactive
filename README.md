@@ -11,14 +11,13 @@ you watch and retain control. Cataclysm: Dark Days Ahead is the first integratio
 other games are not qualified. A deciding player, run by a substitutable player
 host, interprets actual images and chooses basic key, text, pointer and wait actions. The harness owns
 mechanical delivery, original limits, one writer, independent Pause and cleanup.
-The player owns game meaning, goals, memory, programs and outcome claims.
+The player owns game meaning, goals, memory and outcome claims.
 
 Start with the [overview](docs/overview.md) for capabilities and limits, then the
 [architecture](docs/architecture.md) and [current contract](docs/contracts/computer-control.md).
 The [production cutover evidence](docs/acceptance/2026-10-29-computer-control.md)
-demonstrates useful play, conditional local programs, memory/correction, fresh
-succession, Save/new-child reload and a separate normal exit. Its failures and
-limits remain explicit. Independent seven-day survival and useful whole-player
+records useful play, memory/correction, fresh succession, Save/new-child reload and
+a separate normal exit, with its failures and limits. Independent seven-day survival and useful whole-player
 cadence remain unaccepted; GitHub owns protected delivery state.
 
 ## Use and contribute
