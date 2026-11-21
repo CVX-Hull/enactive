@@ -20,7 +20,7 @@ The [normally closed learning006 report](../acceptance/2026-10-22-discovery-lear
 records the bounded integrated result, scoped procedure refinement, actual
 fresh-context application and exact normal lifecycle, including disclosed
 technical assistance and unproved causal benefit. The
-[work map](../work.md#current-integrated-checkpoint) links that baseline and the
+[work map](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md#current-integrated-checkpoint) links that baseline and the
 failed fresh-campaign evidence; Issues/Project own live follow-through. The full
 fresh independent seven-day outcome and protected closeout remain required.
 
@@ -133,7 +133,7 @@ unaffected artifacts need no boilerplate.
 
 | Artifact / reader question | Authoritative update and evidence route |
 | --- | --- |
-| Purpose and big picture: what changes for me? | [Charter](../charter.md), [overview](../overview.md), README and [work](../work.md). Keep the CDDA-class constraint, player/lead roles and current capability limits understandable; update diagrams only when their boundary changes. |
+| Purpose and big picture: what changes for me? | [Charter](../charter.md), [overview](../overview.md), README and [work](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md). Keep the CDDA-class constraint, player/lead roles and current capability limits understandable; update diagrams only when their boundary changes. |
 | Current behavior: what is permitted and recorded? | [Architecture](../architecture.md), [protocol](../protocol.md), schemas, native bridge, mission/controller/composer/SDK callers, ledger/archive readers and focused tests. Migrate the coherent set with unsupported-version rejection; no compatibility path. Explicit Observe changes no public request or persisted schema shape. The implemented foundation migrates to native6/mission10/ledger12/archive5 together, including nested procedure2/campaign-memory5/reflection2, `InputObservation`, actual-preflight lineage and separate delivery/processing failure. Producers, strict readers, examples, tool descriptions and negative-version fixtures are migrated in source; actual host loading and graphical qualification remain separate. |
 | Why this design, and what remains proposed? | This brief, [mixed input](../design/mixed-input.md), [organic discovery](../design/organic-discovery.md), [procedure learning](../design/procedure-learning.md) and the existing research crosswalk. Preserve prior findings, conflicts, applicability limits and unverified assumptions; do not redate a literature review without researching it. |
 | How does one prepare, operate and recover? | [Setup](../setup.md), [runbook](../runbook.md), [permissions](../operator-permissions.md), player/adviser tooling guidance and prospective preparation. Change only affected instructions; verify the actual configured player path before admission. Never patch a frozen run or restore a failed run. |
@@ -223,7 +223,7 @@ handoff and normal lifecycle acceptance; this brief does not maintain another qu
 
 ## Evidence and maintenance
 
-The [work map](../work.md) links decisive campaign evidence; the acceptance directory
+The [work map](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md) links decisive campaign evidence; the acceptance directory
 and Git retain detailed attempt/source history. This brief records the selected
 boundary and its rationale, not every intermediate check or live next action.
 Issues/Project/PR own current stage, assignments, estimates, sequencing and CI

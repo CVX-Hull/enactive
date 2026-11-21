@@ -188,8 +188,8 @@ not a passing mock or an invitation to evade tool review. Resolve it before play
 
 Source, sandbox, native build, real game and provider outcomes are distinct lanes.
 A prefix match or test double does not prove live permissions, normal ending,
-provider competence, human takeover or second-game portability. Current evidence
-is indexed in [work](work.md); retain failed observations and unknown causes.
+provider competence, human takeover or second-game portability. Dated evidence
+is indexed in the [acceptance index](acceptance/index.md); retain failed observations and unknown causes.
 
 ### Constructing player requests
 

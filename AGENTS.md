@@ -13,8 +13,8 @@ For engineering work, start with [the overview](docs/overview.md), then [enginee
 Use the [documentation map](docs/documentation.md) to scope a change from the
 highest affected responsibility through component design/contracts to code and
 select proportionate review. Current architecture is not an attempt log.
-Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
-[current work](docs/work.md) before changing relevant boundaries. Follow S-AGENT
+Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and the
+[Project](https://github.com/users/CVX-Hull/projects/2) before changing relevant boundaries. Follow S-AGENT
 for delegation: the lead owns design/integration/verification; parallel workers use
 separate worktrees and disjoint ownership; one integrator and shared-runtime owner;
 named role; clean-context workers/reviewers; bounded briefs. These instructions

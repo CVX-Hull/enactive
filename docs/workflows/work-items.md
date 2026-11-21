@@ -8,7 +8,13 @@ status: active
 
 GitHub Issues own scope, acceptance, the accountable owner, blockers and exceptions.
 The linked Project owns each item's execution stage. Pull requests own implementation,
-checks and review. There is no other tracker.
+checks and review. There is no other tracker: the Project and the issues are the only
+list of open outcomes and work, and no page in the repository lists them.
+
+A backlog grooming, the lead's review of open issues and the Project with the owner,
+is recorded by the issues and the Project it changes; it gets no dated record. A
+measurement or review made during one may still be a dated record of its own
+([S-DOCS](../standards/documentation.md#current-pages-records-and-decisions)).
 
 | Scale | Home |
 | --- | --- |
@@ -76,7 +82,8 @@ these parts, each a line or a short list:
 6. **Owner decision needed**, asked as the
    [approval request requirements](../operator-permissions.md#requesting-owner-approval) say.
 7. **Depends on** and **Revisit when**.
-8. **Links**: parent, design, at most three records.
+8. **Links**: parent, design, at most three records. An outcome's Links name the
+   design that governs it.
 
 A leaf is Ready when parts 2 to 6 are complete and the decisions it needs are made. A
 worker handoff is a brief that follows the

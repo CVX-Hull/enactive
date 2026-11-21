@@ -26,7 +26,7 @@ prospective plan, not live authority; it does not resume Alex or a failed attemp
 campaign outcome is met. At the024 baseline, mixed interaction/procedural learning/
 reflection were separate follow-through. The user subsequently selected
 delivery057's explicit learning mission before this fresh campaign;
-[#176–178](../work.md#campaign-delivery-path) now supply its source capabilities.
+[#176–178](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md#campaign-delivery-path) now supply its source capabilities.
 Learning006closed normally with155primitives/128requests/409frames/22,190,684bytes
 and1850game seconds. All147actual host image presentations match retained bytes.
 It supports scoped condition refinement and fresh-context application, not

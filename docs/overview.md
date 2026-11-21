@@ -33,7 +33,7 @@ effects. The user can Pause independently. Curated knowledge and hints never gra
 Each finite run freezes one [player host](components/player-interface.md) adapter
 behind the substitutable [`player-host/8` contract](contracts/player-host.md). The selected
 finite configuration is OpenRouter / pinned OpenAI provider / GPT-6.1 Terra at medium
-effort. DeepSeek and other cheaper models are future candidates under #25; none is
+effort. DeepSeek and other cheaper models are later candidates (#164); none is
 the current player. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.
 
@@ -65,7 +65,7 @@ The [architecture](architecture.md) explains ownership, the
 | Actor replacement | Actual old host/MCP quiescence and immutable context preceded a fresh successor under original limits. No game menu, save or identity condition grants authority. |
 | Spectator | The [spectator](components/observer-operations.md) separates a supervised control path (frame, status, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames, plus hand-checked night and day-rollover frames. No held-out clock falls between 7:50 PM and 6:00 AM, popup-covered clocks and severe need labels have no held-out examples, and creature counting and death recall are not yet validated ([reader validation](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383)). Human-usability efficacy remains unqualified. |
 | Day-scale play | Screened on one diagnostic route rather than the selected configuration ([long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)), not qualified; seven-day survival and cadence remain open. |
-| Remaining outcomes | Useful apparent cadence, causal learning benefit, independent seven-day survival, second-game control, broader geometry, Unicode/IME and actual-human takeover qualification remain open. |
+| Not yet qualified | Useful apparent cadence, causal learning benefit, independent seven-day survival, second-game control, broader geometry, Unicode/IME and actual-human takeover are not qualified. |
 
 Delivered means SDL events were handed over. It does not mean the application
 consumed them, saved a character or achieved an objective. Exact receipts,
@@ -79,7 +79,8 @@ uses focused checks and coherent committed checkpoints for authentic play.
 Source tests, compiled native interoperability, actual game outcomes, independent
 review and protected CI are separate evidence lanes. A fixture cannot substitute
 for failed gameplay. Keep every failed or abandoned chain and its original limits.
-[Work](work.md) links evidence; GitHub owns execution and remaining gates.
+The [acceptance index](acceptance/index.md) lists the evidence; GitHub owns execution
+and remaining gates.
 
 ## Current direction and decisions
 
@@ -100,8 +101,8 @@ pre-registers a targeted process metric. Each run's result is in its dated recor
 
 ## How you stay in control of the project
 
-Use the [Project](https://github.com/users/CVX-Hull/projects/2) for priorities,
-[work](work.md) for evidence, and the [documentation map](documentation.md) for
+Use the [Project](https://github.com/users/CVX-Hull/projects/2) for priorities and open
+work, the [acceptance index](acceptance/index.md) for evidence, and the [documentation map](documentation.md) for
 review. The lead owns design, integration and verification; the deciding player
 owns routine tactics and interpretation. [Setup](setup.md) and the
 [runbook](runbook.md) explain project-local operation and exact cleanup.

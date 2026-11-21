@@ -8,7 +8,7 @@ status: historical
 # Change brief 001 — A maintainable, reviewable engineering system
 
 Owner: lead. Status: implemented and verified locally. Authorized by the user's request to implement
-the discussed system on 2026-10-17. Progress and acceptance: [work](../work.md).
+the discussed system on 2026-10-17. Progress and acceptance: [work](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md).
 
 ## Problem and visible outcome
 

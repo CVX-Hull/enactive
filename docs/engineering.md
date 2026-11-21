@@ -14,7 +14,7 @@ beside it; a rule in a standard is a control and follows the
 [control rule](standards/authority.md#control-review).
 
 An exception needs scope, reason, owner and a revisit condition in a GitHub issue
-linked to the affected standard; [work](work.md) links the work tracker. Exceptions
+linked to the affected standard. Exceptions
 cannot override user instructions or hide failed acceptance.
 
 | Standard | What it requires | Risks it addresses |

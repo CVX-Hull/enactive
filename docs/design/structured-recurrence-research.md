@@ -42,7 +42,7 @@ GitHub owns ownership, capacity and stage: [research outcome #666](https://githu
 and [no-model feasibility slice #668](https://github.com/CVX-Hull/enactive/issues/668).
 The [delayed-memory assessment proposal](delayed-memory-assessment.md) specifies
 how to select decisions, compare context budgets and acquire a later waking period.
-The [work map](../work.md) routes to the curated-player parent;
+The curated-player parent is [#445](https://github.com/CVX-Hull/enactive/issues/445);
 [work-item flow](../workflows/work-items.md) governs execution.
 
 ## Research contract and prior evidence
@@ -185,7 +185,7 @@ coverage stamp.
 
 The smallest coherent sequence uses existing work rather than a new stack:
 
-1. **#463, complete:** the adopted ownership/tool migration, intent/hint inputs and rule
+1. **#463:** the adopted ownership/tool migration, intent/hint inputs and rule
    alignment are on main. No positive recurrence result was required. Player
    reasoning/handoff and knowledge reads remain.
 2. **#668:** prepare the real-CDDA source portfolio, deterministic stand-in packets,

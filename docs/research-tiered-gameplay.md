@@ -303,7 +303,7 @@ and the authoritative contracts alongside verified behavior.
 Sequence: establish interruption/observation prerequisites for the chosen slice;
 instrument the capable-model-plus-skills baseline; add explicit task contracts and
 feedback; run held-out comparisons; add a smaller tactical model only if justified.
-The existing [work tracker](work.md) remains authoritative; this note does not
+The existing [work tracker](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md) remains authoritative; this note does not
 reprioritize or close its issues. Publishing and tracking this proposal does not
 implement gameplay, a model service, training or new runtime dependencies.
 

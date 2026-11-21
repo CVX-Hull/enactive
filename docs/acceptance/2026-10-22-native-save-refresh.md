@@ -100,7 +100,7 @@ this production shape. [#143](https://github.com/CVX-Hull/enactive/issues/143) o
 the bounded wording follow-through. Its subsequent renderer/test change is source
 evidence, not retroactively present in this frozen run.
 
-The [work map](../work.md) links the full delivery and campaign requirements.
+The [work map](https://github.com/CVX-Hull/enactive/blob/b076ce1dd39790deddc235385951581e019edc41/docs/work.md) links the full delivery and campaign requirements.
 [#195](https://github.com/CVX-Hull/enactive/issues/195) retains image-drift scope;
 [#176](https://github.com/CVX-Hull/enactive/issues/176)/[#181](https://github.com/CVX-Hull/enactive/issues/181)
 retain wider input/geometry qualification. Failed fresh005 stays failed and closed.
