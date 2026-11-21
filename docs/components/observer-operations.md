@@ -1,6 +1,6 @@
 ---
-owner: harness maintainer
-review_trigger: Responsibility, supported behavior, interfaces or qualification change
+owner: lead
+review_trigger: Spectator control, viewer presentation or supervision changes
 status: active
 ---
 
@@ -21,7 +21,7 @@ records and can fail without effect. [Architecture](../architecture.md) and
 | [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive `/api/status` and `/api/source/ID` routes, independent Pause and the actor tool routes. It serves no page and no derived view. |
 | [Gateway](../../tools/campaign_watch.py) | The page origin and static files, relayed status and source reads, Pause with a reason, and bounded forwarding of view reads. Its exit ends supervision, so it stays minimal. |
 | [Page](../../web/) | Source presentation, labels, resource status, Pause feedback and the viewer's views. Served by the gateway. |
-| Viewer (`harness/viewer`) | Read-only evaluator views, operator-selected curator result records and the curator runner's status ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). A separate process outside supervision. |
+| Viewer (`harness/viewer`) | Read-only evaluator views, operator-selected curator result records and the curator runner's status ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view2)). |
 | [Supervisor](../../tools/campaign_supervision.py) | Starts and stops the custodian, gateway, keep-awake and viewer children; the guardian owns the custody deadline and the Pause receipt ([procedure](../operations/campaign-supervision.md)). |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |
@@ -49,12 +49,8 @@ mutation except Pause.
   an unwatched run continues until a run limit or Pause stops it
   ([procedure](../operations/campaign-supervision.md)). The control strip takes the
   frame and status only from the two relayed routes, so a viewer outage cannot blank it.
-- **Pause.** The page posts `{"reason": "loop" | "fault" | "spend" | "other"}`; a missing
-  or unknown reason is recorded as `unspecified`, and the stop is never refused. The
-  gateway sends the guardian the reason with the Pause time,
-  then forwards `{}` to the custodian unchanged, after verifying the connected socket
-  belongs to the exact custodian child. The reason lands in the watch terminal record
-  (`pause_reason`, null when no owner Pause). Pause never waits for the viewer.
+- **Pause.** The page sends the operator's reason to the gateway under the
+  [operator Pause contract](../contracts/computer-control.md#passive-spectator-reads-and-operator-pause).
 
 **Failure.** Report stop-requested separately from native-confirmed Pause. A stale
 image or retained launch receipt is historical evidence, not current liveness. Player
@@ -66,18 +62,12 @@ verify absence stays unknown. No unrelated process scan/adoption is supported.
 
 ## Viewer
 
-The supervisor starts `python -m harness.viewer` as an **unsupervised** child on a free
-loopback port, with the live run directory, the evaluation root
-(`.runtime/evaluations`), optionally a directory of archived runs and labelled curator result files, and,
-when it starts the curator runner, the runner's `curator-runner/status.json`. It runs the
-evaluator incrementally over the live run's records and serves `spectator-view/2`. It
-writes only the live run's `live` evaluation store and never reaches the custodian, the
-player context or any input.
+The viewer can fail independently of the run under the
+[launch and lifetime rules](../contracts/evaluation.md#control-path-and-viewer).
 
 The viewer lists only its own live run as `live`. Another run whose store is still
 `live`, because its final `evaluate-run` pass never ran, is listed as `unfinished`, so the
-page cannot follow it in place of the real live run
-([#435](https://github.com/CVX-Hull/enactive/issues/435)).
+page follows the [current live run (#435)](https://github.com/CVX-Hull/enactive/issues/435).
 
 Diagnose → Overview shows [recorded custodian receipt facts](../contracts/evaluation.md#recorded-custodian-receipt)
 beside the evaluator's outcome. A normally exited process and an unresolved input
@@ -111,7 +101,7 @@ The page's feed player shows the live control-path frame or the playhead's recor
 frame:
 - Each frame is decoded before it replaces the last, and is drawn at its own pixel size. It never blanks or rescales as frames arrive.
 - **1:1** (the default), **2×** and **3×** are pixel-exact and scroll instead of scaling. **Fit** scales smoothly within the column and the screen height.
-- **Wide** puts the player first, across the page ([#437](https://github.com/CVX-Hull/enactive/issues/437)).
+- **Wide** puts the player first, across the page ([feed player display and controls (#437)](https://github.com/CVX-Hull/enactive/issues/437)).
 - **Hold** freezes the view only. It sends nothing to the run and is separate from Pause.
 - The step buttons move the shared playhead.
 - A caption names the decision on screen: its game clock, mode and the keys the player sent. While following live, it shows the newest step as of the frame on screen, so a held frame keeps its caption.
@@ -126,52 +116,34 @@ frame:
 
   The "?" button lists them. The scale and wide choices are remembered per browser.
 
-The gateway forwards `GET /api/view/*` to it on its own connection:
-- a 2-second total deadline and a 4 MiB cap;
-- only `application/json` and `image/png` responses; another media type, or a response
-  over the cap, returns `502` with `{"error": "Viewer response refused"}`, so HTML or
-  script from the viewer is never served;
-- at most eight forwards at once, and the gateway's own headers on every reply;
-- any other failure, including a refused connection, a timeout, a viewer status other
-  than 200, 400, 404, 409 or 413, or no free forwarding slot, returns `503` with `{"viewer": "unavailable"}`. The page
-  shows both `502` and `503` as "viewer unavailable".
+The gateway forwards `GET /api/view/*` under the
+[viewer forwarding limits and failure rules](../contracts/evaluation.md#control-path-and-viewer).
 
-**Spectator frame.** The page's *Roles and containers* view
-([ADR 009's spectator redesign](../decisions/009-curated-player.md#spectator-d18), `web/app/frame.js`) is a health strip
-over role tabs. *Actor* offers the selected run’s recorded knowledge/public-report
-reader: select an actor and request, inspect selection/delivery, follow an ID into
-the digest-verified frozen snapshot, and inspect explicit reads, fallible public
-reports and their mechanical results. Source links use recorded IDs and the existing
-frame verifier; missing links, ages and journals stay unavailable. The
-[view contract](../contracts/evaluation.md#recorded-knowledge-and-public-reports)
-owns fields and bounds. Historical #397 forgetting episodes remain alongside it,
-with anchors opening Live at that step or explaining why the frame is unavailable.
-*Containers* lists the sidecar inventory with each manifest. *Curator* first shows what
-the curator has done since the actor's delivered version, from the curator runner's
-status file read at each request without a lock: the position play has reached, the
-covered prefix, lag, backlog, the last confirmed version with its stamp, the session in
-flight, the examined ranges and the read they are as of. Steps after that read are
-unknown, and a missing or partly written file shows no figures
-([status contract](../contracts/evaluation.md#curator-runner-status)). *Curator* also selects
-configured terminal session receipts and displays recorded metadata, historical draft
-collection events and paged gate results ([session contract](../contracts/evaluation.md#recorded-curator-sessions)).
-*Curator* selects
-operator-configured current result journals and shows recorded submission/restore
-statuses and versions with a digest/byte cutoff. It provides no verified run link,
-semantic verdict, present-head assertion or lag measure from those journals. Missing, empty, unsupported,
-malformed and changed sources remain distinct. The
-[result contract](../contracts/evaluation.md#recorded-curator-results) owns fields,
-bounds and snapshot paging. Broader curator timelines/diffs and current draft states, *Knowledge*
-ontology/belief views and *Programs* retain their remaining placeholders; health slots
-without data say "not yet measured" instead of a number. It is served by the
-viewer's `/api/view/frame/*` routes ([contract](../contracts/evaluation.md#spectator-frame-spectator-frame1)),
-reads only, and leaves the Pause path untouched.
+**Spectator frame.** The page's *Roles and containers* view puts a health strip over
+role tabs. *Actor* lets the operator select an actor and request, inspect knowledge
+selection and delivery, and follow an ID into the digest-verified frozen snapshot.
+It also shows explicit reads, fallible public reports and their mechanical results.
+Source links use recorded IDs and the frame verifier. Missing links, ages and journals
+stay unavailable. See the [recorded knowledge contract](../contracts/evaluation.md#recorded-knowledge-and-public-reports).
+Forgetting episodes from the [seven-day development lineage (#397)](../acceptance/2026-11-07-seven-day-397.md)
+can open Live at a recorded step or explain why its frame is unavailable.
 
-The viewer's exit is never supervision loss: the guardian, startup wait and cleanup
-treat it separately from the custodian, gateway and keep-awake children. The supervisor
-stops it with them at the end and records its pid and port (`campaign-watch-start/4`
-port, `campaign-watch-terminal/4` children). A viewer that cannot start leaves the run
-unchanged.
+*Containers* shows the sidecar inventory and manifests. *Curator* uses the runner's
+status file to show the last observed play position, covered prefix, lag, backlog,
+last confirmed version and stamp, the session in flight and examined ranges. Steps
+after the last successful read are unknown. Missing or partly written status shows no
+figures. See the [runner status contract](../contracts/evaluation.md#curator-runner-status).
+From configured terminal session receipts, *Curator* shows recorded metadata, draft
+collection events and paged gate results. See the [session contract](../contracts/evaluation.md#recorded-curator-sessions).
+Operator-configured result journals show submission and restore statuses and versions at a
+fixed digest and byte cutoff. These journals establish neither run association, a semantic
+verdict, the current published head nor lag. Missing, empty, unsupported, malformed and
+changed sources remain distinct. See the [result contract](../contracts/evaluation.md#recorded-curator-results).
+
+The *Knowledge* and *Programs* tabs show placeholders. In the health strip, placeholder
+slots say “not yet measured” and actor cadence without a reading says “no data”.
+The page reads the [spectator frame routes](../contracts/evaluation.md#spectator-frame-spectator-frame1)
+independently of Pause.
 
 ## Assurance and evidence
 
