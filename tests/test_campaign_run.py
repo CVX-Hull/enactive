@@ -3,6 +3,10 @@ import hashlib
 import json
 import os
 import signal
+import subprocess
+import sys
+import threading
+import time
 from unittest.mock import patch
 from unittest.mock import Mock
 
@@ -441,3 +445,123 @@ def test_invalid_original_ending_reserves_refuse_before_effects(tmp_path,field,f
     with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,pytest.raises(ControlError):
         packages.preflight(directory)
     assert not validator.called and not (directory/'started.json').exists()
+
+
+# A curator reader process in the admission order of the live curator design: open the existing
+# lock, take it shared, refuse on the marker, then hold one read transaction for argv[2] seconds.
+READER='''import fcntl,os,sqlite3,sys,time
+from pathlib import Path
+directory=Path(sys.argv[1]);descriptor=os.open(directory/'curator-read.lock',os.O_RDONLY)
+fcntl.flock(descriptor,fcntl.LOCK_SH|fcntl.LOCK_NB)
+assert not (directory/'store-closing.json').exists()
+db=sqlite3.connect((directory/'session.sqlite3').as_uri()+'?mode=ro',uri=True)
+db.execute('BEGIN');db.execute('SELECT count(*) FROM actors').fetchone()
+print('admitted',flush=True);time.sleep(float(sys.argv[2]))
+db.close();os.close(descriptor)
+'''
+
+
+def live_store(directory):
+    from harness.computer.store import SessionStore
+    store=SessionStore(directory,'a'*32,dict(max_inputs=1,max_requests=1,max_frames=1,max_bytes=1),time.monotonic()+60)
+    store.add_actor('actor','0'*64)
+    return store
+
+
+def reader(directory,hold):
+    process=subprocess.Popen([sys.executable,'-c',READER,str(directory),str(hold)],stdout=subprocess.PIPE,text=True)
+    try:assert process.stdout.readline()=='admitted\n'
+    except BaseException:
+        stop(process);raise
+    return process
+
+
+def stop(process):
+    process.kill();process.wait(5);process.stdout.close()
+
+
+def close_out(directory,store):
+    errors={}
+    def attempt(name,function):
+        try:return function()
+        except BaseException as exc:errors[name+'_error']=type(exc).__name__
+    started=time.monotonic();campaign_run.close_store(directory,'a'*32,store.close,attempt)
+    return time.monotonic()-started,errors
+
+
+def test_close_out_waits_for_an_admitted_read_and_leaves_a_sealed_store(tmp_path):
+    from harness.trace.stores import sealed
+    store=live_store(tmp_path);(tmp_path/'curator-read.lock').touch()
+    process=reader(tmp_path,.5)
+    try:
+        before=time.time();elapsed,errors=close_out(tmp_path,store)
+        assert process.wait(5)==0 and errors=={}
+    finally:stop(process)
+    # No lower limit on the wait: had it not waited, the log below would be non-empty.
+    assert elapsed<campaign_run.READ_BOUND_SECONDS
+    wal=tmp_path/'session.sqlite3-wal'
+    assert not wal.exists() or wal.stat().st_size==0
+    with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT id FROM actors').fetchall()==[('actor',)]
+    marker=json.loads((tmp_path/'store-closing.json').read_text())
+    assert marker.keys()=={'schema','session','closing_wall'} and marker['schema']=='store-closing/1'
+    assert marker['session']=='a'*32 and before<=marker['closing_wall']<=time.time()
+
+
+def test_close_out_stops_waiting_at_the_read_bound_and_still_closes(tmp_path):
+    from harness.trace.stores import SealedStoreError,sealed
+    store=live_store(tmp_path);(tmp_path/'curator-read.lock').touch()
+    process=reader(tmp_path,60)
+    try:
+        elapsed,errors=close_out(tmp_path,store)
+        assert errors=={} and campaign_run.READ_BOUND_SECONDS<=elapsed<campaign_run.READ_BOUND_SECONDS+1
+        with pytest.raises(Exception,match='closed'):store.counts()
+        # The residual: a read held past the bound keeps the log, and the sealed check refuses it.
+        assert (tmp_path/'session.sqlite3-wal').stat().st_size>0
+        with pytest.raises(SealedStoreError),sealed(tmp_path/'session.sqlite3'):pass
+    finally:stop(process)
+    assert (tmp_path/'store-closing.json').exists()
+
+
+def test_a_failed_marker_or_lock_step_is_recorded_and_the_store_still_closes(tmp_path):
+    from harness.trace.stores import sealed
+    store=live_store(tmp_path);(tmp_path/'curator-read.lock').touch(mode=0);(tmp_path/'store-closing.json').write_text('{}')
+    elapsed,errors=close_out(tmp_path,store)
+    assert errors=={'store_closing_marker_error':'FileExistsError','curator_read_wait_error':'PermissionError'}
+    assert elapsed<campaign_run.READ_BOUND_SECONDS
+    with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT id FROM actors').fetchall()==[('actor',)]
+
+
+def test_close_out_without_a_configured_reader_writes_no_marker_and_does_not_wait(tmp_path):
+    from harness.trace.stores import sealed
+    store=live_store(tmp_path)
+    elapsed,errors=close_out(tmp_path,store)
+    assert errors=={} and elapsed<.25 and not (tmp_path/'store-closing.json').exists()
+    with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT count(*) FROM actors').fetchone()==(1,)
+
+
+def test_the_store_closes_only_after_input_authority_is_revoked(tmp_path):
+    directory,profile=package(tmp_path)
+    events=[];channel=Mock();channel.stopped=threading.Event()
+    class Owner:
+        def __init__(self,*args):self.channel=None;self.process=Mock()
+        def reserve(self):pass
+        def start(self):self.channel=channel;return channel
+        def wait_target(self):pass
+        def close(self):
+            events.append('native_cleanup');channel.stopped.set()
+            return dict(native_absence_verified=True,normal_native_exit_zero=True)
+    runtime=Mock();runtime.stop.side_effect=lambda reason:events.append('pause')
+    server=Mock();server.shutdown.side_effect=lambda:events.append('server_shutdown')
+    def close_store(directory,session,close,attempt):
+        assert channel.stopped.is_set();events.append('close_store')
+    driver=dict(outcome='player_task_complete_unassessed',actors=[],reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,
+                observed_attempts=0,observed_recall_attempts=0,spend_complete=True)
+    with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY',unpriced_request_usd='0.00063',recall=dict(unpriced_request_usd='0.00063')),{})),\
+            patch.object(campaign_run,'OwnedTarget',Owner),patch.object(campaign_run,'ComputerRuntime',return_value=runtime),\
+            patch.object(campaign_run,'Journal'),patch.object(campaign_run,'Application'),\
+            patch.object(campaign_run,'serve',return_value=(server,Mock())),patch.object(campaign_run,'run_hosts',return_value=driver),\
+            patch.object(campaign_run,'close_store',close_store),patch.object(campaign_run.signal,'signal'),\
+            patch.dict(os.environ,{'OFFLINE_KEY':'fixture-secret'}):
+        result=campaign_run.run_campaign(directory)
+    assert events==['pause','native_cleanup','server_shutdown','close_store']
+    assert result['input_authority_revoked'] and not [key for key in result if key.endswith('_error')]
