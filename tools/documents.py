@@ -123,7 +123,7 @@ def check_metadata(root: Path) -> list[str]:
             if invalid:
                 if metadata.get("status") in ("historical", "superseded") and "review_trigger" in metadata:
                     errors.append(f"{label}: remove review_trigger from historical or superseded pages "
-                                  "(docs/documentation.md#lifecycle-and-maintenance)")
+                                  "(docs/standards/documentation.md#s-docs-useful-maintained-documentation)")
                 continue
             if (path.is_relative_to(root / "docs/acceptance") and metadata["status"] != "historical"
                     and label not in INDEXES):

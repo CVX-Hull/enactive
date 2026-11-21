@@ -91,7 +91,7 @@ class DocumentTests(unittest.TestCase):
                 path.write_text(f"---\n{header}---\n# Old guidance\n")
                 errors = "\n".join(documents.check_metadata(self.root))
                 self.assertIn("remove review_trigger from historical or superseded pages", errors)
-                self.assertIn("docs/documentation.md#lifecycle-and-maintenance", errors)
+                self.assertIn("docs/standards/documentation.md#s-docs-useful-maintained-documentation", errors)
 
     def test_historical_page_can_name_an_existing_replacement(self):
         path = self.root / "docs/nested/page.md"
