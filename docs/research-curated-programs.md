@@ -1,9 +1,9 @@
 ---
 owner: lead
-review_trigger: The adoption decision that ends the programs and monitor study (issue 470) and the owner's decision on the practice instance phase (issue 472, ADR 009's first open owner decision) settle this page; until then a change to ADR 009's program, slot, monitor, expectation, offline-evaluation, practice-instance or study sections, a pre-registration for the curator and memory phase or the programs and monitor phase, or new primary evidence on any area below
+review_trigger: A decision or pre-registration for programs, monitoring or practice instances, a change to the related ADR 009 design, or new primary evidence
 status: active
 date: 2026-11-08
-scope: 'Dated primary-source synthesis for eight ADR 009 research areas (#448): program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design, with study-design guidance for #178 and #470. The area on agent workspaces and verification gates (#451) is out of scope. No implementation.'
+scope: 'Primary-source synthesis for ADR 009 on program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design'
 ---
 
 # Programs, supervision, evaluation and study design: evidence for ADR 009
@@ -12,15 +12,15 @@ Search and retrieval date: **2026-11-08** (all sources below were retrieved that
 The 18-month recency line is therefore **2025-05-08**; a conclusion whose newest
 supporting source is older is flagged "STALE-FLAG".
 
+Curator programs, monitors and practice instances are proposals. Evidence for their
+evaluation comes chiefly from coding, office and Linux settings. For screenshot play,
+the proposed studies test verified programs against paired controls, measure monitor
+detection at a fixed false-stop rate and check determinism in practice instances.
+
 ## Brief, questions and method
 
-**Brief (#448, lead).** Produce the S-EVIDENCE synthesis for eight areas of
-[ADR 009's research agenda](decisions/009-curated-player.md#research-agenda), from program
-induction and libraries to study design, with recommendations per
-area and study-design guidance for #178 (the curator memory study) and #470 (the
-programs and monitor study).
-The brief named only foundational sources (below) and no current source. Questions,
-copied from the ADR's agenda table:
+The questions and named foundations follow
+[ADR 009's research agenda](decisions/009-curated-player.md#research-agenda).
 
 | Area | Questions | Foundational sources the brief named |
 | --- | --- | --- |
@@ -46,13 +46,13 @@ means the arXiv listing only. Decisive numbers should be re-verified from the PD
 the reviewer before they enter a pre-registration. Sources seen only as search
 snippets are listed in the last table as **not relied on**.
 
-**Prior work not repeated.** I skimmed (tables and headings only):
+**Prior work** (tables and headings only) includes
 [executable policies](research-executable-policies.md) (research cutoff 2026-10-23,
-archived 2026-10-29, historical; RAX, MetaSkill, SEAR, AtomSearch, SkillNEO, py_trees,
+RAX, MetaSkill, SEAR, AtomSearch, SkillNEO, py_trees,
 Wasmtime), [multirate agents](research-multirate-agents.md) (cutoff 2026-10-24,
-dated 2026-11-07, historical; CodeHack, Recuris, PACT-VLA, anti-persistence) and
-[outcome monitoring](research-outcome-monitoring.md) (cutoff 2026-10-17, dated
-2026-11-07, historical; RoboMonitor, UniPred, Sentry, cost-aware protocol routing
+CodeHack, Recuris, PACT-VLA, anti-persistence) and
+[outcome monitoring](research-outcome-monitoring.md) (cutoff 2026-10-17,
+RoboMonitor, UniPred, Sentry, cost-aware protocol routing
 [2608.14927], correlated errors). I did not re-read their sources. The findings
 below add to them; they cite those pages where a point overlaps.
 
@@ -65,7 +65,7 @@ knowledge of any particular game.
 ## Program induction and libraries
 
 **Evidence read.**
-- *Self-written skills do not help (current revision).* SkillsBench ([2602.12670](https://arxiv.org/html/2602.12670v4),
+- *Self-written skills scored below the no-skill baseline.* SkillsBench ([2602.12670](https://arxiv.org/html/2602.12670v4),
   **v4, 14 Jun 2026**; v1 13 Feb, v2 7 Mar, v3 13 Mar 2026; the v4 abstract page and
   the v4 body were re-read on 2026-11-08, first 100k of 175,714 characters of the body,
   extracted): 87 tasks in 8 domains, 18 model-harness configurations in four harnesses,
@@ -77,10 +77,7 @@ knowledge of any particular game.
   tasks negative with curated skills; 1 skill +18.0, 2-3 skills +19.0, 4+ skills +10.1;
   compact +19.0, standard +21.5, detailed +14.5, "comprehensive" +0.7 pp. **No
   length-matched or irrelevant-text control** (the authors list it as future work), so
-  context length is not ruled out. Terminal tasks only. My earlier draft cited
-  superseded v1 (84 tasks, 7 configurations, 5 repeats, curated +16.2, self-generated
-  -1.3 as I extracted it; the v1 table reportedly says -1.8, which I did not
-  re-check); none of those v1 figures is used now.
+  context length is not ruled out. Terminal tasks only.
 - *Net gains hide regressions.* The Regression Tax ([2607.22520](https://arxiv.org/html/2607.22520),
   24 Jul 2026; full text extracted): 486 tasks per stack, 3 model-harness stacks, 18
   library conditions, **one run per task per condition**, no token-matched control;
@@ -111,8 +108,8 @@ knowledge of any particular game.
   held-out gap persists and grows with code size (about 28 pp per tenfold; it
   reports a 2,900-line solution that memorizes test inputs). Relevance: visible-test
   acceptance of agent-written artifacts can be gamed, which supports the ADR's
-  gate-owned tests the curator cannot see. How agents game pass/fail gates is
-  a question of the agent-workspaces-and-verification-gates area (#451), which already uses this source; I do not extend it here.
+  gate-owned tests the curator cannot see. The [sandbox research](research-curator-sandbox.md)
+  covers gate gaming.
 - *Execution verification of induced programs.* ASI ([2504.06821](https://arxiv.org/html/2504.06821v2),
   v1 Apr 2025, v2 29 Aug 2025; full text extracted): induced Python skills are kept
   only if a re-run from the rewritten trajectory succeeds, a skill is called, and
@@ -217,8 +214,7 @@ in coding/web settings.
   Nondeterminism: Tamba ([2606.26185](https://arxiv.org/abs/2606.26185), 24 Jun 2026,
   v2 24 Oct 2026; abstract only): at default settings borderline judge items flipped
   across identical runs (up to about 50% disagreement over 20 runs); temperature 0
-  reduced but did not remove flips; 690 calls, 7 items, single author; newer
-  Anthropic model versions no longer expose temperature. The Replay Gap measured 90-96% of
+  reduced but did not remove flips; 690 calls, 7 items, single author. The Replay Gap measured 90-96% of
   FP8-served 4B control forks diverging at temperature 0 against near-identical
   AWQ-served 14B controls: determinism depends on the serving stack and/or the model
   (the paper says quantization confounds model size with serving configuration).
@@ -331,10 +327,9 @@ hashing look like the origin; the representation-dependence results suggest OOD
 scores need calibration on the deployment representation.
 
 **Recommendation for ADR 009 (novelty and anomaly detection).**
-1. Do **not** adopt a perceptual-hash threshold from outside sources. The ADR already
-   makes unrecognized screens a yield trigger; add a pre-study (baseline and workbench
-   phase, $0 gameplay) that
-   builds labelled screen pairs (same screen and different state; different screen)
+1. Calibrate the perceptual-hash threshold locally before a study uses the ADR's
+   unrecognized-screen yield trigger. Build labelled screen pairs (same screen and
+   different state, or different screen)
    from sealed traces, picks the threshold on development lineages and reports
    the hash's false-match and false-miss rates on held-out lineages, separately for
    whole frames and the text-heavy regions a program actually reads. Prior evidence
@@ -392,14 +387,11 @@ miscalibrated. Expectation as a **side effect on the actor's behaviour** is unte
 measured for skills, not expectations).
 
 **Recommendation for ADR 009 (expectations and prediction error).**
-1. Keep expectations required (the owner's
-   [direction requiring intent and expectation emissions](decisions/009-curated-player.md#actor-emissions-d10))
-   but state in the ADR that benefit
-   to the **actor's** play is unproven; their justified role is as a measurable
-   signal for the curator and program predicates. Test the actor-side effect in the
-   baseline and workbench phase's emission feasibility run: same-seed short runs with and without required
-   expectations, matched tokens, reporting pace, survival and variance across repeated
-   calls, as development evidence only.
+1. Under ["Intent now, rest later"](decisions/owner-decisions.md#in-force), expectation
+   emissions are deferred until a consumer needs them. Their proposed use is as a
+   measurable signal for the curator or program predicates. Their effect on the actor's
+   play is unproven. A development comparison could use short, same-seed runs with and
+   without required expectations at matched tokens and report pace, survival and run-to-run variance.
 2. Score expectations automatically wherever the claim can be checked against the
    next observation (the expectation hit rate); score free text with a judge only
    after measuring judge agreement and false-pass rate on a labelled set.
@@ -408,9 +400,8 @@ measured for skills, not expectations).
    probability (consistent with the ADR's
    [belief and disagreement](decisions/009-curated-player.md#belief-and-disagreement) language). Do not use early-episode confidence
    to predict failure.
-4. Before using prediction error as the curator's attention signal, show on
-   the baseline and workbench phase's development data that low-expectation-match steps are enriched for the
-   forgetting episodes' retrieval misses; otherwise drop it from the brief.
+4. Test whether low-expectation-match steps predict retrieval misses in development
+   data before using prediction error to direct the curator's attention.
 5. Evidence level: thin; newest relevant primary text is Aug 2026, but the sources
    are open-weight/deep-research or abstract-only.
 
@@ -465,11 +456,8 @@ cloning and importance-sampling sources not read).
    (repeated LLM calls), so "agreement" is read against its noise ceiling.
 3. Where program and actor disagree, disagreement is not failure: audit a blind
    sample of disagreements by frames, report the labelled rates.
-4. Keep the curator memory study's offline claim restricted to **what would have been
-   placed in front of the actor** (the ADR's definition); the evidence shows replay
-   misjudges downstream behaviour once actions differ, so no offline result of that
-   study may be phrased as a
-   behavioural or outcome gain.
+4. Use fixed-trace replay to assess **what would have been placed in front of the
+   actor**. Assess downstream behavior with closed-loop evidence once actions can differ.
 
 ## Practice environments
 
@@ -578,10 +566,9 @@ k = 3, 4, 5). Consequences, stated carefully:
 - The minimum attainable p is **necessary, not sufficient**: at k = 5 one-sided the
   test rejects only if all five lineages favour the treatment arm, and at k = 6 two-sided only if all
   six agree in sign.
-- In a study where arms are **randomized to lineages** (#470), the sign-flip test's
-  validity comes from the random assignment. In **#178's offline replay nothing is
-  randomized**: both arms are replayed on the same fixed traces, so a sign-flip test
-  there rests on a symmetry/exchangeability assumption under the null, not on a design.
+- Random assignment supplies the basis for a design-based sign-flip test. When both
+  arms are replayed on the same fixed traces without random assignment, sign-flip
+  inference depends on symmetry or exchangeability under the null.
 - Per the Canay et al. introduction (verified above), the wild bootstrap behaves like a
   sign-change randomization test, so the same granularity limit applies to it.
 
@@ -608,89 +595,13 @@ k = 3, 4, 5). Consequences, stated carefully:
 
 ## Study-design guidance
 
-### #178: curator memory study (the no-curator arm, root validation plus a pushed working set, against the curator arm)
+The [curator memory study record](acceptance/2026-11-12-p1-descriptive-completion-178.md)
+reports the offline descriptive comparison and its registered no-go.
 
-Facts from the ADR and issue: held-out lineages are #382's three, stored as `lh1`-`lh3`; probes written
-blind and before replay; the curator arm is replayed over the same traces; held-out
-traces predate emissions; ablations only where power allows.
+### Proposed programs and monitor study
 
-1. **Unit of analysis.** The lineage is the only independent unit: probes and facts
-   within a lineage share state. With three lineages no exact randomization test can
-   reject at 5% (arithmetic above), and in offline replay nothing is randomized, so
-   any such test would rest on an exchangeability assumption. Choose one of:
-   (a) add held-out lineages: at least 5 for a one-sided test and 6 for a two-sided
-   one is only the necessary minimum (all lineages must agree), so more are needed
-   for real power. Caveats: new live lineages would **carry emissions, unlike
-   `lh1`-`lh3`**, making the held-out set heterogeneous, they are the lineages #441
-   (deferred by the owner on 8 November) was to supply, and the ADR's cost gate
-   prices them; or (b) pre-register an **estimation-and-consistency criterion**: per-
-   lineage effect, direction in every lineage, and a within-lineage interval from
-   resampling facts (not probes), with the claim scope stated as "these three
-   worlds, this actor and these models". Present (b) as descriptive, not as
-   generalization (S-EVIDENCE: scope not beyond held-out variation). **State (b)'s
-   false-pass rate:** requiring the curator arm to be ahead in all three lineages
-   passes with probability 1/8 under a symmetric null (no true difference, either sign
-   equally likely), so it is weak evidence by itself and needs a minimum effect size and
-   the noise-floor checks below (the no-curator arm compared with itself). (#178's emission-bearing baseline
-   answers a different problem, the missing emissions, and is covered in item 7.
-   Only new held-out lineages could carry it into the deciding comparison; development
-   lineages never can.)
-2. **Probe design.** Probe = (decision time, fact, supporting frames), written by the
-   lead or an independent reviewer **from frames with #449's protocol, never from
-   evaluator readers (ADR008)**, blind to arm, from the baseline trace and before
-   either arm is replayed.
-   Include: positive probes (fact should be in front of the actor), **negative
-   probes** (stale or other-world facts that should not be surfaced), and the four
-   development episodes only as development fit tests. Two annotators label a stratified
-   subset; report Krippendorff's alpha (the agreement criterion in the ADR's
-   [ontology evaluation](decisions/009-curated-player.md#fitting-and-evaluating-the-ontology-d4)) and resolve before
-   freezing. Group probes by underlying fact and episode; deduplicate in the
-   pre-registration. Record annotation cost per lineage in the baseline and workbench
-   phase.
-3. **Scoring.** Score on what the actor would have received at the decision
-   (snapshot or diff content), not each arm's query interface. Hold the **context
-   budget** (snapshot tokens) equal across arms, or report both and state the
-   comparison is not budget-matched. **Simulate curator lag**: the curator arm's
-   snapshot as of time t is the latest published by t under the lag distribution from
-   the baseline and workbench phase's shadow run; report lag = 0 only as an upper bound.
-   Omitting this gives the curator arm a look-ahead the no-curator arm does not have.
-4. **Primary metric and paired reporting.** One primary: probe recall at matched
-   budget (or rediscovery rate per ADR). Report per-probe discordance: gains (the
-   no-curator arm misses and the curator arm hits) and **regressions** (the no-curator
-   arm hits and the curator arm misses; the Regression Tax lesson) and the false- or
-   wrong-scope fact rate; secondary metrics under Holm control and labelled secondary.
-   Report cost per lineage for the curator arm.
-5. **Curator-arm repeat variance.** The curator is an LLM; run the curator arm several
-   times per lineage (count set by the power simulation) with per-arm replay caches, and
-   report variation across repeats and across host/model pairs. Temperature 0 is not a
-   determinism guarantee (Tamba; the Replay Gap), so a single run of the curator arm is
-   a deviation to disclose.
-6. **Power simulation (pre-registered, before spend).** **Proposed change to
-   existing text:** ADR 009 (Evaluation and studies, "Gate before spend") and #178
-   say power is simulated "from the variance in development data". Development data
-   hold at most one day-scale lineage, so lineage-level variance cannot be
-   estimated from it; I propose gridding it (and the fact-level ICC) as a
-   sensitivity analysis, with development data bounding only probe/fact-level noise.
-   This departs from the ADR/#178 wording and needs the lead's decision. Generative
-   model: per-lineage random effect on the difference between the two arms in probe-hit
-   probability; probes nested in facts nested in lineages; a noise term per curator-arm
-   run. Output: for each (k lineages, probes per lineage, curator-arm repeats):
-   (i) false-positive rate under the null, including a **negative control that compares
-   the no-curator arm with itself** (replayed with a perturbation that should not change
-   content, e.g. snapshot order or rebuild timing) and a null in which the curator arm's
-   content is shuffled across lineages; (ii) power at the
-   smallest effect of interest; (iii) the minimum attainable p-value of the chosen
-   test; (iv) dollar cost. Freeze the simulation code, seeds, inputs and decision
-   rule with a hash.
-7. **Limitations to record:** held-out traces lack emissions, so the curator arm runs without the
-   expectation attention signal it would have live (consider a separate,
-   development-only emission-bearing replay); offline replay does not model behaviour
-   change ([offline evaluation of policies](#offline-evaluation-of-policies)); lineages share an actor model, route and start-state family.
-8. **Live guards afterwards** (survival, pace, cost) stay non-inferiority checks; with
-   few lineages state the margin and the minimum lineage count at which the check can
-   fail.
-
-### #470: programs and monitor study (delegation share at matched failure rate; monitor detection)
+This provisional design measures delegation share against a failure-rate margin and
+monitor detection at a fixed false-stop rate.
 
 1. **Delegation share and failure.** Unit: lineage (each lineage forks its own
    repository, so the library differs). Decisions within a lineage are clustered;
@@ -719,9 +630,9 @@ traces predate emissions; ablations only where power allows.
    the yield rate it produces in play.
 7. **Preemption guards.** Preemption latency distribution and fraction with unknown
    delivery; any permanent stop from unknown delivery is a reported outcome.
-8. **Power and spend.** Simulate with lineage-level variance in delegation share and
-   failure rate over a grid (the same proposed departure as #178 item 6 if
-   development variance cannot supply lineage-level values). **Recommendation:**
+8. **Power and spend.** Simulate power using a sensitivity grid for lineage-level
+   variance in delegation share and failure rate when development data cannot
+   estimate that variance. **Recommendation:**
    randomize the arm order within each matched pair, so a paired sign-flip test has
    a randomization basis. Randomization validates a sharp null. For non-inferiority
    with margin δ, apply the test to differences shifted by δ under a constant-effect
@@ -729,12 +640,11 @@ traces predate emissions; ablations only where power allows.
    pre-registered interval. Pick **one-sided non-inferiority on failure** (the
    decision the ADR needs): the necessary minimum is 5 matched pairs for a one-sided 5% exact test,
    and at 5 pairs it rejects only if all five favour programs-allowed, so plan more
-   (the 6-pair figure is the two-sided minimum and is not used here). State
-   cost per lineage from the actor's measured $/game hour (ADR: $0.80 in #397) plus
-   curator and monitor spend. Interim looks: an unsupported hypothesis ([study design](#study-design), item 3);
-   the hard dollar cap stands. If the
-   gate cannot reach the pre-registered detection rate within the envelope the study
-   does not run (ADR rule).
+   (the two-sided minimum is 6 pairs). State
+   cost per lineage using the actor's measured cost per game hour plus curator and
+   monitor spend. Interim looks are an unsupported hypothesis ([study design](#study-design), item 3).
+   The dollar cap stands. Run the study only if the design can reach the
+   pre-registered detection rate within the envelope (ADR rule).
 9. **Pre-registration contents** (S-EVIDENCE): evaluation split, baselines and
    ablations, budget matching plan, frozen hash, deviations log, pinned versions of
    model, route, prompt, code and data.
@@ -747,8 +657,8 @@ traces predate emissions; ablations only where power allows.
 | Programs with model calls | Exact-key replay of recorded outputs; held-out cases for slot swaps; two bindings per slot; closed-loop check; no training | Thin for screens; moderate for routing text |
 | Supervision and interruption | Monitor stop-only and described as having no guarantee; measure TPR at fixed false-stop rate; measure preemption and risk-class error | Thin |
 | Novelty and anomaly detection | No imported hash threshold; local labelled calibration; TPR at fixed FPR; compare hash with model flags | Thin |
-| Expectations and prediction error | Expectations justified as a curator signal, actor benefit untested; test burden/effect in the baseline and workbench phase; confidence as ranking only | Thin |
-| Offline evaluation of policies | Agreement is a filter; no IS/DR; compare to noise ceiling; curator memory study claims limited to surfaced content | Moderate for replay validity; thin for programs |
+| Expectations and prediction error | Expectations are deferred until a consumer needs them. Test actor-side burden and benefit separately and use confidence only for ranking | Thin |
+| Offline evaluation of policies | Use agreement as a filter and compare it with the actor's noise ceiling. Fixed-trace replay can score surfaced content | Moderate for replay validity; thin for programs |
 | Practice environments | Determinism study first with control forks; no transferred timing numbers | Thin for the platform |
 | Study design | Lineage unit; no exact randomization test can reject at 5% with three lineages; paired exact tests where arms are randomized; interim-look rule is an unsupported hypothesis (no source read) | Classical sources all STALE-FLAG (2021 and earlier except two 2025-26 single-author/abstract items); LLM-specific noise evidence moderate |
 
@@ -762,7 +672,7 @@ revision before 2025-05-08).
 
 | Source | Published (revised) | Read scope | Measured / baseline / budget matched / restates | Flags |
 | --- | --- | --- | --- | --- |
-| SkillsBench 2602.12670 **v4** | v1 2026-02-13, v2 03-07, v3 03-13, v4 2026-06-14 | Abstract + body (extr.), 100k of 175.7k chars | Pass rate: no skills, curated, self-generated (3 of 18 configs); no length-matched control | terminal tasks; v1 numbers withdrawn from this page |
+| SkillsBench 2602.12670 **v4** | v1 2026-02-13, v2 03-07, v3 03-13, v4 2026-06-14 | Abstract + body (extr.), 100k of 175.7k chars | Pass rate: no skills, curated, self-generated (3 of 18 configs); no length-matched control | terminal tasks |
 | Regression Tax 2607.22520 | 2026-07-24 | Full (extr.) | Paired gains/regressions vs no skills; not token-matched; skill-ablation lineage | 1R (one run per task); single coder |
 | Skill Following 2609.00549 | 2026-09-01 | Abstract | Same-task effect where retrieved; matched pairs | no numbers read |
 | Ratchet 2605.22148 | v1 2026-05-21, v3 2026-08-07 (v2 unconfirmed) | Abstract + body (extr.), 100k of 135.6k chars | Rolling held-out pass@1 gain +0.328, MBPP+/100, 3 seeds; +0.0/+16.2 are cited from SkillsBench | one benchmark; filtered tasks; not independent of SkillsBench |
@@ -775,7 +685,7 @@ revision before 2025-05-08).
 | TwinRouterBench 2605.18859 | 2026-05 (v5 10-24) | Full (extr.), 18k unread | Step-level routing; resolved count and API cost | V (one vendor-built benchmark); router diagnostic = Opus 4.6, one prompt; no repeats; 100 locked instances |
 | Replay Gap 2608.08239 | 2026-08-08 (v1) | Body (extr.) + Table 1 from PDF text | Branched live rollouts vs replay; same-model control forks; up and down swaps | W (PDF: Efficient Reasoning Workshop, COLM 2026; page said COLM); quantized models; small n |
 | Kang et al. 2505.17612 | 2025-05-23 (v2 11-05) | Abstract | Agent distillation to 0.5-3B | no numbers; not stale |
-| SpecBench 2605.21384 | 2026-05-20 (v2 09-09) | Abstract | Visible vs held-out test gap, 30 coding tasks | The agent-workspaces-and-verification-gates area (#451) owns gate gaming |
+| SpecBench 2605.21384 | 2026-05-20 (v2 09-09) | Abstract | Visible vs held-out test gap, 30 coding tasks | Coding benchmark |
 | vCache 2502.03771 | 2025-02-06 (v5 2026-02-21) | Abstract | Semantic cache hit/error | authors' numbers |
 | Tamba 2606.26185 | 2026-06-24 (v2 10-24) | Abstract | Judge flips at temp 0 | single author; 7 items |
 | CAR 2606.08275 | 2026-06-06 | Full (extr.) | Counterfactual replay attribution | S; no real tools |

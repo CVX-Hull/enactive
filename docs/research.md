@@ -6,9 +6,8 @@ status: active
 
 # Evidence and design consequences
 
-Owner: lead. Evidence reviewed: 2026-10-17. Recheck a fast-moving finding before a
-design depends on it. Sources below distinguish observed findings from
-our engineering inferences; they are not a claim to exhaust the literature.
+Recheck a fast-moving finding before a design depends on it. The sources below
+distinguish observed findings from engineering inferences.
 
 ## Research pages
 
@@ -23,12 +22,10 @@ a priced pilot. Other games and unforeseen cross-game problems are deferred to f
 versions. Paid studies and runtime adoption require their own decisions; the proposal
 is not an experimental result or a change to the current memory contract.
 
-The [belief-method comparison](design/belief-method-comparison.md) isolates provenance,
-revision, subjective-logic/Beta opinions, staleness and pooling on the same CDDA replay
-packets before any live claim. It informs #457's open belief decision; no calculus is
-adopted. The primary foundations were rechecked on 16 November 2026, including the
-matched binomial-opinion/Beta equivalence. Terra stays the player baseline; cheaper
-model trials remain #25's separate work.
+The [belief-method comparison](design/belief-method-comparison.md) proposes testing how
+provenance, revision, numerical evidence, staleness and partial pooling affect
+answers from the same CDDA replay packets. Its **2026-11-16 targeted recheck** covers
+the primary foundations, including the matched binomial-opinion/Beta equivalence.
 
 ### Current: the question is open
 
@@ -37,11 +34,11 @@ Each page answers areas of [ADR 009](decisions/009-curated-player.md)'s
 retrieved on 2026-11-08. The owner's decisions are in the
 [decision log](decisions/owner-decisions.md).
 
-| Page | Subject | Still open | Already settled |
+| Page | Subject | Open question | Current rule or evidence |
 | --- | --- | --- | --- |
-| [Memory, belief, ontology and oversight](research-curated-memory.md) (#447) | Write and retrieval policies, concurrent consolidation, belief under conflict, ontology evaluation and oversight interfaces | How stored knowledge reaches the playing model (#591), the ADR's [open decision on the belief model](decisions/009-curated-player.md#open-owner-decisions) (#457), ontology grooming (#458) and the spectator's views (#464) | Who writes the store: the [curator](components/curator.md) |
-| [Programs, supervision, evaluation and study design](research-curated-programs.md) (#448) | Program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design | Adoption of the programs and monitor phase (#465 to #470) and the owner's decision on the practice instance phase (#472) | Its guidance for the curator memory study (#178), which is [complete](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
-| [Curator sandbox](research-curator-sandbox.md) (#451) | Project-local sandbox mechanisms on this Mac, coding-agent hosts under them, session cost evidence and gate gaming, with the prototype's escape-suite results and residual risks | Gate gaming, until the submission gate's tests on later trace are designed (#459) | The mechanism: the [curator](components/curator.md) runs under a project-owned Seatbelt profile with a supervisor and a proxy that holds the key, and the escape suite is re-run after every macOS or host update ([curator hosts](operations/curator-hosts.md#both-hosts)) |
+| [Memory, belief, ontology and oversight](research-curated-memory.md) | Write and retrieval policies, concurrent consolidation, belief under conflict, ontology evaluation and oversight interfaces | Which delivery, conflict handling, ontology grooming and spectator methods help play or supervision? | The [curator](components/curator.md) writes the knowledge store |
+| [Programs, supervision, evaluation and study design](research-curated-programs.md) | Program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design | Do programs and monitoring help in play, and can practice instances support valid trials? | [Curator memory study](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
+| [Curator sandbox](research-curator-sandbox.md) | Project-local sandbox mechanisms on this Mac, session cost evidence, residual risks and gate gaming | How can the submission gate resist gaming when it tests knowledge or programs on later traces? | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#both-hosts) |
 
 ### Historical: the question is settled
 
@@ -51,16 +48,16 @@ the conclusion the project acts on is stated.
 | Page | Research cutoff | What it informed | Where the conclusion lives |
 | --- | --- | --- | --- |
 | [Engineering research](research-engineering.md) | 2026-10-17 to 2026-10-25 | Principles, standards, controls, documentation, project management, review and the test-selection pilot | The [standards](engineering.md) ([research basis](standards/authority.md)), [project management](project-management.md), [risk-based assurance](workflows/review.md#risk-based-assurance) and [testing](testing.md) |
-| [Spatial grounding](research-spatial-grounding.md) | 2026-10-30 | The spatial-grounding candidate of #300 | [Tested and rejected](acceptance/2026-10-30-spatial-grounding.md) |
-| [Context, prompt and ergonomics](research-context-engineering.md) | 2026-10-26 | The fast, less flagship model direction, checked against small-model and tool studies, memory and compaction counterexamples, provider contracts and the player host's context growth (#251, closed) | Neither more context nor fewer tokens guarantees useful apparent speed; #164 owns the readiness criteria |
+| [Spatial grounding](research-spatial-grounding.md) | 2026-10-30 | The spatial-grounding candidate | [Test and decision](acceptance/2026-10-30-spatial-grounding.md) |
+| [Context, prompt and ergonomics](research-context-engineering.md) | 2026-10-26 | Faster player models, checked against small-model and tool studies, memory and compaction counterexamples, provider contracts and player-host context growth | Useful apparent speed needs measured effects in play. See the [cadence assessment](design/cadence-plan.md) |
 | [Multi-rate agents](research-multirate-agents.md) | 2026-10-24 | The multi-level player direction | Not adopted; it prescribed no additional model tiers and established no responsiveness or learning benefit |
-| [Executable policies](research-executable-policies.md) | 2026-10-23 | Player-authored scripts, branching strategies and online revision, against procedure memory | The [memory component](components/memory-learning.md) describes the adopted journal/knowledge boundary; player-authored programs are retired, and curator programs remain proposed. The recommendation itself implemented and qualified nothing |
+| [Executable policies](research-executable-policies.md) | 2026-10-23 | Player-authored scripts, branching strategies and online revision, against procedure memory | The [memory component](components/memory-learning.md) describes the current journal and knowledge boundary |
 | [Responsive gameplay](research-responsive-gameplay.md) | 2026-10-22 | Brief 060: roguelike skills, asynchronous control, context and memory, and tool ergonomics against closed host traces | Its linked proposal is not implemented behavior or a passing responsiveness qualification |
 | [Memory architecture](research-memory-architecture.md) | 2026-10-19 | The implemented memory paths, checked against the seven-day run and recent memory evidence | A proposal; it changed no execution authority |
 | [Memory representations](research-memory-representations.md) | 2026-10-18 | Mathematical, database, control and statistical views of memory, with a reviewed [simulation protocol](design/memory-study-protocol.md) | The [results](acceptance/2026-10-18-memory-representations.md) support a simple replay and query design basis and a bounded visible-trace benchmark; they select no live memory architecture |
 | [Memory and continuous learning](research-memory-learning.md) | 2026-10-18 | Episode memory, revisable beliefs, retrieval, forgetting and evaluated improvement | A discussion proposal; the protocol defines current task memory and action authority |
 | [Tiered gameplay](research-tiered-gameplay.md) | 2026-10-17 | Hierarchical execution, routing, memory and recovery | A discussion proposal, not current runtime behavior |
-| [Outcome monitoring](research-outcome-monitoring.md) | 2026-10-17 | The monitor proposal, which was never implemented | Rationale only; #42 owns the surviving read-only expectation question |
+| [Outcome monitoring](research-outcome-monitoring.md) | 2026-10-17 | Read-only monitoring and prediction of action outcomes | [Expectations and prediction error](research-curated-programs.md#expectations-and-prediction-error) |
 
 ## Recent agentic coding evidence
 
@@ -86,12 +83,12 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
-The [October28 serving and retained-latency analysis](acceptance/2026-10-28-latency-diagnostics.md#current-endpoint-evidence)
-checks the exact selected model against current endpoint measurements and routing,
+The [28 October serving and retained-latency analysis](acceptance/2026-10-28-latency-diagnostics.md#current-endpoint-evidence)
+checks the pinned player route against its endpoint measurements and routing,
 cache and effort contracts. It combines this with retained host/outcome evidence;
 fast token benchmarks shortlist candidates but cannot qualify useful gameplay.
 The [follow-through comparison](acceptance/2026-10-28-endpoint-gameplay.md) tests
-fixed OpenRouter endpoints through actual play, distinguishes cache/stream clocks
+fixed provider endpoints through actual play, distinguishes cache/stream clocks
 from useful effects, and exposes routine and outcome-accounting failures.
 
 ### Generality and the Bitter Lesson
@@ -118,15 +115,12 @@ training service or framework follows automatically from the essay.
 
 The [organic-discovery crosswalk](design/organic-discovery.md#cross-check-against-prior-work),
 [mixed-input design](design/mixed-input.md) and
-[procedure/reflection boundary](design/procedure-learning.md) already point in
-this direction. The [campaign002 record](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
-holds the gap between that intent and execution (#190 owns that case, and
-#176 the [computer-control boundary](contracts/computer-control.md)); whole-loop
-qualification remains open under #145 and #164. Changed labels/layouts or
-behavior after an arbitrary f(T) are nonstationary conditions, not permission to
-reuse stale coordinates or silently replay an uncertain input. Neither passing
-finite perturbation tests nor one seven-day campaign guarantees success against
-an unrestricted adversary. Further concrete gaps belong in the existing backlog.
+[procedure/reflection boundary](design/procedure-learning.md) apply this reasoning.
+The [second independent seven-day attempt](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
+records a gap between the design and execution. When layouts, labels or behavior
+change, observe again before acting on old coordinates. The
+[computer-control contract](contracts/computer-control.md) governs uncertain input.
+Perturbation tests and campaign results support claims within their tested conditions.
 
 ### Embodied-control sources
 
@@ -142,11 +136,10 @@ an unrestricted adversary. Further concrete gaps belong in the existing backlog.
 Recent discovery leads eMEM (2606.03374) and MeMoREval (2610.12561) need further
 paper/benchmark verification before importing their results. eMEM's accessible
 text also contains an incomplete-ablation placeholder, so its numerical claims
-are not adopted. We do not call a
-new abstract state of the art. The MVP uses no learned motor policy: game
-actions are discrete and engine validation is available. Its hierarchy is an
-engineering inference from control literature, validated by our own acceptance
-probes. Model-call reduction, responsiveness, and survival are separate metrics.
+are not used here. The player selects discrete inputs and the game determines their
+effects. The separation of planning from immediate control is an engineering
+inference from the literature. Model-call reduction, responsiveness and survival
+are separate metrics.
 
 ## CDDA and integration evidence
 
