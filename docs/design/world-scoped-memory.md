@@ -5,7 +5,7 @@ scope: 'World-scoped curator facts and types, with the current curation, deliver
 review_trigger: The curator-fact/4 world-scope migration takes effect, or a change to its scope, provenance or delivery assumptions reopens the field table
 ---
 
-# General memory: curation, delivery and judged measurement
+# World-scoped memory: curation, delivery and judged measurement
 
 ## At a glance
 

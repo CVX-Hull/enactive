@@ -132,16 +132,16 @@ def test_change_index_sorts_unnumbered_briefs_by_date_then_title(tmp_path):
     directory.mkdir(parents=True)
     for name, stamp, title in (
         ("early-topic.md", "2026-02-01", "Latest change"),
-        ("later-topic.md", "2026-01-01", "First change"),
-        ("other-topic.md", "2026-01-01", "Second change"),
+        ("later-topic.md", "2026-01-01", "Second change"),
+        ("other-topic.md", "2026-01-01", "First change"),
     ):
         (directory / name).write_text(
             f"---\nstatus: historical\ndate: {stamp}\nscope: Change scope\n---\n\n# {title}\n")
     text = documents.render_index(tmp_path, "docs/changes/index.md")
     assert [line.split(" | ")[1:3] for line in text.splitlines() if line.startswith("| 2026-")] == [
         ["[Latest change](early-topic.md)", "Change scope"],
-        ["[First change](later-topic.md)", "Change scope"],
-        ["[Second change](other-topic.md)", "Change scope"],
+        ["[First change](other-topic.md)", "Change scope"],
+        ["[Second change](later-topic.md)", "Change scope"],
     ]
 
 
