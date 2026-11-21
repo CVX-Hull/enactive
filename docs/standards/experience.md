@@ -21,7 +21,7 @@ missing qualification alone need not terminate useful development. A slow model
 may remain where genuinely useful authorized execution covers its delay and the
 whole configuration qualifies; filler actions or animation cannot hide waiting.
 Tool duration, cached-token share and engine ACK speed alone do not establish
-responsive play. [Evaluation](../evaluation.md#latency-budgets-for-interactive-play)
+responsive play. [Measurement guide](../measurement-guide.md#latency-budgets-for-interactive-play)
 owns measurement definitions; C-USABILITY is manual, not an automated latency gate.
 Give deciding players a bounded, maintained interface working set, separate from
 engineering instructions and the evidence archive. Use existing role/actor tool

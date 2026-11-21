@@ -51,7 +51,7 @@ stream/logging diagnostics. No averages are pooled across changed experiments.
 Coverage and unsupported input remain visible; missing old diagnostics cannot be
 backfilled. Full derived JSON and the endpoint metadata snapshot remain private in
 `.runtime/telemetry-analysis-20261028/`; run the documented
-[evaluator commands](../evaluation.md#retained-host-and-browser-analysis) to regenerate
+[evaluator commands](../measurement-guide.md#retained-host-and-browser-analysis) to regenerate
 from retained inputs. Existing historical outcome assessments remain necessary to
 interpret usefulness; a host reporting `completed` can still have failed its mission.
 

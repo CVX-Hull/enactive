@@ -82,7 +82,7 @@ journal snapshot. No hidden game/save contents were read or edited.
 | Finding | Smallest next decision and owner | Evidence limit |
 | --- | --- | --- |
 | Required user Escape violates the requested autonomy | [#91](https://github.com/CVX-Hull/enactive/issues/91): verify app-bundle binding, bounded native Escape and existing pickup_all before native code | A binding probe alone cannot prove prompt recovery |
-| Pickup has a genuine unsupported direction boundary | Keep remote refusal; inspect existing ordinary alternative first under [brief 016](../changes/016-autonomous-native-recovery.md) | No generic DEFAULTMODE promotion or fabricated receipt |
+| Pickup has a genuine unsupported direction boundary | Keep remote refusal; inspect existing ordinary alternative first under [brief 016](../changes/autonomous-native-recovery.md) | No generic DEFAULTMODE promotion or fabricated receipt |
 | Advisory player retained facts/unknowns and 47-input total | #79: keep simple bounded files/journals, now verify real restart and scope/identity | No new database, persisted authority, memory benefit or broader handoff guarantee |
 | Conservative walks stop on any visible creature | #80: direct deliberate choices remain available; measure actual route cost before changing policy | No safety/throughput forecast from three tiny walks |
 | Objective text was below the initial spectator viewport | #79/#80: review existing objective/details/timeline at ordinary size and add only a demonstrated missing view | Native view/Pause were readable; no accepted full campaign progress UI claim |

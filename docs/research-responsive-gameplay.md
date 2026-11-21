@@ -16,7 +16,7 @@ official implementation guidance, then followed references. Two independent
 research slices read the named method/results/limitations sections through web
 HTML/PDF; no local PDF corpus or benchmark replication is claimed. Recent
 preprints are provisional. This is a targeted review, not an exhaustive survey
-or model leaderboard. [Brief060](changes/060-responsive-player.md) owns the
+or model leaderboard. [Brief060](changes/responsive-player.md) owns the
 proposed implementation consequences and local trace findings.
 
 ## Evidence and transfer limits
@@ -55,8 +55,8 @@ universal human-perceived latency threshold for CDDA-class games.
 | [Asynchronous reflection](design/asynchronous-reflection.md) | Software jobs/feedback, bounded advice, lead outside play | Actual idle polling and host context must be measured; a designed background path does not prove useful overlap or efficient wakeup. |
 | [Memory architecture](research-memory-architecture.md) and [representations](research-memory-representations.md) | Source-linked facts/procedures/Work, uncertainty, revision and exact recall | Historical code-baseline tables are historical. Add bounded working presentation and actual fresh continuation without another memory store. |
 | [Organic discovery](design/organic-discovery.md) and [mixed input](design/mixed-input.md) | Primitive foundation, revisable abstractions and current feedback | Neither a larger hand-built menu catalogue nor blind key batches solves general discovery or pace. |
-| [Structured tools051](changes/051-structured-player-tools.md) | Existing SDK, one writer, stable requests, retained evidence | Real host results are not as concise as intended; distinguish canonical machine records from actual model-facing representation. |
-| [Evaluation](evaluation.md#latency-budgets-for-interactive-play) | Separate clocks, no inference from ACK alone | Closed host traces now supply scoped call gaps/tokens; isolated inference and full useful-progress cadence remain unmeasured. |
+| [Structured tools051](changes/structured-player-tools.md) | Existing SDK, one writer, stable requests, retained evidence | Real host results are not as concise as intended; distinguish canonical machine records from actual model-facing representation. |
+| [Evaluation](measurement-guide.md#latency-budgets-for-interactive-play) | Separate clocks, no inference from ACK alone | Closed host traces now supply scoped call gaps/tokens; isolated inference and full useful-progress cadence remain unmeasured. |
 
 ## Engineering judgment and uncertainty
 

@@ -12,7 +12,7 @@ scope: Dated candidate observations and qualification limits; not current instru
 Round 008 source and native scenarios have passed local acceptance and independent
 review; protected publication remains pending at this source checkpoint. The planner port is bounded and tested,
 but no live provider or autonomous supervisor is connected. Native recovery now
-works without the former Pause/Observe workaround. [Brief](../changes/008-native-recovery-planner-port.md).
+works without the former Pause/Observe workaround. [Brief](../changes/native-recovery-planner-port.md).
 
 ## Verified source and portable behavior
 

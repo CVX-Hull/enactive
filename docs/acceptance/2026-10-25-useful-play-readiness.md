@@ -31,7 +31,7 @@ outcomes in [#164](https://github.com/CVX-Hull/enactive/issues/164),
 | Normal ending | Failed. The successor stopped after spending its local map allowance. Save was refused before submission; no registered Save/exit/Finish was completed. |
 
 The existing [player interface](../components/player-interface.md),
-[mission execution](../components/mission-execution.md) and
+[mission execution](../components/execution.md) and
 [memory/learning architecture](../components/memory-learning.md) explain the roles.
 Local programs and background advice operated within those roles. The next repair
 is [#217](https://github.com/CVX-Hull/enactive/issues/217): surface existing
@@ -124,7 +124,7 @@ requests, including refusals; passive calls and their context costs are retained
 
 ## Latency: separate measured lanes
 
-The [evaluation contract](../evaluation.md#latency-budgets-for-interactive-play)
+The [evaluation contract](../measurement-guide.md#latency-budgets-for-interactive-play)
 retained its targets: 20 genuine routine goals, ready-to-useful-effect p95≤2 s,
 no unexplained routine stall>5 s, supported local effects≤500 ms and novel reasoning≤30 s.
 Keys, travel legs, program termination and menu transitions do not automatically

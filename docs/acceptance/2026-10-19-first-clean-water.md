@@ -95,7 +95,7 @@ The cost audit found actual024positive routine care63inputs,59without situationa
 warmth changes, above the former55/day forecast. All127actualday-four inputs remain
 charged, including64setup/travel/failed-rest/interruption/inspection inputs. This
 retrospective sensitivity check exposes weak forecast margin; it does not promise
-the same future cost. [048](../changes/048-water-coverage-budget.md) makes the next
+the same future cost. [048](../changes/water-coverage-budget.md) makes the next
 budget decision explicit rather than suppressing contingencies or treating a useful
 partial as seven-day completion. One owned game/controller intentionally remain
 alive paused; final normal shutdown and complete-campaign review remain unproved.

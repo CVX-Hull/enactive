@@ -28,7 +28,7 @@ protocol execution.
 
 The [original partial report](2026-10-18-first-day-rehearsal-002.md) remains intact.
 [PR95](https://github.com/CVX-Hull/enactive/pull/95) prospectively admitted the
-[continuation](../changes/019-first-day-continuation.md), preserving the same
+[continuation](../changes/first-day-continuation.md), preserving the same
 character, original clock/ledger and source. Its candidate73168bc passed CI
 39155137970/39155140999; mergeafc8fde passed main CI39155448751. The publication
 changed documentation only. Execution stayed at72c8b9c13f53999457fc58c25db53e360121d0fc;

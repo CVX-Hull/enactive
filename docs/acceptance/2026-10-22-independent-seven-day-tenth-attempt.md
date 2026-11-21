@@ -93,7 +93,7 @@ their durations must not be added as elapsed wall time.
 
 An early event-log audit inferred model-visible nested result duplication. That
 inference is retracted: persisted MCP event envelopes differ from forwarded model
-output. The [responsive-player brief](../changes/060-responsive-player.md) records
+output. The [responsive-player brief](../changes/responsive-player.md) records
 the corrected observation layers and direct-result redundancy. Compact decision
 presentation, automatic plumbing, bounded working context and useful closed-loop
 execution remain the relevant engineering work. Longer condition-based advisory

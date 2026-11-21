@@ -8,7 +8,7 @@ scope: Reviewed seven-day execution protocol, offline capture boundaries, actual
 
 # Seven-day preparation and its remaining admission gate
 
-The [deciding protocol](../changes/022-seven-day-campaign.md) is implementable and
+The [deciding protocol](../changes/seven-day-campaign.md) is implementable and
 independent review found no confirmed P1/P2 defect. The lead accepts its design
 for protected publication. **No fresh character or seven-day campaign has been
 admitted.** Exact candidate/main CI and a fresh paused-state check are still

@@ -20,7 +20,7 @@ game decisions, memory use, procedure proposals and ordinary correction.
 
 This is a direction and cross-check, not an implemented input/learning contract.
 Current [architecture](../architecture.md) and [protocol](../protocol.md) remain
-authoritative. [Delivery057](../changes/057-discovery-learning-campaign.md) now
+authoritative. [Delivery057](../changes/discovery-learning-campaign.md) now
 implements ordinary key/text/click transport, procedures and reflection; the
 [learning004 report](../acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
 qualifies its bounded functional result and explicit learning/mouse limits.

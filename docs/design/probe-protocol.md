@@ -268,7 +268,7 @@ content-matched check uses the same judge model and question as the query re-che
   digest per file. They give descriptive figures: needed-fact recall from the fact
   ledger, and query coverage.
 
-The curator memory study's [power-gate protocol](p1-study.md) (#491) fixes these rules.
+The curator memory study's [power-gate protocol](curator-memory-study-protocol.md) (#491) fixes these rules.
 The study (#178) wrote the held-out probes and ledgers under them
 ([record](../acceptance/2026-11-09-p1-gate-178.md#held-out-probes)).
 
@@ -278,7 +278,7 @@ Each chunk's annotator tokens and wall time come from the agent host's own task 
 Cost per lineage is their sum. The protocol stops and is reshaped when one #397
 lineage's annotation would exceed the annotation allowance of the study that uses the
 probes, which that study sets before held-out annotation. The curator memory study's
-estimate is in its [power-gate protocol](p1-study.md#cost-estimate), and what its
+estimate is in its [power-gate protocol](curator-memory-study-protocol.md#cost-estimate), and what its
 held-out annotation cost is in the
 [power-gate record](../acceptance/2026-11-09-p1-gate-178.md#cost).
 

@@ -68,5 +68,5 @@ Shutdown is evidenced by retained lead tool results; no numeric controller exit
 code was reported, and the same terminal handle was subsequently missing. No
 human keys, forced native kill, hidden state, save editing or debug advantage.
 
-The[next scope](../changes/037-medical-day-plan.md) addresses the tactical and
+The[next scope](../changes/medical-day-plan.md) addresses the tactical and
 planning gap without changing the engine. Full seven-day acceptance remains open.

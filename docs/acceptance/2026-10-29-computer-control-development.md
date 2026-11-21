@@ -121,7 +121,7 @@ and native groups absent, native SIGTERM zero **not** a normal ending. Remaining
 attempts; known configured estimates remain$21.159546798 with unknowns separate.
 No useful effect, current-game pointer/input or Save/reload is accepted by this run.
 
-[The bounded next decision](../changes/071-computer-control-cutover.md#closed-first-production-attempt-and-bounded-provider-adjustment)
+[The bounded next decision](../changes/computer-control-cutover.md#closed-first-production-attempt-and-bounded-provider-adjustment)
 records the evidence-driven provider-only delay adjustment and unchanged scope.
 The original failed trace is not relabelled or reopened.
 

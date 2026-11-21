@@ -135,7 +135,7 @@ existing serialized spectator poll now schedules250ms after a completed response
 during active play/operations,1000ms when idle/disconnected. Existing decode,
 sequence and authority guards stay intact. Common viewer regression passed;
 actual browser presentation latency remains to be measured. The
-[proposed latency budgets](../evaluation.md#latency-budgets-for-interactive-play)
+[proposed latency budgets](../measurement-guide.md#latency-budgets-for-interactive-play)
 separate ordinary input, whole semantic requests, observer decode, model decisions
 and loading. Reuse native travel/activities and avoid model/approval round trips
 per key; adding model tiers or a new execution framework is not an automatic gate.

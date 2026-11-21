@@ -86,5 +86,5 @@ ledger/archive remains under `.runtime/missions/discovery-learning-007/`.
 timing export retains earlier page sessions and requires current-run filtering;
 it is not proof of paint or end-to-end useful progress. A large expanded export
 also timed out an accessibility read; it is a spectator ergonomics finding, not
-a native game failure. [Delivery062](../changes/062-player-decision-context.md)
+a native game failure. [Delivery062](../changes/player-decision-context.md)
 owns follow-through; existing#164/#177/#178/#191 retain action ownership.

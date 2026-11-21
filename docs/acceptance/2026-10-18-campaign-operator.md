@@ -16,7 +16,7 @@ paused state between them and separately authorized the return. This establishes
 this operating procedure on one saved development character, not an unattended
 survival service, security isolation or seven-day readiness.
 
-[Brief021](../changes/021-operator-access-preflight.md) inherited the original finite
+[Brief021](../changes/operator-access-preflight.md) inherited the original finite
 limits after [probe001 failed before input](2026-10-18-operator-access-stop.md).
 Its9charges/744.317wall seconds remain separate history; the failed run was never
 resumed. The [manifest](2026-10-18-campaign-operator-manifest.json) identifies

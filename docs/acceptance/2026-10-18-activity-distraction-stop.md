@@ -16,7 +16,7 @@ No human keys, save editing, favorable rewind, hidden-state inspection or game s
 
 The [manifest](2026-10-18-activity-distraction-stop-manifest.json) indexes selected
 original evidence. Private originals require this workspace. The
-[preceding scope031](../changes/031-bounded-reassessment-continuation.md) remains
+[preceding scope031](../changes/bounded-reassessment-continuation.md) remains
 historical; a later repair cannot turn this stopped attempt into a pass.
 
 ## Actual evidence
@@ -54,7 +54,7 @@ takes effect on subsequent policy loading, not as a claim that cached rules were
 revoked inside this chat. Closed admission independently refuses further005 play.
 
 [#120](https://github.com/CVX-Hull/enactive/issues/120) owns the exact prompt repair
-and real proof. [The repair brief](../changes/034-activity-distraction-menu.md)
+and real proof. [The repair brief](../changes/activity-distraction-menu.md)
 reuses existing native menu ownership. #82/#100 retain full campaign/day acceptance;
 #75 retains scoped permission retirement and process-cost review. Original whole
 and day clocks/caps continue through development, review and publication. No

@@ -16,7 +16,7 @@ was needed.** This resolves the specific direction-menu defect found in the
 [failed first-day rehearsal](2026-10-18-first-day-rehearsal.md); that attempt
 remains failed. No first-day, seven-day or general recovery success is claimed.
 
-The [reviewed brief](../changes/017-native-direction-menu.md) and
+The [reviewed brief](../changes/native-direction-menu.md) and
 [PR93](https://github.com/CVX-Hull/enactive/pull/93) own the scope. The
 [manifest](2026-10-18-native-direction-menu-manifest.json) indexes 49 selected
 local artifacts and the private index of 146 original probe files. Large originals

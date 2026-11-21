@@ -24,7 +24,7 @@ user Pause; the image above alone does not prove spectator controls.
 
 ## Outcome and evidence
 
-[Scope029](../changes/029-seven-day-integrated.md) froze source
+[Scope029](../changes/seven-day-integrated.md) froze source
 `93739eee13d17d3e95338e4d8dc6c3720a5ae58d`, native
 `297b443a235af6e4803bb6d2a15bd595f0461124f7fe87c297a59b2382d5f704`
 and recorder `9d4ce83edf7ae04156c6020163820022d9e8526be0a3172b17c7bba764e70ca5`.

@@ -23,7 +23,7 @@ frames and failures stay under `.runtime/campaigns/seven-day-campaign-002/`.
 
 ## Admission and actual player work
 
-[Brief025](../changes/025-seven-day-continuation.md) prospectively admitted one
+[Brief025](../changes/seven-day-continuation.md) prospectively admitted one
 functional continuation, preserving the same normally created character, all65
 spent inputs and the original creation clock3813670.588570708/wall1792355636.0674691.
 It did not reclassify campaign001 or resume its unused authority. Frozen candidate
@@ -111,7 +111,7 @@ separately; original negative results and all tools' actual limitations remain.
 | Process/controls | Actor preflight, current images and correct stop behavior did not establish reachable cleanup. [#75](https://github.com/CVX-Hull/enactive/issues/75) retains review cost/recurrence/reuse evaluation and unchanged dates. |
 
 [#100/#82](https://github.com/CVX-Hull/enactive/issues/82) stay open/blocked by#112;
-#108 remains accepted. [The next design](../changes/026-ordinary-survival-menus.md)
+#108 remains accepted. [The next design](../changes/ordinary-survival-menus.md)
 is a separate native repair/probe, not renewed survival allowance. Further play
 needs an explicit prospective decision with original clock and all76+later costs,
 no new character or hidden favorable reset. Useful failure review is not survival,

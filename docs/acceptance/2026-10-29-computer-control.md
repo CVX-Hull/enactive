@@ -101,7 +101,7 @@ cause was not retained, and007 ended on repeated shared-pool429 before final Qui
 Organic007's delivered clicks landed at/right of the Quit label and changed no
 pixels; neither click was a normal exit. Forced SIGTERM zero remains forced cleanup.
 
-The [recorded backend dispositions](../changes/071-computer-control-cutover.md)
+The [recorded backend dispositions](../changes/computer-control-cutover.md)
 selected BaseTen, then OpenRouter DeepInfra regular`deepinfra/fp8` for008, preserving
 the same model snapshot/medium effort and disabling fallback. Five read-only
 [generation metadata](https://openrouter.ai/docs/api/api-reference/generations/get-generation)

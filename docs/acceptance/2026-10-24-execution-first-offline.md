@@ -9,7 +9,7 @@ scope: Offline source experiment only, without native or campaign acceptance
 # Execution-first source and offline measurement
 
 This is an **offline source experiment**, with gameplay and native probes paused.
-It evaluates the [boundary064](../changes/064-execution-first-learning.md) under
+It evaluates the [boundary064](../changes/execution-first-learning.md) under
 [#164](https://github.com/CVX-Hull/enactive/issues/164),
 [#177](https://github.com/CVX-Hull/enactive/issues/177) and
 [#178](https://github.com/CVX-Hull/enactive/issues/178). The PR owns final review,

@@ -64,7 +64,7 @@ comparison's state. A deterministic test of the real controller/runtime/archive
 components reproduces the same stop when a valid newer menu appears between
 ingestion and binding. That proves a source defect, not the precise native race.
 
-[Design059](../changes/059-observation-custody-and-applicability.md) separates
+[Design059](../changes/observation-custody-and-applicability.md) separates
 immutable captured-source custody from semantic action applicability. It covers
 Observe, binding, refresh, status and late preflight together. Changed visible
 state must not be mistaken for lost custody; genuine source, clock, ownership and
@@ -135,7 +135,7 @@ excluding the prior capture001 journal prefix. For 406 correlated ready ACKs,
 admission-to-receipt median/p95/max are 77/126/6,909 ms. This is a journal
 dispatch-admission proxy, not precise bridge-publication or pure engine latency.
 Original preflight-to-ACK monotonic intervals, following
-[evaluation definitions](../evaluation.md#latency-budgets-for-interactive-play),
+[evaluation definitions](../measurement-guide.md#latency-budgets-for-interactive-play),
 are 556.55/1,342.00/6,945.87 ms and include earlier host/persistence work. The maximum
 is world entry. The unknown creation confirmation separately retains a 15,014 ms
 timeout and is excluded from successful-ACK percentiles.

@@ -250,7 +250,7 @@ an omitted or different tier. OpenRouter can fill an omitted tier from a
 [workspace default](https://openrouter.ai/docs/guides/features/service-tiers#workspace-default-service-tier),
 so a request that omitted the tier does not establish its applied tier. Requests and failures
 recorded without the explicit tier retain their original provenance
-([recovery amendment of the curator memory study](../design/p1-study-3.md#owner-gated-robustness-recovery-amendment)),
+([recovery amendment of the curator memory study](../design/curator-memory-study-protocol-revised.md#owner-gated-robustness-recovery-amendment)),
 and scientific use requires an approved runtime freeze that includes the explicit tier.
 Nothing else Pi sends may be refused: the proxy allowlist and the ledger's refusal count are the check
 (the [#454 record](../acceptance/2026-11-08-curator-shadow-454.md#isolation) holds the runs' result).
@@ -320,7 +320,7 @@ byte for byte, so:
   about 4% of the window, most of it read from the cache
   ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
 
-## Both hosts
+## Claude Code and Codex CLI curator host rules
 
 These rules apply to the Claude Code and Codex CLI hosts and exclude the Pi host.
 

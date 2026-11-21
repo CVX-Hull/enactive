@@ -29,7 +29,7 @@ its broader examples are not capabilities of this slice.
 The proposed [outcome-monitoring contract](outcome-monitoring.md) addresses later
 semantic tasks and escalation. It does not replace this slice's exact waypoint
 predicates or add a dependency to its baseline acceptance. The
-[evaluation brief](../changes/007-recovery-evaluation-monitoring.md#waypoint-experiment-protocol)
+[evaluation brief](../changes/recovery-evaluation-monitoring.md#waypoint-experiment-protocol)
 predeclares its comparison protocol; live provider and trial execution remain #24.
 
 ## Owner outcome and boundaries
@@ -82,7 +82,7 @@ there is no automatic player fallback.
 
 The [current protocol](../protocol.md#integrated-mission-lifecycle) owns the runtime
 contract, deadlines and accounting limits. The
-[integration brief](../changes/012-integrated-player.md#player-arrangement) records
+[integration brief](../changes/integrated-player.md#player-arrangement) records
 the decision, and [round012 acceptance](../acceptance/2026-10-18-integrated-player.md)
 records the implementation and native evidence. The user chose
 active-chat planning without a separately billed model API. A dedicated role does
@@ -250,7 +250,7 @@ must support deterministic fixtures for tests and a real capable model for later
 native acceptance; fixture success is not model-performance evidence.
 The selected external-chat arrangement instead makes no API calls: its enforced
 request/deadline/gameplay bounds and explicitly unmeasured model usage follow the
-[player integration contract](../changes/012-integrated-player.md#player-arrangement).
+[player integration contract](../changes/integrated-player.md#player-arrangement).
 
 Role separation is independent of model separation. Task complexity may justify the
 same capable model at any decision point. Smaller models, streaming execution during
@@ -291,7 +291,7 @@ missing frame and no-progress repetition. Unit/contract replay tests prove softw
 responses only. #8 verifies native control; #24 verifies actual windowed gameplay and
 matched model outcomes. #23 verifies readable ordinary, paused, stale and slow states.
 
-The [bounded memory increment](../changes/006-recovery-memory.md) implements passive
+The [bounded memory increment](../changes/recovery-memory.md) implements passive
 TaskMemory over EvidenceStore. Current records, invalidation, retention ceilings
 and limitations are owned by the [protocol](../protocol.md#passive-task-memory).
 Round010 adds [passive supervision](../protocol.md#passive-waypoint-supervision)

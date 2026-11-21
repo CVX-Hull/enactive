@@ -39,7 +39,7 @@ The lifecycle control path skipped refresh because it was still fresh, then the
 later preflight reported stale evidence with no revalidation relation. The ledger
 alone does not recover the precise monotonic interleaving. A deterministic
 regression against the original implementation reproduces a source crossing the
-three-second limit between entry and dispatch. [The repair](../changes/053-operation-entry-refresh.md)
+three-second limit between entry and dispatch. [The repair](../changes/operation-entry-refresh.md)
 reuses existing Observe and typed equivalence before the first proposal for all
 analogous entry paths, preserving final freshness and original authority/limits.
 [#168](https://github.com/CVX-Hull/enactive/issues/168) owns verification within a

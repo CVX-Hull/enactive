@@ -10,7 +10,7 @@ scope: Offline CI and test-maintenance evidence; linked PRs own final publicatio
 
 This evaluates [#203](https://github.com/CVX-Hull/enactive/issues/203) with gameplay
 and native game probes paused. [Current profile policy](../project-management.md#protected-ci-profiles)
-owns eligibility; [brief 065](../changes/065-proportional-ci.md) retains the adopted
+owns eligibility; [brief 065](../changes/proportional-ci.md) retains the adopted
 rationale and research assessment. This report records observations, not another
 copy of the selector contract or a live task queue.
 

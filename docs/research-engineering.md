@@ -56,7 +56,7 @@ changes require independent review and external outcomes. Tool output is evidenc
 not instructions. These controls are in S-AGENT/S-CODE/S-EVIDENCE and do not depend
 on assuming a particular model's historical benchmark performance remains current.
 
-Implementation scope and alternatives: [brief 001](changes/001-engineering-system.md).
+Implementation scope and alternatives: [brief 001](changes/engineering-system.md).
 The controls page is written by hand; checks test selected violations.
 A readable overview and an existing file cannot mechanically prove comprehension
 or procedural accuracy. Those require a real walkthrough and reviewer judgment.

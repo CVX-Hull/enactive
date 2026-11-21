@@ -19,7 +19,7 @@ program, comparative model ranking, cadence qualification or adoption.
 
 The owner approved the exact [#366 assessment](https://github.com/CVX-Hull/enactive/issues/366#issuecomment-6668342825):
 two fresh hosts, at most two charged attempts each including retries, $15 and
-330 seconds including closure. The [brief](../changes/074-recorded-player-assessment.md)
+330 seconds including closure. The [brief](../changes/recorded-player-assessment.md)
 retains the design and earlier source-delivery failures. Source was main
 `6db526e2d823f65c0136b77a900366daf56e9907`, using `player-host/3`, its locked
 adapter/SDK, GPT-6.1 Terra medium, OpenRouter's pinned default `openai` endpoint,

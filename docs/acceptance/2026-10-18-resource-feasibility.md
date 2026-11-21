@@ -29,7 +29,7 @@ unavailable in a fresh checkout; the public image is the actual ordinary scene.
 Clean source57b40d47c8ad5184ec3f3b8acd81617b1490a68d and installed nativea053adb0…3e0a
 stayed frozen. The preceding repair's exact push39188820843/PR39188824044 and
 merged-main39189063934 passed; no new build or source implementation occurred in006.
-Scope[035](../changes/035-full-day-continuation.md) and its preparation were
+Scope[035](../changes/full-day-continuation.md) and its preparation were
 independently reviewed. Actual E/F stable-CLI passive preflights succeeded without
 recurring review observed. The windowed game and connected spectator were checked.
 
@@ -86,5 +86,5 @@ overrun; it does not establish overall process efficiency or survival success.
 
 [#82/#100](https://github.com/CVX-Hull/enactive/issues/82) retain the open outcome
 and actual stopped-result/readback. Parent82 owns qualified publication and final
-seven-day acceptance. The[next prospective scope](../changes/036-resource-first-campaign.md)
+seven-day acceptance. The[next prospective scope](../changes/resource-first-campaign.md)
 must resolve discovery ordering and shared-budget feasibility before new input.

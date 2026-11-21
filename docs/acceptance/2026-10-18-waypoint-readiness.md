@@ -11,7 +11,7 @@ scope: Round014 final-leg guard repair, gated experiment preparation and scoped 
 The cardinal skill can complete a reached waypoint beside a cupboard and request
 a fresh return plan. A blocked tile still stops any further step. This delivers
 the narrow #53 repair, the explicitly gated #56 readiness result and #13's scoped
-Actions/control review under [the brief](../changes/014-waypoint-readiness.md).
+Actions/control review under [the brief](../changes/waypoint-readiness.md).
 The [current protocol](../protocol.md#passive-bounded-movement-skills) owns behavior;
 the [manifest](2026-10-18-waypoint-readiness-manifest.json) identifies local evidence.
 

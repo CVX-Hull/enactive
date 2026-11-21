@@ -11,7 +11,7 @@ scope: Main-history sanitization, native Issue and Project preservation, canonic
 The canonical repository is [CVX-Hull/enactive](https://github.com/CVX-Hull/enactive).
 The [existing public Project](https://github.com/users/CVX-Hull/projects/2) keeps its
 identity and planning history. The user selected this name and explicitly approved
-the real migration. The [brief](../changes/015-enactive-migration.md) explains the
+the real migration. The [brief](../changes/enactive-migration.md) explains the
 alternatives and controls; this record separates preservation from publication.
 
 ## Preserved work and source

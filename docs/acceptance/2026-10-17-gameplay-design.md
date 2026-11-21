@@ -15,7 +15,7 @@ acceptance, not evidence that v2 recovery or autonomous waypoint play exists.
 
 ## Evidence and decisions
 
-The [brief](../changes/004-gameplay-foundation.md) defines the scoped outcomes;
+The [brief](../changes/gameplay-foundation.md) defines the scoped outcomes;
 [ADR 005](../decisions/005-gameplay-foundation.md) records alternatives and reversal
 conditions. The native and gameplay contracts specify future implementation.
 The [source manifest](2026-10-17-gameplay-design-sources.json) identifies inspected

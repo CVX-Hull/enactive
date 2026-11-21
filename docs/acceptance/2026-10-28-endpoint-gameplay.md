@@ -174,7 +174,7 @@ replacement are assumed; this is neither physical paint nor player attention.
 Private inputs, frozen manifests, screen mistake, traces, metadata and derived
 reports remain in `.runtime/openrouter-164-20261028/` and the matching campaign/
 mission directories. Regenerate with `tools.evaluate host-summary` and
-`witness-summary` as documented in [evaluation](../evaluation.md#retained-host-and-browser-analysis).
+`witness-summary` as documented in [evaluation](../measurement-guide.md#retained-host-and-browser-analysis).
 The [selected public diagnostic summary](assets/endpoint-gameplay-280/diagnostics.json)
 records source/native identities, original trace hashes and byte-identical PNG
 hashes. Independent outcome review checked002/003 against actual frames and ledger;

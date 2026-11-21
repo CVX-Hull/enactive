@@ -419,7 +419,7 @@ requested delay and suppression for 402, 429, 502, 503 and 504. Raw error
 messages/bodies and credentials are not logged. This observation adds no fetch,
 retry, timer renewal or dispatch; only an eligible first attempt can authorize the
 one retry described above. Use the existing
-[offline evaluator](../../docs/evaluation.md#retained-host-and-browser-analysis)
+[offline evaluator](../../docs/measurement-guide.md#retained-host-and-browser-analysis)
 to analyze traces; future telemetry versions are not silently interpreted.
 
 ## Frozen knowledge delivery

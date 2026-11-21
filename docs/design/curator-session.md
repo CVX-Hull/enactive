@@ -79,7 +79,7 @@ A submission is a directory `submissions/<id>/` with `submission.json`:
               "type": "relation", "text": "…", "scope": {"game": "example"}, "citations": ["frame-id"]}}]}
 ```
 
-The [general-memory design](general-memory.md#the-format-curator-fact3) owns the field
+The [world-scoped memory design](world-scoped-memory.md#the-format-curator-fact3) owns the field
 meanings. These are the gate's exact submission shapes:
 
 | Record | Fields |
@@ -135,7 +135,7 @@ stores stay available as evidence.
 
 ### Readers that move with the fact and type contract
 
-The [world-scope field table](general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
+The [world-scope field table](world-scoped-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
 changes the fact, type and repository schemas and the campaign manifest in one
 migration. It owns the rules; this table lists what reads them today and what moves.
 
@@ -373,7 +373,7 @@ This proposal adds source-separated verification to the
 [knowledge store and gate contract (#457)](https://github.com/CVX-Hull/enactive/issues/457).
 [Gate v0](#gate-v0) governs current admissions. Prospective publication requires an
 independent test oracle, a utility policy and a coordinator for later evidence.
-The [field table](general-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
+The [field table](world-scoped-memory.md#the-next-format-the-field-table-for-curator-fact4-and-curator-type2)
 covers the scope of facts and types.
 
 ### Evidence identity and exposure

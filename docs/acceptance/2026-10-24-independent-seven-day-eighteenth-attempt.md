@@ -138,7 +138,7 @@ The scoped repair `18113ea` subsequently passes exact
 finds the omitted Claim-storage lane before any019admission: the same rate proxy
 projects about3,176Claims, beyond the old2,048ceiling. Its frame-derived capacity
 repair and synthetic retrieval-cost profile belong in
-[062](../changes/062-player-decision-context.md#closed018-preserve-organic-correction-and-measure-the-real-hot-path).
+[062](../changes/player-decision-context.md#closed018-preserve-organic-correction-and-measure-the-real-hot-path).
 No subsequent source pass or preflight finding changes this frozen failed result.
 
 S-CODE now explicitly requires fixture helpers to respect component synchronization;

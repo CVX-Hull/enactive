@@ -422,7 +422,7 @@ A judge event is one model judge's answer to one closed question about recorded 
 The lead starts the judges. `python -m tools.memory_measure` builds what they read and
 counts what they answer without calling a model. `harness/evaluation/core/judge.py`
 validates the format. See the [memory measurement work (#386)](https://github.com/CVX-Hull/enactive/issues/386)
-and [measurement design](../design/general-memory.md#3-measurement).
+and [measurement design](../design/world-scoped-memory.md#3-measurement).
 
 - **File.** JSON Lines, one event per line, one judge and one kind per file, written once
   and never replaced. Each pair appears at most once. Use verdicts are in
@@ -978,7 +978,7 @@ at `/recorded/` and its allowlisted assets under `/app/` and `/vendor/`. The
 page and existing viewer API stay on the same loopback origin. This mode reads
 existing evaluation stores and recorded sources and opens Run Overview. Its
 browser code makes viewer requests only. The supervised gateway owns live status,
-native captures and Pause. See the [recorded viewer procedure](../components/observer-operations.md#recorded-browser-entry).
+native captures and Pause. See the [recorded viewer procedure](../components/spectator.md#recorded-browser-entry).
 
 ### Recorded custodian receipt
 

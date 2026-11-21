@@ -108,7 +108,7 @@ the others has not been examined.
 
 The study (#178, with the held-out lineage of #522) compared two ways to add a text of
 at most 2,000 tokens to what a successor received at each of 23 boundaries
-([protocol](p1-study-3.md), [completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)):
+([protocol](curator-memory-study-protocol-revised.md), [completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)):
 
 - **The own-records arm** added the player's own records, newest first, with no model
   calls.

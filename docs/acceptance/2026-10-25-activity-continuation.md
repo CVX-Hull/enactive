@@ -15,7 +15,7 @@ return. Neither case below established that sequence. Both planned technical
 attempts were consumed; retain this gap instead of generating another wait merely
 to fill the acceptance table. The source repair belongs to
 [#215](https://github.com/CVX-Hull/enactive/issues/215) and its
-[composition brief](../changes/067-activity-intent-inheritance.md).
+[composition brief](../changes/activity-intent-inheritance.md).
 
 ## Frozen conditions and provenance
 

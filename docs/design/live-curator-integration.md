@@ -96,7 +96,7 @@ The current `campaign-run/10` manifest has no `world` label. The
 [trace projection](../../harness/trace/projection.py) verifies lineage and admission
 position by checking both records against the staged store's session ID and checking
 the manifest bytes against the supervisor's recorded digest. The
-[world-scope design](general-memory.md#provenance-and-the-checks-it-allows) specifies
+[world-scope design](world-scoped-memory.md#provenance-and-the-checks-it-allows) specifies
 how publication uses a future manifest's `world` label.
 
 Step numbering depends on wall time and operation identity. A backward clock step,

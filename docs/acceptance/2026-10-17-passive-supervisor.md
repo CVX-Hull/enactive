@@ -15,7 +15,7 @@ original route and budgets, requests a fresh return plan at the waypoint, and
 offers at most one intent awaiting a correlated result. The service still does
 not instantiate it. Real controller ownership, lifecycle, native receipt assembly
 and provider integration remain #36. No native/model effectiveness is claimed.
-The [brief](../changes/010-passive-supervisor.md) records reviewed decisions;
+The [brief](../changes/passive-supervisor.md) records reviewed decisions;
 [protocol](../protocol.md#passive-waypoint-supervision) owns current behavior.
 
 ## Implementation and review evidence

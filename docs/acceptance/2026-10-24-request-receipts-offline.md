@@ -8,7 +8,7 @@ scope: Synthetic/real-component source qualification and timing-capture cost; no
 
 # Request refusal and settlement: offline evidence
 
-This assesses the [adopted boundary066](../changes/066-request-receipts.md) for
+This assesses the [adopted boundary066](../changes/request-receipts.md) for
 [#207](https://github.com/CVX-Hull/enactive/issues/207) and
 [#208](https://github.com/CVX-Hull/enactive/issues/208). The implementation PR owns
 exact source, independent review and final protected check receipts. This report

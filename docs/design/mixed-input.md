@@ -17,7 +17,7 @@ or deliberate clicks for discovery. Both go through the same mission writer;
 switching must preserve the original work, costs and uncertain outcomes. This
 selected design for [#176](https://github.com/CVX-Hull/enactive/issues/176) now has
 the source implementation and bounded evidence recorded in
-[delivery057](../changes/057-discovery-learning-campaign.md); unqualified features
+[delivery057](../changes/discovery-learning-campaign.md); unqualified features
 and future target handles below remain proposals. Current [architecture](../architecture.md) and
 [protocol](../protocol.md) remain authoritative.
 
@@ -36,7 +36,7 @@ screens under uninterrupted custody, while semantic refresh remains strict.
 Explicit Observe permits a new decision from a changed healthy owned prompt,
 clearing stale quantity proof while preserving original scope and costs. Known
 ACK evidence remains immutable and separate from any actual current snapshot.
-The [delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+The [delivery impact map](../changes/discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
 and #191 identify remaining game-integration and qualification gaps. The new native7 export adds separate literal marker evidence. Historical native6
 [capture001](../acceptance/2026-10-22-native-capture-preconditions.md)
 qualifies ordinary input and normal lifecycle on the rebuilt boundary. Its checked
@@ -142,7 +142,7 @@ applicability drift uses the existing typed refusal and explicit-Observe lineage
 after complete integrity/custody/resource proofs. Custody-only retention of a
 semantic preflight is selected only for proven nondelivery and must end before
 reservation or preparation; strict retention failure is never caught and retried
-with weaker rules. See [design059](../changes/059-observation-custody-and-applicability.md).
+with weaker rules. See [design059](../changes/observation-custody-and-applicability.md).
 
 Actual window-resize qualification remains in [#181](https://github.com/CVX-Hull/enactive/issues/181).
 The archive treats changed geometry at one revision as contradictory; the current
@@ -480,7 +480,7 @@ The first October21 checkpoint used native5/mission9/ledger11/archive4 and
 campaign-memory/4; those versions describe historical artifacts, not supported
 runtime inputs. Preserve their exact captured data and pins without importing
 authority or relabeling them as current-contract learning evidence.
-[Delivery057](../changes/057-discovery-learning-campaign.md) retains failed runs and
+[Delivery057](../changes/discovery-learning-campaign.md) retains failed runs and
 source/build/install receipts. Capture001 above owns the later rebuilt boundary's
 ordinary-input and normal-lifecycle qualification, retaining its unexercised drift
 and commit-race branches. Actual host catalogue/preapproval activation and graphical

@@ -56,7 +56,7 @@ The trace reads these files directly without the campaign tooling.
 The projection verifies lineage and admission position for `campaign-run/10` and
 leaves `world` null. An unsupported manifest version leaves all labels null with a
 diagnostic. A save path cannot establish a game-neutral world label.
-[World-scope field table](general-memory.md#world-and-lineage)
+[World-scope field table](world-scoped-memory.md#world-and-lineage)
 
 The curator window carries the directory name, world, lineage, admission position
 and label diagnostics keyed by sealed session identifier. The map is available in

@@ -207,7 +207,7 @@ There are only four independent lineages; the within-lineage cluster bootstrap
 understates between-lineage uncertainty. Scope is one game, S1 start scenario,
 actor model and route, with pre-emission traces from two player versions. Offline
 delivery does not establish that a live actor would use the information. The
-[frozen limitations](../design/p1-study-3.md#limitations) continue to apply.
+[frozen limitations](../design/curator-memory-study-protocol-revised.md#limitations) continue to apply.
 
 Questions were replaced after replay under an explicit owner amendment. The
 result is descriptive only, with the permanent registered cost-guard failure.

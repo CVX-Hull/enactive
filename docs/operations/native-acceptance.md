@@ -30,10 +30,7 @@ while the actor/game is live. A later source repair never relabels an earlier ru
 Geometry/resize, Unicode/IME, actual-human takeover and second-game
 qualification remain explicit gaps.
 
-## Passive skill acceptance
-
-The current tool table has no player programs, so there is no passive skill lane to
-accept. Earlier program evidence stays bound to its implementation in the
+Earlier program evidence stays bound to its implementation in the
 [production report](../acceptance/2026-10-29-computer-control.md).
 
 [Operations index](../runbook.md).

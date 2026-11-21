@@ -20,7 +20,7 @@ No seven-day survival, learned improvement or native-race outcome is accepted he
 
 Source `de97c8b11ddba299d978c072ff60b687efd1e2d8`; unchanged signed native SHA-256
 `40acb88b75cabf50a1b8a1134336c210d3f20503dcedd910fa2463019bdbcd56`.
-The [design](../changes/059-observation-custody-and-applicability.md) separates
+The [design](../changes/observation-custody-and-applicability.md) separates
 immutable captured-source custody from semantic applicability. No new native
 build, protocol or persisted format was introduced.
 

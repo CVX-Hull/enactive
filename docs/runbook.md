@@ -11,12 +11,12 @@ Use the [current computer/player contract](contracts/computer-control.md),
 
 ## When a mission owns execution
 
-[Custody](operations/mission-ownership.md): one mechanical writer and per-actor
+[Custody](operations/run-custody.md): one mechanical writer and per-actor
 capabilities; no other input producer or authority reconstructed from history.
 
 ## Permissions and player ownership
 
-[Player ownership](operations/mission-ownership.md#permissions-and-player-ownership):
+[Player ownership](operations/run-custody.md#permissions-and-player-ownership):
 the player interprets the game; the lead owns admission/source/review.
 
 ## Start and observe
@@ -60,12 +60,12 @@ inert history, select fresh stores and roll back only as a coherent deployment.
 
 ## Designated campaign operator
 
-[Assignment](operations/mission-ownership.md#designated-campaign-operator): one
+[Assignment](operations/run-custody.md#designated-campaign-operator): one
 explicitly designated player, run by the frozen player host, owns routine choices, with actor-only handoff.
 
 ## Basic computer tools and the player
 
-[Current tool procedure](operations/mission-requests.md) covers the basic computer
+[Player tool results](operations/player-tool-results.md) covers the basic computer
 tools. [Finite run](operations/campaign-run.md) owns launch/closeout.
 
 ### Bounded player host activation

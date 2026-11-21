@@ -60,7 +60,7 @@ project userdir, turn duration0, no new world/character or hidden-state/save rea
 
 ## Actual second proof and costs
 
-[The prospective correction](../changes/027-item-detail-owner.md) retained the
+[The prospective correction](../changes/item-detail-owner.md) retained the
 original combined40-input/45-minute envelope,12spent inputs, original monotonic
 3819543.830057541 and original whole lineage. It did not restore the failed queue.
 

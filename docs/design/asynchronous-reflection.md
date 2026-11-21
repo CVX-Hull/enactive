@@ -41,7 +41,7 @@ User Pause remains independent. [Diagram source](https://github.com/CVX-Hull/ena
 
 ## Execution-first learning
 
-The [source boundary064](../changes/064-execution-first-learning.md) implements
+The [source boundary064](../changes/execution-first-learning.md) implements
 shared candidate authoring/selection, horizon allocation and software adviser
 waiting. This broader responsibility model remains partly proposed, informed by the
 [Fresh024 execution review](../acceptance/2026-10-24-fresh024-execution-review.md)

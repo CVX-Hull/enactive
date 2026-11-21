@@ -76,7 +76,7 @@ Use `player_hint` to report something the curator may later consider. It is
 fallible and does not write curated knowledge. Use the delivered briefing and
 knowledge reads as hypotheses to check against the current screen.
 
-## Current registered CDDA lifecycle
+## Ordinary game controls
 
 There is no registered semantic lifecycle in the harness. Use visible ordinary
 controls to create/load, dismiss menus, play, save and exit. Decide what the screen

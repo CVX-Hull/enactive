@@ -139,7 +139,7 @@ Correction (7 November 2026, #404): no UI hash check exists; the [evaluation con
 | Constraint | Change |
 | --- | --- |
 | ADR006: "no new per-action critic, approval, scheduler or separate metrics service" | A separate read-only viewer process and an offline evaluator are added. They are not a per-action critic, approve nothing and schedule nothing. They read records after the fact and gate no input. |
-| [Observer operations](../components/observer-operations.md): "No collector, automatic diagnosis, annotation store or game semantics is added" | The viewer adds interpretive game readings and display-only alerts, each labelled with its source and confidence. There is still no annotation store: labels are deferred. |
+| [Observer operations](../components/spectator.md): "No collector, automatic diagnosis, annotation store or game semantics is added" | The viewer adds interpretive game readings and display-only alerts, each labelled with its source and confidence. There is still no annotation store: labels are deferred. |
 | `tools/evaluate.py`: "no gameplay verdict" | Evaluator subcommands produce interpretive records and metrics. They still accept no run or claim. Acceptance stays with frames, review and the issue's decision rule. |
 | [Research context](../research-context-engineering.md): "no separate telemetry framework without a demonstrated gap" | The gap is demonstrated in #383. The framework is a package and subcommands over existing records, not a telemetry pipeline or a new store of raw events. |
 

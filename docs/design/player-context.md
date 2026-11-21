@@ -89,7 +89,7 @@ An article lead brings useful knowledge into view and the index lets the
 player discover the rest. The briefing helps at actor starts and reminders
 can surface a fact when it applies during play. Both are fallible knowledge.
 The player checks them against the current view.
-[Articles over facts](general-memory.md#articles-over-facts)
+[Articles over facts](world-scoped-memory.md#articles-over-facts)
 
 ### The delivery boundary
 

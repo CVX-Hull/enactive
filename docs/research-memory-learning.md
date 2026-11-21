@@ -56,7 +56,7 @@ its sources remain retained; it does **not** validate the proposition.
 
 There is no durable cross-episode retrieval/consolidation service, learned world
 model, learned skill library or continual-training pipeline. The
-[evaluation recorder](evaluation.md) records supplied events and judgments; it
+[evaluation recorder](measurement-guide.md) records supplied events and judgments; it
 does not judge success or automatically measure external Codex planning.
 
 Current visible telemetry supplies relative avatar position and adjacent clear

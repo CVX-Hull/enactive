@@ -52,7 +52,7 @@ IGNORE. The player chose Yes to cancel and reassess shelter safety. Its typed
 child was blocked with zero proposals: `Prompt category does not match the
 interpreted control`. Native already owned this exact query; semantic confirmation
 incorrectly required only `YESNO`. The
-[bounded correction](../changes/052-distraction-confirmation.md) reuses existing
+[bounded correction](../changes/distraction-confirmation.md) reuses existing
 native actions and source/phase checks. Source regressions are separate from a
 future real mission; no repair turns this stopped attempt into success.
 

@@ -28,7 +28,7 @@ hidden host review telemetry remains unavailable.
 
 ## Scope of the revision
 
-The [frozen delivery](../changes/057-discovery-learning-campaign.md) requires real
+The [frozen delivery](../changes/discovery-learning-campaign.md) requires real
 changed-condition evidence leading to narrowed/revised procedure data. Actual
 south-locker frozen stock contradicted the successor's intended liquid reserve.
 It applied R1's existing stop, canceled, wrote R2 with an earlier full-condition
