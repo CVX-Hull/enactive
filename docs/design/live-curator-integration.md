@@ -1,6 +1,6 @@
 ---
 owner: lead
-status: proposed
+status: active
 date: '2026-11-20'
 scope: 'How the curator runs during an ongoing admission: who starts a session and when, how a trace that is still being written becomes readable, publication and coverage, failure, grooming, delivery, the spectator view and the measures of a first bounded live run'
 review_trigger: The live trace reader is built, a live run is priced or approved, or the delivery contract changes
@@ -20,11 +20,14 @@ that its lag, cost and effect on play can be measured before anything depends on
 (`harness/trace/snapshot.py`) and the curator runner (its rules in
 `harness/curator/runner.py`, its process in `tools/curator_host/live_runner.py`, started
 by the guardian's `--curator-runner` option) are implemented and tested offline. Delivery
-inside an admission is not, and no run is approved. The
+inside an admission is not. The owner has approved one paid live run
+([decision log](../decisions/owner-decisions.md#one-paid-live-curator-run)); none has
+been made. The
 [curator session design](curator-session.md) owns sessions, the gate and the store; this
-page owns only what is new for a session that runs beside play. A first live run is
-priced in a [dated proposal](../acceptance/2026-11-20-live-curator-run-price-proposal-836.md),
-with [corrections](../acceptance/2026-11-20-live-curator-run-price-correction-836.md).
+page owns only what is new for a session that runs beside play. The run's price is in
+the [stand-in run's record](../acceptance/2026-11-20-live-curator-stand-in-run-851.md#the-price-of-the-paid-run-proposed-again),
+which rests on a [dated proposal](../acceptance/2026-11-20-live-curator-run-price-proposal-836.md)
+and its [corrections](../acceptance/2026-11-20-live-curator-run-price-correction-836.md).
 This page settles the design; its [last section](#what-this-design-settles-and-what-it-leaves)
 lists what the leaves that build it must settle first.
 
@@ -486,9 +489,11 @@ does and does not deliver. It is not an implementation. Before each is built:
 - [The schedule replay leaf](https://github.com/CVX-Hull/enactive/issues/846): the lag
   simulation accepts only a steady or a session-shaped coverage today, and reading a
   run's result needs it to accept the covered prefix as recorded.
-- **The request to the owner** settles the spend bounds, which the
-  [price proposal](../acceptance/2026-11-20-live-curator-run-price-proposal-836.md) shows
-  are planning limits and not a hard cap.
+- **The spend bounds** are settled by the owner's approval of one run
+  ([decision log](../decisions/owner-decisions.md#one-paid-live-curator-run)). They are
+  planning limits and not a hard cap, as the
+  [price section](../acceptance/2026-11-20-live-curator-stand-in-run-851.md#the-price-of-the-paid-run-proposed-again)
+  says.
 
 A live run needs the owner's approval of its design, price and envelope
 ([operator permissions](../operator-permissions.md)). Source work stops while a deciding
