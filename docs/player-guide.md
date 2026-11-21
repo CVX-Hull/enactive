@@ -43,7 +43,7 @@ harness stop rule or permission to replay uncertain input.
 | Tool | Use and consequence |
 | --- | --- |
 | `computer_observe` | Capture the actual target. Identical pixels are valid. |
-| `computer_input` | Send basic controls, then inspect the returned frame when available. When the status is not `completed`, the result gives the operation ID and a reason that says what to do next. A refusal can follow some delivered input: collect the original operation before sending anything again. |
+| `computer_input` | Send basic controls, then inspect the returned frame when available. When the status is not `completed`, the result gives the operation ID and a reason. A refusal of a retained operation can follow some delivered input: collect the original operation before sending anything again. An argument error that submitted nothing can be corrected as a new choice. |
 | `computer_result` | Collect the original operation and its delivery receipts without repeating input. |
 | `computer_stop` | Permanently stop further automation. It does not save, quit or permit another actor. |
 | `player_source` | Read exact retained PNG by source ID, including explicitly remembered prior-session evidence. |
@@ -63,7 +63,8 @@ application's own wait and does not certify that a message, animation or save
 finished. Use ordinary game controls for an in-game wait and check the screen.
 
 Delivered means SDL event handoff, not application consumption or useful effect;
-a `completed` status says the same and nothing more about the game. Check the
+a `completed` status says the mechanical sequence completed and nothing more about
+the game. Check the
 screen for the effect you intended. On partial or unknown delivery, keep the
 original operation ID and collect it with `computer_result`. Input stays
 stopped. Never replay uncertain input or try to regain authority by changing

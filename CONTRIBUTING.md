@@ -39,9 +39,9 @@ for real development runs and formal qualification. Use the
 [native acceptance procedure](docs/operations/native-acceptance.md) for changes to the
 native boundary.
 
-Preserve real game behavior and player-visible observation boundaries. Never edit
-saves or bypass engine validation to produce acceptance evidence. Launch only the
-prepared windowed wrapper with an explicit project userdir.
+Preserve real game behavior: no save editing or engine-validation bypass, and only
+the prepared windowed wrapper ([native acceptance](docs/operations/native-acceptance.md),
+[S-DELIVERY](docs/standards/delivery.md)).
 
 Update affected contracts, tests and guidance in the same change. Follow the
 [documentation checklist](docs/documentation.md#before-writing-or-changing-a-document).

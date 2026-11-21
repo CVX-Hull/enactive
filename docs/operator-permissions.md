@@ -37,7 +37,9 @@ covers the ledger and the separate admission bound for an incomplete trace.
 
 **Real-model checks before merge.** A change to how a model is prompted or how its reply
 is parsed may spend up to \$1 of provider credit before merge without a separate
-approval. The lead runs a short campaign package capped at \$1 on the pinned route
+approval ([owner decision](decisions/owner-decisions.md#in-force)). The lead runs a
+short campaign package on the pinned route whose dollar limit and in-flight allowance
+together keep the spend within that \$1 ([spend limit](operations/campaign-run.md#spend-limit)),
 and records the check in the pull request. The spend counts against the key's
 credit limit and opens no study envelope. Anything larger is asked with its price.
 

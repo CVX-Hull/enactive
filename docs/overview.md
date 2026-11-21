@@ -63,7 +63,7 @@ The [architecture](architecture.md) explains ownership, the
 | Player context | The [player guide](player-guide.md#play-from-observed-effects) works from observed effects. The player's spatial and search claims can exceed the evidence. No causal prompt benefit or general reliability is qualified. |
 | Actor replacement | Actual old host/MCP quiescence and immutable context preceded a fresh successor under original limits. No game menu, save or identity condition grants authority. |
 | Spectator | The [spectator](components/observer-operations.md) separates a supervised control path (frame, status, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames, with gaps in night clocks, popups, need labels, creature counting and death recall ([reader validation](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383)). Human-usability efficacy remains unqualified. |
-| Day-scale play | Screened on one diagnostic route rather than the selected configuration ([long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)); neither seven-day survival nor cadence is qualified. |
+| Day-scale play | Screened by one diagnostic arm with its own frozen configuration ([long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)); neither seven-day survival nor cadence is qualified. |
 | Not yet qualified | Useful apparent cadence, causal learning benefit, independent seven-day survival, second-game control, broader geometry, Unicode/IME and actual-human takeover are not qualified. |
 
 Delivered means SDL events were handed over. It does not mean the application
@@ -89,11 +89,10 @@ and remaining gates.
 [#145](https://github.com/CVX-Hull/enactive/issues/145) own cadence, curated memory and
 programs, and independent survival outcomes, which the boundary does not imply.
 
-Development runs freeze the selected current route and configuration under the
-[development-run method](development-runs.md). The [run evaluator](contracts/evaluation.md)
-and the [spectator](components/observer-operations.md) score runs from recorded frames and
-traces, and each change pre-registers a targeted process metric. Each run's result is in
-its dated record ([acceptance index](acceptance/index.md)).
+Each development run freezes its route and configuration; the
+[development-run method](development-runs.md) says how comparisons are measured and
+recorded. The [run evaluator](contracts/evaluation.md) scores runs from recorded frames
+and traces, and the [spectator](components/observer-operations.md) presents them.
 
 ## How you stay in control of the project
 

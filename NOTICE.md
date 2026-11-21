@@ -9,9 +9,10 @@ status: active
 ## License scope
 
 Original standalone harness/viewer code, tooling, tests and documentation are
-provided under the [MIT license](LICENSE). This does not relicense upstream material. The CDDA integration
-`native/cdda_harness.cpp`, `native/cdda_harness.h` and upstream modifications in
-`tools/patch_game.py` are distributed under CDDA's CC BY-SA 3.0 terms; third-party
+provided under the [MIT license](LICENSE). This does not relicense upstream material. The upstream
+Makefile modification applied by `tools/patch_game.py` is distributed under CDDA's
+CC BY-SA 3.0 terms; the standalone SDL adapter in `harness/computer/native/` uses
+no engine code; third-party
 artwork, embedded fonts and notices retain their own terms below. Source release
 does not distribute the downloaded application or its bundled libraries.
 
