@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: proposed
-review_trigger: Measurement of the curator's confirmed coverage lag behind the player during real play
+review_trigger: 'Implementation of the coverage-gated context cut in #900'
 ---
 
 # A context cut bounded by published coverage
@@ -10,8 +10,8 @@ review_trigger: Measurement of the curator's confirmed coverage lag behind the p
 
 - **Question.** Can the host release old turns while preserving enough context for the player's current task?
 - **Proposal.** Remove only a prefix covered by a published snapshot and deliver a fresh briefing in the same request.
-- **Unknown.** Lag in real play determines how many turns can be released. Whether the briefing preserves the needed distinctions is unmeasured.
-- **Decision.** The owner revisits adoption after [curator lag behind play is measured](../decisions/owner-decisions.md#context-cut-waits-for-curator-lag-measurement).
+- **Unknown.** Lag in real play was measured in `#889` (17/17 live windows kept pace); whether the briefing preserves all needed distinctions across real cuts in live play remains to be observed after implementation.
+- **Decision.** On 22 November 2026 the owner chose **Go** to implement the cut under [#900](https://github.com/CVX-Hull/enactive/issues/900) ([owner decision](../decisions/owner-decisions.md#context-cut-go-and-archive-889), [decision brief](../acceptance/2026-11-22-context-cut-decision-brief-890.md)).
 
 The alternatives considered and the lag estimates are in the
 [retired context design](player-context.md).
