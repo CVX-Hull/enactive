@@ -153,14 +153,18 @@ class LiveKnowledge:
             except BaseException:
                 listing[0].unlink(missing_ok=True);raise
         with self.lock:
-            if self.closed or self.generation!=generation:
-                # Another actor began, or this one ended, while the version was prepared: the next look decides again.
-                if listing is not None:listing[0].unlink(missing_ok=True)
-                return
-            if listing is not None:
-                try:os.replace(*listing)
-                except BaseException:
-                    listing[0].unlink(missing_ok=True);raise
+            stale = self.closed or self.generation != generation
+        if stale:
+            # Another actor began, or this one ended, while the version was prepared: the next look decides again.
+            if listing is not None:listing[0].unlink(missing_ok=True)
+            return
+        if listing is not None:
+            # Keep filesystem rename outside `self.lock` so `begin()`, `end()` and `close()` never block on I/O.
+            try:os.replace(*listing)
+            except BaseException:
+                listing[0].unlink(missing_ok=True);raise
+        with self.lock:
+            if self.closed or self.generation != generation:return
             # Only after the list names the version: the application, the host and the successor move together.
             application.set_knowledge(knowledge)
             self.current,self.data=knowledge,data

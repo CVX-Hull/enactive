@@ -226,23 +226,30 @@ class Sessions:
 
 
 VERSION_FILE = re.compile(r'v(0|[1-9][0-9]*)\.json')
+SESSION_ID_RE = re.compile(r'[0-9a-f]{32}')
 
 
-def delivery_world(run: Path) -> tuple[bool, str | None]:
+def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, str | None]:
     """Whether the run's package delivers newer versions to a running actor, and the world its facts are selected for.
 
     The manifest is trusted only as the supervisor launched it: its bytes must have the SHA-256 that the
-    supervisor's `campaign-watch-start/4` launch record names for the same session, the checks the trace
-    projection makes before it reads labels (`harness/trace/projection.py`). The bytes checked are the bytes read."""
+    supervisor's `campaign-watch-start/4` launch record names for the same 32-hex session (and matching any
+    explicitly supplied `session_id`), the checks the trace projection makes before it reads labels
+    (`harness/trace/projection.py`). The bytes checked are the bytes read."""
     data = (run/'manifest.json').read_bytes()
     manifest = json.loads(data)
     if not isinstance(manifest, dict) or manifest.get('schema') != MANIFEST_SCHEMA:
         raise ValueError(f'{run/"manifest.json"}: not a {MANIFEST_SCHEMA} manifest')
+    session = manifest.get('session')
+    if not isinstance(session, str) or not SESSION_ID_RE.fullmatch(session):
+        raise ValueError(f'{run/"manifest.json"}: missing or invalid session identifier')
     opening = json.loads((run/'watch-start.json').read_bytes())
     if not isinstance(opening, dict) or opening.get('schema') != 'campaign-watch-start/4':
         raise ValueError(f'{run/"watch-start.json"}: unsupported supervisor launch record schema')
-    if opening.get('session') != manifest.get('session'):
+    if opening.get('session') != session:
         raise ValueError(f'{run/"watch-start.json"}: supervisor launch record session differs from the manifest session')
+    if session_id is not None and session != session_id:
+        raise ValueError(f'{run/"manifest.json"}: manifest session differs from the launched session')
     if opening.get('manifest_sha256') != hashlib.sha256(data).hexdigest():
         raise ValueError(f'{run/"manifest.json"}: SHA-256 differs from the supervisor launch record')
     return manifest['live_knowledge_updates'] is True, knowledge_export.world_label(manifest['labels']['world'])
@@ -310,6 +317,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--run', required=True, type=Path, help='the live run directory')
     p.add_argument('--directory', required=True, type=Path, help="the runner's own directory")
     p.add_argument('--config', required=True, type=Path, help='a curator-runner-config/1 file')
+    p.add_argument('--session', default=None, help='expected 32-hex live session id verified by supervision')
     p.add_argument('--runtime-root', type=Path, default=ROOT/'.runtime')
     return p
 
@@ -339,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
             directory = args.directory.resolve()
             deliver = None
             try:
-                enabled, world = delivery_world(run)
+                enabled, world = delivery_world(run, session_id=args.session)
                 deliver = Delivery(directory, repo.path, world) if enabled else None
             except (OSError, ValueError, KeyError, TypeError) as error:
                 # Curation does not depend on delivery: the runner starts and leaves no version for the driver.

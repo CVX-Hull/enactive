@@ -9,11 +9,11 @@ import { model, route, reply, realDelay } from './host-scenario.mjs';
 export const knowledge = () => ({schema:'delivered-knowledge/2',version:'v2',commit:'c'.repeat(40),repository_id:'d'.repeat(40),
   coverage:{schema:'curator-coverage/2',session:'earlier',actor:null,last_step:4},
   articles:[
-    {id:'article-a',title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],links:['B subject'],last_confirmed:{order:1}},
-    {id:'article-b',title:'B subject',lead:'A useful later lead.',body:[{text:'Second claim.',facts:['fact-b']}],links:[],last_confirmed:{order:2}}],
-  facts:[{id:'fact-a',type:'observation',text:'First claim.',seen:{order:1}},
-    {id:'fact-b',type:'observation',text:'Second claim.',seen:{order:2}},
-    {id:'fact-alone',subject:'Unfiled subject',type:'observation',text:'An unfiled claim.',seen:{order:3}}]});
+    {id:'article-a',title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],links:['B subject'],last_confirmed:{session:'s1',actor:'001',step:1,order:[1,'001',1]}},
+    {id:'article-b',title:'B subject',lead:'A useful later lead.',body:[{text:'Second claim.',facts:['fact-b']}],links:[],last_confirmed:{session:'s1',actor:'001',step:2,order:[1,'001',2]}}],
+  facts:[{id:'fact-a',type:'observation',text:'First claim.',seen:{session:'s1',actor:'001',step:1,order:[1,'001',1]}},
+    {id:'fact-b',type:'observation',text:'Second claim.',seen:{session:'s1',actor:'001',step:2,order:[1,'001',2]}},
+    {id:'fact-alone',subject:'Unfiled subject',type:'observation',text:'An unfiled claim.',seen:{session:'s1',actor:'001',step:3,order:[1,'001',3]}}]});
 
 export function recallReply(ids, cost = .002, finishReason = 'stop') {
   return recallTextReply(JSON.stringify({articles:ids}), cost, finishReason);

@@ -1,7 +1,8 @@
 import { isDeepStrictEqual } from 'node:util';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { open, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Agent } from '@earendil-works/pi-agent-core';
 import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
@@ -21,6 +22,7 @@ const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENA
 const MCP_LIMIT_BYTES = 32 * 1_048_576;
 // How often a running host looks for a newer listed knowledge version between its other refreshes.
 const UPDATE_POLL_MS = 1000;
+const UPDATE_READER = fileURLToPath(new URL('./update-reader.mjs', import.meta.url));
 const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
 // Adopt the pinned SDK helper's maintained default; original request/host
 // deadlines and one retry remain the outer bounds.
@@ -750,29 +752,77 @@ export async function runHost(options) {
   };
   // Live delivery of a newer delivered-knowledge version (`--knowledge-updates`). The driver appends one
   // `knowledge-update-entry/1` line for each version it has verified and written beside the list. A refresh
-  // off the request path reads whole unread lines and their files, verifies them and stages the newest in
-  // memory; building a player request only takes what is staged, so a slow or stalled read never holds up a
-  // request. A problem with an entry or its file is recorded and play goes on with the version already adopted.
-  let updatesOffset = 0, pendingKnowledgeUpdate = null, updateRefresh = null, refreshAgain = false, updatesPoll, updatesClosed = false;
+  // off the request path reads whole unread lines and their files in an isolated helper process, verifies
+  // them and stages them in memory; building a player request only takes what is staged, and closing the
+  // helper kills any stalled read immediately so it never delays settlement or CLI exit.
+  let updatesOffset = 0, updateRefresh = null, refreshAgain = false, updatesPoll, updatesClosed = false;
+  let updateReader = null, updateReaderBuf = '', updateReadSeq = 0;
+  const pendingReads = new Map();
+  const pendingKnowledgeUpdates = new Map();
   const pendingRefusals = [];
-  const unreadUpdateLines = async () => {
-    let file;
-    try { file = await open(options.knowledgeUpdates, 'r'); } catch { return []; }
-    try {
-      const length = Math.min((await file.stat()).size - updatesOffset, INPUT_LIMIT_BYTES);
-      if (length <= 0) return [];
-      const data = Buffer.alloc(length);
-      const {bytesRead} = await file.read(data, 0, length, updatesOffset);
-      const end = data.subarray(0, bytesRead).lastIndexOf(10);
-      if (end < 0) {
-        // A line still being appended is read once it is whole; one over the input bound is never an entry.
-        if (bytesRead < INPUT_LIMIT_BYTES) return [];
-        updatesOffset += bytesRead;
-        return [''];
+  const failUpdateReads = () => {
+    for (const resolve of pendingReads.values()) resolve(null);
+    pendingReads.clear();
+  };
+  const closeUpdateReader = () => {
+    const child = updateReader;
+    updateReader = null;
+    updateReaderBuf = '';
+    failUpdateReads();
+    if (!child) return;
+    child.stdin?.destroy();
+    child.stdout?.destroy();
+    try { child.kill('SIGKILL'); } catch {}
+    child.unref();
+  };
+  const ensureUpdateReader = () => {
+    if (updatesClosed) return null;
+    if (updateReader) return updateReader;
+    const childEnv = {PATH:process.env.PATH ?? '/usr/bin:/bin', LANG:process.env.LANG ?? 'C.UTF-8'};
+    const child = spawn(process.execPath, [UPDATE_READER], {env:childEnv, stdio:['pipe', 'pipe', 'ignore']});
+    updateReader = child;
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', chunk => {
+      updateReaderBuf += chunk;
+      let newline;
+      while ((newline = updateReaderBuf.indexOf('\n')) >= 0) {
+        const line = updateReaderBuf.slice(0, newline);
+        updateReaderBuf = updateReaderBuf.slice(newline + 1);
+        if (!line) continue;
+        try {
+          const reply = JSON.parse(line);
+          const resolve = pendingReads.get(reply.id);
+          if (resolve) { pendingReads.delete(reply.id); resolve(reply.ok ? Buffer.from(reply.data, 'base64') : null); }
+        } catch {}
       }
-      updatesOffset += end + 1;
-      return data.subarray(0, end).toString('utf8').split('\n').filter(line => line.trim());
-    } finally { await file.close(); }
+    });
+    const ended = () => { if (updateReader === child) updateReader = null; failUpdateReads(); };
+    child.on('error', ended);
+    child.on('exit', ended);
+    child.stdin.on('error', () => {});
+    child.unref();
+    return child;
+  };
+  const readUpdateFile = (path, offset = null, limit = null) => new Promise(resolve => {
+    const child = ensureUpdateReader();
+    if (!child) { resolve(null); return; }
+    const id = ++updateReadSeq;
+    pendingReads.set(id, resolve);
+    try { child.stdin.write(JSON.stringify({id, path, offset, limit}) + '\n'); }
+    catch { pendingReads.delete(id); resolve(null); }
+  });
+  const unreadUpdateLines = async () => {
+    const data = await readUpdateFile(options.knowledgeUpdates, updatesOffset, INPUT_LIMIT_BYTES);
+    if (!data || data.length === 0) return [];
+    const end = data.lastIndexOf(10);
+    if (end < 0) {
+      // A line still being appended is read once it is whole; one over the input bound is never an entry.
+      if (data.length < INPUT_LIMIT_BYTES) return [];
+      updatesOffset += data.length;
+      return [''];
+    }
+    updatesOffset += end + 1;
+    return data.subarray(0, end).toString('utf8').split('\n').filter(line => line.trim());
   };
   // Refusals wait in memory with the version held when they were decided and are recorded when the next
   // request is built (or when the actor ends), so the refresh itself never writes telemetry between events.
@@ -784,18 +834,17 @@ export async function runHost(options) {
   const verifiedUpdate = async entry => {
     const foreign = () => knowledge.repository_id !== null && entry.repository_id !== knowledge.repository_id;
     if (foreign()) return 'repository-mismatch';
-    let data, value;
-    try { data = await readFile(join(dirname(options.knowledgeUpdates), entry.file)); } catch { return 'file-unreadable'; }
+    const data = await readUpdateFile(join(dirname(options.knowledgeUpdates), entry.file));
+    if (!data) return 'file-unreadable';
     if (foreign()) return 'repository-mismatch';
     if (sha256Hex(data) !== entry.sha256) return 'sha256-mismatch';
+    let value;
     try { value = validateKnowledge(JSON.parse(data.toString('utf8'))); } catch { return 'invalid-delivered-knowledge'; }
     return value.version === entry.version && value.commit === entry.commit && value.repository_id === entry.repository_id
       && isDeepStrictEqual(value.coverage, entry.coverage) ? value : 'entry-mismatch';
   };
-  // Unread entries are tried newest first; the first above the held version that verifies is staged, and one
-  // at or below the staged one is passed over. Each is decided on its own, so one bad entry never hides a
-  // newer good one. The checks against the held and staged versions are repeated after each read, because a
-  // request may adopt the staged version while a read is outstanding.
+  // Unread entries are verified newest first and held until request preparation picks the newest one that fits
+  // within context capacity, so an oversized newer version can still fall back to an older verified candidate.
   const refreshOnce = async () => {
     const entries = [];
     for (const line of await unreadUpdateLines()) {
@@ -803,22 +852,16 @@ export async function runHost(options) {
       if (entry) entries.push(entry); else refuseUpdate(null, 'invalid-entry');
     }
     entries.sort((a, b) => b.number - a.number);
-    const passedOver = entry => {
-      if (pendingKnowledgeUpdate && entry.number <= pendingKnowledgeUpdate.entry.number) return 'superseded';
-      return entry.number <= heldNumber() ? 'not-newer' : null;
-    };
     for (const entry of entries) {
       if (updatesClosed) return;
-      let reason = passedOver(entry);
-      if (reason) { refuseUpdate(entry, reason); continue; }
+      if (entry.number <= heldNumber()) { refuseUpdate(entry, 'not-newer'); continue; }
+      if (pendingKnowledgeUpdates.has(entry.number)) { refuseUpdate(entry, 'superseded'); continue; }
       const value = await verifiedUpdate(entry);
       if (updatesClosed) return;
       if (typeof value === 'string') { refuseUpdate(entry, value); continue; }
-      if ((reason = passedOver(entry))) { refuseUpdate(entry, reason); continue; }
-      let update;
-      try { update = updateDelivery(knowledge, value); } catch { refuseUpdate(entry, 'invalid-delivered-knowledge'); continue; }
-      if (pendingKnowledgeUpdate) refuseUpdate(pendingKnowledgeUpdate.entry, 'superseded');
-      pendingKnowledgeUpdate = {entry, knowledge:value, update};
+      if (entry.number <= heldNumber()) { refuseUpdate(entry, 'not-newer'); continue; }
+      if (pendingKnowledgeUpdates.has(entry.number)) { refuseUpdate(entry, 'superseded'); continue; }
+      pendingKnowledgeUpdates.set(entry.number, {entry, knowledge:value});
     }
   };
   // Starts a refresh unless one is outstanding, in which case that one runs once more when it finishes.
@@ -1075,19 +1118,33 @@ export async function runHost(options) {
           if (options.knowledgeUpdates) {
             try {
               flushRefusals();
-              const newer = pendingKnowledgeUpdate;
-              pendingKnowledgeUpdate = null;
-              if (newer) {
-                const message = {role:'user', timestamp:Date.now(), content:[{type:'text', text:newer.update.text}]};
+              const candidates = [...pendingKnowledgeUpdates.values()].sort((a, b) => b.entry.number - a.entry.number);
+              pendingKnowledgeUpdates.clear();
+              if (candidates.length) {
                 const before = contextTokens(withPlacedNotices(projection.messages, placedNotices)).tokens;
-                if (before + estimateContextTokens([message]).tokens + configuration.context_reserve_tokens < configuration.model.contextWindow) {
-                  knowledge = newer.knowledge;
-                  placedNotices.push({at:messages.length, message});
-                  unsentDeliveries.push(newer.update);
-                } else {
-                  refuseUpdate(newer.entry, 'context-capacity');
-                  flushRefusals();
+                const previousVersion = knowledge.version;
+                let adopted = false;
+                for (const candidate of candidates) {
+                  if (adopted) { refuseUpdate(candidate.entry, 'superseded', {previous_version:previousVersion}); continue; }
+                  if (candidate.entry.number <= heldNumber()) { refuseUpdate(candidate.entry, 'not-newer'); continue; }
+                  if (knowledge.repository_id !== null && candidate.entry.repository_id !== knowledge.repository_id) {
+                    refuseUpdate(candidate.entry, 'repository-mismatch'); continue;
+                  }
+                  let update;
+                  try { update = updateDelivery(knowledge, candidate.knowledge); } catch {
+                    refuseUpdate(candidate.entry, 'invalid-delivered-knowledge'); continue;
+                  }
+                  const message = {role:'user', timestamp:Date.now(), content:[{type:'text', text:update.text}]};
+                  if (before + estimateContextTokens([message]).tokens + configuration.context_reserve_tokens < configuration.model.contextWindow) {
+                    knowledge = candidate.knowledge;
+                    placedNotices.push({at:messages.length, message});
+                    unsentDeliveries.push(update);
+                    adopted = true;
+                  } else {
+                    refuseUpdate(candidate.entry, 'context-capacity');
+                  }
                 }
+                flushRefusals();
               }
             } catch (error) {
               emit('knowledge-delivery', {kind:'update', outcome:'refused', version:null, previous_version:knowledge.version,
@@ -1430,10 +1487,11 @@ export async function runHost(options) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {
     endRecall();
-    // An outstanding refresh is never awaited: a stalled read must not hold up settlement or the successor.
+    // An outstanding refresh is terminated rather than awaited: a stalled read must not hold up settlement or CLI exit.
     clearInterval(updatesPoll);
     flushRefusals();
     updatesClosed = true;
+    closeUpdateReader();
     await recallTask;
     if (briefing) emit('knowledge-undelivered', {...briefing, reason:'actor-ended'});
     for (const value of [...pendingReminders, ...unsentDeliveries]) emit('knowledge-undelivered', {...value, reason:'actor-ended'});

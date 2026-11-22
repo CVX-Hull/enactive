@@ -19,7 +19,7 @@ from tools.configure_player_tools import configuration
 
 
 KNOWLEDGE=dict(schema='delivered-knowledge/2',version='v1',commit='c'*40,repository_id='d'*40,coverage=None,articles=[],
-               facts=[dict(id='fact',type='claim',text='Fallible data',seen=dict(order=1))])
+               facts=[dict(id='fact',type='claim',text='Fallible data',seen=dict(session='s1',actor='001',step=1,order=[1,'001',1]))])
 
 
 def package(root, *, world=None, knowledge=None, live=False, seed=None):

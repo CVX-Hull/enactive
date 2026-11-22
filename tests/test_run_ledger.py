@@ -112,7 +112,7 @@ def test_upper_bound_covers_possible_inflight_attempts_even_when_none_observed(t
     directory=package(tmp_path/'packages',spend_complete=False,observed_attempts=attempts,unpriced_requests=0,unpriced_recall_request_usd='0.2')
     if has_units:
         path=directory/'delivered-knowledge.json';value=json.loads(path.read_text())
-        value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(order=1))]
+        value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(session='s1',actor='001',step=1,order=[1,'001',1]))]
         path.write_text(json.dumps(value))
     if live:
         path=directory/'manifest.json'

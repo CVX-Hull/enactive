@@ -755,18 +755,33 @@ def test_delivery_is_read_from_the_current_package_manifest(tmp_path):
 def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch(tmp_path):
     """R-REGRESSION (B4): replaced manifest bytes, whose SHA-256 differs from the supervisor's launch record,
     neither enable delivery nor choose its world; nor does a launch record of another session or schema."""
+    import hashlib
     run = tmp_path/RUN
     run.mkdir()
     record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
     assert live_runner.delivery_world(run) == (True, 'the farm')
+    assert live_runner.delivery_world(run, session_id=SESSION_ID) == (True, 'the farm')
+    with pytest.raises(ValueError, match='launched session'):
+        live_runner.delivery_world(run, session_id='b' * 32)
     original = (run/'manifest.json').read_bytes()
     replaced = json.loads(original)
     replaced['labels']['world'] = 'another farm'
     (run/'manifest.json').write_text(json.dumps(replaced))
     with pytest.raises(ValueError, match='SHA-256 differs from the supervisor launch record'):
         live_runner.delivery_world(run)
-    (run/'manifest.json').write_bytes(original)
+    # Missing session in both manifest and watch-start (even with matching SHA-256) is refused.
+    no_session = json.loads(original)
+    no_session.pop('session')
+    no_session_bytes = json.dumps(no_session).encode()
+    (run/'manifest.json').write_bytes(no_session_bytes)
     opening = json.loads((run/'watch-start.json').read_text())
+    no_session_opening = {k: v for k, v in opening.items() if k != 'session'}
+    no_session_opening['manifest_sha256'] = hashlib.sha256(no_session_bytes).hexdigest()
+    (run/'watch-start.json').write_text(json.dumps(no_session_opening))
+    with pytest.raises(ValueError, match='missing or invalid session'):
+        live_runner.delivery_world(run)
+    (run/'manifest.json').write_bytes(original)
+    (run/'watch-start.json').write_text(json.dumps(opening))
     for change, message in ((dict(session='b' * 32), 'session differs'), (dict(schema='campaign-watch-start/3'), 'unsupported')):
         (run/'watch-start.json').write_text(json.dumps(dict(opening, **change)))
         with pytest.raises(ValueError, match=message):

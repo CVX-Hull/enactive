@@ -22,8 +22,8 @@ function newer(change = {}) {
   const value = knowledge();
   Object.assign(value,{version:'v3',commit:'e'.repeat(40),coverage:{...value.coverage,last_step:9}});
   value.articles[1].lead = 'A revised later lead.';
-  value.articles.push({id:'article-c',title:'C subject',lead:'A new lead.',body:[{text:'Third claim.',facts:['fact-c']}],links:[],last_confirmed:{order:4}});
-  value.facts = [...value.facts.filter(f => f.id !== 'fact-alone'),{id:'fact-c',type:'observation',text:'Third claim.',seen:{order:4}}];
+  value.articles.push({id:'article-c',title:'C subject',lead:'A new lead.',body:[{text:'Third claim.',facts:['fact-c']}],links:[],last_confirmed:{session:'s1',actor:'001',step:4,order:[1,'001',4]}});
+  value.facts = [...value.facts.filter(f => f.id !== 'fact-alone'),{id:'fact-c',type:'observation',text:'Third claim.',seen:{session:'s1',actor:'001',step:4,order:[1,'001',4]}}];
   return Object.assign(value,change);
 }
 
@@ -155,9 +155,14 @@ test('a malformed newer candidate is refused on its own and an older valid unrea
       await listUpdate(dir,missingText);
     }},3)});
   assert.equal(result.ok,true);
-  // The timer may split the listing between two refreshes, so the two refusals may come in either order.
-  assert.deepEqual(updates(events).map(e => [e.outcome,e.version,e.reason,e.receiving_player_request_id]).sort(),
-    [['delivered','v3',undefined,'request-2'],['refused','v4','invalid-delivered-knowledge',undefined],['refused','v5','invalid-delivered-knowledge',undefined]]);
+  // The background refresh may finish before request-2 or request-3, and refusals may arrive in either order.
+  const seen = updates(events);
+  const delivered = seen.filter(e => e.outcome === 'delivered');
+  assert.equal(delivered.length,1);
+  assert.equal(delivered[0].version,'v3');
+  assert.ok(['request-2','request-3'].includes(delivered[0].receiving_player_request_id));
+  assert.deepEqual(seen.filter(e => e.outcome === 'refused').map(e => [e.version,e.reason]).sort(),
+    [['v4','invalid-delivered-knowledge'],['v5','invalid-delivered-knowledge']]);
 });
 
 test('a stalled read of the update list never holds up a request or the actor\'s end',async t => {
@@ -173,9 +178,14 @@ test('a stalled read of the update list never holds up a request or the actor\'s
   assert.equal(events.filter(e => e.type === 'request-start' && e.request_role !== 'recall').length,3);
   assert.deepEqual(updates(events),[]);
   assert.ok(events.at(-1).monotonic_ms < 5000,'the run settled well inside its ten-second deadline');
-  // A writer can open the FIFO only while a reader holds it: the host's read was still blocked when it settled.
-  const writer = await open(list,constants.O_WRONLY | constants.O_NONBLOCK);
-  await writer.close();
+  // The isolated reader child was terminated on settlement so no stalled reader leaks or blocks CLI exit.
+  let closed = false;
+  for (let i=0;i<50;i++) {
+    try { await (await open(list,constants.O_WRONLY | constants.O_NONBLOCK)).close(); }
+    catch (error) { if (error.code === 'ENXIO') { closed = true; break; } throw error; }
+    await new Promise(resolve => setTimeout(resolve,20));
+  }
+  assert.equal(closed,true,'no reader survived settlement');
 });
 
 test('a line still being appended is read once it is whole',async t => {
@@ -197,6 +207,16 @@ test('an adopted version with no later request is recorded as undelivered',async
   assert.deepEqual([update.type,update.version,update.previous_version,update.reason,'outcome' in update,'receiving_player_request_id' in update],
     ['knowledge-undelivered','v3',null,'actor-ended',false,false]);
   assert.equal(events.filter(e => e.type === 'request-start').length,1);
+});
+
+test('an oversized newer version falls back to an older verified candidate that fits',async t => {
+  const dir = await directory(t), small = newer({version:'v3'}), big = newer({version:'v4'});
+  big.articles[2].lead = 'x'.repeat(600_000);
+  const {result,events} = await deliveryScenario(dir,{knowledgeUpdates:true,recallFetch:n => recallReply(n === 1 ? ['article-a'] : []),
+    playerFetch:play({1:async () => { await listUpdate(dir,small); await listUpdate(dir,big); }},3)});
+  assert.equal(result.ok,true);
+  assert.deepEqual(updates(events).map(e => [e.outcome,e.version,e.reason]),
+    [['refused','v4','context-capacity'],['delivered','v3',undefined]]);
 });
 
 test('an update that would bring the context to its capacity warning is refused and play continues',async t => {
@@ -233,6 +253,8 @@ test('delivered-knowledge/2 names its commit and repository, and the entry and m
     ['article without links',v => { delete v.articles[0].links; }],['article with an extra field',v => { v.articles[0].record = 'article'; }],
     ['article with an empty body',v => { v.articles[0].body = []; }],['claim without facts',v => { v.articles[0].body[0].facts = []; }],
     ['article with a non-string link',v => { v.articles[0].links = [1]; }],['article with last_confirmed null',v => { v.articles[0].last_confirmed = null; }],
+    ['fact seen carrying world',v => { v.facts[0].seen = {world:'unexpected'}; }],
+    ['article last_confirmed carrying world',v => { v.articles[0].last_confirmed = {world:'unexpected'}; }],
     ['coverage carrying world',v => { v.coverage.world = 'farm'; }],['coverage of another schema',v => { v.coverage.schema = 'curator-coverage/1'; }],
     ['coverage without a session',v => { v.coverage.session = ''; }],['coverage with a boolean step',v => { v.coverage.last_step = true; }],
     ['coverage with an empty actor',v => { v.coverage.actor = ''; }]]) assert.throws(() => validateKnowledge(changed(edit)),label);

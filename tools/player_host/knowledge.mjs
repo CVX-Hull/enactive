@@ -17,13 +17,17 @@ const names = (value, nonempty) => Array.isArray(value) && (value.length > 0 || 
 const validCoverage = value => value === null || (record(value) && keys(value, ['schema','session','actor','last_step'])
   && value.schema === 'curator-coverage/2' && filled(value.session) && (value.actor === null || filled(value.actor))
   && (value.last_step === null || Number.isSafeInteger(value.last_step)));
+const validPosition = value => record(value) && keys(value, ['session','actor','step','order'])
+  && filled(value.session) && filled(value.actor) && Number.isSafeInteger(value.step)
+  && Array.isArray(value.order) && value.order.length === 3
+  && Number.isSafeInteger(value.order[0]) && typeof value.order[1] === 'string' && Number.isSafeInteger(value.order[2]);
 const validArticle = value => record(value) && keys(value, ['id','title','lead','body','links','last_confirmed'])
-  && filled(value.id) && filled(value.title) && filled(value.lead) && names(value.links, false) && record(value.last_confirmed)
+  && filled(value.id) && filled(value.title) && filled(value.lead) && names(value.links, false) && validPosition(value.last_confirmed)
   && Array.isArray(value.body) && value.body.length > 0
   && value.body.every(claim => record(claim) && keys(claim, ['text','facts']) && filled(claim.text) && names(claim.facts, true));
 const validFact = value => record(value) && keys(value, ['id','type','text','seen'], ['subject'])
   && filled(value.id) && filled(value.type) && filled(value.text) && (!Object.hasOwn(value, 'subject') || filled(value.subject))
-  && record(value.seen);
+  && validPosition(value.seen);
 
 export function validateKnowledge(value) {
   if (!record(value) || value.schema !== 'delivered-knowledge/2'

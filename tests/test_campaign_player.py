@@ -392,7 +392,7 @@ def published(number,*,repository='d'*40,**change):
     """A published version as the exporter writes it, with one fact per version number."""
     return dict(schema='delivered-knowledge/2',version=f'v{number}',commit=f'{number:040x}',repository_id=repository,
         coverage=dict(schema='curator-coverage/2',session='b'*32,actor='001',last_step=number),articles=[],
-        facts=[dict(id=f'fact-{n}',type='observation',text=f'Claim {n}.',seen=dict(order=[n,'frame',0])) for n in range(1,number+1)],**change)
+        facts=[dict(id=f'fact-{n}',type='observation',text=f'Claim {n}.',seen=dict(session='s1',actor='001',step=n,order=[1,'001',n])) for n in range(1,number+1)],**change)
 
 
 def test_a_version_left_during_play_is_listed_for_the_running_actor_and_seeds_its_successor(tmp_path):
@@ -537,6 +537,33 @@ def test_a_version_prepared_for_an_actor_that_ended_is_decided_again_for_the_nex
     assert not (actor/'.knowledge-updates.jsonl.tmp').exists()
     live.poll(application)  # between actors: adopted for the next frozen file
     assert json.loads(live.begin(tmp_path/'next'))['version']=='v3' and application.set_knowledge.call_count==1
+
+
+def test_a_stalled_list_replace_does_not_block_end_or_begin(tmp_path):
+    """R-REGRESSION (B1): `LiveKnowledge._adopt` performs `os.replace` outside `self.lock` so a stalled
+    filesystem rename cannot block `end()` or `begin()` on the driver thread."""
+    import os
+    live,application,actor,leave,listed=live_case(tmp_path,published(2))
+    live.begin(actor)
+    leave(published(3))
+    entered,release=threading.Event(),threading.Event()
+    real_replace=os.replace
+    def stalling_replace(src,dst):
+        if os.path.basename(dst)=='knowledge-updates.jsonl':
+            entered.set();release.wait(10)
+        return real_replace(src,dst)
+    with patch('tools.campaign_player.os.replace',side_effect=stalling_replace):
+        worker=threading.Thread(target=live.poll,args=(application,),daemon=True)
+        worker.start()
+        assert entered.wait(5)
+        began=time.monotonic()
+        live.end()
+        successor=live.begin(tmp_path/'successor')
+        elapsed=time.monotonic()-began
+        release.set()
+        worker.join(5)
+    assert elapsed<2 and not worker.is_alive()
+    assert json.loads(successor)['version']=='v2' and not application.set_knowledge.called
 
 
 def stalled_source(tmp_path):

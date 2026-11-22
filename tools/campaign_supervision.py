@@ -313,7 +313,8 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                         with (directory/RUNNER_DIRECTORY/'stdout.txt').open('xb') as runner_out, \
                                 (directory/RUNNER_DIRECTORY/'stderr.txt').open('xb') as runner_err:
                             argv = [sys.executable, '-m', 'tools.curator_host.live_runner', '--run', str(directory),
-                                    '--directory', str(directory/RUNNER_DIRECTORY), '--config', str(runner_config)]
+                                    '--directory', str(directory/RUNNER_DIRECTORY), '--config', str(runner_config),
+                                    '--session', profile['session']]
                             # No route credential: the runner resolves its own provider key (HOME for the keychain).
                             handle = popen(argv, start_new_session=True, cwd=ROOT,
                                            env={**env, **{k: os.environ[k] for k in ('HOME',) if k in os.environ}},

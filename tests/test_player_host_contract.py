@@ -368,8 +368,8 @@ def test_a_listed_newer_knowledge_version_is_delivered_and_an_entry_that_does_no
                           enabled_tools=("integer",))
     version = dict(schema="delivered-knowledge/2", version="v1", commit="c" * 40, repository_id="d" * 40,
                    coverage=dict(schema="curator-coverage/2", session="2" * 32, actor="001", last_step=20),
-                   articles=[dict(id="article-a", title="A subject", lead="A useful lead. More.", body=[dict(text="A claim.", facts=["fact-a"])], links=[], last_confirmed=dict(order=1))],
-                   facts=[dict(id="fact-a", type="observation", text="A claim.", seen=dict(order=1))])
+                   articles=[dict(id="article-a", title="A subject", lead="A useful lead. More.", body=[dict(text="A claim.", facts=["fact-a"])], links=[], last_confirmed=dict(session="s1", actor="001", step=1, order=[1, "001", 1]))],
+                   facts=[dict(id="fact-a", type="observation", text="A claim.", seen=dict(session="s1", actor="001", step=1, order=[1, "001", 1]))])
     data = json.dumps(version).encode()
     (tmp_path / "knowledge").mkdir()
     (tmp_path / "knowledge" / "v1.json").write_bytes(data)
@@ -399,6 +399,26 @@ def test_a_listed_newer_knowledge_version_is_delivered_and_an_entry_that_does_no
     # The flag is closed like the others: repeated, it refuses before any request.
     repeated = run_mode(adapter, ["run", *hosted.flags(), "--knowledge-updates", str(updates), "--knowledge-updates", str(updates)])
     assert repeated.returncode != 0 and len(hosted.provider.requests) == 2
+
+
+def test_a_hung_knowledge_updates_fifo_does_not_prevent_the_host_cli_from_exiting(adapter, host_factory, tmp_path):
+    """R-REGRESSION (B1): a stalled filesystem read of `--knowledge-updates` (simulated by a FIFO with no writer)
+    is abandoned on its timeout and must not keep the Node host CLI process alive after settlement."""
+    fifo = tmp_path / "hung-knowledge-updates.jsonl"
+    os.mkfifo(fifo)
+    hosted = host_factory([tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None))])
+    try:
+        proc = hosted.start(["run", *hosted.flags(), "--knowledge-updates", str(fifo)])
+        code = proc.wait(15)
+        assert code == 0
+        assert hosted.settled()["reason"] == "task_complete"
+        assert hosted.accounted()["accounting_complete"] is True
+    finally:
+        try:
+            fd = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+            os.close(fd)
+        except OSError:
+            pass
 
 
 def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow_the_trace(adapter, host_factory):

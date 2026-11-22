@@ -374,9 +374,11 @@ The required `--delivered-knowledge` file is `delivered-knowledge/2`; it has no
 text-size cap. `--finish-reserve-usd` is the frozen reserve from the package.
 With `--knowledge-updates LIST`, an unref'd refresh in `runHost` (at start, every
 `UPDATE_POLL_MS` and after each player response, one at a time) reads the driver's
-list and its files and stages the newest listed version above its own that verifies
-(`updateEntry`, `validateKnowledge`, `updateDelivery` in `knowledge.mjs`). Building a
-player request only takes what is staged and reads no file. The
+list and its files through the isolated `update-reader.mjs` helper (terminated on
+settlement so a stalled read never blocks CLI exit) and stages verified candidates
+above its own (`updateEntry`, `validateKnowledge`, `updateDelivery` in
+`knowledge.mjs`). Building a player request only takes what is staged — picking the
+newest candidate that fits within context capacity — and reads no file. The
 [update rules](../../docs/contracts/player-host.md#a-newer-version-during-play)
 own what is checked and recorded. Nothing waits for the refresh, and it never stops the host.
 The route pins `recall:{model,every,unpriced_request_usd}` with the same provider

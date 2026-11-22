@@ -25,6 +25,7 @@ def version_number(version: object) -> int | None:
 
 # The public record forms `tools/knowledge_export.py` writes; `tools/player_host/knowledge.mjs` checks the same ones.
 COVERAGE_FIELDS = frozenset(('schema', 'session', 'actor', 'last_step'))
+POSITION_FIELDS = frozenset(('session', 'actor', 'step', 'order'))
 ARTICLE_FIELDS = frozenset(('id', 'title', 'lead', 'body', 'links', 'last_confirmed'))
 FACT_FIELDS, FACT_REQUIRED = frozenset(('id', 'type', 'text', 'subject', 'seen')), frozenset(('id', 'type', 'text', 'seen'))
 
@@ -45,10 +46,17 @@ def _coverage(value: object) -> bool:
         and (value['last_step'] is None or type(value['last_step']) is int))
 
 
+def _position(value: object) -> bool:
+    return (isinstance(value, dict) and set(value) == POSITION_FIELDS
+            and _filled(value['session']) and _filled(value['actor']) and type(value['step']) is int
+            and isinstance(value['order'], list) and len(value['order']) == 3
+            and type(value['order'][0]) is int and isinstance(value['order'][1], str) and type(value['order'][2]) is int)
+
+
 def _article(value: object) -> bool:
     return (isinstance(value, dict) and set(value) == ARTICLE_FIELDS
             and all(_filled(value[k]) for k in ('id', 'title', 'lead')) and _names(value['links'], nonempty=False)
-            and isinstance(value['last_confirmed'], dict) and isinstance(value['body'], list) and bool(value['body'])
+            and _position(value['last_confirmed']) and isinstance(value['body'], list) and bool(value['body'])
             and all(isinstance(c, dict) and set(c) == {'text', 'facts'} and _filled(c['text'])
                     and _names(c['facts'], nonempty=True) for c in value['body']))
 
@@ -56,7 +64,7 @@ def _article(value: object) -> bool:
 def _fact(value: object) -> bool:
     return (isinstance(value, dict) and FACT_REQUIRED <= set(value) <= FACT_FIELDS
             and all(_filled(value[k]) for k in ('id', 'type', 'text')) and ('subject' not in value or _filled(value['subject']))
-            and isinstance(value['seen'], dict))
+            and _position(value['seen']))
 
 
 def _valid(value: object) -> bool:

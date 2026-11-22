@@ -118,8 +118,8 @@ def test_the_newly_archived_spend_limit_run_retains_its_recorded_spend(tmp_path)
 def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp_path):
     package=tmp_path/'admission';actor=package/'actors/001';actor.mkdir(parents=True)
     full=dict(schema='delivered-knowledge/2',version='v3',commit='c'*40,repository_id='d'*40,coverage=None,
-        facts=[dict(id=x,type='claim',text=x,seen=dict(order=1)) for x in ('brief','read-first','lead-first','index','withheld')],
-        articles=[dict(id='article-'+x,title=x,lead=x,body=[dict(text=x,facts=[x])],links=[],last_confirmed=dict(order=1))
+        facts=[dict(id=x,type='claim',text=x,seen=dict(session='s1',actor='001',step=1,order=[1,'001',1])) for x in ('brief','read-first','lead-first','index','withheld')],
+        articles=[dict(id='article-'+x,title=x,lead=x,body=[dict(text=x,facts=[x])],links=[],last_confirmed=dict(session='s1',actor='001',step=1,order=[1,'001',1]))
                   for x in ('brief','read-first','lead-first','withheld')])
     seed=next(n for n in range(1000) if {f['id'] for f in draw(full,n)[0]['facts']}=={'brief','read-first','lead-first','index'})
     hashes=export(package,full,seed)
