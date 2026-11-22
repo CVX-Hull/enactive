@@ -279,6 +279,7 @@ test('delivered-knowledge/2 names its commit and repository, and the entry and m
     ['article with a non-string link',v => { v.articles[0].links = [1]; }],['article with last_confirmed null',v => { v.articles[0].last_confirmed = null; }],
     ['fact seen carrying world',v => { v.facts[0].seen = {world:'unexpected'}; }],
     ['fact seen with blank session',v => { v.facts[0].seen.session = '   '; }],
+    ['fact seen with NEL session',v => { v.facts[0].seen.session = '\u0085'; }],
     ['article last_confirmed carrying world',v => { v.articles[0].last_confirmed = {world:'unexpected'}; }],
     ['article last_confirmed with blank actor',v => { v.articles[0].last_confirmed.actor = ' \t '; }],
     ['coverage carrying world',v => { v.coverage.world = 'farm'; }],['coverage of another schema',v => { v.coverage.schema = 'curator-coverage/1'; }],

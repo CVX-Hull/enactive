@@ -181,8 +181,9 @@ class LiveKnowledge:
                     os.replace(*listing)
                 else:
                     listing[1].unlink(missing_ok=True)
-            except OSError:
+            except OSError as error:
                 listing[0].unlink(missing_ok=True)
+                print(f'campaign_player: live knowledge list rollback failed: {type(error).__name__}: {error}',file=sys.stderr)
 
 
 def configured_estimate(amounts) -> float | None:

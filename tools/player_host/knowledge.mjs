@@ -9,7 +9,7 @@ export function versionNumber(version) {
 
 // The public record forms `tools/knowledge_export.py` writes; `harness/player/knowledge.py` checks the same ones.
 const filled = value => typeof value === 'string' && value.length > 0;
-const nonblank = value => typeof value === 'string' && value.trim().length > 0;
+const nonblank = value => typeof value === 'string' && value.replace(/[\s\u001c-\u001f\u0085]/g, '').length > 0;
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const keys = (value, required, optional = []) => Object.keys(value).every(key => required.includes(key) || optional.includes(key))
   && required.every(key => Object.hasOwn(value, key));

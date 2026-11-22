@@ -797,7 +797,7 @@ export async function runHost(options) {
         } catch {}
       }
     });
-    const ended = () => { if (updateReader === child) updateReader = null; failUpdateReads(); };
+    const ended = () => { if (updateReader !== child) return; updateReader = null; failUpdateReads(); };
     child.on('error', ended);
     child.on('exit', ended);
     child.stdin.on('error', () => {});
