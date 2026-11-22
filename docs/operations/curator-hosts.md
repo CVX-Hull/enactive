@@ -305,12 +305,42 @@ The kernel also limits each process to 1,800 CPU seconds, 64 MiB per file and 25
   the per-file limit alone. Between two checks a session can pass the bound by what it
   writes in a tenth of a second.
 
+## Post-admission boundary grooming
+
+After a live admission closes and its trace store is sealed, run one grooming
+session with the same configuration file that started its curator runner.
+
+```sh
+.venv/bin/python -m tools.curator_host.groom --run RUN --config CONFIG --out OUT [--cap-usd USD]
+```
+
+`RUN` is the directory containing `session.sqlite3`. It must match the configured
+repository's last published admission (`CONFIG` supplies `knowledge_root`). Choose a
+fresh `OUT` inside `.runtime`, outside both the knowledge worktree and `RUN`. Use
+`--runtime-root PATH` if the runner used a different runtime root. The grooming cap
+defaults to `session_cap_usd` if set, or `cap_usd` from `CONFIG`. `--cap-usd USD`
+overrides that cap for this session.
+
+Read `OUT/grooming-summary.json` for the status, published versions, cost and
+relative path to the session summary when available. Exit `0` means the session
+sealed with settled accounting, a resolved publication status (including a clean
+rejection that leaves the published version unchanged), no cap stop and clean
+process cleanup, or the repository had no published admission and grooming was
+skipped. Exit `1` records a failed run (including unresolved publication or a
+cap stop). Exit `2` reports a refusal to start, including when the supplied run
+differs from the last published admission.
+
 ## Zero-spend grooming verification
 
 `tests/test_curator_host.py::test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact`
 runs the real Node host, proxy, gate and (on macOS) Seatbelt session runner against
 `tests/curator_stand_in.py`. Its positive and negative cases cover the
 [session publication contract](../design/curator-session.md#admission-and-grooming).
+`tests/test_curator_runner.py::test_boundary_grooming_files_game_facts_and_keeps_world_facts_after_live_windows`
+publishes two live windows from a growing synthetic trace, seals the trace and
+invokes the boundary-grooming CLI. It checks that grooming publishes articles over
+the game-scoped facts, preserves the standalone world-scoped facts and settles the
+proxy at zero dollars.
 The provider, token counts and charges are synthetic; it uses only
 loopback and no real credentials. Native host unit tests run with `npm test` in
 `tools/curator_host`. No paid run or store-size measurement is implied.

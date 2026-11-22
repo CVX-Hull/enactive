@@ -1,4 +1,5 @@
 """The memory screen's free checks on fixtures built here: a knowledge repository, a two-run lineage and the cut (#590)."""
+from dataclasses import replace
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -7,8 +8,8 @@ import pytest
 
 from harness.curator.knowledge import Repository
 from tools.memory_screen_checks import (CutModel, ScheduleError, StoreError, check_schedule, covered_turns, cut_report,
-    fact_history, main, read_lineage, read_versions, render_replay, replay, schedule_coverage, schedule_from_runner, simulate,
-    store_report, summarise, turn_starts)
+    fact_history, main, read_lineage, read_versions, recorded_deliveries_for_run, render_replay, replay, schedule_coverage,
+    schedule_from_runner, simulate, store_report, summarise, turn_starts)
 
 SESSION = 'c' * 32
 RECORD = '5' * 32
@@ -100,6 +101,10 @@ class Trace:
     def write(self, directory: Path) -> None:
         directory.mkdir(parents=True)
         (directory / 'host.jsonl').write_text(''.join(json.dumps(event) + '\n' for event in self.events))
+
+    def deliver(self, kind: str, receiving: str | None, text: str, *, event_type: str = 'knowledge-delivery',
+                **fields) -> None:
+        self.events.append(dict(type=event_type, kind=kind, receiving_player_request_id=receiving, text=text, **fields))
 
 
 def lineage(root: Path) -> tuple[list[Path], str, str]:
@@ -202,6 +207,129 @@ def test_cut_report_and_the_command(tmp_path, capsys):
     assert 'sessions at admission boundaries only: briefing at run-b/001 request 1 of 4' in capsys.readouterr().out
     assert main(['cut', *map(str, runs), '--lags', '10', '--json']) == 0
     assert json.loads(capsys.readouterr().out)['model']['turn_tokens'] == 950
+
+
+# R-REGRESSION: fixtures check the cut's token thresholds and delivery accounting without running the game.
+def test_cut_marks_count_tokens_above_the_briefing():
+    images = list(range(57))
+    model = CutModel(head_tokens=5000, turn_tokens=1000, high_mark=60000, low_mark=20000, image_peak=99)
+    plain = simulate(images, model, 1)
+    briefed = simulate(images, model, 1, briefing_tokens=10000)
+    static = replace(model, briefing_tokens=10000)
+    assert simulate(images, static, 1) == briefed
+    assert simulate(images, static, 1, briefing_tokens=0) == plain
+    assert all(row['freed'] is None for row in briefed[:56])
+    assert (plain[55]['prompt'], briefed[55]['prompt']) == (60000, 70000)
+    assert (plain[56]['freed'], briefed[56]['freed']) == (41, 41)
+    assert (plain[56]['prompt'], briefed[56]['prompt']) == (20000, 30000)
+
+
+def test_first_request_delivery_adds_to_initial_prompt_and_cache_write():
+    model = CutModel()
+    rows = simulate([0, 1], model, None, delivery_tokens=[17, 0])
+    assert [(row['prompt'], row['write']) for row in rows] == [(4517, 4517), (5467, 950)]
+    with pytest.raises(ValueError, match='one entry per request'):
+        simulate([0, 1], model, None, delivery_tokens=[17])
+
+
+def test_recorded_briefings_start_fresh_at_handoff(tmp_path):
+    run = tmp_path / 'run'
+    first, successor = Trace('a' * 32, BASE), Trace('b' * 32, BASE + 100)
+    first.deliver('briefing', 'request-1', 'x' * 120, version='v0')
+    first.call('player_handoff', dict(summary='Continue the task.'), dict(kind='handoff'))
+    first.write(run / 'actors' / '001')
+    successor.deliver('briefing', 'request-1', 'é' * 16000, version='v3')
+    successor.operate('successor-op')
+    successor.write(run / 'actors' / '002')
+
+    report = cut_report([run], CutModel(), [10], recorded_deliveries=True)
+    assert report['deliveries'] == dict(bytes_per_token=4, briefing_tokens_by_actor={'001': 30, '002': 8000},
+        update_count=0, update_tokens=0, reminder_count=0, reminder_tokens=0, unmatched_deliveries=0)
+    _, plain, lagged = report['rows']
+    assert (plain['prompt_p50'], plain['prompt_max'], plain['cache_write']) == (4530, 12500, 17030)
+    assert lagged == dict(plain, row='lag 10')
+
+
+def test_deliveries_use_the_player_turn_of_a_retried_attempt(tmp_path):
+    trace = Trace('a' * 32, BASE)
+    trace.operate('first')
+    trace.deliver('update', 'request-2', 'abcde', outcome='delivered')
+    trace.events.append(dict(type='request-start', request_id='request-2', logical_request_id='request-2'))
+    trace.events.append(dict(type='request-start', request_id='request-3', logical_request_id='request-2'))
+    trace.deliver('reminder', 'request-4', 'abc')
+    trace.events.append(dict(type='request-start', request_id='request-4', logical_request_id='request-4'))
+    run_dir = tmp_path / 'run'
+    trace.write(run_dir / 'actors' / '001')
+    run, = read_lineage([run_dir])[0]
+    briefing, extras, counts = recorded_deliveries_for_run(run)[trace.actor]
+    assert (briefing, extras) == (0, [0, 2, 1])
+    assert counts == dict(update_count=1, update_tokens=2, reminder_count=1, reminder_tokens=1, unmatched_deliveries=0)
+
+
+def test_recorded_deliveries_are_written_at_the_receiving_request_and_cut_with_it(tmp_path, capsys):
+    trace = Trace('a' * 32, BASE)
+    trace.deliver('briefing', 'request-1', 'x' * 120, version='v0')
+    trace.operate('op-1')
+    trace.deliver('update', 'request-2', 'é' * 201, outcome='delivered', previous_version='v0', version='v1')
+    trace.operate('op-2')
+    trace.deliver('update', 'request-3', 'x' * 4000, outcome='refused')
+    trace.operate('op-3')
+    trace.deliver('update', 'request-4', 'x' * 4000, outcome='delivered', event_type='knowledge-undelivered')
+    trace.operate('op-4')
+    trace.deliver('reminder', 'request-5', 'r' * 801, version='v1')
+    trace.operate('op-5')
+    trace.operate('op-6')
+    trace.deliver('update', 'request-7', 'x' * 4000, outcome='delivered')
+    trace.events.append(dict(type='request-start', request_id='recall-1', request_role='recall'))
+    trace.deliver('reminder', 'recall-1', 'x' * 4000)
+    run_dir = tmp_path / 'run'
+    trace.write(run_dir / 'actors' / '001')
+    run, = read_lineage([run_dir])[0]
+    briefing, extras, counts = recorded_deliveries_for_run(run)[trace.actor]
+    assert (briefing, extras) == (30, [0, 101, 0, 0, 201, 0])
+    assert counts == dict(update_count=1, update_tokens=101, reminder_count=1, reminder_tokens=201, unmatched_deliveries=2)
+
+    model = CutModel(coverage='schedule', high_mark=9500, low_mark=6400)
+    coverage = schedule(change(BASE + 5.5, '001', 4, 'op-4'))
+    limits, = covered(run_dir, *coverage['changes'])[0].values()
+    assert limits == [0, 0, 0, 0, 0, 4]
+    rows = simulate(list(range(6)), model, None, limits, briefing_tokens=briefing, delivery_tokens=extras)
+    assert [(row['prompt'], row['write']) for row in rows] == [
+        (4530, 4530), (5581, 1051), (6531, 950), (7481, 950), (8632, 1151), (5480, 1580)]
+    assert [row['freed'] for row in rows] == [None, None, None, None, None, 4]
+
+    path = tmp_path / 'schedule.json'
+    path.write_text(json.dumps(coverage))
+    args = ['cut', str(run_dir), '--coverage', 'schedule', '--schedule', str(path), '--high-mark', '9500',
+            '--low-mark', '6400', '--recorded-deliveries']
+    assert main([*args, '--json']) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report == cut_report([run_dir], model, [], coverage, recorded_deliveries=True)
+    assert report['deliveries'] == dict(bytes_per_token=4, briefing_tokens_by_actor={'001': 30}, **counts)
+    baseline = cut_report([run_dir], model, [], coverage)
+    assert 'deliveries' not in baseline and baseline['rows'][0] == report['rows'][0]
+    _, plain, cut = report['rows']
+    assert (plain['prompt_max'], plain['cache_write']) == (9582, 9582)
+    assert (cut['prompt_max'], cut['cache_write'], cut['cuts'], cut['rewritten']) == (8632, 10212, 1, 1580)
+    assert baseline['rows'][2]['cuts'] == 0
+    assert main(args) == 0
+    output = capsys.readouterr().out
+    assert 'recorded deliveries (4 bytes per token) | updates 1 (101 tokens) | reminders 1 (201 tokens)' in output
+    assert '2 without a matching player request' in output
+    assert 'briefing tokens by actor: 001 = 30' in output
+
+
+def test_recorded_deliveries_refuse_a_nonzero_static_briefing(tmp_path, capsys):
+    run = admission(tmp_path, [['op-1']])
+    conflict = '--recorded-deliveries requires --briefing-tokens to be zero'
+    with pytest.raises(ScheduleError, match=conflict):
+        cut_report([run], CutModel(briefing_tokens=5000), [10], recorded_deliveries=True)
+    with pytest.raises(SystemExit) as error:
+        main(['cut', str(run), '--recorded-deliveries', '--briefing-tokens', '5000'])
+    assert error.value.code == 2
+    result = capsys.readouterr()
+    assert not result.out and conflict in result.err
+    assert main(['cut', str(run), '--recorded-deliveries', '--briefing-tokens', '0']) == 0
 
 
 def article(identity='article', title='A subject', **extra):

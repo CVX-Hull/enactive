@@ -18,16 +18,17 @@ import pytest
 
 from harness.curator import runner as live
 from harness.curator import sandbox
-from harness.curator.gate import COVERAGE, journal as gate_journal
+from harness.curator.gate import COVERAGE, current, gate, journal as gate_journal
 from harness.curator.knowledge import Repository
 from harness.curator.runner import ActorSteps, Outcome, Reading, Runner, Settings, TagLook, choose, covered
 from harness.curator.session import SessionConfig, SessionError, run_session
 from harness.curator.window import Window
 from harness.trace.snapshot import BoundExceeded, ReadRefused, SnapshotError
 from harness.trace.stores import CURATOR_READ_LOCK, sealed
+from tests import curator_stand_in
 from tests.curator_stand_in import StandIn
 from tests.curator_trace import SESSION_ID, LiveWriter, _Writer, make_long_session, record_package
-from tools.curator_host import live_runner, shadow
+from tools.curator_host import groom, live_runner, shadow
 
 RUN = 'run'
 SETTINGS = Settings(trigger_steps=20, ceiling_steps=40, poll_seconds=15, watch_seconds=60)
@@ -988,6 +989,168 @@ def test_a_host_that_cannot_be_resolved_is_reported_by_the_process(tmp_path, mon
     assert outcome.stop.startswith('host-unavailable: ') and live.classify(outcome) == ('host-unavailable', False, False)
 
 
+def grooming_args(run: Path, config: Path, runtime: Path, out: Path) -> list[str]:
+    return ['--run', str(run), '--config', str(config), '--runtime-root', str(runtime), '--out', str(out)]
+
+
+@pytest.fixture
+def grooming_run(tmp_path, monkeypatch):
+    runtime = tmp_path/'runtime'
+    run = make_long_session(tmp_path/'runs', 'live-admission', steps=1, actors=('001',))
+    config = runner_config(tmp_path, upstream='http://127.0.0.1:1')
+    repo = Repository(runtime/'knowledge'/'live', shadow.GAME)
+    out = runtime/'grooming'
+
+    def unexpected(*args, **kwargs):
+        pytest.fail('grooming preflight must not resolve credentials or host tools, or start a session')
+
+    for name in ('route_key', 'host_tools', 'run_one'):
+        monkeypatch.setattr(shadow, name, unexpected)
+    return repo, run, out, grooming_args(run, config, runtime, out)
+
+
+def publish_admission(repo: Repository, submission: Path, name: str) -> None:
+    repo.ensure()
+    submission.mkdir()
+    kind = dict(schema='curator-type/2', name='control', description='what an input does',
+                fields=[], identity=[], reason='Describe a control')
+    (submission/'submission.json').write_text(json.dumps(dict(
+        schema='curator-submission/1', base_version='v0', summary='admission type',
+        changes=[dict(op='add_type', type=kind)])))
+    verdict = gate(repo, submission, session_id='admission', window_frames={}, session_kind='admission',
+                   coverage=dict(schema=COVERAGE, session=name, actor='001', last_step=1))
+    assert verdict['status'] == 'published', verdict
+
+
+def test_boundary_grooming_skips_a_repository_without_a_published_admission(grooming_run, capsys):
+    repo, run, out, args = grooming_run
+    assert repo.ensure() == 'v0'
+    assert groom.main(args) == 0
+    result = json.loads((out/'grooming-summary.json').read_text())
+    assert result == dict(schema='curator-boundary-grooming/1', status='skipped', reason='no-published-admission',
+                          run=run.name, knowledge_root=str(repo.path.parent), published_before='v0', published_after='v0',
+                          cost_usd='0', summary=None)
+    assert 'skipped' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('case, message', [
+    ('mismatch', 'other-admission'), ('missing-repo', 'existing knowledge repository'),
+    ('journal', 'unsupported active gate journal'), ('out-exists', 'fresh output directory'),
+    ('out-outside', '--out must be inside'), ('out-in-run', '--out must be outside --run'),
+    ('out-in-repo', 'outside the knowledge worktree'),
+    ('cap-zero', '--cap-usd must be positive'), ('cap-negative', '--cap-usd must be positive'),
+    ('missing-store', 'missing store'), ('wal', 'un-checkpointed write-ahead log'),
+    ('unreadable-store', 'file is not a database'),
+])
+def test_boundary_grooming_refuses_invalid_inputs_before_resolving_the_host(grooming_run, tmp_path, capsys, case, message):
+    repo, run, out, args = grooming_run
+    db = run/'session.sqlite3'
+    if case == 'mismatch':
+        publish_admission(repo, tmp_path/'submission', 'other-admission')
+    elif case != 'missing-repo':
+        repo.ensure()
+    if case == 'journal':
+        repo.state.mkdir()
+        (repo.state/'gate.jsonl').write_text('{}\n')
+    elif case == 'out-exists':
+        out.mkdir()
+    elif case == 'out-outside':
+        out = tmp_path/'outside'
+        args[-1] = str(out)
+    elif case == 'out-in-run':
+        runtime_run = make_long_session(out.parent/'runs', 'live-admission', steps=1, actors=('001',))
+        args[1] = str(runtime_run)
+        out = runtime_run/'grooming'
+        args[-1] = str(out)
+    elif case == 'out-in-repo':
+        out = repo.path/'grooming'
+        args[-1] = str(out)
+    elif case in ('cap-zero', 'cap-negative'):
+        args.extend(['--cap-usd', '0' if case == 'cap-zero' else '-1'])
+    elif case == 'missing-store':
+        db.unlink()
+    elif case == 'wal':
+        db.with_name('session.sqlite3-wal').write_bytes(b'uncheckpointed')
+    elif case == 'unreadable-store':
+        db.write_bytes(b'not a SQLite database')
+    assert groom.main(args) == 2
+    assert message in capsys.readouterr().err
+    assert not (out/'grooming-summary.json').exists()
+    if case == 'missing-repo':
+        assert not repo.path.exists()
+
+
+@pytest.mark.parametrize('changes, reason', [
+    ({}, None),
+    (dict(unresolved=True, verdicts=[dict(operation='submission', status='unknown')], published_after=None), 'unresolved-result'),
+    (dict(stopped_by_cap=True), 'cap-reached'),
+    (dict(stopped_by_cap=True, proxy=dict(settled=True, revoked=True, breaches=0)), 'proxy-revoked-or-breached'),
+    (dict(proxy=dict(settled=False, revoked=False, breaches=0)), 'proxy-unsettled'),
+    (dict(proxy=dict(settled=True, revoked=True, breaches=0)), 'proxy-revoked-or-breached'),
+    (dict(proxy=dict(settled=True, revoked=False, breaches=1)), 'proxy-revoked-or-breached'),
+    (dict(session_state='aborted'), 'session-not-sealed'),
+    (dict(sandbox=dict(survivors=[42])), 'cleanup-unconfirmed'),
+    (dict(run_state='error: test failure'), 'error: test failure'),
+])
+def test_boundary_grooming_freezes_the_session_and_reports_its_outcome(grooming_run, tmp_path, monkeypatch, changes, reason):
+    repo, run, out, args = grooming_run
+    publish_admission(repo, tmp_path/'submission', run.name)
+    host = dict(test_host=True)
+    monkeypatch.setattr(shadow, 'host_tools', lambda: host)
+
+    def route_key(upstream, runtime):
+        assert upstream == 'http://127.0.0.1:1' and runtime == out.parent
+        return shadow.LOOPBACK_KEY
+
+    monkeypatch.setattr(shadow, 'route_key', route_key)
+    verdicts = [dict(operation='submission', status='rejected', diagnostics=['test verdict'])]
+    session = dict(dict(run_state='completed', session_state='sealed', verdicts=verdicts, published_after='v1',
+                        proxy=dict(settled=True, revoked=False, breaches=0), sandbox=dict(survivors=[]), cost_usd='0.07'),
+                   **changes)
+    relative = f'boundary/groom-{run.name}/summary.json'
+
+    def run_one(**kwargs):
+        assert kwargs['arm_name'] == 'terra' and kwargs['host'] is host and kwargs['key'] == shadow.LOOPBACK_KEY
+        assert kwargs['trace'] == run and kwargs['repo'].path == repo.path and kwargs['memory'] is None
+        assert kwargs['window'] == Window() and kwargs['session_kind'] == 'grooming'
+        assert kwargs['cap'] == Decimal('0.25') and kwargs['model_config']['budget_usd'] == 0.25
+        assert kwargs['config_path'].parent == out/'host-config' == kwargs['config_dir']
+        assert json.loads(kwargs['config_path'].read_text()) == kwargs['model_config']
+        assert kwargs['model_config']['wall_seconds'] == kwargs['wall_seconds'] - 30
+        assert kwargs['model_config']['model']['maxTokens'] == kwargs['max_output_tokens']
+        assert kwargs['out']/kwargs['lineage']/kwargs['name']/'summary.json' == out/relative
+        shadow._write(out/relative, session)
+        return session
+
+    monkeypatch.setattr(shadow, 'run_one', run_one)
+    assert groom.main([*args, '--cap-usd', '0.25']) == (0 if reason is None else 1)
+    result = json.loads((out/'grooming-summary.json').read_text())
+    assert result == dict(schema='curator-boundary-grooming/1', status='completed' if reason is None else 'failed',
+                          reason=reason, run=run.name, knowledge_root=str(repo.path.parent), cap_usd='0.25',
+                          published_before='v1', published_after=session['published_after'], cost_usd='0.07',
+                          verdicts=session['verdicts'], session_state=session['session_state'], proxy=session['proxy'],
+                          sandbox=session['sandbox'], summary=relative)
+
+
+def test_boundary_grooming_writes_summary_if_published_lookup_fails_after_session_error(grooming_run, tmp_path, monkeypatch):
+    repo, run, out, args = grooming_run
+    publish_admission(repo, tmp_path/'submission', run.name)
+    monkeypatch.setattr(shadow, 'host_tools', lambda: dict(test_host=True))
+    monkeypatch.setattr(shadow, 'route_key', lambda upstream, runtime: shadow.LOOPBACK_KEY)
+
+    def fail_session(**kwargs):
+        def broken_published(self):
+            raise ValueError('unreadable repository state')
+        monkeypatch.setattr(Repository, 'published', broken_published)
+        raise RuntimeError('proxy closed early')
+
+    monkeypatch.setattr(shadow, 'run_one', fail_session)
+    assert groom.main([*args, '--cap-usd', '0.25']) == 1
+    result = json.loads((out/'grooming-summary.json').read_text())
+    assert result['status'] == 'failed' and result['reason'] == 'error: RuntimeError: proxy closed early'
+    assert result['published_before'] == 'v1' and result['published_after'] is None and result['summary'] is None
+
+
 INSTALLED = (shadow.HOST_DIR/'node_modules').is_dir() and shutil.which('node') is not None
 native_host = pytest.mark.skipif(not INSTALLED or sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists(),
                                  reason='Seatbelt lane: macOS with the curator host installed (npm ci in tools/curator_host)')
@@ -1017,3 +1180,76 @@ def test_the_process_runs_windows_through_the_proxy_and_the_stand_in_and_reports
     assert summary['window'] == dict(session='live', actor='001', first=1, last=4) and summary['cap_usd'] == '0.5'
     restarted = live_runner.Sessions(tmp_path/'runner', config, repo, shadow.LOOPBACK_KEY)
     assert restarted.spent == sessions.spent  # the spend already counted survives a restart
+
+
+@native_host
+def test_boundary_grooming_files_game_facts_and_keeps_world_facts_after_live_windows(tmp_path, monkeypatch):
+    scripted = curator_stand_in.script
+
+    def scoped_submissions(messages, *args, **kwargs):
+        calls = scripted(messages, *args, **kwargs)
+        for tool, params in calls or []:
+            if tool != 'write_file' or not params['path'].endswith('/submission.json'):
+                continue
+            submission = json.loads(params['content'])
+            changes = submission['changes']
+            if params['path'].startswith('submissions/grooming/'):
+                changes[0]['article']['body'][0]['facts'] = ['f1', 'f2']
+            else:
+                number = int(submission['base_version'][1:]) + 1
+                game_fact = changes[-1]['fact']
+                game_fact.update(id=f'f{number}', text=f'observed control {number}')
+                world_fact = dict(game_fact, id=f'world-f{number}', text=f'observed place {number}',
+                                  scope=dict(game=shadow.GAME, level='world'))
+                submission['changes'] = [*(changes if number == 1 else changes[-1:]), dict(op='add_fact', fact=world_fact)]
+            params['content'] = json.dumps(submission)
+        return calls
+
+    monkeypatch.setattr(curator_stand_in, 'script', scoped_submissions)
+    runtime, run = tmp_path/'runtime', tmp_path/'live-admission'
+    out = runtime/'grooming'
+    with StandIn(cost=0) as stand_in:
+        config_path = runner_config(tmp_path, upstream=stand_in.url, session_cap_usd='0.5', trigger_steps=2,
+                                    ceiling_steps=2, host=dict(max_requests=10, max_output_tokens=4096, wall_seconds=120))
+        config = live_runner.read_config(config_path, runtime)
+        repo = Repository(config['knowledge_root'], shadow.GAME)
+        repo.ensure()
+        directory = tmp_path/'runner'
+        sessions = live_runner.Sessions(directory, config, repo, shadow.LOOPBACK_KEY)
+        with LiveWriter(run) as writer:
+            record_package(run, labels=dict(world='pond', lineage='pond-lineage', admission=1))
+            runner = Runner(directory, run.name, snapshot=live.staged(run), session_call=sessions,
+                            look=TagLook(repo), settings=config['settings'])
+            writer(op='new_actor')
+            for version in ('v1', 'v2'):
+                for _ in range(2):
+                    writer(op='step')
+                assert runner.poll()
+                assert repo.published() == version, status_of(runner)
+                assert {f['scope']['level'] for f in repo.facts(version)} == {'game', 'world'}
+            examined = status_of(runner)['examined']
+            assert [(e['window']['first'], e['window']['last'], e['outcome']) for e in examined] == [
+                (1, 2, 'accepted'), (3, 4, 'accepted')]
+            assert writer(op='close')['wal'] == 0
+            assert not runner.poll() and status_of(runner)['stop_reason'] == 'store-closing'
+        assert sessions.spent == 0
+        admission = repo.provenance()['last_admission']
+        assert admission['coverage'] == dict(schema=COVERAGE, session=run.name, actor='001', last_step=4)
+        assert len(admission['citations']) == 2
+        assert groom.main(grooming_args(run, config_path, runtime, out)) == 0
+        assert len(stand_in.requests) == 9
+
+    result = json.loads((out/'grooming-summary.json').read_text())
+    assert (result['status'], result['published_before'], result['published_after']) == ('completed', 'v2', 'v3')
+    assert result['session_state'] == 'sealed' and result['cap_usd'] == '0.5' and Decimal(result['cost_usd']) == 0
+    assert result['proxy']['settled'] is True and not result['proxy']['revoked'] and result['proxy']['breaches'] == 0
+    assert result['sandbox']['survivors'] == [] and [v['status'] for v in result['verdicts']] == ['published']
+    session = json.loads((out/result['summary']).read_text())
+    assert session['session_kind'] == 'grooming' and session['window'] is None and session['run_state'] == 'completed'
+    assert repo.published() == 'v3' and repo.provenance()['last_admission'] == admission
+    facts = {f['id']: f for f in repo.facts() if current(f)}
+    assert set(facts) == {'f1', 'f2', 'world-f1', 'world-f2'}
+    assert all(f['schema'] == 'curator-fact/4' for f in facts.values())
+    assert {f['id']: f['scope'] for f in facts.values() if f['scope']['level'] == 'world'} == dict.fromkeys(
+        ('world-f1', 'world-f2'), dict(game=shadow.GAME, level='world', world='pond'))
+    assert {f for a in repo.articles() if current(a) for claim in a['body'] for f in claim['facts']} == {'f1', 'f2'}

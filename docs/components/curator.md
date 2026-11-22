@@ -11,8 +11,8 @@ The player and computer do not import curator code. The runner supports windowed
 sessions beside an admission. Live evidence is partial ([first paid live run](../acceptance/2026-11-21-live-curator-run-859.md)):
 full multi-window and handoff behavior in real play remains unverified beyond offline tests and the
 [stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md).
-Publications during an admission leave the running actor on its
-[frozen knowledge export](../contracts/player-host.md#delivered-knowledge-and-recall).
+The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
+with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
 
 ## Internal responsibilities
 
@@ -32,6 +32,7 @@ Publications during an admission leave the running actor on its
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/curator-memory-study-protocol-revised.md#limitations) records that exposure. |
 | [Curator runner](../../harness/curator/runner.py) | Window triggers, the durable record of examined ranges, publication watching, covered prefix and lag, stops, and status. [Runner windows](#runner-windows) |
 | [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/1` file, sessions through the shadow runner's proxy under the runner's cap, its own knowledge repository, signal handling and [delivery to a running actor](#delivery-to-a-running-actor) |
+| [Boundary grooming](../../tools/curator_host/groom.py) (an adapter) | Runs one grooming session against an existing live runner repository and the sealed trace of its last published admission. Writes a `curator-boundary-grooming/1` summary. |
 
 ## Projection and evidence readers
 
@@ -134,9 +135,13 @@ gives the read position, backlog, unexamined ranges and status fields. Later ste
 must be counted from the sealed trace. The [schedule replay](../contracts/measurement-tools.md#runner-records-and-schedule-replay)
 maps this prefix to player requests for the [proposed context cut](../design/coverage-gated-context-cut.md).
 
-The live runner runs admission sessions only, against its configured knowledge
-repository. Handoff does not start grooming. If nothing is published, grooming still
-uses the last published admission, if one exists, under the [grooming rules](../design/curator-session.md#admission-and-grooming).
+The live runner runs admission sessions against its configured knowledge repository.
+After the admission's trace is sealed, the operator can start
+[boundary grooming](../operations/curator-hosts.md#post-admission-boundary-grooming)
+on that repository using the trace of its last published admission. A repository
+with no published admission yields a skipped summary. Grooming uses the
+[last admission's citations](../design/curator-session.md#admission-and-grooming),
+including citations accumulated across published windows of that admission.
 The [first-run rationale](../design/live-curator-integration.md#what-a-first-live-run-measures)
 explains which lag, cost, staging and player-pace questions require real play.
 
