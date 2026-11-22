@@ -16,10 +16,11 @@ import json
 import math
 from pathlib import Path
 
-from .curator import read_file
-from .knowledge import ID_LIMIT, LIST_LIMIT
+from .catalog import ID_LIMIT, LIST_LIMIT
+from .curator import read_file, read_rooted
 
 SCHEMA = 'curator-runner-status/1'
+OWN = ('curator-runner', 'status.json')  # where the runner writes it in a run package
 UNKNOWN = 'unknown'
 STATES = ('polling', 'in-session', 'stopped', 'ended')
 
@@ -131,11 +132,22 @@ def projection(document: dict) -> dict:
 
 
 def status(path: Path | None, now: float) -> dict:
-    """The route's payload: `source_status`, the bytes read (`snapshot`), when this read happened and the projection."""
+    """The payload of the configured status file. One in a run package's own place is read from that package's root."""
     if path is None:
         return dict(source_status='not_configured', snapshot=None, read_wall=now, status=None)
-    state, snapshot, data = read_file(path)
-    if state != 'available':
+    if path.parts[-2:] == OWN:
+        return run_status(path.parent.parent, now)
+    return payload(*read_file(path), now)
+
+
+def run_status(run_dir: Path, now: float) -> dict:
+    """The payload of a run package's own status file."""
+    return payload(*read_rooted(run_dir, *OWN), now)
+
+
+def payload(state: str, snapshot: dict | None, data: bytes | None, now: float) -> dict:
+    """The route's payload: `source_status`, the bytes read (`snapshot`), when this read happened and the projection."""
+    if state != 'available' or data is None:
         return dict(source_status=state, snapshot=snapshot, read_wall=now, status=None)
     try:
         document = json.loads(data.decode('utf-8'))

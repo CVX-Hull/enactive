@@ -61,7 +61,10 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | Route | Returns |
 | --- | --- |
 | `/api/view/runs` | One summary per known run: facts, state (`live` only for the run this viewer evaluates; `unfinished` for any other run whose store is still `live`, because its final pass never ran; otherwise `final`; `versions.state` and the summary's `state` stay the store's own `live` or `final`), outcome (hours, died, `censor_reason`), decisions, dollars, headline metrics, versions. Built by scanning record stores read-only and cached in memory. |
-| `/api/view/run/<run>/summary` | Facts, evaluator outcome, recorded `custodian_receipt`, Pause conditions (below), game state with provenance, findings, ladder, metrics with `source`, `count`, `denominator`, `missing`, and reader coverage with held-out validation status |
+| `/api/view/run/<run>/summary` | Facts, evaluator outcome, recorded `custodian_receipt`, Pause conditions (below), game state with provenance, findings, ladder, metrics with `source`, `count`, `denominator`, `missing`, and reader coverage with held-out validation status. It also has [`host_telemetry`, `curator_spend` and `boundary_grooming`](#host-telemetry-and-curator-spend) |
+| `/api/view/run/<run>/feed?after=&limit=` | The [story feed](#story-feed): steps with the player's stated intent, context cuts, knowledge updates and major findings in one order |
+| `/api/view/run/<run>/telemetry` | The [request series](#request-telemetry), context cuts and spend |
+| `/api/view/run/<run>/delivered-knowledge?version=&q=&scope=&after=&limit=` | The [knowledge versions exported for the player](#delivered-knowledge) and one version's articles and facts |
 | `/api/view/run/<run>/steps?after=&limit=` | Steps: `seq`, `decision`, `wall`, `kind`, `mode`, `game_time`, `source_id`, `frame_changed`, `dollars`, `keys` |
 | `/api/view/run/<run>/frame/<source_id>` | The original PNG (`image/png`), only after its SHA-256 matches the record |
 | `/api/view/run/<run>/tools` | Per-tool aggregates (calls, p50 and p95 latency, refused, errors, result bytes) and transitions `[from, to, n]` |
@@ -83,14 +86,185 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/curator-results?source=&after=&limit=&snapshot=` | One source’s recorded current submission/restore results and read-snapshot provenance (`spectator-frame/1`, below) |
 | `/api/view/frame/curator-session-sources?after=&limit=` | Operator-configured receipt labels |
 | `/api/view/frame/curator-session?source=&after=&limit=&snapshot=` | One terminal curator session receipt and its paged gate results |
-| `/api/view/frame/curator-runner` | The curator runner's status file, read at this request: how far the curator trails play (`spectator-frame/1`, [below](#curator-runner-status)) |
+| `/api/view/frame/curator-runner?run=` | A curator runner's status file, read at this request: how far the curator trails play (`spectator-frame/1`, [below](#curator-runner-status)) |
+
+### Host telemetry and curator spend
+
+`summary`, `feed` and `telemetry` project the run's `actors/*/host.jsonl` with the
+evaluator's own [trace](player-host-telemetry.md) parser when a request needs them. The
+[evaluation record](evaluation-record.md) stores none of it. A trace that is absent,
+unsupported, damaged, over 16 MiB, behind a symlink or of another session is no source:
+`host_telemetry` is `null`, and the other two routes use the evaluation record alone and
+say so in `source` (`host_trace` or `evaluation_record`). A last line still being written
+is ignored. The viewer parses the traces once for each state of the files.
+
+**Files of a run package.** The host traces, the delivered knowledge, the runner's status
+file and the curator sessions are opened from the run directory down, one path component
+at a time. A symlink at any component, the run directory included, or anything but a
+regular file, is unreadable. A read stops at 16 MiB. An operator-named file is read under
+the same limits and may not itself be a symlink; its directories are the operator's choice.
+
+`host_telemetry` has:
+
+- **Spend.** `reported_cost_usd` is the exact sum of the responses' provider-reported cost
+  and `spent_usd` the hosts' own totals, both as decimal text or `null`.
+  `player_requests` and `recall_requests` come from each actor's settlement, else from the
+  events read. `unpriced_requests` and `unpriced_recall_requests` count the request starts
+  without a priced response of the same actor and request ID, in flight or not, and are
+  never below what the events show, whatever a settlement claims.
+  `spend_complete` is true only when every directory under `actors/` has a readable trace,
+  every actor has settled, its settlement equals the events read, every start has a priced
+  response and every response a start. Otherwise the cost is a subtotal. A trace that
+  records no cost field has `null` unpriced counts and completeness. The summary's
+  `dollars` stays the configured-rate estimate.
+- **Routing.** `response_by_endpoint` counts responses by `reported_provider`, with
+  `unknown` for a response without a label. It is empty when the trace records none.
+  `latest_provider` is the label of the response that completed last by its own time.
+- **Context.** `context_cuts` has `applied`, `held_back` and the `latest` applied cut.
+  `token_summary` has the latest, median (`p50_prompt_tokens`) and largest prompt of the
+  player's own requests, and `cache_hit_share` over every response with usage, recall
+  included. A prompt is `input + cacheRead + cacheWrite`.
+- **Knowledge.** `knowledge_updates` has the `count` of versions delivered during play and
+  the `latest_version` the player holds.
+
+`curator_spend` sums the live curator sessions under `curator-runner/sessions/*/*` and is
+`null` without a session directory. It is the curator proxy's accounting, not the
+provider's: a charge is the reservation where the actual cost is unknown. A session counts
+its `spent_snapshot_usd` from a valid `curator-proxy-close/1` `proxy-close.json`, else the
+charged rows of its `proxy-ledger.jsonl`. A session whose ledger is also missing or
+unreadable states no amount, which is not zero, and `spent_usd` is `null` when none states
+one. `sessions_settled` are those whose closing file says settled with no
+unsettled request; `unsettled_requests` adds the closing files' counts and the ledger rows
+without a charge. `spend_complete` needs every session settled and nothing open. A
+request in flight when a session was cut off has no ledger row, so the sum can be low.
+
+`boundary_grooming` is what one operator-configured
+[grooming receipt](curator.md#boundary-grooming-summary-curator-boundary-grooming1) states.
+Grooming runs after an admission ends and writes outside its package, so the viewer reads
+only the file that `--curator-grooming FILE` (`FrameSources.curator_grooming`) names, and
+looks in no other directory. The receipt is shown only when its `run` is the summary's
+session or the admission's name under `curator-runner/sessions`, or the run's own name
+when there is no such session. `source_status` is `not_configured`, `available`,
+`other_run`, or why the file cannot be used (`missing`, `unreadable`, `too_large`, `empty`,
+`malformed` or `unsupported`). Only `available` has `status`, `reason`, `spent_usd` (proxy-accounted),
+`spend_complete` and the published versions. `spend_complete` needs an amount and a
+settled proxy, or a skip. No path of the receipt is served.
+
+### Story feed
+
+The feed is one list, sorted and paginated by each item's integer `order`; `after` and
+`next` are orders. An item's `id` is its identity and never depends on another item. A
+step, cut or update is identified by its actor and trace line (or the step number, without
+a trace) as an integer. A finding is identified by its kind, first step, source and
+payload as text, because the evaluator renumbers its events on every pass; a stall, whose
+payload grows while it lasts, by the first three. Findings that state exactly the same
+thing are numbered. A finding the evaluator adds late can move the `order` of other items
+but changes no `id`, and may appear behind a cursor. The page therefore re-reads the recent
+part of a live feed, and the whole feed once when the run is no longer live. A page also
+ends early at 3 MiB, with `next` set. `total` and `counts` (by `entry_kind`) cover the
+whole feed.
+
+Every item has `entry_kind`, `seq`, `exact_step`, `decision`, `step_decision`, `wall`,
+`source_id`, `mode` and `game_time`. `exact_step` is false when the entry made no step of
+its own; `seq` is then the latest step at or before that time, and `null` with the rest of
+the step's values before the first one. `decision` is the entry's own recorded one: the
+call's, as in the `calls` route, else its own step's, else `null`. `step_decision` is that
+of the step `seq` names, which numbers completed inputs and so differs from a call's
+request number; neither replaces the other.
+
+| `entry_kind` | Further fields |
+| --- | --- |
+| `step` | `tool`, `intent` (`intent_source` is `player_claim`), `keys`, `status` (`ok`, `error`, `refused` or `pending`), `latency_ms`, `arguments_preview`, the request's `reported_provider`, `reported_cost_usd` and token counts, the identifiers, and `result` (mechanical status, reason and receipt dispositions). One request may issue several calls, each carrying the request's cost |
+| `context_cut` | `outcome` (`applied` or `held_back`), `triggers`, `knowledge_version`, tokens and images before and after, `removed_turns`, `reason` |
+| `knowledge_update` | `knowledge_version`, `previous_version`, `outcome`, `reason`, `request_id`, `covered_step`, the counts the delivered text states, and `summary`. A refused update has `null` counts, never zero |
+| `finding` | `finding_kind` (`stall`, `death`, `custody_stop`, `handoff` or `run_end`), `seq_end`, `source`, `payload` |
+
+Intents are unverified player reports, at most 1,024 characters, with the omitted count.
+Arguments are bounded JSON text (2,048 characters). A run without a trace has steps, tool
+calls and findings only, with no intent, cost, cut or update.
+
+### Request telemetry
+
+`requests` lists each response, player and recall, with its `index`, `seq` (the latest
+step at or before it, or `null`), token counts,
+`reported_cost_usd` and, separately, the configured-rate `estimated_dollars`. `cuts` lists
+every context cut at the `index` of the request that carried it. Over 2,000 requests the
+series is thinned evenly, keeping the requests beside an applied cut;
+`requests_omitted` and `cuts_omitted` say how many are left out. `spend` repeats the
+player, limit and curator figures above.
+
+### Delivered knowledge
+
+The route browses the run package's own `delivered-knowledge.json` (`initial`, the version
+the run started with) and `curator-runner/delivered/vN.json`, in version order. It reads no
+curator repository, private export or withheld-unit file and runs no Git command. Files
+are bounded at 16 MiB. Each of `versions` has its counts, coverage stamp, the version the
+file itself records, and `status`; a file that is not a readable `delivered-knowledge/2`
+is listed with its status and no counts.
+
+- `version` defaults to the latest readable one. An unknown version is
+  `404 unknown_version`; one that cannot be read is `409 unsupported_knowledge`.
+  Without any file, `source_status` is `unavailable`.
+- `q` (at most 200 characters) matches case-insensitively in articles and facts. `scope`
+  is `all`, `world` or `game` and filters facts, which page by `after` and `limit`.
+  Articles are bounded, with `articles_omitted`.
+- A fact's `scope` and `known` are `null` and `scope_recorded` is false: the closed
+  [delivered form](player-host.md#delivered-knowledge-and-recall) carries neither, and a
+  field outside that form is not shown. `scope_counts` therefore counts every fact as
+  `unrecorded`, and a `world` or `game` filter lists none. A scope is never inferred from
+  a fact's text.
+- `anchor` is the step of this run that a `seen` or `last_confirmed` position names. It
+  resolves the actor's own step number, and only when the position's session is this run's
+  (its ID, or the name under `curator-runner/sessions`). A position of another admission,
+  or one this run never reached, has `null`.
+
+A listed version was exported for this run. Whether it reached the player is a feed
+`knowledge_update` whose `outcome` is `delivered`; what the player saw of it is the
+[recorded knowledge](#recorded-knowledge-and-public-reports) of that request. The page
+calls a version delivered only where that entry exists, and an exported snapshot with no
+delivery recorded otherwise.
+
+### The page: Mission Control
+
+The bar, three tabs and their fallbacks read only the routes above.
+
+- **Mission Control bar.** One row: the control path's status, the run picker, real spend
+  against the limit, prompt tokens and cuts, the knowledge version, the endpoint that
+  answered last and Pause. The picker selects a run by session, so two sessions may share
+  a run name. The prompt is the latest one while the playhead follows live, and the run's
+  median while it is in history or held. Pause is the same button in every state; it is
+  coloured only while a [Pause condition](#pause-conditions) is met, and its confirmation
+  repeats the selected run's figures only when that run is the session Pause would end.
+- **The control path's own frame** is shown in full unless the viewer works. While it does,
+  the frame is small, and it is hidden only while Watch has painted the same capture of the
+  same session. A newer capture that Watch is still decoding or could not decode,
+  scrubbing, holding the view, another tab or another run brings it back, and a viewer
+  outage shows it in full at once.
+- **Watch** is the default in both modes: the screen, a timeline with a lane for cuts,
+  updates and alerts, the story feed, and an inspector drawer that fetches a request's
+  context only when asked and never covers Pause. An alert, on the timeline and in the
+  feed, is a finding or a call that failed or was refused.
+- **Memory & Curator** shows the selected run's runner status and curator spend, the
+  exported versions with each recorded delivery's difference, and a reader whose citations
+  open Watch at their step. Other recorded sources are in a closed section.
+- **Diagnostics** shows spend, context, routing and custody, then the charts, tools, Pause
+  conditions, game state and findings. Calls, requests, metrics, readers and cross-run
+  views are closed sections that fetch nothing until opened.
+- **Spend** is three parts, each with its basis: player and recall (provider-reported), the
+  live curator and boundary grooming (proxy-accounted). A part that states no amount is
+  unavailable, not zero; grooming without a receipt is recorded outside the admission. The
+  combined figure names the parts in it and is marked partial unless all three are there
+  and closed; without player and recall there is none.
+
+A run without a trace, knowledge or curator says so in words. Nothing shows a figure that
+no record states. A panel whose single read failed repeats it when the viewer returns.
 
 ### Recorded browser entry
 
 The standalone viewer with `--recorded-page` serves the shared spectator page
 at `/recorded/` and its allowlisted assets under `/app/` and `/vendor/`. The
 page and existing viewer API stay on the same loopback origin. This mode reads
-existing evaluation stores and recorded sources and opens Run Overview. Its
+existing evaluation stores and recorded sources and opens Watch. Its
 browser code makes viewer requests only. The supervised gateway owns live status,
 native captures and Pause. See the [recorded viewer procedure](../operations/start-observe.md#recorded-browser-entry).
 
@@ -110,8 +284,8 @@ their own evidence.
 incomplete or invalid. When `spend_complete` is true and the amounts and counts
 are valid, the projection gives equal `reported_usd` and `spent_usd` as exact
 decimal strings, with `unpriced_requests` and `unpriced_recall_requests` as
-counts. Run Overview shows the provider subtotal and the unpriced counts when
-some charges remain unknown.
+counts. Diagnostics uses the host trace's figure and this one where there is no trace,
+and shows a subtotal and the unpriced counts when some charges remain unknown.
 The evaluator's `dollars` field remains the configured-rate estimate.
 
 ### Recorded knowledge and public reports
@@ -162,16 +336,15 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
   items/characters. The common 4 MiB ceiling still returns `413 response_too_large`;
   select a request or narrower entry/page instead of treating that as empty data.
 
-The Actor tab offers this reader alongside historical forgetting episodes. It
-supports native keyboard controls, focuses a selected snapshot entry after loading,
-refreshes at the existing five-second viewer cadence, uses escaped text and
-phone-width wrapping, and preserves the separate Live/Pause
-path. The existing hint list remains available. Richer curator, belief/scope,
-ontology, draft and program views remain outside this projection.
+Memory & Curator offers this reader under its recorded sources, beside the player's own
+records and the forgetting episodes. It supports native keyboard controls, focuses a
+selected snapshot entry after loading, refreshes at the existing five-second viewer
+cadence, uses escaped text and phone-width wrapping, and preserves the separate
+Live/Pause path. Ontology, draft and program views remain outside this projection.
 
 ### Recorded curator results
 
-The Curator tab reads only operator-configured result files. Repeat
+The *Curator results* source reads only operator-configured result files. Repeat
 `--curator-results LABEL=FILE` on the supervisor or standalone viewer CLI to select
 existing `gate.jsonl` files or immutable snapshots. Labels are unique, match
 `[A-Za-z0-9][A-Za-z0-9_.-]{0,127}` and are the only source selectors exposed to the
@@ -213,10 +386,9 @@ returns that label, `source_status`, `snapshot`, `items`, `total`, `next` and `l
 
 The reader serves no raw paths, briefs, transcripts, submission bodies, drafts,
 credentials or arbitrary repository files. It writes nothing, imports no curator runtime
-and sends nothing to the player or curator. The Curator tab provides source selection,
-result rows and detail with escaped content and keyboard controls. It has no view of the
-remaining session timeline, diffs, draft contents and current states, ontology or
-programs. A source change resets a stale selection; the control frame and Pause continue
+and sends nothing to the player or curator. The page provides source selection,
+result rows and detail with escaped content and keyboard controls. It reads no submission
+text, draft contents or current draft states. A source change resets a stale selection; the control frame and Pause continue
 on their own path. Fixture and rendered checks establish this reader's behavior only.
 
 ### Recorded curator sessions
@@ -250,10 +422,16 @@ The reader uses no producer lock, writes no records and makes no Git or provider
 `status.json` (`curator-runner-status/1`, owned by `harness/curator/runner.py`). The
 supervisor passes `<run>/curator-runner/status.json` when it starts the runner with
 `--curator-runner`, and passes nothing otherwise. The runner replaces the file atomically at polls and session boundaries. The file shows what the curator has
-done since the actor's delivered version; the actor's delivered version stays in the
-[knowledge view](#recorded-knowledge-and-public-reports), and the two are never merged.
+done since the actor's delivered version; what was delivered stays in the
+[delivered knowledge](#delivered-knowledge) and the
+[story feed](#story-feed), and the two are never merged.
 
-`GET /api/view/frame/curator-runner` opens the file for reading at each request, with
+With `?run=`, the route reads that run's own `curator-runner/status.json`; the configured
+file answers only for the live run, so a recorded run never shows another run's curator.
+An unknown run is `404`. The page always names the selected run.
+
+`GET /api/view/frame/curator-runner` opens the file for reading at each request, as a
+[file of the run package](#host-telemetry-and-curator-spend) where it is in one, with
 the same bounded regular-file read as recorded results, no lock and no write, and
 returns `source_status`, `snapshot` (`{sha256, bytes}` of the bytes read, or `null`),
 `read_wall` (when the viewer read it) and `status`:
@@ -314,10 +492,12 @@ them for tests.
     of the figures.
   - `actor_cadence` is `no-data`, with a `detail`, when no readable run has a game-time
     reading.
-  - Every other slot is a placeholder with `state: "not-yet-measured"`, a `phase` of
-    `curator-and-memory` or `programs-and-monitor`, and no numeric value. The page labels
-    it “not yet measured” and names the phase after “arrives in”
-    ([health response source](../../harness/viewer/frame.py)).
+  - `curator_lag` is `measured` when the configured runner status file states a lag. It then
+    has `source` (`recorded`), `lag`, `backlog`, `runner_state` and `latest_version`.
+    Otherwise it is `no-data` with a `detail`.
+  - Every other slot has `state: "not-yet-measured"`, a `phase` of `curator-and-memory` or
+    `programs-and-monitor`, and no numeric value
+    ([health response source](../../harness/viewer/frame.py)). The page shows none of them.
 - **Containers.** Every `data/containers/*.json` index (`container-index/1`), each manifest
   checked with `harness.trace.sidecar.validate`. The list pages like the run list: `items`
   (`id`, `kind`, `owner_role`, `lifecycle_state`, `retention_policy`, `evidence_study`,
@@ -355,7 +535,7 @@ The gateway forwards only the statuses listed under
 [Control path and viewer](#control-path-and-viewer), so a `500` from these
 routes reaches the page as "viewer unavailable".
 
-## Pause conditions (supervise)
+## Pause conditions
 
 The viewer computes these for the live run. They inform the owner and gate nothing.
 Each has a value, a threshold, `met`, and the dollars per minute that continuing costs.

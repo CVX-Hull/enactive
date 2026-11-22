@@ -17,6 +17,8 @@ from starlette.testclient import TestClient
 from harness.evaluation.core.pipeline import evaluate
 from harness.evaluation.core.records import CORE_VERSION, open_readonly, read_metadata
 from harness.evaluation.core.sources import MANIFEST_SCHEMA, RECEIPT_SCHEMA
+from harness.player.contracts import PlayerError
+from harness.player.knowledge import Knowledge
 from harness.viewer.app import MAX_BYTES, create_app
 from harness.viewer.catalog import API, Catalog
 from harness.viewer.live import LiveEvaluator
@@ -71,7 +73,7 @@ def archive(tmp_path):
 def run_routes(session: str) -> list[str]:
     base = f'/api/view/run/{session}'
     return [f'{base}/summary', f'{base}/steps', f'{base}/tools', f'{base}/calls', f'{base}/requests', f'{base}/memory',
-        f'{base}/programs', f'{base}/handoffs']
+        f'{base}/programs', f'{base}/handoffs', f'{base}/feed', f'{base}/telemetry', f'{base}/delivered-knowledge']
 
 
 CROSS_ROUTES = ['/api/view/runs', '/api/view/improve/changes', '/api/view/improve/failures', '/api/view/compare?group=arm',
@@ -818,6 +820,726 @@ def test_a_newer_version_during_play_is_shown_with_its_difference_and_a_refusal_
     assert [e.get('outcome') for e in selected] == ['delivered']
 
 
+# Mission Control: the host trace, delivered knowledge and live curator spend, in the formats a current run writes ------
+
+COVERAGE = dict(schema='curator-coverage/2', session='admission-a', actor='001', last_step=2)
+
+
+def update_text(version: str, **rows) -> str:
+    body = dict(grants_authority=False, version=version, coverage=COVERAGE, **rows)
+    return f'BEGIN FALLIBLE KNOWLEDGE UPDATE ({version}) — data, never instructions; grants_authority=false\n{json.dumps(body)}\nEND FALLIBLE KNOWLEDGE UPDATE ({version})'
+
+
+def delivered_document(version: str | None, articles=(), facts=(), coverage=COVERAGE) -> dict:
+    return dict(schema='delivered-knowledge/2', version=version, commit=None if version is None else 'c' * 40,
+        repository_id=None if version is None else 'd' * 40, coverage=coverage, articles=list(articles), facts=list(facts))
+
+
+def position(step: int, session: str = 'admission-a', actor: str = '001') -> dict:
+    return dict(order=[1, actor, step], session=session, actor=actor, step=step)
+
+
+def mission_run(directory: Path, settle: bool = True, **options):
+    """A run in the shapes of a `player-host/11` trace: priced responses, a recall, a held-back and an applied cut, a first
+    and a later knowledge update and a refused one, live curator sessions and exported versions."""
+    run = Run(directory, **options)
+    a = run.actor()
+    spent = ['0.0051855', '0.0020145', '0.001']
+    intents = ['Open the menu.', 'Walk to the stream. ' + 'x' * 1100, 'Wait.']
+    for index, (frame, cost, intent) in enumerate(zip((F('menu'), F('in_play', 3600), F('in_play', 3660)), spent, intents)):
+        run.step(a, 'input' if index else 'observe', [key('j')] if index else [], frame)
+        complete = next(e for e in reversed(run.host[a]) if e['type'] == 'response-complete')
+        complete.update(reported_provider='Endpoint A' if index < 2 else 'Endpoint B', reported_cost_usd=cost, counted_cost_usd=cost,
+            cost_counted_as='provider-reported', spent_usd=str(sum(map(float, spent[:index + 1]))))
+        start = next(e for e in reversed(run.host[a]) if e['type'] == 'tool-start')
+        start['arguments']['intent'] = intent
+        result = next(e for e in reversed(run.host[a]) if e['type'] == 'tool-result')['result']
+        operation = json.loads(result['content'][0]['text'])['operation_id']
+        result['structuredContent'] = dict(schema='player-computer-operation/1', operation_id=operation, status='completed', reason='done',
+            receipts=[dict(disposition='delivered', reason='presented', emitted_events=2)], source=dict(source_id=f'{run.session}-{index + 1}'))
+        wall = run.wall()
+        if index == 0:
+            run.host[a].append(run.event(a, 'context-cut', wall + 1, request_id='request-2', triggers=['high_mark'], covered_through_operation_id=None,
+                knowledge_version=None, tokens_before=61182, images_before=37, outcome='held-back', reason='uncovered', available_turns=0, min_free=10))
+        if index == 1:
+            run.host[a].append(run.event(a, 'context-cut', wall + 1, request_id='request-3', triggers=['high_mark', 'image_peak'],
+                covered_through_operation_id='op', knowledge_version='v1', tokens_before=73510, images_before=45, outcome='cut', removed_turns=22,
+                cumulative_removed_turns=22, tokens_after=41059, briefing_tokens=352, images_after=23, source_ids_count=22))
+            for version, previous, rows, ids in (('v1', None, dict(index=[dict(id='article-a', title='A', index='a')]), []),
+                    ('v2', 'v1', dict(added=[dict(id='article-b', title='B', lead='b'), dict(id='fact-c', title='C', lead='c')],
+                        updated=[dict(id='article-a', title='A', lead='a')], removed=[dict(id='fact-a', title='gone')]), ['article-b', 'article-a'])):
+                event = run.event(a, 'knowledge-delivery', wall + 2, outcome='delivered', text=update_text(version, previous_version=previous, **rows),
+                    article_ids=ids, fact_ids=[], index_ids=[], removed_ids=[], version=version, previous_version=previous, coverage=COVERAGE,
+                    recall_request_id=None, receiving_player_request_id='request-3')
+                event['kind'] = 'update'
+                run.host[a].append(event)
+            refused = run.event(a, 'knowledge-delivery', wall + 3, outcome='refused', reason='sha256-mismatch', version='v3', previous_version='v2',
+                coverage=COVERAGE, receiving_player_request_id='request-3')
+            refused['kind'] = 'update'
+            run.host[a].append(refused)
+            run.host[a].append(run.event(a, 'request-start', wall + 4, request_id='recall-1', logical_request_id='recall-1'))
+            run.host[a].append(run.event(a, 'response-complete', wall + 4, request_id='recall-1', stop_reason='stop', usage_available=True,
+                usage=dict(input=200, output=5, cacheRead=0, cacheWrite=0, cost=dict(total=0.0005)), reported_provider=None, reported_cost_usd=None,
+                counted_cost_usd=None, cost_counted_as='unpriced', spent_usd='0.0072'))
+    run.request(a)
+    run.host[a][-1].update(reported_provider='Endpoint A', reported_cost_usd='0.0000000005', counted_cost_usd='0.0000000005', cost_counted_as='provider-reported')
+    run.call(a, 'player_knowledge_query', dict(intent='Is there water?', query='water'), dict(records=[]), wall=run.wall() + 5)
+    run.finish(settled=dict(ok=True, reason='task_complete', player_requests=4, recall_requests=1, spent_usd='0.0082000005', unpriced_requests=0,
+        unpriced_recall_requests=1) if settle else None)
+    (directory / 'manifest.json').write_text(json.dumps(dict(run.manifest, spend_limit_usd='5.00')))
+    return run, a
+
+
+def curator_files(directory: Path) -> Path:
+    root = directory / 'curator-runner'
+    sessions = root / 'sessions' / 'admission-a'
+    close = dict(schema='curator-proxy-close/1', settled=True, unsettled_requests=0, pending_reserved_usd='0E-7', spent_snapshot_usd='0.12685395',
+        revoked=False, breaches=0, receipt_error=None)
+    ledger = [dict(charged='0.0058805', status=200), dict(charged='0.03876075', status=200)]
+    for name, document, rows in (('w1', close, ledger), ('w2', dict(close, spent_snapshot_usd='1.5'), []), ('w3', None, ledger)):
+        (sessions / name).mkdir(parents=True)
+        if document is not None:
+            (sessions / name / 'proxy-close.json').write_text(json.dumps(document))
+        (sessions / name / 'proxy-ledger.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
+    delivered = root / 'delivered'
+    delivered.mkdir()
+    article = dict(id='article-a', title='Finding water', lead='A stream.', body=[dict(text='It runs east.', facts=['fact-a'])], links=['Other'],
+        last_confirmed=position(2))
+    facts = [dict(id='fact-a', type='site_observation', subject='Stream', text='A stream runs east.', seen=position(2)),
+        dict(id='fact-b', type='control', subject='Wait', text='A dot waits.', seen=position(3)),
+        dict(id='fact-other', type='control', subject='Old', text='Seen by another admission.', seen=position(1, 'admission-z')),
+        dict(id='fact-far', type='control', subject='Far', text='A step this run never reached.', seen=position(99))]
+    for number in (2, 10, 1):
+        (delivered / f'v{number}.json').write_text(json.dumps(delivered_document(f'v{number}', [article] if number > 1 else [], facts[:number])))
+    (delivered / 'covered-prefix.json').write_text(json.dumps(dict(schema='curator-covered-prefix/1')))
+    (delivered / 'v03.json').write_text('{}')
+    (directory / 'delivered-knowledge.json').write_text(json.dumps(delivered_document(None, coverage=None)))
+    return root
+
+
+@pytest.fixture
+def mission(tmp_path):
+    directory = tmp_path / 'runs' / 'mission'
+    _, actor = mission_run(directory)
+    root = curator_files(directory)
+    evaluate(directory, FakeBinding(), tmp_path / 'root', created_wall=1.0)
+    client = TestClient(create_app(Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))))
+    return client, directory, root, actor
+
+
+def test_summary_reads_real_spend_endpoints_cuts_and_prompts_from_the_host_trace(mission):
+    client, directory, _, _ = mission
+    host = client.get('/api/view/run/mission/summary').json()['host_telemetry']
+    assert host['reported_cost_usd'] == host['spent_usd'] == '0.0082000005'   # exact decimal text, no rounding and no exponent
+    assert (host['player_requests'], host['recall_requests'], host['unpriced_requests'], host['unpriced_recall_requests']) == (4, 1, 0, 1)
+    assert host['spend_complete'] is False     # every actor settled and agrees, but the recall has no provider price
+    assert host['response_by_endpoint'] == {'Endpoint A': 3, 'Endpoint B': 1, 'unknown': 1}
+    assert host['latest_provider'] == 'Endpoint A'      # the one that answered last, not the most frequent
+    assert host['context_cuts'] == dict(applied=1, held_back=1, latest=dict(request_id='request-3', knowledge_version='v1', tokens_before=73510,
+        tokens_after=41059, images_before=45, images_after=23, removed_turns=22, triggers=['high_mark', 'image_peak'], wall_time=BASE + 21))
+    assert host['knowledge_updates'] == dict(count=2, latest_version='v2')     # the refused one is not an update the player holds
+    # Prompt sizes are the player's own requests; the cache share is over every response with usage.
+    assert host['token_summary'] == dict(latest_prompt_tokens=2100, p50_prompt_tokens=2100, max_prompt_tokens=2100,
+        cache_hit_share=pytest.approx(4000 / (4 * 2100 + 200)))
+    path = directory / 'actors' / '001' / 'host.jsonl'
+    original = path.read_text()
+    priced = original.replace('"reported_provider": null, "reported_cost_usd": null', '"reported_provider": null, "reported_cost_usd": "0"') \
+        .replace('"unpriced_recall_requests": 1', '"unpriced_recall_requests": 0')
+    assert priced != original
+    path.write_text(priced)
+    closed = client.get('/api/view/run/mission/summary').json()['host_telemetry']
+    assert (closed['spend_complete'], closed['unpriced_recall_requests'], closed['reported_cost_usd']) == (True, 0, '0.0082000005')
+    # A settlement that differs from the responses, or an actor that has not settled, leaves the spend open.
+    lines = priced.splitlines()
+    path.write_text('\n'.join([*lines[:-1], lines[-1].replace('0.0082000005', '0.0083')]) + '\n')
+    changed = client.get('/api/view/run/mission/summary').json()['host_telemetry']
+    assert changed['spend_complete'] is False and changed['reported_cost_usd'] == '0.0082000005' and changed['spent_usd'] == '0.0083'
+    path.write_text('\n'.join(lines[:-1]) + '\n{"type":"tool-st')      # still appending: an unfinished last line is not an error
+    appending = client.get('/api/view/run/mission/summary').json()['host_telemetry']
+    assert appending['spend_complete'] is False and appending['player_requests'] == 4
+
+
+def spend_run(directory: Path, starts: list[str], responses: list[tuple[str, str | None]], *, player: int, spent: str, **options):
+    """A one-step run whose trace starts `starts` and prices `responses`, and whose settlement claims nothing unpriced."""
+    run = Run(directory, **options)
+    a = run.actor()
+    run.step(a, 'observe', [], F('in_play', 3600))
+    run.host[a] = [e for e in run.host[a] if e['type'] not in ('request-start', 'response-complete')]
+    for request_id in starts:
+        run.host[a].append(run.event(a, 'request-start', run.wall(), request_id=request_id, logical_request_id=request_id))
+    for request_id, cost in responses:
+        run.host[a].append(run.event(a, 'response-complete', run.wall(), request_id=request_id, stop_reason='stop', usage_available=False,
+            reported_provider='Endpoint A', reported_cost_usd=cost))
+    run.finish(settled=dict(ok=True, reason='task_complete', player_requests=player, recall_requests=0, spent_usd=spent, unpriced_requests=0,
+        unpriced_recall_requests=0))
+    return run
+
+
+def spend_of(directory: Path, root: Path) -> dict:
+    evaluate(directory, FakeBinding(), root, created_wall=1.0)
+    client = TestClient(create_app(Catalog(root, (directory.parent,), data_dir=data_directory(root.parent))))
+    return client.get(f'/api/view/run/{directory.name}/summary').json()['host_telemetry']
+
+
+@pytest.mark.parametrize('starts, responses, player, complete, unpriced', [
+    (['request-1', 'request-2'], [('request-1', '0.1')], 2, False, 1),                              # one start never answered
+    (['request-1', 'request-2'], [('request-1', '0.1'), ('request-2', None)], 2, False, 1),         # answered without a price
+    (['request-1', 'request-1'], [('request-1', '0.1')], 2, False, 1),                              # a retry under one ID, one answer
+    (['request-1'], [('request-1', '0.05'), ('request-2', '0.05')], 1, False, 0),                   # an answer nothing started
+    (['request-1', 'request-2'], [('request-1', '0.04'), ('request-2', '0.06')], 2, True, 0)])
+def test_spend_is_complete_only_when_every_start_has_a_priced_response(tmp_path, starts, responses, player, complete, unpriced):
+    directory = tmp_path / 'runs' / 'spend'
+    spend_run(directory, starts, responses, player=player, spent='0.1')
+    host = spend_of(directory, tmp_path / 'root')
+    # The settlement claims nothing unpriced and the right total; the events decide.
+    assert (host['reported_cost_usd'], host['spent_usd'], host['spend_complete'], host['unpriced_requests']) == ('0.1', '0.1', complete, unpriced)
+
+
+@pytest.mark.parametrize('damage', ['missing', 'empty', 'no_directory_entry'])
+def test_spend_of_a_run_is_open_while_one_actor_has_no_trace(tmp_path, damage):
+    directory = tmp_path / 'runs' / 'spend'
+    spend_run(directory, ['request-1'], [('request-1', '0.1')], player=1, spent='0.1')
+    assert spend_of(directory, tmp_path / 'root')['spend_complete'] is True
+    other = directory / 'actors' / '002'
+    other.mkdir()
+    if damage == 'empty':
+        (other / 'host.jsonl').touch()
+    elif damage == 'no_directory_entry':     # a stray file is no actor
+        other.rmdir()
+        (directory / 'actors' / '.DS_Store').write_text('x')
+    client = TestClient(create_app(Catalog(tmp_path / 'root', (directory.parent,), data_dir=data_directory(tmp_path))))
+    host = client.get('/api/view/run/spend/summary').json()['host_telemetry']
+    assert host['reported_cost_usd'] == '0.1' and host['spend_complete'] is (damage == 'no_directory_entry')
+
+
+def test_the_latest_provider_is_the_last_to_answer_by_time_across_actors(tmp_path):
+    directory = tmp_path / 'runs' / 'spend'
+    run = spend_run(directory, ['request-1'], [('request-1', '0.1')], player=1, spent='0.1')
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    events = [json.loads(line) for line in trace.read_text().splitlines()]
+    late = run.event(next(iter(run.host)), 'response-complete', run.wall() + 500, request_id='request-9', reported_provider='Endpoint Late')
+    early = dict(late, request_id='request-8', reported_provider='Endpoint Early', wall_time=iso(BASE - 500))
+    trace.write_text(''.join(json.dumps(e) + '\n' for e in [*events[:-1], late, early, events[-1]]))
+    assert spend_of(directory, tmp_path / 'root')['latest_provider'] == 'Endpoint Late'
+
+
+def relinked(path: Path, aside: Path) -> None:
+    """Replace a file or directory with a symlink to its own bytes, moved out of the run package."""
+    path.rename(aside)
+    path.symlink_to(aside, target_is_directory=aside.is_dir())
+
+
+@pytest.mark.parametrize('component', ['actors', 'actors/001', 'actors/001/host.jsonl'])
+def test_a_symlink_anywhere_on_the_way_to_a_trace_falls_back_to_the_record(mission, tmp_path, component):
+    client, directory, _, _ = mission
+    assert client.get('/api/view/run/mission/summary').json()['host_telemetry'] is not None
+    relinked(directory / component, tmp_path / 'aside')
+    assert client.get('/api/view/run/mission/summary').json()['host_telemetry'] is None
+    feed = client.get('/api/view/run/mission/feed?limit=500').json()
+    assert feed['source'] == 'evaluation_record' and feed['counts']['step'] == 4
+    body = client.get('/api/view/run/mission/telemetry').json()
+    assert body['source'] == 'evaluation_record' and body['requests'] and body['spend']['player_reported_usd'] is None
+
+
+def test_a_trace_over_the_input_limit_falls_back_to_the_record_without_being_read_whole(mission, monkeypatch):
+    from harness.evaluation.core.sources import MAX_JSON_FILE_BYTES
+    from harness.viewer import curator, telemetry
+    client, directory, _, _ = mission
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    size = trace.stat().st_size
+    with trace.open('ab') as stream:      # one long line, under the parser's own 64 MiB line bound
+        stream.write(b'{"type":"tool-start","pad":"' + b'x' * (MAX_JSON_FILE_BYTES - size) + b'"}\n')
+    assert trace.stat().st_size > MAX_JSON_FILE_BYTES
+    monkeypatch.setattr(telemetry, 'read_host', lambda *a, **k: pytest.fail('an oversized trace was parsed'))
+    for route, source in (('feed', 'evaluation_record'), ('telemetry', 'evaluation_record')):
+        response = client.get(f'/api/view/run/mission/{route}')
+        assert response.status_code == 200 and response.json()['source'] == source
+    assert client.get('/api/view/run/mission/summary').json()['host_telemetry'] is None
+    state, snapshot, data = curator.read_rooted(directory, 'actors', '001', 'host.jsonl')
+    assert (state, snapshot['bytes'], data) == ('too_large', MAX_JSON_FILE_BYTES + 1, None)
+
+
+def test_rooted_reads_refuse_every_symlink_special_file_and_path_trick(tmp_path):
+    from harness.viewer import curator
+    root, outside = tmp_path / 'run', tmp_path / 'outside'
+    (root / 'a' / 'b').mkdir(parents=True)
+    (outside / 'b').mkdir(parents=True)
+    for place in (root / 'a' / 'b' / 'f', outside / 'b' / 'f', outside / 'f'):
+        place.write_text('data')
+    assert curator.read_rooted(root, 'a', 'b', 'f')[::2] == ('available', b'data')
+    assert curator.read_rooted(root, 'a', 'b', 'none')[0] == curator.read_rooted(root, 'none', 'f')[0] == 'missing'
+    (root / 'a' / 'b' / 'link').symlink_to(outside / 'f')
+    (root / 'a' / 'b' / 'dangling').symlink_to(outside / 'nothing')
+    (root / 'linked').symlink_to(outside, target_is_directory=True)
+    (tmp_path / 'alias').symlink_to(root, target_is_directory=True)
+    for parts in (('a', 'b', 'link'), ('a', 'b', 'dangling'), ('linked', 'b', 'f'), ('a', 'b'), ('a', 'b', 'f', 'g')):
+        assert curator.read_rooted(root, *parts) == ('unreadable', None, None), parts
+    assert curator.read_rooted(tmp_path / 'alias', 'a', 'b', 'f')[0] == 'unreadable'     # the root itself
+    assert curator.rooted_status(root, 'linked', 'b', 'f') is None
+    with pytest.raises(OSError):
+        curator.rooted_entries(root, 'linked')
+    for trick in ('..', '.', '', 'a/b'):
+        with pytest.raises(ValueError):
+            curator.read_rooted(root, trick, 'f')
+    import os
+    os.mkfifo(root / 'pipe')
+    assert curator.read_rooted(root, 'pipe') == ('unreadable', None, None)       # and it does not wait for a writer
+    assert curator.read_file(root / 'a' / 'b' / 'link')[0] == 'unreadable'
+
+
+def test_symlinked_knowledge_and_curator_files_are_never_followed(mission, tmp_path):
+    client, directory, root, _ = mission
+    versions = lambda: {v['version']: v['status'] for v in client.get('/api/view/run/mission/delivered-knowledge').json()['versions']}
+    spend = lambda: client.get('/api/view/run/mission/summary').json()['curator_spend']
+    relinked(root / 'delivered' / 'v2.json', tmp_path / 'v2')
+    relinked(directory / 'delivered-knowledge.json', tmp_path / 'initial')
+    assert versions() == {'initial': 'unreadable', 'v1': 'available', 'v2': 'unreadable', 'v10': 'available'}
+    relinked(root / 'delivered', tmp_path / 'delivered')
+    assert versions() == {'initial': 'unreadable'}
+    sessions = root / 'sessions' / 'admission-a'
+    relinked(sessions / 'w2' / 'proxy-close.json', tmp_path / 'close')
+    assert (spend()['sessions_settled'], spend()['spent_usd'], spend()['spend_complete']) == (1, '0.1714952', False)
+    relinked(sessions / 'w3' / 'proxy-ledger.jsonl', tmp_path / 'ledger')
+    assert spend()['spent_usd'] == '0.12685395'
+    relinked(sessions / 'w1', tmp_path / 'w1')          # a session the viewer cannot look into is still one of them
+    assert (spend()['sessions_total'], spend()['sessions_settled'], spend()['spent_usd']) == (3, 0, '0')
+    relinked(sessions, tmp_path / 'group')
+    assert spend() is None
+
+
+def test_an_older_trace_states_no_price_or_endpoint_it_does_not_record(archive):
+    client, _, runs = archive
+    host = client.get('/api/view/run/aid1/summary').json()['host_telemetry']
+    assert host['reported_cost_usd'] is None and host['spend_complete'] is None and host['response_by_endpoint'] == {}
+    assert host['unpriced_requests'] is None and host['unpriced_recall_requests'] is None
+    assert host['player_requests'] > 0 and host['context_cuts'] == dict(applied=0, held_back=0, latest=None)
+    assert host['knowledge_updates'] == dict(count=0, latest_version=None)
+    assert client.get('/api/view/run/aid1/summary').json()['curator_spend'] is None
+    trace = runs / 'aid1' / 'actors' / '001' / 'host.jsonl'
+    for damage in ('{"type":"host-start","schema":"player-host/99","telemetry_version":99}\n', 'not json\n', '',
+                   trace.read_text().replace('c' * 32, 'e' * 32, 1)):
+        trace.write_text(damage)
+        assert client.get('/api/view/run/aid1/summary').json()['host_telemetry'] is None, damage[:40]
+    assert client.get('/api/view/run/aid1/feed').json()['source'] == 'evaluation_record'
+    assert client.get('/api/view/run/aid1/telemetry').json()['source'] == 'evaluation_record'
+
+
+def test_curator_spend_is_exact_and_complete_only_when_every_session_settled(mission):
+    client, _, root, _ = mission
+    get = lambda: client.get('/api/view/run/mission/summary').json()['curator_spend']
+    assert get() == dict(sessions_total=3, sessions_settled=2, sessions_unsettled=1, spent_usd='1.6714952', unsettled_requests=0, spend_complete=False)
+    session = root / 'sessions' / 'admission-a' / 'w3'
+    with (session / 'proxy-ledger.jsonl').open('a') as stream:
+        stream.write(json.dumps(dict(charged=None, usage_missing=True)) + '\n{"charged":"9')     # an unpriced row, and one being written
+    assert (get()['spent_usd'], get()['unsettled_requests']) == ('1.6714952', 1)
+    close = json.loads((session.parent / 'w2' / 'proxy-close.json').read_text())
+    for damage in (dict(close, schema='curator-proxy-close/2'), dict(close, spent_snapshot_usd=-1), dict(close, settled='yes'), dict(close, unsettled_requests=-1), []):
+        (session / 'proxy-close.json').write_text(json.dumps(damage))
+        assert get()['sessions_settled'] == 2 and get()['spent_usd'] == '1.6714952', damage
+    (session / 'proxy-close.json').write_text(json.dumps(dict(close, settled=False, unsettled_requests=2, spent_snapshot_usd='0.25')))
+    assert get() == dict(sessions_total=3, sessions_settled=2, sessions_unsettled=1, spent_usd='1.87685395', unsettled_requests=2, spend_complete=False)
+    (session / 'proxy-close.json').write_text(json.dumps(dict(close, spent_snapshot_usd='0E-7')))
+    assert get() == dict(sessions_total=3, sessions_settled=3, sessions_unsettled=0, spent_usd='1.62685395', unsettled_requests=0, spend_complete=True)
+
+
+def test_curator_spend_is_unknown_and_never_zero_where_nothing_can_be_read(mission):
+    client, _, root, _ = mission
+    get = lambda: client.get('/api/view/run/mission/summary').json()['curator_spend']
+    sessions = root / 'sessions' / 'admission-a'
+    ledger = sessions / 'w3' / 'proxy-ledger.jsonl'
+    ledger.unlink()
+    ledger.mkdir()                                           # not a regular file
+    assert (get()['spent_usd'], get()['spend_complete']) == ('1.62685395', False)      # what the other two state
+    ledger.rmdir()                                           # and a ledger that is not there states nothing either
+    assert (get()['spent_usd'], get()['spend_complete']) == ('1.62685395', False)
+    for name in ('w1', 'w2'):
+        for path in (sessions / name).iterdir():
+            path.unlink()
+    assert get() == dict(sessions_total=3, sessions_settled=0, sessions_unsettled=3, spent_usd=None, unsettled_requests=0, spend_complete=False)
+    spend = client.get('/api/view/run/mission/telemetry').json()['spend']
+    assert spend['curator_spent_usd'] is None and spend['curator_spend_complete'] is False
+    ledger.touch()                                           # an empty ledger is a measured zero
+    assert get()['spent_usd'] == '0'
+    ledger.unlink()
+    for name in ('w1', 'w2', 'w3'):
+        (sessions / name).rmdir()
+    assert get() is None                                     # no session directory: no curator figure at all
+    sessions.rmdir()
+    assert get() is None
+
+
+def grooming_receipt(run: str, **changes) -> dict:
+    value = dict(schema='curator-boundary-grooming/1', run=run, knowledge_root='/private/store', status='completed', reason=None, published_before='v31',
+        published_after='v33', cap_usd='2.50', cost_usd='0.36140535', session_state='sealed', verdicts=[], sandbox={}, summary='boundary/x/summary.json',
+        proxy=dict(settled=True, unsettled_requests=0, charged_usd='0.36140535'))
+    return dict(value, **changes)
+
+
+def test_boundary_grooming_is_shown_only_from_a_configured_receipt_of_this_run(mission, tmp_path):
+    from harness.viewer.frame import FrameSources
+    client, directory, _, _ = mission
+    absent = client.get('/api/view/run/mission/summary').json()['boundary_grooming']
+    assert absent == dict(source_status='not_configured', status=None, reason=None, spent_usd=None, spend_complete=None, published_before=None,
+        published_after=None)
+    receipt = tmp_path / 'grooming-summary.json'
+    attached = TestClient(create_app(client.app.state.catalog, frame_sources=FrameSources(curator_grooming=receipt)))
+    get = lambda: attached.get('/api/view/run/mission/summary').json()['boundary_grooming']
+    assert get() == dict(absent, source_status='missing')
+    (directory.parent / 'grooming-summary.json').write_text(json.dumps(grooming_receipt('admission-a')))     # a neighbour is never looked for
+    (directory.parent / 'grooming').mkdir()
+    (directory.parent / 'grooming' / 'grooming-summary.json').write_text(json.dumps(grooming_receipt('admission-a')))
+    assert get() == dict(absent, source_status='missing')
+    receipt.write_text(json.dumps(grooming_receipt('admission-a')))       # the admission's name under curator-runner/sessions
+    assert get() == dict(source_status='available', status='completed', reason=None, spent_usd='0.36140535', spend_complete=True,
+        published_before='v31', published_after='v33')
+    assert '/private/store' not in attached.get('/api/view/run/mission/summary').text
+    receipt.write_text(json.dumps(grooming_receipt(SESSION)))
+    assert get()['source_status'] == 'available'
+    for other in ('admission-z', 'mission'):     # a directory name that the curator did not use is not this admission's
+        receipt.write_text(json.dumps(grooming_receipt(other)))
+        assert get() == dict(absent, source_status='other_run'), other
+    for changes, complete, spent in ((dict(status='failed', reason='proxy-unsettled', proxy=dict(settled=False, unsettled_requests=1)), False, '0.36140535'),
+                                     (dict(status='failed', reason='error', cost_usd=None, proxy=None), False, None),
+                                     (dict(status='skipped', reason='no-published-admission', cost_usd='0', proxy=None), True, '0')):
+        receipt.write_text(json.dumps(grooming_receipt('admission-a', **changes)))
+        assert (get()['spend_complete'], get()['spent_usd'], get()['status']) == (complete, spent, changes['status'])
+    for text, status in (('{"schema":', 'malformed'), ('', 'empty'), ('[]', 'unsupported'),
+                         (json.dumps(grooming_receipt('admission-a', schema='curator-boundary-grooming/2')), 'unsupported'),
+                         (json.dumps(grooming_receipt('admission-a', cost_usd=-1)), 'unsupported'), (json.dumps(grooming_receipt('admission-a', status='x')), 'unsupported')):
+        receipt.write_text(text)
+        assert get() == dict(absent, source_status=status), text[:40]
+
+
+def test_the_viewer_command_passes_the_grooming_receipt(monkeypatch, tmp_path):
+    from harness.viewer import __main__ as command
+    seen = {}
+    monkeypatch.setattr(command, 'create_app', lambda catalog, evaluator, **options: seen.update(options))
+    monkeypatch.setattr(command.uvicorn, 'run', lambda *a, **k: None)
+    command.main(['--root', str(tmp_path), '--curator-grooming', str(tmp_path / 'receipt.json')])
+    assert seen['frame_sources'].curator_grooming == tmp_path / 'receipt.json'
+    command.main(['--root', str(tmp_path)])
+    assert seen['frame_sources'].curator_grooming is None
+
+
+def test_the_feed_tells_steps_cuts_and_updates_in_one_order(mission):
+    client, _, _, actor = mission
+    body = client.get('/api/view/run/mission/feed?limit=500').json()
+    items = body['items']
+    assert body['source'] == 'host_trace' and body['next'] is None and body['total'] == len(items)
+    assert [i['order'] for i in items] == sorted({i['order'] for i in items}) and len({i['id'] for i in items}) == len(items)
+    assert [(i['entry_kind'], i['seq']) for i in items if i['entry_kind'] != 'finding'] == [('step', 1), ('context_cut', 1), ('step', 2), ('context_cut', 2),
+        ('knowledge_update', 2), ('knowledge_update', 2), ('knowledge_update', 2), ('step', 3), ('step', 3)]
+    assert body['counts']['step'] == 4 and body['counts']['context_cut'] == 2 and body['counts']['knowledge_update'] == 3
+    first, walk, wait, query = [i for i in items if i['entry_kind'] == 'step']
+    assert first['intent'] == 'Open the menu.' and first['intent_source'] == 'player_claim' and first['tool'] == 'computer_observe' and first['exact_step'] is True
+    assert (first['reported_provider'], first['reported_cost_usd'], first['prompt_tokens'], first['cache_read'], first['cache_write'], first['output_tokens']) == (
+        'Endpoint A', '0.0051855', 2100, 1000, 1000, 50)
+    assert first['status'] == 'ok' and first['source_id'] == f'{SESSION}-1' and first['request_id'] == 'request-1' and first['actor'] == actor
+    assert first['result'] == dict(status='completed', reason='done', source_id=f'{SESSION}-1', receipts=[dict(disposition='delivered', reason='presented',
+        emitted_events=2)], receipts_omitted=0, result_bytes=first['result']['result_bytes'])
+    assert len(walk['intent']) == 1024 and walk['intent_omitted_characters'] == len('Walk to the stream. ') + 1100 - 1024
+    assert walk['keys'] == ['key:j'] and json.loads(walk['arguments_preview']) == dict(actions=[key('j')]) and walk['mode'] == 'in_play' and walk['game_time'] == 3600
+    assert (query['tool'], query['exact_step'], query['operation_id'], query['keys']) == ('player_knowledge_query', False, None, [])
+    held, applied = [i for i in items if i['entry_kind'] == 'context_cut']
+    assert (held['outcome'], held['reason'], held['tokens_after']) == ('held_back', 'uncovered', None)
+    assert (applied['outcome'], applied['tokens_before'], applied['tokens_after'], applied['removed_turns'], applied['knowledge_version']) == ('applied', 73510, 41059, 22, 'v1')
+    one, two, refused = [i for i in items if i['entry_kind'] == 'knowledge_update']
+    assert (one['added_count'], one['added_articles'], one['summary']) == (1, None, 'first version · 1 entry')
+    assert (two['added_count'], two['updated_count'], two['removed_count'], two['added_articles'], two['added_facts']) == (2, 1, 1, 1, 1)
+    assert two['summary'] == '+1 article · +1 fact · ~1 updated · −1 removed' and two['previous_version'] == 'v1' and two['covered_step'] == 2
+    assert (refused['outcome'], refused['reason'], refused['added_count'], refused['summary']) == ('refused', 'sha256-mismatch', None, None)   # unknown, never zero
+    assert two['request_id'] == 'request-3'     # what the knowledge route is asked for to show the difference
+
+
+def test_the_feed_pages_completely_and_its_ids_survive_growth(mission, tmp_path):
+    client, directory, _, actor = mission
+    route = '/api/view/run/mission/feed'
+    whole = client.get(f'{route}?limit=500').json()['items']
+    seen, after = [], 0
+    while after is not None:
+        page = client.get(f'{route}?after={after}&limit=2').json()
+        assert len(page['items']) <= 2
+        seen += page['items']
+        after = page['next']
+    assert seen == whole
+    for bad in ('limit=501', 'limit=0', 'after=-1', 'after=x'):
+        assert client.get(f'{route}?{bad}').status_code == 400, bad
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    lines = trace.read_text().splitlines()
+    extra = dict(type='tool-start', wall_time=iso(BASE + 60), monotonic_ms=9e6, request_id='request-4', tool_call_id='late', tool='computer_input',
+        arguments=dict(intent='Still in flight.', actions=[]))
+    trace.write_text('\n'.join([*lines[:-1], json.dumps(extra)]) + '\n')
+    grown = client.get(f'{route}?limit=500').json()['items']
+    assert grown[:len(whole)] == whole and [i['status'] for i in grown[len(whole):]] == ['pending'] and grown[-1]['result'] is None
+
+
+def test_the_feed_falls_back_to_the_record_without_a_trace(mission):
+    client, directory, _, _ = mission
+    (directory / 'actors' / '001' / 'host.jsonl').unlink()
+    body = client.get('/api/view/run/mission/feed?limit=500').json()
+    assert body['source'] == 'evaluation_record' and {i['entry_kind'] for i in body['items']} <= {'step', 'finding'}
+    steps = [i for i in body['items'] if i['entry_kind'] == 'step']
+    assert [(i['seq'], i['tool'], i['exact_step']) for i in steps] == [(1, 'computer_observe', True), (2, 'computer_input', True), (3, 'computer_input', True),
+        (3, 'player_knowledge_query', False)]
+    assert all(i['intent'] is None and i['intent_source'] is None and i['reported_cost_usd'] is None for i in steps)
+    assert steps[1]['keys'] == ['key:j'] and steps[1]['prompt_tokens'] == 2100 and steps[1]['latency_ms'] is not None
+    assert body['total'] == len(body['items']) and [i['order'] for i in body['items']] == sorted({i['order'] for i in body['items']})
+    # Each call keeps the decision its own record states, beside the one of the step on screen.
+    calls = {c['tool_call_id']: c['decision'] for c in client.get('/api/view/run/mission/calls').json()['items']}
+    assert {i['tool_call_id']: i['decision'] for i in steps} == calls
+    assert [(i['seq'], i['step_decision']) for i in steps] == [(1, 0), (2, 1), (3, 2), (3, 2)]
+
+
+def recorded_calls(client, run: str = 'mission') -> dict:
+    return {c['tool_call_id']: c['decision'] for c in client.get(f'/api/view/run/{run}/calls?limit=500').json()['items']}
+
+
+def test_a_call_without_a_frame_keeps_its_own_decision_beside_the_step_on_screen(tmp_path):
+    directory = tmp_path / 'runs' / 'decisions'
+    run = Run(directory)
+    a = run.actor()
+    run.step(a, 'observe', [], F('in_play', 3600))
+    for minute in range(1, 110):
+        run.step(a, 'input', [key('j')], F('in_play', 3600 + minute))
+    run.request(a)
+    run.call(a, 'player_knowledge_read', dict(intent='Look it up.', id='article-a'), dict(records=[]), wall=run.wall() + 1)
+    run.finish()
+    evaluate(directory, FakeBinding(), tmp_path / 'root', created_wall=1.0)
+    client = TestClient(create_app(Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))))
+    read = next(i for i in client.get('/api/view/run/decisions/feed?limit=500').json()['items'] if i.get('tool') == 'player_knowledge_read')
+    screen = client.get('/api/view/run/decisions/steps?limit=500').json()['items'][-1]
+    assert (screen['seq'], screen['decision']) == (110, 109)
+    # The evaluator numbers a call by its request and a step by the inputs completed, so the two differ.
+    assert read['decision'] == recorded_calls(client, 'decisions')[read['tool_call_id']] == 111
+    assert (read['seq'], read['step_decision'], read['source_id'], read['exact_step']) == (110, 109, screen['source_id'], False)
+    for trace in directory.glob('actors/*/host.jsonl'):      # and the same from the record alone
+        trace.unlink()
+    again = next(i for i in client.get('/api/view/run/decisions/feed?limit=500').json()['items'] if i.get('tool') == 'player_knowledge_read')
+    assert (again['decision'], again['seq'], again['step_decision'], again['source_id']) == (111, 110, 109, screen['source_id'])
+
+
+def test_an_event_before_the_first_frame_has_no_anchor(mission):
+    client, directory, _, actor = mission
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    start, *rest = trace.read_text().splitlines()
+    before = iso(BASE - 100)
+    early = [dict(type='context-cut', wall_time=before, monotonic_ms=1.0, request_id='request-0', triggers=[], outcome='held-back', reason='uncovered',
+            tokens_before=5, images_before=0),
+        dict(type='request-start', wall_time=before, monotonic_ms=2.0, request_id='request-0', logical_request_id='request-0'),
+        dict(type='response-complete', wall_time=before, monotonic_ms=3.0, request_id='request-0', usage_available=False, reported_provider='Endpoint A'),
+        dict(type='tool-start', wall_time=before, monotonic_ms=4.0, request_id='request-0', tool_call_id='early', tool='player_knowledge_read', arguments={})]
+    trace.write_text('\n'.join([start, *(json.dumps(e) for e in early), *rest]) + '\n')
+    items = client.get('/api/view/run/mission/feed?limit=500').json()['items']
+    cut, read = items[0], items[1]
+    assert (cut['entry_kind'], read['tool']) == ('context_cut', 'player_knowledge_read')
+    for entry in (cut, read):
+        assert all(entry[key] is None for key in ('seq', 'source_id', 'mode', 'game_time', 'step_decision')) and entry['exact_step'] is False
+    assert read['decision'] == 1          # its own request's; it borrows nothing from the frame that came after
+    body = client.get('/api/view/run/mission/telemetry').json()
+    assert body['requests'][0]['request_id'] == 'request-0' and body['requests'][0]['seq'] is None and body['cuts'][0]['seq'] is None
+
+
+def feed_findings(client, run: str) -> dict:
+    items = client.get(f'/api/view/run/{run}/feed?limit=500').json()['items']
+    assert len({i['id'] for i in items}) == len(items)
+    return {(i['finding_kind'], i['seq'], json.dumps(i['payload'])): i['id'] for i in items if i['entry_kind'] == 'finding'}
+
+
+def test_a_late_finding_never_takes_or_moves_another_entrys_identity(archive):
+    import sqlite3
+    client, catalog, _ = archive
+    store = catalog.find('base1').path
+    before = feed_findings(client, 'base1')
+    others = [i['id'] for i in client.get('/api/view/run/base1/feed?limit=500').json()['items'] if i['entry_kind'] != 'finding']
+    death = next(i for i in client.get('/api/view/run/base1/feed?limit=500').json()['items'] if i.get('finding_kind') == 'death')
+    late = [(death['seq'], 'handoff', {'late': 1}), (death['seq'], 'custody_stop', {'cause': 'late'}), (1, 'custody_stop', {'cause': 'first'})]
+    with sqlite3.connect(store) as connection:
+        # As an evaluator pass does: every event is deleted and numbered again in its new order.
+        rows = connection.execute('SELECT seq_start, seq_end, kind, source, confidence, payload FROM events').fetchall()
+        rows += [(seq, seq, kind, 'derived', None, json.dumps(payload)) for seq, kind, payload in late]
+        connection.execute('DELETE FROM events')
+        connection.executemany('INSERT INTO events VALUES(?,?,?,?,?,?,?)', [(n, *row) for n, row in enumerate(sorted(rows, key=lambda r: (r[0], r[1], r[2], r[5])), 1)])
+    connection.close()
+    after = feed_findings(client, 'base1')
+    assert len(after) == len(before) + len(late) and {key: after[key] for key in before} == before
+    assert [i['id'] for i in client.get('/api/view/run/base1/feed?limit=500').json()['items'] if i['entry_kind'] != 'finding'] == others
+    # A finding that grows while it lasts is still the same one, and two that state the same thing are still two.
+    with sqlite3.connect(store) as connection:
+        connection.executemany('INSERT INTO events VALUES(?,?,?,?,?,?,?)', [(900, 2, 3, 'stall', 'derived', None, json.dumps(dict(decisions=16, ongoing=True))),
+            (901, 1, 1, 'custody_stop', 'derived', None, json.dumps({'cause': 'first'}))])
+    ids = lambda: [i['id'] for i in client.get('/api/view/run/base1/feed?limit=500').json()['items'] if i['entry_kind'] == 'finding']
+    ongoing = ids()
+    with sqlite3.connect(store) as connection:
+        connection.execute('UPDATE events SET seq_end=4, payload=? WHERE id=900', (json.dumps(dict(decisions=40, ongoing=False)),))
+    assert ids() == ongoing and 'finding:stall:2:derived' in ongoing and len(set(ongoing)) == len(ongoing)
+
+
+def test_the_feed_carries_the_findings_that_change_how_a_run_reads(archive):
+    client, _, _ = archive
+    items = client.get('/api/view/run/base1/feed?limit=500').json()['items']
+    found = [i for i in items if i['entry_kind'] == 'finding']
+    assert 'death' in {i['finding_kind'] for i in found} and {i['finding_kind'] for i in found} <= {'stall', 'death', 'custody_stop', 'handoff', 'run_end'}
+    death = next(i for i in found if i['finding_kind'] == 'death')
+    assert death['source'] and death['payload_omitted'] is False and isinstance(death['payload'], dict)
+    assert items.index(death) > max(n for n, i in enumerate(items) if i['entry_kind'] == 'step' and i['seq'] < death['seq'])
+
+
+def test_a_feed_page_ends_at_its_byte_bound_and_continues(tmp_path):
+    directory = tmp_path / 'runs' / 'wide'
+    run = Run(directory)
+    a = run.actor()
+    for index in range(300):     # each entry holds 3 KiB of text that JSON escapes six-fold
+        run.request(a)
+        run.call(a, 'player_hint', dict(intent='é' * 1024, text='é' * 4000), dict(status='recorded'))
+    run.step(a, 'observe', [], F('in_play', 3600))
+    run.finish()
+    evaluate(directory, FakeBinding(), tmp_path / 'root', created_wall=1.0)
+    client = TestClient(create_app(Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))))
+    page = client.get('/api/view/run/wide/feed?limit=500')
+    assert page.status_code == 200 and len(page.content) < MAX_BYTES
+    body = page.json()
+    assert len(body['items']) < body['total'] and body['next'] == body['items'][-1]['order']
+    assert body['items'][0]['arguments_omitted_characters'] > 0
+    rest = client.get(f"/api/view/run/wide/feed?limit=500&after={body['next']}").json()
+    assert len(body['items']) + len(rest['items']) == body['total'] and rest['next'] is None
+
+
+def test_telemetry_series_marks_cuts_at_their_requests_and_keeps_both_costs(mission):
+    client, _, _, actor = mission
+    body = client.get('/api/view/run/mission/telemetry').json()
+    assert body['source'] == 'host_trace' and (body['requests_total'], body['requests_omitted'], body['cuts_omitted']) == (5, 0, 0)
+    assert [(r['request_id'], r['is_recall'], r['prompt_tokens'], r['reported_cost_usd']) for r in body['requests']] == [('request-1', False, 2100, '0.0051855'),
+        ('request-2', False, 2100, '0.0020145'), ('recall-1', True, 200, None), ('request-3', False, 2100, '0.001'), ('request-4', False, 2100, '0.0000000005')]
+    assert [r['index'] for r in body['requests']] == [0, 1, 2, 3, 4] and body['requests'][0]['estimated_dollars'] == 0.01 and body['requests'][0]['actor'] == actor
+    assert [(c['outcome'], c['request_id'], c['index'], c['seq']) for c in body['cuts']] == [('held_back', 'request-2', 1, 1), ('applied', 'request-3', 3, 2)]
+    assert body['response_by_endpoint'] == {'Endpoint A': 3, 'Endpoint B': 1, 'unknown': 1}
+    assert body['spend'] == dict(player_reported_usd='0.0082000005', player_estimated_usd=pytest.approx(0.0405), spend_limit_usd=5.0, spend_complete=False,
+        unpriced_requests=0, unpriced_recall_requests=1, curator_spent_usd='1.6714952', curator_spend_complete=False, curator_sessions_settled=2,
+        curator_sessions_total=3)
+
+
+def test_telemetry_without_a_trace_or_curator_is_the_record_alone(archive):
+    client, _, runs = archive
+    for trace in (runs / 'base2').glob('actors/*/host.jsonl'):
+        trace.unlink()
+    body = client.get('/api/view/run/base2/telemetry').json()
+    assert body['source'] == 'evaluation_record' and body['requests'] and body['cuts'] == [] and body['response_by_endpoint'] == {}
+    assert all(r['reported_cost_usd'] is None and r['reported_provider'] is None for r in body['requests'])
+    assert body['spend']['player_reported_usd'] is None and body['spend']['spend_complete'] is None and body['spend']['curator_spent_usd'] is None
+
+
+def test_a_long_series_is_thinned_evenly_and_keeps_every_cut(monkeypatch):
+    from harness.viewer import telemetry
+    monkeypatch.setattr(telemetry, 'MAX_POINTS', 20)
+    assert telemetry._kept(20, {3}) == list(range(20))
+    kept = telemetry._kept(1000, {7, 8, 503})
+    assert len(kept) <= 20 and {0, 7, 8, 503, 999} <= set(kept) and kept == sorted(kept)
+
+
+def test_delivered_knowledge_lists_versions_by_number_and_reads_the_latest(mission):
+    client, _, _, _ = mission
+    route = '/api/view/run/mission/delivered-knowledge'
+    body = client.get(route).json()
+    assert body['source_status'] == 'available' and body['selected_version'] == body['recorded_version'] == 'v10'
+    assert [(v['version'], v['status'], v['articles_count'], v['facts_count']) for v in body['versions']] == [('initial', 'available', 0, 0),
+        ('v1', 'available', 0, 1), ('v2', 'available', 1, 2), ('v10', 'available', 1, 4)]     # v03.json and covered-prefix.json are no versions
+    assert body['versions'][0]['recorded_version'] is None and body['versions'][0]['coverage'] is None and body['coverage']['last_step'] == 2
+    article = body['articles'][0]
+    assert (article['id'], article['title'], article['lead'], article['links']) == ('article-a', 'Finding water', 'A stream.', ['Other'])
+    assert article['body'] == [dict(text='It runs east.', facts=['fact-a'], facts_omitted=0)] and article['last_confirmed']['step'] == 2
+    assert article['anchor'] == dict(seq=2, source_id=f'{SESSION}-2')
+    facts = {f['id']: f for f in body['facts']['items']}
+    assert facts['fact-a'] == dict(id='fact-a', type='site_observation', subject='Stream', text='A stream runs east.', known=None, scope=None,
+        seen=dict(session='admission-a', actor='001', step=2), anchor=dict(seq=2, source_id=f'{SESSION}-2'))
+    # Another admission's step numbers, and a step this run never reached, never point at one of this run's frames.
+    assert facts['fact-other']['anchor'] is None and facts['fact-far']['anchor'] is None
+    assert body['scope_recorded'] is False and body['scope_counts'] == dict(world=0, game=0, unrecorded=4)     # the delivered format records no scope
+    assert client.get(f'{route}?version=initial').json()['articles'] == []
+    assert client.get(f'{route}?version=v2').json()['facts']['total'] == 2
+    for unknown in ('v3', 'v03', '../v1', 'covered-prefix', 'v' * 600):
+        response = client.get(route, params=dict(version=unknown))
+        assert response.status_code == 404 and response.json()['error'] == 'unknown_version', unknown[:20]
+
+
+def test_delivered_knowledge_searches_scopes_and_pages(mission):
+    client, _, root, _ = mission
+    route = '/api/view/run/mission/delivered-knowledge'
+    found = client.get(f'{route}?q=STREAM').json()
+    assert [a['id'] for a in found['articles']] == ['article-a'] and [f['id'] for f in found['facts']['items']] == ['fact-a']
+    assert client.get(f'{route}?q=nothing-like-it').json()['articles'] == []
+    first = client.get(f'{route}?limit=3').json()['facts']
+    rest = client.get(f"{route}?limit=3&after={first['next']}").json()['facts']
+    assert (len(first['items']), first['next'], first['total'], len(rest['items']), rest['next']) == (3, 3, 4, 1, None)
+    for bad, code in (('scope=belief', 'bad_scope'), ('limit=0', 'bad_limit'), ('after=x', 'bad_after'), ('q=' + 'x' * 201, 'bad_q')):
+        response = client.get(f'{route}?{bad}')
+        assert response.status_code == 400 and response.json()['error'] == code, bad
+    # The files here are what the player itself accepts: the closed format, which has no scope and no known-by.
+    for path in (*(root / 'delivered').glob('v[0-9].json'), root / 'delivered' / 'v10.json', root.parent / 'delivered-knowledge.json'):
+        assert Knowledge(path).value['schema'] == 'delivered-knowledge/2'
+    body = client.get(route).json()
+    assert body['scope_recorded'] is False and all(f['scope'] is None and f['known'] is None for f in body['facts']['items'])
+    for scope in ('world', 'game'):
+        listed = client.get(f'{route}?scope={scope}').json()
+        assert listed['facts']['items'] == [] and listed['facts']['total'] == 0 and listed['scope_counts'] == dict(world=0, game=0, unrecorded=4)
+    # A file that carries such fields anyway does not follow the format, and they are not shown.
+    invented = [dict(id='f0', type='t', subject='s', text='x', known='observed', scope=dict(level='world', world='w', game='g'), seen=position(1))]
+    document = delivered_document('v11', [], invented)
+    with pytest.raises(PlayerError):
+        Knowledge.from_dict(document)
+    (root / 'delivered' / 'v11.json').write_text(json.dumps(document))
+    body = client.get(route).json()
+    assert body['selected_version'] == 'v11' and (body['facts']['items'][0]['scope'], body['facts']['items'][0]['known']) == (None, None)
+    assert body['scope_recorded'] is False and client.get(f'{route}?scope=world').json()['facts']['total'] == 0
+
+
+def test_an_unreadable_delivered_version_is_listed_as_such_and_never_shown(mission):
+    client, directory, root, _ = mission
+    route = '/api/view/run/mission/delivered-knowledge'
+    for text, status in (('{"schema":"delivered-knowledge/2"', 'malformed'), (json.dumps(dict(schema='delivered-knowledge/1', articles=[], facts=[])), 'unsupported'),
+                         ('', 'empty'), (json.dumps(dict(schema='delivered-knowledge/2', articles={}, facts=[])), 'unsupported')):
+        (root / 'delivered' / 'v12.json').write_text(text)
+        body = client.get(route).json()
+        row = next(v for v in body['versions'] if v['version'] == 'v12')
+        assert row['status'] == status and row['articles_count'] is None and row['facts_count'] is None
+        assert body['selected_version'] == 'v10'     # the latest that can be read
+        refused = client.get(f'{route}?version=v12')
+        assert refused.status_code == 409 and refused.json()['error'] == 'unsupported_knowledge'
+    for path in [*(root / 'delivered').iterdir(), directory / 'delivered-knowledge.json']:
+        path.unlink()
+    empty = client.get(route).json()
+    assert empty['source_status'] == 'unavailable' and empty['versions'] == [] and empty['selected_version'] is None and empty['facts']['items'] == []
+    assert client.get(f'{route}?version=initial').status_code == 404
+
+
+def test_odd_values_in_a_trace_or_a_version_never_break_the_new_routes(mission):
+    client, directory, root, _ = mission
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    lines = trace.read_text().splitlines()
+    odd = [dict(type='context-cut', outcome=['cut'], triggers='x', tokens_before=-1, tokens_after=1.5, request_id=7),
+        dict(type='response-complete', request_id='request-9', reported_cost_usd='NaN', reported_provider=dict(a=1), usage_available=True, usage=dict(input='x')),
+        dict(type='response-complete', request_id='request-10', reported_cost_usd='1e400', reported_provider='y' * 600, usage=[]),
+        dict(type='knowledge-delivery', kind='update', outcome='delivered', text='one line', version=['v'], article_ids=7),
+        dict(type='tool-start', request_id='request-9', tool_call_id='t', tool='player_hint', arguments=dict(intent=5, actions='no')),
+        dict(type='tool-result', request_id='request-9', tool_call_id='t', result=dict(structuredContent=dict(receipts=[1, dict(disposition=[])], source=3, reason={})))]
+    trace.write_text('\n'.join([*lines[:-1], *(json.dumps(e) for e in odd)]) + '\n')
+    (root / 'delivered' / 'v11.json').write_text(json.dumps(delivered_document('v11', [7, dict(id=['x'], body=[3, dict(text=1, facts=[1])], links='x', last_confirmed=[])],
+        [None, dict(id=1, text=['t'], seen=dict(session=['admission-a'], actor={}, step=True), scope=['world'])], coverage='x')))
+    for route in ('summary', 'feed', 'telemetry', 'delivered-knowledge', 'delivered-knowledge?q=x'):
+        response = client.get(f'/api/view/run/mission/{route}')
+        assert response.status_code == 200, (route, response.text[:200])
+    assert client.get('/api/view/run/mission/summary').json()['host_telemetry']['reported_cost_usd'] == '0.0082000005'
+
+
+def test_the_new_routes_leave_the_run_untouched_and_name_no_path(mission, tmp_path):
+    client, directory, _, _ = mission
+    before = snapshot(directory)
+    for route in ('summary', 'feed', 'telemetry', 'delivered-knowledge', 'delivered-knowledge?version=v2'):
+        response = client.get(f'/api/view/run/mission/{route}')
+        assert response.status_code == 200 and (route == 'summary' or str(tmp_path) not in response.text), route
+        assert client.post(f'/api/view/run/mission/{route}').status_code == 405
+    assert snapshot(directory) == before
+
+
 def test_a_sealed_pre_world_session_keeps_its_frozen_snapshot_readable(tmp_path):
     """S-MIGRATION, closed archive reads (#838): a sealed `campaign-run/10` session of the archive index carries
     `player-host-inputs/3` and `delivered-knowledge/1`. The viewer reads those versions for it and for no current run."""
@@ -845,3 +1567,77 @@ def test_a_sealed_pre_world_session_keeps_its_frozen_snapshot_readable(tmp_path)
     (actor_dir/'frozen.json').write_text(json.dumps(dict(schema='player-host-inputs/4', session=session, actor_id=actor,
         knowledge_updates=None, files={'delivered-knowledge.json': digest})))
     assert client.get(url, params=dict(actor=actor)).json()['snapshot_status'] == 'hash_unavailable'
+
+
+def test_context_and_knowledge_routes_reject_symlinked_host_trace(mission, tmp_path):
+    client, directory, _, actor = mission
+    outside = tmp_path / 'outside-host.jsonl'
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    outside.write_bytes(trace.read_bytes())
+    trace.unlink()
+    trace.symlink_to(outside)
+    ctx_resp = client.get('/api/view/run/mission/context/request-1')
+    assert ctx_resp.status_code == 404 and ctx_resp.json()['error'] == 'host_unavailable'
+    kb_resp = client.get(f'/api/view/run/mission/knowledge?actor={actor}')
+    assert kb_resp.status_code == 404 and kb_resp.json()['error'] == 'host_unavailable'
+
+
+def test_malformed_only_curator_ledger_is_unavailable_not_zero(mission):
+    import shutil
+    client, directory, _, _ = mission
+    sessions = directory / 'curator-runner' / 'sessions' / 'admission-a'
+    for existing in list(sessions.iterdir()):
+        shutil.rmtree(existing)
+    bad = sessions / '001-1-2-bad'
+    bad.mkdir()
+    (bad / 'proxy-ledger.jsonl').write_text('{not valid json\n')
+    cs = client.get('/api/view/run/mission/summary').json()['curator_spend']
+    assert cs is not None and cs['spent_usd'] is None and cs['unsettled_requests'] == 1 and cs['spend_complete'] is False
+
+
+def test_settled_actor_with_unpriced_counter_and_no_spend_marks_incomplete(mission):
+    client, directory, _, _ = mission
+    first_start = json.loads((directory / 'actors' / '001' / 'host.jsonl').read_text().splitlines()[0])
+    second = directory / 'actors' / '002'
+    second.mkdir()
+    (second / 'host.jsonl').write_text('\n'.join([
+        json.dumps(dict(first_start, actor_id='actor-2', wall_time=iso(BASE + 1), monotonic_ms=10.0)),
+        json.dumps(dict(type='settled', wall_time=iso(BASE + 2), monotonic_ms=20.0, ok=True, spent_usd=None,
+            player_requests=1, recall_requests=0, unpriced_requests=1, unpriced_recall_requests=0)),
+    ]) + '\n')
+    ht = client.get('/api/view/run/mission/summary').json()['host_telemetry']
+    assert ht is not None and ht['spend_complete'] is False and ht['unpriced_requests'] == 1
+
+
+def test_latest_provider_uses_chronologically_last_response_even_if_unlabelled(mission):
+    client, directory, _, _ = mission
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    lines = trace.read_text().splitlines()
+    extra = [
+        json.dumps(dict(type='request-start', wall_time=iso(BASE + 90), monotonic_ms=9e6, request_id='request-99', logical_request_id='request-99')),
+        json.dumps(dict(type='response-complete', wall_time=iso(BASE + 91), monotonic_ms=9.1e6, request_id='request-99',
+            usage_available=True, usage=dict(input=10, output=5, cacheRead=0, cacheWrite=0), reported_provider=None, reported_cost_usd='0.001')),
+    ]
+    trace.write_text('\n'.join([*lines[:-1], *extra, lines[-1]]) + '\n')
+    ht = client.get('/api/view/run/mission/summary').json()['host_telemetry']
+    assert ht['latest_provider'] == 'unknown'
+
+
+def test_delivered_knowledge_confirms_opening_briefing_delivery_for_initial(mission):
+    client, directory, _, _ = mission
+    initial_version = json.loads((directory / 'delivered-knowledge.json').read_text()).get('version')
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    lines = trace.read_text().splitlines()
+    briefing = json.dumps(dict(type='knowledge-delivery', kind='briefing', version=initial_version,
+        wall_time=iso(BASE + 0.5), monotonic_ms=5.0, request_id='request-1'))
+    trace.write_text('\n'.join([lines[0], briefing, *lines[1:]]) + '\n')
+    body = client.get('/api/view/run/mission/delivered-knowledge?version=initial').json()
+    assert body['delivery'] is not None and body['delivery']['kind'] == 'briefing' and body['delivery']['knowledge_version'] == initial_version
+
+
+def test_placed_preserves_null_call_decision_separately_from_step_decision():
+    from harness.viewer.feed import placed
+    from harness.viewer.telemetry import Step
+    step = Step(seq=5, operation_id='op-5', actor='a1', wall=100.0, decision=4, game_time=3600, mode='in_play', source_id='s-5')
+    out = placed(step, None, 100.0, None)
+    assert out['decision'] is None and out['step_decision'] == 4 and out['seq'] == 5

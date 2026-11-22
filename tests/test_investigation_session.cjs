@@ -1,5 +1,5 @@
-// Control strip and its independence from the viewer, against the fixture server: element ids
-// and text formats of the strip, Pause with a reason, the viewer-unavailable state, CSP, and
+// Mission Control bar (the control path) and its independence from the viewer, against the fixture server: element
+// ids and text formats of the strip, its frame, Pause with a reason, the viewer-unavailable state, CSP, and the
 // keyboard timeline.
 const {test, before, after, beforeEach, afterEach} = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,9 +13,14 @@ before(async () => { browser = await S.launch(); });
 after(async () => { if (browser) await browser.close(); });
 async function start(options = {}) {
   fx = await S.startFixture();
-  page = await S.open(browser, `${fx.url}#live`, options);
+  page = await S.open(browser, `${fx.url}#watch`, options);
   await S.ready(page);
 }
+/** How the strip shows the control path's own frame: out of the way, small, or in full. */
+const stripFrame = () => page.evaluate(() => {
+  const box = document.querySelector('.ctl-frame'), img = document.getElementById('frame');
+  return {visible: getComputedStyle(box).visibility === 'visible', width: document.querySelector('.frame-shell').offsetWidth, hidden: img.hidden, natural: img.naturalWidth};
+});
 afterEach(async () => { if (page) await page.close(); if (fx) fx.stop(); page = fx = null; });
 
 const text = selector => page.$eval(selector, node => node.innerText);
@@ -61,9 +66,134 @@ test('the control strip shows the session, status freshness, source details and 
   assert.deepEqual(page.problems, []);
 });
 
+test('the strip\'s own frame steps aside only while Watch shows the same live frame, and returns whenever it does not', async () => {
+  await start({width: 1440});
+  await until(() => document.documentElement.dataset.watchStage === 'ok');
+  assert.deepEqual(await stripFrame(), {visible: false, width: 63, hidden: false, natural: 640});
+  // Its details stay one click away.
+  await page.click('.src-details summary');
+  assert.equal(await page.$eval('.src-panel', n => n.offsetHeight > 0), true);
+  assert.match(await text('#source-details'), /^Session: /);
+  await page.click('.src-details summary');
+  // In history, on a held view, on another tab and on another run the live frame is nowhere else, so the strip shows it small.
+  const peek = async why => { await until(() => document.documentElement.dataset.watchStage === undefined); const f = await stripFrame(); assert.deepEqual([f.visible, f.hidden, f.natural], [true, false, 640], why); assert.ok(f.width > 0 && f.width < 100, why); };
+  const back = () => until(() => document.documentElement.dataset.watchStage === 'ok');
+  await page.click('#feed-back'); await peek('history');
+  await page.click('#backlive'); await back();
+  await page.click('#feed-hold'); await peek('held');
+  await page.click('#feed-hold'); await back();
+  await page.click('[data-nav="memory"]'); await peek('another tab');
+  await page.click('[data-nav="watch"]'); await back();
+  await S.pick(page, 'aidA1'); await peek('another run');
+  await S.pick(page, 'ceil09'); await back();
+  // Without the viewer it is shown in full at once, still decoded.
+  page.expect503 = true;
+  await fx.viewer('down');
+  await until(() => document.documentElement.dataset.viewer === 'down', null, 10000);
+  const full = await stripFrame();
+  assert.deepEqual([full.visible, full.width, full.hidden, full.natural], [true, 300, false, 640]);
+  await fx.viewer('up');
+  await until(() => document.documentElement.dataset.watchStage === 'ok', null, 12000);
+});
+
+test('the strip\'s own frame is in view while Watch still decodes a newer capture, and stays so when that fails', async () => {
+  await start({width: 1440});
+  // Watch decodes each capture after the control path has: the second decode of one URL is Watch's, held or refused here.
+  await page.evaluate(() => {
+    const real = HTMLImageElement.prototype.decode, seen = new Map();
+    window.__watchDecode = 'run'; window.__release = null;
+    HTMLImageElement.prototype.decode = function () {
+      const n = (seen.get(this.src) || 0) + 1;
+      seen.set(this.src, n);
+      if (n < 2 || window.__watchDecode === 'run') return real.call(this);
+      if (window.__watchDecode === 'fail') return Promise.reject(new DOMException('refused by the test', 'EncodingError'));
+      return new Promise(resolve => { window.__release = () => resolve(real.call(this)); });
+    };
+  });
+  const stage = () => until(() => document.documentElement.dataset.watchStage === 'ok' && getComputedStyle(document.querySelector('.ctl-frame')).visibility === 'hidden');
+  const look = () => page.evaluate(() => ({stage: document.documentElement.dataset.watchStage, feed: Number(document.getElementById('feed-meta').textContent.match(/capture (\d+)/)[1]),
+    strip: Number(document.getElementById('source-details').textContent.match(/Capture: (\d+)/)[1]), seen: getComputedStyle(document.querySelector('.ctl-frame')).visibility,
+    hidden: document.getElementById('frame').hidden, left: document.getElementById('statusline').getBoundingClientRect().left}));
+  const newer = async () => { const was = (await look()).strip; await fx.advance(1); await until(n => Number(document.getElementById('source-details').textContent.match(/Capture: (\d+)/)[1]) > n, was); };
+  await stage();
+  const first = await look();
+  assert.equal(first.feed, first.strip);
+  // Delayed: Watch still shows the earlier capture, so the control path's newer one is in view until Watch has painted it.
+  await page.evaluate(() => { window.__watchDecode = 'delay'; });
+  await newer();
+  await until(() => !!window.__release);
+  const delayed = await look();
+  assert.deepEqual([delayed.stage, delayed.feed, delayed.strip, delayed.seen, delayed.hidden], [undefined, first.feed, first.strip + 1, 'visible', false]);
+  assert.equal(delayed.left, first.left, 'its return moves nothing');
+  await S.settle(page, 2500);   // and a poll later it is still there
+  assert.deepEqual([(await look()).stage, (await look()).seen], [undefined, 'visible']);
+  await page.evaluate(() => { window.__watchDecode = 'run'; window.__release(); });
+  await stage();
+  assert.equal((await look()).feed, first.strip + 1);
+  // Failed: Watch keeps its last good frame, which is no longer the live one.
+  await page.evaluate(() => { window.__watchDecode = 'fail'; });
+  await newer();
+  await S.settle(page, 2500);
+  const failed = await look();
+  assert.deepEqual([failed.stage, failed.feed, failed.strip, failed.seen, failed.hidden], [undefined, first.strip + 1, first.strip + 2, 'visible', false]);
+  await page.evaluate(() => { window.__watchDecode = 'run'; });
+  await newer();
+  await stage();
+  assert.equal((await look()).feed, first.strip + 3);
+  assert.deepEqual(page.problems, []);
+});
+
+test('the strip\'s frame comes back when the control path moves to another session', async () => {
+  await start({width: 1440});
+  await until(() => document.documentElement.dataset.watchStage === 'ok');
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('enactive:control', {detail: {ok: true, status: {session: 'another'}}})));
+  assert.equal(await page.evaluate(() => new Promise(r => requestAnimationFrame(() => setTimeout(() => r(document.documentElement.dataset.watchStage ?? null), 50)))), null);
+  await until(() => document.documentElement.dataset.watchStage === 'ok');   // the next status is the real session's again
+});
+
+test('Pause repeats only the facts of the run it would end, never those of the run being looked at', async () => {
+  await start();
+  const sheetFacts = async () => {
+    await page.focus('#pause'); await page.keyboard.press('Enter');
+    const words = await text('#sheetfacts');
+    await page.keyboard.press('Escape');
+    return words;
+  };
+  await until(() => document.getElementById('pill-spend'));
+  assert.match(await sheetFacts(), /^Session c6c09be0…\. Decision \d+, \$2\.\d\d spent \(provider-reported\)\. Pause permanently ends this run/);
+  await S.pick(page, 'aidA1');
+  await until(async session => { const {store} = await import('/app/data.js'); return store.summary && store.summary.session === session; }, S.SESSIONS.aidA1);
+  await S.settle(page, 2500);
+  assert.match(await text('#viewer-facts'), /not the live run/i);
+  const archived = await sheetFacts();
+  assert.match(archived, /^Session c6c09be0…\.\s+Pause permanently ends this run/);
+  assert.doesNotMatch(archived, /Decision|\$/);
+  await S.pick(page, 'ceil09');
+  await until(async session => { const {store} = await import('/app/data.js'); return store.summary && store.summary.session === session; }, S.SESSIONS.ceil09);
+  assert.match(await sheetFacts(), /Decision \d+, \$2/);
+  assert.deepEqual((await fx.state()).pauses, []);
+});
+
+test('without the viewer page at all, the strip shows its frame in full, its status and Pause', async () => {
+  fx = await S.startFixture();
+  page = await browser.newPage();
+  await page.setRequestInterception(true);
+  page.on('request', r => (/\/app\/main\.js$/.test(r.url()) ? r.abort() : r.continue()));
+  await page.setViewport({width: 1280, height: 900});
+  await page.goto(fx.url, {waitUntil: 'load'});
+  await until(() => document.getElementById('connection').dataset.state === 'ok' && document.getElementById('frame').naturalWidth > 0);
+  const frame = await stripFrame();
+  assert.deepEqual([frame.visible, frame.width, frame.hidden], [true, 300, false]);
+  assert.match(await text('#statusline'), /^Running · session /);
+  await page.focus('#pause'); await page.keyboard.press('Enter');
+  await page.click('input[value="fault"]'); await page.click('#sheetsubmit');
+  await until(() => document.getElementById('sheet').hidden);
+  assert.deepEqual((await fx.state()).pauses, [{reason: 'fault'}]);
+});
+
 test('the control strip reads only /api/status and /api/source; the viewer never feeds it', async () => {
   const source = fs.readFileSync(path.join(__dirname, '../web/app/control.js'), 'utf8');
-  assert.doesNotMatch(source, /api\/view|viewerGet|data\.js/);
+  assert.doesNotMatch(source, /api\/view|viewerGet|data\.js|^import /m);
   const fetches = [...source.matchAll(/(?:getJSON|fetch)\(\s*[`'"]([^`'"]+)/g)].map(m => m[1]);
   for (const target of fetches) assert.match(target, /^\/api\/(status|source\/|pause)/, `unexpected control-path fetch ${target}`);
   await start();
@@ -119,8 +249,8 @@ for (const mode of ['live', 'recorded']) {
     } else {
       fx = await S.startFixture();
       await fx.viewer('nolive');
-      page = await S.open(browser, `${fx.url}recorded/#live`);
-      await until(() => document.querySelector('#tl canvas'));
+      page = await S.open(browser, `${fx.url}recorded/#watch`);
+      await until(() => document.querySelector('#tl') && document.querySelector('#story .card'));
     }
 
     const cdp = await page.createCDPSession();
@@ -153,12 +283,19 @@ for (const mode of ['live', 'recorded']) {
       await page.keyboard.press('End');
       assert.equal(await now(), last);
       assert.equal(/live/.test(await page.$eval('#tl', n => n.getAttribute('aria-valuetext'))), mode === 'live');
+      // Focus survives the redraws of a poll, and a pointer moves the same playhead.
+      await S.settle(page, 2500);
       assert.equal(await page.evaluate(() => document.activeElement.id), 'tl');
       await checkAccessibility(edge);
+      const box = await (await page.$('#tl')).boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      assert.ok(Math.abs(await now() - last / 2) <= 1);
+      await page.focus('#tl');
+      await page.keyboard.press('End');
 
       if (mode === 'live') {
-        await page.select('#runpick', 'aidA1');
-        await until(() => document.querySelector('#tl canvas') &&
+        await S.pick(page, 'aidA1');
+        await until(() => document.querySelector('#story-source') &&
           document.querySelector('#timeline-help')?.textContent.endsWith('the latest recorded step.'));
         const {nodeId: archivedId} = await cdp.send('DOM.querySelector', {nodeId: root.nodeId, selector: '#tl'});
         const {nodes: [archived]} = await cdp.send('Accessibility.getPartialAXTree', {nodeId: archivedId, fetchRelatives: false});
@@ -248,7 +385,7 @@ test('viewer 503 leaves the control strip and Pause working', async () => {
 test('first load while the viewer is down: the strip is complete and the page says viewer unavailable', async () => {
   fx = await S.startFixture();
   await fx.viewer('down');
-  page = await S.open(browser, `${fx.url}#live`);
+  page = await S.open(browser, `${fx.url}#watch`);
   page.expect503 = true;
   await page.waitForFunction(() => document.getElementById('connection').dataset.state === 'ok' && document.getElementById('frame').naturalWidth > 0, {timeout: 8000, polling: 100});
   await until(() => document.getElementById('viewer').classList.contains('down'));
@@ -266,6 +403,7 @@ test('control status failing shows the error line and keeps Pause', async () => 
   await until(() => !document.getElementById('status-error').hidden, null, 5000);
   assert.equal(await page.$eval('#connection', n => n.dataset.state), 'error');
   assert.match(await text('#control-freshness'), /^Last status received \S+; current state unknown\./);
+  assert.ok(await page.$eval('#control-freshness', n => n.offsetHeight > 0), 'the age of the last status is in view');
   assert.equal(await page.$eval('#pause', b => b.disabled), false);
 });
 
@@ -273,7 +411,7 @@ test('the page works under the gateway policy: CSP header present and nothing vi
   await start();
   const response = await fetch(fx.url);
   assert.equal(response.headers.get('content-security-policy'), "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'");
-  await page.evaluate(() => { location.hash = '#compare'; });
+  await page.evaluate(() => { location.hash = '#diagnostics/compare'; });
   await S.settle(page, 1500);
   assert.deepEqual(page.problems, []);
   const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
@@ -285,16 +423,19 @@ test('the page works under the gateway policy: CSP header present and nothing vi
   }
 });
 
-test('phone layout: Pause leads the strip and the Pause? list leads the page', async () => {
+test('phone layout: Pause leads the strip, then the stage, the timeline and the story', async () => {
   await start({width: 390, height: 800, mobile: true});
   const order = await page.evaluate(() => {
     const top = id => document.querySelector(id).getBoundingClientRect().top;
-    return {pause: top('#pause'), conds: top('#conds'), state: top('#gamestate'), tl: top('#tl')};
+    return {pause: top('#pause'), status: top('#statusline'), stage: top('.player'), tl: top('#tl'), story: top('#story')};
   });
-  assert.ok(order.pause < order.conds && order.conds < order.state && order.state < order.tl, JSON.stringify(order));
+  assert.ok(order.pause < order.status && order.status < order.stage && order.stage < order.tl && order.tl < order.story, JSON.stringify(order));
   // A 640-pixel frame at 1:1 scrolls inside the player, never the page.
   await until(() => !document.getElementById('feed').hidden);
+  await page.click('#feed-scale-1');
+  await until(() => document.getElementById('feed').clientWidth === 640);
   assert.equal(await S.overflow(page), 0);
+  await page.evaluate(() => localStorage.removeItem('feed-scale'));
 });
 
 test('the feed player keeps each frame at its size, never blanks, and holding the view never touches the run (#435)', async () => {
@@ -304,8 +445,12 @@ test('the feed player keeps each frame at its size, never blanks, and holding th
     return {w: c.width, h: c.height, cw: c.clientWidth, vw: v.clientWidth, hidden: c.hidden, meta: document.getElementById('feed-meta').textContent};
   });
   await until(() => /^live · control path · capture \d+/.test(document.getElementById('feed-meta').textContent));
+  const fitted = await feed();
+  assert.deepEqual([fitted.cw, await page.$eval('#feed', c => getComputedStyle(c).objectFit)], [fitted.vw, 'contain'], 'fitted to the stage, undistorted, by default');
+  await page.click('#feed-scale-1');
+  await until(() => document.getElementById('feed').clientWidth === 640);
   const first = await feed();
-  assert.deepEqual([first.w, first.h, first.cw, first.hidden], [640, 360, 640, false], 'drawn pixel for pixel by default');
+  assert.deepEqual([first.w, first.h, first.cw, first.hidden], [640, 360, 640, false], 'drawn pixel for pixel at 1:1');
   // New frames replace the picture without a blank or a size change.
   await page.evaluate(() => {
     window.__feed = [];
@@ -347,12 +492,14 @@ test('the feed player keeps each frame at its size, never blanks, and holding th
   await until(seq => document.getElementById('feed-meta').textContent.startsWith(`step ${seq - 1} `), backAt);
   await page.click('#feed-forward');
   await until(seq => document.getElementById('feed-meta').textContent.startsWith(`step ${seq} `), backAt);
-  await page.click('#feed-live');
+  await page.click('#backlive');
   await until(() => /^live · control path/.test(document.getElementById('feed-meta').textContent));
-  // On a run that is not live, Live is disabled and the player shows that run's recorded frames.
-  await page.select('#runpick', 'aidA1');
-  await until(() => document.getElementById('feed-live').disabled && /^step \d+/.test(document.getElementById('feed-meta').textContent));
+  // On a run that is not live there is nothing to return to, and the player shows that run's recorded frames.
+  await S.pick(page, 'aidA1');
+  await until(() => /^step \d+/.test(document.getElementById('feed-meta').textContent) && /RECORDED/.test(document.querySelector('.stagepill').textContent));
+  assert.equal(await page.$('#backlive'), null);
   assert.deepEqual(page.problems, []);
+  await page.evaluate(() => localStorage.removeItem('feed-scale'));
 });
 
 test('stream player: integer scales, wide layout, caption, liveness badges and shortcuts (#437)', async () => {
@@ -360,8 +507,7 @@ test('stream player: integer scales, wide layout, caption, liveness badges and s
   const q = () => page.evaluate(() => {
     const c = document.getElementById('feed');
     return {cw: c.clientWidth, hidden: c.hidden, scale: document.querySelector('.player').dataset.scale,
-      wide: document.querySelector('.player').dataset.wide, col: document.querySelector('.frame-col').className,
-      first: document.querySelector('[data-view="live"]').firstElementChild.className,
+      wide: document.querySelector('.player').dataset.wide, beside: document.querySelector('.story').getBoundingClientRect().left >= document.querySelector('.player').getBoundingClientRect().right,
       caption: (document.getElementById('feed-caption') || {}).textContent || '', age: (document.getElementById('feed-age') || {}).textContent || '',
       behind: (document.getElementById('feed-behind') || {}).textContent || '', meta: document.getElementById('feed-meta').textContent};
   });
@@ -384,10 +530,12 @@ test('stream player: integer scales, wide layout, caption, liveness badges and s
     await page.click(id);
     await until(w => document.getElementById('feed').clientWidth === w, width);
   }
-  // Wide moves the player to the top at full width, without page overflow.
+  // Wide gives the player the whole width with the story below it, without page overflow.
+  assert.equal((await q()).beside, true);
   await page.click('#feed-wide');
+  await until(() => document.querySelector('.player').dataset.wide === 'yes');
   s = await q();
-  assert.deepEqual([s.wide, s.col, s.first], ['yes', 's12 frame-col', 's12 frame-col']);
+  assert.deepEqual([s.wide, s.beside], ['yes', false]);
   assert.equal(await S.overflow(page), 0);
   // Behind live: hold, let the run move on, then jump back from the badge.
   await page.click('#feed-hold');
@@ -467,25 +615,29 @@ test('stream player at phone width: wide and 3x scroll inside the player, never 
 test('a run whose live store was never finalized is labelled and not followed (#435)', async () => {
   fx = await S.startFixture();
   await fx.viewer('stale');
-  page = await S.open(browser, `${fx.url}#live`);
+  page = await S.open(browser, `${fx.url}#watch`);
   await S.ready(page);
   await until(() => document.getElementById('runpick').selectedOptions[0]?.textContent.startsWith('ceil09'));
   const options = await page.$$eval('#runpick option', o => o.map(x => x.textContent));
   assert.match(options[0], /^aidA1 · .* · not finalized$/);
   assert.match(options.find(o => o.startsWith('ceil09')), / · live$/);
-  await page.select('#runpick', 'aidA1');
+  await S.pick(page, 'aidA1');
   await until(() => /ended, not finalized/.test(document.getElementById('viewer-facts').textContent));
-  await page.click('[data-nav="run"]');
-  await until(() => document.querySelector('[data-view="run"] .custodian-receipt dl'));
-  assert.equal(await text('[data-view="run"] .panel header .note'), 'evaluation unfinished');
+  await page.click('[data-nav="diagnostics"]');
+  await until(() => document.querySelector('[data-view="diagnostics"] .custodian-receipt dl'));
+  assert.equal(await text('#evaluation-note'), 'evaluation unfinished');
   assert.deepEqual(page.problems, []);
 });
 
-test('keyboard operation: tab reaches the Pause button, findings rows and nav with a visible focus ring', async () => {
+test('keyboard operation: Pause, the story cards and the findings are focusable buttons with a visible focus ring', async () => {
   await start();
   await page.focus('#pause');
   const outline = await page.$eval('#pause', n => { n.focus(); return getComputedStyle(n).outlineStyle; });
   assert.notEqual(outline, 'none');
+  const cards = await page.$$eval('#story .card > *', n => n.map(x => x.tagName));
+  assert.ok(cards.length >= 3 && cards.every(t => t === 'BUTTON' || t === 'A'), 'story cards are buttons and links');
+  await page.click('[data-nav="diagnostics"]');
+  await until(() => document.querySelector('#findings li'));
   const tags = await page.$$eval('#findings li > *', n => n.map(x => x.tagName));
   assert.ok(tags.length >= 3 && tags.every(t => t === 'BUTTON'), 'finding rows are buttons');
 });

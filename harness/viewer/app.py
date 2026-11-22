@@ -18,7 +18,7 @@ from starlette.routing import Route
 
 from harness.spectator_assets import PAGE_POLICY, WEB, static_file
 
-from . import cross, views, knowledge, curator, curator_runner
+from . import cross, views, knowledge, curator, curator_runner, delivered, feed as story, telemetry
 from . import frame as frame_view
 from .catalog import API, Catalog, RunInfo, ViewError
 from .live import LiveEvaluator
@@ -98,7 +98,22 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         mine = evaluator is not None and info.session == live_session()
         is_live = mine and info.state == 'live'
         # A final store of the live run is served read-only; the evaluator status says live evaluation stopped.
-        return reply(views.summary(catalog, info, connection, is_live, evaluator.status if mine else None, clock()))
+        body = views.summary(catalog, info, connection, is_live, evaluator.status if mine else None, clock())
+        return reply(dict(body, host_telemetry=telemetry.summary(telemetry.read(info)), curator_spend=telemetry.curator_spend(info),
+            boundary_grooming=telemetry.boundary_grooming(info, sources.curator_grooming)))
+
+    def feed(request: Request, info: RunInfo, connection) -> Response:
+        after, limit = paging(request)
+        return reply(story.feed(info, connection, after, limit))
+
+    def telemetry_(request: Request, info: RunInfo, connection) -> Response:
+        return reply(telemetry.telemetry(info, connection))
+
+    def delivered_knowledge(request: Request, info: RunInfo, connection) -> Response:
+        after, limit = paging(request)
+        query = request.query_params
+        return reply(delivered.browse(info, connection, query.get('version') or None, query.get('q') or None,
+            query.get('scope') or None, after, limit))
 
     def steps(request: Request, info: RunInfo, connection) -> Response:
         after, limit = paging(request)
@@ -163,7 +178,7 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         return reply(payload, schema=frame_view.API)
 
     def frame_health(request: Request) -> Response:
-        return frame_reply(frame_view.health(catalog, sources))
+        return frame_reply(frame_view.health(catalog, sources, clock()))
 
     def frame_containers(request: Request) -> Response:
         after, limit = paging(request)
@@ -198,6 +213,16 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
                                            after, limit, request.query_params.get('snapshot')))
 
     def curator_runner_status(request: Request) -> Response:
+        run = request.query_params.get('run') or None
+        if run is not None:  # the selected run's own runner; the configured file belongs to the live run only
+            info = catalog.find(run)
+            live = info.session == live_session()
+            if info.run_dir is not None:
+                own = curator_runner.run_status(info.run_dir, clock())
+                if own['source_status'] != 'missing' or not live:
+                    return frame_reply(own)
+            elif not live:
+                return frame_reply(curator_runner.status(None, clock()))
         return frame_reply(curator_runner.status(sources.curator_runner_status, clock()))
 
     prefix = '/api/view'
@@ -220,6 +245,9 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         Route(f'{prefix}/run/{{run}}/context/{{request_id}}', with_run(context), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/memory', with_run(memory), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/knowledge', with_run(knowledge_), methods=['GET']),
+        Route(f'{prefix}/run/{{run}}/feed', with_run(feed), methods=['GET']),
+        Route(f'{prefix}/run/{{run}}/telemetry', with_run(telemetry_), methods=['GET']),
+        Route(f'{prefix}/run/{{run}}/delivered-knowledge', with_run(delivered_knowledge), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/programs', with_run(programs), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/handoffs', with_run(handoffs), methods=['GET']),
         Route(f'{prefix}/improve/changes', plain(changes), methods=['GET']),

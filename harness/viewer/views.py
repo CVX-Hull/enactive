@@ -21,6 +21,8 @@ from harness.evaluation.core.sources import (JOURNAL_MANIFEST_SCHEMAS, RECEIPT_S
     read_manifest, read_historical_memory, read_player_store, run_archive_entry)
 
 from .catalog import Catalog, RunInfo, ViewError
+from .curator import read_rooted
+from .telemetry import Captured
 from . import pause
 
 SOURCE_ID = re.compile(r'^[A-Za-z0-9._-]{1,128}$')
@@ -322,9 +324,15 @@ def requests(connection: sqlite3.Connection, after: int, limit: int) -> dict:
 def host_events(catalog: Catalog, info: RunInfo, actor: str):
     run_dir = catalog.need_run_dir(info)
     directory = ctx._actor_directory(run_dir, actor)
-    if directory is None or not (directory / 'host.jsonl').is_file():
+    if directory is None:
         raise ViewError(404, 'unknown_actor', actor)
-    return read_host(directory / 'host.jsonl', directory.name, run_archive_entry(run_dir))[1]
+    state, _, data = read_rooted(run_dir, 'actors', directory.name, 'host.jsonl')
+    if state == 'missing':
+        raise ViewError(404, 'unknown_actor', actor)
+    if state != 'available':
+        raise ViewError(404, 'host_unavailable', f'{actor}: {state}')
+    captured = Captured(f'actors/{directory.name}/host.jsonl', data)
+    return read_host(captured, directory.name, run_archive_entry(run_dir))[1]
 
 
 def context(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, request_id: str, actor: str | None) -> dict:
