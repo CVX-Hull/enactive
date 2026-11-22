@@ -1,8 +1,9 @@
 ---
 owner: lead
-status: active
-scope: 'Current curator-fact/4 structural publication, sessions and drafts; compatible-snapshot restore and proposed prospective gate'
-review_trigger: A change to the knowledge repository layout, the submission or fact shapes, the gate checks, the draft lifecycle or the session close-out
+status: historical
+date: '2026-11-22'
+scope: 'Design of curator sessions, drafts, gate v0 and operator restore, adopted into the curator contract; its prospective-gate proposal continues in docs/design/prospective-curator-gate.md'
+replacement: docs/contracts/curator.md
 ---
 
 # Curator sessions, drafts and gate v0

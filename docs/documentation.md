@@ -35,7 +35,7 @@ approval stages.
 | --- | --- | --- |
 | Purpose and constraints | [Charter](charter.md) | [Engineering standards](engineering.md) |
 | Product capability and limits | [Overview](overview.md) | [Architecture](architecture.md) |
-| Ownership, state and failures | A component linked from architecture | [Contract index](protocol.md): [computer control](contracts/computer-control.md), [player host](contracts/player-host.md), [evaluation records](contracts/evaluation-record.md); code and assertions |
+| Ownership, state and failures | A component linked from architecture | [Contract index](protocol.md): [computer control](contracts/computer-control.md), [player host](contracts/player-host.md), [curator](contracts/curator.md), [evaluation records](contracts/evaluation-record.md); code and assertions |
 | Operate a finite run | [Setup](setup.md), [runbook](runbook.md) | [Campaign procedure](operations/campaign-run.md) |
 | Change scope and acceptance | GitHub Issue/PR | Affected parent/component, contract and [review policy](workflows/review.md) |
 | Evidence and remaining work | [Public Project](https://github.com/users/CVX-Hull/projects/2) and its issues | Run method in [development runs](development-runs.md); dated records in the [acceptance index](acceptance/index.md) and [change index](changes/index.md) |
@@ -76,25 +76,26 @@ reader task or boundary benefits; no universal file-size quota applies.
 ### From code to its documents
 
 Before changing an area, read its row: the page that explains it, the page that states
-its exact rules, and the tests that hold them. A delegated agent with a bounded brief
-needs these and the [glossary](glossary.md), not the whole start-here set.
+its exact rules, the tests that hold them, and the diagram to update when the change
+moves a boundary it shows. A delegated agent with a bounded brief needs these and the
+[glossary](glossary.md), not the whole start-here set.
 
-| Code | Explanation | Exact rules | Tests |
-| --- | --- | --- | --- |
-| `harness/computer/`, the native bridge | [Native control](components/native-control.md) | [Computer control](contracts/computer-control.md) | `tests/test_computer_*.py`, the compiled `tests/computer_*_check.py` |
-| `harness/player/`, `harness/player_tools.py`, `player_view.py`, `player_mcp.py`, `player_client.py` | [Player interface](components/player-interface.md), [journal and knowledge](components/player-interface.md#journal-and-knowledge) | [Player ports](contracts/player-ports.md), [computer control](contracts/computer-control.md), [player guide](player-guide.md) | `tests/test_player_journal.py`, `test_player_view.py`, `test_player_isolation.py` |
-| `harness/application.py`, `harness/server.py`, `harness/__main__.py` | [Execution](components/execution.md) | [Computer control](contracts/computer-control.md), [player ports](contracts/player-ports.md) | `tests/test_player_application.py`, `tests/test_server.py`, `tests/test_cli.py` |
-| `tools/player_host/`, `tools/campaign_*.py`, `tools/configure_player_tools.py` | [Player host procedure](operations/player-host.md), [campaign procedure](operations/campaign-run.md), [supervision](operations/campaign-supervision.md) | [Player host](contracts/player-host.md), [host telemetry](contracts/player-host-telemetry.md), the adapter's closed fields in [its reference](../tools/player_host/README.md) | `tests/test_player_host_*.py`, `tests/test_campaign_*.py`, `tests/test_recorded_player_fixture.py`, `tools/player_host/test/` |
-| `harness/curator/`, `tools/curator_host/`, `tools/knowledge_export.py` | [Curator](components/curator.md), [curator session design](design/curator-session.md) | [Curator hosts](operations/curator-hosts.md), [shadow-run procedure](operations/curator-shadow-run.md), [measurement tools](contracts/measurement-tools.md) and [withholding study](contracts/withholding-study.md) for the frozen knowledge export | `tests/test_curator_*.py`, `tests/test_knowledge_export.py`, `tools/curator_host/test/` |
-| `harness/evaluation/`, `harness/trace/`, `tools/evaluate.py`, `host_analysis.py`, `control_analysis.py`, `run_ledger.py`, `probe_baseline.py`, `memory_reads.py`, `memory_screen_checks.py`, `memory_measure.py`, `process_measures.py` | [Development runs](development-runs.md), the [measurement guide](measurement-guide.md); the [curator component](components/curator.md) for `harness/trace/` | [Evaluation records](contracts/evaluation-record.md), [measurement tools](contracts/measurement-tools.md), [withholding study](contracts/withholding-study.md), [run ledger](contracts/run-ledger.md) | `tests/test_evaluation_*.py`, `test_host_analysis.py`, `test_memory_measure*.py`, `test_process_measures.py`, `test_run_ledger.py`, `test_probes.py`, `test_trace_*.py` |
-| `tools/recurrence_research/` | [Structured recurrence research](design/structured-recurrence-research.md), [belief method comparison](design/belief-method-comparison.md) | The same design notes | `tests/test_recurrence_research_*.py` |
-| `harness/viewer/`, `harness/spectator_assets.py`, `web/` | [Spectator](components/spectator.md), [viewer procedures](operations/start-observe.md#viewer-procedures) | [Spectator view API](contracts/spectator-view.md#spectator-view-api-spectator-view2), [computer control](contracts/computer-control.md#passive-spectator-reads-and-operator-pause) for Pause | `tests/test_viewer_*.py`, the browser suites `tests/test_*.cjs` |
-| `tools/check.py`, `ci.py`, `documents.py`, `document_anchors.mjs`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_devtools.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py`, `test_host_neutrality.py` |
-| `tools/delegate.py`, `.agents/` and each coding agent's own configuration directory | [Starting a delegate](operations/coding-agents.md#starting-a-delegate-on-any-coding-agent), [delegate profiles](operations/delegate-profiles.md) | [S-AGENT](standards/agents.md#the-leads-duties) | `tests/test_delegate.py`, `tests/test_coding_agent_attempts.py`, `tests/test_coding_agent_config.py` |
-| `tools/starts.py` | [Reusable starts](development-runs.md#reusable-starts), [environment](environment.md) | [Evidence retention](operations/evidence-cleanup.md), [controls](controls.md) | `tests/test_start_*.py`, `tests/test_starts_*.py` |
-| `schemas/` | The page that names each schema: the [run ledger](contracts/run-ledger.md) for run metrics and development runs, [model routing](operations/model-routing.md#reading-the-ledger) and [matched runs](operations/matched-runs.md) for the attempts ledger, [S-DOCS](standards/documentation.md) for front matter, and the [context-stability record](acceptance/2026-11-08-context-stability-489.md) for the evidence-only curator cache diagnosis | The schema file | The tests of the code that reads it |
-| `tools/setup.py`, `prepare_game.py`, `patch_game.py`, `build_computer.py`, `harness/prepared_app.py`, `native/` | [Setup](setup.md), [environment](environment.md) | [Native acceptance](operations/native-acceptance.md) | `tests/test_setup.py` |
-| `harness/jsonio.py` | A shared helper with no page of its own | The contract of whichever caller is changed | `tests/test_jsonio.py` |
+| Code | Explanation | Exact rules | Tests | Diagram |
+| --- | --- | --- | --- | --- |
+| `harness/computer/`, the native bridge | [Native control](components/native-control.md) | [Computer control](contracts/computer-control.md) | `tests/test_computer_*.py`, the compiled `tests/computer_*_check.py` | [Request collection and permanent stop](components/native-control.md#stop-collection-and-recovery-views) |
+| `harness/player/`, `harness/player_tools.py`, `player_view.py`, `player_mcp.py`, `player_client.py` | [Player interface](components/player-interface.md), [journal and knowledge](components/player-interface.md#journal-and-knowledge) | [Player ports](contracts/player-ports.md), [computer control](contracts/computer-control.md), [player guide](player-guide.md) | `tests/test_player_journal.py`, `test_player_view.py`, `test_player_isolation.py` | [Basic input and collection](architecture.md#what-happens-when-the-agent-acts) |
+| `harness/application.py`, `harness/server.py`, `harness/__main__.py` | [Execution](components/execution.md) | [Computer control](contracts/computer-control.md), [player ports](contracts/player-ports.md) | `tests/test_player_application.py`, `tests/test_server.py`, `tests/test_cli.py` | [Player and custody](architecture.md#scope-and-responsibilities) |
+| `tools/player_host/`, `tools/campaign_*.py`, `tools/configure_player_tools.py` | [Player host procedure](operations/player-host.md), [campaign procedure](operations/campaign-run.md), [supervision](operations/campaign-supervision.md) | [Player host](contracts/player-host.md), [host telemetry](contracts/player-host-telemetry.md), the adapter's closed fields in [its reference](../tools/player_host/README.md) | `tests/test_player_host_*.py`, `tests/test_campaign_*.py`, `tests/test_recorded_player_fixture.py`, `tools/player_host/test/` | [Host request loop](contracts/player-host.md#coverage-gated-context-cut), [supervised processes](operations/campaign-supervision.md#process-ownership-and-credentials), [actor custody](architecture.md#run-ownership-and-operator-takeover) |
+| `harness/curator/`, `tools/curator_host/`, `tools/knowledge_export.py` | [Curator](components/curator.md), [curator hosts](operations/curator-hosts.md), [shadow-run procedure](operations/curator-shadow-run.md) | [Curator contract](contracts/curator.md); [measurement tools](contracts/measurement-tools.md) and [withholding study](contracts/withholding-study.md) for the frozen knowledge export | `tests/test_curator_*.py`, `tests/test_knowledge_export.py`, `tools/curator_host/test/` | [Curator pipeline](components/curator.md#from-live-trace-to-delivered-knowledge) |
+| `harness/evaluation/`, `harness/trace/`, `tools/evaluate.py`, `host_analysis.py`, `control_analysis.py`, `run_ledger.py`, `probe_baseline.py`, `memory_reads.py`, `memory_screen_checks.py`, `memory_measure.py`, `process_measures.py` | [Development runs](development-runs.md), the [measurement guide](measurement-guide.md); the [curator component](components/curator.md) for `harness/trace/` | [Evaluation records](contracts/evaluation-record.md), [measurement tools](contracts/measurement-tools.md), [withholding study](contracts/withholding-study.md), [run ledger](contracts/run-ledger.md) | `tests/test_evaluation_*.py`, `test_host_analysis.py`, `test_memory_measure*.py`, `test_process_measures.py`, `test_run_ledger.py`, `test_probes.py`, `test_trace_*.py` | `none`; `harness/trace/` is in the [curator pipeline](components/curator.md#from-live-trace-to-delivered-knowledge) |
+| `tools/recurrence_research/` | [Structured recurrence research](design/structured-recurrence-research.md), [belief method comparison](design/belief-method-comparison.md) | The same design notes | `tests/test_recurrence_research_*.py` | `none` |
+| `harness/viewer/`, `harness/spectator_assets.py`, `web/` | [Spectator](components/spectator.md), [viewer procedures](operations/start-observe.md#viewer-procedures) | [Spectator view API](contracts/spectator-view.md#spectator-view-api-spectator-view2), [computer control](contracts/computer-control.md#passive-spectator-reads-and-operator-pause) for Pause | `tests/test_viewer_*.py`, the browser suites `tests/test_*.cjs` | [Control path and viewer](components/spectator.md#spectator-host-operations-and-delivery) |
+| `tools/check.py`, `ci.py`, `documents.py`, `document_anchors.mjs`, `evidence.py`, `.github/` | [Testing](testing.md), [CI profiles](workflows/ci-profiles.md), [evidence retention](operations/evidence-cleanup.md) | [Controls](controls.md), [S-DOCS](standards/documentation.md) | `tests/test_ci.py`, `test_devtools.py`, `test_documents*.py`, `test_document_*.py`, `test_record_indexes.py`, `test_evidence.py`, `test_host_neutrality.py` | [CI profiles and jobs](workflows/ci-profiles.md), [review hierarchy](#documentation-understand-decide-implement-verify) |
+| `tools/delegate.py`, `.agents/` and each coding agent's own configuration directory | [Starting a delegate](operations/coding-agents.md#starting-a-delegate-on-any-coding-agent), [delegate profiles](operations/delegate-profiles.md) | [S-AGENT](standards/agents.md#the-leads-duties) | `tests/test_delegate.py`, `tests/test_coding_agent_attempts.py`, `tests/test_coding_agent_config.py` | `none` |
+| `tools/starts.py` | [Reusable starts](development-runs.md#reusable-starts), [environment](environment.md) | [Evidence retention](operations/evidence-cleanup.md), [controls](controls.md) | `tests/test_start_*.py`, `tests/test_starts_*.py` | `none` |
+| `schemas/` | The page that names each schema: the [run ledger](contracts/run-ledger.md) for run metrics and development runs, [model routing](operations/model-routing.md#reading-the-ledger) and [matched runs](operations/matched-runs.md) for the attempts ledger, [S-DOCS](standards/documentation.md) for front matter, and the [context-stability record](acceptance/2026-11-08-context-stability-489.md) for the evidence-only curator cache diagnosis | The schema file | The tests of the code that reads it | `none` |
+| `tools/setup.py`, `prepare_game.py`, `patch_game.py`, `build_computer.py`, `harness/prepared_app.py`, `native/` | [Setup](setup.md), [environment](environment.md) | [Native acceptance](operations/native-acceptance.md) | `tests/test_setup.py` | `none` |
+| `harness/jsonio.py` | A shared helper with no page of its own | The contract of whichever caller is changed | `tests/test_jsonio.py` | `none` |
 
 ### Follow a concrete reader task
 
@@ -111,30 +112,26 @@ needs these and the [glossary](glossary.md), not the whole start-here set.
 
 ## One authoritative home per kind of fact
 
-Charter owns purpose; engineering/standards own mandatory rules;
-architecture/components own current responsibilities and assurance limits;
-[computer-control](contracts/computer-control.md) owns exact current ports;
-schemas/source own their declared executable interface; operations own tasks.
-GitHub Issues and the linked Project own live priorities, status, owners, blockers
-and exceptions ([work items](workflows/work-items.md)); proposals and designs own
-unadopted scope; ADRs own dated rationale; acceptance reports own original observations;
-research owns external evidence and its limits; setup and the runbook own procedures.
-The charter owns the [scope of use](charter.md#scope-of-use-and-what-is-guaranteed);
-the [risk register](risks.md) owns the risks defended against in that scope and the
-ones excluded; the [controls page](controls.md) owns which risks each control serves,
-how, at what cost and with what gap. Neither is a second contract or work tracker. The
-[authority contract](workflows/authority.md) owns which summaries may restate what. The
-[spectator view contract](contracts/spectator-view.md#spectator-view-api-spectator-view2) owns the spectator view API.
-
-Five kinds of fact are often put in the wrong place:
+What is true now and how to do it belongs on a current page, in the present tense. The
+last column names the wrong place a fact is often put.
 
 | Fact | Home | Not |
 | --- | --- | --- |
-| What is true now and how to do it | A current page, in the present tense | A dated account of how it came to be |
+| Purpose and [scope of use](charter.md#scope-of-use-and-what-is-guaranteed) | [Charter](charter.md) | |
+| Mandatory rules | [Engineering standards](engineering.md) | |
+| Current responsibilities and assurance limits | [Architecture](architecture.md) and its components | A dated account of how it came to be |
+| Exact ports, formats and APIs | The [contract](protocol.md) that names them; schemas and source for their declared executable interface | A component or design note |
+| Tasks and procedures | [Setup](setup.md), the [runbook](runbook.md) and operations pages | |
+| Risks defended against or excluded | [Risk register](risks.md) | A second contract or work tracker |
+| Which risks a control serves, how, at what cost and with what gap | [Controls](controls.md) | A second contract or work tracker |
+| Which summaries may restate what | [Authority contract](workflows/authority.md) | |
 | What the owner decided | One row in the [owner decision log](decisions/owner-decisions.md) | Only a sentence in a current page, a banner on a design, or a record of its own |
 | What a run, measurement or study showed | A dated record under `docs/acceptance/` | A current page |
 | What a change did, why, and what was checked | Its pull request and commit message | A dated record |
-| Where a piece of work stands | Its issue and the Project | An ADR, a design note or a current page |
+| Live priorities, status, owners, blockers and exceptions | Its issue and the Project ([work items](workflows/work-items.md)) | An ADR, a design note or a current page |
+| Unadopted scope | Proposals and design notes | A current contract |
+| Dated rationale | ADRs | |
+| External evidence and its limits | Research pages | |
 
 [S-DOCS](standards/documentation.md#current-pages-records-and-decisions) states the
 rules that follow from this table.

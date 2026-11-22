@@ -6,54 +6,80 @@ status: active
 
 # Player interface and ordinary interaction design
 
-Design model-facing working context separately from machine-facing canonical
-records. Return the smallest sufficient decision view, retain exact evidence by
-reference, and expose detail on demand. Preserve required IDs, current ownership,
-obligations, unknown effects and relevant applicability limits. Keep images as
-image parts; avoid nested transport envelopes and repeated history. Verify the
-actual loaded host's presentation as well as SDK return values. Software owns
-deterministic request binding, bounded collection, cursors, joins and idle waiting;
-models own intent, interpretation and learning judgments. Do not require model
-narration for facts already available in receipts or another model turn just to
-discover an empty work queue. Measure context sufficiency by actual continuation,
-and migrate changed caller/persisted contracts under S-MIGRATION. These are design
-and qualification obligations, not claims that present tooling satisfies them.
-Apply progressive revelation: small current decision context first, selected
-tool guidance and focused memory/evidence next, technical detail by exact
-retained reference when needed. A detail read must not silently change the target
-snapshot or grant authority. For each model task, identify the interpretation or
-choice it supplies and when it can change a decision. Automate deterministic
-verification/accounting and known-failure classification; let the player select optional reflection for
-justified novelty, recurrence or consequence. Escalation needs an unresolved
-question and expected decision benefit, not merely any mismatch. C-REVIEW checks
-this responsibility split at consequential changes, without per-action review or
-an automated claim to judge semantic truth.
+These rules are obligations for design and qualification. They do not claim that present
+tooling satisfies them.
 
-Ordinary interface actions are the player's base capability; semantic skills are
-optional shortcuts and stronger claims about those actions. Missing semantic
-coverage must not prevent otherwise supported ordinary exploration or cancellation.
-Treat optional accelerators and derived caches accordingly: bound their working
-set and forget/recompute candidates when appropriate, rather than make historical
-cache growth a lifetime limit on ordinary observation/input. Size a producer cache
-to the permitted atomic decision/handoff working set using the existing contract,
-with explicit exact rereads after eviction; test the cross-boundary case rather
-than treating a local cache size as a new semantic limit. Preserve durable
-evidence, current guards, explicit uncertainty and original resource accounting.
-Exercise exploration beyond the cache working set in the existing component and
-whole-runtime lanes; this is not permission to ignore integrity or storage failure.
-Separate a rejected request, an unexpected in-game outcome and actual loss of
-authority or uncertain delivery. A correctable request error must not revoke a
-healthy input scope. Classify positively identified new caller-data errors at the
-validation boundary; do not infer nondelivery from arbitrary exceptions or treat
-trusted-history/storage failures as caller mistakes. Pure validation before SDK
-submission must not direct collection of a nonexistent operation. Pair correction
-regressions with actual integrity/transaction faults, preserving original costs,
-exact retry semantics and Pause. Reuse existing ledger/OS contracts and avoid
-recomputing full semantic projections merely to classify a rejected candidate.
-Review the entire observe/try/correct/cancel loop, including
-raw-input fallback, rather than only each adapter's successful path. C-REVIEW
-checks this distinction and C-PORTABLE exercises boundary regressions; actual
-keyboard/mouse capabilities still need their separate C-NATIVE evidence.
+## What the model sees
+
+- **Keep two forms.** Design the working context a model reads separately from the
+  canonical records a machine keeps.
+- **Return the smallest view that supports the decision.** Keep exact evidence by
+  reference and expose detail on demand. The view still carries required IDs, current
+  ownership, obligations, unknown effects and relevant limits of applicability.
+- **Reveal in steps.** The current decision context comes first, then selected tool
+  guidance and focused memory or evidence. Technical detail follows by exact retained
+  reference when it is needed. A detail read must not silently change the target snapshot
+  or grant authority.
+- **Keep the form plain.** Images stay image parts. Avoid nested transport envelopes and
+  repeated history.
+- **Verify what arrives.** Check the actual loaded host's presentation as well as SDK
+  return values, and measure whether context suffices by whether play actually continues.
+- **Migrate together.** A changed caller or persisted contract moves under S-MIGRATION.
+
+## What software does and what models do
+
+- Software owns deterministic request binding, bounded collection, cursors, joins and
+  idle waiting. It also automates deterministic verification, accounting and the
+  classification of known failures.
+- Models own intent, interpretation and learning judgments. For each model task, identify
+  the interpretation or choice it supplies and when that can change a decision.
+- A model does not narrate facts that receipts already hold, and does not take a turn
+  only to discover an empty work queue.
+- The player selects optional reflection when novelty, recurrence or consequence
+  justifies it. Escalation needs an unresolved question and an expected decision benefit;
+  a mismatch alone is not enough.
+- C-REVIEW checks this split at consequential changes. It reviews no single action, and
+  no automated check claims to judge semantic truth.
+
+## Ordinary actions and optional shortcuts
+
+Ordinary interface actions are the player's base capability. Semantic skills are optional
+shortcuts and make stronger claims about those actions. Missing semantic coverage must
+not prevent ordinary exploration or cancellation that is otherwise supported.
+
+Optional accelerators and derived caches follow the same rule:
+
+- Bound their working set, and forget or recompute candidates when appropriate. The
+  growth of a historical cache must not become a lifetime limit on ordinary observation
+  or input.
+- Size a producer cache to the decision or handoff working set that the existing contract
+  permits as one unit, with explicit exact rereads after eviction. Test the case that
+  crosses the boundary; a local cache size is not a new semantic limit.
+- Preserve durable evidence, current guards, explicit uncertainty and original resource
+  accounting.
+- Exercise exploration beyond the cache working set in the existing component and
+  whole-runtime lanes. Integrity and storage failures still count as failures.
+
+## Errors and correction
+
+Separate three events: a rejected request, an unexpected outcome in the game, and an
+actual loss of authority or uncertain delivery.
+
+- A correctable request error must not revoke a healthy input scope.
+- Classify a new caller-data error at the validation boundary, and only when it is
+  positively identified. Do not infer nondelivery from an arbitrary exception, and do not
+  treat a failure of trusted history or storage as a caller's mistake.
+- Validation that runs before SDK submission must not direct the caller to collect an
+  operation that does not exist.
+- Pair each correction regression with an actual integrity or transaction fault.
+  Preserve original costs, exact retry semantics and Pause.
+- Reuse the existing ledger and OS contracts. Do not recompute a full semantic projection
+  only to classify a rejected candidate.
+- Review the whole observe, try, correct and cancel loop, including the raw-input
+  fallback, and not only each adapter's successful path.
+
+C-REVIEW checks this distinction and C-PORTABLE exercises regressions at the boundary.
+Actual keyboard and mouse capabilities still need their separate C-NATIVE evidence.
 
 This page is part of [S-ARCH Explicit architectural boundaries](architecture.md).
 

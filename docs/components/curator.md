@@ -62,14 +62,14 @@ actor uses the covered prefix.
 | [Sandbox](../../harness/curator/sandbox.py) | Default-deny Seatbelt profile and polling supervisor: writes only in the workspace's writable directories, one loopback port, and bounded memory, processes, time and size of the session's own files. It does not watch or protect the rest of the disk ([what is bounded](../operations/curator-hosts.md#what-the-sandbox-bounds)). [Research and residual risks](../research-curator-sandbox.md) |
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Providers](../../tools/curator_host/providers.py) (an adapter) | Model service adapters define routes, key and forwarding headers, request validation and conversion of reported usage to dollars. Provider and model identities stay in the curator host's adapters; the proxy receives them from its caller. |
-| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions, under the [session publication rules](../design/curator-session.md#gate-v0), and through the [operator restore](../design/curator-session.md#minimum-first-slice-operator-restore) of a compatible snapshot. |
-| [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Decision-window and citations-only views remove the entire journal JSON; only filtered in-window calls can carry hints. [Design](../design/curator-session.md#windows-of-decisions-and-the-coverage-stamp) |
-| [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | Draft lifecycle (open, stale, abandoned, promoted) and ephemeral sandboxed sessions whose close-out never follows a link |
+| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions, under the [gate checks](../contracts/curator.md#gate-v0), and through the [operator restore](../contracts/curator.md#operator-restore) of a compatible snapshot. |
+| [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Decision-window and citations-only views remove the entire journal JSON; only filtered in-window calls can carry hints. [Window rules](../contracts/curator.md#windows-of-decisions) and [coverage stamp](../contracts/curator.md#coverage-stamp-curator-coverage2) |
+| [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | Draft lifecycle (open, stale, abandoned, promoted) and ephemeral sandboxed sessions whose close-out never follows a link. [Drafts](../contracts/curator.md#drafts) and [close-out](../contracts/curator.md#session-close-out) |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/curator-memory-study-protocol-revised.md#limitations) records that exposure. |
 | [Curator runner](../../harness/curator/runner.py) | Window triggers, the durable record of examined ranges, publication watching, covered prefix and lag, stops, and status. [Runner windows](#runner-windows) |
 | [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/1` file, sessions through the shadow runner's proxy under the runner's cap, its own knowledge repository, signal handling and [delivery to a running actor](#delivery-to-a-running-actor) |
-| [Boundary grooming](../../tools/curator_host/groom.py) (an adapter) | Runs one grooming session against an existing live runner repository and the sealed trace of its last published admission. Writes a `curator-boundary-grooming/1` summary. |
+| [Boundary grooming](../../tools/curator_host/groom.py) (an adapter) | Runs one grooming session against an existing live runner repository and the sealed trace of its last published admission. Writes a [`curator-boundary-grooming/1` summary](../contracts/curator.md#boundary-grooming-summary-curator-boundary-grooming1). |
 
 ## Projection and evidence readers
 
@@ -177,7 +177,7 @@ After the admission's trace is sealed, the operator can start
 [boundary grooming](../operations/curator-hosts.md#post-admission-boundary-grooming)
 on that repository using the trace of its last published admission. A repository
 with no published admission yields a skipped summary. Grooming uses the
-[last admission's citations](../design/curator-session.md#admission-and-grooming),
+[last admission's citations](../contracts/curator.md#admission-and-grooming),
 including citations accumulated across published windows of that admission.
 The [first-run rationale](../design/live-curator-integration.md#what-a-first-live-run-measures)
 explains which lag, cost, staging and player-pace questions require real play.
@@ -241,15 +241,16 @@ adoption by the driver and the host.
 
 ## Facts, articles and grooming
 
-The [session design](../design/curator-session.md#submissions) states the record and
-operation shapes the [gate](../../harness/curator/gate.py) accepts, the
-[frozen submission instructions](../../tools/curator_host/prompt.md#submission-contract)
-give the whole `curator-submission/1` envelope, and
-[world-scoped memory](../design/world-scoped-memory.md#field-table-for-curator-fact4-and-curator-type2) owns the
-`curator-fact/4` and `curator-type/2` field meanings.
+The curator records durable claims as facts that cite frames, and groups `game` facts
+into articles an actor can read. A grooming session merges, retires and refiles them
+between admissions. The [curator contract](../contracts/curator.md) owns the record,
+type and submission shapes, the gate, sessions, drafts and restore; the
+[frozen instructions](../../tools/curator_host/prompt.md#submission-contract) restate the
+submission shapes to the curator. [Host operations](../operations/curator-hosts.md) owns
+adapter configuration and the zero-spend stand-in lane.
 
-The [session design](../design/curator-session.md#admission-and-grooming) owns what
-admission and grooming sessions read and do, their briefs and publication rules, and
-the [operator restore](../design/curator-session.md#minimum-first-slice-operator-restore)
-of a compatible snapshot. [Host operations](../operations/curator-hosts.md) owns adapter
-configuration and the zero-spend stand-in lane.
+A curator variant is scored on sealed development admissions by comparing its published
+facts with later visible actions and re-observations
+([method and limits](../acceptance/2026-11-13-curator-scoring.md#method)). Publishing
+only after checks on later evidence is an unbuilt
+[proposal](../design/prospective-curator-gate.md).
