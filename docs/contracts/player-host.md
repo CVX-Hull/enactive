@@ -323,7 +323,8 @@ The following user message is delimited by `BEGIN CONTEXT CUT` and
 `END CONTEXT CUT`. Its JSON line contains `grants_authority:false`, the cumulative
 `removed_turns`, `covered_through_operation_id`, the coverage `knowledge_version`
 and distinct `source_ids` in their original order across the removed turns, with
-contiguous same-prefix numeric runs losslessly compacted as `prefix-start..end`.
+contiguous same-prefix numeric runs losslessly compacted as `start..end` and a
+shared prefix factored into `source_id_prefix` when all entries share one stem.
 The marker directs the player to `player_source` for those frames. Both
 messages stay fixed until the next cut. Knowledge notices at or after the cut
 boundary stay with the surviving turns; prior `tail-notice` messages and the

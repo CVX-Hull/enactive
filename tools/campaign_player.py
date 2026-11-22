@@ -180,7 +180,13 @@ class LiveKnowledge:
             previous, entry = self.last_coverage_bytes, self.current_coverage
             restored, actor_coverage, number = self.restored, self.actor_coverage, self.number
         try:
-            data = previous if restored else (self.source/COVERED_PREFIX_FILE).read_bytes()
+            if restored:
+                data = previous
+            else:
+                try:
+                    data = (self.source/COVERED_PREFIX_FILE).read_bytes()
+                except FileNotFoundError:
+                    return
             if data != previous:
                 entry = self._coverage_entry(data,number)
             elif entry is None or target is None or entry == actor_coverage:
@@ -194,8 +200,6 @@ class LiveKnowledge:
 
             listing_target = target if entry != actor_coverage else None
             self._publish_entry(entry,listing_target,generation,adopt)
-        except FileNotFoundError:
-            return
         except Exception as exc:  # noqa: BLE001 - live coverage is optional and is retried off the driver thread
             self._report_coverage(exc)
 

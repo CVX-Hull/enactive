@@ -128,7 +128,8 @@ export function fullBriefing(knowledge) {
   return delivery(knowledge, topLevelEntries(knowledge), 'briefing', null);
 }
 
-/** Losslessly compact contiguous numbered IDs (`prefix-0001`, `prefix-0002`, ...) into `prefix-0001..0002`. */
+/** Losslessly compact contiguous numbered IDs (`prefix-0001`, `prefix-0002`, ...) into `prefix-0001..0002`,
+ * and factor out a shared prefix when at least two entries carry the same `prefix-` stem. */
 export function compactSourceIds(sourceIds) {
   const out = [];
   let run = null;
@@ -157,10 +158,22 @@ export function compactSourceIds(sourceIds) {
   return out;
 }
 
+function factoredSourceIds(sourceIds) {
+  const compacted = compactSourceIds(sourceIds);
+  if (sourceIds.length < 2) return {source_ids:compacted};
+  const first = typeof compacted[0] === 'string' ? /^(.*-)(?:[0-9]+(?:\.\.[0-9]+)?)$/.exec(compacted[0]) : null;
+  if (!first) return {source_ids:compacted};
+  const prefix = first[1];
+  if (compacted.every(entry => typeof entry === 'string' && entry.startsWith(prefix) && entry.length > prefix.length)) {
+    return {source_id_prefix:prefix, source_ids:compacted.map(entry => entry.slice(prefix.length))};
+  }
+  return {source_ids:compacted};
+}
+
 export function cutMarker({removedTurns, coveredThroughOperationId, knowledgeVersion, sourceIds}) {
   const data = {grants_authority:false, removed_turns:removedTurns, covered_through_operation_id:coveredThroughOperationId,
-    knowledge_version:knowledgeVersion, source_ids:compactSourceIds(sourceIds)};
-  return `BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false\n${JSON.stringify(data)}\nEND CONTEXT CUT\nTo inspect any omitted frame again, read its source_id (expanding any prefix-start..end range) with player_source.`;
+    knowledge_version:knowledgeVersion, ...factoredSourceIds(sourceIds)};
+  return `BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false\n${JSON.stringify(data)}\nEND CONTEXT CUT\nTo inspect any omitted frame again, read its source_id (combining any source_id_prefix and expanding any start..end range) with player_source.`;
 }
 
 /** What a newer version changes in what a briefing can show: the articles and the facts no article files.

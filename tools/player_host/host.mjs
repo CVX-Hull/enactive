@@ -1321,9 +1321,8 @@ export async function runHost(options) {
           if (tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
           // Notices warn before each stop the host itself will enforce: context capacity, the request
           // allowance and the work deadline. Each notice stays in the history where it was first sent
-          // and is never rewritten, so every request extends the previous one byte for byte (#489: the
-          // provider's cache reuses only a request that a later one extends; a tail rewritten each
-          // request is never reused). Once a threshold is passed, every later request adds a new notice
+          // and is never rewritten until a cut (#489: the provider's cache reuses only a request that
+          // a later one extends; a tail rewritten each request is never reused). Once a threshold is passed, every later request adds a new notice
           // (the context one is latched; the others only grow nearer). The first context and time
           // notices explain how to wrap up. Request notices report the allowance without directing
           // the player to end before the separate ending control or the actual cap.

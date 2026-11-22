@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration } from '../host.mjs';
-import { compactSourceIds, coverageEntry } from '../knowledge.mjs';
+import { compactSourceIds, coverageEntry, cutMarker } from '../knowledge.mjs';
 import { knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
 import { actorId, model, png, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
 
@@ -50,11 +50,14 @@ test('coverage lines are closed and distinguish publication from restore invalid
   assert.equal(coverageEntry('not JSON'), null);
 });
 
-test('compactSourceIds losslessly compacts contiguous numbered runs and keeps singletons or arbitrary IDs', () => {
+test('compactSourceIds and cutMarker losslessly compact runs and factor out a shared prefix', () => {
   assert.deepEqual(compactSourceIds([]), []);
   assert.deepEqual(compactSourceIds(['s-0001']), ['s-0001']);
   assert.deepEqual(compactSourceIds(['s-0001', 's-0002', 's-0003', 's-0005', 's-0006', 'custom', 's-9', 's-10', 's-011']),
     ['s-0001..0003', 's-0005..0006', 'custom', 's-9..10', 's-011']);
+  const factored = JSON.parse(cutMarker({removedTurns:4, coveredThroughOperationId:operationId(4), knowledgeVersion:'v1',
+    sourceIds:[`${sessionId}-10`, `${sessionId}-13`, `${sessionId}-14`, `${sessionId}-20`]}).split('\n')[1]);
+  assert.deepEqual([factored.source_id_prefix, factored.source_ids], [`${sessionId}-`, ['10', '13..14', '20']]);
 });
 
 const observe = (n, count = 1, tokens = 16) => reply(null,
@@ -139,9 +142,9 @@ test('a high-mark cut delivers all leads, clears stale usage and warning, and ke
   assert.deepEqual(marker, [
     'BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false',
     JSON.stringify({grants_authority:false, removed_turns:3, covered_through_operation_id:operationId(3),
-      knowledge_version:'v1', source_ids:[`${sessionId}-1..3`]}),
+      knowledge_version:'v1', source_id_prefix:`${sessionId}-`, source_ids:['1..3']}),
     'END CONTEXT CUT',
-    'To inspect any omitted frame again, read its source_id (expanding any prefix-start..end range) with player_source.',
+    'To inspect any omitted frame again, read its source_id (combining any source_id_prefix and expanding any start..end range) with player_source.',
   ]);
   const briefings = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'briefing');
   assert.deepEqual(briefings.map(event => [event.receiving_player_request_id, event.recall_request_id, event.article_ids, event.index_ids]),
@@ -183,7 +186,8 @@ test('image peak holds an only partly covered batch, then cuts it whole and accu
   assert.deepEqual([first.request_id, first.triggers, first.removed_turns, first.images_after], ['request-4', ['image_peak'], 1, 2]);
   assert.deepEqual([second.request_id, second.triggers, second.cumulative_removed_turns, second.source_ids_count],
     ['request-5', ['image_peak'], 2, 3]);
-  assert.deepEqual(JSON.parse(markerText(payloads[4]).split('\n')[1]).source_ids, [`${sessionId}-1..3`]);
+  const marker5 = JSON.parse(markerText(payloads[4]).split('\n')[1]);
+  assert.deepEqual([marker5.source_id_prefix, marker5.source_ids], [`${sessionId}-`, ['1..3']]);
 });
 
 test('an otherwise eligible prefix below min_free falls back to image eviction', async t => {
@@ -311,7 +315,8 @@ test('min_free 10 holds back 9 covered turns and cuts at 10 covered turns', asyn
   const cuts = cutEvents(events).filter(c => ['request-11', 'request-12'].includes(c.request_id));
   assert.deepEqual(cuts.map(c => [c.request_id, c.outcome, c.reason ?? null, c.removed_turns ?? c.available_turns]),
     [['request-11', 'held-back', 'below-min-free', 9], ['request-12', 'cut', null, 10]]);
-  assert.deepEqual(JSON.parse(markerText(payloads[11]).split('\n')[1]).source_ids, [`${sessionId}-1..10`]);
+  const marker12 = JSON.parse(markerText(payloads[11]).split('\n')[1]);
+  assert.deepEqual([marker12.source_id_prefix, marker12.source_ids], [`${sessionId}-`, ['1..10']]);
 });
 
 test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered if spend stops before fetch', async t => {
