@@ -143,6 +143,10 @@ class DocumentTests(unittest.TestCase):
                 for detail in ("docs/nested/page.md:10:", f"Word count {words}, cap 150.",
                                f"Character count {chars}, cap 1,000.", documents.REVIEWER_RULE):
                     self.assertIn(detail, errors[0])
+        path.write_text(self.active + f"\n| {'x' * 1001} | H2 |\n| --- | --- |\n| ok | ok |\n")
+        errors = documents.check_structure(self.root)
+        self.assertEqual(len(errors), 1)
+        self.assertTrue(errors[0].startswith("docs/nested/page.md:8:"))
 
     def test_table_pipe_escaping_matches_gfm_parser(self):
         path = self.root / "docs/nested/page.md"
@@ -233,6 +237,8 @@ class DocumentTests(unittest.TestCase):
         self.assertEqual(documents.check_structure(self.root), [])
 
     def test_main_runs_check_structure(self):
+        import contextlib
+        import io
         from unittest import mock
         with (mock.patch.object(documents, "ROOT", self.root),
               mock.patch.object(documents, "check_metadata", return_value=[]),
@@ -240,7 +246,10 @@ class DocumentTests(unittest.TestCase):
               mock.patch.object(documents, "check_risks", return_value=[]),
               mock.patch.object(documents, "check_indexes", return_value=[])):
             (self.root / "docs/nested/page.md").write_text(self.active + f"\n| H |\n| --- |\n| {'x' * 1001} |\n")
-            self.assertEqual(documents.main([]), 1)
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(documents.main([]), 1)
+            self.assertIn("table cell exceeds the size cap", stderr.getvalue())
 
 
 if __name__ == "__main__":

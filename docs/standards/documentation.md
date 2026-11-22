@@ -31,8 +31,9 @@ loads, prompts are inputs a program reads, and a provenance file sits beside wha
 describes. Active or proposed pages need a review trigger. Historical and superseded
 pages carry none, because nobody reviews them against current behavior. A historical
 page needs date and scope; a superseded one needs scope and a repository-relative
-replacement. A historical page that a later one replaces in whole or in part stays historical
-and names that page as its replacement. Proposals are not implemented contracts. Accepted ADRs are dated rationale;
+replacement. A historical page that a later one replaces only in part stays historical
+and may name that page as its replacement. A finished adopted design note is
+historical and names the current documentation as its replacement. Proposals are not implemented contracts. Accepted ADRs are dated rationale;
 architecture/protocol remain authoritative about current behavior. Metadata is
 not a claim of accuracy. Review a current page when its own review trigger fires.
 
