@@ -13,7 +13,7 @@ replacement: docs/contracts/player-host.md
 - **Question.** Can the host release old turns while preserving enough context for the player's current task?
 - **Proposal.** Remove only a prefix covered by a published snapshot and deliver a fresh briefing in the same request.
 - **Unknown.** Lag in real play was measured in `#889` (17/17 live windows kept pace); whether the briefing preserves all needed distinctions across real cuts in live play remains to be observed after implementation.
-- **Decision.** On 22 November 2026 the owner chose **Go** to implement the cut under [#900](https://github.com/CVX-Hull/enactive/issues/900) ([owner decision](../decisions/owner-decisions.md#context-cut-go-and-archive-889), [decision brief](../acceptance/2026-11-22-context-cut-decision-brief-890.md)).
+- **Decision.** On 22 November 2026 the owner chose **Go** to implement the cut under [#900](https://github.com/CVX-Hull/enactive/issues/900) ([owner decision](../decisions/owner-decisions-archive.md#context-cut-go-and-archive-889), [decision brief](../acceptance/2026-11-22-context-cut-decision-brief-890.md)).
 
 The alternatives considered and the lag estimates are in the
 [retired context design](player-context.md).

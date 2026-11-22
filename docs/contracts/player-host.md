@@ -341,7 +341,7 @@ flowchart TB
   Q -->|"No"| V
   Q -->|"Yes"| T{"Cut trigger?<br/>Tokens above briefing exceed high_mark,<br/>or images exceed max_context_images"}
   T -->|"No"| V
-  T -->|"Yes"| L{"Eligible?<br/>No restore seen, and at least min_free<br/>complete turns inside unbroken coverage"}
+  T -->|"Yes"| L{"Eligible?<br/>No restore seen, and the cut plan removes<br/>at least min_free eligible turns"}
   L -->|"No"| H["Held back<br/>History unchanged, reason recorded"]
   L -->|"Yes"| K["Cut toward low_mark and the image peak<br/>Fresh briefing, cut marker, surviving turns"]
   H --> V
@@ -349,7 +349,7 @@ flowchart TB
   V --> P{"Estimate leaves room<br/>for the reply?"}
   P -->|"No"| X["Host stops<br/>No further model call"]
   P -->|"Yes"| N["Tail notices<br/>near context capacity or the host deadline"]
-  N --> D{"Counted cost below<br/>spend_limit_usd?"}
+  N --> D{"Counted cost plus in-flight recall<br/>reserve strictly below spend_limit_usd?"}
   D -->|"No: spend-limit"| X
   D -->|"Yes"| M["Model call"]
   M -->|"Success without a usable cost:<br/>cost-unreported"| X

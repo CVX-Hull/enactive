@@ -161,11 +161,10 @@ node tools/player_host/run.mjs run \
   --delivered-knowledge FROZEN/delivered-knowledge.json \
   --finish-reserve-usd USD \
   --model MODEL --effort EFFORT --timeout-seconds SECONDS \
-  -o DRIVER_RESERVED_FINAL_FILE \
-  [--knowledge-updates LIST]
+  -o DRIVER_RESERVED_FINAL_FILE
 ```
 
-The bracketed flag occurs only in a run with
-[live knowledge updates](campaign-run.md#live-knowledge-updates).
+In a run with [live knowledge updates](campaign-run.md#live-knowledge-updates), the
+driver also passes `--knowledge-updates LIST`.
 
 [Operations index](../runbook.md).

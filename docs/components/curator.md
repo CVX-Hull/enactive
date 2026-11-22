@@ -34,9 +34,9 @@ flowchart LR
   Q -->|"Submission"| G
   G -->|"Publishes"| K["Knowledge repository<br/>curator-knowledge/3, curator-fact/4<br/>Version tag vN"]
   O["Operator restore<br/>of a compatible snapshot"] --> G
-  K -->|"Confirmed live version,<br/>for the package's world"| D["delivered/vN.json"]
-  K -->|"Unbroken confirmed coverage"| C["delivered/covered-prefix.json"]
-  K -.->|"After a restore: restored true,<br/>no further cuts"| C
+  K -->|"Runner exports confirmed live version,<br/>for the package's world"| D["delivered/vN.json"]
+  K -->|"Runner writes unbroken confirmed coverage"| C["delivered/covered-prefix.json"]
+  K -.->|"Runner writes restored true after restore:<br/>no further cuts"| C
   D --> A["Driver to running actor"]
   C --> A
   K -->|"Exported into a later package"| F["Frozen delivered-knowledge.json"]
@@ -45,9 +45,9 @@ flowchart LR
 This diagram answers “How does what happened in play become knowledge an actor can
 read?” Boxes are data or the step that writes it, the two frames separate work beside
 play from work after it, and arrows give the direction of data. The dashed arrow is the
-invalidation a restore makes. The gate is the only writer of the repository, for
-submissions and for an operator restore alike, and nothing here holds custody. The
-sections below own each step.
+invalidation the runner writes after a restore. After `repo.ensure()` initializes `v0`,
+the gate is the only writer of subsequent repository versions and operator restores, and
+nothing here holds custody. The sections below own each step.
 The [host contract](../contracts/player-host.md#coverage-gated-context-cut) owns how the
 actor uses the covered prefix.
 

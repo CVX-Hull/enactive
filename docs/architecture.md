@@ -108,9 +108,11 @@ With `--curator-runner` the guardian also starts an unsupervised
 bounded transaction under a shared lock, runs sandboxed window sessions and publishes
 through the gate. When the package sets
 [`live_knowledge_updates`](operations/campaign-run.md#live-knowledge-updates), the driver
-adopts the versions and the covered prefix the runner leaves, and the host delivers them
-between requests. On a route with `context_cut` enabled, the host can then replace
-covered turns with a fresh briefing. Neither the runner's exit nor a missing update stops
+adopts each newer version for the application and any successor and forwards version and
+coverage lines to the host. Between requests, the host delivers the newest verified
+update that fits within context capacity and applies coverage lines internally to govern
+cuts. On a route with `context_cut` enabled, the host can then replace covered turns with
+a fresh briefing. Neither the runner's exit nor a missing update stops
 play. After the admission is sealed, the operator can run
 [boundary grooming](operations/curator-hosts.md#post-admission-boundary-grooming) on the
 same repository.

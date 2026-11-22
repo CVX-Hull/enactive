@@ -58,9 +58,11 @@ Knowledge moves beside play in four steps, each optional for a run:
    the live write-ahead-log store and runs sandboxed sessions over windows of finished
    steps. Its failure or lag never stops play.
 2. **Deliver.** With [`live_knowledge_updates`](operations/campaign-run.md#live-knowledge-updates),
-   a version confirmed during the run reaches the running actor as one message, and the
-   next actor's starting knowledge. Otherwise every actor keeps the package's frozen
-   version.
+   the driver adopts each newer confirmed version and writes it for the running actor and
+   for any successor. The running host delivers the newest verified update that fits
+   within context capacity as one message (refusing an oversized one for context
+   capacity), while a successor starts from the driver's latest adopted version.
+   Otherwise every actor keeps the package's frozen version.
 3. **Cut.** The `player-host/10` route can enable `context_cut`. The host then replaces
    older turns with a fresh briefing, and only turns that the curator's confirmed,
    [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut) has reached.
@@ -98,7 +100,7 @@ question is parked.
 
 | Subject and evidence | Standing | What it shows | What it does not show |
 | --- | --- | --- | --- |
-| Day-scale play: [long-horizon arm (#382)](acceptance/2026-11-07-long-horizon-382.md) and [seven-day development lineage (#397)](acceptance/2026-11-07-seven-day-397.md) | Unqualified, parked | Chained save/reload play past one in-game day. The #397 survivor passed its day 1 check and died on day 2. | Seven-day survival or useful cadence. Long play waits on [memory](decisions/owner-decisions.md#memory-settled-before-long-play). |
+| Day-scale play: [long-horizon arm (#382)](acceptance/2026-11-07-long-horizon-382.md) and [seven-day development lineage (#397)](acceptance/2026-11-07-seven-day-397.md) | Unqualified | Chained save/reload play past one in-game day. The #397 survivor passed its day 1 check and died on day 2. | Seven-day survival or useful cadence. |
 | Benefit of delivered memory: [withholding study (#651)](acceptance/2026-11-14-withholding-study.md) | No confirmed effect | Delivered facts are used: the player acted in line with a delivered lead in most windows where it applied. | A benefit. The frozen primary is not positive, and harm was not tested. |
 | A stated earlier sighting: [paired trunk replay (#829)](acceptance/2026-11-20-malvern-trunk-paired-replay-829.md) | Offline or stand-in | One supplied sentence moved every proposal to checking the trunk, at both context sizes. | That the check was the better move, or any effect in play. |
 | Live curation: [first live curator run (#859)](acceptance/2026-11-21-live-curator-run-859.md) | Live-verified, partial | Every live snapshot read succeeded, and the published windows kept the backlog from growing. | A full admission: a gate defect stopped publication, and play ended early. |
