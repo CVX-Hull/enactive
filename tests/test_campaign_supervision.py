@@ -389,6 +389,25 @@ def test_a_curator_runner_starts_after_the_custodian_outside_supervision_and_is_
     assert (run/'curator-runner'/'stdout.txt').is_file()
 
 
+def test_a_runner_finishes_its_close_out_before_group_cleanup(tmp_path, monkeypatch):
+    assert guard.CURATOR_RUNNER_TEARDOWN_GRACE_SECONDS >= 15.0
+    monkeypatch.setattr(guard, 'CURATOR_RUNNER_TEARDOWN_GRACE_SECONDS', 2.5)
+    runner_code = '''
+import signal, time
+def close_out(*_):
+    time.sleep(.9)
+    raise SystemExit(0)
+signal.signal(signal.SIGTERM, close_out)
+open('runner-ready', 'w').close()
+signal.pause()
+'''
+    _, result, _, _, outcome = supervised_with_runner(tmp_path, monkeypatch, runner_code)
+    cleanup = result['cleanup']['curator_runner']
+    assert outcome['runner_alive'] and cleanup['returncode'] == 0
+    assert 'grace_expired' not in cleanup and cleanup['signals'] == []
+    assert cleanup['process_absent'] and cleanup['group_absent'] and result['cleanup_verified']
+
+
 RUNNER_IGNORING_SIGTERM = '''
 import os, signal, time
 signal.signal(signal.SIGTERM, signal.SIG_IGN); signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -400,12 +419,14 @@ time.sleep(60)
 
 
 def test_a_runner_that_ignores_sigterm_is_asked_first_killed_last_and_its_snapshots_removed(tmp_path, monkeypatch):
+    monkeypatch.setattr(guard, 'CURATOR_RUNNER_TEARDOWN_GRACE_SECONDS', .2)
     run, result, _, closed, outcome = supervised_with_runner(tmp_path, monkeypatch, RUNNER_IGNORING_SIGTERM)
     assert outcome['runner_alive']
     # Asked to terminate before the custodian's bounded wait is entered; closed after it.
     assert outcome['events'].index('runner-terminate') < outcome['events'].index('custodian-wait')
     assert closed.index('custodian') < closed.index('curator_runner')
     cleanup = result['cleanup']['curator_runner']
+    assert cleanup.get('grace_expired') is True
     assert cleanup['signals'][-1] == 'SIGKILL' and cleanup['process_absent'] and cleanup['group_absent']
     assert result['reason'] == 'custodian_terminal' and result['cleanup_verified'] and 'error' not in result
     assert cleanup['snapshots_removed'] is True and not (run/'curator-runner'/'snapshots').exists()

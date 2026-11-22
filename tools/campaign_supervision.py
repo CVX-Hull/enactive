@@ -31,6 +31,7 @@ from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
 
 ROOT = Path(__file__).resolve().parents[1]
 PAUSE_REPLY = .75
+CURATOR_RUNNER_TEARDOWN_GRACE_SECONDS = 15.0
 MARKERS = ('watch-start.json', 'watch-terminal.json')
 # Optional, git-ignored map from a credential variable to the operator's own
 # macOS keychain item: {"<KEY_VARIABLE>": {"keychain_service": "NAME"}}.
@@ -381,7 +382,14 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                     continue
                 exited = dict(exited_before_teardown=early[name] is not None) if name == 'curator_runner' else {}
                 try:
-                    result['cleanup'][name] = dict(launched=True, **exited, **close_group(unsupervised[name]['handle']))
+                    handle = unsupervised[name]['handle']
+                    graceful = {}
+                    if name == 'curator_runner' and handle.poll() is None:
+                        try:
+                            handle.wait(timeout=CURATOR_RUNNER_TEARDOWN_GRACE_SECONDS)
+                        except subprocess.TimeoutExpired:
+                            graceful['grace_expired'] = True
+                    result['cleanup'][name] = dict(launched=True, **exited, **graceful, **close_group(handle))
                 except BaseException as exc:
                     result['cleanup'][name] = dict(launched=True, **exited, process_absent=False, group_absent=False,
                         error=type(exc).__name__, error_message=str(exc)[:400])
