@@ -4,7 +4,7 @@
   python -m tools.memory_screen_checks replay RUNS... --loss LABEL:need=FRAME[,record=ID][,fact=ID] ...
         [--records ROOT] [--knowledge REPOSITORY] [--lags N ...] [--json]
   python -m tools.memory_screen_checks cut RUNS... [--lags N ...] [--turn-tokens N] [model options] [--json]
-  python -m tools.memory_screen_checks cut RUN --coverage schedule --schedule FILE [model options] [--json]
+  python -m tools.memory_screen_checks cut RUN --coverage schedule --schedule FILE [--recorded-deliveries] [model options] [--json]
   python -m tools.memory_screen_checks schedule RUN [--output FILE]
 
 `store` lists every published version of a curator knowledge repository (its facts, articles and the bytes of `facts.jsonl`)
@@ -22,6 +22,7 @@ at handoffs too.
 recorded covered prefix (`curator-coverage-schedule/1`) over that one run in place of the lag rows; `schedule`
 writes that file from the run's `curator-runner/polls.jsonl` and final `status.json`. The mapping is in
 docs/contracts/measurement-tools.md, "Runner records and schedule replay".
+`--recorded-deliveries` estimates tokens from the delivered text in each actor's host trace.
 
 RUNS are as in `tools.memory_reads`, in lineage order. A lineage request number counts requests over those runs'
 actors in order. The context design is docs/design/coverage-gated-context-cut.md.
@@ -46,6 +47,9 @@ from harness.evaluation.core.sources import read_carry, read_host, run_archive_e
 from tools.memory_reads import game_clock, run_dirs
 
 LAGS = (10, 20, 47, 94)
+DELIVERY_BYTES_PER_TOKEN = 4  # Pi's context estimate uses four bytes per text token.
+DELIVERY_COUNT_KEYS = ('update_count', 'update_tokens', 'reminder_count', 'reminder_tokens', 'unmatched_deliveries')
+BRIEFING_CONFLICT = '--recorded-deliveries requires --briefing-tokens to be zero'
 
 
 # --- the lineage's requests -------------------------------------------------------------------------------------
@@ -338,7 +342,8 @@ class CutModel:
 
     A turn (a tool call with its short result) costs `turn_tokens` when it carries one image: `image_tokens` for the
     image and the rest for text. A request's prompt is the fixed head, the briefing and the turns still in the
-    window. An image the host drops outside a cut leaves `marker_tokens` in its turn. A request that extends the one
+    window. The high and low marks count tokens above the briefing. An image the host drops outside a cut leaves
+    `marker_tokens` in its turn. A request that extends the one
     before it writes only the new turn to the cache; a request that cuts or drops images writes everything after
     `cached_head_tokens`. `coverage` says which turns a snapshot covers at lag L when the actor has made t turns:
     `steady` covers the first t - L; `sessions` runs one curator session after another, each L turns long and
@@ -363,34 +368,42 @@ def covered_turns(turns: int, lag: int, coverage: str) -> int:
     return max(0, turns - lag if coverage == 'steady' else lag * (turns // lag - 1))
 
 
+def delivery_tokens_from_bytes(n: int) -> int:
+    return math.ceil(n / DELIVERY_BYTES_PER_TOKEN)
+
+
 def simulate(images: Sequence[int], model: CutModel, lag: int | None,
-             covered: Sequence[int] | None = None) -> list[dict]:
+             covered: Sequence[int] | None = None, *, briefing_tokens: int | None = None,
+             delivery_tokens: Sequence[int] | None = None) -> list[dict]:
     """One actor's requests under the model. `images[i]` is the images the conversation held at request i + 1, kept
-    or omitted, so turn i carries `images[i] - images[i - 1]`. `lag` None disables the cut. `covered`, given in place
-    of a lag, is the number of turns covered at each request. Each row has the prompt tokens, the tokens written to
-    the cache, `freed` (None when no cut was due, 0 when one was held back, else the turns removed) and whether an
-    image block was dropped."""
+    or omitted, so turn i carries `images[i] - images[i - 1]`. Each turn also carries the tokens of deliveries first
+    sent with it. `lag` None disables the cut unless `covered` gives the number of turns covered at each request.
+    Each row has the prompt tokens, the tokens written to the cache, `freed` (None when no cut was due, 0 when one
+    was held back, else the turns removed) and whether an image block was dropped."""
+    if delivery_tokens is not None and len(delivery_tokens) != len(images):
+        raise ValueError('delivery_tokens must have one entry per request')
+    briefing = model.briefing_tokens if briefing_tokens is None else briefing_tokens
     text = model.turn_tokens - model.image_tokens
-    window: deque[list] = deque()  # [turn number, images, images dropped]
-    tokens, held, rows = model.head_tokens + model.briefing_tokens, 0, []
+    window: deque[list] = deque()  # [turn number, images, images dropped, delivery tokens]
+    tokens, held, rows = model.head_tokens + briefing, 0, []
 
     def cost(turn: list) -> int:
-        return text + turn[1] * (model.marker_tokens if turn[2] else model.image_tokens)
+        return text + turn[1] * (model.marker_tokens if turn[2] else model.image_tokens) + turn[3]
 
     for index in range(len(images)):
-        added = 0
+        added = delivery_tokens[index] if delivery_tokens is not None else 0
         if index:
-            turn = [index, max(0, images[index] - images[index - 1]), False]
+            turn = [index, max(0, images[index] - images[index - 1]), False, added]
             window.append(turn)
             added = cost(turn)
-            tokens += added
             held += turn[1]
+        tokens += added
         freed = None
-        if (lag is not None or covered is not None) and (tokens > model.high_mark or held > model.image_peak):
+        if (lag is not None or covered is not None) and (tokens - briefing > model.high_mark or held > model.image_peak):
             limit = covered[index] if covered is not None else covered_turns(index, lag, model.coverage)
             plan, after = 0, tokens
             for turn in window:
-                if after <= model.low_mark or turn[0] > limit:
+                if after - briefing <= model.low_mark or turn[0] > limit:
                     break
                 after -= cost(turn)
                 plan += 1
@@ -579,9 +592,37 @@ def schedule_coverage(run: Run, changes: Sequence[dict], requests: dict[str, Seq
     return covered, left_out
 
 
-def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], schedule: object = None) -> dict:
+def recorded_deliveries_for_run(run: Run) -> dict[str, tuple[int, list[int], dict]]:
+    """By trace actor ID, return starting briefing tokens, extra tokens per logical player request, and delivery
+    counts. The update and reminder totals describe deliveries placed in the simulation."""
+    indices = {actor: {decision: index for index, (decision, _) in enumerate(requests)}
+        for actor, requests in turn_starts(run).items()}
+    receiving = {(request.actor, key): indices[request.actor][request.decision]
+        for request in run.facts.requests if request.role == 'player' for key in (request.key, request.logical)}
+    deliveries = {actor: (0, [0] * len(indices.get(actor, ())), dict.fromkeys(DELIVERY_COUNT_KEYS, 0))
+        for actor in run.facts.actors}
+    for delivery in run.facts.deliveries:
+        briefing, extras, counts = deliveries[delivery.actor]
+        tokens = delivery_tokens_from_bytes(delivery.text_bytes)
+        if delivery.kind == 'briefing':
+            deliveries[delivery.actor] = (briefing + tokens, extras, counts)
+            continue
+        index = receiving.get((delivery.actor, delivery.request_id))
+        if index is None:
+            counts['unmatched_deliveries'] += 1
+            continue
+        extras[index] += tokens
+        counts[f'{delivery.kind}_count'] += 1
+        counts[f'{delivery.kind}_tokens'] += tokens
+    return deliveries
+
+
+def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], schedule: object = None, *,
+               recorded_deliveries: bool = False) -> dict:
     """The cut's table. With `coverage` `schedule`, `schedule` is a `curator-coverage-schedule/1` value replayed over
     exactly one run, and its row stands in place of the lag rows."""
+    if recorded_deliveries and model.briefing_tokens != 0:
+        raise ScheduleError(BRIEFING_CONFLICT)
     if (model.coverage == 'schedule') != (schedule is not None):
         raise ScheduleError('a schedule is given with --coverage schedule and only with it')
     if schedule is not None and len(runs) != 1:
@@ -589,7 +630,17 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], sched
     lineage, actors = read_lineage(runs)
     changes = None if schedule is None else check_schedule(schedule, lineage[0].directories)
     sequences, recorded = [], []
-    for run in lineage:
+    briefings = {}
+    delivery_totals = dict.fromkeys(DELIVERY_COUNT_KEYS, 0)
+    for path, run in zip(runs, lineage):
+        deliveries = {}
+        if recorded_deliveries:
+            deliveries = recorded_deliveries_for_run(run)
+            for actor, directory in zip(run.facts.actors, run.directories):
+                briefing, _, counts = deliveries[actor]
+                briefings[directory if len(runs) == 1 else str(path / directory)] = briefing
+                for key, value in counts.items():
+                    delivery_totals[key] += value
         by_actor: dict[str, dict[int, dict]] = {}
         for request in run.facts.requests:  # a retried player request keeps its last attempt
             if request.role == 'recall':continue
@@ -602,7 +653,8 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], sched
                     + int(request.cache_write_tokens or 0), write=int(request.cache_write_tokens or 0))
         for name, requests in by_actor.items():
             ordered = [requests[key] for key in sorted(requests)]
-            sequences.append((name, [row['images'] for row in ordered]))
+            briefing, extras, _ = deliveries.get(name, (None, None, None))
+            sequences.append((name, [row['images'] for row in ordered], briefing, extras))
             was, actor = 0, []
             for row in ordered:
                 if 'prompt' in row:  # a response without usage has no recorded prompt; its turn is still simulated
@@ -613,13 +665,17 @@ def cut_report(runs: Sequence[Path], model: CutModel, lags: Sequence[int], sched
     total = sum(row['write'] for actor in recorded for row in actor)
     table = [summarise('recorded', recorded, total)]
     for label, lag in [('no cut', None), *((f'lag {lag}', lag) for lag in (lags if changes is None else ()))]:
-        table.append(summarise(label, [simulate(images, model, lag) for _, images in sequences], total))
+        table.append(summarise(label, [simulate(images, model, lag, briefing_tokens=briefing, delivery_tokens=extras)
+            for _, images, briefing, extras in sequences], total))
     report = dict(runs=len(lineage), actors=len(actors), model=asdict(model), rows=table)
     if changes is not None:
         covered, left_out = schedule_coverage(lineage[0], changes, turn_starts(lineage[0]))
-        table.append(summarise('schedule', [simulate(images, model, None, covered[name]) for name, images in sequences],
-            total))
+        table.append(summarise('schedule', [simulate(images, model, None, covered[name], briefing_tokens=briefing,
+            delivery_tokens=extras) for name, images, briefing, extras in sequences], total))
         report['schedule'] = dict(read=len(changes), applied=len(changes) - left_out, left_out=left_out)
+    if recorded_deliveries:
+        report['deliveries'] = dict(bytes_per_token=DELIVERY_BYTES_PER_TOKEN, briefing_tokens_by_actor=briefings,
+            **delivery_totals)
     return report
 
 
@@ -688,6 +744,15 @@ def render_cut(report: dict) -> str:
         count = report['schedule']
         lines.append(f"schedule: {count['read']} changes read, {count['applied']} applied, {count['left_out']} left out "
             'because no tool result places them')
+    if 'deliveries' in report:
+        deliveries = report['deliveries']
+        briefings = ', '.join(f'{actor} = {tokens}' for actor, tokens in deliveries['briefing_tokens_by_actor'].items())
+        lines.append(f"recorded deliveries ({deliveries['bytes_per_token']} bytes per token) | "
+            f"updates {deliveries['update_count']} ({deliveries['update_tokens']} tokens) | "
+            f"reminders {deliveries['reminder_count']} ({deliveries['reminder_tokens']} tokens) | "
+            f"{deliveries['unmatched_deliveries']} without a matching player request")
+        if briefings:
+            lines.append(f"briefing tokens by actor: {briefings}")
     return '\n'.join(lines)
 
 
@@ -711,6 +776,7 @@ def main(argv=None) -> int:
         cut.add_argument(f"--{name.replace('_', '-')}", type=type(value), default=value,
             **(dict(choices=('steady', 'sessions', 'schedule')) if name == 'coverage' else {}))
     cut.add_argument('--schedule', type=Path, help='a curator-coverage-schedule/1 file, with --coverage schedule')
+    cut.add_argument('--recorded-deliveries', action='store_true', help="estimate tokens for each actor's delivered knowledge")
     for command in (store, again, cut):
         command.add_argument('--json', action='store_true')
     recorded = commands.add_parser('schedule', help="a run's recorded covered prefix as a coverage schedule")
@@ -732,11 +798,14 @@ def main(argv=None) -> int:
         result, text = replay(run_dirs(args.runs), args.loss, args.records, args.knowledge, args.lags), render_replay
     else:
         model = CutModel(**{name: getattr(args, name) for name in asdict(CutModel())})
+        if args.recorded_deliveries and model.briefing_tokens != 0:
+            cut.error(BRIEFING_CONFLICT)
         try:
             schedule = None if args.schedule is None else json.loads(args.schedule.read_text())
         except ValueError:
             raise ScheduleError(f'{args.schedule}: not a JSON schedule') from None
-        result, text = cut_report(run_dirs(args.runs), model, args.lags, schedule), render_cut
+        result, text = cut_report(run_dirs(args.runs), model, args.lags, schedule,
+            recorded_deliveries=args.recorded_deliveries), render_cut
     print(json.dumps(result, indent=1, ensure_ascii=False) if args.json else text(result))
     return 0
 

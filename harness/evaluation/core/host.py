@@ -1,8 +1,8 @@
 """Facts from player-host/9 traces: decisions, cost, tool calls and host-side events.
 
 Dollars here are the configured-rate estimate of each response (`usage.cost.total`), the one figure every run
-carries. The cost the provider reported, which the host counts toward the dollar limit, is not read. An archived
-player-host/3 trace gives the same facts: no field read here differs between the two versions.
+carries. The cost the provider reported, which the host counts toward the dollar limit, is not read.
+Archived player-host/3 traces support the same request and tool accounting.
 
 Request ordinals are cumulative over the run's actors in directory order. They only index
 the cumulative tokens and dollars of a step (the run's decision count comes from completed
@@ -104,6 +104,14 @@ class ToolCall:
         return value if isinstance(value, str) else None
 
 
+@dataclass(frozen=True)
+class DeliveryEvent:
+    actor: str
+    kind: str
+    request_id: str | None
+    text_bytes: int
+
+
 @dataclass
 class HostFacts:
     actors: tuple[str, ...]
@@ -118,6 +126,7 @@ class HostFacts:
     manifests: dict[str, list[dict]] = field(default_factory=dict)
     omitted: dict[tuple[str, str], int] = field(default_factory=dict)
     images: dict[tuple[str, str], int] = field(default_factory=dict)  # images the conversation held, kept or omitted
+    deliveries: list[DeliveryEvent] = field(default_factory=list)
     _starts: dict[str, list[tuple[float, int]]] = field(default_factory=dict)
     _prefix: dict[int, tuple[int, float]] = field(default_factory=dict)
     _keys: list[int] | None = None
@@ -315,6 +324,13 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
             elif kind == 'context-estimate':
                 if _number(fields.get('tokens')):
                     facts.estimates[actor].append(int(fields['tokens']))
+            elif kind == 'knowledge-delivery':
+                delivery = fields.get('kind')
+                if delivery in ('briefing', 'reminder') or (delivery == 'update' and fields.get('outcome') == 'delivered'):
+                    receiving = fields.get('receiving_player_request_id')
+                    text = fields.get('text')
+                    facts.deliveries.append(DeliveryEvent(actor, delivery, receiving if isinstance(receiving, str) else None,
+                        len(text.encode('utf-8')) if isinstance(text, str) else 0))
             elif kind == 'control-accepted':
                 facts.controls.append(event)
             elif kind == 'player-finish':
