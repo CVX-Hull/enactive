@@ -8,8 +8,11 @@ status: active
 
 The curator reads projected traces and holds no custody or direct player access.
 The player and computer do not import curator code. The runner supports windowed
-sessions beside an admission. Live evidence is partial ([first paid live run](../acceptance/2026-11-21-live-curator-run-859.md)):
-full multi-window and handoff behavior in real play remains unverified beyond offline tests and the
+sessions beside an admission. Live evidence covers full single-actor multi-window
+publication, `curator-fact/4` world/game separation, within-admission delivery and
+post-admission boundary grooming ([live validation run #889](../acceptance/2026-11-22-live-validation-run-889.md),
+following [first paid live run #859](../acceptance/2026-11-21-live-curator-run-859.md));
+real-play actor handoff briefing adoption remains unverified beyond offline tests and the
 [stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md).
 The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
 with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
