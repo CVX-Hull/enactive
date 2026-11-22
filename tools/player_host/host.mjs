@@ -1,12 +1,15 @@
 import { isDeepStrictEqual } from 'node:util';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Agent } from '@earendil-works/pi-agent-core';
 import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { estimateContextTokens } from '@earendil-works/pi-ai/utils/estimate';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
-import { validateKnowledge, knowledgeIndex, selection, delivery } from './knowledge.mjs';
+import { validateKnowledge, knowledgeIndex, selection, delivery, updateDelivery, updateEntry, versionNumber } from './knowledge.mjs';
 import { createValidationFeedback } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
@@ -17,6 +20,10 @@ const STOP_TEXT = 'Automation control: orderly stop requested. Finish up and sto
 // Their values can alter request headers or enable raw SDK logging.
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
 const MCP_LIMIT_BYTES = 32 * 1_048_576;
+// How often a running host looks for a newer listed knowledge version between its other refreshes.
+const UPDATE_POLL_MS = 1000;
+const UPDATE_READ_TIMEOUT_MS = 2000;
+const UPDATE_READER = fileURLToPath(new URL('./update-reader.mjs', import.meta.url));
 const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
 // Adopt the pinned SDK helper's maintained default; original request/host
 // deadlines and one retry remain the outer bounds.
@@ -83,7 +90,7 @@ function listenControl(input, session, actorId, accept, fail) {
 export function validateConfiguration(configuration, selectedModel, effort, nested = false) {
   bounded(configuration);
   closed(configuration, ['schema', 'model', 'api_key_env', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall']);
-  requireThat(configuration.schema === 'player-host/8');
+  requireThat(configuration.schema === 'player-host/9');
   // Positive decimal text for this actor's spend limit and one in-flight request allowance.
   const spendLimit = amountFromText(configuration.spend_limit_usd), bound = amountFromText(configuration.unpriced_request_usd);
   requireThat(spendLimit !== null && spendLimit[0] > 0n && bound !== null && bound[0] > 0n);
@@ -655,17 +662,20 @@ export async function runHost(options) {
   const lessThan = (a, b) => { const [x,y] = alignedUnits(a,b); return x < y; };
   const canSpend = () => lessThan(addAmounts(spent, recallAttemptInFlight ? recallBound : [0n,0]), spendLimit);
   let recallConfiguration;
-  const recallUnavailable = () => recallRefusal({
-    hasUnits:knowledge.articles.length + knowledge.facts.length > 0, disabled:recallDisabled,
+  const recallUnavailable = version => recallRefusal({
+    hasUnits:version.articles.length + version.facts.length > 0, disabled:recallDisabled,
     ending:actorEnding, stopping:control || options.pendingControlId !== null,
     spent, playerInFlight:requestInFlight, playerBound:unpricedBound,
     recallBound, reserve:finishReserve, limit:spendLimit});
-  const recall = async mode => {
-    const unavailable = recallUnavailable();
+  // One recall reads one version from start to finish: the index it sends, the reply it validates and the
+  // delivery it builds all come from the version adopted when it was requested, so an update adopted while
+  // the request is in flight never changes what its reply is checked against.
+  const recall = async (mode, version = knowledge) => {
+    const unavailable = recallUnavailable(version);
     if (unavailable) {
       recallDisabled ||= unavailable === 'spend-refused';
-      emit('knowledge-recall', {kind:mode, status:'not-made', reason:unavailable, version:knowledge.version});
-      return mode === 'briefing' ? delivery(knowledge, [], mode, null) : null;
+      emit('knowledge-recall', {kind:mode, status:'not-made', reason:unavailable, version:version.version});
+      return mode === 'briefing' ? delivery(version, [], mode, null) : null;
     }
     let id;
     recallFlight = true;
@@ -686,7 +696,7 @@ export async function runHost(options) {
       return {reply_text:narration.text, reply_omitted_bytes:narration.omitted_bytes};
     };
     try {
-      const content = [{type:'text', text:JSON.stringify({index:knowledgeIndex(knowledge), kind:mode,
+      const content = [{type:'text', text:JSON.stringify({index:knowledgeIndex(version), kind:mode,
         first_message:mode === 'briefing' ? options.prompt : undefined, recent_calls:mode === 'reminder' ? recentCalls : undefined})}];
       if (mode === 'reminder') for (const part of latestResult ?? [])
         if (part.type === 'image') content.push({...part});
@@ -698,7 +708,7 @@ export async function runHost(options) {
         sessionId:affinityId,
         fetch:async (url, init) => {
           signal.throwIfAborted();
-          const refused = recallUnavailable();
+          const refused = recallUnavailable(version);
           if (refused) { refusalReason = refused; throw new Error(refused); }
           const payload = JSON.parse(init.body);
           id = `recall-${++recallRequests}`;
@@ -721,11 +731,11 @@ export async function runHost(options) {
       completeAttempt();
       if (['error','aborted','length','deferred'].includes(message.stopReason)) throw new Error(refusalReason ?? 'provider-failure');
       if (amountText(reported) === null) throw new Error('cost-unreported');
-      const articles = selection(message, knowledge);
-      const selectedDelivery = delivery(knowledge, articles, mode, id);
+      const articles = selection(message, version);
+      const selectedDelivery = delivery(version, articles, mode, id);
       emit('knowledge-recall', {kind:mode, status:articles.length ? 'selected' : 'silence', request_id:id,
         article_ids:articles.filter(a => a.body).map(a => a.id), fact_ids:selectedDelivery.fact_ids,
-        version:knowledge.version, ...replyFields()});
+        version:version.version, ...replyFields()});
       return mode === 'reminder' && !articles.length ? null : selectedDelivery;
     } catch (error) {
       failure = recallController.signal.aborted ? 'actor-ended'
@@ -735,11 +745,144 @@ export async function runHost(options) {
         : failure === 'spend-refused' || failure === 'recall-failed' || failure === 'provider-failure';
       completeAttempt();
       emit('knowledge-recall', {kind:mode, status:attemptStarted ? 'failure' : 'not-made', ...(id ? {request_id:id} : {}),
-        reason:failure, version:knowledge.version, ...replyFields(),
+        reason:failure, version:version.version, ...replyFields(),
         ...(failure === 'invalid-recall-selection' ? {selection_error:error.detail} : {}),
         ...(failure === 'recall-failed' ? {error_name:error.name} : {})});
-      return mode === 'briefing' ? delivery(knowledge, [], mode, id ?? null) : null;
+      return mode === 'briefing' ? delivery(version, [], mode, id ?? null) : null;
     } finally { recallFlight = null; recallAttemptInFlight = false; }
+  };
+  // Live delivery of a newer delivered-knowledge version (`--knowledge-updates`). The driver appends one
+  // `knowledge-update-entry/1` line for each version it has verified and written beside the list. A refresh
+  // off the request path reads whole unread lines and their files in an isolated helper process, verifies
+  // them and stages them in memory; building a player request only takes what is staged, and closing the
+  // helper kills any stalled read immediately so it never delays settlement or CLI exit.
+  let updatesOffset = 0, updateRefresh = null, refreshAgain = false, updatesPoll, updatesClosed = false;
+  let updateReader = null, updateReaderBuf = '', updateReadSeq = 0;
+  const pendingReads = new Map();
+  const pendingKnowledgeUpdates = new Map();
+  const pendingRefusals = [];
+  const failUpdateReads = () => {
+    for (const resolve of pendingReads.values()) resolve(null);
+    pendingReads.clear();
+  };
+  const closeUpdateReader = () => {
+    const child = updateReader;
+    updateReader = null;
+    updateReaderBuf = '';
+    failUpdateReads();
+    if (!child) return;
+    child.stdin?.destroy();
+    child.stdout?.destroy();
+    try { child.kill('SIGKILL'); } catch {}
+    child.unref();
+  };
+  const ensureUpdateReader = () => {
+    if (updatesClosed) return null;
+    if (updateReader) return updateReader;
+    const childEnv = {PATH:process.env.PATH ?? '/usr/bin:/bin', LANG:process.env.LANG ?? 'C.UTF-8'};
+    const child = spawn(process.execPath, [UPDATE_READER], {env:childEnv, stdio:['pipe', 'pipe', 'ignore']});
+    updateReader = child;
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', chunk => {
+      updateReaderBuf += chunk;
+      let newline;
+      while ((newline = updateReaderBuf.indexOf('\n')) >= 0) {
+        const line = updateReaderBuf.slice(0, newline);
+        updateReaderBuf = updateReaderBuf.slice(newline + 1);
+        if (!line) continue;
+        try {
+          const reply = JSON.parse(line);
+          const resolve = pendingReads.get(reply.id);
+          if (resolve) { pendingReads.delete(reply.id); resolve(reply.ok ? Buffer.from(reply.data, 'base64') : null); }
+        } catch {}
+      }
+    });
+    const ended = () => { if (updateReader !== child) return; updateReader = null; failUpdateReads(); };
+    child.on('error', ended);
+    child.on('exit', ended);
+    child.stdin.on('error', () => {});
+    child.unref();
+    return child;
+  };
+  const updateReadTimeoutMs = positive(options.updateReadTimeoutMs) ? options.updateReadTimeoutMs : UPDATE_READ_TIMEOUT_MS;
+  const readUpdateFile = (path, offset = null, limit = null) => new Promise(resolve => {
+    const child = ensureUpdateReader();
+    if (!child) { resolve(null); return; }
+    const id = ++updateReadSeq;
+    const finish = value => { clearTimeout(timer); resolve(value); };
+    const timer = setTimeout(() => {
+      if (!pendingReads.has(id)) return;
+      // A stalled read wedged the helper process: terminate it so the next read spawns a fresh helper.
+      if (updateReader === child) closeUpdateReader();
+      else { pendingReads.delete(id); finish(null); }
+    }, updateReadTimeoutMs);
+    timer.unref();
+    pendingReads.set(id, finish);
+    try { child.stdin.write(JSON.stringify({id, path, offset, limit}) + '\n'); }
+    catch { pendingReads.delete(id); finish(null); }
+  });
+  const unreadUpdateLines = async () => {
+    const data = await readUpdateFile(options.knowledgeUpdates, updatesOffset, INPUT_LIMIT_BYTES);
+    if (!data || data.length === 0) return [];
+    const end = data.lastIndexOf(10);
+    if (end < 0) {
+      // A line still being appended is read once it is whole; one over the input bound is never an entry.
+      if (data.length < INPUT_LIMIT_BYTES) return [];
+      updatesOffset += data.length;
+      return [''];
+    }
+    updatesOffset += end + 1;
+    return data.subarray(0, end).toString('utf8').split('\n').filter(line => line.trim());
+  };
+  // Refusals wait in memory with the version held when they were decided and are recorded when the next
+  // request is built (or when the actor ends), so the refresh itself never writes telemetry between events.
+  const refuseUpdate = (entry, reason, extra = {}) => { if (!updatesClosed) pendingRefusals.push({kind:'update', outcome:'refused',
+    version:entry?.version ?? null, previous_version:knowledge.version, coverage:entry?.coverage ?? null, reason, ...extra}); };
+  const flushRefusals = () => { for (const event of pendingRefusals.splice(0)) emit('knowledge-delivery', event); };
+  const heldNumber = () => versionNumber(knowledge.version) ?? -1;
+  // The listed file as the adopted version would be, or the reason it is refused.
+  const verifiedUpdate = async entry => {
+    const foreign = () => knowledge.repository_id !== null && entry.repository_id !== knowledge.repository_id;
+    if (foreign()) return 'repository-mismatch';
+    const data = await readUpdateFile(join(dirname(options.knowledgeUpdates), entry.file));
+    if (!data) return 'file-unreadable';
+    if (foreign()) return 'repository-mismatch';
+    if (sha256Hex(data) !== entry.sha256) return 'sha256-mismatch';
+    let value;
+    try { value = validateKnowledge(JSON.parse(data.toString('utf8'))); } catch { return 'invalid-delivered-knowledge'; }
+    return value.version === entry.version && value.commit === entry.commit && value.repository_id === entry.repository_id
+      && isDeepStrictEqual(value.coverage, entry.coverage) ? value : 'entry-mismatch';
+  };
+  // Unread entries are verified newest first and held until request preparation picks the newest one that fits
+  // within context capacity, so an oversized newer version can still fall back to an older verified candidate.
+  const refreshOnce = async () => {
+    const entries = [];
+    for (const line of await unreadUpdateLines()) {
+      const entry = updateEntry(line);
+      if (entry) entries.push(entry); else refuseUpdate(null, 'invalid-entry');
+    }
+    entries.sort((a, b) => b.number - a.number);
+    for (const entry of entries) {
+      if (updatesClosed) return;
+      if (entry.number <= heldNumber()) { refuseUpdate(entry, 'not-newer'); continue; }
+      if (pendingKnowledgeUpdates.has(entry.number)) { refuseUpdate(entry, 'superseded'); continue; }
+      const value = await verifiedUpdate(entry);
+      if (updatesClosed) return;
+      if (typeof value === 'string') { refuseUpdate(entry, value); continue; }
+      if (entry.number <= heldNumber()) { refuseUpdate(entry, 'not-newer'); continue; }
+      if (pendingKnowledgeUpdates.has(entry.number)) { refuseUpdate(entry, 'superseded'); continue; }
+      pendingKnowledgeUpdates.set(entry.number, {entry, knowledge:value});
+    }
+  };
+  // Starts a refresh unless one is outstanding, in which case that one runs once more when it finishes.
+  // Nothing waits for it.
+  const refreshUpdates = () => {
+    if (!options.knowledgeUpdates || updatesClosed) return;
+    if (updateRefresh) { refreshAgain = true; return; }
+    updateRefresh = (async () => {
+      do { refreshAgain = false; await refreshOnce(); } while (refreshAgain && !updatesClosed);
+    })().catch(error => refuseUpdate(null, 'update-check-failed', {error_name:error?.name ?? null}))
+      .finally(() => { updateRefresh = null; });
   };
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
@@ -826,7 +969,14 @@ export async function runHost(options) {
       && (options.pendingControlId === null || identity(options.pendingControlId)), 'invalid-control-binding');
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
+    requireThat(options.knowledgeUpdates == null || text(options.knowledgeUpdates), 'invalid-input');
     knowledge = validateKnowledge(options.knowledge);
+    if (options.knowledgeUpdates) {
+      // Refreshes start now, on a timer and after each player response; none keeps the process alive.
+      refreshUpdates();
+      updatesPoll = setInterval(refreshUpdates, UPDATE_POLL_MS);
+      updatesPoll.unref();
+    }
     finishReserve = amountFromText(options.finishReserveUsd);
     requireThat(finishReserve !== null, 'invalid-finish-reserve');
     recallConfiguration = configuration.recall;
@@ -834,7 +984,7 @@ export async function runHost(options) {
     affinityId = sessionAffinityId(options.session);
     spendLimit = amountFromText(configuration.spend_limit_usd);
     unpricedBound = amountFromText(configuration.unpriced_request_usd);
-    emit('host-start', {telemetry_version:8, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
+    emit('host-start', {telemetry_version:9, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -964,16 +1114,58 @@ export async function runHost(options) {
             placedNotices.push({at:messages.length, message:{role:'user', timestamp:Date.now(), content:[{type:'text', text:value.text}]}});
             unsentDeliveries.push(value);
           }
+          const contextTokens = list => {
+            const estimate = estimateContextTokens(list);
+            // Reported usage can be missing or exclude serializer overhead. Keep
+            // a second text/image heuristic as a conservative independent floor.
+            const heuristic = estimateContextTokens(list.map(message => message.role === 'assistant'
+              ? {...message, usage:{input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0}} : message));
+            return {tokens:Math.max(estimate.tokens, heuristic.tokens), usageTokens:estimate.usageTokens, heuristicTokens:heuristic.tokens};
+          };
+          // A staged newer version becomes the adopted one here, between requests, and its difference is one
+          // more placed message. Only memory is read: the files were read and verified by the refresh. This
+          // has its own failure boundary: it can refuse an update, never stop the host.
+          if (options.knowledgeUpdates) {
+            try {
+              flushRefusals();
+              const candidates = [...pendingKnowledgeUpdates.values()].sort((a, b) => b.entry.number - a.entry.number);
+              pendingKnowledgeUpdates.clear();
+              if (candidates.length) {
+                const before = contextTokens(withPlacedNotices(projection.messages, placedNotices)).tokens;
+                const previousVersion = knowledge.version;
+                let adopted = false;
+                for (const candidate of candidates) {
+                  if (adopted) { refuseUpdate(candidate.entry, 'superseded', {previous_version:previousVersion}); continue; }
+                  if (candidate.entry.number <= heldNumber()) { refuseUpdate(candidate.entry, 'not-newer'); continue; }
+                  if (knowledge.repository_id !== null && candidate.entry.repository_id !== knowledge.repository_id) {
+                    refuseUpdate(candidate.entry, 'repository-mismatch'); continue;
+                  }
+                  let update;
+                  try { update = updateDelivery(knowledge, candidate.knowledge); } catch {
+                    refuseUpdate(candidate.entry, 'invalid-delivered-knowledge'); continue;
+                  }
+                  const message = {role:'user', timestamp:Date.now(), content:[{type:'text', text:update.text}]};
+                  if (before + estimateContextTokens([message]).tokens + configuration.context_reserve_tokens < configuration.model.contextWindow) {
+                    knowledge = candidate.knowledge;
+                    placedNotices.push({at:messages.length, message});
+                    unsentDeliveries.push(update);
+                    adopted = true;
+                  } else {
+                    refuseUpdate(candidate.entry, 'context-capacity');
+                  }
+                }
+                flushRefusals();
+              }
+            } catch (error) {
+              emit('knowledge-delivery', {kind:'update', outcome:'refused', version:null, previous_version:knowledge.version,
+                coverage:null, reason:'update-check-failed', error_name:error?.name ?? null});
+            }
+          }
           const withNotices = withPlacedNotices(projection.messages, placedNotices);
-          const estimate = estimateContextTokens(withNotices);
-          // Reported usage can be missing or exclude serializer overhead. Keep
-          // a second text/image heuristic as a conservative independent floor.
-          const heuristic = estimateContextTokens(withNotices.map(message => message.role === 'assistant'
-            ? {...message, usage:{input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0}} : message));
-          const tokens = Math.max(estimate.tokens, heuristic.tokens);
+          const {tokens, usageTokens, heuristicTokens} = contextTokens(withNotices);
           requireThat(Number.isSafeInteger(tokens) && tokens >= 0, 'context-estimate-failed');
-          emit('context-estimate', {request_id:`request-${requests + 1}`, tokens, usage_tokens:estimate.usageTokens,
-            heuristic_tokens:heuristic.tokens, heuristic:true, exact:false});
+          emit('context-estimate', {request_id:`request-${requests + 1}`, tokens, usage_tokens:usageTokens,
+            heuristic_tokens:heuristicTokens, heuristic:true, exact:false});
           if (tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
           // Notices warn before each stop the host itself will enforce: context capacity, the request
           // allowance and the work deadline. Each notice stays in the history where it was first sent
@@ -1103,7 +1295,8 @@ export async function runHost(options) {
             const inspectionMs = performance.now() - fetchEntered;
             const attemptId = requestId = `request-${++requests}`;
             if (briefing) { emit('knowledge-delivery', {...briefing, receiving_player_request_id:attemptId}); briefing = null; }
-            for (const value of unsentDeliveries.splice(0)) emit('knowledge-delivery', {...value, receiving_player_request_id:attemptId});
+            for (const value of unsentDeliveries.splice(0)) emit('knowledge-delivery', {...value,
+              ...(value.kind === 'update' ? {outcome:'delivered'} : {}), receiving_player_request_id:attemptId});
             const attemptProgress = responseProgress = {request_id:attemptId, body_bytes:0, body_chunks:0,
               provider_events:0, content_bytes:0, reasoning_bytes:0,
               tool_argument_bytes:0, response_id:null, reported_provider:null, ...progressTimes()};
@@ -1292,6 +1485,8 @@ export async function runHost(options) {
         }
         requestInFlight = false;
         if (failed && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
+        // A version listed during this request is read while the response's tools run.
+        refreshUpdates();
       }
     });
     if (control) agent.steer({role:'user', timestamp:Date.now(), content:[{type:'text', text:`${STOP_TEXT}\ncontrol_id: ${control.id}`}]});
@@ -1302,6 +1497,11 @@ export async function runHost(options) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {
     endRecall();
+    // An outstanding refresh is terminated rather than awaited: a stalled read must not hold up settlement or CLI exit.
+    clearInterval(updatesPoll);
+    flushRefusals();
+    updatesClosed = true;
+    closeUpdateReader();
     await recallTask;
     if (briefing) emit('knowledge-undelivered', {...briefing, reason:'actor-ended'});
     for (const value of [...pendingReminders, ...unsentDeliveries]) emit('knowledge-undelivered', {...value, reason:'actor-ended'});

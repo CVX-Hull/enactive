@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/8`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/9`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [player interface component](../../docs/components/player-interface.md) describes
 the adapter's place in the run.
@@ -18,7 +18,7 @@ frozen provider/MCP/context inputs; no coding-agent launch or resumed-host fallb
 is supported. Host choice
 is independent of whether a particular model passes gameplay qualification.
 
-See the [adapter procedure](../../docs/operations/player-host.md#install-and-test-the-adapter) for installation, tests and invocation with the required mode and flags (`validate` with `--config`, `--mcp-config`, `--model` and `--effort`, and `run` with those flags plus `--context`, `--prompt`, `--session`, `--actor-id`, `--pending-control-id`, `--delivered-knowledge`, `--finish-reserve-usd`, `--timeout-seconds` and `-o`).
+See the [adapter procedure](../../docs/operations/player-host.md#install-and-test-the-adapter) for installation, tests and invocation with the required mode and flags (`validate` with `--config`, `--mcp-config`, `--model` and `--effort`, and `run` with those flags plus `--context`, `--prompt`, `--session`, `--actor-id`, `--pending-control-id`, `--delivered-knowledge`, `--finish-reserve-usd`, `--timeout-seconds` and `-o`, and the one optional flag `--knowledge-updates`).
 
 The runner requires regular files of at most 1 MiB for the route, MCP table,
 context and prompt. The delivered knowledge file has no text-size cap. Stdin
@@ -34,13 +34,13 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/8"`, `model`,
+The closed route has exactly `schema: "player-host/9"`, `model`,
 `api_key_env`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
 `context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
 amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
-text ([the dollar limit](#the-dollar-limit)), and the closed [recall configuration](#frozen-knowledge-delivery).
+text ([the dollar limit](#the-dollar-limit)), and the closed [recall configuration](#knowledge-delivery).
 The adapter rejects other schema versions and missing or invalid fields.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
@@ -266,7 +266,7 @@ post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
 cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 8 retains request text/UTF8 counts,
+call IDs where applicable. Telemetry version 9 retains request text/UTF8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -336,7 +336,7 @@ progress neither extends the active request deadline nor authorizes tool input.
 The bounded timeout recovery requires observed assistant output before the deadline. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 8 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 9 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings
@@ -368,10 +368,19 @@ one retry described above. Use the existing
 [offline evaluator](../../docs/measurement-guide.md#retained-host-and-browser-analysis)
 to analyze traces; future telemetry versions are not silently interpreted.
 
-## Frozen knowledge delivery
+## Knowledge delivery
 
-The required `--delivered-knowledge` file is `delivered-knowledge/1`; it has no
+The required `--delivered-knowledge` file is `delivered-knowledge/2`; it has no
 text-size cap. `--finish-reserve-usd` is the frozen reserve from the package.
+With `--knowledge-updates LIST`, an unref'd refresh in `runHost` (at start, every
+`UPDATE_POLL_MS` and after each player response, one at a time) reads the driver's
+list and its files through the isolated `update-reader.mjs` helper (terminated on
+settlement so a stalled read never blocks CLI exit) and stages verified candidates
+above its own (`updateEntry`, `validateKnowledge`, `updateDelivery` in
+`knowledge.mjs`). Building a player request only takes what is staged — picking the
+newest candidate that fits within context capacity — and reads no file. The
+[update rules](../../docs/contracts/player-host.md#a-newer-version-during-play)
+own what is checked and recorded. Nothing waits for the refresh, and it never stops the host.
 The route pins `recall:{model,every,unpriced_request_usd}` with the same provider
 and credential variable as the player. Recall counts and request IDs begin at fetch.
 

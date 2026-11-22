@@ -31,7 +31,7 @@ test('briefing, standalone index, concurrent reminder, silence, read and exact s
   assert.deepEqual(briefing.article_ids,['article-a']);
   assert.deepEqual(briefing.index_ids,['article-b','fact-alone']);
   assert.equal(briefing.receiving_player_request_id,'request-1');
-  assert.equal(briefing.delivered_knowledge_schema,'delivered-knowledge/1');
+  assert.equal(briefing.delivered_knowledge_schema,'delivered-knowledge/2');
   assert.equal(briefing.grants_authority,false);
   assert.ok(briefing.text.includes('curator-coverage/2'));
   const reminder = deliveries.find(e => e.kind === 'reminder');
@@ -78,7 +78,7 @@ for (const failure of ['failed','rejected-fetch','unpriced']) test(`${failure} r
 });
 
 test('empty knowledge never requests recall and reserve suppresses nonempty recall',async t => {
-  const empty = await scenario(t,{knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]}});
+  const empty = await scenario(t,{knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]}});
   assert.ok(empty.events.every(e => e.request_role !== 'recall'));
   const reserved = await scenario(t,{configuration:{spend_limit_usd:'0.3'},finishReserveUsd:'0.3'});
   assert.ok(reserved.events.every(e => e.request_role !== 'recall'));

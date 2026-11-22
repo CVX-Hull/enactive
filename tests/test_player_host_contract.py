@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/8` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/9` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -77,7 +77,7 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/8", spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/9", spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
@@ -182,7 +182,7 @@ class Hosted:
         self.route = route(adapter, provider.base_url, spend_limit_usd=spend_limit_usd)
         self.paths["route.json"].write_text(json.dumps(self.route))
         self.paths["mcp.json"].write_text(json.dumps(self.mcp(enabled_tools)))
-        self.paths["delivered-knowledge.json"].write_text(json.dumps(dict(schema="delivered-knowledge/1",version=None,coverage=None,articles=[],facts=[])))
+        self.paths["delivered-knowledge.json"].write_text(json.dumps(dict(schema="delivered-knowledge/2",version=None,commit=None,repository_id=None,coverage=None,articles=[],facts=[])))
         self.paths["context.txt"].write_text("Frozen player guide")
         self.paths["prompt.txt"].write_text("Offline mission")
         self.paths["final.txt"].write_text("reserved")
@@ -295,7 +295,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/7", "player-host/7", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
+    for schema in ("pi-player-host/7", "player-host/7", "player-host/8", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -346,7 +346,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/8" and events[0]["telemetry_version"] == 8
+    assert events[0]["schema"] == "player-host/9" and events[0]["telemetry_version"] == 9
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
@@ -356,6 +356,69 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     assert CREDENTIAL in hosted.provider.requests[0]["authorization"]
     assert hosted.provider.requests[0]["path"].endswith("/chat/completions")
     assert process_gone(hosted.mcp_pid())
+
+
+def test_a_listed_newer_knowledge_version_is_delivered_and_an_entry_that_does_not_verify_never_stops_the_host(adapter, host_factory, tmp_path):
+    """The optional `--knowledge-updates` list (docs/contracts/player-host.md, A newer version during play): one
+    entry that verifies and two that do not. The host delivers the first as its own delimited message in the
+    next request it builds, records the others as refused and finishes the run."""
+    import hashlib
+    hosted = host_factory([tool_response("integer", dict(value=7)),
+                           tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None))],
+                          enabled_tools=("integer",))
+    version = dict(schema="delivered-knowledge/2", version="v1", commit="c" * 40, repository_id="d" * 40,
+                   coverage=dict(schema="curator-coverage/2", session="2" * 32, actor="001", last_step=20),
+                   articles=[dict(id="article-a", title="A subject", lead="A useful lead. More.", body=[dict(text="A claim.", facts=["fact-a"])], links=[], last_confirmed=dict(session="s1", actor="001", step=1, order=[1, "001", 1]))],
+                   facts=[dict(id="fact-a", type="observation", text="A claim.", seen=dict(session="s1", actor="001", step=1, order=[1, "001", 1]))])
+    data = json.dumps(version).encode()
+    (tmp_path / "knowledge").mkdir()
+    (tmp_path / "knowledge" / "v1.json").write_bytes(data)
+    (tmp_path / "knowledge" / "v2.json").write_bytes(data)
+    entry = dict(schema="knowledge-update-entry/1", version="v1", commit=version["commit"], repository_id=version["repository_id"],
+                 file="knowledge/v1.json", sha256=hashlib.sha256(data).hexdigest(), coverage=version["coverage"])
+    updates = tmp_path / "knowledge-updates.jsonl"
+    # In the order the host tries them, newest first: v2's file names v1, the unparsable line is no entry.
+    updates.write_text("".join(json.dumps(row) + "\n" for row in (entry, dict(entry, version="v2", file="knowledge/v2.json"))) + "{not json\n")
+    assert hosted.start(["run", *hosted.flags(), "--knowledge-updates", str(updates)]).wait() == 0
+    events = hosted.events()
+    deliveries = [e for e in events if e["type"] == "knowledge-delivery" and e["kind"] == "update"]
+    refused = [(e["version"], e["reason"]) for e in deliveries if e["outcome"] == "refused"]
+    assert len(refused) == 2 and set(refused) == {(None, "invalid-entry"), ("v2", "entry-mismatch")}
+    delivered, = (e for e in deliveries if e["outcome"] == "delivered")
+    assert (delivered["version"], delivered["previous_version"], delivered["coverage"], delivered["receiving_player_request_id"]) == (
+        "v1", None, version["coverage"], "request-1")
+    assert (delivered["delivered_knowledge_schema"], delivered["grants_authority"], delivered["index_ids"]) == ("delivered-knowledge/2", False, ["article-a"])
+    begin, body, end = delivered["text"].split("\n")
+    assert begin.startswith("BEGIN FALLIBLE KNOWLEDGE UPDATE (v1)") and end == "END FALLIBLE KNOWLEDGE UPDATE (v1)"
+    assert json.loads(body)["index"] == [dict(id="article-a", title="A subject", index="A useful lead")]
+    first, second = (json.loads(request["body"])["messages"] for request in hosted.provider.requests)
+    texts = lambda messages: [m["content"] if isinstance(m["content"], str) else "".join(p.get("text", "") for p in m["content"] or [])
+                              for m in messages if m["role"] == "user"]
+    assert texts(first).count(delivered["text"]) == 1 and second[:len(first)] == first
+    assert hosted.settled()["reason"] == "task_complete" and hosted.accounted()["accounting_complete"] is True
+    # The flag is closed like the others: repeated, it refuses before any request.
+    repeated = run_mode(adapter, ["run", *hosted.flags(), "--knowledge-updates", str(updates), "--knowledge-updates", str(updates)])
+    assert repeated.returncode != 0 and len(hosted.provider.requests) == 2
+
+
+def test_a_hung_knowledge_updates_fifo_does_not_prevent_the_host_cli_from_exiting(adapter, host_factory, tmp_path):
+    """R-REGRESSION (B1): a stalled filesystem read of `--knowledge-updates` (simulated by a FIFO with no writer)
+    is abandoned on its timeout and must not keep the Node host CLI process alive after settlement."""
+    fifo = tmp_path / "hung-knowledge-updates.jsonl"
+    os.mkfifo(fifo)
+    hosted = host_factory([tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None))])
+    try:
+        proc = hosted.start(["run", *hosted.flags(), "--knowledge-updates", str(fifo)])
+        code = proc.wait(15)
+        assert code == 0
+        assert hosted.settled()["reason"] == "task_complete"
+        assert hosted.accounted()["accounting_complete"] is True
+    finally:
+        try:
+            fd = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+            os.close(fd)
+        except OSError:
+            pass
 
 
 def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow_the_trace(adapter, host_factory):

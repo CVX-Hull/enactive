@@ -15,7 +15,7 @@ import numpy as np
 from harness.curator.knowledge import KnowledgeError, Repository
 from harness.curator.gate import FACT, current
 from harness.jsonio import strict_loads
-from harness.player.knowledge import empty
+from harness.player.knowledge import SCHEMA, empty
 
 PRIVATE_FILES = {'knowledge-full.json', 'units.json'}
 STUDY_DRAW_SCHEMA = 'withholding-study-draw/2'
@@ -200,7 +200,12 @@ def published(path: Path, version: str, *, world: str | None = None) -> dict:
     coverage = json.loads(repo._show(version, 'coverage.json')) if 'coverage.json' in names else None
     if coverage is not None and coverage.get('schema') != 'curator-coverage/2':
         raise KnowledgeError('Unsupported coverage stamp')
-    return dict(schema='delivered-knowledge/1', version=version, coverage=coverage, articles=articles, facts=facts)
+    # The identity a later version is checked against: this tag's commit, and the repository's first
+    # version, which every later version of the same repository descends from. The world label that
+    # selected the facts is never written here; it stays in the private full file.
+    commit, repository_id = (_git(repo.path, 'rev-parse', f'{tag}^{{commit}}').decode().strip() for tag in (version, 'v0'))
+    return dict(schema=SCHEMA, version=version, commit=commit, repository_id=repository_id, coverage=coverage,
+                articles=articles, facts=facts)
 
 
 def export(package: Path, knowledge: dict, seed: int | None = None, *,

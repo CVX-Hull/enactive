@@ -64,7 +64,7 @@ record the owner decisions.
   system's business, and nothing here does it. What software can check is consistency
   across what the repository has cited, below. A wrong label that is consistent is not
   caught.
-- **Campaign manifest.** The driver accepts `campaign-run/11`, which carries `world`. The evaluator reads earlier versions through its closed
+- **Campaign manifest.** The driver accepts `campaign-run/12`, which carries `world`. The evaluator reads earlier versions through its closed
   archive index. The decision log holds the
   [eligibility rule](../decisions/owner-decisions.md#archive-index-holds-cited-sessions)
   and the [approved sessions](../decisions/owner-decisions.md#eleven-version-ten-sessions-join-the-archive-index).
@@ -113,7 +113,7 @@ record the owner decisions.
   ordering today is keyed by a session's directory name, so the map also holds that a
   directory name belongs to one sealed identifier.
 - **Where the labels are trusted from.** Software takes a session's labels from its
-  package manifest only after checking three things: the manifest is `campaign-run/11` or sealed `campaign-run/10`, the manifest names the
+  package manifest only after checking three things: the manifest is `campaign-run/12` or sealed `campaign-run/10`, the manifest names the
   same session as the sealed store, and its digest is
   the one the supervisor recorded for the run. When any of that evidence is missing,
   the session has no world. The [trace projection](../contracts/measurement-tools.md#trace-projection) does
@@ -213,11 +213,12 @@ record the owner decisions.
 - **A fresh start.** The migration starts a new repository, at its first version, and
   new working state. Old working repositories, session state and study draws are not
   carried over; sealed stores stay as evidence.
-- **Delivery keeps its shape.** `delivered-knowledge/1` and the host input contract
-  do not change. The exporter copies a fixed list of fact fields (`id`, `type`,
-  `text`, `subject`, `seen`), none of which changes shape. What changes is which
-  standalone facts it exports. The world label itself is never written into anything
-  the player sees.
+- **Delivery keeps its fact shape.** World scoping changes neither the delivered
+  file's fields nor the host input contract. The exporter copies a fixed list of fact
+  fields (`id`, `type`, `text`, `subject`, `seen`), none of which changes shape. What
+  changes is which standalone facts it exports. The world label itself is never
+  written into anything the player sees: `delivered-knowledge/2`'s `commit` and
+  `repository_id` identify the version, not the world.
 - **The world is bound at freeze, and checked at preflight.** The exporter exports
   every `game` fact, every article and the `world` facts of one world; with no world it
   exports game facts and articles only, as today. It writes two things into the

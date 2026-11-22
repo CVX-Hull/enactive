@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from harness.player.knowledge import empty
 from tools import run_ledger
 from tools.evaluate import has_blocks, main as evaluate_main, read_snapshot, table
 from tools.run_ledger import LedgerError, main, read_ledger, totals
@@ -19,9 +20,9 @@ def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounti
     """A finished package with $1.0 reported and one unknown-cost attempt."""
     directory = root / name
     directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11', session=SESSION,
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/12', session=SESSION, live_knowledge_updates=False,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
-    (directory/'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/1',version=None,coverage=None,articles=[],facts=[])))
+    (directory/'delivered-knowledge.json').write_text(json.dumps(empty()))
     if receipt:
         (directory / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/7', session=SESSION,
             source_commit=COMMIT, outcome='player_cannot_continue_unassessed', ended_wall=1794038818.1,
@@ -105,17 +106,22 @@ def test_an_incomplete_receipt_preserves_observed_cost_beside_the_explicit_upper
 
 @pytest.mark.parametrize('attempts',[0,1,2])
 @pytest.mark.parametrize('has_units',[False,True])
-def test_upper_bound_covers_possible_inflight_attempts_even_when_none_observed(tmp_path,attempts,has_units):
+@pytest.mark.parametrize('live',[False,True])
+def test_upper_bound_covers_possible_inflight_attempts_even_when_none_observed(tmp_path,attempts,has_units,live):
     from tools.run_ledger import package_row
     directory=package(tmp_path/'packages',spend_complete=False,observed_attempts=attempts,unpriced_requests=0,unpriced_recall_request_usd='0.2')
     if has_units:
         path=directory/'delivered-knowledge.json';value=json.loads(path.read_text())
-        value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(order=1))]
+        value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(session='s1',actor='001',step=1,order=[1,'001',1]))]
         path.write_text(json.dumps(value))
+    if live:
+        path=directory/'manifest.json'
+        path.write_text(json.dumps(dict(json.loads(path.read_text()),live_knowledge_updates=True)))
     value=package_row(directory,study=999,label='upper-bound',upper_bound=True)
     assert value['unpriced_attempts']==value['unpriced_recall_attempts']==0
     assert value['provider_usd']==value['spend_usd']=='1.0'
-    expected=Decimal('5')+Decimal('0.4096')+int(has_units)*Decimal('0.2')
+    # A recall is possible with frozen facts, and with live updates even from an empty frozen file.
+    expected=Decimal('5')+Decimal('0.4096')+int(has_units or live)*Decimal('0.2')
     assert value['attempts']==attempts
     assert Decimal(value['spend_upper_bound_usd'])==expected
     assert read_ledger(write(tmp_path/'ledger.jsonl',value))==[value]

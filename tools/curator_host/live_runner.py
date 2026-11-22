@@ -38,8 +38,11 @@ from __future__ import annotations
 
 import argparse
 from decimal import Decimal, InvalidOperation
+import hashlib
 import json
+import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import sys
@@ -52,6 +55,9 @@ from harness.curator.gate import journal  # noqa: E402
 from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.curator.runner import Outcome, Reading, Runner, RunnerError, Settings, TagLook, staged  # noqa: E402
 from harness.curator.window import Window  # noqa: E402
+from harness.evaluation.core.sources import MANIFEST_SCHEMA  # noqa: E402
+from tools import knowledge_export  # noqa: E402
+from tools.campaign_package import DELIVERED_DIRECTORY  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
 
 CONFIG_SCHEMA = 'curator-runner-config/1'
@@ -219,11 +225,99 @@ class Sessions:
                        session_id=summary.get('session_id'), stop=stop, error=error, details=details)
 
 
+VERSION_FILE = re.compile(r'v(0|[1-9][0-9]*)\.json')
+SESSION_ID_RE = re.compile(r'[0-9a-f]{32}')
+
+
+def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, str | None]:
+    """Whether the run's package delivers newer versions to a running actor, and the world its facts are selected for.
+
+    The manifest is trusted only as the supervisor launched it: its bytes must have the SHA-256 that the
+    supervisor's `campaign-watch-start/4` launch record names for the same 32-hex session (and matching any
+    explicitly supplied `session_id`), the checks the trace projection makes before it reads labels
+    (`harness/trace/projection.py`). The bytes checked are the bytes read."""
+    data = (run/'manifest.json').read_bytes()
+    manifest = json.loads(data)
+    if not isinstance(manifest, dict) or manifest.get('schema') != MANIFEST_SCHEMA:
+        raise ValueError(f'{run/"manifest.json"}: not a {MANIFEST_SCHEMA} manifest')
+    session = manifest.get('session')
+    if not isinstance(session, str) or not SESSION_ID_RE.fullmatch(session):
+        raise ValueError(f'{run/"manifest.json"}: missing or invalid session identifier')
+    opening = json.loads((run/'watch-start.json').read_bytes())
+    if not isinstance(opening, dict) or opening.get('schema') != 'campaign-watch-start/4':
+        raise ValueError(f'{run/"watch-start.json"}: unsupported supervisor launch record schema')
+    if opening.get('session') != session:
+        raise ValueError(f'{run/"watch-start.json"}: supervisor launch record session differs from the manifest session')
+    if session_id is not None and session != session_id:
+        raise ValueError(f'{run/"manifest.json"}: manifest session differs from the launched session')
+    if opening.get('manifest_sha256') != hashlib.sha256(data).hexdigest():
+        raise ValueError(f'{run/"manifest.json"}: SHA-256 differs from the supervisor launch record')
+    return manifest['live_knowledge_updates'] is True, knowledge_export.world_label(manifest['labels']['world'])
+
+
+class Delivery:
+    """Leaves each newly confirmed version for the driver: `<runner directory>/delivered/vN.json`.
+
+    The file is the version exported as `delivered-knowledge/2` for the package's world
+    (`tools.knowledge_export.published`), written whole to a temporary name, synced and renamed, so the
+    driver only ever sees a complete file. Only a version the runner has confirmed in this admission is
+    exported (its tag was seen, an examined session reports it and its stamp is that window), never a
+    restore, and only one above the last version exported, restarts included. A failed export is reported
+    on stderr once per version and error and tried again at the next poll; it never ends the runner.
+    """
+
+    def __init__(self, directory: Path, repository: Path, world: str | None):
+        self.directory, self.repository, self.world = Path(directory)/DELIVERED_DIRECTORY, repository, world
+        present = os.listdir(self.directory) if self.directory.is_dir() else []
+        self.last = max((int(m[1]) for name in present if (m := VERSION_FILE.fullmatch(name))), default=-1)
+        self.reported = None
+
+    def __call__(self, runner: Runner) -> None:
+        version = None
+        try:
+            confirmed, _, _ = runner.publications()
+            numbers = [int(c['version'][1:]) for c in confirmed if runner.versions[c['version']]['restored_from'] is None]
+            if not numbers or max(numbers) <= self.last:
+                return
+            version = f'v{max(numbers)}'
+            value = knowledge_export.published(self.repository, version, world=self.world)
+            data = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + '\n').encode()
+            self.directory.mkdir(mode=0o700, exist_ok=True)
+            temporary = self.directory/f'.{version}.json.tmp'
+            with temporary.open('wb') as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, self.directory/f'{version}.json')
+            self.last = max(numbers)
+        except Exception as exc:  # noqa: BLE001 - delivery is beside curation: reported, retried, never fatal
+            report = (version, f'{type(exc).__name__}: {str(exc)[:300]}')
+            if report != self.reported:
+                self.reported = report
+                print(f'curator_runner: delivery of {version or "a confirmed version"} failed: {report[1]}',
+                      file=sys.stderr, flush=True)
+
+
+class DeliveringRunner(Runner):
+    """The runner, with one look for a newly confirmed version to deliver after each poll that returned."""
+
+    def __init__(self, *args, deliver: Delivery | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.deliver = deliver
+
+    def poll(self) -> bool:
+        more = super().poll()
+        if self.deliver is not None:
+            self.deliver(self)
+        return more
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--run', required=True, type=Path, help='the live run directory')
     p.add_argument('--directory', required=True, type=Path, help="the runner's own directory")
     p.add_argument('--config', required=True, type=Path, help='a curator-runner-config/1 file')
+    p.add_argument('--session', default=None, help='expected 32-hex live session id verified by supervision')
     p.add_argument('--runtime-root', type=Path, default=ROOT/'.runtime')
     return p
 
@@ -251,8 +345,16 @@ def main(argv: list[str] | None = None) -> int:
             if not key:
                 raise ConfigError(f'{shadow.KEY_VARIABLE} is not set and not mapped to a keychain item (docs/setup.md)')
             directory = args.directory.resolve()
-            runner = Runner(directory, run.name, snapshot=staged(run), session_call=Sessions(directory, config, repo, key),
-                            look=TagLook(repo), settings=config['settings'], run=run)
+            deliver = None
+            try:
+                enabled, world = delivery_world(run, session_id=args.session)
+                deliver = Delivery(directory, repo.path, world) if enabled else None
+            except (OSError, ValueError, KeyError, TypeError) as error:
+                # Curation does not depend on delivery: the runner starts and leaves no version for the driver.
+                print(f'curator_runner: delivery to the running actor is off: {type(error).__name__}: {error}',
+                      file=sys.stderr, flush=True)
+            runner = DeliveringRunner(directory, run.name, snapshot=staged(run), session_call=Sessions(directory, config, repo, key),
+                                      look=TagLook(repo), settings=config['settings'], run=run, deliver=deliver)
         except (ConfigError, RunnerError, KnowledgeError, shadow.ShadowError, OSError, ValueError) as error:
             print(f'curator_runner: {error}', file=sys.stderr)
             return FAILED

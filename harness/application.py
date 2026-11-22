@@ -24,11 +24,20 @@ class Application:
     def __init__(self, runtime: ComputerRuntime, journal: Journal, context_directory: Path, *, knowledge: Path) -> None:
         self.runtime, self.journal = runtime, journal
         self.knowledge = Knowledge(knowledge)
+        self.knowledge_lock = threading.Lock()
         self.context_directory = context_directory
         context_directory.mkdir(mode=0o700)
         self.serial = threading.RLock()
         self.host: dict[str, Any] | None = None
         self.final_actor: str | None = None
+
+    def set_knowledge(self, knowledge: Knowledge) -> None:
+        """Serve a newer delivered version to every later knowledge read; each result names its version.
+
+        The swap has a lock of its own, held only for the assignment, so the driver that adopts a
+        version never waits for a tool call in progress and a read sees one whole version."""
+        with self.knowledge_lock:
+            self.knowledge = knowledge
 
     def status(self) -> dict[str, Any]:
         return dict(self.runtime.status(), host=copy.deepcopy(self.host), player_claims=[])
@@ -94,7 +103,9 @@ class Application:
                 closed(semantic, {key})
                 if not isinstance(semantic[key], str):
                     raise PlayerError('Knowledge argument must be text')
-                return (self.knowledge.read(semantic[key]) if key == 'id_or_title' else self.knowledge.query(semantic[key])), None
+                with self.knowledge_lock:
+                    knowledge = self.knowledge
+                return (knowledge.read(semantic[key]) if key == 'id_or_title' else knowledge.query(semantic[key])), None
             if name == 'player_hint':
                 if not {'text'} <= semantic.keys() or semantic.keys() - {'text', 'source_ids'}:
                     raise PlayerError('Hint requires text and optional source_ids')

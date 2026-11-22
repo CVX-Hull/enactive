@@ -625,6 +625,172 @@ def test_three_runner_windows_publish_when_the_first_two_share_a_frame(tmp_path,
     assert first['seen'] == second['seen'] == recorded and third['seen']['step'] == 3
 
 
+# ---------------------------------------------------------------- versions left for the driver (#838)
+def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export_is_tried_again(tmp_path, monkeypatch, capsys):
+    """R-REGRESSION: the runner's part of live delivery, over a real repository and gate. Each version the runner
+    confirms is exported for the package's world as `delivered-knowledge/2` under `delivered/`; a failed export is
+    reported once and tried again at the next poll; a restarted runner exports nothing it already left."""
+    from harness.curator.knowledge import _git
+    from harness.player.knowledge import Knowledge
+    from tools import knowledge_export
+    repo = Repository(tmp_path/'knowledge', 'testgame')
+    repo.ensure()
+    config = SessionConfig(argv=('scripted',), host=dict(name='scripted'))
+
+    def submit(_argv, layout, **_kwargs):
+        workspace = layout.workspace
+        base = (workspace/'brief.md').read_text().split('`')[1]
+        step = json.loads((workspace/'trace'/RUN/'001'/'steps.jsonl').read_text())
+        changes = []
+        if base == 'v0':
+            changes.append(dict(op='add_type', type=dict(schema='curator-type/2', name='container',
+                                                        description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')))
+        # One fact of the game and one of the run's world (the gate stamps the world from the cited session),
+        # which only an export for that world selects.
+        for identity, scope in ((f'f{step["seq"]}', dict(game=repo.game, level='game')),
+                                (f'w{step["seq"]}', dict(game=repo.game, level='world'))):
+            changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id=identity, type='container',
+                                                         text=f'the cupboard {identity} holds bottles', known='observed',
+                                                         scope=scope, citations=[step['frame']])))
+        directory = workspace/'submissions'/'s1'
+        directory.mkdir()
+        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/1', base_version=base,
+                                                                 summary='window fact', changes=changes)))
+        return sandbox.Result(0, None, 0, 0, 0., [])
+
+    def session(reading, window, label):
+        result = run_session(repo, [reading.directory], config, window=window, session_id=label)
+        return Outcome(result['manifest']['lifecycle']['state'], tuple(result['verdicts']), session_id=label)
+
+    monkeypatch.setattr(sandbox, 'run', submit)
+    run = tmp_path/RUN
+    run.mkdir()
+    (run/CURATOR_READ_LOCK).touch()
+    record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
+    enabled, world = live_runner.delivery_world(run)
+    assert (enabled, world) == (True, 'the farm')
+    delivered = tmp_path/'runner'/'delivered'
+
+    def runner():
+        return live_runner.DeliveringRunner(
+            tmp_path/'runner', RUN, snapshot=live.staged(run), session_call=session, look=TagLook(repo),
+            settings=Settings(trigger_steps=1, ceiling_steps=1), deliver=live_runner.Delivery(tmp_path/'runner', repo.path, world))
+
+    first = runner()
+    assert first.deliver.last == -1 and not delivered.exists()  # the repository's baseline v0 is never left
+    writer = _Writer(run, SESSION_ID)
+    try:
+        writer.new_actor()
+        writer.step()
+        assert first.poll()
+        value = json.loads((delivered/'v1.json').read_text())
+        assert value == knowledge_export.published(repo.path, 'v1', world='the farm') and Knowledge.from_dict(value).value == value
+        root = _git(repo.path, 'rev-parse', 'v0^{commit}').decode().strip()
+        assert (value['schema'], value['version'], value['repository_id']) == ('delivered-knowledge/2', 'v1', root)
+        assert value['commit'] == _git(repo.path, 'rev-parse', 'v1^{commit}').decode().strip() != root
+        # The facts are those of the package's world; the label itself is never written into the file.
+        assert [f['id'] for f in value['facts']] == ['f1', 'w1'] and value['coverage']['last_step'] == 1
+        assert [f['id'] for f in knowledge_export.published(repo.path, 'v1')['facts']] == ['f1'] and 'the farm' not in json.dumps(value)
+        # An export that fails leaves nothing, says so once, and the next poll leaves the version.
+        published = knowledge_export.published
+        calls = []
+
+        def failing(path, version, *, world):
+            calls.append(version)
+            raise OSError('disk refused the export')
+
+        monkeypatch.setattr(knowledge_export, 'published', failing)
+        writer.step()
+        assert first.poll() and first.poll()
+        assert calls == ['v2', 'v2'] and sorted(p.name for p in delivered.iterdir()) == ['v1.json']
+        assert capsys.readouterr().err.splitlines() == ['curator_runner: delivery of v2 failed: OSError: disk refused the export']
+        monkeypatch.setattr(knowledge_export, 'published', published)
+        assert first.poll()
+        assert sorted(p.name for p in delivered.iterdir()) == ['v1.json', 'v2.json']
+        assert sorted(f['id'] for f in json.loads((delivered/'v2.json').read_text())['facts']) == ['f1', 'f2', 'w1', 'w2']
+        # A restarted runner starts from what is already left.
+        second = runner()
+        assert second.deliver.last == 2
+        before = {p.name: p.stat().st_mtime_ns for p in delivered.iterdir()}
+        assert second.poll() and {p.name: p.stat().st_mtime_ns for p in delivered.iterdir()} == before
+        writer.step()
+        assert second.poll() and sorted(p.name for p in delivered.iterdir()) == ['v1.json', 'v2.json', 'v3.json']
+    finally:
+        writer.close()
+    assert capsys.readouterr().err == ''
+
+
+def test_only_a_confirmed_publication_that_is_not_a_restore_is_left_for_the_driver(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from tools import knowledge_export
+    exported = []
+    monkeypatch.setattr(knowledge_export, 'published',
+                        lambda path, version, *, world: exported.append((version, world)) or dict(version=version))
+    deliver = live_runner.Delivery(tmp_path, tmp_path/'repository', 'farm')
+    versions = {'v1': dict(restored_from=None), 'v2': dict(restored_from='v1'), 'v3': dict(restored_from=live.UNKNOWN),
+                'v4': dict(restored_from=None)}
+    state = SimpleNamespace(versions=versions, publications=lambda: ([], [dict(version='v4')], None))
+    deliver(state)  # v4's tag was seen but no examined session confirms it
+    assert exported == [] and not (tmp_path/'delivered').exists()
+    state.publications = lambda: ([dict(version=v) for v in ('v1', 'v2', 'v3')], [], dict(version='v2'))
+    deliver(state)  # v2 and v3 are restores, or may be: only v1 is left
+    assert exported == [('v1', 'farm')] and [p.name for p in (tmp_path/'delivered').iterdir()] == ['v1.json']
+    deliver(state)
+    assert exported == [('v1', 'farm')]  # nothing above the last version left
+
+
+def test_delivery_is_read_from_the_current_package_manifest(tmp_path):
+    run = tmp_path/RUN
+    run.mkdir()
+    record_package(run, labels=dict(world='the farm', lineage='L1', admission=1))
+    assert live_runner.delivery_world(run) == (False, 'the farm')
+    record_package(run, labels=dict(lineage='L1', admission=1), schema='campaign-run/10')
+    with pytest.raises(ValueError, match='not a campaign-run/12 manifest'):
+        live_runner.delivery_world(run)
+    (run/'manifest.json').unlink()
+    with pytest.raises(OSError):
+        live_runner.delivery_world(run)
+
+
+def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch(tmp_path):
+    """R-REGRESSION (B4): replaced manifest bytes, whose SHA-256 differs from the supervisor's launch record,
+    neither enable delivery nor choose its world; nor does a launch record of another session or schema."""
+    import hashlib
+    run = tmp_path/RUN
+    run.mkdir()
+    record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
+    assert live_runner.delivery_world(run) == (True, 'the farm')
+    assert live_runner.delivery_world(run, session_id=SESSION_ID) == (True, 'the farm')
+    with pytest.raises(ValueError, match='launched session'):
+        live_runner.delivery_world(run, session_id='b' * 32)
+    original = (run/'manifest.json').read_bytes()
+    replaced = json.loads(original)
+    replaced['labels']['world'] = 'another farm'
+    (run/'manifest.json').write_text(json.dumps(replaced))
+    with pytest.raises(ValueError, match='SHA-256 differs from the supervisor launch record'):
+        live_runner.delivery_world(run)
+    # Missing session in both manifest and watch-start (even with matching SHA-256) is refused.
+    no_session = json.loads(original)
+    no_session.pop('session')
+    no_session_bytes = json.dumps(no_session).encode()
+    (run/'manifest.json').write_bytes(no_session_bytes)
+    opening = json.loads((run/'watch-start.json').read_text())
+    no_session_opening = {k: v for k, v in opening.items() if k != 'session'}
+    no_session_opening['manifest_sha256'] = hashlib.sha256(no_session_bytes).hexdigest()
+    (run/'watch-start.json').write_text(json.dumps(no_session_opening))
+    with pytest.raises(ValueError, match='missing or invalid session'):
+        live_runner.delivery_world(run)
+    (run/'manifest.json').write_bytes(original)
+    (run/'watch-start.json').write_text(json.dumps(opening))
+    for change, message in ((dict(session='b' * 32), 'session differs'), (dict(schema='campaign-watch-start/3'), 'unsupported')):
+        (run/'watch-start.json').write_text(json.dumps(dict(opening, **change)))
+        with pytest.raises(ValueError, match=message):
+            live_runner.delivery_world(run)
+    (run/'watch-start.json').unlink()
+    with pytest.raises(OSError):
+        live_runner.delivery_world(run)
+
+
 # ---------------------------------------------------------------- beside a growing trace, with a real session
 native = pytest.mark.skipif(sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists(),
                             reason='Seatbelt lane: macOS only')

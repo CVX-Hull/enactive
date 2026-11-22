@@ -22,7 +22,7 @@ in `route.json`; use no fallback. The current campaign accepts the explicit defa
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the package's dollar limit and operational capacities.
 
-The package freezes `route.json` (`player-host/8`), `delivered-knowledge.json`, `mcp-template.json`,
+The package freezes `route.json` (`player-host/9`), `delivered-knowledge.json`, `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, the dollar limit, the planning bound for an in-flight
@@ -39,11 +39,14 @@ The [host reference](../../tools/player_host/README.md) owns exact closed fields
 Unsupported route and player-view configurations are rejected as executable inputs.
 
 The driver creates each actor's `player-adapter/2`, explicit MCP table, fixed
-context, ongoing-objective/knowledge prompt and `player-host-inputs/3` hashes.
+context, ongoing-objective/knowledge prompt and `player-host-inputs/4` hashes.
+With [live knowledge updates](campaign-run.md#live-knowledge-updates) it also passes
+`--knowledge-updates`, and a successor starts from the latest version adopted in the
+run ([host contract](../contracts/player-host.md#a-newer-version-during-play)).
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/11`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/12`.
 Each actor's route carries the requests the run has left. The driver starts an
 actor only while requests and dollars remain. The
 [request-stability contract](../contracts/player-host.md#request-stability-and-tail-notices)

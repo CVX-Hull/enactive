@@ -49,6 +49,10 @@ Journal and application tests cover the supported formats and composition. They 
 not establish learning benefit. Sealed historical evidence retains its original scope.
 The application serves knowledge reads from the delivered export. The host selects
 briefings and reminders from that same version under the [delivery contract](../contracts/player-host.md#delivered-knowledge-and-recall).
+When the package sets live knowledge updates, the driver has the application serve a
+newer version during play, and the host states the difference to the running actor
+in one update message ([a newer version during play](../contracts/player-host.md#a-newer-version-during-play)).
+Each knowledge read names the version it answers from.
 The [player guide](../player-guide.md#delivered-knowledge) describes how to check
 fallible leads and reminders against the current view. The
 [curator repository](curator.md#facts-articles-and-grooming) stays outside the player

@@ -16,14 +16,15 @@ Before changing a deployment:
 
 1. Close writers and verify exact owned native/host/MCP cleanup. Never migrate under a live actor/game.
 2. Preserve original saves, SQLite/JSON/PNG, configuration, source checkpoint and binary bytes as inert evidence. Keep failed/abandoned chains intact.
-3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/11` package under `.runtime/computer-sessions/`.
+3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/12` package under `.runtime/computer-sessions/`.
 4. Use a fresh `computer-session/1` store and launch marker. A selected partial directory refuses even with no DB; do not delete markers to rearm it.
 5. Select a `player-journal/1` store (`user_version=1`); a supported journal can span fresh native-child sessions. Unsupported or unrecognized nonempty stores are refused before native launch without conversion.
 6. Requalify the affected native/gameplay boundary. Earlier test/demo results remain bound to their source and cannot qualify the replacement.
 
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
-callers move together with `player-host/8`, telemetry 8, `campaign-run/11`,
+callers move together with `player-host/9`, telemetry 9, `campaign-run/12`,
+`player-host-inputs/4`, `delivered-knowledge/2`, `knowledge-update-entry/1`,
 `player-driver/7` and `campaign-receipt/7`. The live spectator requires
 `computer-status/2`; its host block carries observed attempts. The evaluator
 reads older versions only for sealed sessions individually pinned to those

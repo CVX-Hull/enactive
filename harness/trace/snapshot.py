@@ -33,7 +33,7 @@ connection closed before the lock is released.
 
 **The cutoff, per actor, by identity across the store and the host's log.** An actor is
 included only when, before the read is admitted, its frozen manifest (`frozen.json`,
-`player-host-inputs/3`) is complete and so is every secret-guard input it has. Its frozen prompt
+`player-host-inputs/4`) is complete and so is every secret-guard input it has. Its frozen prompt
 and guide and the custody and route files are copied, each checked against the manifest's
 digest where it names one; a guard input the manifest does not bind (`host-process.json`,
 `mcp-template.json`) that does not parse yet leaves the actor out of this snapshot. An actor has
@@ -89,7 +89,7 @@ TRANSACTION_BOUND_SECONDS = 1.5  # the read transaction is cancelled here, from 
 STORE = 'session.sqlite3'
 STORE_SCHEMA = 'computer-session/1'
 STORE_VERSION = 1
-FROZEN_SCHEMA = 'player-host-inputs/3'
+FROZEN_SCHEMA = 'player-host-inputs/4'
 UNKNOWN_TRANSPORT = 'computer-transport/2'
 FROZEN_INPUTS = ('prompt.txt', 'context.txt')
 RUN_FILES = ('manifest.json', 'watch-start.json')

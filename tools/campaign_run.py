@@ -21,7 +21,7 @@ from harness.computer.runtime import ComputerRuntime
 from harness.player.journal import Journal
 from harness.server import serve
 from harness.trace.stores import CURATOR_READ_LOCK,READ_HOLD_BOUND_SECONDS,STORE_CLOSING_MARKER
-from tools.campaign_package import preflight,usd_text
+from tools.campaign_package import DELIVERED_DIRECTORY,RUNNER_DIRECTORY,preflight,usd_text
 from tools.campaign_player import run_hosts,write_new
 
 
@@ -100,7 +100,9 @@ def run_campaign(directory: Path) -> dict:
         server,server_thread=serve(application,profile['port'])
         write_new(directory/'ready.json',dict(schema='computer-ready/1',session=profile['session'],pid=owner.process.pid,
             viewer_url=f"http://127.0.0.1:{profile['port']}/",ready_wall=time.time()))
-        driver=run_hosts(directory,profile,route,application,secret,stopped,deadline)
+        # A package that delivers newer knowledge versions reads them where the curator runner leaves them.
+        live_updates=directory/RUNNER_DIRECTORY/DELIVERED_DIRECTORY if profile['live_knowledge_updates'] else None
+        driver=run_hosts(directory,profile,route,application,secret,stopped,deadline,live_updates)
         report['driver']=driver
         report['deciding_hosts_quiescent']=all(r['cleanup']['process_absent'] and r['cleanup']['group_absent'] for r in driver['actors'])
         report['outcome']=driver['outcome']

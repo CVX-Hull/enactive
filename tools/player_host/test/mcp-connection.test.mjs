@@ -42,7 +42,7 @@ test('real production MCP discovery forwards all exact current actor-only tool s
   assert.equal(chosen.length,10);
   assert.ok(chosen.includes('player_hint'));
   assert.ok(chosen.every(name=>!name.startsWith('player_memory_')&&!name.startsWith('player_program_')));
-  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,chosen),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,chosen),
     context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
     timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{bodies.push(init.body);payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
@@ -79,7 +79,7 @@ test('missing allowlisted tool fails before provider call and closes child',asyn
 test('production MCP preserves actual source JSON and PNG through Pi while event images are references',async t=>{
   const workspace=await fixtureWorkspace(t);
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe','player_source']),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe','player_source']),
     context:'Offline current pixel fixture',prompt:'Read actual source pixels.',model:model.id,
     effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -122,7 +122,7 @@ test('production MCP preserves actual source JSON and PNG through Pi while event
 test('production MCP sealed handoff settles after earlier ordinary tool without followup inference or dispatch',async t=>{
   const workspace=await fixtureWorkspace(t);
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe','player_handoff'],'3'.repeat(32)),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe','player_handoff'],'3'.repeat(32)),
     context:'Offline current actor handoff fixture',prompt:'Retain unfinished context and hand off.',
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -148,7 +148,7 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
 test('production MCP foreign actor handoff cannot settle or dispatch later input',async t=>{
   const workspace=await fixtureWorkspace(t);
   const events=[];
-  const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'2'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),
+  const result=await runHost({knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'a'.repeat(32),actorId:'2'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),
     mcpConfig:productionMcp(workspace,['computer_observe','player_handoff'],'3'.repeat(32)),context:'Offline foreign actor fixture',
     prompt:'Retain unfinished context.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async()=>reply(null,[['player_handoff',{summary:'Foreign actor'}],['computer_observe',{}]]),onEvent:event=>events.push(event)});
@@ -164,7 +164,7 @@ test('fixture workspace is removed after a terminated MCP child',async t=>{
   await t.test('terminate child',async child=>{
     workspace=await fixtureWorkspace(child);
     let childPid;
-    const result=await runHost({knowledge:{schema:'delivered-knowledge/1',version:null,coverage:null,articles:[],facts:[]},
+    const result=await runHost({knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},
       finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),
       configuration:route(),mcpConfig:productionMcp(workspace,['computer_observe']),context:'Fixture',prompt:'Observe.',
       model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},

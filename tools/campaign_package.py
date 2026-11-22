@@ -20,7 +20,11 @@ from tools.run_ledger import validator as ledger_validator
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json','delivered-knowledge.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
         'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','limits','ending_reserve',
-        'spend_limit_usd','labels','private_files'}
+        'spend_limit_usd','labels','private_files','live_knowledge_updates'}
+#: The curator runner's own directory inside a run directory, and inside that the versions it leaves for
+#: delivery to a running actor when the package sets `live_knowledge_updates`.
+RUNNER_DIRECTORY='curator-runner'
+DELIVERED_DIRECTORY='delivered'
 LABEL_FIELDS={'arm','start','scenario','lineage','admission','world'}
 PRINTABLE_ASCII=re.compile('[ -~]+')
 #: A declared dollar amount (a package's limit and reserve, a route's limit and bound): plain decimal text, never a
@@ -108,7 +112,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/8` adapter selection and return its argv."""
+    """Validate the closed `player-host/9` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -138,6 +142,8 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     if type(profile) is not dict or profile.get('schema') != MANIFEST_SCHEMA:
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
+    if type(profile['live_knowledge_updates']) is not bool:
+        raise ControlError('live_knowledge_updates must be true or false')
     labels(profile['labels'])
     host_argv(profile['host'])
     if not isinstance(profile['session'],str) or re.fullmatch('[0-9a-f]{32}',profile['session']) is None:
@@ -167,8 +173,19 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     except (ValueError, RecursionError) as exc:
         raise ControlError('Invalid private full knowledge') from exc
     selection = dict(world=profile['labels']['world'], delivered_sha256=profile['files']['delivered-knowledge.json'])
-    if not isinstance(full, dict) or full.get('selection') != selection:
+    if not isinstance(full, dict) or full.get('schema') != 'delivered-knowledge/2':
+        raise ControlError('Unsupported private full knowledge; expected delivered-knowledge/2')
+    if full.get('selection') != selection:
         raise ControlError('Private knowledge selection differs from the package world or delivered SHA-256')
+    if profile['live_knowledge_updates']:
+        # A newer version is exported whole, so it would deliver what a draw withheld.
+        try:
+            drawn = strict_loads(units_path.read_bytes(), ControlError)
+        except (ValueError, RecursionError) as exc:
+            raise ControlError('Invalid private unit record') from exc
+        if not isinstance(drawn, dict) or drawn.get('seed') is not None or 'draw_sha256' in drawn:
+            raise ControlError('live_knowledge_updates cannot be combined with withholding: private/units.json '
+                               'records a withholding seed or a study draw')
     for name in ('native','library'):
         closed(profile[name],{'path','sha256'})
         if file_sha256(local_file(profile[name]['path']))!=profile[name]['sha256']:
@@ -193,7 +210,7 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/8':
+    if type(route) is not dict or route.get('schema')!='player-host/9':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     # The dollar limit: the most this run may count as spent. The route repeats it, and the driver
@@ -233,7 +250,9 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     recall_bound=unpriced_request_usd(route['recall'])
     if recall_bound<=0 or usd(route['recall']['unpriced_request_usd'],'recall.unpriced_request_usd')!=recall_bound:
         raise ControlError('Recall unpriced_request_usd differs from its model rates')
-    reserve_bound=usd_sum([bound,recall_bound if knowledge.records else Decimal(0)])
+    # With live updates a recall can follow a version adopted during play, even from an empty frozen file.
+    recalls=bool(knowledge.records) or profile['live_knowledge_updates']
+    reserve_bound=usd_sum([bound,recall_bound if recalls else Decimal(0)])
     # A rate-derived bound must reserve resources for a pending request.
     if bound<=0:raise ControlError("The route's configured rates give no in-flight request bound")
     if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:

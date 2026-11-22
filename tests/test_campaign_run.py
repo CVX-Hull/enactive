@@ -18,15 +18,19 @@ from tools import campaign_run
 from tools.configure_player_tools import configuration
 
 
-def package(root, *, world=None, knowledge=None):
+KNOWLEDGE=dict(schema='delivered-knowledge/2',version='v1',commit='c'*40,repository_id='d'*40,coverage=None,articles=[],
+               facts=[dict(id='fact',type='claim',text='Fallible data',seen=dict(session='s1',actor='001',step=1,order=[1,'001',1]))])
+
+
+def package(root, *, world=None, knowledge=None, live=False, seed=None):
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     from harness.player.knowledge import empty
     from tools.knowledge_export import export
-    hashes=export(directory,empty() if knowledge is None else knowledge,world=world)
+    hashes=export(directory,empty() if knowledge is None else knowledge,seed,world=world)
     values={
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
-        'route.json':dict(schema='player-host/8',service_tier='default',context_reserve_tokens=200,
+        'route.json':dict(schema='player-host/9',service_tier='default',context_reserve_tokens=200,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
@@ -36,7 +40,7 @@ def package(root, *, world=None, knowledge=None):
     values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,unpriced_request_usd='0.00063')
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/11',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/12',session='a'*32,source_commit='f'*40,live_knowledge_updates=live,
         labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None,world=world),
         files={name:artifact(directory/name)['sha256'] for name in (*values, 'delivered-knowledge.json')},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')},
@@ -183,10 +187,8 @@ def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both
     profile['ending_reserve']['usd']='0.00063'
     (directory/'manifest.json').write_text(json.dumps(profile))
     assert validate(directory,tmp_path)
-    knowledge=dict(schema='delivered-knowledge/1',version='v1',coverage=None,articles=[],
-                   facts=[dict(id='fact',type='claim',text='Fallible data',seen=dict(order=1))])
     tmp_path = tmp_path/'with-knowledge'
-    directory,profile=package(tmp_path, knowledge=knowledge)
+    directory,profile=package(tmp_path, knowledge=KNOWLEDGE)
     profile['ending_reserve']['usd']='0.00063'
     (directory/'manifest.json').write_text(json.dumps(profile))
     with pytest.raises(ControlError,match='ending_reserve.usd'):validate(directory,tmp_path)
@@ -201,6 +203,45 @@ def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both
     with pytest.raises(ControlError,match='Freeze every'):validate(directory,tmp_path)
 
 
+def test_live_knowledge_updates_is_a_required_boolean_that_reserves_a_recall_and_excludes_withholding(tmp_path):
+    """R-OVERSPEND: a recall can follow a version adopted from an empty frozen file, so the reserve holds its bound.
+    A newer version is exported whole, so it cannot be combined with a withholding draw."""
+    directory,profile=package(tmp_path/'empty',live=True)
+    profile['ending_reserve']['usd']='0.00063'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with pytest.raises(ControlError,match=r'ending_reserve\.usd 0\.00063 must be at least unpriced_request_usd 0\.00126'):
+        validate(directory,tmp_path/'empty')
+    profile['ending_reserve']['usd']='0.00126'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    assert validate(directory,tmp_path/'empty')[0]['live_knowledge_updates'] is True
+    for value in (None,'true',1,0):
+        profile['live_knowledge_updates']=value
+        (directory/'manifest.json').write_text(json.dumps(profile))
+        with patch.object(packages,'ROOT',tmp_path/'empty'),git(),patch.object(packages.subprocess,'run') as validator,\
+                pytest.raises(ControlError,match='live_knowledge_updates must be true or false'):packages.preflight(directory)
+        assert not validator.called
+    del profile['live_knowledge_updates']
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path/'empty'),git(),patch.object(packages.subprocess,'run'),\
+            pytest.raises(ControlError,match='Invalid mechanical object fields'):packages.preflight(directory)
+    # A seeded draw, even one that withheld nothing, and a study draw both refuse live updates; the same packages pass without them.
+    for name,seed,live in (('seeded',7,True),('seeded-frozen',7,False),('unseeded',None,True)):
+        directory,profile=package(tmp_path/name,knowledge=KNOWLEDGE,live=live,seed=seed)
+        if seed is None or not live:
+            assert validate(directory,tmp_path/name)
+            continue
+        with patch.object(packages,'ROOT',tmp_path/name),git(),patch.object(packages.subprocess,'run') as validator,\
+                pytest.raises(ControlError,match='cannot be combined with withholding'):packages.preflight(directory)
+        assert not validator.called
+    directory,profile=package(tmp_path/'study',knowledge=KNOWLEDGE,live=True)
+    units=directory/'private/units.json'
+    units.write_text(json.dumps(dict(json.loads(units.read_text()),schema='knowledge-units/2',draw_sha256='0'*64)))
+    profile['private_files']['units.json']=hashlib.sha256(units.read_bytes()).hexdigest()
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path/'study'),git(),patch.object(packages.subprocess,'run'),\
+            pytest.raises(ControlError,match='cannot be combined with withholding'):packages.preflight(directory)
+
+
 @pytest.mark.parametrize('name',['knowledge-full.json','units.json'])
 def test_private_knowledge_hash_mismatch_refuses_preflight(tmp_path,name):
     directory,profile=package(tmp_path)
@@ -210,11 +251,14 @@ def test_private_knowledge_hash_mismatch_refuses_preflight(tmp_path,name):
         validate(directory,tmp_path)
 
 
-@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','reservation_package','pre_delivery_package','attempt_limited_package','unscoped_package','old_node','old_route','previous_route',
-                                  'reservation_route','untracked_adapter','partial','changed','dirty','credentials','different_lock'])
+@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','reservation_package','pre_delivery_package','attempt_limited_package','unscoped_package','frozen_knowledge_package','old_node','old_route','previous_route',
+                                  'reservation_route','frozen_knowledge_route','untracked_adapter','partial','changed','dirty','credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     directory,profile=package(tmp_path)
     if fault=='old':profile['schema']='campaign-run/1'
+    # The version before delivery of a newer knowledge version to a running actor: no `live_knowledge_updates`.
+    if fault=='frozen_knowledge_package':profile['schema']='campaign-run/11';del profile['live_knowledge_updates']
+    if fault=='frozen_knowledge_route':rewrite_route(directory,profile,schema='player-host/8')
     if fault=='attempt_limited_package':profile['schema']='campaign-run/9'
     if fault=='unscoped_package':profile['schema']='campaign-run/10';profile['labels'].pop('world')
     if fault=='pre_delivery_package':profile['schema']='campaign-run/6'
@@ -236,7 +280,8 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
         path.write_text(json.dumps(target));profile['files']['target.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
     expected={'old':'inert history','previous_package':'inert history','previous_labelless':'inert history','reservation_package':'inert history',
-              'attempt_limited_package':'inert history','unscoped_package':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history','reservation_route':'inert history',
+              'attempt_limited_package':'inert history','unscoped_package':'inert history','frozen_knowledge_package':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history','reservation_route':'inert history',
+              'frozen_knowledge_route':'inert history',
               'untracked_adapter':'tracked by the clean source commit'}.get(fault)
     # Ignored files never appear in porcelain status; only tracking binds them to the commit.
     with patch.object(packages,'ROOT',tmp_path),\
@@ -324,6 +369,22 @@ def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_h
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run') as validator:
         with pytest.raises(ControlError, match='Private knowledge selection differs'):
+            packages.preflight(directory)
+    validator.assert_not_called()
+
+
+def test_a_current_package_with_a_private_export_of_the_retired_knowledge_version_refuses_preflight(tmp_path):
+    """R-REGRESSION (B5), S-MIGRATION: a `/12` package whose private full export is `delivered-knowledge/1` is
+    refused even when its hashes and selection match the manifest."""
+    directory, profile = package(tmp_path, world='the farm')
+    path = directory/'private/knowledge-full.json'
+    full = json.loads(path.read_text())
+    assert full['schema'] == 'delivered-knowledge/2' and full['selection']['world'] == 'the farm'
+    path.write_text(json.dumps(dict(full, schema='delivered-knowledge/1')))
+    profile['private_files'][path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run') as validator:
+        with pytest.raises(ControlError, match='Unsupported private full knowledge'):
             packages.preflight(directory)
     validator.assert_not_called()
 
@@ -567,11 +628,12 @@ def test_close_out_without_a_configured_reader_writes_no_marker_and_does_not_wai
     with sealed(tmp_path/'session.sqlite3') as db:assert db.execute('SELECT count(*) FROM actors').fetchone()==(1,)
 
 
-def test_the_store_closes_only_after_input_authority_is_revoked(tmp_path):
-    directory,profile=package(tmp_path)
+@pytest.mark.parametrize('live',[False,True])
+def test_the_store_closes_only_after_input_authority_is_revoked(tmp_path,live):
+    directory,profile=package(tmp_path,live=live)
     events=[];channel=Mock();channel.stopped=threading.Event()
     class Owner:
-        def __init__(self,*args):self.channel=None;self.process=Mock()
+        def __init__(self,*args):self.channel=None;self.process=Mock(pid=4242)
         def reserve(self):pass
         def start(self):self.channel=channel;return channel
         def wait_target(self):pass
@@ -587,9 +649,11 @@ def test_the_store_closes_only_after_input_authority_is_revoked(tmp_path):
     with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY',unpriced_request_usd='0.00063',recall=dict(unpriced_request_usd='0.00063')),{})),\
             patch.object(campaign_run,'OwnedTarget',Owner),patch.object(campaign_run,'ComputerRuntime',return_value=runtime),\
             patch.object(campaign_run,'Journal'),patch.object(campaign_run,'Application'),\
-            patch.object(campaign_run,'serve',return_value=(server,Mock())),patch.object(campaign_run,'run_hosts',return_value=driver),\
+            patch.object(campaign_run,'serve',return_value=(server,Mock())),patch.object(campaign_run,'run_hosts',return_value=driver) as hosts,\
             patch.object(campaign_run,'close_store',close_store),patch.object(campaign_run.signal,'signal'),\
             patch.dict(os.environ,{'OFFLINE_KEY':'fixture-secret'}):
         result=campaign_run.run_campaign(directory)
+    # Only a package that delivers newer knowledge versions gives the driver the runner's delivery directory.
+    assert hosts.call_args.args[7]==(directory.resolve()/'curator-runner'/'delivered' if live else None)
     assert events==['pause','native_cleanup','server_shutdown','close_store']
     assert result['input_authority_revoked'] and not [key for key in result if key.endswith('_error')]

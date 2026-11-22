@@ -40,8 +40,10 @@ The publication would identify the decisions its confirmed prefix covers. When
 it trails play, the host would shorten or defer the cut, continuing with ordinary
 image eviction and capacity handoff. Play would never wait for publication.
 The proposal would use the latest available publication at handoff without delaying
-the successor. Delivering a later publication within an admission would require a
-separate change that appends the difference while preserving the prefix already sent.
+the successor. A later publication already reaches a running actor as an appended
+difference that preserves the prefix already sent
+([a newer version during play](../contracts/player-host.md#a-newer-version-during-play));
+the cut would not change that path.
 The [runner](../components/curator.md#publication-and-coverage) supplies the coverage
 evidence. The [host contract](../contracts/player-host.md#delivered-knowledge-and-recall)
 defines the export available to actors today.

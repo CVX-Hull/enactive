@@ -10,17 +10,32 @@ This contract covers [player host](player-host.md) JSONL events, accounting and 
 
 ## Knowledge delivery and recall events
 
-Telemetry records `knowledge-delivery` with kind, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. `knowledge-recall` records selections, silence, failures and opportunities not made; a recall aborted because the actor ended has reason `actor-ended`. Every `knowledge-recall` for a recall whose attempt received a response (a stop other than an error or abort; status `selected`, `silence` or `failure`) carries `reply_text` and `reply_omitted_bytes`, the reply's text bounded at 8192 bytes on a UTF-8 boundary as the player's `assistant-text` is. An invalid reply has reason `invalid-recall-selection` and `selection_error`, one of `not-json`, `not-one-object`, `wrong-keys`, `repeated-entry`, `unknown-entry`; an unexpected exception has reason `recall-failed` and `error_name`. Each recall attempt has exactly one `response-complete`, emitted before its reply is parsed. `knowledge-undelivered` records text still unsent at actor end. Recall requests are never player decisions.
+Telemetry records `knowledge-delivery` with kind, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. `knowledge-recall` records selections, silence, failures and opportunities not made; a recall aborted because the actor ended has reason `actor-ended`. Every `knowledge-recall` for a recall whose attempt received a response (a stop other than an error or abort; status `selected`, `silence` or `failure`) carries `reply_text` and `reply_omitted_bytes`, the reply's text bounded at 8192 bytes on a UTF-8 boundary as the player's `assistant-text` is. An invalid reply has reason `invalid-recall-selection` and `selection_error`, one of `not-json`, `not-one-object`, `wrong-keys`, `repeated-entry`, `unknown-entry`; an unexpected exception has reason `recall-failed` and `error_name`. Each recall attempt has exactly one `response-complete`, emitted before its reply is parsed. `knowledge-undelivered` records text still unsent at actor end, an adopted update's included. Recall requests are never player decisions.
+
+A [newer version during play](player-host.md#a-newer-version-during-play) records
+`knowledge-delivery` with kind `update`, `version`, `previous_version` and the new
+version's `coverage`, and `outcome`:
+
+- `delivered`: the update message reached the receiving player request. It also has
+  the full text, `article_ids`, `fact_ids` and `index_ids` of the entries it shows,
+  `removed_ids`, `delivered_knowledge_schema`, `receiving_player_request_id` and a
+  null `recall_request_id`.
+- `refused`: the host kept the version it holds. `reason` is one of `invalid-entry`
+  (the line is not a closed entry; `version` and `coverage` are null), `not-newer`,
+  `superseded` (a newer listed version verified), `repository-mismatch`,
+  `file-unreadable`, `sha256-mismatch`, `invalid-delivered-knowledge`,
+  `entry-mismatch`, `context-capacity`, or `update-check-failed` for an unexpected
+  exception, with `error_name` and null `version` and `coverage`.
 
 ## Telemetry
 
-Stdout is JSONL telemetry version 8. The driver rejects other versions for live
+Stdout is JSONL telemetry version 9. The driver rejects other versions for live
 accounting. Each line has `type`. The driver ignores event kinds it does not
 account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:8` and `schema:"player-host/8"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:9` and `schema:"player-host/9"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every observed HTTP start, including retries and failures. Each role has a contiguous ID sequence, `request-1` or `recall-1` onward. |
 | `context-manifest` | Exactly one per player HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). For a sealed archive trace without this event, the evaluator reports the manifest as `absent`. |

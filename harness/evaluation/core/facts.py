@@ -1,7 +1,7 @@
 """The `run_facts` table: what the run was configured to do (docs/contracts/evaluation-record.md).
 
 From the campaign manifest and the first host-start event. Operator labels come from the manifest. The caller
-may supply labels for a campaign-run/4 archive without them. Only campaign-run/11 supplies the world.
+may supply labels for a campaign-run/4 archive without them. Only campaign-run/12 supplies the world.
 The spend allowance comes from `spend_limit_usd` or, for archives predating that field, the ceiling minus
 what earlier admissions had reserved.
 """

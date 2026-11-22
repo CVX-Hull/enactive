@@ -48,7 +48,7 @@ from .stores import SealedStoreError, sealed
 
 # Label fields supplied by each supported sealed run package version.
 PACKAGE_LABELS = {
-    'campaign-run/11': ('world', 'lineage', 'admission'),
+    'campaign-run/12': ('world', 'lineage', 'admission'),
     'campaign-run/10': ('lineage', 'admission'),
 }
 ACTION_FIELDS = ('type', 'key', 'modifiers', 'text', 'seconds', 'x', 'y', 'button')
