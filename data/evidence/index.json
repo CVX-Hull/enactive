@@ -1239,6 +1239,25 @@
       },
       "visibility": "private"
     },
+    "seven-day-896-admission-01": {
+      "availability": "present",
+      "bytes": 127406061,
+      "cited_by": [
+        "docs/decisions/owner-decisions.md"
+      ],
+      "files": 1422,
+      "manifest_sha256": "72465210ac14c9845c5cf26e8c4b15bdfd6b5eeb1bea8943aa040a5a4a042668",
+      "note": "Gated Admission 1 (#896) on main 403864d3, session b55e1a8d35000e10190c07f499284d60 (Starrsville / Rowan Reed, labels.world=campground-seven-day-896): campaign-run/12 + player-host/11 run directory with 31 live context cuts and curator-runner/ (31 accepted windows v1-v31, 1 interrupted at teardown), runner configuration, curator knowledge repository (v0-v33 under curator-fact/4), post-admission boundary grooming (v31->v33), recorded coverage schedule, and saved study userdir.",
+      "sources": {
+        "config": "403864d3",
+        "grooming": "403864d3",
+        "knowledge": "403864d3",
+        "run": "403864d3",
+        "schedule": "403864d3",
+        "study-userdir": "403864d3"
+      },
+      "visibility": "private"
+    },
     "seven-day-recap-video": {
       "availability": "present",
       "bytes": 2722183,
