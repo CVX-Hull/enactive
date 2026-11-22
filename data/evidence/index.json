@@ -914,6 +914,25 @@
       },
       "visibility": "private"
     },
+    "live-validation-run-889": {
+      "availability": "present",
+      "bytes": 77814328,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-live-validation-run-889.md"
+      ],
+      "files": 854,
+      "manifest_sha256": "651aeda46a21b44001fa7a94d16314961f11c3d119b00b86783a2fde307be73d",
+      "note": "Full live validation admission (#889) on main 5e3f51ad, session a02d8069d0434813a41acc7009217da6 (Burtons Bridge / Rowan Hale): campaign-run/12 run directory with curator-runner/ (17/17 accepted windows v1-v17 and delivered exports), runner configuration, curator knowledge repository (v0-v18 under curator-fact/4), post-admission boundary grooming (v17->v18), recorded coverage schedule, and saved study userdir.",
+      "sources": {
+        "config": ".runtime/live-validation-run-889/curator-runner-config.json",
+        "grooming": ".runtime/live-validation-run-889/grooming@5e3f51ad",
+        "knowledge": ".runtime/knowledge/live-validation-run-889/cdda@5e3f51ad",
+        "run": ".runtime/computer-sessions/live-validation-run-889-a02d8069d043@5e3f51ad",
+        "schedule": ".runtime/live-validation-run-889/schedule-889.json",
+        "study-userdir": ".runtime/user@5e3f51ad"
+      },
+      "visibility": "private"
+    },
     "malvern-trunk-paired-replay-829": {
       "availability": "present",
       "bytes": 36002169,
