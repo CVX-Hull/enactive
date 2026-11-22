@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Kind | Scope | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-21 | [Price proposal for the full live validation run (#889)](2026-11-21-live-validation-run-price-proposal-889.md) | measurement | Price proposal, frozen package plan, runner configuration, pace cutoff, boundary-grooming command and upgraded #859 delivery-aware schedule replay for the first full live validation admission (#889, prepared under #895) | historical |
 | 2026-11-21 | [Paid live curator run beside real play (#859)](2026-11-21-live-curator-run-859.md) | run | One paid live curator run beside real CDDA play: lag, covered prefix, time to publication, backlog, cost, snapshot timing, player pace, published facts, prompt cache share, input routine recurrence, schedule lag replay, and an early curator stop from a gate provenance defect (#859) | historical |
 | 2026-11-20 | [Screen for a second scoreable packet in the retained worlds (#831)](2026-11-20-second-scoreable-packet-screen-831.md) | review | Offline screen of retained cutoffs in worlds other than Malvern for a second packet that can carry the paired replay (#831) | historical |
 | 2026-11-20 | [Paired replay design for the Malvern sedan-trunk decision (#824)](2026-11-20-malvern-trunk-paired-replay-design-824.md) | review | Offline readback of the retained Malvern sedan-trunk cutoff and the design and price of one paired proposal replay on it (#824) | historical |
