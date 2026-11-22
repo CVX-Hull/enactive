@@ -17,12 +17,15 @@ mission-driver CLI. Freeze the Pi adapter as
 The selected finite configuration is OpenRouter / pinned OpenAI provider /
 `openai/gpt-6.1-terra`, medium effort, under the
 [owner's decision of 16 November 2026](../decisions/owner-decisions.md#current-player-model-and-effort-stay). Freeze the verified
-full endpoint tag and supported parameters
-in `route.json`; use no fallback. The current campaign accepts the explicit default
+full endpoint tag and supported parameters in `route.json`. For a package that
+declares same-model failover, freeze both verified endpoint tags in primary-first
+order and record rates for each endpoint using the
+[adapter's routing policy](../../tools/player_host/README.md#openrouter-endpoint-routing).
+The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the package's dollar limit and operational capacities.
 
-The package freezes `route.json` (`player-host/10`), `delivered-knowledge.json`, `mcp-template.json`,
+The package freezes `route.json` (`player-host/11`), `delivered-knowledge.json`, `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, the dollar limit, the planning bound for an in-flight

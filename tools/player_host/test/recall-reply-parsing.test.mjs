@@ -66,12 +66,19 @@ test('an invalid reminder delivers nothing and does not disable later reminders'
 });
 
 for (const provider of ['fixture', 'openrouter']) test(`${provider} recall payload has the stable index prefix and provider-specific format`, async t => {
+  const tags = ['fixture', 'fixture/secondary'];
+  const endpoint_costs = provider === 'openrouter' ? Object.fromEntries(tags.map(tag => [tag, {...model.cost}])) : null;
   const routeModel = {...structuredClone(model), provider,
     ...(provider === 'openrouter' ? {baseUrl:'https://openrouter.ai/api/v1',
-      compat:{...model.compat, openRouterRouting:{only:['fixture'], order:['fixture'], allow_fallbacks:false, require_parameters:true}}} : {})};
-  const {result, payloads} = await scenario(t, {configuration:{model:routeModel,
-    recall:{model:{...routeModel, id:'recall-fixture'}, every:1, unpriced_request_usd:'0.2'}}});
+      compat:{...model.compat, openRouterRouting:{only:tags, order:[...tags], allow_fallbacks:false, require_parameters:true}}} : {})};
+  const {result, payloads, events} = await scenario(t, {configuration:{model:routeModel, endpoint_costs,
+    recall:{model:{...routeModel, id:'recall-fixture'}, every:1, unpriced_request_usd:'0.2',endpoint_costs}},
+    recallFetch:n => recallTextReply('{"articles":["article-b"]}', .002, 'stop',
+      n === 1 ? 'Secondary Endpoint' : n === 2 ? 'stand-in-only private provider' : undefined)});
   assert.equal(result.ok, true);
+  const completions = events.filter(e => e.type === 'response-complete' && e.request_role === 'recall');
+  assert.equal(completions[0].reported_provider, 'Secondary Endpoint');
+  for (const completion of completions.slice(1)) assert.equal(completion.reported_provider, null);
   const recalls = payloads.filter(p => p.model === 'recall-fixture');
   assert.ok(recalls.length >= 2);
   const userTexts = recalls.map(p => p.messages.find(m => m.role === 'user').content)
@@ -82,9 +89,12 @@ for (const provider of ['fixture', 'openrouter']) test(`${provider} recall paylo
     assert.equal(text.slice(0, text.indexOf(',"kind":')), userTexts[0].slice(0, userTexts[0].indexOf(',"kind":')));
   }
   for (const payload of recalls) {
-    if (provider === 'openrouter') assert.deepEqual(payload.response_format, {type:'json_schema',
-      json_schema:{name:'recall_selection', strict:true, schema:{type:'object',
-        properties:{articles:{type:'array', items:{type:'string'}}}, required:['articles'], additionalProperties:false}}});
+    if (provider === 'openrouter') {
+      assert.deepEqual(payload.provider, routeModel.compat.openRouterRouting);
+      assert.deepEqual(payload.response_format, {type:'json_schema',
+        json_schema:{name:'recall_selection', strict:true, schema:{type:'object',
+          properties:{articles:{type:'array', items:{type:'string'}}}, required:['articles'], additionalProperties:false}}});
+    }
     else assert.ok(!Object.hasOwn(payload, 'response_format'));
   }
   for (const payload of payloads.filter(p => p.model !== 'recall-fixture')) assert.ok(!Object.hasOwn(payload, 'response_format'));

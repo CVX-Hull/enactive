@@ -30,14 +30,14 @@ def package(root, *, world=None, knowledge=None, live=False, seed=None):
     hashes=export(directory,empty() if knowledge is None else knowledge,seed,world=world)
     values={
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
-        'route.json':dict(schema='player-host/10',service_tier='default',context_reserve_tokens=200,context_cut=None,
+        'route.json':dict(schema='player-host/11',endpoint_costs=None,service_tier='default',context_reserve_tokens=200,context_cut=None,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
         'target.json':dict(argv=[str(root/'native')],cwd=str(root),env={}),
     }
-    values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,unpriced_request_usd='0.00063')
+    values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,unpriced_request_usd='0.00063',endpoint_costs=None)
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
     profile=dict(schema='campaign-run/12',session='a'*32,source_commit='f'*40,live_knowledge_updates=live,
@@ -91,9 +91,10 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
-def test_preflight_rejects_an_old_host_route_before_dispatch(tmp_path):
+@pytest.mark.parametrize('version', [9, 10])
+def test_preflight_rejects_an_old_host_route_before_dispatch(tmp_path, version):
     directory,profile=package(tmp_path)
-    rewrite_route(directory,profile,schema='player-host/9')
+    rewrite_route(directory,profile,schema=f'player-host/{version}')
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as adapter:
         with pytest.raises(ControlError,match='Unsupported player host route'):

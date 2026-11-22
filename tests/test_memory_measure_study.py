@@ -221,7 +221,7 @@ def test_facts_builder_reads_both_unit_record_versions_and_refuses_others(tmp_pa
     save(package / 'manifest.json', manifest)
     actor = package / 'actors/001'
     actor.mkdir(parents=True)
-    (actor / 'host.jsonl').write_text(json.dumps(dict(type='host-start', schema='player-host/10', telemetry_version=10, actor_id='actor')) + '\n')
+    (actor / 'host.jsonl').write_text(json.dumps(dict(type='host-start', schema='player-host/11', telemetry_version=11, actor_id='actor')) + '\n')
     record = mm.pilot_units(package, independent=False)
     result = mm.build_facts(tmp_path / 'memory-measure/facts', [package])['admissions']['package']['001']
     assert {f['id'] for f in result['index']} == ke.delivered_fact_ids(record)

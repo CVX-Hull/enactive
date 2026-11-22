@@ -64,7 +64,7 @@ Knowledge moves beside play in four steps, each optional for a run:
    (refusing an oversized one for context capacity), while a successor starts from the
    driver's latest adopted version. Otherwise every actor keeps the package's frozen
    version.
-3. **Cut.** The `player-host/10` route can enable `context_cut`. The host then replaces
+3. **Cut.** The `player-host/11` route can enable `context_cut`. The host then replaces
    older turns with a fresh briefing, and only turns that the curator's confirmed,
    [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut) has reached.
    Without that coverage, play continues with image eviction and handoff.

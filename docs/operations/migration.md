@@ -23,7 +23,7 @@ Before changing a deployment:
 
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
-callers move together with `player-host/10`, telemetry 10, `campaign-run/12`,
+callers move together with `player-host/11`, telemetry 11, `campaign-run/12`,
 `player-host-inputs/4`, `delivered-knowledge/2`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
 `player-driver/7` and `campaign-receipt/7`. The live spectator requires
 `computer-status/2`; its host block carries observed attempts. The evaluator

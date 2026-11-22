@@ -24,7 +24,7 @@ def test_delivered_reminder_is_a_notice_for_prompt_composition_pairs(tmp_path):
                   usage=dict(input=10,output=1,cacheRead=0,cacheWrite=0)),
             event('tool-start',at+2,request_id=key,tool_call_id='call',tool='x',arguments={}),
             event('tool-result',at+3,request_id=key,tool_call_id='call',result={'content':[{'type':'text','text':'x'}]})]
-    events=[event('host-start',0,schema='player-host/10',telemetry_version=10),*request('request-1',1),
+    events=[event('host-start',0,schema='player-host/11',telemetry_version=11),*request('request-1',1),
         event('knowledge-delivery',5,kind='reminder',receiving_player_request_id='request-2'),
         *request('request-2',6),
         # A delivered knowledge update is a message the host added too; a refused one added nothing.
@@ -50,7 +50,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def event(self, kind, at, **fields):
         if kind == "host-start":
-            fields = {"schema": "player-host/10", "telemetry_version": 10, **fields}
+            fields = {"schema": "player-host/11", "telemetry_version": 11, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
@@ -89,6 +89,55 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(distribution(values)["p50"], nearest_rank(values, .5))
         self.assertEqual((distribution(values)["p50"], distribution(values)["p95"]), (2, 4))
         self.assertEqual(distribution([5])["p50"], 5)
+
+    def test_response_time_by_endpoint_uses_completed_player_requests(self):
+        e = self.event
+
+        def response(request_id, start, duration, **fields):
+            return [e("request-start", start, request_id=request_id),
+                e("response-complete", start + duration, request_id=request_id,
+                    **{"stop_reason": "stop", **fields})]
+
+        first = self.trace([e("host-start", 0, endpoint_costs={"primary": {"input": 1, "output": 5, "cacheRead": 0.05, "cacheWrite": 1.25},
+                                                               "secondary": {"input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2.5}}),
+            *response("request-1", 10, 2_000, reported_provider="Secondary", response_progress={"reported_provider": "Ignored"},
+                      usage_available=True, usage={"input": 100, "cacheRead": 0, "cacheWrite": 0, "output": 10, "cost": {"total": 0.008}},
+                      reported_cost_usd="0.008"),
+            *response("request-2", 3_000, 500, response_progress={"reported_provider": "Primary"},
+                      usage_available=True, usage={"input": 100, "cacheRead": 0, "cacheWrite": 0, "output": 10, "cost": {"total": 0.008}},
+                      reported_cost_usd="0.004"),
+            *response("request-3", 4_000, 6_000, reported_provider=45,
+                      usage_available=True, usage={"input": 100, "cacheRead": 0, "cacheWrite": 0, "output": 10, "cost": {"total": 0.008}},
+                      reported_cost_usd=None),
+            *response("request-4", 11_000, 100, reported_provider="Failed", stop_reason="error"),
+            *response("recall-1", 12_000, 100, reported_provider="Recall"),
+            e("request-start", 13_000, request_id="request-5"), e("settled", 14_000)])
+        second = self.trace([e("host-start", 0), *response("request-1", 1, 3_000, reported_provider="Secondary",
+                                                           usage_available=True, usage={"input": 100, "cacheRead": 0, "cacheWrite": 0, "output": 10, "cost": {"total": 0.008}},
+                                                           reported_cost_usd="0.006"),
+            e("settled", 4_000)], name="second.jsonl")
+        report = host_summary([first, second])
+        trace = report["traces"][0]
+        self.assertIn("primary", trace["configuration"]["endpoint_costs"])
+        self.assertEqual([r["reported_provider"] for r in trace["requests"]],
+            ["Secondary", "Primary", None, "Failed", "Recall", None])
+        self.assertEqual([r["endpoint"] for r in trace["response_by_endpoint"]], ["Primary", "Secondary", "unknown"])
+        self.assertEqual(trace["response_by_endpoint"][1]["response_ms"]["n"], 1)
+        endpoint_rows = report["selection"]["response_by_endpoint"]
+        self.assertEqual(report["runs"][0]["response_by_endpoint"], endpoint_rows)
+        primary, secondary, unknown = endpoint_rows
+        self.assertEqual(primary["response_ms"]["p50"], 500)
+        self.assertAlmostEqual(primary["mean_cost_usd"], 0.004)
+        self.assertEqual(primary["cost_n"], 1)
+        self.assertEqual((secondary["response_ms"]["n"], secondary["response_ms"]["p95"]), (2, 3_000))
+        self.assertAlmostEqual(secondary["mean_cost_usd"], 0.007)
+        self.assertEqual(secondary["cost_n"], 2)
+        self.assertEqual(secondary["within_2s"], 0.5)
+        self.assertEqual(unknown["within_5s"], 0)
+        self.assertEqual((unknown["mean_cost_usd"], unknown["cost_n"]), (None, 0))
+        rendered = markdown(report)
+        self.assertIn("## Response time by endpoint\n\n| Endpoint | Responses", rendered)
+        self.assertIn("| Secondary | 2 | 2.0 | 3.0 | 50.0% | 100.0% | 0.0070 |", rendered)
 
     def test_the_trace_is_parsed_by_the_evaluator_parser(self):
         e = self.event
@@ -229,6 +278,7 @@ class HostAnalysisTests(unittest.TestCase):
             self.assertEqual(row["censored_requests"], 1)
         row = analyze_trace(self.trace([e("host-start", 0), e("request-start", 1, request_id="r"), e("settled", 11)]))
         self.assertIsNone(row["request_share"])
+        self.assertEqual(row["response_by_endpoint"], [])
 
     def test_malformed_nested_host_shapes_report_invalid(self):
         e = self.event
@@ -251,9 +301,10 @@ class HostAnalysisTests(unittest.TestCase):
                        {"schema": "player-host/3", "telemetry_version": 6},
                        {"schema": "player-host/8", "telemetry_version": 8},
                        {"schema": "player-host/9", "telemetry_version": 9},
-                       {"schema": "player-host/10", "telemetry_version": 8},
-                       {"schema": "player-host/10", "telemetry_version": 1},
-                       {"schema": "player-host/10", "telemetry_version": True}):
+                       {"schema": "player-host/10", "telemetry_version": 10},
+                       {"schema": "player-host/11", "telemetry_version": 10},
+                       {"schema": "player-host/11", "telemetry_version": 1},
+                       {"schema": "player-host/11", "telemetry_version": True}):
             row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
             self.assertEqual(row["coverage"], "unsupported_version")
             self.assertNotIn("requests", row)

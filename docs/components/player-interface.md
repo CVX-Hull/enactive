@@ -26,7 +26,8 @@ the [current adapter reference](../../tools/player_host/README.md) owns its prov
 
 The host loads no coding-agent shell/file tools, personal configuration, resource
 discovery or resumed session. The route is frozen per finite run and permits no
-fallback; the [selected host configuration](../operations/player-host.md) names it.
+model fallback and no fallback outside its declared endpoints; the
+[selected host configuration](../operations/player-host.md) names it.
 
 ## Journal and knowledge
 

@@ -214,7 +214,7 @@ class _Writer:
         self.write(directory/'frozen.json', dict(schema='player-host-inputs/4', actor_id=self.actor['id'],
             session=self.session, knowledge_updates=None,
             files={n: hashlib.sha256((directory/n).read_bytes()).hexdigest() for n in names}))
-        self.log(dict(type='host-start', schema='player-host/10', telemetry_version=10, actor_id=self.actor['id']))
+        self.log(dict(type='host-start', schema='player-host/11', telemetry_version=11, actor_id=self.actor['id']))
         return {}
 
     def frame(self) -> tuple[dict, bytes]:

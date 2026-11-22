@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/10` is the current boundary between the
+`player-host/11` is the current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -49,10 +49,11 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/10"`, `model`, `api_key_env`,
+The closed route has `schema:"player-host/11"`, `model`, `api_key_env`,
 `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
 `context_image_block`, `context_reserve_tokens`, `context_cut`, `request_timeout_seconds`,
-`service_tier` and the closed `recall` object (`model`, `every`, `unpriced_request_usd`).
+`service_tier`, `endpoint_costs` and the closed `recall` object
+(`model`, `every`, `unpriced_request_usd`, `endpoint_costs`).
 The adapter owns its closed `model` fields. The driver reads only model
 ID/name/cost/context/output fields, credential variable, the two
 dollar amounts and tier.
@@ -63,6 +64,18 @@ a closed object with the safe integers `low_mark`, `high_mark` and `min_free`.
 The marks satisfy `1 <= low_mark < high_mark < model.contextWindow` for the
 player model, and `min_free` is at least one turn. The host rejects unsupported
 route versions.
+
+Each role declares one model. For a route that supports ordered endpoint failover,
+the adapter validates a list of one or two distinct endpoint tags. The routing
+provider may try the second declared endpoint before the first token within the
+same HTTP attempt. The same model serves both endpoints. Model fallback and
+fallback outside the declared endpoint list are unsupported.
+
+Each role sets `endpoint_costs` to null on a direct or single-endpoint route.
+On a two-endpoint route, it is a closed object keyed by the two declared tags.
+Each value has finite nonnegative `input`, `output`, `cacheRead` and `cacheWrite`
+rates in dollars per million tokens. For each field, that role's `model.cost`
+equals the higher of the two endpoint rates.
 
 A dollar amount is plain decimal text such as `"0.4096"`: digits with an optional
 fraction. A JSON number, an exponent, a sign or a non-finite word is refused. Two
@@ -77,8 +90,10 @@ rules set its length:
   without rounding. When it gives a successor what remains, it cuts that to eighteen
   fractional digits, never up.
 
-The driver sets `spend_limit_usd` to the dollars the run has left ([Spend](#spend)). One
-logical request admits at most two provider attempts. Once per actor, an HTTP 200 stream may reach its request deadline after
+The driver sets `spend_limit_usd` to the dollars the run has left ([Spend](#spend)).
+A logical player request admits at most two host HTTP attempts. The initial
+attempt and the one shared retry can each use the same declared endpoint order.
+Once per actor, an HTTP 200 stream may reach its request deadline after
 producing content, reasoning or tool arguments and before a provider finish reason. After aborting and accounting for that attempt, the adapter may
 make one inference with a fresh request deadline from the identical serialized
 context. Only a completed reply reaches the agent or its tools. The next attempt
@@ -114,7 +129,8 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   count. The route's `unpriced_request_usd` is a planning bound for an in-flight
   request. The package check computes it from the full context window at the largest
   configured input/cache rate plus the configured output limit at its output rate.
-  The host uses it for the in-flight and ending allowances.
+  On a two-endpoint route those rates cover either declared endpoint. The host
+  uses the bound for the in-flight and ending allowances for each role.
 - **What counts.** Telemetry records every started HTTP request, including a
   retry. It adds only a usable provider-reported cost to the dollar total. A
   refusal, timeout, cutoff or abort without a usable cost keeps an unknown charge

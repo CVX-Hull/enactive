@@ -11,7 +11,7 @@ import re
 import subprocess
 
 from harness.computer.protocol import MAX_FRAME_BYTES, ControlError, closed, decode_json, integer, read_json
-from harness.evaluation.core.sources import MANIFEST_SCHEMA
+from harness.evaluation.core.sources import HOST_SCHEMA, MANIFEST_SCHEMA
 from harness.jsonio import file_sha256, strict_loads
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
@@ -74,8 +74,9 @@ def usd_text(amount: Decimal) -> str:
 
 def unpriced_request_usd(route: dict) -> Decimal:
     """Planning bound for a pending request: the whole context window at the route's most expensive
-    input rate plus the output limit at the output rate, from the configured dollars per million tokens. The one
-    place this bound is computed; the route file carries it to the host and the driver."""
+    input rate plus the output limit at the output rate, from the configured dollars per million tokens.
+    The adapter validates these as per-category maximum rates on two-endpoint routes.
+    The route file carries the bound to the host and the driver."""
     model=route['model'];costs=model['cost']
     rate=max(Decimal(str(costs[k])) for k in ('input','cacheRead','cacheWrite'))
     return (Decimal(model['contextWindow'])*rate+Decimal(model['maxTokens'])*Decimal(str(costs['output'])))/Decimal(10**6)
@@ -112,7 +113,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/10` adapter selection and return its argv."""
+    """Validate the closed `player-host/11` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -210,7 +211,7 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/10':
+    if type(route) is not dict or route.get('schema')!=HOST_SCHEMA:
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     # The dollar limit: the most this run may count as spent. The route repeats it, and the driver

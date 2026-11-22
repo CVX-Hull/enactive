@@ -19,7 +19,7 @@ rule still decide acceptance. No evaluation value reaches the player.
 The evaluator reads one run directory read-only:
 - `session.sqlite3` (`computer-session/1`);
 - `sources/*.png`;
-- each `actors/NNN/host.jsonl` (`player-host/10`), including its per-request context
+- each `actors/NNN/host.jsonl` (`player-host/11`), including its per-request context
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
 - `manifest.json` (`campaign-run/12`), including its operator labels;
@@ -42,19 +42,22 @@ input format is an error naming the file and version. Nothing is guessed.
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
   forbid the computer importing evaluation.
-- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/10`), used by
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/11`), used by
   the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
   `tools/campaign_player.py` stays separate because evaluation never gates the control path
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/10` telemetry 10. For an [archived run](#implementation-rules),
+  `host-start` is not `player-host/11` telemetry 11. For an [archived run](#implementation-rules),
   the parser also accepts the exact host version and session in its manifest's archive
   entry. An unterminated final line that does not parse is an error for `host-summary`.
   The evaluator and viewer ignore it because a trace may still be appending. A malformed
   line ending in a newline is always an error.
-- `host-summary` leaves the pair ending at a successful context cut out of the
-  prompt-composition fit. A held-back cut leaves the pair eligible for the fit.
+- `host-summary` groups completed player responses by the endpoint label the
+  stream reported. When an archived trace lacks the top-level label, it reads the
+  response progress label if present. It leaves the pair ending at a successful
+  context cut out of the prompt-composition fit. A held-back cut leaves the pair
+  eligible for the fit.
 
 **Sequence and incremental reading.**
 - The operation sequence `seq` is the `operations` table's rowid.

@@ -44,7 +44,7 @@ def admission(root: Path, name: str, tag: str, shades: list, size=(8, 8)) -> Pat
         actor += 1
         directory = run / 'actors' / f'{actor:03d}'
         directory.mkdir(parents=True)
-        events = [dict(type='host-start', schema='player-host/10', telemetry_version=10, session=tag * 32,
+        events = [dict(type='host-start', schema='player-host/11', telemetry_version=11, session=tag * 32,
             actor_id=(tag + str(actor)) * 16, wall_time=datetime.fromtimestamp(wall, timezone.utc).isoformat(), monotonic_ms=0)]
         for shade in group:
             wall, number = wall + 1, number + 1

@@ -41,6 +41,19 @@ plus cache-read plus cache-write tokens: under 20,000; 20,000 to 60,000; 60,000 
 share within 2 s and within 5 s, and the mean provider-reported cost per request. For the
 whole set it also reports the interval from one request's first tool result to the next.
 
+**`response_by_endpoint`** is reported per trace, per run directory and for the whole
+selection. It applies the same response statistics as `response_by_prompt` to completed
+player responses grouped by their `reported_provider` labels, sorted by label. Because
+`reported_provider` carries a provider name rather than a full endpoint tag, two declared
+tags served by the same provider share one row; each group's
+`first_tool_result_interval_ms` still measures from the previous request's first tool
+result regardless of which endpoint served that earlier request. Mean cost uses
+`reported_cost_usd` when the trace records that field (falling back to
+`usage.cost.total` only on archived traces written before `reported_cost_usd` existed).
+The `unknown` group covers completed responses with no usable label. An empty sample
+yields an empty list. The Markdown report includes a **Response time by endpoint** table
+for the selection.
+
 **`prompt_composition`** says what the prompt is made of. It is one object per trace, and
 for a run directory or the whole selection a list with one object per route (the host's
 `model`). A least-squares fit relates the growth in prompt tokens between an actor's
