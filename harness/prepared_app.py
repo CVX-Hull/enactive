@@ -36,6 +36,7 @@ def wrapper_source(root: Path) -> str:
         # Protected /bin/sh strips inherited DYLD variables on macOS. The
         # computer launcher supplies and validates this non-DYLD library path.
         'export DYLD_INSERT_LIBRARIES="$ENACTIVE_COMPUTER_LIBRARY"\n'
+        f"mkdir -p {shlex.quote(str(runtime / 'logs'))}\n"
         f"exec ./cataclysm-tiles --userdir {shlex.quote(str(runtime / 'user') + '/')} "
         f">>{shlex.quote(str(runtime / 'logs' / 'game.log'))} 2>&1\n"
     )

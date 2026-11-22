@@ -601,11 +601,15 @@ def recorded_deliveries_for_run(run: Run) -> dict[str, tuple[int, list[int], dic
         for request in run.facts.requests if request.role == 'player' for key in (request.key, request.logical)}
     deliveries = {actor: (0, [0] * len(indices.get(actor, ())), dict.fromkeys(DELIVERY_COUNT_KEYS, 0))
         for actor in run.facts.actors}
+    seen_briefing: set[str] = set()
     for delivery in run.facts.deliveries:
         briefing, extras, counts = deliveries[delivery.actor]
         tokens = delivery_tokens_from_bytes(delivery.text_bytes)
         if delivery.kind == 'briefing':
-            deliveries[delivery.actor] = (briefing + tokens, extras, counts)
+            # Only the actor's initial starting briefing sets its baseline; later cut briefings replace it.
+            if delivery.actor not in seen_briefing:
+                seen_briefing.add(delivery.actor)
+                deliveries[delivery.actor] = (tokens, extras, counts)
             continue
         index = receiving.get((delivery.actor, delivery.request_id))
         if index is None:

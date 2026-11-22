@@ -133,6 +133,7 @@ class ActorSteps:
     directory: str
     operations: tuple[str, ...]
     ended: bool
+    actor_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -186,7 +187,7 @@ def reading(snapshot: Snapshot) -> Reading:
         found = operations[actor.actor_id]
         if len(found) != actor.steps or (found[-1] if found else None) != actor.last_operation:
             raise SnapshotError(f'{snapshot.directory}: actor {actor.directory} does not match its coverage')
-        actors.append(ActorSteps(actor.directory, tuple(found), actor.ended))
+        actors.append(ActorSteps(actor.directory, tuple(found), actor.ended, actor.actor_id))
     return Reading(snapshot.directory, tuple(actors), snapshot.hold_seconds, snapshot.transaction_seconds,
                    snapshot.staging_seconds)
 

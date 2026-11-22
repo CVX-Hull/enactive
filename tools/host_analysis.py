@@ -70,7 +70,7 @@ TOKENIZER_MEDIAN_RESIDUAL = 1.0
 #: count other than the most common one. Otherwise the two cannot be told apart and only their sum at that count is.
 IMAGE_VARIATION_SHARE = 0.1
 #: Why a pair of consecutive requests is left out of the fit, in the order the reasons are tried.
-LEFT_OUT = ("usage_unknown", "projection_unknown", "images_dropped", "notice_added", "not_one_call")
+LEFT_OUT = ("usage_unknown", "projection_unknown", "images_dropped", "context_cut", "notice_added", "not_one_call")
 
 
 def tokenizer_holds(slope, median_residual):
@@ -120,14 +120,14 @@ def _result_parts(result):
     return text, len(text.encode("utf-8")), sum(part.get("type") == "image_reference" for part in parts)
 
 
-def composition_pairs(rows, omitted, notices, calls, results):
+def composition_pairs(rows, omitted, notices, calls, results, cuts=()):
     """Growth in prompt tokens between consecutive requests of one trace, with what was added between them.
 
     Request `n+1` holds what request `n` held, plus the reply to `n` and the result of the one call that reply made, so
     the growth is the cost of those. A pair is left out (and counted in the second value, by reason) when a prompt size
     or the reply's output is unknown, when only one of the two requests has an image projection event, when the host
-    dropped images between the two requests, when a notice was added to the second, or when the reply did not make
-    exactly one call with one result. Returns `(pairs, left_out)`."""
+    dropped images between the two requests, when a context cut or notice changed the second, or when the reply
+    made anything other than one call with one result. Returns `(pairs, left_out)`."""
     pairs, left_out = [], Counter()
     ids = [key for key in rows if not key.startswith("recall-")]
     for first, second in zip(ids, ids[1:]):
@@ -139,6 +139,8 @@ def composition_pairs(rows, omitted, notices, calls, results):
             left_out["projection_unknown"] += 1  # one of the two has no `context-image-projection` event (a retry)
         elif omitted.get(first) != omitted.get(second):
             left_out["images_dropped"] += 1
+        elif second in cuts:
+            left_out["context_cut"] += 1
         elif second in notices:
             left_out["notice_added"] += 1
         elif calls[first] != 1 or len(results.get(first, ())) != 1:
@@ -409,6 +411,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
     tokenizers = tokenizers or {}
     tokenizer = tokenizer_failure = None
     omitted, notices, calls, results = {}, set(), Counter(), {}
+    cuts = set()
     rows, tools, tool_intervals = {}, {}, []
     counts = Counter()
     start = terminal = previous = None
@@ -451,6 +454,8 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 notices.add(event.get('receiving_player_request_id'))
             elif kind == "tail-notice":
                 notices.add(event.get("request_id"))
+            elif kind == "context-cut" and event.get("outcome") == "cut":
+                cuts.add(event.get("request_id"))
             elif kind == "request-start":
                 identity = event.get("request_id")
                 if not isinstance(identity, str) or not identity or identity in rows or len(rows) >= MAX_REQUESTS:
@@ -573,7 +578,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
             if clock_valid:
                 row["since_previous_first_tool_result_ms"] = delta(result, previous_result)
             previous_result = result
-    pairs, left_out = composition_pairs(rows, omitted, notices, calls, results)
+    pairs, left_out = composition_pairs(rows, omitted, notices, calls, results, cuts)
     observed_requests = union_ms(requests_intervals) if clock_valid else None
     observed_tools = union_ms(tool_intervals) if clock_valid else None
     overlaps = overlap_ms(requests_intervals, tool_intervals) if clock_valid else None

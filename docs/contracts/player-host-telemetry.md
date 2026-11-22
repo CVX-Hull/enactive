@@ -21,7 +21,8 @@ version's `coverage`, and `outcome`:
   `removed_ids`, `delivered_knowledge_schema`, `receiving_player_request_id` and a
   null `recall_request_id`.
 - `refused`: the host kept the version it holds. `reason` is one of `invalid-entry`
-  (the line is not a closed entry; `version` and `coverage` are null), `not-newer`,
+  (the line failed both supported schemas, with null `version` and `coverage`),
+  `not-newer`,
   `superseded` (a newer listed version verified), `repository-mismatch`,
   `file-unreadable`, `sha256-mismatch`, `invalid-delivered-knowledge`,
   `entry-mismatch`, `context-capacity`, or `update-check-failed` for an unexpected
@@ -29,15 +30,16 @@ version's `coverage`, and `outcome`:
 
 ## Telemetry
 
-Stdout is JSONL telemetry version 9. The driver rejects other versions for live
+Stdout is JSONL telemetry version 10. The driver rejects other versions for live
 accounting. Each line has `type`. The driver ignores event kinds it does not
 account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:9` and `schema:"player-host/9"`. It records `session_affinity_id` and the route's `spend_limit_usd` and `unpriced_request_usd`. |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:10` and `schema:"player-host/10"`. It records `session_affinity_id` and the route's `spend_limit_usd`, `unpriced_request_usd` and `context_cut`, including null when cuts are disabled. |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every observed HTTP start, including retries and failures. Each role has a contiguous ID sequence, `request-1` or `recall-1` onward. |
+| `context-cut` | One per triggered [cut decision](#context-cut), before the next player request's image projection. |
 | `context-manifest` | Exactly one per player HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). For a sealed archive trace without this event, the evaluator reports the manifest as `absent`. |
 | `response-complete` | One per HTTP attempt, a failed or aborted one included. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` matches the provider cost, or is `null` when the attempt has unknown cost. `cost_counted_as` is `provider-reported` or `unpriced`. `spent_usd` is the running provider subtotal. |
 | `tool-result` | The MCP result as the host received it, with each image replaced by an `image_reference`. The operation payload follows the [tool server's result formats](player-ports.md#mcp-projection-and-envelopes). Readers take the full record from `structuredContent` when present and from JSON text otherwise, including for sealed traces with text-only records. |
@@ -47,6 +49,26 @@ account for, and observers project only known kinds.
 
 Stop reasons the [host contract](player-host.md) adds to a failed settlement: `spend-limit` and
 `cost-unreported` ([Spend](player-host.md#spend)).
+
+### Context cut
+
+A `context-cut` event carries the next `request_id`, the `triggers` in order
+(`high_mark`, `image_peak`), `covered_through_operation_id` (null without
+eligible coverage), the adopted `knowledge_version`, `tokens_before` and
+`images_before`. The request may still stop before fetch. Token fields are
+approximate. Token and image counts describe the active history before ordinary
+image eviction and new tail notices.
+
+- `outcome: "cut"` also reports `removed_turns`, `cumulative_removed_turns`,
+  `tokens_after`, `briefing_tokens`, `images_after` and `source_ids_count` for
+  the cumulative distinct sources. The first HTTP attempt carrying the cut
+  gets a `knowledge-delivery` with `kind: "briefing"` and a null
+  `recall_request_id`.
+- `outcome: "held-back"` also reports `reason`, `available_turns` and
+  `min_free`. The reason is `restored` after invalidation, `uncovered` when
+  no surviving turn is eligible, or `below-min-free` when the planned
+  number of turns is below the configured minimum. `available_turns` is zero
+  for the first two reasons and the planned number for the last.
 
 ### Context manifest
 
@@ -63,8 +85,9 @@ every manifest of one host in trace order from its first; `len(parts(M))` equals
 starts a fresh chain with `base_request_id:null`. A retry attempt resends the same body,
 so its manifest has `reused_prefix_parts == part_count` and no `parts`. The prefix is
 the longest run of leading parts equal in every field, so a request that only appends
-costs its new parts; an image eviction rewrites the parts after the oldest newly
-omitted image, because omitted images change positions.
+costs its new parts. A cut starts a new message prefix in the same manifest chain.
+An image eviction rewrites the parts after the oldest newly omitted image, because
+omitted images change positions.
 
 **Parts** follow the payload's message order; within a message: `reasoning`, then
 text, then tool calls. Fields: `index`, `role` (`system`, `user`, `assistant` or

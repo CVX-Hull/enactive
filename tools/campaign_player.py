@@ -1,6 +1,7 @@
 """Finite actors of the selected player host over one live mechanical custodian."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
 from decimal import Decimal
 import hashlib
@@ -23,10 +24,14 @@ from harness.player_client import ADAPTER_CLOSE_REASON
 from tools.campaign_package import EXACT,counted_usd,declared_floor,usd_sum,usd_text
 from tools.configure_player_tools import ROOT,configuration
 
-#: An actor's append-only list of the versions the driver adopted while it ran, beside its frozen inputs.
+#: An actor's append-only list of adopted versions and covered-prefix updates, beside its frozen inputs.
 UPDATES_FILE='knowledge-updates.jsonl'
 UPDATE_ENTRY_SCHEMA='knowledge-update-entry/1'
+COVERAGE_ENTRY_SCHEMA='coverage-update-entry/1'
+COVERED_PREFIX_FILE='covered-prefix.json'
+COVERED_PREFIX_SCHEMA='curator-covered-prefix/1'
 VERSION_FILE=re.compile(r'v(0|[1-9][0-9]*)\.json')
+HEX_ID=re.compile(r'[0-9a-f]{32}')
 
 
 def write_new(path: Path,value,*,text=False) -> None:
@@ -46,21 +51,29 @@ class LiveKnowledge:
     version; the host reads that list. Between actors (after `end`) a version is adopted for the next
     actor's frozen file alone, which `begin` returns.
 
-    During a run `start` makes the looks on a daemon thread, so a slow or stalled read of `source` never
-    holds up the driver's deadline checks, settlement or handoff. The adopted snapshot (`current`,
-    `data`), the running actor and the publication of its list change together under `lock`, held only
-    for the list's rename and the application's swap; `begin` and `end` take it and never read `source`.
-    A version prepared for one actor is discarded, and decided again, if another actor begins first.
+    The runner also leaves its unbroken covered prefix. The driver lists verified coverage only
+    after adopting the version it names. A restore closes the coverage path for the admission,
+    and a successor's update list starts with that invalidation.
 
-    Nothing here raises or waits on `source`. A version that does not verify, or that cannot be
-    published, is reported once on stderr and never tried again, and play goes on with the version
-    already held.
+    During a run `start` makes the looks on a daemon thread, so a slow or stalled read of `source` never
+    holds up the driver's deadline checks, settlement or handoff. `lock` protects the adopted state
+    and actor generation. Background list writes happen outside it and are rolled back when stale.
+    `begin` and `end` never read `source`. The next look decides again for the successor.
+
+    Source and publication failures are reported on stderr while play continues with the state
+    already held. A refused version is never tried again. Coverage is retried on later looks.
     """
-    def __init__(self,source: Path | None,package: Path):
+    def __init__(self,source: Path | None,package: Path,session: str | None=None):
         self.source=source
+        self.session=session
         self.data=package.read_bytes()
         self.current=Knowledge(package)
         self.refused=set()
+        self.last_coverage_bytes: bytes | None = None
+        self.current_coverage: dict | None = None
+        self.actor_coverage: dict | None = None
+        self.restored = False
+        self.coverage_reports: set[str] = set()
         self.lock=threading.Lock()
         # One look at a time; held across reads of `source`, so only the looking thread ever waits on it.
         self.looking=threading.Lock()
@@ -76,6 +89,14 @@ class LiveKnowledge:
         """Attach the running actor and return the adopted version's bytes for its frozen file. `target`
         holds the actor's update list already (empty). Never reads `source`."""
         with self.lock:
+            self.actor_coverage = None
+            if self.restored:
+                try:
+                    listing, _, _ = self._prepare_listing(target,self.current_coverage)
+                    self._replace_listing(listing)
+                    self.actor_coverage = self.current_coverage
+                except OSError as exc:
+                    self._report_coverage(exc)
             self.target=target;self.generation+=1
             return self.data
 
@@ -108,17 +129,79 @@ class LiveKnowledge:
                 if self.closed:return
                 target,generation,held=self.target,self.generation,self.current
             try:names=os.listdir(self.source)
-            except OSError:return  # no version has been left yet
+            except OSError:names=()  # no version has been left yet
             numbers={int(match[1]) for name in names if (match:=VERSION_FILE.fullmatch(name))}
             least=version_number(held.value['version'])
             for number in sorted((n for n in numbers if n>(-1 if least is None else least) and n not in self.refused),reverse=True):
                 try:
                     self._adopt(number,application,target,generation,held)
-                    return
+                    break
                 except Exception as exc:
                     self.refused.add(number)
                     print(f'campaign_player: live knowledge v{number} refused: {type(exc).__name__}: {str(exc)[:300]}',
                           file=sys.stderr,flush=True)
+            self._poll_coverage(target,generation)
+
+    def _coverage_entry(self,data: bytes,number: int) -> dict:
+        value = strict_loads(data)
+        fields = {'schema', 'session', 'actor', 'actor_id', 'operation_id', 'version', 'restored'}
+        if not isinstance(value,dict) or set(value) != fields or value['schema'] != COVERED_PREFIX_SCHEMA:
+            raise ControlError(f'Expected a closed {COVERED_PREFIX_SCHEMA} record')
+        session = value['session']
+        if (not isinstance(session,str) or not HEX_ID.fullmatch(session)
+                or self.session is not None and session != self.session):
+            raise ControlError('Covered prefix belongs to an invalid or different session')
+        if type(value['restored']) is not bool:
+            raise ControlError('Covered prefix restore flag must be a boolean')
+        if value['restored']:
+            if any(value[key] is not None for key in ('actor','actor_id','operation_id','version')):
+                raise ControlError('A restored prefix must have a null endpoint and version')
+        else:
+            if (not isinstance(value['actor'],str) or not value['actor'] or any(
+                    not isinstance(value[key],str) or not HEX_ID.fullmatch(value[key])
+                    for key in ('actor_id','operation_id'))):
+                raise ControlError('Covered prefix has an invalid endpoint')
+            version = version_number(value['version'])
+            if version is None or not 1 <= version <= number:
+                raise ControlError('Covered prefix must name an adopted publication')
+        return dict(schema=COVERAGE_ENTRY_SCHEMA,session=session,actor_id=value['actor_id'],
+                    operation_id=value['operation_id'],version=value['version'],restored=value['restored'])
+
+    def _report_coverage(self,exc: Exception) -> None:
+        report = f'{type(exc).__name__}: {str(exc)[:300]}'
+        if report not in self.coverage_reports:
+            self.coverage_reports.add(report)
+            print(f'campaign_player: live coverage refused: {report}',file=sys.stderr,flush=True)
+
+    def _poll_coverage(self,target: Path | None,generation: int) -> None:
+        with self.lock:
+            if self.closed or self.generation != generation:
+                return
+            previous, entry = self.last_coverage_bytes, self.current_coverage
+            restored, actor_coverage, number = self.restored, self.actor_coverage, self.number
+        try:
+            if restored:
+                data = previous
+            else:
+                try:
+                    data = (self.source/COVERED_PREFIX_FILE).read_bytes()
+                except FileNotFoundError:
+                    return
+            if data != previous:
+                entry = self._coverage_entry(data,number)
+            elif entry is None or target is None or entry == actor_coverage:
+                return
+
+            def adopt() -> None:
+                self.last_coverage_bytes, self.current_coverage = data, entry
+                if target is not None:
+                    self.actor_coverage = entry
+                self.restored = entry['restored']
+
+            listing_target = target if entry != actor_coverage else None
+            self._publish_entry(entry,listing_target,generation,adopt)
+        except Exception as exc:  # noqa: BLE001 - live coverage is optional and is retried off the driver thread
+            self._report_coverage(exc)
 
     def _adopt(self,number: int,application,target: Path | None,generation: int,held: Knowledge) -> None:
         data=(self.source/f'v{number}.json').read_bytes()
@@ -128,7 +211,7 @@ class LiveKnowledge:
         repository=held.value['repository_id']
         if repository is not None and value['repository_id']!=repository:
             raise ControlError('The version comes from another knowledge repository')
-        listing=None
+        entry=None
         if target is not None:
             (target/'knowledge').mkdir(mode=0o700,exist_ok=True)
             name=f'knowledge/v{number}.json'
@@ -139,20 +222,49 @@ class LiveKnowledge:
             os.replace(temporary,target/name)
             entry=dict(schema=UPDATE_ENTRY_SCHEMA,version=value['version'],commit=value['commit'],
                 repository_id=value['repository_id'],file=name,sha256=hashlib.sha256(data).hexdigest(),coverage=value['coverage'])
-            # The whole list with one more line, durable beside the list before it replaces it: the host
-            # either sees the list as it was or with the whole new line, and a failed write changes nothing.
-            # This thread is the list's only writer, so its bytes are the published prefix.
-            path=target/UPDATES_FILE
-            existed=path.exists()
-            try:prefix=path.read_bytes()
-            except FileNotFoundError:prefix=b'';existed=False
-            listing=(target/f'.{UPDATES_FILE}.tmp',path)
-            try:
-                with listing[0].open('wb') as stream:
-                    stream.write(prefix+(canonical(entry)+'\n').encode('utf-8'));stream.flush();os.fsync(stream.fileno())
-                listing[0].chmod(0o600)
-            except BaseException:
-                listing[0].unlink(missing_ok=True);raise
+
+        def adopt() -> None:
+            application.set_knowledge(knowledge)
+            self.current,self.data=knowledge,data
+
+        self._publish_entry(entry,target,generation,adopt)
+
+    @staticmethod
+    def _write_listing(path: Path,data: bytes) -> None:
+        try:
+            with path.open('wb') as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            path.chmod(0o600)
+        except BaseException:
+            path.unlink(missing_ok=True)
+            raise
+
+    def _prepare_listing(self,target: Path,entry: dict) -> tuple[tuple[Path,Path],bytes,bool]:
+        path = target/UPDATES_FILE
+        try:
+            prefix, existed = path.read_bytes(), True
+        except FileNotFoundError:
+            prefix, existed = b'', False
+        listing = (target/f'.{UPDATES_FILE}.tmp',path)
+        self._write_listing(listing[0],prefix+(canonical(entry)+'\n').encode('utf-8'))
+        return listing,prefix,existed
+
+    @staticmethod
+    def _replace_listing(listing: tuple[Path,Path]) -> None:
+        try:
+            os.replace(*listing)
+        except BaseException:
+            listing[0].unlink(missing_ok=True)
+            raise
+
+    def _publish_entry(self,entry: dict | None,target: Path | None,generation: int,adopt: Callable[[],None]) -> None:
+        # The host reads either the old list or the complete new line. Adopt only after the rename,
+        # then roll back on this background thread if the actor stopped while the rename was in flight.
+        listing = None
+        if target is not None:
+            listing,prefix,existed = self._prepare_listing(target,entry)
         with self.lock:
             stale = self.closed or self.generation != generation
         if stale:
@@ -160,25 +272,19 @@ class LiveKnowledge:
             if listing is not None:listing[0].unlink(missing_ok=True)
             return
         if listing is not None:
-            # Keep filesystem rename outside `self.lock` so `begin()`, `end()` and `close()` never block on I/O.
-            try:os.replace(*listing)
-            except BaseException:
-                listing[0].unlink(missing_ok=True);raise
+            # Keep the background rename outside `self.lock` so it cannot block actor lifecycle calls.
+            self._replace_listing(listing)
         with self.lock:
             stale = self.closed or self.generation != generation
             if not stale:
-                # Only after the list names the version: the application, the host and the successor move together.
-                application.set_knowledge(knowledge)
-                self.current,self.data=knowledge,data
+                adopt()
         if stale and listing is not None:
             # The actor ended (or the driver closed) while `os.replace` was in flight: restore the old actor's
             # list to its prior bytes on this background thread so it never records an unadopted version.
             try:
                 if existed:
-                    with listing[0].open('wb') as stream:
-                        stream.write(prefix);stream.flush();os.fsync(stream.fileno())
-                    listing[0].chmod(0o600)
-                    os.replace(*listing)
+                    self._write_listing(listing[0],prefix)
+                    self._replace_listing(listing)
                 else:
                     listing[1].unlink(missing_ok=True)
             except OSError as error:
@@ -268,8 +374,8 @@ class HostEvents:
                 # These records are copied into the receipt. Reject data the writer cannot retain.
                 canonical(value).encode('utf-8')
             if kind=='host-start':
-                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=9
-                        or value.get('schema')!='player-host/9'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=10
+                        or value.get('schema')!='player-host/10'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'(request|recall)-([1-9][0-9]*)',value.get('request_id',''))
@@ -430,7 +536,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             # until a newer one arrived. The snapshot is in memory; `source` is read only on the looking
             # thread, so no read of it delays a handoff.
             if live is None:
-                live=LiveKnowledge(live_updates,directory/'delivered-knowledge.json')
+                live=LiveKnowledge(live_updates,directory/'delivered-knowledge.json',session=profile['session'])
                 live.start(application)
             if live_updates is not None:write_new(target/UPDATES_FILE,'',text=True)
             with (target/'delivered-knowledge.json').open('xb') as stream:

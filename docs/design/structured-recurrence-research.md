@@ -98,7 +98,7 @@ Measure update freshness in decisions, wall time and game time, with coverage
 and version. A coverage stamp records what was read. Applicability still
 depends on the fact and its context. Preserving recent player turns lets the
 player continue while the curator works. The
-[context cut proposal](coverage-gated-context-cut.md#the-cut)
+[coverage-gated context cut](../contracts/player-host.md#coverage-gated-context-cut)
 is independent of the comparison.
 
 Within-admission research depends on [live memory integration (#664)](https://github.com/CVX-Hull/enactive/issues/664)

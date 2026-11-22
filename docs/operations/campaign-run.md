@@ -40,10 +40,13 @@ governs which journals the package can reopen.
 working directory are absolute. Keep the prepared wrapper/windowed project userdir
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
+The custodian creates `.runtime/logs/` before launch for the prepared wrapper's log.
 
-`route.json` uses current `player-host/9` with text/image input and explicit
+`route.json` uses current `player-host/10` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
-provider's image limit. It repeats the package's `spend_limit_usd` and carries
+provider's image limit. Set `context_cut` to `null` or the closed object with
+`high_mark`, `low_mark` and `min_free` described in the [host procedure](player-host.md).
+The route repeats the package's `spend_limit_usd` and carries
 `unpriced_request_usd` ([Spend limit](#spend-limit)). Freeze the
 [selected route](player-host.md) for ordinary runs. Diagnostic or qualification
 packages may freeze another conforming route and name it in their record.
@@ -186,6 +189,9 @@ actor plays the frozen version for the whole admission. With `true`, a version t
 during the admission reaches the actor that is running and becomes the next actor's
 frozen file. The [host contract](../contracts/player-host.md#a-newer-version-during-play)
 specifies adoption, verification and the message the player receives.
+Live delivery also sends the runner's verified coverage to the actor. A route
+with context cuts enabled can cut only through eligible covered turns. Play
+continues through ordinary image eviction and handoff while coverage is unavailable.
 
 Set it only for a run launched with `--curator-runner`
 ([supervision](campaign-supervision.md#freeze-launch-and-inspect)); without the

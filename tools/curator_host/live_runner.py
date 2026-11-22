@@ -233,10 +233,12 @@ class Sessions:
 
 VERSION_FILE = re.compile(r'v(0|[1-9][0-9]*)\.json')
 SESSION_ID_RE = re.compile(r'[0-9a-f]{32}')
+COVERED_PREFIX_FILE = 'covered-prefix.json'
+COVERED_PREFIX_SCHEMA = 'curator-covered-prefix/1'
 
 
-def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, str | None]:
-    """Whether the run's package delivers newer versions to a running actor, and the world its facts are selected for.
+def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, str | None, str]:
+    """Whether the package delivers newer versions, the world its facts are selected for, and the session ID.
 
     The manifest is trusted only as the supervisor launched it: its bytes must have the SHA-256 that the
     supervisor's `campaign-watch-start/4` launch record names for the same 32-hex session (and matching any
@@ -258,11 +260,11 @@ def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, s
         raise ValueError(f'{run/"manifest.json"}: manifest session differs from the launched session')
     if opening.get('manifest_sha256') != hashlib.sha256(data).hexdigest():
         raise ValueError(f'{run/"manifest.json"}: SHA-256 differs from the supervisor launch record')
-    return manifest['live_knowledge_updates'] is True, knowledge_export.world_label(manifest['labels']['world'])
+    return manifest['live_knowledge_updates'] is True, knowledge_export.world_label(manifest['labels']['world']), session
 
 
 class Delivery:
-    """Leaves each newly confirmed version for the driver: `<runner directory>/delivered/vN.json`.
+    """Leaves confirmed versions and the unbroken covered prefix in `<runner directory>/delivered/`.
 
     The file is the version exported as `delivered-knowledge/2` for the package's world
     (`tools.knowledge_export.published`), written whole to a temporary name, synced and renamed, so the
@@ -272,36 +274,76 @@ class Delivery:
     on stderr once per version and error and tried again at the next poll; it never ends the runner.
     """
 
-    def __init__(self, directory: Path, repository: Path, world: str | None):
+    def __init__(self, directory: Path, repository: Path, world: str | None, session: str | None = None):
         self.directory, self.repository, self.world = Path(directory)/DELIVERED_DIRECTORY, repository, world
+        self.session = session
+        self.actor_ids: dict[str, str] = {}
+        self.last_prefix = None
         present = os.listdir(self.directory) if self.directory.is_dir() else []
         self.last = max((int(m[1]) for name in present if (m := VERSION_FILE.fullmatch(name))), default=-1)
-        self.reported = None
+        self.reported: dict[str, str] = {}
+
+    def _write(self, name: str, value: dict) -> None:
+        data = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + '\n').encode()
+        self.directory.mkdir(mode=0o700, exist_ok=True)
+        temporary = self.directory/f'.{name}.tmp'
+        with temporary.open('wb') as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, self.directory/name)
+
+    def _report(self, name: str, exc: Exception) -> None:
+        report = f'{type(exc).__name__}: {str(exc)[:300]}'
+        if report != self.reported.get(name):
+            self.reported[name] = report
+            print(f'curator_runner: delivery of {name} failed: {report}', file=sys.stderr, flush=True)
 
     def __call__(self, runner: Runner) -> None:
-        version = None
+        version = 'a confirmed version'
         try:
-            confirmed, _, _ = runner.publications()
-            numbers = [int(c['version'][1:]) for c in confirmed if runner.versions[c['version']]['restored_from'] is None]
-            if not numbers or max(numbers) <= self.last:
-                return
-            version = f'v{max(numbers)}'
-            value = knowledge_export.published(self.repository, version, world=self.world)
-            data = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + '\n').encode()
-            self.directory.mkdir(mode=0o700, exist_ok=True)
-            temporary = self.directory/f'.{version}.json.tmp'
-            with temporary.open('wb') as stream:
-                stream.write(data)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary, self.directory/f'{version}.json')
-            self.last = max(numbers)
+            with runner.lock:
+                confirmed, _, _ = runner.publications()
+                number = max((int(c['version'][1:]) for c in confirmed
+                              if runner.versions[c['version']]['restored_from'] is None), default=-1)
+            if number > self.last:
+                version = f'v{number}'
+                self._write(f'{version}.json', knowledge_export.published(self.repository, version, world=self.world))
+                self.last = number
         except Exception as exc:  # noqa: BLE001 - delivery is beside curation: reported, retried, never fatal
-            report = (version, f'{type(exc).__name__}: {str(exc)[:300]}')
-            if report != self.reported:
-                self.reported = report
-                print(f'curator_runner: delivery of {version or "a confirmed version"} failed: {report[1]}',
-                      file=sys.stderr, flush=True)
+            self._report(version, exc)
+
+        try:
+            prefix = self._prefix(runner)
+            if prefix is not None and prefix != self.last_prefix:
+                if prefix['restored'] or (self.directory/f"{prefix['version']}.json").is_file():
+                    self._write(COVERED_PREFIX_FILE, prefix)
+                    self.last_prefix = prefix
+        except Exception as exc:  # noqa: BLE001 - delivery is beside curation: reported, retried, never fatal
+            self._report(COVERED_PREFIX_FILE, exc)
+
+    def _prefix(self, runner: Runner) -> dict | None:
+        if self.session is None or not SESSION_ID_RE.fullmatch(self.session):
+            return None
+        with runner.lock:
+            if runner.last is not None:
+                self.actor_ids.update((a.directory, a.actor_id) for a in runner.last.actors if a.actor_id is not None)
+            confirmed, _, restore = runner.publications()
+            if restore is not None:
+                return dict(schema=COVERED_PREFIX_SCHEMA, session=self.session, actor=None, actor_id=None,
+                            operation_id=None, version=None, restored=True)
+            end = runner.coverage()['covered_prefix']['end']
+        if end is None or end['operation'] == 'unknown':
+            return None
+        actor_id = self.actor_ids.get(end['actor'])
+        if actor_id is None or not SESSION_ID_RE.fullmatch(actor_id) or not SESSION_ID_RE.fullmatch(end['operation']):
+            return None
+        version = next((c['version'] for c in reversed(confirmed)
+                        if (c['window']['actor'], c['window']['last']) == (end['actor'], end['step'])), None)
+        if version is None or int(version[1:]) > self.last:
+            return None
+        return dict(schema=COVERED_PREFIX_SCHEMA, session=self.session, actor=end['actor'], actor_id=actor_id,
+                    operation_id=end['operation'], version=version, restored=False)
 
 
 class DeliveringRunner(Runner):
@@ -353,8 +395,8 @@ def main(argv: list[str] | None = None) -> int:
             directory = args.directory.resolve()
             deliver = None
             try:
-                enabled, world = delivery_world(run, session_id=args.session)
-                deliver = Delivery(directory, repo.path, world) if enabled else None
+                enabled, world, session = delivery_world(run, session_id=args.session)
+                deliver = Delivery(directory, repo.path, world, session=session) if enabled else None
             except (OSError, ValueError, KeyError, TypeError) as error:
                 # Curation does not depend on delivery: the runner starts and leaves no version for the driver.
                 print(f'curator_runner: delivery to the running actor is off: {type(error).__name__}: {error}',

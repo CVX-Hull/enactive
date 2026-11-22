@@ -22,12 +22,15 @@ in `route.json`; use no fallback. The current campaign accepts the explicit defa
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the package's dollar limit and operational capacities.
 
-The package freezes `route.json` (`player-host/9`), `delivered-knowledge.json`, `mcp-template.json`,
+The package freezes `route.json` (`player-host/10`), `delivered-knowledge.json`, `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, the dollar limit, the planning bound for an in-flight
 request, credential environment name, image peak, eviction block and
 required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
+Set `context_cut` to `null` to disable cuts, or supply the closed object
+with `high_mark`, `low_mark` and `min_free`. The marks count tokens above the
+briefing and `min_free` is the minimum number of turns a cut must free.
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
 one image at a time (rolling); a larger block keeps the prompt prefix cacheable
 between evictions. Prefer a block of about half the peak, such as 39/20, so evictions are
@@ -43,6 +46,9 @@ context, ongoing-objective/knowledge prompt and `player-host-inputs/4` hashes.
 With [live knowledge updates](campaign-run.md#live-knowledge-updates) it also passes
 `--knowledge-updates`, and a successor starts from the latest version adopted in the
 run ([host contract](../contracts/player-host.md#a-newer-version-during-play)).
+The same list carries verified `coverage-update-entry/1` records after the named
+version is adopted. Once the driver sees a restore, it seeds each successor's
+list with the invalidation before the host starts.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.

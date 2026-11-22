@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/9` is the current boundary between the
+`player-host/10` is the current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
 deciding player. The host owns the model/tool loop and player context. The finite
 test driver owns original limits, process-group closure and verified succession.
@@ -49,16 +49,20 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/9"`, `model`, `api_key_env`,
+The closed route has `schema:"player-host/10"`, `model`, `api_key_env`,
 `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
-`context_image_block`, `context_reserve_tokens`, `request_timeout_seconds` and
-`service_tier`, and the closed `recall` object (`model`, `every`, `unpriced_request_usd`).
+`context_image_block`, `context_reserve_tokens`, `context_cut`, `request_timeout_seconds`,
+`service_tier` and the closed `recall` object (`model`, `every`, `unpriced_request_usd`).
 The adapter owns its closed `model` fields. The driver reads only model
 ID/name/cost/context/output fields, credential variable, the two
 dollar amounts and tier.
 The image block is a positive integer no larger than the image peak.
 `context_reserve_tokens` is a safe integer at least `model.maxTokens` and less
-than `model.contextWindow`. The host rejects unsupported route versions.
+than `model.contextWindow`. The required `context_cut` is null to disable cuts or
+a closed object with the safe integers `low_mark`, `high_mark` and `min_free`.
+The marks satisfy `1 <= low_mark < high_mark < model.contextWindow` for the
+player model, and `min_free` is at least one turn. The host rejects unsupported
+route versions.
 
 A dollar amount is plain decimal text such as `"0.4096"`: digits with an optional
 fraction. A JSON number, an exponent, a sign or a non-finite word is refused. Two
@@ -95,9 +99,9 @@ existing handoff when the actor's tool table includes `player_handoff` (every ac
 does; the final actor's handoff call is refused, and the notice says to use
 `player_finish` then); otherwise it says no successor is available and asks for
 `player_finish`.
-These estimates are not exact provider token bounds. Known excessive context
-stops before another fetch. Original text, source/omission provenance and tool
-correlations remain without compaction, fabricated summaries, restore or fallback.
+Known excessive context stops before another fetch. Before checking capacity the
+host may [cut a curator-covered prefix](#coverage-gated-context-cut) from the
+request. The token estimates are approximate.
 The finite diagnostic must exercise its envelope, including missing usage and
 oversized results, before admission.
 
@@ -188,8 +192,7 @@ The [withholding unit rule](measurement-tools.md#the-facts-to-judge-judged-facts
 defines the export layout. Version changes follow the [migration standard](../standards/migration.md).
 The [journal and knowledge component](../components/player-interface.md#journal-and-knowledge)
 describes application reads and evaluation. The [delivery rationale](../design/player-context.md)
-records the prompt measurements and alternatives. The [coverage-gated context cut](../design/coverage-gated-context-cut.md)
-remains a proposal.
+records the prompt measurements and alternatives.
 
 The host appends a briefing to the first user message: recall-selected article leads or standalone fact text, an index line for every other article and standalone fact, and the coverage stamp. It labels the text as fallible data granting no authority. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
 
@@ -245,11 +248,12 @@ say when a package may set the field.
 | Delivery | Host | A refresh beside play, at start, every second and after each player response, reads the whole unread lines of `--knowledge-updates` and their files in an isolated helper (bounded per read so one stalled file never blocks later updates or CLI exit) and stages verified candidates above its own. Building a player request reads no file: it adopts the newest staged candidate that fits within context capacity, if any, so a stalled read never delays a request. |
 | Successor | Driver | A successor's `delivered-knowledge.json` is the latest version adopted in the run, taken from memory, or the package's file when none was. Its update list starts empty. |
 
-An update-list line is `knowledge-update-entry/1`: exactly `schema`, `version`
-(`vN`), `commit`, `repository_id`, `file` (`knowledge/vN.json`, relative to the
-list), `sha256` of that file and its `coverage` stamp.
+The append-only JSONL list carries two closed line schemas. A
+`knowledge-update-entry/1` line has exactly `schema`, `version` (`vN`), `commit`,
+`repository_id`, `file` (`knowledge/vN.json`, relative to the list), `sha256`
+of that file and its `coverage` stamp.
 
-The host verifies an entry before it adopts it: the line is a closed entry; the
+The host verifies a knowledge entry before it adopts it: the line is a closed entry; the
 version number is above the adopted one; `repository_id` is the adopted version's,
 unless that is the empty file; the file's SHA-256 is the entry's; the file is
 `delivered-knowledge/2` in its closed form; and its `version`, `commit`,
@@ -279,11 +283,55 @@ what a briefing can show, the articles and the facts no article files:
 - From an empty store the line carries `index`, the index line of every entry, in
   place of a difference.
 
-The message makes no recall request and costs no request of its own. It is placed
-like a reminder: where the next request begins, never joined with another notice
-and never moved or rewritten, so [every request still extends the previous one](#request-stability-and-tail-notices).
+The message makes no recall request and costs no request of its own. Like a
+reminder, it is appended at the next request boundary as its own message.
 An update whose message would bring the context to its capacity warning is refused
 with reason `context-capacity`; the driver's next actor starts from that version.
+
+### Coverage-gated context cut
+
+A `coverage-update-entry/1` line has exactly `schema`, `session`, `actor_id`,
+`operation_id`, `version` and `restored`. The session is 32 lowercase hexadecimal
+characters. A publication sets `restored:false` and names a 32-character
+lowercase hexadecimal actor and operation ID and a version `vN` with positive
+safe integer `N`. A restore sets `restored:true` and sets the actor, operation
+and version to null. The refresh stages these lines from the same list. The
+request builder applies them between requests. The host ignores another session's
+entry and publications for another actor.
+
+The host uses the operation from the highest coverage version at or below its
+adopted knowledge version. The latest line for that version supplies its operation.
+An undelivered newer version leaves eligible older coverage available. A restore
+permanently disables further cuts by the actor and leaves its last cut in effect.
+An accepted orderly stop also prevents any further cuts and sends its control
+instruction in the surviving request history.
+
+The host considers a cut when the token estimate above the current briefing
+exceeds `high_mark`, or the active history's image count exceeds
+`max_context_images`. A turn is one assistant message and its contiguous tool
+results. The coverage operation must be the last creating operation in its
+turn for the host to remove that turn. Earlier complete turns are eligible,
+and the latest turn always survives. The host removes a leading sequence of
+eligible turns toward `low_mark` above the fresh briefing and the image peak,
+up to the covered boundary. It applies the cut only if the plan removes at least
+`min_free` turns. Image block eviction still applies after each decision.
+
+The cut preserves the system prompt and tools. It replaces the first user
+message with the frozen mission prompt and a fallible briefing from the adopted
+version, with every article lead and standalone fact and no recall request.
+The following user message is delimited by `BEGIN CONTEXT CUT` and
+`END CONTEXT CUT`. Its JSON line contains `grants_authority:false`, the cumulative
+`removed_turns`, `covered_through_operation_id`, the coverage `knowledge_version`
+and distinct `source_ids` in their original order across the removed turns, with
+contiguous same-prefix numeric runs losslessly compacted as `start..end` and a
+shared prefix factored into `source_id_prefix` when all entries share one stem.
+The marker directs the player to `player_source` for those frames. Both
+messages stay fixed until the next cut. Knowledge notices at or after the cut
+boundary stay with the surviving turns; prior `tail-notice` messages and the
+first-notice latch are cleared on a cut, the token estimate disregards pre-cut
+provider usage, and capacity/time warnings are re-evaluated against the new
+request.
+[Cut telemetry](player-host-telemetry.md#context-cut) records the decision.
 
 ### Request stability and tail notices
 
@@ -296,10 +344,10 @@ handoff successor and a new admission's first actor, with no provider call:
   its notices included, because the provider's cache reuses a request only when a later
   one extends it
   ([context stability and prompt-cache findings (#489)](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
-  The one earlier rewrite is image
-  eviction: whole blocks of the oldest pixels become omission markers, each image
-  once, and a marker never changes afterwards. Every other request field (tool table,
-  limits, routing) is identical.
+  A coverage-gated cut starts a new message prefix. Image eviction can also
+  rewrite history when a whole block of the oldest pixels first becomes
+  omission markers. Both projections preserve the system prompt, tool table,
+  limits and routing.
 - **System prompt and tool table.** The system prompt is the frozen context plus the
   MCP server instructions, and holds no per-actor identity. Every actor of a package
   gets the same system prompt and the same tool table, so they are byte-identical
@@ -316,11 +364,12 @@ handoff successor and a new admission's first actor, with no provider call:
 - **Omission markers** carry the omitted frame's `source_id` (when its tool result
   has one) and name `player_source` as the way to read it again.
 - **Notices** go at the end of the request in which they are first sent, and then stay
-  in the history there unchanged. A retry resends the same body below the notice step,
+  in the retained history there unchanged. A retry resends the same body below the notice step,
   so it adds no notice. Once a threshold is passed, every later request adds a new
   notice. The first context and time notices explain how to wrap up. The context
   notice latches when the `context_reserve_tokens` line is crossed and reports the
-  tokens of room before the stop. The time notice starts when the work deadline is
+  tokens of room before the stop. A cut clears that latch and checks the threshold
+  again. The time notice starts when the work deadline is
   within a tenth of the allowance, at least a minute and at most half. An accepted
   ending control carries its own ending instruction. Later notices update the
   applicable figures. Each emission is a `tail-notice` event with `request_id` and

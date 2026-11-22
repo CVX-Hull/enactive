@@ -668,21 +668,23 @@ def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export
     run.mkdir()
     (run/CURATOR_READ_LOCK).touch()
     record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
-    enabled, world = live_runner.delivery_world(run)
-    assert (enabled, world) == (True, 'the farm')
+    enabled, world, session_id = live_runner.delivery_world(run)
+    assert (enabled, world, session_id) == (True, 'the farm', SESSION_ID)
     delivered = tmp_path/'runner'/'delivered'
+    prefix = delivered/live_runner.COVERED_PREFIX_FILE
 
     def runner():
         return live_runner.DeliveringRunner(
             tmp_path/'runner', RUN, snapshot=live.staged(run), session_call=session, look=TagLook(repo),
-            settings=Settings(trigger_steps=1, ceiling_steps=1), deliver=live_runner.Delivery(tmp_path/'runner', repo.path, world))
+            settings=Settings(trigger_steps=1, ceiling_steps=1),
+            deliver=live_runner.Delivery(tmp_path/'runner', repo.path, world, session=session_id))
 
     first = runner()
     assert first.deliver.last == -1 and not delivered.exists()  # the repository's baseline v0 is never left
     writer = _Writer(run, SESSION_ID)
     try:
         writer.new_actor()
-        writer.step()
+        operation = writer.step()['operation_id']
         assert first.poll()
         value = json.loads((delivered/'v1.json').read_text())
         assert value == knowledge_export.published(repo.path, 'v1', world='the farm') and Knowledge.from_dict(value).value == value
@@ -692,6 +694,9 @@ def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export
         # The facts are those of the package's world; the label itself is never written into the file.
         assert [f['id'] for f in value['facts']] == ['f1', 'w1'] and value['coverage']['last_step'] == 1
         assert [f['id'] for f in knowledge_export.published(repo.path, 'v1')['facts']] == ['f1'] and 'the farm' not in json.dumps(value)
+        first_prefix = dict(schema='curator-covered-prefix/1', session=SESSION_ID, actor='001',
+                            actor_id=writer.actor['id'], operation_id=operation, version='v1', restored=False)
+        assert json.loads(prefix.read_text()) == first_prefix
         # An export that fails leaves nothing, says so once, and the next poll leaves the version.
         published = knowledge_export.published
         calls = []
@@ -701,21 +706,23 @@ def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export
             raise OSError('disk refused the export')
 
         monkeypatch.setattr(knowledge_export, 'published', failing)
-        writer.step()
+        operation = writer.step()['operation_id']
         assert first.poll() and first.poll()
-        assert calls == ['v2', 'v2'] and sorted(p.name for p in delivered.iterdir()) == ['v1.json']
+        assert calls == ['v2', 'v2'] and sorted(p.name for p in delivered.glob('v*.json')) == ['v1.json']
+        assert json.loads(prefix.read_text()) == first_prefix
         assert capsys.readouterr().err.splitlines() == ['curator_runner: delivery of v2 failed: OSError: disk refused the export']
         monkeypatch.setattr(knowledge_export, 'published', published)
         assert first.poll()
-        assert sorted(p.name for p in delivered.iterdir()) == ['v1.json', 'v2.json']
+        assert sorted(p.name for p in delivered.glob('v*.json')) == ['v1.json', 'v2.json']
+        assert json.loads(prefix.read_text()) == dict(first_prefix, operation_id=operation, version='v2')
         assert sorted(f['id'] for f in json.loads((delivered/'v2.json').read_text())['facts']) == ['f1', 'f2', 'w1', 'w2']
         # A restarted runner starts from what is already left.
         second = runner()
         assert second.deliver.last == 2
-        before = {p.name: p.stat().st_mtime_ns for p in delivered.iterdir()}
-        assert second.poll() and {p.name: p.stat().st_mtime_ns for p in delivered.iterdir()} == before
+        before = {p.name: p.stat().st_mtime_ns for p in delivered.glob('v*.json')}
+        assert second.poll() and {p.name: p.stat().st_mtime_ns for p in delivered.glob('v*.json')} == before
         writer.step()
-        assert second.poll() and sorted(p.name for p in delivered.iterdir()) == ['v1.json', 'v2.json', 'v3.json']
+        assert second.poll() and sorted(p.name for p in delivered.glob('v*.json')) == ['v1.json', 'v2.json', 'v3.json']
     finally:
         writer.close()
     assert capsys.readouterr().err == ''
@@ -730,7 +737,8 @@ def test_only_a_confirmed_publication_that_is_not_a_restore_is_left_for_the_driv
     deliver = live_runner.Delivery(tmp_path, tmp_path/'repository', 'farm')
     versions = {'v1': dict(restored_from=None), 'v2': dict(restored_from='v1'), 'v3': dict(restored_from=live.UNKNOWN),
                 'v4': dict(restored_from=None)}
-    state = SimpleNamespace(versions=versions, publications=lambda: ([], [dict(version='v4')], None))
+    state = SimpleNamespace(versions=versions, lock=threading.RLock(),
+                            publications=lambda: ([], [dict(version='v4')], None))
     deliver(state)  # v4's tag was seen but no examined session confirms it
     assert exported == [] and not (tmp_path/'delivered').exists()
     state.publications = lambda: ([dict(version=v) for v in ('v1', 'v2', 'v3')], [], dict(version='v2'))
@@ -740,11 +748,40 @@ def test_only_a_confirmed_publication_that_is_not_a_restore_is_left_for_the_driv
     assert exported == [('v1', 'farm')]  # nothing above the last version left
 
 
+@pytest.mark.parametrize('gap', ['rejected', 'nothing'])
+def test_delivery_leaves_the_prefix_before_a_gap_until_a_restore_invalidates_it(tmp_path, monkeypatch, gap):
+    world = World(tmp_path/'runner', Settings(trigger_steps=1, ceiling_steps=1))
+    world.outcomes = ['accepted', gap, 'accepted']
+    monkeypatch.setattr(live_runner.knowledge_export, 'published',
+                        lambda path, version, *, world: dict(version=version))
+    runner = world.runner()
+    deliver = live_runner.Delivery(world.directory, tmp_path/'repository', None, session=SESSION_ID)
+    delivered = world.directory/'delivered'
+    prefix = delivered/live_runner.COVERED_PREFIX_FILE
+    actor_id = 'b' * 32
+    operations = ('1' * 32, '2' * 32, '3' * 32)
+    expected = dict(schema='curator-covered-prefix/1', session=SESSION_ID, actor='001', actor_id=actor_id,
+                    operation_id=operations[0], version='v1', restored=False)
+    for step in range(1, 4):
+        world.reading = Reading(Path('/snapshots')/RUN, (ActorSteps('001', operations[:step], False, actor_id),), 0, 0, 0)
+        assert runner.poll()
+        deliver(runner)
+        assert json.loads(prefix.read_text()) == expected
+    assert (delivered/'v2.json').is_file()  # the publication after the gap still reaches the driver
+    world.tags['v3'] = dict(coverage=world.tags['v1']['coverage'], restored_from='v1')
+    runner._look()
+    assert runner.poll()
+    deliver(runner)
+    assert json.loads(prefix.read_text()) == dict(schema='curator-covered-prefix/1', session=SESSION_ID,
+                                                  actor=None, actor_id=None, operation_id=None, version=None, restored=True)
+    assert not (delivered/'v3.json').exists()
+
+
 def test_delivery_is_read_from_the_current_package_manifest(tmp_path):
     run = tmp_path/RUN
     run.mkdir()
     record_package(run, labels=dict(world='the farm', lineage='L1', admission=1))
-    assert live_runner.delivery_world(run) == (False, 'the farm')
+    assert live_runner.delivery_world(run) == (False, 'the farm', SESSION_ID)
     record_package(run, labels=dict(lineage='L1', admission=1), schema='campaign-run/10')
     with pytest.raises(ValueError, match='not a campaign-run/12 manifest'):
         live_runner.delivery_world(run)
@@ -760,8 +797,8 @@ def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch
     run = tmp_path/RUN
     run.mkdir()
     record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
-    assert live_runner.delivery_world(run) == (True, 'the farm')
-    assert live_runner.delivery_world(run, session_id=SESSION_ID) == (True, 'the farm')
+    assert live_runner.delivery_world(run) == (True, 'the farm', SESSION_ID)
+    assert live_runner.delivery_world(run, session_id=SESSION_ID) == (True, 'the farm', SESSION_ID)
     with pytest.raises(ValueError, match='launched session'):
         live_runner.delivery_world(run, session_id='b' * 32)
     original = (run/'manifest.json').read_bytes()
