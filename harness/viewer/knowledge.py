@@ -9,7 +9,7 @@ from harness.evaluation.core import context
 from harness.evaluation.core.host import host_facts, returned_records
 from harness.evaluation.core.records import EvaluationError
 from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_json_file, read_manifest, read_operations
-from .catalog import ViewError
+from .catalog import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, ViewError
 from . import frame, views
 
 #: The versions of an actor's frozen inputs and delivered knowledge: the current ones for a current run, and
@@ -18,9 +18,6 @@ CURRENT_SNAPSHOT = ('player-host-inputs/4', 'delivered-knowledge/2')
 ARCHIVED_SNAPSHOT = ('player-host-inputs/3', 'delivered-knowledge/1')
 #: The rows of a delivery's text: a briefing's or reminder's leads and index, an update's difference.
 DELIVERY_ROWS = ('leads', 'index', 'added', 'updated', 'removed')
-TEXT_LIMIT = 1024
-ID_LIMIT = 512
-LIST_LIMIT = 100
 ID_FIELDS = frozenset(('id', 'request_id', 'recall_request_id', 'receiving_player_request_id',
                        'tool_call_id', 'source_id', 'operation_id', 'actor_id'))
 

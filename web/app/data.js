@@ -9,17 +9,24 @@ const VIEW_TIMEOUT_MS = 4000;
 export const SUMMARY_MS = 2000;
 export const RUNS_MS = 10000;
 export const LIMIT = 500;
+/** A live feed re-reads this many of its newest entries: pending calls settle and findings may be added late. */
+const FEED_OVERLAP = 60;
+/** Every this many polls a live feed is read whole, for a finding placed further back than the overlap. */
+const FEED_WHOLE = 30;
 
 /* ---------------------------------------------------------------- store */
 const subscribers = new Set();
+/** `feedFinalized` is the recorded state ('final', or 'live' for a run never finalized) in which a run that is no longer
+ *  live had its whole feed read; null while it is live, so the last passes' findings are read once more when it ends. */
+const EMPTY_RUN = {summary: null, steps: [], feed: [], feedMeta: null, feedFinalized: null, feedFinalCursor: null, cursor: null, inspect: null, held: false};
 export const store = {
   viewerOk: true, viewerSeen: false, lastOk: null,
-  runs: null, runId: null,
-  summary: null, steps: [], requests: [], markers: [],
-  cursor: null,            // null = following live; otherwise a step seq
+  runs: null, runId: null, // runId: the selected run's session, the only name two runs never share
+  ...EMPTY_RUN,            // cursor: null = following live; otherwise a step seq. inspect: a feed entry ID. held: the view is frozen
   control: {ok: null, status: null, frameUrl: null},
+  stageLive: false,        // the Watch stage is showing the live control-path frame
   themeEpoch: 0,
-  feedWide: savedFlag('feed-wide'),   // the feed player spans the page (#437); a per-browser view choice
+  feedWide: savedFlag('feed-wide'),   // the player spans the page (#437); a per-browser view choice
 };
 function savedFlag(key) {
   try { return localStorage.getItem(key) === 'yes'; } catch { return false; }
@@ -81,23 +88,32 @@ function markViewer(ok) {
 export const runPath = (run, tail) => `run/${encodeURIComponent(run)}/${tail}`;
 export const framePath = (run, sourceId) => `/api/view/${runPath(run, `frame/${encodeURIComponent(sourceId)}`)}`;
 
-/** Fetch one viewer route into component state; refetch on an interval and when the viewer returns. */
+/** Fetch one viewer route into component state, again on an interval if it has one. A one-shot read (`every` 0) that
+ *  failed is repeated when the viewer returns; one that succeeded is of something that does not change, and is kept. */
 export function useView(path, every = 5000, schema = 'spectator-view/2', refresh = 0) {
   const [state, setState] = useState({path: null, data: null, error: null});
   useEffect(() => {
     if (!path) return undefined;
-    let dead = false, timer;
+    let dead = false, timer, failed = false, ok = store.viewerOk;
     const run = async () => {
+      failed = false;
       try {
         const data = await viewerGet(path, schema);
         if (!dead) setState({path, data, error: null});
       } catch (error) {
+        failed = true;
         if (!dead) setState(s => ({path, data: s.path === path ? s.data : null, error}));
       }
       if (!dead && every) timer = setTimeout(run, every);
     };
+    const onChange = () => {
+      const returned = store.viewerOk && !ok;
+      ok = store.viewerOk;
+      if (returned && failed && !every && !dead) void run();
+    };
+    subscribers.add(onChange);
     void run();
-    return () => { dead = true; clearTimeout(timer); };
+    return () => { dead = true; clearTimeout(timer); subscribers.delete(onChange); };
   }, [path, every, schema, refresh]);
   return state.path === path ? state : {path, data: null, error: null};
 }
@@ -106,39 +122,64 @@ export function useView(path, every = 5000, schema = 'spectator-view/2', refresh
 let generation = 0;
 /** Pages of a list route (`items`, `next`), continuing from the known cursor until it ends. */
 async function pages(path, after, token) {
-  let items = [], last = null;
+  let items = [], last = null, next = after, done = false;
   for (let page = 0; page < 40; page++) {
-    const body = await viewerGet(`${path}${path.includes('?') ? '&' : '?'}after=${after}&limit=${LIMIT}`);
+    const body = await viewerGet(`${path}${path.includes('?') ? '&' : '?'}after=${next}&limit=${LIMIT}`);
     if (token !== generation) return null;
     items = items.concat(body.items || []);
     last = body;
-    if (body.next === null || body.next === undefined) break;
-    after = body.next;
+    if (body.next === null || body.next === undefined) { done = true; next = null; break; }
+    next = body.next;
   }
-  return {items, last};
+  return {items, last, next, done};
 }
 
 async function pollRunOnce(run, token) {
   const summary = await viewerGet(runPath(run, 'summary'));
   const seen = store.steps.length ? store.steps[store.steps.length - 1].seq : 0;
   const steps = await pages(runPath(run, 'steps'), seen, token);
-  if (!steps) return;
-  const known = store.requests.length ? store.requests[store.requests.length - 1].id : 0;
-  const requests = await pages(runPath(run, 'requests'), known, token);
-  if (!requests || token !== generation) return;
-  set({summary, steps: store.steps.concat(steps.items), requests: store.requests.concat(requests.items),
-    markers: requests.last && requests.last.markers ? requests.last.markers : store.markers});
+  if (!steps || token !== generation) return;
+  set({summary, steps: steps.items.length ? store.steps.concat(steps.items) : store.steps});
   announce();
+  await pollFeed(run, token, summary);
+}
+
+let feedPolls = 0;
+/** The feed's recent part replaces what was held from the same point on, so an entry that moved or settled is not kept
+ *  twice. A run that is no longer live has its feed read whole (continuing past 40 pages until `next` is null), after
+ *  which it does not change. */
+async function pollFeed(run, token, {live, state}) {
+  if (!live && store.feedFinalized === state) return;
+  const continuingFinal = !live && store.feedFinalCursor !== null;
+  const whole = !continuingFinal && (!live || !store.feedMeta || feedPolls++ % FEED_WHOLE === FEED_WHOLE - 1);
+  const keep = continuingFinal ? store.feed.length : whole ? 0 : Math.max(0, store.feed.length - FEED_OVERLAP);
+  const cursor = continuingFinal ? store.feedFinalCursor : keep ? store.feed[keep - 1].order : 0;
+  const found = await pages(runPath(run, 'feed'), cursor, token);
+  if (!found || token !== generation) return;
+  const {source, total, counts} = found.last;
+  const read = new Set(found.items.map(e => e.id));
+  set({
+    feed: store.feed.slice(0, keep).filter(e => !read.has(e.id)).concat(found.items),
+    feedMeta: {source, total, counts},
+    feedFinalized: !live && found.done ? state : null,
+    feedFinalCursor: !live && !found.done ? found.next : null,
+  });
 }
 
 // Until the owner picks a run, the page follows the live run, including one listed after the first load.
 let ownerPicked = false;
-export function selectRun(run) {
+export function selectRun(session) {
   ownerPicked = true;
-  if (run === store.runId) return;
+  if (session === store.runId) return;
   generation++;
-  set({runId: run, summary: null, steps: [], requests: [], markers: [], cursor: null});
+  set({runId: session, ...EMPTY_RUN});
   announce();
+}
+/** The session of a run that a recorded anchor names by its run name, as the viewer's own routes resolve it. */
+export function sessionOf(name) {
+  const runs = store.runs || [];
+  const found = runs.find(r => r.session === name) || runs.find(r => r.run === name);
+  return found ? found.session : null;
 }
 
 let runsTimer = null, runTimer = null;
@@ -148,10 +189,10 @@ async function loadRuns() {
     const runs = listing ? listing.items : store.runs || [];
     const patch = {runs};
     const live = runs.find(r => r.state === 'live');
-    const shown = runs.some(r => r.run === store.runId);
-    if (!store.runId || !shown || (!ownerPicked && live && live.run !== store.runId)) {
+    const shown = runs.some(r => r.session === store.runId);
+    if (!store.runId || !shown || (!ownerPicked && live && live.session !== store.runId)) {
       const pick = live || runs[0];
-      if (pick) { generation++; Object.assign(patch, {runId: pick.run, summary: null, steps: [], requests: [], markers: [], cursor: null}); }
+      if (pick) { generation++; Object.assign(patch, {runId: pick.session, ...EMPTY_RUN}); }
     }
     set(patch);
     announce();
@@ -172,23 +213,25 @@ export function startPolling() {
 }
 
 /* ---------------------------------------------------------------- playhead */
-/** Epoch seconds of the run's first step or request: the viewer reports no separate start time. */
-export function runStart() {
-  const walls = [store.steps[0] && store.steps[0].wall, store.requests[0] && store.requests[0].wall].filter(w => typeof w === 'number');
-  return walls.length ? Math.min(...walls) : 0;
-}
-export const liveRun =() => (store.runs || []).find(r => r.state === 'live') || null;
-export const selectedRun = () => (store.runs || []).find(r => r.run === store.runId) || null;
+/** Epoch seconds of the run's first step. */
+export const runStart = () => (store.steps[0] && typeof store.steps[0].wall === 'number' ? store.steps[0].wall : 0);
+export const liveRun = () => (store.runs || []).find(r => r.state === 'live') || null;
+export const selectedRun = () => (store.runs || []).find(r => r.session === store.runId) || null;
 /** False only while the owner has moved the playhead into history; an unavailable viewer counts as live. */
 export function isLive() {
   if (!store.viewerOk) return true;
   return store.cursor === null;
 }
+/** The playhead follows the live run now: neither moved into history nor held, and the selected run is the live one. */
+export const followingLive = () => selectedRun()?.state === 'live' && isLive() && !store.held;
+/** The index of the step at or after `seq`, else the last one; -1 without steps. */
+export function indexOfSeq(seq) {
+  const i = store.steps.findIndex(s => s.seq >= seq);
+  return i < 0 ? store.steps.length - 1 : i;
+}
 export function cursorIndex() {
   if (!store.steps.length) return -1;
-  if (store.cursor === null) return store.steps.length - 1;
-  const i = store.steps.findIndex(s => s.seq >= store.cursor);
-  return i < 0 ? store.steps.length - 1 : i;
+  return store.cursor === null ? store.steps.length - 1 : indexOfSeq(store.cursor);
 }
 export function setCursorIndex(index) {
   const steps = store.steps;
@@ -199,19 +242,30 @@ export function setCursorIndex(index) {
   set({cursor: atEdge && run && run.state === 'live' ? null : steps[i].seq});
   announce();
 }
+/** Put the playhead on a recorded step; unlike a move, this never falls back to following live. */
+export function setCursorSeq(seq) { set({cursor: seq}); announce(); }
+/** Open Watch at one step of the selected run. */
+export function jumpToSeq(seq) {
+  setCursorSeq(seq);
+  if (location.hash !== '#watch') location.hash = '#watch';
+}
 export function goLive() { set({cursor: null}); announce(); }
 
+/** The facts the Pause sheet repeats: those of the run that Pause would end, or none. Another run's are never given. */
 export function announce() {
-  const s = store.summary;
-  const facts = s ? `Decision ${s.decisions ?? '?'}, $${Number(s.dollars ?? 0).toFixed(2)} spent.` : '';
+  const status = store.control.status;
+  const s = store.summary && status && store.summary.session === status.session ? store.summary : null;
+  const reported = s && s.host_telemetry ? s.host_telemetry.reported_cost_usd : null;
+  const money = reported !== null && reported !== undefined ? `$${Number(reported).toFixed(2)} spent (provider-reported)` : s ? `$${Number(s.dollars ?? 0).toFixed(2)} spent (estimated)` : '';
+  const facts = s ? `Decision ${s.decisions ?? '?'}, ${money}.` : '';
   document.dispatchEvent(new CustomEvent('enactive:facts', {detail: {text: store.viewerOk ? facts : ''}}));
 }
 
 /* ---------------------------------------------------------------- control events (from control.js) */
 document.addEventListener('enactive:control', event => {
-  const flipped = store.control.ok !== event.detail.ok;
-  store.control = {...store.control, ok: event.detail.ok, status: event.detail.status};
-  if (flipped) set({});
+  const before = store.control;
+  store.control = {...before, ok: event.detail.ok, status: event.detail.status};
+  if (before.ok !== event.detail.ok || before.status?.session !== event.detail.status?.session) { set({}); announce(); }
 });
 document.addEventListener('enactive:frame', event => set({control: {...store.control, frameUrl: event.detail.url, frameSource: event.detail.source}}));
 document.addEventListener('enactive:theme', () => set({themeEpoch: store.themeEpoch + 1}));

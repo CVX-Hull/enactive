@@ -4,8 +4,8 @@ docs/contracts/spectator-view.md).
 The frame is a health strip, the container inventory and the four #397 forgetting episodes over sealed traces. Every
 builder is a pure read: sidecar container indexes (`data/containers/*.json`), tracked probe episodes
 (`data/evaluation/probes/*/episodes.json`) and the catalog's evaluation stores. Nothing here writes, and nothing it
-computes reaches the player or the curator (ADR008). Slots that need a later phase's data say so
-(`not-yet-measured` with the phase that delivers them) instead of showing a number.
+computes reaches the player or the curator (ADR008). A slot without its data says so
+(`no-data`, or `not-yet-measured` with the phase that delivers it) instead of showing a number.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from harness.evaluation.core.probes import ProbeError, episodes as validate_epis
 from harness.trace.sidecar import INDEX_SCHEMA, ManifestError, validate
 
 from .catalog import Catalog, RunInfo, ViewError
-from . import views
+from . import curator_runner, views
 
 API = 'spectator-frame/1'
 DATA_ROOT = Path(__file__).resolve().parents[2] / 'data'
@@ -32,15 +32,14 @@ class FrameSources:
     curator_results: tuple[tuple[str, Path], ...] = ()
     curator_sessions: tuple[tuple[str, Path], ...] = ()
     curator_runner_status: Path | None = None  # the curator runner's status.json, read at each request
+    curator_grooming: Path | None = None  # one boundary grooming receipt, shown only for the run it names
 
 
 # The health strip's slots (ADR 009's spectator direction) and the phase that first delivers each. `actor_cadence` is measured from sealed
-# actor sessions already; the rest need a curator, gate, snapshots or programs that exist only from ADR 009's curator
-# and memory phase or its programs and monitor phase.
+# actor sessions and `curator_lag` from the curator runner's status file; the rest have no measured source here.
 CURATOR_AND_MEMORY = 'curator-and-memory'
 PROGRAMS_AND_MONITOR = 'programs-and-monitor'
 NOT_YET = (
-    ('curator_lag', 'Curator lag', CURATOR_AND_MEMORY),
     ('gate_pass_rate', 'Gate pass rate', CURATOR_AND_MEMORY),
     ('snapshot_freshness', 'Snapshot freshness', CURATOR_AND_MEMORY),
     ('program_delegation_share', 'Program delegation share', PROGRAMS_AND_MONITOR),
@@ -141,10 +140,24 @@ def actor_cadence(catalog: Catalog, runs: list[tuple[dict, RunInfo]]) -> dict:
         steps_per_game_hour=steps / hours if hours else None, dollars=sum(info.dollars for _, info in readable))
 
 
-def health(catalog: Catalog, sources: FrameSources) -> dict:
+def curator_lag(sources: FrameSources, now: float) -> dict:
+    """The curator runner's own lag (finished operations after its covered prefix), as its status file states it."""
+    slot = dict(id='curator_lag', label='Curator lag')
+    read = curator_runner.status(sources.curator_runner_status, now)
+    status = read['status']
+    if status is None:
+        return dict(slot, state='no-data', detail=f"curator runner status: {read['source_status'].replace('_', ' ')}")
+    if type(status['lag']) is not int:
+        return dict(slot, state='no-data', detail='the curator runner does not state its lag')
+    latest = status['latest_version']
+    return dict(slot, state='measured', source='recorded', lag=status['lag'], backlog=status['backlog'],
+        runner_state=status['state'], latest_version=latest['version'] if isinstance(latest, dict) else latest)
+
+
+def health(catalog: Catalog, sources: FrameSources, now: float) -> dict:
     manifests = container_manifests(sources)
     runs = container_runs(catalog, manifests)
-    slots = [actor_cadence(catalog, runs)]
+    slots = [actor_cadence(catalog, runs), curator_lag(sources, now)]
     slots += [dict(id=slot_id, label=label, state='not-yet-measured', phase=phase) for slot_id, label, phase in NOT_YET]
     return dict(slots=slots, containers=len(manifests), runs=len(runs))
 

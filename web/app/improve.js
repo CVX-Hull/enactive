@@ -2,21 +2,11 @@
 import {html, useState, useMemo, Panel, Pv, Waiting, Table, Insufficient, Callout, Verdict, fmtMoney, pct, trim, median, quantile, label} from './ui.js';
 import {store, useView, selectRun} from './data.js';
 import {Chart, dotsOption} from './charts.js';
-import {SubNav} from './diagnose.js';
-
-export const IMPROVE_TABS = [['changes', 'Changes'], ['failures', 'Failure modes'], ['components', 'Components by arm']];
-
-export function Improve({section}) {
-  const current = IMPROVE_TABS.some(t => t[0] === section) ? section : 'changes';
-  const body = current === 'changes' ? html`<${Changes} />` : current === 'failures' ? html`<${Failures} />` : html`<${Components} />`;
-  return html`<section class="grid" data-view="improve" aria-label="Improve">
-    <div class="s12"><${SubNav} tabs=${IMPROVE_TABS} base="improve" current=${current} label="Improve sections" /></div>${body}</section>`;
-}
 
 const metricName = m => (m ? `${m.name}${m.key ? ` · ${m.key}` : ''}` : '—');
 const groupText = g => (g && g.n ? `${trim(+g.mean.toFixed(3))} mean, ${trim(+g.median.toFixed(3))} median (n ${g.n})` : 'no values');
 
-function Changes() {
+export function Changes() {
   const {data, error} = useView('improve/changes');
   const [sel, setSel] = useState(null);
   const changes = data ? data.changes || [] : [];
@@ -50,19 +40,19 @@ function Changes() {
       <li>Guards report any harm to survival, cost or setup. A pre-registered rule, where one exists, decides adoption.</li></ul><//>`;
 }
 
-function Failures() {
+export function Failures() {
   const {data, error} = useView('improve/failures');
   const [sel, setSel] = useState(null);
   if (!data) return html`<${Panel} title="Failure modes" span="s12"><${Waiting} store=${store} what="failure modes" error=${error} /><//>`;
   const modes = data.failures || [];
   const m = modes.find(x => x.code === sel) || modes[0];
-  const open = item => { selectRun(item.run); location.hash = '#run/overview'; };
+  const open = item => { selectRun(item.session); location.hash = '#diagnostics'; };
   return html`<${Panel} title="Failure modes ranked by impact" note=${`deaths first, then money spent inside the failure · taxonomy version ${data.taxonomy_version ?? '?'}`} span="s12">
       <${Table} columns=${[{title: 'Failure mode', render: x => x.name}, {title: 'Occurrences', num: true, key: 'occurrences'}, {title: 'Runs', num: true, key: 'runs'},
         {title: 'Decisions inside', num: true, render: x => x.decisions || '—'}, {title: '$ inside', num: true, render: x => (x.dollars ? fmtMoney(x.dollars) : '—')},
         {title: 'Source', render: x => (x.sources.length ? x.sources.map(s => html`<${Pv} source=${s} /> `) : html`<span class="note">none yet</span>`)}]}
         rows=${modes} onPick=${(i, x) => setSel(x.code)} selected=${m ? modes.indexOf(m) : -1} empty="No failure modes recorded." /><//>
-    ${m ? html`<${Panel} title=${`${m.name}: every occurrence`} note="open a row in Diagnose to see its run" span="s12">
+    ${m ? html`<${Panel} title=${`${m.name}: every occurrence`} note="open a row to see its run" span="s12">
       <p class="note">${m.definition}</p>
       <${Table} columns=${[{title: 'Run', key: 'run'}, {title: 'Decisions', num: true, render: x => (x.decision_from === null ? '—' : `${x.decision_from}–${x.decision_to}`)}, {title: 'Length', num: true, render: x => x.decisions || '—'},
         {title: '$', num: true, render: x => (x.dollars ? x.dollars.toFixed(2) : '—')}, {title: 'Source', render: x => html`<${Pv} source=${x.source} />`}, {title: 'Note', wrap: true, render: x => x.note || x.reason || ''}]}
@@ -72,7 +62,7 @@ function Failures() {
 const COMPONENT_METRICS = [['Routine pace (game s / decision)', 'pace.routine_seconds_per_decision'], ['Out-of-play share', 'mode.out_of_play_share', 'pct'],
   ['Longest stall', 'stall.longest'], ['Stalls', 'stall.count'], ['$ per decision', 'host.dollars_per_decision', 'money'],
   ['Large-rewrite share of spend', 'host.large_rewrite_share', 'pct'], ['Survival (game h)', 'survival.game_hours']];
-function Components() {
+export function Components() {
   const runs = store.runs;
   if (!runs) return html`<${Panel} title="Components by arm" span="s12"><${Waiting} store=${store} what="runs" /><//>`;
   const scored = runs.filter(r => !r.outcome.lost);

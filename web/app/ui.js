@@ -1,8 +1,9 @@
 // Shared UI pieces: htm bound to Preact, provenance chips, formatting, small components.
 import {h, render, Fragment, createPortal} from '../vendor/preact.js';
 import htm from '../vendor/htm.js';
+import {useState as useStateHook} from '../vendor/hooks.js';
 export {h, render, Fragment, createPortal};
-export {useState, useEffect, useRef, useMemo, useCallback} from '../vendor/hooks.js';
+export {useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback} from '../vendor/hooks.js';
 export const html = htm.bind(h);
 
 /* ---------------------------------------------------------------- provenance */
@@ -25,12 +26,13 @@ export function validationText(check) {
 export function Unvalidated({metric}) {
   return metric.validated === false ? html` <span class="state watch" title="A reader this value depends on has not passed held-out validation">unvalidated</span>` : null;
 }
-export function ReadChip({reading}) {
+export function readingNote(reading) {
   const bits = [];
   if (typeof reading.confidence === 'number') bits.push(`${Math.round(reading.confidence * 100)}%`);
   bits.push(validationText(reading.validation));
-  return html`<${Pv} source="read" detail=${bits.join(' · ')} />`;
+  return bits.join(' · ');
 }
+export const ReadChip = ({reading}) => html`<${Pv} source="read" detail=${readingNote(reading)} />`;
 
 /* ---------------------------------------------------------------- formatting */
 export const fmtH = x => (x === null || x === undefined ? '—' : Number(x).toFixed(2));
@@ -38,14 +40,26 @@ export const fmtMoney = (x, digits = 2) => (x === null || x === undefined ? '—
 export const pct = (x, digits = 0) => (x === null || x === undefined ? '—' : `${(x * 100).toFixed(digits)}%`);
 export const trim = x => (x === null || x === undefined ? '—' : Number.isInteger(x) ? String(x) : String(+Number(x).toFixed(3)));
 export const bytes = b => (b === null || b === undefined ? '—' : b >= 1e6 ? `${(b / 1e6).toFixed(2)} MB` : `${(b / 1e3).toFixed(1)} KB`);
-export const mmss = seconds => `+${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
+/** Token counts in thousands, one decimal from 1,000 up. */
+export const kilo = n => (n === null || n === undefined ? '—' : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+export const count = n => (n === null || n === undefined ? '—' : Number(n).toLocaleString('en-US'));
+export const plural = (n, noun) => `${count(n)} ${noun}${n === 1 ? '' : 's'}`;
+export const mmss = seconds => `+${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 export const shortId = id => (typeof id === 'string' && id.length > 12 ? `${id.slice(0, 8)}…` : id);
 export const runName = run => (run ? shortId(run.run) : '—');
+export const clockTime = ms => new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 /** Game time is whole seconds from the game's epoch; the day counts from 1. */
 export function gameClock(seconds) {
   if (seconds === null || seconds === undefined) return '—';
   const day = Math.floor(seconds / 86400) + 1, rest = seconds % 86400;
   return `day ${day}, ${String(Math.floor(rest / 3600)).padStart(2, '0')}:${String(Math.floor(rest % 3600 / 60)).padStart(2, '0')}`;
+}
+/** One input as a person reads it: `key:ENTER` is ENTER, typed text is quoted, anything else keeps its kind. */
+export function keyText(key) {
+  if (key.startsWith('key:')) return key.slice(4);
+  if (key.startsWith('text:')) return `“${key.slice(5)}”`;
+  if (key.startsWith('wait:')) return `wait ${key.slice(5)}`;
+  return key;
 }
 /** One comparable number from a stored metric value (mirrors the viewer's own reduction). */
 export function scalar(value) {
@@ -79,6 +93,21 @@ export function Panel({title, note, span = 's12', children, className = ''}) {
 export const Insufficient = ({children}) => html`<div class="insuf">${children}</div>`;
 export const Callout = ({children}) => html`<div class="callout">${children}</div>`;
 
+/** A closed section whose body mounts (and fetches) only once it is opened. `open` opens it from a link. */
+export function Disclosure({id, title, note, open = false, children}) {
+  const [shown, setShown] = useStateHook(open);
+  const visible = shown || open;
+  return html`<details class="disclosure s12" id=${id} open=${visible} onToggle=${e => { if (e.target === e.currentTarget) setShown(e.currentTarget.open); }}>
+    <summary><span class="dtitle">${title}</span>${note ? html`<span class="note">${note}</span>` : null}</summary>
+    ${visible ? html`<div class="grid dbody">${children()}</div>` : null}</details>`;
+}
+
+/** One choice of several, as a row of pressed buttons. */
+export function Segmented({label: aria, options, value, onChange, className = ''}) {
+  return html`<span class="seg ${className}" role="group" aria-label=${aria}>${options.map(o => html`<button type="button" id=${o.id} data-value=${o.value}
+    aria-pressed=${o.value === value} title=${o.title} disabled=${o.disabled} onClick=${() => onChange(o.value)}>${o.text}${o.count !== undefined ? html` <span class="n">${o.count}</span>` : null}</button>`)}</span>`;
+}
+
 /** Waiting or unavailable placeholder for a viewer-backed panel that has no data yet. */
 export function Waiting({store, what = 'data', error}) {
   if (!store.viewerOk) return html`<div class="insuf" role="status">Viewer unavailable. ${what} will appear when it returns.</div>`;
@@ -91,6 +120,10 @@ export function Table({columns, rows, onPick, selected, empty = 'Nothing recorde
   return html`<div class="scroll"><table class="data"><thead><tr>${columns.map(c => html`<th class=${c.num ? 'num' : ''}>${c.title}</th>`)}</tr></thead>
     <tbody>${rows.map((row, i) => html`<tr class=${selected === i ? 'sel' : ''}>${columns.map((c, k) => html`<td class="${c.num ? 'num' : ''} ${c.wrap ? 'wrapcell' : ''}">${
       onPick && k === 0 ? html`<button type="button" class="link" aria-pressed=${selected === i} onClick=${() => onPick(i, row)}>${c.render ? c.render(row, i) : row[c.key]}</button>` : c.render ? c.render(row, i) : row[c.key]}</td>`)}</tr>`)}</tbody></table></div>`;
+}
+
+export function SubNav({tabs, base, current, label: aria}) {
+  return html`<nav class="subnav" aria-label=${aria}>${tabs.map(([id, text]) => html`<a href=${`#${base}/${id}`} aria-current=${current === id ? 'page' : null}>${text}</a>`)}</nav>`;
 }
 
 export const Verdict = ({verdict}) => {

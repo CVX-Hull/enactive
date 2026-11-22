@@ -1,6 +1,7 @@
-"""Read-only, bounded projection of configured curator result journals."""
+"""Read-only, bounded projection of configured curator result journals, and the viewer's bounded file reads."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
 import math
@@ -12,8 +13,7 @@ import stat
 
 from harness.evaluation.core.sources import MAX_JSON_FILE_BYTES
 from harness.trace.sidecar import ManifestError, validate
-from .catalog import ViewError
-from .knowledge import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT
+from .catalog import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, ViewError
 
 LABEL = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}')
 VERSION = re.compile(r'v(0|[1-9][0-9]*)')
@@ -86,23 +86,85 @@ def project(row, index):
     return item
 
 
-def read_file(path):
+DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+FILE = os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW
+
+
+def contents(fd):
+    """(status, snapshot, bytes) of one opened regular file, at most the 16 MiB input limit. Closes `fd`."""
     try:
-        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
-        with os.fdopen(fd, 'rb') as stream:
-            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
-                return 'unreadable', None, None
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return 'unreadable', None, None
+        with os.fdopen(fd, 'rb', closefd=False) as stream:
             data = stream.read(MAX_JSON_FILE_BYTES + 1)
-    except FileNotFoundError:
-        return 'missing', None, None
-    except OSError:
-        return 'unreadable', None, None
+    finally:
+        os.close(fd)
     snapshot = {'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)}
     if len(data) > MAX_JSON_FILE_BYTES:
         return 'too_large', snapshot, None
     if not data:
         return 'empty', snapshot, None
     return 'available', snapshot, data
+
+
+def attempt(read):
+    try:
+        return read()
+    except FileNotFoundError:
+        return 'missing', None, None
+    except OSError:
+        return 'unreadable', None, None
+
+
+def read_file(path):
+    """One file the operator named: its directories are the operator's choice, and the file is no symlink."""
+    return attempt(lambda: contents(os.open(path, FILE)))
+
+
+@contextmanager
+def opened_directory(root, *parts):
+    """A descriptor of `root`/`parts`, opened one component at a time: a symlink at any of them, `root` included, is an
+    OSError. Nothing under a run directory can therefore lead a reader out of it."""
+    fd = os.open(root, DIRECTORY)
+    try:
+        for name in parts:
+            inner = os.open(component(name), DIRECTORY, dir_fd=fd)
+            os.close(fd)
+            fd = inner
+        yield fd
+    finally:
+        os.close(fd)
+
+
+def component(name):
+    if not name or name in ('.', '..') or '/' in name:
+        raise ValueError(f'not one path component: {name!r}')
+    return name
+
+
+def read_rooted(root, *parts):
+    """`read_file` for a file of a run package, with no symlink on the way from `root`."""
+    def read():
+        with opened_directory(root, *parts[:-1]) as directory:
+            fd = os.open(component(parts[-1]), FILE, dir_fd=directory)
+        return contents(fd)
+    return attempt(read)
+
+
+def rooted_status(root, *parts):
+    """The `lstat` of a file of a run package, or None: missing, or behind a symlink."""
+    try:
+        with opened_directory(root, *parts[:-1]) as directory:
+            return os.stat(component(parts[-1]), dir_fd=directory, follow_symlinks=False)
+    except OSError:
+        return None
+
+
+def rooted_entries(root, *parts):
+    """(name, `lstat`) of each entry of a run package's directory, by name. A missing directory or one behind a symlink
+    is an OSError."""
+    with opened_directory(root, *parts) as directory:
+        return [(name, os.stat(name, dir_fd=directory, follow_symlinks=False)) for name in sorted(os.listdir(directory))]
 
 
 def read(path):

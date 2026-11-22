@@ -148,13 +148,61 @@ def test_health_measures_actor_cadence_and_never_invents_the_rest(frame):
     assert cadence['decisions'] == 13 and cadence['steps'] == 14 and cadence['game_hours'] == pytest.approx(hours)
     assert cadence['decisions_per_game_hour'] == pytest.approx(13 / hours)
     assert cadence['steps_per_game_hour'] == pytest.approx(14 / hours)
-    phases = {slot_id: slot for slot_id, slot in slots.items() if slot_id != 'actor_cadence'}
+    assert slots['curator_lag'] == dict(id='curator_lag', label='Curator lag', state='no-data', detail='curator runner status: not configured')
+    phases = {slot_id: slot for slot_id, slot in slots.items() if slot_id not in ('actor_cadence', 'curator_lag')}
     curator, programs = 'curator-and-memory', 'programs-and-monitor'
     assert {i: (s['state'], s['phase']) for i, s in phases.items()} == {
-        'curator_lag': ('not-yet-measured', curator), 'gate_pass_rate': ('not-yet-measured', curator),
+        'gate_pass_rate': ('not-yet-measured', curator),
         'snapshot_freshness': ('not-yet-measured', curator), 'program_delegation_share': ('not-yet-measured', programs),
         'monitor_alerts': ('not-yet-measured', programs), 'spend_against_cap': ('not-yet-measured', curator)}
     assert all(set(slot) == {'id', 'label', 'state', 'phase'} for slot in phases.values())     # no number rides along
+
+
+def test_health_states_the_curator_runners_own_lag_and_never_a_guess(tmp_path):
+    path = tmp_path / 'status.json'
+    lag = lambda: {s['id']: s for s in runner_status_client(tmp_path, path).get('/api/view/frame/health').json()['slots']}['curator_lag']
+    assert lag()['state'] == 'no-data' and lag()['detail'] == 'curator runner status: missing'
+    path.write_text(json.dumps(dict(schema='curator-runner-status/1', state='in-session', lag=20, backlog=21,
+        latest_version=dict(version='v31', coverage=None))))
+    assert lag() == dict(id='curator_lag', label='Curator lag', state='measured', source='recorded', lag=20, backlog=21,
+        runner_state='in-session', latest_version='v31')
+    path.write_text(json.dumps(dict(schema='curator-runner-status/1', state='polling', lag='unknown', backlog=3)))
+    assert lag()['state'] == 'no-data' and 'lag' not in lag()
+    path.write_text('{"schema":')
+    assert lag()['detail'] == 'curator runner status: malformed'
+
+
+def test_the_runner_status_of_a_selected_run_is_its_own(frame):
+    """A configured status file belongs to the live run: a recorded run shows its own runner's file or none."""
+    _, catalog, sources, tmp_path = frame
+    configured = tmp_path / 'live-status.json'
+    configured.write_text(json.dumps(dict(schema='curator-runner-status/1', state='polling', lag=1)))
+    client = TestClient(create_app(catalog, frame_sources=FrameSources(sources.containers, sources.probes, curator_runner_status=configured)))
+    assert client.get(RUNNER_STATUS).json()['status']['lag'] == 1
+    assert client.get(RUNNER_STATUS, params=dict(run=SESSION)).json()['source_status'] == 'missing'
+    own = tmp_path / 'runs' / 'base1' / 'curator-runner' / 'status.json'
+    own.parent.mkdir()
+    own.write_text(json.dumps(dict(schema='curator-runner-status/1', state='ended', lag=7)))
+    assert client.get(RUNNER_STATUS, params=dict(run='base1')).json()['status']['lag'] == 7
+    assert client.get(RUNNER_STATUS, params=dict(run='nope')).status_code == 404
+
+
+@pytest.mark.parametrize('component', ['curator-runner', 'curator-runner/status.json'])
+def test_the_runner_status_never_leaves_the_run_package_through_a_symlink(frame, component):
+    _, catalog, sources, tmp_path = frame
+    run = tmp_path / 'runs' / 'base1'
+    own = run / 'curator-runner' / 'status.json'
+    own.parent.mkdir()
+    own.write_text(json.dumps(dict(schema='curator-runner-status/1', state='ended', lag=7)))
+    # As the supervisor configures it, by its path in the package, and as the page asks for it, by the run.
+    client = TestClient(create_app(catalog, frame_sources=FrameSources(sources.containers, sources.probes, curator_runner_status=own)))
+    asked = (dict(), dict(run='base1'))
+    assert [client.get(RUNNER_STATUS, params=p).json()['status']['lag'] for p in asked] == [7, 7]
+    (run / component).rename(tmp_path / 'aside')
+    (run / component).symlink_to(tmp_path / 'aside', target_is_directory=component == 'curator-runner')
+    assert [client.get(RUNNER_STATUS, params=p).json()['source_status'] for p in asked] == ['unreadable', 'unreadable']
+    slots = {slot['id']: slot for slot in client.get('/api/view/frame/health').json()['slots']}
+    assert slots['curator_lag']['state'] == 'no-data'
 
 
 def test_health_without_container_runs_reports_no_data_rather_than_zero(frame):

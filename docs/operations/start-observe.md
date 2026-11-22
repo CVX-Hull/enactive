@@ -47,17 +47,18 @@ After the supervisor exits, open completed runs through the
 [recorded browser entry](#recorded-browser-entry).
 
 For recorded curator results, repeat `--curator-results LABEL=FILE` on the supervisor
-command, naming existing current result files or snapshots. The Curator tab selects
-those labels and displays recorded submission/restore status and versions. No source
-is selected by default; labels do not associate a journal with the live player run.
-Files are read only, with a 16 MiB input ceiling and digest-bound paging. Empty,
-unavailable, unsupported and unknown data stay explicit; publication is not factual
+command, naming existing current result files or snapshots. Under **Memory & Curator** →
+**Additional recorded sources**, select those labels to display recorded submission/restore
+status and versions. No source is selected by default; labels do not associate a journal with
+the live player run. Files are read only, with a 16 MiB input ceiling and digest-bound paging.
+Empty, unavailable, unsupported and unknown data stay explicit; publication is not factual
 verification or measured lag. See the [result contract](../contracts/spectator-view.md#recorded-curator-results).
 
 For recorded curator sessions, repeat `--curator-sessions LABEL=FILE` with individual
-terminal `close-out.json` files. Select the operator-supplied alias in the Curator tab;
-the recorded session and its draft collection events do not establish a run association
-or current draft state. See the [session contract](../contracts/spectator-view.md#recorded-curator-sessions).
+terminal `close-out.json` files. Select the operator-supplied alias under **Memory & Curator** →
+**Additional recorded sources**; the recorded session and its draft collection events do not
+establish a run association or current draft state. See the
+[session contract](../contracts/spectator-view.md#recorded-curator-sessions).
 
 If the page says **viewer unavailable**, the run, the frame and
 Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
@@ -95,8 +96,15 @@ session-named subdirectories. `--runs` names a parent directory of campaign
 packages with their manifests and original sources. For a sealed admission,
 point `--runs` to the parent of its package and use a session-named copy of its
 final evaluation files under a separate evaluation root. The viewer opens
-Run Overview. Select a run and open **Recorded playback** to inspect its
-findings and original frames with the shared playhead.
+**Watch** with the selected run's recorded screen, timeline and Story Feed; use
+**Memory & Curator** and **Diagnostics** to inspect curated knowledge, spend and telemetry.
+
+To include what an admission's boundary grooming spent, add `--curator-grooming FILE` with
+its `grooming-summary.json`. It is shown only for the run that receipt names; without it
+**Diagnostics** says that grooming is recorded outside the admission and marks the combined
+figure partial. Name the package directory itself, not a symlink to it: the viewer
+[opens a package's files](../contracts/spectator-view.md#host-telemetry-and-curator-spend)
+without following one.
 
 The recorded page reads existing records, labels unfinished stores, and offers
 recorded playback controls. The CLI reserves the live evaluation option `--run`
@@ -108,7 +116,7 @@ including the control path and independent Pause.
 The page's feed player shows the live control-path frame or the playhead's recorded
 frame:
 - Each frame is decoded before it replaces the last, and is drawn at its own pixel size. It never blanks or rescales as frames arrive.
-- **1:1** (the default), **2×** and **3×** are pixel-exact and scroll instead of scaling. **Fit** scales smoothly within the column and the screen height.
+- **Fit** (the default) scales smoothly within the column and the screen height; **1:1**, **2×** and **3×** are pixel-exact and scroll instead of scaling.
 - **Wide** puts the player first, across the page ([feed player display and controls (#437)](https://github.com/CVX-Hull/enactive/issues/437)).
 - **Hold** freezes the view only. It sends nothing to the run and is separate from Pause.
 - The step buttons move the shared playhead.

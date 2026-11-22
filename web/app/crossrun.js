@@ -27,7 +27,7 @@ export function Explore() {
     <${Select} name="start" text="Start" value=${f.start} onChange=${set('start')} options=${[['', 'all'], ...starts.map(a => [a, a])]} />
     <${Select} name="outcome" text="Outcome" value=${f.outcome} onChange=${set('outcome')} options=${[['', 'all'], ['died', 'died'], ['censored', 'censored'], ['lost', 'lost']]} />
     <${Select} name="metric" text="Metric" value=${f.metric} onChange=${set('metric')} options=${METRICS} /></div>`;
-  return html`<section class="grid" data-view="explore" aria-label="Explore">
+  return html`<section class="grid s12" data-section="explore" aria-label="Explore">
     <${Panel} title="Cohort" note="filter runs, pick a metric, get n, median, spread and a bootstrap interval" span="s12">${filters}
       ${data ? html`<dl class="kv wide" id="cohortsum"><dt>Runs in cohort</dt><dd>${rows.length} (${rows.filter(r => r.outcome === 'died').length} died, ${rows.filter(r => r.outcome === 'lost').length} lost)</dd>
           <dt>${(METRICS.find(m => m[0] === f.metric) || [])[1]}: n with a value</dt><dd>${stat.n}</dd>
@@ -48,7 +48,7 @@ export function Compare() {
   const groups = data ? Object.entries(data.groups).map(([name, g]) => ({name, ...g})) : [];
   const option = useMemo(() => (groups.length ? survivalOption(groups) : null), [data, store.themeEpoch]);
   const excluded = data ? data.excluded : [];
-  return html`<section class="grid" data-view="compare" aria-label="Compare">
+  return html`<section class="grid s12" data-section="compare" aria-label="Compare">
     <${Panel} title=${`Survival by ${byStart ? 'start' : 'arm'}`} note=${data ? `lost runs excluded: ${excluded.map(e => e.run).join(', ') || 'none'}` : ''} span="s12">
       <div class="filters"><label><input type="checkbox" id="strat" checked=${byStart} onChange=${e => setByStart(e.target.checked)} /> Split by start type instead of arm</label></div>
       ${data ? html`<${Table} columns=${[{title: byStart ? 'Start' : 'Arm', key: 'name'}, {title: 'n', num: true, key: 'n'}, {title: 'Deaths', num: true, key: 'deaths'}, {title: 'Censored', num: true, key: 'censored'},

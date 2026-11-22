@@ -83,12 +83,19 @@ async function until(page, fn, arg, timeout = 10000) {
 async function ready(page) {
   await until(page, () => document.getElementById('connection') && document.getElementById('connection').dataset.state === 'ok'
     && document.getElementById('frame') && !document.getElementById('frame').hidden && document.getElementById('frame').naturalWidth > 0);
+  await settled(page);
+}
+/** The tab in the address has its data: Watch its timeline and story, the others their first panel. */
+async function settled(page) {
   await until(page, () => document.querySelector('#app .panel, #app .insuf'));
   const hash = new URL(page.url()).hash;
-  if (hash === '' || hash === '#live') await until(page, () => document.querySelector('#conds li, #pauseanswer') && document.querySelector('#tl canvas'));
+  if (hash === '' || hash.startsWith('#watch')) await until(page, () => document.querySelector('#tl') && document.querySelector('#story .card'));
 }
+const SESSIONS = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(__dirname, 'runs.json'), 'utf8')).items.map(r => [r.run, r.session]));
+/** Choose a fixture run in the picker, whose values are sessions. */
+const pick = (page, run) => page.select('#runpick', SESSIONS[run]);
 async function overflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-module.exports = {startFixture, launch, open, shot, settle, ready, until, stalled, overflow, SHOTS};
+module.exports = {startFixture, launch, open, shot, settle, ready, settled, until, stalled, overflow, pick, SESSIONS, SHOTS};

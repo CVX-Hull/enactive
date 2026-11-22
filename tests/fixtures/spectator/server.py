@@ -8,11 +8,13 @@ It imitates only the parts of the supervised gateway that the page depends on:
 - answers `/api/view/*` from the JSON files beside this script (real viewer responses for one run and the
   cross-run routes, trimmed; `refresh.py` regenerates them),
   or `503 {"viewer": "unavailable"}` while the viewer is switched off; the `frame-*.json` files (the spectator's
-  frame, `spectator-frame/1`) are synthetic and hand-built, not captured, so `refresh.py` does not touch them.
+  frame, `spectator-frame/1`) and everything in `synthetic.py` (the story feed, request telemetry, delivered knowledge,
+  host telemetry and curator figures of the live run) are invented, not captured, so `refresh.py` does not touch them.
+  Every other run has no host trace, delivered knowledge or curator, which is how an older run looks.
 
 With `--viewer URL` the view routes go to a real viewer process instead (the control path stays stubbed).
 
-Test hooks (never part of the product): GET /__fixture/state, POST /__fixture/viewer?mode=down|up|nolive|stale|stale-recorded,
+Test hooks (never part of the product): GET /__fixture/state, POST /__fixture/viewer?mode=down|up|nolive|stale|stale-recorded|ended,
 POST /__fixture/advance?n=5. Standard library only.
 """
 from __future__ import annotations
@@ -34,8 +36,12 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 # The browser runner launches the fixture with isolated Python and no installed dependencies.
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(HERE))
+import synthetic
 from harness.spectator_assets import PAGE_POLICY as CSP, WEB, static_file
 
+LIVE_RUN = 'ceil09'
+SPEND_LIMIT = 5.0
 SESSION = 'c6c09be0b7d43fba2839147651a4f6a5'    # the live run's real session id
 REASONS = {'loop', 'fault', 'spend', 'other'}
 
@@ -50,13 +56,14 @@ class State:
         self.lock = threading.Lock()
         self.steps = load('steps.json')['items']
         self.requests = load('requests.json')
-        self.runs = {row['run'] for row in load('runs.json')['items']}
+        self.sessions = {row['session']: row['run'] for row in load('runs.json')['items']}
         self.png = (HERE / 'frame.png').read_bytes()
         self.sha = hashlib.sha256(self.png).hexdigest()
         self.visible = len(self.steps) - 4
         self.viewer_down = False
         self.no_live = False
         self.stale = False
+        self.ended = False
         self.pauses, self.view_requests = [], []
         self.started = time.time()
 
@@ -162,7 +169,7 @@ def make_handler(state: State):
                 body = load('runs.json')
                 after, limit = int(first('after', 0)), min(500, int(first('limit', 100)))
                 rows = body['items'][after:after + limit + 1]
-                if state.no_live:
+                if state.no_live or state.ended:
                     rows = [dict(row, state='final') for row in rows]
                 if state.stale:
                     # stale: the first-listed run left a live store that was never finalized (#435).
@@ -172,8 +179,7 @@ def make_handler(state: State):
             if route in ('frame/curator-sources', 'frame/curator-session-sources'):
                 self.json(200, dict(schema='spectator-frame/1', items=[], total=0, next=None, limit=500)); return
             if route == 'frame/curator-runner':
-                self.json(200, dict(schema='spectator-frame/1', source_status='not_configured', snapshot=None,
-                                    read_wall=0, status=None)); return
+                self.json(200, synthetic.runner_status(first('run') in (LIVE_RUN, SESSION))); return
             if route in ('frame/health', 'frame/containers', 'frame/episodes'):
                 self.json(200, load('frame-' + route.split('/')[1] + '.json')); return
             if route.startswith('frame/containers/'):
@@ -196,13 +202,37 @@ def make_handler(state: State):
             if not match:
                 self.send_error(404); return
             run, sub = match.groups()
-            if run not in state.runs:
+            run = state.sessions.get(run, run)     # a run by session, or by its name, as the viewer resolves one
+            session = next((s for s, name in state.sessions.items() if name == run), None)
+            if session is None:
                 self.json(404, {'error': 'unknown run'}); return
             if sub.startswith('frame/'):
                 self.reply(200, state.png, 'image/png'); return
-            if sub == 'summary':
+            traced = run == LIVE_RUN
+            shown = state.steps[:visible]
+            if sub in ('summary', 'feed', 'telemetry'):
                 body = load('summary.json')
                 body['custodian_receipt'] = None
+                body['facts']['spend_allowance_usd'] = SPEND_LIMIT
+                body['host_telemetry'] = synthetic.host_telemetry(shown) if traced else None
+                body['curator_spend'] = synthetic.curator_spend() if traced else None
+                body['boundary_grooming'] = synthetic.boundary_grooming()
+                body.update(run=run, session=session)
+                if traced and state.ended:
+                    body.update(state='final', live=False, pause=None, findings=body['findings'] + synthetic.terminal_findings(shown))
+            if sub == 'feed':
+                items = synthetic.feed(shown, body['findings'], not traced)
+                self.json(200, synthetic.feed_page(items, int(first('after', 0)), min(500, int(first('limit', 100))), not traced)); return
+            if sub == 'telemetry':
+                self.json(200, synthetic.telemetry(shown, body, not traced)); return
+            if sub == 'delivered-knowledge':
+                limit = min(500, int(first('limit', 100)))
+                found = synthetic.delivered(shown, first('version'), first('q', ''), first('scope', 'all'), int(first('after', 0)), limit) \
+                    if traced else synthetic.no_knowledge(limit)
+                if found is None:
+                    self.json(404, {'schema': 'spectator-view/2', 'error': 'unknown_version', 'detail': first('version')}); return
+                self.json(200, found); return
+            if sub == 'summary':
                 if run in ('aidA1', 'aidA2', 'aidA3', 'aidA4'):
                     body.update(run=run, state='final', live=False, pause=None)
                 if run == 'aidA1':
@@ -261,6 +291,9 @@ def make_handler(state: State):
                         body['snapshot']['entry_id'] = selected
                         body['snapshot']['items'] = [item for item in body['snapshot']['items'] if item['id'] == selected]
                         body['snapshot']['total'] = len(body['snapshot']['items'])
+                    update = {f'request-{seq}': version for seq, version in synthetic.UPDATES.items()}.get(first('request'))
+                    if update is not None:   # the delivery one story entry names
+                        body['events'] = [synthetic.delivery_event(update)]
                     if actor == 'actor-2':
                         body.update(events=[], calls=[], hints=[], finishes=[], journal_available=False)
                 self.json(200, body); return
@@ -280,6 +313,8 @@ def make_handler(state: State):
                     # nolive: the viewer is up but has not yet listed the live run (its first pass is still running).
                     state.no_live = mode in ('nolive', 'stale-recorded')
                     state.stale = mode in ('stale', 'stale-recorded')
+                    # ended: the live run was evaluated a last time, which added findings, and is now final.
+                    state.ended = mode == 'ended'
                 self.json(200, {'viewer_down': state.viewer_down, 'no_live': state.no_live, 'stale': state.stale}); return
             if url.path == '/__fixture/advance':
                 with state.lock:

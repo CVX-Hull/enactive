@@ -17,6 +17,10 @@ from harness.evaluation.core.records import (EvaluationError, open_readonly, rea
 from harness.evaluation.core.sources import read_json_file, read_json_lines, read_manifest
 
 API = 'spectator-view/2'
+#: Bounds shared by the projections: a text is cut and says so, an identifier is whole or absent, a list states its omissions.
+TEXT_LIMIT = 1024
+ID_LIMIT = 512
+LIST_LIMIT = 100
 DATA_DIR = Path(__file__).resolve().parents[2] / 'data' / 'evaluation'
 
 
