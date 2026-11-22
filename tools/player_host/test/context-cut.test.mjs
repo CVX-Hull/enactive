@@ -21,7 +21,7 @@ const publication = (n, version = 'v1') => ({schema:'coverage-update-entry/1', s
 const restoration = {...publication(0), actor_id:null, operation_id:null, version:null, restored:true};
 const usage = tokens => ({...usageRecord, prompt_tokens:tokens - 5, total_tokens:tokens});
 
-test('route /10 requires a closed context cut policy for the player model only', () => {
+test('the current route requires a closed context cut policy for the player model only', () => {
   const base = route();
   const validate = config => validateConfiguration(config, model.id, 'off');
   assert.equal(validate(base).context_cut, null);
@@ -119,7 +119,7 @@ test('a high-mark cut delivers all leads, clears stale usage and warning, and ke
     return observe(n, 1, [3, 4].includes(n) ? 97_000 : n === 5 ? 12_345 : 16);
   }, {contextCut:tokenCut, maxImages:12});
   const start = events.find(event => event.type === 'host-start');
-  assert.deepEqual([start.schema, start.telemetry_version, start.context_cut], ['player-host/10', 10, tokenCut]);
+  assert.deepEqual([start.schema, start.telemetry_version, start.context_cut], ['player-host/11', 11, tokenCut]);
   assert.ok(start.unsupported_features.includes('compaction'));
   const [held, cut] = cutEvents(events);
   assert.equal(cutEvents(events).length, 2);

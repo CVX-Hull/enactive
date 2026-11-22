@@ -36,7 +36,7 @@ def test_judged_facts_builder_resolves_shared_facts_from_the_recorded_citing_art
         live_knowledge_updates=False,files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={n:hashes['private/'+n] for n in ('knowledge-full.json','units.json')})))
     actor=package/'actors/001';actor.mkdir(parents=True)
-    (actor/'host.jsonl').write_text(json.dumps(dict(type='host-start',schema='player-host/10',telemetry_version=10,actor_id='actor'))+'\n')
+    (actor/'host.jsonl').write_text(json.dumps(dict(type='host-start',schema='player-host/11',telemetry_version=11,actor_id='actor'))+'\n')
     value=build_facts(tmp_path/'memory-measure/result',[package])['admissions']['package']['001']
     route='index' if articles_delivered else 'withheld'
     assert any(f['id']=='fact-3' for f in value[route])
@@ -126,7 +126,7 @@ def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp
     (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/12',session='a'*32, labels=dict(world=None),
         live_knowledge_updates=False,files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')})))
-    events=[dict(type='host-start',schema='player-host/10',telemetry_version=10,session='a'*32,actor_id='b'*32),
+    events=[dict(type='host-start',schema='player-host/11',telemetry_version=11,session='a'*32,actor_id='b'*32),
             dict(type='request-start',request_id='recall-1',request_role='recall'),
             dict(type='response-complete',request_id='recall-1',stop_reason='stop'),
             dict(type='knowledge-delivery',kind='briefing',text='briefing',fact_ids=['brief'],receiving_player_request_id='request-1')]

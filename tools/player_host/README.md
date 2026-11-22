@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/10`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/11`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [player interface component](../../docs/components/player-interface.md) describes
 the adapter's place in the run.
@@ -17,6 +17,8 @@ The campaign driver invokes the frozen `host.argv` followed by a mode word with
 frozen provider/MCP/context inputs; no coding-agent launch or resumed-host fallback
 is supported. Host choice
 is independent of whether a particular model passes gameplay qualification.
+
+## Invocation and settlement
 
 See the [adapter procedure](../../docs/operations/player-host.md#install-and-test-the-adapter) for installation, tests and invocation with the required mode and flags (`validate` with `--config`, `--mcp-config`, `--model` and `--effort`, and `run` with those flags plus `--context`, `--prompt`, `--session`, `--actor-id`, `--pending-control-id`, `--delivered-knowledge`, `--finish-reserve-usd`, `--timeout-seconds` and `-o`, and the one optional flag `--knowledge-updates`).
 
@@ -34,14 +36,16 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/10"`, `model`,
+## Frozen route and serving tier
+
+The closed route has exactly `schema: "player-host/11"`, `model`,
 `api_key_env`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
 `context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
 amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
-text ([the dollar limit](#the-dollar-limit)), the closed [recall configuration](#knowledge-delivery)
-and required `context_cut`. Set `context_cut` to null or a closed object with
+text ([the dollar limit](#the-dollar-limit)), the closed [recall configuration](#knowledge-delivery),
+required `endpoint_costs` and required `context_cut`. Set `context_cut` to null or a closed object with
 safe integers `1 <= low_mark < high_mark < model.contextWindow` and `min_free >= 1`.
 The bounds use the player model's window.
 The adapter rejects other schema versions and missing or invalid fields.
@@ -58,7 +62,7 @@ Freeze `service_tier` as `default` or `priority`. Direct-provider default leaves
 unset; priority adds only `service_tier: "priority"` through Pi's maintained
 `onPayload` hook. Verify support and pricing for the exact provider/model before
 selection. For the tested DeepInfra route, requested priority uses all configured
-rates at1.5× standard, which also raises the bound a request with no cost record
+rates at 1.5× standard, which also raises the bound a request with no cost record
 counts for. This is a
 conservative configured estimate, separate from provider-reported cost,
 actual applied-tier prices and invoices. DeepInfra may serve an unsupported
@@ -69,6 +73,8 @@ triggered by the echo. `host-start.requested_service_tier` records selection;
 remains unknown. Nonstream provider probes do not establish stream-echo support;
 serving tier, cache counts and request spans do not qualify useful apparent latency.
 See [DeepInfra's current contract](https://docs.deepinfra.com/chat/overview#service-tier).
+
+## Request context and session affinity
 
 Freeze the actual provider's image-part allowance explicitly as `max_context_images`,
 the hard peak of pixel images per request; the host imposes no universal provider
@@ -128,6 +134,8 @@ schemas with an `anyOf` union discriminated by `entry_type`. Current player tool
 use a string for `intent`, so the helper never runs its diagnostic for them and
 is a candidate for removal.
 
+## Reasoning and credentials
+
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a
 non-null explicit `thinkingLevelMap` entry, with
@@ -147,34 +155,47 @@ mutates the parent environment or a profile. No key values, headers or raw
 provider exceptions are emitted. Pi cache retention is explicitly `short`, preserving the maintained default
 while preventing an ambient `PI_CACHE_RETENTION` override.
 
+## OpenRouter endpoint routing
 
 For `model.provider: "openrouter"`, require a closed
-`model.compat.openRouterRouting` object with exactly `only: ["FULL_TAG"]`,
-`order: ["FULL_TAG"]`, `allow_fallbacks: false` and `require_parameters: true`.
-Pi1.4.0 owns its provider-policy and nested reasoning serialization; no arbitrary
-payload/header injection is admitted. Direct routes reject this policy. OpenRouter
+`model.compat.openRouterRouting` object with exactly `only`, `order`,
+`allow_fallbacks: false` and `require_parameters: true`. Put one or two distinct full
+endpoint tags in `only` and the identical list in `order`, primary first. A tag
+matches `^[a-z0-9][a-z0-9_./-]{0,127}$`. With two tags, OpenRouter may try the
+second endpoint for the same model before the first token within one host HTTP
+attempt. Model fallback and fallback to undeclared endpoints are unsupported.
+Pi 1.4.0 serializes the routing policy and nested reasoning fields. OpenRouter
 requires configured `service_tier: "default"` and sends that value explicitly to
 exclude workspace tier defaults and priority pool admission. That does not prove
 applied tier or performance. Refresh advertised full tags before each finite
-freeze; base/prefix tags can match variants/regions and are not immutable endpoint
-identities. Actual provider metadata and failures remain evidence, without automatic
-fallback or a claim that Baseten's base tag identifies its FAST benchmark variant.
-`host-start.provider_routing` and `reasoning_format` retain configured policy;
-parsed stream IDs/provider names and optional generation metadata establish only
-what the service actually reports. See [routing](https://openrouter.ai/docs/guides/routing/provider-selection)
-and [tier semantics](https://openrouter.ai/docs/guides/features/service-tiers).
+freeze because base tags can match variants or regions and are not immutable
+endpoint identities.
+[Routing](https://openrouter.ai/docs/guides/routing/provider-selection) ·
+[Tier semantics](https://openrouter.ai/docs/guides/features/service-tiers) ·
+[Same-model failover probe](../../docs/acceptance/2026-11-22-failover-routing-probe-309.md)
 
-One logical inference admits at most two HTTP attempts. For failures before
-assistant output the host uses Pi's maintained abortable provider-retry helper. The host
-alone decides eligibility; its synthesized retry error carries no status, so Pi's
+With two tags, `endpoint_costs` is a closed object with the two declared tags as
+its exact keys. Each value is a closed rate object with finite nonnegative
+`input`, `output`, `cacheRead` and `cacheWrite` numbers in dollars per million
+tokens. Each field of `model.cost` must equal the higher of the two corresponding
+rates. The package uses these maximum rates for the in-flight planning bound.
+Single-endpoint and direct routes set `endpoint_costs` to null. A direct route
+omits `openRouterRouting`.
+
+## HTTP attempts and retry
+
+One logical player request admits at most two host HTTP attempts, the initial
+attempt and one shared retry. Each sends the same declared endpoint order.
+For failures before assistant output, the host uses Pi's abortable provider-retry
+helper. The host alone decides eligibility. Its synthesized retry error carries no status, so Pi's
 broader classifier (which also admits 408, 409 and 500) never widens the set. The
 declared classes, recorded as `provider-retry.retry_class`, are:
 
 - `server-error`: HTTP 502, 503 or 504, by status alone. HTML or non-JSON bodies
-  are eligible, as is a refusal body that fails or exceeds16KiB while being read.
+  are eligible, as is a refusal body that fails or exceeds 16 KiB while being read.
 - `pre-header-rejection`: a rejected fetch with no response headers. A request
   timeout, cancellation or host deadline latches first and is never retried.
-- `rate-limit`: HTTP 429 whose classifier reads at most16KiB of a JSON error
+- `rate-limit`: HTTP 429 whose classifier reads at most 16 KiB of a JSON error
   object; explicit authorization/invalid-request kinds, quota/billing/budget/credit
   limits, malformed or unrecognized errors stay terminal. A 429 whose metadata has
   `limit_source:openrouter_admission_control` is eligible even with no message or
@@ -224,10 +245,12 @@ Each actual provider fetch emits a start, including a retry. A refused attempt
 has no request or completion event. All attempts send the same serialized context. The pre-output classes share the
 original request timer across classification, backoff and response reading.
 Every class stays within the original host and custody deadlines. Pi rejects a
-provider-requested retry delay over60seconds (the pinned helper's maintained default); its bounded default backoff applies
+provider-requested retry delay over 60 seconds (the pinned helper's maintained default); its bounded default backoff applies
 when no valid delay is supplied. Cancellation interrupts backoff and bounded error
 reading. The first eligible refusal records unknown usage, without a zero-price
 assumption; another attempt requires spare capacity before any backoff.
+
+## MCP tools and control
 
 The MCP config is the driver's current flat server table, with explicit command,
 args, cwd, enabled tools and finite startup/tool timeouts. `enabled` must be true;
@@ -266,10 +289,12 @@ ordinary tool results before the accepted call.
 The host reserves at most one second (one quarter of short runs) from its total
 budget for cleanup. Stdio closure uses at most 500 ms each for stdin grace and
 post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
-cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
+cleanup share the host budget. SIGINT/SIGTERM use the same abort and closure path.
+
+## Telemetry and accounting
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 9 retains request text/UTF8 counts,
+call IDs where applicable. Telemetry version 11 retains request text/UTF-8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -290,8 +315,11 @@ API keys, private provider errors and private reasoning are excluded.
 
 `response-first-chunk` is the first raw HTTP response-body chunk, including an
 error body, before Pi parses it. `response-backend` reports the backend model ID
-from parsed provider chunks. `response-complete` reports the Pi model/provider,
-terminal stop reason and available usage. Missing provider usage is `usage:null`
+from parsed provider chunks. Each player or recall `response-complete` records
+`reported_provider` from the first usable, sanitized SSE `provider` label, or
+null if it is unavailable. Player completions also retain this label in
+`response_progress`. A completion records the terminal stop reason and
+available usage. Missing provider usage is `usage:null`
 with `usage_available:false`; a reported complete input/output count enables
 normalized usage. Its `usage.cost` is Pi's estimate from the route's configured rates,
 which `cost_source:"configured-rates"` says; Pi discards any cost the provider reports.
@@ -315,7 +343,7 @@ inventing the SDK's planned delay. Internal blocked provider attempts create no
 fabricated response-completion receipt. Model attention, provider inference start and
 physical paint timestamps are unavailable and declared at `host-start`.
 
-`abort` and `response-complete` also snapshot constant-size `response_progress`
+Player `abort` and `response-complete` events also snapshot constant-size `response_progress`
 metadata for the last observed HTTP attempt, or null before any attempt. Its
 `request_id` and `scope` distinguish the current attempt from a completed attempt
 retained during tool work, backoff or a spend-limit refusal. Counters reset at
@@ -326,7 +354,7 @@ existing stream transform, not compressed wire bytes or physical network arrival
 advance body counters without advancing parsed events.
 
 For the first choice, `content_bytes`, `reasoning_bytes` and `tool_argument_bytes`
-sum UTF8 lengths of observed string fragments. Reasoning uses Pi1.4.0's first
+sum UTF-8 lengths of observed string fragments. Reasoning uses Pi 1.4.0's first
 nonempty `reasoning_content`/`reasoning`/`reasoning_text` alias; tool arguments use
 `tool_calls[].function.arguments`. These are neither token counts nor final
 source lengths, and do not count opaque reasoning details or other representations.
@@ -339,7 +367,7 @@ progress neither extends the active request deadline nor authorizes tool input.
 The bounded timeout recovery requires observed assistant output before the deadline. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 9 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 11 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings
@@ -353,7 +381,8 @@ still adds work and must be measured during subsequent play.
 The adapter builds the [context manifest](../../docs/contracts/player-host-telemetry.md#context-manifest)
 from the serialized player request just before Fetch.
 
-`host-start` records the configured output cap, context window, effort mapping,
+`host-start` records the configured `provider_routing`, `endpoint_costs`,
+`reasoning_format`, output cap, context window, effort mapping,
 cut policy (`context_cut`) and image policy (`max_context_images`,
 `context_image_block`, also repeated on each `context-image-projection`);
 these are transmitted configuration, not backend effort attestation. Sanitized
@@ -396,8 +425,10 @@ defines the boundaries, and the
 [telemetry contract](../../docs/contracts/player-host-telemetry.md#context-cut)
 defines the cut and holdback events.
 
-The route pins `recall:{model,every,unpriced_request_usd}` with the same provider
-and credential variable as the player. Recall counts and request IDs begin at fetch.
+The route pins `recall:{model,every,unpriced_request_usd,endpoint_costs}` with the
+same provider and credential variable as the player. Recall validates its own
+endpoint tags and rates and makes one host HTTP attempt. Recall counts and
+request IDs begin at fetch.
 
 The [recall contract](../../docs/contracts/player-host.md#delivered-knowledge-and-recall)
 defines selection, delivery and accounting. For OpenRouter the adapter's `onPayload`

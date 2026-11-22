@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 import math
 from pathlib import Path
+import re
 import sys
 
 import numpy as np
@@ -35,6 +37,17 @@ def number(value):
         return type(value) in (int, float) and math.isfinite(value) and value >= 0
     except OverflowError:
         return False
+
+
+def reported_cost(value):
+    """Parse a plain nonnegative decimal dollar string (`reported_cost_usd`), or `None` when absent or unusable."""
+    if isinstance(value, str) and re.fullmatch(r"\d+(?:\.\d+)?", value):
+        try:
+            parsed = float(Decimal(value))
+            return parsed if math.isfinite(parsed) and parsed >= 0 else None
+        except (InvalidOperation, ValueError):
+            return None
+    return None
 
 
 def distribution(values):
@@ -303,6 +316,15 @@ def response_by_requests(rows):
         [row["since_previous_first_tool_result_ms"] for row in rows])
 
 
+def response_by_endpoint(requests):
+    """The same completed player responses, grouped by the reported endpoint label."""
+    groups = defaultdict(list)
+    for row in requests:
+        if not row["request_id"].startswith("recall-") and not row["censored"] and number(row["observed_ms"]):
+            groups[row["reported_provider"] or "unknown"].append(row)
+    return [{"endpoint": label, **response_by_requests(group)} for label, group in sorted(groups.items())]
+
+
 def discover(paths: list[Path]) -> list[Path]:
     """Select files, actor directories or campaign directories; never scan siblings."""
     if not 1 <= len(paths) <= 4096:
@@ -397,7 +419,7 @@ PROGRESS_NUMBERS = ("body_bytes", "body_chunks", "provider_events", "content_byt
 
 
 def progress_metadata(value: dict | None) -> dict:
-    # Provider fields and tool payloads are not copied into the diagnostic output.
+    # The progress projection keeps only timing and size fields.
     return {key: value.get(key) if number(value.get(key)) else None for key in PROGRESS_NUMBERS} if value else {}
 
 
@@ -443,7 +465,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                     raise ControlError(f"Multiple hosts in one trace; split at original host boundaries: {path}")
                 start = at
                 config = {key: event.get(key) for key in ("schema", "model", "provider", "api", "effort",
-                    "requested_service_tier", "max_context_images", "context_image_block", "context_reserve_tokens", "max_output_tokens", "context_window", "thinking_level_map", "reasoning_format", "provider_routing", "telemetry_version")}
+                    "requested_service_tier", "max_context_images", "context_image_block", "context_reserve_tokens", "max_output_tokens", "context_window", "thinking_level_map", "reasoning_format", "provider_routing", "endpoint_costs", "telemetry_version")}
                 tokenizer = tokenizers.get(config["model"], tokenizers.get(None))
             elif kind == "context-image-projection":
                 context.append({key: event.get(key) for key in ("projection_ms", "input_images", "omitted_images", "retained_images")})
@@ -460,7 +482,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 identity = event.get("request_id")
                 if not isinstance(identity, str) or not identity or identity in rows or len(rows) >= MAX_REQUESTS:
                     raise ControlError(f"Invalid/duplicate request identity or request bound: {path}:{line_number}")
-                rows[identity] = {"request_id": identity, "start_ms": at,
+                rows[identity] = {"request_id": identity, "start_ms": at, "reported_provider": None,
                     **{key: event.get(key) for key in ("request_role", "logical_request_id", "payload_bytes", "text_bytes", "image_parts",
                         "image_bytes", "host_inspection_ms", "sdk_after_payload_ms")}}
             elif kind in ("request-fetch-start", "response-headers", "response-first-chunk", "response-complete", "provider-refusal"):
@@ -478,9 +500,13 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                     row["error_type"], row["error_code"] = event.get("error_type"), event.get("error_code")
                     row["limit_source"], row["provider_error_code"] = event.get("limit_source"), event.get("provider_error_code")
                 elif kind == "response-complete":
+                    provider = event.get("reported_provider") or (event.get("response_progress") or {}).get("reported_provider")
+                    row["reported_provider"] = provider if isinstance(provider, str) and provider else None
                     row["stop_reason"] = event.get("stop_reason")
                     row["usage"] = event.get("usage") if event.get("usage_available") is True else None
                     row["cost_source"] = event.get("cost_source")
+                    row["_reported_cost_present"] = "reported_cost_usd" in event
+                    row["_reported_cost_usd"] = reported_cost(event.get("reported_cost_usd"))
                     row["progress"] = progress_metadata(event.get("response_progress"))
             elif kind == "tool-start":
                 identity = (event.get("request_id"), event.get("tool_call_id"))
@@ -565,7 +591,14 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 rates.append(rate)
         cost = usage.get("cost") if isinstance(usage, dict) else None
         row["prompt_tokens"] = prompt_tokens(usage)
-        row["cost_usd"] = cost.get("total") if isinstance(cost, dict) and number(cost.get("total")) else None
+        reported_present = row.pop("_reported_cost_present", False)
+        reported_value = row.pop("_reported_cost_usd", None)
+        # Prefer provider-reported cost; when the trace records `reported_cost_usd`, null stays
+        # unknown instead of falling back to the adapter's max-rate configured estimate (`usage.cost.total`).
+        if reported_present:
+            row["cost_usd"] = reported_value
+        else:
+            row["cost_usd"] = cost.get("total") if isinstance(cost, dict) and number(cost.get("total")) else None
         row["usage"] = {key: usage.get(key) if number(usage.get(key)) else None for key in usage_fields} if isinstance(usage, dict) else None
         row["progress"] = progress
     # The interval ends at a request's first tool result and starts at the previous request's, in request order;
@@ -594,6 +627,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
         "counts": dict(counts), "http_attempts_observed": len(rows), "censored_requests": incomplete,
         "unknown_usage_requests": unknown_usage, "pending_tools": sum(end is None for _, end in tools.values()),
         "completed_response_ms": distribution(durations), "response_by_prompt": response_by_requests(rows.values()),
+        "response_by_endpoint": response_by_endpoint(rows.values()),
         "prompt_composition": composition(pairs, left_out, tokenizer if tokenizer_failure is None else
             replace(tokenizer, count=None, unavailable=tokenizer_failure)),
         "composition_pairs": pairs, "composition_left_out": left_out, "tokenizer_failure": tokenizer_failure,
@@ -622,8 +656,10 @@ def host_summary(paths: list[Path], tokenizers=None) -> dict:
         by_run.setdefault(str(run_root(Path(r["path"]))), []).append(r)
     # The pairs are inputs to the pooled fits; the report carries each trace's own fit, not its raw pairs.
     runs = [{"run": run, "traces": len(group), "response_by_prompt": response_by_requests(row for r in group for row in r["requests"]),
+        "response_by_endpoint": response_by_endpoint(row for r in group for row in r["requests"]),
         "prompt_composition": compositions(group, resolved)} for run, group in sorted(by_run.items())]
     selection = {"traces": len(hosts), "response_by_prompt": response_by_requests(row for r in hosts for row in r["requests"]),
+        "response_by_endpoint": response_by_endpoint(row for r in hosts for row in r["requests"]),
         "prompt_composition": compositions(hosts, resolved)}
     for r in hosts:
         del r["composition_pairs"], r["composition_left_out"], r["tokenizer_failure"]
@@ -672,6 +708,8 @@ def markdown(report: dict) -> str:
     wait = figures["first_tool_result_interval_ms"]
     lines += ["", f"One request's first tool result to the next request's first tool result: {wait['n']:,} intervals, median {seconds(wait['p50'])} s, "
         f"95th percentile {seconds(wait['p95'])} s, within 2 s {percent(wait['within_2s'])}, within 5 s {percent(wait['within_5s'])}."]
+    lines += ["", "## Response time by endpoint", "", header.format("Endpoint"), divider,
+        *(timing_row(row["endpoint"], row) for row in selection["response_by_endpoint"])]
     lines += ["", "## Response time by run", "", header.format("Run").replace("| Responses", "| Traces | Responses", 1), "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
     for run in report["runs"]:
         lines.append(timing_row(Path(run["run"]).name, run["response_by_prompt"], run["traces"]))

@@ -16,7 +16,7 @@ from tools.campaign_player import COVERED_PREFIX_FILE,UPDATES_FILE,HostEvents,Li
 from tools.configure_player_tools import configuration
 
 
-START=dict(type='host-start',telemetry_version=10,schema='player-host/10')
+START=dict(type='host-start',telemetry_version=11,schema='player-host/11')
 
 
 def cost(request,amount,how='provider-reported',kind='response-complete'):
@@ -124,7 +124,9 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/6',6),('player-host/3',3),('player-host/3',4),('player-host/7',7),('player-host/8',8),('player-host/9',9),('player-host/10',9),('player-host/9',10),(None,4)])
+@pytest.mark.parametrize('schema,telemetry',
+    [('pi-player-host/6',4), ('player-host/3',4), ('player-host/11',10), ('player-host/9',11), (None,4)]
+    + [(f'player-host/{version}',version) for version in (3, 6, 7, 8, 9, 10)])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
@@ -195,7 +197,7 @@ assert prompt.startswith('Frozen mission') and 'Software actor/resource note' no
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
-emit(type='host-start', telemetry_version=10, schema='player-host/10', spend_limit_usd=route['spend_limit_usd'])
+emit(type='host-start', telemetry_version=11, schema='player-host/11', spend_limit_usd=route['spend_limit_usd'])
 if 'HANG' in prompt: time.sleep(120)  # a host still playing when the driver must stop it
 recall_made = int('WITH_RECALL' in prompt and flags['--pending-control-id']=='none')
 if recall_made:

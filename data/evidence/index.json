@@ -809,6 +809,20 @@
       },
       "visibility": "private"
     },
+    "failover-routing-probe-309": {
+      "availability": "present",
+      "bytes": 92962,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-failover-routing-probe-309.md"
+      ],
+      "files": 2,
+      "manifest_sha256": "316bc688291d6e7b406df740a308c88bb8807b7c5b7891742012141444bf3db7",
+      "note": "Bounded #309 OpenRouter failover routing probe (12 calls, $0.012221 counted of $3.00 approved cap, 0 game launches)",
+      "sources": {
+        ".": ".runtime/failover-routing-probe-309@305cecc5"
+      },
+      "visibility": "private"
+    },
     "farm-setup-stop-785": {
       "availability": "present",
       "bytes": 2155653,

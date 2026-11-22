@@ -10,7 +10,8 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/6','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4','player-host/5','player-host/6'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/6',
+    ...Array.from({length:11}, (_, version) => 'player-host/' + version)])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   // The dollar limit and the bound for a request with no cost record are plain decimal text; a number,
   // an exponent, a sign, a non-finite word or a limit of zero is refused, and so is leaving either out.
@@ -39,6 +40,98 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.throws(()=>validateConfiguration(unblocked,model.id,'off'),'an old /2-shaped route without a block is rejected');
   for (const value of [undefined,null,0,1023,100000,Infinity,1.1,true,'4096'])
     assert.throws(()=>validateConfiguration({...route(),context_reserve_tokens:value},model.id,'off'));
+});
+
+const endpointCosts = {
+  'fireworks/us':{input:2, output:1, cacheRead:0.5, cacheWrite:0},
+  baseten:{input:1, output:3, cacheRead:0, cacheWrite:1.25},
+};
+const maxCost = {input:2, output:3, cacheRead:0.5, cacheWrite:1.25};
+
+function failoverRoute() {
+  const configuration = route();
+  const tags = Object.keys(endpointCosts);
+  configuration.model = {...configuration.model, provider:'openrouter', baseUrl:'https://openrouter.ai/api/v1',
+    cost:{...maxCost}, compat:{...configuration.model.compat, openRouterRouting:{
+      only:tags, order:[...tags], allow_fallbacks:false, require_parameters:true}}};
+  configuration.endpoint_costs = structuredClone(endpointCosts);
+  configuration.recall.model = structuredClone(configuration.model);
+  configuration.recall.endpoint_costs = structuredClone(endpointCosts);
+  return configuration;
+}
+
+test('two distinct endpoints require matching order and closed per-endpoint max rates for both roles', () => {
+  const validate = configuration => validateConfiguration(configuration, model.id, 'off');
+  assert.doesNotThrow(() => validate(failoverRoute()));
+  for (const change of [
+    {only:[], order:[]},
+    {only:['baseten','baseten'], order:['baseten','baseten']},
+    {only:['baseten','fireworks/us','extra'], order:['baseten','fireworks/us','extra']},
+    {only:['baseten','INVALID'], order:['baseten','INVALID']},
+    {order:['baseten','fireworks/us']},
+    {order:['fireworks/us']},
+    {order:['fireworks/us','baseten','extra']},
+  ]) {
+    const configuration = failoverRoute();
+    Object.assign(configuration.model.compat.openRouterRouting, change);
+    assert.throws(() => validate(configuration), /invalid-configuration/);
+  }
+  const invalidRates = [
+    settings => { delete settings.endpoint_costs; },
+    settings => { settings.endpoint_costs = null; },
+    settings => { delete settings.endpoint_costs.baseten; },
+    settings => { settings.endpoint_costs.extra = {...maxCost}; },
+    settings => { delete settings.endpoint_costs.baseten.input; },
+    settings => { settings.endpoint_costs.baseten.other = 1; },
+    ...[-1, NaN, Infinity, '1'].map(input => settings => { settings.endpoint_costs.baseten.input = input; }),
+    ...Object.keys(maxCost).map(key => settings => { settings.model.cost[key] -= 0.1; }),
+    settings => { settings.model.cost.output += 0.1; },
+  ];
+  for (const change of invalidRates) {
+    for (const role of ['player', 'recall']) {
+      const configuration = failoverRoute();
+      change(role === 'recall' ? configuration.recall : configuration);
+      assert.throws(() => validate(configuration), /invalid-configuration/, role);
+    }
+  }
+});
+
+test('direct and single-endpoint routes require null endpoint costs for each role', () => {
+  const direct = route();
+  const single = failoverRoute();
+  for (const settings of [single, single.recall]) {
+    settings.model.compat.openRouterRouting.only = ['baseten'];
+    settings.model.compat.openRouterRouting.order = ['baseten'];
+    settings.endpoint_costs = null;
+  }
+  for (const configuration of [direct, single]) {
+    assert.doesNotThrow(() => validateConfiguration(configuration, model.id, 'off'));
+    for (const role of ['player', 'recall']) {
+      for (const value of [undefined, {}, endpointCosts]) {
+        const invalid = structuredClone(configuration);
+        const settings = role === 'recall' ? invalid.recall : invalid;
+        if (value === undefined) delete settings.endpoint_costs;
+        else settings.endpoint_costs = value;
+        assert.throws(() => validateConfiguration(invalid, model.id, 'off'), /invalid-configuration/);
+      }
+    }
+  }
+});
+
+test('two-endpoint player route is sent unchanged across the shared HTTP retry', async t => {
+  const configuration = failoverRoute();
+  const result = await scenario(t, [rateLimit(), reply('finished', [], true, undefined, 'call', 'Secondary Endpoint')], {configuration});
+  assert.equal(result.result.ok, true);
+  assert.deepEqual(result.payloads.map(payload => payload.provider),
+    [configuration.model.compat.openRouterRouting, configuration.model.compat.openRouterRouting]);
+  assert.deepEqual(result.payloads.map(payload => payload.model), [model.id, model.id]);
+  const start = result.events.find(event => event.type === 'host-start');
+  assert.deepEqual(start.provider_routing, configuration.model.compat.openRouterRouting);
+  assert.deepEqual(start.endpoint_costs, endpointCosts);
+  assert.notEqual(start.endpoint_costs, configuration.endpoint_costs);
+  const complete = result.events.filter(event => event.type === 'response-complete');
+  assert.deepEqual(complete.map(event => event.reported_provider), [null, 'Secondary Endpoint']);
+  assert.deepEqual(complete.map(event => event.response_progress.reported_provider), [null, 'Secondary Endpoint']);
 });
 
 test('OpenRouter uses maintained routing and reasoning serializers with explicit standard tier on every attempt',async t=>{

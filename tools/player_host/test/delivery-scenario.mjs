@@ -19,8 +19,8 @@ export function recallReply(ids, cost = .002, finishReason = 'stop') {
   return recallTextReply(JSON.stringify({articles:ids}), cost, finishReason);
 }
 
-export function recallTextReply(text, cost = .002, finishReason = 'stop') {
-  const chunks = [{id:'recall',model:'recall-fixture',choices:[{index:0,delta:{role:'assistant',content:text},finish_reason:finishReason}],
+export function recallTextReply(text, cost = .002, finishReason = 'stop', provider) {
+  const chunks = [{id:'recall',model:'recall-fixture',provider,choices:[{index:0,delta:{role:'assistant',content:text},finish_reason:finishReason}],
     usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16,...(cost === null ? {} : {cost})}}];
   return new Response(chunks.map(c => 'data: '+JSON.stringify(c)+'\n\n').join('')+'data: [DONE]\n\n',
     {headers:{'content-type':'text/event-stream'}});
@@ -47,7 +47,7 @@ export async function deliveryScenario(directory, overrides = {}) {
   const path = directory+'/delivered-knowledge.json';
   if (!overrides.preserveKnowledgeFile) await writeFile(path,JSON.stringify(value));
   const configuration = route();
-  configuration.recall = {model:{...structuredClone(model),id:'recall-fixture'},every:1,unpriced_request_usd:'0.2'};
+  configuration.recall = {model:{...structuredClone(model),id:'recall-fixture'},every:1,unpriced_request_usd:'0.2',endpoint_costs:null};
   Object.assign(configuration,overrides.configuration);
   const events = [], payloads = [];
   let player = 0, recall = 0;

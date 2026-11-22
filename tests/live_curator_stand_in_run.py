@@ -720,7 +720,7 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
     delivered = [u for u in host.get('updates', ()) if u.get('outcome') == 'delivered']
     others = [u for u in host.get('updates', ()) if u.get('outcome') != 'delivered']
     checks['host_delivered_the_newest_listed_version_to_its_next_request'] = (
-        host.get('ok') is True and host.get('host') == dict(schema='player-host/10', telemetry_version=10)
+        host.get('ok') is True and host.get('host') == dict(schema='player-host/11', telemetry_version=11)
         and len(delivered) == 1 and delivered[0]['type'] == 'knowledge-delivery' and delivered[0]['version'] == newest
         and delivered[0]['previous_version'] == actors[chosen]['frozen_version']
         and delivered[0]['coverage'] == exported[newest]['coverage']

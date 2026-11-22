@@ -42,9 +42,11 @@ and normal input configuration. The target receives only the permitted environme
 and inherited mechanical descriptors, not provider credentials.
 The custodian creates `.runtime/logs/` before launch for the prepared wrapper's log.
 
-`route.json` uses current `player-host/10` with text/image input and explicit
+`route.json` uses current `player-host/11` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
-provider's image limit. Set `context_cut` to `null` or the closed object with
+provider's image limit. Set `endpoint_costs` for the player and recall as specified
+by the [route envelope](../contracts/player-host.md#route-envelope). Set
+`context_cut` to `null` or the closed object with
 `high_mark`, `low_mark` and `min_free` described in the [host procedure](player-host.md).
 The route repeats the package's `spend_limit_usd` and carries
 `unpriced_request_usd` ([Spend limit](#spend-limit)). Freeze the
@@ -179,7 +181,7 @@ defines the blocked assignment. The sealed pilot's starts each took their own se
 defines that measure. See the [unit rule](../contracts/measurement-tools.md#the-facts-to-judge-judged-facts1)
 for shared facts and article units.
 
-The closed `recall` object pins the model on the player's provider and key, `every` completed inputs per reminder, and `unpriced_request_usd` computed from the recall model's rates. Player and recall share the run's dollar budget. Use forecast attempt counts to size the work and ending, and retain observed starts to assess the run.
+The closed `recall` object pins the model on the player's provider and key, `every` completed inputs per reminder, `endpoint_costs` and `unpriced_request_usd` computed from the recall model's rates. Player and recall share the run's dollar budget. Use forecast attempt counts to size the work and ending, and retain observed starts to assess the run.
 
 ### Live knowledge updates
 
@@ -214,7 +216,9 @@ envelope, and put the same value in the manifest and `route.json`. Use the
 [route envelope](../contracts/player-host.md#route-envelope) for the decimal format.
 The validator recomputes `unpriced_request_usd` as
 `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
-from the frozen rates and refuses a mismatch or zero. Set `ending_reserve.usd` at
+from the frozen rates and refuses a mismatch or zero. For two-endpoint routing
+the frozen model rates are the per-category maxima across the two endpoints.
+Set `ending_reserve.usd` at
 or above the player bound plus the recall bound, with zero recall contribution for
 empty knowledge in a package without [live knowledge updates](#live-knowledge-updates),
 and below the declared limit.

@@ -100,7 +100,7 @@ test('finish reserve refuses before preparing recall and leaves enough budget to
   const recallModel={...structuredClone(model),id:'recall-fixture'};
   Object.defineProperty(recallModel,'api',{enumerable:true,get(){if(armed)reads++;return model.api;}});
   const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.8',
-    recall:{model:recallModel,every:1,unpriced_request_usd:'0.2'}},
+    recall:{model:recallModel,every:1,unpriced_request_usd:'0.2',endpoint_costs:null}},
     finishReserveUsd:'0.65',
     onEvent:e=>{if(e.type==='mcp-connected')armed=true;if(e.type==='settled')armed=false;},playerFetch:()=>reply('Done')});
   assert.equal(reads,0,'the pre-check must not enter recall preparation');
@@ -113,7 +113,7 @@ test('unstarted recall preparation consumes no attempt or request id and cannot 
   let armed=false;
   const recallModel={...structuredClone(model),id:'recall-fixture'};
   Object.defineProperty(recallModel,'maxTokens',{enumerable:true,get(){if(armed)throw new Error('fixture preparation failure');return model.maxTokens;}});
-  const {result,events}=await scenario(t,{configuration:{recall:{model:recallModel,every:1,unpriced_request_usd:'0.2'}},
+  const {result,events}=await scenario(t,{configuration:{recall:{model:recallModel,every:1,unpriced_request_usd:'0.2',endpoint_costs:null}},
     onEvent:e=>{if(e.type==='mcp-connected')armed=true;if(e.type==='settled')armed=false;},
     playerFetch:n=>n===1?reply(null,[['player_knowledge_read',{id_or_title:'article-a'}]]):reply('Done')});
   assert.equal(result.reason,'task_complete');assert.equal(result.requests,2);

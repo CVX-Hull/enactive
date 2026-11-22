@@ -124,7 +124,7 @@ test('a completed reminder without another player request is recorded as undeliv
 
 test('cadence counts computer inputs while hints and knowledge reads do not advance it',async t => {
   const configuration=route();
-  configuration.recall={model:{...structuredClone(model),id:'recall-fixture'},every:2,unpriced_request_usd:'0.2'};
+  configuration.recall={model:{...structuredClone(model),id:'recall-fixture'},every:2,unpriced_request_usd:'0.2',endpoint_costs:null};
   const {events,result}=await scenario(t,{configuration:{recall:configuration.recall},
     enabledTools:['player_hint','computer_input','player_knowledge_query'],playerFetch:n => {
       if (n === 1) return reply(null,[['player_hint',{text:'Unverified cadence fixture report'}]]);
