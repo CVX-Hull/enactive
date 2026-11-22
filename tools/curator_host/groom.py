@@ -19,6 +19,10 @@ SUMMARY = 'grooming-summary.json'
 def failure_reason(summary: dict) -> str | None:
     if summary['run_state'] != 'completed':
         return summary['run_state']
+    if summary.get('unresolved'):
+        return 'unresolved-result'
+    if summary.get('stopped_by_cap'):
+        return 'cap-reached'
     proxy = summary['proxy']
     if proxy.get('settled') is not True:
         return 'proxy-unsettled'
@@ -52,6 +56,8 @@ def main(argv: list[str] | None = None) -> int:
         out = args.out.resolve()
         if runtime not in out.parents:
             raise ValueError(f'--out must be inside {runtime}')
+        if out.is_relative_to(run):
+            raise ValueError('--out must be outside --run')
         if out.exists() or args.out.is_symlink():
             raise ValueError(f'{args.out} exists; grooming needs a fresh output directory')
 
@@ -105,8 +111,14 @@ def main(argv: list[str] | None = None) -> int:
 
     reason = failure_reason(summary)
     status = 'completed' if reason is None else 'failed'
+    if 'published_after' in summary:
+        after = summary['published_after']
+    else:
+        try:
+            after = repo.published()
+        except (OSError, ValueError):
+            after = None
     try:
-        after = summary['published_after'] if 'published_after' in summary else repo.published()
         shadow._write(out/SUMMARY, dict(
             report, status=status, reason=reason, cap_usd=str(cap), published_after=after,
             cost_usd=summary.get('cost_usd'), session_state=summary.get('session_state'),
@@ -118,7 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     if reason is not None:
         print(f'curator_groom: failed {run.name}: {reason}', file=sys.stderr)
         return 1
-    print(f'curator_groom: completed {run.name}: {before} -> {after}')
+    detail = f'{before} -> {after}' if after != before else f'{before} (no new version published)'
+    print(f'curator_groom: completed {run.name}: {detail}')
     return 0
 
 

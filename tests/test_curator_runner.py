@@ -1036,7 +1036,8 @@ def test_boundary_grooming_skips_a_repository_without_a_published_admission(groo
 @pytest.mark.parametrize('case, message', [
     ('mismatch', 'other-admission'), ('missing-repo', 'existing knowledge repository'),
     ('journal', 'unsupported active gate journal'), ('out-exists', 'fresh output directory'),
-    ('out-outside', '--out must be inside'), ('out-in-repo', 'outside the knowledge worktree'),
+    ('out-outside', '--out must be inside'), ('out-in-run', '--out must be outside --run'),
+    ('out-in-repo', 'outside the knowledge worktree'),
     ('cap-zero', '--cap-usd must be positive'), ('cap-negative', '--cap-usd must be positive'),
     ('missing-store', 'missing store'), ('wal', 'un-checkpointed write-ahead log'),
     ('unreadable-store', 'file is not a database'),
@@ -1055,6 +1056,11 @@ def test_boundary_grooming_refuses_invalid_inputs_before_resolving_the_host(groo
         out.mkdir()
     elif case == 'out-outside':
         out = tmp_path/'outside'
+        args[-1] = str(out)
+    elif case == 'out-in-run':
+        runtime_run = make_long_session(out.parent/'runs', 'live-admission', steps=1, actors=('001',))
+        args[1] = str(runtime_run)
+        out = runtime_run/'grooming'
         args[-1] = str(out)
     elif case == 'out-in-repo':
         out = repo.path/'grooming'
@@ -1076,6 +1082,8 @@ def test_boundary_grooming_refuses_invalid_inputs_before_resolving_the_host(groo
 
 @pytest.mark.parametrize('changes, reason', [
     ({}, None),
+    (dict(unresolved=True, verdicts=[dict(operation='submission', status='unknown')], published_after=None), 'unresolved-result'),
+    (dict(stopped_by_cap=True), 'cap-reached'),
     (dict(proxy=dict(settled=False, revoked=False, breaches=0)), 'proxy-unsettled'),
     (dict(proxy=dict(settled=True, revoked=True, breaches=0)), 'proxy-revoked-or-breached'),
     (dict(proxy=dict(settled=True, revoked=False, breaches=1)), 'proxy-revoked-or-breached'),
@@ -1118,9 +1126,28 @@ def test_boundary_grooming_freezes_the_session_and_reports_its_outcome(grooming_
     result = json.loads((out/'grooming-summary.json').read_text())
     assert result == dict(schema='curator-boundary-grooming/1', status='completed' if reason is None else 'failed',
                           reason=reason, run=run.name, knowledge_root=str(repo.path.parent), cap_usd='0.25',
-                          published_before='v1', published_after='v1', cost_usd='0.07', verdicts=verdicts,
-                          session_state=session['session_state'], proxy=session['proxy'], sandbox=session['sandbox'],
-                          summary=relative)
+                          published_before='v1', published_after=session['published_after'], cost_usd='0.07',
+                          verdicts=session['verdicts'], session_state=session['session_state'], proxy=session['proxy'],
+                          sandbox=session['sandbox'], summary=relative)
+
+
+def test_boundary_grooming_writes_summary_if_published_lookup_fails_after_session_error(grooming_run, tmp_path, monkeypatch):
+    repo, run, out, args = grooming_run
+    publish_admission(repo, tmp_path/'submission', run.name)
+    monkeypatch.setattr(shadow, 'host_tools', lambda: dict(test_host=True))
+    monkeypatch.setattr(shadow, 'route_key', lambda upstream, runtime: shadow.LOOPBACK_KEY)
+
+    def fail_session(**kwargs):
+        def broken_published(self):
+            raise ValueError('unreadable repository state')
+        monkeypatch.setattr(Repository, 'published', broken_published)
+        raise RuntimeError('proxy closed early')
+
+    monkeypatch.setattr(shadow, 'run_one', fail_session)
+    assert groom.main([*args, '--cap-usd', '0.25']) == 1
+    result = json.loads((out/'grooming-summary.json').read_text())
+    assert result['status'] == 'failed' and result['reason'] == 'error: RuntimeError: proxy closed early'
+    assert result['published_before'] == 'v1' and result['published_after'] is None and result['summary'] is None
 
 
 INSTALLED = (shadow.HOST_DIR/'node_modules').is_dir() and shutil.which('node') is not None

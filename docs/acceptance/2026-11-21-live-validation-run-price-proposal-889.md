@@ -3,28 +3,29 @@ owner: lead
 status: historical
 kind: measurement
 date: '2026-11-21'
-scope: 'Price proposal, frozen package plan, runner configuration, pace cutoff, boundary-grooming command and upgraded #859 delivery-aware schedule replay for the first full live validation admission (#889, prepared under #895)'
+scope: 'Price proposal, frozen package plan, runner configuration, stop rules, ordered outcome table, pace cutoff, boundary-grooming command and upgraded #859 delivery-aware schedule replay for the first full live validation admission (#889, prepared under #895)'
 ---
 
 # Price proposal for the full live validation run (#889)
 
 ## At a glance
 
-One fresh `Wilderness / Campground / Survivor` admission (`S1`, `campaign-run/12`)
-crossing a real in-session actor handoff (`001 -> 002`) with the live curator runner
-publishing under `curator-fact/4`, live in-session knowledge delivery enabled
-(`live_knowledge_updates: true`), and one post-admission boundary-grooming session is
-forecast at about **$4.00 to $5.80** (up to about **$7.50** if curator sessions average
-the [#836](2026-11-20-live-curator-run-price-proposal-836.md) price-pilot median instead
-of the [#859](2026-11-21-live-curator-run-859.md) live accepted rate):
+One fresh `Wilderness / Campground / Survivor` admission (`S1`, `campaign-run/12`) with
+the live curator runner publishing under `curator-fact/4`, live in-session knowledge
+delivery enabled (`live_knowledge_updates: true`), and one post-admission
+boundary-grooming session is forecast at about **$4.12 to $6.02** for a 300–400 decision
+run at [#859](2026-11-21-live-curator-run-859.md)'s live accepted curator rate (up to
+about **$8.16** if 20 curator sessions average the
+[#836](2026-11-20-live-curator-run-price-proposal-836.md) price-pilot median of `$0.20`,
+or up to about **$9.00** if play consumes its entire `$4.10` work budget):
 
-- **Play (one admission, ~300–400 decisions across `001 -> 002`):** forecast **$2.50–$3.50**, package limit **`$5.50`** (`ending_reserve.usd: "1.40"`, leaving `$4.10` for the work phase).
-- **Live curator runner (~15–20 sequential 20-step windows):** forecast **$1.35–$1.90** at `#859` accepted rates (up to `$3.60` at the `#836` pilot median), runner cap **`$15.00`** with per-session cap **`$8.00`**.
-- **Post-admission boundary grooming (1 session after the store seals):** forecast **$0.15–$0.40** (`$0` if nothing was published, skipped cleanly), session cap **`$8.00`**.
+- **Play (one admission, work budget `$4.10`, ~300–450 decisions possible):** forecast **$2.50–$3.50** for 300–400 decisions (up to `$4.10` work + `$1.40` ending reserve), package limit **`$5.50`** (`ending_reserve.usd: "1.40"`).
+- **Live curator runner (~15–20 sequential 20-step windows for 300–400 operations; up to ~23 if play reaches 450 decisions):** forecast **$1.35–$1.86** at `#859` accepted rates (or **$3.00–$4.00** for 15–20 sessions at `#836`'s `$0.20` pilot median), runner cap **`$19.00`** with per-session cap **`$8.00`** (keeping full `$8.00` proxy reservation headroom on the 20th session even if all 19 earlier sessions hit `#836`'s `$0.57` maximum: `19 × $0.57 + $8.00 = $18.83`).
+- **Post-admission boundary grooming (1 session after the store seals):** forecast **$0.27–$0.66** (median **$0.53** across the seven recorded grooming sessions in [#618](2026-11-13-curator-scoring.md); `$0` if nothing was published, skipped cleanly), session cap **`$8.00`**.
 - **Unallocated margin:** **`$1.50`**.
-- **Planning ceiling:** **`$30.00`** (`$5.50 + $15.00 + $8.00 + $1.50`).
+- **Planning ceiling:** **`$34.00`** (`$5.50 + $19.00 + $8.00 + $1.50`).
 
-**`$30.00` is a planning ceiling, not a hard billing cap.** `$16.00` of the `$30.00`
+**`$34.00` is a planning ceiling, not a hard billing cap.** `$16.00` of the `$34.00`
 ceiling is proxy worst-case reservation headroom (`$8.00` across the live runner's
 session cap and `$8.00` for the separate post-admission boundary-grooming proxy), not
 expected spend. The only hard billing cap is the credit limit on the provider key,
@@ -32,9 +33,9 @@ which the owner sets and the code cannot read. Nothing here is approved, no game
 launched, `.runtime/user/` was not touched, and **$0** was spent preparing this
 proposal.
 
-[First paid live run (#859)](2026-11-21-live-curator-run-859.md) · [Joanna Campground run (#803)](2026-11-19-joanna-campground-memory-803.md) · [Price proposal (#836)](2026-11-20-live-curator-run-price-proposal-836.md) · [Price corrections (#836)](2026-11-20-live-curator-run-price-correction-836.md) · [Owner decision](../decisions/owner-decisions.md#post-838-validation-cut-failover-and-seven-day-sequence)
+[First paid live run (#859)](2026-11-21-live-curator-run-859.md) · [Joanna Campground run (#803)](2026-11-19-joanna-campground-memory-803.md) · [Curator scoring (#618)](2026-11-13-curator-scoring.md) · [Price proposal (#836)](2026-11-20-live-curator-run-price-proposal-836.md) · [Price corrections (#836)](2026-11-20-live-curator-run-price-correction-836.md) · [Owner decision](../decisions/owner-decisions.md#post-838-validation-cut-failover-and-seven-day-sequence)
 
-## Why `#889` needs a larger work budget than `#859`
+## Why `#889` needs a larger work budget than `#859` — and what budget cannot guarantee
 
 The first paid live run ([#859](2026-11-21-live-curator-run-859.md)) gave the player
 `spend_limit_usd: "3.00"` with `ending_reserve.usd: "1.40"` (`$1.60` work budget),
@@ -44,69 +45,92 @@ therefore did **not** exercise a real in-session actor handoff, live mid-admissi
 delivery (`live_knowledge_updates: true`), `curator-fact/4` world/game scope separation
 in live play, or post-admission boundary grooming.
 
-To exercise all of those mechanisms in one real `Wilderness / Campground / Survivor`
-admission (`S1`), the player must have enough work-phase budget to cross an ordinary
-`001 -> 002` handoff:
+| Evidence source | Decisions | Ops | Actors | Wall (s) | Player spend (USD) | USD / decision | Dec/min (receipt elapsed) | Ops/min (first-to-last op) |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| `wilderness-803-first-eligible-8a4badef08b9` (`#803`, same `S1` mission) | 405 | 414 | 2 (`001 -> 002` at req 210) | 3,423 | $3.47 | $0.00856 | 7.10 | 7.31 |
+| `farm-788-equipment-return-e3da8d1f2714` (`#788`) | 265 | 286 | 1 | 2,312 | $2.78 | $0.01047 | 6.88 | 7.60 |
+| `two-wake-772-farm-58ee9279783f45ba8ffd469e1c6357b9` (`#772`) | 310 | 322 | 1 | 2,488 | $3.58 | $0.01156 | 7.48 | 7.86 |
+| `live-curator-run-859-2cda0867c344` (`#859`, partial, 1 actor) | 127 | 133 | 1 | 783 | $0.79 | $0.00623 | 9.74 | 10.46 |
 
-| Evidence source | Decisions | Actors | Wall (s) | Player spend (USD) | USD / decision | Pace (dec/min; op/min) |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `wilderness-803-first-eligible-8a4badef08b9` (`#803`, same `S1` mission) | 405 | 2 (`001 -> 002` at req 210) | 3,423 | $3.47 | $0.00856 | 7.10; 7.31 |
-| `farm-788-equipment-return-e3da8d1f2714` (`#788`) | 265 | 1 | 2,312 | $2.78 | $0.01047 | 6.88; 7.60 |
-| `two-wake-772-farm-58ee9279783f45ba8ffd469e1c6357b9` (`#772`) | 310 | 1 | 2,488 | $3.58 | $0.01156 | 7.48; 7.86 |
-| `live-curator-run-859-2cda0867c344` (`#859`, partial, 1 actor) | 127 | 1 | 783 | $0.79 | $0.00623 | 9.74; 10.46 |
+At `#803`'s rate (`$0.00856`/decision) to `#788`'s rate (`$0.01047`/decision), a `$4.10`
+work budget (`spend_limit_usd: "5.50"` minus `ending_reserve.usd: "1.40"`) buys roughly
+**350–450 decisions** (nothing in the package stops play at 400 decisions; the work
+phase stops when reported spend plus pending recall reaches `$4.10`, or earlier on a
+natural finish or limit).
 
-At `#803`'s rate (`$3.47` across 405 decisions and two actors), a `$4.10` work budget
-(`spend_limit_usd: "5.50"` minus `ending_reserve.usd: "1.40"`) provides room for ~350–450
-decisions and a real `001 -> 002` handoff without stopping prematurely like `#859` or
-risking a multi-hour run.
+**Budget gives room for a handoff; it does not guarantee one.** In `#803`, the
+`001 -> 002` handoff occurred because actor `001` chose to call `player_handoff` at
+request 210 (when its largest context estimate was 117,194 tokens against a 262,144
+window, with `$10.35` of its `$12.00` limit remaining). Both `#788` (265 decisions) and
+`#772` (310 decisions) ran to completion on a single actor with **no** handoff. `#889`
+can therefore consume its entire `$4.10` work budget on actor `001` without a handoff.
+If that happens, `#889` is reported honestly as **partial on handoff** (multi-window
+`curator-fact/4` publication, live in-session `update` delivery, recall after adoption,
+post-admission boundary grooming, and single-actor `#846` schedule replay are still
+measured and recorded; successor-actor briefing adoption across a real handoff remains
+unverified and is put back to the owner before any second run).
 
-## Curator cost and reservation inputs
+## Curator cost, grooming cost and reservation inputs
 
 | Input | Figure | Source |
 | --- | --- | --- |
 | Live accepted curator session cost | median $0.0745 (S1–S3: $0.0557, $0.1481, $0.0745); mean $0.0928; **$0.00449 / covered step** | `#859` accepted sessions `v1`–`v3` (62 steps) |
 | All five `#859` sessions (incl. 2 rejected by `#886`) | median $0.0769; mean $0.1286; $0.00606 / step | `#859` sessions S1–S5 (106 steps) |
 | Session price pilot (offline sealed windows) | median $0.20, range $0.11–$0.57 | `#836` price pilot (10 sessions) |
+| Grooming session cost (offline sealed lineage) | median **$0.53**, range **$0.08–$0.76** ($0.33, $0.53, $0.63, $0.08, $0.76, $0.27, $0.66) | [Curator scoring (#618)](2026-11-13-curator-scoring.md) (7 grooming sessions) |
 | Live session wall time | 49.40 s to 113.73 s; every session ended before the next 20-step window filled | `#859` sessions S1–S5 |
+| Operations per decision | 1.05 (`#859`: 133/127) and 1.02 (`#803`: 414/405); forecast assumes ~1.0–1.05 ops/decision | `#859` and `#803` sealed stores |
 | Largest single-request proxy reservation in `#859` | $0.9380 (at `max_output_tokens: 16384`; largest real charge $0.0518) | `#859` `proxy-ledger.jsonl` |
 | Largest single-request proxy reservation in `#836` pilot | $1.12–$1.41 at 32,768 max output (~$1.00–$1.29 at 16,384) | `#859` `before-launch-summary.md` |
 
 The live `Runner` (`harness/curator/runner.py`) enforces no hardcoded session count cap;
-it stops when `cap_usd` cannot fit the next session's proxy reservation, on two
-consecutive rejected or failed sessions, or when the trace store closes. Across 300–400
-operations (~15–20 sequential 20-step windows):
+its window trigger counts finished computer **operations** (not decisions), and polling
+plus snapshot staging add time before each session starts.
 
-- At `#859`'s accepted rate (`$0.00449`/step), 300–400 steps forecast **$1.35–$1.80** (or
-  **$1.39–$1.86** at the `$0.0928` accepted session mean).
-- At `#836`'s pilot median (`$0.20`/session), 15–18 sessions forecast **$3.00–$3.60**.
-- Setting `session_cap_usd: "8.00"` and `cap_usd: "15.00"` leaves at least `$8.00` of
-  proxy reservation headroom even after `$7.00` of cumulative curator spend, preventing
-  artificial mid-run reservation stalls on later windows when the store is larger.
+- **Window count assumption:** At `#803`/`#859`'s ratio (~1.02–1.05 operations per
+  decision), a 300–400 decision run generates roughly **306–420 operations** (**15–20**
+  full 20-step windows); if play uses the entire `$4.10` work budget (~450 decisions at
+  `#803`'s rate), it can reach ~460–470 operations (**~22–23** windows).
+- **Live curator forecast (15–20 windows):**
+  - At `#859`'s accepted rate (`$0.00449`/step or `$0.0928`/session mean): **$1.35–$1.86**.
+  - At `#836`'s pilot median (`$0.20`/session): **$3.00–$4.00**.
+- **Curator run cap (`#836` correction rule):** Following
+  [the `#836` price correction](2026-11-20-live-curator-run-price-correction-836.md#the-curators-cap-and-so-the-ceiling),
+  for the 20th session still to keep the full `$8.00` `session_cap_usd` after 19 earlier
+  sessions at the pilot's largest displayed cost (`$0.57`), `cap_usd` must be at least
+  `19 × $0.57 + $8.00 = $18.83`. Setting **`cap_usd: "19.00"`** and
+  **`session_cap_usd: "8.00"`** satisfies that rule for 20 windows (and still leaves
+  `$6.46` after 22 max-cost `$0.57` sessions or `$14.60` after 22 pilot-median `$0.20`
+  sessions if play reaches 23 windows).
 
 ## Upgraded `#859` schedule replay with recorded deliveries (`#846` preparation)
 
-Before proposing `#889`, the upgraded `tools.memory_screen_checks cut --recorded-deliveries`
-was run read-only (`$0`) over the sealed `#859` admission (`1` actor, `135` player
-requests, `4` recorded coverage changes, `v18` starting briefing of `1,457` estimated
-tokens, `12` delivered reminders totalling `5,473` estimated tokens, `0` live updates,
-`0` unmatched deliveries):
+Read-only (`$0`) comparison over the sealed `#859` admission (`1` actor, `135` player
+requests, `4` recorded coverage changes, `v18` starting briefing of `1,457`
+approximated tokens at 4 UTF-8 bytes/token, `12` delivered reminders totalling `5,473`
+approximated tokens, `0` live updates, `0` unmatched deliveries):
 
 ```sh
 .venv/bin/python -m tools.memory_screen_checks schedule .runtime/evidence/live-curator-run-859/run --output SCHEDULE
+.venv/bin/python -m tools.memory_screen_checks cut .runtime/evidence/live-curator-run-859/run --coverage schedule --schedule SCHEDULE
 .venv/bin/python -m tools.memory_screen_checks cut .runtime/evidence/live-curator-run-859/run --coverage schedule --schedule SCHEDULE --recorded-deliveries
 ```
 
 | Row | Requests | Prompt p50 | Prompt p95 | Prompt max | Cuts | Cuts / reqs held back | Image drops | Cache write (vs recorded) | Share < 40k | Share < 60k |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `recorded` | 135 | 45,035 | 67,399 | 69,506 | 0 | 0 / 0 | 5 | 323,169 (1.000) | 0.407 | 0.830 |
-| `no cut` (with recorded deliveries) | 135 | 47,871 | 69,474 | 71,414 | 0 | 0 / 0 | 5 | 342,609 (1.060) | 0.326 | 0.770 |
-| `schedule` (with recorded deliveries) | 135 | 35,663 | 48,341 | 51,191 | 3 | 2 / 2 | 2 | 259,884 (0.804) | 0.681 | 1.000 |
+| `no cut` (0 delivery tokens) | 135 | 43,590 | 63,010 | 64,910 | 0 | 0 / 0 | 5 | 311,134 (0.963) | 0.415 | 0.904 |
+| `no cut` (`--recorded-deliveries`) | 135 | 47,871 | 69,474 | 71,414 | 0 | 0 / 0 | 5 | 342,609 (1.060) | 0.326 | 0.770 |
+| `schedule` (0 delivery tokens) | 135 | 33,000 | 44,540 | 47,390 | 3 | 2 / 2 | 2 | 239,154 (0.740) | 0.830 | 1.000 |
+| `schedule` (`--recorded-deliveries`) | 135 | 35,663 | 48,341 | 51,191 | 3 | 2 / 2 | 2 | 259,884 (0.804) | 0.681 | 1.000 |
 
-Including `#859`'s recorded `v18` briefing and `12` reminders brings the simulated
-`no cut` row closely in line with the recorded trace (`47,871 / 69,474 / 71,414` and
-`1.060x` cache write vs recorded `45,035 / 67,399 / 69,506` and `1.000x`), confirming
-that the upgraded replay is ready to evaluate `#889`'s multi-window, live-update, and
-post-handoff briefing trace under `#846`.
+Adding `--recorded-deliveries` shrinks upper-tail error against the recorded trace
+(`p95` from `-6.5%` to `+3.1%`, `max` from `-6.6%` to `+2.7%`) while shifting median
+prompt (`-3.2%` to `+6.3%`) and total cache write (`0.963x` to `1.060x`) above
+recorded. Two simulation limits remain disclosed for `#889`/`#890`: delivery tokens use
+the stated 4-UTF-8-bytes/token approximation, and `simulate` keeps each actor's
+starting briefing size across cuts rather than modelling fresh-briefing growth at a cut
+([measurement tools contract](../contracts/measurement-tools.md#runner-records-and-schedule-replay)).
 
 ## The run proposed (`#889`)
 
@@ -115,17 +139,19 @@ post-handoff briefing trace under `#846`.
 - **Scenario and world:** One fresh `Wilderness / Campground / Survivor` admission (`S1`),
   using `#803`/`#859`'s mission text (`prompt.txt`), with explicit world label
   `labels.world: "campground-889"`, `labels.arm: "live-validation-run"`,
-  `labels.start: "S1"`, `labels.scenario: "campground"`, `labels.lineage: null`,
-  `labels.admission: null`.
-- **Starting delivered knowledge (`delivered-knowledge/2`):** Exported empty (`v0`, `0`
-  articles, `0` facts) bound to `campground-889`:
+  `labels.start: "S1"`, `labels.scenario: "Wilderness / Campground / Survivor"`,
+  `labels.lineage: null`, `labels.admission: null`.
+- **Starting delivered knowledge (`delivered-knowledge/2`):** Exported empty (`version: null`,
+  `commit: null`, `repository_id: null`, `0` articles, `0` facts) bound to `campground-889`:
   ```sh
   .venv/bin/python -m tools.knowledge_export --empty --world campground-889 --package .runtime/computer-sessions/PACKAGE
   ```
 - **Live knowledge updates:** `live_knowledge_updates: true`. As the live curator
-  publishes `v1`, `v2`, … into `.runtime/knowledge/live-validation-run-889/cdda`,
-  verified updates reach the running actor via `knowledge-delivery` (`update`) and
-  become the next actor's frozen file on `001 -> 002` handoff.
+  publishes `v1`, `v2`, … into the game repository under
+  `knowledge_root: ".runtime/knowledge/live-validation-run-889/cdda"` (the repository
+  worktree is `.runtime/knowledge/live-validation-run-889/cdda/cdda`), verified updates
+  reach the running actor via `knowledge-delivery` (`update`) and become the next
+  actor's frozen file if a handoff occurs.
 - **Player route (`player-host/9`):** `openai/gpt-6.1-terra`, `effort: "medium"`, via
   OpenRouter pinned to `openai` (`allow_fallbacks: false`, `only: ["openai"]`,
   `order: ["openai"]`, `require_parameters: true`, `service_tier: "default"`),
@@ -137,10 +163,10 @@ post-handoff briefing trace under `#846`.
   `unpriced_request_usd: "0.06144"`. Combined player + recall in-flight unpriced bound is
   **`$0.47104`** (well below `ending_reserve.usd: "1.40"`; note `live_knowledge_updates:
   true` requires the recall bound in `ending_reserve.usd` even on an `--empty` start).
-- **Package limits:** `spend_limit_usd: "5.50"`, `ending_reserve.usd: "1.40"`
-  (other ending reserve fields matching `#859`: `seconds: 120`, `inputs: 128`,
-  `requests: 128`, `frames: 128`, `frame_bytes: 134217728`), `max_hosts: 2`,
-  `wall_seconds: 9000`, `host_seconds: 3600`, `total_host_seconds: 7200`,
+- **Package limits (matching sealed `#859`/`#803` except `spend_limit_usd`):**
+  `spend_limit_usd: "5.50"`, `ending_reserve: {seconds: 600, usd: "1.40", inputs: 128,
+  requests: 128, frames: 96, frame_bytes: 201326592}`, `max_hosts: 2`,
+  `wall_seconds: 6300`, `host_seconds: 5700`, `total_host_seconds: 5700`,
   `limits: {max_inputs: 6000, max_requests: 10000, max_frames: 1500, max_bytes: 2147483648}`.
 - **Working guide choice (`context.txt`) — explicit owner confirmation before freeze:**
   `docs/player-guide.md` on `main` (`sha256: 142e73034bbbfd3b53db33adf408904cad867419a4e806e0b3dfaf0d08ac70fd`,
@@ -152,7 +178,7 @@ post-handoff briefing trace under `#846`.
 - **Planned capture headroom preflight:** Run `tools.campaign_package` before launch
   against the frozen package for 500 work frames + 96 ending frames at 524,288 bytes
   (`--work-before-bytes 262144000 --ending-before-bytes 312475648`), well inside
-  `max_bytes: 2147483648`.
+  `max_bytes: 2147483648` and consistent with `ending_reserve.frames: 96`.
 
 ### Live curator runner configuration (`curator-runner-config/1`)
 
@@ -161,7 +187,7 @@ post-handoff briefing trace under `#846`.
   "schema": "curator-runner-config/1",
   "knowledge_root": ".runtime/knowledge/live-validation-run-889/cdda",
   "arm": "terra",
-  "cap_usd": "15.00",
+  "cap_usd": "19.00",
   "session_cap_usd": "8.00",
   "trigger_steps": 20,
   "ceiling_steps": 40,
@@ -182,8 +208,8 @@ post-handoff briefing trace under `#846`.
 ### Post-admission boundary grooming (`tools.curator_host.groom`)
 
 After `#889` closes and `session.sqlite3` seals, run one boundary-grooming session using
-the same configuration file and a fresh output directory inside `.runtime/` outside the
-knowledge worktree:
+the same configuration file and a fresh output directory inside `.runtime/` outside both
+the knowledge worktree and the run directory:
 
 ```sh
 .venv/bin/python -m tools.curator_host.groom \
@@ -199,51 +225,52 @@ resolving credentials or starting a host. If one or more windows published, it r
 `session_kind="grooming"` session under `curator-fact/4` (filing game-scoped facts into
 articles while keeping world-scoped facts standalone under `campground-889`).
 
-### What `#889` measures and validates
-
-1. **Multi-window live publication without `#886`:** `curator-fact/4` facts and
-   accumulated `last_admission` citations across consecutive 20-step windows, plus scope
-   separation (`game` vs `world: campground-889`).
-2. **In-session live delivery (`#838`):** real `knowledge-delivery` (`update`) events
-   adopted by actor `001` mid-run, recall firing after live adoption from an empty `v0`
-   start, and actor `002` starting with the latest live-adopted briefing on `001 -> 002`
-   handoff.
-3. **Post-admission boundary grooming (`#895`):** one real grooming session sealing cleanly
-   over the multi-window live repository and trace.
-4. **Live lag, backlog, snapshot hold/close, and player pace:** whether backlog stays
-   bounded across an entire multi-actor run, whether `store-closing.json` / active-read
-   wait behaves cleanly, and whether player pace clears the fixed cutoff.
-5. **Upgraded `#846` schedule replay:** replaying `#889`'s real coverage schedule with
-   `--recorded-deliveries` (live updates, reminders, and actor `002`'s non-empty starting
-   briefing) to measure whether `#846` cuts hold back or drop image blocks in real play.
-
-## Price, limits and why `$30.00` is not a hard cap
+## Price, limits and stop rules
 
 | Part | Forecast | Planning limit, and what enforces it |
 | --- | --- | --- |
-| Play (one admission, ~300–400 dec, `001 -> 002`) | $2.50–$3.50 | **`$5.50`**: package `spend_limit_usd` (`ending_reserve.usd: "1.40"` -> `$4.10` work). Checked before each player/recall request against reported spend plus pending recall allowance |
-| Live curator runner (~15–20 windows) | $1.35–$1.90 (`#859` rate; up to $3.60 at `#836` pilot median) | **`$15.00`** run cap (`session_cap_usd: "8.00"`). Curator proxy reserves an estimated worst case before each request; `$8.00` headroom avoids reservation stalls on later windows |
-| Post-admission boundary grooming (1 session) | $0.15–$0.40 ($0 if skipped) | **`$8.00`**: `--cap-usd 8.00` passed to `tools.curator_host.groom` (proxy reservation headroom for one grooming session over the sealed multi-window store) |
+| Play (one admission, ~300–400 dec; work budget allows ~350–450) | $2.50–$3.50 (up to $4.10 work) | **`$5.50`**: package `spend_limit_usd` (`ending_reserve.usd: "1.40"` -> `$4.10` work). Checked before each player/recall request against reported spend plus pending recall allowance |
+| Live curator runner (~15–20 windows; up to ~23 if play fills work budget) | $1.35–$1.86 (`#859` rate; $3.00–$4.00 for 15–20 at `#836` pilot median) | **`$19.00`** run cap (`session_cap_usd: "8.00"`). Preserves full `$8.00` reservation headroom on session 20 even after 19 max-cost `$0.57` sessions (`$18.83`) |
+| Post-admission boundary grooming (1 session) | $0.27–$0.66 (median $0.53 from `#618`; $0 if skipped) | **`$8.00`**: `--cap-usd 8.00` passed to `tools.curator_host.groom` (proxy reservation headroom for one grooming session over the sealed multi-window store) |
 | Unallocated margin | — | **`$1.50`** |
-| **Total** | **~$4.00–$5.80** (up to ~$7.50 at pilot median) | **`$30.00`** |
+| **Total** | **~$4.12–$6.02** (up to ~$8.16 at pilot median for 20 windows; up to ~$9.00 if full work budget used) | **`$34.00`** |
 
-**Why `$30.00` is not a hard billing cap:**
+**Why `$34.00` is not a hard billing cap:**
 
 - **Player in-flight and unpriced charges:** The player host can pass `spend_limit_usd`
   by the final in-flight player and recall requests (`$0.4096 + $0.06144 = $0.47104`
   combined unpriced bound). Attempts returning no usable cost are recorded as unpriced
   and may still be billed; the driver passes `spend_limit_usd` minus *reported* spend to
-  the successor actor.
-- **Curator proxy reservation and kill-in-flight:** The proxy reserves an estimated worst
-  case (`body_bytes * $2.5/1e6 + max_output_tokens * $7.5/1e6`) and revokes only after
-  an actual charge exceeds its reservation. A request already in flight when the runner
-  stops is bounded on paper by ~$1.00–$1.30 at a 20-step window (larger at a 40-step
-  tail), though real single-request charges were at most `$0.0518` in `#859` and `$0.10`
-  in `#836`.
+  a successor actor.
+- **Curator proxy reservation and kill-in-flight:** The proxy estimates each request's
+  worst case by replacing inline images with a fixed image-token estimate and charging
+  remaining body bytes plus `max_output_tokens`, and revokes only after an actual charge
+  exceeds its reservation. A request already in flight when the runner stops is bounded
+  on paper by ~$1.00–$1.30 at a 20-step window (larger at a 40-step tail), though real
+  single-request charges were at most `$0.0518` in `#859` and `$0.10` in `#836`.
 - **Hard cap:** Only a credit limit set by the owner on the provider key is a hard cap;
-  the code cannot read that limit. The owner approval request will state explicitly
-  whether `#889` runs under the existing key with this `$30.00` planning ceiling or under
-  a run-scoped key with a hard credit limit.
+  the code cannot read that limit. The owner approval request states explicitly whether
+  `#889` runs under the existing key with this `$34.00` planning ceiling or under a
+  run-scoped key with a hard credit limit (which the owner sets at or above the ceiling).
+
+**Stop rules (carrying forward [the `#836` corrections](2026-11-20-live-curator-run-price-correction-836.md#what-stops-the-players-side)):**
+
+- A successful **player** response with no usable cost stops the player host.
+- A successful **recall** response with no usable cost ends recall for that actor only,
+  and the player continues.
+- The player host enforces `spend_limit_usd`, `ending_reserve.usd`, and its per-actor
+  timeout; the driver and custodian enforce `wall_seconds`, `host_seconds`,
+  `total_host_seconds`, and the mechanical ceilings.
+- The live curator runner stops for the admission when its run cap is reached; when the
+  proxy refuses the next reservation even with counted spend under the cap; when the
+  proxy is revoked, breached, or unsettled; when session cleanup is unconfirmed; when a
+  charge is unknown; after two consecutive rejected or failed sessions; after three
+  consecutive failed snapshots; or when the trace store closes. Play continues without
+  it.
+- Boundary grooming runs at most one session after the store seals and stops on any
+  cap refusal, unresolved publication, proxy issue, unsealed session, or cleanup
+  failure.
+- `#889` is one admission and is not repeated on its own result without owner approval.
 
 ## Fixed pace cutoff
 
@@ -262,9 +289,30 @@ A pace under **5.16 decisions/min** (receipt elapsed) or under **5.48 operations
 (first-to-last op) triggers investigation before treating the run as clear on pace. One
 admission cannot prove that the runner did or did not slow play.
 
+## Ordered outcome table (what each result changes)
+
+Rows are read in order; the first row that applies decides. Snapshot safety comes before
+an early stop, and any stop or inconclusive result comes before a favourable replay
+([`#836` correction](2026-11-20-live-curator-run-price-correction-836.md#the-order-of-the-outcome-table-and-two-rows)).
+
+| Result | Reading | Next |
+| --- | --- | --- |
+| Snapshots fail or pass their time bound | The live read is not safe beside the custodian as designed | Fall back to the custodian yielding a detached, stable copy of each window's prefix; repeat only after that |
+| Session store closes with a non-empty write-ahead log | Sealed evidence cannot be read (does not by itself prove the snapshot reader caused it) | Investigate store close before another run |
+| The run stops early, the covered prefix cannot be established, or no actor handoff occurred | Partial figures are reported as partial (noting which mechanisms were and were not exercised) | Report to the owner before another run |
+| Player pace falls below 5.16 decisions/min (receipt) or 5.48 operations/min (first-to-last op) | A reason to look, not a finding: one admission cannot show cause | Inspect snapshot timings and `host.jsonl` before concluding |
+| No version is published | Nothing can be said about lag, live updates, or grooming (boundary grooming skips cleanly at $0) | Read the curator sessions before retrying |
+| Backlog grows across the admission | A session cannot keep up with play at this window | Live curation at this price/window is not workable; keep curation between admissions |
+| Cost and lag disagree (close behind and far over forecast, or cheap and far behind) | Window and model are mismatched | Show both figures to the owner before another run |
+| Upgraded `--recorded-deliveries` schedule replay makes no cut | Inconclusive: the admission gave the cut nothing to do | Longer admission needed before deciding `#890` |
+| Replay holds back requests | Curation trails too far behind for the cut at this window | Test a smaller window or faster model in a second priced run before building `#890` |
+| Replay holds back no request but drops image blocks | The cut keeps its token target only by losing images | Revisit the image policy before proposing `#890` |
+| Replay makes cuts, holds back no request, drops no image block, but leaves a request above `high_mark` above briefing (`prompt - briefing > 60,000`) | The cut is not keeping its above-briefing token target | Revisit window, model, or cut parameters before proposing `#890` |
+| Replay makes cuts, holds back no request, drops no image block, and leaves every request within `high_mark` above briefing (`prompt - briefing <= 60,000`), with live updates and grooming clean | Curation and live delivery keep pace closely enough for the simulated cut to hold its target | Put `#890` (coverage-gated context cut) to the owner with these figures and the disclosed fresh-briefing simulation caveat |
+
 ## Pre-dispatch checklist (not yet executed)
 
-1. **Owner approval:** Confirm planning ceiling (`$30.00`, forecast `~$4.00–$5.80`), key
+1. **Owner approval:** Confirm planning ceiling (`$34.00`, forecast `~$4.12–$6.02`), key
    type (existing key vs run-scoped credit limit), and working guide choice
    (`docs/player-guide.md` vs `#803`/`#859` `context.txt`).
 2. **Main checkout required:** Freeze the package on the clean merged `main` commit and

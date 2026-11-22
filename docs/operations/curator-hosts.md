@@ -315,17 +315,20 @@ session with the same configuration file that started its curator runner.
 ```
 
 `RUN` is the directory containing `session.sqlite3`. It must match the configured
-repository's last published admission. Choose a fresh `OUT` inside `.runtime`
-and outside the knowledge worktree. Use `--runtime-root PATH` if the runner used
-a different runtime root. The grooming cap defaults to `session_cap_usd` if set,
-or `cap_usd` from `CONFIG`. `--cap-usd USD` overrides that cap for this session.
+repository's last published admission (`CONFIG` supplies `knowledge_root`). Choose a
+fresh `OUT` inside `.runtime`, outside both the knowledge worktree and `RUN`. Use
+`--runtime-root PATH` if the runner used a different runtime root. The grooming cap
+defaults to `session_cap_usd` if set, or `cap_usd` from `CONFIG`. `--cap-usd USD`
+overrides that cap for this session.
 
 Read `OUT/grooming-summary.json` for the status, published versions, cost and
 relative path to the session summary when available. Exit `0` means the session
-sealed with settled accounting and clean process cleanup, or the repository had
-no published admission and grooming was skipped. Exit `1` records a failed run.
-Exit `2` reports a refusal to start, including when the supplied run differs from
-the last published admission.
+sealed with settled accounting, a resolved publication status (including a clean
+rejection that leaves the published version unchanged), no cap stop and clean
+process cleanup, or the repository had no published admission and grooming was
+skipped. Exit `1` records a failed run (including unresolved publication or a
+cap stop). Exit `2` reports a refusal to start, including when the supplied run
+differs from the last published admission.
 
 ## Zero-spend grooming verification
 

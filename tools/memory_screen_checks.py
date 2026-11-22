@@ -47,7 +47,7 @@ from harness.evaluation.core.sources import read_carry, read_host, run_archive_e
 from tools.memory_reads import game_clock, run_dirs
 
 LAGS = (10, 20, 47, 94)
-DELIVERY_BYTES_PER_TOKEN = 4  # Pi's context estimate uses four bytes per text token.
+DELIVERY_BYTES_PER_TOKEN = 4  # Simulation approximation: four UTF-8 bytes per text token.
 DELIVERY_COUNT_KEYS = ('update_count', 'update_tokens', 'reminder_count', 'reminder_tokens', 'unmatched_deliveries')
 BRIEFING_CONFLICT = '--recorded-deliveries requires --briefing-tokens to be zero'
 

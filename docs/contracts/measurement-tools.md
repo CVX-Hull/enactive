@@ -85,16 +85,21 @@ A request without a start time inherits the previous request's coverage for its
 actor, initially zero.
 
 With `--recorded-deliveries`, `cut` reads `knowledge-delivery` events from each
-actor's `host.jsonl`, estimating tokens at four UTF-8 bytes per token (`ceil(bytes / 4)`).
-An actor's `briefing` events set that actor's starting briefing size (zero when absent,
-such as an empty `v0` start, and fresh for a successor actor after handoff). Delivered
+actor's `host.jsonl`, approximating tokens at four UTF-8 bytes per token (`ceil(bytes / 4)`).
+An actor's `briefing` events set that actor's starting briefing size (zero only when no
+`briefing` event appears; an empty start still emits a short `version: null` briefing,
+and a successor actor after handoff carries its own starting briefing). Delivered
 `update` events (`outcome: "delivered"`) and `reminder` events are assigned to their
 `receiving_player_request_id`'s logical player request (matching retries and skipping
-recall requests), adding their tokens on that request and releasing them when a cut
-removes that turn. Refused updates and `knowledge-undelivered` events add no tokens;
-deliveries whose receiving request matches no logical player request are counted as
-unmatched. In every mode, `high_mark` and `low_mark` count tokens above the actor's
-briefing size per the [context-cut design](../design/coverage-gated-context-cut.md#the-cut).
+recall requests), adding their tokens on that request. Deliveries on turns after the
+first request are released when a cut removes that turn; a delivery on the first
+request belongs to no turn and is not removed by a cut. Refused updates and
+`knowledge-undelivered` events add no tokens; deliveries whose receiving request
+matches no logical player request are counted as unmatched. In every mode, `high_mark`
+and `low_mark` count tokens above the actor's starting briefing size per the
+[context-cut design](../design/coverage-gated-context-cut.md#the-cut); the simulation
+keeps each actor's starting briefing size across cuts and does not model fresh-briefing
+growth at a cut.
 
 ## Judge events (`judge-events/2`)
 
