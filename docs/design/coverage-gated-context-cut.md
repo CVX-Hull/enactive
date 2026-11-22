@@ -1,6 +1,6 @@
 ---
 owner: lead
-status: proposed
+status: active
 review_trigger: 'Implementation of the coverage-gated context cut in #900'
 ---
 
@@ -30,8 +30,10 @@ would identify the removed decisions and direct the player to their frames throu
 The free checks use 20,000 and 60,000 tokens for the low and high marks. At about
 950 tokens per turn and a peak of 39 images, the first trigger falls near 40,000
 tokens. These are simulation parameters. Sessions of 15 decisions avoided image-block
-drops in the back-to-back simulation. The lag beside play and the player's ability
-to continue its task after a cut still need measurement.
+drops in the back-to-back simulation. Curator lag beside play was measured in
+[#889](../acceptance/2026-11-22-live-validation-run-889.md) (17 of 17 live windows kept
+pace); the player's ability to continue its task after a real cut still needs
+measurement in live play.
 [Cut simulation](../acceptance/2026-11-13-memory-screen-free-checks.md#where-the-cut-stops-working)
 
 ## Publication conditions
