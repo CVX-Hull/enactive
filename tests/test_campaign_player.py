@@ -12,11 +12,11 @@ import pytest
 
 from harness.computer.protocol import ControlError
 from harness.player.knowledge import empty
-from tools.campaign_player import HostEvents,LiveKnowledge,ending_trigger,finish_interruption,run_hosts
+from tools.campaign_player import COVERED_PREFIX_FILE,UPDATES_FILE,HostEvents,LiveKnowledge,ending_trigger,finish_interruption,run_hosts
 from tools.configure_player_tools import configuration
 
 
-START=dict(type='host-start',telemetry_version=9,schema='player-host/9')
+START=dict(type='host-start',telemetry_version=10,schema='player-host/10')
 
 
 def cost(request,amount,how='provider-reported',kind='response-complete'):
@@ -124,7 +124,7 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/6',6),('player-host/3',3),('player-host/3',4),('player-host/7',7),('player-host/8',8),('player-host/9',8),('player-host/8',9),(None,4)])
+@pytest.mark.parametrize('schema,telemetry',[('pi-player-host/6',4),('player-host/6',6),('player-host/3',3),('player-host/3',4),('player-host/7',7),('player-host/8',8),('player-host/9',9),('player-host/10',9),('player-host/9',10),(None,4)])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
@@ -195,7 +195,7 @@ assert prompt.startswith('Frozen mission') and 'Software actor/resource note' no
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
-emit(type='host-start', telemetry_version=9, schema='player-host/9', spend_limit_usd=route['spend_limit_usd'])
+emit(type='host-start', telemetry_version=10, schema='player-host/10', spend_limit_usd=route['spend_limit_usd'])
 if 'HANG' in prompt: time.sleep(120)  # a host still playing when the driver must stop it
 recall_made = int('WITH_RECALL' in prompt and flags['--pending-control-id']=='none')
 if recall_made:
@@ -436,7 +436,78 @@ def live_case(tmp_path,package=None):
     def listed():
         path=actor/'knowledge-updates.jsonl'
         return [json.loads(line)['version'] for line in path.read_text().splitlines()] if path.exists() else []
-    return LiveKnowledge(source,tmp_path/'delivered-knowledge.json'),Mock(),actor,leave,listed
+    return LiveKnowledge(source,tmp_path/'delivered-knowledge.json',session='b'*32),Mock(),actor,leave,listed
+
+
+def covered_prefix(**changes):
+    value = dict(schema='curator-covered-prefix/1',session='b'*32,actor='001',actor_id='a'*32,
+                 operation_id='c'*32,version='v2',restored=False)
+    return dict(value,**changes)
+
+
+def coverage_entry(prefix):
+    return dict(schema='coverage-update-entry/1', **{key: prefix[key] for key in (
+        'session','actor_id','operation_id','version','restored')})
+
+
+def updates(target):
+    return [json.loads(line) for line in (target/UPDATES_FILE).read_text().splitlines()]
+
+
+def test_coverage_is_listed_after_adoption_and_restore_is_seeded_for_successors(tmp_path,capsys):
+    live,application,actor,leave,_=live_case(tmp_path,published(1))
+    live.begin(actor)
+    prefix=covered_prefix()
+    leave(prefix,COVERED_PREFIX_FILE)
+    live.poll(application)
+    live.poll(application)
+    assert not (actor/UPDATES_FILE).exists()
+    assert capsys.readouterr().err.count('must name an adopted publication')==1
+
+    leave(published(2))
+    live.poll(application)
+    live.poll(application)
+    knowledge,coverage=updates(actor)
+    assert (knowledge['schema'],knowledge['version'])==('knowledge-update-entry/1','v2')
+    assert coverage==coverage_entry(prefix)
+    assert live.current_coverage==live.actor_coverage==coverage
+
+    live.end()
+    successor=tmp_path/'successor';successor.mkdir()
+    assert json.loads(live.begin(successor))['version']=='v2'
+    live.poll(application)
+    assert updates(successor)==[coverage]  # unchanged source bytes, a new actor list
+
+    restore=covered_prefix(restored=True,actor=None,actor_id=None,operation_id=None,version=None)
+    leave(restore,COVERED_PREFIX_FILE)
+    live.poll(application)
+    assert updates(successor)==[coverage,coverage_entry(restore)] and live.restored
+    live.end()
+    (live.source/COVERED_PREFIX_FILE).unlink()
+    final_actor=tmp_path/'final-actor';final_actor.mkdir()
+    live.begin(final_actor)
+    assert updates(final_actor)==[coverage_entry(restore)]  # available even before the next poll
+    leave(prefix,COVERED_PREFIX_FILE)
+    live.poll(application)
+    assert updates(final_actor)==[coverage_entry(restore)]
+
+
+@pytest.mark.parametrize('value', [None, covered_prefix(extra=True), covered_prefix(session='a'*32),
+    covered_prefix(session='B'*32), covered_prefix(actor=''), covered_prefix(actor_id='001'),
+    covered_prefix(operation_id='unknown'), covered_prefix(version='v02'), covered_prefix(version='v0'),
+    covered_prefix(restored=1), covered_prefix(restored=True)])
+def test_invalid_coverage_is_reported_once_while_live_knowledge_continues(tmp_path,capsys,value):
+    live,application,actor,leave,listed=live_case(tmp_path,published(1))
+    live.begin(actor)
+    if value is None:
+        (live.source/COVERED_PREFIX_FILE).write_text('{')
+    else:
+        leave(value,COVERED_PREFIX_FILE)
+    leave(published(2))
+    live.poll(application)
+    live.poll(application)
+    assert listed()==['v2'] and live.current_coverage is None and not live.restored
+    assert capsys.readouterr().err.count('live coverage refused')==1
 
 
 def test_the_highest_verified_version_above_the_current_one_is_adopted_and_a_refused_one_is_never_retried(tmp_path,capsys):
@@ -447,7 +518,8 @@ def test_the_highest_verified_version_above_the_current_one_is_adopted_and_a_ref
     (tmp_path/'delivered'/'.v9.json.tmp').write_text('{')  # a file still being written is not a version
     (tmp_path/'delivered'/'notes.txt').write_text('ignored')
     live.poll(application)
-    assert listed()==[] and not application.set_knowledge.called and capsys.readouterr().err==''
+    assert listed()==[] and not application.set_knowledge.called
+    assert capsys.readouterr().err.count('live coverage refused: FileNotFoundError')==1
     leave(published(3))
     leave(published(4,repository='e'*40))  # another repository
     leave(published(5),'v6.json')  # names another version than its file
@@ -539,8 +611,9 @@ def test_a_version_prepared_for_an_actor_that_ended_is_decided_again_for_the_nex
     assert json.loads(live.begin(tmp_path/'next'))['version']=='v3' and application.set_knowledge.call_count==1
 
 
-def test_a_stalled_list_replace_does_not_block_end_or_begin(tmp_path):
-    """R-REGRESSION (B1): `LiveKnowledge._adopt` performs `os.replace` outside `self.lock` so a stalled
+@pytest.mark.parametrize('kind',['knowledge','coverage'])
+def test_a_stalled_list_replace_does_not_block_end_or_begin(tmp_path,kind):
+    """R-REGRESSION (B1): `LiveKnowledge` performs `os.replace` outside `self.lock` so a stalled
     filesystem rename cannot block `end()` or `begin()` on the driver thread, and once the rename finishes
     after the actor ended it restores the old actor's list to its prior bytes rather than leaving an
     unadopted version listed."""
@@ -548,7 +621,10 @@ def test_a_stalled_list_replace_does_not_block_end_or_begin(tmp_path):
     live,application,actor,leave,listed=live_case(tmp_path,published(2))
     (actor/'knowledge-updates.jsonl').write_bytes(b'')
     live.begin(actor)
-    leave(published(3))
+    if kind=='coverage':
+        leave(covered_prefix(),COVERED_PREFIX_FILE)
+    else:
+        leave(published(3))
     entered,release=threading.Event(),threading.Event()
     real_replace=os.replace
     def stalling_replace(src,dst):
@@ -568,6 +644,7 @@ def test_a_stalled_list_replace_does_not_block_end_or_begin(tmp_path):
     assert elapsed<2 and not worker.is_alive()
     assert json.loads(successor)['version']=='v2' and not application.set_knowledge.called
     assert listed()==[] and (actor/'knowledge-updates.jsonl').read_bytes()==b''
+    assert live.current_coverage is None and live.actor_coverage is None
 
 
 def stalled_source(tmp_path):

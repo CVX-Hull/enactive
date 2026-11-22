@@ -23,8 +23,8 @@ SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 #: The current versions. Any other version of these records is an error naming the file and version, except where
 #: the closed archive index below lists that exact version for that session.
-HOST_SCHEMA = 'player-host/9'
-HOST_TELEMETRY = 9
+HOST_SCHEMA = 'player-host/10'
+HOST_TELEMETRY = 10
 MANIFEST_SCHEMA = 'campaign-run/12'
 #: These package versions use player-journal/1 and player-handoff-context/2.
 JOURNAL_MANIFEST_SCHEMAS = (MANIFEST_SCHEMA, 'campaign-run/10')
@@ -123,9 +123,14 @@ ARCHIVE_COMBINATIONS = (
              host_telemetry=8, run_ending='campaign-watch-terminal/4'),
         dict(manifest=(*(key for key in _MANIFEST_5 if key not in ('accounting', 'max_http_attempts')),
                        'spend_limit_usd', 'total_host_seconds', 'private_files'), host=_HOST_3)),
+    # Owner decision, 22 November 2026: #889's sealed live validation and initial zero-spend aborted launch.
+    ArchiveCombination(
+        dict(manifest='campaign-run/12', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/9',
+             host_telemetry=9, run_ending='campaign-watch-terminal/4'),
+        dict(host=_HOST_3)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
-MANIFEST_SCHEMAS = (*dict.fromkeys(c.versions['manifest'] for c in ARCHIVE_COMBINATIONS), MANIFEST_SCHEMA)
+MANIFEST_SCHEMAS = tuple(dict.fromkeys([*(c.versions['manifest'] for c in ARCHIVE_COMBINATIONS), MANIFEST_SCHEMA]))
 
 
 @dataclass(frozen=True)
@@ -376,7 +381,7 @@ class HostTraceUnsupported(EvaluationError):
 
 def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
               entry: ArchiveSession | None = None) -> Iterator[HostEvent]:
-    """Stream one current player-host/9 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+    """Stream one current player-host/10 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
     host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
     evaluation never gates the control path (ADR008).
 
@@ -430,7 +435,7 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
 
 
 def read_host(path: Path, actor_hint: str, entry: ArchiveSession | None = None) -> tuple[str, tuple[HostEvent, ...]]:
-    """One whole current player-host/9 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    """One whole current player-host/10 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
     still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final.
     `entry` is its session's archive index entry, as in `iter_host`."""
     events = tuple(iter_host(path, actor_hint, partial_tail=True, entry=entry))

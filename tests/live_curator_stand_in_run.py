@@ -117,7 +117,7 @@ def writer_main(args: argparse.Namespace) -> int:
         def set_knowledge(self, knowledge):
             served.append(dict(version=knowledge.value['version'], wall=time.time()))
 
-    live = LiveKnowledge(run/RUNNER_DIRECTORY/DELIVERED_DIRECTORY, run/'delivered-knowledge.json')
+    live = LiveKnowledge(run/RUNNER_DIRECTORY/DELIVERED_DIRECTORY, run/'delivered-knowledge.json', session=args.session)
     try:
         for actor in range(args.actors):
             writer.new_actor()
@@ -587,7 +587,7 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
                                       for c in costs]
     report['knowledge'] = dict(published=repo.published(), root=live['config']['knowledge_root'])
 
-    delivery_checks, report['live_delivery'] = live_delivery(out, run, repo, windows, writer_live)
+    delivery_checks, report['live_delivery'] = live_delivery(out, run, repo, windows, writer_live, order)
     checks.update(delivery_checks)
 
     report['not_measured'] = {
@@ -605,7 +605,7 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
     return dict(checks=checks, **report)
 
 
-def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: dict) -> tuple[dict, dict]:
+def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: dict, order: dict) -> tuple[dict, dict]:
     """Live delivery (#838) from the files the run left: the versions the real runner exported, what the driver's
     own code listed for each actor and told the application to serve, and what the real host delivers from one
     actor's list (replayed offline with a scripted provider: `tools/player_host/test/live-update-replay.mjs`)."""
@@ -613,6 +613,8 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
 
     from harness.curator.knowledge import _git
     from harness.player.knowledge import Knowledge, version_number
+    from tools.campaign_player import COVERAGE_ENTRY_SCHEMA, UPDATE_ENTRY_SCHEMA
+    from tools.curator_host.live_runner import COVERED_PREFIX_FILE, COVERED_PREFIX_SCHEMA, SESSION_ID_RE
 
     checks = {}
     number = lambda version: -1 if version is None else version_number(version)  # noqa: E731
@@ -629,29 +631,62 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
                                        coverage=value['coverage'], sha256=hashlib.sha256(path.read_bytes()).hexdigest())
         except Exception as exc:  # noqa: BLE001 - reported as an invalid export
             exported[path.stem] = dict(valid=False, error=f'{type(exc).__name__}: {exc}')
-    leftovers = sorted(p.name for p in directory.iterdir() if p.name not in {f'{v}.json' for v in exported}) if directory.is_dir() else []
+    recognized = {COVERED_PREFIX_FILE, *(f'{v}.json' for v in exported)}
+    leftovers = sorted(p.name for p in directory.iterdir() if p.name not in recognized) if directory.is_dir() else []
     # The runner exports after the poll that confirmed a version, so the last one may be cut by the teardown.
     checks['runner_left_each_confirmed_version_for_the_driver'] = (
         bool(exported) and all(e['valid'] for e in exported.values()) and not leftovers
         and list(exported) in (published, published[:-1]))
 
+    session = json.loads((run/'manifest.json').read_text())['session']
+    endpoints = {}
+    for window in windows:
+        if not window['numbering_equals_sealed']:
+            continue
+        actor = window['actor']
+        actor_id = json.loads((run/'actors'/actor/'actor.json').read_text())['actor_id']
+        operation_id = order[actor][window['last']-1]
+        if not all(SESSION_ID_RE.fullmatch(value) for value in (session, actor_id, operation_id)):
+            continue
+        for verdict in window['verdicts'] or ():
+            version = verdict.get('version')
+            if verdict.get('status') == 'published' and exported.get(version, {}).get('valid'):
+                endpoints[version] = dict(schema=COVERED_PREFIX_SCHEMA, session=session, actor=actor, actor_id=actor_id,
+                                          operation_id=operation_id, version=version, restored=False)
+    try:
+        prefix = json.loads((directory/COVERED_PREFIX_FILE).read_text())
+    except (OSError, ValueError):
+        prefix = None
+    checks['runner_left_a_verified_covered_prefix'] = (
+        isinstance(prefix, dict) and isinstance(prefix.get('version'), str) and prefix == endpoints.get(prefix['version']))
+
     record = writer_live['live']
-    actors, listed_ok = {}, True
+    actors, listed_ok, coverage_ok = {}, True, True
     for actor in sorted(p for p in (run/'actors').iterdir() if p.is_dir()):
         frozen = json.loads((actor/'delivered-knowledge.json').read_text())['version']
         entries = lines(actor/'knowledge-updates.jsonl')
         previous = number(frozen)
+        listed, coverage = [], []
         for entry in entries:
+            if entry.get('schema') == COVERAGE_ENTRY_SCHEMA:
+                version = entry.get('version')
+                endpoint = endpoints.get(version) if isinstance(version, str) else None
+                expected = None if endpoint is None else dict(schema=COVERAGE_ENTRY_SCHEMA, **{
+                    key: endpoint[key] for key in ('session', 'actor_id', 'operation_id', 'version', 'restored')})
+                coverage_ok = coverage_ok and expected == entry and number(version) <= previous
+                coverage.append(entry)
+                continue
             data = (actor/entry['file']).read_bytes() if (actor/entry['file']).is_file() else b''
             listed_ok = listed_ok and (
-                entry['schema'] == 'knowledge-update-entry/1' and entry['file'] == f"knowledge/{entry['version']}.json"
+                entry['schema'] == UPDATE_ENTRY_SCHEMA and entry['file'] == f"knowledge/{entry['version']}.json"
                 and hashlib.sha256(data).hexdigest() == entry['sha256'] == exported.get(entry['version'], {}).get('sha256')
                 and number(entry['version']) > previous and entry['repository_id'] == root
                 and entry['coverage'] == exported[entry['version']]['coverage'])
             previous = number(entry['version'])
-        actors[actor.name] = dict(frozen_version=frozen, listed=[e['version'] for e in entries],
-                                  started=record['started'].get(actor.name))
+            listed.append(entry['version'])
+        actors[actor.name] = dict(frozen_version=frozen, listed=listed, coverage=coverage, started=record['started'].get(actor.name))
     checks['driver_listed_a_verified_version_for_a_running_actor'] = listed_ok and any(a['listed'] for a in actors.values())
+    checks['driver_forwarded_verified_coverage_after_adoption'] = coverage_ok and any(a['coverage'] for a in actors.values())
     served = [s['version'] for s in record['served']]
     # Each actor starts from the version the application was last told to serve before it started (none: the package's).
     starts = True
@@ -685,14 +720,14 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
     delivered = [u for u in host.get('updates', ()) if u.get('outcome') == 'delivered']
     others = [u for u in host.get('updates', ()) if u.get('outcome') != 'delivered']
     checks['host_delivered_the_newest_listed_version_to_its_next_request'] = (
-        host.get('ok') is True and host.get('host') == dict(schema='player-host/9', telemetry_version=9)
+        host.get('ok') is True and host.get('host') == dict(schema='player-host/10', telemetry_version=10)
         and len(delivered) == 1 and delivered[0]['type'] == 'knowledge-delivery' and delivered[0]['version'] == newest
         and delivered[0]['previous_version'] == actors[chosen]['frozen_version']
         and delivered[0]['coverage'] == exported[newest]['coverage']
         and delivered[0]['delivered_knowledge_schema'] == 'delivered-knowledge/2'
         and isinstance(delivered[0].get('receiving_player_request_id'), str)
         and all(u.get('reason') == 'superseded' for u in others) and len(others) == len(actors[chosen]['listed']) - 1)
-    return checks, dict(published=published, exported=exported, leftovers=leftovers, actors=actors,
+    return checks, dict(published=published, exported=exported, leftovers=leftovers, covered_prefix=prefix, actors=actors,
                         served=record['served'], host=host)
 
 

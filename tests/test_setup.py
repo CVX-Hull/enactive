@@ -4,6 +4,7 @@ import hashlib
 import fcntl
 from io import BytesIO, StringIO
 import json
+import shlex
 from pathlib import Path
 import subprocess
 import shutil
@@ -198,6 +199,8 @@ class SetupTests(unittest.TestCase):
         self.assertIn(str(root / ".runtime/Cataclysm.app/Contents/Resources"), script)
         self.assertIn(str(root / ".runtime/user") + "/", script)
         self.assertIn(str(root / ".runtime/logs/game.log"), script)
+        mkdir = f"mkdir -p {shlex.quote(str(root.resolve() / '.runtime/logs'))}\n"
+        self.assertIn(mkdir + "exec ./cataclysm-tiles", script)
         result = subprocess.run(["/bin/sh", "-n"], input=script, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 

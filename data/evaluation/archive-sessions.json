@@ -531,6 +531,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "49964eb42a7d4dabaef0c5ff6230a9be": {
+      "run": "live-validation-run-889-49964eb42a7d",
+      "study": "live-validation-run-889-aux",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/9",
+        "host_telemetry": 9,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "4ab9b529841fc6ff98beebb05c0dd77a": {
       "run": "withholding-study-651-03",
       "study": "withholding-study-651",
@@ -1217,6 +1229,18 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "a02d8069d0434813a41acc7009217da6": {
+      "run": "live-validation-run-889-a02d8069d043",
+      "study": "live-validation-run-889",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/9",
+        "host_telemetry": 9,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },

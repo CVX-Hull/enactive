@@ -89,6 +89,7 @@ def run_campaign(directory: Path) -> dict:
         player_path=Path(profile['player_store']);player_path.parent.mkdir(parents=True,exist_ok=True)
         memory=Journal(player_path)
         if stopped.is_set():raise ValueError('Cancelled before native launch')
+        (Path(profile['shared_lock']).parent.parent/'logs').mkdir(parents=True,exist_ok=True)
         channel=owner.start()
         if stopped.is_set():
             channel.stop('Cancelled during native launch')

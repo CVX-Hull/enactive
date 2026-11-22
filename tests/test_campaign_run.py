@@ -30,7 +30,7 @@ def package(root, *, world=None, knowledge=None, live=False, seed=None):
     hashes=export(directory,empty() if knowledge is None else knowledge,seed,world=world)
     values={
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
-        'route.json':dict(schema='player-host/9',service_tier='default',context_reserve_tokens=200,
+        'route.json':dict(schema='player-host/10',service_tier='default',context_reserve_tokens=200,context_cut=None,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
@@ -89,6 +89,16 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     for i in range(1000):(unrelated/f'{i}.json').write_text('{unsupported partial old data')
     assert validate(directory,tmp_path)[0]==profile
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
+
+
+def test_preflight_rejects_an_old_host_route_before_dispatch(tmp_path):
+    directory,profile=package(tmp_path)
+    rewrite_route(directory,profile,schema='player-host/9')
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as adapter:
+        with pytest.raises(ControlError,match='Unsupported player host route'):
+            packages.preflight(directory)
+    adapter.assert_not_called()
 
 
 @pytest.mark.parametrize('start', ['home-mechanic-open-shelter', 'S0', 'S01', 'S100'])
@@ -392,6 +402,8 @@ def test_a_current_package_with_a_private_export_of_the_retired_knowledge_versio
 @pytest.mark.parametrize('when',['before','during'])
 def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path,when):
     directory,profile=package(tmp_path)
+    logs=tmp_path/'.runtime/logs'
+    assert not logs.exists()
     handlers={};calls=[]
     def install(sig,handler):
         prior=handlers.get(sig);handlers[sig]=handler;return prior
@@ -401,6 +413,7 @@ def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path
         def reserve(self):
             if when=='before':handlers[signal.SIGTERM](signal.SIGTERM,None)
         def start(self):
+            assert logs.is_dir()
             calls.append('start');self.channel=Mock()
             handlers[signal.SIGTERM](signal.SIGTERM,None)
             return self.channel
@@ -411,6 +424,7 @@ def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path
             patch.dict(os.environ,{'OFFLINE_KEY':'fixture-secret'}),patch.object(campaign_run,'run_hosts') as host:
         result=campaign_run.run_campaign(directory)
     assert calls==([] if when=='before' else ['start']) and not host.called
+    assert logs.exists() == (when == 'during')
     assert result['schema']=='campaign-receipt/7'
     # No host was started, so nothing was spent and the record is complete.
     assert result['accounting']==dict(spend_limit_usd='1',reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,unpriced_request_usd='0.00063',unpriced_recall_request_usd='0.00063',

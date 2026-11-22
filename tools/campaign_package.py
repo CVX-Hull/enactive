@@ -112,7 +112,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/9` adapter selection and return its argv."""
+    """Validate the closed `player-host/10` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -210,7 +210,7 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/9':
+    if type(route) is not dict or route.get('schema')!='player-host/10':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     # The dollar limit: the most this run may count as spent. The route repeats it, and the driver

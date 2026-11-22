@@ -161,8 +161,14 @@ error and tried again at the next poll. The runner reads `live_knowledge_updates
 and the world only from a manifest whose bytes have the SHA-256 that the supervisor's
 `campaign-watch-start/4` launch record names for the same session, the checks the
 [trace projection](../../harness/trace/projection.py) makes before it reads labels.
-Delivery never stops the runner or curation: a manifest it cannot read or verify
-turns delivery off and the runner starts. The
+After the corresponding `vN.json` is on disk, the runner atomically publishes
+`curator-runner/delivered/covered-prefix.json` (`curator-covered-prefix/1`). It
+names the session, actor directory and ID, final operation ID and version of the
+[unbroken covered prefix](#publication-and-coverage). A gap holds the prefix in
+place while later versions can still reach the actor. A restore publishes
+`restored: true` with null actor, operation and version fields, invalidating the
+prefix for the admission. Curation proceeds even when the runner cannot verify the
+manifest or write the delivery files. The
 [host contract](../contracts/player-host.md#a-newer-version-during-play) owns
 adoption by the driver and the host.
 

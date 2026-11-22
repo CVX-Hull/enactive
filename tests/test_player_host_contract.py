@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/9` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/10` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -77,11 +77,12 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/9", spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/10", spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
-                max_context_images=4, context_image_block=1, context_reserve_tokens=512, request_timeout_seconds=10, model=adapter.model(base_url),recall=dict(model=adapter.model(base_url),every=5,unpriced_request_usd=UNPRICED_REQUEST_USD))
+                max_context_images=4, context_image_block=1, context_reserve_tokens=512, context_cut=None,
+                request_timeout_seconds=10, model=adapter.model(base_url),recall=dict(model=adapter.model(base_url),every=5,unpriced_request_usd=UNPRICED_REQUEST_USD))
 
 
 # ---------------------------------------------------------------- reference provider
@@ -295,9 +296,26 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/7", "player-host/7", "player-host/8", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
+    for schema in ("pi-player-host/7", "player-host/7", "player-host/8", "player-host/9", "player-host/0", "player-host/1", "player-host/2", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
+
+
+def test_validate_accepts_a_closed_context_cut(adapter, validation_files):
+    envelope = dict(route(adapter, "http://127.0.0.1:9/v1"),
+                    context_cut={"high_mark": 6000, "low_mark": 2000, "min_free": 10})
+    result = run_mode(adapter, ["validate", *validation_files(envelope=envelope)])
+    assert result.returncode == 0 and result.stdout == ""
+
+
+@pytest.mark.parametrize("cut", [False, {}, {"high_mark": 6000, "low_mark": 2000},
+    {"high_mark": 6000, "low_mark": 2000, "min_free": 10, "extra": 1},
+    {"high_mark": 6000, "low_mark": 6000, "min_free": 10},
+    {"high_mark": 6000, "low_mark": 2000, "min_free": 0},
+    {"high_mark": 6000, "low_mark": 2000, "min_free": 1.5}])
+def test_validate_rejects_invalid_context_cut(adapter, validation_files, cut):
+    envelope = dict(route(adapter, "http://127.0.0.1:9/v1"), context_cut=cut)
+    assert run_mode(adapter, ["validate", *validation_files(envelope=envelope)]).returncode != 0
 
 
 def test_validate_rejects_disabled_mcp_table(adapter, validation_files, tmp_path):
@@ -346,7 +364,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/9" and events[0]["telemetry_version"] == 9
+    assert events[0]["schema"] == "player-host/10" and events[0]["telemetry_version"] == 10
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True

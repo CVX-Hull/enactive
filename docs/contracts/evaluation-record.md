@@ -19,7 +19,7 @@ rule still decide acceptance. No evaluation value reaches the player.
 The evaluator reads one run directory read-only:
 - `session.sqlite3` (`computer-session/1`);
 - `sources/*.png`;
-- each `actors/NNN/host.jsonl` (`player-host/9`), including its per-request context
+- each `actors/NNN/host.jsonl` (`player-host/10`), including its per-request context
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
 - `manifest.json` (`campaign-run/12`), including its operator labels;
@@ -42,17 +42,19 @@ input format is an error naming the file and version. Nothing is guessed.
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
   forbid the computer importing evaluation.
-- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/9`), used by
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/10`), used by
   the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
   `tools/campaign_player.py` stays separate because evaluation never gates the control path
   ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
   per line and two million lines per trace, skips blank lines, and rejects a trace that is
   empty (or only blank lines), whose first event is not a `host-start`, or whose
-  `host-start` is not `player-host/9` telemetry 9. For an [archived run](#implementation-rules),
+  `host-start` is not `player-host/10` telemetry 10. For an [archived run](#implementation-rules),
   the parser also accepts the exact host version and session in its manifest's archive
   entry. An unterminated final line that does not parse is an error for `host-summary`.
   The evaluator and viewer ignore it because a trace may still be appending. A malformed
   line ending in a newline is always an error.
+- `host-summary` leaves the pair ending at a successful context cut out of the
+  prompt-composition fit. A held-back cut leaves the pair eligible for the fit.
 
 **Sequence and incremental reading.**
 - The operation sequence `seq` is the `operations` table's rowid.
@@ -304,7 +306,9 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   use the same receipt, driver, terminal, handoff and player journal formats
   as current runs. Their host traces are `player-host/8` telemetry 8 and their actor
   inputs `player-host-inputs/3` with `delivered-knowledge/1`, the versions before a
-  newer knowledge version could reach a running actor. The evaluator sets `labels.world` to null for archive versions.
+  newer knowledge version could reach a running actor. The evaluator sets `labels.world` to null for manifests
+  that predate the world label. The [two approved #889 sessions](../decisions/owner-decisions.md#context-cut-go-and-archive-889)
+  use the current manifest, receipt, driver and terminal versions. Their host version is `player-host/9` telemetry 9.
   The index also includes `spend-limit-run-555` under the
   [“Add it to the index” decision](../decisions/owner-decisions-archive.md#index-the-spend-limit-check). The
   indexed session `522-held-out/computer-sessions/lh4a1` does not evaluate: its database

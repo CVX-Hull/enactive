@@ -24,7 +24,7 @@ def test_delivered_reminder_is_a_notice_for_prompt_composition_pairs(tmp_path):
                   usage=dict(input=10,output=1,cacheRead=0,cacheWrite=0)),
             event('tool-start',at+2,request_id=key,tool_call_id='call',tool='x',arguments={}),
             event('tool-result',at+3,request_id=key,tool_call_id='call',result={'content':[{'type':'text','text':'x'}]})]
-    events=[event('host-start',0,schema='player-host/9',telemetry_version=9),*request('request-1',1),
+    events=[event('host-start',0,schema='player-host/10',telemetry_version=10),*request('request-1',1),
         event('knowledge-delivery',5,kind='reminder',receiving_player_request_id='request-2'),
         *request('request-2',6),
         # A delivered knowledge update is a message the host added too; a refused one added nothing.
@@ -50,7 +50,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def event(self, kind, at, **fields):
         if kind == "host-start":
-            fields = {"schema": "player-host/9", "telemetry_version": 9, **fields}
+            fields = {"schema": "player-host/10", "telemetry_version": 10, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
@@ -250,9 +250,10 @@ class HostAnalysisTests(unittest.TestCase):
                        {"schema": "player-host/3", "telemetry_version": 3},
                        {"schema": "player-host/3", "telemetry_version": 6},
                        {"schema": "player-host/8", "telemetry_version": 8},
-                       {"schema": "player-host/9", "telemetry_version": 8},
-                       {"schema": "player-host/9", "telemetry_version": 1},
-                       {"schema": "player-host/9", "telemetry_version": True}):
+                       {"schema": "player-host/9", "telemetry_version": 9},
+                       {"schema": "player-host/10", "telemetry_version": 8},
+                       {"schema": "player-host/10", "telemetry_version": 1},
+                       {"schema": "player-host/10", "telemetry_version": True}):
             row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
             self.assertEqual(row["coverage"], "unsupported_version")
             self.assertNotIn("requests", row)
@@ -436,6 +437,8 @@ class HostAnalysisTests(unittest.TestCase):
                 events.append(e("context-image-projection", at + 2, request_id=request, omitted_images=step["omitted"]))
             if step.get("notice_here"):
                 events.append(e("tail-notice", at + 2, request_id=request, kinds=["context-capacity"], tokens=prompt))
+            if "cut_here" in step:
+                events.append(e("context-cut", at + 2, request_id=request, outcome=step["cut_here"]))
             reasoning, output = step.get("reasoning", 0), step.get("visible", 0) + step.get("reasoning", 0)
             events.append(e("response-complete", at + 5, request_id=request, stop_reason="toolUse", usage_available=True,
                 usage=dict(input=prompt // 2, cacheRead=prompt - prompt // 2, cacheWrite=0, output=output, reasoning=reasoning)))
@@ -558,6 +561,20 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(composed["pairs"], 19 - 5)
         self.assertAlmostEqual(composed["usage_fit"]["per_result_byte"], 0.4, places=2)
         self.assertLessEqual(composed["usage_fit"]["residual_abs"]["p95"], 3)
+
+    def test_a_context_cut_excludes_the_pair_before_the_notice_reason(self):
+        steps = self.steps(2)
+        steps[1].update(cut_here="cut", notice_here=True)
+        composed = analyze_trace(self.chain(steps))["prompt_composition"]
+        self.assertEqual(composed["pairs"], 0)
+        self.assertEqual(composed["left_out"], {**dict.fromkeys(LEFT_OUT, 0), "context_cut": 1})
+
+    def test_a_held_back_cut_keeps_the_pair(self):
+        steps = self.steps(2)
+        steps[1]["cut_here"] = "held-back"
+        composed = analyze_trace(self.chain(steps))["prompt_composition"]
+        self.assertEqual(composed["pairs"], 1)
+        self.assertEqual(composed["left_out"], dict.fromkeys(LEFT_OUT, 0))
 
     def test_a_pair_with_unknown_usage_on_either_side_is_left_out(self):
         e = self.event

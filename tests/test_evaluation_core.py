@@ -147,7 +147,7 @@ class Run:
         actor = name or f'{len(self.actors) + 1:032x}'
         self.store.add_actor(actor, hashlib.sha256(actor.encode()).hexdigest())
         self.actors.append(actor)
-        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/5' if self.historical else 'player-host/9', telemetry_version=5 if self.historical else 9, actor_id=actor,
+        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/5' if self.historical else 'player-host/10', telemetry_version=5 if self.historical else 10, actor_id=actor,
             session=self.session)]
         return actor
 
@@ -1160,8 +1160,8 @@ def test_unsupported_input_versions_are_errors(tmp_path):
     host = directory / 'actors' / '001' / 'host.jsonl'
     original = host.read_text()
     # An older trace, the immediately previous version included, is not read for a session the index does not list.
-    for schema, telemetry in (('player-host/3', 3), ('player-host/8', 8)):
-        host.write_text(original.replace('"schema": "player-host/9", "telemetry_version": 9', f'"schema": "{schema}", "telemetry_version": {telemetry}'))
+    for schema, telemetry in (('player-host/3', 3), ('player-host/8', 8), ('player-host/9', 9)):
+        host.write_text(original.replace('"schema": "player-host/10", "telemetry_version": 10', f'"schema": "{schema}", "telemetry_version": {telemetry}'))
         assert host.read_text() != original
         with pytest.raises(EvaluationError, match=rf'host\.jsonl.*{schema}'):
             evaluate(directory, FakeBinding(), tmp_path / 'e2')
@@ -1543,6 +1543,11 @@ def test_a_sealed_pre_world_session_reads_its_older_host_trace_and_no_other_sess
 OLD_MANIFEST = ('campaign-run/4', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/2')
 OLD_TERMINAL = ('campaign-run/5', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/3')
 CURRENT_TERMINAL = ('campaign-run/5', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/4')
+PRE_CONTEXT_CUT = ('campaign-run/12', 'campaign-receipt/7', 'player-driver/7', 'player-host/9', 9, 'campaign-watch-terminal/4')
+LIVE_VALIDATION_ARCHIVES = {
+    '49964eb42a7d4dabaef0c5ff6230a9be': ('live-validation-run-889-aux', 'aborted-launch'),
+    'a02d8069d0434813a41acc7009217da6': ('live-validation-run-889', 'run'),
+}
 
 
 def as_archived(directory: Path, versions: tuple, *, receipt: bool = False) -> Path:
@@ -1570,31 +1575,30 @@ def test_the_shipped_archive_index_preserves_exact_approved_sessions():
     from collections import Counter
     import harness.evaluation.core.sources as sources
     sessions = sources.archive_sessions()
-    assert len(sessions) == 147 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
+    assert len(sessions) == 149 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
     assert all(key == item.session for key, item in sessions.items())
-    assert len({(item.study, item.run) for item in sessions.values()}) == 147
+    assert len({(item.study, item.run) for item in sessions.values()}) == 149
     spend_limit = ('campaign-run/6','campaign-receipt/4','player-driver/4','player-host/4',4,'campaign-watch-terminal/4')
     memory_adoption = ('campaign-run/7','campaign-receipt/5','player-driver/5','player-host/5',5,'campaign-watch-terminal/4')
     pre_world = ('campaign-run/10', 'campaign-receipt/7', 'player-driver/7', 'player-host/8', 8, 'campaign-watch-terminal/4')
-    # Exact allowed combinations, including the sessions whose only older record is the manifest.
     assert [tuple(c.versions.items()) for c in sources.ARCHIVE_COMBINATIONS] == [
         tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (
-            OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit, memory_adoption, pre_world)]
+            OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit, memory_adoption, pre_world, PRE_CONTEXT_CUT)]
     assert Counter(tuple(item.combination.versions.values()) for item in sessions.values()) == {
-        OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2, spend_limit: 1, memory_adoption: 80, pre_world: 12}
+        OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2, spend_limit: 1, memory_adoption: 80, pre_world: 12,
+        PRE_CONTEXT_CUT: 2}
     # A combination names the fields read from exactly the records the reader takes in an old version.
     current = dict(manifest=sources.MANIFEST_SCHEMA, receipt=sources.RECEIPT_SCHEMA, driver=sources.DRIVER_SCHEMA,
                    host=sources.HOST_SCHEMA, run_ending=sources.WATCH_TERMINAL_SCHEMA)
     for combination in sources.ARCHIVE_COMBINATIONS:
         assert set(combination.fields) == {key for key, value in current.items() if combination.versions[key] != value}
-        assert 'manifest' in combination.fields
-        # No sealed session carries the current host trace: the 12 `campaign-run/10` sessions' traces predate
-        # delivery of a newer knowledge version to a running actor, and name the fields read from them.
         assert combination.versions['host_telemetry'] != sources.HOST_TELEMETRY and 'host' in combination.fields
-    assert sources.ARCHIVE_COMBINATIONS[-1].fields['host'] == sources.ARCHIVE_COMBINATIONS[0].fields['host']
+    assert sources.ARCHIVE_COMBINATIONS[-1].fields == {'host': sources.ARCHIVE_COMBINATIONS[0].fields['host']}
+    assert sources.MANIFEST_SCHEMAS == ('campaign-run/4', 'campaign-run/5', 'campaign-run/6', 'campaign-run/7',
+                                       'campaign-run/10', 'campaign-run/12')
     assert [c.fields.get('run_ending') for c in sources.ARCHIVE_COMBINATIONS] == [
-        ('reason',), ('session', 'reason', 'pause_reason'), None, None, None, None]
-    assert ['labels' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True, True]
+        ('reason',), ('session', 'reason', 'pause_reason'), None, None, None, None, None]
+    assert ['labels' in c.fields.get('manifest', ()) for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True, True, False]
     assert all('accounting' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS[:3])
     assert 'spend_limit_usd' in sources.ARCHIVE_COMBINATIONS[3].fields['manifest']
     # The operator labels are on the 30 older sessions and nowhere else.
@@ -1611,6 +1615,30 @@ def test_the_shipped_archive_index_preserves_exact_approved_sessions():
         '28c285bd86824a8793ec9d398ce27eb8', '9613db5a64244830b0a7865fa09e8d00', 'bc5d04d07c3e454d96447f3f05e22002',
         '813c7e1ed845445e966cedb0a85b82d1', 'ec996e56741745bb9f99b485cfdc13f6', '2cda0867c34442f394299555aece7009',
     }
+    assert {session: (item.study, item.run) for session, item in sessions.items()
+            if tuple(item.combination.versions.values()) == PRE_CONTEXT_CUT} == {
+        session: (study, f'live-validation-run-889-{session[:12]}') for session, (study, _) in LIVE_VALIDATION_ARCHIVES.items()}
+
+
+def test_only_the_listed_sessions_can_read_pre_context_cut_host_traces(tmp_path):
+    from harness.evaluation.core.sources import HostTraceUnsupported, read_host, run_archive_entry
+
+    trace = tmp_path/'actors'/'001'/'host.jsonl'
+    trace.parent.mkdir(parents=True)
+    session = 'a02d8069d0434813a41acc7009217da6'
+    start = dict(type='host-start', schema='player-host/9', telemetry_version=9, session=session, actor_id='b'*32)
+    trace.write_text(json.dumps(start) + '\n')
+    manifest = tmp_path/'manifest.json'
+    manifest.write_text(json.dumps(dict(schema='campaign-run/12', session=SESSION)))
+    with pytest.raises(HostTraceUnsupported, match='player-host/9'):
+        read_host(trace, '001', run_archive_entry(tmp_path))
+    manifest.write_text(json.dumps(dict(schema='campaign-run/12', session=session)))
+    entry = run_archive_entry(tmp_path)
+    actor, (event,) = read_host(trace, '001', entry)
+    assert actor == start['actor_id'] and event.fields == start
+    trace.write_text(json.dumps(dict(start, session=SESSION)) + '\n')
+    with pytest.raises(HostTraceUnsupported, match='player-host/9'):
+        read_host(trace, '001', entry)
 
 
 def sealed_store() -> Path:
@@ -1665,6 +1693,11 @@ def test_the_archive_index_matches_the_sealed_store():
             assert versions == item.combination.versions
             inputs = sources.read_run(directory, digests=False)
             assert all(not ids for ids in inputs.carry.values())
+        elif session in LIVE_VALIDATION_ARCHIVES:
+            assert directory.relative_to(store) == Path(*LIVE_VALIDATION_ARCHIVES[session])
+            assert all(item.combination.versions[key] == value for key, value in versions.items()), directory
+            for trace in directory.glob('actors/*/host.jsonl'):
+                assert next(sources.iter_host(trace, trace.parent.name, entry=item)).fields['schema'] == 'player-host/9'
         else:
             assert directory.name == item.run
             assert all(item.combination.versions[key] == value for key, value in versions.items()), directory
@@ -2009,7 +2042,7 @@ def test_input_digests_are_the_sha256_of_each_file(tmp_path):
 
 def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     from harness.evaluation.core.sources import HostTraceUnsupported, read_host
-    start = dict(type='host-start', schema='player-host/9', telemetry_version=9, actor_id='actor-1', monotonic_ms=0,
+    start = dict(type='host-start', schema='player-host/10', telemetry_version=10, actor_id='actor-1', monotonic_ms=0,
         wall_time='2026-11-07T01:02:03.500Z')
     path = tmp_path / 'host.jsonl'
     path.write_text(json.dumps(start) + '\n' + json.dumps(dict(type='settled', monotonic_ms=1, wall_time='not a time')) + '\n')
@@ -2019,7 +2052,7 @@ def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     for lines, kind in (([], 'empty'), ([dict(type='thread.started')], 'format'),
             ([dict(start, schema='player-host/3', telemetry_version=3)], 'version'), ([dict(start, schema='player-host/3')], 'version'),
             ([dict(start, schema='player-host/8', telemetry_version=8)], 'version'),
-            ([dict(start, telemetry_version=3)], 'version'), ([dict(start, telemetry_version=9.0)], 'version')):
+            ([dict(start, telemetry_version=3)], 'version'), ([dict(start, telemetry_version=10.0)], 'version')):
         path.write_text(''.join(json.dumps(line) + '\n' for line in lines))
         with pytest.raises(HostTraceUnsupported) as error:
             read_host(path, 'hint')
