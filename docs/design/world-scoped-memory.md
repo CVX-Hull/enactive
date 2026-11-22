@@ -67,7 +67,7 @@ record the owner decisions.
 - **Campaign manifest.** The driver accepts `campaign-run/12`, which carries `world`. The evaluator reads earlier versions through its closed
   archive index. The decision log holds the
   [eligibility rule](../decisions/owner-decisions.md#archive-index-holds-cited-sessions)
-  and the [approved sessions](../decisions/owner-decisions.md#eleven-version-ten-sessions-join-the-archive-index).
+  and the [approved sessions](../decisions/owner-decisions-archive.md#eleven-version-ten-sessions-join-the-archive-index).
 - **Sealed sessions.** A session sealed before the `world` label supports only
   `game` facts. [Trace workbench](../contracts/measurement-tools.md#trace-projection)
 

@@ -184,11 +184,14 @@ The closed `recall` object pins the model on the player's provider and key, `eve
 ### Live knowledge updates
 
 `live_knowledge_updates` is required and is `true` or `false`. With `false`, every
-actor plays the frozen version for the whole admission. With `true`, a version the
-[curator runner](../components/curator.md#delivery-to-a-running-actor) confirms
-during the admission reaches the actor that is running and becomes the next actor's
-frozen file. The [host contract](../contracts/player-host.md#a-newer-version-during-play)
-specifies adoption, verification and the message the player receives.
+actor plays the frozen version for the whole admission. With `true`, on each poll the
+driver adopts the highest newer version the
+[curator runner](../components/curator.md#delivery-to-a-running-actor) has confirmed and
+that verifies and publishes; the running host delivers the newest verified update that
+fits within context capacity (refusing an oversized one for context capacity), and any
+successor starts from the driver's latest adopted version. The
+[host contract](../contracts/player-host.md#a-newer-version-during-play) specifies
+adoption, verification and the message the player receives.
 Live delivery also sends the runner's verified coverage to the actor. A route
 with context cuts enabled can cut only through eligible covered turns. Play
 continues through ordinary image eviction and handoff while coverage is unavailable.
@@ -230,12 +233,12 @@ assign provider billing to the owner. Before paid play, the lead verifies the
 approved envelope against the frozen package. Preserve provider credit refusals
 as run evidence with the attempt's returned cost or explicit unknown.
 
-Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
+Limits: five input files each ≤1 MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked
 by the clean source commit (ignored `.runtime`, `.worktrees` or dependency files refuse), with
-the frozen adapter's `validate` mode accepting the route and MCP template; port1024–65535;
-wall60–86400s, host/aggregate-host30–86400s, one or two hosts.
-Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
+the frozen adapter's `validate` mode accepting the route and MCP template; port 1024–65535;
+wall 60–86400 s, host/aggregate-host 30–86400 s, one or two hosts.
+Host seconds ≤ aggregate-host seconds < wall seconds minus 30 s cleanup. Each positive
 computer capacity is ≤2^40. `spend_limit_usd` is above zero. `ending_reserve.usd`
 covers the player's pending-request bound and, with delivered knowledge or live
 knowledge updates, the recall bound. It stays below the declared limit. The selected directory must have no prior started marker,

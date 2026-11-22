@@ -17,6 +17,40 @@ real-play actor handoff briefing adoption remains unverified beyond offline test
 The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
 with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
 
+## From live trace to delivered knowledge
+
+```mermaid
+flowchart LR
+  accTitle: Curator pipeline from live trace to delivered knowledge
+  accDescr: During play a bounded snapshot under a shared read lock is projected and a runner session examines one window. After the admission is sealed, a grooming session can reorganise the store from the sealed trace. Both submit to the gate, which alone publishes a repository version tag. World facts stand alone and only game facts are cited in articles. A confirmed live version is exported for the running actor with the unbroken covered prefix. A restore invalidates that prefix. A groomed version reaches play only when a later package freezes it.
+  subgraph L["During an admission: curator runner"]
+    S["Live write-ahead-log store<br/>Bounded snapshot under curator-read.lock"] --> P["trace-projection/3<br/>Allowlisted, secret-guarded"]
+    P --> W["Window session in the sandbox<br/>v1 to vN"]
+  end
+  subgraph B["After the admission is sealed: operator"]
+    Z["Sealed trace of the<br/>last published admission"] --> Q["tools.curator_host.groom<br/>One boundary-grooming session"]
+  end
+  W -->|"Submission"| G["Gate, curator-gate/2<br/>World facts stand alone<br/>Articles cite game facts only"]
+  Q -->|"Submission"| G
+  G -->|"Publishes"| K["Knowledge repository<br/>curator-knowledge/3, curator-fact/4<br/>Version tag vN"]
+  O["Operator restore<br/>of a compatible snapshot"] --> G
+  K -->|"Runner exports confirmed live version,<br/>for the package's world"| D["delivered/vN.json"]
+  K -->|"Runner writes unbroken confirmed coverage"| C["delivered/covered-prefix.json"]
+  K -.->|"Runner writes restored true after restore:<br/>no further cuts"| C
+  D --> A["Driver to running actor"]
+  C --> A
+  K -->|"Exported into a later package"| F["Frozen delivered-knowledge.json"]
+```
+
+This diagram answers “How does what happened in play become knowledge an actor can
+read?” Boxes are data or the step that writes it, the two frames separate work beside
+play from work after it, and arrows give the direction of data. The dashed arrow is the
+invalidation the runner writes after a restore. After `repo.ensure()` initializes `v0`,
+the gate is the only writer of subsequent repository versions and operator restores, and
+nothing here holds custody. The sections below own each step.
+The [host contract](../contracts/player-host.md#coverage-gated-context-cut) owns how the
+actor uses the covered prefix.
+
 ## Internal responsibilities
 
 | Part | Owned data and consequence |

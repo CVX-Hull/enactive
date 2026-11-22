@@ -47,10 +47,11 @@ Restart reads no old inbox and reconstructs no authority.
 
 ### Stop, collection and recovery views
 
-These three diagrams are current. Boxes are logical states, not processes; labelled
+These two diagrams are current. Boxes are logical states, not processes; labelled
 arrows are the transitions or reads the
 [contract](../contracts/computer-control.md#computer-operations-and-custody) allows.
-The paragraph under each diagram is its text equivalent.
+The paragraph under each diagram is its text equivalent, and the numbered list after
+them gives the operator's steps.
 
 ```mermaid
 flowchart TB
@@ -92,21 +93,21 @@ further play needs separate explicit admission of a fresh session. The operator 
 instead recover through ordinary native controls; both paths end in exact owned
 cleanup, with normal exit kept distinct from forced signals.
 
-```mermaid
-flowchart TB
-  accTitle: Current native manual recovery after permanent stop
-  accDescr: The harness supplies no activity, menu or debug recovery handler. Pause permanently stops automation but cannot undo events or cancel every game activity. The user may recover the application with native controls; this intervention and its uncertainty remain recorded.
-  P["Independent permanent Pause"] --> S["No further automation<br/>Original receipts retained"]
-  S --> N["Operator uses ordinary native controls<br/>Interpret and interrupt if needed"]
-  N --> V["Observe actual effects<br/>Record intervention and uncertainty"]
-  V --> E["Save or exit if appropriate<br/>No harness success or save certification"]
-  E --> C["Exact owned cleanup and absence evidence"]
-```
+#### What may an operator do by hand after a permanent stop?
 
-Current. “What may an operator do by hand after a permanent stop?” This expands the
-operator branch of the recovery diagram above. Use the game's
-ordinary controls; the harness supplies no recovery handler and certifies neither
-the recovery nor a save. See [Pause procedure](../operations/pause-timeout.md#operator-recovery).
+This expands the operator branch of the recovery diagram above.
+
+1. Pause is independent and permanent: no further automation runs, and the original
+   receipts are retained. It cannot undo events already delivered or cancel every game
+   activity.
+2. Use the game's ordinary native controls, interpreting the screen and interrupting an
+   activity if needed. The harness supplies no activity, menu or debug recovery handler.
+3. Observe the actual effects, and record the intervention and its uncertainty.
+4. Save or exit if appropriate. The harness certifies neither the recovery nor a save,
+   and reports no success for either.
+5. Finish with exact owned cleanup and evidence that the owned processes are absent.
+
+See [Pause procedure](../operations/pause-timeout.md#operator-recovery).
 
 ## Portability and verification
 

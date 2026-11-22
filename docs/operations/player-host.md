@@ -15,8 +15,8 @@ mission-driver CLI. Freeze the Pi adapter as
 `"host": {"argv": ["ABSOLUTE_EXISTING_NODE_EXECUTABLE", "ABSOLUTE_PROJECT_ROOT/tools/player_host/run.mjs"]}`.
 
 The selected finite configuration is OpenRouter / pinned OpenAI provider /
-`openai/gpt-6.1-terra`, medium effort, under the owner's decision of 16 November
-2026 in the [decision log](../decisions/owner-decisions.md). Freeze the verified
+`openai/gpt-6.1-terra`, medium effort, under the
+[owner's decision of 16 November 2026](../decisions/owner-decisions.md#current-player-model-and-effort-stay). Freeze the verified
 full endpoint tag and supported parameters
 in `route.json`; use no fallback. The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency
@@ -31,10 +31,11 @@ required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Set `context_cut` to `null` to disable cuts, or supply the closed object
 with `high_mark`, `low_mark` and `min_free`. The marks count tokens above the
 briefing and `min_free` is the minimum number of turns a cut must free.
-Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
-one image at a time (rolling); a larger block keeps the prompt prefix cacheable
-between evictions. Prefer a block of about half the peak, such as 39/20, so evictions are
-rare. Follow the [campaign route-selection procedure](campaign-run.md#construct-a-package).
+Keep the peak within the provider's image limit. Block 1 evicts one image at a time
+(rolling); a larger block keeps the prompt prefix cacheable between evictions. Prefer a
+block of about half the peak, so evictions are rare: for example 39/20 on a route whose
+image limit is at least 39. A provider with a lower limit needs a lower peak and block;
+DeepInfra rejects more than 30 images. Follow the [campaign route-selection procedure](campaign-run.md#construct-a-package).
 Pi sends a per-session `x-session-id` affinity value on the OpenRouter route. The host's
 [request-stability rules](../contracts/player-host.md#request-stability-and-tail-notices)
 govern the rest.
@@ -53,8 +54,9 @@ Experiment quotas, host counts and other final-actor policy remain outside playe
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
 Both original and successor start fresh; at most two hosts fit `campaign-run/12`.
-Each actor's route carries the requests the run has left. The driver starts an
-actor only while requests and dollars remain. The
+Each actor's route carries in `spend_limit_usd` the dollars the run has left, and no
+request count. The driver starts an actor only while dollars and more than 30 s of host time
+remain and nothing has stopped the run. The
 [request-stability contract](../contracts/player-host.md#request-stability-and-tail-notices)
 defines which request fields stay fixed across actors and how images are omitted.
 The final actor's `player_handoff` call is refused by the application with no
@@ -161,5 +163,8 @@ node tools/player_host/run.mjs run \
   --model MODEL --effort EFFORT --timeout-seconds SECONDS \
   -o DRIVER_RESERVED_FINAL_FILE
 ```
+
+In a run with [live knowledge updates](campaign-run.md#live-knowledge-updates), the
+driver also passes `--knowledge-updates LIST`.
 
 [Operations index](../runbook.md).

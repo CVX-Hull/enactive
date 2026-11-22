@@ -16,37 +16,48 @@ versions and failure behavior.
 ```mermaid
 flowchart TB
   accTitle: Current player and mechanical computer custody
-  accDescr: Logical responsibilities, not separate required models. The player keeps the user's ongoing objective, interprets images and chooses basic controls. Curated knowledge and player hints are fallible. The finite test controller retains quotas outside player context and can request bounded finish-up. Direct finish reports are claims, not save certificates. Independent user Pause and hard limits stop input without a model reply. The game determines effects and saving; no memory or game claim grants custody.
-  U["User<br/>Objective and independent Pause"] --> P["Designated player in selected host<br/>Interpret pixels and choose actions"]
-  M["Curated knowledge<br/>Briefing and reads"] -->|"Fallible evidence"| P
-  P -->|"Basic input and hints"| A["Composition and MCP tools"]
-  A -->|"Same computer port"| C["One mechanical custodian<br/>Original limits and actor capabilities"]
-  C -->|"SDL events over inherited socket"| G["Windowed game<br/>Determines outcomes"]
-  G -->|"Actual pixels and delivery receipts"| C
-  C -->|"Original evidence and uncertainty<br/>Actor view excludes global countdowns"| A
-  A --> P
-  T["Finite test controller<br/>Operator quotas and ending reserves"] -->|"Optional bounded finish-up request"| P
+  accDescr: Logical responsibilities, not separate required models. The player keeps the user's ongoing objective, interprets images and chooses basic controls. Hints and knowledge reads go through the composition and MCP tools. Beside play the curator reads bounded snapshots, publishes through a gate and leaves delivered versions and covered prefixes, which the driver hands to the host as live updates and cut coverage. Curated knowledge and player hints are fallible. The test controller and driver keep quotas outside player context and can request bounded finish-up. The supervised gateway carries status, frame and Pause, and an unsupervised viewer only reads. User Pause and hard limits stop input without a model reply. The game determines effects, and no knowledge or claim grants custody.
+  U["User<br/>Objective and independent Pause"] -->|"Ongoing objective"| P["Designated player in selected host<br/>Interpret pixels and choose actions"]
+  U -->|"Watch, Pause with a reason"| Y["Supervised gateway<br/>Status, frame and Pause"]
+  T["Finite test controller and driver<br/>Operator quotas and ending reserves"] -->|"Optional finish-up, live updates,<br/>coverage for context cuts"| P
+  T -->|"Hard limits and owned cleanup"| C
+  P <-->|"Input, player_hint and reads<br/>Results without global countdowns"| A["Composition and MCP tools"]
   P -->|"Direct player_finish claim"| T
-  T -->|"Independent hard limits and owned cleanup"| C
-  P -->|"Fallible hints for later curation"| J["Public player journal"]
-  C --> V["Passive spectator<br/>Mechanical status and labelled player claims"]
-  U -->|"Permanent stop, independent of writer"| C
+  A <-->|"Same computer port<br/>Original evidence and uncertainty"| C["One mechanical custodian<br/>Original limits and actor capabilities"]
+  A -->|"Fallible hints and calls"| J["Public player journal"]
+  Y -->|"Permanent stop, independent of writer<br/>Passive reads"| C
+  Y -->|"Bounded view reads"| V["Unsupervised read-only viewer<br/>Evaluator and curator views"]
+  C <-->|"SDL events over inherited socket<br/>Actual pixels and receipts"| G["Windowed game<br/>Determines outcomes"]
+  subgraph L["Curator loop beside play: no custody, never blocks the actor"]
+    S["Bounded snapshot reader<br/>Live write-ahead-log store"] --> R["Curator runner<br/>Sandboxed window sessions"]
+    R -->|"Submission"| Q["Gate"]
+    Q --> K["Knowledge repository"]
+    K --> D["Delivered versions and<br/>covered-prefix.json"]
+  end
+  C -.->|"Shared-lock reads of committed rows"| S
+  D -.->|"Fallible evidence"| T
 ```
 
-This current diagram answers “Who decides and who can stop input?” Boxes identify
-logical responsibilities; arrows identify requests, results or user control.
-Its text equivalent is below.
+This current diagram answers “Who decides, who can stop input and how does curated
+knowledge reach the player?” Boxes identify logical responsibilities; solid arrows
+identify requests, results or user control. Dashed arrows cross between play and the
+curator loop as files read at best effort. The driver also serves an adopted version to
+the player's knowledge reads, and a package's frozen export supplies the first briefing.
+The host contract owns
+[live updates](contracts/player-host.md#a-newer-version-during-play) and
+[context cuts](contracts/player-host.md#coverage-gated-context-cut).
+The text equivalent is below.
 
 | Responsibility | Owned state and authority | Component |
 | --- | --- | --- |
-| Deciding player / player host | Ongoing user objective, visual interpretation, game choices and fallible claims; direct finish reports, explicit provider/context/tools | [Player interface](components/player-interface.md) |
-| Finite test controller | Operator-only quotas and ending reserves, external finish-up request and exact owned process cleanup; no game-save guarantee | [Campaign procedure](operations/campaign-run.md) |
+| Deciding player / player host | Ongoing user objective, visual interpretation, game choices and fallible claims; direct finish reports, explicit provider/context/tools; the host adopts knowledge updates and applies coverage-gated context cuts between requests | [Player interface](components/player-interface.md) |
+| Finite test controller / driver | Operator-only quotas and ending reserves, external finish-up request, verified succession, adoption of delivered versions and exact owned process cleanup; no game-save guarantee | [Campaign procedure](operations/campaign-run.md) |
 | Player journal and knowledge | Public calls, hints, source provenance and curated delivery; no custody | [Memory and learning](components/player-interface.md#journal-and-knowledge) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
 | Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Spectator](components/spectator.md) |
 | Run evaluator | Interpretive records and metrics from retained evidence with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation-record.md) |
-| Curator | Sandboxed trace sessions and a gate-only knowledge repository; frozen exports reach the player; no custody | [Curator and trace workbench](components/curator.md) |
+| Curator | Sandboxed sessions over bounded live snapshots or sealed traces, and a gate-only knowledge repository that keeps world and game facts apart; frozen exports and live versions reach the player; no custody | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
@@ -89,6 +100,23 @@ guardian owns the custody clock and exact newly launched child groups; a separat
 forwards spectator reads and receiver-verified Pause. It adds no player input
 producer or native custody. Supervision, host settlement and game outcomes stay
 separate; source fixtures do not qualify actual play or human attention.
+The [process diagram](operations/campaign-supervision.md#process-ownership-and-credentials)
+shows each process group and which processes hold a key.
+
+With `--curator-runner` the guardian also starts an unsupervised
+[curator runner](components/curator.md#runner-windows). It reads the live store in one
+bounded transaction under a shared lock, runs sandboxed window sessions and publishes
+through the gate. When the package sets
+[`live_knowledge_updates`](operations/campaign-run.md#live-knowledge-updates), on each
+poll the driver adopts the highest newer confirmed version it can verify and publish for
+the application and any successor, and forwards version and coverage lines to the host.
+Between requests, the host delivers the newest verified update that fits within context
+capacity and applies coverage lines internally to govern cuts. On a route with
+`context_cut` enabled, the host can then replace covered turns with a fresh briefing.
+Neither the runner's exit nor a missing update stops
+play. After the admission is sealed, the operator can run
+[boundary grooming](operations/curator-hosts.md#post-admission-boundary-grooming) on the
+same repository.
 
 Fresh session stores live under `.runtime/computer-sessions/`. A selected player
 journal may span fresh native-child sessions.
@@ -128,6 +156,13 @@ sequenceDiagram
   end
   Note over C,N: Independent user Pause latches before writer waits
 ```
+
+This current diagram answers “What happens between an action the player chooses and the
+result it reads?” Columns are logical participants, not separate required processes.
+Solid arrows are requests or events, dashed arrows are results, and the framed part
+happens only after partial or unknown input. The
+[custody contract](contracts/computer-control.md#computer-operations-and-custody) owns
+the fields.
 
 ### How do I recover control?
 
@@ -171,7 +206,7 @@ Current coupling. None of it is in the shared player code. The entries inside
 | macOS SDL adapter loaded into the game process | [`harness/computer/native/`](../harness/computer/native) | [Native control](components/native-control.md) |
 | Adapter injection through `DYLD_INSERT_LIBRARIES` | [`harness/computer/launch.py`](../harness/computer/launch.py) | [Native control](components/native-control.md) |
 | CDDA-specific play guidance | [Player guide](player-guide.md) | Player guide |
-| Curator: one knowledge repository per game, and the shadow runner over sealed lineages names the game `cdda`; the fact format, articles and briefs name no kind of thing in a game | [`harness/curator/knowledge.py`](../harness/curator/knowledge.py), [`tools/curator_host/shadow.py`](../tools/curator_host/shadow.py) | [Curator](components/curator.md) |
+| Curator: one knowledge repository per game, and the shadow runner over sealed lineages, the live runner and boundary grooming use the game name `cdda`; the fact format, articles and briefs name no kind of thing in a game | [`harness/curator/knowledge.py`](../harness/curator/knowledge.py), [`tools/curator_host/shadow.py`](../tools/curator_host/shadow.py), [`tools/curator_host/live_runner.py`](../tools/curator_host/live_runner.py), [`tools/curator_host/groom.py`](../tools/curator_host/groom.py) | [Curator](components/curator.md) |
 | Memory measure: the anchor check's frozen prompt and `anchor_verdict` labels are worded for going to a known place with goods, kept only to re-judge the measure gate's 30 owner-labelled pairs; the standing packets, labels and measures name no kind of thing in a game | [`tools/memory_measure.py`](../tools/memory_measure.py), [`harness/evaluation/core/judge.py`](../harness/evaluation/core/judge.py) | [Evaluation contract](contracts/measurement-tools.md#checks-of-a-changed-judge) |
 
 ## Separate recovery and memory boundaries
@@ -192,13 +227,15 @@ requires no save, menu or identity check. [Run procedure](operations/campaign-ru
 ```mermaid
 flowchart TB
   accTitle: Current actor custody and permanent stop
-  accDescr: One custodian owns original resources and exact target handles. Handoff snapshots context and seals the actor. A successor requires canonical issuance and actual old host and MCP group quiescence under original limits. Pending orderly stop is admission-wide: new handoff is refused, and an already sealed handoff carries the same stop ID to a verified successor gated before MCP or fetch. Direct finish claims do not certify saving. Pause and unknown input permanently stop succession.
-  C["One custodian<br/>Exact target and original limits"] --> A["Active actor capability"]
+  accDescr: One custodian owns original resources and exact target handles. Handoff snapshots context and seals the actor. The final actor's handoff call is refused without a state change. A successor requires canonical issuance and actual old host and MCP group quiescence under original limits, and starts from the latest knowledge version adopted in the run. Pending orderly stop is admission-wide: new handoff is refused, and an already sealed handoff carries the same stop ID to a verified successor gated before MCP or fetch. A host that stops at the dollar limit or on an unreported cost admits no successor. Direct finish claims do not certify saving. Pause and unknown input permanently stop succession.
+  C["One custodian<br/>Exact target and original limits"] --> A["Active actor capability<br/>At most max_hosts 2 in turn"]
   A -->|"Basic input"| W["One serialized mechanical writer"]
-  A -->|"Handoff without uncertainty or pending stop"| H["Persist canonical context<br/>Seal actor"]
+  A -->|"player_handoff by the final actor"| X["Refused, no state change<br/>Actor plays on or calls player_finish"]
+  A -->|"Earlier actor's handoff without<br/>uncertainty or pending stop"| H["Persist canonical context<br/>Seal actor"]
   H --> R["Old actor reads and original collection only"]
   H --> Q{"Canonical issuance and context<br/>Actual host and MCP quiescence?"}
-  Q -->|"Yes, original resources remain"| N["Fresh successor capability"]
+  Q -->|"Yes, dollars, host time and<br/>original resources remain"| N["Fresh successor capability<br/>Latest adopted knowledge version"]
+  A -->|"Host stops: spend-limit<br/>or cost-unreported"| S
   T["Admission-wide orderly stop<br/>One retained command ID"] -->|"If handoff already sealed"| B["Successor gate before MCP or fetch<br/>Receive matching inherited control"]
   N --> B
   B -->|"No pending stop, or matching control delivered"| A
@@ -213,9 +250,14 @@ This current diagram answers “What permits a successor after handoff or a stop
 request?” Boxes are logical custody/control states; labelled arrows are allowed
 transfers or requests, not separate processes. The driver retains one stop ID;
 an already sealed handoff requires verified old-group quiescence and a successor
-control gate before MCP/fetch. Pause and unknown input prevent succession.
+control gate before MCP/fetch. A package admits one or two hosts in turn. Every actor has
+the same tool table, so the final one learns that it has no successor only from the
+refused call. A successor starts from the latest knowledge version adopted in the run, or
+from the package's frozen file when none was. A host that stops with `spend-limit` or
+`cost-unreported` ends the run's succession, as Pause and unknown input do.
 Direct player finish is a claim, not saving or game acceptance.
-[Exact host control](contracts/player-host.md#external-control) owns the fields.
+[Exact host control](contracts/player-host.md#external-control) and
+[spend](contracts/player-host.md#spend) own the fields.
 
 ## Coordinated change
 
@@ -231,10 +273,10 @@ governs storage, preservation of evidence and coherent rollback.
 | --- | --- |
 | Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
 | Journal and hints | Player and composition assertions for provenance, hint isolation and original IDs; [memory](components/player-interface.md#journal-and-knowledge). |
-| Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
+| Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting, exact group quiescence, knowledge-update adoption and `context_cut` decisions with their request serialization; no real play has used a context cut; [player interface](components/player-interface.md#assurance-and-evidence). |
 | Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [spectator](components/spectator.md#assurance-and-evidence). |
 | Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation-record.md). |
-| Curator shadow | The sandbox escape suite against the real listeners (macOS), projection secret guards, gate and close-out negative tests, and proxy allowlist and settlement tests; [curator](components/curator.md#assurance-and-evidence). |
+| Curator, live and shadow | The sandbox escape suite against the real listeners (macOS), projection secret guards, gate and close-out negative tests, and proxy allowlist and settlement tests; snapshot staging from a growing store, runner windows and covered prefix, live delivery, boundary grooming and the coverage that gates `context_cut`; the [live validation run (#889)](acceptance/2026-11-22-live-validation-run-889.md) covers staging, delivery and grooming in real play, and not handoff; [curator](components/curator.md#assurance-and-evidence). |
 
 The [testing guide](testing.md) selects lanes. [Production outcome evidence](acceptance/2026-10-29-computer-control.md)
 covers actual basic input, useful stock, conditional scouting, succession and

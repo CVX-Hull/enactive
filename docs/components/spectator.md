@@ -14,6 +14,34 @@ that keeps Pause, status and the frame, and a **viewer** that shows interpreted
 records and can fail without effect. [Architecture](../architecture.md) and
 [current contract](../contracts/computer-control.md) own system/port guarantees.
 
+```mermaid
+flowchart LR
+  accTitle: Spectator control path and read-only viewer
+  accDescr: The browser talks only to the gateway. On the control path the gateway relays status and source reads and a verified Pause to the custodian and tells the guardian about a Pause. On the viewer path it forwards bounded read requests to an unsupervised viewer, which reads evaluator records and the curator runner's status file. The viewer has no route to the custodian, so its exit changes neither Pause nor the live frame.
+  B["Browser page<br/>Served by the gateway"] -->|"Every read,<br/>Pause with a reason"| G["Gateway, campaign_watch.py<br/>Supervised"]
+  subgraph P["Control path: keeps working if the viewer exits"]
+    C["Custodian<br/>/api/status, /api/source/ID, /api/pause"]
+    D["Guardian<br/>Records the Pause reason"]
+  end
+  subgraph R["Viewer path: read-only and unsupervised"]
+    V["Viewer, harness.viewer"]
+    E["Evaluator records"]
+    S["curator-runner/status.json"]
+  end
+  G -->|"Relayed reads, verified empty POST /api/pause"| C
+  G -->|"Pause datagram"| D
+  G -->|"Bounded GET /api/view/*"| V
+  V -->|"Reads"| E
+  V -->|"Reads"| S
+```
+
+This diagram answers “Why can the viewer fail without affecting Pause or the live
+frame?” Boxes are processes or files and arrows are requests or reads. The two paths
+share only the page and the gateway: no arrow runs from the viewer to the custodian, so
+its exit leaves status, frames and Pause unchanged. The
+[custodian routes](#control-path) and the
+[viewer contract](../contracts/spectator-view.md#control-path-and-viewer) own the detail.
+
 ## Internal responsibilities
 
 | Part | Owns |

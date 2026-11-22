@@ -25,6 +25,52 @@ is doing. The lead cancels on first observed death or replacement.
 This is a Mac finite-test helper. Source delivery grants no gameplay/provider
 spending or new admission. General unattended operation remains unqualified.
 
+## Process ownership and credentials
+
+```mermaid
+flowchart TB
+  accTitle: Supervised processes, input custody and credentials of one campaign run
+  accDescr: The guardian launches each child in its own process group. The custodian, gateway and keep-awake process are supervised. The viewer and the optional curator runner are not, and their exit never stops play. The custodian runs the driver and owns the game and the single input writer. It starts the player host, which owns its MCP child. The route key passes from the guardian through the custodian environment to the player host. The curator runner resolves its own key for its model proxy, and the sandboxed curator host gets only a revocable proxy token. No key reaches the game, MCP, gateway, keep-awake or viewer.
+  U["Operator"] -->|"Pause with a reason"| W
+  U -->|"Signal"| G["Guardian, campaign_supervision.py<br/>Custody deadline, Pause receipt, owned cleanup"]
+  subgraph S["Supervised run: loss of any part ends it"]
+    C["Custodian and driver, campaign_run.py<br/>Own group, single input writer, original limits"]
+    W["Gateway, campaign_watch.py<br/>Own group"]
+    K["Keep-awake, caffeinate<br/>Own group"]
+    N["Game, OwnedTarget<br/>Own group"]
+    H["Player host<br/>Own group, uses the route key"]
+    M["stdio MCP adapter<br/>In the host's group"]
+  end
+  subgraph R["Not supervised: exit never stops play"]
+    V["Viewer, harness.viewer<br/>Own group, read-only"]
+    L["Curator runner with its model proxy<br/>Own group, uses the curator key"]
+    X["Sandboxed curator host<br/>Own group, revocable proxy token only"]
+  end
+  G -->|"Launches and closes,<br/>passes the route key"| C
+  G -->|"Launches and closes,<br/>receives its Pause datagram"| W
+  G -->|"Launches and closes"| K
+  G -->|"Launches and closes"| V
+  G -->|"Launches with --curator-runner,<br/>and closes"| L
+  W -->|"Verified Pause and passive reads"| C
+  W -->|"Bounded view reads"| V
+  C -->|"Inherited socket,<br/>the only automated input route"| N
+  C -->|"Starts per actor,<br/>passes the route key"| H
+  H -->|"Starts, sends sequential tool calls"| M
+  M -.->|"HTTP with the actor's capability"| C
+  L -->|"One session at a time"| X
+```
+
+This diagram answers “Which process owns what in one supervised run, and which can
+spend or send input?” Boxes are processes and solid arrows are launches, calls or
+signals as labelled; the dashed arrow is the MCP adapter's call back into the
+custodian. “Own group” is a process group of its own. The frames separate processes
+whose unexpected loss ends the run from those whose exit does not. Only the custodian
+sends automated game input. Two processes call a
+paid model: the player host with the route key, and the curator runner's proxy with its
+own key. The guardian and custodian only pass the route key on; the game, MCP adapter,
+gateway, keep-awake process, viewer and sandboxed curator host hold no key. The sections
+below own [launch](#freeze-launch-and-inspect) and [cleanup](#failure-and-owned-cleanup).
+
 ## Freeze, launch and inspect
 
 1. Prepare the exact clean source and fresh `campaign-run/12` package through the

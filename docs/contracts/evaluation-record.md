@@ -302,12 +302,12 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
 - **Archived runs.** The evaluator reads older records only for a session and exact
   manifest and record versions listed in the [closed archive index](../../data/evaluation/archive-sessions.json)
   (`archive-sessions/1`), under [S-MIGRATION's closed-archive rule](../standards/migration.md#s-migration-one-current-contract-coordinated-migration).
-  The 12 [approved `campaign-run/10` sessions](../decisions/owner-decisions.md#eleven-version-ten-sessions-join-the-archive-index)
+  The 12 [approved `campaign-run/10` sessions](../decisions/owner-decisions-archive.md#the-paid-runs-session-joins-the-archive-index)
   use the same receipt, driver, terminal, handoff and player journal formats
   as current runs. Their host traces are `player-host/8` telemetry 8 and their actor
   inputs `player-host-inputs/3` with `delivered-knowledge/1`, the versions before a
   newer knowledge version could reach a running actor. The evaluator sets `labels.world` to null for manifests
-  that predate the world label. The [two approved #889 sessions](../decisions/owner-decisions.md#context-cut-go-and-archive-889)
+  that predate the world label. The [two approved #889 sessions](../decisions/owner-decisions-archive.md#context-cut-go-and-archive-889)
   use the current manifest, receipt, driver and terminal versions. Their host version is `player-host/9` telemetry 9.
   The index also includes `spend-limit-run-555` under the
   [“Add it to the index” decision](../decisions/owner-decisions-archive.md#index-the-spend-limit-check). The

@@ -65,9 +65,19 @@ schema. The objective is ongoing; experiment countdowns and final-actor policy
 are absent from supplied prompt and tool views. The [typed MCP projection](../contracts/player-ports.md#mcp-projection-and-envelopes) gives the model a
 short result and keeps the original evidence and uncertainty in the operation record while excluding global resource accounting;
 canonical operator records remain unchanged. The player uses curated knowledge,
-hints and exact source reads as needed; none supplies engine facts. The provider image-history window retains all
-text/IDs, marks omitted older pixels and protects the current result group; an
-oversized protected group stops. Source availability does not prove the actor read it.
+hints and exact source reads as needed; none supplies engine facts.
+
+The host keeps a long context within its limits in three steps. On a route that enables
+`context_cut`, a request that grows past the high mark or the image peak can first drop
+the oldest complete turns that the curator has already covered, in favour of a fresh
+briefing and a marker naming the dropped frames
+([coverage-gated context cut](../contracts/player-host.md#coverage-gated-context-cut)).
+When coverage does not reach far enough, the cut is held back and play continues.
+Next, the image-history window evicts the oldest pixels in blocks; it keeps all
+remaining text and IDs, marks omitted pixels and protects the current result group, and
+an oversized protected group stops. Last, the host warns of approaching capacity and
+offers a handoff, and it stops before a request that would not fit. Source availability
+does not prove the actor read it.
 
 The [route envelope](../contracts/player-host.md#route-envelope) sets the host's
 limits and capabilities. Only the provider host receives credentials. The host
