@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration } from '../host.mjs';
-import { coverageEntry } from '../knowledge.mjs';
+import { compactSourceIds, coverageEntry } from '../knowledge.mjs';
 import { knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
 import { actorId, model, png, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
 
@@ -48,6 +48,13 @@ test('coverage lines are closed and distinguish publication from restore invalid
     assert.equal(coverageEntry(JSON.stringify(entry)), null);
   }
   assert.equal(coverageEntry('not JSON'), null);
+});
+
+test('compactSourceIds losslessly compacts contiguous numbered runs and keeps singletons or arbitrary IDs', () => {
+  assert.deepEqual(compactSourceIds([]), []);
+  assert.deepEqual(compactSourceIds(['s-0001']), ['s-0001']);
+  assert.deepEqual(compactSourceIds(['s-0001', 's-0002', 's-0003', 's-0005', 's-0006', 'custom', 's-9', 's-10', 's-011']),
+    ['s-0001..0003', 's-0005..0006', 'custom', 's-9..10', 's-011']);
 });
 
 const observe = (n, count = 1, tokens = 16) => reply(null,
@@ -126,13 +133,15 @@ test('a high-mark cut delivers all leads, clears stale usage and warning, and ke
   assert.deepEqual(after.tools, before.tools);
   assert.ok(!JSON.stringify(after.messages).includes('Observation 3'));
   assert.ok(JSON.stringify(after.messages).includes('Observation 4'));
+  assert.ok(JSON.stringify(before.messages).includes('Host context capacity is approaching'));
+  assert.ok(!JSON.stringify(after.messages).includes('Host context capacity'), 'cut must drop prior capacity tail notice');
   const marker = markerText(after).split('\n');
   assert.deepEqual(marker, [
     'BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false',
     JSON.stringify({grants_authority:false, removed_turns:3, covered_through_operation_id:operationId(3),
-      knowledge_version:'v1', source_ids:[sourceId(1), sourceId(2), sourceId(3)]}),
+      knowledge_version:'v1', source_ids:[`${sessionId}-1..3`]}),
     'END CONTEXT CUT',
-    'To inspect any omitted frame again, read its source_id with player_source.',
+    'To inspect any omitted frame again, read its source_id (expanding any prefix-start..end range) with player_source.',
   ]);
   const briefings = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'briefing');
   assert.deepEqual(briefings.map(event => [event.receiving_player_request_id, event.recall_request_id, event.article_ids, event.index_ids]),
@@ -174,7 +183,7 @@ test('image peak holds an only partly covered batch, then cuts it whole and accu
   assert.deepEqual([first.request_id, first.triggers, first.removed_turns, first.images_after], ['request-4', ['image_peak'], 1, 2]);
   assert.deepEqual([second.request_id, second.triggers, second.cumulative_removed_turns, second.source_ids_count],
     ['request-5', ['image_peak'], 2, 3]);
-  assert.deepEqual(JSON.parse(markerText(payloads[4]).split('\n')[1]).source_ids, [sourceId(1), sourceId(2), sourceId(3)]);
+  assert.deepEqual(JSON.parse(markerText(payloads[4]).split('\n')[1]).source_ids, [`${sessionId}-1..3`]);
 });
 
 test('an otherwise eligible prefix below min_free falls back to image eviction', async t => {
@@ -236,4 +245,146 @@ test('an accepted orderly stop fences new cuts and remains visible after an earl
   assert.equal(markerText(payloads[3]), markerText(payloads[2]));
   assert.ok(payloads[3].messages.some(message => messageText(message).startsWith('Automation control: orderly stop requested.')
     && messageText(message).endsWith(`control_id: ${command.id}`)));
+});
+
+test('a second capacity warning after a cut re-emits the full wrap-up instruction', async t => {
+  const {events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 4) await publish(publication(3));
+    if (n === 6) return reply();
+    return observe(n, 1, [3, 4, 5].includes(n) ? 97_000 : 16);
+  }, {contextCut:tokenCut, maxImages:12});
+  assert.deepEqual(events.filter(event => event.type === 'tail-notice' && event.kinds.includes('context-capacity'))
+    .map(event => event.request_id), ['request-4', 'request-6']);
+  assert.ok(!JSON.stringify(payloads[4].messages).includes('Host context capacity'));
+  assert.ok(JSON.stringify(payloads[5].messages).includes('Host context capacity is approaching'));
+  assert.ok(JSON.stringify(payloads[5].messages).includes('No text summarization or history restoration is available.'));
+});
+
+test('an unknown player-transport/2 operation in a batch prevents cutting that batch', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'player-context-cut-transport-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
+  await mkdir(actor, {recursive:true});
+  const configuration = {...route(), context_cut:imageCut, max_context_images:2};
+  configuration.recall.model.id = 'recall-fixture';
+  configuration.recall.every = 100;
+  let calls = 0;
+  t.mock.method(McpClient.prototype, 'connect', async () => {});
+  t.mock.method(McpClient.prototype, 'close', async () => {});
+  t.mock.method(McpClient.prototype, 'listTools', async () => [{name:'computer_observe',
+    inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent'], additionalProperties:false}}]);
+  t.mock.method(McpClient.prototype, 'callTool', async () => {
+    calls++;
+    if (calls === 2) {
+      return {content:[{type:'text', text:JSON.stringify({schema:'player-transport/2', status:'unknown', reason:'timeout'})}]};
+    }
+    return {content:[{type:'text', text:`Observation ${calls}`}, {type:'image', data:png, mimeType:'image/png'}],
+      structuredContent:{schema:'player-computer-operation/1', kind:'observe', status:'completed',
+        actor_id:actorId, session:sessionId, operation_id:operationId(calls), source:{source_id:sourceId(calls)}}};
+  });
+  const events = [], payloads = [];
+  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+    session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
+    context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
+    env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
+      enabled:true, required:true, enabled_tools:['computer_observe'], startup_timeout_sec:2, tool_timeout_sec:2},
+    fetch:async (_url, init) => {
+      const payload = JSON.parse(init.body);
+      if (payload.model === 'recall-fixture') return recallReply(['article-a']);
+      payloads.push(payload);
+      const n = payloads.length;
+      if (n === 2) { await appendFile(list, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
+      return n === 4 ? reply() : observe(n, n === 1 ? 2 : 1);
+    }, onEvent:event => events.push(event)});
+  assert.equal(result.ok, true, result.reason);
+  const cuts = cutEvents(events);
+  assert.ok(cuts.length >= 1 && cuts.every(c => c.outcome === 'held-back' && c.reason === 'uncovered'));
+});
+
+test('min_free 10 holds back 9 covered turns and cuts at 10 covered turns', async t => {
+  const {events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 10) await publish(publication(9));
+    if (n === 11) await publish(publication(10));
+    if (n === 12) return reply();
+    return observe(n, 1, 16);
+  }, {contextCut:{high_mark:90_000, low_mark:80_000, min_free:10}, maxImages:1});
+  const cuts = cutEvents(events).filter(c => ['request-11', 'request-12'].includes(c.request_id));
+  assert.deepEqual(cuts.map(c => [c.request_id, c.outcome, c.reason ?? null, c.removed_turns ?? c.available_turns]),
+    [['request-11', 'held-back', 'below-min-free', 9], ['request-12', 'cut', null, 10]]);
+  assert.deepEqual(JSON.parse(markerText(payloads[11]).split('\n')[1]).source_ids, [`${sessionId}-1..10`]);
+});
+
+test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered if spend stops before fetch', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'player-context-cut-handoff-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
+  await mkdir(actor, {recursive:true});
+  const configuration = {...route(), context_cut:imageCut, max_context_images:1};
+  configuration.recall.model.id = 'recall-fixture';
+  configuration.recall.every = 100;
+  let operations = 0;
+  const handoffOp = operationId(99), contextId = 'd'.repeat(32), contextSha = 'e'.repeat(64);
+  t.mock.method(McpClient.prototype, 'connect', async () => {});
+  t.mock.method(McpClient.prototype, 'close', async () => {});
+  t.mock.method(McpClient.prototype, 'listTools', async () => [
+    {name:'computer_observe', inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent'], additionalProperties:false}},
+    {name:'player_handoff', inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent'], additionalProperties:false}},
+  ]);
+  t.mock.method(McpClient.prototype, 'callTool', async name => {
+    if (name === 'player_handoff') {
+      return {content:[{type:'text', text:'Handoff sealed'}],
+        structuredContent:{schema:'player-computer-operation/1', kind:'handoff', status:'sealed',
+          actor_id:actorId, session:sessionId, operation_id:handoffOp,
+          handoff:{schema:'player-handoff/1', grants_authority:false, operation_id:handoffOp, session:sessionId,
+            actor_id:actorId, context_id:contextId, context_sha256:contextSha, sealed_wall:1.5}}};
+    }
+    const n = ++operations;
+    return {content:[{type:'text', text:`Observation ${n}`}, {type:'image', data:png, mimeType:'image/png'}],
+      structuredContent:{schema:'player-computer-operation/1', kind:'observe', status:'completed',
+        actor_id:actorId, session:sessionId, operation_id:operationId(n), source:{source_id:sourceId(n)}}};
+  });
+  const events = [];
+  let reqs = 0;
+  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+    session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
+    context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
+    env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
+      enabled:true, required:true, enabled_tools:['computer_observe', 'player_handoff'], startup_timeout_sec:2, tool_timeout_sec:2},
+    fetch:async (_url, init) => {
+      const payload = JSON.parse(init.body);
+      if (payload.model === 'recall-fixture') return recallReply(['article-a']);
+      reqs++;
+      if (reqs === 2) { await appendFile(list, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
+      return reqs === 3 ? reply(null, [['player_handoff', {}]]) : observe(reqs);
+    }, onEvent:event => events.push(event)});
+  assert.deepEqual([result.ok, result.reason], [true, 'handoff']);
+  assert.deepEqual(cutEvents(events).map(c => [c.request_id, c.outcome]), [['request-3', 'cut']]);
+  assert.ok(events.some(e => e.type === 'handoff' && e.handoff_id === handoffOp));
+
+  // Now verify knowledge-undelivered when spend limit stops right after cutContext queues a cut briefing.
+  const dir2 = await mkdtemp(join(tmpdir(), 'player-context-cut-undelivered-'));
+  t.after(() => rm(dir2, {recursive:true, force:true}));
+  const actor2 = join(dir2, 'actors', '001'), list2 = join(actor2, 'knowledge-updates.jsonl');
+  await mkdir(actor2, {recursive:true});
+  const config2 = {...route(), spend_limit_usd:'0.002', unpriced_request_usd:'0.001', context_cut:imageCut, max_context_images:1};
+  config2.recall.model.id = 'recall-fixture';
+  config2.recall.every = 100;
+  operations = 0;
+  const events2 = [];
+  let reqs2 = 0;
+  const res2 = await runHost({configuration:config2, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list2,
+    session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
+    context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
+    env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir2,
+      enabled:true, required:true, enabled_tools:['computer_observe'], startup_timeout_sec:2, tool_timeout_sec:2},
+    fetch:async (_url, init) => {
+      const payload = JSON.parse(init.body);
+      if (payload.model === 'recall-fixture') return recallReply(['article-a']);
+      reqs2++;
+      if (reqs2 === 2) { await appendFile(list2, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
+      return reply(null, [['computer_observe', {}]], {...usageRecord, cost:reqs2 === 2 ? 0.002 : 0.0005});
+    }, onEvent:event => events2.push(event)});
+  assert.deepEqual([res2.ok, res2.reason], [false, 'spend-limit']);
+  assert.ok(events2.some(e => e.type === 'context-cut' && e.outcome === 'cut' && e.request_id === 'request-3'));
+  assert.ok(events2.some(e => e.type === 'knowledge-undelivered' && e.kind === 'briefing' && e.reason === 'actor-ended'));
 });

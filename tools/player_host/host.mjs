@@ -280,6 +280,7 @@ const imageCount = messages => messages.reduce((total, message) => total + (Arra
   ? message.content.filter(part => part.type === 'image').length : 0), 0);
 const heuristicTokens = messages => messages.reduce((total, message) => total + estimateMessageTokens(message), 0);
 const noUsage = {input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0};
+const UNCOVERED_OPERATION = Symbol('uncovered-operation');
 
 function contextTokens(messages) {
   const estimate = estimateContextTokens(messages);
@@ -1116,9 +1117,11 @@ export async function runHost(options) {
         if (result.isError === true) content.unshift({type:'text', text:'MCP isError: true'});
         if (configuration.context_cut !== null) {
           if (sourceId !== null) sourcesByContent.set(content, sourceId);
-          if ((createsOperation || name === 'player_handoff') && identity(record?.operation_id)
-              && record.actor_id === options.actorId && record.session === options.session)
-            toolOperations.set(toolCallId, record.operation_id);
+          if (createsOperation || name === 'player_handoff') {
+            const op = identity(record?.operation_id) && record.actor_id === options.actorId
+              && record.session === options.session ? record.operation_id : UNCOVERED_OPERATION;
+            toolOperations.set(toolCallId, op);
+          }
         }
         return {content, details:undefined, isError:result.isError === true};
       }};
@@ -1194,7 +1197,7 @@ export async function runHost(options) {
       const freshBriefing = fullBriefing(knowledge);
       const briefingTokens = estimateMessageTokens(userMessage(freshBriefing.text));
       const promptMessage = userMessage(options.prompt + '\n\n' + freshBriefing.text);
-      const notes = placedNotices.filter(({at}) => at >= cutMessageIndex);
+      const notes = placedNotices.filter(({at, tail}) => !tail && at >= cutMessageIndex);
       // A different prefix invalidates the old provider usage. Estimate the retained
       // suffix, and subtract each turn and its displaced notices only once.
       let remainingTokens = estimateMessageTokens(validated[0]) + estimateMessageTokens(promptMessage)
@@ -1225,6 +1228,9 @@ export async function runHost(options) {
       }
       if (planCount < cfg.min_free) return holdBack('below-min-free', planCount);
 
+      // A cut rewrites the prefix, drops prior capacity/time tail notices, and resets the full-notice latch.
+      for (let i = placedNotices.length - 1; i >= 0; i--) if (placedNotices[i].tail) placedNotices.splice(i, 1);
+      noticed.clear();
       cutState = {cutMessageIndex, firstFreshMessageIndex:validated.length, promptMessage,
         markerMessage:markerMessage ?? marker(), briefingTokens, removedTurns:alreadyRemoved + planCount, sourceIds:omittedSources};
       currentBriefingTokens = cutState.briefingTokens;
@@ -1336,7 +1342,7 @@ export async function runHost(options) {
             lines.push(first('context-capacity')
               ? `${control || mcp.enabled_tools.includes('player_handoff')
                 ? `Host context capacity is approaching. ${wrapUp}`
-                : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands.'} No compaction or history restoration is available. About ${room} tokens of room remain before the host must stop.`
+                : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands.'} ${configuration.context_cut !== null ? 'No text summarization or history restoration is available.' : 'No compaction or history restoration is available.'} About ${room} tokens of room remain before the host must stop.`
               : `Host context capacity: about ${room} tokens of room remain before the host must stop.`);
             kinds.push('context-capacity');
           }
@@ -1351,7 +1357,7 @@ export async function runHost(options) {
           if (lines.length === 0) return withNotices;
           const notice = {role:'user', timestamp:Date.now(), content:[{type:'text', text:lines.join('\n')}]};
           if (tokens + estimateContextTokens([notice]).tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
-          placedNotices.push({at, message:notice});
+          placedNotices.push({at, message:notice, tail:true});
           for (const kind of kinds) noticed.add(kind);
           emit('tail-notice', {request_id:`request-${requests + 1}`, kinds, tokens});
           return [...withNotices, notice];

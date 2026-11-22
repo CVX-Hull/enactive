@@ -519,7 +519,7 @@ def test_the_highest_verified_version_above_the_current_one_is_adopted_and_a_ref
     (tmp_path/'delivered'/'notes.txt').write_text('ignored')
     live.poll(application)
     assert listed()==[] and not application.set_knowledge.called
-    assert capsys.readouterr().err.count('live coverage refused: FileNotFoundError')==1
+    assert capsys.readouterr().err==''
     leave(published(3))
     leave(published(4,repository='e'*40))  # another repository
     leave(published(5),'v6.json')  # names another version than its file

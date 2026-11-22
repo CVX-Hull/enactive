@@ -136,7 +136,7 @@ the version preceding the restore if the target is unknown). Coverage beyond tha
 point and lag are unknown. The [spectator status contract](../contracts/spectator-view.md#curator-runner-status)
 gives the read position, backlog, unexamined ranges and status fields. Later steps
 must be counted from the sealed trace. The [schedule replay](../contracts/measurement-tools.md#runner-records-and-schedule-replay)
-maps this prefix to player requests for the [proposed context cut](../design/coverage-gated-context-cut.md).
+maps this prefix to player requests for the [context cut](../contracts/player-host.md#coverage-gated-context-cut).
 
 The live runner runs admission sessions against its configured knowledge repository.
 After the admission's trace is sealed, the operator can start

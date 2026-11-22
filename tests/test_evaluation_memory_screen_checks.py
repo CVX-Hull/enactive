@@ -712,3 +712,18 @@ def test_the_schedule_command_refuses_an_unreadable_status_file_and_an_output_in
     (directory / 'status.json').write_text('{"schema": ')
     with pytest.raises(ScheduleError, match='status.json: unreadable'):
         schedule_from_runner(run)
+
+
+def test_recorded_deliveries_uses_only_the_initial_starting_briefing_when_cuts_emit_replacement_briefings(tmp_path):
+    trace = Trace('a' * 32, BASE)
+    trace.deliver('briefing', 'request-1', 'a' * 180, version='v0')
+    trace.operate('op-1')
+    trace.deliver('briefing', 'request-2', 'b' * 12000, version='v1')
+    trace.operate('op-2')
+    run_dir = tmp_path / 'cut-briefings'
+    trace.write(run_dir / 'actors' / '001')
+    run, = read_lineage([run_dir])[0]
+    b0, extras, counts = recorded_deliveries_for_run(run)[trace.actor]
+    assert b0 == 45
+    assert extras == [0, 0]
+    assert counts['unmatched_deliveries'] == 0

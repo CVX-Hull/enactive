@@ -194,6 +194,8 @@ class LiveKnowledge:
 
             listing_target = target if entry != actor_coverage else None
             self._publish_entry(entry,listing_target,generation,adopt)
+        except FileNotFoundError:
+            return
         except Exception as exc:  # noqa: BLE001 - live coverage is optional and is retried off the driver thread
             self._report_coverage(exc)
 

@@ -322,11 +322,14 @@ version, with every article lead and standalone fact and no recall request.
 The following user message is delimited by `BEGIN CONTEXT CUT` and
 `END CONTEXT CUT`. Its JSON line contains `grants_authority:false`, the cumulative
 `removed_turns`, `covered_through_operation_id`, the coverage `knowledge_version`
-and distinct `source_ids` in their original order across the removed turns.
+and distinct `source_ids` in their original order across the removed turns, with
+contiguous same-prefix numeric runs losslessly compacted as `prefix-start..end`.
 The marker directs the player to `player_source` for those frames. Both
-messages stay fixed until the next cut. Notices at or after the cut boundary
-stay with the surviving turns. The token estimate disregards pre-cut provider
-usage, and the context warning is re-evaluated against the new request.
+messages stay fixed until the next cut. Knowledge notices at or after the cut
+boundary stay with the surviving turns; prior `tail-notice` messages and the
+first-notice latch are cleared on a cut, the token estimate disregards pre-cut
+provider usage, and capacity/time warnings are re-evaluated against the new
+request.
 [Cut telemetry](player-host-telemetry.md#context-cut) records the decision.
 
 ### Request stability and tail notices

@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: 'Implementation of the coverage-gated context cut in #900'
+status: historical
+date: '2026-11-22'
+scope: 'Design for the coverage-gated context cut implemented in #900 under player-host/10'
+replacement: docs/contracts/player-host.md
 ---
 
 # A context cut bounded by published coverage

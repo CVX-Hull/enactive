@@ -128,10 +128,39 @@ export function fullBriefing(knowledge) {
   return delivery(knowledge, topLevelEntries(knowledge), 'briefing', null);
 }
 
+/** Losslessly compact contiguous numbered IDs (`prefix-0001`, `prefix-0002`, ...) into `prefix-0001..0002`. */
+export function compactSourceIds(sourceIds) {
+  const out = [];
+  let run = null;
+  const flush = () => {
+    if (!run) return;
+    out.push(run.start === run.end ? `${run.prefix}${run.start}` : `${run.prefix}${run.start}..${run.end}`);
+    run = null;
+  };
+  for (const id of sourceIds) {
+    const match = typeof id === 'string' ? /^(.*-)([0-9]+)$/.exec(id) : null;
+    if (!match) { flush(); out.push(id); continue; }
+    const [, prefix, digits] = match;
+    const value = BigInt(digits);
+    const padded = digits.length > 1 && digits.startsWith('0');
+    const sameFormat = run && run.prefix === prefix && value === run.value + 1n
+      && (run.padded ? digits.length === run.width : !padded);
+    if (sameFormat) {
+      run.end = digits;
+      run.value = value;
+    } else {
+      flush();
+      run = {prefix, start:digits, end:digits, width:digits.length, padded, value};
+    }
+  }
+  flush();
+  return out;
+}
+
 export function cutMarker({removedTurns, coveredThroughOperationId, knowledgeVersion, sourceIds}) {
   const data = {grants_authority:false, removed_turns:removedTurns, covered_through_operation_id:coveredThroughOperationId,
-    knowledge_version:knowledgeVersion, source_ids:sourceIds};
-  return `BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false\n${JSON.stringify(data)}\nEND CONTEXT CUT\nTo inspect any omitted frame again, read its source_id with player_source.`;
+    knowledge_version:knowledgeVersion, source_ids:compactSourceIds(sourceIds)};
+  return `BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false\n${JSON.stringify(data)}\nEND CONTEXT CUT\nTo inspect any omitted frame again, read its source_id (expanding any prefix-start..end range) with player_source.`;
 }
 
 /** What a newer version changes in what a briefing can show: the articles and the facts no article files.
