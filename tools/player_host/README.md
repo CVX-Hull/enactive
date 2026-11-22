@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/9`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/10`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [player interface component](../../docs/components/player-interface.md) describes
 the adapter's place in the run.
@@ -34,13 +34,16 @@ Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
 `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/9"`, `model`,
+The closed route has exactly `schema: "player-host/10"`, `model`,
 `api_key_env`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
 `context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
 amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
-text ([the dollar limit](#the-dollar-limit)), and the closed [recall configuration](#knowledge-delivery).
+text ([the dollar limit](#the-dollar-limit)), the closed [recall configuration](#knowledge-delivery)
+and required `context_cut`. Set `context_cut` to null or a closed object with
+safe integers `1 <= low_mark < high_mark < model.contextWindow` and `min_free >= 1`.
+The bounds use the player model's window.
 The adapter rejects other schema versions and missing or invalid fields.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
@@ -70,8 +73,9 @@ See [DeepInfra's current contract](https://docs.deepinfra.com/chat/overview#serv
 Freeze the actual provider's image-part allowance explicitly as `max_context_images`,
 the hard peak of pixel images per request; the host imposes no universal provider
 limit (DeepInfra, for example, rejects more than 30). Pi's maintained
-`transformContext` hook keeps historical images within that peak while preserving
-all text, reasoning, tool calls/results and IDs. Eviction is count-only, in whole
+`transformContext` hook keeps historical images within that peak. After any
+coverage-gated cut, image eviction preserves the remaining text, reasoning,
+tool calls/results and IDs. Eviction is count-only, in whole
 blocks of `context_image_block`. When `n` images exceed the peak, the oldest
 `ceil((n − peak) / block) × block` become markers, never reaching into the protected
 batch below, so a large protected batch can leave fewer. Otherwise retained pixels
@@ -97,7 +101,7 @@ the player can request the exact source again through its available tools. No to
 
 The request projection adds no standing countdown. Instead, once a threshold is
 passed, each request adds a notice. The notice stays in the history where it was
-first sent, so every request extends the previous one for the provider's cache. It
+first sent for as long as that history survives. It
 warns before context capacity and the work deadline (a tenth left, at least a
 minute and at most half). See the contract's
 [request-stability rules](../../docs/contracts/player-host.md#request-stability-and-tail-notices).
@@ -109,16 +113,15 @@ by the [player result projection](../../docs/contracts/player-ports.md#mcp-proje
 to the model and keeps `structuredContent` in the trace.
 The host reuses Pi's `estimateContextTokens`, reported usage and a heuristic
 text/image floor to request the existing sealed handoff before critical context
-pressure. These are not exact provider token bounds. Known oversized context
-stops before fetch; no text compaction, restore or fallback is introduced.
+pressure. Known oversized context stops before fetch. A cut uses a fresh
+heuristic estimate until a response supplies usage for the new prefix.
 
 Live agent messages retain the pixels needed by the provider. Original source
 images stay in the mechanical/player stores. Telemetry stores image references
 and the exact `request-start.payload_sha256`, sizes and counts, never the raw
-projected body or private reasoning. Context projection events expose omissions. This is a declared image-history
-window, without text summarization, automatic compaction, replay or permission
-renewal. Qualification must include actual continuation and apparent effects;
-reducing images alone is not a latency pass.
+projected body or private reasoning. Context projection events expose image
+omissions, and `context-cut` records cut decisions. Qualification must include
+actual continuation and apparent effects.
 
 `validation-feedback.mjs` narrows model-facing validation feedback for `intent`
 schemas with an `anyOf` union discriminated by `entry_type`. Current player tools
@@ -350,9 +353,9 @@ still adds work and must be measured during subsequent play.
 The adapter builds the [context manifest](../../docs/contracts/player-host-telemetry.md#context-manifest)
 from the serialized player request just before Fetch.
 
-`host-start` records the configured output cap, context window, effort mapping and
-image policy (`max_context_images`, `context_image_block`, also repeated on each
-`context-image-projection`);
+`host-start` records the configured output cap, context window, effort mapping,
+cut policy (`context_cut`) and image policy (`max_context_images`,
+`context_image_block`, also repeated on each `context-image-projection`);
 these are transmitted configuration, not backend effort attestation. Sanitized
 bounded response/provider IDs and `x-request-id` permit later correlation when
 reported. After bounded reading of an HTTP error response, `provider-refusal`
@@ -377,10 +380,22 @@ With `--knowledge-updates LIST`, an unref'd refresh in `runHost` (at start, ever
 list and its files through the isolated `update-reader.mjs` helper (terminated on
 settlement so a stalled read never blocks CLI exit) and stages verified candidates
 above its own (`updateEntry`, `validateKnowledge`, `updateDelivery` in
-`knowledge.mjs`). Building a player request only takes what is staged — picking the
-newest candidate that fits within context capacity — and reads no file. The
+`knowledge.mjs`) and coverage lines (`coverageEntry`). Building a player request
+applies staged coverage and picks the newest staged version that fits within
+context capacity. The
 [update rules](../../docs/contracts/player-host.md#a-newer-version-during-play)
 own what is checked and recorded. Nothing waits for the refresh, and it never stops the host.
+
+With `context_cut` enabled, a `coverage-update-entry/1` line supplies the verified
+operation boundary for that version, or permanently invalidates further cuts
+for this actor after a restore. The host cuts whole turns only through applicable
+coverage for adopted knowledge. It delivers a fresh full briefing and a marker
+listing the omitted turns' distinct sources. The
+[cut contract](../../docs/contracts/player-host.md#coverage-gated-context-cut)
+defines the boundaries, and the
+[telemetry contract](../../docs/contracts/player-host-telemetry.md#context-cut)
+defines the cut and holdback events.
+
 The route pins `recall:{model,every,unpriced_request_usd}` with the same provider
 and credential variable as the player. Recall counts and request IDs begin at fetch.
 

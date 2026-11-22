@@ -61,7 +61,23 @@ export function updateEntry(line) {
     ? {...value, number} : null;
 }
 
+/** One line of the driver's coverage feed, or null when the line is invalid. */
+export function coverageEntry(line) {
+  let value;
+  try { value = JSON.parse(line); } catch { return null; }
+  if (!record(value) || !keys(value, ['schema','session','actor_id','operation_id','version','restored'])
+      || value.schema !== 'coverage-update-entry/1' || !hex(value.session, 32)
+      || typeof value.restored !== 'boolean') return null;
+  const valid = value.restored ? value.actor_id === null && value.operation_id === null && value.version === null
+    : hex(value.actor_id, 32) && hex(value.operation_id, 32) && versionNumber(value.version) >= 1;
+  return valid ? value : null;
+}
+
 const filedFacts = knowledge => new Set(knowledge.articles.flatMap(a => a.body ? a.body.flatMap(c => c.facts) : [a.id]));
+const topLevelEntries = knowledge => {
+  const filed = filedFacts(knowledge);
+  return [...knowledge.articles, ...knowledge.facts.filter(fact => !filed.has(fact.id))];
+};
 
 export function knowledgeIndex(knowledge) {
   const filed = filedFacts(knowledge);
@@ -108,16 +124,23 @@ export function delivery(knowledge, articles, mode, recallRequest) {
     delivered_knowledge_schema:knowledge.schema, version:knowledge.version, recall_request_id:recallRequest, grants_authority:false};
 }
 
+export function fullBriefing(knowledge) {
+  return delivery(knowledge, topLevelEntries(knowledge), 'briefing', null);
+}
+
+export function cutMarker({removedTurns, coveredThroughOperationId, knowledgeVersion, sourceIds}) {
+  const data = {grants_authority:false, removed_turns:removedTurns, covered_through_operation_id:coveredThroughOperationId,
+    knowledge_version:knowledgeVersion, source_ids:sourceIds};
+  return `BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false\n${JSON.stringify(data)}\nEND CONTEXT CUT\nTo inspect any omitted frame again, read its source_id with player_source.`;
+}
+
 /** What a newer version changes in what a briefing can show: the articles and the facts no article files.
  * An entry is `added`, `updated` (its title, lead or claims changed; a fact's subject or text) or `removed`
  * (gone from the version; a fact that an article now files is not removed). From an empty store there is no
  * difference to state, so the message is the index of the whole version, as a briefing without recall gives it.
  * One JSON line between the delimiters, so no delivered text can end the block. No recall request is made. */
 export function updateDelivery(previous, next) {
-  const shown = knowledge => {
-    const filed = filedFacts(knowledge);
-    return new Map([...knowledge.articles, ...knowledge.facts.filter(f => !filed.has(f.id))].map(item => [item.id, item]));
-  };
+  const shown = knowledge => new Map(topLevelEntries(knowledge).map(item => [item.id, item]));
   const face = item => JSON.stringify(item.body ? [item.title, item.lead, item.body] : [item.subject ?? null, item.text]);
   const before = shown(previous), after = shown(next);
   const initial = previous.articles.length + previous.facts.length === 0;

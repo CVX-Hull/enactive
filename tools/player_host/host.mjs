@@ -7,9 +7,10 @@ import { Agent } from '@earendil-works/pi-agent-core';
 import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
-import { estimateContextTokens } from '@earendil-works/pi-ai/utils/estimate';
+import { estimateContextTokens, estimateMessageTokens } from '@earendil-works/pi-ai/utils/estimate';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
-import { validateKnowledge, knowledgeIndex, selection, delivery, updateDelivery, updateEntry, versionNumber } from './knowledge.mjs';
+import { validateKnowledge, knowledgeIndex, selection, delivery, updateDelivery, updateEntry, coverageEntry,
+  fullBriefing, cutMarker, versionNumber } from './knowledge.mjs';
 import { createValidationFeedback } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
@@ -89,8 +90,8 @@ function listenControl(input, session, actorId, accept, fail) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort, nested = false) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall']);
-  requireThat(configuration.schema === 'player-host/9');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens', 'spend_limit_usd', 'unpriced_request_usd', 'recall', 'context_cut']);
+  requireThat(configuration.schema === 'player-host/10');
   // Positive decimal text for this actor's spend limit and one in-flight request allowance.
   const spendLimit = amountFromText(configuration.spend_limit_usd), bound = amountFromText(configuration.unpriced_request_usd);
   requireThat(spendLimit !== null && spendLimit[0] > 0n && bound !== null && bound[0] > 0n);
@@ -110,6 +111,13 @@ export function validateConfiguration(configuration, selectedModel, effort, nest
   requireThat(Number.isSafeInteger(configuration.context_reserve_tokens)
     && configuration.context_reserve_tokens >= model.maxTokens
     && configuration.context_reserve_tokens < model.contextWindow);
+  const cut = configuration.context_cut;
+  if (cut !== null) {
+    closed(cut, ['high_mark', 'low_mark', 'min_free']);
+    requireThat(Number.isSafeInteger(cut.low_mark) && cut.low_mark >= 1
+      && Number.isSafeInteger(cut.high_mark) && cut.high_mark > cut.low_mark && cut.high_mark < model.contextWindow
+      && Number.isSafeInteger(cut.min_free) && cut.min_free >= 1);
+  }
   closed(model.cost, ['input', 'output', 'cacheRead', 'cacheWrite']);
   requireThat(['input', 'output', 'cacheRead', 'cacheWrite'].every(key => typeof model.cost[key] === 'number' && Number.isFinite(model.cost[key]) && model.cost[key] >= 0));
   let url;
@@ -156,7 +164,7 @@ export function validateConfiguration(configuration, selectedModel, effort, nest
     requireThat(bound !== null && bound[0] > 0n && recall.model.provider === model.provider
       && recall.model.baseUrl === model.baseUrl);
     validateConfiguration({...configuration, model:recall.model, unpriced_request_usd:recall.unpriced_request_usd,
-      context_reserve_tokens:recall.model.maxTokens}, recall.model.id, recall.model.reasoning ? effort : 'off', true);
+      context_reserve_tokens:recall.model.maxTokens, context_cut:null}, recall.model.id, recall.model.reasoning ? effort : 'off', true);
   }
   return configuration;
 }
@@ -265,6 +273,35 @@ export function withPlacedNotices(messages, placed) {
     if (i < messages.length) out.push(messages[i]);
   }
   return out;
+}
+
+const userMessage = text => ({role:'user', timestamp:Date.now(), content:[{type:'text', text}]});
+const imageCount = messages => messages.reduce((total, message) => total + (Array.isArray(message.content)
+  ? message.content.filter(part => part.type === 'image').length : 0), 0);
+const heuristicTokens = messages => messages.reduce((total, message) => total + estimateMessageTokens(message), 0);
+const noUsage = {input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0};
+
+function contextTokens(messages) {
+  const estimate = estimateContextTokens(messages);
+  // Provider usage can be absent or exclude serializer overhead.
+  const heuristic = heuristicTokens(messages);
+  return {tokens:Math.max(estimate.tokens, heuristic), usageTokens:estimate.usageTokens, heuristicTokens:heuristic};
+}
+
+/** Each assistant and its contiguous results form one indivisible turn. */
+function contextTurns(messages, operationsByResult) {
+  const turns = [];
+  for (let index = 1; index < messages.length; index++) {
+    if (messages[index].role !== 'assistant') continue;
+    const start = index;
+    const creatingOps = [];
+    while (messages[index + 1]?.role === 'toolResult') {
+      const operation = operationsByResult.get(messages[++index]);
+      if (operation !== undefined) creatingOps.push(operation);
+    }
+    turns.push({start, end:index + 1, creatingOps});
+  }
+  return turns;
 }
 
 /** The provider-affinity value of one mechanical session: a digest of the session identity (not
@@ -649,7 +686,8 @@ export async function runHost(options) {
   // A completed attempt without a usable price stays unknown and remains in the observed count.
   let spent = [0n, 0], unpricedRequests = 0, unpricedRecallRequests = 0, spendLimit, unpricedBound;
   let recallRequests = 0, recallDisabled = false, recallFlight, recallTask, recallController, recallAttemptInFlight = false, actorEnding = false, knowledge, finishReserve, recallBound;
-  let briefing, pendingReminders = [], unsentDeliveries = [], completedInputs = 0, latestResult;
+  let briefing, currentBriefingTokens, cutState, cutRestored = false;
+  let pendingReminders = [], unsentDeliveries = [], completedInputs = 0, latestResult;
   const recentCalls = [];
   const countAttempt = (reported, role = "player") => {
     const priced = reported !== null && reported !== MALFORMED_COST;
@@ -760,6 +798,8 @@ export async function runHost(options) {
   let updateReader = null, updateReaderBuf = '', updateReadSeq = 0;
   const pendingReads = new Map();
   const pendingKnowledgeUpdates = new Map();
+  const pendingCoverageUpdates = [];
+  const coveredByVersion = new Map();
   const pendingRefusals = [];
   const failUpdateReads = () => {
     for (const resolve of pendingReads.values()) resolve(null);
@@ -858,8 +898,15 @@ export async function runHost(options) {
   const refreshOnce = async () => {
     const entries = [];
     for (const line of await unreadUpdateLines()) {
+      if (updatesClosed) return;
       const entry = updateEntry(line);
-      if (entry) entries.push(entry); else refuseUpdate(null, 'invalid-entry');
+      if (entry) {
+        entries.push(entry);
+        continue;
+      }
+      const coverage = coverageEntry(line);
+      if (!coverage) refuseUpdate(null, 'invalid-entry');
+      else if (coverage.session === options.session) pendingCoverageUpdates.push(coverage);
     }
     entries.sort((a, b) => b.number - a.number);
     for (const entry of entries) {
@@ -896,6 +943,8 @@ export async function runHost(options) {
   // identities, and the previous manifest (part keys and omitted indexes) for deltas.
   let contextImages = [], manifestBase = null;
   const sourceIds = new Map();
+  const toolOperations = new Map();
+  const operationsByResult = new WeakMap(), sourcesByContent = new WeakMap();
   // Delta against the previous attempt's manifest: the leading parts identical to it are
   // counted, not repeated. Replay rule: contract `context-manifest` row.
   const nextContextManifest = (attemptId, payload) => {
@@ -984,7 +1033,7 @@ export async function runHost(options) {
     affinityId = sessionAffinityId(options.session);
     spendLimit = amountFromText(configuration.spend_limit_usd);
     unpricedBound = amountFromText(configuration.unpriced_request_usd);
-    emit('host-start', {telemetry_version:9, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
+    emit('host-start', {telemetry_version:10, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, context_cut:configuration.context_cut, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, recall:configuration.recall, spend_limit_usd:configuration.spend_limit_usd, unpriced_request_usd:configuration.unpriced_request_usd, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -1032,8 +1081,9 @@ export async function runHost(options) {
         // A stop or an unverified input receipt never permits a stalled inference
         // to earn extra work. Ordinary collection of the original ID stays available.
         if (name === 'computer_stop') streamRecoveryAvailable = false;
-        if (name === 'computer_input' || name === 'computer_observe') {
-          const record = resultRecord(result);
+        const createsOperation = name === 'computer_input' || name === 'computer_observe';
+        const record = resultRecord(result);
+        if (createsOperation) {
           streamRecoveryAvailable &&= record?.schema === 'player-computer-operation/1'
             && record.status === 'completed' && name === `computer_${record.kind}`
             && record.actor_id === options.actorId && record.session === options.session;
@@ -1064,6 +1114,12 @@ export async function runHost(options) {
         }
         const content = toLlmContent(result);
         if (result.isError === true) content.unshift({type:'text', text:'MCP isError: true'});
+        if (configuration.context_cut !== null) {
+          if (sourceId !== null) sourcesByContent.set(content, sourceId);
+          if ((createsOperation || name === 'player_handoff') && identity(record?.operation_id)
+              && record.actor_id === options.actorId && record.session === options.session)
+            toolOperations.set(toolCallId, record.operation_id);
+        }
         return {content, details:undefined, isError:result.isError === true};
       }};
     });
@@ -1089,6 +1145,96 @@ export async function runHost(options) {
       }});
     const validationFeedback = createValidationFeedback(tools, diagnostic =>
       emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
+    const survivingNotices = cutIndex => placedNotices.filter(({at}) => at >= cutIndex)
+      .map(({at, message}) => ({at:at - cutIndex, message}));
+    const activeContext = validated => {
+      if (!cutState) return withPlacedNotices(validated, placedNotices);
+      const {cutMessageIndex, firstFreshMessageIndex, promptMessage, markerMessage} = cutState;
+      const suffix = validated.slice(cutMessageIndex).map((message, offset) =>
+        message.role === 'assistant' && cutMessageIndex + offset < firstFreshMessageIndex
+          ? {...message, usage:noUsage} : message);
+      // Pi keeps both the frozen system prompt and the tool table in this first message.
+      return [validated[0], promptMessage, markerMessage, ...withPlacedNotices(suffix, survivingNotices(cutMessageIndex))];
+    };
+    const cutContext = (validated, activeMessages) => {
+      const cfg = configuration.context_cut;
+      if (cfg === null || control) return activeMessages;
+      const before = contextTokens(activeMessages).tokens, images = imageCount(activeMessages);
+      const triggers = [];
+      if (before - currentBriefingTokens > cfg.high_mark) triggers.push('high_mark');
+      if (images > configuration.max_context_images) triggers.push('image_peak');
+      if (!triggers.length) return activeMessages;
+
+      let coveredVersion = -1, effectiveCoveredOp = null;
+      if (!cutRestored && knowledge.version !== null) {
+        const adoptedVersion = heldNumber();
+        for (const [version, operation] of coveredByVersion) {
+          if (version > coveredVersion && version <= adoptedVersion) {
+            coveredVersion = version;
+            effectiveCoveredOp = operation;
+          }
+        }
+      }
+      const decision = {request_id:`request-${requests + 1}`, triggers, covered_through_operation_id:effectiveCoveredOp,
+        knowledge_version:knowledge.version, tokens_before:before, images_before:images};
+      const holdBack = (reason, availableTurns) => {
+        emit('context-cut', {...decision, outcome:'held-back', reason, available_turns:availableTurns, min_free:cfg.min_free});
+        return activeMessages;
+      };
+      if (effectiveCoveredOp === null) return holdBack(cutRestored ? 'restored' : 'uncovered', 0);
+
+      const turns = contextTurns(validated, operationsByResult);
+      const boundary = turns.findIndex(turn => turn.creatingOps.includes(effectiveCoveredOp));
+      const maxCovered = turns[boundary]?.creatingOps.at(-1) === effectiveCoveredOp ? boundary : boundary - 1;
+      const maxCuttable = Math.min(maxCovered, turns.length - 2);
+      let cutMessageIndex = cutState?.cutMessageIndex ?? 2;
+      const cuttable = turns.slice(0, Math.max(0, maxCuttable + 1)).filter(turn => turn.start >= cutMessageIndex);
+      if (!cuttable.length) return holdBack('uncovered', 0);
+
+      const freshBriefing = fullBriefing(knowledge);
+      const briefingTokens = estimateMessageTokens(userMessage(freshBriefing.text));
+      const promptMessage = userMessage(options.prompt + '\n\n' + freshBriefing.text);
+      const notes = placedNotices.filter(({at}) => at >= cutMessageIndex);
+      // A different prefix invalidates the old provider usage. Estimate the retained
+      // suffix, and subtract each turn and its displaced notices only once.
+      let remainingTokens = estimateMessageTokens(validated[0]) + estimateMessageTokens(promptMessage)
+        + heuristicTokens(validated.slice(cutMessageIndex)) + heuristicTokens(notes.map(({message}) => message));
+      let remainingImages = images, nextNote = 0, planCount = 0;
+      const alreadyRemoved = cutState?.removedTurns ?? 0;
+      const omittedSources = new Set(cutState?.sourceIds);
+      const marker = () => userMessage(cutMarker({removedTurns:alreadyRemoved + planCount,
+        coveredThroughOperationId:effectiveCoveredOp, knowledgeVersion:`v${coveredVersion}`, sourceIds:[...omittedSources]}));
+      let markerMessage;
+      for (const turn of cuttable) {
+        const dropped = validated.slice(cutMessageIndex, turn.end);
+        remainingTokens -= heuristicTokens(dropped);
+        remainingImages -= imageCount(dropped);
+        while (nextNote < notes.length && notes[nextNote].at < turn.end)
+          remainingTokens -= estimateMessageTokens(notes[nextNote++].message);
+        for (const message of dropped) {
+          const sourceId = sourcesByContent.get(message.content);
+          if (sourceId !== undefined) omittedSources.add(sourceId);
+        }
+        cutMessageIndex = turn.end;
+        planCount++;
+        if (remainingImages <= configuration.max_context_images && remainingTokens - briefingTokens <= cfg.low_mark) {
+          markerMessage = marker();
+          if (remainingTokens + estimateMessageTokens(markerMessage) - briefingTokens <= cfg.low_mark) break;
+          markerMessage = undefined;
+        }
+      }
+      if (planCount < cfg.min_free) return holdBack('below-min-free', planCount);
+
+      cutState = {cutMessageIndex, firstFreshMessageIndex:validated.length, promptMessage,
+        markerMessage:markerMessage ?? marker(), briefingTokens, removedTurns:alreadyRemoved + planCount, sourceIds:omittedSources};
+      currentBriefingTokens = cutState.briefingTokens;
+      unsentDeliveries.push(freshBriefing);
+      contextWarning = false;
+      const after = activeContext(validated);
+      emit('context-cut', {...decision, outcome:'cut', removed_turns:planCount, cumulative_removed_turns:cutState.removedTurns,
+        tokens_after:contextTokens(after).tokens, briefing_tokens:briefingTokens, images_after:imageCount(after), source_ids_count:omittedSources.size});
+      return after;
+    };
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
@@ -1101,27 +1247,16 @@ export async function runHost(options) {
         try {
           // Memoize against canonical SDK objects before image projection clones
           // them. Earlier diagnostic text remains stable in subsequent prefixes.
-          const projectionStarted = performance.now();
-          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block, sourceIds);
-          requestControlId = control && projection.messages.some(message => message.role === 'user'
-            && Array.isArray(message.content) && message.content.some(part => part.type === 'text'
-              && part.text === `${STOP_TEXT}\ncontrol_id: ${control.id}`)) ? control.id : undefined;
-          contextImages = projection.images;
-          emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
-          if (projection.summary.blocked) stop('context-image-limit');
+          const validated = validationFeedback(messages);
           // Notices already sent stay where they were first sent (see below), so they count here.
           for (const value of pendingReminders.splice(0)) {
-            placedNotices.push({at:messages.length, message:{role:'user', timestamp:Date.now(), content:[{type:'text', text:value.text}]}});
+            placedNotices.push({at:messages.length, message:userMessage(value.text)});
             unsentDeliveries.push(value);
           }
-          const contextTokens = list => {
-            const estimate = estimateContextTokens(list);
-            // Reported usage can be missing or exclude serializer overhead. Keep
-            // a second text/image heuristic as a conservative independent floor.
-            const heuristic = estimateContextTokens(list.map(message => message.role === 'assistant'
-              ? {...message, usage:{input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0}} : message));
-            return {tokens:Math.max(estimate.tokens, heuristic.tokens), usageTokens:estimate.usageTokens, heuristicTokens:heuristic.tokens};
-          };
+          for (const entry of pendingCoverageUpdates.splice(0)) {
+            if (entry.restored) cutRestored = true;
+            else if (entry.actor_id === options.actorId) coveredByVersion.set(versionNumber(entry.version), entry.operation_id);
+          }
           // A staged newer version becomes the adopted one here, between requests, and its difference is one
           // more placed message. Only memory is read: the files were read and verified by the refresh. This
           // has its own failure boundary: it can refuse an update, never stop the host.
@@ -1131,7 +1266,9 @@ export async function runHost(options) {
               const candidates = [...pendingKnowledgeUpdates.values()].sort((a, b) => b.entry.number - a.entry.number);
               pendingKnowledgeUpdates.clear();
               if (candidates.length) {
-                const before = contextTokens(withPlacedNotices(projection.messages, placedNotices)).tokens;
+                const projected = projectImageContext(activeContext(validated), configuration.max_context_images,
+                  configuration.context_image_block, sourceIds);
+                const before = contextTokens(projected.messages).tokens;
                 const previousVersion = knowledge.version;
                 let adopted = false;
                 for (const candidate of candidates) {
@@ -1144,8 +1281,8 @@ export async function runHost(options) {
                   try { update = updateDelivery(knowledge, candidate.knowledge); } catch {
                     refuseUpdate(candidate.entry, 'invalid-delivered-knowledge'); continue;
                   }
-                  const message = {role:'user', timestamp:Date.now(), content:[{type:'text', text:update.text}]};
-                  if (before + estimateContextTokens([message]).tokens + configuration.context_reserve_tokens < configuration.model.contextWindow) {
+                  const message = userMessage(update.text);
+                  if (before + estimateMessageTokens(message) + configuration.context_reserve_tokens < configuration.model.contextWindow) {
                     knowledge = candidate.knowledge;
                     placedNotices.push({at:messages.length, message});
                     unsentDeliveries.push(update);
@@ -1161,7 +1298,16 @@ export async function runHost(options) {
                 coverage:null, reason:'update-check-failed', error_name:error?.name ?? null});
             }
           }
-          const withNotices = withPlacedNotices(projection.messages, placedNotices);
+          const activeMessages = cutContext(validated, activeContext(validated));
+          const projectionStarted = performance.now();
+          const projection = projectImageContext(activeMessages, configuration.max_context_images, configuration.context_image_block, sourceIds);
+          const withNotices = projection.messages;
+          requestControlId = control && withNotices.some(message => message.role === 'user'
+            && Array.isArray(message.content) && message.content.some(part => part.type === 'text'
+              && part.text === `${STOP_TEXT}\ncontrol_id: ${control.id}`)) ? control.id : undefined;
+          contextImages = projection.images;
+          emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
+          if (projection.summary.blocked) stop('context-image-limit');
           const {tokens, usageTokens, heuristicTokens} = contextTokens(withNotices);
           requireThat(Number.isSafeInteger(tokens) && tokens >= 0, 'context-estimate-failed');
           emit('context-estimate', {request_id:`request-${requests + 1}`, tokens, usage_tokens:usageTokens,
@@ -1471,6 +1617,12 @@ export async function runHost(options) {
       },
     });
     agent.subscribe(event => {
+      if (event.type === 'message_end' && event.message.role === 'toolResult') {
+        const {toolCallId} = event.message;
+        const operation = toolOperations.get(toolCallId);
+        // Pin the operation to its canonical result even if a later response reuses the call ID.
+        if (toolOperations.delete(toolCallId)) operationsByResult.set(event.message, operation);
+      }
       if (event.type === 'message_end' && event.message.role === 'assistant') {
         clearTimeout(requestTimer);
         const message = event.message;
@@ -1491,6 +1643,7 @@ export async function runHost(options) {
     });
     if (control) agent.steer({role:'user', timestamp:Date.now(), content:[{type:'text', text:`${STOP_TEXT}\ncontrol_id: ${control.id}`}]});
     briefing = await recall('briefing');
+    currentBriefingTokens = estimateMessageTokens(userMessage(briefing.text));
     await agent.prompt(options.prompt + '\n\n' + briefing.text);
     if (!fatal && !handoff && !finish) stop('incomplete-terminal-response');
   } catch (error) {
