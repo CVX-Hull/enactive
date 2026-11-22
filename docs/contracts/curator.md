@@ -84,9 +84,11 @@ A published tree holds exactly these files:
 
 ### Worlds and lineages
 
-The operator chooses an opaque `world` label of 1 to 40 printable ASCII characters and
-freezes it in the run package
+The operator chooses an opaque `world` label of 1 to 40 printable ASCII characters,
+unique among the worlds of one game's repository, and freezes it in the run package
 ([decision on a separate world label](../decisions/owner-decisions.md#a-separate-world-label)).
+The operator assigns a distinct label to each world and reuses a label across lineages
+only when they share that world; the exporter selects `world` facts by label equality.
 A package that names a lineage must name a world, a world may stand without a lineage,
 and several lineages may share a world. Nothing compares the label with the game, so a
 consistent wrong label goes undetected.
@@ -157,7 +159,7 @@ Articles share `facts.jsonl` and the `curator-fact/4` schema.
 | `id` | curator | As for a fact; facts and articles share one set of IDs |
 | `title` | curator | Non-empty; unique among current articles |
 | `lead` | curator | Non-empty. The instructions ask for one or two sentences an actor can act on; the gate does not parse them |
-| `body` | curator | Non-empty list of exactly `{text, facts}` claims; `facts` is a non-empty list of distinct current `game` fact IDs |
+| `body` | curator | Non-empty list of exactly `{text, facts}` claims; each `text` is a nonblank string and `facts` is a non-empty list of distinct current `game` fact IDs |
 | `links` | curator | Distinct titles of other current articles; may be empty |
 | `last_confirmed` | software | Latest `seen` among the cited facts |
 | `published_in`, `session`, `superseded_by`, `retired` | software | As for a fact; an article's `retired` has empty `citations` |
@@ -350,7 +352,8 @@ does not check the choice of type.
 ### Windows of decisions
 
 A session reads whole admissions or a **window**: one actor of one sealed or staged
-session, and a range of its steps (`seq` in `steps.jsonl`, first and last inclusive). A
+session, and a range of its steps (`seq` in `steps.jsonl`, first and last inclusive,
+integers satisfying `1 ≤ first ≤ last` when restricted). A
 step is one computer operation, and one model request can produce zero or more steps.
 Session and actor names match `[A-Za-z0-9_-]+`.
 [`window.py`](../../harness/curator/window.py) narrows a whole projection in place; the
@@ -375,7 +378,12 @@ session stamps its comma-joined session names with null `actor` and `last_step`.
 submission that carries `coverage` is refused.
 
 A stamp describes one window. The [component](../components/curator.md#publication-and-coverage)
-defines the covered prefix that joins them.
+defines the covered prefix that joins them. During a live run, the curator runner writes
+that unbroken covered prefix (and `restored: true` when a restore replaces the tip) to
+`covered-prefix.json` (`curator-covered-prefix/1`), and the campaign driver converts each
+verified prefix or restore invalidation into a `coverage-update-entry/1` record on the
+player host's `--knowledge-updates` list, where `restored: true` withholds further
+coverage-gated cuts for the run ([player-host coverage updates](player-host.md#a-newer-version-during-play)).
 
 ### Admission and grooming
 
@@ -430,18 +438,23 @@ between sessions.
 | `open` | A session creates it or writes to it |
 | `stale` | Three sessions have passed without a write |
 | `abandoned` | Three more untouched sessions have passed; the draft is archived |
-| `promoted` | A submission that names it in `from_drafts` publishes; the draft is archived |
+| `promoted` | A submission that names an active draft in `from_drafts` publishes; the draft is archived |
 
-A draft ID matches `[a-z0-9][a-z0-9-]{0,63}`, and an archived ID is not reused. An
-aborted session keeps its drafts and ages none.
+A draft ID matches `[a-z0-9][a-z0-9-]{0,63}`, and an archived ID is not reused. A session
+already aborted before draft collection keeps its drafts and ages none.
 
 ## Session close-out
 
 When a sandbox result is available and reports no surviving process, the session runner
-collects `submissions/` and `drafts/`, gates submissions in directory-name order after a
-clean exit, updates drafts, seals the record and deletes the workspace. Gating stops at
-an `unknown` result or a close-out error. Without a result it collects nothing, and exit
-and survivors are recorded as null.
+collects `submissions/`, then collects `drafts/` and ages untouched active drafts (when
+not already aborted), then gates submissions in directory-name order after a clean exit
+(promoting each `from_drafts` ID still present in the active store when a `submission`
+publishes), seals the record and deletes the workspace. Because draft aging runs before
+gating, a draft archived as `abandoned` on its sixth untouched session is no longer
+active for promotion, and a gating or later close-out error that marks the session
+`aborted` does not undo draft aging already recorded. Gating stops at an `unknown`
+result or a close-out error. Without a result it collects nothing, and exit and
+survivors are recorded as null.
 
 ### Collection follows no link
 

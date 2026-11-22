@@ -33,13 +33,13 @@ tooling satisfies them.
   classification of known failures.
 - Models own intent, interpretation and learning judgments. For each model task, identify
   the interpretation or choice it supplies and when that can change a decision.
-- A model does not narrate facts that receipts already hold, and does not take a turn
-  only to discover an empty work queue.
+- Do not require a model to narrate facts that receipts already hold, and do not
+  require a turn only to discover an empty work queue.
 - The player selects optional reflection when novelty, recurrence or consequence
   justifies it. Escalation needs an unresolved question and an expected decision benefit;
   a mismatch alone is not enough.
-- C-REVIEW checks this split at consequential changes. It reviews no single action, and
-  no automated check claims to judge semantic truth.
+- C-REVIEW checks this split at consequential changes rather than reviewing routine
+  individual actions, and no automated check claims to judge semantic truth.
 
 ## Ordinary actions and optional shortcuts
 
