@@ -1,8 +1,9 @@
 ---
 owner: lead
-status: active
-scope: 'World-scoped curator facts and types, with the current curation, delivery and measurement boundaries'
-review_trigger: A change to the fact and type formats, scope, provenance or delivery
+status: historical
+date: '2026-11-22'
+scope: 'Design of world-scoped curator facts and types, with their curation, delivery and measurement boundaries; the formats are adopted into the curator contract'
+replacement: docs/contracts/curator.md
 ---
 
 # World-scoped memory: curation, delivery and judged measurement

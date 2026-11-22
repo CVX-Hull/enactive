@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: proposed
-review_trigger: "The fact store's field table merges (the owner's revisit condition for the programs line), the bounded program interface brief (#839) lands, or a program producer is built."
+review_trigger: "The owner decides whether to take up the programs line, the bounded program interface brief (#839) lands, the curator contract's fact or gate rules change, or a program producer is built."
 ---
 
 # Programs and monitor
@@ -10,11 +10,11 @@ review_trigger: "The fact store's field table merges (the owner's revisit condit
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The [decision on the bounded program interface brief](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief) keeps this unbuilt proposal parked. The owner revisits it when the fact store's field table merges.
+**Answer.** The [decision on the bounded program interface brief](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief) set this unbuilt proposal aside until the fact store's field table merged. The [curator contract](../contracts/curator.md#facts-curator-fact4) holds that table, so the owner's revisit condition is met. The proposal authorizes no build.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
-**Decision needed.** The [bounded program interface brief (#839)](https://github.com/CVX-Hull/enactive/issues/839) must settle artifact and eligibility choices. Adoption depends on the integrated study.
+**Decision needed.** The owner decides whether to take up the line. The [bounded program interface brief (#839)](https://github.com/CVX-Hull/enactive/issues/839) must settle artifact and eligibility choices. Adoption depends on the integrated study.
 
 The reasons are in the retired [curated-player decision record](../decisions/009-curated-player.md).
 
@@ -22,7 +22,7 @@ The reasons are in the retired [curated-player decision record](../decisions/009
 
 A program can replace the playing model on its interface. Like that model, called the actor, it receives the full-resolution frame, objective and delivered knowledge. It returns basic inputs with emissions, a slot request, or a yield with a reason. It sends only basic controls through the actor's port under the [computer-control boundary](../decisions/006-computer-control-boundary.md). Each run pins the program version.
 
-A passive policy runs in isolation with no I/O, bounded memory and a per-step time limit. Only the curator's or gate's sandbox executes curator-written code and tests. The custodian and publisher execute no program code.
+A passive policy runs in isolation with no I/O, bounded memory and a per-step time limit. Only the curator's or gate's sandbox would execute curator-written code and tests. The custodian and publisher would execute no program code. The [gate](../contracts/curator.md#gate-v0) publishes data only and refuses program or test content in its repository.
 
 Budgets cap steps, wall time and model spend. A failed precondition or unrecognized screen makes the program yield.
 
@@ -71,7 +71,7 @@ Each field joins existing tool calls with the work that first reads it, under th
 | Integrated programs and monitor study | [#470](https://github.com/CVX-Hull/enactive/issues/470) | Measure delegation and detection to inform adoption. |
 
 - Eligibility revocation, active input stop and knowledge restore have distinct effects.
-- Program and delivered-knowledge pins never change silently on a base change or restore.
+- A program pin never changes silently on a base change or restore. Delivered knowledge changes during a run only as an [announced newer version](../contracts/player-host.md#a-newer-version-during-play), never through a restore.
 - Partial or unknown delivery ends input permanently.
 - Views show missing data as absent or unknown.
 
@@ -79,7 +79,7 @@ The bounded interface brief freezes artifact identity and layout, base and versi
 
 ## Pages that change on adoption
 
-Adoption updates the [charter](../charter.md), [player tooling standard](../standards/player-tooling.md), [architecture](../architecture.md), [computer-control contract](../contracts/computer-control.md), [run custody](../operations/run-custody.md), and [evaluation contract](../contracts/spectator-view.md) with the [spectator component](../components/spectator.md). The computer-control boundary, one-input-sender rule, P-TRUTH, no-lead-hint rule and S-MIGRATION continue to govern the design.
+Adoption updates the [charter](../charter.md), [player tooling standard](../standards/player-tooling.md), [architecture](../architecture.md), [computer-control contract](../contracts/computer-control.md), [run custody](../operations/run-custody.md), [curator contract](../contracts/curator.md), and [spectator view contract](../contracts/spectator-view.md) with the [spectator component](../components/spectator.md). The computer-control boundary, one-input-sender rule, P-TRUTH, no-lead-hint rule and S-MIGRATION continue to govern the design.
 
 ## How it would be judged
 

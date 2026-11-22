@@ -247,12 +247,33 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `reader.coverage` | Non-abstained readings ÷ frames, per reader | frames | — |
 | `lineage.continuity` | Per admission boundary: same identity (or `unknown`) and game-time gap (negative means rewound) | boundaries | — |
 | `lineage.elapsed` | Game time from admission 1's first in-play clock to the lineage's last accepted reading (a rewind lowers it), with total decisions, overall game seconds per decision (null when elapsed is not positive), long-activity hours and their share of elapsed time (null when elapsed is not positive, and above 1 when a reload undid long activities), and `episode_changes` (a restarted clock or another survivor inside an admission) | game seconds | No accepted reading: missing (`no_game_time`) |
-| `lineage.day_check` | The crossing is the first step after the lineage's last reading below one game day from that start, so a rewind below the day undoes an earlier crossing. The needs are scored at the first in-play step from the crossing on whose needs the binding can read, in that admission or a later one (`scored_run`, `lag_hours` past the day). Deaths are compared in lineage order (admission, then step), so a death in an admission a reload later rewound still counts. A death at or before the crossing fails the check (`died_before`). A death after the crossing but before the scored step leaves it unscored (`died_in_lag`). Otherwise `passed` when `severe_needs` reports none. A severe need that was read counts even when another need is unreadable. The metric also reports `severe` and `episode_changes`. The long-horizon study treats an episode change as a continuity failure first. If admission 1 never reaches play, a later admission's first in-play clock is the zero | 1 | Not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible`; death in the lag: `died_in_lag` |
+| `lineage.day_check` | Alive one game day after the lineage's first in-play clock, with no severe need ([rules](#the-one-day-check)) | 1 | No clock: `no_game_time`; not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible`; death in the lag: `died_in_lag` |
 | `lineage.memory_reuse` | Distinct memory record IDs read in an admission that an earlier admission of the lineage wrote, per admission and in total | records written before the last admission | None written: `no_earlier_writes` |
 
 The four `lineage.*` metrics are written only by `evaluate-lineage` and are the same in every
 admission's store. An incremental pass keeps them; a fresh `--replace` pass drops them until
 the lineage is stitched again.
+
+### The one-day check
+
+`lineage.day_check` starts its day at admission 1's first in-play clock. If admission 1
+never reaches play, a later admission's first in-play clock is the zero.
+
+- **Crossing.** The first step after the lineage's last reading below one game day from
+  the start, so a rewind below the day undoes an earlier crossing.
+- **Scored step.** The first in-play step from the crossing on whose needs the binding
+  can read, in that admission or a later one. `scored_run` names its run and `lag_hours`
+  its distance past the day.
+- **Deaths.** They are compared in lineage order (admission, then step), so a death in an
+  admission a reload later rewound still counts. A death at or before the crossing fails
+  the check (`died_before`). A death after the crossing and up to the scored step leaves
+  it unscored (`died_in_lag`).
+- **Pass.** Otherwise `passed` is true when `severe_needs` reports none. A severe need
+  that was read counts even when another need is unreadable.
+- **Also reported.** `severe` and `episode_changes`. The long-horizon study treats an
+  episode change as a continuity failure first.
+
+### Comparison statistics and percentiles
 
 **Comparison statistics** (across runs, never within the player):
 - Kaplan–Meier survival with Greenwood intervals;

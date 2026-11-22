@@ -488,17 +488,18 @@ stale memory read, failed edit, contradicted mechanics hypothesis and a query wh
 answer remains unknown, followed by an actual player decision.
 
 A proposed inter-admission comparison curates a sealed development prefix
-and delivers the published version to the next player. The
-[curator runner](../components/curator.md) is built and tested offline only
-and has yet to run beside a real custodian. Delivery of newly published
-knowledge to the running player depends on the within-admission integration
-and the applicable schema path.
+and delivers the published version to the next player. The deployed
+[curator runner](../components/curator.md#runner-windows) publishes facts and articles
+beside live play and can [deliver them to a running actor](../components/curator.md#delivery-to-a-running-actor)
+([live validation run #889](../acceptance/2026-11-22-live-validation-run-889.md)).
+That path carries the [curator contract's](../contracts/curator.md) formats, not this
+proposal's candidate representations.
 
-When a live research integration is separately built and admitted, it should publish
-source coverage/version with each readout and measure update-to-use lag. The player
-continues with recent observations and available fallible memory while a slow curator
-works; curator delay cannot silently become a context cut or a second input writer.
-Do not treat an inter-admission result as evidence that this live loop works.
+A live integration of those representations would be built and admitted separately. It
+should publish source coverage and version with each readout and measure update-to-use
+lag. The player continues with recent observations and available fallible memory while a
+slow curator works. Curator delay cannot silently become a context cut or a second input
+writer. An inter-admission result is not evidence that a live loop works.
 
 The outer selector ranks generic candidate algorithms with development/selection
 scores; final outcomes are opened only after outputs are sealed. Current

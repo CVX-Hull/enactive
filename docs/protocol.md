@@ -7,8 +7,8 @@ status: active
 # Computer control and player contract
 
 The contract navigation below links the exact rules for [computer control](contracts/computer-control.md),
-[player ports](contracts/player-ports.md), the [player host](contracts/player-host.md)
-and [evaluation](contracts/evaluation-record.md).
+[player ports](contracts/player-ports.md), the [player host](contracts/player-host.md),
+the [curator](contracts/curator.md) and [evaluation](contracts/evaluation-record.md).
 The [computer-control boundary decision](decisions/006-computer-control-boundary.md)
 explains the rationale. The [migration procedure](operations/migration.md) governs
 version and state handling.
@@ -24,6 +24,7 @@ version and state handling.
 | Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
 | Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
 | Host JSONL, recall events and context manifests | [Player host telemetry](contracts/player-host-telemetry.md) |
+| Curator facts, articles, types, submissions, gate, restore, drafts and sessions | [Curator contract](contracts/curator.md), [curator component](components/curator.md) |
 | Interpretive run evaluation | [Evaluation records and metrics](contracts/evaluation-record.md) |
 | Offline diagnostics and judging | [Measurement tools](contracts/measurement-tools.md) |
 | Withholding study commands and file formats | [Withholding study](contracts/withholding-study.md) |

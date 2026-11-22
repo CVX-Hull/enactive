@@ -198,27 +198,26 @@ returns that label, `source_status`, `snapshot`, `items`, `total`, `next` and `l
   The existing response ceiling remains `413 response_too_large`.
 - Rows preserve journal order with an `index`, exact `operation_id`, `operation`,
   `status`, `base_version`, `restored_from`, `version`, `submission`, `session` and
-  bounded `diagnostics`. Only the current exact `curator-gate/2` shape and its
-  operation/status/null conventions are accepted. No Boolean alias or historical
-  converter is used. Text, identifiers and lists use the existing bounded omission
-  conventions; an overlong identifier is omitted, never shortened into another ID.
-  Free-form references and diagnostics containing `/` or `\` are conservatively
-  withheld as path-like detail, with `path_details_omitted` and identifier omission
-  metadata. This also hides benign separator-containing text; the source remains
-  available for local inspection. Whole values are withheld rather than presenting partially redacted identifiers.
-- Publication is a recorded gate report, not semantic verification, the repository's
-  present head or delivery/read/use. Restore, unchanged and submission results remain
-  distinct. Null and unknown versions remain explicit. No timestamp, gate pass rate,
-  lag, absolute age, health-slot value or run association is inferred.
+  bounded `diagnostics`. Only the exact [`curator-gate/2`](curator.md#gate-result-curator-gate2)
+  shape and its operation, status and null conventions are accepted, with no alias or
+  historical converter.
+- Text, identifiers and lists use the existing bounded omission conventions. An overlong
+  identifier is omitted, never shortened into another ID. Whole free-form references and
+  diagnostics containing `/` or `\` are withheld as path-like detail, with
+  `path_details_omitted` and identifier omission metadata. This also hides benign text
+  with separators; the source stays available for local inspection.
+- A row reports what the gate recorded. It shows neither semantic verification nor the
+  repository's present head, and no delivery or use. Restore, unchanged and submission
+  results stay distinct, null and unknown versions stay explicit, and nothing else is
+  inferred: no time, pass rate, lag, age, health value or run.
 
 The reader serves no raw paths, briefs, transcripts, submission bodies, drafts,
-credentials or arbitrary repository files. It writes nothing and imports no curator
-runtime; no output reaches the player or curator. The Curator tab provides source
-selection, result rows and detail using escaped content and keyboard controls. The
-remaining session timeline, diffs, draft contents and current states, ontology and program views stay unavailable.
-Source changes reset stale result/detail selection; the control frame and independent
-Pause continue through their existing path. Fixture projection and rendered checks
-establish this reader's behavior, not semantic gate efficacy or real curator lag.
+credentials or arbitrary repository files. It writes nothing, imports no curator runtime
+and sends nothing to the player or curator. The Curator tab provides source selection,
+result rows and detail with escaped content and keyboard controls. It has no view of the
+remaining session timeline, diffs, draft contents and current states, ontology or
+programs. A source change resets a stale selection; the control frame and Pause continue
+on their own path. Fixture and rendered checks establish this reader's behavior only.
 
 ### Recorded curator sessions
 

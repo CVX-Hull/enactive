@@ -92,10 +92,11 @@ Node tests: `cd tools/curator_host && npm test`.
   Both admission and grooming use game-neutral instructions and treat facts as hypotheses.
   The host selects the grooming instructions with `SessionConfig.grooming_brief`, pointing
   to [`grooming.md`](../../tools/curator_host/grooming.md). The
-  [session design](../design/curator-session.md#admission-and-grooming) owns session
+  [curator contract](../contracts/curator.md#admission-and-grooming) owns session
   inputs, responsibilities and publication rules. The shadow CLI runs admission sessions,
   and with `--groom` a grooming session after each whole admission that publishes, on the
-  same repository and under the same caps (not with windows). There is no live trigger.
+  same repository and under the same caps (not with windows); it has no live trigger
+  (live runs use the [live curator runner](campaign-run.md#live-knowledge-updates)).
 - The frozen configuration is `curator-host/1`: model, effort, request and wall limits, image
   limits. It names no endpoint and holds no key.
 - The host reads `CURATOR_PROXY_URL` (must be `http://127.0.0.1:<port>`) and presents
@@ -335,7 +336,7 @@ differs from the last published admission.
 `tests/test_curator_host.py::test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact`
 runs the real Node host, proxy, gate and (on macOS) Seatbelt session runner against
 `tests/curator_stand_in.py`. Its positive and negative cases cover the
-[session publication contract](../design/curator-session.md#admission-and-grooming).
+[session publication contract](../contracts/curator.md#admission-and-grooming).
 `tests/test_curator_runner.py::test_boundary_grooming_files_game_facts_and_keeps_world_facts_after_live_windows`
 publishes two live windows from a growing synthetic trace, seals the trace and
 invokes the boundary-grooming CLI. It checks that grooming publishes articles over
