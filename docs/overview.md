@@ -58,11 +58,12 @@ Knowledge moves beside play in four steps, each optional for a run:
    the live write-ahead-log store and runs sandboxed sessions over windows of finished
    steps. Its failure or lag never stops play.
 2. **Deliver.** With [`live_knowledge_updates`](operations/campaign-run.md#live-knowledge-updates),
-   the driver adopts each newer confirmed version and writes it for the running actor and
-   for any successor. The running host delivers the newest verified update that fits
-   within context capacity as one message (refusing an oversized one for context
-   capacity), while a successor starts from the driver's latest adopted version.
-   Otherwise every actor keeps the package's frozen version.
+   on each poll the driver adopts the highest newer confirmed version it can verify and
+   publish for the application and any successor. Between requests, the running host
+   delivers the newest verified update that fits within context capacity as one message
+   (refusing an oversized one for context capacity), while a successor starts from the
+   driver's latest adopted version. Otherwise every actor keeps the package's frozen
+   version.
 3. **Cut.** The `player-host/10` route can enable `context_cut`. The host then replaces
    older turns with a fresh briefing, and only turns that the curator's confirmed,
    [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut) has reached.

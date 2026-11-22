@@ -184,11 +184,14 @@ The closed `recall` object pins the model on the player's provider and key, `eve
 ### Live knowledge updates
 
 `live_knowledge_updates` is required and is `true` or `false`. With `false`, every
-actor plays the frozen version for the whole admission. With `true`, a version the
-[curator runner](../components/curator.md#delivery-to-a-running-actor) confirms
-during the admission reaches the actor that is running and becomes the next actor's
-frozen file. The [host contract](../contracts/player-host.md#a-newer-version-during-play)
-specifies adoption, verification and the message the player receives.
+actor plays the frozen version for the whole admission. With `true`, on each poll the
+driver adopts the highest newer version the
+[curator runner](../components/curator.md#delivery-to-a-running-actor) has confirmed and
+that verifies and publishes; the running host delivers the newest verified update that
+fits within context capacity (refusing an oversized one for context capacity), and any
+successor starts from the driver's latest adopted version. The
+[host contract](../contracts/player-host.md#a-newer-version-during-play) specifies
+adoption, verification and the message the player receives.
 Live delivery also sends the runner's verified coverage to the actor. A route
 with context cuts enabled can cut only through eligible covered turns. Play
 continues through ordinary image eviction and handoff while coverage is unavailable.
