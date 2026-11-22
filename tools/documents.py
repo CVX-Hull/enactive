@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Document and record checks (C-DOCUMENTS): stewardship metadata, the data rule and its schema ids,
-the risk IDs that controls and current pages name, and the dated-record indexes. Structure only, no content-truth claims."""
+"""Document and record checks (C-DOCUMENTS): stewardship metadata, active-page structure, the data rule and
+its schema ids, risk IDs, and dated-record indexes."""
 from __future__ import annotations
 
 from datetime import date
@@ -9,6 +9,7 @@ from os.path import relpath
 from pathlib import Path, PurePosixPath
 import re
 import sys
+from typing import Iterator
 from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,11 +19,22 @@ if __package__ in (None, ""):
 try:
     import frontmatter
     from jsonschema import Draft202012Validator, FormatChecker
+    from markdown_it import MarkdownIt
     from yaml import YAMLError
 except ImportError as error:
     raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
 
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")
+# Current documents outside the root and docs/ trees; checked wherever they exist.
+COMPONENT_DOCUMENTS = ("tools/player_host/README.md",)
+MAX_ACTIVE_TABLE_CELL_WORDS = 150
+MAX_ACTIVE_TABLE_CELL_CHARS = 1000
+
+
+def _document_paths(root: Path) -> Iterator[Path]:
+    yield from (root / name for name in ROOT_DOCUMENTS)
+    yield from (root / name for name in COMPONENT_DOCUMENTS if (root / name).exists())
+    yield from sorted((root / "docs").rglob("*.md"))
 
 
 def local_reference(root: Path, reference: object) -> bool:
@@ -90,17 +102,12 @@ def check_data(root: Path) -> list[str]:
                 and not re.search(rf"(?<![A-Za-z0-9_/-]){re.escape(schema)}(?![0-9])", defining)):
             errors.append(f"{'/'.join(parts)}: schema {schema!r} is defined by no schema file, contract or code")
     return errors
-# Current documents outside the root and docs/ trees; checked wherever they exist.
-COMPONENT_DOCUMENTS = ("tools/player_host/README.md",)
 
 
 def check_metadata(root: Path) -> list[str]:
     errors = []
     yaml_handler = frontmatter.YAMLHandler()
-    paths = [*(root / name for name in ROOT_DOCUMENTS),
-             *(root / name for name in COMPONENT_DOCUMENTS if (root / name).exists()),
-             *sorted((root / "docs").rglob("*.md"))]
-    for path in paths:
+    for path in _document_paths(root):
         label = str(path.relative_to(root))
         try:
             if not path.resolve().is_relative_to(root.resolve()):
@@ -207,6 +214,52 @@ INDEXES = {
     "docs/decisions/index.md": ("Decision records", "docs/decisions", "numbered decision records (ADRs)"),
 }
 
+TABLE_CELL_EXEMPTIONS = {"docs/decisions/owner-decisions.md", "docs/decisions/owner-decisions-archive.md", *INDEXES}
+
+
+def check_structure(root: Path) -> list[str]:
+    """Check table-cell size and proposed sections on active pages using the pinned Markdown parser."""
+    errors = []
+    resolved_root = root.resolve()
+    yaml_handler = frontmatter.YAMLHandler()
+    parser = MarkdownIt("commonmark").enable("table").disable("inline")
+    for path in _document_paths(root):
+        label = path.relative_to(root).as_posix()
+        try:
+            if not path.resolve().is_relative_to(resolved_root):
+                continue
+            text = path.read_text()
+            if not yaml_handler.detect(text):
+                continue
+            header, body = yaml_handler.split(text)
+            metadata = yaml_handler.load(header)
+        except (OSError, ValueError, YAMLError):
+            continue  # check_metadata reports unreadable or invalid front matter.
+        if not isinstance(metadata, dict) or metadata.get("status") != "active":
+            continue
+        first_line = text.count("\n", 0, len(text) - len(body)) + 1
+        tokens = parser.parse(body)
+        check_tables = label not in TABLE_CELL_EXEMPTIONS
+        for index, token in enumerate(tokens):
+            if index + 1 >= len(tokens) or tokens[index + 1].type != "inline":
+                continue
+            inline = tokens[index + 1]
+            offset = inline.map[0] if inline.map else (token.map[0] if token.map else 0)
+            location = f"{label}:{first_line + offset}"
+            if token.type == "heading_open" and token.tag == "h2":
+                if path.parent == root / "docs/design" and re.match(r"^proposed\b", inline.content.strip(), re.I):
+                    errors.append(f"{location}: active design notes cannot contain a '## Proposed' section ({RECORD_RULE})")
+            elif check_tables and token.type in ("th_open", "td_open"):
+                cell = inline.content.strip()
+                words = len(cell.split())
+                chars = len(cell)
+                if words > MAX_ACTIVE_TABLE_CELL_WORDS or chars > MAX_ACTIVE_TABLE_CELL_CHARS:
+                    errors.append(f"{location}: table cell exceeds the size cap. "
+                                  f"Word count {words:,}, cap {MAX_ACTIVE_TABLE_CELL_WORDS}. "
+                                  f"Character count {chars:,}, cap {MAX_ACTIVE_TABLE_CELL_CHARS:,}. "
+                                  f"Move dense detail into a subsection ({REVIEWER_RULE})")
+    return errors
+
 
 def _cell(text: object) -> str:
     return " ".join(str(text).split()).replace("|", "\\|")
@@ -290,11 +343,11 @@ def main(argv: list[str] | None = None) -> int:
         for index in INDEXES:
             (ROOT / index).write_text(render_index(ROOT, index))
         print("Generated the dated-record indexes.")
-    errors = check_metadata(ROOT) + check_data(ROOT) + check_risks(ROOT) + check_indexes(ROOT)
+    errors = check_metadata(ROOT) + check_structure(ROOT) + check_data(ROOT) + check_risks(ROOT) + check_indexes(ROOT)
     if errors:
         print("Document checks failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("Document metadata, the data rule, risk IDs and record indexes: passed; content truth was not verified.")
+    print("Document metadata, active-page structure, the data rule, risk IDs and record indexes: passed; content truth was not verified.")
     return 0
 
 
