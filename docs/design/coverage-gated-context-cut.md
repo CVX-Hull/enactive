@@ -1,7 +1,7 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Measurement of the curator's confirmed coverage lag behind the player during real play
+status: active
+review_trigger: 'Implementation of the coverage-gated context cut in #900'
 ---
 
 # A context cut bounded by published coverage
@@ -10,8 +10,8 @@ review_trigger: Measurement of the curator's confirmed coverage lag behind the p
 
 - **Question.** Can the host release old turns while preserving enough context for the player's current task?
 - **Proposal.** Remove only a prefix covered by a published snapshot and deliver a fresh briefing in the same request.
-- **Unknown.** Lag in real play determines how many turns can be released. Whether the briefing preserves the needed distinctions is unmeasured.
-- **Decision.** The owner revisits adoption after [curator lag behind play is measured](../decisions/owner-decisions.md#context-cut-waits-for-curator-lag-measurement).
+- **Unknown.** Lag in real play was measured in `#889` (17/17 live windows kept pace); whether the briefing preserves all needed distinctions across real cuts in live play remains to be observed after implementation.
+- **Decision.** On 22 November 2026 the owner chose **Go** to implement the cut under [#900](https://github.com/CVX-Hull/enactive/issues/900) ([owner decision](../decisions/owner-decisions.md#context-cut-go-and-archive-889), [decision brief](../acceptance/2026-11-22-context-cut-decision-brief-890.md)).
 
 The alternatives considered and the lag estimates are in the
 [retired context design](player-context.md).
@@ -30,8 +30,10 @@ would identify the removed decisions and direct the player to their frames throu
 The free checks use 20,000 and 60,000 tokens for the low and high marks. At about
 950 tokens per turn and a peak of 39 images, the first trigger falls near 40,000
 tokens. These are simulation parameters. Sessions of 15 decisions avoided image-block
-drops in the back-to-back simulation. The lag beside play and the player's ability
-to continue its task after a cut still need measurement.
+drops in the back-to-back simulation. Curator lag beside play was measured in
+[#889](../acceptance/2026-11-22-live-validation-run-889.md) (17 of 17 live windows kept
+pace); the player's ability to continue its task after a real cut still needs
+measurement in live play.
 [Cut simulation](../acceptance/2026-11-13-memory-screen-free-checks.md#where-the-cut-stops-working)
 
 ## Publication conditions
