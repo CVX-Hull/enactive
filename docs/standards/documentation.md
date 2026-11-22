@@ -102,6 +102,8 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   [Replaced](../decisions/owner-decisions-archive.md#replaced) section holds decisions a later
   decision replaces. Its [Used approvals and rulings on finished work](../decisions/owner-decisions-archive.md#used-approvals-and-rulings-on-finished-work)
   section holds approvals and rulings that no longer grant permission. Rows are retained.
+  The pull request that finishes work under a one-off ruling or uses up a one-off
+  approval moves its row to that archive in the same change.
 - **A dated record names its kind** in its front matter. The generated index shows it,
   so a reader can find the runs without reading past the reviews, and the document
   check requires it. A new record is one of four kinds:
@@ -122,7 +124,11 @@ log row per owner decision and a reviewer's attention to tense; no check enforce
   owner decisions are open. When they are made it becomes `historical`, unless it is
   the working description of something being built, in which case it is `active` until
   that is built and described in components and contracts. The change that adds the
-  deciding row to the log changes the note's status.
+  deciding row to the log changes the note's status. The pull request that finishes
+  an adopted design retires its note to `historical` and sets `replacement` to the
+  current documentation. `tools/documents.py` keeps active working notes separate
+  from unbuilt proposals by refusing `## Proposed` headings in `status: active` pages
+  directly under `docs/design/`.
 - **An issue has one current description**, replaced when things change
   ([work items](../workflows/work-items.md#status-fields-and-dates)). GitHub keeps its
   edit history.
@@ -158,6 +164,14 @@ reads ([R-UNREADABLE-DOCS](../risks.md#development-risks)).
 - **Write sentences.** A rule is stated as a sentence with a subject and a verb, not as
   a string of nouns. When a change touches a section written in compressed form, it
   rewrites that section; pages are not rewritten for style alone.
+- **State each caveat once.** Put caveats about what is known or what is safe at the
+  boundary that owns them. Link to that explanation from pages that depend on it.
+- **Keep table cells scannable.** Move dense specifications that need several sentences
+  into subsections. `tools/documents.py` refuses cells over 150 words or 1,000 characters
+  on `status: active` pages, excluding `docs/decisions/owner-decisions.md`, its archive
+  and generated indexes.
+- **Keep spaces around numbers and units.** Write measurements like `16 KiB` and leave
+  spaces around a range like `1..32` in prose.
 - **Say where a number comes from** ([S-EVIDENCE](evidence.md)).
 
 ## Names
@@ -239,9 +253,12 @@ actual process boundaries. Link the contract that owns the detail.
 Write each diagram as one fenced `mermaid` block in its host page; GitHub renders it
 and the block is the only copy. Update the block and its explanatory text together,
 and preview a changed diagram on GitHub, because GitHub's Mermaid version decides how
-it draws. A diagram of a changed boundary is reviewed with that change, as part of
-its ordinary review. Retire a diagram with its parent page, and link to one diagram
-instead of copying it.
+it draws. A pull request that alters a system boundary, process or supervision
+topology, or a persisted schema version checks the [overview](../overview.md),
+[architecture](../architecture.md) and the owning Mermaid diagram listed in the
+[documentation map](../documentation.md#from-code-to-its-documents). Review the
+diagram with that change. Retire a diagram with its parent page, and link to one
+diagram instead of copying it.
 
 The user must be able to find purpose, current capabilities/limits, architectural
 rationale, next change/tradeoffs and supporting evidence from the overview and
