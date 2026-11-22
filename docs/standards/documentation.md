@@ -31,8 +31,8 @@ loads, prompts are inputs a program reads, and a provenance file sits beside wha
 describes. Active or proposed pages need a review trigger. Historical and superseded
 pages carry none, because nobody reviews them against current behavior. A historical
 page needs date and scope; a superseded one needs scope and a repository-relative
-replacement. A historical page that a later one replaces only in part stays historical
-and may name that page as its replacement. Proposals are not implemented contracts. Accepted ADRs are dated rationale;
+replacement. A historical page that a later one replaces in whole or in part stays historical
+and names that page as its replacement. Proposals are not implemented contracts. Accepted ADRs are dated rationale;
 architecture/protocol remain authoritative about current behavior. Metadata is
 not a claim of accuracy. Review a current page when its own review trigger fires.
 
@@ -75,7 +75,7 @@ Each kind of fact has one home, listed in the
 [documentation map](../documentation.md#one-authoritative-home-per-kind-of-fact), so
 that a reader finds the current rule without reading history
 ([R-UNREADABLE-DOCS and R-STALE-DOCS](../risks.md#development-risks)). The cost is one
-log row per owner decision and a reviewer's attention to tense; no check enforces it.
+log row per owner decision and a reviewer's attention to tense; no check enforces tense.
 
 - **Current pages** state rules, contracts and procedures as they are. A date appears
   only where a reader needs it now: beside a measured figure, a pinned version or a

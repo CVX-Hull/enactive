@@ -102,6 +102,8 @@ def check_data(root: Path) -> list[str]:
                 and not re.search(rf"(?<![A-Za-z0-9_/-]){re.escape(schema)}(?![0-9])", defining)):
             errors.append(f"{'/'.join(parts)}: schema {schema!r} is defined by no schema file, contract or code")
     return errors
+
+
 def check_metadata(root: Path) -> list[str]:
     errors = []
     yaml_handler = frontmatter.YAMLHandler()
@@ -215,27 +217,14 @@ INDEXES = {
 TABLE_CELL_EXEMPTIONS = {"docs/decisions/owner-decisions.md", "docs/decisions/owner-decisions-archive.md", *INDEXES}
 
 
-def _table_cells(row: str) -> Iterator[str]:
-    inner = row[1:-1]
-    start = 0
-    # Consume escapes in pairs so a pipe after two backslashes is still a separator.
-    for match in re.finditer(r"\\.|(\|)", inner):
-        if match[1]:
-            yield inner[start:match.start()].strip()
-            start = match.end()
-    yield inner[start:].strip()
-
-
 def check_structure(root: Path) -> list[str]:
-    """Check table-cell size and proposed sections on active pages."""
+    """Check table-cell size and proposed sections on active pages using the pinned Markdown parser."""
     errors = []
     resolved_root = root.resolve()
     yaml_handler = frontmatter.YAMLHandler()
-    parser = MarkdownIt("commonmark").disable("inline")
+    parser = MarkdownIt("commonmark").enable("table").disable("inline")
     for path in _document_paths(root):
         label = path.relative_to(root).as_posix()
-        if label in TABLE_CELL_EXEMPTIONS:
-            continue
         try:
             if not path.resolve().is_relative_to(resolved_root):
                 continue
@@ -249,17 +238,19 @@ def check_structure(root: Path) -> list[str]:
         if not isinstance(metadata, dict) or metadata.get("status") != "active":
             continue
         first_line = text.count("\n", 0, len(text) - len(body)) + 1
-        fenced = {line for token in parser.parse(body) if token.type == "fence" for line in range(*token.map)}
-        for offset, line in enumerate(body.split("\n")):
-            if offset in fenced:
+        tokens = parser.parse(body)
+        check_tables = label not in TABLE_CELL_EXEMPTIONS
+        for index, token in enumerate(tokens):
+            if index + 1 >= len(tokens) or tokens[index + 1].type != "inline":
                 continue
-            stripped = line.strip()
+            inline = tokens[index + 1]
+            offset = inline.map[0] if inline.map else (token.map[0] if token.map else 0)
             location = f"{label}:{first_line + offset}"
-            if path.parent == root / "docs/design" and re.match(r"^##\s+proposed\b", stripped, re.I):
-                errors.append(f"{location}: active design notes cannot contain a '## Proposed' section ({RECORD_RULE})")
-            if not (stripped.startswith("|") and stripped.endswith("|")) or re.fullmatch(r"[-:|\s]+", stripped):
-                continue
-            for cell in _table_cells(stripped):
+            if token.type == "heading_open" and token.tag == "h2":
+                if path.parent == root / "docs/design" and re.match(r"^proposed\b", inline.content.strip(), re.I):
+                    errors.append(f"{location}: active design notes cannot contain a '## Proposed' section ({RECORD_RULE})")
+            elif check_tables and token.type in ("th_open", "td_open"):
+                cell = inline.content.strip()
                 words = len(cell.split())
                 chars = len(cell)
                 if words > MAX_ACTIVE_TABLE_CELL_WORDS or chars > MAX_ACTIVE_TABLE_CELL_CHARS:

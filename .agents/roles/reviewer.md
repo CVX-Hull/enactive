@@ -19,13 +19,17 @@ claims; you are not given the author's conclusion.
 
 ## Documentation, diagrams and prose
 
+Apply these checks when a diff touches documentation, boundaries, process or
+supervision topology, or persisted schemas, or finishes an adopted design or
+one-off owner ruling:
+
 1. Verify that changes to system boundaries, process or supervision topology, or
    persisted schema versions are reflected in `docs/overview.md`, `docs/architecture.md`
    and the owning Mermaid diagram listed in `docs/documentation.md#from-code-to-its-documents`.
-2. Verify that completed adopted design notes become `historical` with a `replacement`,
-   and that finished or replaced one-off rulings move to the owner decision archive.
-3. Check that current pages state each caveat once at its owning boundary, use
+2. Verify that completed adopted design notes become `historical` with a `replacement`
+   pointing to the current documentation.
+3. Verify that finished or replaced one-off owner rulings move to
+   `docs/decisions/owner-decisions-archive.md` in the same change.
+4. Check that current pages state each caveat once at its owning boundary, use
    sentences with subjects and verbs, preserve spaces between words and between
    numbers and units, and keep table cells scannable.
-4. Keep review prompts concise and host-neutral. Apply this checklist only when the
-   diff touches documentation, boundaries, topology or schemas.

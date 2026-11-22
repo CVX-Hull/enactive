@@ -130,28 +130,41 @@ class DocumentTests(unittest.TestCase):
     def test_active_table_cells_at_or_below_both_caps_pass(self):
         path = self.root / "docs/nested/page.md"
         at_both_caps = "word " * 149 + "x" * 255
-        path.write_text(self.active + f"| {at_both_caps} | short |\n| :{'-' * 1001} | ---: |\n")
+        path.write_text(self.active + f"\n| {at_both_caps} | short |\n| :{'-' * 1001} | ---: |\n| ok | ok |\n")
         self.assertEqual(documents.check_structure(self.root), [])
 
     def test_active_table_cells_over_either_cap_fail(self):
         path = self.root / "docs/nested/page.md"
         for cell, words, chars in (("x " * 150 + "x", "151", "301"), ("x" * 1001, "1", "1,001")):
             with self.subTest(words=words, chars=chars):
-                path.write_text(self.active + f"\n\n| short | {cell} |\n")
+                path.write_text(self.active + f"\n| H1 | H2 |\n| --- | --- |\n| short | {cell} |\n")
                 errors = documents.check_structure(self.root)
                 self.assertEqual(len(errors), 1)
-                for detail in ("docs/nested/page.md:9:", f"Word count {words}, cap 150.",
+                for detail in ("docs/nested/page.md:10:", f"Word count {words}, cap 150.",
                                f"Character count {chars}, cap 1,000.", documents.REVIEWER_RULE):
                     self.assertIn(detail, errors[0])
 
-    def test_table_pipe_escaping_respects_backslash_parity(self):
+    def test_table_pipe_escaping_matches_gfm_parser(self):
         path = self.root / "docs/nested/page.md"
         half = "word " * 80
-        path.write_text(self.active + f"| {half}" + r"\|" + f" {half}|\n")
-        errors = documents.check_structure(self.root)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("Word count 161,", errors[0])
-        path.write_text(self.active + f"| {half}" + r"\\|" + f" {half}|\n")
+        # On GitHub / GFM tables, a pipe preceded by one or two backslashes remains escaped inside one cell.
+        for sep in (r"\|", r"\\|"):
+            with self.subTest(sep=sep):
+                path.write_text(self.active + f"\n| A | B |\n| --- | --- |\n| {half}{sep} {half}| ok |\n")
+                errors = documents.check_structure(self.root)
+                self.assertEqual(len(errors), 1)
+                self.assertIn("Word count 161,", errors[0])
+
+    def test_markdown_parser_handles_variants_and_non_tables(self):
+        path = self.root / "docs/nested/page.md"
+        big = "x" * 1001
+        # Tables without outer pipes and blockquoted tables are checked.
+        for snippet in (f"A | B\n--- | ---\n{big} | ok\n", f"> | A | B |\n> | --- | --- |\n> | {big} | ok |\n"):
+            with self.subTest(snippet=snippet[:12]):
+                path.write_text(self.active + "\n" + snippet)
+                self.assertEqual(len(documents.check_structure(self.root)), 1)
+        # Non-table paragraphs, HTML comments and indented code blocks are ignored.
+        path.write_text(self.active + f"\n| {big} |\n\n<!--\n| A |\n| --- |\n| {big} |\n-->\n\n    | A |\n    | --- |\n    | {big} |\n")
         self.assertEqual(documents.check_structure(self.root), [])
 
     def test_structure_ignores_tables_and_headings_inside_fences(self):
@@ -159,22 +172,23 @@ class DocumentTests(unittest.TestCase):
         path.parent.mkdir()
         for fence, other in (("```", "~~~"), ("~~~", "```")):
             with self.subTest(fence=fence):
-                path.write_text(self.active + f"{fence}markdown\n{other}\n"
-                                f"| {'x' * 1001} |\n## Proposed\n{fence}\n")
+                path.write_text(self.active + f"\n{fence}markdown\n{other}\n"
+                                f"| H |\n| --- |\n| {'x' * 1001} |\n## Proposed\n{fence}\n")
                 self.assertEqual(documents.check_structure(self.root), [])
 
     def test_structure_ignores_front_matter_and_malformed_yaml(self):
         path = self.root / "docs/design/example.md"
         path.parent.mkdir()
-        table = f"| {'x' * 1001} |"
-        header = self.active.replace("review_trigger: boundary change", f"review_trigger: |-\n  ## Proposed\n  {table}")
+        table = f"| H |\n| --- |\n| {'x' * 1001} |"
+        header = self.active.replace("review_trigger: boundary change",
+                                     f"review_trigger: |-\n  ## Proposed\n  | {'x' * 1001} |")
         path.write_text(header)
         self.assertEqual(documents.check_structure(self.root), [])
-        path.write_text(self.active.replace("owner: maintainer", "owner: [broken") + f"{table}\n## Proposed\n")
+        path.write_text(self.active.replace("owner: maintainer", "owner: [broken") + f"\n{table}\n\n## Proposed\n")
         self.assertEqual(documents.check_structure(self.root), [])
 
     def test_table_cell_cap_exemptions(self):
-        table = f"| {'x' * 1001} |\n"
+        table = f"\n| H |\n| --- |\n| {'x' * 1001} |\n"
         path = self.root / "docs/nested/page.md"
         for header in (self.active.replace("active", "proposed"), HISTORICAL):
             path.write_text(header + table)
@@ -187,35 +201,46 @@ class DocumentTests(unittest.TestCase):
                 self.assertEqual(documents.check_structure(self.root), [])
 
     def test_table_cell_cap_covers_root_and_component_pages(self):
+        table = f"\n| H |\n| --- |\n| {'x' * 1001} |\n"
         for name in ("README.md", "tools/player_host/README.md"):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(self.active + f"| {'x' * 1001} |\n")
+            path.write_text(self.active + table)
         errors = documents.check_structure(self.root)
         self.assertEqual(len(errors), 2)
-        self.assertTrue(errors[0].startswith("README.md:7:"))
-        self.assertTrue(errors[1].startswith("tools/player_host/README.md:7:"))
+        self.assertTrue(errors[0].startswith("README.md:10:"))
+        self.assertTrue(errors[1].startswith("tools/player_host/README.md:10:"))
 
     def test_active_design_notes_reject_proposed_sections(self):
         path = self.root / "docs/design/example.md"
         path.parent.mkdir()
-        for heading in ("## Proposed", "## pRoPoSeD next step"):
-            with self.subTest(heading=heading):
-                path.write_text(self.active + f"{heading}\n")
+        for heading in ("## Proposed\n", "## pRoPoSeD next step\n", "Proposed\n--------\n"):
+            with self.subTest(heading=heading.splitlines()[0]):
+                path.write_text(self.active + f"\n{heading}")
                 errors = documents.check_structure(self.root)
                 self.assertEqual(len(errors), 1)
-                for detail in ("docs/design/example.md:7:", "## Proposed", documents.RECORD_RULE):
+                for detail in ("docs/design/example.md:8:", "## Proposed", documents.RECORD_RULE):
                     self.assertIn(detail, errors[0])
 
     def test_proposed_heading_rule_only_checks_active_design_notes_and_level_two(self):
         design = self.root / "docs/design/example.md"
         design.parent.mkdir()
         for header in (self.active.replace("active", "proposed"), HISTORICAL):
-            design.write_text(header + "## Proposed\n")
+            design.write_text(header + "\n## Proposed\n")
             self.assertEqual(documents.check_structure(self.root), [])
-        design.write_text(self.active + "### Proposed\n## Proposedly\n")
-        (self.root / "docs/nested/page.md").write_text(self.active + "## Proposed\n")
+        design.write_text(self.active + "\n### Proposed\n## Proposedly\n\n<!--\n## Proposed\n-->\n\n    ## Proposed\n")
+        (self.root / "docs/nested/page.md").write_text(self.active + "\n## Proposed\n")
         self.assertEqual(documents.check_structure(self.root), [])
+
+    def test_main_runs_check_structure(self):
+        from unittest import mock
+        with (mock.patch.object(documents, "ROOT", self.root),
+              mock.patch.object(documents, "check_metadata", return_value=[]),
+              mock.patch.object(documents, "check_data", return_value=[]),
+              mock.patch.object(documents, "check_risks", return_value=[]),
+              mock.patch.object(documents, "check_indexes", return_value=[])):
+            (self.root / "docs/nested/page.md").write_text(self.active + f"\n| H |\n| --- |\n| {'x' * 1001} |\n")
+            self.assertEqual(documents.main([]), 1)
 
 
 if __name__ == "__main__":
