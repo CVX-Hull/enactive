@@ -148,6 +148,18 @@ def counted_spend(out: Path) -> Decimal:
     return total
 
 
+def session_host_configuration(config: dict, prices: dict, cap: Decimal) -> dict:
+    """Freeze host settings from a runner configuration for admission or boundary grooming."""
+    host = config['host']
+    arm = shadow.ARMS[config['arm']]
+    return shadow.host_configuration(
+        arm, prices, effort=host['effort'] or arm.effort,
+        max_requests=host['max_requests'], max_output_tokens=host['max_output_tokens'],
+        request_timeout_seconds=host['request_timeout_seconds'], wall_seconds=host['wall_seconds'] - 30,
+        max_context_images=host['max_context_images'], context_image_block=host['context_image_block'],
+        workbench_timeout_seconds=60, budget_usd=float(cap))
+
+
 def _host_ran(summary: dict) -> bool:
     """The sandboxed host wrote output, so it was launched."""
     record = summary.get('record')
@@ -169,14 +181,8 @@ class Sessions:
         self.spent = counted_spend(self.out)
 
     def _host(self) -> None:
-        host = self.config['host']
         self.tools = shadow.host_tools()
-        self.model_config = shadow.host_configuration(
-            shadow.ARMS[self.config['arm']], self.prices, effort=host['effort'] or shadow.ARMS[self.config['arm']].effort,
-            max_requests=host['max_requests'], max_output_tokens=host['max_output_tokens'],
-            request_timeout_seconds=host['request_timeout_seconds'], wall_seconds=host['wall_seconds'] - 30,
-            max_context_images=host['max_context_images'], context_image_block=host['context_image_block'],
-            workbench_timeout_seconds=60, budget_usd=float(self.config['cap']))
+        self.model_config = session_host_configuration(self.config, self.prices, self.config['cap'])
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_path = shadow._write(self.config_dir/f'{self.config["arm"]}.json', self.model_config)
 
