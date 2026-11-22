@@ -22,6 +22,7 @@ const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENA
 const MCP_LIMIT_BYTES = 32 * 1_048_576;
 // How often a running host looks for a newer listed knowledge version between its other refreshes.
 const UPDATE_POLL_MS = 1000;
+const UPDATE_READ_TIMEOUT_MS = 2000;
 const UPDATE_READER = fileURLToPath(new URL('./update-reader.mjs', import.meta.url));
 const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
 // Adopt the pinned SDK helper's maintained default; original request/host
@@ -803,13 +804,22 @@ export async function runHost(options) {
     child.unref();
     return child;
   };
+  const updateReadTimeoutMs = positive(options.updateReadTimeoutMs) ? options.updateReadTimeoutMs : UPDATE_READ_TIMEOUT_MS;
   const readUpdateFile = (path, offset = null, limit = null) => new Promise(resolve => {
     const child = ensureUpdateReader();
     if (!child) { resolve(null); return; }
     const id = ++updateReadSeq;
-    pendingReads.set(id, resolve);
+    const finish = value => { clearTimeout(timer); resolve(value); };
+    const timer = setTimeout(() => {
+      if (!pendingReads.has(id)) return;
+      // A stalled read wedged the helper process: terminate it so the next read spawns a fresh helper.
+      if (updateReader === child) closeUpdateReader();
+      else { pendingReads.delete(id); finish(null); }
+    }, updateReadTimeoutMs);
+    timer.unref();
+    pendingReads.set(id, finish);
     try { child.stdin.write(JSON.stringify({id, path, offset, limit}) + '\n'); }
-    catch { pendingReads.delete(id); resolve(null); }
+    catch { pendingReads.delete(id); finish(null); }
   });
   const unreadUpdateLines = async () => {
     const data = await readUpdateFile(options.knowledgeUpdates, updatesOffset, INPUT_LIMIT_BYTES);

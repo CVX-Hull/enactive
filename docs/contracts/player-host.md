@@ -242,7 +242,7 @@ say when a package may set the field.
 | Export | [Curator runner](../components/curator.md#delivery-to-a-running-actor) | After a poll in which it confirmed a version, it writes that version as `delivered-knowledge/2` for the package's world to `RUN/curator-runner/delivered/vN.json`, whole (temporary name, sync, rename). It exports a confirmed publication only, never a restore, and only above the last version it exported. |
 | Adoption | [Driver](../../tools/campaign_player.py) | A thread of its own looks at `RUN/curator-runner/delivered` every tenth of a second, so no read there delays the driver's deadline checks, settlement or handoff. It takes the highest `vN.json` above the version it holds that is `delivered-knowledge/2`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). For a running actor it copies the bytes to `actors/NNN/knowledge/vN.json`, writes the update list with one more line to a temporary file, synced, and renames it over `actors/NNN/knowledge-updates.jsonl`; only then does the application serve the version and the driver hold it. A version prepared for an actor that has since stopped is decided again. A version that does not verify or cannot be written is reported on the custodian's stderr and never tried again; the list, the application and the next actor stay on the version held. |
 | Reads | Application | `player_knowledge_read` and `player_knowledge_query` answer from the adopted version from then on. Each result names its `version`. |
-| Delivery | Host | A refresh beside play, at start, every second and after each player response, reads the whole unread lines of `--knowledge-updates` and their files and holds the newest listed version above its own that verifies. Building a player request reads no file: it adopts the version held, if any, so a stalled read never delays a request. |
+| Delivery | Host | A refresh beside play, at start, every second and after each player response, reads the whole unread lines of `--knowledge-updates` and their files in an isolated helper (bounded per read so one stalled file never blocks later updates or CLI exit) and stages verified candidates above its own. Building a player request reads no file: it adopts the newest staged candidate that fits within context capacity, if any, so a stalled read never delays a request. |
 | Successor | Driver | A successor's `delivered-knowledge.json` is the latest version adopted in the run, taken from memory, or the package's file when none was. Its update list starts empty. |
 
 An update-list line is `knowledge-update-entry/1`: exactly `schema`, `version`
@@ -254,10 +254,13 @@ version number is above the adopted one; `repository_id` is the adopted version'
 unless that is the empty file; the file's SHA-256 is the entry's; the file is
 `delivered-knowledge/2` in its closed form; and its `version`, `commit`,
 `repository_id` and `coverage` are the entry's. It tries unread entries newest first
-and holds the first that verifies, deciding each on its own, so one malformed entry
-never hides another. An entry that fails, an older one and one passed over for a
-newer are each recorded as refused with a reason when the next request is built (or
-when the actor ends), and the adopted version stays.
+and stages every candidate that verifies, deciding each on its own, so one malformed
+or oversized entry never hides an older valid one. When the next request is built,
+the host adopts the newest staged candidate whose message fits within context
+capacity and refuses the rest (`context-capacity` for oversized newer ones,
+`superseded` for older ones). An entry that fails, an older one and one passed over
+for a newer are each recorded as refused with a reason when the next request is
+built (or when the actor ends), and the adopted version stays.
 
 An adopted version is the host's version for every later recall, reminder and
 delivery of that actor. A recall already in flight keeps the version it was

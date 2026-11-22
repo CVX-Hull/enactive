@@ -9,6 +9,7 @@ export function versionNumber(version) {
 
 // The public record forms `tools/knowledge_export.py` writes; `harness/player/knowledge.py` checks the same ones.
 const filled = value => typeof value === 'string' && value.length > 0;
+const nonblank = value => typeof value === 'string' && value.trim().length > 0;
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const keys = (value, required, optional = []) => Object.keys(value).every(key => required.includes(key) || optional.includes(key))
   && required.every(key => Object.hasOwn(value, key));
@@ -18,7 +19,7 @@ const validCoverage = value => value === null || (record(value) && keys(value, [
   && value.schema === 'curator-coverage/2' && filled(value.session) && (value.actor === null || filled(value.actor))
   && (value.last_step === null || Number.isSafeInteger(value.last_step)));
 const validPosition = value => record(value) && keys(value, ['session','actor','step','order'])
-  && filled(value.session) && filled(value.actor) && Number.isSafeInteger(value.step)
+  && nonblank(value.session) && nonblank(value.actor) && Number.isSafeInteger(value.step)
   && Array.isArray(value.order) && value.order.length === 3
   && Number.isSafeInteger(value.order[0]) && typeof value.order[1] === 'string' && Number.isSafeInteger(value.order[2]);
 const validArticle = value => record(value) && keys(value, ['id','title','lead','body','links','last_confirmed'])

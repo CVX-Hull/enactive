@@ -34,6 +34,10 @@ def _filled(value: object) -> bool:
     return isinstance(value, str) and bool(value)
 
 
+def _nonblank(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 def _names(value: object, *, nonempty: bool) -> bool:
     return (isinstance(value, list) and (bool(value) or not nonempty) and all(_filled(v) for v in value)
             and len(set(value)) == len(value))
@@ -48,7 +52,7 @@ def _coverage(value: object) -> bool:
 
 def _position(value: object) -> bool:
     return (isinstance(value, dict) and set(value) == POSITION_FIELDS
-            and _filled(value['session']) and _filled(value['actor']) and type(value['step']) is int
+            and _nonblank(value['session']) and _nonblank(value['actor']) and type(value['step']) is int
             and isinstance(value['order'], list) and len(value['order']) == 3
             and type(value['order'][0]) is int and isinstance(value['order'][1], str) and type(value['order'][2]) is int)
 

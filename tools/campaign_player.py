@@ -143,8 +143,9 @@ class LiveKnowledge:
             # either sees the list as it was or with the whole new line, and a failed write changes nothing.
             # This thread is the list's only writer, so its bytes are the published prefix.
             path=target/UPDATES_FILE
+            existed=path.exists()
             try:prefix=path.read_bytes()
-            except FileNotFoundError:prefix=b''
+            except FileNotFoundError:prefix=b'';existed=False
             listing=(target/f'.{UPDATES_FILE}.tmp',path)
             try:
                 with listing[0].open('wb') as stream:
@@ -164,10 +165,24 @@ class LiveKnowledge:
             except BaseException:
                 listing[0].unlink(missing_ok=True);raise
         with self.lock:
-            if self.closed or self.generation != generation:return
-            # Only after the list names the version: the application, the host and the successor move together.
-            application.set_knowledge(knowledge)
-            self.current,self.data=knowledge,data
+            stale = self.closed or self.generation != generation
+            if not stale:
+                # Only after the list names the version: the application, the host and the successor move together.
+                application.set_knowledge(knowledge)
+                self.current,self.data=knowledge,data
+        if stale and listing is not None:
+            # The actor ended (or the driver closed) while `os.replace` was in flight: restore the old actor's
+            # list to its prior bytes on this background thread so it never records an unadopted version.
+            try:
+                if existed:
+                    with listing[0].open('wb') as stream:
+                        stream.write(prefix);stream.flush();os.fsync(stream.fileno())
+                    listing[0].chmod(0o600)
+                    os.replace(*listing)
+                else:
+                    listing[1].unlink(missing_ok=True)
+            except OSError:
+                listing[0].unlink(missing_ok=True)
 
 
 def configured_estimate(amounts) -> float | None:

@@ -541,15 +541,18 @@ def test_a_version_prepared_for_an_actor_that_ended_is_decided_again_for_the_nex
 
 def test_a_stalled_list_replace_does_not_block_end_or_begin(tmp_path):
     """R-REGRESSION (B1): `LiveKnowledge._adopt` performs `os.replace` outside `self.lock` so a stalled
-    filesystem rename cannot block `end()` or `begin()` on the driver thread."""
+    filesystem rename cannot block `end()` or `begin()` on the driver thread, and once the rename finishes
+    after the actor ended it restores the old actor's list to its prior bytes rather than leaving an
+    unadopted version listed."""
     import os
     live,application,actor,leave,listed=live_case(tmp_path,published(2))
+    (actor/'knowledge-updates.jsonl').write_bytes(b'')
     live.begin(actor)
     leave(published(3))
     entered,release=threading.Event(),threading.Event()
     real_replace=os.replace
     def stalling_replace(src,dst):
-        if os.path.basename(dst)=='knowledge-updates.jsonl':
+        if os.path.basename(dst)=='knowledge-updates.jsonl' and not entered.is_set():
             entered.set();release.wait(10)
         return real_replace(src,dst)
     with patch('tools.campaign_player.os.replace',side_effect=stalling_replace):
@@ -564,6 +567,7 @@ def test_a_stalled_list_replace_does_not_block_end_or_begin(tmp_path):
         worker.join(5)
     assert elapsed<2 and not worker.is_alive()
     assert json.loads(successor)['version']=='v2' and not application.set_knowledge.called
+    assert listed()==[] and (actor/'knowledge-updates.jsonl').read_bytes()==b''
 
 
 def stalled_source(tmp_path):

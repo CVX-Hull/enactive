@@ -55,7 +55,8 @@ export async function deliveryScenario(directory, overrides = {}) {
   const workspace = await mkdtemp(join(directory,'enactive-player-fixture-'));
   try {
     const result = await runHost({configuration,knowledge:value,
-      knowledgeUpdates:overrides.knowledgeUpdates ? actor+'/knowledge-updates.jsonl' : null,finishReserveUsd:overrides.finishReserveUsd ?? '0.5',
+      knowledgeUpdates:overrides.knowledgeUpdates ? actor+'/knowledge-updates.jsonl' : null,
+      updateReadTimeoutMs:overrides.updateReadTimeoutMs,finishReserveUsd:overrides.finishReserveUsd ?? '0.5',
       session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:overrides.pendingControlId ?? null,control,
       context:'Frozen stand-in guide',prompt:'Inspect the receiver stand-in.',model:model.id,effort:'off',timeoutSeconds:10,
       env:{OFFLINE_TEST_KEY:'stand-in-only'},

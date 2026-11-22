@@ -219,6 +219,30 @@ test('an oversized newer version falls back to an older verified candidate that 
     [['refused','v4','context-capacity'],['delivered','v3',undefined]]);
 });
 
+test('a stalled older version file times out and restarts the reader so later updates still deliver',async t => {
+  const dir = await directory(t), v3 = newer({version:'v3'}), v4 = newer({version:'v4'}), v5 = newer({version:'v5'});
+  const stalled = join(dir,'actors/001/knowledge/v3.json');
+  await mkdir(dirname(stalled),{recursive:true});
+  execFileSync('mkfifo',[stalled]);
+  t.after(async () => { try { await (await open(stalled,constants.O_WRONLY | constants.O_NONBLOCK)).close(); } catch {} });
+  const {result,events} = await deliveryScenario(dir,{knowledgeUpdates:true,updateReadTimeoutMs:150,
+    recallFetch:n => recallReply(n === 1 ? ['article-a'] : []),
+    playerFetch:play({
+      1:async () => { await listUpdate(dir,v3,{skipFile:true}); await listUpdate(dir,v4); },
+      2:async () => {
+        // Give the stalled v3 read time to exceed updateReadTimeoutMs and restart the helper, then list v5.
+        await new Promise(resolve => setTimeout(resolve,300));
+        await listUpdate(dir,v5);
+      },
+      3:async () => { await new Promise(resolve => setTimeout(resolve,150)); },
+    },4)});
+  assert.equal(result.ok,true);
+  const seen = updates(events);
+  const delivered = seen.filter(e => e.outcome === 'delivered').map(e => e.version);
+  assert.deepEqual(delivered,['v4','v5']);
+  assert.ok(seen.some(e => e.outcome === 'refused' && e.version === 'v3' && e.reason === 'file-unreadable'));
+});
+
 test('an update that would bring the context to its capacity warning is refused and play continues',async t => {
   const dir = await directory(t), value = newer();
   value.articles[2].lead = 'x'.repeat(600_000);
@@ -254,7 +278,9 @@ test('delivered-knowledge/2 names its commit and repository, and the entry and m
     ['article with an empty body',v => { v.articles[0].body = []; }],['claim without facts',v => { v.articles[0].body[0].facts = []; }],
     ['article with a non-string link',v => { v.articles[0].links = [1]; }],['article with last_confirmed null',v => { v.articles[0].last_confirmed = null; }],
     ['fact seen carrying world',v => { v.facts[0].seen = {world:'unexpected'}; }],
+    ['fact seen with blank session',v => { v.facts[0].seen.session = '   '; }],
     ['article last_confirmed carrying world',v => { v.articles[0].last_confirmed = {world:'unexpected'}; }],
+    ['article last_confirmed with blank actor',v => { v.articles[0].last_confirmed.actor = ' \t '; }],
     ['coverage carrying world',v => { v.coverage.world = 'farm'; }],['coverage of another schema',v => { v.coverage.schema = 'curator-coverage/1'; }],
     ['coverage without a session',v => { v.coverage.session = ''; }],['coverage with a boolean step',v => { v.coverage.last_step = true; }],
     ['coverage with an empty actor',v => { v.coverage.actor = ''; }]]) assert.throws(() => validateKnowledge(changed(edit)),label);
