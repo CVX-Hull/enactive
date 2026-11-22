@@ -120,12 +120,12 @@ executor stores original intent/native IDs and reserves original capacities befo
 publication. DB/PNG failure pauses and leaves the original uncertain operation;
 no replay or authority reconstruction after restart. User Pause bypasses executor
 and DB waits. Cleanup closes the channel and terminates/reaps exact owned children.
-Normal native exit0 is sampled **before** forced cleanup, separately from Save claims.
+Normal native exit 0 is sampled **before** forced cleanup, separately from Save claims.
 
-Public input is1..32 key/text/click/wait actions. Keys are printable ASCII or the
+Public input is 1..32 key/text/click/wait actions. Keys are printable ASCII or the
 named keys in the [shared schema](../../harness/computer/protocol.py); modifiers
-are explicit. Text is1..31UTF-8 bytes without controls. Waits are0..2s each and
-at most15s combined; one operation is at most15s and never exceeds the run deadline.
+are explicit. Text is 1..31 UTF-8 bytes without controls. Waits are 0..2 s each and
+at most 15 s combined; one operation is at most 15 s and never exceeds the run deadline.
 Wait delays the caller in wall time without sending an SDL input event; it is
 not an application command or settlement guarantee. Clicks use a source actually
 returned to that actor; keys/text need no source.
@@ -146,7 +146,7 @@ original receipt time. Per-read time is separate. Verify original bytes on sourc
 consumption. Full PNG remains available; derived player views disclose omissions.
 Custodian remaining seconds and host HTTP/time budgets are distinctly labelled.
 
-The loopback service binds127.0.0.1, accepts bounded JSON and per-actor bearer
+The loopback service binds 127.0.0.1, accepts bounded JSON and per-actor bearer
 capabilities, with no CORS/public exposure. Browser routes are passive status/source
 plus independent user Pause. The writer validates active custody immediately before
 effects. Memory/progress/identity are never capability tokens.

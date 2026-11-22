@@ -8,9 +8,11 @@ review_trigger: Decisions on player context, ontology or spectator methods, or n
 
 # Research synthesis for ADR 009: memory, ontology and oversight
 
-The literature search cutoff is **2026-11-08** (America/New_York). The 18-month
-recency line (S-EVIDENCE) is **2025-05-08**. Conclusions whose newest supporting
-source is older are flagged "RECENCY". A targeted recheck of the belief-method
+The literature search cutoff is **2026-11-08** (America/New_York). Conclusions whose
+newest supporting source is older than **2025-05-08**, 18 months before that cutoff, are
+flagged "RECENCY". That flag was the search's own method;
+[no current standard requires it](decisions/owner-decisions.md#model-and-provider-claims-use-dated-primary-sources).
+A targeted recheck of the belief-method
 foundations has its own **2026-11-16** retrieval date.
 
 This page builds on, and does not repeat, two earlier pages: the

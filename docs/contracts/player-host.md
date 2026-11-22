@@ -94,11 +94,11 @@ These operator counts do not enter the assignment, repeated model messages or
 actor tool results.
 
 The current adapter reuses its maintained context estimate, reported usage and a text/image
-heuristic floor to warn before capacity becomes critical. The warning offers the
-existing handoff when the actor's tool table includes `player_handoff` (every actor's
-does; the final actor's handoff call is refused, and the notice says to use
-`player_finish` then); otherwise it says no successor is available and asks for
-`player_finish`.
+heuristic floor to warn before capacity becomes critical. Every actor's tool table
+includes `player_handoff`, so the warning offers the existing handoff and says to use
+`player_finish` if the call reports that no successor is available. The final actor's
+call is refused that way. Once an orderly stop is accepted, the warning names only the
+`player_finish` ending under that control.
 Known excessive context stops before another fetch. Before checking capacity the
 host may [cut a curator-covered prefix](#coverage-gated-context-cut) from the
 request. The token estimates are approximate.
@@ -332,6 +332,41 @@ first-notice latch are cleared on a cut, the token estimate disregards pre-cut
 provider usage, and capacity/time warnings are re-evaluated against the new
 request.
 [Cut telemetry](player-host-telemetry.md#context-cut) records the decision.
+
+```mermaid
+flowchart TB
+  accTitle: What the player host does on each request
+  accDescr: Between requests the host places finished reminders, applies coverage lines and adopts the newest staged knowledge version that fits. It considers a cut only when cuts are enabled and no orderly stop is accepted. A triggered cut is applied when enough covered complete turns can be removed and no restore was seen. Otherwise it is held back and the history stays. Image-block eviction, capacity stop, tail notices and the dollar limit follow before the model call. Settlement stops are handoff, player finish, the dollar limit and an unreported cost. Pause, uncertain input and the driver's deadlines are independent of this loop.
+  R["Request boundary<br/>Place finished reminders<br/>Apply coverage and restore lines<br/>Adopt newest staged version that fits"] --> Q{"Cuts enabled, and<br/>no orderly stop accepted?"}
+  Q -->|"No"| V
+  Q -->|"Yes"| T{"Cut trigger?<br/>Tokens above briefing exceed high_mark,<br/>or images exceed max_context_images"}
+  T -->|"No"| V
+  T -->|"Yes"| L{"Eligible?<br/>No restore seen, and at least min_free<br/>complete turns inside unbroken coverage"}
+  L -->|"No"| H["Held back<br/>History unchanged, reason recorded"]
+  L -->|"Yes"| K["Cut toward low_mark and the image peak<br/>Fresh briefing, cut marker, surviving turns"]
+  H --> V
+  K --> V["Image-block eviction<br/>when images still exceed the peak"]
+  V --> P{"Estimate leaves room<br/>for the reply?"}
+  P -->|"No"| X["Host stops<br/>No further model call"]
+  P -->|"Yes"| N["Tail notices<br/>near context capacity or the host deadline"]
+  N --> D{"Counted cost below<br/>spend_limit_usd?"}
+  D -->|"No: spend-limit"| X
+  D -->|"Yes"| M["Model call"]
+  M -->|"Success without a usable cost:<br/>cost-unreported"| X
+  M -->|"Priced reply"| C["Sequential tool calls"]
+  C -->|"Otherwise"| Y["Next request boundary"]
+  C -->|"Sealed player_handoff"| E["Host settles<br/>No save or success certificate"]
+  C -->|"Accepted player_finish"| E
+  I["User Pause or uncertain input"] -.->|"Custodian fences input"| C
+  W["Driver deadline or signal"] -.->|"Ends the host without a model reply"| X
+```
+
+This diagram answers “What happens inside the player host on each request, when is a
+context cut applied or held back, and what stops the actor?” Boxes are steps of one
+host process, diamonds are its decisions and solid arrows give their order. Dashed
+arrows are stops that act from outside the loop at any point. A refused image group
+and other host faults also stop the actor; the sections above and
+[settlement](#settlement-and-handoff) own the exact rules.
 
 ### Request stability and tail notices
 
