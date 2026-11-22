@@ -21,13 +21,13 @@ def failure_reason(summary: dict) -> str | None:
         return summary['run_state']
     if summary.get('unresolved'):
         return 'unresolved-result'
-    if summary.get('stopped_by_cap'):
-        return 'cap-reached'
     proxy = summary['proxy']
     if proxy.get('settled') is not True:
         return 'proxy-unsettled'
     if proxy.get('revoked') or proxy.get('breaches') != 0:
         return 'proxy-revoked-or-breached'
+    if summary.get('stopped_by_cap'):
+        return 'cap-reached'
     if summary.get('session_state') != 'sealed':
         return 'session-not-sealed'
     if summary.get('sandbox', {}).get('survivors') != []:

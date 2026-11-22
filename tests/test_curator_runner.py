@@ -1084,6 +1084,7 @@ def test_boundary_grooming_refuses_invalid_inputs_before_resolving_the_host(groo
     ({}, None),
     (dict(unresolved=True, verdicts=[dict(operation='submission', status='unknown')], published_after=None), 'unresolved-result'),
     (dict(stopped_by_cap=True), 'cap-reached'),
+    (dict(stopped_by_cap=True, proxy=dict(settled=True, revoked=True, breaches=0)), 'proxy-revoked-or-breached'),
     (dict(proxy=dict(settled=False, revoked=False, breaches=0)), 'proxy-unsettled'),
     (dict(proxy=dict(settled=True, revoked=True, breaches=0)), 'proxy-revoked-or-breached'),
     (dict(proxy=dict(settled=True, revoked=False, breaches=1)), 'proxy-revoked-or-breached'),
