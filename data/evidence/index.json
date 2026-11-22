@@ -933,6 +933,21 @@
       },
       "visibility": "private"
     },
+    "live-validation-run-889-aux": {
+      "availability": "present",
+      "bytes": 1364015,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-live-validation-run-889.md"
+      ],
+      "files": 30,
+      "manifest_sha256": "e9085937def149055e474a38c857effb2edeb6d37240a684ef09dacf0d4080a6",
+      "note": "Companion seal for #889: initial zero-spend aborted launch package (session 49964eb42a7d4dabaef0c5ff6230a9be, exited in 29 ms due to missing .runtime/logs/) and the evaluated 2-cdda-2.sqlite3 record for played session a02d8069d0434813a41acc7009217da6.",
+      "sources": {
+        "aborted-launch": ".runtime/computer-sessions/live-validation-run-889-49964eb42a7d@5e3f51ad",
+        "eval": ".runtime/live-validation-run-889/eval/a02d8069d0434813a41acc7009217da6@5e3f51ad"
+      },
+      "visibility": "private"
+    },
     "malvern-trunk-paired-replay-829": {
       "availability": "present",
       "bytes": 36002169,
