@@ -1243,6 +1243,7 @@
       "availability": "present",
       "bytes": 127406061,
       "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md",
         "docs/decisions/owner-decisions.md"
       ],
       "files": 1422,
@@ -1255,6 +1256,184 @@
         "run": "403864d3",
         "schedule": "403864d3",
         "study-userdir": "403864d3"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-01": {
+      "availability": "present",
+      "bytes": 109873747,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 1011,
+      "manifest_sha256": "7b0f3fef0422db79cc48ff1235e0ea1696d0b7cb1d0630576d9ca9a6bc703e22",
+      "note": "Admission 1 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 1 8:00 AM -> Day 2 7:38:58 AM (23h 38m 58s), normal Save + exit 0, live curator v0->v16 (16/16 settled), grooming v16->v18.",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-01-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-01-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a01-c949ed5cecf2@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-01-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-02": {
+      "availability": "present",
+      "bytes": 64286631,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 802,
+      "manifest_sha256": "0361dfd8f92280fb930d0205e6313158dcdea2e38a7ef2c90a706e49e2261154",
+      "note": "Admission 2 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 2 7:38:58 AM -> Day 2 3:18:42 PM (~31h 19m), player cannot_continue on overmap (autosave intact), live curator v18->v26 (8/8 settled), grooming v26->v28.",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-02-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-02-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a02-20551a8e9e25@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-02-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-03": {
+      "availability": "present",
+      "bytes": 104687242,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 1130,
+      "manifest_sha256": "38e8d09d5e26d5a918d3595ac94afb7129e87d07bb8c4739c5a98ff5522c4954",
+      "note": "Admission 3 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 2 -> Day 3 10:33:35 AM (50h 33m 35s), normal Save + exit 0, live curator v28->v38 (11/11 settled), grooming v38->v40.",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-03-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-03-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a03-b312d2c8e509@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-03-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-04": {
+      "availability": "present",
+      "bytes": 79267034,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 1144,
+      "manifest_sha256": "4919478d23609c8bacc0b8866eb37c8bc01acdae46f825b41c67a2fec7d4aa2d",
+      "note": "Admission 4 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 3 -> Day 4 12:03:46 PM (76h 03m 46s), normal Save + exit 0, live curator v40->v47 (7/7 settled), grooming v47->v50.",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-04-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-04-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a04-9d8f05986ffa@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-04-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-05": {
+      "availability": "present",
+      "bytes": 88078652,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 1244,
+      "manifest_sha256": "8e65f22338ee04784d33d7b79bf05cbfe73891edb81fff6e611a1d8b650c421b",
+      "note": "Admission 5 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 4 -> Day 5 1:28:19 PM (101h 28m 19s), normal Save + exit 0, live curator v50->v58 (9/9 settled), grooming v58->v59.",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-05-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-05-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a05-4d06a351c23c@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-05-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-06": {
+      "availability": "present",
+      "bytes": 93179626,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 1383,
+      "manifest_sha256": "d605cf7573e40abb18d7904d121803612d7cb3791ad328195f63fdccee8f842a",
+      "note": "Admission 6 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 5 -> Day 6 10:06:31 AM (122h 06m 31s), normal Save + exit 0, live curator v59->v69 (11/11 settled), grooming cap-reached (v69 unchanged).",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-06-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-06-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a06-aaf541c340e1@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-06-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-07": {
+      "availability": "present",
+      "bytes": 66074668,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 1283,
+      "manifest_sha256": "771807d51145e054a60ad99c551314cc1b55b0b8cdc93f57ddfa948d08079afb",
+      "note": "Admission 7 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 6 10:06:31 AM -> Day 6 1:56:28 PM (125h 56m 28s), aborted on HTTP 403 provider-refusal at req 295 (autosave intact), live curator v69->v76 (8/8 settled), grooming cap-reached (v76 unchanged).",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-07-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-07-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a07-1d14589af7c2@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-07-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-08": {
+      "availability": "present",
+      "bytes": 15992879,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 952,
+      "manifest_sha256": "1aa5a68e73650e77ed356ca0803e5b0523c2bb326376a7ff55e7bd7c2860fb8f",
+      "note": "Admission 8 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: aborted after 59s on HTTP 403 provider-refusal at req 15 (save unchanged from A7 autosave), 0 curator sessions, v76 unchanged.",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-08-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a08-17610f3033b2@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-08-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-09": {
+      "availability": "present",
+      "bytes": 85154708,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 1127,
+      "manifest_sha256": "5ca8c183fbec8dfa306468734b5526cd0c353fd2e7999996635fb079ace17be8",
+      "note": "Admission 9 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 6 -> Day 7 6:51:09 AM (142h 51m 09s), normal Save + exit 0, live curator v76->v85 (10/10 settled), grooming cap-reached (v85 unchanged).",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "grooming": ".runtime/campaigns/seven-day-896-b/admission-09-grooming@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-09-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a09-a6a0013cd039@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-09-snapshots/study-userdir@0ff6ace5"
+      },
+      "visibility": "private"
+    },
+    "seven-day-896-b-admission-10": {
+      "availability": "present",
+      "bytes": 48783656,
+      "cited_by": [
+        "docs/acceptance/2026-11-22-seven-day-campaign-896.md"
+      ],
+      "files": 974,
+      "manifest_sha256": "08b4d7c1d265abfe1a4f5f520624a8a74df1327ead6ca0bdc442e9b990484811",
+      "note": "Admission 10 (#896 campground-seven-day-896-b) on main 0ff6ace5, Norge / Rowan Vale: Day 7 6:51:09 AM -> Day 8 8:24:07 AM (168h 24m 07s = 606,247 elapsed game seconds, >= 7 full days), task_complete, normal Save + exit 0, persisted save verified 98/98 HP all parts, live curator v85->v91 (6/6 settled).",
+      "sources": {
+        "config": ".runtime/campaigns/seven-day-896-b/curator-runner-config.json@0ff6ace5",
+        "knowledge": ".runtime/campaigns/seven-day-896-b/admission-10-snapshots/knowledge/cdda@0ff6ace5",
+        "run": ".runtime/computer-sessions/seven-day-896-b-a10-7a28b7bea730@0ff6ace5",
+        "study-userdir": ".runtime/campaigns/seven-day-896-b/admission-10-snapshots/study-userdir@0ff6ace5"
       },
       "visibility": "private"
     },
