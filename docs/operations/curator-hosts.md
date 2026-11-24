@@ -173,10 +173,13 @@ Node tests: `cd tools/curator_host && npm test`.
 
 Prices are in [`data/curator/openrouter-prices-2026-11-08.json`](../../data/curator/openrouter-prices-2026-11-08.json)
 (`curator-prices/1`), read from OpenRouter's public model list (the file names the fetch date).
-The loader validates finite, nonnegative decimal-string rates and takes each component's maximum
-across the base and recorded long-prompt tiers. For Terra these reservation and missing-cost
-fallback bounds are $2 / $7.50 / $0.10 / $2.50 per MTok. Reported actual fees remain authoritative;
-old receipts are not repriced. Opus's bounds equal its base row. Its reasoning is mandatory and
+The loader validates finite, nonnegative decimal-string rates and keeps the base rates and any
+recorded `long_prompt` tier separately. The proxy reserves at the highest tier reachable by the
+request's prompt-token bound (on Terra: `$1 / $5 / $0.05 / $1.25` per MTok below `272,000`
+tokens, and `$2 / $7.50 / $0.10 / $2.50` per MTok at or above `272,000` tokens), and missing-cost
+fallback uses the tier matching the response's actual prompt tokens (or the worst reachable tier
+when usage is absent). Reported actual fees remain authoritative; old receipts are not repriced.
+Opus has no separate long-prompt tier, so its bounds equal its base row. Its reasoning is mandatory and
 its listed default effort is high; `--effort` overrides.
 
 Both arms use a 262,144-token comparison preset. The host checks the previous response's prompt
@@ -228,9 +231,12 @@ request raise the reservation. The host keeps at most `--max-context-images` (de
 request, evicting the oldest in blocks of `--context-image-block` (default 8). Each marker names the
 evicted frame's source ID so `view_frame` can show it again. The peak trades three limits:
 - **Eviction.** It rewrites the prompt prefix, so a wide window keeps it rare.
-- **Reservation.** Each image reserves `IMAGE_TOKENS` (10,000) at the highest input price, $0.40
-  per request at 16 images on terra and $1.28 on Opus, before any text or output. A small session
-  cap therefore refuses requests that would really cost cents.
+- **Reservation.** Pinned-route Terra 960×640 PNG frames reserve `TERRA_FRAME_TOKENS` (3,000)
+  input tokens at the request's reachable tier (`$0.06` per request at 16 frames in the base
+  cache-write tier, or `$0.12` in the long-prompt tier, before text or output). Non-standard
+  images, other models, or unpinned routes reserve `IMAGE_TOKENS` (10,000) at the highest
+  reachable input price (`$1.28` at 16 images on Opus). A small session cap can still refuse large
+  requests that would really cost less.
 - **Body size.** The largest of the 1,932 frames in the sealed `397-seven-day` study (the
   [#397 lineage](../acceptance/2026-11-07-seven-day-397.md)) is 322,175 bytes, or 429,568 as
   base64, a design input. Sixteen such frames stay under the proxy's 8 MiB request limit

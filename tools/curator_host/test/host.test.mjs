@@ -117,6 +117,19 @@ test('a scripted session lists, writes a submission and a draft, views a frame a
   assert.ok(!JSON.stringify(payloads.map(p => p.body)).includes(TOKEN));
 });
 
+test('a local spend refusal ends cleanly and retains submitted work without a retry', async t => {
+  const { root, events, result, payloads } = await session(t, [
+    sse([['write_file', { path: 'submissions/s1/submission.json', content: '{"proposed":true}' }]]),
+    rateLimit({ 'x-curator-spend-refused': '1', 'retry-after': '1' }),
+  ]);
+  assert.deepEqual(result, { ok: true, reason: 'spend-reservation-refused', requests: 2, tool_calls: 1 });
+  assert.equal(payloads.length, 2);
+  assert.equal(await readFile(join(root, 'submissions/s1/submission.json'), 'utf8'), '{"proposed":true}');
+  const refusal = events.filter(event => event.type === 'request-end').at(-1);
+  assert.equal(refusal.status, 429);
+  assert.equal(refusal.failure.kind, 'spend-reservation-refused');
+});
+
 test('write_file refuses everything outside the writable directories', async t => {
   const root = await workspace(t);
   await symlink(tmpdir(), join(root, 'drafts/out'));

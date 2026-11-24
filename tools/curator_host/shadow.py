@@ -114,7 +114,7 @@ ARMS = load_arms()
 
 
 def load_prices(path: Path) -> dict[str, Price]:
-    """Conservative per-component bounds across every recorded prompt-length tier."""
+    """Load the frozen base rates and any recorded long-prompt tier."""
     data = json.loads(Path(path).read_text())
     if data.get('schema') != PRICES_SCHEMA:
         raise ShadowError(f'{path}: not a {PRICES_SCHEMA} file')
@@ -133,15 +133,15 @@ def load_prices(path: Path) -> dict[str, Price]:
 
     prices = {}
     for model, row in data['models'].items():
-        bounds = rates(row)
+        base = rates(row)
+        long_prompt = None
         if 'long_prompt' in row:
             tier = row['long_prompt']
             if (not isinstance(tier, dict) or set(tier) != {*fields, 'min_prompt_tokens'}
                     or type(tier['min_prompt_tokens']) is not int or tier['min_prompt_tokens'] <= 0):
                 raise ShadowError(f'{path}: invalid long-prompt tier')
-            longer = rates(tier)
-            bounds = {field: max(bounds[field], longer[field]) for field in fields}
-        prices[model] = Price(**bounds)
+            long_prompt = (tier['min_prompt_tokens'], Price(**rates(tier)))
+        prices[model] = Price(**base, long_prompt=long_prompt)
     return prices
 
 
@@ -385,6 +385,9 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
     proxy = ModelProxy(provider=OPENROUTER, upstream=upstream, key=key, prices={arm.model: prices[arm.model]},
                        cap_usd=cap, ledger=session_dir/'proxy-ledger.jsonl', max_output_tokens=max_output_tokens,
                        routing=model_config['model']['compat']['openRouterRouting'])
+    # A killed runner may leave a billed request without a settlement receipt.
+    # Hold this session's entire cap across a restart until its closure is recorded.
+    _write(session_dir/'proxy-start.json', dict(cap_usd=str(cap)))
     # The host's own budget sits below the proxy cap, so its write and finish phases begin while
     # the proxy still admits requests (the proxy refuses on worst-case reservations, not spend).
     budget = float(cap * HOST_BUDGET_SHARE)

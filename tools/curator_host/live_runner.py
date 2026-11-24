@@ -53,7 +53,7 @@ if __package__ in (None, ''):
 
 from harness.curator.gate import journal  # noqa: E402
 from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
-from harness.curator.runner import Outcome, Reading, Runner, RunnerError, Settings, TagLook, staged  # noqa: E402
+from harness.curator.runner import SPEND_EXHAUSTED, SPEND_REFUSED, Outcome, Reading, Runner, RunnerError, Settings, TagLook, staged  # noqa: E402
 from harness.curator.window import Window  # noqa: E402
 from harness.evaluation.core.sources import MANIFEST_SCHEMA  # noqa: E402
 from tools import knowledge_export  # noqa: E402
@@ -133,18 +133,22 @@ def read_config(path: Path, runtime: Path) -> dict:
 
 def counted_spend(out: Path) -> Decimal:
     """Every session's spend as its proxy left it, whether or not the session returned: the closing
-    snapshot (spent, plus reservations still held, which count as spent) where the proxy closed, else
-    the charges in its ledger. A request still in flight when the runner was killed has no ledger row
-    and is not counted."""
+    snapshot (spent plus reservations still held) where the proxy closed, else the entire
+    session cap. Ledgers from sessions with no recorded start contain only known charges."""
     total = Decimal(0)
     for session in sorted(p for p in out.glob('*/*') if p.is_dir()):
         try:
             closure = json.loads((session/'proxy-close.json').read_text())
-            total += Decimal(closure['spent_snapshot_usd']) + Decimal(closure['pending_reserved_usd'])
-            continue
+            if closure.get('receipt_error') is None:
+                total += Decimal(closure['spent_snapshot_usd']) + Decimal(closure['pending_reserved_usd'])
+                continue
         except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
             pass
-        total += Decimal(shadow._ledger(session/'proxy-ledger.jsonl')['charged_usd'])
+        start = session/'proxy-start.json'
+        if start.is_file():
+            total += _usd(json.loads(start.read_text())['cap_usd'], 'recorded session cap')
+        else:
+            total += Decimal(shadow._ledger(session/'proxy-ledger.jsonl')['charged_usd'])
     return total
 
 
@@ -189,7 +193,7 @@ class Sessions:
     def __call__(self, read: Reading, window: Window, label: str) -> Outcome:
         remaining = self.config['cap'] - self.spent
         if remaining <= 0:
-            return Outcome(state=None, stop='cap-reached')
+            return Outcome(state=None, stop=SPEND_EXHAUSTED)
         if self.tools is None:
             try:
                 self._host()
@@ -211,10 +215,6 @@ class Sessions:
         stop = None
         if proxy.get('revoked') or proxy.get('breaches'):
             stop = 'proxy-revoked'
-        elif summary['stopped_by_cap']:
-            stop = 'spend-reservation-refused'
-        elif self.config['cap'] - self.spent <= 0:
-            stop = 'cap-reached'
         elif not proxy.get('settled', True):
             stop = 'proxy-unsettled'
         elif 'session_id' in summary and (summary.get('sandbox', {}).get('survivors')
@@ -222,6 +222,10 @@ class Sessions:
             # Host processes survived, or the host ran and the sandbox's result is missing. A session that
             # aborted before its host ran is an ordinary failed session.
             stop = 'cleanup-unconfirmed'
+        elif self.config['cap'] - self.spent <= 0:
+            stop = SPEND_EXHAUSTED
+        elif summary['stopped_by_cap']:
+            stop = SPEND_REFUSED
         details = dict(cost_usd=summary['cost_usd'], summary=str(self.out/read.directory.name/label/'summary.json'))
         error = summary['run_state'] if summary['run_state'] != 'completed' else None
         if 'session_id' not in summary and error and error.startswith('error: SessionError:'):

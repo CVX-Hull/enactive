@@ -178,12 +178,42 @@ def test_accepting_a_submission_promotes_the_drafts_it_names(tmp_path, world):
 
 def test_the_workspace_cannot_write_published_knowledge_or_the_trace(tmp_path, world):
     repo, trace = world
-    attack = ("import json\nfor p in ('knowledge/facts.jsonl','trace/manifest.json','brief.md'):\n"
+    attack = ("import json\nfor p in ('knowledge/facts.jsonl','knowledge/current-facts.jsonl','trace/manifest.json','brief.md'):\n"
               "    try: open(p,'a').write('x'); print('WROTE', p)\n"
               "    except OSError: print('denied', p)\n")
     record = run_session(repo, trace, host(tmp_path, 'attack', attack))
     log = (repo.state/'sessions'/record['manifest']['id']/'host-output.log').read_text()
-    assert 'WROTE' not in log and log.count('denied') == 3
+    assert 'WROTE' not in log and log.count('denied') == 4
+
+
+def test_current_workspace_view_filters_history_without_editing_the_published_store(tmp_path, world):
+    repo, trace = world
+    run_session(repo, trace, host(tmp_path, 'publish', SUBMIT))
+    replacement = SUBMIT + '''
+p = 'submissions/s1/submission.json'
+with open(p) as stream:
+    proposal = json.load(stream)
+fact = dict(proposal['changes'][-1]['fact'], id='f2')
+proposal['changes'] = [dict(op='supersede_fact', ids=['f1'], fact=fact)]
+with open(p, 'w') as stream:
+    json.dump(proposal, stream)
+'''
+    record = run_session(repo, trace, host(tmp_path, 'replace', replacement))
+    assert record['published_after'] == 'v2', record
+    records = (repo.path/'facts.jsonl').read_bytes()
+    verify = '''
+import json
+from pathlib import Path
+history = [json.loads(line) for line in Path('knowledge/facts.jsonl').read_text().splitlines()]
+active = [json.loads(line) for line in Path('knowledge/current-facts.jsonl').read_text().splitlines()]
+assert [row['id'] for row in history] == ['f1', 'f2']
+assert history[0]['superseded_by'] == 'f2'
+assert active == history[1:]
+'''
+    record = run_session(repo, trace, host(tmp_path, 'check-current', verify))
+    assert record['manifest']['lifecycle']['state'] == 'sealed', record
+    assert (repo.path/'facts.jsonl').read_bytes() == records
+    assert not (repo.path/'current-facts.jsonl').exists()
 
 
 LINKS = '''

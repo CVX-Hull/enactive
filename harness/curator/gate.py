@@ -560,7 +560,10 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
             touched.add(identity)
         citations = change.get('citations', change.get('fact', {}).get('citations', []))
         inherited = set()
-        if session_kind == 'grooming' and op == 'supersede_fact':
+        grooming_references = session_kind == 'grooming' and (
+            op == 'supersede_fact' or (op == 'retire_fact'
+                                      and original.get(change['id'], {}).get('scope', {}).get('level') == 'world'))
+        if grooming_references:
             inherited = {citation for identity in targets for citation in
                          original.get(identity, {}).get('citations', [])}
         cited_positions = {}
@@ -574,7 +577,8 @@ def _apply(repo: Repository, data: dict, version: str, session_id: str,
                     found.append(f'{label}: inherited citation {citation!r} has no recorded provenance')
             else:
                 found.append(f'{label}: citation {citation!r} is outside the trace window'
-                             + (' and the replaced facts' if session_kind == 'grooming' and op == 'supersede_fact' else ''))
+                             + (' and the replaced facts' if grooming_references and op == 'supersede_fact'
+                                else ' and the retired fact' if grooming_references else ''))
         if op.startswith('retire_'):
             target = by_id.get(change['id'])
             if target is not None:

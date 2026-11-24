@@ -12,7 +12,7 @@ import sqlite3
 
 import pytest
 
-from harness.curator.window import FULL, Window, WindowError, citations_only, coverage, positions, restrict, session_labels
+from harness.curator.window import FULL, Window, WindowError, coverage, grooming_context, positions, restrict, session_labels
 from harness.trace.projection import ProjectionError, project
 from tests.curator_trace import SESSION_ID, frame_id, make_long_session, record_package
 
@@ -130,7 +130,7 @@ def test_the_window_refuses_an_old_projection(tmp_path):
     with pytest.raises(ProjectionError, match='Expected a trace-projection/3 manifest'):
         session_labels(manifest)
     with pytest.raises(ProjectionError, match='Expected a trace-projection/3 manifest'):
-        citations_only(out, manifest, {frame_id(1, 1)})
+        grooming_context(out, manifest, {frame_id(1, 1)})
 
 
 def test_windows_are_read_from_rows_and_unknown_keys_are_refused():
@@ -223,7 +223,7 @@ def test_a_new_frame_uses_its_earliest_position_when_it_repeats_in_one_window(tm
     assert positions(out, manifest, {}) == {frame: dict(session='s1', actor='001', step=1, order=[1, '001', 1])}
 
 
-def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path):
+def test_grooming_projection_keeps_cited_frames_and_actor_boundaries(tmp_path):
     trace = make_long_session(tmp_path/'evidence')
     record_package(trace, labels=dict(world='pond', lineage='survivor', admission=3))
     out = tmp_path/'trace'
@@ -234,23 +234,25 @@ def test_grooming_projection_keeps_exactly_cited_frames_and_their_steps(tmp_path
     manifest = project([trace], out, journal=journal)
     assert (out/'journal.json').exists()
     cited = {frame_id(1, 3), frame_id(2, 5)}
-    reduced = citations_only(out, manifest, cited)
-    assert {p.stem for p in (out/'frames').iterdir()} == cited
-    assert [s['seq'] for s in steps(out)] == [3]
-    assert [s['seq'] for s in steps(out, '002')] == [5]
+    boundaries = {frame_id(actor, seq) for actor in (1, 2) for seq in (1, 12)}
+    reduced = grooming_context(out, manifest, cited)
+    assert {p.stem for p in (out/'frames').iterdir()} == cited | boundaries
+    assert [s['seq'] for s in steps(out)] == [1, 3, 12]
+    assert [s['seq'] for s in steps(out, '002')] == [1, 5, 12]
     assert not (out/'s1'/'001'/'received.txt').exists()
     assert not (out/'s1'/'handoffs').exists()
     assert not (out/'journal.json').exists()
     assert [c['arguments'].get('text') for c in tools(out) if c['tool'] == 'player_hint'] == ['hint at step 3']
     assert 'hint at step 6' not in (out/'s1'/'001'/'tools.jsonl').read_text()
-    assert reduced['citations_only'] == sorted(cited)
+    assert reduced['grooming_citations'] == sorted(cited)
+    assert reduced['grooming_boundary_frames'] == sorted(boundaries)
     gate_input = positions(out, reduced, {})
-    assert gate_input.keys() == cited
+    assert gate_input.keys() == cited | boundaries
     assert gate_input.sessions == {
         SESSION_ID: dict(name='s1', world='pond', lineage='survivor', admission=3, label_check=None, label_error=None),
     }
     with pytest.raises(WindowError, match='missing from trace'):
-        citations_only(out, reduced, {'absent'})
+        grooming_context(out, reduced, {'absent'})
 
 
 def test_window_removes_entire_journal_and_keeps_only_in_range_hints(tmp_path):

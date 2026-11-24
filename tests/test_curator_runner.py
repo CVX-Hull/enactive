@@ -342,15 +342,41 @@ def test_a_lock_refusal_does_nothing_and_the_next_poll_computes_the_range_again(
     assert world.calls == [Window(RUN, '001', 1, 20)] * 2 and runner.cursor == {'001': 20}
 
 
-def test_a_refused_spend_reservation_stops_the_runner(world):
+def test_a_refused_spend_reservation_retries_the_oldest_uncovered_steps_after_restart(world):
     world.reading = read({'001': 20})
-    world.outcomes = [lambda window: Outcome('sealed', (), stop='spend-reservation-refused')]
+    world.outcomes = [lambda window: Outcome('sealed', (), stop=live.SPEND_REFUSED), 'accepted']
+    runner = world.runner()
+    assert runner.poll()
+    now = status(world)
+    assert now['state'] == 'polling' and now['stop_reason'] is None
+    assert now['examined'][-1]['outcome'] == live.SPEND_REFUSED
+    assert runner.cursor == {} and runner.session_failures() == 0
+    runner = world.runner()
+    assert runner.poll()
+    assert world.calls == [Window(RUN, '001', 1, 20), Window(RUN, '001', 1, 10)]
+    assert runner.cursor == {'001': 10}
+    assert status(world)['covered_prefix']['end']['operation'] == 'op-001-10'
+
+
+@pytest.mark.parametrize('refusal', [live.SPEND_REFUSED, live.SPEND_EXHAUSTED])
+def test_a_refusal_at_one_step_and_an_exhausted_cap_have_distinct_terminal_reasons(world, refusal):
+    world.reading = read({'001': 1}, ended=('001',))
+    world.outcomes = [lambda window: Outcome(None, stop=refusal)]
     runner = world.runner()
     assert not runner.poll()
-    now = status(world)
-    assert now['state'] == 'stopped' and now['stop_reason'] == 'spend-reservation-refused'
-    assert runner.cursor == {'001': 20}  # the session itself closed
-    assert json.loads((world.directory/'stopped.json').read_text())['reason'] == 'spend-reservation-refused'
+    assert runner.cursor == {}
+    assert status(world)['stop_reason'] == refusal
+    assert json.loads((world.directory/'stopped.json').read_text())['reason'] == refusal
+
+
+def test_a_spend_refusal_keeps_an_already_published_window(world):
+    world.reading = read({'001': 20})
+    world.outcomes = [lambda window: Outcome('sealed', ({'operation': 'submission', 'status': 'published',
+                                                       'version': world.publish(window)},),
+                                             stop=live.SPEND_REFUSED)]
+    runner = world.runner()
+    assert runner.poll() and runner.cursor == {'001': 20}
+    assert status(world)['covered_prefix']['end']['operation'] == 'op-001-20'
 
 
 def test_no_store_waits_and_the_closing_marker_ends_every_read(world):
@@ -995,6 +1021,32 @@ def test_spend_is_counted_from_what_the_proxy_left_even_for_a_session_cut_short(
     assert restarted.spent == Decimal('0.50') and caps[1] == Decimal('0.65')
     restarted(reading, Window(RUN, '001', 1, 20), 'third')
     assert caps[2] == Decimal('0.50') and restarted.spent == Decimal('0.60')
+
+
+def test_an_unclosed_session_holds_its_cap_across_runner_restart(tmp_path, monkeypatch):
+    def interrupted(directory, kwargs):
+        (directory/'proxy-start.json').write_text(json.dumps(dict(cap_usd=str(kwargs['cap']))))
+        raise KeyboardInterrupt
+
+    sessions = fake_sessions(tmp_path, monkeypatch, interrupted)
+    reading = Reading(tmp_path/RUN, (), 0., 0., 0.)
+    window = Window(RUN, '001', 1, 20)
+    with pytest.raises(KeyboardInterrupt):
+        sessions(reading, window, 'killed')
+    restarted = fake_sessions(tmp_path, monkeypatch, interrupted)
+    assert restarted.spent == Decimal(1)
+    assert restarted(reading, window, 'no-budget').stop == live.SPEND_EXHAUSTED
+
+
+@pytest.mark.parametrize('spent,stop', [('0.75', live.SPEND_REFUSED), ('1', live.SPEND_EXHAUSTED)])
+def test_live_spend_refusal_distinguishes_remaining_headroom(tmp_path, monkeypatch, spent, stop):
+    def behave(directory, kwargs):
+        closed(directory, spent)
+        return summary(directory, stopped_by_cap=True)
+
+    outcome = fake_sessions(tmp_path, monkeypatch, behave)(Reading(tmp_path/RUN, (), 0., 0., 0.),
+                                                           Window(RUN, '001', 1, 20), 'one')
+    assert outcome.stop == stop
 
 
 @pytest.mark.parametrize('survivors, host_output, stops', [

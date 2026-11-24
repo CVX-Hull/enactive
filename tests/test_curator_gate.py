@@ -15,7 +15,7 @@ import pytest
 
 from harness.curator import containers, gate as gate_module, knowledge, sandbox, session
 from harness.curator.containers import Drafts, UnsafeTree, copy_tree
-from harness.curator.gate import _history, gate, restore
+from harness.curator.gate import _history, current, gate, restore
 from harness.curator.knowledge import KnowledgeError, Repository
 
 FRAMES = {'frame-1', 'frame-2'}
@@ -1410,6 +1410,33 @@ def test_grooming_leaves_world_facts_unfiled_and_can_retire_them_within_their_wo
     verdict = grooming(world_repo, tmp_path, [dict(op='retire_fact', id='f1', reason='changed', citations=[POND_FRAME])],
                        name='retire-world', frames=frames, session_labels={POND_ID: POND})
     assert verdict['status'] == 'published', verdict
+
+
+@pytest.mark.parametrize('session_kind, expected', [('grooming', 'published'), ('admission', 'rejected')])
+def test_only_grooming_can_retire_world_fact_using_its_own_out_of_window_citation(
+        tmp_path, world_repo, session_kind, expected):
+    change = dict(op='retire_fact', id='f1', reason='superseded by the lineage rollback', citations=[POND_FRAME])
+    verdict = run(world_repo, submission(tmp_path, [change], base_version='v1'), frames={FOREST_FRAME},
+                  session_kind=session_kind, session_labels={FOREST_ID: FOREST})
+    assert verdict['status'] == expected, verdict
+    if expected == 'published':
+        record = world_repo.facts()[0]
+        assert not current(record) and record['retired']['citations'] == [POND_FRAME]
+        assert world_repo.provenance()['frames'][POND_FRAME]['session'] == POND['name']
+    else:
+        assert 'outside the trace window' in verdict['diagnostics'][0]
+
+
+def test_grooming_cannot_retire_world_fact_using_unrelated_provenance_from_same_world(tmp_path, world_repo):
+    other = f'{POND_ID}-2'
+    recorded = run(world_repo, submission(tmp_path, [dict(op='add_type', type=kind('other'))], base_version='v1',
+                                          name='record-other'), frames={other}, session_labels={POND_ID: POND})
+    assert recorded['status'] == 'published', recorded
+    change = dict(op='retire_fact', id='f1', reason='earlier state restored', citations=[other])
+    rejected = grooming(world_repo, tmp_path, [change], frames=set(), name='out-of-window')
+    assert rejected['status'] == 'rejected' and 'outside the trace window and the retired fact' in rejected['diagnostics'][0]
+    published = grooming(world_repo, tmp_path, [change], frames={other}, name='current-world')
+    assert published['status'] == 'published', published
 
 
 @pytest.mark.parametrize('identity,row,diagnostic', [

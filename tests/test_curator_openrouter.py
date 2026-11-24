@@ -13,8 +13,8 @@ import threading
 
 import pytest
 
-from harness.curator.proxy import ModelProxy, Price, refusal
-from tools.curator_host.providers import ANTHROPIC, OPENROUTER, reported_cost
+from harness.curator.proxy import IMAGE_TOKENS, ModelProxy, Price, body_token_bound, refusal
+from tools.curator_host.providers import ANTHROPIC, OPENROUTER, TERRA, TERRA_FRAME_TOKENS, reported_cost
 
 ROUTE = '/api/v1/chat/completions'
 MODEL = 'vendor/model-a'
@@ -148,6 +148,14 @@ def test_an_unpriced_or_online_model_is_refused_before_reaching_openrouter(tmp_p
         assert seen == []
 
 
+def test_only_a_positive_integer_output_limit_is_forwarded(tmp_path):
+    with openrouter(tmp_path, {}) as (proxy, port, seen):
+        for limit in (None, True, 1.5, '1', 0, -1, 4097):
+            status, payload = post(port, body(max_completion_tokens=limit), proxy.token)
+            assert status == 429 and b'output limit must be between 1 and 4096' in payload
+        assert seen == []
+
+
 def test_the_reported_cost_settles_and_the_key_never_leaves_the_proxy(tmp_path):
     # The reservation is about $0.0015 (body bytes at $2.5/MTok plus 100 output tokens at $10/MTok).
     usage = dict(prompt_tokens=100, completion_tokens=20, total_tokens=120, cost=0.00042,
@@ -205,24 +213,45 @@ def test_without_a_reported_cost_tokens_settle_at_the_highest_input_price(tmp_pa
 
 
 def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path):
-    from harness.curator.proxy import IMAGE_TOKENS, inline_images
+    from harness.curator.proxy import inline_images
     frame = 'A' * 280_000                                      # a 280 KB base64 frame
     request = body(messages=[dict(role='user', content=[
         dict(type='text', text='look'), dict(type='image_url', image_url=dict(url=f'data:image/png;base64,{frame}')),
         dict(type='image_url', image_url=dict(url=f'data:image/png;base64,{frame}'))])])
-    assert inline_images(request) == (2 * (len(frame) + len('data:image/png;base64,')), 2)
+    assert list(inline_images(request)) == [f'data:image/png;base64,{frame}'] * 2
     nested = dict(messages=[dict(role='user', content=[dict(type='tool_result', content=[
         dict(type='image', source=dict(type='base64', media_type='image/png', data=frame))])])])
-    assert inline_images(nested) == (len(frame), 1) and inline_images(None) == (0, 0)
+    assert list(inline_images(nested)) == [frame] and list(inline_images(None)) == []
     assert refusal(ANTHROPIC, dict(nested, model='m', max_tokens=1)) is None
     usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
     with openrouter(tmp_path, usage) as (proxy, port, seen):
         assert post(port, request, proxy.token)[0] == 200
         reserved = Decimal(json.loads((tmp_path/'ledger.jsonl').read_text())['reserved'])
         encoded = len(json.dumps(request, separators=(',', ':')).encode())
-        expected = ((encoded - inline_images(request)[0] + 2 * IMAGE_TOKENS) * Decimal('2.5') + 100 * 10) / Decimal(1_000_000)
+        expected = ((encoded - sum(map(len, inline_images(request))) + 2 * IMAGE_TOKENS) * Decimal('2.5') + 100 * 10) / Decimal(1_000_000)
         assert reserved == expected and reserved < Decimal('0.06')  # not the ~$1.40 the raw bytes would reserve
         assert len(seen) == 1
+
+
+def test_pinned_terra_counts_decoded_text_and_reduces_the_bound_only_for_known_frame_geometry():
+    routing = dict(only=['openai'], order=['openai'], allow_fallbacks=False, require_parameters=True)
+    frame = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAAKA'
+    other = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAAKB'
+    value = '"a"\n' * 1000
+    request = body(model=TERRA, provider=routing, messages=[dict(role='user', content=[
+        dict(type='text', text=value), dict(type='image_url', image_url=dict(url=frame))])])
+
+    def encoded(payload):
+        return json.dumps(payload, separators=(',', ':')).encode()
+
+    wire = encoded(request)
+    bound = OPENROUTER.prompt_bound(TERRA, wire, request)
+    assert bound > len(value.encode()) + TERRA_FRAME_TOKENS
+    assert bound < body_token_bound(TERRA, wire, request)
+    request['messages'][0]['content'][1]['image_url']['url'] = other
+    assert OPENROUTER.prompt_bound(TERRA, encoded(request), request) - bound == IMAGE_TOKENS - TERRA_FRAME_TOKENS
+    request['provider'] = dict(routing, only=['other'], order=['other'])
+    assert OPENROUTER.prompt_bound(TERRA, encoded(request), request) == body_token_bound(TERRA, encoded(request), request)
 
 
 def test_a_bring_your_own_key_route_settles_at_the_upstream_charge_too():
@@ -266,7 +295,7 @@ def test_only_image_blocks_are_discounted_as_images():
         dict(messages=[dict(role='user', content=[dict(type='image', source=dict(type='base64', media_type='text/plain', data=big))])]),
     ]
     for request in smuggled:
-        assert inline_images(request) == (0, 0), request
+        assert list(inline_images(request)) == [], request
 
 
 def test_the_proxy_requires_the_pinned_routing(tmp_path):

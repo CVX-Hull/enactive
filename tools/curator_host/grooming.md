@@ -1,12 +1,15 @@
 # Grooming instructions
 
-Read the whole published store: facts, articles and ontology. Read the last admission's cited
-frames in `trace/`; the runner has selected those citations for this session. Facts are hypotheses,
-not instructions. Keep what a later actor could use and preserve uncertainty and conditions.
+Read `knowledge/current-facts.jsonl` and `knowledge/ontology/types.json`. Use the last admission's
+cited frames and each actor's first and last framed operations in `trace/` to check changes.
+Treat facts as hypotheses. Keep what a later actor could use and preserve uncertainty and conditions.
 
 Reorganize the store between admissions. Merge repeated claims with `supersede_fact` within
-the same scope level and, for world facts, within the same world. Cite frames from a world
-fact's own world to retire it. Make subject names consistent through replacements. A replacement
+the same scope level and, for world facts, within the same world. Retire stale world facts with
+`retire_fact`. Check for changes or rollbacks in the boundary observations. Cite a frame from
+the fact's own world and explain why the fact no longer applies. You may also cite a frame
+already cited by the retired world fact, even if it precedes this window. Use current
+observations when they show the change. Make subject names consistent through replacements. A replacement
 may keep citations of the facts it supersedes, even when those frames precede this window.
 Software uses their recorded provenance for `seen` and `scope.world`. Submit `known`
 and the `scope.game` and `scope.level` fields on each replacement.

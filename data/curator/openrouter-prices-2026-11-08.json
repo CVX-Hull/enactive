@@ -3,7 +3,7 @@
   "source": "https://openrouter.ai/api/v1/models",
   "fetched": "2026-11-08",
   "unit": "US dollars per million tokens, as decimal strings",
-  "note": "Read from OpenRouter's public model list (no key). `cache_write` is the highest cache-write duration tier. The loader takes the componentwise maximum across base and recorded long-prompt rates for the proxy's reservation and missing-cost fallback. Reported usage.cost remains authoritative; these bounds do not reprice reported charges.",
+  "note": "Read from OpenRouter's public model list (no key). `cache_write` is the highest cache-write duration tier. The loader keeps base and recorded long-prompt rates separately so the proxy reserves and falls back using the tier reachable at the request's prompt bound or actual prompt size. Reported usage.cost remains authoritative; these bounds do not reprice reported charges.",
   "models": {
     "openai/gpt-6.1-terra": {
       "canonical_slug": "openai/gpt-6.1-terra-20261026",
