@@ -122,6 +122,87 @@ def test_closed_forms_refuse_edge_cases_beyond_the_shared_fixtures(change):
         Knowledge.from_dict(value)
 
 
+def graph(version: str = 'v3', revision: str = 'v2', **guide) -> dict:
+    """An article citing `fact-a`, and `fact-b` contradicting and shadowing `fact-a`; derived fields as exported."""
+    return document([article('guide', 'Guide', 'Lead.', ('Claim.', ['fact-a']), version=revision, **guide)],
+                    [fact('fact-a', 'A claim.', shadowed_by=['fact-b']),
+                     fact('fact-b', 'A narrower claim.', step=2, links=[dict(rel='contradicts', target='fact-a')])],
+                    dict(replaced={'guide@v1': dict(reason='restated', by=['guide'])}, ended=[], retracted=[]),
+                    version=version)
+
+
+def bound(record: dict, relation: str = 'same', **fields) -> None:
+    record.update(scope=dict(game='example', world=None), branch_relation=relation, **fields)
+
+
+def test_derived_fields_and_inherited_flags_that_agree_are_accepted():
+    Knowledge.from_dict(graph())
+    Knowledge.from_dict(graph(version='v2'))  # The delivered revision may be the file's own version.
+    value = graph()
+    bound(value['articles'][0], unverified_branch=True)
+    bound(value['facts'][0], 'unknown', unverified_branch=True)
+    value['facts'][0].update(condition_unverified=True, lifecycle_state='contested')
+    value['articles'][0].update(condition_unverified=True, lifecycle_state='contested')
+    Knowledge.from_dict(value)
+    # An article may be unverified_branch by its own unknown lineage when no cited fact is.
+    value = graph()
+    bound(value['articles'][0], 'unknown', unverified_branch=True)
+    Knowledge.from_dict(value)
+
+
+@pytest.mark.parametrize('change', [
+    # A revision later than the file, and a history revision not strictly earlier than the delivered one.
+    lambda d: d.update(version='v1'),
+    lambda d: d['articles'][0].update(revision='guide@v4'),
+    lambda d: d['history']['replaced'].update({'guide@v2': dict(reason='restated', by=['guide'])}),
+    lambda d: d['history']['replaced'].update({'guide@v3': dict(reason='restated', by=['guide'])}),
+    # Derived graph fields that disagree with citations, links or `contradicts` edges.
+    lambda d: d['facts'][0].update(cited_by_articles=[]),
+    lambda d: d['facts'][1].update(cited_by_articles=['guide']),
+    lambda d: d['facts'][0].update(backlinks=[]),
+    lambda d: d['facts'][0]['backlinks'].append(dict(rel='see_also', source='fact-b')),
+    lambda d: d['facts'][1]['backlinks'].append(dict(rel='contradicts', source='fact-a')),
+    lambda d: d['facts'][0].update(backlinks=[dict(rel='depends_on', source='fact-b')]),
+    lambda d: d['facts'][1].update(shadowed_by=['guide']),
+    lambda d: d['articles'][0].update(contradicted_by=['fact-a']),
+    # Uncertainty a record or article suppresses.
+    lambda d: bound(d['facts'][0], 'unknown', unverified_branch=False),
+    lambda d: d['facts'][0].update(condition_unverified=True),
+    lambda d: d['articles'][0].update(condition_unverified=True),
+    lambda d: (bound(d['articles'][0]), bound(d['facts'][0], unverified_branch=True)),
+    lambda d: d['facts'][0].update(lifecycle_state='contested'),
+    # Unhashable or non-string JSON where a string is required: refused, never a `TypeError`.
+    lambda d: d['articles'][0].update(revision=[]),
+    lambda d: d['articles'][0].update(id=[]),
+    lambda d: d['facts'][0].update(claim_kind={}),
+    lambda d: d['facts'][0].update(evidence_basis=[]),
+    lambda d: d['facts'][0].update(lifecycle_state={}),
+    lambda d: bound(d['facts'][0], []),
+    lambda d: d['facts'][0].update(links=[{}]),
+    lambda d: d['facts'][1].update(links=[dict(rel=[], target='fact-a')]),
+    lambda d: d['facts'][0].update(stale_citations=[[]]),
+    lambda d: d['history']['replaced'].update({'old-fact': dict(reason=[], by=['fact-a'])}),
+    lambda d: d['history'].update(ended=[{}]),
+], ids=lambda _: 'mutation')
+def test_inconsistent_derived_fields_suppressed_flags_and_unhashable_values_are_refused(change):
+    value = graph()
+    change(value)
+    with pytest.raises(PlayerError, match='unsupported delivered knowledge'):
+        Knowledge.from_dict(value)
+
+
+def test_the_caller_changing_its_dict_after_from_dict_changes_nothing():
+    value = graph()
+    knowledge = Knowledge.from_dict(value)
+    value['facts'][0]['text'] = 'Zebra.'
+    value['articles'].clear()
+    value['history']['replaced'].clear()
+    assert knowledge.read('guide')['records'][0]['id'] == 'guide'
+    assert knowledge.read('guide@v1')['resolution'] == 'revision'
+    assert knowledge.read('fact-a')['records'][0]['text'] == 'A claim.'
+    assert ids(knowledge.query('zebra')) == []
+
+
 # `player-knowledge/2` reads, in table order.
 
 def read(knowledge: Knowledge, identity: str, **options) -> tuple[str, str | None, list[str]]:
@@ -263,6 +344,17 @@ def test_one_hop_lifts_cited_and_linked_neighbours_without_reaching_unrelated_re
     assert 'unrelated' not in ids(knowledge.query('murky tinder drill water'))
 
 
+def test_a_lower_scoring_connected_record_takes_a_seed_slot_over_ten_better_isolated_matches():
+    isolated = [fact(f'isolated-{n:02}', 'Zebra zebra.', step=n + 2) for n in range(10)]
+    knowledge = store([article('guide', 'Guide', 'Lead.', ('Claim.', ['seed']))],
+                      [fact('seed', 'A zebra crossed near the old mill road at dusk.'), *isolated])
+    scores = knowledge._bm25('zebra')
+    seed, guide = knowledge._position['seed'], knowledge._position['guide']
+    assert scores[guide] == 0 and all(scores[knowledge._position[f['id']]] > scores[seed] > 0 for f in isolated)
+    # The connected seed is the eleventh-best match yet the only one with a neighbour, so it lifts its article.
+    assert knowledge._one_hop('zebra')[guide] == pytest.approx(0.35 * scores[seed] * 1.25)
+
+
 def test_the_hop_follows_the_formula_and_an_article_neighbour_gains_more_than_a_fact():
     knowledge = store([article('guide', 'Guide', 'Lead.', ('Claim.', ['seed']))],
                       [fact('seed', 'Zebra crossing.', links=[dict(rel='see_also', target='peer')]),
@@ -343,13 +435,82 @@ def test_the_player_view_projects_only_the_current_knowledge_result():
             actor_result(bad)
 
 
+def _changed(result: dict, change) -> dict:
+    result = copy.deepcopy(result)
+    change(result)
+    return result
+
+
+def test_the_player_view_projects_every_resolution_of_the_read_table():
+    knowledge = Knowledge(FULL)
+    for identity in ('camp-water', 'boil-water', 'camp-water@v12', 'camp-water@v4', 'old-water-fact', 'broad-fire-claim',
+                     'broken-tank-claim', 'ended-fire', 'wrong-fact', 'Camp water', 'unicorn'):
+        assert actor_result(knowledge.read(identity)) == knowledge.read(identity)
+    for result in (Knowledge.from_dict(empty()).read('water'), Knowledge.from_dict(empty()).query('water')):
+        assert actor_result(result) == result
+    # Every ranked record is checked as well: one raw world label refuses the whole query result.
+    query = knowledge.query('camp water')
+    assert len(query['records']) > 1
+    with pytest.raises(UnsupportedResult):
+        actor_result(_changed(query, lambda r: r['records'][-1]['scope'].update(world='world-alpha')))
+
+
+@pytest.mark.parametrize('identity, change', [
+    # The version.
+    ('camp-water', lambda r: r.update(version='v12\n')),
+    ('camp-water', lambda r: r.update(version=12)),
+    ('unicorn', lambda r: r.update(version=[])),
+    ('boil-water', lambda r: r.update(version=None)),
+    # A resolution's record count, record kind or `resolved_from` outside its row of the table.
+    ('camp-water', lambda r: r.update(records=[])),
+    ('camp-water', lambda r: r.update(resolved_from='camp-water')),
+    ('camp-water', lambda r: r['records'].append(copy.deepcopy(r['records'][0]))),
+    ('camp-water', lambda r: r.update(resolution=[])),
+    ('camp-water@v12', lambda r: r.update(resolved_from=None)),
+    ('camp-water@v12', lambda r: r.update(resolved_from='camp-water')),
+    ('camp-water@v12', lambda r: r.update(records=Knowledge(FULL).read('boil-water')['records'])),
+    ('old-water-fact', lambda r: r.update(records=[])),
+    ('old-water-fact', lambda r: r.update(resolved_from=' ')),
+    ('old-water-fact', lambda r: r.update(resolved_from=None)),
+    ('ended-fire', lambda r: r.update(records=Knowledge(FULL).read('boil-water')['records'])),
+    ('wrong-fact', lambda r: r.update(resolved_from=None)),
+    ('Camp water', lambda r: r.update(records=Knowledge(FULL).read('boil-water')['records'])),
+    ('Camp water', lambda r: r.update(resolved_from='Camp water')),
+    ('unknown-id', lambda r: r.update(records=Knowledge(FULL).read('boil-water')['records'])),
+    ('unknown-id', lambda r: r.update(resolved_from='unknown-id')),
+    # A record that is not a closed, blinded delivered record.
+    ('camp-water', lambda r: r['records'][0].update(status=['contested'])),
+    ('camp-water', lambda r: r['records'][0]['scope'].update(world='world-alpha')),
+    ('camp-water', lambda r: r['records'][0]['last_confirmed'].update(session='2026-11-24-session')),
+    ('camp-water', lambda r: r['records'][0].update(revision='camp-water@v13')),
+    ('camp-water', lambda r: r['records'][0].update(unverified_branch=False)),
+    ('camp-water', lambda r: r['records'][0].update(revision=[])),
+    ('boil-water', lambda r: r['records'][0].update(claim_kind={})),
+    ('boil-water', lambda r: r['records'][0].pop('seen')),
+    ('boil-water', lambda r: r['records'][0]['seen'].update(session='s1')),
+    ('boil-water', lambda r: r['records'][0].update(links=[{}])),
+    ('boil-water', lambda r: r.update(records=[1])),
+], ids=lambda value: value if isinstance(value, str) else 'mutation')
+def test_the_player_view_refuses_an_inconsistent_or_unblinded_knowledge_result(identity, change):
+    result = Knowledge(FULL).read(identity)
+    with pytest.raises(UnsupportedResult):
+        actor_result(_changed(result, change))
+
+
 # Gate 9: the #924 queries on test-only projections of sealed files into `delivered-knowledge/3`.
 
-def _sealed() -> dict[str, Path]:
-    from tools.evidence import default_store
+def _sealed(corpus: str) -> Path:
+    """The sealed file, or a skip when this checkout holds no store. A clone recorded as holding the store
+    (`enactive.evidenceStore = expected`) fails instead, so a lost store cannot pass Gate 9 as a skip."""
+    from tools.evidence import default_store, store_expected
     from tools.knowledge_retrieval_benchmark import CORPORA
     store_root = default_store()
-    return {name: store_root / CORPORA[name] for name in ('v91', 'v17')}
+    path = store_root / CORPORA[corpus]
+    if not path.is_file():
+        if not store_root.is_dir() and store_expected():
+            pytest.fail(f'this clone is recorded as holding the evidence store, but {store_root} is missing')
+        pytest.skip(f'sealed {corpus} is not in this checkout\'s evidence store')
+    return path
 
 
 def project(old: dict) -> dict:
@@ -392,9 +553,7 @@ BASELINE = {'v91': (1.000, 0.700), 'v17': (1.000, 0.650)}
 
 @pytest.mark.parametrize('corpus', ['v91', 'v17'])
 def test_gate_9_bm25_1hop_meets_the_920_baseline_on_projected_sealed_files(corpus):
-    path = _sealed()[corpus]
-    if not path.is_file():
-        pytest.skip(f'sealed {corpus} is not in this checkout\'s evidence store')
+    path = _sealed(corpus)
     from tools.knowledge_retrieval_benchmark import CUT, QUERIES
     knowledge = Knowledge.from_dict(project(json.loads(path.read_text())), str(path))
     cites = {a['id']: {f for c in a['body'] for f in c['facts']} for a in knowledge.value['articles']}

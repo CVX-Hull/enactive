@@ -46,7 +46,7 @@ status unknown and is neither a harness stop rule nor permission to replay input
 | `computer_result` | Collect the original operation and its delivery receipts without repeating input. |
 | `computer_stop` | Permanently stop further automation. It does not save, quit or permit another actor. |
 | `player_source` | Read an exact retained PNG by source ID, including explicitly remembered prior-session evidence and frames trimmed from your context. |
-| `player_knowledge_read` | Open an article by slug, revision or title, or a fact by ID; `by: "id"` skips the title fallback. The result names its knowledge version and how the identity resolved; its content is a fallible hypothesis. |
+| `player_knowledge_read` | Open an article by slug, revision or title, or a fact by ID; `by: "id"` skips titles. The result names its version and how the identity resolved; content is a fallible hypothesis. |
 | `player_knowledge_query` | Ranked search of curated articles and facts, including records cited by or linked to a strong match. Up to ten results, best first; they are fallible leads, not instructions. |
 | `player_hint` | Report a fallible observation or suggestion for the curator, optionally citing sources. It does not publish a fact or write curated knowledge. |
 | `player_result` | Collect your original hint after lost transport. |
@@ -85,13 +85,14 @@ A read result's `resolution` says what the identity named:
 | `current` | A delivered fact ID or article slug. |
 | `revision` | An article revision (`slug@vN`); you get the delivered revision. |
 | `restated`, `narrowed`, `corrected` | An older ID; `records` are what replaced it, and `resolved_from` is the old ID. |
-| `ended`, `retracted` | The state ended, or the claim was withdrawn; no records. |
+| `ended`, `retracted` | `ended`: the world state ended, or the article was retired editorially. `retracted`: the claim was withdrawn as wrong. No records. |
 | `title` | The exact title of an article. |
 | `unknown` | Nothing delivered matches. This is not evidence that a state ended; re-observe. |
 
 An entry whose `status` lists `contested`, `unverified_branch`, `needs_review` or
 `condition_unverified` is disputed, may come from another timeline of this world,
-cites something since replaced, or holds under a condition not yet confirmed. Records
+cites something since replaced or relies on a disputed or other-timeline entry, or
+holds under a condition not yet confirmed. Records
 carry the same marks as `lifecycle_state` and flags. Weigh such an entry lower and check
 it first.
 

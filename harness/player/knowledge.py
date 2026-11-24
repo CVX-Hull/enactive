@@ -16,7 +16,7 @@ FIELDS = frozenset(('schema', 'version', 'commit', 'repository_id', 'coverage', 
 VERSION = re.compile(r'v(0|[1-9][0-9]*)\Z')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
 IDENTIFIER = re.compile(r'[a-z0-9][a-z0-9-]{0,63}\Z')
-REVISION = re.compile(r'([a-z0-9][a-z0-9-]{0,63})@v(?:0|[1-9][0-9]*)\Z')
+REVISION = re.compile(r'([a-z0-9][a-z0-9-]{0,63})@v(0|[1-9][0-9]*)\Z')
 SOURCE = re.compile(r'[0-9a-f]{32}-[1-9][0-9]*\Z')
 ALIAS = re.compile(r's(?:0[1-9]|[1-9][0-9]+)\Z')
 TAG = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*\Z')
@@ -58,12 +58,27 @@ def _matches(pattern: re.Pattern, value: object) -> bool:
     return isinstance(value, str) and pattern.fullmatch(value) is not None
 
 
+def _member(value: object, allowed: frozenset[str]) -> bool:
+    """A string in `allowed`. The type is checked first, so an unhashable JSON value is refused, never a `TypeError`."""
+    return isinstance(value, str) and value in allowed
+
+
 def _nonblank(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _identifier(value: str) -> bool:
+    return IDENTIFIER.fullmatch(value) is not None
+
+
+def _historical(value: str) -> bool:
+    """A name the public history set can hold: an old fact ID or slug, or an earlier article revision."""
+    return IDENTIFIER.fullmatch(value) is not None or REVISION.fullmatch(value) is not None
+
+
 def _distinct(value: object, allowed=None, *, nonempty: bool = False) -> bool:
-    """A list of distinct strings, each in `allowed` when given (a set, or a predicate)."""
+    """A list of distinct strings, each in `allowed` when given (a set, or a predicate). Strings are checked before
+    the set is built, so an unhashable member is refused, never a `TypeError`."""
     if not isinstance(value, list) or (nonempty and not value) or not all(isinstance(v, str) for v in value):
         return False
     if len(set(value)) != len(value):
@@ -102,37 +117,45 @@ def _when(value: object) -> bool:
                     for k, v in value['requires'].items()))
 
 
-def _links(value: object, end: str, owner: str, public: set[str]) -> bool:
+def _links(value: object, end: str, owner: str, public) -> bool:
+    """Distinct typed links to other records, each end passing the predicate `public`."""
     if not isinstance(value, list):
         return False
     pairs = set()
     for link in value:
-        if (not isinstance(link, dict) or set(link) != {'rel', end} or link['rel'] not in RELATIONS
-                or not isinstance(link[end], str) or link[end] == owner or link[end] not in public):
+        if (not isinstance(link, dict) or set(link) != {'rel', end} or not _member(link['rel'], RELATIONS)
+                or not isinstance(link[end], str) or link[end] == owner or not public(link[end])):
             return False
         pairs.add((link['rel'], link[end]))
     return len(pairs) == len(value)
 
 
-def _record(value: dict, public: set[str], history: set[str]) -> bool:
-    """The fields articles and facts share, checked against the public set `P` and the public history set `H`."""
+def _record(value: dict, public, history) -> bool:
+    """The fields articles and facts share, checked against predicates for the public set `P` and the public history
+    set `H`. A world-bound record of unknown lineage is always delivered `unverified_branch`."""
     owner = value['id']
+    if not _matches(IDENTIFIER, owner):
+        return False
     bound = isinstance(value['scope'], dict) and 'world' in value['scope']
-    others = public - {owner}
+
+    def others(other: str) -> bool:
+        return other != owner and public(other)
     return (_tags(value['tags']) and _scope(value['scope'])
-            and (value['branch_relation'] in BRANCH_RELATIONS if bound
+            and (_member(value['branch_relation'], BRANCH_RELATIONS) if bound
                  else value['branch_relation'] is None and value['unverified_branch'] is False)
-            and value['lifecycle_state'] in LIFECYCLE_STATES and all(type(value[flag]) is bool for flag in FLAGS)
+            and _member(value['lifecycle_state'], LIFECYCLE_STATES) and all(type(value[flag]) is bool for flag in FLAGS)
+            and (value['branch_relation'] != 'unknown' or value['unverified_branch'] is True)
             and _distinct(value['stale_citations'], history)
             and _links(value['links'], 'target', owner, public) and _links(value['backlinks'], 'source', owner, public)
             and _distinct(value['shadowed_by'], others) and _distinct(value['contradicted_by'], others))
 
 
-def _article(value: object, facts: set[str], public: set[str], history: set[str]) -> bool:
+def _article(value: object, facts, public, history, version: int) -> bool:
+    """An article whose revision `<slug>@vM` is no later than the file's version `vN` (M <= N)."""
     if not isinstance(value, dict) or set(value) != ARTICLE_FIELDS:
         return False
     revision = REVISION.fullmatch(value['revision']) if isinstance(value['revision'], str) else None
-    return (revision is not None and revision.group(1) == value['id']
+    return (revision is not None and revision.group(1) == value['id'] and int(revision.group(2)) <= version
             and _nonblank(value['title']) and _nonblank(value['lead']) and _position(value['last_confirmed'])
             and isinstance(value['body'], list) and bool(value['body'])
             and all(isinstance(c, dict) and set(c) == {'text', 'facts'} and _nonblank(c['text'])
@@ -140,11 +163,11 @@ def _article(value: object, facts: set[str], public: set[str], history: set[str]
             and _record(value, public, history))
 
 
-def _fact(value: object, articles: set[str], public: set[str], history: set[str]) -> bool:
+def _fact(value: object, articles, public, history) -> bool:
     if not isinstance(value, dict) or not FACT_REQUIRED <= set(value) <= FACT_FIELDS:
         return False
     bound = isinstance(value['scope'], dict) and 'world' in value['scope']
-    return (value['claim_kind'] in CLAIM_KINDS and value['evidence_basis'] in EVIDENCE_BASES
+    return (_member(value['claim_kind'], CLAIM_KINDS) and _member(value['evidence_basis'], EVIDENCE_BASES)
             and (value['claim_kind'] != 'instance_state' or bound)
             and _nonblank(value['text']) and ('subject' not in value or _nonblank(value['subject']))
             and ('when' not in value or _when(value['when'])) and _position(value['seen'])
@@ -153,28 +176,68 @@ def _fact(value: object, articles: set[str], public: set[str], history: set[str]
             and _record(value, public, history))
 
 
-def _history(value: object, articles: set[str], facts: set[str], revisions: set[str]) -> bool:
-    """Old identifiers name only public replacements; `ended` and `retracted` name fact IDs and retired slugs."""
+def _history(value: object, articles: set[str], facts: set[str], revisions: dict[str, int]) -> bool:
+    """Old identifiers name only public replacements; `ended` and `retracted` name fact IDs and retired slugs. An
+    earlier revision `<slug>@vK` is strictly earlier than the delivered `<slug>@vM` (K < M); `revisions` maps each
+    delivered slug to M."""
     if not isinstance(value, dict) or set(value) != set(EMPTY_HISTORY):
         return False
     replaced, ended, retracted = value['replaced'], value['ended'], value['retracted']
     public = articles | facts
-    if not isinstance(replaced, dict) or not _distinct(ended, IDENTIFIER.fullmatch) or not _distinct(retracted, IDENTIFIER.fullmatch):
+    if not isinstance(replaced, dict) or not _distinct(ended, _identifier) or not _distinct(retracted, _identifier):
         return False
     gone = set(ended) | set(retracted)
     if set(ended) & set(retracted) or gone & public:
         return False
     for key, entry in replaced.items():
-        if (not isinstance(key, str) or key in public or key in revisions or key in gone or not isinstance(entry, dict)
+        if (not isinstance(key, str) or key in public or key in gone or not isinstance(entry, dict)
                 or set(entry) != {'reason', 'by'} or not _distinct(entry['by'], nonempty=True)):
             return False
         revision = REVISION.fullmatch(key)
         if revision is not None:  # An earlier revision of a delivered slug redirects to that slug alone.
-            if entry['reason'] != 'restated' or entry['by'] != [revision.group(1)] or revision.group(1) not in articles:
+            slug = revision.group(1)
+            if (entry['reason'] != 'restated' or entry['by'] != [slug] or slug not in articles
+                    or slug not in revisions or int(revision.group(2)) >= revisions[slug]):
                 return False
-        elif IDENTIFIER.fullmatch(key) is None or entry['reason'] not in REASONS or not set(entry['by']) <= facts:
+        elif not _identifier(key) or not _member(entry['reason'], REASONS) or not set(entry['by']) <= facts:
             return False
     return True
+
+
+def _derived(articles: list[dict], facts: list[dict]) -> bool:
+    """The derived fields agree with what they derive from: `cited_by_articles` with citations, `backlinks` with
+    `links`, `shadowed_by` and `contradicted_by` with `contradicts` edges, and an article's inherited flags with the
+    facts it cites (an article is no more certain than its facts, and citing a contested fact makes it contested)."""
+    records = articles + facts
+    by_id = {f['id']: f for f in facts}
+    citing: dict[str, set[str]] = {f['id']: set() for f in facts}
+    for a in articles:
+        cited = [by_id[f] for claim in a['body'] for f in claim['facts']]
+        for f in cited:
+            citing[f['id']].add(a['id'])
+        if (a['condition_unverified'] is not any(f['condition_unverified'] for f in cited)
+                or (any(f['unverified_branch'] for f in cited) and a['unverified_branch'] is not True)
+                or (any(f['lifecycle_state'] == 'contested' for f in cited) and a['lifecycle_state'] != 'contested')):
+            return False
+    if any(set(f['cited_by_articles']) != citing[f['id']] for f in facts):
+        return False
+    links = {(r['id'], link['rel'], link['target']) for r in records for link in r['links']}
+    if links != {(back['source'], back['rel'], r['id']) for r in records for back in r['backlinks']}:
+        return False
+    joined = {frozenset((source, target)) for source, rel, target in links if rel == 'contradicts'}
+    return all(frozenset((r['id'], other)) in joined for r in records for other in r['shadowed_by'] + r['contradicted_by'])
+
+
+def delivered_record(value: object, version: object) -> bool:
+    """One closed delivered article or fact as a read returns it, apart from its file: its closed shape, a blinded
+    `world`, aliased positions and a revision no later than `version`. What needs the whole file (public set,
+    history, derived fields) was checked when the file was read."""
+    number = version_number(version)
+    if number is None or not isinstance(value, dict):
+        return False
+    if 'body' in value:
+        return _article(value, _identifier, _identifier, _historical, number)
+    return _fact(value, _identifier, _identifier, _historical)
 
 
 def _valid(value: object) -> bool:
@@ -196,14 +259,18 @@ def _valid(value: object) -> bool:
     articles, facts = {a['id'] for a in value['articles']}, {f['id'] for f in value['facts']}
     if len(articles | facts) != len(records):
         return False
-    revisions = {a.get('revision') for a in value['articles']} - {None}
+    # Only well-formed revisions enter the map; an article with any other `revision` fails its own check below.
+    revisions = {m.group(1): int(m.group(2)) for a in value['articles']
+                 if isinstance(a.get('revision'), str) and (m := REVISION.fullmatch(a['revision'])) is not None}
     if not _history(value['history'], articles, facts, revisions):
         return False
     history = value['history']
     public_history = set(history['replaced']) | set(history['ended']) | set(history['retracted'])
     public = articles | facts
-    return (all(_article(a, facts, public, public_history) for a in value['articles'])
-            and all(_fact(f, articles, public, public_history) for f in value['facts']))
+    number = version_number(value['version'])
+    return (all(_article(a, facts, public.__contains__, public_history, number) for a in value['articles'])
+            and all(_fact(f, articles, public.__contains__, public_history) for f in value['facts'])
+            and _derived(value['articles'], value['facts']))
 
 
 class Knowledge:
@@ -215,7 +282,8 @@ class Knowledge:
     @classmethod
     def from_dict(cls, value: object, where: str = 'delivered knowledge') -> 'Knowledge':
         knowledge = cls.__new__(cls)
-        knowledge._set(value, where)
+        # A private copy: the caller changing its dict later cannot alter this version or part it from its index.
+        knowledge._set(copy.deepcopy(value), where)
         return knowledge
 
     def _set(self, value: object, where: str) -> None:
