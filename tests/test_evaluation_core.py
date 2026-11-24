@@ -253,7 +253,8 @@ class Run:
             (directory / 'actor.json').write_text(json.dumps(dict(schema='player-adapter/1' if self.historical else 'player-adapter/2', actor_id=actor)))
             (directory / 'context.txt').write_text('GUIDE')
             (directory / 'prompt.txt').write_text(f'ASSIGNMENT {index}')
-        self.manifest = dict(schema='campaign-run/7' if self.historical else 'campaign-run/12', session=self.session, source_commit='fixture', **manifest)
+        self.manifest = dict(schema='campaign-run/7' if self.historical else 'campaign-run/13', session=self.session,
+                             source_commit='fixture', **({} if self.historical else {'context': {}}), **manifest)
         if memory is not None:
             self.manifest['player_store'] = str(memory)
         (self.directory / 'manifest.json').write_text(json.dumps(self.manifest))
@@ -1160,7 +1161,7 @@ def test_unsupported_input_versions_are_errors(tmp_path):
     (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/11', session=SESSION)))
     with pytest.raises(EvaluationError, match=r"manifest\.json.*unsupported manifest version 'campaign-run/11'"):
         evaluate(directory, FakeBinding(), tmp_path / 'e1')
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/12', session=SESSION)))
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={}, session=SESSION)))
     host = directory / 'actors' / '001' / 'host.jsonl'
     original = host.read_text()
     # An older trace, the immediately previous version included, is not read for a session the index does not list.
@@ -1494,7 +1495,7 @@ def test_terminal_native_eof_classifies_custody_without_rewriting_delivery(tmp_p
 def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path, monkeypatch):
     from harness.evaluation.core.sources import read_end_facts
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
-    current = dict(schema='campaign-run/12', session=SESSION)
+    current = dict(schema='campaign-run/13', context={}, session=SESSION)
     archived = dict(schema='campaign-run/4', session=SESSION)
     directory = tmp_path / 'end'
     directory.mkdir()
@@ -1637,7 +1638,9 @@ def as_archived(directory: Path, versions: tuple, *, receipt: bool = False) -> P
     request reserve."""
     manifest_schema, receipt_schema, driver_schema, host_schema, telemetry, _ = versions
     path = directory / 'manifest.json'
-    path.write_text(json.dumps(json.loads(path.read_text()) | dict(schema=manifest_schema)))
+    manifest = json.loads(path.read_text())
+    manifest.pop('context', None)
+    path.write_text(json.dumps(manifest | dict(schema=manifest_schema)))
     for trace in sorted(directory.glob('actors/*/host.jsonl')):
         lines = trace.read_text().splitlines()
         lines[0] = json.dumps(json.loads(lines[0]) | dict(schema=host_schema, telemetry_version=telemetry))
@@ -1674,12 +1677,14 @@ def test_the_shipped_archive_index_preserves_exact_approved_sessions():
     for combination in sources.ARCHIVE_COMBINATIONS:
         assert set(combination.fields) == {key for key, value in current.items() if combination.versions[key] != value}
         assert combination.versions['host_telemetry'] != sources.HOST_TELEMETRY and 'host' in combination.fields
-    assert sources.ARCHIVE_COMBINATIONS[-1].fields == {'host': sources.ARCHIVE_COMBINATIONS[0].fields['host']}
+    assert sources.ARCHIVE_COMBINATIONS[-1].fields == dict(
+        host=sources.ARCHIVE_COMBINATIONS[0].fields['host'],
+        manifest=(*sources.ARCHIVE_COMBINATIONS[-2].fields['manifest'], 'live_knowledge_updates'))
     assert sources.MANIFEST_SCHEMAS == ('campaign-run/4', 'campaign-run/5', 'campaign-run/6', 'campaign-run/7',
-                                       'campaign-run/10', 'campaign-run/12')
+                                       'campaign-run/10', 'campaign-run/12', 'campaign-run/13')
     assert [c.fields.get('run_ending') for c in sources.ARCHIVE_COMBINATIONS] == [
         ('reason',), ('session', 'reason', 'pause_reason'), None, None, None, None, None]
-    assert ['labels' in c.fields.get('manifest', ()) for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True, True, False]
+    assert ['labels' in c.fields.get('manifest', ()) for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True, True, True]
     assert all('accounting' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS[:3])
     assert 'spend_limit_usd' in sources.ARCHIVE_COMBINATIONS[3].fields['manifest']
     # The operator labels are on the 30 older sessions and nowhere else.
@@ -1908,7 +1913,7 @@ def test_a_current_run_with_a_v2_terminal_is_an_error(tmp_path, monkeypatch):
     archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
     directory = ended_run(tmp_path / 'current', files={'watch-terminal.json': dict(
         schema='campaign-watch-terminal/2', reason='operator_pause')})
-    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/12'
+    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/13'
     with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*unsupported version.*campaign-watch-terminal/2'):
         evaluate(directory, FakeBinding(), tmp_path / 'evals')
 
@@ -1997,7 +2002,7 @@ def test_run_facts_labels_and_host_rows(tmp_path):
     assert (facts['model'], facts['provider'], facts['route'], facts['effort']) == ('m/x', 'p', dict(only=['p']), 'medium')
     assert (facts['guide_sha256'], facts['assignment_sha256']) == ('g' * 64, 'p' * 64)
     # A current run's allowance is its declared dollar limit; it has no ceiling and no earlier reservation.
-    assert (facts['manifest_schema'], facts['spend_allowance_usd'], facts['limits']) == ('campaign-run/12', 15.5, LIMITS)
+    assert (facts['manifest_schema'], facts['spend_allowance_usd'], facts['limits']) == ('campaign-run/13', 15.5, LIMITS)
     assert (facts['declared_ceiling_usd'], facts['prior_reserved_usd']) == (None, None)
     assert read_metadata(connection)['labels'] == facts['labels'] and read_metadata(connection)['arm'] == 'X'
     calls = read_tool_calls(connection)

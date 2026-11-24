@@ -20,7 +20,7 @@ def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounti
     """A finished package with $1.0 reported and one unknown-cost attempt."""
     directory = root / name
     directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/12', session=SESSION, live_knowledge_updates=False,
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={}, session=SESSION, live_knowledge_updates=False,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
     (directory/'delivered-knowledge.json').write_text(json.dumps(empty()))
     if receipt:
@@ -111,9 +111,8 @@ def test_upper_bound_covers_possible_inflight_attempts_even_when_none_observed(t
     from tools.run_ledger import package_row
     directory=package(tmp_path/'packages',spend_complete=False,observed_attempts=attempts,unpriced_requests=0,unpriced_recall_request_usd='0.2')
     if has_units:
-        path=directory/'delivered-knowledge.json';value=json.loads(path.read_text())
-        value['facts']=[dict(id='fact',type='claim',text='Fallible',seen=dict(session='s1',actor='001',step=1,order=[1,'001',1]))]
-        path.write_text(json.dumps(value))
+        from tests.test_knowledge_export import delivered_fixture
+        (directory/'delivered-knowledge.json').write_text(json.dumps(delivered_fixture(['fact'])))
     if live:
         path=directory/'manifest.json'
         path.write_text(json.dumps(dict(json.loads(path.read_text()),live_knowledge_updates=True)))

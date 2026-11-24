@@ -26,9 +26,9 @@ OPERATION_SCHEMA = 'computer-operation/1'
 #: the closed archive index below lists that exact version for that session.
 HOST_SCHEMA = 'player-host/11'
 HOST_TELEMETRY = 11
-MANIFEST_SCHEMA = 'campaign-run/12'
+MANIFEST_SCHEMA = 'campaign-run/13'
 #: These package versions use player-journal/1 and player-handoff-context/2.
-JOURNAL_MANIFEST_SCHEMAS = (MANIFEST_SCHEMA, 'campaign-run/10')
+JOURNAL_MANIFEST_SCHEMAS = (MANIFEST_SCHEMA, 'campaign-run/12', 'campaign-run/10')
 RECEIPT_SCHEMA = 'campaign-receipt/7'
 DRIVER_SCHEMA = 'player-driver/7'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
@@ -70,6 +70,9 @@ class ArchiveCombination:
 _MANIFEST_4 = ('schema', 'session', 'player_store', 'source_commit', 'effort', 'files', 'accounting', 'limits',
                'ending_reserve', 'wall_seconds', 'host_seconds', 'max_hosts', 'max_http_attempts')
 _MANIFEST_5 = (*_MANIFEST_4, 'labels')
+_MANIFEST_10 = (*(key for key in _MANIFEST_5 if key not in ('accounting', 'max_http_attempts')),
+                'spend_limit_usd', 'total_host_seconds', 'private_files')
+_MANIFEST_12 = (*_MANIFEST_10, 'live_knowledge_updates')
 #: `read_end_facts` takes `outcome`, `normal_native_exit_zero` and `driver`; host-summary takes the rest.
 _RECEIPT_3 = ('session', 'source_commit', 'outcome', 'normal_save_claimed_by_harness', 'native_absence_verified',
               'normal_native_exit_zero', 'deciding_hosts_quiescent', 'input_authority_revoked', 'driver')
@@ -122,13 +125,12 @@ ARCHIVE_COMBINATIONS = (
     ArchiveCombination(
         dict(manifest='campaign-run/10', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/8',
              host_telemetry=8, run_ending='campaign-watch-terminal/4'),
-        dict(manifest=(*(key for key in _MANIFEST_5 if key not in ('accounting', 'max_http_attempts')),
-                       'spend_limit_usd', 'total_host_seconds', 'private_files'), host=_HOST_3)),
+        dict(manifest=_MANIFEST_10, host=_HOST_3)),
     # Owner decision, 22 November 2026: #889's sealed live validation and initial zero-spend aborted launch.
     ArchiveCombination(
         dict(manifest='campaign-run/12', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/9',
              host_telemetry=9, run_ending='campaign-watch-terminal/4'),
-        dict(host=_HOST_3)),
+        dict(manifest=_MANIFEST_12, host=_HOST_3)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
 MANIFEST_SCHEMAS = tuple(dict.fromkeys([*(c.versions['manifest'] for c in ARCHIVE_COMBINATIONS), MANIFEST_SCHEMA]))
@@ -227,6 +229,8 @@ def read_json_lines(path: Path, maximum: int = MAX_JSON_FILE_BYTES) -> list[obje
 
 
 def read_manifest(run_dir: Path) -> dict:
+    from harness.trace.projection import valid_context
+
     path = run_dir / 'manifest.json'
     if not path.is_file():
         raise EvaluationError(f'{path}: missing campaign-run manifest')
@@ -237,6 +241,8 @@ def read_manifest(run_dir: Path) -> dict:
     if value['schema'] != MANIFEST_SCHEMA and archive_entry(value) is None:
         raise EvaluationError(f'{path}: {value["schema"]} is read only for the sealed sessions that '
             f'{ARCHIVE_INDEX.name} lists with that version; session {value.get("session")!r} is not listed')
+    if value['schema'] == MANIFEST_SCHEMA and not valid_context(value.get('context')):
+        raise EvaluationError(f'{path}: missing or invalid context axes')
     return value
 
 
