@@ -18,9 +18,20 @@ static std::string quoted(const char *value) {
     return out+'"';
 }
 int main(int argc,char **argv) {
-    if(argc<2) { fprintf(stderr,"usage: fixture EVENT_LOG.jsonl [--hidden] [--offscreen]\n"); return 2; }
+    if(argc<2) { fprintf(stderr,"usage: fixture EVENT_LOG.jsonl [--hidden] [--offscreen] [--no-text-input] [--keep-running-on-escape]\n"); return 2; }
     bool hidden=false,offscreen=false,noise=false; int checkSocket=-1; unsigned exitAfter=0; std::vector<int> checkFDs;
-    for(int i=2;i<argc;++i) { if(strcmp(argv[i],"--hidden")==0) hidden=true; else if(strcmp(argv[i],"--offscreen")==0) offscreen=true; else if(strcmp(argv[i],"--check-fd")==0 && i+1<argc) checkFDs.push_back(atoi(argv[++i])); else if(strcmp(argv[i],"--check-socket")==0 && i+1<argc) checkSocket=atoi(argv[++i]); else if(strcmp(argv[i],"--exit-after-ms")==0 && i+1<argc) exitAfter=(unsigned)atoi(argv[++i]); else if(strcmp(argv[i],"--noise")==0) noise=true; else return 2; }
+    bool textInput=true,escapeExits=true;
+    for(int i=2;i<argc;++i) {
+        if(strcmp(argv[i],"--hidden")==0) hidden=true;
+        else if(strcmp(argv[i],"--offscreen")==0) offscreen=true;
+        else if(strcmp(argv[i],"--check-fd")==0 && i+1<argc) checkFDs.push_back(atoi(argv[++i]));
+        else if(strcmp(argv[i],"--check-socket")==0 && i+1<argc) checkSocket=atoi(argv[++i]);
+        else if(strcmp(argv[i],"--exit-after-ms")==0 && i+1<argc) exitAfter=(unsigned)atoi(argv[++i]);
+        else if(strcmp(argv[i],"--noise")==0) noise=true;
+        else if(strcmp(argv[i],"--no-text-input")==0) textInput=false;
+        else if(strcmp(argv[i],"--keep-running-on-escape")==0) escapeExits=false;
+        else return 2;
+    }
     FILE *log=fopen(argv[1],"wx"); if(!log) { perror("event log"); return 2; }
     for(int fd:checkFDs) { int flags=fcntl(fd,F_GETFD); if(flags<0 || !(flags&FD_CLOEXEC)) { fprintf(stderr,"Inherited FD lacks close-on-exec before SDL startup\n"); fclose(log); return 3; } }
     if(checkSocket>=0) {
@@ -36,7 +47,8 @@ int main(int argc,char **argv) {
     SDL_Texture *target=offscreen?SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,123,77):nullptr;
     if(offscreen && !target) { fprintf(stderr,"SDL texture: %s\n",SDL_GetError()); return 1; }
     fprintf(log,"{\"type\":0,\"fixture_ready\":true,\"pre_sdl_cloexec_checked\":%s}\n",!checkFDs.empty()?"true":"false"); fflush(log);
-    SDL_StartTextInput(); bool running=true; unsigned count=0,drain=0; int markerX=100,markerY=100; Uint8 red=40,green=100,blue=180; std::string text;
+    if(textInput) SDL_StartTextInput(); else SDL_StopTextInput();
+    bool running=true; unsigned count=0,drain=0; int markerX=100,markerY=100; Uint8 red=40,green=100,blue=180; std::string text;
     Uint32 started=SDL_GetTicks(); unsigned heartbeat=0;
     std::vector<Uint32> noisePixels(640*400); Uint32 random=0xabcdef01;
     for(auto &pixel:noisePixels) { random^=random<<13; random^=random>>17; random^=random<<5; pixel=random|0xff000000; }
@@ -49,8 +61,9 @@ int main(int argc,char **argv) {
             ++count; int mx=0,my=0,gx=0,gy=0; Uint32 buttons=SDL_GetMouseState(&mx,&my), globalButtons=SDL_GetGlobalMouseState(&gx,&gy); SDL_Keymod mods=SDL_GetModState();
             fprintf(log,"{\"event\":%u,\"drain\":%u,\"type\":%u,\"mouse\":[%d,%d],\"buttons\":%u,\"global_mouse\":[%d,%d],\"global_buttons\":%u,\"modifiers\":%u,\"offscreen\":%s",count,drain,e.type,mx,my,buttons,gx,gy,globalButtons,(unsigned)mods,SDL_GetRenderTarget(renderer)?"true":"false");
             if(e.type==SDL_KEYDOWN || e.type==SDL_KEYUP) {
-                fprintf(log,",\"key\":%d,\"key_modifiers\":%u,\"repeat\":%u",e.key.keysym.sym,e.key.keysym.mod,e.key.repeat);
-                if(e.type==SDL_KEYDOWN) { red=(Uint8)(red+37); if(e.key.keysym.sym==SDLK_ESCAPE) running=false; if(e.key.keysym.sym==SDLK_LEFT) markerX-=10; if(e.key.keysym.sym==SDLK_RIGHT) markerX+=10; if(e.key.keysym.sym==SDLK_UP) markerY-=10; if(e.key.keysym.sym==SDLK_DOWN) markerY+=10;
+                fprintf(log,",\"key\":%d,\"scancode\":%d,\"key_modifiers\":%u,\"repeat\":%u,\"text_input_active\":%s",
+                    e.key.keysym.sym,e.key.keysym.scancode,e.key.keysym.mod,e.key.repeat,SDL_IsTextInputActive()?"true":"false");
+                if(e.type==SDL_KEYDOWN) { red=(Uint8)(red+37); if(escapeExits && e.key.keysym.sym==SDLK_ESCAPE) running=false; if(e.key.keysym.sym==SDLK_LEFT) markerX-=10; if(e.key.keysym.sym==SDLK_RIGHT) markerX+=10; if(e.key.keysym.sym==SDLK_UP) markerY-=10; if(e.key.keysym.sym==SDLK_DOWN) markerY+=10;
                     // Independent application behavior for mechanical tests only.
                     if(e.key.keysym.sym==SDLK_r) SDL_SetWindowSize(window,800,500);
                     // Stall the loop between this key's down and up events, as a game

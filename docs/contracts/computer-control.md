@@ -123,9 +123,11 @@ and DB waits. Cleanup closes the channel and terminates/reaps exact owned childr
 Normal native exit 0 is sampled **before** forced cleanup, separately from Save claims.
 
 Public input is 1..32 key/text/click/wait actions. Keys are printable ASCII or the
-named keys in the [shared schema](../../harness/computer/protocol.py); modifiers
-are explicit. Text is 1..31 UTF-8 bytes without controls. Waits are 0..2 s each and
-at most 15 s combined; one operation is at most 15 s and never exceeds the run deadline.
+named keys in the [shared schema](../../harness/computer/protocol.py).
+Uppercase ASCII letters and shifted US-ANSI punctuation imply Shift in addition
+to any listed modifiers. Text is 1..31 UTF-8 bytes without controls. Waits are
+0..2 s each and at most 15 s combined; one operation is at most 15 s and never
+exceeds the run deadline.
 Wait delays the caller in wall time without sending an SDL input event; it is
 not an application command or settlement guarantee. Clicks use a source actually
 returned to that actor; keys/text need no source.

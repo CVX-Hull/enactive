@@ -125,7 +125,7 @@ class Peer:
 
 
 @contextmanager
-def fixture(options, case, *, offscreen=False, noise=False, lifetime=8000):
+def fixture(options, case, *, offscreen=False, noise=False, lifetime=8000, extra_args=()):
     case.mkdir(parents=True, exist_ok=False)
     shared = (case / 'user.lock').open('a')
     fcntl.flock(shared, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -139,6 +139,7 @@ def fixture(options, case, *, offscreen=False, noise=False, lifetime=8000):
         command.append('--offscreen')
     if noise:
         command.append('--noise')
+    command.extend(extra_args)
     script = case / 'launch.sh'
     script.write_text('export DYLD_INSERT_LIBRARIES="$ENACTIVE_COMPUTER_LIBRARY"\nexec ' + shlex.join(command) + '\n')
     env = dict(PATH=os.environ['PATH'], LANG='en_US.UTF-8',
@@ -176,6 +177,69 @@ def key(name, modifiers=None):
 def click(frame):
     return dict(type='click', x=200, y=180, button='left',
                 geometry={k: frame[k] for k in protocol.GEOMETRY_KEYS})
+
+
+def key_mapping_checks(options):
+    key_down, key_up, text_input = 768, 769, 771
+    scancode_mask = 1 << 30
+    # SDL_scancode and SDL_keymod values for left Shift, Control and Alt.
+    shift, control, alt = (225, 1), (224, 64), (226, 256)
+    cases = [
+        (key('w'), ord('w'), 26, (), 'w'),
+        (key('w', ['SHIFT']), ord('w'), 26, (shift,), 'W'),
+        (key('W', ['SHIFT']), ord('w'), 26, (shift,), 'W'),
+        (key('W'), ord('w'), 26, (shift,), 'W'),
+        (key('W', ['CTRL']), ord('w'), 26, (control, shift), None),
+        (key('W', ['CTRL', 'SHIFT']), ord('w'), 26, (control, shift), None),
+        (key('W', ['ALT']), ord('w'), 26, (alt, shift), None),
+        (key('/'), ord('/'), 56, (), '/'),
+        (key('/', ['SHIFT']), ord('/'), 56, (shift,), '?'),
+        (key('1', ['SHIFT']), ord('1'), 30, (shift,), '!'),
+        (key('?', ['SHIFT']), ord('/'), 56, (shift,), '?'),
+        (key('ESC'), 27, 41, (), None),
+        (key('ENTER'), 13, 40, (), None),
+        (key('SPACE'), 32, 44, (), None),
+    ]
+    punctuation = zip('!@#$%^&*()_+{}|:"<>?~', "1234567890-=[]\\;',./`",
+                      (30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 45, 46, 47, 48, 49, 51, 52, 54, 55, 56, 53),
+                      strict=True)
+    cases.extend((key(symbol), ord(base), scan, (shift,), symbol) for symbol, base, scan in punctuation)
+
+    for active in (True, False):
+        case = options.output / ('text-input-active' if active else 'text-input-stopped')
+        args = ['--keep-running-on-escape']
+        if not active:
+            args.append('--no-text-input')
+        with fixture(options, case, lifetime=12000, extra_args=args) as (peer, child):
+            peer.observe()
+            seen = 0
+            for action, code, scan, held, character in cases:
+                expected = []
+                mods = 0
+                for modifier_scan, mask in held:
+                    mods |= mask
+                    expected.append((key_down, scancode_mask | modifier_scan, modifier_scan, mods))
+                expected.append((key_down, code, scan, mods))
+                if active and character is not None:
+                    expected.append((text_input, character))
+                expected.append((key_up, code, scan, mods))
+                for modifier_scan, mask in reversed(held):
+                    mods &= ~mask
+                    expected.append((key_up, scancode_mask | modifier_scan, modifier_scan, mods))
+
+                value, _ = peer.execute(action)
+                assert value['disposition'] == 'delivered', (action, value)
+                entries = [r for r in records(case / 'events.jsonl') if r['type'] in (key_down, key_up, text_input)]
+                actual = []
+                for event in entries[seen:]:
+                    if event['type'] == text_input:
+                        actual.append((text_input, event['text']))
+                    else:
+                        assert event['text_input_active'] is active, event
+                        actual.append((event['type'], event['key'], event['scancode'], event['key_modifiers']))
+                assert actual == expected, (action, active, actual, expected)
+                assert value['emitted_events'] == len(expected), (action, value)
+                seen = len(entries)
 
 
 def mechanics(options, *, offscreen, terminal):
@@ -448,6 +512,7 @@ def arguments():
 
 def check(options):
     options.output.mkdir(parents=True, exist_ok=False)
+    key_mapping_checks(options)
     for offscreen in (False, True):
         for terminal in ('takeover', 'target-loss'):
             mechanics(options, offscreen=offscreen, terminal=terminal)

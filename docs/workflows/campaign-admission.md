@@ -23,6 +23,17 @@ choose changes. Keep campaign-specific observed facts separate from reusable les
 candidates. Unknown identity, absent observations and uncertain delivery remain
 unknown; a review cannot reconstruct an unobserved outcome.
 
+For comparative and deciding multi-day benchmarks, use the game's default
+point pool with unmodified baseline stats (`8/8/8/8` in CDDA) and no extra pool
+points spent on starting skills beyond the chosen scenario and profession
+(pool points may go only to traits unless the frozen campaign brief declares
+and justifies a non-default build variant). Freeform, overpowered or other
+non-default builds require an explicit declaration in the frozen campaign brief.
+At the first [segment-boundary review](#campaign-review-and-finding-disposition),
+record the starting build and any game-displayed rating from first observation
+to catch unintended advantages before comparing outcomes
+([R-FALSE-CLAIM](../risks.md#development-risks)).
+
 Before banking long optional work, reconcile actual current inventory and observed
 resource dependencies with the full remaining outcome. Separate current visibility,
 remembered terrain, historical possession and generic mechanics. A replenishment
