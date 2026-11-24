@@ -393,10 +393,15 @@ def test_recall_can_continue_with_remaining_budget_after_verified_handoff(tmp_pa
 
 
 def published(number,*,repository='d'*40,**change):
-    """A published version as the exporter writes it, with one fact per version number."""
-    return dict(schema='delivered-knowledge/2',version=f'v{number}',commit=f'{number:040x}',repository_id=repository,
-        coverage=dict(schema='curator-coverage/2',session='b'*32,actor='001',last_step=number),articles=[],
-        facts=[dict(id=f'fact-{n}',type='observation',text=f'Claim {n}.',seen=dict(session='s1',actor='001',step=n,order=[1,'001',n])) for n in range(1,number+1)],**change)
+    """A published version as the exporter writes it, with one plainly active, unbound fact per version number."""
+    def fact(n):
+        return dict(id=f'fact-{n}',claim_kind='mechanic',evidence_basis='observed',tags=[],text=f'Claim {n}.',
+            scope=dict(game='example'),branch_relation=None,lifecycle_state='active',needs_review=False,stale_citations=[],
+            condition_unverified=False,unverified_branch=False,links=[],backlinks=[],shadowed_by=[],contradicted_by=[],
+            cited_by_articles=[],citation_source_ids=[f"{'b'*32}-{n}"],seen=dict(session='s01',actor='001',step=n,order=[1,'001',n]))
+    return dict(schema='delivered-knowledge/3',version=f'v{number}',commit=f'{number:040x}',repository_id=repository,
+        coverage=dict(schema='curator-coverage/2',session='s01',actor='001',last_step=number),articles=[],
+        facts=[fact(n) for n in range(1,number+1)],history=dict(replaced={},ended=[],retracted=[]),**change)
 
 
 def test_a_version_left_during_play_is_listed_for_the_running_actor_and_seeds_its_successor(tmp_path):
@@ -527,8 +532,8 @@ def test_the_highest_verified_version_above_the_current_one_is_adopted_and_a_ref
     leave(published(3))
     leave(published(4,repository='e'*40))  # another repository
     leave(published(5),'v6.json')  # names another version than its file
-    leave(dict(published(7),schema='delivered-knowledge/1'))
-    (tmp_path/'delivered'/'v8.json').write_text('{"schema":"delivered-knowledge/2","schema":"delivered-knowledge/2"}')
+    leave(dict(published(7),schema='delivered-knowledge/2'))  # the retired schema
+    (tmp_path/'delivered'/'v8.json').write_text('{"schema":"delivered-knowledge/3","schema":"delivered-knowledge/3"}')
     live.poll(application)
     assert listed()==['v3'] and live.current.value['version']=='v3' and live.data==(tmp_path/'delivered'/'v3.json').read_bytes()
     assert application.set_knowledge.call_args.args[0].read('fact-3')['version']=='v3'

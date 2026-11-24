@@ -4,16 +4,19 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { runHost } from '../host.mjs';
-import { model, route, reply, realDelay } from './host-scenario.mjs';
+import { model, route, reply, realDelay, article, fact, position } from './host-scenario.mjs';
 
-export const knowledge = () => ({schema:'delivered-knowledge/2',version:'v2',commit:'c'.repeat(40),repository_id:'d'.repeat(40),
-  coverage:{schema:'curator-coverage/2',session:'earlier',actor:null,last_step:4},
+export const knowledge = () => ({schema:'delivered-knowledge/3',version:'v2',commit:'c'.repeat(40),repository_id:'d'.repeat(40),
+  coverage:{schema:'curator-coverage/2',session:'s01',actor:null,last_step:4},
   articles:[
-    {id:'article-a',title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],links:['B subject'],last_confirmed:{session:'s1',actor:'001',step:1,order:[1,'001',1]}},
-    {id:'article-b',title:'B subject',lead:'A useful later lead.',body:[{text:'Second claim.',facts:['fact-b']}],links:[],last_confirmed:{session:'s1',actor:'001',step:2,order:[1,'001',2]}}],
-  facts:[{id:'fact-a',type:'observation',text:'First claim.',seen:{session:'s1',actor:'001',step:1,order:[1,'001',1]}},
-    {id:'fact-b',type:'observation',text:'Second claim.',seen:{session:'s1',actor:'001',step:2,order:[1,'001',2]}},
-    {id:'fact-alone',subject:'Unfiled subject',type:'observation',text:'An unfiled claim.',seen:{session:'s1',actor:'001',step:3,order:[1,'001',3]}}]});
+    article('article-a',{revision:'article-a@v2',title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],
+      links:[{rel:'see_also',target:'article-b'}],last_confirmed:position(1)}),
+    article('article-b',{revision:'article-b@v2',title:'B subject',lead:'A useful later lead.',body:[{text:'Second claim.',facts:['fact-b']}],
+      backlinks:[{rel:'see_also',source:'article-a'}],last_confirmed:position(2)})],
+  facts:[fact('fact-a',{text:'First claim.',cited_by_articles:['article-a'],seen:position(1)}),
+    fact('fact-b',{text:'Second claim.',cited_by_articles:['article-b'],seen:position(2)}),
+    fact('fact-alone',{subject:'Unfiled subject',text:'An unfiled claim.',seen:position(3)})],
+  history:{replaced:{},ended:[],retracted:[]}});
 
 export function recallReply(ids, cost = .002, finishReason = 'stop') {
   return recallTextReply(JSON.stringify({articles:ids}), cost, finishReason);

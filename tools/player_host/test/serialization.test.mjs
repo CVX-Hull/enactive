@@ -10,6 +10,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { runHost, projectImageContext, wallWarningMs, sessionAffinityId } from '../host.mjs';
+import { emptyKnowledge } from './host-scenario.mjs';
 
 const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
@@ -50,7 +51,7 @@ async function host(t, replies, { session = '2'.repeat(32), actorId = '3'.repeat
   };
   const mcpConfig = { command: resolve(python), args: [fixture, join(dir, 'calls.jsonl'), join(dir, 'pid')], cwd: dir, enabled: true, required: true,
     enabled_tools: enabledTools, startup_timeout_sec: 5, tool_timeout_sec: 2, default_tools_approval_mode: 'never', tools: {} };
-  const result = await runHost({knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0', session, actorId, pendingControlId: null, control: new PassThrough(), configuration, mcpConfig, context, prompt,
+  const result = await runHost({knowledge:emptyKnowledge(),finishReserveUsd:'0', session, actorId, pendingControlId: null, control: new PassThrough(), configuration, mcpConfig, context, prompt,
     model: configuration.model.id, effort: 'off', timeoutSeconds, env: { OFFLINE_TEST_KEY: 'fixture-key' }, fetch, onEvent: event => events.push(event) });
   return { result, captured, events, payloads: captured.map(item => item.payload) };
 }

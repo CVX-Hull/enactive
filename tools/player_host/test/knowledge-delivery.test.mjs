@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { deliveryScenario, knowledge, recallReply } from './delivery-scenario.mjs';
-import { delivery, selection } from '../knowledge.mjs';
-import { reply } from './host-scenario.mjs';
+import { cutBriefing, delivery, knowledgeIndex, selection, statusOf, updateDelivery, validateKnowledge } from '../knowledge.mjs';
+import { emptyKnowledge, reply } from './host-scenario.mjs';
 import { route, model } from './host-scenario.mjs';
 import { validateConfiguration } from '../host.mjs';
 
@@ -31,7 +32,7 @@ test('briefing, standalone index, concurrent reminder, silence, read and exact s
   assert.deepEqual(briefing.article_ids,['article-a']);
   assert.deepEqual(briefing.index_ids,['article-b','fact-alone']);
   assert.equal(briefing.receiving_player_request_id,'request-1');
-  assert.equal(briefing.delivered_knowledge_schema,'delivered-knowledge/2');
+  assert.equal(briefing.delivered_knowledge_schema,'delivered-knowledge/3');
   assert.equal(briefing.grants_authority,false);
   assert.ok(briefing.text.includes('curator-coverage/2'));
   const reminder = deliveries.find(e => e.kind === 'reminder');
@@ -78,7 +79,7 @@ for (const failure of ['failed','rejected-fetch','unpriced']) test(`${failure} r
 });
 
 test('empty knowledge never requests recall and reserve suppresses nonempty recall',async t => {
-  const empty = await scenario(t,{knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]}});
+  const empty = await scenario(t,{knowledge:emptyKnowledge()});
   assert.ok(empty.events.every(e => e.request_role !== 'recall'));
   const reserved = await scenario(t,{configuration:{spend_limit_usd:'0.3'},finishReserveUsd:'0.3'});
   assert.ok(reserved.events.every(e => e.request_role !== 'recall'));
@@ -160,4 +161,89 @@ test('article and fact injection stays quoted fallible data and recall cannot in
   assert.throws(() => selection({content:[{type:'text',text:'{"articles":["withheld"]}'}]},value));
   value.articles[0].lead='x'.repeat(1_100_000);
   assert.ok(delivery(value,[value.articles[0]],'briefing','recall-1').text.length>1_100_000,'no delivered-text cap');
+});
+
+// Evidence gate 1 (reader parity), Node half: tests/test_shared_shapes.py loads the same directory for the Python
+// reference, and the Python reader's suite loads it too.
+test('the shared delivered-knowledge/3 fixtures are accepted and refused as the Python reader does',async () => {
+  const fixtures = fileURLToPath(new URL('../../../tests/fixtures/',import.meta.url));
+  const load = async path => JSON.parse(await readFile(path,'utf8'));
+  const all = async kind => {
+    const directory = join(fixtures,'delivered-knowledge-3',kind);
+    const names = (await readdir(directory)).filter(name => name.endsWith('.json')).sort();
+    return Promise.all(names.map(async name => [name,await load(join(directory,name))]));
+  };
+  const valid = await all('valid'), invalid = await all('invalid');
+  assert.ok(valid.length > 0 && invalid.length > 0);
+  for (const [name,value] of valid) assert.equal(validateKnowledge(value),value,name);
+  for (const [name,value] of invalid) assert.throws(() => validateKnowledge(value),{message:'invalid-delivered-knowledge'},name);
+  assert.equal(validateKnowledge(await load(join(fixtures,'empty-delivered-knowledge.json'))).version,null);
+});
+
+// Evidence gate 10 (cut and cache): one status list on every projection, absent from plainly active entries.
+const ORDER = ['contested','unverified_branch','needs_review','condition_unverified'];
+const payloadOf = message => JSON.parse(message.text.split('\n')[1]);
+
+test('status markers are absent from plainly active entries, so their bytes do not change',() => {
+  const plain = knowledge();
+  assert.ok([...plain.articles,...plain.facts].every(item => statusOf(item).length === 0));
+  assert.equal(JSON.stringify(payloadOf(delivery(plain,[plain.articles[0]],'briefing','recall-1')).leads),
+    '[{"id":"article-a","title":"A subject","lead":"A useful first lead."}]');
+  assert.equal(JSON.stringify(knowledgeIndex(plain)),'[{"id":"article-a","title":"A subject","index":"A useful first lead"},'
+    +'{"id":"article-b","title":"B subject","index":"A useful later lead"},{"id":"fact-alone","title":"Unfiled subject","index":"An unfiled claim"}]');
+  assert.equal(JSON.stringify(payloadOf(cutBriefing(plain)).leads),'[{"id":"article-a","title":"A subject","lead":"A useful first lead."},'
+    +'{"id":"article-b","title":"B subject","lead":"A useful later lead."}]');
+});
+
+test('every projection carries status in the contract order when a marker holds',() => {
+  const bound = {scope:{game:'example',world:null},branch_relation:'unknown'};
+  for (const [flags,status] of [[{lifecycle_state:'contested'},['contested']],[{...bound,unverified_branch:true},['unverified_branch']],
+    [{needs_review:true},['needs_review']],[{condition_unverified:true},['condition_unverified']],
+    [{condition_unverified:true,needs_review:true,lifecycle_state:'contested'},['contested','needs_review','condition_unverified']],
+    [{...bound,lifecycle_state:'contested',unverified_branch:true,needs_review:true,condition_unverified:true},ORDER]]) {
+    const value = knowledge();
+    Object.assign(value.articles[0],structuredClone(flags));
+    assert.deepEqual(statusOf(validateKnowledge(value).articles[0]),status,JSON.stringify(flags));
+  }
+  const marked = knowledge();
+  Object.assign(marked.articles[0],{condition_unverified:true,needs_review:true});
+  Object.assign(marked.articles[1],{...bound,lifecycle_state:'contested',unverified_branch:true,needs_review:true,condition_unverified:true});
+  Object.assign(marked.facts[2],{lifecycle_state:'contested'});
+  validateKnowledge(marked);
+  const expected = {'article-a':['needs_review','condition_unverified'],'article-b':ORDER,'article-new':ORDER,'fact-alone':['contested']};
+  const check = (entries,ids,field) => {
+    assert.deepEqual(entries.map(entry => entry.id),ids);
+    for (const entry of entries) assert.deepEqual(Object.entries(entry),[['id',entry.id],['title',entry.title],[field,entry[field]],
+      ['status',expected[entry.id]]],entry.id);
+  };
+  const briefing = payloadOf(delivery(marked,[marked.articles[0]],'briefing','recall-1'));
+  check(briefing.leads,['article-a'],'lead');
+  check(briefing.index,['article-b','fact-alone'],'index');
+  check(payloadOf(delivery(marked,[marked.articles[1],marked.facts[2]],'reminder','recall-2')).leads,['article-b','fact-alone'],'lead');
+  check(knowledgeIndex(marked),['article-a','article-b','fact-alone'],'index');
+  const cut = payloadOf(cutBriefing(marked));
+  check(cut.leads,['article-a','article-b'],'lead');
+  check(cut.index,['fact-alone'],'index');
+  const update = payloadOf(updateDelivery(knowledge(),{...marked,version:'v3'}));
+  check(update.updated,['article-a','article-b','fact-alone'],'lead');
+  const added = structuredClone(marked);
+  added.articles.push({...marked.articles[1],id:'article-new',revision:'article-new@v3'});
+  check(payloadOf(updateDelivery(knowledge(),{...validateKnowledge(added),version:'v3'})).added,['article-new'],'lead');
+});
+
+test('a flag-only change with unchanged prose is an updated entry, and so is clearing the flag',() => {
+  const before = knowledge(), flagged = {...knowledge(),version:'v3'};
+  flagged.facts[2].needs_review = true;
+  flagged.articles[1].lifecycle_state = 'contested';
+  const data = payloadOf(updateDelivery(before,flagged));
+  assert.deepEqual([data.added,data.updated,data.removed],[[],[
+    {id:'article-b',title:'B subject',lead:'A useful later lead.',status:['contested']},
+    {id:'fact-alone',title:'Unfiled subject',lead:'An unfiled claim.',status:['needs_review']}],[]]);
+  const cleared = payloadOf(updateDelivery(flagged,{...knowledge(),version:'v4'}));
+  assert.deepEqual(cleared.updated,[{id:'article-b',title:'B subject',lead:'A useful later lead.'},
+    {id:'fact-alone',title:'Unfiled subject',lead:'An unfiled claim.'}]);
+  // A field the player is not shown changes nothing to state.
+  const unseen = {...knowledge(),version:'v5'};
+  unseen.facts[2].tags = ['water'];
+  assert.deepEqual(payloadOf(updateDelivery(before,unseen)).updated,[]);
 });

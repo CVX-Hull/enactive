@@ -187,7 +187,8 @@ class Hosted:
         self.route = route(adapter, provider.base_url, spend_limit_usd=spend_limit_usd)
         self.paths["route.json"].write_text(json.dumps(self.route))
         self.paths["mcp.json"].write_text(json.dumps(self.mcp(enabled_tools)))
-        self.paths["delivered-knowledge.json"].write_text(json.dumps(dict(schema="delivered-knowledge/2",version=None,commit=None,repository_id=None,coverage=None,articles=[],facts=[])))
+        self.paths["delivered-knowledge.json"].write_text(json.dumps(dict(schema="delivered-knowledge/3",version=None,commit=None,repository_id=None,coverage=None,articles=[],facts=[],
+                                                                                history=dict(replaced={},ended=[],retracted=[]))))
         self.paths["context.txt"].write_text("Frozen player guide")
         self.paths["prompt.txt"].write_text("Offline mission")
         self.paths["final.txt"].write_text("reserved")
@@ -388,10 +389,17 @@ def test_a_listed_newer_knowledge_version_is_delivered_and_an_entry_that_does_no
     hosted = host_factory([tool_response("integer", dict(value=7)),
                            tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None))],
                           enabled_tools=("integer",))
-    version = dict(schema="delivered-knowledge/2", version="v1", commit="c" * 40, repository_id="d" * 40,
-                   coverage=dict(schema="curator-coverage/2", session="2" * 32, actor="001", last_step=20),
-                   articles=[dict(id="article-a", title="A subject", lead="A useful lead. More.", body=[dict(text="A claim.", facts=["fact-a"])], links=[], last_confirmed=dict(session="s1", actor="001", step=1, order=[1, "001", 1]))],
-                   facts=[dict(id="fact-a", type="observation", text="A claim.", seen=dict(session="s1", actor="001", step=1, order=[1, "001", 1]))])
+    position = dict(session="s01", actor="001", step=1, order=[1, "001", 1])
+    shared = dict(tags=[], scope=dict(game="example"), branch_relation=None, lifecycle_state="active", needs_review=False,
+                  stale_citations=[], condition_unverified=False, unverified_branch=False, links=[], backlinks=[], shadowed_by=[],
+                  contradicted_by=[])
+    version = dict(schema="delivered-knowledge/3", version="v1", commit="c" * 40, repository_id="d" * 40,
+                   coverage=dict(schema="curator-coverage/2", session="s01", actor="001", last_step=20),
+                   articles=[dict(id="article-a", revision="article-a@v1", title="A subject", lead="A useful lead. More.",
+                                  body=[dict(text="A claim.", facts=["fact-a"])], **shared, last_confirmed=position)],
+                   facts=[dict(id="fact-a", claim_kind="mechanic", evidence_basis="observed", text="A claim.", **shared,
+                               cited_by_articles=["article-a"], citation_source_ids=["2" * 32 + "-1"], seen=position)],
+                   history=dict(replaced={}, ended=[], retracted=[]))
     data = json.dumps(version).encode()
     (tmp_path / "knowledge").mkdir()
     (tmp_path / "knowledge" / "v1.json").write_bytes(data)
@@ -409,7 +417,7 @@ def test_a_listed_newer_knowledge_version_is_delivered_and_an_entry_that_does_no
     delivered, = (e for e in deliveries if e["outcome"] == "delivered")
     assert (delivered["version"], delivered["previous_version"], delivered["coverage"], delivered["receiving_player_request_id"]) == (
         "v1", None, version["coverage"], "request-1")
-    assert (delivered["delivered_knowledge_schema"], delivered["grants_authority"], delivered["index_ids"]) == ("delivered-knowledge/2", False, ["article-a"])
+    assert (delivered["delivered_knowledge_schema"], delivered["grants_authority"], delivered["index_ids"]) == ("delivered-knowledge/3", False, ["article-a"])
     begin, body, end = delivered["text"].split("\n")
     assert begin.startswith("BEGIN FALLIBLE KNOWLEDGE UPDATE (v1)") and end == "END FALLIBLE KNOWLEDGE UPDATE (v1)"
     assert json.loads(body)["index"] == [dict(id="article-a", title="A subject", index="A useful lead")]
