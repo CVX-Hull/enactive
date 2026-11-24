@@ -47,7 +47,7 @@ async function scenario(t, sequence, overrides = {}) {
     return typeof item === 'function' ? item(init) : item;
   };
   const mcpConfig = {command:resolve(python),args:[fixture,log,pid],cwd:dir,enabled:true,required:true,enabled_tools:['observe','mutate','integer'],startup_timeout_sec:5,tool_timeout_sec:2,default_tools_approval_mode:'never',tools:{}};
-  const options = {knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
+  const options = {knowledge:emptyKnowledge(),finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
     onEvent:event=>{events.push(event);overrides.onEvent?.(event);}};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
@@ -103,5 +103,17 @@ const sessionId = '2'.repeat(32);
 const actorId = '3'.repeat(32);
 const collectArgs = {operation_id:handoffId};
 
+// Closed `delivered-knowledge/3` forms for the fixtures: the empty file, a position on an aliased session (`s01`...)
+// and plainly active, unbound records that a test changes with `fields`.
+const emptyKnowledge = () => ({schema:'delivered-knowledge/3',version:null,commit:null,repository_id:null,coverage:null,
+  articles:[],facts:[],history:{replaced:{},ended:[],retracted:[]}});
+const position = (step, session = 1) => ({session:`s${String(session).padStart(2,'0')}`,actor:'001',step,order:[session,'001',step]});
+const shared = () => ({tags:[],scope:{game:'example'},branch_relation:null,lifecycle_state:'active',needs_review:false,
+  stale_citations:[],condition_unverified:false,unverified_branch:false,links:[],backlinks:[],shadowed_by:[],contradicted_by:[]});
+const article = (id, fields = {}) => ({id,revision:`${id}@v1`,title:id,lead:`Lead of ${id}.`,
+  body:[{text:`Claim of ${id}.`,facts:[]}],...shared(),last_confirmed:position(1),...fields});
+const fact = (id, fields = {}) => ({id,claim_kind:'mechanic',evidence_basis:'observed',text:`Claim of ${id}.`,...shared(),
+  cited_by_articles:[],citation_source_ids:[`${'a'.repeat(32)}-1`],seen:position(1),...fields});
+
 export { realDelay, python, fixture, png, model, route, usageRecord, reply, rateLimit, scenario, assertRequestMetadata, eventStream,
-  handoffArgs, handoffTools, handoffId, sessionId, actorId, collectArgs };
+  handoffArgs, handoffTools, handoffId, sessionId, actorId, collectArgs, emptyKnowledge, position, article, fact };

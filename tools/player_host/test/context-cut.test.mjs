@@ -9,9 +9,9 @@ import { PassThrough } from 'node:stream';
 import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration } from '../host.mjs';
 import { compactSourceIds, coverageEntry, cutBriefing, cutMarker, CUT_BRIEFING_ARTICLES, CUT_BRIEFING_CHARS,
-  CUT_BRIEFING_FACTS, CUT_BRIEFING_SNIPPET_CHARS } from '../knowledge.mjs';
-import { knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
-import { actorId, model, png, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
+  CUT_BRIEFING_FACTS, CUT_BRIEFING_SNIPPET_CHARS, validateKnowledge } from '../knowledge.mjs';
+import { contest, knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
+import { actorId, article, fact, model, png, position, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
 
 const tokenCut = {high_mark:20_000, low_mark:2_600, min_free:1};
 const imageCut = {high_mark:90_000, low_mark:80_000, min_free:1};
@@ -98,7 +98,7 @@ async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, block
     // Give the off-path reader a polling interval while the provider holds its response.
     await realDelay(1200);
   };
-  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
     session:sessionId, actorId, pendingControlId:null, control, finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
@@ -232,14 +232,13 @@ test('an image cut leaves a block of headroom, so the next request extends the c
 });
 
 test('a cut briefing is bounded: recent articles as leads and recent standalone facts as index lines', () => {
-  const at = n => ({session:'s1', actor:'001', step:n, order:[1, '001', n]});
   // Delivered order is not recency: the first three articles are the most recently confirmed.
-  const articles = Array.from({length:CUT_BRIEFING_ARTICLES + 3}, (_, n) => ({id:`article-${n}`, title:`Article ${n}`,
-    lead:`Lead ${n}. More detail.`, body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}], links:[],
-    last_confirmed:at(n < 3 ? 10_000 + n : n)}));
-  const filed = articles.map((_, n) => ({id:`filed-${n}`, type:'observation', text:`Claim ${n}.`, seen:at(n)}));
+  const articles = Array.from({length:CUT_BRIEFING_ARTICLES + 3}, (_, n) => article(`article-${n}`, {title:`Article ${n}`,
+    lead:`Lead ${n}. More detail.`, body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}],
+    last_confirmed:position(n < 3 ? 10_000 + n : n)}));
+  const filed = articles.map((_, n) => fact(`filed-${n}`, {text:`Claim ${n}.`, cited_by_articles:[`article-${n}`], seen:position(n)}));
   const store = count => ({...knowledge(), articles, facts:[...filed, ...Array.from({length:count}, (_, n) =>
-    ({id:`fact-${n}`, subject:`Fact ${n}`, type:'observation', text:`Standalone claim ${n}. Detail.`, seen:at(n)}))]});
+    fact(`fact-${n}`, {subject:`Fact ${n}`, text:`Standalone claim ${n}. Detail.`, seen:position(n)}))]});
   const small = cutBriefing(store(CUT_BRIEFING_FACTS + 5));
   const data = JSON.parse(small.text.split('\n')[1]);
   const kept = [0, 1, 2, ...Array.from({length:CUT_BRIEFING_ARTICLES - 3}, (_, n) => n + 6)].map(n => `article-${n}`);
@@ -255,17 +254,15 @@ test('a cut briefing is bounded: recent articles as leads and recent standalone 
 });
 
 test('a cut briefing stays within its serialized size cap however long the entries are', () => {
-  const at = n => ({session:'s1', actor:'001', step:n, order:[1, '001', n]});
   const payload = briefing => JSON.parse(briefing.text.split('\n')[1]);
   const size = briefing => briefing.text.split('\n')[1].length;
   const huge = 100_000;
   // Five valid articles with 100 KB leads, the newest titled too long to fit even clipped, and thirty standalone
   // facts of 100 KB with no sentence break, so their index lines are 100 KB before clipping.
-  const articles = Array.from({length:5}, (_, n) => ({id:`article-${n}`, title:n === 4 ? 'T'.repeat(CUT_BRIEFING_CHARS) : `Article ${n}`,
-    lead:'L'.repeat(huge), body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}], links:[], last_confirmed:at(n)}));
-  const filed = articles.map((_, n) => ({id:`filed-${n}`, type:'observation', text:`Claim ${n}.`, seen:at(n)}));
-  const standalone = Array.from({length:30}, (_, n) => ({id:`fact-${n}`, subject:`Fact ${n}`, type:'observation',
-    text:'F'.repeat(huge), seen:at(n)}));
+  const articles = Array.from({length:5}, (_, n) => article(`article-${n}`, {title:n === 4 ? 'T'.repeat(CUT_BRIEFING_CHARS) : `Article ${n}`,
+    lead:'L'.repeat(huge), body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}], last_confirmed:position(n)}));
+  const filed = articles.map((_, n) => fact(`filed-${n}`, {text:`Claim ${n}.`, cited_by_articles:[`article-${n}`], seen:position(n)}));
+  const standalone = Array.from({length:30}, (_, n) => fact(`fact-${n}`, {subject:`Fact ${n}`, text:'F'.repeat(huge), seen:position(n)}));
   const store = {...knowledge(), articles, facts:[...filed, ...standalone]};
   assert.ok(JSON.stringify(store).length > 30 * huge, 'the store itself is megabytes');
   const bounded = cutBriefing(store), data = payload(bounded);
@@ -292,12 +289,41 @@ test('a cut briefing stays within its serialized size cap however long the entri
   assert.deepEqual([payload(single).leads.map(lead => lead.lead.length), payload(single).unlisted_entries],
     [[CUT_BRIEFING_SNIPPET_CHARS], 0]);
   const giantEnvelope = cutBriefing({...knowledge(),
-    coverage:{schema:'curator-coverage/2', session:'s'.repeat(CUT_BRIEFING_CHARS), actor:null, last_step:null},
+    coverage:{schema:'curator-coverage/2', session:`s1${'0'.repeat(CUT_BRIEFING_CHARS)}`, actor:null, last_step:null},
     articles:[], facts:[]});
   assert.ok(size(giantEnvelope) <= CUT_BRIEFING_CHARS, `oversized coverage payload ${size(giantEnvelope)} chars`);
   assert.deepEqual([payload(giantEnvelope).coverage, payload(giantEnvelope).leads, payload(giantEnvelope).unlisted_entries],
     [null, [], 0]);
 });
+
+// Evidence gate 10 (cut and cache): the status markers are counted against the cap.
+test('a cut briefing whose entries carry every status marker stays within its cap', () => {
+  const flagged = {scope:{game:'example', world:null}, branch_relation:'unknown', lifecycle_state:'contested',
+    unverified_branch:true, needs_review:true, condition_unverified:true};
+  const articles = Array.from({length:CUT_BRIEFING_ARTICLES + 8}, (_, n) => article(`article-${n}`, {...flagged,
+    title:`Article ${n}`, lead:`${'L'.repeat(200)}.`, body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}], last_confirmed:position(n)}));
+  const filed = articles.map((_, n) => fact(`filed-${n}`, {...flagged, cited_by_articles:[`article-${n}`], seen:position(n)}));
+  const standalone = Array.from({length:CUT_BRIEFING_FACTS + 8}, (_, n) => fact(`fact-${n}`, {...flagged,
+    subject:`Fact ${n}`, text:`${'F'.repeat(200)}.`, seen:position(n)}));
+  const store = {...knowledge(), articles, facts:[...filed, ...standalone]};
+  // Each fact is contested by a real peer of equal scope, and each article inherits `contested` from its fact.
+  for (const group of [filed, standalone])
+    for (let n = 0; n < group.length; n += 2) contest(store, group[n].id, group[n + 1].id);
+  const bounded = cutBriefing(validateKnowledge(store));
+  const text = bounded.text.split('\n')[1], data = JSON.parse(text);
+  assert.ok(text.length <= CUT_BRIEFING_CHARS, `payload ${text.length} chars`);
+  assert.ok(data.leads.length > 0 && data.index.length > 0 && data.unlisted_entries > 0, 'the cap, not the counts, bounds it');
+  for (const entry of [...data.leads, ...data.index])
+    assert.deepEqual(entry.status, ['contested', 'unverified_branch', 'needs_review', 'condition_unverified']);
+  // Without the markers the same store fits more entries: the cap counted the added bytes.
+  const plain = cutBriefing(validateKnowledge({...knowledge(), articles:articles.map(a => article(a.id, {...a, ...flaggedOff})),
+    facts:[...filed, ...standalone].map(f => fact(f.id, {...f, ...flaggedOff}))}));
+  const plainData = JSON.parse(plain.text.split('\n')[1]);
+  assert.ok(plainData.unlisted_entries < data.unlisted_entries);
+  assert.ok([...plainData.leads, ...plainData.index].every(entry => !Object.hasOwn(entry, 'status')));
+});
+const flaggedOff = {scope:{game:'example'}, branch_relation:null, lifecycle_state:'active', unverified_branch:false,
+  needs_review:false, condition_unverified:false, links:[], backlinks:[], contradicted_by:[]};
 
 test('an otherwise eligible prefix below min_free falls back to image eviction', async t => {
   const {events, payloads} = await play(t, async (n, {publish}) => {
@@ -396,7 +422,7 @@ test('an unknown player-transport/2 operation in a batch prevents cutting that b
         actor_id:actorId, session:sessionId, operation_id:operationId(calls), source:{source_id:sourceId(calls)}}};
   });
   const events = [], payloads = [];
-  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
     session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
@@ -459,7 +485,7 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
   });
   const events = [];
   let reqs = 0;
-  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
     session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
@@ -486,7 +512,7 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
   operations = 0;
   const events2 = [];
   let reqs2 = 0;
-  const res2 = await runHost({configuration:config2, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list2,
+  const res2 = await runHost({configuration:config2, knowledge:knowledge('v1'), knowledgeUpdates:list2,
     session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir2,
