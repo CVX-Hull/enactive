@@ -170,14 +170,31 @@ DIRECT_ANSWERS = (
 )
 
 
+def _v2_weighted_terms(record: dict) -> tuple[dict[str, int], int]:
+    """Historical #920 field-weighted BM25 index over sealed `delivered-knowledge/2` records."""
+    if 'body' in record:
+        fields = ((3, record['title']), (2, record['lead']), (1, ' '.join(c['text'] for c in record['body'])))
+    else:
+        fields = ((3, record.get('subject', '')), (2, record.get('type', '')), (1, record['text']))
+    weights: dict[str, int] = {}
+    length = 0
+    for weight, text in fields:
+        for term in production.terms_of(text):
+            weights[term] = weights.get(term, 0) + weight
+            length += weight
+    return weights, length
+
+
 class Corpus:
-    """One delivered file under the production reader, with the BM25 index and the projected one-hop graph."""
+    """One sealed `delivered-knowledge/2` file with the #920 BM25 baseline index and the projected one-hop graph."""
 
     def __init__(self, name: str, value: dict, where: str = 'delivered knowledge'):
+        if (not isinstance(value, dict) or value.get('schema') != 'delivered-knowledge/2'
+                or not isinstance(value.get('articles'), list) or not isinstance(value.get('facts'), list)):
+            raise ValueError(f'{where}: expected sealed delivered-knowledge/2 benchmark input')
         self.name = name
-        self.knowledge = production.Knowledge.from_dict(value, where)
-        self.records = self.knowledge.records
-        self.index = [production._weighted_terms(r) for r in self.records]
+        self.records = list(value['articles']) + list(value['facts'])
+        self.index = [_v2_weighted_terms(r) for r in self.records]
         self.position = {r['id']: i for i, r in enumerate(self.records)}
         self.article = [('body' in r) for r in self.records]
         titles = {r['title']: i for i, r in enumerate(self.records) if 'body' in r}
@@ -255,14 +272,12 @@ class Corpus:
 
     def rank(self, method: str, query: str) -> list[int]:
         if method == 'prod_bm25':
-            return [self.position[r['id']] for r in self.knowledge.query(query)['records']]
+            return self.ordered(self.bm25(query))[:LIMIT]
         order = self.ordered(self.one_hop(self.bm25(query)))
         return self.walk(order, skip=method == 'bm25_1hop_skip')
 
     def query(self, method: str, query: str) -> list[dict]:
         """The full result a player would receive, deep-copied as the production reader does; used for timing."""
-        if method == 'prod_bm25':
-            return self.knowledge.query(query)['records']
         return [copy.deepcopy(self.records[i]) for i in self.rank(method, query)]
 
     def ids(self, positions: list[int]) -> list[str]:

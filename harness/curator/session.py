@@ -415,9 +415,7 @@ def _validated_prefix(record_dir: Path, submissions: list[Path]) -> int:
             break
         expected.append((path.relative_to(record_dir).as_posix(), _sha(path)))
     longest = 0
-    events = record_dir / 'host.jsonl'
-    if not events.exists():
-        events = record_dir / 'host-output.log'
+    events = record_dir / 'host-output.log'
     if not expected or not events.is_file():
         return longest
     with events.open(encoding='utf-8', errors='replace') as stream:

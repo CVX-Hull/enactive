@@ -24,7 +24,7 @@ version and state handling.
 | Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
 | Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
 | Host JSONL, recall events and context manifests | [Player host telemetry](contracts/player-host-telemetry.md) |
-| Curator facts, articles, types, submissions, gate, restore, drafts and sessions | [Curator contract](contracts/curator.md), [curator component](components/curator.md) |
+| Curator facts, articles, submissions, validation, gate, restore, drafts and sessions | [Curator contract](contracts/curator.md), [curator component](components/curator.md) |
 | Interpretive run evaluation | [Evaluation records and metrics](contracts/evaluation-record.md) |
 | Offline diagnostics and judging | [Measurement tools](contracts/measurement-tools.md) |
 | Withholding study commands and file formats | [Withholding study](contracts/withholding-study.md) |

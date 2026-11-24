@@ -68,7 +68,12 @@ def read_submission(directory: Path | str, *, dir_fd: int | None = None) -> tupl
         if error.validator == 'oneOf' and path[:1] == ['changes'] and isinstance(error.instance, dict):
             op = error.instance.get('op')
             if op == 'retire_fact':
-                op = f'{op}_{error.instance.get("reason_kind")}'
+                reason_kind = error.instance.get('reason_kind')
+                if reason_kind not in ('wrong', 'ended'):
+                    diagnostics.append(_diagnostic(path + ['reason_kind'],
+                                                   "reason_kind must be 'wrong' or 'ended'"))
+                    continue
+                op = f'{op}_{reason_kind}'
             if isinstance(op, str) and f'op_{op}' in _validator('curator-submission.schema.json').schema['$defs']:
                 shape = _validator('curator-submission.schema.json', f'op_{op}')
                 for problem in shape.iter_errors(error.instance):

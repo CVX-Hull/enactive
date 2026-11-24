@@ -73,7 +73,7 @@ below own [launch](#freeze-launch-and-inspect) and [cleanup](#failure-and-owned-
 
 ## Freeze, launch and inspect
 
-1. Prepare the exact clean source and fresh `campaign-run/12` package through the
+1. Prepare the exact clean source and fresh `campaign-run/13` package through the
    [campaign procedure](campaign-run.md). Resolve scope, spending, original
    resources, ending reserves and stop rules before admission. Preserve original
    saves and failed chains; old experiment launchers stay historical evidence.

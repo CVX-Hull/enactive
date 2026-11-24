@@ -154,7 +154,7 @@ def _entries(objects: Path, tree: str) -> dict[str, str]:
 
 
 def read_versions(repository: Path) -> list[dict]:
-    """Every published /3 snapshot: facts and articles separately, with its byte size."""
+    """Every published /4 snapshot: facts and articles separately, with its byte size."""
     objects, tags = repository / '.git' / 'objects', repository / '.git' / 'refs' / 'tags'
     if not tags.is_dir():
         raise StoreError(f'{repository}: no loose version tags')

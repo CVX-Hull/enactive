@@ -1,9 +1,9 @@
 ---
 owner: lead
-status: active
+status: historical
 date: '2026-11-24'
-scope: 'Approved working specification for one coordinated S-MIGRATION from curator-knowledge/3, delivered-knowledge/2 and campaign-run/12 to curator-knowledge/4, delivered-knowledge/3 and campaign-run/13 (Wave 3: issues 936 and 937; becomes historical when #937 merges into the curator, player-host, campaign-run and spectator-view contracts).'
-review_trigger: 'Wave 3 (#937) merges and moves this design into active contracts (marking this note historical), a second game binding is started, or any target contract changes before #937 lands'
+scope: 'Approved working specification for one coordinated S-MIGRATION from curator-knowledge/3, delivered-knowledge/2 and campaign-run/12 to curator-knowledge/4, delivered-knowledge/3 and campaign-run/13 (Wave 3: issues 936 and 937); adopted into the curator, player-host, campaign-run and spectator-view contracts.'
+replacement: docs/contracts/curator.md
 ---
 
 # Scoped, traceable knowledge: `curator-knowledge/4` and `delivered-knowledge/3`
@@ -70,8 +70,8 @@ review_trigger: 'Wave 3 (#937) merges and moves this design into active contract
   1. Adopt the fixed `claim_kind` core and the five stored lifecycle states, and retire
      `curator-type/2` and `ontology/types.json` in favour of tags. This rewrites five
      type rulings, listed in [the retired type rulings](#what-the-retired-type-rulings-become).
-     They revisit [player-proposed, explained types](../decisions/owner-decisions.md#player-system-proposes-and-explains-types)
-     and [types earn their place](../decisions/owner-decisions.md#types-earn-their-place).
+     They revisit [player-proposed, explained types](../decisions/owner-decisions-archive.md#player-system-proposes-and-explains-types)
+     and [types earn their place](../decisions/owner-decisions-archive.md#types-earn-their-place).
      They partly revisit [free-text facts](../decisions/owner-decisions.md#free-text-facts-with-optional-subject),
      which dropped fixed kinds. **Adopt.**
   2. Let admission sessions publish articles whose citations went stale. They are flagged
@@ -1700,9 +1700,9 @@ gets an explicit replacement so that nothing is dropped silently:
 
 | Ruling today | Source | After this migration |
 | --- | --- | --- |
-| Types are proposed by the player system and checked against existing types | [Decision](../decisions/owner-decisions.md#player-system-proposes-and-explains-types); curator contract `add_type` | The curator proposes tags. The brief lists existing tags with counts over facts and articles, and near pairs. `claim_kind` is fixed and needs no proposal |
+| Types are proposed by the player system and checked against existing types | [Decision](../decisions/owner-decisions-archive.md#player-system-proposes-and-explains-types); curator contract `add_type` | The curator proposes tags. The brief lists existing tags with counts over facts and articles, and near pairs. `claim_kind` is fixed and needs no proposal |
 | Types are explained to every reader | Same decision | The five `claim_kind` values are defined once in the curator instructions and the [player guide](../player-guide.md). A tag carries no definition; it is seen with its usage count. **This is the ruling the owner revisits** |
-| Types earn their place or go; an unused type is flagged | [Decision](../decisions/owner-decisions.md#types-earn-their-place); the type list in the brief | A tag exists only while a current record uses it, so a tag with no use leaves the list and needs no "unused" flag |
+| Types earn their place or go; an unused type is flagged | [Decision](../decisions/owner-decisions-archive.md#types-earn-their-place); the type list in the brief | A tag exists only while a current record uses it, so a tag with no use leaves the list and needs no "unused" flag |
 | Grooming re-types with `revise_types`, at most once per submission, recorded in `retyped` | Curator contract | `retag`, grooming only, at most once per submission, recorded in `retagged` |
 | Near pairs use the words of a type's name and field names | Curator contract, the type list | Near pairs use the words of the tag alone. The 1/3 shared-word rule and the size limits are unchanged, now in [`type_usage.py`](../../harness/curator/type_usage.py)'s successor |
 

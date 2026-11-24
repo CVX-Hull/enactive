@@ -1,40 +1,41 @@
 ---
 owner: lead
-review_trigger: A change to the knowledge repository layout, the fact, article, type or submission shapes, the gate checks or result, session inputs, the draft lifecycle, close-out, restore or the grooming summary
+review_trigger: A change to the knowledge repository layout, the fact, article or submission shapes, the gate checks or result, session inputs, validation, the draft lifecycle, close-out, restore or the grooming summary
 status: active
 ---
 
 # Curator contract
 
-This contract states the formats and rules for curator sessions, drafts, publication,
-restore and grooming. The [curator component](../components/curator.md) explains the
-responsibilities and shows the pipeline from trace to delivered knowledge.
+This contract states the formats and rules for curator sessions, validation, drafts,
+publication, restore and grooming. The [curator component](../components/curator.md)
+explains the responsibilities and shows the pipeline from trace to delivered knowledge.
 [Curator hosts](../operations/curator-hosts.md) owns host configuration and procedures.
 Terms are in the [glossary](../glossary.md).
 
 | Format | Where | Written by |
 | --- | --- | --- |
-| [`curator-knowledge/3`](#knowledge-repository-curator-knowledge3) | `knowledge.json` | Repository initialization |
-| [`curator-fact/4`](#facts-curator-fact4) | `facts.jsonl`: [facts](#facts-curator-fact4) and [articles](#articles) | Gate, from submissions |
-| [`curator-type/2`](#types-curator-type2) | `ontology/types.json` | Gate, from submissions |
-| [`curator-submission/1`](#submissions-curator-submission1) | `submissions/<id>/submission.json` | Curator |
+| [`curator-knowledge/4`](#knowledge-repository-curator-knowledge4) | `knowledge.json` | Repository initialization |
+| [`curator-fact/5`](#facts-curator-fact5) | `facts.jsonl`: [facts](#facts-curator-fact5) and [articles](#articles) | Gate, from submissions |
+| [`curator-submission/2`](#submissions-curator-submission2) | `submissions/<id>/submission.json` | Curator |
 | [`curator-coverage/2`](#coverage-stamp-curator-coverage2) | `coverage.json` | Gate, from the session runner's stamp |
 | [`curator-gate/2`](#gate-result-curator-gate2) | `gate.jsonl` | Gate |
 | `container-manifest/1` | [Session](#session-close-out) and [draft](#drafts) manifests | Session runner |
-| [`curator-boundary-grooming/1`](#boundary-grooming-summary-curator-boundary-grooming1) | `grooming-summary.json` | Boundary grooming command |
+| [`curator-boundary-grooming/2`](#boundary-grooming-summary-curator-boundary-grooming2) | `grooming-summary.json` | Boundary grooming command |
 
 ## Who decides what
 
-The model decides what to record, how to word it, what to merge or retire, and which
-types and articles exist. Software writes provenance, sighting order and versions, and
-checks structure. No format or check names a kind of thing in a game, under the
-[charter's](../charter.md) portability constraint.
+The model decides what to record, how to word it, what to merge, narrow or retire, and
+which tags and articles exist. Software writes provenance, sighting order, scopes bound to
+the cited world, lifecycle flags and versions, and checks structure. No format or check
+names a kind of thing in a game, under the [charter's](../charter.md) portability
+constraint.
 
-The gate reads references and shapes. It never judges whether a claim is true, whether
-a `game` fact holds in every world, or whether article prose repeats one world's detail.
-Facts are hypotheses that an actor is told to check cheaply before relying on them.
+The gate reads references, scopes and shapes. It never judges whether a claim is true,
+whether an unbound fact holds in every world, or whether article prose repeats one
+world's detail. Facts are hypotheses that an actor is told to check cheaply before
+relying on them.
 
-## Knowledge repository (`curator-knowledge/3`)
+## Knowledge repository (`curator-knowledge/4`)
 
 One Git repository per game lives under a project-local root, by default
 `.runtime/knowledge/`
@@ -54,221 +55,226 @@ A published tree holds exactly these files:
 
 | File | Content |
 | --- | --- |
-| `knowledge.json` | Exactly `schema` (`curator-knowledge/3`) and `game` |
-| `facts.jsonl` | Fact and article records, current and historical |
-| `ontology/types.json` | The current types |
-| `provenance.json` | [Frame positions, session labels and the last admission](#provenance) |
+| `knowledge.json` | Exactly `schema` (`curator-knowledge/4`) and `game` |
+| `facts.jsonl` | Fact and article revision records, current and historical |
+| `provenance.json` | [Frame positions, session labels, lineage edges and the last admission](#provenance) |
 | `coverage.json` | The [coverage stamp](#coverage-stamp-curator-coverage2); present from the first publication of a submission |
 | `programs/.keep`, `tests/.keep` | Empty placeholders; the gate refuses any other content there |
 
 - **Versions.** Each publication is one commit on `main` and one tag `v<N>`. Tagging
   establishes publication, and the highest tag is the published version. Initialization
-  writes `v0` with no records or types.
+  writes `v0` with no records.
 - **Other formats.** Readers and writers refuse another repository or record schema with
-  a message to start a new repository. There is no layout migration and no import.
+  a message to start a new repository. There is no layout migration and no import;
+  `ontology/types.json` and `curator-type/2` are retired.
 
 ### Provenance
 
-`provenance.json` holds `frames`, `sessions` and, after an admission publishes,
-`last_admission`.
+`provenance.json` holds `frames`, `sessions`, `lineages` and, after an admission
+publishes, `last_admission`.
 
 - **`frames`** maps a frame source ID to its position: `session`, `actor`, `step` and
   `order`. `order` is the triple of admission ordinal, actor directory and step. It
   compares sightings and says nothing about elapsed time. A frame keeps its recorded
   position; a new frame takes its earliest occurrence in the window.
 - **`sessions`** maps a sealed session ID (32 hexadecimal digits) to its directory
-  `name`, `world`, `lineage` and `admission`. A frame source ID begins with its sealed
-  session ID, so a citation identifies its own session.
+  `name`, `world`, `lineage`, `admission` and `context` (a map of declared run-wide
+  axes, `{}` when none are declared). A frame source ID begins with its sealed session
+  ID, so a citation identifies its own session.
+- **`lineages`** records lineage fork edges and restore cuts when a world has multiple
+  lineages or restored runs, so export computes inherited and unknown timeline states
+  without exposing raw labels.
 - **`last_admission`** holds the `coverage` stamp of the last admission publication and
   the `citations` accumulated across the published windows of that admission.
 
-### Worlds and lineages
+### Worlds, lineages and context axes
 
 The operator chooses an opaque `world` label of 1 to 40 printable ASCII characters,
 unique among the worlds of one game's repository, and freezes it in the run package
 ([decision on a separate world label](../decisions/owner-decisions.md#a-separate-world-label)).
-The operator assigns a distinct label to each world and reuses a label across lineages
-only when they share that world; the exporter selects `world` facts by label equality.
 A package that names a lineage must name a world, a world may stand without a lineage,
-and several lineages may share a world. Nothing compares the label with the game, so a
-consistent wrong label goes undetected.
+and several lineages may share a world. The package also declares a required top-level
+`context` map (`{}` by default) of 0 to 8 run-wide invariant axes (`[a-z][a-z0-9_]{0,31}`,
+never `game` or `world`, values 1 to 64 printable ASCII characters). Nothing compares
+labels or axes with the game, so a consistent wrong declaration goes undetected.
 
 The [trace projection](measurement-tools.md#trace-projection) verifies a session's
-labels. A session without verified labels has no world and supports only `game` facts.
+labels and `context`. A session without verified labels has no world and supports only
+unbound facts.
 
 The gate refuses a publication when any compatible tagged version, including one a
 restore has since replaced, conflicts with the session labels:
 
-- a sealed session ID recorded with a different name, world, lineage or admission;
+- a sealed session ID recorded with a different name, world, lineage, admission or
+  `context`;
 - one directory name with two sealed IDs;
 - one lineage and admission with two sealed IDs;
 - one lineage with two worlds.
 
 A session recorded with no world stays so.
 
-## Facts (`curator-fact/4`)
+## Facts (`curator-fact/5`)
 
-A fact is one durable claim.
-[World memory first](../decisions/owner-decisions.md#world-memory-first) and
+A fact is one durable claim. The JSON Schema in
+[`schemas/curator-fact.schema.json`](../../schemas/curator-fact.schema.json) closes its
+stored shape. [World memory first](../decisions/owner-decisions.md#world-memory-first),
 [free-text facts](../decisions/owner-decisions.md#free-text-facts-with-optional-subject)
-govern the shape.
+and the [knowledge graph and scoping decision](../decisions/owner-decisions.md#knowledge-graph-scoping-rfc-approved)
+govern the fields.
 
 | Field | Written by | Rule |
 | --- | --- | --- |
-| `schema`, `record` | curator | `curator-fact/4` and `fact` |
-| `id` | curator | Non-empty; unused by any record in the compatible tagged history |
-| `type` | curator | A type that exists once the submission is applied |
-| `text` | curator | Non-empty; the claim in the curator's words |
-| `known` | curator | `observed` (the cited frames show it), `inferred` (concluded from them) or `hinted` (rests on a player hint visible in the cited steps). The gate checks the value only |
-| `scope.game` | curator | The repository's game |
-| `scope.level` | curator | `world` (true of the world it was seen in) or `game` (true in any world) |
-| `scope.world` | software | On a `world` fact only: the one world of every cited frame's session |
-| `citations` | curator | Non-empty, distinct frame source IDs |
-| `subject` | curator | Optional non-empty short name |
-| `seen` | software | Position of the latest cited frame by `order` |
+| `schema`, `record` | curator | `curator-fact/5` and `fact` |
+| `id` | curator | Matches `[a-z0-9][a-z0-9-]{0,63}`; unused across compatible tagged history |
+| `claim_kind` | curator | Fixed kind: `interface`, `mechanic`, `entity_property`, `instance_state` or `strategy` |
+| `evidence_basis` | curator | `observed`, `inferred` or `hinted` |
+| `tags` | curator | 0 to 8 distinct hyphenated tags (`[a-z0-9]+(?:-[a-z0-9]+)*`, max 32 chars) |
+| `text` | curator | Non-blank claim in the curator's words |
+| `subject` | curator | Optional non-blank short name |
+| `scope` | curator + software | Open axis map (1 to 8 keys). Software sets `game` and, when `binds: ["world"]`, `world` |
+| `when` | curator | Optional `{note, requires}` for transient conditions not on `scope` |
+| `links` | curator | Distinct `{rel, target}` edges: `depends_on`, `contradicts`, `part_of`, `see_also` |
+| `citations` | curator | Non-empty distinct frame source IDs |
+| `seen`, `valid_from`, `valid_to` | software | Sighting and end positions (`valid_to` is null until an `ended` retirement sets it) |
+| `lineages` | software | Lineages observed on cited frames (world-bound facts only) |
+| `lifecycle_state` | software | `active`, `contested`, `superseded`, `retracted` or `ended` |
+| `stale_citations`, `needs_review` | software | Fixed-point review flags propagated over `depends_on` and citations |
 | `published_in`, `session` | software | Version and curator session that published it |
-| `retyped` | software | List of `{from, to, version}` type assignments |
-| `superseded_by` or `retired` | software | Replacement ID, or `{reason, citations, published_in, session}`; never both |
+| `retagged` | software | Optional list of `{from, to, version}` tag reassignments |
+| `superseded_by` or `retired` | software | Replacement IDs and reason kind, or retirement record (`wrong` or `ended` events); never both |
 
-- **Submitted and stored scope differ.** A submitted `scope` holds exactly `game` and
-  `level`. A stored `world` fact also holds `world`. The gate refuses a `world` fact
-  whose citations name two worlds or a session with no world.
-- **Current records.** A record is current until it has `superseded_by` or `retired`.
-  Historical records stay in `facts.jsonl` as evidence.
-- **Replacing across scopes.** A replacement has the same level, and for a `world` fact
-  the same world, as every fact it supersedes. A `world` fact is retired only with
-  citations from its own world. No operation promotes a `world` fact to a `game` fact.
-- **Game scope rests on the curator's word.** The gate asks for no evidence from a
-  second world.
-- **Time.** `seen` is the one stored time. No game clock or wall time is kept, so a
-  fact's age in game time cannot be computed. Where time matters, `text` states it as
-  the screen showed it.
-- **No belief value.** A fact carries no belief, confidence or weight
+- **Submitted and stored scope differ.** A submitted `scope` names only curator-declared
+  axes (never `game` or `world`); the curator binds a fact to the cited world with
+  `binds: ["world"]`. Every `instance_state` fact must bind `world`. Software fills
+  `scope.game` from the repository and `scope.world` from the one world of every cited
+  frame's session, refusing mixed worlds or unlabelled sessions. Declared non-`game`,
+  non-`world` axes must match the cited sessions' `context`.
+- **Current records.** A record is current while its `lifecycle_state` is `active` or
+  `contested`. `superseded`, `retracted` and `ended` records stay in `facts.jsonl` as
+  evidence; `superseded` records always hold a non-empty `superseded_by`.
+- **Scope lattice and replacement.** Scope `A` is at least as general as `B` when every
+  key-value pair of `A` is present in `B`. `supersede_fact` preserves the superseded
+  facts' scope (and world); `narrow_fact` replaces one fact with two or more strictly
+  narrower facts whose scopes refine the original. `retire_fact` with `reason_kind: "ended"`
+  records observed `transition` or `absence` events with `end_citations` on a surviving
+  segment of the fact's world.
+- **Conflicts and shadowing.** A `contradicts` edge between comparable scopes at equal
+  scope marks both `contested`; between strictly ordered scopes it is local shadowing,
+  not a conflict.
+- **No belief value.** A fact carries no probability, confidence or weight
   ([decision](../decisions/owner-decisions.md#no-belief-value-in-the-fact-store)).
-- **Asserter.** Only a curator session submits facts, and `session` names it.
 
 ## Articles
 
 Facts are the unit of evidence and articles the unit of reading
 ([decision](../decisions/owner-decisions.md#curator-writes-articles-over-facts)).
-Articles share `facts.jsonl` and the `curator-fact/4` schema.
+Articles share `facts.jsonl` and `curator-fact/5`. Each article has a stable `slug`
+across revisions; software assigns each revision ID `<slug>@v<N>`.
 
 | Field | Written by | Rule |
 | --- | --- | --- |
-| `schema`, `record` | curator | `curator-fact/4` and `article` |
-| `id` | curator | As for a fact; facts and articles share one set of IDs |
-| `title` | curator | Non-empty; unique among current articles |
-| `lead` | curator | Non-empty. The instructions ask for one or two sentences an actor can act on; the gate does not parse them |
-| `body` | curator | Non-empty list of exactly `{text, facts}` claims; each `text` is a nonblank string and `facts` is a non-empty list of distinct current `game` fact IDs |
-| `links` | curator | Distinct titles of other current articles; may be empty |
-| `last_confirmed` | software | Latest `seen` among the cited facts |
-| `published_in`, `session`, `superseded_by`, `retired` | software | As for a fact; an article's `retired` has empty `citations` |
+| `schema`, `record` | curator | `curator-fact/5` and `article` |
+| `slug` | curator | Stable identifier (`[a-z0-9][a-z0-9-]{0,63}`); unique among current articles |
+| `id` | software | `<slug>@v<N>` assigned on publication; facts and slugs share one namespace |
+| `title` | curator | Non-blank; unique among current articles |
+| `lead` | curator | Non-blank summary an actor can act on |
+| `body` | curator | Non-empty list of `{text, facts}` claims citing current facts compatible with `scope` |
+| `tags` | curator | 0 to 8 distinct tags, counted alongside facts |
+| `scope` | curator + software | Open axis map; articles without `world` cite unbound facts, working articles cite `world` facts |
+| `links` | curator | Distinct `{rel, target}` edges to facts or article slugs |
+| `last_confirmed` | software | Latest `seen` among cited facts |
+| `lifecycle_state`, `stale_citations`, `needs_review` | software | Fixed-point state and flags |
+| `published_in`, `session`, `retagged`, `superseded_by`, `retired` | software | Revision provenance; article `retired` carries `reason` and `reason_kind` (`wrong` or `editorial`) |
 
-An article that cites a `world` fact is refused at publication and at restore. `world`
-facts stand alone. Every claim traces through a fact to a frame.
+An article cites only facts whose scope is at least as general as the article's scope
+(or, for a world-scoped working article, facts of the same world or unbound facts).
+Every claim traces through a fact to a frame.
 
-## Types (`curator-type/2`)
-
-| Field | Written by | Rule |
-| --- | --- | --- |
-| `schema` | curator | `curator-type/2` |
-| `name` | curator | Non-empty; unique in the ontology |
-| `description` | curator | Text |
-| `fields` | curator | List of strings; adds no keys to facts |
-| `identity` | curator | Distinct names from `fields`, possibly empty, that say when two facts are about the same thing |
-| `reason` | curator | Non-blank: why the type is needed and how it relates to existing types |
-| `published_in` | software | Version that added the type or last wrote it by a revision |
-
-- **Identity is guidance.** A fact has no typed values, so the gate cannot compare facts
-  by identity.
-- **Reason is stated, not judged.** The gate checks that it is not blank. A
-  specialization is stated there; the format has no parent field.
-- **Definitions stay recoverable.** Every fact a submission adds names a type that
-  exists once the submission is applied, so the version in `published_in` holds the
-  definition the fact was written under.
-
-## Submissions (`curator-submission/1`)
+## Submissions (`curator-submission/2`)
 
 A submission is a directory `submissions/<id>/` with one `submission.json` of at most
-200 changes and 256 KiB.
+200 changes and 256 KiB, closed by
+[`schemas/curator-submission.schema.json`](../../schemas/curator-submission.schema.json).
 
 ```json
-{"schema": "curator-submission/1", "base_version": "v3", "summary": "…",
- "changes": [{"op": "add_fact", "fact": {"schema": "curator-fact/4", "record": "fact", "id": "f12",
-              "type": "relation", "text": "…", "known": "observed",
-              "scope": {"game": "example", "level": "game"}, "citations": ["frame-id"]}}]}
+{"schema": "curator-submission/2", "base_version": "v3", "summary": "…",
+ "changes": [{"op": "add_fact", "fact": {"schema": "curator-fact/5", "record": "fact",
+              "id": "f12", "claim_kind": "mechanic", "evidence_basis": "observed",
+              "tags": ["doors"], "text": "…", "scope": {}, "links": [],
+              "citations": ["00000000000000000000000000000001-1"]}}]}
 ```
 
 The top level has exactly `schema`, `base_version`, `summary` (text) and `changes`
-(non-empty), with optional `from_drafts` (draft IDs). The fields marked “software” in
-the tables above are refused in a submission, as is any other unexpected field.
+(non-empty), with optional `from_drafts` (draft IDs). Software-owned fields and
+unexpected keys are refused.
 
 | Operation | Exact fields beyond `op` |
 | --- | --- |
 | `add_fact` | `fact` |
-| `supersede_fact` | `ids` (one or more distinct current fact IDs), replacement `fact` |
-| `retire_fact` | current `id`, non-empty `reason`, non-empty distinct `citations` |
-| `add_type` | `type` |
-| `add_article` | `article` |
-| `revise_article` | current `id`, replacement `article` with a new ID |
-| `retire_article` | current `id`, non-empty `reason` |
-| `revise_types` | `action`, `names`, `types`, `assignments` (fact ID to new type name) |
+| `supersede_fact` | `ids` (distinct current fact IDs), `reason_kind` (`restated` or `corrected`), replacement `fact` |
+| `narrow_fact` | current fact `id`, `facts` (two or more strictly narrower facts) |
+| `retire_fact` | current `id`, `reason`, `reason_kind` (`wrong` with `citations`, or `ended` with `end`, `end_citations`, optional `citations`) |
+| `add_article` | `article` (with `slug`) |
+| `revise_article` | `slug` and one or more replacement fields (`title`, `lead`, `tags`, `links`, `scope`, `body`) |
+| `edit_article` | `slug` and targeted patches (`set_title`, `set_lead`, `set_scope`, `add_claims`, `replace_claims`, `remove_claims`, `add_links`, `remove_links`, `add_tags`, `remove_tags`) |
+| `remap_citations` | `from` fact ID, `to` fact ID, `in` list of article slugs |
+| `retire_article` | `slug`, `reason`, `reason_kind` (`wrong` or `editorial`) |
+| `retag` | `assignments` (map of current fact ID or article slug to new tag list); grooming only, at most once per submission |
 
-- **Targets.** Each target is current and changed at most once per submission.
-- **Citations.** A citation names a frame in the session's trace. In grooming, a
-  replacement may also cite frames of the facts it supersedes. Retirement of a world
-  fact may also cite that fact's own recorded frames.
-- **Articles.** To split or merge articles, add the resulting articles and retire or
-  revise their predecessors in one submission, repairing links and fact references.
+- **Targets and one revision per slug.** Each fact target is changed at most once per
+  submission. Article edits, revisions and `remap_citations` targeting the same `slug`
+  compose within one submission and publish **at most one revision per slug per
+  submission** (replacing the former one-change-per-target rule for articles); mixing
+  `retire_article` with an edit or revision of the same `slug` is refused.
+- **Minimal edits.** `replace_claims` and `remove_claims` require exact `index`,
+  `old_text` and `old_facts` guards so stale patches fail cleanly.
+- **Citations and carry-over.** A `restated` supersession may carry forward citations
+  from the superseded facts (`citations` may be empty when unchanged); `corrected`
+  requires non-empty new or trace citations. An `ended` retirement requires novel
+  `end_citations` in the session trace (on a surviving segment for world-bound facts).
 
-### Type revisions
+## Gate and pre-validation
 
-`revise_types` is accepted only in a grooming session, at most once per submission.
-
-| Action | Existing `names` | New `types` |
-| --- | --- | --- |
-| `merge` | two or more | one |
-| `split` | one | two or more |
-| `rename` | one | one |
-| `deprecate` | one | none |
-
-- An assigned fact is current, has a type in `names` at the base version, and is neither
-  retired nor superseded by the same submission.
-- A submission that replaces a definition under a name the base version already had
-  assigns every surviving fact of that name, even when the name does not change. This
-  includes deprecating a type and adding one of the same name.
-- Software appends `{from, to, version}` to the `retyped` list of each assigned fact.
-- Every current fact ends with a type that exists.
-
-## Gate v0
-
-The gate is the only writer of versions after initialization. It executes nothing a
-submission or the repository contains, and calls no model. Its structural controls
-address [R-GAME-COUPLING and R-REGRESSION](../risks.md).
+The gate (`harness/curator/gate.py`) is the only writer of versions after
+initialization. Pure structural and cross-record checks live in
+[`harness/curator/check.py`](../../harness/curator/check.py), invoked both by the gate
+and by the curator host's `validate_submission` tool via
+[`harness/curator/validate.py`](../../harness/curator/validate.py). The gate executes
+nothing a submission or repository contains and calls no model. Its controls address
+[R-GAME-COUPLING and R-REGRESSION](../risks.md).
 
 ### Checks
 
 Stages run in this order, and the first stage with a problem rejects the submission and
-lists that stage's problems:
+lists that stage's diagnostics:
 
-1. **Well formed.** Known schema and operations, exact fields, and the size limits.
-2. **Base version.** `base_version` is the published version. Otherwise the submission
-   is stale.
-3. **Candidate.** The operations apply together to a copy. Types and targets exist, IDs
-   are new, scopes match, and citations resolve.
-4. **References and filing.** Claims cite current `game` facts, links name current
-   articles, and current titles are unique. Grooming files every current `game` fact in
-   at least one current article. An admission may leave facts unfiled.
+1. **Well formed.** JSON Schema validation (`curator-submission/2`), exact fields and
+   size limits.
+2. **Base version.** `base_version` is the published version; otherwise the submission is
+   stale.
+3. **Candidate.** Operations apply together to a copy: targets are current, IDs and slugs
+   are unused across compatible tagged history (including post-restore reservations),
+   declared axes and world bindings match cited sessions, scope lattice and carry-over
+   rules hold, `old_text`/`old_facts` guards match, and `retag` appears only in grooming.
+4. **References, fixed point and filing.** Claims cite compatible current facts, links
+   resolve to current records, titles and slugs are unique, and the lifecycle fixed point
+   converges cleanly. Grooming files every current unbound fact in at least one current
+   article (except facts narrowed out); an admission may leave facts unfiled.
 
-The gate also validates the stored shape of every tagged version before it applies a
-submission, and the candidate tree before it publishes. An incompatible history rejects
+`validate_submission` runs the same four stages inside the sandbox against the staged
+workspace and `validation-context.json`, returning identical diagnostics and recording
+each passing prefix's exact file paths and SHA-256 digests (`submission-validated` host
+event).
+
+The gate also validates the stored shape of every tagged version before applying a
+submission, and the candidate tree before publishing. An incompatible history rejects
 the submission.
 
 ### Publication
 
 An accepted submission publishes in one commit and one tag, after discarding any
-unpublished work in the tree. A publication writes the records, types, provenance and
-coverage stamp together. If a failure leaves it unclear whether the tag exists, the
+unpublished work in the tree. A publication writes `facts.jsonl`, `provenance.json` and
+`coverage.json` together. If a failure leaves it unclear whether the tag exists, the
 result is `unknown`; resolve it against tagged history before retrying.
 
 ### Gate result (`curator-gate/2`)
@@ -306,8 +312,8 @@ python -m harness.curator.gate restore ROOT --game GAME --expected-base VERSION 
   files absent at the target, such as `coverage.json` at `v0`. A target identical to the
   current tree returns `unchanged` and creates no tag.
 - **What is kept.** Restored records keep their original `seen`, `last_confirmed`,
-  `published_in`, session and citations. Record IDs and session labels stay reserved
-  across all compatible tags, including those absent from the restored tree.
+  `published_in`, session and citations. Record IDs, article slugs and session labels
+  stay reserved across all compatible tags, including those absent from the restored tree.
 - **Reporting.** The commit names the operation, base and target. A reporting failure
   after tagging leaves the restore published, even when the result is `unknown`.
 
@@ -326,27 +332,25 @@ store.
 | Path | Holds | Writable |
 | --- | --- | --- |
 | `trace/` | The [trace projection](measurement-tools.md#trace-projection), narrowed to the session's window | No |
-| `knowledge/` | The published version without `.git`, plus `current-facts.jsonl` with only current facts and articles | No |
-| `brief.md` | Software-written: the window, drafts, recent gate results and type list | No |
+| `knowledge/` | Published version without `.git`, `current-facts.jsonl` (current records only) and `validation-context.json` | No |
+| `brief.md` | Software-written: window, declared axes, drafts, worklist, recent gate results and tag list | No |
 | `grooming.md` | The grooming instructions, in grooming sessions | No |
-| `workbench/` | A copy of `harness/trace` | No |
+| `workbench/` | Staged validator copy (`harness/curator`, `harness/trace`, `schemas` and `jsonschema` runtime) | No |
 | `submissions/`, `drafts/`, `scratch/` | Proposals, open and stale drafts, temporary files | Yes |
 
-Submission names, gate diagnostics, and type names and fields are `repr`-escaped in the
-brief, so they cannot start a line.
+Submission names, gate diagnostics and tags are `repr`-escaped in the brief, so they
+cannot start a line.
 
-### The type list in the brief
+### The tag list in the brief
 
-[`type_usage.py`](../../harness/curator/type_usage.py) lists each published type with its
-fields and its count of current facts, and flags a type with none as unused. The brief
-asks the curator to check the list before any `add_type`. The list is advice: the gate
-does not check the choice of type.
+[`type_usage.py`](../../harness/curator/type_usage.py) lists every tag used by at least
+one current fact or article with its usage count. Unused tags leave the list
+automatically; `claim_kind` is fixed and needs no list.
 
-- **Nearest types.** A type's words are the distinct lower-cased runs of letters and
-  digits in its name and field names. Two types are near when their shared words are at
-  least 1/3 of all the words of the two. At most 10 pairs are shown, closest first, then
-  by first and second name.
-- **Size.** Type rows stop at 32,768 bytes, at a whole row, with a count of the rest.
+- **Nearest tags.** A tag's words are its lower-cased alphanumeric tokens. Two tags are
+  near when their shared words are at least 1/3 of all words of the two. At most 10 pairs
+  are shown, closest first, then lexicographically.
+- **Size.** Tag rows stop at 32,768 bytes, at a whole row, with a count of the rest.
   Pair rows stop when the list would pass 65,536 bytes. The host refuses a brief over
   262,144 bytes.
 
@@ -354,11 +358,10 @@ does not check the choice of type.
 
 A session reads whole admissions or a **window**: one actor of one sealed or staged
 session, and a range of its steps (`seq` in `steps.jsonl`, first and last inclusive,
-integers satisfying `1 ≤ first ≤ last` when restricted). A
-step is one computer operation, and one model request can produce zero or more steps.
-Session and actor names match `[A-Za-z0-9_-]+`.
-[`window.py`](../../harness/curator/window.py) narrows a whole projection in place; the
-full window changes nothing.
+integers satisfying `1 ≤ first ≤ last` when restricted). A step is one computer
+operation, and one model request can produce zero or more steps. Session and actor names
+match `[A-Za-z0-9_-]+`. [`window.py`](../../harness/curator/window.py) narrows a whole
+projection in place; the full window changes nothing.
 
 - **Kept.** The steps in range, their frames and tool calls, and the actor's received
   prompt and guide. A call belongs to the step its result names; a call that names none
@@ -390,12 +393,12 @@ coverage-gated cuts for the run ([player-host coverage updates](player-host.md#a
 
 | Rule | Admission session | Grooming session |
 | --- | --- | --- |
-| Trace | The supplied sessions or one window | The last admission's cited frames, their steps and tool calls, and the first and last framed operations of each actor |
-| Store | Current records in `current-facts.jsonl` and the published export | Current records in `current-facts.jsonl` and the published export |
-| Instructions | Brief and [shared instructions](../../tools/curator_host/prompt.md) | Also its own [`grooming.md`](../../tools/curator_host/grooming.md) |
+| Trace | The supplied sessions or one window | Last admission's cited frames, steps, tool calls and actor boundary operations |
+| Store | Current records in `current-facts.jsonl` and published tree | Current records in `current-facts.jsonl` and published tree |
+| Instructions | Brief and [shared instructions](../../tools/curator_host/prompt.md) | Also [`grooming.md`](../../tools/curator_host/grooming.md) |
 | Window | Full or restricted | Full only |
-| `revise_types` | Refused | Allowed |
-| Filing | May leave `game` facts unfiled | Files every current `game` fact |
+| `retag` | Refused | Allowed (at most once per submission) |
+| Filing | May leave unbound facts unfiled | Files every current unbound fact |
 | Coverage stamp | From its own window | The last admission's stamp, retained |
 
 - **Grooming inputs.** The host passes `SessionConfig.grooming_brief`; the session
@@ -410,7 +413,7 @@ coverage-gated cuts for the run ([player-host coverage updates](player-host.md#a
   ([decision](../decisions/owner-decisions.md#groom-the-store-between-admissions)).
   Submission and host resource limits still apply.
 
-### Boundary grooming summary (`curator-boundary-grooming/1`)
+### Boundary grooming summary (`curator-boundary-grooming/2`)
 
 [Boundary grooming](../operations/curator-hosts.md#post-admission-boundary-grooming)
 runs one grooming session on a live runner's repository against the sealed run of its
@@ -418,20 +421,22 @@ last published admission, and writes `grooming-summary.json`.
 
 | Field | Value |
 | --- | --- |
-| `schema`, `run`, `knowledge_root` | Format, run directory name and repository root |
+| `schema`, `run`, `knowledge_root` | `curator-boundary-grooming/2`, run directory name and repository root |
 | `status` | `completed`, `failed` or `skipped` |
-| `reason` | Null when completed; otherwise the first failure found, or `no-published-admission` when skipped |
-| `published_before`, `published_after` | Versions; `published_after` is null when it cannot be read |
+| `reason` | Null when completed; otherwise first failure found, or `no-published-admission` when skipped |
+| `published_before`, `published_after` | Versions; `published_after` is null when unreadable |
+| `stale_records` | Count of current records with `stale_citations` or `needs_review` after grooming |
 | `cap_usd`, `cost_usd` | Session cap and cost. A skip reports cost `0` and no cap |
 | `session_state`, `verdicts`, `proxy`, `sandbox` | From the session summary; absent from a skip |
 | `summary` | Relative path of the session summary, or null |
 
 A failure reason is the session error, `unresolved-result`, `proxy-unsettled`,
-`proxy-revoked-or-breached`, `cap-reached`, `session-not-sealed` or
-`cleanup-unconfirmed`. When a session stops on a local spend refusal after earlier
-submissions already sealed and published, `status` is `failed` with reason
-`cap-reached` while `published_after` still reflects the published version. A clean
-rejection that leaves the version unchanged completes.
+`proxy-revoked-or-breached`, `cap-reached`, `session-not-sealed`, `provider-error`,
+`cleanup-unconfirmed`, `stale-citations-unreadable` or `stale-citations-remain`.
+When a session stops on a local spend refusal or a provider error after earlier
+validated submissions already published, `status` is `failed` while `published_after`
+reflects the published version. A clean rejection that leaves no stale citations
+completes.
 
 ## Drafts
 
@@ -452,14 +457,29 @@ already aborted before draft collection keeps its drafts and ages none.
 
 When a sandbox result is available and reports no surviving process, the session runner
 collects `submissions/`, then collects `drafts/` and ages untouched active drafts (when
-not already aborted), then gates submissions in directory-name order after a clean exit
-(promoting each `from_drafts` ID still present in the active store when a `submission`
-publishes), seals the record and deletes the workspace. Because draft aging runs before
-gating, a draft archived as `abandoned` on its sixth untouched session is no longer
-active for promotion, and a gating or later close-out error that marks the session
-`aborted` does not undo draft aging already recorded. Gating stops at an `unknown`
-result or a close-out error. Without a result it collects nothing, and exit and
-survivors are recorded as null.
+not already aborted), then gates submissions in directory-name order, seals the record
+and deletes the workspace.
+
+- **Clean exit (`exit_code == 0`).** Gates all collected submissions in directory-name
+  order and seals the session `sealed`.
+- **Provider-error exit (`exit_code == 75`).** When the curator host stops on a provider
+  or transport failure (`stop_reason: "provider-error"`), close-out reads the
+  `submission-validated` events in `host-output.log` and gates **only** the longest
+  contiguous prefix of collected submissions whose exact paths and SHA-256 digests match
+  a passing `validate_submission` call (`all_passed: true`). Unvalidated or modified
+  submissions are skipped. Drafts are kept without aging, and the session closes as
+  `aborted` with `provider_error: true`.
+- **Live runner rule for `provider-error`.** A single `provider-error` session that
+  publishes at least one validated submission advances the cursor normally; one that
+  publishes nothing retries the same window once without halving its width; an unexpected
+  rejection does not advance the cursor; two consecutive `provider-error` sessions trip
+  the runner's `SESSION_FAILURES = 2` stop limit.
+- **Draft aging and gating order.** Because draft aging runs before gating on clean
+  exits, a draft archived as `abandoned` on its sixth untouched session is no longer
+  active for promotion, and a gating or later close-out error that marks the session
+  `aborted` does not undo draft aging already recorded. Gating stops at an `unknown`
+  result or a close-out error. Without a result it collects nothing, and exit and
+  survivors are recorded as null.
 
 ### Collection follows no link
 
@@ -477,8 +497,9 @@ relative to its parent's descriptor with `O_NOFOLLOW` and checked with `fstat`.
 ### Abort and interruption
 
 - **Abort.** A crash, a breached limit or a handled failure seals the record as
-  `aborted` where it is writable. An error before gating gates nothing. A later error
-  cannot undo a publication already made.
+  `aborted` where it is writable. An error before gating gates nothing (except the
+  validated prefix on `provider-error` exit `75`). A later error cannot undo a
+  publication already made.
 - **Drafts.** After an observed unclean exit, collectable drafts are kept without aging.
 - **Cleanup.** Removing the workspace clears file flags and permissions first. A removal
   failure is written to `cleanup-failed.json`, and the lock is released.
@@ -494,9 +515,11 @@ Proxy shutdown and unsettled accounting are separate
 
 ## Delivery boundary
 
-The exporter selects every current `game` fact and article and the current `world` facts
-of one world, or no `world` facts when no world is named. The delivered
-`delivered-knowledge/2` file does not name the world.
+The exporter selects every current record whose `scope` is satisfied by the package's
+`world`, `lineage` and `context` (with no `world`-bound records when no world is named),
+plus derived timeline history and aliases. The delivered `delivered-knowledge/3` file
+contains no raw `world` or `lineage` label anywhere in its bytes, including coverage
+stamps and aliased session identifiers.
 [Delivered knowledge and recall](player-host.md#delivered-knowledge-and-recall) owns the
 delivered format and its preflight checks,
 [freezing delivered knowledge](../operations/campaign-run.md#freeze-delivered-knowledge)
@@ -511,14 +534,14 @@ A change to a format here migrates its readers and writers in the same change
 
 | Code | Reads or writes |
 | --- | --- |
-| `harness/curator/gate.py`, `knowledge.py` | Every repository format, at publication, history validation and restore |
-| `harness/curator/session.py`, `type_usage.py`, `containers.py` | Record and type schemas, provenance, gate results, session and draft manifests |
-| `harness/curator/window.py`, `harness/trace/projection.py` | Session labels, frame positions and coverage stamps, from `trace-projection/3` |
-| `harness/curator/runner.py`, `tools/curator_host/live_runner.py` | Version tags, the stamp in each version's `last_admission`, and gate results |
-| `tools/curator_host/shadow.py`, `groom.py` | Gate results and, for grooming, `last_admission` |
-| `tools/curator_host/prompt.md`, `grooming.md` | Restate the submission shapes to the curator |
-| `tools/knowledge_export.py` | Current facts and articles, with their scope |
+| `harness/curator/gate.py`, `knowledge.py`, `check.py`, `validate.py` | Every repository format, JSON Schemas, pure validation, publication, history validation and restore |
+| `harness/curator/session.py`, `type_usage.py`, `containers.py` | Record schemas, tag usage, provenance, gate results, staged workbench, session and draft manifests |
+| `harness/curator/window.py`, `harness/trace/projection.py` | Session labels, `context`, frame positions and coverage stamps, from `trace-projection/3` |
+| `harness/curator/runner.py`, `tools/curator_host/live_runner.py` | Version tags, `last_admission` stamp, `provider-error` outcomes and gate results |
+| `tools/curator_host/host.mjs`, `run.mjs`, `workspace-tools.mjs` | Curator host tool set (`validate_submission`), atomic writes and `provider-error` exit `75` |
+| `tools/curator_host/shadow.py`, `groom.py` | Gate results, `curator-boundary-grooming/2` summaries and `last_admission` |
+| `tools/curator_host/prompt.md`, `grooming.md` | Restate the `curator-submission/2` and `curator-fact/5` shapes to the curator |
+| `tools/knowledge_export.py`, `tools/campaign_package.py` | Scoped selection, timeline history, blinding aliases, `delivered-knowledge/3` and `campaign-run/13` |
+| `harness/player/`, `tools/player_host/` | Delivered `delivered-knowledge/3` validation, `player-knowledge/2` reads, ranking and projections |
 | `tools/memory_screen_checks.py` | Fact and article records of every version |
-| `harness/viewer/curator.py` | Gate results, close-out receipts and coverage stamps |
-
-The player, player host and knowledge view read only the delivered file.
+| `harness/viewer/`, `tools/campaign_watch.py` | Gate results, close-out receipts, coverage stamps, `curator-boundary-grooming/2` and delivered snapshots |

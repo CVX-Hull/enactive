@@ -40,7 +40,7 @@ for the control path and its limits.
 outside supervision, and stops it with the other children. It shows the evaluator's
 interpretation of the live run and of archived runs when you pass
 `--runs DIR` to supervision, each reading labelled with its source and confidence
-([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view2)). Its
+([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view3)). Its
 displays inform you and gate nothing; the Pause conditions it computes are advice.
 
 After the supervisor exits, open completed runs through the

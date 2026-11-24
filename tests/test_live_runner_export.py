@@ -45,7 +45,6 @@ def test_live_delivery_uses_verified_context_and_blinds_positions(tmp_path):
     enabled, selected_world, selected_lineage, selected_context, session = live_runner.delivery_target(run)
     assert (enabled, selected_world, selected_lineage, selected_context, session) == (
         True, world, lineage, context, SESSION_ID)
-    assert live_runner.delivery_world(run) == (True, world, SESSION_ID)
 
     version = fixture['version']
     runner = SimpleNamespace(lock=Lock(), publications=lambda: ([dict(version=version)], [], None),

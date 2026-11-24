@@ -52,9 +52,9 @@ connection, timeout, unlisted viewer status or unavailable forwarding slot retur
   - The compare route accepts `horizon` in game hours, default 0.5.
   - Runs resolve by session ID or run directory name.
 
-## Spectator view API (`spectator-view/2`)
+## Spectator view API (`spectator-view/3`)
 
-All routes are `GET`, return JSON with `"schema": "spectator-view/2"` unless noted, stay
+All routes are `GET`, return JSON with `"schema": "spectator-view/3"` unless noted, stay
 under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 `after`/`limit` (`limit` ≤ 500).
 
@@ -139,7 +139,7 @@ without a charge. `spend_complete` needs every session settled and nothing open.
 request in flight when a session was cut off has no ledger row, so the sum can be low.
 
 `boundary_grooming` is what one operator-configured
-[grooming receipt](curator.md#boundary-grooming-summary-curator-boundary-grooming1) states.
+[grooming receipt](curator.md#boundary-grooming-summary-curator-boundary-grooming2) states.
 Grooming runs after an admission ends and writes outside its package, so the viewer reads
 only the file that `--curator-grooming FILE` (`FrameSources.curator_grooming`) names, and
 looks in no other directory. The receipt is shown only when its `run` is the summary's
@@ -197,26 +197,30 @@ player, limit and curator figures above.
 
 The route browses the run package's own `delivered-knowledge.json` (`initial`, the version
 the run started with) and `curator-runner/delivered/vN.json`, in version order. It reads no
-curator repository, private export or withheld-unit file and runs no Git command. Files
-are bounded at 16 MiB. Each of `versions` has its counts, coverage stamp, the version the
-file itself records, and `status`; a file that is not a readable `delivered-knowledge/2`
+curator repository, private export, alias map or withheld-unit file and runs no Git command.
+Files are bounded at 16 MiB. Each of `versions` has its counts, coverage stamp, the version
+the file itself records, and `status`; a file that is not a readable `delivered-knowledge/3`
 is listed with its status and no counts.
 
 - `version` defaults to the latest readable one. An unknown version is
   `404 unknown_version`; one that cannot be read is `409 unsupported_knowledge`.
   Without any file, `source_status` is `unavailable`.
-- `q` (at most 200 characters) matches case-insensitively in articles and facts. `scope`
-  is `all`, `world` or `game` and filters facts, which page by `after` and `limit`.
-  Articles are bounded, with `articles_omitted`.
-- A fact's `scope` and `known` are `null` and `scope_recorded` is false: the closed
-  [delivered form](player-host.md#delivered-knowledge-and-recall) carries neither, and a
-  field outside that form is not shown. `scope_counts` therefore counts every fact as
-  `unrecorded`, and a `world` or `game` filter lists none. A scope is never inferred from
-  a fact's text.
-- `anchor` is the step of this run that a `seen` or `last_confirmed` position names. It
-  resolves the actor's own step number, and only when the position's session is this run's
-  (its ID, or the name under `curator-runner/sessions`). A position of another admission,
-  or one this run never reached, has `null`.
+- `q` (at most 200 characters) matches case-insensitively in articles and facts (including
+  tags and `claim_kind`). `scope` is `all`, `world`, `game` or `unrecorded` and filters
+  facts by delivered scope class (`world` key present vs absent, or missing scope), paging
+  by `after` and `limit`. Articles are bounded, with `articles_omitted`.
+- Each record projects its delivered `scope` class (`world` or `game`), bounded non-world
+  `scope_axes` (never exposing a world or lineage label), `tags`, `lifecycle_state`,
+  `branch_relation`, review flags (`stale_citations`, `needs_review`,
+  `condition_unverified`, `unverified_branch`) and typed `links`/`backlinks`
+  (`shadowed_by`, `contradicted_by`). Facts also project `claim_kind`, `evidence_basis`,
+  `when`, `cited_by_articles` and `citation_source_ids`. The response includes
+  `scope_counts`, `tag_counts` (with `tag_counts_omitted`) and `claim_kind_counts`
+  computed over the delivered records.
+- `anchor` and `citation_anchors` resolve `citation_source_ids` belonging to this run's
+  own session (`<session>-<n>`) to that step's `{seq, source_id}` (latest step for a
+  record's `anchor`). A citation of another admission, or a step this run never recorded,
+  has `null`.
 
 A listed version was exported for this run. Whether it reached the player is a feed
 `knowledge_update` whose `outcome` is `delivered`; what the player saw of it is the
@@ -307,12 +311,17 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
 - `snapshot_status` is `verified`, `unavailable`, `hash_unavailable` or
   `hash_mismatch`. Entries are served only after the actor's `player-host-inputs/4`
   `frozen.json` names this actor/session and its `delivered-knowledge.json` digest
-  matches. A sealed archived session's frozen inputs are `player-host-inputs/3`
-  with `delivered-knowledge/1`; a run with no supported manifest is `hash_unavailable`.
+  matches (`delivered-knowledge/3` for current `campaign-run/13` packages). Sealed
+  archived sessions before `/12` use `player-host-inputs/3` with `delivered-knowledge/1`;
+  a sealed `campaign-run/12` run (whose snapshot is `delivered-knowledge/2`) or a run
+  with no supported manifest reports explicit `hash_unavailable` and never falls through
+  to `delivered-knowledge/1`.
   Missing/mismatched bytes are never presented as the frozen contents.
   The snapshot is the version the actor started with, never one adopted during play.
-  The `delivered-knowledge/2` snapshot exposes only public article/fact fields,
-  coverage and confirmation markers in their recorded units. It pages `items` with
+  The `delivered-knowledge/3` snapshot exposes only public article/fact fields (including
+  scope class, non-world axes, `claim_kind`, `evidence_basis`, `tags`, lifecycle/review
+  flags, typed links/backlinks, `citation_source_ids`, coverage and confirmation markers
+  in their recorded units). It pages `items` with
   `total`, `limit` and `next`. An absent entry is unavailable, not proof of withholding.
   No private full export, withheld-unit file or curator repository is read.
 - `calls` expose public intent/cites, knowledge query/read returned IDs, status and
@@ -353,7 +362,7 @@ verification of game/fork identity or a link to a player run. The supervisor for
 these arguments only to its unsupervised viewer child; they grant no input authority.
 
 Both result routes use `spectator-frame/1` success payloads and the existing
-`spectator-view/2` error envelope. The sources route pages `items: [{label}]` with
+`spectator-view/3` error envelope. The sources route pages `items: [{label}]` with
 `total`, `next` and `limit`. The results route requires a configured `source` and
 returns that label, `source_status`, `snapshot`, `items`, `total`, `next` and `limit`:
 
@@ -475,7 +484,7 @@ Nothing is sent to the curator, and no figure is derived beyond what the file st
 ### Spectator frame (`spectator-frame/1`)
 
 The spectator's `/api/view/frame/*` routes follow the view API rules above and carry
-`"schema": "spectator-frame/1"`. Errors keep the `spectator-view/2` envelope. They read
+`"schema": "spectator-frame/1"`. Errors keep the `spectator-view/3` envelope. They read
 tracked data, the catalog's stores, explicitly configured curator result files and the curator runner's status file, and nothing they compute reaches the player or the
 curator (ADR008). The container and probe directories default to the repository's
 `data/containers` and `data/evaluation/probes`; `create_app(frame_sources=)` overrides

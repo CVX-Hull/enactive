@@ -132,7 +132,7 @@ def restrict(out: Path, manifest: dict, window: Window) -> dict:
     kept = [s for s in steps if window.first <= s['seq'] <= last]
     frames = {s['frame'] for s in kept if s['frame']}
     calls = _jsonl(directory/'tools.jsonl')
-    owners = _owners(calls, {s['operation_id']: s['seq'] for s in steps}, len(steps))
+    owners = _owners(calls, {s['operation_id']: s['seq'] for s in steps}, max((s['seq'] for s in steps), default=0))
     calls = [c for c, owner in zip(calls, owners) if window.first <= owner <= last]
     _write(directory/'steps.jsonl', kept)
     _write(directory/'tools.jsonl', calls)

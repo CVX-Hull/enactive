@@ -49,7 +49,7 @@ its exit leaves status, frames and Pause unchanged. The
 | [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive `/api/status` and `/api/source/ID` routes, independent Pause and the actor tool routes. It serves no page and no derived view. |
 | [Gateway](../../tools/campaign_watch.py) | The page origin and static files, relayed status and source reads, Pause with a reason, and bounded forwarding of view reads. Its exit ends supervision, so it stays minimal. |
 | [Page](../../web/) | Source presentation, labels, resource status, Pause feedback and the viewer's views. Served by the gateway. |
-| Viewer (`harness/viewer`) | Read-only evaluator views, projections of the run package's host traces, delivered knowledge and curator runner files, and operator-selected curator records ([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view2)). |
+| Viewer (`harness/viewer`) | Read-only evaluator views, projections of the run package's host traces, delivered knowledge and curator runner files, and operator-selected curator records ([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view3)). |
 | [Supervisor](../../tools/campaign_supervision.py) | Starts and stops the custodian, gateway, keep-awake and viewer children; the guardian owns the custody deadline and the Pause receipt ([procedure](../operations/campaign-supervision.md)). |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |

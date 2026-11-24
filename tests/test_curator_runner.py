@@ -689,8 +689,8 @@ def test_live_runner_leaves_each_confirmed_version_whole_and_retries_a_failed_ex
     run.mkdir()
     (run/CURATOR_READ_LOCK).touch()
     record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
-    enabled, world, session_id = live_runner.delivery_world(run)
-    assert (enabled, world, session_id) == (True, 'the farm', SESSION_ID)
+    enabled, world, lineage, context, session_id = live_runner.delivery_target(run)
+    assert (enabled, world, lineage, context, session_id) == (True, 'the farm', None, {}, SESSION_ID)
     delivered = tmp_path/'runner'/'delivered'
     prefix = delivered/live_runner.COVERED_PREFIX_FILE
 
@@ -710,7 +710,7 @@ def test_live_runner_leaves_each_confirmed_version_whole_and_retries_a_failed_ex
         value = json.loads((delivered/'v1.json').read_text())
         assert value == knowledge_export.published(repo.path, 'v1', world='the farm') and Knowledge.from_dict(value).value == value
         root = _git(repo.path, 'rev-parse', 'v0^{commit}').decode().strip()
-        assert (value['schema'], value['version'], value['repository_id']) == ('delivered-knowledge/2', 'v1', root)
+        assert (value['schema'], value['version'], value['repository_id']) == ('delivered-knowledge/3', 'v1', root)
         assert value['commit'] == _git(repo.path, 'rev-parse', 'v1^{commit}').decode().strip() != root
         # The facts are those of the package's world; the label itself is never written into the file.
         assert [f['id'] for f in value['facts']] == ['f1', 'w1'] and value['coverage']['last_step'] == 1
@@ -722,7 +722,7 @@ def test_live_runner_leaves_each_confirmed_version_whole_and_retries_a_failed_ex
         published = knowledge_export.published
         calls = []
 
-        def failing(path, version, *, world):
+        def failing(path, version, *, world, lineage=None, context=None):
             calls.append(version)
             raise OSError('disk refused the export')
 
@@ -754,7 +754,7 @@ def test_only_a_confirmed_publication_that_is_not_a_restore_is_left_for_the_driv
     from tools import knowledge_export
     exported = []
     monkeypatch.setattr(knowledge_export, 'published',
-                        lambda path, version, *, world: exported.append((version, world)) or dict(version=version))
+                        lambda path, version, *, world, lineage=None, context=None: exported.append((version, world)) or dict(version=version))
     deliver = live_runner.Delivery(tmp_path, tmp_path/'repository', 'farm')
     versions = {'v1': dict(restored_from=None), 'v2': dict(restored_from='v1'), 'v3': dict(restored_from=live.UNKNOWN),
                 'v4': dict(restored_from=None)}
@@ -774,7 +774,7 @@ def test_delivery_leaves_the_prefix_before_a_gap_until_a_restore_invalidates_it(
     world = World(tmp_path/'runner', Settings(trigger_steps=1, ceiling_steps=1))
     world.outcomes = ['accepted', gap, 'accepted']
     monkeypatch.setattr(live_runner.knowledge_export, 'published',
-                        lambda path, version, *, world: dict(version=version))
+                        lambda path, version, *, world, lineage=None, context=None: dict(version=version))
     runner = world.runner()
     deliver = live_runner.Delivery(world.directory, tmp_path/'repository', None, session=SESSION_ID)
     delivered = world.directory/'delivered'
@@ -802,13 +802,13 @@ def test_delivery_is_read_from_the_current_package_manifest(tmp_path):
     run = tmp_path/RUN
     run.mkdir()
     record_package(run, labels=dict(world='the farm', lineage='L1', admission=1))
-    assert live_runner.delivery_world(run) == (False, 'the farm', SESSION_ID)
+    assert live_runner.delivery_target(run) == (False, 'the farm', 'L1', {}, SESSION_ID)
     record_package(run, labels=dict(lineage='L1', admission=1), schema='campaign-run/10')
-    with pytest.raises(ValueError, match='not a campaign-run/12 manifest'):
-        live_runner.delivery_world(run)
+    with pytest.raises(ValueError, match='not a campaign-run/13 manifest'):
+        live_runner.delivery_target(run)
     (run/'manifest.json').unlink()
     with pytest.raises(OSError):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
 
 
 def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch(tmp_path):
@@ -818,16 +818,16 @@ def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch
     run = tmp_path/RUN
     run.mkdir()
     record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
-    assert live_runner.delivery_world(run) == (True, 'the farm', SESSION_ID)
-    assert live_runner.delivery_world(run, session_id=SESSION_ID) == (True, 'the farm', SESSION_ID)
+    assert live_runner.delivery_target(run) == (True, 'the farm', None, {}, SESSION_ID)
+    assert live_runner.delivery_target(run, session_id=SESSION_ID) == (True, 'the farm', None, {}, SESSION_ID)
     with pytest.raises(ValueError, match='launched session'):
-        live_runner.delivery_world(run, session_id='b' * 32)
+        live_runner.delivery_target(run, session_id='b' * 32)
     original = (run/'manifest.json').read_bytes()
     replaced = json.loads(original)
     replaced['labels']['world'] = 'another farm'
     (run/'manifest.json').write_text(json.dumps(replaced))
     with pytest.raises(ValueError, match='SHA-256 differs from the supervisor launch record'):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
     # Missing session in both manifest and watch-start (even with matching SHA-256) is refused.
     no_session = json.loads(original)
     no_session.pop('session')
@@ -838,16 +838,16 @@ def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch
     no_session_opening['manifest_sha256'] = hashlib.sha256(no_session_bytes).hexdigest()
     (run/'watch-start.json').write_text(json.dumps(no_session_opening))
     with pytest.raises(ValueError, match='missing or invalid session'):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
     (run/'manifest.json').write_bytes(original)
     (run/'watch-start.json').write_text(json.dumps(opening))
     for change, message in ((dict(session='b' * 32), 'session differs'), (dict(schema='campaign-watch-start/3'), 'unsupported')):
         (run/'watch-start.json').write_text(json.dumps(dict(opening, **change)))
         with pytest.raises(ValueError, match=message):
-            live_runner.delivery_world(run)
+            live_runner.delivery_target(run)
     (run/'watch-start.json').unlink()
     with pytest.raises(OSError):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
 
 
 # ---------------------------------------------------------------- beside a growing trace, with a real session
@@ -1113,9 +1113,9 @@ def test_boundary_grooming_skips_a_repository_without_a_published_admission(groo
     assert repo.ensure() == 'v0'
     assert groom.main(args) == 0
     result = json.loads((out/'grooming-summary.json').read_text())
-    assert result == dict(schema='curator-boundary-grooming/1', status='skipped', reason='no-published-admission',
+    assert result == dict(schema='curator-boundary-grooming/2', status='skipped', reason='no-published-admission',
                           run=run.name, knowledge_root=str(repo.path.parent), published_before='v0', published_after='v0',
-                          cost_usd='0', summary=None)
+                          stale_records=0, cost_usd='0', summary=None)
     assert 'skipped' in capsys.readouterr().out
 
 
@@ -1211,9 +1211,10 @@ def test_boundary_grooming_freezes_the_session_and_reports_its_outcome(grooming_
     monkeypatch.setattr(shadow, 'run_one', run_one)
     assert groom.main([*args, '--cap-usd', '0.25']) == (0 if reason is None else 1)
     result = json.loads((out/'grooming-summary.json').read_text())
-    assert result == dict(schema='curator-boundary-grooming/1', status='completed' if reason is None else 'failed',
+    assert result == dict(schema='curator-boundary-grooming/2', status='completed' if reason is None else 'failed',
                           reason=reason, run=run.name, knowledge_root=str(repo.path.parent), cap_usd='0.25',
-                          published_before='v1', published_after=session['published_after'], cost_usd='0.07',
+                          published_before='v1', published_after=session['published_after'],
+                          stale_records=None if session['published_after'] is None else 0, cost_usd='0.07',
                           verdicts=session['verdicts'], session_state=session['session_state'], proxy=session['proxy'],
                           sandbox=session['sandbox'], summary=relative)
 

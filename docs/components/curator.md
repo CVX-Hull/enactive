@@ -9,7 +9,7 @@ status: active
 The curator reads projected traces and holds no custody or direct player access.
 The player and computer do not import curator code. The runner supports windowed
 sessions beside an admission. Live evidence covers full single-actor multi-window
-publication, `curator-fact/4` world/game separation, within-admission delivery and
+publication, `curator-fact/5` scoped claims and articles, within-admission delivery and
 post-admission boundary grooming ([live validation run #889](../acceptance/2026-11-22-live-validation-run-889.md),
 following [first paid live run #859](../acceptance/2026-11-21-live-curator-run-859.md));
 real-play actor handoff briefing adoption remains unverified beyond offline tests and the
@@ -22,7 +22,7 @@ with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge exp
 ```mermaid
 flowchart LR
   accTitle: Curator pipeline from live trace to delivered knowledge
-  accDescr: During play a bounded snapshot under a shared read lock is projected and a runner session examines one window. After the admission is sealed, a grooming session can reorganise the store from the sealed trace. Both submit to the gate, which alone publishes a repository version tag. World facts stand alone and only game facts are cited in articles. A confirmed live version is exported for the running actor with the unbroken covered prefix. A restore invalidates that prefix. A groomed version reaches play only when a later package freezes it.
+  accDescr: During play a bounded snapshot under a shared read lock is projected and a runner session examines one window. After the admission is sealed, a grooming session can reorganise the store from the sealed trace. Both submit to the gate, which alone publishes a repository version tag. Facts and articles carry declared scopes and typed links. A confirmed live version is exported for the running actor with the unbroken covered prefix. A restore invalidates that prefix. A groomed version reaches play only when a later package freezes it.
   subgraph L["During an admission: curator runner"]
     S["Live write-ahead-log store<br/>Bounded snapshot under curator-read.lock"] --> P["trace-projection/3<br/>Allowlisted, secret-guarded"]
     P --> W["Window session in the sandbox<br/>v1 to vN"]
@@ -30,11 +30,11 @@ flowchart LR
   subgraph B["After the admission is sealed: operator"]
     Z["Sealed trace of the<br/>last published admission"] --> Q["tools.curator_host.groom<br/>One boundary-grooming session"]
   end
-  W -->|"Submission"| G["Gate, curator-gate/2<br/>World facts stand alone<br/>Articles cite game facts only"]
+  W -->|"Submission"| G["Gate, curator-gate/2<br/>Pure checks, scopes, fixed point"]
   Q -->|"Submission"| G
-  G -->|"Publishes"| K["Knowledge repository<br/>curator-knowledge/3, curator-fact/4<br/>Version tag vN"]
+  G -->|"Publishes"| K["Knowledge repository<br/>curator-knowledge/4, curator-fact/5<br/>Version tag vN"]
   O["Operator restore<br/>of a compatible snapshot"] --> G
-  K -->|"Runner exports confirmed live version,<br/>for the package's world"| D["delivered/vN.json"]
+  K -->|"Runner exports confirmed live version,<br/>for package world, lineage and context"| D["delivered/vN.json"]
   K -->|"Runner writes unbroken confirmed coverage"| C["delivered/covered-prefix.json"]
   K -.->|"Runner writes restored true after restore:<br/>no further cuts"| C
   D --> A["Driver to running actor"]
@@ -62,14 +62,14 @@ actor uses the covered prefix.
 | [Sandbox](../../harness/curator/sandbox.py) | Default-deny Seatbelt profile and polling supervisor: writes only in the workspace's writable directories, one loopback port, and bounded memory, processes, time and size of the session's own files. It does not watch or protect the rest of the disk ([what is bounded](../operations/curator-hosts.md#what-the-sandbox-bounds)). [Research and residual risks](../research-curator-sandbox.md) |
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Providers](../../tools/curator_host/providers.py) (an adapter) | Model service adapters define routes, key and forwarding headers, request validation and conversion of reported usage to dollars. Provider and model identities stay in the curator host's adapters; the proxy receives them from its caller. |
-| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions, under the [gate checks](../contracts/curator.md#gate-v0), and through the [operator restore](../contracts/curator.md#operator-restore) of a compatible snapshot. |
+| [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py), [check](../../harness/curator/check.py) | One Git repository per game. Pure checks validate submissions before and at the gate ([checks](../contracts/curator.md#gate-and-pre-validation)), and the gate handles [operator restore](../contracts/curator.md#operator-restore). |
 | [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Windowed admission and grooming projections remove the journal JSON. Only retained tool calls can carry hints. [Window rules](../contracts/curator.md#windows-of-decisions) and [coverage stamp](../contracts/curator.md#coverage-stamp-curator-coverage2) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | Draft lifecycle (open, stale, abandoned, promoted) and ephemeral sandboxed sessions whose close-out never follows a link. [Drafts](../contracts/curator.md#drafts) and [close-out](../contracts/curator.md#session-close-out) |
-| [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
+| [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools (`validate_submission`, atomic writes), budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/curator-memory-study-protocol-revised.md#limitations) records that exposure. |
 | [Curator runner](../../harness/curator/runner.py) | Window triggers, the durable record of examined ranges, publication watching, covered prefix and lag, stops, and status. [Runner windows](#runner-windows) |
 | [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/1` file, sessions through the shadow runner's proxy under the runner's cap, its own knowledge repository, signal handling and [delivery to a running actor](#delivery-to-a-running-actor) |
-| [Boundary grooming](../../tools/curator_host/groom.py) (an adapter) | Runs one grooming session against an existing live runner repository and the sealed trace of its last published admission. Writes a [`curator-boundary-grooming/1` summary](../contracts/curator.md#boundary-grooming-summary-curator-boundary-grooming1). |
+| [Boundary grooming](../../tools/curator_host/groom.py) (an adapter) | Runs one grooming session against an existing live runner repository and the sealed trace of its last published admission. Writes a [`curator-boundary-grooming/2` summary](../contracts/curator.md#boundary-grooming-summary-curator-boundary-grooming2). |
 
 ## Projection and evidence readers
 
@@ -188,7 +188,7 @@ When the package sets [`live_knowledge_updates`](../operations/campaign-run.md#l
 the [runner process](../../tools/curator_host/live_runner.py) looks once after each
 poll that returned for a newly confirmed version. It exports the highest confirmed
 publication that is not a restore and is above the last version it exported, restarts
-included, as `delivered-knowledge/2` for the package's world. It writes the file whole
+included, as `delivered-knowledge/3` for the package's world, lineage and context. It writes the file whole
 to `curator-runner/delivered/vN.json` (temporary name, sync, rename), so the driver
 never sees a partial file. A failed export is reported on stderr once per version and
 error and tried again at the next poll. The runner reads `live_knowledge_updates`
@@ -211,7 +211,7 @@ adoption by the driver and the host.
 - **Close-out and the gate.** Execution failure, unknown cleanup or surviving processes
   prevents gating. Handled failures record an abort where writable; a later close-out error
   cannot undo an earlier atomic publication. Each gate publishes atomically or not at all.
-- **Runner failure.** Two consecutive failed sessions or three consecutive failed or over-bound snapshots stop the runner. A missing store retries, a closing store ends the runner, and other read refusals stop it. A refused reservation leaves any published work in place. If the window did not publish, the runner retries the same starting step over half as many steps. A refusal at one step stops it as `spend-reservation-refused`. A fully spent cap stops it as `spend-cap-exhausted`. Proxy revocation, unsettled accounting and unconfirmed host cleanup also stop it. [Runner process](../../tools/curator_host/live_runner.py) and [guardian cleanup](../operations/campaign-supervision.md#failure-and-owned-cleanup)
+- **Runner failure.** Two consecutive failed sessions (including two consecutive `provider-error` sessions) or three consecutive failed or over-bound snapshots stop the runner. A single `provider-error` session that published nothing retries the same window once without halving; one that published a validated prefix advances the cursor. A missing store retries, a closing store ends the runner, and other read refusals stop it. A refused reservation leaves any published work in place. If the window did not publish, the runner retries the same starting step over half as many steps. A refusal at one step stops it as `spend-reservation-refused`. A fully spent cap stops it as `spend-cap-exhausted`. Proxy revocation, unsettled accounting and unconfirmed host cleanup also stop it. [Runner process](../../tools/curator_host/live_runner.py) and [guardian cleanup](../operations/campaign-supervision.md#failure-and-owned-cleanup)
 - **The proxy.** It reserves the worst charge for the bounded prompt and full output
   limit across the reachable frozen price tiers. Missing usage keeps the reservation
   except on a fully read HTTP refusal with no usage. An over-reservation charge
@@ -244,10 +244,11 @@ adoption by the driver and the host.
 
 ## Facts, articles and grooming
 
-The curator records durable claims as facts that cite frames, and groups `game` facts
-into articles an actor can read. A grooming session merges, retires and refiles them
-between admissions. The [curator contract](../contracts/curator.md) owns the record,
-type and submission shapes, the gate, sessions, drafts and restore; the
+The curator records durable claims as facts that cite frames, and groups them into
+articles an actor can read (including world-scoped working articles). A grooming session
+merges, narrows, retags, retires and refiles them between admissions. The
+[curator contract](../contracts/curator.md) owns the record and submission shapes,
+validation, the gate, sessions, drafts and restore; the
 [frozen instructions](../../tools/curator_host/prompt.md#submission-contract) restate the
 submission shapes to the curator. [Host operations](../operations/curator-hosts.md) owns
 adapter configuration and the zero-spend stand-in lane.

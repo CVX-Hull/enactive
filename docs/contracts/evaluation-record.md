@@ -22,7 +22,7 @@ The evaluator reads one run directory read-only:
 - each `actors/NNN/host.jsonl` (`player-host/11`), including its per-request context
   manifest;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/2`);
-- `manifest.json` (`campaign-run/12`), including its operator labels;
+- `manifest.json` (`campaign-run/13`, plus indexed archived `campaign-run/12` and earlier runs), including its operator labels and `context`;
 - `receipt.json` (`campaign-receipt/7`, with `player-driver/7`) and
   `watch-terminal.json` (`campaign-watch-terminal/4`), when recorded;
 - the run's `player-journal/1` public call and hint store.

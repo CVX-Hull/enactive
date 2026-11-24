@@ -115,8 +115,8 @@ def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(
     assert first['provider'] == dict(only=['openai'], order=['openai'], allow_fallbacks=False, require_parameters=True)
     assert first['reasoning'] == {'effort': 'medium'} and first['service_tier'] == 'default' and 'max_tokens' not in first
     assert all(request['body']['service_tier'] == 'default' for request in stand_in.requests)
-    assert {'list_dir', 'read_file', 'view_frame', 'write_file', 'run_workbench', 'finish'} <= {
-        t['function']['name'] for t in first['tools']
+    assert {t['function']['name'] for t in first['tools']} == {
+        'list_dir', 'read_file', 'view_frame', 'write_file', 'run_workbench', 'validate_submission', 'finish'
     }
     assert 'data:image/png;base64,' in json.dumps(stand_in.requests[2]['body'])
     # Telemetry: every tool outcome, token usage and cost; never the session token or the key.
@@ -342,7 +342,10 @@ def test_the_hosts_node_unit_tests_pass():
 
 def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('add_fact', 'supersede_fact', 'base_version', 'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench', 'finish', '256 KiB', '200'):
+    for needed in ('curator-submission/2', 'curator-fact/5', 'add_fact', 'supersede_fact', 'narrow_fact',
+                   'edit_article', 'remap_citations', 'retag', 'validate_submission', 'base_version',
+                   'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench',
+                   'finish', '256 KiB', '200'):
         assert needed in prompt, needed
     # P-GENERALITY and the blinding of #449 probes: nothing about the game, its items or the recorded runs.
     lowered = prompt.lower()
@@ -737,7 +740,7 @@ def test_an_upstream_retry_veto_survives_the_real_proxy(tmp_path, world):
         finally:
             proxy.close()
     life = record['manifest']['lifecycle']
-    assert life['state'] == 'aborted' and life['survivors'] == [] and record['published_after'] == 'v0'
+    assert life['state'] == 'sealed' and life['stopped'] == 'provider-error' and life['survivors'] == [] and record['published_after'] == 'v0'
     assert len(stand_in.requests) == 1
     ledger = shadow._lines(tmp_path/'proxy-ledger.jsonl')
     assert len(ledger) == 1 and ledger[0]['status'] == 429 and ledger[0]['usage_missing']

@@ -275,12 +275,6 @@ def delivery_target(run: Path, *, session_id: str | None = None) -> tuple[bool, 
     return manifest['live_knowledge_updates'] is True, world, lineage, context, session
 
 
-def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, str | None, str]:
-    """Read the delivery switch, world and session from the verified target."""
-    enabled, world, _, _, session = delivery_target(run, session_id=session_id)
-    return enabled, world, session
-
-
 class Delivery:
     """Leaves confirmed versions and the unbroken covered prefix in `<runner directory>/delivered/`.
 

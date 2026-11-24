@@ -10,7 +10,7 @@ review_trigger: "The owner decides whether to take up the programs line, the bou
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The [decision on the bounded program interface brief](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief) set this unbuilt proposal aside until the fact store's field table merged. The [curator contract](../contracts/curator.md#facts-curator-fact4) holds that table, so the owner's revisit condition is met. The proposal authorizes no build.
+**Answer.** The [decision on the bounded program interface brief](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief) set this unbuilt proposal aside until the fact store's field table merged. The [curator contract](../contracts/curator.md#facts-curator-fact5) holds that table, so the owner's revisit condition is met. The proposal authorizes no build.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
@@ -22,7 +22,7 @@ The reasons are in the retired [curated-player decision record](../decisions/009
 
 A program can replace the playing model on its interface. Like that model, called the actor, it receives the full-resolution frame, objective and delivered knowledge. It returns basic inputs with emissions, a slot request, or a yield with a reason. It sends only basic controls through the actor's port under the [computer-control boundary](../decisions/006-computer-control-boundary.md). Each run pins the program version.
 
-A passive policy runs in isolation with no I/O, bounded memory and a per-step time limit. Only the curator's or gate's sandbox would execute curator-written code and tests. The custodian and publisher would execute no program code. The [gate](../contracts/curator.md#gate-v0) publishes data only and refuses program or test content in its repository.
+A passive policy runs in isolation with no I/O, bounded memory and a per-step time limit. Only the curator's or gate's sandbox would execute curator-written code and tests. The custodian and publisher would execute no program code. The [gate](../contracts/curator.md#gate-and-pre-validation) publishes data only and refuses program or test content in its repository.
 
 Budgets cap steps, wall time and model spend. A failed precondition or unrecognized screen makes the program yield.
 
