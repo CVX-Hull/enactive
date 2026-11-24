@@ -45,18 +45,16 @@ def script(messages: list[dict], attack: str | None = None, *, unfiled: bool = F
     if grooming:
         if turns == 0:
             return [('read_file', {'path': 'brief.md'}), ('read_file', {'path': 'knowledge/facts.jsonl'}),
-                    ('read_file', {'path': 'knowledge/ontology/types.json'}),
                     ('read_file', {'path': 'grooming.md'}), ('read_file', {'path': 'trace/manifest.json'})]
         if turns == 1:
             tools = '\n'.join(_text(m) for m in messages if m.get('role') == 'tool')
             version = re.search(r'Published knowledge: `(v[0-9]+)`', tools).group(1)
             # This stand-in's admission publishes f1. Its grooming files that evidence.
-            article = dict(schema='curator-fact/4', record='article', id='a1', title='Stand-in subject',
+            article = dict(schema='curator-fact/5', record='article', slug='a1', tags=[], title='Stand-in subject',
                            lead='A useful observed relation. Check before relying on it.',
                            body=[dict(text='An observed relation.', facts=['f1'])], links=[])
-            submission = dict(schema='curator-submission/1', base_version=version, summary='stand-in grooming',
-                              changes=([dict(op='add_type', type=dict(schema='curator-type/2', name='unfiled',
-                                                                    description='a valid change with no filing', fields=[], identity=[], reason='Test unfiled evidence'))]
+            submission = dict(schema='curator-submission/2', base_version=version, summary='stand-in grooming',
+                              changes=([dict(op='retag', assignments={'f1': ['unfiled']})]
                                        if unfiled else [dict(op='add_article', article=article)]))
             return [('write_file', {'path': 'submissions/grooming/submission.json', 'content': json.dumps(submission)})]
         return [('finish', {'summary': 'stand-in grooming done'})] if turns == 2 else None
@@ -67,14 +65,11 @@ def script(messages: list[dict], attack: str | None = None, *, unfiled: bool = F
         tools = '\n'.join(_text(m) for m in messages if m.get('role') == 'tool')
         version = re.search(r'Published knowledge: `(v[0-9]+)`', tools).group(1)
         frames = re.findall(r'file\t[0-9]+\t(.+?)\.png', tools)
-        game = re.search(r'"game": "([^"]+)"', tools).group(1)
-        submission = dict(schema='curator-submission/1', base_version=version, summary='stand-in: one control and one fact',
-                          changes=[dict(op='add_type', type=dict(schema='curator-type/2', name='control',
-                                                                 description='what an input does', fields=['input', 'effect'],
-                                                                 identity=['input'], reason='Describe a control')),
-                                   dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id='f1', type='control',
-                                                                 text='stand-in statement', known='observed',
-                                                                 scope=dict(game=game, level='game'),
+        submission = dict(schema='curator-submission/2', base_version=version, summary='stand-in: one fact',
+                          changes=[dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id='f1',
+                                                                 claim_kind='interface', tags=['control'],
+                                                                 text='stand-in statement', evidence_basis='observed',
+                                                                 scope={}, links=[],
                                                                  citations=frames[:1], subject='stand-in subject'))])
         return [('view_frame', {'frames': frames[:2]}), ('run_workbench', {'args': ['--help']}),
                 ('write_file', {'path': 'submissions/stand-in/submission.json', 'content': json.dumps(submission)}),

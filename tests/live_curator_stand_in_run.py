@@ -166,11 +166,9 @@ def writer_main(args: argparse.Namespace) -> int:
 
 
 # ----------------------------------------------------------------------------------- the stand-in curator
-def distinct_facts(knowledge_root: Path):
-    """Wrap the stand-in's script: a fact identity per window, and the type only when the base lacks it."""
-    from harness.curator.knowledge import KnowledgeError, Repository
+def distinct_facts():
+    """Give each stand-in window a distinct fact identity."""
     from tests import curator_stand_in
-    from tools.curator_host import shadow
 
     original = curator_stand_in.script
     rewritten = []
@@ -181,21 +179,11 @@ def distinct_facts(knowledge_root: Path):
             if name != 'write_file' or arguments.get('path') != 'submissions/stand-in/submission.json':
                 continue
             submission = json.loads(arguments['content'])
-            try:
-                types = {t['name'] for t in Repository(knowledge_root, shadow.GAME).types(submission['base_version'])}
-            except KnowledgeError:
-                types = set()
-            changes = []
-            for change in submission['changes']:
-                if change['op'] == 'add_type' and change['type']['name'] in types:
-                    continue
-                if change['op'] == 'add_fact' and change['fact']['citations']:
-                    change['fact']['id'] = 'f-' + change['fact']['citations'][0].rsplit('-', 1)[-1]
-                changes.append(change)
-            submission['changes'] = changes
-            rewritten.append(dict(base_version=submission['base_version'],
-                                  facts=[c['fact']['id'] for c in changes if c['op'] == 'add_fact'],
-                                  types=[c['type']['name'] for c in changes if c['op'] == 'add_type']))
+            facts = [change['fact'] for change in submission['changes'] if change['op'] == 'add_fact']
+            for fact in facts:
+                if fact['citations']:
+                    fact['id'] = 'f-' + fact['citations'][0].rsplit('-', 1)[-1]
+            rewritten.append(dict(base_version=submission['base_version'], facts=[fact['id'] for fact in facts]))
             calls[index] = (name, dict(arguments, content=json.dumps(submission)))
         return calls
 
@@ -262,7 +250,7 @@ def live_run(out: Path, knowledge_root: Path, args: argparse.Namespace) -> dict:
     port = guard.free_loopback_port()  # the custodian's own port: nothing listens there in this run
     profile = dict(session=session, source_commit=commit, wall_seconds=WALL_SECONDS, port=port)
     substitutions = []
-    rewritten = distinct_facts(knowledge_root)
+    rewritten = distinct_facts()
     with StandIn() as stand_in:
         config = out/'runner-config.json'
         config.write_text(json.dumps(dict(

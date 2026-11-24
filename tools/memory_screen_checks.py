@@ -165,18 +165,18 @@ def read_versions(repository: Path) -> list[dict]:
         if kind != 'commit':
             raise StoreError(f'{repository}: {tag.name} is a {kind}, not a commit')
         files = _entries(objects, body.split(b'\n', 1)[0].split()[1].decode())
-        message = f'{repository} {tag.name}: unsupported knowledge schema: expected curator-knowledge/3; start a new repository'
+        message = f'{repository} {tag.name}: unsupported knowledge schema: expected curator-knowledge/4; start a new repository'
         try:
             metadata = json.loads(_object(objects, files['knowledge.json'])[1])
         except (KeyError, StoreError, OSError, ValueError, RecursionError) as error:
             raise StoreError(message) from error
-        if not isinstance(metadata, dict) or metadata.get('schema') != 'curator-knowledge/3':
+        if not isinstance(metadata, dict) or metadata.get('schema') != 'curator-knowledge/4':
             raise StoreError(message)
         data = _object(objects, files['facts.jsonl'])[1]
-        records = [json.loads(line) for line in data.decode('utf-8').splitlines() if line.strip()]
+        records = [json.loads(line) for line in data.decode('utf-8').split('\n') if line.strip()]
         for record in records:
-            if not isinstance(record, dict) or record.get('schema') != 'curator-fact/4':
-                raise StoreError(f'{repository} {tag.name}: unsupported record schema; expected curator-fact/4')
+            if not isinstance(record, dict) or record.get('schema') != 'curator-fact/5':
+                raise StoreError(f'{repository} {tag.name}: unsupported record schema; expected curator-fact/5')
             if record.get('record') not in ('fact', 'article'):
                 raise StoreError(f'{repository} {tag.name}: unsupported record kind; expected fact or article')
         message_lines = body.partition(b'\n\n')[2].decode('utf-8').splitlines()
@@ -211,7 +211,8 @@ def fact_history(versions: Sequence[dict], identity: str) -> dict | None:
             changed.append(version['version'])
         last = fact
     return None if first is None else dict(id=identity, version=first['version'], session=first.get('session'),
-        type=first.get('type'), text=first.get('text'), scope=first.get('scope'), known=first.get('known'),
+        claim_kind=first.get('claim_kind'), text=first.get('text'), scope=first.get('scope'),
+        evidence_basis=first.get('evidence_basis'), tags=first.get('tags'),
         citations=first.get('citations') or [],
         changed_in=changed, dropped_in=dropped, latest_text=last.get('text'))
 
@@ -706,7 +707,7 @@ def render_store(reports: Sequence[dict]) -> str:
             lines.append(f"find {label}: {len(found)} facts")
             for fact in found:
                 cited = '; '.join(f"{c['frame']} = {_where(c)}" for c in fact['cited']) or ', '.join(fact['citations'])
-                lines.append(f"  {fact['id']} ({fact['type']}) first in {fact['version']} by {fact['session']}; changed in "
+                lines.append(f"  {fact['id']} ({fact['claim_kind']}) first in {fact['version']} by {fact['session']}; changed in "
                     f"{fact['changed_in'] or 'none'}; dropped in {fact['dropped_in'] or 'none'}; cites {cited}\n"
                     f"    {fact['text']}")
     return '\n'.join(lines)
