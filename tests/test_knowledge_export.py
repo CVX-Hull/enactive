@@ -578,3 +578,120 @@ def test_editorial_retirement_in_grooming_is_visible_on_its_admitted_lineage(tmp
     child_view, _ = freeze(tmp_path/'child', fixture, world='world', lineage='child')
     assert child_view.read('cache-guide', by='id')['resolution'] == 'ended'
     assert child_view.read('cache-guide@v1', by='id')['resolution'] == 'unknown'
+
+
+def test_editorial_retirement_requires_every_session_in_whole_admission_to_match(tmp_path):
+    from tests.synthetic_knowledge_repo import SyntheticKnowledgeBuilder, session_hex
+    builder = SyntheticKnowledgeBuilder(tmp_path/'repository')
+    first = session_hex(1)
+    builder.add_session(first, 'first-session', world='world', lineage='main', admission=1)
+    builder.add_session(session_hex(2), 'second-session', world='world', lineage='main', admission=2)
+    builder.add_session(session_hex(3), 'other-session', world='world', lineage='other', admission=1)
+    builder.add_session(session_hex(4), 'unlabelled-session', world='world')
+    source = builder.add_frame(first, 1, 5)
+    builder.records.append(builder.make_fact(fact_id='cache', claim_kind='instance_state', text='The box is full.',
+        citations=[source], published_in='v1', session='curator-v1', bind_world=True))
+    admissions = {'same-lineage': 'first-session,second-session', 'mixed-lineage': 'first-session,other-session',
+                  'unknown-session': 'first-session,missing-session', 'unlabelled': 'first-session,unlabelled-session'}
+    for slug in admissions:
+        builder.records.append(builder.make_article(slug=slug, title=slug, lead='Check the box.',
+            body=[dict(text='The box is full.', facts=['cache'])], published_in='v1', session='curator-v1'))
+    builder.commit_version(coverage_session='first-session', last_step=5)
+    for slug, stamp in admissions.items():
+        builder.commit_version(coverage_session=stamp, actor=None, last_step=None)
+        builder.retire_article(slug, reason='The fact stands alone.', reason_kind='editorial',
+                               published_in=f'v{builder.version_num + 1}', session='grooming')
+        version = builder.commit_version(coverage_session=stamp, actor=None, last_step=None, session_kind='grooming')
+    value = publish(dict(repo_path=builder.path, version=version), world='world', lineage='main')
+    assert value['history']['ended'] == ['same-lineage']
+    assert {row['id'] for row in value['articles']} == admissions.keys() - {'same-lineage'}
+
+
+def test_child_inherits_uncertainty_from_parent_restore_before_fork(tmp_path):
+    from tests.synthetic_knowledge_repo import SyntheticKnowledgeBuilder, position, session_hex
+    builder = SyntheticKnowledgeBuilder(tmp_path/'repository')
+    parent, child = session_hex(1), session_hex(2)
+    builder.add_session(parent, 'parent-session', world='world', lineage='parent', admission=1)
+    source = builder.add_frame(parent, 1, 5)
+    builder.records.append(builder.make_fact(fact_id='cache', claim_kind='instance_state', text='The box is full.',
+        citations=[source], published_in='v1', session='curator-v1', bind_world=True))
+    builder.commit_version(coverage_session='parent-session', last_step=5)
+    builder.add_restore(lineage='parent', saved_at=None, saved_version=None,
+        restored_at=position('parent-session', 10), restored_version='v1')
+    builder.add_frame(parent, 2, 11)
+    builder.commit_version(coverage_session='parent-session', last_step=11)
+    builder.add_session(child, 'child-session', world='world', lineage='child', admission=1,
+        branch=dict(parent='parent', fork_at=position('parent-session', 12), fork_version='v2'))
+    builder.add_frame(child, 1, 13, order_index=2)
+    version = builder.commit_version(coverage_session='child-session', last_step=13)
+    fixture = dict(repo_path=builder.path, version=version)
+    for lineage in ('parent', 'child'):
+        fact, = publish(fixture, world='world', lineage=lineage)['facts']
+        assert fact['branch_relation'] == 'unknown'
+        assert fact['unverified_branch'] is True
+
+
+def test_editorial_retirement_needs_positive_version_evidence_after_unknown_restore(tmp_path):
+    from tests.synthetic_knowledge_repo import SyntheticKnowledgeBuilder, position, session_hex
+    builder = SyntheticKnowledgeBuilder(tmp_path/'repository')
+    sid = session_hex(1)
+    builder.add_session(sid, 'main-session', world='world', lineage='main', admission=1)
+    source = builder.add_frame(sid, 1, 5)
+    builder.records.append(builder.make_fact(fact_id='cache', claim_kind='instance_state', text='The box is full.',
+        citations=[source], published_in='v1', session='curator-v1', bind_world=True))
+    for slug in ('guide-ended-before-restore', 'guide-ended-after-restore'):
+        builder.records.append(builder.make_article(slug=slug, title=slug, lead='Check the box.',
+            body=[dict(text='The box is full.', facts=['cache'])], published_in='v1', session='curator-v1'))
+    builder.commit_version(coverage_session='main-session', last_step=5)
+    builder.retire_article('guide-ended-before-restore', reason='The fact stands alone.', reason_kind='editorial',
+                           published_in='v2', session='curator-v2')
+    builder.commit_version(coverage_session='main-session', last_step=5)
+    builder.add_restore(lineage='main', saved_at=None, saved_version=None,
+        restored_at=position('main-session', 10), restored_version='v2')
+    builder.add_frame(sid, 2, 11)
+    builder.retire_article('guide-ended-after-restore', reason='The fact stands alone.', reason_kind='editorial',
+                           published_in='v3', session='curator-v3')
+    version = builder.commit_version(coverage_session='main-session', last_step=11)
+    reader = Knowledge.from_dict(publish(dict(repo_path=builder.path, version=version), world='world', lineage='main'))
+    assert reader.read('guide-ended-before-restore', by='id')['resolution'] == 'current'
+    assert reader.read('guide-ended-after-restore', by='id')['resolution'] == 'ended'
+
+
+def test_article_history_keeps_applicable_citations_after_fact_restatement_or_end(tmp_path):
+    from tests.synthetic_knowledge_repo import SyntheticKnowledgeBuilder, session_hex
+    builder = SyntheticKnowledgeBuilder(tmp_path/'repository')
+    sid = session_hex(1)
+    builder.add_session(sid, 'main-session', world='world', lineage='main', admission=1)
+    source = builder.add_frame(sid, 1, 5)
+    builder.records.append(builder.make_fact(fact_id='cache-old', claim_kind='instance_state', text='The box is full.',
+        citations=[source], published_in='v1', session='curator-v1', bind_world=True))
+    builder.records.append(builder.make_fact(fact_id='camp-fire', claim_kind='instance_state', text='The fire is lit.',
+        citations=[source], published_in='v1', session='curator-v1', bind_world=True))
+    builder.records.append(builder.make_article(slug='cache-guide', title='Cache guide', lead='Check the box.',
+        body=[dict(text='The box is full.', facts=['cache-old'])], published_in='v1', session='curator-v1'))
+    for slug in ('fire-guide', 'wrong-fire-guide'):
+        builder.records.append(builder.make_article(slug=slug, title=slug, lead='Check the fire.',
+            body=[dict(text='The fire is lit.', facts=['camp-fire'])], published_in='v1', session='curator-v1'))
+    builder.commit_version(coverage_session='main-session', last_step=5)
+    builder.supersede_fact(['cache-old'], builder.make_fact(fact_id='cache', claim_kind='instance_state',
+        text='The storage box is full.', citations=[source], published_in='v2', session='curator-v2', bind_world=True),
+        reason_kind='restated')
+    builder.revise_article('cache-guide', builder.make_article(slug='cache-guide', title='Cache guide',
+        lead='Check the storage box.', body=[dict(text='The storage box is full.', facts=['cache'])],
+        published_in='v2', session='curator-v2'))
+    builder.retire_article('fire-guide', reason='The fact stands alone.', reason_kind='editorial',
+                           published_in='v2', session='curator-v2')
+    builder.retire_article('wrong-fire-guide', reason='The lead is wrong.', reason_kind='wrong',
+                           published_in='v2', session='curator-v2')
+    builder.commit_version(coverage_session='main-session', last_step=5)
+    end = builder.add_frame(sid, 2, 10)
+    builder.retire_fact_ended('camp-fire', reason='The fire went out.', end='transition',
+                             end_citations=[end], published_in='v3', session='curator-v3')
+    version = builder.commit_version(coverage_session='main-session', last_step=10)
+    fixture = dict(repo_path=builder.path, version=version)
+    target = dict(world='world', lineage='main')
+    value = publish(fixture, **target)
+    assert {row['id'] for row in value['facts']} == {'cache'}
+    assert value['history']['replaced']['cache-guide@v1'] == dict(reason='restated', by=['cache-guide'])
+    assert value['history']['ended'] == ['camp-fire', 'fire-guide']
+    assert value['history']['retracted'] == ['wrong-fire-guide']

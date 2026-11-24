@@ -330,18 +330,15 @@ class _TargetView:
         retirement = self.at(version)
         coverage = self.coverage(version) or {}
         # The publication's stamp names the admitted trace. Grooming carries the last admission's stamp.
-        session = coverage.get('session')
-        if session not in retirement.lineages:
-            session = retirement.provenance.get('last_admission', {}).get('coverage', {}).get('session')
-        if retirement.lineages.get(session) != lineage:
+        session = coverage.get('session') or retirement.provenance.get('last_admission', {}).get('coverage', {}).get('session')
+        names = {name for name in (session or '').split(',') if name}
+        if not (names <= retirement.lineages.keys() and {retirement.lineages[name] for name in names} == {lineage}):
             return False
         branch = snap.branch(lineage)
         if branch.get('fork_at') is not None and (branch['fork_version'] is None
                                                   or int(version[1:]) <= int(branch['fork_version'][1:])):
             return False
         for restore in snap.restores.get(lineage, ()):
-            if restore['saved_at'] is None:
-                continue
             saved, restored = restore['saved_version'], restore['restored_version']
             if not ((saved is not None and int(version[1:]) <= int(saved[1:]))
                     or (restored is not None and int(version[1:]) > int(restored[1:]))):
@@ -364,8 +361,8 @@ class _TargetView:
             if cut_number >= int(version[1:]):
                 raise KnowledgeError(f'{version}: timeline cut {fork_version} is outside the published prefix')
             parent_snapshot = self.at(fork_version)
-            view = {identity: (row, 'inherited')
-                    for identity, (row, _) in self.resolved(parent, fork_version).items()
+            view = {identity: (row, 'unknown' if relation == 'unknown' else 'inherited')
+                    for identity, (row, relation) in self.resolved(parent, fork_version).items()
                     if all(p <= fork_at['order'] for p in parent_snapshot.own_positions(row, parent))}
             previous = defaultdict(list)
             for row in snap.rows.values():
@@ -488,14 +485,15 @@ class _TargetView:
                 terminals[identity] = paths
             return terminals[identity]
 
-        eligible_facts = {identity for identity in eligible if '@' not in identity}
         for identity, row in sorted(self.snapshot.rows.items()):
             slug = check.owner(row)
             if (identity in eligible or check.current(row) or self.applicable(row) is not True
                     or not self.historical_lineage(row)):
                 continue
             if row['record'] == 'article':
-                if not check.cited_facts(row) <= eligible_facts:
+                if not all((fact := self.snapshot.rows.get(fid)) is not None
+                           and self.applicable(fact) is True and self.historical_lineage(fact)
+                           for fid in check.cited_facts(row)):
                     continue
                 if slug in public:
                     if _publication(row) < int(public[slug]['revision'].rsplit('@v', 1)[1]):
