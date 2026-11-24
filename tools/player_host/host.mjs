@@ -478,11 +478,54 @@ function diagnosticId(value, secret) {
     && !value.includes(secret) ? value : null;
 }
 function refusalDiagnostic(error, secret) {
-  return {error_type:diagnosticId(error?.metadata?.error_type ?? error?.type, secret),
-    error_code:diagnosticId(Number.isSafeInteger(error?.code) ? String(error.code) : error?.code, secret),
-    provider_error_code:diagnosticId(error?.metadata?.provider_code, secret),
-    limit_source:diagnosticId(error?.metadata?.limit_source, secret),
-    reason:diagnosticId(error?.metadata?.reason, secret)};
+  const metadata = error?.metadata;
+  const raw = metadata?.raw;
+  let structuredRaw = raw;
+  if (typeof raw === 'string') {
+    try { structuredRaw = JSON.parse(raw); } catch { /* Keep plain text as classification input. */ }
+  }
+  const rawError = structuredRaw?.error;
+  const refusalText = [error?.message, error?.error, raw, structuredRaw?.message, rawError,
+    rawError?.message, rawError?.error].filter(text);
+  const safeId = value => {
+    const id = diagnosticId(Number.isSafeInteger(value) ? String(value) : value, secret);
+    return id !== null && !refusalText.some(part => part.trim() === id.trim()) ? id : null;
+  };
+  const providerLabel = typeof metadata?.provider_name === 'string' ? safeId(metadata.provider_name) : null;
+  const providerEcho = providerLabel?.includes(' ') && [...refusalText, metadata?.flagged_input].filter(text)
+    .some(part => part.toLowerCase().includes(providerLabel.toLowerCase()));
+  const providerName = providerLabel && providerLabel.length <= 64 && !providerEcho
+    && /^[A-Za-z0-9][A-Za-z0-9_.:/-]*(?: [A-Za-z0-9_.:/-]+){0,2}$/.test(providerLabel) ? providerLabel : null;
+  const identifier = value => {
+    const id = safeId(value);
+    return id && !id.includes(' ') ? id : null;
+  };
+  const words = values => values.filter(value => typeof value === 'string' || Number.isSafeInteger(value))
+    .join(' ').replace(/[_-]+/g, ' ');
+  const reasons = Array.isArray(metadata?.reasons) ? metadata.reasons : [metadata?.reasons];
+  const kind = words([error?.code, error?.type, metadata?.provider_code, metadata?.limit_source, metadata?.error_type,
+    structuredRaw?.code, structuredRaw?.type, rawError?.code, rawError?.type]);
+  const details = words([kind, ...refusalText, metadata?.reason,
+    ...reasons.flatMap(reason => object(reason) ? [reason.code, reason.type, reason.reason, reason.message] : [reason])]);
+  // Free-form text is classification input only. Explicit terminal evidence wins over provider attribution.
+  let refusalClass = 'unknown';
+  if (metadata?.flagged_input != null || (Array.isArray(metadata?.reasons) && metadata.reasons.length > 0)
+      || /\b(?:moderat(?:ion|ed)|flagged|safety|policy|guardrails?|blocklist|content filter(?:ed|ing)?|(?:blocked|prohibited) content|(?:content|prompt) blocked)\b/i.test(details)) {
+    refusalClass = 'moderation';
+  } else if (/\b(?:401|forbidden)\b/i.test(kind)
+      || /\b(?:auth|authentication|authorization|unauthori[sz]ed|not authori[sz]ed|permissions?|access (?:is )?denied|forbidden access|disabled|suspended|banned|not allowed)\b/i.test(details)
+      || /\b(?:(?:invalid|expired|revoked|missing) (?:api |access )?(?:key|token|credentials?)|(?:key|token|credentials?) (?:is |are )?(?:invalid|expired|revoked|missing))\b/i.test(details)) {
+    refusalClass = 'auth';
+  } else if (text(metadata?.limit_source)
+      || /\b(?:quota|billing|budget|credits?|balance|insufficient funds|payment required|(?:spend(?:ing)?|usage|account|key|rate|request) limits?)\b/i.test(details)) {
+    refusalClass = 'credits-or-limit';
+  } else if (providerName !== null) {
+    refusalClass = 'upstream-provider';
+  }
+  return {refusal_class:refusalClass, provider_name:providerName,
+    error_type:identifier(metadata?.error_type ?? error?.type), error_code:identifier(error?.code),
+    provider_error_code:identifier(metadata?.provider_code), limit_source:identifier(metadata?.limit_source),
+    reason:identifier(metadata?.reason)};
 }
 
 // The provider's own statement of what one response cost, in US dollars (#555). The host
@@ -976,7 +1019,7 @@ export async function runHost(options) {
   let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
   let releaseInitialControl;
   const initialControlReady = new Promise(resolve => { releaseInitialControl = resolve; });
-  let contextWarning = false, affinityId;
+  let contextWarning = false, spendWarning = false, affinityId;
   // Notices sent so far, each with the number of history messages it followed (append-only), and
   // the kinds already announced in full.
   const placedNotices = [], noticed = new Set();
@@ -1077,6 +1120,10 @@ export async function runHost(options) {
     recallBound = amountFromText(recallConfiguration.unpriced_request_usd);
     affinityId = sessionAffinityId(options.session);
     spendLimit = amountFromText(configuration.spend_limit_usd);
+    const [limitUnits, reserveUnits, spendScale] = alignedUnits(spendLimit, finishReserve);
+    const workBudget = largerAmount([0n, 0], [limitUnits - reserveUnits, spendScale]);
+    const warningBand = largerAmount([25n, 2], [workBudget[0] * 15n, workBudget[1] + 2]);
+    const spendWarningThreshold = lessThan(workBudget, warningBand) ? workBudget : warningBand;
     unpricedBound = amountFromText(configuration.unpriced_request_usd);
     emit('host-start', {telemetry_version:11, schema:configuration.schema, session:options.session, actor_id:options.actorId,
       requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider,
@@ -1291,7 +1338,7 @@ export async function runHost(options) {
       }
       if (planCount < cfg.min_free) return holdBack('below-min-free', planCount);
 
-      // A cut rewrites the prefix, drops prior capacity/time tail notices, and resets the full-notice latch.
+      // A cut rewrites the prefix and drops prior tail notices, so the next notice gives full guidance.
       for (let i = placedNotices.length - 1; i >= 0; i--) if (placedNotices[i].tail) placedNotices.splice(i, 1);
       noticed.clear();
       cutState = {cutMessageIndex, firstFreshMessageIndex:validated.length, promptMessage,
@@ -1383,19 +1430,17 @@ export async function runHost(options) {
           emit('context-estimate', {request_id:`request-${requests + 1}`, tokens, usage_tokens:usageTokens,
             heuristic_tokens:heuristicTokens, heuristic:true, exact:false});
           if (tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
-          // Notices warn before each stop the host itself will enforce: context capacity, the request
-          // allowance and the work deadline. Each notice stays in the history where it was first sent
-          // and is never rewritten until a cut (#489: the provider's cache reuses only a request that
-          // a later one extends; a tail rewritten each request is never reused). Once a threshold is passed, every later request adds a new notice
-          // (the context one is latched; the others only grow nearer). The first context and time
-          // notices explain how to wrap up. Request notices report the allowance without directing
-          // the player to end before the separate ending control or the actual cap.
+          // Each notice stays unchanged where it was first sent until a cut, so later requests
+          // extend the cached prefix (#489). After crossing a threshold, each request adds a notice.
           // A retry resends the same body below this hook (the fetch wrapper), so it adds no notice.
           const at = messages.length;
           const lines = [], kinds = [];
+          const [workUnits, spentUnits, remainingScale] = alignedUnits(workBudget, spent);
+          const workLeft = largerAmount([0n, 0], [workUnits - spentUnits, remainingScale]);
+          spendWarning ||= !lessThan(spendWarningThreshold, workLeft);
           const wrapUp = control
             ? 'Finish up and use player_finish under the accepted automation control.'
-            : mcp.enabled_tools.includes('player_handoff')
+            : !spendWarning && mcp.enabled_tools.includes('player_handoff')
               ? 'Request the existing player_handoff with the context you need to retain (if it reports that no successor is available, use player_finish), or use player_finish if you cannot continue.'
               : 'Use player_finish, reporting where play stands.';
           const first = kind => !noticed.has(kind);
@@ -1403,7 +1448,7 @@ export async function runHost(options) {
           if (contextWarning) {
             const room = Math.max(0, configuration.model.contextWindow - configuration.model.maxTokens - tokens);
             lines.push(first('context-capacity')
-              ? `${control || mcp.enabled_tools.includes('player_handoff')
+              ? `${control || spendWarning || mcp.enabled_tools.includes('player_handoff')
                 ? `Host context capacity is approaching. ${wrapUp}`
                 : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands.'} ${configuration.context_cut !== null ? 'No text summarization or history restoration is available.' : 'No compaction or history restoration is available.'} About ${room} tokens of room remain before the host must stop.`
               : `Host context capacity: about ${room} tokens of room remain before the host must stop.`);
@@ -1416,6 +1461,15 @@ export async function runHost(options) {
               ? `Host time allowance: about ${left} remain before the host stops. ${wrapUp}`
               : `Host time allowance: about ${left} remain before the host stops.`);
             kinds.push('host-timeout');
+          }
+          if (spendWarning) {
+            const remaining = `Host spend allowance: about $${amountText(workLeft)} of work budget remains before the ending reserve.`;
+            const handoffAdvice = !control && mcp.enabled_tools.includes('player_handoff')
+              ? ' Avoid starting a fresh actor with player_handoff.' : '';
+            lines.push(first('spend-limit')
+              ? `${remaining} Wrap up with player_finish, reporting where play stands.${handoffAdvice}`
+              : remaining);
+            kinds.push('spend-limit');
           }
           if (lines.length === 0) return withNotices;
           const notice = {role:'user', timestamp:Date.now(), content:[{type:'text', text:lines.join('\n')}]};
@@ -1543,7 +1597,7 @@ export async function runHost(options) {
             const server = SERVER_RETRY_STATUSES.includes(response.status);
             emit('response-headers', {request_id:attemptId, status:response.status, provider_request_id:
               diagnosticId(response.headers.get('x-request-id'), apiKey),
-              ...(server || [402, 429].includes(response.status) ? retryDiagnostic(response.headers) : {})});
+              ...(server || [402, 403, 429].includes(response.status) ? retryDiagnostic(response.headers) : {})});
             let first = false;
             const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
               attemptProgress.body_bytes += chunk.byteLength;
@@ -1562,7 +1616,7 @@ export async function runHost(options) {
               if (peeked.failed && attempts === 1 && response.headers.get('x-should-retry') !== 'false' && !fatal && !requestSignal.aborted) {
                 await peeked.cancel();
                 emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:true, stream_start_error:true,
-                  error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null});
+                  ...refusalDiagnostic(null, apiKey)});
                 retry(attemptId, 'stream-start-error', response.status, response.headers);
               }
               recoverableResponse = response.status === 200 && !peeked.failed && response.headers.get('x-should-retry') !== 'false';
@@ -1579,10 +1633,13 @@ export async function runHost(options) {
             }
             if (object(refusal?.usage)) requestReportedCost = withUsageRecord(null, refusal.usage);
             const error = refusal?.error;
-            emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:errorBody !== null, ...refusalDiagnostic(error, apiKey)});
+            const diagnosticError = object(error) ? error : refusal;
+            const diagnostic = refusalDiagnostic(diagnosticError, apiKey);
+            emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:errorBody !== null, ...diagnostic});
             // One shared retry per logical request, whatever the first class was.
             if (attempts === 1 && response.headers.get('x-should-retry') !== 'false') {
               if (server) retry(attemptId, 'server-error', response.status, response.headers);
+              if (response.status === 403 && diagnostic.refusal_class === 'upstream-provider') retry(attemptId, 'provider-403-failover', 403, response.headers);
               if (response.status === 429 && retryableRefusal(error)) retry(attemptId, 'rate-limit', 429, response.headers);
               if (response.status === 402 && Number.isFinite(retryAfterMs(response.headers.get('retry-after'))) && inFlightBudgetRefusal(error)) retry(attemptId, 'in-flight-budget', 402, response.headers);
             }

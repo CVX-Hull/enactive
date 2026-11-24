@@ -76,6 +76,18 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(row["timing_ms"]["first_reasoning"]["n"], 0)
         self.assertEqual(row["pending_tools"], 0)
 
+    def test_refusal_projection_accepts_redacted_fields_and_older_version_11_events(self):
+        e = self.event
+        events = [e("host-start", 0), e("request-start", 1, request_id="r1"),
+            e("provider-refusal", 2, request_id="r1", refusal_class="upstream-provider", provider_name="Fixture Endpoint",
+                error_code="403", provider_error_code="endpoint_refused", message="private fixture detail"),
+            e("request-start", 3, request_id="r2"), e("provider-refusal", 4, request_id="r2", error_code="403"), e("settled", 5)]
+        first, second = analyze_trace(self.trace(events))["requests"]
+        self.assertEqual((first["refusal_class"], first["provider_name"], first["error_code"], first["provider_error_code"]),
+            ("upstream-provider", "Fixture Endpoint", "403", "endpoint_refused"))
+        self.assertNotIn("message", first)
+        self.assertEqual((second["refusal_class"], second["provider_name"], second["error_code"]), (None, None, "403"))
+
     def test_p50_is_nearest_rank_not_the_mean_of_the_middle_pair(self):
         e = self.event
         events = [e("host-start", 0), e("request-start", 10, request_id="r1"),
@@ -486,8 +498,8 @@ class HostAnalysisTests(unittest.TestCase):
             events.append(e("request-start", at + 1, request_id=request))
             if "omitted" in step:
                 events.append(e("context-image-projection", at + 2, request_id=request, omitted_images=step["omitted"]))
-            if step.get("notice_here"):
-                events.append(e("tail-notice", at + 2, request_id=request, kinds=["context-capacity"], tokens=prompt))
+            if notice := step.get("notice_here"):
+                events.append(e("tail-notice", at + 2, request_id=request, kinds=[notice if isinstance(notice, str) else "context-capacity"], tokens=prompt))
             if "cut_here" in step:
                 events.append(e("context-cut", at + 2, request_id=request, outcome=step["cut_here"]))
             reasoning, output = step.get("reasoning", 0), step.get("visible", 0) + step.get("reasoning", 0)
@@ -510,6 +522,14 @@ class HostAnalysisTests(unittest.TestCase):
             step["growth"] = 0.4 * len(step["text"]) + step["visible"] + step["reasoning"] + per_image * step["images"] + constant
             steps.append(step)
         return steps
+
+    def test_spend_notice_is_projected_and_excluded_from_prompt_growth_pairs(self):
+        steps = self.steps(3)
+        steps[1]["notice_here"] = "spend-limit"
+        report = analyze_trace(self.chain(steps))
+        self.assertEqual(report["requests"][1]["tail_notice_kinds"], ["spend-limit"])
+        self.assertEqual(report["prompt_composition"]["left_out"]["notice_added"], 1)
+        self.assertEqual(report["prompt_composition"]["pairs"], 1)
 
     def test_the_usage_fit_recovers_the_cost_of_each_part_from_reported_usage_alone(self):
         steps = self.steps(images=lambda index: index % 3, per_image=730, constant=15)

@@ -108,8 +108,8 @@ def tool_response(name: str, arguments: dict) -> tuple:
              usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16, cost=RESPONSE_COST_USD))))
 
 
-def http_response(status: int, body: dict) -> tuple:
-    return ("http", status, json.dumps(body).encode())
+def http_response(status: int, body: dict, headers=None) -> tuple:
+    return ("http", status, json.dumps(body).encode(), headers or {})
 
 
 HANG = ("hang",)
@@ -160,6 +160,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(step[1])
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(step[2])))
+            for name, value in step[3].items():
+                self.send_header(name, value)
             self.end_headers()
             self.wfile.write(step[2])
             return
@@ -177,8 +179,9 @@ class Handler(BaseHTTPRequestHandler):
 class Hosted:
     """One adapter invocation with the driver's launch shape and its own file set."""
 
-    def __init__(self, adapter, directory: Path, provider: Provider, *, enabled_tools=("observe",), effort="off", spend_limit_usd="100"):
+    def __init__(self, adapter, directory: Path, provider: Provider, *, enabled_tools=("observe",), effort="off", spend_limit_usd="100", finish_reserve_usd="0"):
         self.adapter, self.directory, self.provider, self.effort = adapter, directory, provider, effort
+        self.finish_reserve_usd = finish_reserve_usd
         self.paths = {name: directory / name for name in ("route.json", "delivered-knowledge.json", "mcp.json", "context.txt", "prompt.txt", "final.txt",
                                                           "host.jsonl", "host-stderr.log", "mcp-log", "mcp-pid")}
         self.route = route(adapter, provider.base_url, spend_limit_usd=spend_limit_usd)
@@ -198,7 +201,7 @@ class Hosted:
     def flags(self, timeout_seconds="30") -> list[str]:
         return ["--config", str(self.paths["route.json"]), "--mcp-config", str(self.paths["mcp.json"]),
                 "--context", str(self.paths["context.txt"]), "--prompt", str(self.paths["prompt.txt"]),
-                "--session", "2" * 32, "--actor-id", "3" * 32, "--pending-control-id", "none", "--delivered-knowledge", str(self.paths["delivered-knowledge.json"]), "--finish-reserve-usd", "0", "--model", "fixture", "--effort", self.effort,
+                "--session", "2" * 32, "--actor-id", "3" * 32, "--pending-control-id", "none", "--delivered-knowledge", str(self.paths["delivered-knowledge.json"]), "--finish-reserve-usd", self.finish_reserve_usd, "--model", "fixture", "--effort", self.effort,
                 "--timeout-seconds", timeout_seconds, "-o", str(self.paths["final.txt"])]
 
     def start(self, arguments: list[str] | None = None, *, timeout_seconds="30") -> "Hosted":
@@ -562,7 +565,10 @@ def test_credential_reaches_neither_output_nor_the_mcp_child(adapter, host_facto
     assert hosted.start().wait() != 0
     settled = hosted.settled()
     assert settled["ok"] is False
-    assert hosted.provider.requests, "the refusal must have been provoked by a real provider request"
+    assert len(hosted.provider.requests) == 1
+    refusal = next(e for e in hosted.events() if e["type"] == "provider-refusal")
+    assert (refusal["refusal_class"], refusal["provider_name"]) == ("auth", None)
+    assert not any(e["type"] == "provider-retry" for e in hosted.events())
     for name in ("host.jsonl", "host-stderr.log"):
         assert CREDENTIAL not in hosted.paths[name].read_text(), name
     assert hosted.final() == "reserved"
@@ -571,6 +577,50 @@ def test_credential_reaches_neither_output_nor_the_mcp_child(adapter, host_facto
     assert all(CREDENTIAL not in value for value in environment.values())
     assert set(environment) <= {"PATH", "LANG", "__CF_USER_TEXT_ENCODING", "LC_CTYPE"}
     assert process_gone(hosted.mcp_pid())
+
+
+@pytest.mark.parametrize("suppress", [False, True], ids=["retry", "suppressed"])
+def test_upstream_403_uses_the_shared_retry_through_the_cli(adapter, host_factory, suppress):
+    """R-KEY-LEAK and R-OVERSPEND: redacted refusal fields and bounded attempt accounting."""
+    private_message, private_raw = "private prompt echoed by fixture", "private endpoint response"
+    refusal = dict(code=403, message=f"{private_message} {CREDENTIAL}",
+                   metadata=dict(provider_name="Fixture Endpoint", provider_code="endpoint_refused", raw=private_raw))
+    headers = {"retry-after-ms": "0", **({"x-should-retry": "false"} if suppress else {})}
+    finish = tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None))
+    hosted = host_factory([http_response(403, refusal, headers), finish])
+    assert hosted.start().wait() == int(suppress)
+    assert len(hosted.provider.requests) == (1 if suppress else 2)
+    events = hosted.events()
+    diagnostic = next(e for e in events if e["type"] == "provider-refusal")
+    assert (diagnostic["request_id"], diagnostic["refusal_class"], diagnostic["provider_name"], diagnostic["provider_error_code"]) == (
+        "request-1", "upstream-provider", "Fixture Endpoint", "endpoint_refused")
+    eligible = [e["retry_class"] for e in events if e["type"] == "provider-retry" and e["stage"] == "eligible"]
+    assert eligible == ([] if suppress else ["provider-403-failover"])
+    if not suppress:
+        assert hosted.provider.requests[0]["body"] == hosted.provider.requests[1]["body"]
+    accounting = hosted.accounted()
+    assert accounting["accounting_complete"] is True and accounting["unpriced_requests"] == 1
+    for name in ("host.jsonl", "host-stderr.log"):
+        output = hosted.paths[name].read_text()
+        assert all(value not in output for value in (CREDENTIAL, private_message, private_raw))
+
+
+def test_spend_notice_crosses_the_work_budget_threshold_and_keeps_prior_messages(adapter, host_factory):
+    """R-OVERSPEND and R-REGRESSION: finish guidance before the reserve with stable request prefixes."""
+    calls = [tool_response("integer", dict(value=7)) for _ in range(3)]
+    finish = tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None))
+    hosted = host_factory([*calls, finish], enabled_tools=("integer",), spend_limit_usd="0.358", finish_reserve_usd="0.1")
+    assert hosted.start().wait() == 0
+    events = hosted.events()
+    assert events[0]["telemetry_version"] == 11
+    notices = [e for e in events if e["type"] == "tail-notice"]
+    # $0.258 of work at start and exact $0.004 per response cross the $0.25 band after two responses.
+    assert [(e["request_id"], e["kinds"]) for e in notices] == [("request-3", ["spend-limit"]), ("request-4", ["spend-limit"])]
+    payloads = [json.loads(request["body"])["messages"] for request in hosted.provider.requests]
+    assert all(after[:len(before)] == before for before, after in zip(payloads, payloads[1:]))
+    first, second = (messages[-1]["content"][0]["text"] for messages in payloads[2:])
+    assert "$0.25" in first and "ending reserve" in first and "Wrap up with player_finish" in first
+    assert "$0.246" in second and len(second) < len(first)
 
 
 def test_sigterm_cancels_closes_the_mcp_child_and_leaves_no_process_group(adapter, host_factory):

@@ -80,6 +80,14 @@ test('repeated 429 stops after exactly two charged attempts',async t=>{
   assert.equal(result.requests,2);assert.equal(payloads.length,2);assert.equal(calls.length,0);
   assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.request_id),['request-1','request-2']);
 });
+test('top-level 429 message does not authorize a retry', async t => {
+  const refusal = new Response(JSON.stringify({message:'Too many requests'}), {status:429,
+    headers:{'content-type':'application/json', 'retry-after-ms':'0'}});
+  const {result, bodies, events} = await scenario(t, [refusal, reply()]);
+  assert.equal(result.reason, 'provider-error');
+  assert.equal(bodies.length, 1);
+  assert.equal(events.some(event => event.type === 'provider-retry'), false);
+});
 test('quota, authorization and malformed 429 errors remain terminal despite retry-looking text',async t=>{
   for (const error of [
     {code:'insufficient_quota',message:'Rate limited'},
