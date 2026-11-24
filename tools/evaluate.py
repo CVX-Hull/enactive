@@ -94,6 +94,7 @@ def evaluate_run(arguments: argparse.Namespace, binding: Any) -> dict:
 
 def evaluate_runs(arguments: argparse.Namespace, binding: Any) -> dict:
     from harness.evaluation.core.pipeline import record_summary
+    from harness.evaluation.core.sources import run_name
     directory = arguments.paths[0]
     runs = sorted(p for p in directory.iterdir() if (p / 'manifest.json').is_file())
     if not runs:
@@ -102,11 +103,11 @@ def evaluate_runs(arguments: argparse.Namespace, binding: Any) -> dict:
     for run in runs:
         memory = None
         if arguments.memory_dir is not None:
-            candidate = arguments.memory_dir / f'player-memory-{run.name}.sqlite3'
+            candidate = arguments.memory_dir / f'player-memory-{run_name(run)}.sqlite3'
             memory = candidate if candidate.is_file() else None
         path = evaluate_one(run, binding, arguments, memory)
         survival = record_summary(path)['metrics']['survival.game_hours']['value']
-        results.append(dict(run=run.name, record=str(path), hours=None if not survival else survival['hours'],
+        results.append(dict(run=run_name(run), record=str(path), hours=None if not survival else survival['hours'],
             outcome=None if not survival else survival['outcome'],
             censor_reason=None if not survival else survival.get('censor_reason')))
     return dict(runs=results)
@@ -140,11 +141,15 @@ def evaluate_compare(arguments: argparse.Namespace) -> dict:
 
 TABLE_COLUMNS = ('Run', 'Arm', 'Start', 'End', 'Game h', 'Decisions', 'Setup', 'Routine pace', 'Long activities',
                  'Out of play', 'Longest stall', '$ / decision', 'Large rewrites')
+#: Shown after 'Out of play' only when a selected row carries the split (core version 3 and later), so a table of
+#: earlier rows keeps its columns.
+SPLIT_COLUMNS = ('UI', 'Interruptions')
 
 
 #: The metrics the table shows, copied verbatim into a run-metrics/1 snapshot row.
-HEADLINE_METRICS = ('survival.game_hours', 'mode.out_of_play_share', 'pace.routine_seconds_per_decision',
-                    'pace.long_activities', 'stall.longest', 'host.dollars_per_decision', 'host.large_rewrite_share')
+HEADLINE_METRICS = ('survival.game_hours', 'mode.out_of_play_share', 'mode.ui_share', 'mode.interruption_share',
+                    'pace.routine_seconds_per_decision', 'pace.long_activities', 'stall.longest',
+                    'host.dollars_per_decision', 'host.large_rewrite_share')
 SNAPSHOT = Path(__file__).resolve().parents[1] / 'data' / 'evaluation' / 'run-metrics.jsonl'
 # Markers are whole lines; a block's content may not contain another opening marker.
 BLOCK = re.compile(r'^(<!-- evaluate-table ([^>\n]+) -->\n)((?:(?!^<!-- evaluate-table ).)*?)(^<!-- /evaluate-table -->)$',
@@ -193,6 +198,8 @@ def read_snapshot(path: Path) -> list[dict]:
 
 def table(rows: list[dict]) -> str:
     """The Markdown table of headline metrics, one row per run-metrics/1 row."""
+    split = any('mode.ui_share' in row['metrics'] for row in rows)
+    columns = (*TABLE_COLUMNS[:10], *SPLIT_COLUMNS, *TABLE_COLUMNS[10:]) if split else TABLE_COLUMNS
     lines = []
     for row in rows:
         value = row['metrics'].get
@@ -202,15 +209,17 @@ def table(rows: list[dict]) -> str:
         long = value('pace.long_activities') or {}
         share = lambda item: '—' if item is None else f'{round(item * 100)}%'
         number = lambda item, digits: '—' if item is None else f'{item:.{digits}f}'
+        splits = tuple(share(inner(value(name))) for name in ('mode.ui_share', 'mode.interruption_share')) if split else ()
         lines.append((row['run'], row['arm'], row['start'],
             survival.get('censor_reason', '—'), number(survival.get('hours'), 2), str(row['decisions']),
             '—' if setup is None else str(setup), number(value('pace.routine_seconds_per_decision'), 1),
             f"{long.get('count', 0)} · {(long.get('total_game_seconds') or 0) / 3600:.2f} h",
-            share(inner(value('mode.out_of_play_share'))), '—' if value('stall.longest') is None else str(value('stall.longest')),
+            share(inner(value('mode.out_of_play_share'))), *splits,
+            '—' if value('stall.longest') is None else str(value('stall.longest')),
             number(inner(value('host.dollars_per_decision')), 4), share(value('host.large_rewrite_share'))))
     order = {'pilot': 0, 'pre-loop': 1, 'ceiling': 2, 'zoom-aid': 3, 'game-help-aid': 4, 'reflection-aid': 5}
     lines.sort(key=lambda line: (order.get(line[1], 9), str(line[0])))
-    header = f'| {" | ".join(TABLE_COLUMNS)} |\n| {" | ".join("---" if k < 4 else "---:" for k in range(len(TABLE_COLUMNS)))} |'
+    header = f'| {" | ".join(columns)} |\n| {" | ".join("---" if k < 4 else "---:" for k in range(len(columns)))} |'
     cell = lambda item: '—' if item is None or item == '' else str(item)
     return '\n'.join([header, *(f'| {" | ".join(cell(item) for item in line)} |' for line in lines)])
 

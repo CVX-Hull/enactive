@@ -279,3 +279,45 @@ def test_a_snapshot_row_of_another_version_is_rejected(tmp_path, capsys):
     snapshot = write(tmp_path / 'run-metrics.jsonl', dict(schema='run-metrics/0', metrics={}))
     assert evaluate_main(['evaluate-table', str(snapshot)]) == 1
     assert 'not a run-metrics/1 row' in capsys.readouterr().err
+
+
+def test_sealed_bundle_run_directories_take_their_bundle_name(tmp_path, capsys):
+    """Every sealed bundle holds its package as `<bundle>/run`; the ledger names the run for the bundle."""
+    from tools.run_ledger import package_row
+    first = package(tmp_path / 'evidence' / 'study-a-admission-01', 'run')
+    second = package(tmp_path / 'evidence' / 'study-b-admission-01', 'run')
+    names = [package_row(p, study=999, label='x')['run'] for p in (first, second)]
+    assert names == ['study-a-admission-01', 'study-b-admission-01']
+    # Any other directory keeps its own name, and the default label is the run name.
+    assert package_row(package(tmp_path / 'packages'), study=999, label='x')['run'] == 'lh9a1'
+    ledger = write(tmp_path / 'runs.jsonl')
+    assert main(['--ledger', str(ledger), 'record', str(first), '--study', '999']) == 0
+    assert (read_ledger(ledger)[0]['run'], read_ledger(ledger)[0]['label']) == ('study-a-admission-01',) * 2
+    capsys.readouterr()
+
+
+def test_the_table_adds_split_columns_only_for_rows_that_carry_them():
+    base = dict(schema='run-metrics/1', session=SESSION, run='lh9a1', binding_id='cdda', arm='long-horizon', start='S1',
+                decisions=5)
+    share = lambda value: dict(value=value, excluded=0, setup_decisions=1)  # noqa: E731
+    old = table([base | dict(core_version=2, binding_version=2, metrics={'mode.out_of_play_share': share(0.75)})])
+    assert old.splitlines()[0] == ('| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | '
+                                   'Out of play | Longest stall | $ / decision | Large rewrites |')
+    split = table([base | dict(core_version=3, binding_version=3, metrics={'mode.out_of_play_share': share(0.75),
+        'mode.ui_share': share(0.5), 'mode.interruption_share': share(0.25)})])
+    header, _, line = split.splitlines()
+    assert '| Out of play | UI | Interruptions | Longest stall |' in header
+    assert '| 75% | 50% | 25% | — |' in line and header.count('|') == line.count('|')
+
+
+def test_a_session_already_recorded_under_another_run_name_is_refused(tmp_path, capsys):
+    """The same admission reached as a sealed `<bundle>/run` after its original directory was recorded."""
+    ledger = write(tmp_path / 'runs.jsonl')
+    original = package(tmp_path / 'packages')
+    assert main(['--ledger', str(ledger), 'record', str(original), '--study', '999']) == 0
+    before = ledger.read_bytes()
+    sealed = package(tmp_path / 'evidence' / 'study-a-admission-01', 'run')
+    assert main(['--ledger', str(ledger), 'record', str(sealed), '--study', '999']) == 1
+    assert f'session {SESSION} is already recorded as study 999 run lh9a1' in capsys.readouterr().err
+    # Nothing was appended, so the ledger still reads.
+    assert ledger.read_bytes() == before and [r['run'] for r in read_ledger(ledger)] == ['lh9a1']

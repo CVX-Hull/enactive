@@ -27,8 +27,20 @@ The evaluator reads one run directory read-only:
   `watch-terminal.json` (`campaign-watch-terminal/4`), when recorded;
 - the run's `player-journal/1` public call and hint store.
 
-Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
-input format is an error naming the file and version. Nothing is guessed.
+Open SQLite read-only with a bounded busy timeout (`records.connect_readonly`, for run
+inputs and evaluation records alike). A store whose file and directory are writable (a live
+run, or a record a live pass is extending) opens with `mode=ro`, so rows still in its
+write-ahead log are read. A sealed store, whose file or directory is not writable (a
+`chmod a-w` evidence bundle), opens with `mode=ro&immutable=1`, because a write-ahead-log
+store cannot open read-only without its shared-memory file. Immutable mode ignores the log,
+so a sealed store whose `-wal` file is not empty is an error, never read incomplete. A
+missing or unsupported input format is an error naming the file and version. Nothing is
+guessed.
+
+**Run name.** A record's `run` is its run directory's name as supplied (a symlink keeps
+its own name), except that a sealed bundle's `<bundle>/run` directory takes its bundle's
+name (`sources.run_name`), so the runs of two bundles never share the name `run`. `evaluate-runs` and the
+[run ledger](run-ledger.md) use the same name.
 
 **One JSON reader, one host parser.**
 - Every JSON document the evaluation side and the viewer read from a run or from
@@ -85,8 +97,12 @@ Its `metadata.state` is `live` or `final`.
   `continuity` events and the four `lineage.*` metrics (continuity, elapsed time, the day
   check and memory reuse) into every admission's store. Stitching again after re-scoring an
   admission restores them.
-- **Current versions.** Core 2 and CDDA binding 2. Core 2 includes the lineage elapsed time,
-  day check and memory reuse; binding 2 includes `severe_needs`.
+- **Current versions.** Core 3 and CDDA binding 3. The core includes the lineage elapsed
+  time, day check and memory reuse, and core 3 adds the `ui` mode and the split of
+  out-of-play decisions into `mode.ui_share` and `mode.interruption_share`. The binding
+  includes `severe_needs`, and binding 3 reads game screens the player works in as `ui`
+  (mode reader version 2). Snapshot rows of core 2 stay as recorded, so the dated tables
+  that select `core=2` are unchanged.
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
@@ -124,7 +140,13 @@ Mechanical (from host traces and the session store):
 Derived from readings:
 - `mode_change`;
 - `long_activity`: consecutive clock readings advancing at least the binding threshold;
-- `stall`: a streak of 15 or more decisions without an `in_play` mode;
+- `stall`: a streak of 15 or more decisions without an `in_play` mode. Each decision is
+  read at its last step with a legible mode; a decision with none (an abstention) is
+  skipped, neither extending nor breaking the streak. `in_play` and `dead` close a streak;
+  every other mode extends it, `ui` included, so a player stuck in a game screen still
+  stalls. A streak that ends before its episode's first `in_play` frame is setup: it is
+  still an event, with `setup: true`, but `stall.longest` and `stall.count` count only
+  streaks after setup;
 - `ineffective_repeat`: the same binding-declared movement input on three or more
   consecutive decisions, with under 1% pixel change in the binding's map region;
 - `vital_change`, `threat_change`;
@@ -138,7 +160,7 @@ The interface is [`harness/evaluation/core/binding.py`](../../harness/evaluation
 
 | Quantity | Core meaning | The binding supplies |
 | --- | --- | --- |
-| `mode` | `in_play`, `menu`, `prompt`, `loading`, `dead`, `unknown` | A mode classifier over a frame |
+| `mode` | `in_play`, `ui`, `menu`, `prompt`, `loading`, `dead`, `unknown`. `ui` is a game screen the player works in while the game is loaded (an inventory, a crafting list); `prompt` is a dialog or other window that interrupts play | A mode classifier over a frame |
 | `game_time` | Monotonic elapsed time in one unit | A clock reader, its unit and a maximum plausible jump |
 | `vital` | Normalised 0–1 with scope `whole` or `part:<id>`, and a binding-decided `critical` flag | Readers that map labels or bars to vitals |
 | `threat` | Count and bucket (`none`, `low`, `high`, `lethal`) | A threat reader and its bucket rule |
@@ -153,7 +175,11 @@ jump the next reading confirms.
 
 **Accuracy floors (a process rule).** Each reader has a held-out validation record in
 `data/evaluation/reader-validation.json` with a floor: clock 98% exact, mode 97%, every
-other reader 95% on non-abstained frames. The record is shown with every reader's values,
+other reader 95% on non-abstained frames. The mode reader's `ui`-versus-`prompt` boundary
+has its own entry, `mode_ui`, because the `mode` sample was taken before that boundary
+existed; until `mode_ui` passes, `mode.ui_share` and `mode.interruption_share` are
+unvalidated, and so is a `ui` or `prompt` reading from a mode reader newer than the
+version the `mode` entry validated (earlier readings keep the `mode` result). The record is shown with every reader's values,
 with `pass` of `true` (floor met), `false` (below it) or `null` (unmeasured, with a note).
 Values are never hidden. A metric derived from a reader without `pass: true` is labelled
 unvalidated: the metric JSON carries `validated` (`true`, `false` or `null` for a metric
@@ -164,6 +190,16 @@ that reads no frame reader) and the page shows it next to the provenance chip. A
 **The CDDA binding** (`harness/evaluation/cdda`) supplies:
 - a glyph-atlas sidebar reader for date and time;
 - a main-view mode template;
+- a window-size rule for `ui` (binding version 3, `readers.game_ui`): a full-height side
+  panel (overmap, look-around, nearby items), a window at least 400 px wide whose side
+  border is at least 240 px tall (inventory, consume, pickup, wield), a full-width screen
+  (crafting), or a narrower item-selector window whose bottom border carries both
+  `< [/] Filter >` and `< [;] categories >` (reload, pour into) is `ui`, unless a floating
+  dialog (a query, a distraction or direction prompt, an activity notice, or a distinct
+  floating window over a narrow selector) is drawn on it; any other window, including the
+  in-game main menu, is `prompt`. The sizes come from the frames of the eleven
+  [#896](https://github.com/CVX-Hull/enactive/issues/896) admissions, without a held-out
+  sample;
 - need labels for hunger, thirst, weariness and pain;
 - limb bars;
 - monster-list ink;
@@ -215,7 +251,9 @@ size or layout changes (this follows the custom-code table in
 
 ## Metrics, version 1
 
-A **decision** is one completed `computer_input` operation. Rates are shown with their
+A **decision** is one completed `computer_input` operation; operations before the first
+one (decision 0, such as the opening observe) belong to no decision, so a run without
+input has no mode decisions, abstentions or stalls. Rates are shown with their
 counts. The pace median built from fewer than five qualifying intervals reports
 `missing: insufficient` (the one name for this rule). Every other rate and median carries
 its `count` and `denominator`, and the viewer shows an insufficient sample as such.
@@ -227,7 +265,9 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `pace.long_activities` | Count and total game seconds of `long_activity` events | — | — |
 | `pace.dollars_per_game_hour` | Run dollars ÷ survival game hours | game hours | Zero hours: null |
 | `mode.out_of_play_share` | Decisions whose mode is not `in_play` ÷ decisions with a non-abstained mode | mode readings | Abstentions excluded and counted |
-| `stall.longest` / `stall.count` | Longest streak of decisions without `in_play` (abstentions neither extend nor break a streak); number of `stall` events | decisions | — |
+| `mode.ui_share` | Decisions whose mode is `ui` ÷ the same denominator (core 3) | mode readings | As `mode.out_of_play_share` |
+| `mode.interruption_share` | Decisions whose mode is neither `in_play` nor `ui` (`prompt`, `menu`, `loading`, `dead`) ÷ the same denominator; with `mode.ui_share` it sums to `mode.out_of_play_share` (core 3) | mode readings | As `mode.out_of_play_share` |
+| `stall.longest` / `stall.count` | Longest streak after setup of decisions without `in_play`, `ui` included (`dead` closes a streak; abstentions neither extend nor break one); number of `stall` events after setup (`setup: false`) | decisions | — |
 | `input.actions_per_call` | Key, text and click actions in input operations (`wait` actions excluded) ÷ input operations | input operations | — |
 | `input.unseen_action_share` | 1 − input operations with a capture ÷ actions in input operations | input actions | — |
 | `input.frame_unchanged_rate` | Input operations whose capture SHA-256 equals the previous capture's ÷ input operations with a capture | captured inputs | — |
@@ -341,9 +381,10 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   use the current manifest, receipt, driver and terminal versions. Their host version is `player-host/9` telemetry 9.
   The index also includes `spend-limit-run-555` under the
   [“Add it to the index” decision](../decisions/owner-decisions-archive.md#index-the-spend-limit-check). The
-  indexed session `522-held-out/computer-sessions/lh4a1` does not evaluate: its database
-  cannot be opened in the read-only store, evaluating it is an error, and the sealed copy
-  stays as it is ([“Record it as a limit” decision](../decisions/owner-decisions-archive.md#record-the-unreadable-archive-session-as-a-limit)).
+  indexed session `522-held-out/computer-sessions/lh4a1` evaluates from its sealed copy,
+  which stays as it is ([“Record it as a limit” decision](../decisions/owner-decisions-archive.md#record-the-unreadable-archive-session-as-a-limit)):
+  its write-ahead log is empty, so it opens with `immutable=1` (Inputs). It holds one
+  observe and no input, so it has no decisions.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.

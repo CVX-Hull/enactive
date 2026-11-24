@@ -13,6 +13,7 @@ import sqlite3
 from typing import Iterator
 
 from harness.computer.protocol import ControlError, closed, decode_json, receipt, source
+from harness.evaluation.core.records import EvaluationError, connect_readonly
 from tools.host_analysis import delta, distribution, number
 
 MAX_DATABASE_BYTES = 512 * 1024 * 1024
@@ -41,7 +42,7 @@ def session_database(path: Path) -> Iterator[tuple[sqlite3.Connection, Path, str
     selected = database_path(path)
     connection = None
     try:
-        connection = sqlite3.connect(selected.as_uri() + '?mode=ro', uri=True, timeout=.25)
+        connection = connect_readonly(selected, timeout=.25)
         connection.execute('PRAGMA query_only=ON')
         connection.execute('BEGIN')
         if connection.execute('PRAGMA user_version').fetchone()[0] != 1:
@@ -55,6 +56,8 @@ def session_database(path: Path) -> Iterator[tuple[sqlite3.Connection, Path, str
         yield connection, selected, session
     except ControlError:
         raise
+    except EvaluationError as exc:  # a sealed store with an un-checkpointed log: keep its path and byte count
+        raise ControlError(str(exc)) from exc
     except (sqlite3.Error, ValueError, TypeError, UnicodeError, RecursionError) as exc:
         raise ControlError('Cannot read current computer session database') from exc
     finally:

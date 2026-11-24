@@ -145,9 +145,14 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
         rows.append(_row('pace.dollars_per_game_hour', dollars / hours, len(priced), hours))
 
     # mode.*, stall.*
+    # Out of play is split into game screens the player works in (`ui`) and everything else (interruptions),
+    # so out = ui + interruption on the same denominator.
     out = sum(1 for i in play if frames[i].mode != 'in_play')
-    rows.append(_row('mode.out_of_play_share', dict(value=out / len(play) if play else None, excluded=abstained,
-        setup_decisions=setup), out, len(play), 'abstentions_excluded' if abstained else ('no_mode_readings' if not play else None)))
+    ui = sum(1 for i in play if frames[i].mode == 'ui')
+    mode_missing = 'abstentions_excluded' if abstained else ('no_mode_readings' if not play else None)
+    for name, count in (('mode.out_of_play_share', out), ('mode.ui_share', ui), ('mode.interruption_share', out - ui)):
+        rows.append(_row(name, dict(value=count / len(play) if play else None, excluded=abstained, setup_decisions=setup),
+            count, len(play), mode_missing))
     streaks = [s for s in out_of_play_streaks(timeline) if not s.setup]
     rows.append(_row('stall.longest', max((s.length for s in streaks), default=0), None, len(play)))
     stalls = sum(1 for s in streaks if s.length >= STALL_DECISIONS)

@@ -60,6 +60,7 @@ export function Failures() {
 }
 
 const COMPONENT_METRICS = [['Routine pace (game s / decision)', 'pace.routine_seconds_per_decision'], ['Out-of-play share', 'mode.out_of_play_share', 'pct'],
+  ['Game-screen share', 'mode.ui_share', 'pct'], ['Interruption share', 'mode.interruption_share', 'pct'],
   ['Longest stall', 'stall.longest'], ['Stalls', 'stall.count'], ['$ per decision', 'host.dollars_per_decision', 'money'],
   ['Large-rewrite share of spend', 'host.large_rewrite_share', 'pct'], ['Survival (game h)', 'survival.game_hours']];
 export function Components() {

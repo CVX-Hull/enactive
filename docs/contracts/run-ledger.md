@@ -15,7 +15,7 @@ Development-run quantities live as data in git, and pages render them or cite th
 
 | File | Format | Written by |
 | --- | --- | --- |
-| `runs.jsonl` | One [`dev-run/3`](../../schemas/dev-run.schema.json) row per admission: study issue, run, label (the run's short name in its study's dated record), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, observed attempts for current runs, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/12` manifest and `campaign-receipt/7` alone |
+| `runs.jsonl` | One [`dev-run/3`](../../schemas/dev-run.schema.json) row per admission: study issue, run (the package directory's name, or for a sealed bundle's `<bundle>/run` the bundle's name, as in [evaluation records](evaluation-record.md#inputs)), label (the run's short name in its study's dated record; by default the run), arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, observed attempts for current runs, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/12` manifest and `campaign-receipt/7` alone |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
 - **Origin.** `record` accepts the current `campaign-run/12` and
@@ -39,14 +39,18 @@ Development-run quantities live as data in git, and pages render them or cite th
   per-attempt bounds or configured estimates.
 - **Rejection.** A row without `schema: dev-run/3`, a schema violation (a label is required),
   a repeated study and run, a repeated session, more combined player and recall unpriced attempts than recorded attempts, or an
-  inconsistent spend split is an error naming the line. Snapshot rows are validated against
+  inconsistent spend split is an error naming the line. `record` refuses a package whose
+  study and run, or whose session under any run name, is already recorded, before it
+  writes anything. Snapshot rows are validated against
   their schema when read and before they are written.
 - **Generated tables.** A `<!-- evaluate-table study=N [lineage=L] core=C binding=ID:V -->` …
   `<!-- /evaluate-table -->` block is the table of the snapshot rows for that study (and
   lineage), joined to the ledger on session, at those versions. Markers are whole lines and
   blocks do not nest; mismatched or malformed markers are an error before anything is
   written. `evaluate-table … --write` regenerates the blocks, and the fast checks run
-  `--check`, which fails on a stale block.
+  `--check`, which fails on a stale block. A table whose rows carry `mode.ui_share`
+  (core 3) adds `UI` and `Interruptions` columns after `Out of play`; a table of earlier
+  rows keeps its columns.
 - **One numeric record.** The ledger is the one numeric record of a run. A dated record
   presents numbers through generated tables or by citing the ledger, and keeps no second
   hand-typed copy of attempts, spend or duration. `run_ledger check`, part of the fast

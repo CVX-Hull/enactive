@@ -182,11 +182,82 @@ class ModeTests(unittest.TestCase):
             self.box(array, 280, 200, 680, 300)
         self.assertEqual(read('sidebar_calm', edit=really_quit).mode, 'prompt')
 
-    def test_full_height_panel_screen_is_a_prompt(self):
+    def test_full_height_panel_screen_is_game_ui(self):
+        # The overmap and look-around screens replace the sidebar with a full-height panel.
         def panel(array):
             array[:, 738] = (255, 255, 255)
             put_text(array, 1, 93, 'evac shelter C-41')
-        self.assertEqual(read(edit=panel).mode, 'prompt')
+        self.assertEqual(read(edit=panel).mode, 'ui')
+
+    def test_large_window_is_game_ui(self):
+        # An inventory-sized window (wider than 50 cells, side border taller than 15 rows) over the sidebar.
+        def inventory(array):
+            self.box(array, 120, 60, 840, 560)   # shorter than the side-panel divider
+        self.assertEqual(read('sidebar_calm', edit=inventory).mode, 'ui')
+
+    def test_mid_width_tall_window_with_all_anchors_is_game_ui(self):
+        # The wield window sits over the map with the sidebar intact.
+        def wield(array):
+            self.box(array, 100, 200, 560, 600)
+        self.assertEqual(read('sidebar_calm', edit=wield).mode, 'ui')
+
+    def test_full_width_screen_is_game_ui(self):
+        # Crafting spans the whole frame; its tab box splits its top border into a run that reaches the edge.
+        def crafting(array):
+            self.box(array, 0, 40, 960, 640)
+            array[40, 20:100] = 0
+            self.box(array, 20, 8, 100, 41)
+        self.assertEqual(read('sidebar_calm', edit=crafting).mode, 'ui')
+
+    def test_dialog_over_a_game_screen_is_a_prompt(self):
+        def query_over_crafting(array):
+            self.box(array, 0, 40, 960, 640)
+            self.box(array, 160, 280, 800, 360)   # "Proceed? [Y]es [N]o"
+        self.assertEqual(read('sidebar_calm', edit=query_over_crafting).mode, 'prompt')
+
+    def test_narrow_tall_window_is_a_prompt(self):
+        # The in-game main menu is taller than 15 rows but narrower than 50 cells.
+        def main_menu(array):
+            self.box(array, 362, 160, 598, 482)
+        self.assertEqual(read('sidebar_calm', edit=main_menu).mode, 'prompt')
+
+    def item_selector(self, array, footer=True):
+        # The Reload item window of #896 A2 frame 1868: 298 px wide, narrower than 50 cells, with the
+        # filter and category controls drawn into its bottom border (row 31).
+        self.box(array, 331, 135, 629, 504)
+        if footer:
+            array[503, 43 * 8:77 * 8] = 0
+            put_text(array, 31, 43, '< [/] Filter >')
+            put_text(array, 31, 59, '< [;] categories >')
+
+    def test_narrow_item_selector_is_game_ui(self):
+        self.assertEqual(read('sidebar_calm', edit=self.item_selector).mode, 'ui')
+
+    def test_narrow_tall_window_without_the_selector_footer_is_a_prompt(self):
+        self.assertEqual(read('sidebar_calm', edit=lambda a: self.item_selector(a, footer=False)).mode, 'prompt')
+
+    def test_dialog_over_an_item_selector_is_a_prompt(self):
+        def query_over_selector(array):
+            self.item_selector(array)
+            self.box(array, 352, 280, 600, 360)   # "How many?"
+        self.assertEqual(read('sidebar_calm', edit=query_over_selector).mode, 'prompt')
+
+        def narrow_dialog_over_selector(array):
+            self.item_selector(array)
+            self.box(array, 400, 200, 548, 422)   # 148x222 floating dialog (< DIALOG_MIN_WIDTH)
+        self.assertEqual(read('sidebar_calm', edit=narrow_dialog_over_selector).mode, 'prompt')
+
+        def tall_dialog_over_selector(array):
+            self.item_selector(array)
+            self.box(array, 362, 160, 598, 482)   # 236x322 floating main menu (>= UI_WINDOW_HEIGHT)
+        self.assertEqual(read('sidebar_calm', edit=tall_dialog_over_selector).mode, 'prompt')
+
+    def test_full_height_divider_with_every_sidebar_anchor_is_game_ui(self):
+        # A side panel drawn while the sidebar labels are all still legible is not play.
+        def divider(array):
+            array[:, 300] = (255, 255, 255)
+        self.assertEqual(read('sidebar_calm').mode, 'in_play')
+        self.assertEqual(read('sidebar_calm', edit=divider).mode, 'ui')
 
     def test_covered_sidebar_label_is_a_prompt(self):
         def cover(array):
@@ -423,7 +494,7 @@ class LadderTests(unittest.TestCase):
 
 class BindingShapeTests(unittest.TestCase):
     def test_identity_and_constants(self):
-        self.assertEqual((BINDING.binding_id, BINDING.binding_version, BINDING.game_time_unit), ('cdda', 2, 'seconds'))
+        self.assertEqual((BINDING.binding_id, BINDING.binding_version, BINDING.game_time_unit), ('cdda', 3, 'seconds'))
         self.assertEqual(BINDING.long_activity_seconds, 900)
         self.assertEqual(BINDING.map_region, (0, 0, 608, 640))
         self.assertTrue({'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n', 'UP', 'DOWN', 'LEFT', 'RIGHT'} <= BINDING.movement_keys)
@@ -431,7 +502,7 @@ class BindingShapeTests(unittest.TestCase):
 
     def test_every_reading_is_versioned(self):
         for r in read('sidebar_calm').readings:
-            self.assertEqual(r.version, rd.READER_VERSION)
+            self.assertEqual(r.version, rd.MODE_READER_VERSION if r.reader == 'mode' else rd.READER_VERSION)
 
 
 class DayCheckTests(unittest.TestCase):

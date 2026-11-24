@@ -30,7 +30,7 @@ from .metrics import compute_metrics
 from .lineage import DAY_METRIC, ELAPSED_METRIC, MEMORY_METRIC, METRIC as LINEAGE_METRIC
 LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, MEMORY_METRIC)
 from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
-from .sources import MANIFEST_SCHEMA, RunInputs, archive_entry, read_run
+from .sources import MANIFEST_SCHEMA, RunInputs, archive_entry, read_run, run_name
 
 
 def _frame_matches(png: Path, sha256: str | None) -> bool:
@@ -160,7 +160,7 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
     if arm is not None and labels is None:
         labels = dict(arm=arm)
     base = dict(core_version=CORE_VERSION, binding_id=binding.binding_id, binding_version=binding.binding_version,
-        game_time_unit=binding.game_time_unit, run=run_dir.resolve().name, run_dir=str(run_dir.resolve()),
+        game_time_unit=binding.game_time_unit, run=run_name(run_dir), run_dir=str(run_dir.resolve()),
         session=inputs.session, arm=arm or (labels or {}).get('arm') or (inputs.manifest.get('labels') or {}).get('arm'),
         memory_store=str(memory_store) if memory_store else None, state=state)
     if state == 'live' and existing_state(final) == 'final':

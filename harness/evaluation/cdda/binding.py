@@ -33,7 +33,7 @@ def _reading(name: str, result: rd.Result) -> Reading:
 
 class CddaBinding:
     binding_id = 'cdda'
-    binding_version = 2
+    binding_version = 3
     game_time_unit = 'seconds'
     long_activity_seconds = 900
     # Sleeping or waiting through a night is the longest single legitimate step (about 12 h).
@@ -52,22 +52,22 @@ class CddaBinding:
         except Exception as error:  # an unreadable screen abstains; it never raises
             reason = f'unreadable:{type(error).__name__}'
             return FrameReading('unknown', None, None, (), None, None, False,
-                                (Reading('mode', rd.READER_VERSION, None, None, reason),))
+                                (Reading('mode', rd.MODE_READER_VERSION, None, None, reason),))
 
     def _read(self, png: Path) -> FrameReading:
         with Image.open(png) as image:
             if image.size != (rd.FRAME_W, rd.FRAME_H):
                 return FrameReading('unknown', None, None, (), None, None, False,
-                                    (Reading('mode', rd.READER_VERSION, None, None, 'frame_size'),))
+                                    (Reading('mode', rd.MODE_READER_VERSION, None, None, 'frame_size'),))
             arr = np.asarray(image.convert('RGB'))
         frame = rd.Frame(arr, self._atlas)
         mode, confidence, reason, death_name = rd.classify_mode(frame)
-        readings = [Reading('mode', rd.READER_VERSION, mode if reason is None else None, confidence, reason)]
+        readings = [Reading('mode', rd.MODE_READER_VERSION, mode if reason is None else None, confidence, reason)]
         clock = rd.read_clock(frame) if mode != 'menu' and mode != 'loading' else rd.abstain('not_in_game')
         readings.append(_reading('game_time', clock))
         vitals: list[Vital] = []
         threat = count = None
-        if mode in ('in_play', 'prompt'):
+        if mode in ('in_play', 'ui', 'prompt'):
             for name, reader in NEEDS:
                 result = reader(frame)
                 readings.append(_reading(f'vital.{name}', result))

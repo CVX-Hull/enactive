@@ -15,6 +15,8 @@ from harness.evaluation.cdda.atlas import Atlas
 from harness.evaluation.cdda.screen import CELL_H, CELL_W, FRAME_H, FRAME_W, UNKNOWN, Grid, colour_name, decode_grid, decode_line
 
 READER_VERSION = 1
+#: The mode classifier: version 2 reads a game screen the player works in as `ui`, apart from `prompt`.
+MODE_READER_VERSION = 2
 SIDEBAR_X, SIDEBAR_COLS, SIDEBAR_ROWS = 616, 43, 28
 MAP_REGION = (0, 0, 608, 640)
 
@@ -241,6 +243,24 @@ def read_threat(frame: Frame) -> Result:
     return {'count': count, 'entries': entries, 'bucket': threat_bucket(count)}, confidence, None
 
 
+def _border_gray(arr: np.ndarray) -> np.ndarray:
+    """Pixels in a window-border gray (150 or 128)."""
+    px = arr.astype(np.int16)
+    return (px[..., 0] == px[..., 1]) & (px[..., 1] == px[..., 2]) & ((px[..., 0] == 150) | (px[..., 0] == 128))
+
+
+def _border_lines(gray: np.ndarray) -> list[tuple[int, int, int]]:
+    """Horizontal border runs of 64 or more pixels, as (y, x, length)."""
+    lines: list[tuple[int, int, int]] = []
+    for y in np.nonzero(gray.sum(axis=1) >= 64)[0].tolist():
+        row = np.concatenate(([0], gray[y].astype(np.int8), [0]))
+        edges = np.diff(row)
+        for a, b in zip(np.nonzero(edges == 1)[0].tolist(), np.nonzero(edges == -1)[0].tolist()):
+            if b - a >= 64:
+                lines.append((y, a, b - a))
+    return lines
+
+
 def popup_present(arr: np.ndarray) -> bool:
     """A window frame drawn over the screen.
 
@@ -248,17 +268,10 @@ def popup_present(arr: np.ndarray) -> bool:
     pixels, or a rectangle: two lines of 64 or more pixels with the same start and length at
     least 24 rows apart, joined by a gray side line. Tile art does not draw such rectangles.
     """
-    px = arr.astype(np.int16)
-    gray = (px[..., 0] == px[..., 1]) & (px[..., 1] == px[..., 2]) & ((px[..., 0] == 150) | (px[..., 0] == 128))
-    lines: list[tuple[int, int, int]] = []
-    for y in np.nonzero(gray.sum(axis=1) >= 64)[0].tolist():
-        row = np.concatenate(([0], gray[y].astype(np.int8), [0]))
-        edges = np.diff(row)
-        for a, b in zip(np.nonzero(edges == 1)[0].tolist(), np.nonzero(edges == -1)[0].tolist()):
-            if b - a >= 200:
-                return True
-            if b - a >= 64:
-                lines.append((y, a, b - a))
+    gray = _border_gray(arr)
+    lines = _border_lines(gray)
+    if any(length >= 200 for _, _, length in lines):
+        return True
     for n, (y1, a1, l1) in enumerate(lines):
         for y2, a2, l2 in lines[n + 1:]:
             if y2 - y1 >= 24 and abs(a1 - a2) <= 1 and abs(l1 - l2) <= 2:
@@ -272,6 +285,72 @@ def side_panel_ui(arr: np.ndarray) -> bool:
     px = arr[:, 200:900].astype(np.int16)
     gray = (px[..., 0] == px[..., 1]) & (px[..., 1] == px[..., 2]) & ((px[..., 0] == 150) | (px[..., 0] == 128) | (px[..., 0] == 255))
     return bool((gray.sum(axis=0) >= 560).any())
+
+
+# Window sizes that separate a game screen the player works in from a dialog that interrupts it,
+# measured on the 960x640 frames of the eleven #896 admissions. Inventory, crafting, consume, pickup,
+# wield, item-info and nearby-items windows are 400 px (50 cells) or wider and have a side border of
+# 240 px (15 rows) or more, or span the full width; queries, distraction prompts, direction prompts,
+# activity notices and the in-game main menu are smaller. Boxes narrower than 160 px are tabs and
+# labels inside a screen. The rule is calibrated on those frames only; it has no held-out validation.
+UI_WINDOW_WIDTH, UI_WINDOW_HEIGHT, FULL_WIDTH, DIALOG_MIN_WIDTH, BORDER_MIN_HEIGHT = 400, 240, 900, 160, 24
+# The game's item selector (reload, pour into, and the other single-purpose item lists) can be narrower
+# than 50 cells; its bottom border always carries its filter and category controls, which no dialog
+# draws. Seen at 298 and 386 px wide in #896 A2 frames 1868 (Reload item) and 7485 (Pour ... into).
+ITEM_SELECTOR_FOOTER = ('< [/] Filter >', '< [;] categories >')
+
+
+def _run_span(column: np.ndarray, y: int) -> tuple[int, int] | None:
+    """First and last row of the gray run in `column` that contains row `y` (None when that pixel is not gray)."""
+    if not column[y]:
+        return None
+    up, down = np.flatnonzero(~column[y::-1]), np.flatnonzero(~column[y:])
+    return y - (int(up[0]) - 1 if up.size else y), y + (int(down[0]) - 1 if down.size else column.size - 1 - y)
+
+
+def window_borders(arr: np.ndarray) -> list[tuple[int, int, int, int, int]]:
+    """Each horizontal border run as (x, y, width, side height, side bottom): the side border is the
+    longest gray vertical run through either end of the line, so a window's height and its bottom
+    border row read from it (side bottom is `y` when no side border runs through the line's ends)."""
+    gray = _border_gray(arr)
+    out = []
+    for y, x, width in _border_lines(gray):
+        spans = [span for c in (x, x + 1, x + width - 1, x + width - 2)
+                 if 0 <= c < gray.shape[1] and (span := _run_span(gray[:, c], y)) is not None]
+        top, bottom = max(spans, key=lambda span: span[1] - span[0], default=(y, y - 1))
+        out.append((x, y, width, bottom - top + 1, max(bottom, y)))
+    return out
+
+
+def item_selector(frame: Frame, x: int, width: int, bottom: int) -> bool:
+    """Whether the window spanning pixels `x`..`x + width` has the item selector's footer on its bottom border row."""
+    line = decode_line(frame.arr, 0, bottom // CELL_H * CELL_H, FRAME_W // CELL_W, frame.atlas)
+    inside = line[x // CELL_W:(x + width) // CELL_W + 1]
+    return all(control in inside for control in ITEM_SELECTOR_FOOTER)
+
+
+def game_ui(frame: Frame) -> bool:
+    """A game screen the player works in with no dialog over it: a side panel (overmap, look-around,
+    nearby items), a large window (inventory, crafting, consume, pickup, wield) or an item selector
+    of any width (reload, pour), and no smaller bordered dialog (a query, a distraction or direction
+    prompt, an activity notice) drawn on top."""
+    borders = window_borders(frame.arr)
+    large = [b for b in borders if b[2] >= FULL_WIDTH or (b[2] >= UI_WINDOW_WIDTH and b[3] >= UI_WINDOW_HEIGHT)]
+    windows = [b for b in borders if DIALOG_MIN_WIDTH <= b[2] < FULL_WIDTH and b[3] >= BORDER_MIN_HEIGHT and b not in large]
+    selectors = [b for b in windows if item_selector(frame, b[0], b[2], b[4])]
+    # A dialog floats: its border stays a cell clear of both screen edges. A screen's own border reaching
+    # an edge (the crafting screen's tab bar splits its top border) is not a dialog.
+    if any(b[3] < UI_WINDOW_HEIGHT and b[0] >= CELL_W and b[0] + b[2] <= FRAME_W - CELL_W
+           for b in windows if b not in selectors):
+        return False
+    # Over a narrow item selector (no full/large screen), any distinct floating bordered window —
+    # including a narrow (<160 px) or tall (>=240 px) dialog like the in-game main menu — takes precedence.
+    if selectors and not large and any(
+            b not in selectors and b[3] >= BORDER_MIN_HEIGHT and b[0] >= CELL_W and b[0] + b[2] <= FRAME_W - CELL_W
+            and not any(abs(b[0] - s[0]) <= 2 and abs(b[2] - s[2]) <= 2 for s in selectors)
+            for b in borders):
+        return False
+    return bool(large or selectors) or side_panel_ui(frame.arr)
 
 
 def loading_screen(arr: np.ndarray) -> bool:
@@ -328,17 +407,21 @@ def read_creation_name(frame: Frame) -> str | None:
 
 
 def classify_mode(frame: Frame) -> tuple[str, float | None, str | None, str | None]:
-    """(mode, confidence, abstain reason, death-dialog name)."""
+    """(mode, confidence, abstain reason, death-dialog name).
+
+    A loaded game behind a window is `ui` when the window is a game screen the player works in
+    (`game_ui`) and `prompt` otherwise."""
     dead, name = read_death(frame)
     if dead:
         return 'dead', 0.95, None, name
     anchors = frame.anchors_present()
+    window = lambda: ('ui', 0.7, None, None) if game_ui(frame) else ('prompt', 0.7, None, None)  # noqa: E731
     if anchors == len(ANCHORS):
-        return ('prompt', 0.7, None, None) if popup_present(frame.arr) else ('in_play', 0.97, None, None)
+        return window() if popup_present(frame.arr) or side_panel_ui(frame.arr) else ('in_play', 0.97, None, None)
     if loading_screen(frame.arr):
         return 'loading', 0.8, None, None
     if menu_screen(frame):
         return 'menu', 0.9, None, None
     if anchors >= 3 or popup_present(frame.arr) or side_panel_ui(frame.arr):
-        return 'prompt', 0.7, None, None
+        return window()
     return 'unknown', None, 'no_signature', None

@@ -32,7 +32,7 @@ from tools.evaluate import main
 
 SESSION = 'a' * 32
 BASE = 1_700_000_000.0
-MODES = ['loading', 'menu', 'in_play', 'prompt', 'dead', 'unknown']
+MODES = ['loading', 'menu', 'in_play', 'prompt', 'dead', 'unknown', 'ui']
 THREATS = [None, 'none', 'low', 'high', 'lethal']
 LIMITS = dict(max_inputs=10**6, max_requests=10**6, max_frames=10**6, max_bytes=10**9)
 
@@ -769,7 +769,8 @@ def test_memory_metrics_missing_without_a_host_trace(tmp_path):
 def test_every_metric_row_is_present_with_count_and_denominator(tmp_path):
     metrics = metrics_of(run_and_evaluate(tmp_path))
     expected = {'survival.game_hours', 'pace.routine_seconds_per_decision', 'pace.long_activities',
-        'pace.dollars_per_game_hour', 'mode.out_of_play_share', 'stall.longest', 'stall.count',
+        'pace.dollars_per_game_hour', 'mode.out_of_play_share', 'mode.ui_share', 'mode.interruption_share',
+        'stall.longest', 'stall.count',
         'input.actions_per_call', 'input.unseen_action_share', 'input.frame_unchanged_rate',
         'custody.uncertain_receipts', 'custody.stopped', 'memory.writes', 'memory.reads', 'memory.retrieved_beyond_carry',
         'memory.late_write_share', 'programs.saved', 'programs.runs', 'programs.reused', 'programs.outcomes',
@@ -842,8 +843,11 @@ def test_pace_routine_is_missing_with_fewer_than_five_intervals(tmp_path):
 def test_mode_input_and_needs_metrics(tmp_path):
     metrics = metrics_of(run_and_evaluate(tmp_path))
     mode = metrics['mode.out_of_play_share']
-    assert mode.value == dict(value=pytest.approx(1 / 12), excluded=0, setup_decisions=2)
+    # The opening observe precedes any input (decision 0), so it is no decision; the menu input is the one setup decision.
+    assert mode.value == dict(value=pytest.approx(1 / 12), excluded=0, setup_decisions=1)
     assert (mode.count, mode.denominator, mode.missing) == (1, 12, None)
+    # The one out-of-play decision is the death screen: an interruption, not a game screen.
+    assert (metrics['mode.ui_share'].count, metrics['mode.interruption_share'].count) == (0, 1)
     assert metrics['stall.longest'].value == 0 and metrics['stall.count'].value == 0
     apc = metrics['input.actions_per_call']
     assert apc.value == pytest.approx(15 / 13) and (apc.count, apc.denominator) == (15, 13)
@@ -2137,3 +2141,209 @@ def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     path.write_text(json.dumps(start) + '\n{"type":"x"}\n{"monotonic_ms": 1}\n')
     with pytest.raises(EvaluationError, match=r'host\.jsonl:3'):
         read_host(path, 'hint')
+
+
+# ---------------------------------------------------------------------------------------------
+# Out of play split into game screens and interruptions (core version 3).
+
+def test_out_of_play_splits_into_game_ui_and_interruptions(tmp_path):
+    def build(directory):
+        run = Run(directory)
+        a = run.actor()
+        run.step(a, 'input', [key('j')], F('in_play', 3600, fill=1))
+        for k in range(3):  # three decisions on a game screen the player works in
+            run.step(a, 'input', [key('i')], F('ui', 3600 + k, fill=2 + k))
+        run.step(a, 'input', [key('y')], F('prompt', fill=6))  # one interrupting dialog
+        run.step(a, 'input', [key('j')], F('in_play', 3700, fill=7))
+        run.finish()
+        return directory
+    metrics = metrics_of(run_and_evaluate(tmp_path, build))
+    out, ui, interruption = (metrics[name] for name in ('mode.out_of_play_share', 'mode.ui_share', 'mode.interruption_share'))
+    assert (out.count, ui.count, interruption.count) == (4, 3, 1)
+    assert out.denominator == ui.denominator == interruption.denominator == 6
+    assert ui.value == dict(value=pytest.approx(3 / 6), excluded=0, setup_decisions=0)
+    assert interruption.value == dict(value=pytest.approx(1 / 6), excluded=0, setup_decisions=0)
+    assert out.value['value'] == pytest.approx(ui.value['value'] + interruption.value['value'])
+    # A stall streak counts every out-of-play decision, game screens included.
+    assert metrics['stall.longest'].value == 4
+
+
+# ---------------------------------------------------------------------------------------------
+# Sealed read-only stores and sealed bundle run names.
+
+def set_writable(directory: Path, writable: bool) -> None:
+    """`chmod a-w` a directory tree as the sealed evidence store does, or undo it."""
+    for path in [directory, *directory.rglob('*')]:
+        path.chmod((0o755 if path.is_dir() else 0o644) if writable else (0o555 if path.is_dir() else 0o444))
+
+
+@pytest.fixture
+def sealing():
+    sealed: list[Path] = []
+
+    def seal(directory: Path) -> None:
+        sealed.append(directory)
+        set_writable(directory, False)
+    yield seal
+    for directory in sealed:
+        set_writable(directory, True)
+
+
+def test_a_sealed_run_and_record_are_read_immutably_when_their_log_is_empty(tmp_path, sealing):
+    from harness.evaluation.core.sources import read_operations
+    directory = main_scenario(tmp_path / 'bundle' / 'run')
+    record = evaluate(directory, FakeBinding(), tmp_path / 'evaluations', created_wall=1.0)
+    expected, operations = dump(record), read_operations(directory)
+    # The run keeps an empty log and the record none; neither keeps the shared-memory file a reader would need.
+    for path in (directory / 'session.sqlite3-shm', Path(f'{record}-shm'), Path(f'{record}-wal')):
+        path.unlink(missing_ok=True)
+    Path(directory / 'session.sqlite3-wal').write_bytes(b'')
+    sealing(tmp_path / 'bundle')
+    sealing(record.parent)
+    plain = sqlite3.connect((directory / 'session.sqlite3').resolve().as_uri() + '?mode=ro', uri=True)
+    with pytest.raises(sqlite3.Error):  # a plain read-only open of a sealed WAL store fails
+        plain.execute('SELECT COUNT(*) FROM operations').fetchone()
+    plain.close()
+    assert read_operations(directory) == operations
+    assert dump(record) == expected
+    again = evaluate(directory, FakeBinding(), tmp_path / 'again', created_wall=1.0)
+    assert dump(again) == expected
+
+
+def test_a_sealed_store_with_an_unflushed_log_is_refused(tmp_path, sealing):
+    from harness.evaluation.core.sources import _connect_readonly
+    record = run_and_evaluate(tmp_path)
+    writer = RecordWriter.open(record)
+    try:
+        writer.connection.execute('PRAGMA wal_autocheckpoint=0')
+        writer.set_metadata(dict(note='only in the log'))
+        assert Path(f'{record}-wal').stat().st_size > 0
+        sealing(record.parent)
+        for opener in (open_readonly, lambda path: _connect_readonly(path)):
+            with pytest.raises(EvaluationError, match='un-checkpointed write-ahead log'):
+                opener(record)
+    finally:
+        set_writable(record.parent, True)
+        writer.close()
+
+
+def test_a_writable_live_record_shows_rows_still_in_its_log(tmp_path):
+    # The live viewer reads a record a live pass is still writing: its log must stay visible.
+    record = run_and_evaluate(tmp_path)
+    writer = RecordWriter.open(record)
+    try:
+        writer.connection.execute('PRAGMA wal_autocheckpoint=0')
+        reader = open_readonly(record)
+        writer.set_metadata(dict(last_seq=99))
+        assert Path(f'{record}-wal').stat().st_size > 0
+        assert read_metadata(reader)['last_seq'] == 99
+        reader.close()
+        fresh = open_readonly(record)
+        assert read_metadata(fresh)['last_seq'] == 99
+        fresh.close()
+    finally:
+        writer.close()
+
+
+def test_sealed_bundle_run_directories_are_named_for_their_bundle(tmp_path, capsys):
+    from harness.evaluation.core.sources import run_name
+    for bundle, session in (('study-a-admission-01', 'a' * 32), ('study-b-admission-01', 'b' * 32)):
+        main_scenario(tmp_path / bundle / 'run', session=session)
+    main_scenario(tmp_path / 'lh1a1', session='c' * 32)
+    assert [run_name(tmp_path / name) for name in ('study-a-admission-01/run', 'lh1a1', 'study-a-admission-01')] == [
+        'study-a-admission-01', 'lh1a1', 'study-a-admission-01']
+    root = tmp_path / 'evaluations'
+    names = [read_metadata(open_readonly(evaluate(tmp_path / bundle / 'run', FakeBinding(), root, created_wall=1.0)))['run']
+             for bundle in ('study-a-admission-01', 'study-b-admission-01')]
+    assert names == ['study-a-admission-01', 'study-b-admission-01']
+    assert read_metadata(open_readonly(evaluate(tmp_path / 'lh1a1', FakeBinding(), root, created_wall=1.0)))['run'] == 'lh1a1'
+    # evaluate-runs names a bundle's run directory for its bundle, and the table keeps the two runs apart.
+    assert main(['evaluate-runs', str(tmp_path / 'study-b-admission-01'), '--binding', 'fake', '--root',
+                 str(tmp_path / 'other'), '--replace'], binding=FakeBinding()) == 0
+    assert [r['run'] for r in json.loads(capsys.readouterr().out)['runs']] == ['study-b-admission-01']
+    assert main(['evaluate-table', str(root)]) == 0
+    rows = capsys.readouterr().out.strip().splitlines()[2:]
+    assert sorted(line.split(' | ')[0] for line in rows) == ['| lh1a1', '| study-a-admission-01', '| study-b-admission-01']
+
+
+def test_a_symlink_to_a_sealed_store_with_an_unflushed_log_is_refused(tmp_path, sealing):
+    # The link sits in a writable directory; the store and its log sit beside the sealed target, so the
+    # sealed check and the log it inspects are the target's, never the link's.
+    record = run_and_evaluate(tmp_path)
+    writer = RecordWriter.open(record)
+    try:
+        writer.connection.execute('PRAGMA wal_autocheckpoint=0')
+        writer.set_metadata(dict(note='only in the log'))
+        assert Path(f'{record}-wal').stat().st_size > 0
+        sealing(record.parent)
+        link = tmp_path / 'links' / 'record.sqlite3'
+        link.parent.mkdir()
+        link.symlink_to(record)
+        with pytest.raises(EvaluationError, match='un-checkpointed write-ahead log'):
+            open_readonly(link)
+    finally:
+        set_writable(record.parent, True)
+        writer.close()
+
+
+def test_a_run_without_input_has_no_decisions(tmp_path):
+    # A run that observed once and sent no input (the sealed lh4a1 session) made no decision: its opening
+    # observe is no out-of-play decision, no abstention and no stall.
+    def build(directory):
+        run = Run(directory)
+        run.step(run.actor(), 'observe', [], F('prompt'))
+        run.finish()
+        return directory
+    metrics = metrics_of(run_and_evaluate(tmp_path, build))
+    for name in ('mode.out_of_play_share', 'mode.ui_share', 'mode.interruption_share'):
+        row = metrics[name]
+        assert row.value == dict(value=None, excluded=0, setup_decisions=0)
+        assert (row.count, row.denominator, row.missing) == (0, 0, 'no_mode_readings')
+    assert metrics['stall.longest'].value == 0 and metrics['stall.count'].value == 0
+
+
+def test_a_symlinked_run_directory_keeps_its_supplied_name(tmp_path, capsys, monkeypatch):
+    import tools.evaluate as evaluate_tool
+    from harness.evaluation.core.sources import run_name
+    main_scenario(tmp_path / 'ordinary')
+    runs = tmp_path / 'runs'
+    runs.mkdir()
+    (runs / 'baseline').symlink_to(tmp_path / 'ordinary')
+    assert run_name(runs / 'baseline') == 'baseline'
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir()
+    (memory_dir / 'player-memory-baseline.sqlite3').write_bytes(b'')
+    chosen: list[Path | None] = []
+
+    # Records the memory store evaluate-runs chose and evaluates without it (the file is a placeholder) and
+    # without the external trace summaries, which refuse a symlinked trace path on their own.
+    def recording(run, binding, arguments, memory, label=None):
+        chosen.append(memory)
+        return evaluate(run, binding, arguments.root, replace=arguments.replace, created_wall=1.0)
+    monkeypatch.setattr(evaluate_tool, 'evaluate_one', recording)
+    assert main(['evaluate-runs', str(runs), '--binding', 'fake', '--root', str(tmp_path / 'evaluations'),
+                 '--memory-dir', str(memory_dir)], binding=FakeBinding()) == 0
+    assert chosen == [memory_dir / 'player-memory-baseline.sqlite3']
+    result = json.loads(capsys.readouterr().out)['runs']
+    assert [r['run'] for r in result] == ['baseline']
+    assert read_metadata(open_readonly(Path(result[0]['record'])))['run'] == 'baseline'
+
+
+def test_control_analysis_reports_why_a_sealed_session_cannot_be_read(tmp_path, sealing):
+    from harness.computer.protocol import ControlError
+    from tools.control_analysis import session_database
+    directory = main_scenario(tmp_path / 'bundle' / 'run')
+    writer = sqlite3.connect(directory / 'session.sqlite3')
+    try:
+        writer.execute('PRAGMA wal_autocheckpoint=0')
+        writer.execute("INSERT OR REPLACE INTO metadata(key, value) VALUES ('note', '\"only in the log\"')")
+        writer.commit()
+        wal = directory / 'session.sqlite3-wal'
+        assert wal.stat().st_size > 0
+        sealing(tmp_path / 'bundle')
+        with pytest.raises(ControlError, match=rf'un-checkpointed write-ahead log \(.*session\.sqlite3-wal, {wal.stat().st_size} bytes\)'):
+            with session_database(directory):
+                pass
+    finally:
+        set_writable(tmp_path / 'bundle', True)
+        writer.close()

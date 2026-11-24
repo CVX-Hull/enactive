@@ -206,10 +206,14 @@ class Timeline:
 
     def decision_rows(self) -> tuple[list[int], int]:
         """One representative step per decision: its last step with a legible mode. Also the
-        number of decisions that returned a capture but no legible mode."""
+        number of decisions that returned a capture but no legible mode. Operations before the first
+        completed input (decision 0, such as the opening observe) are no decision: a run without input
+        has no decision rows and no abstentions."""
         last: dict[int, int] = {}
         framed: set[int] = set()
         for index, (step, frame) in enumerate(zip(self.steps, self.frames)):
+            if step.decision == 0:
+                continue
             if step.source_id is not None:
                 framed.add(self.ranks[index])
             if frame.mode != 'unknown':

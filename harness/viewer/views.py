@@ -31,8 +31,9 @@ FINDING_KINDS = ('stall', 'long_activity', 'ineffective_repeat', 'handoff', 'dea
 PROVENANCE = {'survival': 'derived', 'pace': 'derived', 'stall': 'derived', 'lineage': 'derived', 'handoff': 'derived',
     'run': 'derived', 'mode': 'read', 'needs': 'read', 'ladder': 'read', 'reader': 'read'}
 DERIVED_NAMES = ('memory.retrieved_beyond_carry', 'memory.late_write_share')
-HEADLINE = ('survival.game_hours', 'stall.longest', 'stall.count', 'mode.out_of_play_share',
-    'pace.routine_seconds_per_decision', 'host.dollars_per_decision', 'host.large_rewrite_share', 'run.infrastructure_loss')
+HEADLINE = ('survival.game_hours', 'stall.longest', 'stall.count', 'mode.out_of_play_share', 'mode.ui_share',
+    'mode.interruption_share', 'pace.routine_seconds_per_decision', 'host.dollars_per_decision', 'host.large_rewrite_share',
+    'run.infrastructure_loss')
 
 
 def provenance(name: str) -> str:
@@ -56,10 +57,13 @@ def scalar(value: object) -> float | None:
 
 # The validated readers each metric is derived from. A metric is `validated` only when every one of them has `pass: true`
 # in data/evaluation/reader-validation.json; a missing entry or `pass: null` (unmeasured) is unvalidated. Metrics that
-# read no frame reader (host, tool, custody, memory, program and handoff facts) are `null`.
+# read no frame reader (host, tool, custody, memory, program and handoff facts) are `null`. The split of out-of-play
+# decisions into game screens and interruptions depends on `mode_ui`, the mode reader's ui-versus-prompt boundary,
+# which is validated apart from the in-play boundary.
 NEEDS_READERS = ('hunger', 'thirst', 'weariness', 'pain')
 METRIC_READERS = {'survival.game_hours': ('clock', 'mode', 'death'), 'pace.routine_seconds_per_decision': ('clock', 'mode'),
     'pace.long_activities': ('clock',), 'pace.dollars_per_game_hour': ('clock', 'mode'), 'mode.out_of_play_share': ('mode',),
+    'mode.ui_share': ('mode', 'mode_ui'), 'mode.interruption_share': ('mode', 'mode_ui'),
     'stall.longest': ('mode',), 'stall.count': ('mode',), 'needs.severe_share': ('mode', *NEEDS_READERS),
     'ladder.reached': ('clock', 'mode', *NEEDS_READERS), 'lineage.continuity': ('clock', 'identity'),
     'run.infrastructure_loss': ('death',), 'run.provider_loss': ('death',)}
@@ -173,6 +177,18 @@ def validation_key(reader: str) -> str:
     return reader.split('.', 1)[1] if reader.startswith('vital.') and not reader.startswith('vital.limb') else reader
 
 
+def reading_validation_key(reader: str, version: object, value: object, validation: dict) -> str:
+    """The validation entry for one reading. A `ui` or `prompt` mode reading from a mode reader newer than the
+    version the `mode` entry validated is checked against `mode_ui`, the ui-versus-prompt boundary, which is
+    validated apart; earlier readings keep the `mode` entry's held-out result."""
+    key = validation_key(reader)
+    if key == 'mode' and value in ('ui', 'prompt'):
+        checked = (validation.get('mode') or {}).get('version')
+        if isinstance(version, int) and (not isinstance(checked, int) or version > checked):
+            return 'mode_ui'
+    return key
+
+
 def game_state(connection: sqlite3.Connection, validation: dict) -> dict | None:
     row = connection.execute("SELECT seq, decision, wall, source_id, frame_sha256 FROM steps WHERE source_id IS NOT NULL "
         "ORDER BY seq DESC LIMIT 1").fetchone()
@@ -184,8 +200,9 @@ def game_state(connection: sqlite3.Connection, validation: dict) -> dict | None:
             'SELECT reader, reader_version, value, confidence, abstain FROM readings WHERE seq=? ORDER BY reader', (seq,)):
         if reader.startswith('core.'):
             continue
-        check = validation.get(validation_key(reader))
-        readings[reader] = dict(value=loads(value), confidence=confidence, abstain=abstain, version=version,
+        decoded = loads(value)
+        check = validation.get(reading_validation_key(reader, version, decoded, validation))
+        readings[reader] = dict(value=decoded, confidence=confidence, abstain=abstain, version=version,
             validation=None if check is None else {'pass': check.get('pass'), 'accuracy': check.get('accuracy'),
                 'n': check.get('n'), 'floor': check.get('floor')})
     frame = connection.execute("SELECT value FROM readings WHERE seq=? AND reader='core.frame'", (seq,)).fetchone()

@@ -10,7 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Mapping, Protocol, Sequence
 
-MODES = ('in_play', 'menu', 'prompt', 'loading', 'dead', 'unknown')
+#: `ui` is a game screen the player works in (the game is loaded and the screen is part of play, not an
+#: interruption of it); `prompt` is a dialog or other window that interrupts play.
+MODES = ('in_play', 'ui', 'menu', 'prompt', 'loading', 'dead', 'unknown')
 THREAT_BUCKETS = ('none', 'low', 'high', 'lethal')
 SOURCES = ('harness', 'reader', 'derived', 'player_claim', 'human')
 

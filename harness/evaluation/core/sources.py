@@ -1,6 +1,7 @@
 """Read-only access to one run directory (docs/contracts/evaluation-record.md, Inputs).
 
-Opens `session.sqlite3` with `mode=ro` and a one-second busy timeout, reads
+Opens `session.sqlite3` read-only with a one-second busy timeout (`mode=ro`, or `immutable=1`
+for a sealed read-only run directory whose write-ahead log is empty; see records.connect_readonly), reads
 `actors/NNN/host.jsonl`, `manifest.json`, the handoff contexts and the run's
 player-memory/2 store. A live run may grow while it is read: `after_seq` returns only
 newer operations and `settled_only` stops at the first operation whose terminal state is
@@ -17,7 +18,7 @@ from typing import Iterator
 
 from harness.jsonio import file_sha256
 
-from .records import EvaluationError, loads
+from .records import EvaluationError, connect_readonly, loads
 
 SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
@@ -288,10 +289,22 @@ def accepted_versions(entry: ArchiveSession | None, record: str, current: str) -
     return (current,) if listed == current else (current, listed)
 
 
+def run_name(run_dir: Path) -> str:
+    """A run directory's name in records, tables and the run ledger: its basename, except that a sealed
+    evidence bundle's `<bundle>/run` directory takes its bundle's name, so two bundles never share `run`.
+    The supplied basename is kept, so a symlink `baseline -> ordinary` is named `baseline`; the path is
+    resolved only when that basename is `run`, empty (`.`) or `..`."""
+    supplied = Path(run_dir)
+    if supplied.name not in ('run', '', '..'):
+        return supplied.name
+    resolved = supplied.resolve()
+    return resolved.parent.name if resolved.name == 'run' and resolved.parent.name else resolved.name
+
+
 def _connect_readonly(path: Path) -> sqlite3.Connection:
     if not path.is_file():
         raise EvaluationError(f'{path}: missing database')
-    return sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=BUSY_TIMEOUT_SECONDS)
+    return connect_readonly(path, BUSY_TIMEOUT_SECONDS)
 
 
 def _session_connection(path: Path) -> tuple[sqlite3.Connection, str]:
