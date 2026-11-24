@@ -31,6 +31,7 @@ The manifest records which optional journal was included and what the projection
 """
 from __future__ import annotations
 
+from functools import cache
 import hashlib
 import json
 from pathlib import Path
@@ -162,11 +163,28 @@ def _label_evidence(path: Path, limit: int, check: _LabelCheck) -> tuple[bytes, 
         raise _LabelEvidenceError(check, f'{path.name} has invalid JSON') from exc
 
 
+ARCHIVE_INDEX = Path(__file__).resolve().parents[2] / 'data' / 'evaluation' / 'archive-sessions.json'
+
+
+@cache
+def _archived_manifests() -> dict[str, str]:
+    """Closed archive session -> manifest schema map, read directly to preserve trace/evaluation isolation."""
+    if not ARCHIVE_INDEX.is_file():
+        return {}
+    data = strict_loads(ARCHIVE_INDEX.read_bytes())
+    sessions = data.get('sessions') if isinstance(data, dict) else None
+    if not isinstance(sessions, dict):
+        return {}
+    return {sid: row['versions']['manifest'] for sid, row in sessions.items()
+            if isinstance(row, dict) and isinstance(row.get('versions'), dict)
+            and isinstance(row['versions'].get('manifest'), str)}
+
+
 def valid_context(value: object) -> bool:
     """A run's declared curator axes, shared by the package readers and exporter."""
     return (isinstance(value, dict) and len(value) <= 8
             and all(isinstance(key, str) and re.fullmatch(r'[a-z][a-z0-9_]{0,31}', key)
-                    and key not in ('game', 'world') and isinstance(text, str)
+                    and key not in ('game', 'world', 'lineage') and isinstance(text, str)
                     and re.fullmatch(r'[ -~]{1,64}', text) for key, text in value.items()))
 
 
@@ -177,6 +195,8 @@ def _verified_labels(session: Path, session_id: str) -> dict:
         raise _LabelEvidenceError('manifest-schema', 'unsupported run package manifest schema')
     if package.get('session') != session_id:
         raise _LabelEvidenceError('manifest-session', 'manifest session differs from sealed session')
+    if schema == 'campaign-run/12' and _archived_manifests().get(session_id) != schema:
+        raise _LabelEvidenceError('manifest-schema', 'unsupported run package manifest schema')
 
     _, opening = _label_evidence(session/'watch-start.json', 65536, 'supervisor-digest')
     if not isinstance(opening, dict) or opening.get('schema') != 'campaign-watch-start/4':

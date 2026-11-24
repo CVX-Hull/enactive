@@ -111,7 +111,7 @@ def cited_facts(article: dict) -> set[str]:
 
 
 def _axes(scope: dict) -> dict:
-    return {key: value for key, value in scope.items() if key not in ('game', 'world')}
+    return {key: value for key, value in scope.items() if key not in ('game', 'world', 'lineage')}
 
 
 def _join(left: dict, right: dict) -> dict:
@@ -159,7 +159,7 @@ def _merge_sessions(reserved: dict, incoming: dict) -> None:
                 or (admission is not None and (type(admission) is not int or not 1 <= admission <= 10000))):
             raise ValueError('invalid session labels')
         if (not isinstance(context, dict) or len(context) > 8
-                or any(not _AXIS.fullmatch(key) or key in ('game', 'world') or not isinstance(value, str)
+                or any(not _AXIS.fullmatch(key) or key in ('game', 'world', 'lineage') or not isinstance(value, str)
                        or not re.fullmatch(r'[ -~]{1,64}', value) for key, value in context.items())):
             raise ValueError('invalid session context')
         if sid in recorded and recorded[sid] != row:

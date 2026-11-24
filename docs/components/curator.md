@@ -245,7 +245,7 @@ adoption by the driver and the host.
 ## Facts, articles and grooming
 
 The curator records durable claims as facts that cite frames, and groups them into
-articles an actor can read (including world-scoped working articles). A grooming session
+articles an actor can read (including world-bound articles). A grooming session
 merges, narrows, retags, retires and refiles them between admissions. The
 [curator contract](../contracts/curator.md) owns the record and submission shapes,
 validation, the gate, sessions, drafts and restore; the

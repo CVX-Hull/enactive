@@ -81,7 +81,7 @@
         "pattern": "^[a-z][a-z0-9_]{0,31}$",
         "not": {
           "anyOf": [
-            {"enum": ["game", "world"]},
+            {"enum": ["game", "world", "lineage"]},
             {"pattern": "\\n"}
           ]
         }
@@ -95,7 +95,7 @@
         "pattern": "^[a-z][a-z0-9_]{0,31}$",
         "not": {
           "anyOf": [
-            {"enum": ["game", "world"]},
+            {"enum": ["game", "world", "lineage"]},
             {"pattern": "\\n"}
           ]
         }

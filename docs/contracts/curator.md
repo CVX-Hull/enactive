@@ -70,8 +70,8 @@ A published tree holds exactly these files:
 
 ### Provenance
 
-`provenance.json` holds `frames`, `sessions`, `lineages` and, after an admission
-publishes, `last_admission`.
+`provenance.json` holds `frames`, `sessions`, `branches`, `restores` and, after an
+admission publishes, `last_admission`.
 
 - **`frames`** maps a frame source ID to its position: `session`, `actor`, `step` and
   `order`. `order` is the triple of admission ordinal, actor directory and step. It
@@ -81,9 +81,9 @@ publishes, `last_admission`.
   `name`, `world`, `lineage`, `admission` and `context` (a map of declared run-wide
   axes, `{}` when none are declared). A frame source ID begins with its sealed session
   ID, so a citation identifies its own session.
-- **`lineages`** records lineage fork edges and restore cuts when a world has multiple
-  lineages or restored runs, so export computes inherited and unknown timeline states
-  without exposing raw labels.
+- **`branches` and `restores`** record lineage fork edges and restore cuts when a world
+  has multiple lineages or restored runs, so export computes inherited and unknown
+  timeline states without exposing raw labels.
 - **`last_admission`** holds the `coverage` stamp of the last admission publication and
   the `citations` accumulated across the published windows of that admission.
 
@@ -95,7 +95,7 @@ unique among the worlds of one game's repository, and freezes it in the run pack
 A package that names a lineage must name a world, a world may stand without a lineage,
 and several lineages may share a world. The package also declares a required top-level
 `context` map (`{}` by default) of 0 to 8 run-wide invariant axes (`[a-z][a-z0-9_]{0,31}`,
-never `game` or `world`, values 1 to 64 printable ASCII characters). Nothing compares
+never `game`, `world` or `lineage`, values 1 to 64 printable ASCII characters). Nothing compares
 labels or axes with the game, so a consistent wrong declaration goes undetected.
 
 The [trace projection](measurement-tools.md#trace-projection) verifies a session's
@@ -141,7 +141,7 @@ govern the fields.
 | `stale_citations`, `needs_review` | software | Fixed-point review flags propagated over `depends_on` and citations |
 | `published_in`, `session` | software | Version and curator session that published it |
 | `retagged` | software | Optional list of `{from, to, version}` tag reassignments |
-| `superseded_by` or `retired` | software | Replacement IDs and reason kind, or retirement record (`wrong` or `ended` events); never both |
+| `superseded_by` or `retired` | software | Replacement ID list (lifecycle is `superseded` when restated, `retracted` when corrected), or retirement record (`wrong` or `ended` events); never both |
 
 - **Submitted and stored scope differ.** A submitted `scope` names only curator-declared
   axes (never `game` or `world`); the curator binds a fact to the cited world with
@@ -180,15 +180,15 @@ across revisions; software assigns each revision ID `<slug>@v<N>`.
 | `lead` | curator | Non-blank summary an actor can act on |
 | `body` | curator | Non-empty list of `{text, facts}` claims citing current facts compatible with `scope` |
 | `tags` | curator | 0 to 8 distinct tags, counted alongside facts |
-| `scope` | curator + software | Open axis map; articles without `world` cite unbound facts, working articles cite `world` facts |
+| `scope` | curator + software | Open axis map combining cited facts' scopes plus declared axes; unbound articles cite unbound facts, world-bound articles bind one world |
 | `links` | curator | Distinct `{rel, target}` edges to facts or article slugs |
 | `last_confirmed` | software | Latest `seen` among cited facts |
 | `lifecycle_state`, `stale_citations`, `needs_review` | software | Fixed-point state and flags |
 | `published_in`, `session`, `retagged`, `superseded_by`, `retired` | software | Revision provenance; article `retired` carries `reason` and `reason_kind` (`wrong` or `editorial`) |
 
-An article cites only facts whose scope is at least as general as the article's scope
-(or, for a world-scoped working article, facts of the same world or unbound facts).
-Every claim traces through a fact to a frame.
+An article's stored scope combines the scopes of its cited facts with any declared
+non-world axes: an unbound article cites unbound facts, and a world-bound article cites
+facts of that one world or unbound facts. Every claim traces through a fact to a frame.
 
 ## Submissions (`curator-submission/2`)
 
@@ -224,7 +224,8 @@ unexpected keys are refused.
 - **Targets and one revision per slug.** Each fact target is changed at most once per
   submission. Article edits, revisions and `remap_citations` targeting the same `slug`
   compose within one submission and publish **at most one revision per slug per
-  submission** (replacing the former one-change-per-target rule for articles); mixing
+  submission** (replacing the former one-change-per-target rule for articles); a tag-only
+  `retag` updates the current revision in place without creating a new revision. Mixing
   `retire_article` with an edit or revision of the same `slug` is refused.
 - **Minimal edits.** `replace_claims` and `remove_claims` require exact `index`,
   `old_text` and `old_facts` guards so stale patches fail cleanly.
@@ -425,7 +426,7 @@ last published admission, and writes `grooming-summary.json`.
 | `status` | `completed`, `failed` or `skipped` |
 | `reason` | Null when completed; otherwise first failure found, or `no-published-admission` when skipped |
 | `published_before`, `published_after` | Versions; `published_after` is null when unreadable |
-| `stale_records` | Count of current records with `stale_citations` or `needs_review` after grooming |
+| `stale_records` | Count of current records with non-empty `stale_citations` at `published_after`; null when unreadable |
 | `cap_usd`, `cost_usd` | Session cap and cost. A skip reports cost `0` and no cap |
 | `session_state`, `verdicts`, `proxy`, `sandbox` | From the session summary; absent from a skip |
 | `summary` | Relative path of the session summary, or null |
@@ -467,8 +468,8 @@ and deletes the workspace.
   `submission-validated` events in `host-output.log` and gates **only** the longest
   contiguous prefix of collected submissions whose exact paths and SHA-256 digests match
   a passing `validate_submission` call (`all_passed: true`). Unvalidated or modified
-  submissions are skipped. Drafts are kept without aging, and the session closes as
-  `aborted` with `provider_error: true`.
+  submissions are skipped. Drafts are kept without aging, and when no other close-out
+  error occurs the session seals as `sealed` with `lifecycle.stopped: "provider-error"`.
 - **Live runner rule for `provider-error`.** A single `provider-error` session that
   publishes at least one validated submission advances the cursor normally; one that
   publishes nothing retries the same window once without halving its width; an unexpected
@@ -496,10 +497,11 @@ relative to its parent's descriptor with `O_NOFOLLOW` and checked with `fstat`.
 
 ### Abort and interruption
 
-- **Abort.** A crash, a breached limit or a handled failure seals the record as
-  `aborted` where it is writable. An error before gating gates nothing (except the
-  validated prefix on `provider-error` exit `75`). A later error cannot undo a
-  publication already made.
+- **Abort.** A crash, a breached limit or a handled failure (other than a clean
+  `provider-error` exit `75`, which gates its validated prefix and seals with
+  `lifecycle.stopped: "provider-error"`) seals the record as `aborted` where writable.
+  An error before gating gates nothing. A later error cannot undo a publication already
+  made.
 - **Drafts.** After an observed unclean exit, collectable drafts are kept without aging.
 - **Cleanup.** Removing the workspace clears file flags and permissions first. A removal
   failure is written to `cleanup-failed.json`, and the lock is released.

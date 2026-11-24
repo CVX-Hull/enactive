@@ -218,9 +218,10 @@ is listed with its status and no counts.
   `scope_counts`, `tag_counts` (with `tag_counts_omitted`) and `claim_kind_counts`
   computed over the delivered records.
 - `anchor` and `citation_anchors` resolve `citation_source_ids` belonging to this run's
-  own session (`<session>-<n>`) to that step's `{seq, source_id}` (latest step for a
-  record's `anchor`). A citation of another admission, or a step this run never recorded,
-  has `null`.
+  own session (`<session>-<n>`) to that step's `{seq, source_id}` only when the per-run
+  frame route would serve the frame (PNG present and SHA-256 verified), choosing the
+  latest verified step for a record's `anchor`. A citation of another admission, an
+  unverified frame, or a step this run never recorded has `null`.
 
 A listed version was exported for this run. Whether it reached the player is a feed
 `knowledge_update` whose `outcome` is `delivered`; what the player saw of it is the

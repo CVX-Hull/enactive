@@ -163,7 +163,7 @@ and `admission` labels.
 The projector reads the run's `manifest.json` and `watch-start.json` directly.
 It checks both session IDs against the store and the manifest bytes against the
 SHA-256 in the `campaign-watch-start/4` record. A verified `campaign-run/13`
-manifest supplies `world`, `lineage`, `admission` and `context`. A verified
+manifest supplies `world`, `lineage`, `admission` and `context`. A verified indexed
 `campaign-run/12` manifest supplies `world`, `lineage` and `admission` (empty `context`);
 a verified `campaign-run/10` manifest supplies `lineage` and `admission` and leaves
 `world` null. A save path supplies no world label. Missing or invalid evidence leaves
@@ -280,11 +280,12 @@ is exclusive. `private/units.json.shared` records each fact that several article
 with the IDs of those articles, and any delivered citing article delivers the shared
 fact. The player never sees the private inputs.
 
-The facts builder and pilot read `campaign-run/13` and indexed `campaign-run/12`,
-`campaign-run/10` and `campaign-run/7` evidence. For `/13` the facts builder also
-verifies the [private selection](player-host.md#delivered-knowledge-and-recall) against
-the package's `world`, `lineage`, `context` and delivered file digest, and expects
-`delivered-knowledge/3`; older archive versions keep their recorded delivered schemas.
+The facts builder and pilot read `campaign-run/13` and indexed `campaign-run/10`
+and `campaign-run/7` evidence (sealed `campaign-run/12` packages are read via their
+earlier source, not by `build_facts`). For `/13` the facts builder also verifies the
+[private selection](player-host.md#delivered-knowledge-and-recall) against the
+package's `world`, `lineage`, `context` and delivered file digest, and expects
+`delivered-knowledge/3`; indexed `/10` and `/7` packages expect `delivered-knowledge/1`.
 The builder refuses a `/13` run that sets [`live_knowledge_updates`](../operations/campaign-run.md#live-knowledge-updates):
 its judged facts are the frozen file's, and a version adopted during play delivers
 facts outside it.

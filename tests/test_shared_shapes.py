@@ -66,6 +66,7 @@ EXPECTED_INVALID_FIXTURES = {
     'invalid-lifecycle-state.json',
     'invalid-revision-prefix.json',
     'invalid-tag-format.json',
+    'lineage-axis-in-scope.json',
     'link-outside-public-set.json',
     'malformed-citation-source-id.json',
     'missing-history.json',
@@ -220,7 +221,7 @@ def _is_valid_delivered_3(doc: object) -> bool:
         if not isinstance(s, dict) or not (1 <= len(s) <= 8) or 'game' not in s:
             return False
         for k, v in s.items():
-            if not isinstance(k, str) or not _AXIS_RE.match(k):
+            if not isinstance(k, str) or not _AXIS_RE.match(k) or k == 'lineage':
                 return False
             if k == 'world':
                 if v is not None:
@@ -347,7 +348,7 @@ def _is_valid_delivered_3(doc: object) -> bool:
             w = f['when']
             if (not isinstance(w, dict) or set(w) != {'note', 'requires'} or not _nonblank(w['note'])
                     or not isinstance(w['requires'], dict) or len(w['requires']) > 8
-                    or not all(isinstance(k, str) and _AXIS_RE.match(k) and k not in ('game', 'world')
+                    or not all(isinstance(k, str) and _AXIS_RE.match(k) and k not in ('game', 'world', 'lineage')
                                and isinstance(v, str) and _ASCII_RE.match(v) for k, v in w['requires'].items())):
                 return False
         world_bound = 'world' in f['scope']

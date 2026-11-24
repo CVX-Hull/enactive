@@ -42,10 +42,10 @@ const validPosition = value => exactly(value, ['session','actor','step','order']
   && matches(ALIAS, value.session) && nonblank(value.actor) && Number.isSafeInteger(value.step)
   && Array.isArray(value.order) && value.order.length === 3
   && Number.isSafeInteger(value.order[0]) && typeof value.order[1] === 'string' && Number.isSafeInteger(value.order[2]);
-// `world` is only ever `null` in a delivered scope: the export never writes a world label.
+// `world` is only ever `null` in a delivered scope and `lineage` is reserved: the export never writes either label.
 const validScope = value => record(value) && Object.hasOwn(value, 'game') && Object.keys(value).length >= 1
   && Object.keys(value).length <= 8 && Object.entries(value).every(([axis, label]) => AXIS.test(axis)
-    && (axis === 'world' ? label === null : matches(ASCII, label)));
+    && axis !== 'lineage' && (axis === 'world' ? label === null : matches(ASCII, label)));
 const validTags = value => Array.isArray(value) && value.length <= 8
   && strings(value, tag => tag.length <= 32 && TAG.test(tag));
 const validLinks = (value, end, owner, publicIds) => Array.isArray(value)
@@ -54,7 +54,8 @@ const validLinks = (value, end, owner, publicIds) => Array.isArray(value)
   && new Set(value.map(link => `${link.rel} ${link[end]}`)).size === value.length;
 const validWhen = value => exactly(value, ['note','requires']) && nonblank(value.note) && record(value.requires)
   && Object.keys(value.requires).length <= 8 && Object.entries(value.requires)
-  .every(([axis, label]) => AXIS.test(axis) && axis !== 'game' && axis !== 'world' && matches(ASCII, label));
+  .every(([axis, label]) => AXIS.test(axis) && axis !== 'game' && axis !== 'world' && axis !== 'lineage'
+    && matches(ASCII, label));
 /** The fields an article and a fact share; `publicIds` is P and `historyIds` is H. A world-bound record of unknown
  * lineage is always delivered `unverified_branch`. */
 const validShared = (item, publicIds, historyIds) => {

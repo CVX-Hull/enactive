@@ -195,8 +195,9 @@ other:
   integer).
 - An article has `id` (the stable slug), `revision` (`<slug>@v<N>`), `title`, `lead`,
   `body` (non-empty list of `{text, facts}` claims), `tags`, `scope` (`game`, optional
-  `world: null` for world-bound working articles, and declared non-world axes),
-  `branch_relation` (`same`, `inherited` or `unknown`), `lifecycle_state` (`active` or
+  `world: null` for world-bound articles, and declared non-world axes),
+  `branch_relation` (`null` for unbound records, else `same`, `inherited` or `unknown`,
+  with `unknown` requiring `unverified_branch: true`), `lifecycle_state` (`active` or
   `contested`), `stale_citations`, `needs_review`, `condition_unverified`,
   `unverified_branch`, `links`, `backlinks`, `shadowed_by`, `contradicted_by` and
   `last_confirmed` (aliased position object).
@@ -216,15 +217,16 @@ other:
 versions, else `null`.
 
 `private/knowledge-full.json` holds the full selected facts, articles and history before
-withholding, plus a top-level `selection` object with `world` (the selected label or
-null), `lineage` (the selected lineage or null), `context` (the package's declared
-context map) and `delivered_sha256` (the SHA-256 of the delivered file). The delivered
-knowledge is the one player-visible input whose contents depend on
-[operator labels and context](../operations/campaign-run.md#operator-labels).
-Preflight requires the private file to be `delivered-knowledge/3` and checks
-`selection.world` against `labels.world`, `selection.lineage` against `labels.lineage`,
-`selection.context` against `context`, and `selection.delivered_sha256` against the
-verified digest of `delivered-knowledge.json`.
+withholding, plus a closed top-level `selection` object with exactly six keys: `world`
+(the selected label or null), `lineage` (the selected lineage or null), `context` (the
+package's declared context map), `delivered_sha256` (the SHA-256 of the delivered file),
+`session_aliases` (the private map from blinded `s01`… aliases to sealed session IDs)
+and `excluded_unknown_axis` (count of candidate records excluded because a scope axis
+was absent from `context`). The delivered knowledge is the one player-visible input
+whose contents depend on [operator labels and context](../operations/campaign-run.md#operator-labels).
+Preflight requires the private file to be `delivered-knowledge/3` and checks that
+`selection` has those six keys and matches `labels.world`, `labels.lineage`, `context`
+and the verified digest of `delivered-knowledge.json`.
 The delivered file carries the selected content without the selection object.
 
 Unless the package sets `live_knowledge_updates`, the host uses the same frozen

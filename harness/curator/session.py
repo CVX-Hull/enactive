@@ -194,7 +194,7 @@ def _axes_section(trace_manifest: dict, records: list[dict]) -> list[str]:
     sessions = trace_manifest['sessions']
     active = sessions[-1].get('context', {}) if sessions else {}
     counts = Counter(key for row in records if check.current(row) for key in row['scope']
-                     if key not in ('game', 'world'))
+                     if key not in ('game', 'world', 'lineage'))
     return ['## Scope axes', '',
             'Active package: ' + (', '.join(f'`{key}` = {value!r}' for key, value in sorted(active.items())) or 'none'),
             'Current usage: ' + (', '.join(f'`{key}` ({n})' for key, n in sorted(counts.items())) or 'none')]

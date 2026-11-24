@@ -1958,3 +1958,46 @@ def test_a_symlinked_record_is_restamped_when_only_its_log_changes(tmp_path):
         assert stamp(link) != before and stamp(link) == stamp(record)
     finally:
         writer.close()
+
+
+def test_blinded_markers_drop_source_id_archived_facts_keep_type_and_anchors_omitted_is_exact(mission):
+    from harness.viewer.knowledge import entry as project_entry, marker
+    client, directory, _, actor = mission
+    catalog = client.app.state.catalog
+    runs = catalog.runs()
+    # 1. Blinded /3 marker drops stray `source_id` (raw label) while archived /1 marker keeps it.
+    raw = dict(session='s01', actor='001', step=1, order=[1, '001', 1], source_id='raw-world-label-1')
+    assert 'source_id' not in marker(raw, blinded=True)
+    assert marker(raw, blinded=False)['source_id'] == 'raw-world-label-1'
+    # 2. Archived /1 fact preserves `type`.
+    v1_fact = dict(id='f-old', type='container', text='old fact', seen=raw, source_ids=[])
+    assert project_entry(v1_fact, 'fact', catalog, runs, current=False)['type'] == 'container'
+    # 3. >20 distinct valid citations report exact `anchors_omitted` for both facts and articles.
+    cites = [f'{"a" * 32}-{i}' for i in range(1, 24)]
+    fact_many = dict(id='f-many', claim_kind='mechanic', evidence_basis='observed', tags=[], text='many cites',
+                     scope=dict(game='cdda'), branch_relation=None, lifecycle_state='active', stale_citations=[],
+                     needs_review=False, condition_unverified=False, unverified_branch=False, links=[], backlinks=[],
+                     shadowed_by=[], contradicted_by=[], cited_by_articles=[], citation_source_ids=cites,
+                     seen=dict(session='s01', actor='001', step=1, order=[1, '001', 1]))
+    article_many = dict(id='art-many', revision='art-many@v1', title='Many', lead='Lead',
+                        body=[dict(text='Claim', facts=['f-many'])], tags=[], scope=dict(game='cdda'),
+                        branch_relation=None, lifecycle_state='active', stale_citations=[], needs_review=False,
+                        condition_unverified=False, unverified_branch=False, links=[], backlinks=[],
+                        shadowed_by=[], contradicted_by=[],
+                        last_confirmed=dict(session='s01', actor='001', step=1, order=[1, '001', 1]))
+    pf = project_entry(fact_many, 'fact', catalog, runs, current=True)
+    pa = project_entry(article_many, 'article', catalog, runs, current=True, facts={'f-many': fact_many})
+    assert len(pf['anchors']) == 20 and pf['anchors_omitted'] == 3
+    assert len(pa['anchors']) == 20 and pa['anchors_omitted'] == 3
+    # 4. Update event coverage in a /13 run blinds raw session names.
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    lines = trace.read_text().splitlines()
+    bad_update = json.dumps(dict(type='knowledge-delivery', kind='update', outcome='delivered', version='v9',
+        previous_version='v1', wall_time=iso(BASE + 5), monotonic_ms=50.0, receiving_player_request_id='request-3',
+        coverage=dict(schema='curator-coverage/2', session='raw-secret-world-run', actor='001', last_step=5,
+                      source_id='raw-secret-source'),
+        text='BEGIN FALLIBLE KNOWLEDGE UPDATE (v9)\n{"added":[],"updated":[],"removed":[]}\nEND FALLIBLE KNOWLEDGE UPDATE (v9)'))
+    trace.write_text('\n'.join([*lines[:-1], bad_update, lines[-1]]) + '\n')
+    resp = client.get(f'/api/view/run/mission/knowledge?actor={actor}')
+    assert resp.status_code == 200
+    assert 'raw-secret-world-run' not in resp.text and 'raw-secret-source' not in resp.text

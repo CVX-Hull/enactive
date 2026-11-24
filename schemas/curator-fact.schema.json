@@ -75,7 +75,12 @@
       "required": ["game"],
       "propertyNames": {
         "pattern": "^[a-z][a-z0-9_]{0,31}$",
-        "not": {"pattern": "\\n"}
+        "not": {
+          "anyOf": [
+            {"const": "lineage"},
+            {"pattern": "\\n"}
+          ]
+        }
       },
       "properties": {
         "game": {"$ref": "#/$defs/axis_value"},
@@ -90,7 +95,7 @@
         "pattern": "^[a-z][a-z0-9_]{0,31}$",
         "not": {
           "anyOf": [
-            {"enum": ["game", "world"]},
+            {"enum": ["game", "world", "lineage"]},
             {"pattern": "\\n"}
           ]
         }

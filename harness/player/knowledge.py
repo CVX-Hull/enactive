@@ -105,15 +105,16 @@ def _tags(value: object) -> bool:
 
 
 def _scope(value: object) -> bool:
-    """1..8 axes including `game`; a world-bound record's `world` is delivered as null, never as its label."""
+    """1..8 axes including `game`; a world-bound record's `world` is delivered as null, and `lineage` is reserved."""
     return (isinstance(value, dict) and 1 <= len(value) <= 8 and 'game' in value
-            and all(_matches(AXIS, k) and (v is None if k == 'world' else _matches(ASCII, v)) for k, v in value.items()))
+            and all(_matches(AXIS, k) and k != 'lineage' and (v is None if k == 'world' else _matches(ASCII, v))
+                    for k, v in value.items()))
 
 
 def _when(value: object) -> bool:
     return (isinstance(value, dict) and set(value) == {'note', 'requires'} and _nonblank(value['note'])
             and isinstance(value['requires'], dict) and len(value['requires']) <= 8
-            and all(_matches(AXIS, k) and k not in ('game', 'world') and _matches(ASCII, v)
+            and all(_matches(AXIS, k) and k not in ('game', 'world', 'lineage') and _matches(ASCII, v)
                     for k, v in value['requires'].items()))
 
 

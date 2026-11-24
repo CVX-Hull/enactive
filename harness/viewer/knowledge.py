@@ -84,12 +84,14 @@ def blind(value):
 
 
 def marker(value, blinded=False):
-    """A position or coverage stamp; `blinded` for a `delivered-knowledge/3` one, whose session must be an alias."""
+    """A position or coverage stamp; `blinded` for a `delivered-knowledge/3` one, whose session must be an alias
+    and whose closed shape has no `source_id`."""
     if not isinstance(value, dict):
         return None
     if blinded:
         value = blind(value)
-    result = fields(value, ('schema', 'session', 'actor', 'step', 'last_step', 'source_id'))
+    allowed = ('schema', 'session', 'actor', 'step', 'last_step') if blinded else ('schema', 'session', 'actor', 'step', 'last_step', 'source_id')
+    result = fields(value, allowed)
     order = value.get('order') if isinstance(value.get('order'), list) else []
     parts = [fields({'value': v}, ('value',)) for v in order[:8]]
     result['order'] = [v['value'] for v in parts]
@@ -164,7 +166,10 @@ def entry(value, kind, catalog, runs, current=True, facts=None):
     by type: a fact's anchors are its own cited frames, an article's those of the facts its body cites, looked up in
     `facts` (the whole file's facts by ID). Its positions name session aliases, and any other session is withheld. An
     archived (`delivered-knowledge/1`) entry names `source_ids`, positions with a source ID, and plain links."""
-    result = fields(value, ('id', 'revision', 'title', 'subject', 'claim_kind', 'evidence_basis', 'text', 'lead'))
+    names = ('id', 'revision', 'title', 'subject', 'claim_kind', 'evidence_basis', 'text', 'lead')
+    if not current:
+        names = (*names, 'type')
+    result = fields(value, names)
     result['kind'] = kind
     result['seen'] = marker(value.get('seen'), blinded=current)
     result['last_confirmed'] = marker(value.get('last_confirmed'), blinded=current)
@@ -178,10 +183,10 @@ def entry(value, kind, catalog, runs, current=True, facts=None):
         result['source_ids'], result['source_ids_omitted'] = [], 0     # the current format has no `source_ids`
         if kind == 'article':
             held = facts or {}
-            sources = [s for f in cited_facts(body) if f in held for s in citations(held[f].get('citation_source_ids'), 20)]
+            raw = [s for f in cited_facts(body) if f in held for s in citations(held[f].get('citation_source_ids'), limit=None)]
         else:
-            sources = result['citation_source_ids']
-        distinct = list(dict.fromkeys(sources))
+            raw = citations(value.get('citation_source_ids'), limit=None)
+        distinct = list(dict.fromkeys(raw))
         sources, result['anchors_omitted'] = distinct[:ANCHOR_LIMIT], max(0, len(distinct) - ANCHOR_LIMIT)
     else:
         add_ids(result, 'citation_source_ids', value.get('citation_source_ids'), 20)
@@ -246,6 +251,11 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
     if request_id and request_id not in requests:
         raise ViewError(404, 'unknown_request', request_id)
     runs = catalog.runs()
+    try:
+        manifest_schema = read_manifest(directory)['schema']
+    except EvaluationError:
+        manifest_schema = None  # no supported manifest says which versions these files are
+    blinded_run = manifest_schema == MANIFEST_SCHEMA
     matching = []
     for event in events:
         f = event.fields
@@ -260,7 +270,7 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
         for name in ('article_ids', 'fact_ids', 'index_ids', *(('removed_ids',) if update else ())):
             add_ids(item, name, f.get(name))
         if update:
-            item['coverage'] = marker(f.get('coverage'))
+            item['coverage'] = marker(f.get('coverage'), blinded=blinded_run)
         if event.type == 'knowledge-delivery' and isinstance(f.get('text'), str):
             try:
                 delivered = json.loads(f['text'].split('\n')[1])
@@ -275,10 +285,6 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
                 item['delivery_text_unavailable'] = True
         matching.append(item)
     snapshot = None
-    try:
-        manifest_schema = read_manifest(directory)['schema']
-    except EvaluationError:
-        manifest_schema = None  # no supported manifest says which versions these files are
     if manifest_schema == MANIFEST_SCHEMA:
         frozen_schema, knowledge_schema = CURRENT_SNAPSHOT
     elif manifest_schema is None:

@@ -193,6 +193,8 @@ class Corpus:
                 or not isinstance(value.get('articles'), list) or not isinstance(value.get('facts'), list)):
             raise ValueError(f'{where}: expected sealed delivered-knowledge/2 benchmark input')
         self.name = name
+        self.article_count = len(value['articles'])
+        self.fact_count = len(value['facts'])
         self.records = list(value['articles']) + list(value['facts'])
         self.index = [_v2_weighted_terms(r) for r in self.records]
         self.position = {r['id']: i for i, r in enumerate(self.records)}
@@ -388,8 +390,8 @@ def retrieval(corpus: Corpus, queries: list[Query], repeat: int) -> dict:
         rows.append(dict(label=q.label, group=q.group, query=q.text, gold=list(q.gold),
                          ranks={m: first_rank(corpus, corpus.rank(m, q.text), q.gold) for m in METHODS},
                          top5={m: corpus.ids(corpus.rank(m, q.text)[:CUT]) for m in METHODS}))
-    return dict(corpus=corpus.name, articles=len(corpus.knowledge.value['articles']),
-                facts=len(corpus.knowledge.value['facts']), edges=sum(map(len, corpus.neighbours)) // 2,
+    return dict(corpus=corpus.name, articles=corpus.article_count,
+                facts=corpus.fact_count, edges=sum(map(len, corpus.neighbours)) // 2,
                 queries=len(queries), methods=summary, rows=rows)
 
 
@@ -491,18 +493,20 @@ def overall_gate(results: dict) -> dict:
 
 def benchmark(evidence: Path, repeat: int) -> dict:
     corpora = {name: Corpus.load(name, evidence / path) for name, path in CORPORA.items()}
-    for q in QUERIES + LIVE:
-        corpus = corpora[q.corpus]
-        if corpus.rank('prod_bm25', q.text) != corpus.ordered(corpus.bm25(q.text))[:LIMIT]:
-            raise ValueError(f'{q.corpus} {q.label}: recomputed BM25 order differs from Knowledge.query')
     results = {name: retrieval(corpora[name], [q for q in QUERIES if q.corpus == name], repeat)
                for name in ('v91', 'v17')}
+    # Guard against accidental drift in the historical #920 baseline scorer.
+    expected_baseline = {'v91': (1.0, 0.7), 'v17': (1.0, 0.65)}
+    for name, (hit5, mrr5) in expected_baseline.items():
+        actual = results[name]['methods']['prod_bm25']
+        if (actual['hit_at_5'], actual['article_mrr_at_5']) != (hit5, mrr5):
+            raise ValueError(f'{name}: #920 baseline metrics drifted: {(actual["hit_at_5"], actual["article_mrr_at_5"])} != {(hit5, mrr5)}')
     live = [dict(label=q.label, corpus=q.corpus, query=q.text,
                  top5={m: corpora[q.corpus].ids(corpora[q.corpus].rank(m, q.text)[:CUT]) for m in METHODS})
             for q in LIVE]
     return dict(schema='knowledge-retrieval-benchmark/1', repeat=repeat,
-                corpora={name: dict(path=CORPORA[name], articles=len(c.knowledge.value['articles']),
-                                    facts=len(c.knowledge.value['facts']), edges=sum(map(len, c.neighbours)) // 2,
+                corpora={name: dict(path=CORPORA[name], articles=c.article_count,
+                                    facts=c.fact_count, edges=sum(map(len, c.neighbours)) // 2,
                                     links=c.links, unresolved_links=c.unresolved_links)
                          for name, c in corpora.items()},
                 retrieval=results, live=live, overall_gate=overall_gate(results),

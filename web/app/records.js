@@ -342,7 +342,7 @@ function RecordedOutcome({value}) {
 function EntryState({item}) {
   const link = (l, end) => (typeof l === 'string' ? l : `${l.rel} ${l[end]}`);
   const flags = ['needs_review', 'condition_unverified', 'unverified_branch'].filter(name => item[name]);
-  return html`<p class="wrapany" data-entry-state>Kind: ${label(item.claim_kind || 'unrecorded')} · evidence: ${item.evidence_basis || 'unrecorded'} · scope: ${item.scope || 'unrecorded'}${Object.entries(item.scope_axes || {}).map(([k, v]) => ` (${k}: ${v})`).join('')} · state: ${item.lifecycle_state || 'unrecorded'}${flags.length ? ` · ${flags.map(label).join(', ')}` : ''} · tags: ${(item.tags || []).join(', ') || 'none'}</p>
+  return html`<p class="wrapany" data-entry-state>Kind: ${label(item.claim_kind || item.type || 'unrecorded')} · evidence: ${item.evidence_basis || 'unrecorded'} · scope: ${item.scope || 'unrecorded'}${Object.entries(item.scope_axes || {}).map(([k, v]) => ` (${k}: ${v})`).join('')} · state: ${item.lifecycle_state || 'unrecorded'}${flags.length ? ` · ${flags.map(label).join(', ')}` : ''} · tags: ${(item.tags || []).join(', ') || 'none'}</p>
     <p class="wrapany">Links: ${(item.links || []).map(l => link(l, 'target')).join(', ') || 'none'}${(item.backlinks || []).length ? ` · linked from: ${item.backlinks.map(l => link(l, 'source')).join(', ')}` : ''} · cited frames: ${(item.citation_source_ids || []).join(', ') || 'none recorded'}</p>`;
 }
 

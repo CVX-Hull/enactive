@@ -57,7 +57,7 @@ The text equivalent is below.
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
 | Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Spectator](components/spectator.md) |
 | Run evaluator | Interpretive records and metrics from retained evidence with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation-record.md) |
-| Curator | Sandboxed sessions over bounded live snapshots or sealed traces, and a gate-only knowledge repository that scopes facts and articles by world, lineage and declared context axes; frozen exports and live versions reach the player; no custody | [Curator and trace workbench](components/curator.md) |
+| Curator | Sandboxed sessions over bounded live snapshots or sealed traces, and a gate-only knowledge repository that scopes facts and articles by world and declared context axes and tracks lineages; frozen exports and live versions reach the player; no custody | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state

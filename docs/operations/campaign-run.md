@@ -274,9 +274,9 @@ package before effects, like the rest of the manifest. Preflight accepts only
 `campaign-run/13`.
 
 The required top-level `context` object (`{}` by default) declares 0 to 8 **run-wide
-invariant** axes (`[a-z][a-z0-9_]{0,31}`, never `game` or `world`; printable ASCII
-values of 1 to 64 characters) that remain constant for the entire run — such as game
-build, modset or scenario rules. Never place transient in-run state in `context`;
+invariant** axes (`[a-z][a-z0-9_]{0,31}`, never `game`, `world` or `lineage`; printable
+ASCII values of 1 to 64 characters) that remain constant for the entire run — such as
+game build, modset or scenario rules. Never place transient in-run state in `context`;
 transient conditions belong in a fact's `when` clause.
 
 Keep the label values out of the player's argv, prompt, context, route, target,
