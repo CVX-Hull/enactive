@@ -4,21 +4,29 @@ Portable: real Git in tmp_path repositories, no game, no provider.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import fcntl
 import os
+import random
 from pathlib import Path
 import subprocess
 import sys
 
 import pytest
 
-from harness.curator import containers, gate as gate_module, knowledge, sandbox, session
+from harness.curator import check, containers, knowledge, sandbox, session
 from harness.curator.containers import Drafts, UnsafeTree, copy_tree
 from harness.curator.gate import _history, current, gate, restore
 from harness.curator.knowledge import KnowledgeError, Repository
+from harness.curator.validate import validate
+from tests.synthetic_knowledge_repo import build_cycle_and_withholding_repo, position
 
-FRAMES = {'frame-1', 'frame-2'}
+SEALED = '1' * 32
+FRAME1 = f'{SEALED}-1'
+FRAME2 = f'{SEALED}-2'
+FRAME3 = f'{SEALED}-3'
+FRAMES = {FRAME1, FRAME2}
 
 
 def make_repo(tmp_path: Path) -> Repository:
@@ -27,20 +35,20 @@ def make_repo(tmp_path: Path) -> Repository:
     return repo
 
 
-def fact(fact_id='f1', type_name='mechanic', game='cdda', citations=('frame-1',), *,
-         known='observed', level='game', **extra):
-    return {'schema': 'curator-fact/4', 'record': 'fact', 'id': fact_id, 'type': type_name,
-            'text': f'text {fact_id}', 'known': known, 'scope': {'game': game, 'level': level},
-            'citations': list(citations), 'subject': 'a thing', **extra}
+def fact(fact_id='f1', citations=None, **extra):
+    return dict(schema='curator-fact/5', record='fact', id=fact_id, claim_kind='mechanic',
+                evidence_basis='observed', text=f'text {fact_id}', scope={}, tags=['mechanic'], links=[],
+                citations=list(citations if citations is not None else [FRAME1]), subject='a thing') | extra
 
 
-def kind(name='mechanic', *, identity=(), reason='Define the observed relation.'):
-    return {'schema': 'curator-type/2', 'name': name, 'description': 'd', 'fields': ['a'],
-            'identity': list(identity), 'reason': reason}
+def article(slug='guide', title='A subject', facts=('f1',), **extra):
+    return dict(schema='curator-fact/5', record='article', slug=slug, title=title,
+                lead='A hypothesis.', body=[dict(text='An arbitrary claim.', facts=list(facts))],
+                links=[], tags=[]) | extra
 
 
 def submission(tmp_path: Path, changes, name='s1', **top) -> Path:
-    body = {'schema': 'curator-submission/1', 'base_version': 'v0', 'summary': 'sum',
+    body = {'schema': 'curator-submission/2', 'base_version': 'v0', 'summary': 'sum',
             'changes': changes, **top}
     directory = tmp_path / 'submissions' / name
     directory.mkdir(parents=True)
@@ -52,7 +60,7 @@ COVERAGE = {'schema': 'curator-coverage/2', 'session': 's1', 'actor': '001', 'la
 
 
 def run(repo, directory, frames=FRAMES, coverage=COVERAGE, session_kind='admission', *, session_labels=None):
-    positions = {frame: dict(session=(session_labels or {}).get(frame.partition('-')[0], {}).get('name', 's1'),
+    positions = frames if isinstance(frames, dict) else {frame: dict(session=(session_labels or {}).get(frame.partition('-')[0], {}).get('name', 's1'),
                              actor='001', step=index, order=[1, '001', index])
                  for index, frame in enumerate(sorted(frames), 1)}
     return gate(repo, directory, session_id='sess', window_frames=positions, coverage=coverage,
@@ -70,10 +78,9 @@ def snapshot(repo):
 
 
 def seeded(tmp_path: Path) -> Repository:
-    """A repository at v1 holding type 'mechanic' and fact f1."""
+    """A repository at v1 holding fact f1."""
     repo = make_repo(tmp_path)
-    directory = submission(tmp_path, [{'op': 'add_type', 'type': kind()},
-                                      {'op': 'add_fact', 'fact': fact()}], name='seed')
+    directory = submission(tmp_path, [dict(op='add_fact', fact=fact())], name='seed')
     assert run(repo, directory)['version'] == 'v1'
     return repo
 
@@ -86,8 +93,7 @@ def test_restore_exact_v0_and_reserves_historical_identity(tmp_path):
     assert repo.snapshot('v2') == before and not (repo.path/'coverage.json').exists()
     repeated = restore(repo, expected_base='v2', target='v0')
     assert repeated['status'] == 'unchanged' and repeated['version'] == 'v2'
-    again = run(repo, submission(tmp_path, [dict(op='add_type', type=kind()),
-                dict(op='add_fact', fact=fact())], name='reuse', base_version='v2'))
+    again = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact())], name='reuse', base_version='v2'))
     assert again['status'] == 'rejected' and any('not new' in d for d in again['diagnostics'])
 
 
@@ -258,22 +264,16 @@ def test_submission_reconciles_untagged_commit_before_publication(tmp_path):
     assert git(repo, 'rev-parse', 'v2^').strip() == git(repo, 'rev-parse', 'v1').strip()
 
 
-def test_restored_export_preserves_ages_and_existing_delivery(tmp_path):
-    from tools.knowledge_export import export, published
+def test_restoring_a_tag_preserves_its_record_ages_and_exact_bytes(tmp_path):
     repo = seeded(tmp_path)
-    original = published(repo.path, 'v1')
-    export(tmp_path/'frozen', original)
-    frozen = (tmp_path/'frozen'/'delivered-knowledge.json').read_bytes()
+    original = repo.snapshot('v1')
     newer = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('f2'))],
                                      name='newer', base_version='v1'))
     assert newer['status'] == 'published'
     result = restore(repo, expected_base='v2', target='v1')
     assert result['status'] == 'published' and result['version'] == 'v3'
-    restored = published(repo.path, 'v3')
-    assert restored['version'] == 'v3'
-    assert {key: restored[key] for key in ('coverage', 'articles', 'facts')} == {
-        key: original[key] for key in ('coverage', 'articles', 'facts')}
-    assert (tmp_path/'frozen'/'delivered-knowledge.json').read_bytes() == frozen
+    assert repo.snapshot('v3') == original
+    assert repo.records()[0]['published_in'] == 'v1'
 
 
 def test_ensure_is_idempotent_and_starts_at_v0(tmp_path):
@@ -283,18 +283,18 @@ def test_ensure_is_idempotent_and_starts_at_v0(tmp_path):
     assert repo.ensure() == 'v0'
     assert snapshot(repo) == before
     assert repo.published() == 'v0'
-    assert repo.facts() == [] and repo.types() == []
+    assert repo.records() == []
     assert json.loads((repo.path / 'knowledge.json').read_text()) == {
-        'schema': 'curator-knowledge/3', 'game': 'cdda'}
-    assert repo.provenance() == {'frames': {}, 'sessions': {}}
+        'schema': 'curator-knowledge/4', 'game': 'cdda'}
+    assert repo.provenance() == {'frames': {}, 'sessions': {}, 'branches': {}, 'restores': []}
+    assert 'ontology/types.json' not in repo.snapshot('v0')
     assert (repo.path / 'programs' / '.keep').exists() and (repo.path / 'tests' / '.keep').exists()
     assert repo.state == tmp_path / 'knowledge' / 'cdda.state'
 
 
 def test_valid_submission_is_accepted_and_versions_are_exportable(tmp_path):
     repo = make_repo(tmp_path)
-    directory = submission(tmp_path, [{'op': 'add_type', 'type': kind()},
-                                      {'op': 'add_fact', 'fact': fact()}],
+    directory = submission(tmp_path, [dict(op='add_fact', fact=fact())],
                            from_drafts=['d1'])
     verdict = run(repo, directory)
     operation_id = verdict['operation_id']
@@ -306,7 +306,7 @@ def test_valid_submission_is_accepted_and_versions_are_exportable(tmp_path):
     stored = repo.facts()
     assert stored[0]['id'] == 'f1' and stored[0]['published_in'] == 'v1'
     assert stored[0]['session'] == 'sess'
-    assert [item['name'] for item in repo.types()] == ['mechanic']
+    assert stored[0]['tags'] == ['mechanic']
     new, old = tmp_path / 'at-v1', tmp_path / 'at-v0'
     repo.export('v1', new)
     repo.export('v0', old)
@@ -333,51 +333,12 @@ def test_stale_base_is_rejected_with_the_current_version(tmp_path):
 
 def test_out_of_window_citation_is_rejected(tmp_path):
     repo = make_repo(tmp_path)
-    changes = [{'op': 'add_type', 'type': kind()},
-               {'op': 'add_fact', 'fact': fact(citations=('frame-1', 'elsewhere'))}]
+    changes = [{'op': 'add_fact', 'fact': fact(citations=(FRAME1, FRAME3))}]
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, changes))
     assert not (verdict['status'] == 'published')
-    assert any('elsewhere' in line for line in verdict['diagnostics'])
+    assert any(FRAME3 in line and 'outside' in line for line in verdict['diagnostics'])
     assert snapshot(repo) == before
-
-
-def test_unknown_type_rejected_and_accepted_when_added_in_the_submission(tmp_path):
-    repo = make_repo(tmp_path)
-    bad = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}]))
-    assert not (bad['status'] == 'published') and any('unknown type' in line for line in bad['diagnostics'])
-    good = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()},
-                                           {'op': 'add_type', 'type': kind()}], name='s2'))
-    assert (good['status'] == 'published') and repo.published() == 'v1'
-
-
-def test_supersede_marks_the_old_fact(tmp_path):
-    repo = seeded(tmp_path)
-    directory = submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f2')}],
-                           base_version='v1')
-    assert run(repo, directory)['version'] == 'v2'
-    by_id = {item['id']: item for item in repo.facts()}
-    assert by_id['f1']['superseded_by'] == 'f2' and 'superseded_by' not in by_id['f2']
-    assert 'superseded_by' not in {key for item in repo.facts('v1') for key in item}
-
-
-def test_supersede_unknown_or_already_superseded_is_rejected(tmp_path):
-    repo = seeded(tmp_path)
-    unknown = run(repo, submission(
-        tmp_path, [{'op': 'supersede_fact', 'ids': ['nope'], 'fact': fact('f2')}],
-        base_version='v1'))
-    assert not (unknown['status'] == 'published') and any('does not exist' in x for x in unknown['diagnostics'])
-    run(repo, submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f2')}],
-                         name='s3', base_version='v1'))
-    again = run(repo, submission(
-        tmp_path, [{'op': 'supersede_fact', 'ids': ['f1'], 'fact': fact('f3')}], name='s4',
-        base_version='v2'))
-    assert not (again['status'] == 'published') and any('already superseded' in x for x in again['diagnostics'])
-    twice = run(repo, submission(
-        tmp_path, [{'op': 'supersede_fact', 'ids': ['f2'], 'fact': fact('f4')},
-                   {'op': 'supersede_fact', 'ids': ['f2'], 'fact': fact('f5')}], name='s5',
-        base_version='v2'))
-    assert not (twice['status'] == 'published')
 
 
 def test_duplicate_fact_ids_are_rejected(tmp_path):
@@ -392,13 +353,6 @@ def test_duplicate_fact_ids_are_rejected(tmp_path):
     assert repo.published() == 'v1'
 
 
-def test_wrong_scope_game_is_rejected(tmp_path):
-    repo = make_repo(tmp_path)
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
-                                              {'op': 'add_fact', 'fact': fact(game='other')}]))
-    assert not (verdict['status'] == 'published') and any('scope game' in x for x in verdict['diagnostics'])
-
-
 def malformed_cases():
     good = {'op': 'add_fact', 'fact': fact()}
     return {
@@ -408,7 +362,7 @@ def malformed_cases():
         'wrong fact schema': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/2'}}],
         'empty citations': [{'op': 'add_fact', 'fact': fact(citations=())}],
         'scope not object': [{'op': 'add_fact', 'fact': {**fact(), 'scope': 'cdda'}}],
-        'extra type field': [{'op': 'add_type', 'type': {**kind(), 'x': 1}}],
+        'obsolete type operation': [dict(op='add_type', type={})],
         'no changes': [],
         'too many changes': [{'op': 'add_fact', 'fact': fact(f'f{i}')} for i in range(201)],
     }
@@ -426,15 +380,15 @@ def test_malformed_submissions_are_rejected_and_leave_the_repository_alone(tmp_p
 def test_envelope_problems_are_rejected(tmp_path):
     repo = make_repo(tmp_path)
     before = snapshot(repo)
-    change = [{'op': 'add_type', 'type': kind()}]
+    change = [dict(op='add_fact', fact=fact('seed-fact'))]
     cases = {
-        'schema': submission(tmp_path, change, name='a', schema='curator-submission/2'),
+        'schema': submission(tmp_path, change, name='a', schema='curator-submission/1'),
         'extra': submission(tmp_path, change, name='b', surprise=1),
         'base': submission(tmp_path, change, name='c', base_version='3'),
     }
     huge = submission(tmp_path, change, name='d')
     (huge / 'submission.json').write_text(json.dumps(
-        {'schema': 'curator-submission/1', 'base_version': 'v0', 'summary': 'x' * 300_000,
+        {'schema': 'curator-submission/2', 'base_version': 'v0', 'summary': 'x' * 300_000,
          'changes': change}))
     garbage = tmp_path / 'submissions' / 'e'
     garbage.mkdir()
@@ -460,24 +414,22 @@ def test_failed_commit_leaves_published_unchanged(tmp_path, monkeypatch):
         return real(cwd, *args)
 
     monkeypatch.setattr(knowledge, '_git', failing)
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
-                                              {'op': 'add_fact', 'fact': fact()}]))
+    verdict = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}]))
     monkeypatch.setattr(knowledge, '_git', real)
     assert not (verdict['status'] == 'published') and verdict['version'] is None
     assert any('forced tag failure' in x for x in verdict['diagnostics'])
     assert repo.published() == 'v0'
     assert snapshot(repo) == before
     assert repo.facts() == []
-    retry = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()},
-                                            {'op': 'add_fact', 'fact': fact()}], name='s2'))
+    retry = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}], name='s2'))
     assert (retry['status'] == 'published') and repo.published() == 'v1'
 
 
 def test_gate_log_gains_one_line_per_call(tmp_path):
     repo = make_repo(tmp_path)
-    run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact()}]))
-    run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}], name='s2'))
-    run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}], name='s3'))
+    run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact(citations=[FRAME3]))]))
+    run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact())], name='s2'))
+    run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))], name='s3'))
     lines = (repo.state / 'gate.jsonl').read_text().splitlines()
     assert [json.loads(line)['status'] for line in lines] == ['rejected', 'published', 'rejected']
     assert [json.loads(line)['submission'] for line in lines] == ['s1', 's2', 's3']
@@ -486,8 +438,8 @@ def test_gate_log_gains_one_line_per_call(tmp_path):
 def test_the_gate_reads_neither_links_nor_special_files(tmp_path):
     repo = make_repo(tmp_path)
     secret = tmp_path / 'secret.json'
-    secret.write_text(json.dumps({'schema': 'curator-submission/1', 'base_version': 'v0', 'summary': 's',
-                                  'changes': [{'op': 'add_type', 'type': kind()}]}))
+    secret.write_text(json.dumps({'schema': 'curator-submission/2', 'base_version': 'v0', 'summary': 's',
+                                  'changes': [dict(op='add_fact', fact=fact('seed-fact'))]}))
     linked = tmp_path / 'submissions' / 'link'
     linked.mkdir(parents=True)
     (linked / 'submission.json').symlink_to(secret)
@@ -505,10 +457,10 @@ def test_pathological_json_is_rejected_not_raised(tmp_path):
     deep = tmp_path / 'submissions' / 'deep'
     deep.mkdir(parents=True)
     (deep / 'submission.json').write_text('[' * 100_000 + ']' * 100_000)
-    surrogate = submission(tmp_path, [{'op': 'add_type', 'type': {**kind(), 'description': 'x'}}], name='sur')
+    surrogate = submission(tmp_path, [dict(op='add_fact', fact=fact(text='x'))], name='sur')
     (surrogate / 'submission.json').write_text(
         (surrogate / 'submission.json').read_text().replace('"x"', '"\\ud800"'))
-    bad_drafts = submission(tmp_path, [{'op': 'add_type', 'type': kind()}], name='drafts',
+    bad_drafts = submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))], name='drafts',
                             from_drafts=['../../etc'])
     for directory in (deep, surrogate, bad_drafts):
         verdict = run(repo, directory)
@@ -524,7 +476,7 @@ def test_an_inherited_git_environment_cannot_redirect_the_repository(tmp_path, m
     monkeypatch.setenv('GIT_DIR', str(other / '.git'))
     monkeypatch.setenv('GIT_WORK_TREE', str(other))
     repo = make_repo(tmp_path)
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]))
+    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))]))
     monkeypatch.delenv('GIT_DIR')
     monkeypatch.delenv('GIT_WORK_TREE')
     assert (verdict['status'] == 'published') and repo.published() == 'v1'
@@ -598,7 +550,7 @@ def test_surviving_host_processes_stop_collection(tmp_path):
         (workspace / name).mkdir(parents=True)
     (workspace / 'drafts' / 'plan').mkdir()
     (workspace / 'drafts' / 'plan' / 'n').write_text('x')
-    good = submission(workspace, [{'op': 'add_type', 'type': kind()}])
+    good = submission(workspace, [dict(op='add_fact', fact=fact('seed-fact'))])
     assert good.parent == workspace / 'submissions'
     record_dir = tmp_path / 'record'
     record_dir.mkdir()
@@ -685,7 +637,7 @@ def test_a_failure_while_collecting_submissions_is_sealed(tmp_path, monkeypatch)
     workspace = tmp_path / 'ws'
     for name in session.WRITABLE:
         (workspace / name).mkdir(parents=True)
-    submission(workspace, [{'op': 'add_type', 'type': kind()}])
+    submission(workspace, [dict(op='add_fact', fact=fact('seed-fact'))])
     record_dir = tmp_path / 'record'
     record_dir.mkdir()
 
@@ -703,7 +655,7 @@ def test_a_failure_while_collecting_submissions_is_sealed(tmp_path, monkeypatch)
 
 def test_submission_names_cannot_add_lines_to_the_commit_message(tmp_path):
     repo = make_repo(tmp_path)
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}],
+    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))],
                                    name='s1\nCo-Authored-By: someone <x@example.com>'))
     assert (verdict['status'] == 'published')
     message = git(repo, 'log', '-1', '--format=%B')
@@ -720,46 +672,11 @@ def test_the_draft_digest_separates_names_from_contents(tmp_path):
     assert containers._digest(one) != containers._digest(two)
 
 
-def without(item: dict, key: str) -> dict:
-    return {k: v for k, v in item.items() if k != key}
-
-
-FACT_RULES = {
-    'blank subject': (fact(subject='  '), 'subject must be a non-empty string'),
-    'subject not text': (fact(subject=['a thing']), 'subject must be a non-empty string'),
-    'old schema': (fact(schema='curator-fact/3'), "schema must be 'curator-fact/4'"),
-    'missing known': (without(fact(), 'known'), "missing field 'known'"),
-    'invalid known': (fact(known='certain'), 'known must be'),
-    'missing record': (without(fact(), 'record'), "missing field 'record'"),
-    'wrong record': (fact(record='article'), 'record must be fact'),
-    'missing text': (without(fact(), 'text'), "missing field 'text'"),
-    'blank text': (fact(text=' '), 'text must be a non-empty string'),
-    'duplicate citations': (fact(citations=['frame-1', 'frame-1']), 'citations must be'),
-    'blank scope': (fact(scope={'game': ' '}), 'scope must be'),
-    'invalid scope level': (fact(level='local'), 'scope must be'),
-    'submitted world': (fact(scope={'game': 'cdda', 'level': 'world', 'world': 'pond'}), 'scope must be'),
-    'model seen': (fact(seen=50), "unexpected field 'seen'"),
-    **{f'removed {key}': (fact(**{key: 'x'}), f"unexpected field '{key}'")
-       for key in ('kind', 'place', 'game_time', 'statement')},
-    'a coverage key in a fact': (fact(coverage=COVERAGE), "unexpected field 'coverage'"),
-}
-
-
-@pytest.mark.parametrize('name', list(FACT_RULES))
-def test_each_fact_rule_rejects_with_its_own_diagnostic_at_the_well_formed_stage(tmp_path, name):
-    repo = make_repo(tmp_path)
-    before = snapshot(repo)
-    bad, expected = FACT_RULES[name]
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': bad}]))
-    assert not (verdict['status'] == 'published')
-    assert len(verdict['diagnostics']) == 1 and expected in verdict['diagnostics'][0], verdict['diagnostics']
-    assert snapshot(repo) == before
-
-
 def test_subject_is_optional_and_seen_is_the_latest_cited_position(tmp_path):
     repo = make_repo(tmp_path)
-    item = without(fact(citations=['frame-2', 'frame-1']), 'subject')
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': item}]))
+    item = fact(citations=[FRAME2, FRAME1])
+    del item['subject']
+    verdict = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': item}]))
     assert (verdict['status'] == 'published'), verdict['diagnostics']
     assert repo.facts()[0]['seen'] == dict(session='s1', actor='001', step=2, order=[1, '001', 2])
 
@@ -767,14 +684,12 @@ def test_subject_is_optional_and_seen_is_the_latest_cited_position(tmp_path):
 @pytest.mark.parametrize('first_step, replay_step', [(41, 42), (42, 41)])
 def test_shared_frame_keeps_its_first_published_position_across_windows(tmp_path, first_step, replay_step):
     repo = make_repo(tmp_path)
-    windows = [('frame-1', first_step), ('frame-1', replay_step), ('next-frame', 43)]
+    windows = [(FRAME1, first_step), (FRAME1, replay_step), (FRAME2, 43)]
     expected_positions = {}
     for index, (frame, step) in enumerate(windows, 1):
         position = dict(session='s1', actor='001', step=step, order=[1, '001', step])
         expected_positions.setdefault(frame, position)
         changes = [dict(op='add_fact', fact=fact(f'f{index}', citations=[frame]))]
-        if index == 1:
-            changes.insert(0, dict(op='add_type', type=kind()))
         directory = submission(tmp_path, changes, name=f'window-{index}', base_version=f'v{index - 1}')
         verdict = gate(repo, directory, session_id=f'curator-{index}', window_frames={frame: position},
                        coverage={**COVERAGE, 'last_step': step}, session_kind='admission')
@@ -791,28 +706,11 @@ def test_the_gate_rejects_invalid_candidate_frame_positions_before_commit(tmp_pa
     before = snapshot(repo)
     monkeypatch.setattr(repo, 'commit', lambda *args: pytest.fail('invalid candidate reached commit'))
     position = dict(session='s1', actor='001', step='42', order=[1, '001', 42])
-    directory = submission(tmp_path, [dict(op='add_fact', fact=fact('f2', citations=['new-frame']))], base_version='v1')
-    verdict = gate(repo, directory, session_id='sess', window_frames={'new-frame': position},
+    directory = submission(tmp_path, [dict(op='add_fact', fact=fact('f2', citations=[FRAME3]))], base_version='v1')
+    verdict = gate(repo, directory, session_id='sess', window_frames={FRAME3: position},
                    coverage={**COVERAGE, 'last_step': 42}, session_kind='admission')
     assert (verdict['status'], verdict['version']) == ('rejected', None)
-    assert verdict['diagnostics'] == ['publication failed: invalid candidate snapshot: invalid frame position']
-    assert snapshot(repo) == before
-
-
-def test_the_gate_rejects_a_candidate_that_changes_a_record_origin(tmp_path, monkeypatch):
-    repo = seeded(tmp_path)
-    before = snapshot(repo)
-    publication = gate_module._publication
-
-    def wrong_origin(repo, records, *args):
-        records[0] = dict(records[0], session='different-session')
-        return publication(repo, records, *args)
-
-    monkeypatch.setattr(gate_module, '_publication', wrong_origin)
-    monkeypatch.setattr(repo, 'commit', lambda *args: pytest.fail('invalid candidate reached commit'))
-    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('f2'))], base_version='v1'))
-    assert (verdict['status'], verdict['version']) == ('rejected', None)
-    assert verdict['diagnostics'] == ['publication failed: invalid candidate snapshot: invalid record origin']
+    assert verdict['diagnostics'] == ['invalid candidate snapshot: invalid frame position']
     assert snapshot(repo) == before
 
 
@@ -820,27 +718,26 @@ def old_contract_repository(tmp_path):
     repo = make_repo(tmp_path)
     old = {'schema': 'curator-fact/2', 'id': 'old', 'type': 'mechanic', 'statement': 's', 'scope': {'game': 'cdda'},
            'citations': ['frame-1'], 'published_in': 'v1', 'session': 'x'}
-    repo.commit({'facts.jsonl': (json.dumps(old) + '\n').encode(),
-                 'ontology/types.json': (json.dumps([kind()]) + '\n').encode()}, 'Publish v1')
+    repo.commit({'facts.jsonl': (json.dumps(old) + '\n').encode()}, 'Publish v1')
     return repo
 
 
 @pytest.mark.parametrize('change', [
-    lambda: {'op': 'supersede_fact', 'ids': ['old'], 'fact': fact('new')},
+    lambda: {'op': 'supersede_fact', 'ids': ['old'], 'reason_kind': 'restated', 'fact': fact('new')},
     lambda: {'op': 'add_fact', 'fact': fact('new')}])
 def test_the_gate_does_not_publish_into_a_repository_holding_facts_of_another_contract(tmp_path, change):
     repo = old_contract_repository(tmp_path)
     before = snapshot(repo)
     verdict = run(repo, submission(tmp_path, [change()], base_version='v1'))
     assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
-    assert verdict['diagnostics'] == ['publication failed: incompatible history at v1']
+    assert verdict['diagnostics'][0].startswith('publication failed: incompatible history at v1:')
     assert snapshot(repo) == before and repo.published() == 'v1'
 
 
 def test_the_coverage_stamp_is_published_with_the_version_and_changes_with_it(tmp_path):
     repo = make_repo(tmp_path)
     assert not (repo.path / 'coverage.json').exists()
-    first = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]))
+    first = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))]))
     assert (first['status'] == 'published')
     assert json.loads(git(repo, 'show', 'v1:coverage.json')) == COVERAGE
     later = {**COVERAGE, 'last_step': 40}
@@ -855,16 +752,16 @@ def test_the_coverage_stamp_is_published_with_the_version_and_changes_with_it(tm
 def test_a_submission_cannot_set_the_coverage_stamp(tmp_path, where):
     repo = make_repo(tmp_path)
     before = snapshot(repo)
-    changes = [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': fact()}]
+    changes = [{'op': 'add_fact', 'fact': fact()}]
     top = {}
     if where == 'top':
         top['coverage'] = {**COVERAGE, 'last_step': 999}
     elif where == 'change':
-        changes[1]['coverage'] = COVERAGE
+        changes[0]['coverage'] = COVERAGE
     else:
-        changes[1]['fact']['coverage'] = COVERAGE
+        changes[0]['fact']['coverage'] = COVERAGE
     verdict = run(repo, submission(tmp_path, changes, **top))
-    assert not (verdict['status'] == 'published') and any('unexpected field' in d and 'coverage' in d for d in verdict['diagnostics'])
+    assert not (verdict['status'] == 'published') and any('Additional properties' in d and 'coverage' in d for d in verdict['diagnostics'])
     assert snapshot(repo) == before
 
 
@@ -873,348 +770,21 @@ def test_a_submission_cannot_set_the_coverage_stamp(tmp_path, where):
 def test_a_bad_stamp_from_the_runner_publishes_nothing(tmp_path, stamp):
     repo = make_repo(tmp_path)
     before = snapshot(repo)
-    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}]), coverage=stamp)
+    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))]), coverage=stamp)
     assert not (verdict['status'] == 'published') and any('coverage' in d for d in verdict['diagnostics'])
     assert snapshot(repo) == before
 
 
-def article(identity='a1', title='A subject', facts=('f1',), **extra):
-    return dict(schema='curator-fact/4', record='article', id=identity, title=title,
-                lead='A hypothesis. Check before relying on it.',
-                body=[dict(text='An arbitrary claim, never judged by the gate.', facts=list(facts))], links=[]) | extra
-
-
-def grooming(repo, tmp_path, changes, *, frames=FRAMES, session_labels=None, **kw):
-    return run(repo, submission(tmp_path, changes, base_version=repo.published(), **kw),
-               session_kind='grooming', frames=frames, session_labels=session_labels)
-
-
-def test_supersede_merges_several_facts_and_retirement_preserves_evidence(tmp_path):
-    repo = seeded(tmp_path)
-    added = run(repo, submission(tmp_path, [{'op': 'add_fact', 'fact': fact('f2')}], base_version='v1'))
-    assert (added['status'] == 'published')
-    merged = run(repo, submission(tmp_path, [{'op': 'supersede_fact', 'ids': ['f1', 'f2'], 'fact': fact('merged')}],
-                                  name='merge', base_version='v2'))
-    assert (merged['status'] == 'published'), merged
-    assert [f['superseded_by'] for f in repo.facts()[:2]] == ['merged', 'merged']
-    retired = run(repo, submission(tmp_path, [dict(op='retire_fact', id='merged', reason='contradicted',
-                                                 citations=['frame-2'])], name='retire', base_version='v3'))
-    assert (retired['status'] == 'published'), retired
-    assert repo.facts()[-1]['retired']['reason'] == 'contradicted'
-    assert repo.facts()[-1]['retired']['citations'] == ['frame-2']
-    assert 'retired' not in repo.facts('v3')[-1]
-
-
-@pytest.mark.parametrize('changes, expected', [
-    ([dict(op='supersede_fact', ids=[], fact=fact('f2'))], 'ids must be'),
-    ([dict(op='supersede_fact', ids=['f1', 'f1'], fact=fact('f2'))], 'ids must be'),
-    ([dict(op='retire_fact', id='f1', reason='', citations=['frame-1'])], 'reason must be'),
-    ([dict(op='retire_fact', id='f1', reason='x', citations=[])], 'citations must be'),
-    ([dict(op='retire_fact', id='f1', reason='x', citations=['frame-1', 'frame-1'])], 'citations must be'),
-    ([dict(op='retire_article', id='a1', reason=' ')], 'reason must be'),
-    ([dict(op='retire_fact', id='f1', reason='x', citations=['outside'])], 'outside the trace window'),
-    ([dict(op='retire_fact', id='unknown', reason='x', citations=['frame-1'])], 'does not exist'),
-    ([dict(op='retire_fact', id='f1', reason='x', citations=['frame-1'])] * 2, 'already superseded or retired'),
-])
-def test_merge_and_retirement_rules_are_independently_rejected(tmp_path, changes, expected):
-    repo = seeded(tmp_path)
-    before = snapshot(repo)
-    verdict = run(repo, submission(tmp_path, changes, base_version='v1'))
-    assert not (verdict['status'] == 'published') and any(expected in d for d in verdict['diagnostics']), verdict
-    assert snapshot(repo) == before
-
-
-ARTICLE_RULES = {
-    'non-object': ([], 'must be an object'),
-    'blank id': (dict(article(), id=' '), 'id must be'),
-    'blank link': (dict(article(), links=[' ']), 'links must be'),
-    'duplicate claim facts': (dict(article(), body=[dict(text='x', facts=['f1', 'f1'])]), 'body must be'),
-    'old schema': (dict(article(), schema='curator-fact/2'), 'schema must be'),
-    'wrong record': (dict(article(), record='fact'), 'record must be article'),
-    'missing record': (without(article(), 'record'), "missing field 'record'"),
-    'blank title': (dict(article(), title=' '), 'title must be'),
-    'blank lead': (dict(article(), lead=''), 'lead must be'),
-    'no body': (dict(article(), body=[]), 'body must be'),
-    'uncited claim': (dict(article(), body=[dict(text='x', facts=[])]), 'body must be'),
-    'blank claim': (dict(article(), body=[dict(text=' ', facts=['f1'])]), 'body must be'),
-    'extra claim key': (dict(article(), body=[dict(text='x', facts=['f1'], extra='x')]), 'body must be'),
-    'invalid links': (dict(article(), links='x'), 'links must be'),
-    'duplicate links': (dict(article(), links=['A', 'A']), 'links must be'),
-    'model timestamp': (dict(article(), last_confirmed=99), "unexpected field 'last_confirmed'"),
-}
-
-
-@pytest.mark.parametrize('name', list(ARTICLE_RULES))
-def test_each_article_shape_rule_rejects_on_its_own(tmp_path, name):
-    repo = seeded(tmp_path)
-    value, expected = ARTICLE_RULES[name]
-    verdict = grooming(repo, tmp_path, [dict(op='add_article', article=value)])
-    assert not (verdict['status'] == 'published')
-    assert len(verdict['diagnostics']) == 1 and expected in verdict['diagnostics'][0], verdict
-
-
-def test_article_citations_links_and_last_confirmed_resolve_the_final_snapshot(tmp_path):
-    repo = seeded(tmp_path)
-    verdict = grooming(repo, tmp_path, [dict(op='add_fact', fact=fact('f2', citations=['frame-2'])),
-                                       dict(op='add_article', article=article(links=['Other'])),
-                                       dict(op='add_article', article=article('a2', 'Other', ['f1', 'f2']))])
-    assert (verdict['status'] == 'published'), verdict
-    assert repo.articles()[1]['last_confirmed']['step'] == 2
-    assert all(r['schema'] == 'curator-fact/4' for r in repo.records())
-    # Replace both articles together; neither stale citations nor incoming links survive.
-    verdict = grooming(repo, tmp_path, [dict(op='supersede_fact', ids=['f1', 'f2'], fact=fact('merged')),
-                                       dict(op='revise_article', id='a1', article=article('a3', 'Combined', ['merged'])),
-                                       dict(op='retire_article', id='a2', reason='merged')], name='revise')
-    assert (verdict['status'] == 'published'), verdict
-    assert repo.articles()[0]['superseded_by'] == 'a3'
-    assert repo.articles()[1]['retired']['reason'] == 'merged'
-
-
-@pytest.mark.parametrize('changes, expected', [
-    ([dict(op='add_article', article=article(facts=['unknown']))], 'is not current'),
-    ([dict(op='add_article', article=article(links=['Missing']))], 'does not resolve'),
-    ([dict(op='add_article', article=article()), dict(op='add_article', article=article('a2'))], 'titles must be unique'),
-    ([dict(op='add_article', article=article('f1'))], 'is not new'),
-    ([dict(op='add_type', type=kind('other'))], 'unfiled current facts'),
-])
-def test_each_article_reference_and_filing_rule_rejects(tmp_path, changes, expected):
-    repo = seeded(tmp_path)
-    before = snapshot(repo)
-    verdict = grooming(repo, tmp_path, changes)
-    assert not (verdict['status'] == 'published') and any(expected in d for d in verdict['diagnostics']), verdict
-    assert snapshot(repo) == before
-
-
-def test_retired_and_superseded_facts_cannot_support_current_articles(tmp_path):
-    repo = seeded(tmp_path)
-    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())])['status'] == 'published'
-    for name, change in [('retire', dict(op='retire_fact', id='f1', reason='x', citations=['frame-1'])),
-                         ('replace', dict(op='supersede_fact', ids=['f1'], fact=fact('f2')))]:
-        verdict = run(repo, submission(tmp_path, [change], name=name, base_version='v2'))
-        assert not (verdict['status'] == 'published') and any("fact 'f1' is not current" in d for d in verdict['diagnostics']), verdict
-    # The fact itself stays current because both rejected publications were atomic.
-    assert 'retired' not in repo.facts()[0]
-
-
-def test_removing_a_link_target_requires_repairing_incoming_links(tmp_path):
-    repo = seeded(tmp_path)
-    assert grooming(repo, tmp_path, [dict(op='add_article', article=article(links=['Other'])),
-                                     dict(op='add_article', article=article('a2', 'Other'))])['status'] == 'published'
-    verdict = run(repo, submission(tmp_path, [dict(op='retire_article', id='a2', reason='x')],
-                                   name='retire', base_version='v2'))
-    assert not (verdict['status'] == 'published') and any('does not resolve' in d for d in verdict['diagnostics'])
-
-
-def test_every_type_revision_publishes_a_new_version_and_keeps_current_types(tmp_path):
-    repo = seeded(tmp_path)
-    revisions = [
-        dict(action='rename', names=['mechanic'], types=[kind('relation')], assignments={'f1': 'relation'}),
-        dict(action='split', names=['relation'], types=[kind('observed'), kind('inferred')], assignments={'f1': 'observed'}),
-        dict(action='merge', names=['observed', 'inferred'], types=[kind('relation')], assignments={'f1': 'relation'}),
-        dict(action='deprecate', names=['relation'], types=[], assignments={}),
-    ]
-    for index, revision in enumerate(revisions):
-        changes = [dict(op='revise_types', **revision)]
-        if index == 0:
-            changes.append(dict(op='add_article', article=article()))
-        if index == 3:
-            changes += [dict(op='retire_fact', id='f1', reason='contradicted', citations=['frame-1']),
-                        dict(op='retire_article', id='a1', reason='no current evidence')]
-        verdict = grooming(repo, tmp_path, changes, name=f'revision-{revision["action"]}')
-        assert (verdict['status'] == 'published') and verdict['version'] == f'v{index + 2}', verdict
-    assert repo.types() == [] and repo.types('v1') == [dict(kind(), published_in='v1')]
-    assert repo.facts('v3')[0]['type'] == 'observed'
-
-
-@pytest.mark.parametrize('revision, expected', [
-    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={}), 'unknown type'),
-    (dict(action='rename', names=['unknown'], types=[kind('renamed')], assignments={}), 'unknown type'),
-    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={'missing': 'renamed'}), 'is not current'),
-    (dict(action='merge', names=['mechanic', 'mechanic'], types=[kind('renamed')], assignments={}), 'names must be'),
-    (dict(action='rename', names=['mechanic'], types=[None], assignments={}), 'must be an object'),
-    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={'': 'renamed'}), 'assignments must map'),
-    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments={'f1': ' '}), 'assignments must map'),
-    (dict(action='rename', names=[], types=[kind('renamed')], assignments={}), 'names must be'),
-    (dict(action='rename', names=['mechanic'], types='bad', assignments={}), 'types must be'),
-    (dict(action='rename', names=['mechanic'], types=[kind('renamed')], assignments=[]), 'assignments must map'),
-    (dict(action='unknown', names=['mechanic'], types=[], assignments={}), 'unknown type revision action'),
-    (dict(action='merge', names=['mechanic'], types=[kind('renamed')], assignments={}), 'cardinality'),
-    (dict(action='split', names=['mechanic'], types=[kind('renamed')], assignments={}), 'cardinality'),
-    (dict(action='rename', names=['mechanic'], types=[], assignments={}), 'cardinality'),
-    (dict(action='deprecate', names=['mechanic'], types=[kind('renamed')], assignments={}), 'cardinality'),
-])
-def test_each_type_revision_rule_rejects(tmp_path, revision, expected):
-    repo = seeded(tmp_path)
-    verdict = grooming(repo, tmp_path, [dict(op='revise_types', **revision), dict(op='add_article', article=article())])
-    assert not (verdict['status'] == 'published') and any(expected in d for d in verdict['diagnostics']), verdict
-
-
-def test_type_revisions_need_grooming_and_separate_versions(tmp_path):
-    repo = seeded(tmp_path)
-    revision = dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('renamed')],
-                    assignments={'f1': 'renamed'})
-    verdict = run(repo, submission(tmp_path, [revision], base_version='v1'))
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ['changes[0]: type revisions require a grooming session']
-    verdict = grooming(repo, tmp_path, [revision, revision], name='twice')
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ['submission: each type revision needs its own published version']
-
-
-
-def test_bad_frame_provenance_with_an_article_rejects_before_deriving_confirmation(tmp_path):
-    repo = make_repo(tmp_path)
-    changes = [dict(op='add_type', type=kind()), dict(op='add_fact', fact=fact(citations=['outside'])),
-               dict(op='add_article', article=article())]
-    verdict = run(repo, submission(tmp_path, changes))
-    assert not (verdict['status'] == 'published')
-    assert verdict['diagnostics'] == ["changes[1]: citation 'outside' is outside the trace window"]
-    assert repo.published() == 'v0'
-
-
-@pytest.mark.parametrize('field', ['schema', 'id', 'title', 'lead', 'body', 'links'])
-def test_required_article_fields_are_individually_checked(tmp_path, field):
-    repo = seeded(tmp_path)
-    verdict = grooming(repo, tmp_path, [dict(op='add_article', article=without(article(), field))])
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == [f"changes[0].article: missing field '{field}'"]
-
-
-@pytest.mark.parametrize('op', ['revise_article', 'retire_article'])
-def test_article_operations_require_a_current_article_target(tmp_path, op):
-    repo = seeded(tmp_path)
-    change = dict(op=op, id='f1')
-    change.update(article=article()) if op == 'revise_article' else change.update(reason='x')
-    verdict = run(repo, submission(tmp_path, [change], base_version='v1'))
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[0]: article 'f1' does not exist"]
-
-
-def test_ontology_revision_cannot_reuse_another_current_type_name(tmp_path):
-    repo = seeded(tmp_path)
-    changes = [dict(op='add_type', type=kind('existing')),
-               dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('existing')],
-                    assignments={'f1': 'existing'}), dict(op='add_article', article=article())]
-    verdict = grooming(repo, tmp_path, changes)
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[1]: type 'existing' already exists"]
-
-
-@pytest.mark.parametrize('citations', [['frame-1', 'frame-2'], ['frame-1', 'frame-2', 'current']])
-def test_grooming_merge_inherits_older_evidence_and_uses_its_recorded_seen(tmp_path, citations):
-    repo = make_repo(tmp_path)
-    changes = [dict(op='add_type', type=kind()),
-               dict(op='add_fact', fact=fact('f1')),
-               dict(op='add_fact', fact=fact('f2', citations=['frame-2']))]
-    assert run(repo, submission(tmp_path, changes, name='older'))['status'] == 'published'
-    positions = {'current': dict(session='s2', actor='001', step=1, order=[2, '001', 1])}
-    stamp = {**COVERAGE, 'session': 's2'}
-    assert gate(repo, submission(tmp_path, [dict(op='add_type', type=kind('new'))], name='latest', base_version='v1'),
-                session_id='latest', window_frames=positions, coverage=stamp, session_kind='admission')['status'] == 'published'
-    changes = [dict(op='supersede_fact', ids=['f1', 'f2'], fact=fact('merged', citations=citations)),
-               dict(op='add_article', article=article(facts=['merged']))]
-    verdict = gate(repo, submission(tmp_path, changes, name='merge', base_version='v2'), session_id='groom',
-                   window_frames=positions, coverage=stamp, session_kind='grooming')
-    assert (verdict['status'] == 'published'), verdict
-    expected = positions['current'] if 'current' in citations else repo.provenance()['frames']['frame-2']
-    assert repo.facts()[-1]['seen'] == expected
-    assert repo.articles()[0]['last_confirmed'] == expected
-
-
-@pytest.mark.parametrize('session_kind, citation', [('admission', 'frame-1'), ('grooming', 'unrelated'), ('grooming', 'unknown')])
-def test_replacement_cannot_inherit_unrelated_citations_or_inherit_during_admission(tmp_path, session_kind, citation):
-    repo = make_repo(tmp_path)
-    assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind()), dict(op='add_fact', fact=fact()),
-                                          dict(op='add_fact', fact=fact('other', citations=['unrelated']))], name='seed'),
-               frames={'frame-1', 'unrelated'})['status'] == 'published'
-    changes = [dict(op='supersede_fact', ids=['f1'], fact=fact('replacement', citations=[citation])),
-               dict(op='add_article', article=article(facts=['replacement', 'other']))]
-    verdict = run(repo, submission(tmp_path, changes, base_version='v1'), frames={'current'}, session_kind=session_kind)
-    assert not (verdict['status'] == 'published')
-    assert len(verdict['diagnostics']) == 1 and f"citation {citation!r} is outside" in verdict['diagnostics'][0]
-
-
-@pytest.mark.parametrize('removal', ['unrelated-type', 'retire_fact', 'supersede_fact'])
-def test_retype_assignments_require_a_source_type_and_a_surviving_fact(tmp_path, removal):
-    repo = seeded(tmp_path)
-    if removal == 'unrelated-type':
-        assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind('other')),
-                                              dict(op='add_fact', fact=fact('f2', type_name='other'))],
-                                   name='extra', base_version='v1'))['status'] == 'published'
-        assignments, facts = {'f1': 'renamed', 'f2': 'renamed'}, ['f1', 'f2']
-        changes, expected = [], 'type outside names before the revision'
-    else:
-        assignments = {'f1': 'renamed'}
-        if removal == 'retire_fact':
-            changes, facts = [dict(op=removal, id='f1', reason='contradicted', citations=['frame-1'])], []
-        else:
-            changes, facts = [dict(op=removal, ids=['f1'], fact=fact('f2', type_name='renamed'))], ['f2']
-        expected = 'retired or superseded in this submission'
-    changes.insert(0, dict(op='revise_types', action='rename', names=['mechanic'], types=[kind('renamed')],
-                           assignments=assignments))
-    if facts:
-        changes.append(dict(op='add_article', article=article(facts=facts)))
-    verdict = grooming(repo, tmp_path, changes)
-    assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
-    assert expected in verdict['diagnostics'][0], verdict
-
-
-def test_retyping_records_software_history_and_preserves_prior_versions(tmp_path):
-    repo = seeded(tmp_path)
-    for old, new, version in [('mechanic', 'relation', 'v2'), ('relation', 'observed', 'v3')]:
-        changes = [dict(op='revise_types', action='rename', names=[old], types=[kind(new)], assignments={'f1': new})]
-        if version == 'v2':
-            changes.append(dict(op='add_article', article=article()))
-        assert grooming(repo, tmp_path, changes, name=new)['version'] == version
-    assert [
-        {'from': 'mechanic', 'to': 'relation', 'version': 'v2'},
-        {'from': 'relation', 'to': 'observed', 'version': 'v3'}] == repo.facts()[0]['retyped']
-    assert 'retyped' not in repo.facts('v1')[0]
-    assert len(repo.facts('v2')[0]['retyped']) == 1
-    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('forged', type_name='observed', retyped=[]))],
-                                   name='forged', base_version='v3'))
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[0].fact: unexpected field 'retyped'"]
-
-
-def test_article_cannot_link_to_itself(tmp_path):
-    repo = seeded(tmp_path)
-    verdict = grooming(repo, tmp_path, [dict(op='add_article', article=article(links=['A subject']))])
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["article 'a1': link to itself is not allowed"]
-
-
-@pytest.mark.parametrize('first, second', [('retire_article', 'retire_article'), ('retire_article', 'revise_article'),
-                                          ('revise_article', 'retire_article'), ('revise_article', 'revise_article')])
-@pytest.mark.parametrize('same_submission', [True, False])
-def test_article_target_cannot_be_changed_twice_or_after_retirement(tmp_path, first, second, same_submission):
-    repo = seeded(tmp_path)
-    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['status'] == 'published'
-    def change(op, identity):
-        return dict(op=op, id='a1', **(dict(reason='no longer useful') if op == 'retire_article' else
-                                      dict(article=article(identity, title=identity))))
-    changes = [change(first, 'a2'), change(second, 'a3')]
-    if not same_submission:
-        assert run(repo, submission(tmp_path, changes[:1], name='first', base_version='v2'))['status'] == 'published'
-        changes = changes[1:]
-    verdict = run(repo, submission(tmp_path, changes, name='again', base_version=repo.published()))
-    assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
-    assert 'already superseded or retired' in verdict['diagnostics'][0]
-
-
-@pytest.mark.parametrize('op', ['retire_fact', 'supersede_fact'])
-def test_fact_operations_cannot_target_articles(tmp_path, op):
-    repo = seeded(tmp_path)
-    assert grooming(repo, tmp_path, [dict(op='add_article', article=article())], name='article')['status'] == 'published'
-    change = dict(op=op, **(dict(id='a1', reason='x', citations=['frame-1']) if op == 'retire_fact' else
-                            dict(ids=['a1'], fact=fact('f2'))))
-    verdict = run(repo, submission(tmp_path, [change], base_version='v2'))
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == ["changes[0]: fact 'a1' does not exist"]
-
-
-@pytest.mark.parametrize('schema', ['curator-knowledge/2', 'curator-knowledge/4', None])
+@pytest.mark.parametrize('schema', ['curator-knowledge/2', 'curator-knowledge/3', None])
 def test_repository_refuses_other_layout_schemas_for_every_reader_and_writer(tmp_path, schema):
     repo = make_repo(tmp_path)
     repo.commit({'knowledge.json': json.dumps(dict(schema=schema, game='cdda')).encode()}, 'foreign layout')
     before = snapshot(repo)
-    for action in [repo.ensure, repo.published, repo.records, repo.types, repo.provenance,
+    for action in [repo.ensure, repo.published, repo.records, repo.provenance,
                    lambda: repo.export('v1', tmp_path/'export'), lambda: repo.commit({}, 'forbidden')]:
-        with pytest.raises(KnowledgeError, match='expected curator-knowledge/3; start a new repository'):
+        with pytest.raises(KnowledgeError, match='expected curator-knowledge/4; start a new repository'):
             action()
-    verdict = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())], base_version='v1'))
+    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))], base_version='v1'))
     assert not (verdict['status'] == 'published') and 'start a new repository' in verdict['diagnostics'][0]
     assert snapshot(repo) == before
 
@@ -1236,9 +806,9 @@ def test_run_session_refuses_invalid_session_selection(tmp_path, options, expect
 @pytest.mark.parametrize('problem, expected', [
     ('no-admission', 'grooming needs a published admission'),
     ('wrong-trace', 'grooming trace must be the last admission'),
-    ('old-record', 'published store is not curator-fact/4'),
-    ('old-type', 'published types are not curator-type/2'),
-    ('old-layout', 'expected curator-knowledge/3; start a new repository'),
+    ('old-record', 'curator-fact/5'),
+    ('old-layout-file', 'unsupported snapshot layout'),
+    ('old-layout', 'expected curator-knowledge/4; start a new repository'),
 ])
 def test_session_preparation_refuses_invalid_grooming_inputs_before_starting_a_host(tmp_path, monkeypatch, problem, expected):
     from tests.curator_trace import make_long_session
@@ -1246,8 +816,8 @@ def test_session_preparation_refuses_invalid_grooming_inputs_before_starting_a_h
     repo = make_repo(tmp_path) if problem == 'no-admission' else seeded(tmp_path)
     if problem == 'old-record':
         repo.commit({'facts.jsonl': (json.dumps(fact(schema='curator-fact/3'))+'\n').encode()}, 'old record')
-    elif problem == 'old-type':
-        repo.commit({'ontology/types.json': json.dumps([dict(kind(), schema='curator-type/1')]).encode()}, 'old type')
+    elif problem == 'old-layout-file':
+        repo.commit({'ontology/types.json': b'[]'}, 'obsolete layout file')
     if problem == 'old-layout':
         repo.commit({'knowledge.json': json.dumps(dict(schema='curator-knowledge/2', game='cdda')).encode()}, 'old layout')
     trace = make_long_session(tmp_path/'evidence', name='other' if problem == 'wrong-trace' else 's1')
@@ -1260,26 +830,13 @@ def test_session_preparation_refuses_invalid_grooming_inputs_before_starting_a_h
     assert record['verdicts'] == []
 
 
-def test_inherited_citations_require_recorded_frame_positions(tmp_path):
-    repo = seeded(tmp_path)
-    provenance = repo.provenance()
-    provenance['frames'].pop('frame-1')
-    repo.commit({'provenance.json': json.dumps(provenance).encode()}, 'missing recorded position')
-    verdict = run(repo, submission(tmp_path, [dict(op='supersede_fact', ids=['f1'], fact=fact('replacement')),
-                                             dict(op='add_article', article=article(facts=['replacement']))],
-                                   base_version='v2'), frames=set(), session_kind='grooming')
-    assert verdict['status'] == 'rejected' and verdict['diagnostics'] == [
-        'publication failed: incompatible history at v2']
-
-
 def test_grooming_without_a_configured_brief_aborts_before_host_start(tmp_path, monkeypatch):
     from tests.curator_trace import frame_id, make_long_session
 
     repo = make_repo(tmp_path)
     trace = make_long_session(tmp_path/'evidence')
     citation = frame_id(1, 1)
-    assert run(repo, submission(tmp_path, [dict(op='add_type', type=kind()),
-                                          dict(op='add_fact', fact=fact(citations=[citation]))]),
+    assert run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact(citations=[citation]))]),
                frames={citation})['status'] == 'published'
     started = []
     def forbidden(*args, **kwargs):
@@ -1307,241 +864,483 @@ def test_unreadable_knowledge_metadata_is_an_unsupported_schema_and_gate_rejecti
     for read in [repo.published, repo.ensure, repo.records]:
         with pytest.raises(KnowledgeError, match='unsupported knowledge schema:.*start a new repository'):
             read()
-    verdict = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())], base_version='v1'))
+    verdict = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('seed-fact'))], base_version='v1'))
     assert not (verdict['status'] == 'published') and len(verdict['diagnostics']) == 1
     assert 'unsupported knowledge schema:' in verdict['diagnostics'][0]
     assert 'start a new repository' in verdict['diagnostics'][0]
     assert snapshot(repo) == before
 
 
-@pytest.mark.parametrize('op', ['add_fact', 'retire_fact', 'supersede_fact'])
-def test_grooming_citation_diagnostic_mentions_replaced_facts_only_for_superseding(tmp_path, op):
+
+
+def change_fact(id='f1', **kwargs):
+    return dict(op='add_fact', fact=fact(id, **kwargs))
+
+
+def change_article(slug='guide', **kwargs):
+    return dict(op='add_article', article=article(slug, **kwargs))
+
+
+def restate(id, replacement, **kwargs):
+    return dict(op='supersede_fact', ids=[id], reason_kind='restated',
+                fact=fact(replacement, citations=[], **kwargs))
+
+
+def public_rows(repo):
+    return {check.owner(row): row for row in repo.records() if current(row)}
+
+
+def publish(repo, tmp_path, changes, *, name=None, base=None, **kwargs):
+    base = base or repo.published()
+    directory = submission(tmp_path, changes, name=name or base, base_version=base)
+    return run(repo, directory, **kwargs)
+
+
+def test_grooming_combines_remap_edit_revise_and_retag_into_one_revision(tmp_path):
+    repo = make_repo(tmp_path)
+    original_claim = {'text': '  Verbatim  ', 'facts': ['extra']}
+    body = [{'text': 'First claim.', 'facts': ['f1']}, original_claim]
+    assert publish(repo, tmp_path, [change_fact(), change_fact('extra'),
+                                    change_article(body=body)])['status'] == 'published'
+    edited = dict(index=0, old_text='First claim.', old_facts=['f2'], text='First edited.', facts=['f2'])
+    verdict = publish(repo, tmp_path, [
+        restate('f1', 'f2'),
+        dict(op='remap_citations', **{'from': 'f1', 'to': 'f2', 'in': ['guide']}),
+        dict(op='edit_article', slug='guide', replace_claims=[edited], add_tags=['fire']),
+        dict(op='retag', assignments={'guide': ['cook']}),
+        dict(op='revise_article', slug='guide', title='Revised title'),
+    ], session_kind='grooming', frames=set())
+    assert verdict['status'] == 'published', verdict
+    old, new = repo.articles()
+    assert old['id'] == 'guide@v1' and old['superseded_by'] == ['guide@v2']
+    assert new['id'] == 'guide@v2' and new['title'] == 'Revised title'
+    assert new['body'] == [{'text': 'First edited.', 'facts': ['f2']}, original_claim]
+    assert new['retagged'] == [{'from': ['fire'], 'to': ['cook'], 'version': 'v2'}]
+    assert new['tags'] == ['cook'] and new['stale_citations'] == []
+    assert publish(repo, tmp_path, [dict(op='retag', assignments={'guide': ['camp']})],
+                   session_kind='grooming')['status'] == 'published'
+    assert [row['id'] for row in repo.articles()] == ['guide@v1', 'guide@v2']
+    assert repo.articles()[-1]['retagged'][-1] == {'from': ['cook'], 'to': ['camp'], 'version': 'v3'}
+
+
+@pytest.mark.parametrize('operation, diagnostic', [
+    (dict(remove_claims=[dict(index=2, old_text='An arbitrary claim.', old_facts=['f1'])]), 'out of range'),
+    (dict(remove_claims=[dict(index=0, old_text='An arbitrary claim.', old_facts=['f2'])]), 'old_text or old_facts'),
+    (dict(remove_claims=[dict(index=0, old_text='An arbitrary claim.', old_facts=['f1'])]), 'empty'),
+    (dict(remove_claims=[dict(index=0, old_text='An arbitrary claim.', old_facts=['f1'])],
+          replace_claims=[dict(index=0, old_text='An arbitrary claim.', old_facts=['f1'],
+                               text='Edited.', facts=['f1'])]), 'duplicate claim index'),
+])
+def test_edit_claim_guards_are_atomic(tmp_path, operation, diagnostic):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact(), change_article()])['status'] == 'published'
+    before = repo.snapshot('v1')
+    reject = publish(repo, tmp_path, [dict(op='edit_article', slug='guide', **operation)])
+    assert reject['status'] == 'rejected' and diagnostic in reject['diagnostics'][0]
+    assert repo.snapshot(repo.published()) == before
+
+
+def test_retired_article_slug_is_reserved_and_retirement_names_conflicting_operation(tmp_path):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact(), change_article()])['status'] == 'published'
+    retire = dict(op='retire_article', slug='guide', reason_kind='editorial', reason='Combine the pages.')
+    conflict = publish(repo, tmp_path, [retire, dict(op='retag', assignments={'guide': ['camp']})],
+                       name='both', session_kind='grooming')
+    assert conflict['status'] == 'rejected' and 'retag' in conflict['diagnostics'][0]
+    assert publish(repo, tmp_path, [retire])['status'] == 'published'
+    assert repo.articles()[0]['lifecycle_state'] == 'ended'
+    assert repo.articles()[0]['valid_to'] is None
+    reject = publish(repo, tmp_path, [change_fact('guide')])
+    assert reject['status'] == 'rejected' and 'not new' in reject['diagnostics'][0]
+
+
+def test_remaps_require_one_to_one_restated_chain_across_versions(tmp_path):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact(), change_fact('other'), change_article()])['status'] == 'published'
+    assert publish(repo, tmp_path, [restate('f1', 'f2')], frames=set())['status'] == 'published'
+    assert repo.articles()[-1]['stale_citations'] == ['f1']
+    remap = dict(op='remap_citations', **{'from': 'f1', 'to': 'f3', 'in': ['guide']})
+    merge = dict(restate('f2', 'f3'), ids=['f2', 'other'])
+    refused = publish(repo, tmp_path, [merge, remap], name='merge', frames=set())
+    assert refused['status'] == 'rejected' and 'one-to-one' in refused['diagnostics'][0]
+    assert publish(repo, tmp_path, [restate('f2', 'f3'), remap], frames=set(),
+                   session_kind='grooming')['status'] == 'published'
+    assert public_rows(repo)['guide']['body'] == [{'text': 'An arbitrary claim.', 'facts': ['f3']}]
+
+
+def test_correction_retracts_and_requires_a_fresh_frame(tmp_path):
     repo = seeded(tmp_path)
-    if op == 'retire_fact':
-        change = dict(op=op, id='f1', reason='contradicted', citations=['outside'])
-    else:
-        change = dict(op=op, fact=fact('f2', citations=['outside']))
-        if op == 'supersede_fact':
-            change['ids'] = ['f1']
-    verdict = grooming(repo, tmp_path, [change])
-    suffix = ' and the replaced facts' if op == 'supersede_fact' else ''
-    assert not (verdict['status'] == 'published') and verdict['diagnostics'] == [
-        "changes[0]: citation 'outside' is outside the trace window" + suffix]
+    corrected = dict(op='supersede_fact', ids=['f1'], reason_kind='corrected', fact=fact('f2'))
+    rejected = publish(repo, tmp_path, [corrected], name='repeat')
+    assert 'new frame' in rejected['diagnostics'][0]
+    corrected['fact']['citations'] = [FRAME2]
+    assert publish(repo, tmp_path, [corrected])['status'] == 'published'
+    old, new = repo.facts()
+    assert old['lifecycle_state'] == 'retracted' and old['superseded_by'] == ['f2']
+    assert new['citations'] == [FRAME2]
 
 
-POND_ID = 'a' * 32
-FOREST_ID = 'b' * 32
-POND_FRAME = f'{POND_ID}-1'
-FOREST_FRAME = f'{FOREST_ID}-1'
-POND = dict(name='pond-first', world='pond', lineage='pond-lineage', admission=1)
-FOREST = dict(name='forest-first', world='forest', lineage='forest-lineage', admission=1)
+def labels(name='s1', *, world='pond', lineage='main', admission=1, **extra):
+    return dict(name=name, world=world, lineage=lineage, admission=admission, context={'mode': 'hard'}) | extra
 
 
-@pytest.fixture
-def world_repo(tmp_path):
+def test_declared_scope_compatibility_world_bindings_and_article_scope(tmp_path):
     repo = make_repo(tmp_path)
-    changes = [dict(op='add_type', type=kind(identity=['a'])),
-               dict(op='add_fact', fact=fact(level='world', citations=[POND_FRAME]))]
-    verdict = run(repo, submission(tmp_path, changes, name='before-grooming'), frames={POND_FRAME},
-                  session_labels={POND_ID: POND})
-    assert verdict['status'] == 'published', verdict
-    return repo
+    wrong = publish(repo, tmp_path, [change_fact(scope={'weather': 'dry'})], name='axis',
+                    session_labels={SEALED: labels()})
+    assert "declared axes: ['mode']" in wrong['diagnostics'][0]
+    clash = publish(repo, tmp_path, [change_fact(scope={'mode': 'easy'},
+                                               when={'note': 'Hard mode.', 'requires': {'mode': 'hard'}})],
+                    name='constraint', session_labels={SEALED: labels()})
+    assert 'one axis two values' in clash['diagnostics'][0]
+    good = publish(repo, tmp_path, [
+        change_fact(scope={'mode': 'hard'}, binds=['world'], claim_kind='instance_state'),
+        change_article(),
+    ], session_labels={SEALED: labels()})
+    assert good['status'] == 'published', good
+    f1, guide = repo.records()
+    assert guide['scope'] == f1['scope'] == dict(game=repo.game, world='pond', mode='hard')
+    assert guide['lineages'] == f1['lineages'] == ['main']
+    assert guide['valid_from'] == f1['valid_from'] and guide['last_confirmed'] == f1['seen']
 
 
-def test_world_scope_uses_frame_positions_labels_and_grooming_inherits_the_join(tmp_path):
-    from harness.curator.window import FramePositions
-
+@pytest.mark.parametrize('world, diagnostic', [(None, 'no recorded world'), ('forest', 'span two worlds')])
+def test_world_bound_fact_refuses_unknown_or_mixed_worlds(tmp_path, world, diagnostic):
     repo = make_repo(tmp_path)
-    second_id = 'c' * 32
-    second_frame = f'{second_id}-2'
-    second = dict(POND, name='pond-second', admission=2)
-    labels = {POND_ID: POND, second_id: second}
-    frames = FramePositions({identity: dict(label, label_check=None, label_error=None)
-                             for identity, label in labels.items()})
-    frames[POND_FRAME] = dict(session=POND['name'], actor='001', step=1, order=[1, '001', 1])
-    frames[second_frame] = dict(session=second['name'], actor='001', step=2, order=[2, '001', 2])
-    changes = [dict(op='add_type', type=kind()),
-               dict(op='add_fact', fact=fact(level='world', citations=[POND_FRAME, second_frame], known='inferred'))]
-    result = gate(repo, submission(tmp_path, changes), session_id='sess', window_frames=frames,
-                  coverage=COVERAGE, session_kind='admission')
-    assert result['status'] == 'published', result
-    assert repo.facts()[0]['scope'] == dict(game='cdda', level='world', world='pond')
-    assert repo.facts()[0]['seen'] == frames[second_frame]
-    assert repo.provenance()['sessions'] == labels
-    replacement = fact('f2', level='world', citations=[POND_FRAME], known='hinted')
-    verdict = grooming(repo, tmp_path, [dict(op='supersede_fact', ids=['f1'], fact=replacement)], name='replace',
-                       frames={second_frame}, session_labels={second_id: second})
-    assert verdict['status'] == 'published', verdict
-    assert repo.facts()[1]['seen'] == frames[POND_FRAME]
-    assert repo.facts()[1]['known'] == 'hinted'
-
-
-@pytest.mark.parametrize('forest_world,diagnostic', [(None, 'no recorded world'), ('forest', 'span two worlds')])
-def test_world_facts_require_a_single_known_world(tmp_path, forest_world, diagnostic):
-    repo = make_repo(tmp_path)
-    labels = {POND_ID: POND, FOREST_ID: dict(FOREST, world=forest_world)}
-    changes = [dict(op='add_type', type=kind()),
-               dict(op='add_fact', fact=fact(level='world', citations=[POND_FRAME, FOREST_FRAME]))]
-    result = run(repo, submission(tmp_path, changes), frames={POND_FRAME, FOREST_FRAME}, session_labels=labels)
+    other = '2' * 32
+    frame = f'{other}-1'
+    result = publish(repo, tmp_path, [change_fact(citations=[FRAME1, frame], binds=['world'])],
+                     frames={FRAME1, frame},
+                     session_labels={SEALED: labels(), other: labels('s2', world=world, lineage=None, admission=None)})
     assert result['status'] == 'rejected' and diagnostic in result['diagnostics'][0]
-    changes[-1]['fact']['scope']['level'] = 'game'
-    result = run(repo, submission(tmp_path, changes, name='game'), frames={POND_FRAME, FOREST_FRAME},
-                 session_labels=labels)
+
+
+def test_narrow_preserves_when_scope_and_evidence_without_booking_inherited_frames(tmp_path):
+    repo = make_repo(tmp_path)
+    when = dict(note='  In this condition.  ', requires={})
+    source_labels = {SEALED: labels(context={'mode': 'hard', 'patch': 'one'})}
+    assert publish(repo, tmp_path, [change_fact(when=when, scope={'patch': 'one'})],
+                   frames={FRAME1}, session_labels=source_labels)['status'] == 'published'
+    children = [fact('hard', citations=[FRAME1], scope={'patch': 'one', 'mode': 'hard'}, when=when),
+                fact('easy', citations=[FRAME2], scope={'patch': 'one', 'mode': 'easy'}, when=when)]
+    operation = dict(op='narrow_fact', id='f1', facts=children)
+    for name, override, diagnostic in [
+        ('condition', {'when': dict(when, requires={'mode': 'hard'})}, 'preserve or strengthen'),
+        ('scope', {'scope': {'patch': 'one'}}, 'strictly narrow'),
+        ('evidence', {'citations': [FRAME2]}, 'carry over'),
+    ]:
+        rejected = publish(repo, tmp_path, [dict(operation, facts=[dict(children[0], **override), children[1]])],
+                           name=name, frames={FRAME2}, session_labels=source_labels)
+        assert diagnostic in rejected['diagnostics'][0]
+    result = publish(repo, tmp_path, [operation], frames={FRAME2}, session_labels=source_labels,
+                     coverage=dict(COVERAGE, session='s2'))
     assert result['status'] == 'published', result
-    assert repo.facts()[0]['scope'] == dict(game='cdda', level='game')
+    old, hard, easy = repo.facts()
+    assert old['superseded_by'] == ['hard', 'easy'] and old['lifecycle_state'] == 'superseded'
+    assert hard['when'] == easy['when'] == when
+    assert repo.provenance()['last_admission']['citations'] == [FRAME2]
 
 
-@pytest.mark.parametrize('change,diagnostic', [
-    (dict(op='supersede_fact', ids=['f1'], fact=fact('f2', citations=[POND_FRAME])), 'same fact scope'),
-    (dict(op='supersede_fact', ids=['f1'], fact=fact('f2', level='world', citations=[FOREST_FRAME])), 'same fact scope'),
-    (dict(op='retire_fact', id='f1', reason='changed', citations=[FOREST_FRAME]), 'fact\'s world'),
-    (dict(op='add_article', article=article()), 'only game facts'),
+def test_grooming_checks_stale_owner_pairs_after_the_batch(tmp_path):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact(), change_fact('other'), change_article(),
+                                    change_article('second', title='Second', facts=['other'])])['status'] == 'published'
+    assert publish(repo, tmp_path, [restate('f1', 'replacement')])['status'] == 'published'
+    revise = dict(op='revise_article', slug='guide', lead='Partial work.')
+    assert publish(repo, tmp_path, [revise], session_kind='grooming')['status'] == 'published'
+    remap = dict(op='remap_citations', **{'from': 'f1', 'to': 'replacement', 'in': ['guide']})
+    move = dict(op='revise_article', slug='second', body=[dict(text='Move debt.', facts=['f1'])])
+    rejection = publish(repo, tmp_path, [remap, move], name='move', session_kind='grooming')
+    assert rejection['status'] == 'rejected' and "('second', 'f1')" in rejection['diagnostics'][0]
+    assert publish(repo, tmp_path, [remap], session_kind='grooming')['status'] == 'published'
+    assert public_rows(repo)['guide']['stale_citations'] == []
+
+
+def test_fixed_point_is_idempotent_and_order_independent_on_seeded_and_unseeded_cycles(tmp_path):
+    fixture = build_cycle_and_withholding_repo(tmp_path)
+    repo = Repository(tmp_path, fixture['game'])
+    _history(repo)
+    rows = repo.records()
+    baseline = {row['id']: row for row in rows}
+    random.Random(712).shuffle(rows)
+    for _ in range(2):
+        check.recompute_flags(rows)
+        assert {row['id']: row for row in rows} == baseline
+    assert not baseline['clean-cycle-a']['needs_review']
+    assert baseline['dirty-cycle-b']['needs_review'] and baseline['stale-cycle-b']['needs_review']
+    damaged = deepcopy(rows)
+    item = next(row for row in damaged if row['id'] == 'clean-cycle-a')
+    item['needs_review'] = True
+    with pytest.raises(ValueError, match='incorrect stored needs_review'):
+        check.validate_snapshot(damaged, repo.provenance(), repo.game, repo.published())
+
+
+def test_minimal_changes_over_random_sequences(tmp_path):
+    repo = make_repo(tmp_path)
+    opts = dict(session_labels={SEALED: labels()})
+    independent = change_fact('unrelated')
+    body = [dict(text='Untouched claim.', facts=['unrelated']), dict(text='Repairable claim.', facts=['f1'])]
+    when = {'note': 'Only hard.', 'requires': {'mode': 'hard'}}
+    assert publish(repo, tmp_path, [change_fact(when=when), independent, change_article(body=body)], **opts)['status'] == 'published'
+    rng = random.Random(937)
+    old = 'f1'
+    for number in range(12):
+        before = public_rows(repo)
+        choice = rng.choice(('replace', 'remap', 'edit', 'conflict'))
+        new = f'next-{number}'
+        if choice in ('replace', 'remap'):
+            operations = [
+                restate(old, new, when=when),
+                dict(op='remap_citations', **{'from': old, 'to': new, 'in': ['guide']}),
+            ]
+        elif choice == 'edit':
+            operations = [dict(op='edit_article', slug='guide', set_lead=f'Changed lead {number}.')]
+        else:
+            operations = [
+                change_fact(new, links=[{'rel': 'contradicts', 'target': old}]),
+                change_fact(f'disjoint-{number}', scope={'mode': 'easy'},
+                            when={'note': 'Only easy.', 'requires': {'mode': 'easy'}},
+                            links=[{'rel': 'contradicts', 'target': old}]),
+            ]
+        result = publish(repo, tmp_path, operations, **opts)
+        assert result['status'] == 'published', result
+        after = public_rows(repo)
+        assert json.dumps(after['unrelated']) == json.dumps(before['unrelated'])
+        assert json.dumps(after['guide']['body'][0]) == json.dumps(before['guide']['body'][0])
+        if choice in ('replace', 'remap'):
+            assert set(before[old]['citations']) <= set(after[new]['citations'])
+            assert after[new]['scope'] == before[old]['scope']
+            old = new
+        if choice == 'conflict':
+            assert after[old]['lifecycle_state'] == after[new]['lifecycle_state'] == 'contested'
+            assert after[f'disjoint-{number}']['lifecycle_state'] == 'active'
+            assert after['guide']['lifecycle_state'] == 'contested'
+
+
+def end_fact(id='f1', *, end='absence', end_citations=(FRAME2,), citations=()):
+    return dict(op='retire_fact', id=id, reason_kind='ended', reason='Observed an end.', end=end,
+                end_citations=list(end_citations), citations=list(citations))
+
+
+@pytest.mark.parametrize('end, step', [('absence', 2), ('transition', 3)])
+def test_end_time_uses_only_end_evidence_and_keeps_origin(tmp_path, end, step):
+    repo = make_repo(tmp_path)
+    session_labels = {SEALED: labels()}
+    assert publish(repo, tmp_path, [change_fact(binds=['world'])], frames={FRAME1},
+                   session_labels=session_labels)['status'] == 'published'
+    frame4 = f'{SEALED}-4'
+    frames = {f'{SEALED}-{seq}': position('s1', seq) for seq in range(1, 5)}
+    overlap = end_fact(end_citations=[FRAME1])
+    rejected = publish(repo, tmp_path, [overlap], name='overlap', frames=frames, session_labels=session_labels)
+    assert 'disjoint' in rejected['diagnostics'][0]
+    evidence = end_fact(end=end, end_citations=[FRAME3, FRAME2], citations=[frame4])
+    result = publish(repo, tmp_path, [evidence], frames=frames, session_labels=session_labels)
+    assert result['status'] == 'published', result
+    record = repo.facts()[0]
+    assert record['seen'] == frames[FRAME1] and record['citations'] == [FRAME1]
+    assert record['lifecycle_state'] == 'ended' and record['valid_to'] == position('s1', step)
+    assert record['retired']['events'][0]['valid_to'] == record['valid_to']
+    assert 'already has a visible end' in publish(
+        repo, tmp_path, [end_fact(end_citations=[frame4])], frames=frames, session_labels=session_labels)['diagnostics'][0]
+
+
+def test_a_branch_end_does_not_end_a_fact_on_its_parent(tmp_path):
+    repo = make_repo(tmp_path)
+    parent = {SEALED: labels()}
+    assert publish(repo, tmp_path, [change_fact(binds=['world'])], frames={FRAME1},
+                   session_labels=parent)['status'] == 'published'
+    child_id = '2' * 32
+    child_frame = f'{child_id}-1'
+    child = {child_id: labels('s2', lineage='fork', branch={'parent': 'main', 'fork_at': position('s1', 1),
+                                                            'fork_version': 'v1'})}
+    result = publish(repo, tmp_path, [end_fact(end_citations=[child_frame])],
+                     frames={child_frame: position('s2', 1, order_index=2)}, session_labels=child)
+    assert result['status'] == 'published', result
+    row = repo.facts()[0]
+    assert check.ended_still_alive(row, parent[SEALED], repo.provenance())
+    assert not check.ended_still_alive(row, child[child_id], repo.provenance())
+    again = publish(repo, tmp_path, [end_fact()], frames={FRAME2: position('s1', 2)}, session_labels=parent)
+    assert again['status'] == 'published', again
+    row = repo.facts()[0]
+    assert row['valid_to'] is None and len(row['retired']['events']) == 2
+    _history(repo)
+
+
+@pytest.mark.parametrize('saved_step, seen_step, expected', [(2, 3, 'rejected'), (2, 1, 'published'), (None, 1, 'rejected')])
+def test_world_end_checks_restore_segments(tmp_path, saved_step, seen_step, expected):
+    repo = make_repo(tmp_path)
+    seen_frame = f'{SEALED}-{seen_step}'
+    assert publish(repo, tmp_path, [change_fact(citations=[seen_frame], binds=['world'])],
+                   frames={seen_frame: position('s1', seen_step)}, session_labels={SEALED: labels()})['status'] == 'published'
+    restore_row = dict(lineage='main', restored_at=position('s1', 4), restored_version='v1',
+                       saved_at=position('s1', saved_step) if saved_step else None, saved_version='v1' if saved_step else None)
+    end_frame = f'{SEALED}-5'
+    result = publish(repo, tmp_path, [end_fact(end_citations=[end_frame])],
+                     frames={end_frame: position('s1', 5)}, session_labels={SEALED: labels(restores=[restore_row])})
+    assert result['status'] == expected, result
+    if expected == 'rejected':
+        assert 'surviving timeline' in result['diagnostics'][0]
+
+
+def test_unbound_end_is_right_censored_and_requires_later_frames(tmp_path):
+    repo = make_repo(tmp_path)
+    frames = {FRAME1: position('s1', 3), FRAME2: position('s1', 2), FRAME3: position('s1', 4)}
+    assert publish(repo, tmp_path, [change_fact()], frames=frames)['status'] == 'published'
+    reject = publish(repo, tmp_path, [end_fact()], name='before', frames=frames)
+    assert 'strictly after' in reject['diagnostics'][0]
+    assert publish(repo, tmp_path, [end_fact(end_citations=[FRAME3])], frames=frames)['status'] == 'published'
+    row = repo.facts()[0]
+    assert row['lifecycle_state'] == 'ended' and row['valid_to'] is None
+    assert row['retired']['events'][0]['valid_to'] is None
+
+
+def test_retire_wrong_is_terminal_and_checks_evidence_world(tmp_path):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact(binds=['world'])], session_labels={SEALED: labels()})['status'] == 'published'
+    sid = '7' * 32
+    frame = f'{sid}-1'
+    wrong = dict(op='retire_fact', id='f1', reason_kind='wrong', reason='Corrected evidence.', citations=[frame])
+    refusal = publish(repo, tmp_path, [wrong], name='other-world', frames={frame},
+                      session_labels={sid: labels('s2', world='other', lineage='elsewhere')})
+    assert 'must belong to the fact' in refusal['diagnostics'][0]
+    wrong['citations'] = [FRAME2]
+    assert publish(repo, tmp_path, [wrong])['status'] == 'published'
+    row = repo.facts()[0]
+    assert row['lifecycle_state'] == 'retracted' and row['valid_to'] is None
+    assert row['retired']['citations'] == [FRAME2]
+    assert publish(repo, tmp_path, [end_fact()])['status'] == 'rejected'
+
+
+def validation_workspace(repo, tmp_path, frames, *, kind='admission', incoming=None):
+    workspace = tmp_path / 'sess'
+    base = repo.published()
+    _, reserved_ids, reservations = _history(repo)
+    repo.export(base, workspace / 'knowledge')
+    context = dict(base_version=base, reserved_ids=sorted(reserved_ids), reserved_sessions=reservations,
+                   session_kind=kind, window_frames=frames, session_labels=incoming or {},
+                   declared_axes=sorted(check.declared_axes(reservations, incoming or {})))
+    (workspace/'knowledge'/'validation-context.json').write_text(json.dumps(context))
+    return workspace
+
+
+def test_validation_parity_for_ordered_multi_submission_repairs_with_a_rejected_prefix_file(tmp_path):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact(), change_article()])['status'] == 'published'
+    assert publish(repo, tmp_path, [restate('f1', 'new')])['status'] == 'published'
+    workspace = validation_workspace(repo, tmp_path, {}, kind='grooming')
+    submissions = [
+        submission(workspace, [dict(op='revise_article', slug='guide', title='Stale')],
+                   name='01', base_version='v1'),
+        submission(workspace, [dict(op='revise_article', slug='guide', title='Partial')],
+                   name='02', base_version='v2'),
+        submission(workspace, [dict(op='remap_citations', **{'from': 'f1', 'to': 'new', 'in': ['guide']})],
+                   name='03', base_version='v3'),
+    ]
+    result = validate(workspace, '03')
+    assert result['ok'] and not result['all_passed']
+    assert [entry['candidate_version'] for entry in result['prefix']] == [None, 'v3', 'v4']
+    assert repo.published() == 'v2'
+    for expected, directory in zip(result['prefix'], submissions):
+        assert expected['path'] == f'submissions/{directory.name}/submission.json'
+        actual = run(repo, directory, frames={}, session_kind='grooming')
+        assert expected['diagnostics'] == actual['diagnostics']
+        assert expected['candidate_version'] == actual['version']
+    assert public_rows(repo)['guide']['stale_citations'] == []
+
+
+@pytest.mark.parametrize('different', [
+    {'name': 'changed'}, {'world': 'changed'}, {'lineage': 'changed'},
+    {'admission': 2}, {'context': {'mode': 'easy'}},
 ])
-def test_world_fact_operations_respect_scope(tmp_path, world_repo, change, diagnostic):
-    result = grooming(world_repo, tmp_path, [change], frames={POND_FRAME, FOREST_FRAME},
-                      session_labels={POND_ID: POND, FOREST_ID: FOREST})
-    assert result['status'] == 'rejected' and any(diagnostic in d for d in result['diagnostics']), result
+def test_validation_and_gate_reserve_session_labels_across_restore(tmp_path, different):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact()], session_labels={SEALED: labels()})['status'] == 'published'
+    assert restore(repo, expected_base='v1', target='v0')['version'] == 'v2'
+    incoming = {SEALED: labels() | different}
+    positions = {FRAME1: position(incoming[SEALED]['name'], 1)}
+    workspace = validation_workspace(repo, tmp_path, positions, incoming=incoming)
+    path = submission(workspace, [change_fact('new')], name='01', base_version='v2')
+    result = validate(workspace, '01')
+    verdict = run(repo, path, frames=positions, session_labels=incoming)
+    assert not result['ok'] and verdict['status'] == 'rejected'
+    assert result['diagnostics'] == verdict['diagnostics']
+    assert 'different recorded labels' in verdict['diagnostics'][0]
 
 
-def test_grooming_leaves_world_facts_unfiled_and_can_retire_them_within_their_world(tmp_path, world_repo):
-    frames = {POND_FRAME}
-    assert grooming(world_repo, tmp_path, [dict(op='add_type', type=kind('other'))],
-                    name='keep-world', frames=frames)['status'] == 'published'
-    verdict = grooming(world_repo, tmp_path, [dict(op='retire_fact', id='f1', reason='changed', citations=[POND_FRAME])],
-                       name='retire-world', frames=frames, session_labels={POND_ID: POND})
-    assert verdict['status'] == 'published', verdict
+def test_validation_reports_the_derived_scope_change_and_matches_the_published_revision(tmp_path):
+    repo = make_repo(tmp_path)
+    incoming = {SEALED: labels()}
+    assert publish(repo, tmp_path, [change_fact(), change_fact('bound', binds=['world']), change_article()],
+                   session_labels=incoming)['status'] == 'published'
+    workspace = validation_workspace(repo, tmp_path, {}, incoming=incoming)
+    edit = dict(op='revise_article', slug='guide', body=[dict(text='A revised claim.', facts=['bound'])])
+    path = submission(workspace, [edit], name='01', base_version='v1')
+    result = validate(workspace, '01')
+    assert result['all_passed'] and result['scope_changes'] == [
+        {'slug': 'guide', 'from': {'game': repo.game}, 'to': {'game': repo.game, 'world': 'pond'}},
+    ]
+    assert run(repo, path, frames={}, session_labels=incoming)['status'] == 'published'
+    assert repo.articles()[-1]['scope'] == result['scope_changes'][0]['to']
 
 
-@pytest.mark.parametrize('session_kind, expected', [('grooming', 'published'), ('admission', 'rejected')])
-def test_only_grooming_can_retire_world_fact_using_its_own_out_of_window_citation(
-        tmp_path, world_repo, session_kind, expected):
-    change = dict(op='retire_fact', id='f1', reason='superseded by the lineage rollback', citations=[POND_FRAME])
-    verdict = run(world_repo, submission(tmp_path, [change], base_version='v1'), frames={FOREST_FRAME},
-                  session_kind=session_kind, session_labels={FOREST_ID: FOREST})
-    assert verdict['status'] == expected, verdict
-    if expected == 'published':
-        record = world_repo.facts()[0]
-        assert not current(record) and record['retired']['citations'] == [POND_FRAME]
-        assert world_repo.provenance()['frames'][POND_FRAME]['session'] == POND['name']
+def test_unicode_line_separator_in_prose_survives_publication_and_validation(tmp_path):
+    repo = make_repo(tmp_path)
+    prose = 'An observation.\u2028Its implication.'
+    assert publish(repo, tmp_path, [change_fact(text=prose)])['status'] == 'published'
+    assert repo.records()[0]['text'] == prose
+    workspace = validation_workspace(repo, tmp_path, {})
+    path = submission(workspace, [restate('f1', 'new', text=prose)], name='01', base_version='v1')
+    assert validate(workspace, '01')['ok']
+    assert run(repo, path, frames={})['status'] == 'published'
+    assert repo.records()[-1]['text'] == prose
+
+
+def test_branch_conflicts_and_cycles_are_refused(tmp_path):
+    repo = make_repo(tmp_path)
+    branch = {'parent': 'main', 'fork_at': position('s1', 1), 'fork_version': 'v1'}
+    assert publish(repo, tmp_path, [change_fact()], session_labels={SEALED: labels()})['status'] == 'published'
+    sid = '2' * 32
+    incoming = {sid: labels('s2', lineage='fork', branch=branch)}
+    result = publish(repo, tmp_path, [change_fact('fork-note')], session_labels=incoming)
+    assert result['status'] == 'published', result
+    conflict = {sid: labels('s2', lineage='fork', branch=dict(branch, fork_version='v0'))}
+    reject = publish(repo, tmp_path, [change_fact('changed')], name='conflict', session_labels=conflict)
+    assert 'conflicting parent, fork_at or fork_version' in reject['diagnostics'][0]
+    cycle = {'x': dict(branch, parent='y'), 'y': dict(branch, parent='x')}
+    reject = publish(repo, tmp_path, [change_fact('cycle')], name='cycle',
+                     session_labels={sid: labels('s2', lineage='fork', branches=cycle)})
+    assert 'branch parent cycle' in reject['diagnostics'][0]
+
+
+@pytest.mark.parametrize('case, expected', [
+    ('unknown', 'unknown record'),
+    ('self', 'cannot link to itself'),
+    ('titles', 'titles and slugs must be unique'),
+    ('scopes', 'incompatible scopes'),
+])
+def test_candidate_refuses_invalid_article_links_titles_and_citation_join(tmp_path, case, expected):
+    repo = make_repo(tmp_path)
+    scopes = (dict(mode='hard'), dict(mode='easy')) if case == 'scopes' else ({}, {})
+    changes = [change_fact(scope=scopes[0]), change_fact('f2', scope=scopes[1])]
+    if case == 'scopes':
+        changes.append(change_article(facts=['f1', 'f2']))
+    elif case == 'titles':
+        changes.extend([change_article(), change_article('another')])
     else:
-        assert 'outside the trace window' in verdict['diagnostics'][0]
+        changes.append(change_article(links=[dict(rel='depends_on', target='guide' if case == 'self' else 'missing')]))
+    result = publish(repo, tmp_path, changes, session_labels={SEALED: labels()})
+    assert result['status'] == 'rejected' and expected in result['diagnostics'][0]
 
 
-def test_grooming_cannot_retire_world_fact_using_unrelated_provenance_from_same_world(tmp_path, world_repo):
-    other = f'{POND_ID}-2'
-    recorded = run(world_repo, submission(tmp_path, [dict(op='add_type', type=kind('other'))], base_version='v1',
-                                          name='record-other'), frames={other}, session_labels={POND_ID: POND})
-    assert recorded['status'] == 'published', recorded
-    change = dict(op='retire_fact', id='f1', reason='earlier state restored', citations=[other])
-    rejected = grooming(world_repo, tmp_path, [change], frames=set(), name='out-of-window')
-    assert rejected['status'] == 'rejected' and 'outside the trace window and the retired fact' in rejected['diagnostics'][0]
-    published = grooming(world_repo, tmp_path, [change], frames={other}, name='current-world')
-    assert published['status'] == 'published', published
-
-
-@pytest.mark.parametrize('identity,row,diagnostic', [
-    (POND_ID, dict(POND, name='pond-renamed'), 'different recorded labels or name'),
-    (POND_ID, dict(POND, world=None), 'different recorded labels or name'),
-    (POND_ID, dict(POND, lineage='other'), 'different recorded labels or name'),
-    (POND_ID, dict(POND, admission=2), 'different recorded labels or name'),
-    (FOREST_ID, dict(POND, name='another-name'), 'admission 1 has two sealed identifiers'),
-    (FOREST_ID, dict(POND, name='another-name', admission=2, world='forest'), 'two different worlds'),
-    (FOREST_ID, dict(FOREST, name=POND['name']), 'directory'),
-])
-def test_restore_does_not_free_reserved_session_identity_and_labels(tmp_path, world_repo, identity, row, diagnostic):
-    assert restore(world_repo, expected_base='v1', target='v0')['version'] == 'v2'
-    result = run(world_repo, submission(tmp_path, [dict(op='add_type', type=kind())], base_version='v2'),
-                 frames=set(), session_labels={identity: row})
-    assert result['status'] == 'rejected' and diagnostic in result['diagnostics'][0]
-    assert world_repo.published() == 'v2'
-
-
-def test_a_session_recorded_without_world_cannot_acquire_one(tmp_path):
+def test_only_depends_on_and_body_references_are_stale_in_admission(tmp_path):
     repo = make_repo(tmp_path)
-    changes = [dict(op='add_type', type=kind())]
-    unknown = dict(POND, world=None, lineage=None, admission=None)
-    assert run(repo, submission(tmp_path, changes), frames=set(),
-               session_labels={POND_ID: unknown})['status'] == 'published'
-    result = run(repo, submission(tmp_path, [dict(op='add_type', type=kind('other'))], name='relabel', base_version='v1'),
-                 frames=set(), session_labels={POND_ID: dict(unknown, world='pond')})
-    assert result['status'] == 'rejected' and 'different recorded labels' in result['diagnostics'][0]
-
-
-@pytest.mark.parametrize('damage', ['article', 'scope', 'supersession', 'retirement', 'session-history', 'type-tag'])
-def test_restore_validates_world_and_type_rules_in_tagged_snapshots(tmp_path, world_repo, damage):
-    repo = world_repo
-    changes = [dict(op='add_fact', fact=fact('f2', citations=[FOREST_FRAME])),
-               dict(op='add_article', article=article(facts=['f2']))]
-    assert run(repo, submission(tmp_path, changes, base_version='v1'), frames={FOREST_FRAME},
-               session_labels={FOREST_ID: FOREST})['status'] == 'published'
-    records = repo.records()
-    if damage == 'article':
-        records[-1]['body'][0]['facts'] = ['f1']
-        records[-1]['last_confirmed'] = records[0]['seen']
-    elif damage == 'scope':
-        records[0]['scope']['world'] = 'forest'
-    elif damage == 'supersession':
-        records[0]['superseded_by'] = 'f2'
-    elif damage == 'retirement':
-        records[0]['retired'] = dict(reason='changed', published_in='v3', session='sess', citations=[FOREST_FRAME])
-    files = {'facts.jsonl': ''.join(json.dumps(item) + '\n' for item in records).encode()}
-    if damage == 'session-history':
-        provenance = repo.provenance()
-        provenance['sessions'][FOREST_ID] = dict(FOREST, world=None)
-        files['provenance.json'] = json.dumps(provenance).encode()
-    if damage == 'type-tag':
-        types = repo.types()
-        types[0]['published_in'] = 'v4'
-        files['ontology/types.json'] = json.dumps(types).encode()
-    repo.commit(files, 'Invalid stored fixture')
-    result = restore(repo, expected_base='v3', target='v1')
-    assert result['status'] == 'rejected' and result['diagnostics'] == ['incompatible or unavailable history']
-
-
-@pytest.mark.parametrize('overrides', [
-    {'schema': 'curator-type/1'}, {'identity': ['other']}, {'identity': ['a', 'a']},
-    {'identity': [1]}, {'reason': ' '}, {'published_in': 'v1'},
-])
-def test_submitted_type_fields_are_validated_separately_from_the_software_stamp(tmp_path, overrides):
-    repo = make_repo(tmp_path)
-    result = run(repo, submission(tmp_path, [dict(op='add_type', type=dict(kind(), **overrides))]))
-    assert result['status'] == 'rejected', result
-
-
-@pytest.mark.parametrize('rewrite', ['revise', 'deprecate-and-add'])
-def test_redefining_a_type_requires_assignments_for_survivors_only(tmp_path, rewrite):
-    repo = seeded(tmp_path)
-    assert run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('f2')),
-                                         dict(op='add_fact', fact=fact('f3'))], base_version='v1'))['status'] == 'published'
-    definition = kind(reason='Clarify the relation.', identity=['a'])
-    revision = (dict(action='rename', types=[definition]) if rewrite == 'revise'
-                else dict(action='deprecate', types=[]))
-    change = dict(op='revise_types', **revision, names=['mechanic'], assignments={})
-    changes = [change]
-    if rewrite == 'deprecate-and-add':
-        changes.append(dict(op='add_type', type=definition))
-    changes += [dict(op='retire_fact', id='f2', reason='changed', citations=['frame-1']),
-                dict(op='supersede_fact', ids=['f3'], fact=fact('f4')),
-                dict(op='add_article', article=article(facts=['f1', 'f4']))]
-    refused = grooming(repo, tmp_path, changes, name='missing-assignment')
-    assert refused['status'] == 'rejected' and 'assignment required' in refused['diagnostics'][0]
-    change['assignments'] = {'f1': 'mechanic'}
-    verdict = grooming(repo, tmp_path, changes, name='apply-assignment')
-    assert verdict['status'] == 'published', verdict
-    survivor, retired, superseded, added = repo.facts()
-    assert survivor['retyped'] == [dict(version='v3', **{'from': 'mechanic', 'to': 'mechanic'})]
-    assert all('retyped' not in item for item in (retired, superseded, added))
-    assert repo.types() == [dict(definition, published_in='v3')]
-    assert restore(repo, expected_base='v3', target='v2')['version'] == 'v4'
-    assert repo.types() == [dict(kind(), published_in='v1')]
-
-
-@pytest.mark.parametrize('end', ['retire', 'supersede'])
-def test_a_fact_added_and_removed_in_one_batch_still_needs_a_final_type(tmp_path, end):
-    repo = make_repo(tmp_path)
-    added = dict(op='add_fact', fact=fact(type_name='absent'))
-    removed = (dict(op='retire_fact', id='f1', reason='changed', citations=['frame-1']) if end == 'retire'
-               else dict(op='supersede_fact', ids=['f1'], fact=fact('f2')))
-    changes = [dict(op='add_type', type=kind()), added, removed]
-    result = run(repo, submission(tmp_path, changes))
-    assert result['status'] == 'rejected' and result['diagnostics'] == ["fact 'f1': unknown type 'absent'"]
+    links = [dict(rel=rel, target=target) for rel, target in (
+        ('depends_on', 'f1'), ('see_also', 'also'), ('part_of', 'guide'),
+    )]
+    assert publish(repo, tmp_path, [change_fact(), change_fact('also'), change_article(),
+                                    change_fact('dependent', links=links)])['status'] == 'published'
+    assert publish(repo, tmp_path, [
+        restate('f1', 'new'), restate('also', 'new-also'),
+        dict(op='retire_article', slug='guide', reason='Editorial removal.', reason_kind='editorial'),
+    ])['status'] == 'published'
+    assert public_rows(repo)['dependent']['stale_citations'] == ['f1']

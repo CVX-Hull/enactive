@@ -172,7 +172,12 @@ def session_labels(manifest: dict) -> dict[str, dict]:
     """Return labels for the gate and projection diagnostics keyed by sealed identifier."""
     require_current(manifest)
     fields = ('name', 'world', 'lineage', 'admission', 'label_check', 'label_error')
-    return {session['session_id']: {key: session[key] for key in fields} for session in manifest['sessions']}
+    return {
+        session['session_id']: {key: session[key] for key in fields}
+        | {'context': session.get('context', {})}
+        | {key: session[key] for key in ('branch', 'branches', 'restores') if key in session}
+        for session in manifest['sessions']
+    }
 
 
 def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> FramePositions:

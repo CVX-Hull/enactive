@@ -17,7 +17,7 @@ BASE = 4_000_000_000.0
 
 
 def fact(identity: str, text: str, version: str, session: str, citations: list[str]) -> dict:
-    return dict(schema='curator-fact/4', record='fact', id=identity, type='resource', text=text, scope=dict(game='cdda', level='game'), known='observed',
+    return dict(schema='curator-fact/5', record='fact', id=identity, claim_kind='mechanic', text=text, scope=dict(game='cdda'), evidence_basis='observed', tags=['resource'],
         citations=citations, published_in=version, session=session)
 
 
@@ -202,7 +202,7 @@ def test_cut_report_and_the_command(tmp_path, capsys):
     assert lagged == dict(plain, row='lag 10')  # nothing reaches a mark in so short a lineage
     repository = knowledge(tmp_path / 'knowledge', tank)
     assert main(['store', str(repository), '--find', 'tank=tank', '--runs', str(tmp_path / 'run-a')]) == 0
-    assert 'roof-tank (resource) first in v2 by run-a-2' in capsys.readouterr().out
+    assert 'roof-tank (mechanic) first in v2 by run-a-2' in capsys.readouterr().out
     assert main(['replay', *map(str, runs), '--loss', f'tank:need={need},fact=roof-tank', '--knowledge', str(repository)]) == 0
     assert 'sessions at admission boundaries only: briefing at run-b/001 request 1 of 4' in capsys.readouterr().out
     assert main(['cut', *map(str, runs), '--lags', '10', '--json']) == 0
@@ -333,7 +333,7 @@ def test_recorded_deliveries_refuse_a_nonzero_static_briefing(tmp_path, capsys):
 
 
 def article(identity='article', title='A subject', **extra):
-    return dict(schema='curator-fact/4', record='article', id=identity, title=title, lead='A hypothesis.',
+    return dict(schema='curator-fact/5', record='article', id=f'{identity}@v3', slug=identity, title=title, lead='A hypothesis.',
                 body=[dict(text='A claim.', facts=['roof-tank'])], links=[], published_in='v3', session='groom', **extra)
 
 
@@ -361,7 +361,7 @@ def test_store_reports_fact_and_article_totals_current_counts_and_bytes_per_vers
     assert json.loads(capsys.readouterr().out)[0]['versions'][-1]['articles'] == 1
 
 
-@pytest.mark.parametrize('schema', ['curator-fact/1', 'curator-fact/2', 'curator-fact/3', None])
+@pytest.mark.parametrize('schema', ['curator-fact/1', 'curator-fact/2', 'curator-fact/3', 'curator-fact/4', None])
 @pytest.mark.parametrize('command', ['store', 'replay'])
 def test_memory_readers_refuse_other_record_schemas(tmp_path, schema, command):
     runs, tank, need = lineage(tmp_path)
@@ -369,19 +369,19 @@ def test_memory_readers_refuse_other_record_schemas(tmp_path, schema, command):
     repo.ensure()
     invalid = dict(fact('f', 'x', 'v1', 's', [tank]), schema=schema)
     repo.commit({'facts.jsonl': lines(invalid)}, 'unsupported record')
-    with pytest.raises(StoreError, match='unsupported record schema; expected curator-fact/4'):
+    with pytest.raises(StoreError, match='unsupported record schema; expected curator-fact/5'):
         if command == 'store':
             store_report([repo.path], [], [])
         else:
             replay(runs, [f'x:need={need},fact=f'], None, repo.path, [])
 
 
-@pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/2', None])
+@pytest.mark.parametrize('schema', ['curator-knowledge/1', 'curator-knowledge/2', 'curator-knowledge/3', None])
 def test_memory_reader_refuses_other_repository_layouts(tmp_path, schema):
     repo = Repository(tmp_path/'knowledge', 'cdda')
     repo.ensure()
     repo.commit({'knowledge.json': json.dumps(dict(schema=schema, game='cdda')).encode()}, 'unsupported layout')
-    with pytest.raises(StoreError, match='expected curator-knowledge/3; start a new repository'):
+    with pytest.raises(StoreError, match='expected curator-knowledge/4; start a new repository'):
         read_versions(repo.path)
 
 
@@ -419,13 +419,13 @@ def test_memory_reader_refuses_missing_or_unparseable_knowledge_metadata(tmp_pat
         read_versions(repo.path)
 
 
-@pytest.mark.parametrize('operation', ['retype-only', 'retire-only'])
+@pytest.mark.parametrize('operation', ['retag-only', 'retire-only'])
 def test_store_uses_the_commit_session_when_a_version_adds_no_record(tmp_path, operation):
     path = knowledge(tmp_path/'knowledge', 'frame')
     repo = Repository(path.parent, path.name)
     records = repo.records()
-    if operation == 'retype-only':
-        records[0].update(type='observed', retyped=[dict(version='v3', **{'from': 'resource', 'to': 'observed'})])
+    if operation == 'retag-only':
+        records[0].update(tags=['storage'], retagged=[dict(version='v3', **{'from': ['resource'], 'to': ['storage']})])
     else:
         records[0]['retired'] = dict(reason='contradicted', session=operation, published_in='v3')
     repo.commit({'facts.jsonl': lines(*records)}, f'Publish v3: {operation}\n\nsession: {operation}\nsubmission: fixture')

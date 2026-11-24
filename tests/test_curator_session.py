@@ -37,13 +37,12 @@ frame = sorted(k[7:-4] for k in manifest['files'] if k.startswith('frames/'))[0]
 version = open('brief.md').read().split('`')[1]
 cite = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != '-' else frame
 os.makedirs('submissions/s1')
-json.dump(dict(schema='curator-submission/1', base_version=version, summary='first fact',
+json.dump(dict(schema='curator-submission/2', base_version=version, summary='first fact',
                from_drafts=[d for d in os.listdir('drafts')],
-               changes=[dict(op='add_type', type=dict(schema='curator-type/2', name='container',
-                                                    description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')),
-                        dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id='f1', type='container',
-                                                      text='the cupboard holds bottles', known='observed',
-                                                      scope=dict(game='testgame', level='game'), citations=[cite],
+               changes=[dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id='f1',
+                                                      claim_kind='entity_property', tags=['container'],
+                                                      text='the cupboard holds bottles', evidence_basis='observed',
+                                                      scope={}, links=[], citations=[cite],
                                                       subject='cupboard'))]),
           open('submissions/s1/submission.json', 'w'))
 '''
@@ -92,10 +91,10 @@ def test_a_scripted_session_publishes_verified_world_provenance(tmp_path, world)
     trace, = traces
     labels = dict(world='pond', lineage='survivor', admission=1)
     record_package(trace, labels=labels)
-    record = run_session(repo, traces, host(tmp_path, 'world', SUBMIT.replace("level='game'", "level='world'")))
+    record = run_session(repo, traces, host(tmp_path, 'world', SUBMIT.replace("scope={}", "scope={}, binds=['world']")))
     assert [v['status'] for v in record['verdicts']] == ['published'], record
-    assert repo.facts()[0]['scope'] == dict(game='testgame', level='world', world='pond')
-    assert repo.provenance()['sessions'] == {SESSION_ID: dict(name=trace.name, **labels)}
+    assert repo.facts()[0]['scope'] == dict(game='testgame', world='pond')
+    assert repo.provenance()['sessions'] == {SESSION_ID: dict(name=trace.name, context={}, **labels)}
 
 
 def test_out_of_window_citations_are_rejected_and_reported_in_the_next_brief(tmp_path, world):
@@ -178,12 +177,12 @@ def test_accepting_a_submission_promotes_the_drafts_it_names(tmp_path, world):
 
 def test_the_workspace_cannot_write_published_knowledge_or_the_trace(tmp_path, world):
     repo, trace = world
-    attack = ("import json\nfor p in ('knowledge/facts.jsonl','knowledge/current-facts.jsonl','trace/manifest.json','brief.md'):\n"
+    attack = ("import json\nfor p in ('knowledge/facts.jsonl','knowledge/current-facts.jsonl','knowledge/validation-context.json','trace/manifest.json','brief.md'):\n"
               "    try: open(p,'a').write('x'); print('WROTE', p)\n"
               "    except OSError: print('denied', p)\n")
     record = run_session(repo, trace, host(tmp_path, 'attack', attack))
     log = (repo.state/'sessions'/record['manifest']['id']/'host-output.log').read_text()
-    assert 'WROTE' not in log and log.count('denied') == 4
+    assert 'WROTE' not in log and log.count('denied') == 5
 
 
 def test_current_workspace_view_filters_history_without_editing_the_published_store(tmp_path, world):
@@ -194,7 +193,7 @@ p = 'submissions/s1/submission.json'
 with open(p) as stream:
     proposal = json.load(stream)
 fact = dict(proposal['changes'][-1]['fact'], id='f2')
-proposal['changes'] = [dict(op='supersede_fact', ids=['f1'], fact=fact)]
+proposal['changes'] = [dict(op='supersede_fact', ids=['f1'], reason_kind='restated', fact=fact)]
 with open(p, 'w') as stream:
     json.dump(proposal, stream)
 '''
@@ -207,7 +206,7 @@ from pathlib import Path
 history = [json.loads(line) for line in Path('knowledge/facts.jsonl').read_text().splitlines()]
 active = [json.loads(line) for line in Path('knowledge/current-facts.jsonl').read_text().splitlines()]
 assert [row['id'] for row in history] == ['f1', 'f2']
-assert history[0]['superseded_by'] == 'f2'
+assert history[0]['superseded_by'] == ['f2']
 assert active == history[1:]
 '''
     record = run_session(repo, trace, host(tmp_path, 'check-current', verify))
@@ -438,11 +437,10 @@ def test_citations_accumulate_across_windows_of_one_admission(tmp_path, long_wor
     repo, trace = long_world
     first = run_session(repo, trace, host(tmp_path, 'first', SUBMIT), window=Window('s1', '001', 1, 2))
     assert first['verdicts'][0]['status'] == 'published', first
-    # The next window proposes a distinct fact using the already-published type.
+    # The next window proposes a distinct fact using the same tag.
     second_code = SUBMIT + '''
 p = 'submissions/s1/submission.json'
 data = json.load(open(p))
-data['changes'] = [c for c in data['changes'] if c['op'] != 'add_type']
 data['changes'][0]['fact']['id'] = 'f2'
 json.dump(data, open(p, 'w'))
 '''
@@ -450,3 +448,67 @@ json.dump(data, open(p, 'w'))
     assert second['verdicts'][0]['status'] == 'published', second
     assert repo.provenance()['last_admission']['citations'] == [frame_id(1, 1), frame_id(1, 3)]
     assert repo.provenance()['last_admission']['coverage']['last_step'] == 4
+
+
+@pytest.mark.parametrize('edited, published', [(None, 2), ('02', 1), ('01', 0)])
+def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world, monkeypatch, edited, published):
+    from harness.curator.session import PROVIDER_ERROR_EXIT_CODE
+    from harness.curator.validate import validate
+
+    repo, traces = world
+    drafts_aged = []
+
+    def scripted(_argv, layout, *, stdout, **_kwargs):
+        workspace = layout.workspace
+        frame = next(iter(json.loads((workspace/'knowledge'/'validation-context.json').read_text())['window_frames']))
+        for i in range(1, 4):
+            directory = workspace/'submissions'/f'{i:02}'
+            directory.mkdir()
+            fact = dict(schema='curator-fact/5', record='fact', id=f'f{i}', claim_kind='mechanic',
+                        evidence_basis='observed', tags=[], scope={}, links=[], citations=[frame], text='Observed.')
+            (directory/'submission.json').write_text(json.dumps(dict(
+                schema='curator-submission/2', base_version=f'v{i - 1}', summary='valid prefix',
+                changes=[dict(op='add_fact', fact=fact)])))
+        for identifier in ('02', '01'):
+            result = validate(workspace, identifier)
+            assert result['all_passed']
+            event = dict(type='submission-validated', all_passed=True, prefix=result['prefix'])
+            stdout.write((json.dumps(event) + '\n').encode())
+        stdout.write(b'{"type":"submission-validated","all_passed":true,"prefix":[null]}\n')
+        if edited:
+            path = workspace/'submissions'/edited/'submission.json'
+            path.write_text(path.read_text() + '\n')
+        return sandbox.Result(PROVIDER_ERROR_EXIT_CODE, None, 0, 0, 0.1, [])
+
+    from harness.curator.containers import Drafts
+    original_collect = Drafts.collect
+
+    def collect(self, *args, age=True, **kwargs):
+        drafts_aged.append(age)
+        return original_collect(self, *args, age=age, **kwargs)
+
+    monkeypatch.setattr(sandbox, 'run', scripted)
+    monkeypatch.setattr(Drafts, 'collect', collect)
+    result = run_session(repo, traces, SessionConfig(argv=('stand-in',)))
+    life = result['manifest']['lifecycle']
+    assert life['state'] == 'sealed' and life['stopped'] == 'provider-error', result
+    assert [v['status'] for v in result['verdicts']] == ['published'] * published
+    assert result['published_after'] == f'v{published}' and drafts_aged == [False]
+    record_dir = repo.state/'sessions'/result['manifest']['id']
+    assert len(list((record_dir/'submissions').glob('*/submission.json'))) == 3
+    assert len(life['refused']) == 3 - published
+
+
+def test_real_sandbox_can_run_the_staged_validator(tmp_path, world):
+    repo, trace = world
+    script = SUBMIT + '''
+import subprocess
+result = subprocess.run([sys.argv[2], '-m', 'harness.curator.validate', '--workspace', os.getcwd(),
+                         '--submission', 's1'], cwd='workbench', capture_output=True, text=True)
+assert result.returncode == 0, result.stderr
+print(result.stdout.strip())
+'''
+    record = run_session(repo, trace, host(tmp_path, 'validate', script, '-', str(PYTHON)))
+    log = (repo.state/'sessions'/record['manifest']['id']/'host-output.log').read_text()
+    assert record['published_after'] == 'v1', (record, log)
+    assert json.loads(log)['prefix'][0]['candidate_version'] == 'v1'
