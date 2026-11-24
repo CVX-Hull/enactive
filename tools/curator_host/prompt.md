@@ -159,7 +159,15 @@ them now.
 
 Operations apply in order on a working copy; references must resolve after the whole submission.
 A fact can be the target of only one operation per submission. Each article slug has one working
-copy per submission: every operation naming it applies in order and publishes one new revision.
+copy per submission, and every operation naming it applies to that copy in order. What the gate
+publishes for the slug depends on the operations:
+
+- Substantive edits (`revise_article`, `edit_article`, `remap_citations`), one or several, together
+  publish one new revision `<slug>@<version>`; a `retag` of the same slug lands in that revision.
+- A `retag` alone updates `tags` and `retagged` on the current revision itself and publishes no
+  new revision.
+- `retire_article` marks the current revision retired and publishes no new one; it cannot be
+  combined with any other operation on that slug.
 
 - `add_fact`: `{"op": "add_fact", "fact": <fact>}`.
 - `add_article`: `{"op": "add_article", "article": <article>}`.
@@ -182,7 +190,12 @@ copy per submission: every operation naming it applies in order and publishes on
   `end_citations` are frames after the fact's `seen` showing the state stopped holding, none of
   them already cited by the fact: `transition` when the frames show the change, `absence` when the
   state was found gone later. Optional `citations` are other supporting frames. A bound fact's
-  frames must come from its own world. A state that holds again later is a new fact.
+  frames must come from its own world, and its `end_citations` must all lie on one known timeline
+  that survives (is not abandoned by a restore), after its `seen` on that timeline. A world-bound
+  fact already `ended` on another branch or on an abandoned stretch still holds on this timeline,
+  so it can appear in `current-facts.jsonl`; when it ends on this timeline too, retire it as
+  `ended` again with frames from this timeline. A state that holds again later on the same
+  timeline, after its end, is a new fact.
 - `retire_article`: `{"op": "retire_article", "slug": ..., "reason": "...", "reason_kind":
   "wrong" | "editorial"}`. No other operation may name that slug in the same submission.
 - `revise_article`: `{"op": "revise_article", "slug": ..., <any of "title", "lead", "tags",

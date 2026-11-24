@@ -116,10 +116,11 @@ export async function writeFile(root, { path, content }) {
   const bytes = Buffer.from(content, 'utf8');
   if (bytes.length > WRITE_MAX_BYTES) throw new ToolError(`content is ${bytes.length} bytes; the limit is ${WRITE_MAX_BYTES}`);
   const target = await locate(root, names.join('/'), { createDirectories: true });
-  if (target.exists && !(await lstat(target.path)).isFile()) throw new ToolError(`not a regular file: ${path}`);
+  await confirmDestination(root, names, path);
   // Write a sibling temporary file and rename it into place, so a reader (the gate, or close-out after a
-  // provider error) sees either the whole new file or the whole old one, never a partial write.
-  const temporary = join(dirname(target.path), `.${names.at(-1)}.tmp.${process.pid}.${randomBytes(6).toString('hex')}`);
+  // provider error) sees either the whole new file or the whole old one, never a partial write. The temporary
+  // name has a fixed short length, so a destination name up to the file system's limit still fits.
+  const temporary = join(dirname(target.path), `.enactive-tmp-${process.pid}-${randomBytes(8).toString('hex')}`);
   let handle;
   try { handle = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644); }
   catch (error) { throw new ToolError(`cannot write ${path}: ${error.code ?? 'error'}`); }
@@ -128,12 +129,36 @@ export async function writeFile(root, { path, content }) {
       await handle.writeFile(bytes);
       await handle.sync();
     } finally { await handle.close(); }
+    // Check again just before the rename: the parent chain and the destination may have changed while the
+    // bytes were written. Node has no openat/renameat, so a change between this check and the rename is still
+    // possible; the Seatbelt sandbox, not this check, confines the host to the workspace.
+    await confirmDestination(root, names, path);
     await rename(temporary, target.path);
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => {});
+    if (error instanceof ToolError) throw error;
     throw new ToolError(`cannot write ${path}: ${error.code ?? 'error'}`);
   }
   return textResult(`wrote ${bytes.length} bytes to ${names.join('/')}`);
+}
+
+/** Every parent of `names` under `root` is a real directory, not a link, and the destination is absent or a
+ * regular file (not a link or a directory). */
+async function confirmDestination(root, names, path) {
+  let current = root;
+  for (const [index, name] of names.entries()) {
+    current = join(current, name);
+    const isLast = index === names.length - 1;
+    let info;
+    try { info = await lstat(current); }
+    catch (error) {
+      if (isLast && error.code === 'ENOENT') return;
+      throw new ToolError(`cannot write ${path}: ${error.code ?? 'error'}`);
+    }
+    if (info.isSymbolicLink()) throw new ToolError(`links are not allowed: ${names.slice(0, index + 1).join('/')}`);
+    if (!isLast && !info.isDirectory()) throw new ToolError(`not a directory: ${names.slice(0, index + 1).join('/')}`);
+    if (isLast && !info.isFile()) throw new ToolError(`not a regular file: ${path}`);
+  }
 }
 
 export async function viewFrame(root, { frame }) {
@@ -248,7 +273,8 @@ export async function validateSubmission(root, { submission }, { python, env, ti
   requirePython(python);
   const workbench = join(root, 'workbench');
   const childEnv = { ...env, PYTHONPATH: [workbench, env?.PYTHONPATH].filter(Boolean).join(':') };
-  const run = await capture(python, ['-m', 'harness.curator.validate', '--workspace', root, '--submission', submission],
+  // One `--option=value` argument each, so a directory name that starts with "-" stays a value for argparse.
+  const run = await capture(python, ['-m', 'harness.curator.validate', `--workspace=${root}`, `--submission=${submission}`],
     { cwd: workbench, env: childEnv, timeoutSeconds, limit: VALIDATOR_OUTPUT_BYTES });
   const failed = reason => ({ ...textResult(`validation could not run: ${reason}`, true), validation: null });
   if (run.error) return failed(run.error.code ?? 'error');

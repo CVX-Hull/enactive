@@ -1,20 +1,49 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { chmod, link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile as writeNodeFile } from 'node:fs/promises';
+import { chmod, copyFile, link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile as writeNodeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as realDelay } from 'node:timers/promises';
 import { PROVIDER_ERROR_EXIT_CODE, projectImages, proxyFrom, runCurator, validateConfiguration } from '../host.mjs';
 import { listDir, readFile as readTool, validateSubmission, viewFrame, writeFile as writeTool } from '../workspace-tools.mjs';
 
-// The repository root, whose harness/curator/validate.py the validation tests run with CURATOR_PYTHON.
+// The repository root, whose harness/curator validator and schemas the validation tests stage into workbench/.
 const REPOSITORY = fileURLToPath(new URL('../../..', import.meta.url));
-const PYTHON = process.env.CURATOR_PYTHON;
-const needsPython = PYTHON ? false : 'set CURATOR_PYTHON to the project interpreter to run the real validator';
+
+/** The absolute path of the first interpreter that imports jsonschema: CURATOR_PYTHON, the main checkout's .venv
+ * (beside the git common directory, or three levels above a worktree under .runtime/worktrees/), then python3. */
+function resolvePython() {
+  const commonDirectory = spawnSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+    { cwd: REPOSITORY, encoding: 'utf8' });
+  const candidates = [process.env.CURATOR_PYTHON, join(REPOSITORY, '.venv/bin/python'), join(REPOSITORY, '../../../.venv/bin/python'),
+    commonDirectory.status === 0 ? join(dirname(commonDirectory.stdout.trim()), '.venv/bin/python') : undefined, 'python3'];
+  for (const candidate of candidates.filter(Boolean)) {
+    const probe = spawnSync(candidate, ['-c', 'import jsonschema, sys; print(sys.executable)'], { encoding: 'utf8' });
+    const executable = probe.status === 0 ? probe.stdout.trim() : '';
+    if (isAbsolute(executable)) return executable;
+  }
+  return undefined;
+}
+const PYTHON = resolvePython();
+const requirePythonForValidator = () => assert.ok(PYTHON,
+  'no interpreter that imports jsonschema: set CURATOR_PYTHON or create the project .venv (the real-validator tests never skip)');
+
+/** Stage the validator and its schemas into workbench/ as harness/curator/session.py does. */
+async function stageWorkbench(root) {
+  const curator = join(root, 'workbench/harness/curator'), schemas = join(root, 'workbench/schemas');
+  await mkdir(curator, { recursive: true });
+  await mkdir(schemas, { recursive: true });
+  await writeNodeFile(join(root, 'workbench/harness/__init__.py'), '');
+  await writeNodeFile(join(curator, '__init__.py'), '');
+  for (const name of ['check.py', 'validate.py']) await copyFile(join(REPOSITORY, 'harness/curator', name), join(curator, name));
+  for (const name of ['curator-fact.schema.json', 'curator-submission.schema.json']) {
+    await copyFile(join(REPOSITORY, 'schemas', name), join(schemas, name));
+  }
+}
 
 const TOKEN = 'a1'.repeat(32);
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=', 'base64');
@@ -54,6 +83,7 @@ async function workspace(t) {
 const SEALED = '0123456789abcdef0123456789abcdef';
 const FRAME = `${SEALED}-1`;
 async function knowledge(root) {
+  await stageWorkbench(root);
   await writeNodeFile(join(root, 'knowledge/knowledge.json'), JSON.stringify({ schema: 'curator-knowledge/4', game: 'g' }));
   await writeNodeFile(join(root, 'knowledge/provenance.json'), JSON.stringify({ frames: {}, sessions: {}, branches: {}, restores: [], last_admission: null }));
   await writeNodeFile(join(root, 'knowledge/validation-context.json'), JSON.stringify({
@@ -65,7 +95,7 @@ const addFact = (id, base) => JSON.stringify({ schema: 'curator-submission/2', b
   changes: [{ op: 'add_fact', fact: { schema: 'curator-fact/5', record: 'fact', id, claim_kind: 'mechanic', evidence_basis: 'observed',
     tags: [], text: 'An observed rule.', scope: {}, links: [], citations: [FRAME] } }] });
 const sha256 = async path => createHash('sha256').update(await readFile(path)).digest('hex');
-const validatorOptions = { python: PYTHON, env: { PATH: '/usr/bin:/bin', PYTHONPATH: REPOSITORY, PYTHONDONTWRITEBYTECODE: '1' }, timeoutSeconds: 60 };
+const validatorOptions = { python: PYTHON, env: { PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1' }, timeoutSeconds: 60 };
 
 async function session(t, replies, overrides = {}, prepare = undefined) {
   const root = await workspace(t);
@@ -191,6 +221,16 @@ test('write_file replaces a file by renaming a whole new one into its path', asy
   assert.deepEqual(await readdir(join(root, 'drafts')), []);
 });
 
+test('write_file writes a destination name near the file-system limit, since the temporary name is short', async t => {
+  const root = await workspace(t);
+  for (const length of [240, 255]) {
+    const name = 'n'.repeat(length);
+    assert.equal((await writeTool(root, { path: `drafts/${name}`, content: `long ${length}` })).isError, false);
+    assert.equal(await readFile(join(root, 'drafts', name), 'utf8'), `long ${length}`);
+  }
+  assert.deepEqual((await readdir(join(root, 'drafts'))).map(name => name.length).sort(), [240, 255], 'no temporary file is left');
+});
+
 test('validate_submission refuses names and files outside one submission directory', async t => {
   const root = await workspace(t);
   await mkdir(join(root, 'submissions/folder/submission.json'), { recursive: true });
@@ -221,7 +261,8 @@ test('validate_submission reports a validator that cannot run without leaking it
   }
 });
 
-test('validate_submission runs the real validator over the ordered prefix', { skip: needsPython }, async t => {
+test('validate_submission runs the real validator over the ordered prefix', async t => {
+  requirePythonForValidator();
   const root = await workspace(t);
   await knowledge(root);
   await writeTool(root, { path: 'submissions/01/submission.json', content: addFact('f1', 'v7') });
@@ -242,8 +283,20 @@ test('validate_submission runs the real validator over the ordered prefix', { sk
     [['01', 'rejected', null], ['02', 'passed', 'v1'], ['03', 'passed', 'v2']]);
 });
 
-test('validate_submission works past four fifths of the budget and records only an all-passing prefix', { skip: needsPython }, async t => {
-  const env = { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin', PYTHONPATH: REPOSITORY };
+test('validate_submission passes a submission directory name that starts with "-" as a value', async t => {
+  requirePythonForValidator();
+  const root = await workspace(t);
+  await knowledge(root);
+  await writeTool(root, { path: 'submissions/-repair/submission.json', content: addFact('f1', 'v0') });
+  const result = await validateSubmission(root, { submission: '-repair' }, validatorOptions);
+  assert.equal(result.isError, false, result.content[0].text);
+  assert.deepEqual([result.validation.submission, result.validation.ok, result.validation.all_passed], ['-repair', true, true]);
+  assert.deepEqual(result.validation.prefix.map(row => [row.id, row.status]), [['-repair', 'passed']]);
+});
+
+test('validate_submission works past four fifths of the budget and records only an all-passing prefix', async t => {
+  requirePythonForValidator();
+  const env = { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin' };
   const replies = [
     () => sse([['write_file', { path: 'submissions/01/submission.json', content: addFact('f1', 'v0') }],
       ['write_file', { path: 'submissions/02/submission.json', content: addFact('f1', 'v1') }]]),
