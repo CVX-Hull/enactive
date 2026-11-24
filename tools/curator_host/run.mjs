@@ -4,9 +4,11 @@
 // Reads brief.md from the workspace and prompt.md from this package. The proxy URL, the session
 // token and the workbench interpreter come from the environment the sandbox provides
 // (CURATOR_PROXY_URL, CURATOR_PROXY_TOKEN, CURATOR_PYTHON). Telemetry is JSON lines on stdout.
+// Exit codes: 0 when the session finished, PROVIDER_ERROR_EXIT_CODE (75) when the provider failed (close-out then
+// gates only a validated prefix), 1 for every other failure.
 import { lstat, open } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { CONFIG_LIMIT_BYTES, HostError, runCurator } from './host.mjs';
+import { CONFIG_LIMIT_BYTES, HostError, PROVIDER_ERROR_EXIT_CODE, runCurator } from './host.mjs';
 
 const BRIEF_LIMIT_BYTES = 262144;
 
@@ -30,7 +32,7 @@ try {
     readBounded('brief.md', BRIEF_LIMIT_BYTES, 'invalid-brief'),
   ]);
   const result = await runCurator({ configuration, systemPrompt, brief, cwd: process.cwd(), onEvent: emit, signal: controller.signal });
-  process.exitCode = result.ok ? 0 : 1;
+  process.exitCode = result.ok ? 0 : result.reason === 'provider-error' ? PROVIDER_ERROR_EXIT_CODE : 1;
 } catch (error) {
   emit({ type: 'host-end', wall_time: new Date().toISOString(), monotonic_ms: performance.now(), ok: false,
     reason: error instanceof HostError ? error.reason : 'invalid-input', requests: 0, tool_calls: 0 });

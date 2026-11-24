@@ -1,13 +1,15 @@
-// One curator session on Pi agent-core: a frozen prompt, six workspace tools, the model proxy as the
+// One curator session on Pi agent-core: a frozen prompt, seven workspace tools, the model proxy as the
 // only endpoint. See docs/operations/curator-hosts.md. The host never sees the provider key; it
 // presents the per-session proxy token as its API key and writes JSON-lines telemetry without it.
 import { Agent } from '@earendil-works/pi-agent-core';
 import { Type, AssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
-import { ToolError, listDir, readFile, runWorkbench, viewFrame, writeFile } from './workspace-tools.mjs';
+import { ToolError, listDir, readFile, runWorkbench, validateSubmission, viewFrame, writeFile } from './workspace-tools.mjs';
 
 export const SCHEMA = 'curator-host/1';
+/** run.mjs's exit code for a `provider-error` stop; harness/curator/session.py's PROVIDER_ERROR_EXIT_CODE. */
+export const PROVIDER_ERROR_EXIT_CODE = 75;
 export const CONFIG_LIMIT_BYTES = 65536;
 const MAX_SUMMARY_CHARS = 2000;
 const NARRATION_BYTES = 1024;
@@ -147,9 +149,9 @@ export function budgetNote({ requests, maxRequests, spent, budget, elapsedSecond
   const time = Number.isFinite(wallSeconds) ? elapsedSeconds / wallSeconds : 0;
   const status = `Budget: ${requests} of ${maxRequests} requests used; about $${spent.toFixed(2)} of $${budget.toFixed(2)} spent`
     + (Number.isFinite(wallSeconds) ? `; ${Math.floor(elapsedSeconds)} of ${wallSeconds} s of time used.` : '.');
-  const clock = time >= FINISH_AT ? ' The time is nearly up: the host stops the session when it runs out. Write your submission or draft with write_file now, then call finish.'
+  const clock = time >= FINISH_AT ? ' The time is nearly up: the host stops the session when it runs out. Write your submission or draft with write_file now, check each submission with validate_submission, then call finish.'
     : time >= WRITE_AT ? ' More than half the time is used. Start writing what you have found.' : '';
-  if (share >= FINISH_AT) return { share, text: `${status} The budget is nearly spent. Reading tools are now refused: write your submission or draft with write_file now, then call finish.${clock}` };
+  if (share >= FINISH_AT) return { share, text: `${status} The budget is nearly spent. Reading tools are now refused: write your submission or draft with write_file now, check each submission with validate_submission, then call finish.${clock}` };
   if (share >= WRITE_AT) return { share, text: `${status} More than half is spent. Start writing what you have found: a submission for changes you can support, a draft for the rest.${clock}` };
   return { share, text: status + clock };
 }
@@ -246,9 +248,20 @@ export async function runCurator(options) {
         for (const frame of args.frames) content.push(...(await viewFrame(root, { frame })).content);
         return { content, details: undefined, isError: false };
       } },
-    { name: 'write_file', label: 'write_file', description: 'Write a text file, replacing it, under submissions/, drafts/ or scratch/ only. Parent directories are created.',
+    { name: 'write_file', label: 'write_file', description: 'Write a text file, replacing it whole, under submissions/, drafts/ or scratch/ only. Parent directories are created.',
       parameters: Type.Object({ path: Type.String({ maxLength: 512 }), content: Type.String({ maxLength: 524288 }) }),
       run: args => writeFile(root, args) },
+    { name: 'validate_submission', label: 'validate_submission', description: 'Check submissions/<submission>/submission.json against the gate without publishing. Every submission before it, in directory-name order, is checked too, from the published version. Returns each one\'s verdict, diagnostics and article scope changes. Allowed at any budget; run it on every submission before finish.',
+      parameters: Type.Object({ submission: Type.String({ maxLength: 255 }) }),
+      run: async args => {
+        const { validation, ...result } = await validateSubmission(root, args,
+          { python, env: workbenchEnv, timeoutSeconds: configuration.workbench_timeout_seconds });
+        // harness/curator/session.py's _validated_prefix reads this event: after a provider error it gates only the
+        // longest all-passing prefix whose exact (path, sha256) list a passing call recorded.
+        if (validation) emit('submission-validated', { submission: validation.submission, ok: validation.ok, all_passed: validation.all_passed,
+          prefix: validation.all_passed ? validation.prefix.map(row => ({ path: row.path, sha256: row.sha256 })) : [] });
+        return result;
+      } },
     { name: 'run_workbench', label: 'run_workbench', description: 'Run `python -m harness.trace.workbench` from workbench/ with these arguments (a list of strings, for example ["steps", "../trace", "--from", "1", "--to", "20"]). Run it with ["--help"] for the commands.',
       parameters: Type.Object({ args: Type.Array(Type.String({ maxLength: 1000 }), { minItems: 1, maxItems: 40 }) }),
       run: args => runWorkbench(root, args, { python, env: workbenchEnv, timeoutSeconds: configuration.workbench_timeout_seconds }) },
@@ -266,7 +279,7 @@ export async function runCurator(options) {
       let result;
       try {
         if (READING_TOOLS.has(tool.name) && budget().share >= FINISH_AT) {
-          throw new ToolError('the budget is nearly spent; write your submission or draft with write_file, then call finish');
+          throw new ToolError('the budget is nearly spent; write your submission or draft with write_file, check it with validate_submission, then call finish');
         }
         result = await tool.run(args);
       }

@@ -1,33 +1,50 @@
 # Grooming instructions
 
-Read `knowledge/current-facts.jsonl` and `knowledge/ontology/types.json`. Use the last admission's
-cited frames and each actor's first and last framed operations in `trace/` to check changes.
-Treat facts as hypotheses. Keep what a later actor could use and preserve uncertainty and conditions.
+Start from the brief's **Grooming worklist** instead of scanning the whole store. It lists records
+from `knowledge/current-facts.jsonl` in two parts, one line each with the record's ID, its state and
+the IDs it names. Read only the records and frames a repair needs. The trace holds the last
+admission's cited frames and each actor's first and last framed operations. Treat facts as
+hypotheses. Keep what a later actor could use, and preserve uncertainty and conditions.
 
-Reorganize the store between admissions. Merge repeated claims with `supersede_fact` within
-the same scope level and, for world facts, within the same world. Retire stale world facts with
-`retire_fact`. Check for changes or rollbacks in the boundary observations. Cite a frame from
-the fact's own world and explain why the fact no longer applies. You may also cite a frame
-already cited by the retired world fact, even if it precedes this window. Use current
-observations when they show the change. Make subject names consistent through replacements. A replacement
-may keep citations of the facts it supersedes, even when those frames precede this window.
-Software uses their recorded provenance for `seen` and `scope.world`. Submit `known`
-and the `scope.game` and `scope.level` fields on each replacement.
+**Must clear.** Every current record with non-empty `stale_citations` cites or `depends_on` a record
+that is no longer current. The grooming fails while one remains at the version you leave, so clear
+every one. A batch may not add a stale citation to any record, including moving one from a record
+you repair to another.
 
-Merge, split, rename or deprecate types with `revise_types`. Give each resulting
-`curator-type/2` definition its `identity` and `reason`. When rewriting an existing
-name (if deprecating and re-adding a name, list `revise_types` before `add_type`),
-assign all facts that were current under that name at the base version and stay current,
-even if their type name stays the same. Publish each revision in a new version.
+- A one-to-one `restated` supersession: check that the replacement says the same thing, then use
+  `remap_citations` (`from` the stale ID, `to` its replacement, `in` every slug that cites it).
+- A restated merge or a `corrected` supersession: rewrite the affected claims with
+  `edit_article`'s `replace_claims`, copying `index`, `old_text` and `old_facts` exactly.
+- A narrowed fact: cite the child or children whose scope matches the article, with
+  `replace_claims`.
+- A retired fact (`wrong` or `ended`): there is no successor. Remove the claim with
+  `remove_claims`, rewrite it with `replace_claims` so that it cites only current facts (for
+  example, saying when the state held), or retire the article with `retire_article`.
+- A stale `depends_on` link: repoint or drop it (`edit_article`'s `add_links` and `remove_links` for
+  an article; a `restated` supersession with new `links` for a fact).
 
-File every current game fact in at least one article. World facts stand alone. Use one article per subject, choosing subjects
-from the evidence. Write or revise a concise title, a lead of one or two useful sentences, body
-claims that cite current game facts, and links to related articles by their current titles. Keep
-article prose true in any world. Split
-and merge articles by adding replacements and retiring or revising their predecessors together;
-repair incoming links and citations in the same submission. No fixed categories or hard size cap
-apply. The gate checks references and complete filing, never the meaning of your prose.
+**Advisory.** These may remain when the evidence cannot resolve them: `contested` records and
+records flagged `needs review` only because of them; world-bound records whose `lineages` hold
+several labels or `null`; and `unfiled` facts. Resolve a contradiction only with evidence, by a
+`corrected` supersession, `narrow_fact` (splitting a claim by a declared axis or by
+`"binds": ["world"]` when each side holds under a different condition) or `retire_fact`.
 
-Use the `curator-fact/4` submission shapes in the curator instructions. Software writes
-`seen` and `last_confirmed` to order sightings. A later actor should
-check knowledge cheaply before relying on it. Leave a draft for work that lacks evidence.
+**Filing rule.** File every current unbound fact in at least one current article. File a
+world-bound fact once an article bound to its world exists. Use one article per subject, choosing
+subjects from the evidence. Each article has a concise title, a lead of one or two useful sentences,
+body claims that cite current facts, and links to related records. Prefer surgical `edit_article`
+changes (`add_claims`, `replace_claims`, `set_lead`) to rewriting a body with `revise_article`.
+Split and merge articles by adding the new ones and retiring or editing their predecessors in the
+same submission, and repair the citations and links that pointed at them. No fixed categories or
+size cap apply.
+
+**Other repairs.** Merge repeated claims with a `restated` `supersede_fact` (the replaced facts must
+share one scope and `when`), then repair their citing articles. Make subjects consistent in the
+same way. Retire a world-bound fact that stopped holding with `retire_fact` as `ended`, citing frames
+from its own world that show the change. Use `retag`, once per submission, to make tags consistent
+with the brief's tag list and its nearest-tag pairs.
+
+Use the `curator-submission/2` operations and `curator-fact/5` shapes in the curator instructions.
+Several ordered submissions may repair the store step by step. Run `validate_submission` on each
+before `finish`: it reports the gate's diagnostics, including any stale citation a batch would add.
+Leave a draft for work that lacks evidence.
