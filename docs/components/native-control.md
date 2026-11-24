@@ -111,6 +111,16 @@ See [Pause procedure](../operations/pause-timeout.md#operator-recovery).
 
 ## Portability and verification
 
+The SDL2 adapter maps uppercase ASCII letters and shifted US-ANSI punctuation
+to their base keycode and host-layout scancode with left Shift (scancodes follow
+the active host keyboard layout, and the compiled key-mapping check assumes a
+US-ANSI layout). An explicit `SHIFT` and an implied Shift share one modifier press
+and release. When SDL text input is active and neither Ctrl nor Alt is held,
+printable keys also emit text, shifting letters and US-ANSI base symbols
+consistently when Shift is held. Named keys (`ESC`, `ENTER`, `SPACE`, etc.)
+deliver their keycode and scancode in either text input mode and generate no text
+event.
+
 Actual PNG and mechanical geometry are the whole observation port. Save/load,
 identity, menus, activities and objective meaning belong to the player. The
 [prepared application](../../harness/prepared_app.py) and
@@ -121,8 +131,10 @@ before a run; the computer adapter does not override game settings.
 
 Protocol, wire, channel and runtime tests assert ingress, original expiry and
 capacity, packet backpressure, stop and uncertainty. Compiled checks exercise actual
-SDL and inherited descriptors. Portable doubles cannot replace these checks or
-actual CDDA qualification.
+SDL and inherited descriptors. Two short fixture runs compare the keycode,
+scancode, modifiers and text in both text input modes to catch
+input regressions ([R-REGRESSION](../risks.md#development-risks)).
+Portable doubles cannot replace these checks or actual CDDA qualification.
 
 The [native procedure](../operations/native-acceptance.md) owns actual control,
 useful play, save/new-child reload and normal exit evidence. The [production report](../acceptance/2026-10-29-computer-control.md)

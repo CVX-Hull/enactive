@@ -98,11 +98,23 @@ bool geometry(id g) {
     for(id n in v) if(!number(n,0,16384)) return false;
     return [v[2] intValue]>0 && [v[3] intValue]>0 && [v[0] intValue]+[v[2] intValue]<=[g[@"width"] intValue] && [v[1] intValue]+[v[3] intValue]<=[g[@"height"] intValue];
 }
-SDL_Keycode keycode(NSString *key) {
+static constexpr char SHIFTED_SYMBOLS[]="!@#$%^&*()_+{}|:\"<>?~";
+static constexpr char BASE_SYMBOLS[]="1234567890-=[]\\;',./`";
+char shiftedGlyph(char c) {
+    if(c>='a' && c<='z') return (char)(c-('a'-'A'));
+    if(const char *match=std::strchr(BASE_SYMBOLS,c)) return SHIFTED_SYMBOLS[match-BASE_SYMBOLS];
+    return c;
+}
+std::pair<SDL_Keycode,bool> keycode(NSString *key) {
     NSDictionary *names=@{@"ENTER":@(SDLK_RETURN),@"ESC":@(SDLK_ESCAPE),@"UP":@(SDLK_UP),@"DOWN":@(SDLK_DOWN),@"LEFT":@(SDLK_LEFT),@"RIGHT":@(SDLK_RIGHT),@"TAB":@(SDLK_TAB),@"BACKSPACE":@(SDLK_BACKSPACE),@"SPACE":@(SDLK_SPACE),@"PAGEUP":@(SDLK_PAGEUP),@"PAGEDOWN":@(SDLK_PAGEDOWN),@"HOME":@(SDLK_HOME),@"END":@(SDLK_END),@"DELETE":@(SDLK_DELETE)};
-    if(names[key]) return [names[key] intValue];
+    if(names[key]) return {[names[key] intValue],false};
     require(string(key) && key.length==1 && [key characterAtIndex:0]>=32 && [key characterAtIndex:0]<=126,"Unsupported basic key");
-    return (SDL_Keycode)[key characterAtIndex:0];
+    char c=(char)[key characterAtIndex:0];
+    if(c>='A' && c<='Z') return {SDLK_a+(c-'A'),true};
+    // SDL keycodes use the unmodified key. Map shifted US-ANSI glyphs
+    // before looking up the scancode; shifted text is derived consistently from Shift state.
+    if(const char *match=std::strchr(SHIFTED_SYMBOLS,c)) return {BASE_SYMBOLS[match-SHIFTED_SYMBOLS],true};
+    return {c,false};
 }
 struct Bridge {
     std::recursive_mutex mutex;
@@ -272,26 +284,26 @@ struct Bridge {
         require([in isKindOfClass:[NSDictionary class]],"Input must be object"); NSString *type=in[@"type"];
         if([type isEqual:@"key"]) {
             require(closed(in,@[@"type",@"key",@"modifiers"]) && string(in[@"key"]),"Invalid key fields");
-            SDL_Keycode code=keycode(in[@"key"]); id mods=in[@"modifiers"];
+            NSString *name=in[@"key"];
+            auto [code,implicitShift]=keycode(name);
+            id mods=in[@"modifiers"];
             require([mods isKindOfClass:[NSArray class]] && [mods count]<=3 && [[NSSet setWithArray:mods] count]==[mods count],"Invalid modifiers");
             for(id m in mods) require([@[@"CTRL",@"ALT",@"SHIFT"] containsObject:m],"Invalid modifier");
             std::vector<std::pair<SDL_Keycode,SDL_Keymod>> selected;
             if([mods containsObject:@"CTRL"]) selected.push_back({SDLK_LCTRL,KMOD_LCTRL});
             if([mods containsObject:@"ALT"]) selected.push_back({SDLK_LALT,KMOD_LALT});
-            if([mods containsObject:@"SHIFT"]) selected.push_back({SDLK_LSHIFT,KMOD_LSHIFT});
+            if(implicitShift || [mods containsObject:@"SHIFT"]) selected.push_back({SDLK_LSHIFT,KMOD_LSHIFT});
             SDL_Keymod m=KMOD_NONE;
             for(auto item:selected) { m=(SDL_Keymod)(m|item.second); stages.push_back(key(item.first,true,m)); }
             stages.push_back(key(code,true,m));
             // SDL emits text in addition to a printable key while text input is
             // active. This is framework state, not a game/menu classification.
-            if([in[@"key"] length]==1 && SDL_IsTextInputActive() &&
+            if(name.length==1 && SDL_IsTextInputActive() &&
                     !(m & (KMOD_CTRL|KMOD_ALT))) {
                 SDL_Event text={}; text.type=SDL_TEXTINPUT; text.text.windowID=windowID;
-                NSString *value=in[@"key"];
-                if(m & KMOD_SHIFT) value=[value uppercaseString];
-                NSData *utf8=[value dataUsingEncoding:NSUTF8StringEncoding];
-                require(utf8.length>0 && utf8.length<=31,"Key text outside bound");
-                memcpy(text.text.text,utf8.bytes,utf8.length); stages.push_back(text);
+                char raw=(char)[name characterAtIndex:0];
+                char glyph=(m & KMOD_SHIFT)?shiftedGlyph(raw):raw;
+                text.text.text[0]=glyph; text.text.text[1]='\0'; stages.push_back(text);
             }
             stages.push_back(key(code,false,m));
             for(auto it=selected.rbegin();it!=selected.rend();++it) { m=(SDL_Keymod)(m&~it->second); stages.push_back(key(it->first,false,m)); }
