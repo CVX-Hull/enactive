@@ -16,6 +16,8 @@ secondary background where the paywalled ISO texts were not read directly. This 
 on, and does not repeat, [memory, ontology and oversight](research-curated-memory.md) (cutoff
 `2026-11-08`) and [belief under conflicting observations](research-belief-under-conflict.md).
 
+The design proposal built on this note is [scoped, traceable knowledge](design/knowledge-graph-scoping-contract.md).
+
 ## Search method and open-horizon discovery
 
 Following `P-GENERALITY` and the project's research discipline, this review did not limit
