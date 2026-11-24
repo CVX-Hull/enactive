@@ -134,11 +134,17 @@ def _service(value):
     return result
 
 
+_KNOWLEDGE_RESOLUTIONS = frozenset(('current', 'revision', 'restated', 'narrowed', 'corrected', 'ended', 'retracted',
+                                    'title', 'unknown', 'query'))
+
+
 def _project(value):
     schema = value.get('schema')
-    if schema == 'player-knowledge/1':
-        result = _fields(value, {'schema', 'version', 'records', 'grants_authority'})
-        if result['grants_authority'] is not False or not isinstance(result['records'], list):
+    if schema == 'player-knowledge/2':
+        result = _fields(value, {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'records'})
+        if (result['grants_authority'] is not False or not isinstance(result['records'], list)
+                or result['resolution'] not in _KNOWLEDGE_RESOLUTIONS or not isinstance(result['identity'], str)
+                or not (result['resolved_from'] is None or isinstance(result['resolved_from'], str))):
             raise UnsupportedResult('Unsupported delivered knowledge result')
         return result  # Article and fact text is opaque data, never another envelope.
     if schema == 'computer-operation/1':

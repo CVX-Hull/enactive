@@ -98,14 +98,21 @@ class Application:
                 closed(semantic, {'source_id'})
                 value, png = self.source(semantic['source_id'], actor)
                 return dict(schema='player-source-read/1', source=value, read_wall=time.time()), png
-            if name in ('player_knowledge_read', 'player_knowledge_query'):
-                key = 'id_or_title' if name == 'player_knowledge_read' else 'query'
-                closed(semantic, {key})
-                if not isinstance(semantic[key], str):
+            if name == 'player_knowledge_read':
+                if not {'id_or_title'} <= semantic.keys() or semantic.keys() - {'id_or_title', 'by'}:
+                    raise PlayerError('Knowledge read requires id_or_title and optional by')
+                if not isinstance(semantic['id_or_title'], str):
                     raise PlayerError('Knowledge argument must be text')
                 with self.knowledge_lock:
                     knowledge = self.knowledge
-                return (knowledge.read(semantic[key]) if key == 'id_or_title' else knowledge.query(semantic[key])), None
+                return knowledge.read(semantic['id_or_title'], by=semantic.get('by', 'any')), None
+            if name == 'player_knowledge_query':
+                closed(semantic, {'query'})
+                if not isinstance(semantic['query'], str):
+                    raise PlayerError('Knowledge argument must be text')
+                with self.knowledge_lock:
+                    knowledge = self.knowledge
+                return knowledge.query(semantic['query']), None
             if name == 'player_hint':
                 if not {'text'} <= semantic.keys() or semantic.keys() - {'text', 'source_ids'}:
                     raise PlayerError('Hint requires text and optional source_ids')
