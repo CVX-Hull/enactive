@@ -6,6 +6,9 @@ Standard library only.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 ACTOR = '79e9a7e05352477e8820bc94874b23de'
 HOSTILE = '<img src=x onerror=window.storyExecuted=true>'
 CUTS = (40, 80, 120, 160, 200)          # step seqs at which a cut is applied
@@ -142,8 +145,9 @@ def telemetry(steps: list[dict], summary: dict, recorded: bool) -> dict:
 
 # Delivered knowledge ------------------------------------------------------------------------------------------------
 
-#: A frame of this run's session, and one of another session (which has no anchor here).
-FRAME = 'c6c09be0b7d43fba2839147651a4f6a5-{}'
+#: The source ID the captured run recorded at each step (`steps.json`, written by `refresh.py`): a cited frame of this
+#: run is the one its step names. And a frame of another session, which has no anchor here.
+SOURCES = {row['seq']: row['source_id'] for row in json.loads((Path(__file__).parent / 'steps.json').read_text())['items']}
 ELSEWHERE = 'b' * 32 + '-7'
 
 
@@ -161,7 +165,7 @@ def state(**extra) -> dict:
 
 def fact(identity: str, text: str, kind: str, step: int, anchored: bool = True, **extra) -> dict:
     """A fact of a `delivered-knowledge/3` export as the viewer lists it: anchored by the frames it cites."""
-    cited = FRAME.format(step) if anchored else ELSEWHERE
+    cited = SOURCES[step] if anchored else ELSEWHERE
     anchor = dict(seq=step, source_id=cited) if anchored else None
     return dict(id=identity, claim_kind=kind, evidence_basis='observed', subject=f'Subject of {identity}', text=text, when=None,
         cited_by_articles=[], cited_by_articles_omitted=0, citation_source_ids=[cited], citation_source_ids_omitted=0, citation_anchors=[anchor],
@@ -171,7 +175,7 @@ def fact(identity: str, text: str, kind: str, step: int, anchored: bool = True, 
 def article(identity: str, title: str, facts: list[str], step: int, **extra) -> dict:
     return dict(id=identity, revision=f'{identity}@v1', title=title, lead=f'{title} in one sentence.', body=[dict(text=f'What is known about {title.lower()}.', facts=facts,
         facts_omitted=0)], body_omitted=0, last_confirmed=dict(seen(step), order=[1, '001', step], order_omitted=0,
-        order_omitted_characters={}), anchor=dict(seq=step, source_id=FRAME.format(step)), **state(**extra))
+        order_omitted_characters={}), anchor=dict(seq=step, source_id=SOURCES[step]), **state(**extra))
 
 
 WORLD = dict(scope='world', branch_relation='same')

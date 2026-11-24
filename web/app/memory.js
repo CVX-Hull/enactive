@@ -117,13 +117,14 @@ function Graph({value, choose}) {
     ${(value.stale_citations || []).length ? html`<p class="note" data-stale>Stale citations: ${value.stale_citations.join(', ')}</p>` : null}`;
 }
 
-/** A fact's cited frames: one of this run opens Watch there; another session's is listed without a frame. */
+/** A fact's cited frames: one of this run that the frame route serves opens Watch there; any other (another session's,
+ * or one whose PNG is missing or not the recorded one) is listed without a frame. */
 function Citations({fact}) {
   const ids = fact.citation_source_ids || [];
   if (!ids.length) return null;
   return html`<h4>Cited frames</h4><ul class="difflist" data-citations>${ids.map((id, i) => {
     const at = (fact.citation_anchors || [])[i];
-    return html`<li class="wrapany">${at ? html`<button type="button" class="btn" data-citation-seq=${at.seq} onClick=${() => jumpToSeq(at.seq)}>Frame #${at.seq}</button>` : html`<span class="note">another session</span>`} <span class="mono">${id}</span></li>`;
+    return html`<li class="wrapany">${at ? html`<button type="button" class="btn" data-citation-seq=${at.seq} onClick=${() => jumpToSeq(at.seq)}>Frame #${at.seq}</button>` : html`<span class="note">Frame unavailable</span>`} <span class="mono">${id}</span></li>`;
   })}</ul>${fact.citation_source_ids_omitted ? html`<p class="note">${fact.citation_source_ids_omitted} more not shown.</p>` : null}`;
 }
 

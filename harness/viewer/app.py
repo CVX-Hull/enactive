@@ -112,7 +112,7 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
     def delivered_knowledge(request: Request, info: RunInfo, connection) -> Response:
         after, limit = paging(request)
         query = request.query_params
-        return reply(delivered.browse(info, connection, query.get('version') or None, query.get('q') or None,
+        return reply(delivered.browse(catalog, info, connection, query.get('version') or None, query.get('q') or None,
             query.get('scope') or None, after, limit))
 
     def steps(request: Request, info: RunInfo, connection) -> Response:

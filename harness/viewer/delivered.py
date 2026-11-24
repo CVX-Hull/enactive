@@ -6,9 +6,9 @@ No curator repository, private export, alias map or withheld-unit file is read, 
 version is not thereby a delivered one: only the host trace says what reached the player.
 
 The format is blinded: a world-bound record's scope holds `world: null`, never the label, and positions name opaque
-session aliases (`s01`). So a record's scope is shown as its class (`world` or `game`) with its other axes, and its
-anchor comes from the frames it cites: a `citation_source_ids` entry of this run's own session resolves to that step,
-and one of another session to nothing.
+session aliases (`s01`); a session that is no alias is withheld. So a record's scope is shown as its class (`world` or
+`game`) with its other axes, and its anchor comes from the frames it cites: a `citation_source_ids` entry of this run's
+own session resolves to that step when the frame route would serve it, and one of another session to nothing.
 """
 from __future__ import annotations
 
@@ -19,17 +19,19 @@ import re
 import sqlite3
 import threading
 
-from .catalog import ID_LIMIT, RunInfo, ViewError
+from .catalog import ID_LIMIT, Catalog, RunInfo, ViewError
 from .curator import read_rooted, rooted_entries, rooted_status
-from .knowledge import add_ids, fields, marker, record, scope_class, when
+from .knowledge import SOURCE, add_ids, blind, citations, fields, marker, record, scope_class, when
 from .telemetry import HostProjection, Steps, identifier, read
+from . import views
 
 SCHEMA = 'delivered-knowledge/3'
 INITIAL = 'initial'
 STARTING = ('delivered-knowledge.json',)
 EXPORTS = ('curator-runner', 'delivered')
 VERSION_FILE = re.compile(r'v(0|[1-9][0-9]{0,8})\.json')
-SCOPES = ('all', 'world', 'game')
+#: `unrecorded` lists the facts that state no scope, the ones `scope_counts` counts as such.
+SCOPES = ('all', 'world', 'game', 'unrecorded')
 MAX_VERSIONS = 500
 MAX_ARTICLES = 200
 BODY_LIMIT = 50
@@ -98,38 +100,54 @@ def version_row(name: str, run_dir: Path, parts: Parts) -> dict:
     if document is None:
         return dict(version=name, status=state, recorded_version=None, articles_count=None, facts_count=None, coverage=None)
     return dict(version=name, status=state, recorded_version=identifier(document.get('version')),
-        articles_count=len(document['articles']), facts_count=len(document['facts']), coverage=marker(document.get('coverage')))
-
-
-def citations(value: object) -> list[str]:
-    return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
+        articles_count=len(document['articles']), facts_count=len(document['facts']),
+        coverage=marker(document.get('coverage'), blinded=True))
 
 
 class Anchors:
     """Resolves a cited frame to a step of this run: only a source ID of this run's own session (`<session>-<n>`) that
-    one of its steps recorded. Another session's frame has no anchor here."""
+    one of its steps recorded and whose frame the per-run frame route serves (its PNG present, its SHA-256 the
+    recorded one). Another session's frame, or one that route refuses, has no anchor here."""
 
-    def __init__(self, info: RunInfo, connection: sqlite3.Connection, facts: list) -> None:
+    def __init__(self, catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, facts: list) -> None:
+        self.catalog, self.info, self.connection = catalog, info, connection
         self.steps = Steps(connection)
         prefix = f'{info.session}-'
         self.frames = {s.source_id: s for s in self.steps.rows if isinstance(s.source_id, str) and s.source_id.startswith(prefix)}
         self.facts = {f['id']: f for f in facts if isinstance(f, dict) and isinstance(f.get('id'), str)}
+        self.served: dict[str, bool] = {}      # each frame is read and hashed once per listing
+
+    def verified(self, source_id: str) -> bool:
+        if source_id not in self.frames:
+            return False
+        if source_id not in self.served:
+            try:
+                views.frame(self.catalog, self.info, self.connection, source_id)
+            except ViewError:
+                self.served[source_id] = False
+            else:
+                self.served[source_id] = True
+        return self.served[source_id]
 
     def step(self, source_id: str) -> dict | None:
-        found = self.frames.get(source_id)
-        return None if found is None else dict(seq=found.seq, source_id=found.source_id)
+        if not self.verified(source_id):
+            return None
+        found = self.frames[source_id]
+        return dict(seq=found.seq, source_id=found.source_id)
 
     def latest(self, source_ids: list[str]) -> dict | None:
-        """The latest step of this run among the cited frames."""
-        found = [self.frames[s] for s in source_ids if s in self.frames]
-        last = max(found, key=lambda s: s.seq, default=None)
-        return None if last is None else dict(seq=last.seq, source_id=last.source_id)
+        """The latest step of this run among the cited frames that the frame route serves."""
+        cited = {s: self.frames[s] for s in source_ids if s in self.frames}
+        for found in sorted(cited.values(), key=lambda s: s.seq, reverse=True):
+            if self.verified(found.source_id):
+                return dict(seq=found.seq, source_id=found.source_id)
+        return None
 
     def article(self, article: dict) -> dict | None:
         body = article.get('body') if isinstance(article.get('body'), list) else []
         cited = [f for part in body if isinstance(part, dict) and isinstance(part.get('facts'), list) for f in part['facts']]
         return self.latest([s for f in cited if isinstance(f, str) and f in self.facts
-                            for s in citations(self.facts[f].get('citation_source_ids'))])
+                            for s in citations(self.facts[f].get('citation_source_ids'), None)])
 
 
 def contains(query: str, *values: object) -> bool:
@@ -161,7 +179,7 @@ def article_row(article: dict, anchors: Anchors) -> dict:
             out['body'].append(row)
     out['body_omitted'] = len(body) - len(out['body'])
     record(out, article)
-    out['last_confirmed'] = marker(article.get('last_confirmed'))
+    out['last_confirmed'] = marker(article.get('last_confirmed'), blinded=True)
     out['anchor'] = anchors.article(article)
     return out
 
@@ -172,11 +190,11 @@ def fact_row(fact: dict, anchors: Anchors) -> dict:
     record(out, fact)
     out['when'] = when(fact.get('when'))
     add_ids(out, 'cited_by_articles', fact.get('cited_by_articles'))
-    add_ids(out, 'citation_source_ids', fact.get('citation_source_ids'))
+    add_ids(out, 'citation_source_ids', fact.get('citation_source_ids'), pattern=SOURCE)
     out['citation_anchors'] = [anchors.step(s) for s in out['citation_source_ids']]
     seen = fact.get('seen')
-    out['seen'] = fields(seen, SEEN_FIELDS) if isinstance(seen, dict) else None
-    out['anchor'] = anchors.latest(citations(fact.get('citation_source_ids')))
+    out['seen'] = fields(blind(seen), SEEN_FIELDS) if isinstance(seen, dict) else None
+    out['anchor'] = anchors.latest(citations(fact.get('citation_source_ids'), None))
     return out
 
 
@@ -230,11 +248,11 @@ def delivery_for(host: HostProjection | None, steps: Steps, selected: str, recor
     return None
 
 
-def browse(info: RunInfo, connection: sqlite3.Connection, version: str | None, query: str | None,
+def browse(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, version: str | None, query: str | None,
            scope: str | None, after: int, limit: int) -> dict:
     scope = scope or 'all'
     if scope not in SCOPES:
-        raise ViewError(400, 'bad_scope', 'scope must be all, world or game')
+        raise ViewError(400, 'bad_scope', 'scope must be all, world, game or unrecorded')
     if query is not None and len(query) > QUERY_LIMIT:
         raise ViewError(400, 'bad_q', f'q must be at most {QUERY_LIMIT} characters')
     files = [] if info.run_dir is None else version_files(info.run_dir)
@@ -254,13 +272,14 @@ def browse(info: RunInfo, connection: sqlite3.Connection, version: str | None, q
             raise ViewError(409, 'unsupported_knowledge', f'{selected}: {state}')
         return dict(empty, versions=rows, selected_version=selected)
     host = read(info)
-    anchors = Anchors(info, connection, document['facts'])
+    anchors = Anchors(catalog, info, connection, document['facts'])
     needle = (query or '').strip().casefold()
     articles = [a for a in document['articles'] if isinstance(a, dict) and contains(needle, *article_text(a))]
     facts = [f for f in document['facts'] if isinstance(f, dict) and contains(needle, *fact_text(f))]
     classes = Counter(scope_class(f.get('scope')) for f in facts)
     if scope != 'all':
-        facts = [f for f in facts if scope_class(f.get('scope')) == scope]
+        wanted = None if scope == 'unrecorded' else scope
+        facts = [f for f in facts if scope_class(f.get('scope')) == wanted]
     shown, omitted = bounded([article_row(a, anchors) for a in articles[:MAX_ARTICLES]])
     window, cut = bounded([fact_row(f, anchors) for f in facts[after:after + limit]])
     end = after + len(window)

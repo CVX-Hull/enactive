@@ -2,15 +2,23 @@
 from __future__ import annotations
 
 import json
-
-from harness.jsonio import file_sha256
+import re
 
 from harness.evaluation.core import context
 from harness.evaluation.core.host import host_facts, returned_records
-from harness.evaluation.core.records import EvaluationError
-from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_json_file, read_manifest, read_operations
+from harness.evaluation.core.records import EvaluationError, loads
+from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_manifest, read_operations
 from .catalog import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, ViewError
+from .curator import read_rooted
 from . import frame, views
+
+#: A `delivered-knowledge/3` position names only an opaque session alias, and a citation only a frame `<session>-<n>`.
+#: These are the player's own `harness.player.knowledge.ALIAS` and `SOURCE`, which the viewer may not import: a session
+#: that is no alias (a raw admission or world label) is withheld, and a citation that is no frame is omitted.
+ALIAS = re.compile(r's(?:0[1-9]|[1-9][0-9]+)')
+SOURCE = re.compile(r'[0-9a-f]{32}-[1-9][0-9]*')
+#: A current entry resolves at most this many distinct cited frames; the rest are counted in `anchors_omitted`.
+ANCHOR_LIMIT = 20
 
 #: The versions of an actor's frozen inputs and delivered knowledge: the current ones for a current run, and
 #: the ones the sealed sessions of the archive index carry (S-MIGRATION, closed archive reads).
@@ -52,19 +60,35 @@ def fields(value, names):
     return result
 
 
-def id_list(value, limit=LIST_LIMIT):
+def id_list(value, limit=LIST_LIMIT, pattern=None):
+    """The first `limit` IDs that are strings within the ID bound (and match `pattern`), and how many are left out."""
     rows = value if isinstance(value, list) else []
-    kept = [v for v in rows[:limit] if isinstance(v, str) and len(v) <= ID_LIMIT]
+    kept = [v for v in rows[:limit] if isinstance(v, str) and len(v) <= ID_LIMIT and (pattern is None or pattern.fullmatch(v))]
     return kept, len(rows)-len(kept)
 
 
-def add_ids(target, name, value, limit=LIST_LIMIT):
-    target[name], target[name + '_omitted'] = id_list(value, limit)
+def add_ids(target, name, value, limit=LIST_LIMIT, pattern=None):
+    target[name], target[name + '_omitted'] = id_list(value, limit, pattern)
 
 
-def marker(value):
+def citations(value, limit=LIST_LIMIT):
+    """A `delivered-knowledge/3` record's cited frames: its `citation_source_ids` that are frame source IDs."""
+    return id_list(value, limit, SOURCE)[0]
+
+
+def blind(value):
+    """A delivered position or coverage stamp with a `session` that is no opaque alias withheld (null), never echoed."""
+    if isinstance(value, dict) and 'session' in value and not (isinstance(value['session'], str) and ALIAS.fullmatch(value['session'])):
+        return dict(value, session=None)
+    return value
+
+
+def marker(value, blinded=False):
+    """A position or coverage stamp; `blinded` for a `delivered-knowledge/3` one, whose session must be an alias."""
     if not isinstance(value, dict):
         return None
+    if blinded:
+        value = blind(value)
     result = fields(value, ('schema', 'session', 'actor', 'step', 'last_step', 'source_id'))
     order = value.get('order') if isinstance(value.get('order'), list) else []
     parts = [fields({'value': v}, ('value',)) for v in order[:8]]
@@ -129,20 +153,44 @@ def anchors(catalog, runs, values):
     return [source_anchor(catalog, runs, v) for v in dict.fromkeys(values)]
 
 
-def entry(value, kind, catalog, runs, current=True):
-    """One snapshot entry. A current (`delivered-knowledge/3`) entry cites frames by `citation_source_ids` and links by
-    type; an archived one names `source_ids` and plain links."""
+def cited_facts(body):
+    """The fact IDs an article's body cites, in order, once each."""
+    return list(dict.fromkeys(f for part in body if isinstance(part, dict) and isinstance(part.get('facts'), list)
+                              for f in part['facts'] if isinstance(f, str)))
+
+
+def entry(value, kind, catalog, runs, current=True, facts=None):
+    """One snapshot entry. A current (`delivered-knowledge/3`) entry cites frames only by `citation_source_ids` and links
+    by type: a fact's anchors are its own cited frames, an article's those of the facts its body cites, looked up in
+    `facts` (the whole file's facts by ID). Its positions name session aliases, and any other session is withheld. An
+    archived (`delivered-knowledge/1`) entry names `source_ids`, positions with a source ID, and plain links."""
     result = fields(value, ('id', 'revision', 'title', 'subject', 'claim_kind', 'evidence_basis', 'text', 'lead'))
     result['kind'] = kind
-    result['seen'] = marker(value.get('seen'))
-    result['last_confirmed'] = marker(value.get('last_confirmed'))
+    result['seen'] = marker(value.get('seen'), blinded=current)
+    result['last_confirmed'] = marker(value.get('last_confirmed'), blinded=current)
     record(result, value, typed=current)
     if kind == 'fact':
         result['when'] = when(value.get('when'))
         add_ids(result, 'cited_by_articles', value.get('cited_by_articles'))
-    add_ids(result, 'citation_source_ids', value.get('citation_source_ids'), 20)
-    add_ids(result, 'source_ids', value.get('source_ids'), 20)
     body = value.get('body') if isinstance(value.get('body'), list) else []
+    if current:
+        add_ids(result, 'citation_source_ids', value.get('citation_source_ids'), 20, SOURCE)
+        result['source_ids'], result['source_ids_omitted'] = [], 0     # the current format has no `source_ids`
+        if kind == 'article':
+            held = facts or {}
+            sources = [s for f in cited_facts(body) if f in held for s in citations(held[f].get('citation_source_ids'), 20)]
+        else:
+            sources = result['citation_source_ids']
+        distinct = list(dict.fromkeys(sources))
+        sources, result['anchors_omitted'] = distinct[:ANCHOR_LIMIT], max(0, len(distinct) - ANCHOR_LIMIT)
+    else:
+        add_ids(result, 'citation_source_ids', value.get('citation_source_ids'), 20)
+        add_ids(result, 'source_ids', value.get('source_ids'), 20)
+        sources = [*result['citation_source_ids'], *result['source_ids']]
+        for name in ('seen', 'last_confirmed'):
+            if result[name] and result[name].get('source_id'):
+                sources.append(result[name]['source_id'])
+        result['anchors_omitted'] = 0
     result['body'] = []
     for part in body[:20]:
         if not isinstance(part, dict):
@@ -151,12 +199,36 @@ def entry(value, kind, catalog, runs, current=True):
         add_ids(projected, 'facts', part.get('facts'))
         result['body'].append(projected)
     result['body_omitted'] = len(body)-len(result['body'])
-    sources = [*result['citation_source_ids'], *result['source_ids']]
-    for name in ('seen', 'last_confirmed'):
-        if result[name] and result[name].get('source_id'):
-            sources.append(result[name]['source_id'])
     result['anchors'] = anchors(catalog, runs, sources)
     return result
+
+
+def frozen_snapshot(directory, actor_parts, frozen_schema, knowledge_schema, actor, session):
+    """(`snapshot_status`, the delivered-knowledge document when `verified`) of an actor's frozen snapshot.
+
+    Each file of the run package is read once, without following a symlink and bounded at 16 MiB; the digest compared
+    with `frozen.json` and the document served are of the same bytes, so nothing is reopened after it is verified."""
+    knowledge = (*actor_parts, 'delivered-knowledge.json')
+    state, snapshot, data = read_rooted(directory, *knowledge)
+    if state != 'available':
+        return 'unavailable', None     # absent, or no regular file of the package
+    frozen_parts = (*actor_parts, 'frozen.json')
+    frozen_state, _, frozen_data = read_rooted(directory, *frozen_parts)
+    try:
+        frozen = loads(frozen_data, '/'.join(frozen_parts)) if frozen_state == 'available' else None
+    except EvaluationError:
+        frozen = None
+    files = frozen.get('files') if isinstance(frozen, dict) else None
+    expected = files.get('delivered-knowledge.json') if isinstance(files, dict) else None
+    if (frozen_schema is None or not isinstance(expected, str) or frozen.get('schema') != frozen_schema
+            or frozen.get('actor_id') != actor or frozen.get('session') != session):
+        return 'hash_unavailable', None
+    if snapshot['sha256'] != expected:
+        return 'hash_mismatch', None
+    value = loads(data, '/'.join(knowledge))
+    if not isinstance(value, dict) or value.get('schema') != knowledge_schema:
+        raise ViewError(409, 'unsupported_knowledge')
+    return 'verified', value
 
 
 def projection(catalog, info, connection, actor, request_id, after, limit, entry_id=None):
@@ -203,49 +275,37 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
                 item['delivery_text_unavailable'] = True
         matching.append(item)
     snapshot = None
-    snapshot_status = 'unavailable'
-    path = actor_dir / 'delivered-knowledge.json'
-    frozen_path = actor_dir / 'frozen.json'
     try:
         manifest_schema = read_manifest(directory)['schema']
     except EvaluationError:
         manifest_schema = None  # no supported manifest says which versions these files are
     if manifest_schema == MANIFEST_SCHEMA:
         frozen_schema, knowledge_schema = CURRENT_SNAPSHOT
-    elif manifest_schema is None or manifest_schema in UNREAD_SNAPSHOT_MANIFESTS:
+    elif manifest_schema is None:
         frozen_schema = knowledge_schema = None
     else:
         frozen_schema, knowledge_schema = ARCHIVED_SNAPSHOT
-    if path.is_file() and frozen_path.is_file():
+    if manifest_schema in UNREAD_SNAPSHOT_MANIFESTS:
+        snapshot_status, value = 'hash_unavailable', None     # its files are never read, present or not
+    else:
         try:
-            frozen = read_json_file(frozen_path)
-            expected = frozen.get('files', {}).get('delivered-knowledge.json') if isinstance(frozen, dict) and isinstance(frozen.get('files'), dict) else None
-            if not isinstance(frozen, dict) or frozen_schema is None or frozen.get('schema') != frozen_schema or frozen.get('actor_id') != actor or frozen.get('session') != info.session or not isinstance(expected, str):
-                snapshot_status = 'hash_unavailable'
-            elif file_sha256(path) != expected:
-                snapshot_status = 'hash_mismatch'
-            else:
-                snapshot_status = 'verified'
-        except (OSError, EvaluationError):
-            snapshot_status = 'hash_unavailable'
-    elif path.is_file():
-        snapshot_status = 'hash_unavailable'
-    if snapshot_status == 'verified':
-        try:
-            value = read_json_file(path)
-            if not isinstance(value, dict) or value.get('schema') != knowledge_schema:
-                raise ViewError(409, 'unsupported_knowledge')
-            articles, fact_rows = value.get('articles'), value.get('facts')
-            if not isinstance(articles, list) or not isinstance(fact_rows, list):
-                raise ViewError(409, 'unsupported_knowledge')
-            all_entries = [(v, kind) for kind, rows in (('article', articles), ('fact', fact_rows)) for v in rows if isinstance(v, dict)]
-            if entry_id:
-                all_entries = [(v, k) for v, k in all_entries if v.get('id') == entry_id]
-            snapshot = dict(**fields(value, ('version',)), coverage=marker(value.get('coverage')), entry_id=entry_id,
-                items=[entry(v, k, catalog, runs, knowledge_schema == CURRENT_SNAPSHOT[1]) for v, k in all_entries[after:after+limit]], total=len(all_entries), limit=limit,
-                next=after+limit if after+limit < len(all_entries) else None)
+            snapshot_status, value = frozen_snapshot(directory, ('actors', actor_dir.name), frozen_schema, knowledge_schema,
+                                                     actor, info.session)
         except EvaluationError as exc:
             raise ViewError(409, 'knowledge_unavailable', str(exc)) from exc
+    if value is not None:
+        current = knowledge_schema == CURRENT_SNAPSHOT[1]
+        articles, fact_rows = value.get('articles'), value.get('facts')
+        if not isinstance(articles, list) or not isinstance(fact_rows, list):
+            raise ViewError(409, 'unsupported_knowledge')
+        # An article's anchors come from the facts it cites, wherever they fall in the file, before any selection.
+        held = {f['id']: f for f in fact_rows if isinstance(f, dict) and isinstance(f.get('id'), str)} if current else None
+        all_entries = [(v, kind) for kind, rows in (('article', articles), ('fact', fact_rows)) for v in rows if isinstance(v, dict)]
+        if entry_id:
+            all_entries = [(v, k) for v, k in all_entries if v.get('id') == entry_id]
+        snapshot = dict(**fields(value, ('version',)), coverage=marker(value.get('coverage'), blinded=current), entry_id=entry_id,
+            items=[entry(v, k, catalog, runs, current, held) for v, k in all_entries[after:after+limit]], total=len(all_entries), limit=limit,
+            next=after+limit if after+limit < len(all_entries) else None)
     operations = {o.operation_id: o for o in read_operations(directory)[1] if o.actor == actor}
     calls = []
     selected_calls = [c for c in facts.calls if not request_id or c.request_id == request_id]

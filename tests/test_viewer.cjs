@@ -253,7 +253,7 @@ test('Memory: curator strip, version rail, delivery diff, reader, and a citation
     await S.until(page, () => document.querySelector('[data-reading="fact-old"]'));
     assert.equal(await page.$('[data-reading="fact-old"] [data-jump-seq], [data-reading="fact-old"] [data-citation-seq]'), null, 'another session\'s frame is not a frame of this run');
     const old = await text(page, '[data-reading]');
-    for (const pattern of [/contested/, /unverified branch/, /needs review/, /Contradicted by\s*fact-water/, /Stale citations: fact-gone/, /another session/, /no cited frame of this run/])
+    for (const pattern of [/contested/, /unverified branch/, /needs review/, /Contradicted by\s*fact-water/, /Stale citations: fact-gone/, /Frame unavailable/, /no cited frame of this run/])
       assert.match(old, pattern);
     await page.click('#kb-world');
     await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 2);

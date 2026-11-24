@@ -1573,6 +1573,36 @@ def test_delivered_knowledge_searches_scopes_and_pages(mission):
     rows = body['facts']['items']
     assert (rows[0]['scope'], rows[0]['scope_axes']) == ('world', dict(ruleset='standard')) and (rows[1]['scope'], rows[1]['scope_axes']) == (None, {})
     assert body['scope_counts'] == dict(world=1, game=0, unrecorded=1) and client.get(f'{route}?scope=world').json()['facts']['total'] == 1
+    assert [f['id'] for f in client.get(f'{route}?scope=unrecorded').json()['facts']['items']] == ['f1']     # the counted ones are listed
+
+
+@pytest.mark.parametrize('broken', ['corrupt', 'missing'])
+def test_a_delivered_anchor_is_only_a_frame_the_frame_route_serves(mission, broken):
+    """A cited frame of this run whose PNG is missing or not the recorded one is no anchor: the latest verified one is,
+    for the fact and for an article citing it, so the browser never links to a frame the frame route refuses."""
+    client, directory, _, _ = mission
+    route = '/api/view/run/mission/delivered-knowledge'
+    here = lambda n: dict(seq=n, source_id=f'{SESSION}-{n}')
+    png = directory / 'sources' / f'{SESSION}-3.png'
+    assert png.is_file() and client.get(f'/api/view/run/mission/frame/{SESSION}-3').status_code == 200
+    if broken == 'corrupt':
+        png.write_bytes(b'tampered')
+    else:
+        png.unlink()
+    assert client.get(f'/api/view/run/mission/frame/{SESSION}-3').status_code == (409 if broken == 'corrupt' else 404)
+    facts = {f['id']: f for f in client.get(route).json()['facts']['items']}
+    b = facts['fact-b']     # cites SESSION-1 and SESSION-3; the newer one fails verification
+    assert b['citation_source_ids'] == [f'{SESSION}-1', f'{SESSION}-3']
+    assert b['citation_anchors'] == [here(1), None] and b['anchor'] == here(1)
+    assert facts['fact-a']['anchor'] == here(2)
+    # An article's anchor is the latest verified frame among those its cited facts cite.
+    (directory / 'sources' / f'{SESSION}-2.png').unlink()
+    article = client.get(route).json()['articles'][0]
+    assert article['id'] == 'article-a' and article['anchor'] is None
+    cites_b = article_record('article-b', ['fact-a', 'fact-b'])
+    root = directory / 'curator-runner' / 'delivered'
+    (root / 'v11.json').write_text(json.dumps(delivered_document('v11', [cites_b], mission_version(10)['facts'])))
+    assert client.get(route).json()['articles'][0]['anchor'] == here(1)
 
 
 def test_delivered_knowledge_shows_graph_flags_and_kinds_and_never_reads_private_files(mission, monkeypatch):
@@ -1705,10 +1735,11 @@ def test_a_sealed_pre_world_session_keeps_its_frozen_snapshot_readable(tmp_path)
 
 
 @pytest.mark.parametrize('frozen_schema, knowledge_schema', [('player-host-inputs/4', 'delivered-knowledge/2'),
-    ('player-host-inputs/3', 'delivered-knowledge/1'), ('player-host-inputs/4', 'delivered-knowledge/3')])
+    ('player-host-inputs/3', 'delivered-knowledge/1'), ('player-host-inputs/4', 'delivered-knowledge/3'), (None, None)])
 def test_a_sealed_889_session_reports_its_snapshot_hash_unavailable(tmp_path, frozen_schema, knowledge_schema):
     """S-MIGRATION, closed archive reads: a sealed `#889` `campaign-run/12` session carries `delivered-knowledge/2`, which
-    nothing reads now. Its snapshot is `hash_unavailable`, never verified as the archived `/1` nor as the current `/3`."""
+    nothing reads now. Its snapshot is `hash_unavailable`, never verified as the archived `/1` nor as the current `/3`, and
+    its files are not read: an actor without them (`None`) is `hash_unavailable` too."""
     session = ARCHIVED_SESSIONS['campaign-run/12']
     directory = tmp_path/'runs'/'sealed-889'
     run = Run(directory, session=session)
@@ -1718,13 +1749,98 @@ def test_a_sealed_889_session_reports_its_snapshot_hash_unavailable(tmp_path, fr
     (directory/'manifest.json').write_text(json.dumps(dict({k: v for k, v in run.manifest.items() if k != 'context'}, schema='campaign-run/12')))
     actor_dir = next((directory/'actors').iterdir())
     path = actor_dir/'delivered-knowledge.json'
-    path.write_text(json.dumps(dict(schema=knowledge_schema, version='v7', coverage=None, articles=[], facts=[dict(id='fact-a', text='A fact')])))
-    (actor_dir/'frozen.json').write_text(json.dumps(dict(schema=frozen_schema, session=session, actor_id=actor, knowledge_updates=None,
-        files={'delivered-knowledge.json': hashlib.sha256(path.read_bytes()).hexdigest()})))
+    if knowledge_schema is not None:
+        path.write_text(json.dumps(dict(schema=knowledge_schema, version='v7', coverage=None, articles=[], facts=[dict(id='fact-a', text='A fact')])))
+        (actor_dir/'frozen.json').write_text(json.dumps(dict(schema=frozen_schema, session=session, actor_id=actor, knowledge_updates=None,
+            files={'delivered-knowledge.json': hashlib.sha256(path.read_bytes()).hexdigest()})))
     evaluate(directory, FakeBinding(), tmp_path/'root', created_wall=1.0)
     client = TestClient(create_app(Catalog(tmp_path/'root', (tmp_path/'runs',), data_dir=data_directory(tmp_path))))
     value = client.get(f'/api/view/run/{session}/knowledge', params=dict(actor=actor)).json()
     assert value['schema'] == 'spectator-view/3' and value['snapshot_status'] == 'hash_unavailable' and value['snapshot'] is None
+
+
+def frozen_reader(tmp_path: Path, articles=(), facts=(), coverage=COVERAGE):
+    """A current run whose actor's verified frozen snapshot is a `delivered-knowledge/3` file of `articles` and `facts`,
+    also exported as its `v1`, beside another catalog run whose first frame (`OTHER_SESSION-1`) they may cite."""
+    runs = tmp_path/'runs'
+    other = Run(runs/'other', session=OTHER_SESSION)
+    other.step(other.actor(), 'observe', [], F('in_play', 3600))
+    other.finish()
+    run = Run(runs/'reader')
+    actor = run.actor()
+    run.request(actor)
+    run.finish()
+    actor_dir = runs/'reader'/'actors'/'001'
+    path = actor_dir/'delivered-knowledge.json'
+    path.write_text(json.dumps(delivered_document('v1', articles, facts, coverage=coverage)))
+    (actor_dir/'frozen.json').write_text(json.dumps(dict(schema='player-host-inputs/4', session=SESSION, actor_id=actor, knowledge_updates=None,
+        files={'delivered-knowledge.json': hashlib.sha256(path.read_bytes()).hexdigest()})))
+    exported = runs/'reader'/'curator-runner'/'delivered'
+    exported.mkdir(parents=True)
+    (exported/'v1.json').write_bytes(path.read_bytes())
+    for directory in (runs/'other', runs/'reader'):
+        evaluate(directory, FakeBinding(), tmp_path/'root', created_wall=1.0)
+    client = TestClient(create_app(Catalog(tmp_path/'root', (runs,), data_dir=data_directory(tmp_path))))
+    return client, actor, actor_dir
+
+
+def test_a_current_snapshot_anchors_only_cited_frames_and_an_article_through_its_facts(tmp_path):
+    """A current `/3` entry is anchored only by `citation_source_ids`: a stray `source_ids` field or a position's
+    `source_id` is no citation. An article is anchored by the frames of the facts its body cites, looked up in the whole
+    file, whether it is selected by `entry` or paged apart from those facts."""
+    cited = f'{OTHER_SESSION}-1'
+    stray = dict(source_ids=[cited], seen=dict(position(1), source_id=cited))
+    articles, facts = published([article_record('article', ['fact-cited', 'fact-stray'], last_confirmed=dict(position(1), source_id=cited))],
+        [fact_record('fact-stray', [], **stray), *(fact_record(f'fact-{n}', []) for n in range(3)), fact_record('fact-cited', [cited])])
+    client, actor, _ = frozen_reader(tmp_path, articles, facts)
+    url = f'/api/view/run/{SESSION}/knowledge'
+    frame = [dict(run='other', source_id=cited, available=True, reason=None)]
+    loose = client.get(url, params=dict(actor=actor, entry='fact-stray')).json()['snapshot']['items'][0]
+    assert (loose['citation_source_ids'], loose['source_ids'], loose['anchors']) == ([], [], [])
+    for params in (dict(entry='article'), dict(limit=1), dict(entry='article', limit=1)):
+        page = client.get(url, params=dict(actor=actor, **params)).json()['snapshot']
+        article = page['items'][0]
+        assert len(page['items']) == 1 and article['id'] == 'article' and article['citation_source_ids'] == [], params
+        assert article['anchors'] == frame and article['anchors_omitted'] == 0, params
+    assert client.get(url, params=dict(actor=actor, entry='fact-cited')).json()['snapshot']['items'][0]['anchors'] == frame
+
+
+def test_a_label_bearing_session_or_citation_is_never_served(tmp_path):
+    """Blinding: a `/3` position or coverage stamp whose session is no alias is withheld, and a citation that is no frame
+    source ID is omitted and counted, in both the frozen snapshot and the delivered-knowledge browser."""
+    label = 'world-secret-admission'
+    articles, facts = published([article_record('article', ['fact'], last_confirmed=position(2, label))],
+        [fact_record('fact', [f'{label}-1', f'{SESSION}-1', 'x' * 32 + '-1'], seen=position(1, label)),
+         fact_record('fact-alias', [], seen=position(1, 's02'))])
+    client, actor, _ = frozen_reader(tmp_path, articles, facts, coverage=dict(COVERAGE, session=label))
+    snapshot = client.get(f'/api/view/run/{SESSION}/knowledge', params=dict(actor=actor))
+    browser = client.get('/api/view/run/reader/delivered-knowledge')
+    for response in (snapshot, browser):
+        assert response.status_code == 200 and label not in response.text
+    shown = snapshot.json()['snapshot']
+    assert shown['coverage']['session'] is None and shown['coverage']['last_step'] == 2
+    article, fact, alias = shown['items']
+    assert article['last_confirmed']['session'] is None and article['last_confirmed']['step'] == 2
+    assert fact['seen']['session'] is None and alias['seen']['session'] == 's02'
+    assert (fact['citation_source_ids'], fact['citation_source_ids_omitted']) == ([f'{SESSION}-1'], 2)
+    listed = browser.json()
+    assert listed['coverage']['session'] is None and listed['versions'][-1]['coverage']['session'] is None
+    assert listed['articles'][0]['last_confirmed']['session'] is None
+    rows = {f['id']: f for f in listed['facts']['items']}
+    assert rows['fact']['seen'] == dict(session=None, actor='001', step=1) and rows['fact-alias']['seen']['session'] == 's02'
+    assert (rows['fact']['citation_source_ids'], rows['fact']['citation_source_ids_omitted']) == ([f'{SESSION}-1'], 2)
+
+
+@pytest.mark.parametrize('name, status', [('delivered-knowledge.json', 'unavailable'), ('frozen.json', 'hash_unavailable')])
+def test_a_symlinked_frozen_snapshot_file_is_never_followed(tmp_path, name, status):
+    """The frozen snapshot's files are read once each from the run package, never through a symlink, even to their
+    own bytes."""
+    client, actor, actor_dir = frozen_reader(tmp_path, *published([], [fact_record('fact', [])]))
+    url = f'/api/view/run/{SESSION}/knowledge'
+    assert client.get(url, params=dict(actor=actor)).json()['snapshot_status'] == 'verified'
+    relinked(actor_dir/name, tmp_path/name)
+    value = client.get(url, params=dict(actor=actor)).json()
+    assert (value['snapshot_status'], value['snapshot']) == (status, None)
 
 
 def test_context_and_knowledge_routes_reject_symlinked_host_trace(mission, tmp_path):
