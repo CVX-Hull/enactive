@@ -1,9 +1,9 @@
 ---
 owner: lead
-status: active
-date: 2026-11-23
-scope: Open-horizon primary-source research on game-neutral epistemic meta-ontologies, hierarchical scope maps, bi-temporal rollback invalidation, wiki/graph memory retrieval, and competing 2025-2026 paradigms for curator memory
-review_trigger: "Before finalizing the #925 knowledge-schema RFC, adding a second game binding, or adopting new memory retrieval or invalidation mechanisms"
+status: historical
+date: '2026-11-24'
+scope: Open-horizon primary-source research on game-neutral epistemic meta-ontologies, hierarchical scope maps, bi-temporal rollback invalidation, wiki/graph memory retrieval, and competing 2025-2026 paradigms for curator memory; settled by the 24 November 2026 owner approval of the Wave 3 design
+replacement: docs/design/knowledge-graph-scoping-contract.md
 ---
 
 # Research note: game-neutral meta-ontology, scoped cross-referencing, and wiki/graph retrieval

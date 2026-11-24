@@ -1,9 +1,9 @@
 ---
 owner: lead
-status: proposed
-date: '2026-11-23'
-scope: 'Design for one coordinated S-MIGRATION from curator-knowledge/3, delivered-knowledge/2 and campaign-run/12 to curator-knowledge/4, delivered-knowledge/3 and campaign-run/13 (issue 925): epistemic core and lifecycle, keyed and declared scope, lineages, forks and restores, honest end times, stale-citation propagation, typed links and revision identity, curator editing operations and validation, public identifiers and blinding, retrieval and its gate, reuse review, the provenance bridge to the belief comparison, the retired type rulings, and the migration inventory and plan. No code, contract or spend is authorized by this note.'
-review_trigger: 'The owner decides the questions in At a glance, a second game binding is started, or the curator, delivered-knowledge, player-host, campaign-run or spectator-view contract changes before this migration lands'
+status: active
+date: '2026-11-24'
+scope: 'Approved working specification for one coordinated S-MIGRATION from curator-knowledge/3, delivered-knowledge/2 and campaign-run/12 to curator-knowledge/4, delivered-knowledge/3 and campaign-run/13 (Wave 3: issues 936 and 937; becomes historical when #937 merges into the curator, player-host, campaign-run and spectator-view contracts).'
+review_trigger: 'Wave 3 (#937) merges and moves this design into active contracts (marking this note historical), a second game binding is started, or any target contract changes before #937 lands'
 ---
 
 # Scoped, traceable knowledge: `curator-knowledge/4` and `delivered-knowledge/3`
@@ -65,7 +65,8 @@ review_trigger: 'The owner decides the questions in At a glance, a second game b
   boundaries, such as `mechanic` against `entity_property`, are untested on curator
   output. A save reload inside one lineage is invisible to the store unless an operator
   labels it.
-- **Owner decisions needed** (recommendation in bold):
+- **Owner decisions** (all 9 recommendations approved on 24 November 2026;
+  [owner decision log](../decisions/owner-decisions.md#knowledge-graph-scoping-rfc-approved)):
   1. Adopt the fixed `claim_kind` core and the five stored lifecycle states, and retire
      `curator-type/2` and `ontology/types.json` in favour of tags. This rewrites five
      type rulings, listed in [the retired type rulings](#what-the-retired-type-rulings-become).
@@ -158,8 +159,8 @@ Three independent reviews of the earlier draft recounted the sealed `#896-b` sto
 gate results, session submissions and Git tags. Their counts are not yet in a dated
 record. The benchmark-and-recount slice, which runs first, commits the read-only recount
 script beside the `#920` baseline benchmark and publishes both in one dated `#896-b`
-curator-behaviour and retrieval record before owner decision 7 is taken
-([plan](#migration-plan)). The counts bear on
+curator-behaviour and retrieval record before decision 7's curator changes are
+implemented (`#937`) ([plan](#migration-plan)). The counts bear on
 the curator operations only:
 
 - All 91 gate results published and none was rejected, and no revision silently dropped a
@@ -1904,7 +1905,7 @@ runtime.
 | Slice | Owner | Files | Done when |
 | --- | --- | --- | --- |
 | Shared shapes | Lead, first | The shared `delivered-knowledge/3` fixture directory, the two curator JSON Schemas, and the synthetic two-world, two-lineage repository builder | Fixtures and schemas reviewed; every other slice builds on them |
-| Benchmark and recount | Worker, first | A rerunnable benchmark script (30 #924 queries, labelled direct-answer subset), a read-only `#896-b` recount script, and one dated acceptance record | Evidence gate 11 passes: the record holds #920's baseline, the paired skip comparison and the recount, before owner decision 7 |
+| Benchmark and recount | Worker, first | A rerunnable benchmark script (30 #924 queries, labelled direct-answer subset), a read-only `#896-b` recount script, and one dated acceptance record | Evidence gate 11 passes (`#936`): the record holds #920's baseline, paired skip comparison and recount before implementing decision 7 (`#937`) |
 | Repository and gate | Worker | `harness/curator/` (`knowledge`, `gate`, `check`, `validate`, `session`, `runner`, `window`, `type_usage`), `test_curator_runner.py`, other curator tests, `memory_screen_checks` | Gate tests cover every operation, working articles, axis, scope, end, identifier, carry-over and `(owner, stale_target)` rules, the fixed point, `provider-error` close-out, and refusal of `curator-knowledge/3` |
 | Curator host | Worker | `tools/curator_host/` `workspace-tools.mjs`, `host.mjs`, `run.mjs`, `prompt.md`, `grooming.md`, `groom.py`, `host.test.mjs`, new `test_curator_groom.py` | `validate_submission` runs past 80% of the budget; `provider-error` is reported distinctly; submissions are written atomically; grooming reasons pass |
 | Export and selection | Worker | `knowledge_export`, `live_runner` (delivery context, `Outcome.provider_error`), `campaign_package`, `projection.py`, `sources.py`, `facts.py`, manifest readers, `memory_measure`, new `test_live_runner_export.py` | Public-set, alias and blinding tests pass for initial files and live updates, with fork, nested-cut, restore and withheld-dependency cases; `#889`'s `/12` archive still reads |
@@ -1965,7 +1966,8 @@ All of these gates cost `$0` and need no game launch:
     cut payload stays within 24,000 characters, and a flag-only change produces an
     `updated` entry.
 11. **Evidence record.** The benchmark-and-recount slice's dated acceptance record exists
-    before owner decision 7 is taken. It holds #920's measured baseline on both corpora,
+    before decision 7's curator changes are implemented (`#937`). It holds #920's
+    measured baseline on both corpora,
     the paired skip comparison, and the `#896-b` curator-behaviour recount from
     `.runtime/evidence/seven-day-896-b-admission-10/knowledge/`, each with the command
     that produced it.
