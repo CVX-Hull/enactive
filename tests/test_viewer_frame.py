@@ -407,10 +407,9 @@ def test_curator_states_and_bounded_projection(tmp_path):
 
 def test_curator_projection_of_gate_and_restore_producer_results(tmp_path):
     from harness.curator.gate import restore
-    from tests.test_curator_gate import fact, kind, make_repo, run, submission
+    from tests.test_curator_gate import fact, make_repo, run, submission
     repo = make_repo(tmp_path)
-    published = run(repo, submission(tmp_path, [dict(op='add_type', type=kind()),
-                                               dict(op='add_fact', fact=fact())]))
+    published = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact())]))
     rejected = run(repo, submission(tmp_path, [], name='stale', base_version='v0'))
     changed = restore(repo, expected_base='v1', target='v0')
     unchanged = restore(repo, expected_base='v2', target='v0')
@@ -426,9 +425,9 @@ def test_curator_projection_of_gate_and_restore_producer_results(tmp_path):
 
 def test_curator_omits_path_details_from_real_producer_failure(tmp_path):
     from harness.curator.knowledge import Repository
-    from tests.test_curator_gate import kind, run, submission
+    from tests.test_curator_gate import fact, run, submission
     repo = Repository(tmp_path / 'private-repository-location', 'cdda')
-    result = run(repo, submission(tmp_path, [dict(op='add_type', type=kind())]))
+    result = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact())]))
     assert result['status'] == 'rejected' and str(repo.path) in result['diagnostics'][0]
     source = repo.state / 'gate.jsonl'
     before = source.read_bytes()

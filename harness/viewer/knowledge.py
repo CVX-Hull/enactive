@@ -14,8 +14,18 @@ from . import frame, views
 
 #: The versions of an actor's frozen inputs and delivered knowledge: the current ones for a current run, and
 #: the ones the sealed sessions of the archive index carry (S-MIGRATION, closed archive reads).
-CURRENT_SNAPSHOT = ('player-host-inputs/4', 'delivered-knowledge/2')
+CURRENT_SNAPSHOT = ('player-host-inputs/4', 'delivered-knowledge/3')
 ARCHIVED_SNAPSHOT = ('player-host-inputs/3', 'delivered-knowledge/1')
+#: Sealed `#889` packages: their delivered knowledge is `delivered-knowledge/2`, which nothing reads any more, so their
+#: snapshot is `hash_unavailable` and never misread as the archived `delivered-knowledge/1`.
+UNREAD_SNAPSHOT_MANIFESTS = frozenset(('campaign-run/12',))
+#: A delivered scope's axes that are never shown: a world-bound record's world label is withheld (delivered as null),
+#: `game` is the scope class itself, and a lineage is never an axis.
+WITHHELD_AXES = frozenset(('game', 'world', 'lineage'))
+AXIS_LIMIT = 8
+AXIS_CHARACTERS = 64
+#: The delivered record's scalar state, shared by articles and facts.
+RECORD_STATE = ('branch_relation', 'lifecycle_state', 'needs_review', 'condition_unverified', 'unverified_branch')
 #: The rows of a delivery's text: a briefing's or reminder's leads and index, an update's difference.
 DELIVERY_ROWS = ('leads', 'index', 'added', 'updated', 'removed')
 ID_FIELDS = frozenset(('id', 'request_id', 'recall_request_id', 'receiving_player_request_id',
@@ -64,6 +74,52 @@ def marker(value):
     return result
 
 
+def scope_class(value):
+    """`world` for a world-bound delivered record (its world label withheld), `game` for one bound to no world, and
+    None where the record states no scope."""
+    if not isinstance(value, dict):
+        return None
+    return 'world' if 'world' in value else 'game'
+
+
+def axes(value):
+    """A delivered scope's or condition's other axes, bounded; never a world or a lineage."""
+    if not isinstance(value, dict):
+        return {}
+    return {k: v for k, v in list(value.items())[:AXIS_LIMIT] if isinstance(k, str) and len(k) <= ID_LIMIT
+            and k not in WITHHELD_AXES and isinstance(v, str) and len(v) <= AXIS_CHARACTERS}
+
+
+def typed_links(target, name, value, end, limit=LIST_LIMIT):
+    """Typed links `{rel, <end>}` to other records, bounded like an ID list."""
+    rows = value if isinstance(value, list) else []
+    target[name] = [{'rel': v['rel'], end: v[end]} for v in rows[:limit] if isinstance(v, dict)
+                    and isinstance(v.get('rel'), str) and len(v['rel']) <= ID_LIMIT and isinstance(v.get(end), str) and len(v[end]) <= ID_LIMIT]
+    target[name + '_omitted'] = len(rows) - len(target[name])
+
+
+def when(value):
+    """A fact's stated condition: its note and the axes it requires."""
+    if not isinstance(value, dict):
+        return None
+    return dict(fields(value, ('note',)), requires=axes(value.get('requires')))
+
+
+def record(target, value, typed=True):
+    """The fields a delivered article and fact share: tags, the scope class and its other axes, lifecycle and review
+    flags, citations that went stale, and typed links both ways. `typed` is false for an archived format whose links
+    are plain IDs."""
+    target.update(dict.fromkeys(RECORD_STATE), **fields(value, RECORD_STATE))
+    target['scope'], target['scope_axes'] = scope_class(value.get('scope')), axes(value.get('scope'))
+    for name in ('tags', 'stale_citations', 'shadowed_by', 'contradicted_by'):
+        add_ids(target, name, value.get(name))
+    if typed:
+        typed_links(target, 'links', value.get('links'), 'target')
+        typed_links(target, 'backlinks', value.get('backlinks'), 'source')
+    else:
+        add_ids(target, 'links', value.get('links'))
+
+
 def source_anchor(catalog, runs, source_id):
     found = frame.resolve(catalog, runs, [], dict(chunk='-', frame=source_id))
     return {k: found[k] for k in ('run', 'source_id', 'available', 'reason')}
@@ -73,13 +129,19 @@ def anchors(catalog, runs, values):
     return [source_anchor(catalog, runs, v) for v in dict.fromkeys(values)]
 
 
-def entry(value, kind, catalog, runs):
-    result = fields(value, ('id', 'title', 'subject', 'type', 'text', 'lead'))
+def entry(value, kind, catalog, runs, current=True):
+    """One snapshot entry. A current (`delivered-knowledge/3`) entry cites frames by `citation_source_ids` and links by
+    type; an archived one names `source_ids` and plain links."""
+    result = fields(value, ('id', 'revision', 'title', 'subject', 'claim_kind', 'evidence_basis', 'text', 'lead'))
     result['kind'] = kind
     result['seen'] = marker(value.get('seen'))
     result['last_confirmed'] = marker(value.get('last_confirmed'))
+    record(result, value, typed=current)
+    if kind == 'fact':
+        result['when'] = when(value.get('when'))
+        add_ids(result, 'cited_by_articles', value.get('cited_by_articles'))
+    add_ids(result, 'citation_source_ids', value.get('citation_source_ids'), 20)
     add_ids(result, 'source_ids', value.get('source_ids'), 20)
-    add_ids(result, 'links', value.get('links'))
     body = value.get('body') if isinstance(value.get('body'), list) else []
     result['body'] = []
     for part in body[:20]:
@@ -89,7 +151,7 @@ def entry(value, kind, catalog, runs):
         add_ids(projected, 'facts', part.get('facts'))
         result['body'].append(projected)
     result['body_omitted'] = len(body)-len(result['body'])
-    sources = list(result['source_ids'])
+    sources = [*result['citation_source_ids'], *result['source_ids']]
     for name in ('seen', 'last_confirmed'):
         if result[name] and result[name].get('source_id'):
             sources.append(result[name]['source_id'])
@@ -145,9 +207,15 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
     path = actor_dir / 'delivered-knowledge.json'
     frozen_path = actor_dir / 'frozen.json'
     try:
-        frozen_schema, knowledge_schema = CURRENT_SNAPSHOT if read_manifest(directory)['schema'] == MANIFEST_SCHEMA else ARCHIVED_SNAPSHOT
+        manifest_schema = read_manifest(directory)['schema']
     except EvaluationError:
-        frozen_schema = knowledge_schema = None  # no supported manifest says which versions these files are
+        manifest_schema = None  # no supported manifest says which versions these files are
+    if manifest_schema == MANIFEST_SCHEMA:
+        frozen_schema, knowledge_schema = CURRENT_SNAPSHOT
+    elif manifest_schema is None or manifest_schema in UNREAD_SNAPSHOT_MANIFESTS:
+        frozen_schema = knowledge_schema = None
+    else:
+        frozen_schema, knowledge_schema = ARCHIVED_SNAPSHOT
     if path.is_file() and frozen_path.is_file():
         try:
             frozen = read_json_file(frozen_path)
@@ -174,7 +242,7 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
             if entry_id:
                 all_entries = [(v, k) for v, k in all_entries if v.get('id') == entry_id]
             snapshot = dict(**fields(value, ('version',)), coverage=marker(value.get('coverage')), entry_id=entry_id,
-                items=[entry(v, k, catalog, runs) for v, k in all_entries[after:after+limit]], total=len(all_entries), limit=limit,
+                items=[entry(v, k, catalog, runs, knowledge_schema == CURRENT_SNAPSHOT[1]) for v, k in all_entries[after:after+limit]], total=len(all_entries), limit=limit,
                 next=after+limit if after+limit < len(all_entries) else None)
         except EvaluationError as exc:
             raise ViewError(409, 'knowledge_unavailable', str(exc)) from exc

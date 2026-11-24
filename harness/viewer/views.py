@@ -1,4 +1,4 @@
-"""Payload builders for the per-run `spectator-view/2` routes. Pure reads over one evaluation store.
+"""Payload builders for the per-run `spectator-view/3` routes. Pure reads over one evaluation store.
 
 Each builder takes the catalog, the run's `RunInfo` and an open read-only connection and returns a plain
 JSON-able dict (the app adds the schema field and bounds the size). Values keep their provenance:

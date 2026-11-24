@@ -93,7 +93,7 @@ def terminal_findings(steps: list[dict]) -> list[dict]:
 def feed_page(items: list[dict], after: int, limit: int, recorded: bool) -> dict:
     rows = [i for i in items if i['order'] > after]
     kinds = ('step', 'context_cut', 'knowledge_update', 'finding')
-    return dict(schema='spectator-view/2', items=rows[:limit], next=rows[limit - 1]['order'] if len(rows) > limit else None, limit=limit,
+    return dict(schema='spectator-view/3', items=rows[:limit], next=rows[limit - 1]['order'] if len(rows) > limit else None, limit=limit,
         source='evaluation_record' if recorded else 'host_trace', total=len(items),
         counts={k: sum(i['entry_kind'] == k for i in items) for k in kinds})
 
@@ -131,7 +131,7 @@ def telemetry(steps: list[dict], summary: dict, recorded: bool) -> dict:
             is_recall=step['seq'] % 40 == 5))
     cuts = [] if recorded else [dict(cut(s, s['seq'] in CUTS), index=s['seq'] - 1, seq=s['seq']) for s in steps if s['seq'] in CUTS or s['seq'] in HELD]
     host, curator = summary.get('host_telemetry') or {}, summary.get('curator_spend') or {}
-    return dict(schema='spectator-view/2', source='evaluation_record' if recorded else 'host_trace', requests=rows, requests_total=len(rows),
+    return dict(schema='spectator-view/3', source='evaluation_record' if recorded else 'host_trace', requests=rows, requests_total=len(rows),
         requests_omitted=0, cuts=cuts, cuts_omitted=0, response_by_endpoint=host.get('response_by_endpoint', {}),
         spend=dict(player_reported_usd=host.get('reported_cost_usd'), player_estimated_usd=summary['dollars'],
             spend_limit_usd=summary['facts'].get('spend_allowance_usd'), spend_complete=host.get('spend_complete'),
@@ -142,28 +142,61 @@ def telemetry(steps: list[dict], summary: dict, recorded: bool) -> dict:
 
 # Delivered knowledge ------------------------------------------------------------------------------------------------
 
-def seen(step: int, session: str = 'fixture-run') -> dict:
+#: A frame of this run's session, and one of another session (which has no anchor here).
+FRAME = 'c6c09be0b7d43fba2839147651a4f6a5-{}'
+ELSEWHERE = 'b' * 32 + '-7'
+
+
+def seen(step: int, session: str = 's01') -> dict:
+    """A delivered position: an opaque session alias, never this run's ID."""
     return dict(session=session, actor='001', step=step)
 
 
-def fact(identity: str, text: str, kind: str, step: int, anchored: bool = True) -> dict:
-    """A fact of a `delivered-knowledge/2` export, which records neither a scope nor a known-by."""
-    return dict(id=identity, type=kind, subject=f'Subject of {identity}', text=text, scope=None, known=None, seen=seen(step, 'fixture-run' if anchored else 'another-run'),
-        anchor=dict(seq=step, source_id=f'source-{step}') if anchored else None)
+def state(**extra) -> dict:
+    """The record state a `spectator-view/3` row carries: active, bound to no world, nothing flagged or linked."""
+    rows = dict(branch_relation=None, lifecycle_state='active', needs_review=False, condition_unverified=False, unverified_branch=False,
+        scope='game', scope_axes={}, tags=[], stale_citations=[], shadowed_by=[], contradicted_by=[], links=[], backlinks=[]) | extra
+    return dict(rows, **{f'{name}_omitted': 0 for name in ('tags', 'stale_citations', 'shadowed_by', 'contradicted_by', 'links', 'backlinks')})
 
 
-def article(identity: str, title: str, facts: list[str], links: list[str], step: int) -> dict:
-    return dict(id=identity, title=title, lead=f'{title} in one sentence.', body=[dict(text=f'What is known about {title.lower()}.', facts=facts,
-        facts_omitted=0)], body_omitted=0, links=links, links_omitted=0, last_confirmed=dict(seen(step), order=[1, '001', step], order_omitted=0,
-        order_omitted_characters={}), anchor=dict(seq=step, source_id=f'source-{step}'))
+def fact(identity: str, text: str, kind: str, step: int, anchored: bool = True, **extra) -> dict:
+    """A fact of a `delivered-knowledge/3` export as the viewer lists it: anchored by the frames it cites."""
+    cited = FRAME.format(step) if anchored else ELSEWHERE
+    anchor = dict(seq=step, source_id=cited) if anchored else None
+    return dict(id=identity, claim_kind=kind, evidence_basis='observed', subject=f'Subject of {identity}', text=text, when=None,
+        cited_by_articles=[], cited_by_articles_omitted=0, citation_source_ids=[cited], citation_source_ids_omitted=0, citation_anchors=[anchor],
+        seen=seen(step, 's01' if anchored else 's02'), anchor=anchor, **state(**extra))
 
 
-ARTICLES = {'v1': [article('article-water', 'Finding water', ['fact-water'], [], 20)]}
-FACTS = {'v1': [fact('fact-water', 'A stream runs past the east wall.', 'site_observation', 20), fact('fact-wait', 'A dot waits one turn.', 'control', 25)]}
-ARTICLES['v2'] = [*ARTICLES['v1'], article('article-fire', 'Making fire', ['fact-fire', 'fact-water'], ['Finding water'], 90)]
-FACTS['v2'] = [*FACTS['v1'], fact('fact-fire', '<script>window.knowledgeExecuted=true</script> A lighter lights a fire ring.', 'control', 90),
-    fact('fact-old', 'An earlier admission saw a shelter.', 'site_observation', 7, anchored=False)]
-ARTICLES['v3'], FACTS['v3'] = ARTICLES['v2'], [f for f in FACTS['v2'] if f['id'] != 'fact-wait'] + [fact('fact-late', 'A fact of the third version.', 'control', 150)]
+def article(identity: str, title: str, facts: list[str], step: int, **extra) -> dict:
+    return dict(id=identity, revision=f'{identity}@v1', title=title, lead=f'{title} in one sentence.', body=[dict(text=f'What is known about {title.lower()}.', facts=facts,
+        facts_omitted=0)], body_omitted=0, last_confirmed=dict(seen(step), order=[1, '001', step], order_omitted=0,
+        order_omitted_characters={}), anchor=dict(seq=step, source_id=FRAME.format(step)), **state(**extra))
+
+
+WORLD = dict(scope='world', branch_relation='same')
+ARTICLES = {'v1': [article('article-water', 'Finding water', ['fact-water'], 20, tags=['water'], **WORLD)]}
+FACTS = {'v1': [fact('fact-water', 'A stream runs past the east wall.', 'instance_state', 20, tags=['water'], **WORLD),
+    fact('fact-wait', 'A dot waits one turn.', 'interface', 25)]}
+ARTICLES['v2'] = [*ARTICLES['v1'], article('article-fire', 'Making fire', ['fact-fire', 'fact-water'], 90, tags=['fire'],
+    links=[dict(rel='see_also', target='article-water')])]
+FACTS['v2'] = [*FACTS['v1'], fact('fact-fire', '<script>window.knowledgeExecuted=true</script> A lighter lights a fire ring.', 'mechanic', 90,
+        tags=['fire'], scope_axes=dict(ruleset='standard'), links=[dict(rel='depends_on', target='fact-water')]),
+    fact('fact-old', 'An earlier admission saw a shelter.', 'instance_state', 7, anchored=False, scope='world', branch_relation='unknown',
+        unverified_branch=True, needs_review=True, lifecycle_state='contested', contradicted_by=['fact-water'], stale_citations=['fact-gone'])]
+ARTICLES['v3'], FACTS['v3'] = ARTICLES['v2'], [f for f in FACTS['v2'] if f['id'] != 'fact-wait'] + [fact('fact-late', 'A fact of the third version.', 'strategy', 150)]
+
+
+def counted(records: list[dict]) -> tuple[list[dict], dict]:
+    tags: dict[str, int] = {}
+    for r in records:
+        for t in r['tags']:
+            tags[t] = tags.get(t, 0) + 1
+    kinds: dict[str, int] = {}
+    for r in records:
+        if 'claim_kind' in r:
+            kinds[r['claim_kind']] = kinds.get(r['claim_kind'], 0) + 1
+    return [dict(tag=t, count=n) for t, n in sorted(tags.items(), key=lambda i: (-i[1], i[0]))], dict(sorted(kinds.items()))
 
 
 def delivered(steps: list[dict], version: str | None, query: str, scope: str, after: int, limit: int) -> dict | None:
@@ -171,24 +204,26 @@ def delivered(steps: list[dict], version: str | None, query: str, scope: str, af
     if version and version not in names:
         return None
     chosen = version or names[-1]
-    coverage = {name: dict(session='fixture-run', actor='001', last_step=seq - 10) for seq, name in UPDATES.items()}
+    coverage = {name: dict(session='s01', actor='001', last_step=seq - 10) for seq, name in UPDATES.items()}
     needle = query.strip().lower()
-    articles = [a for a in ARTICLES[chosen] if needle in ' '.join((a['id'], a['title'], a['lead'], a['body'][0]['text'])).lower()]
-    facts = [f for f in FACTS[chosen] if needle in ' '.join((f['id'], f['type'], f['subject'], f['text'])).lower()]
-    counts = dict(world=0, game=0, unrecorded=len(facts))
+    articles = [a for a in ARTICLES[chosen] if needle in ' '.join((a['id'], a['title'], a['lead'], a['body'][0]['text'], *a['tags'])).lower()]
+    facts = [f for f in FACTS[chosen] if needle in ' '.join((f['id'], f['claim_kind'], f['subject'], f['text'], *f['tags'])).lower()]
+    counts = dict(world=sum(f['scope'] == 'world' for f in facts), game=sum(f['scope'] == 'game' for f in facts), unrecorded=0)
     if scope != 'all':
-        facts = []
+        facts = [f for f in facts if f['scope'] == scope]
     window = facts[after:after + limit]
-    return dict(schema='spectator-view/2', source_status='available', versions=[dict(version=n, status='available', recorded_version=n,
+    tags, kinds = counted(ARTICLES[chosen] + FACTS[chosen])
+    return dict(schema='spectator-view/3', source_status='available', versions=[dict(version=n, status='available', recorded_version=n,
         articles_count=len(ARTICLES[n]), facts_count=len(FACTS[n]), coverage=coverage[n]) for n in names], selected_version=chosen,
-        recorded_version=chosen, coverage=coverage[chosen], articles=articles, articles_total=len(articles), articles_omitted=0, scope_recorded=False, scope_counts=counts,
+        recorded_version=chosen, coverage=coverage[chosen], articles=articles, articles_total=len(articles), articles_omitted=0, scope_recorded=True, scope_counts=counts,
+        tag_counts=tags, tag_counts_omitted=0, claim_kind_counts=kinds,
         facts=dict(items=window, total=len(facts), next=after + len(window) if after + len(window) < len(facts) else None, limit=limit))
 
 
 def no_knowledge(limit: int) -> dict:
-    return dict(schema='spectator-view/2', source_status='unavailable', versions=[], selected_version=None, recorded_version=None, coverage=None,
+    return dict(schema='spectator-view/3', source_status='unavailable', versions=[], selected_version=None, recorded_version=None, coverage=None,
         articles=[], articles_total=0, articles_omitted=0, scope_recorded=False, scope_counts=dict(world=0, game=0, unrecorded=0),
-        facts=dict(items=[], total=0, next=None, limit=limit))
+        tag_counts=[], tag_counts_omitted=0, claim_kind_counts={}, facts=dict(items=[], total=0, next=None, limit=limit))
 
 
 def delivery_event(version: str) -> dict:

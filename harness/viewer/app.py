@@ -1,9 +1,9 @@
-"""The read-only spectator viewer: every `spectator-view/2` route (docs/contracts/spectator-view.md).
+"""The read-only spectator viewer: every `spectator-view/3` route (docs/contracts/spectator-view.md).
 
-All routes are GET. JSON responses carry `"schema": "spectator-view/2"`, stay under 4 MiB and are paginated with
+All routes are GET. JSON responses carry `"schema": "spectator-view/3"`, stay under 4 MiB and are paginated with
 `after` and `limit` (at most 500) where they list. The application writes nothing; the only write in the process
 is the live evaluator's own `live` store, which the app merely reports on. The `/frame/` routes are the spectator's
-frame (`spectator-frame/1`, `frame.py`): errors still use the `spectator-view/2` envelope.
+frame (`spectator-frame/1`, `frame.py`): errors still use the `spectator-view/3` envelope.
 """
 from __future__ import annotations
 

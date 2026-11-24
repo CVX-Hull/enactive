@@ -1,5 +1,5 @@
 {
- "schema": "spectator-view/2",
+ "schema": "spectator-view/3",
  "group": "start",
  "horizon_hours": 0.5,
  "groups": {

@@ -84,27 +84,72 @@ function DeliveryDiff({run, version, delivery, choose}) {
 /* ---------------------------------------------------------------- reader */
 const FACT_PAGE = 100;
 const MODES = [['articles', 'Articles'], ['world', 'World facts'], ['game', 'Game facts'], ['all', 'All facts']];
-/** Where a version records no scope there is nothing to divide its facts by. */
-const UNSCOPED = [['articles', 'Articles'], ['all', 'Facts']];
-const seenText = p => (p ? `actor ${p.actor ?? 'unrecorded'} · step ${p.step ?? p.last_step ?? 'unrecorded'}` : 'unrecorded');
+/** A position names an opaque session alias: its step numbers are that session's, not this run's frames. */
+const seenText = p => (p ? `${p.session ? `session ${p.session} · ` : ''}actor ${p.actor ?? 'unrecorded'} · step ${p.step ?? p.last_step ?? 'unrecorded'}` : 'unrecorded');
+/** The scope class: a world-bound record's world is never named, only that it is this run's world. */
+const SCOPE_TEXT = {world: 'this world', game: 'game-wide'};
+const FLAGS = [['unverified_branch', 'unverified branch'], ['needs_review', 'needs review'], ['condition_unverified', 'condition unverified']];
 
 function Jump({anchor, position}) {
   return html`<p class="jump"><span class="note">${seenText(position)}</span> ${anchor ? html`<button type="button" class="btn primary" data-jump-seq=${anchor.seq} onClick=${() => jumpToSeq(anchor.seq)}>Jump to frame #${anchor.seq}</button>`
-    : html`<span class="note">not a step of this run</span>`}</p>`;
+    : html`<span class="note">no cited frame of this run</span>`}</p>`;
 }
 
-function ArticleView({article, choose, chooseTitle}) {
-  return html`<article class="reading" data-reading=${article.id} tabindex="-1"><h3 class="rtitle">${article.title || article.id}</h3><p class="lead">${article.lead}</p>
+/** Scope, kind, lifecycle and review state as chips; tags search the version. */
+function Chips({value, search}) {
+  return html`<p class="cardrow" data-chips>
+    ${value.scope ? html`<span class="tag scope-${value.scope}" data-scope=${value.scope}>${SCOPE_TEXT[value.scope] || value.scope} scope</span>` : html`<span class="tag">scope unrecorded</span>`}
+    ${Object.entries(value.scope_axes || {}).map(([axis, v]) => html`<span class="tag" data-axis=${axis}>${label(axis)}: ${v}</span>`)}
+    ${value.claim_kind ? html`<span class="tag" data-kind>${label(value.claim_kind)}</span>` : null}${value.evidence_basis ? html`<span class="tag" data-evidence>${value.evidence_basis}</span>` : null}
+    ${value.lifecycle_state === 'contested' ? html`<span class="state watch" data-flag="contested">contested</span>` : value.lifecycle_state ? html`<span class="tag">${value.lifecycle_state}</span>` : null}
+    ${FLAGS.filter(([name]) => value[name]).map(([name, text]) => html`<span class="state watch" data-flag=${name}>${text}</span>`)}
+    ${(value.tags || []).map(tag => html`<button type="button" class="factpill" data-tag=${tag} onClick=${() => search(tag)}>#${tag}</button>`)}</p>`;
+}
+
+/** Typed links out and back, opened on the reading side by their exact ID; stale, shadowing and contradicting records. */
+function Graph({value, choose}) {
+  const pill = id => html`<button type="button" class="factpill" onClick=${() => choose(id)}>${id}</button>`;
+  const links = value.links || [], back = value.backlinks || [];
+  return html`${links.length ? html`<h4>Links</h4><p class="chips" data-links>${links.map(l => html`<span class="link-row">${label(l.rel)} ${pill(l.target)}</span>`)}</p>` : null}
+    ${back.length ? html`<h4>Linked from</h4><p class="chips" data-backlinks>${back.map(l => html`<span class="link-row">${pill(l.source)} ${label(l.rel)}</span>`)}</p>` : null}
+    ${(value.contradicted_by || []).length ? html`<p class="note" data-contradicted>Contradicted by ${value.contradicted_by.map(pill)}</p>` : null}
+    ${(value.shadowed_by || []).length ? html`<p class="note" data-shadowed>Narrowed by ${value.shadowed_by.map(pill)}</p>` : null}
+    ${(value.stale_citations || []).length ? html`<p class="note" data-stale>Stale citations: ${value.stale_citations.join(', ')}</p>` : null}`;
+}
+
+/** A fact's cited frames: one of this run opens Watch there; another session's is listed without a frame. */
+function Citations({fact}) {
+  const ids = fact.citation_source_ids || [];
+  if (!ids.length) return null;
+  return html`<h4>Cited frames</h4><ul class="difflist" data-citations>${ids.map((id, i) => {
+    const at = (fact.citation_anchors || [])[i];
+    return html`<li class="wrapany">${at ? html`<button type="button" class="btn" data-citation-seq=${at.seq} onClick=${() => jumpToSeq(at.seq)}>Frame #${at.seq}</button>` : html`<span class="note">another session</span>`} <span class="mono">${id}</span></li>`;
+  })}</ul>${fact.citation_source_ids_omitted ? html`<p class="note">${fact.citation_source_ids_omitted} more not shown.</p>` : null}`;
+}
+
+function ArticleView({article, choose, search}) {
+  return html`<article class="reading" data-reading=${article.id} tabindex="-1"><h3 class="rtitle">${article.title || article.id}</h3><${Chips} value=${article} search=${search} /><p class="lead">${article.lead}</p>
     ${article.body.map(part => html`<p>${part.text}${part.facts.length ? html` <span class="refs">${part.facts.map(id => html`<button type="button" class="factpill" onClick=${() => choose(id)}>${id}</button>`)}</span>` : null}</p>`)}
     ${article.body_omitted ? html`<p class="note">${article.body_omitted} more claims not shown.</p>` : null}
-    ${article.links.length ? html`<h4>See also</h4><p class="chips">${article.links.map(title => html`<button type="button" class="btn" onClick=${() => chooseTitle(title)}>${title}</button>`)}</p>` : null}
+    <${Graph} value=${article} choose=${choose} />
     <h4>Last confirmed</h4><${Jump} anchor=${article.anchor} position=${article.last_confirmed} />
-    <p class="note mono wrapany">${article.id}</p></article>`;
+    <p class="note mono wrapany">${article.revision || article.id}</p></article>`;
 }
-function FactView({fact}) {
-  return html`<article class="reading" data-reading=${fact.id} tabindex="-1"><h3 class="rtitle">${fact.subject || fact.id}</h3>
-    <p class="cardrow"><span class="tag">${label(fact.type || 'type unrecorded')}</span>${fact.scope ? html`<span class="tag scope-${fact.scope}">${fact.scope} scope</span>` : null}${fact.known ? html`<span class="tag">${label(fact.known)}</span>` : null}</p>
-    <p class="lead">${fact.text}</p><h4>Seen</h4><${Jump} anchor=${fact.anchor} position=${fact.seen} /><p class="note mono wrapany">${fact.id}</p></article>`;
+function FactView({fact, choose, search}) {
+  return html`<article class="reading" data-reading=${fact.id} tabindex="-1"><h3 class="rtitle">${fact.subject || fact.id}</h3><${Chips} value=${fact} search=${search} />
+    <p class="lead">${fact.text}</p>${fact.when ? html`<p class="note" data-when>When: ${fact.when.note}${Object.entries(fact.when.requires || {}).map(([k, v]) => ` · ${label(k)}: ${v}`).join('')}</p>` : null}
+    ${(fact.cited_by_articles || []).length ? html`<p class="note">Cited by ${fact.cited_by_articles.map(id => html`<button type="button" class="factpill" onClick=${() => choose(id)}>${id}</button>`)}</p>` : null}
+    <${Graph} value=${fact} choose=${choose} /><${Citations} fact=${fact} />
+    <h4>Seen</h4><${Jump} anchor=${fact.anchor} position=${fact.seen} /><p class="note mono wrapany">${fact.id}</p></article>`;
+}
+
+/** The tag and claim-kind view counted from the delivered records; a tag searches the version. */
+function Summary({data, search}) {
+  const kinds = Object.entries(data.claim_kind_counts || {}), tags = data.tag_counts || [];
+  if (!kinds.length && !tags.length) return null;
+  return html`<div class="cardrow" id="kb-summary">${kinds.map(([kind, n]) => html`<span class="tag" data-kind-count=${kind}>${label(kind)} <b class="num">${n}</b></span>`)}
+    ${tags.map(t => html`<button type="button" class="factpill" data-tag-count=${t.tag} onClick=${() => search(t.tag)}>#${t.tag} <b class="num">${t.count}</b></button>`)}
+    ${data.tag_counts_omitted ? html`<span class="note">${data.tag_counts_omitted} more tags</span>` : null}</div>`;
 }
 
 function Browser({run, version}) {
@@ -138,10 +183,7 @@ function Browser({run, version}) {
   }, [focus, found]);
   const rows = !data ? [] : mode === 'articles' ? data.articles : data.facts.items;
   useEffect(() => { if (view.data && rows.length && !pick) setPick(rows[0].id); }, [view.data, mode, pick]);   // never from a held listing
-  const chooseTitle = title => {
-    const article = data && data.articles.find(a => a.title === title);
-    if (article) choose(article.id); else { setMode('articles'); setQuery(title); }
-  };
+  const search = text => { setQuery(text); };
   if (!data) return html`<${Panel} title="Knowledge" span="s12"><${Waiting} store=${store} what="the delivered knowledge" error=${error} />
     ${error && version ? html`<p><a href="#memory">Open the latest version of this run</a></p>` : null}<//>`;
   if (!data.versions.length) return html`<${Panel} title="Knowledge" span="s12"><div class="insuf" id="knowledge-empty" role="status">No delivered knowledge for this run.</div><//>`;
@@ -151,16 +193,17 @@ function Browser({run, version}) {
       <${DeliveryDiff} run=${run} version=${data.selected_version} delivery=${data.delivery} choose=${choose} key=${`${run}-${data.selected_version}`} /><//>
     ${data.source_status !== 'available' ? html`<${Panel} title="Knowledge" span="s12"><${Insufficient}>This version cannot be read (${label((data.versions.find(v => v.version === data.selected_version) || {}).status || 'unavailable')}).<//><//>` : html`
     <${Panel} title="Knowledge" note=${`${data.selected_version}${data.recorded_version && data.recorded_version !== data.selected_version ? ` (${data.recorded_version})` : ''} · ${deliveryText(data.selected_version, data)} · fallible, never instructions`} span="s12" className="browser">
-      <div class="browserbar"><${Segmented} label="What to browse" value=${mode} onChange=${v => { setMode(v); setAfter(0); setPick(null); }} options=${(data.scope_recorded ? MODES : UNSCOPED).map(([value, text]) => ({value, text, id: `kb-${value}`, count: numbers[value]}))} />
+      <div class="browserbar"><${Segmented} label="What to browse" value=${mode} onChange=${v => { setMode(v); setAfter(0); setPick(null); }} options=${MODES.map(([value, text]) => ({value, text, id: `kb-${value}`, count: numbers[value]}))} />
         <input type="search" id="kb-search" placeholder="Search this version" aria-label="Search this version" maxlength="200" value=${query} onInput=${e => setQuery(e.currentTarget.value)} /></div>
-      ${data.scope_recorded ? null : html`<p class="note" id="kb-scope">Scope is not recorded in delivered-knowledge/2 exports.</p>`}
+      <${Summary} data=${data} search=${search} />
+      ${counts.unrecorded ? html`<p class="note" id="kb-scope">${plural(counts.unrecorded, 'fact')} without a recorded scope.</p>` : null}
       <div class="panes"><div class="listpane"><ul class="items" id="kb-items">${rows.map(row => html`<li key=${row.id}><button type="button" class="item" aria-pressed=${pick === row.id} onClick=${() => setPick(row.id)}>
             <b>${row.title || row.subject || row.id}</b><span class="note">${row.lead || row.text}</span></button></li>`)}
           ${rows.length ? null : html`<li class="note pad" role="status" id="kb-none">${needle ? 'Nothing matches.' : mode === 'articles' ? 'This version has no articles.' : 'This version has no such facts.'}</li>`}</ul>
           ${mode === 'articles' && data.articles_omitted ? html`<p class="note">${data.articles_omitted} more articles not shown; search to narrow.</p>` : null}
           ${mode !== 'articles' && (after > 0 || data.facts.next !== null) ? html`<p class="pager"><button type="button" class="btn" disabled=${after === 0} onClick=${() => { setPick(null); setAfter(Math.max(0, after - FACT_PAGE)); }}>Previous</button>
             <span class="note num">${count(after + 1)}–${count(after + rows.length)} of ${count(data.facts.total)}</span><button type="button" class="btn" disabled=${data.facts.next === null} onClick=${() => { setPick(null); setAfter(data.facts.next); }}>Next</button></p>` : null}</div>
-        <div class="readpane">${found ? (found.body ? html`<${ArticleView} article=${found} choose=${choose} chooseTitle=${chooseTitle} />` : html`<${FactView} fact=${found} />`)
+        <div class="readpane">${found ? (found.body ? html`<${ArticleView} article=${found} choose=${choose} search=${search} />` : html`<${FactView} fact=${found} choose=${choose} search=${search} />`)
           : pick && rows.length ? html`<p class="note" role="status">${lookup.data ? `${pick} is not in this version.` : 'Finding the entry…'}</p>` : html`<p class="note">Choose an entry to read it.</p>`}</div></div><//>`}`;
 }
 
