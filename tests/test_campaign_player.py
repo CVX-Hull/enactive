@@ -11,6 +11,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from harness.computer.protocol import ControlError
+from harness.computer.channel import NATIVE_EOF_REASON
 from harness.player.knowledge import empty
 from tools.campaign_player import COVERED_PREFIX_FILE,UPDATES_FILE,HostEvents,LiveKnowledge,ending_trigger,finish_interruption,run_hosts
 from tools.configure_player_tools import configuration
@@ -226,9 +227,10 @@ else:
     reason = 'external_stop_complete' if ending else 'task_complete'
     control_id = control['id'] if control else None
     if 'WRONG_CONTROL' in prompt: control_id='f'*32
-    if 'NO_FINISH' not in prompt:
+    failed = 'HOST_FAILURE' in prompt
+    if 'NO_FINISH' not in prompt and not failed:
         emit(type='player-finish',disposition=reason,control_id=control_id,report='report',source_ids=[])
-    emit(type='settled',unpriced_recall_requests=unpriced,ok=True,reason=reason,control_id=control_id,requests=1+recall_made+2*unpriced,player_requests=1+unpriced,recall_requests=recall_made+unpriced,spent_usd=spent,unpriced_requests=unpriced)
+    emit(type='settled',unpriced_recall_requests=unpriced,ok=not failed,reason='provider-error' if failed else reason,control_id=control_id,requests=1+recall_made+2*unpriced,player_requests=1+unpriced,recall_requests=recall_made+unpriced,spent_usd=spent,unpriced_requests=unpriced)
 open(flags['-o'], 'w').write('report\\n')
 """
 
@@ -242,7 +244,7 @@ def driver_case(tmp_path,prompt='Frozen mission',*,two_actors=False,low_frames=F
         runtime=SimpleNamespace(add_actor=Mock(side_effect=actors),stop=Mock(),confirm_quiescent=Mock(),
             remaining=Mock(return_value=dict(inputs=10000,requests=10000,frames=5 if low_frames else 10000,frame_bytes=10**9)),
             process=SimpleNamespace(poll=lambda:None),channel=SimpleNamespace(stopped=threading.Event(),
-                stop_origin=lambda:dict(requested_wall=None,reason='fixture fence')),session='b'*32),
+                stop_origin=lambda:dict(requested_wall=None,reason='fixture fence'),fault=None),session='b'*32),
         host=None)
     reserve=dict(seconds=10,inputs=10,requests=10,frames=5,frame_bytes=1000,usd='0.997' if 'READ_CONTROL' in prompt else '0.01')
     profile=dict(max_hosts=2 if two_actors else 1,host_seconds=100,total_host_seconds=200,effort='off',port=8766,
@@ -854,6 +856,40 @@ def test_post_finish_cleanup_and_unknown_stop_origin_have_separate_outcomes():
     assert finish_interruption(channel) is None
     channel.stop_origin=lambda:dict(requested_wall=100.0005,reason='Unresolved first stop')
     assert finish_interruption(channel)['reason']=='Input permanently fenced outside accepted host cleanup'
+
+
+def fence_on_host_settlement(monkeypatch,runtime,reason=NATIVE_EOF_REASON):
+    """Simulate the native fault by the time the host's final trace is collected."""
+    finish=HostEvents.finish
+    def finish_with_fence(events):
+        runtime.channel.stop_origin=lambda:dict(reason=reason)
+        runtime.channel.fault=reason
+        runtime.channel.stopped.set()
+        return finish(events)
+    monkeypatch.setattr(HostEvents,'finish',finish_with_fence)
+
+
+@pytest.mark.parametrize('suffix,stop_reason,verified,expected',[
+    ('',NATIVE_EOF_REASON,True,'player_task_complete_unassessed'),
+    (' READ_CONTROL',NATIVE_EOF_REASON,True,'player_external_stop_complete_unassessed'),
+    ('',NATIVE_EOF_REASON,False,'interrupted'),
+    (' NO_FINISH',NATIVE_EOF_REASON,True,'interrupted'),
+    (' HOST_FAILURE',NATIVE_EOF_REASON,True,'interrupted'),
+    (' READ_CONTROL WRONG_CONTROL',NATIVE_EOF_REASON,True,'interrupted'),
+    ('','Native receive failed: Bad header',True,'interrupted'),
+])
+def test_terminal_fence_requires_native_exit_and_an_accepted_finish(tmp_path,monkeypatch,suffix,stop_reason,verified,expected):
+    profile,route,application=driver_case(tmp_path,'Frozen mission'+suffix)
+    fence_on_host_settlement(monkeypatch,application.runtime,stop_reason)
+    verify_exit=Mock(return_value=verified)
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300,
+        native_exit_zero=verify_exit)
+    assert result['outcome']==expected,result
+    assert application.runtime.channel.stopped.is_set()
+    if expected=='interrupted':assert result['actors'][0]['interruption']['stop']['reason']==stop_reason
+    else:assert 'interruption' not in result['actors'][0]
+    assert verify_exit.call_count==int(suffix in ('',' READ_CONTROL') and stop_reason==NATIVE_EOF_REASON)
+    if 'READ_CONTROL' in suffix:assert result['ending_request']['trigger']=='spend'
 
 
 def test_successor_starts_in_ending_if_predecessor_crossed_reserve_between_polls(tmp_path):

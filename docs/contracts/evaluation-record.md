@@ -232,7 +232,7 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `input.unseen_action_share` | 1 − input operations with a capture ÷ actions in input operations | input actions | — |
 | `input.frame_unchanged_rate` | Input operations whose capture SHA-256 equals the previous capture's ÷ input operations with a capture | captured inputs | — |
 | `custody.uncertain_receipts` | Partial or unknown receipts ÷ receipts; a run end or custody stop never counts here | receipts | No receipts: null (`no_receipts`) |
-| `custody.stopped` | Boolean: whether a custody stop ended the run | — | — |
+| `custody.stopped` | Boolean: whether the run has a `custody_stop` event | — | — |
 | `tools.calls` | Calls per tool, with refusals and error results per tool | calls | — |
 | `memory.writes` / `memory.reads` | Append calls; query, read and context calls | — | — |
 | `memory.retrieved_beyond_carry` | Distinct record IDs returned by any read that were not in the reading actor's handoff context ÷ distinct records written (capped at 1) | records written | No writes: null |
@@ -318,8 +318,14 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   reading changes, the evaluator starts a new **episode**. It emits an `episode` event,
   and survival is measured within the last episode.
 - **Run end.** An orderly stop or a player finish is a `run_end` event with its reason.
-  It is not a `custody_stop`, which is reserved for partial or unknown delivery and
-  custody fences.
+  Partial or unknown delivery and custody fences can produce `custody_stop`. When
+  the final operation is unknown due to native EOF, the receipt records a clean
+  player-finish outcome (`player_task_complete_unassessed` or
+  `player_external_stop_complete_unassessed`) and a normal native exit with exit
+  code 0 and no forced signals, and the last host settles successfully with an
+  accepted `task_complete` or `external_stop_complete` and no operator Pause,
+  the final operation contributes no `custody_stop`. Its unknown receipt still
+  contributes to `custody.uncertain_receipts`.
 
 ### Implementation rules
 
