@@ -128,8 +128,8 @@ tokens, with the same image treatment.
 **`store`** reads every published version of a curator knowledge repository from its
 loose objects without a Git process. It reports each version's session, its facts and
 articles (all and current), its bytes and the facts whose text matches a pattern. It
-reads `curator-knowledge/3` repositories of `curator-fact/4` records only, so it refuses
-the sealed stores of the memory screen's gates.
+reads `curator-knowledge/4` repositories of `curator-fact/5` records only, so it refuses
+older sealed stores.
 
 **`replay`** reports, for a known loss, the request that returned the frame at which play
 needed the fact and when the player's record was written. For a curated fact it adds an
@@ -162,11 +162,12 @@ and `admission` labels.
 
 The projector reads the run's `manifest.json` and `watch-start.json` directly.
 It checks both session IDs against the store and the manifest bytes against the
-SHA-256 in the `campaign-watch-start/4` record. A verified `campaign-run/12`
-manifest supplies world, lineage and admission. A verified `campaign-run/10`
-manifest supplies lineage and admission and leaves world null. A save path supplies
-no world label. Missing or invalid evidence leaves all three labels
-null. `label_check` is `manifest-schema` for a package file, schema or label error,
+SHA-256 in the `campaign-watch-start/4` record. A verified `campaign-run/13`
+manifest supplies `world`, `lineage`, `admission` and `context`. A verified indexed
+`campaign-run/12` manifest supplies `world`, `lineage` and `admission` (empty `context`);
+a verified `campaign-run/10` manifest supplies `lineage` and `admission` and leaves
+`world` null. A save path supplies no world label. Missing or invalid evidence leaves
+all labels null. `label_check` is `manifest-schema` for a package file, schema or label error,
 `manifest-session` for a package session mismatch, or `supervisor-digest` for a
 launch-record or digest error. `label_error` gives a fixed explanation. Both
 diagnostics are null on success.
@@ -195,7 +196,7 @@ each boundary. The end row gives the outcome and whether the cursor advanced.
 
 For frame age, match the evaluator's operation by ID and use the source's
 `received_wall` in the sealed session store. A step without a frame has no frame age.
-A fact's [`seen` position](curator.md#facts-curator-fact4)
+A fact's [`seen` position](curator.md#facts-curator-fact5)
 gives sighting order.
 
 The [schedule reader](../../tools/memory_screen_checks.py) joins the recorded
@@ -279,12 +280,13 @@ is exclusive. `private/units.json.shared` records each fact that several article
 with the IDs of those articles, and any delivered citing article delivers the shared
 fact. The player never sees the private inputs.
 
-The facts builder and pilot read `campaign-run/12` and indexed `campaign-run/10`
-and `campaign-run/7` evidence. For `/12` the facts builder also verifies the
+The facts builder and pilot read `campaign-run/13` and indexed `campaign-run/10`
+and `campaign-run/7` evidence (sealed `campaign-run/12` packages are read via their
+earlier source, not by `build_facts`). For `/13` the facts builder also verifies the
 [private selection](player-host.md#delivered-knowledge-and-recall) against the
-package's world and delivered file digest, and expects `delivered-knowledge/2`; the
-archive versions predate that field and keep `delivered-knowledge/1`. The builder
-refuses a `/12` run that sets [`live_knowledge_updates`](../operations/campaign-run.md#live-knowledge-updates):
+package's `world`, `lineage`, `context` and delivered file digest, and expects
+`delivered-knowledge/3`; indexed `/10` and `/7` packages expect `delivered-knowledge/1`.
+The builder refuses a `/13` run that sets [`live_knowledge_updates`](../operations/campaign-run.md#live-knowledge-updates):
 its judged facts are the frozen file's, and a version adopted during play delivers
 facts outside it.
 

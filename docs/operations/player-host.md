@@ -56,7 +56,7 @@ list with the invalidation before the host starts.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/12`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/13`.
 Each actor's route carries in `spend_limit_usd` the dollars the run has left, and no
 request count. The driver starts an actor only while dollars and more than 30 s of host time
 remain and nothing has stopped the run. The

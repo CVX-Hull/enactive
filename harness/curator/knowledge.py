@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 
-SCHEMA = 'curator-knowledge/3'
+SCHEMA = 'curator-knowledge/4'
 BRANCH = 'main'
 IDENTITY = ('-c', 'user.name=enactive-gate', '-c', 'user.email=gate@localhost',
             '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', '-c', 'core.hooksPath=/dev/null')
@@ -84,8 +84,7 @@ class Repository:
         files = {
             'knowledge.json': _dump({'schema': SCHEMA, 'game': self.game}),
             'facts.jsonl': b'',
-            'ontology/types.json': b'[]\n',
-            'provenance.json': _dump({'frames': {}, 'sessions': {}}),
+            'provenance.json': _dump({'frames': {}, 'sessions': {}, 'branches': {}, 'restores': []}),
             'programs/.keep': b'',
             'tests/.keep': b'',
         }
@@ -138,7 +137,7 @@ class Repository:
 
     def records(self, version: str | None = None) -> list[dict]:
         text = self._show(self._resolve(version), 'facts.jsonl').decode('utf-8')
-        return [json.loads(line) for line in text.splitlines() if line.strip()]
+        return [json.loads(line) for line in text.split('\n') if line.strip()]
 
     def facts(self, version: str | None = None) -> list[dict]:
         return [item for item in self.records(version) if item.get('record') == 'fact']
@@ -148,9 +147,6 @@ class Repository:
 
     def provenance(self, version: str | None = None) -> dict:
         return json.loads(self._show(self._resolve(version), 'provenance.json'))
-
-    def types(self, version: str | None = None) -> list[dict]:
-        return json.loads(self._show(self._resolve(version), 'ontology/types.json'))
 
     def commit(self, files: dict[str, bytes], message: str) -> str:
         """Write `files`, commit and tag the next version; on any failure restore the tree."""

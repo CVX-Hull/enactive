@@ -2,7 +2,7 @@
 
 `run_session` builds a fresh workspace (trace window, published knowledge, brief, workbench,
 open drafts), runs a coding-agent host in it under the curator sandbox, and always closes out:
-it collects submissions and drafts, gates each submission in order (only after a clean exit),
+it collects submissions and drafts, gates each submission in order (after a clean exit or a validated provider-error prefix),
 updates draft lifecycles, seals the session record and deletes the workspace. One session runs
 at a time per knowledge repository. See docs/design/curator-session.md.
 
@@ -12,6 +12,8 @@ is refused and never followed.
 """
 from __future__ import annotations
 
+from collections import Counter
+from copy import deepcopy
 from dataclasses import dataclass, field
 import fcntl
 import hashlib
@@ -27,15 +29,16 @@ import uuid
 from harness.trace.projection import project
 from harness.trace.sidecar import validate
 
-from . import sandbox, type_usage
+from . import check, sandbox, type_usage
 from .containers import Drafts, UnsafeTree, read_tree, write_tree
-from .gate import FACT, TYPE, current, gate, journal as gate_journal
+from .gate import _history, gate, journal as gate_journal
 from .window import FULL, Window, coverage as window_coverage, restrict, positions, grooming_context
 from .knowledge import Repository
 
 TRACE_PACKAGE = Path(__file__).resolve().parents[1]/'trace'
 WRITABLE = ('submissions', 'drafts', 'scratch')
-WORKBENCH_DEPENDENCIES = ('numpy', 'PIL')
+WORKBENCH_DEPENDENCIES = ('numpy', 'PIL', 'jsonschema', 'jsonschema_specifications', 'referencing', 'attrs', 'rpds')
+PROVIDER_ERROR_EXIT_CODE = 75
 MAX_SUBMISSIONS_BYTES = 16 << 20
 
 
@@ -144,7 +147,7 @@ def _error(exc: BaseException) -> str:
 
 
 def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dict], session_kind: str = 'admission') -> str:
-    """Software-written brief: what is new, open and stale drafts, recent gate results, type usage.
+    """Software-written brief: what is new, open and stale drafts, recent gate results, axes and tag usage.
 
     Names the curator chose (submission and draft directories) are shown `repr`-escaped, so a
     name cannot inject Markdown or lines into a later session's brief.
@@ -174,13 +177,76 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
               + (f"{v['status']} as `{v['version']}`" if v['version'] is not None else v['status'])
               + (': ' + '; '.join(repr(d) for d in v['diagnostics']) if v['diagnostics'] else '')
               for v in verdicts] or ['None.']
-    lines += ['', '## Hints and flagged types', '',
+    lines += ['', '## Hints', '',
               'Player hints in the selected trace tool calls are fallible public reports, not published facts. '
-              'Check their source evidence before proposing knowledge. No additional operator hints.', '',
-              *type_usage.section(repo.types(version), repo.facts(version)), '', '## Close-out', '',
+              'Check their source evidence before proposing knowledge. No additional operator hints.']
+    records = repo.records(version)
+    lines += ['', *_axes_section(trace_manifest, records), '', *type_usage.section(records)]
+    if session_kind == 'grooming':
+        lines += ['', *_grooming_worklist(records)]
+    lines += ['', '## Close-out', '',
               'Put each proposed change in `submissions/<id>/submission.json`; work to continue later in '
               '`drafts/<id>/`. Everything else is discarded.', '']
     return '\n'.join(lines)
+
+
+def _axes_section(trace_manifest: dict, records: list[dict]) -> list[str]:
+    sessions = trace_manifest['sessions']
+    active = sessions[-1].get('context', {}) if sessions else {}
+    counts = Counter(key for row in records if check.current(row) for key in row['scope']
+                     if key not in ('game', 'world', 'lineage'))
+    return ['## Scope axes', '',
+            'Active package: ' + (', '.join(f'`{key}` = {value!r}' for key, value in sorted(active.items())) or 'none'),
+            'Current usage: ' + (', '.join(f'`{key}` ({n})' for key, n in sorted(counts.items())) or 'none')]
+
+
+def _grooming_worklist(records: list[dict]) -> list[str]:
+    rows = sorted((row for row in records if check.current(row)), key=check.owner)
+    articles = [row for row in rows if row['record'] == 'article']
+    filed = set().union(*(check.cited_facts(row) for row in articles))
+    worlds = {row['scope'].get('world') for row in articles}
+    stale_sources = check.stale_review_sources(rows)
+    must_clear, advisory = [], []
+    for row in rows:
+        stale = row['stale_citations']
+        identity, state = check.owner(row), row['lifecycle_state']
+        if stale:
+            must_clear.append(f'- `{identity}` ({state}): stale {", ".join(stale)}')
+        notes = []
+        if state == 'contested':
+            notes.append('contested')
+        elif row['needs_review'] and identity not in stale_sources:
+            notes.append('needs review')
+        lineages = row.get('lineages', [])
+        if len(lineages) > 1 or None in lineages:
+            notes.append(f'lineages {lineages!r}')
+        world = row['scope'].get('world')
+        if row['record'] == 'fact' and identity not in filed and (world is None or world in worlds):
+            notes.append('unfiled')
+        if notes:
+            names = {link['target'] for link in row['links']}
+            if row['record'] == 'article':
+                names.update(check.cited_facts(row))
+            references = f' (references {", ".join(sorted(names))})' if names else ''
+            advisory.append(f'- `{identity}` ({state}): {", ".join(notes)}{references}')
+    return ['## Grooming worklist', '', '### Must clear', '', *(must_clear or ['None.']),
+            '', '### Advisory', '', *(advisory or ['None.'])]
+
+
+def _stage_workbench(workspace: Path) -> None:
+    workbench = workspace / 'workbench'
+    harness = workbench / 'harness'
+    shutil.copytree(TRACE_PACKAGE, harness / 'trace', ignore=shutil.ignore_patterns('__pycache__'))
+    (harness / '__init__.py').write_text('')
+    curator = harness / 'curator'
+    curator.mkdir()
+    (curator / '__init__.py').write_text('')
+    for name in ('check.py', 'validate.py'):
+        shutil.copyfile(Path(__file__).with_name(name), curator / name)
+    schemas = workbench / 'schemas'
+    schemas.mkdir()
+    for name in ('curator-submission.schema.json', 'curator-fact.schema.json'):
+        shutil.copyfile(Path(__file__).resolve().parents[2] / 'schemas' / name, schemas / name)
 
 
 def run_session(repo: Repository, trace_sessions: list[Path], config: SessionConfig, *, window: Window = FULL,
@@ -239,16 +305,9 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         home.mkdir()
         home = home.resolve()
         version = repo.published()
+        _, reserved_ids, reservations = _history(repo)
         records = repo.records(version)
-        if any(item.get('schema') != FACT for item in records):
-            raise SessionError(f'published store is not {FACT}; start a new repository')
-        if any(item.get('schema') != TYPE for item in repo.types(version)):
-            raise SessionError(f'published types are not {TYPE}; start a new repository')
         repo.export(version, workspace/'knowledge')
-        with (workspace/'knowledge'/'current-facts.jsonl').open('w', encoding='utf-8') as stream:
-            for record in records:
-                if current(record):
-                    stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
         trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory, journal=journal), window)
         provenance = repo.provenance()
         if session_kind == 'grooming':
@@ -262,6 +321,28 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         else:
             coverage = window_coverage(window, [p.name for p in trace_sessions], trace_manifest)
         window_frames = positions(workspace/'trace', trace_manifest, provenance['frames'])
+        labels = window_frames.sessions
+        context = dict(base_version=version, session_id=session_id, reserved_ids=sorted(reserved_ids),
+                       reserved_sessions=reservations, session_kind=session_kind, window_frames=window_frames,
+                       session_labels=labels, declared_axes=sorted(check.declared_axes(reservations, labels)))
+        knowledge = workspace / 'knowledge'
+        validation_context = knowledge / 'validation-context.json'
+        validation_context.write_text(json.dumps(context, ensure_ascii=False), encoding='utf-8')
+        validation_context.chmod(0o444)
+        # The active trace labels can make an off-timeline end irrelevant on this lineage.
+        timeline = deepcopy(provenance)
+        try:
+            incoming = check._incoming_provenance(labels, reservations)
+            check._merge_sessions(timeline, reservations)
+            check._merge_sessions(timeline, incoming)
+        except ValueError:
+            # The shared candidate check reports conflicting labels in its normal stage.
+            timeline = provenance
+        active_labels = next(reversed(labels.values()), {})
+        with (knowledge / 'current-facts.jsonl').open('w', encoding='utf-8') as stream:
+            for record in records:
+                if check.current(record) or check.ended_still_alive(record, active_labels, timeline):
+                    stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
         for name in WRITABLE:
             (workspace/name).mkdir()
         drafts = Drafts(repo.state)
@@ -278,9 +359,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         if (config.expected_trace_manifest_sha256 is not None
                 and _sha(workspace/'trace'/'manifest.json') != config.expected_trace_manifest_sha256):
             raise SessionError('retained-prefix next trace projection differs from its frozen input')
-        shutil.copytree(TRACE_PACKAGE, workspace/'workbench'/'harness'/'trace',
-                        ignore=shutil.ignore_patterns('__pycache__'))
-        (workspace/'workbench'/'harness'/'__init__.py').write_text('')
+        _stage_workbench(workspace)
         dependencies = dependency_roots()
         manifest = dict(
             schema='container-manifest/1', id=session_id, kind='curator-session', owner_role='curator',
@@ -327,12 +406,42 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
     return _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window_frames, coverage, drafts, before, session_kind)
 
 
+def _validated_prefix(record_dir: Path, submissions: list[Path]) -> int:
+    """Find the longest passing event that names the exact retained submission bytes."""
+    expected = []
+    for directory in submissions:
+        path = directory / 'submission.json'
+        if not path.is_file():
+            break
+        expected.append((path.relative_to(record_dir).as_posix(), _sha(path)))
+    longest = 0
+    events = record_dir / 'host-output.log'
+    if not expected or not events.is_file():
+        return longest
+    with events.open(encoding='utf-8', errors='replace') as stream:
+        for line in stream:
+            try:
+                event = json.loads(line)
+                prefix = event.get('prefix') if isinstance(event, dict) and (
+                    event.get('type') == 'submission-validated' and event.get('all_passed') is True) else None
+                if not isinstance(prefix, list) or not longest < len(prefix) <= len(expected):
+                    continue
+                actual = [(entry['path'], entry['sha256']) for entry in prefix]
+            except (ValueError, TypeError, KeyError, RecursionError):
+                continue
+            if actual == expected[:len(actual)]:
+                longest = len(actual)
+    return longest
+
+
 def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window_frames, coverage, drafts, before, session_kind='admission') -> dict:
     """Keep what is safe to keep, gate it after a clean exit, and seal the record."""
     survivors = list(result.survivors) if result is not None else None
     if survivors:
         errors.append(f'close-out: {len(survivors)} host processes survived; nothing was collected')
-    aborted = bool(errors) or result is None or result.stopped is not None or result.returncode != 0
+    provider_error = (result is not None and result.stopped is None
+                      and result.returncode == PROVIDER_ERROR_EXIT_CODE)
+    aborted = bool(errors) or result is None or result.stopped is not None or (result.returncode != 0 and not provider_error)
     collectable = result is not None and not survivors
     refused: list[str] = []
     draft_report: dict = {}
@@ -359,13 +468,23 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         aborted = aborted or bool(errors)
         try:
             if drafts is not None and _plain_directory(workspace/'drafts'):
-                draft_report = drafts.collect(workspace/'drafts', session_id, before or {}, age=not aborted)
+                draft_report = drafts.collect(workspace/'drafts', session_id, before or {}, age=not aborted and not provider_error)
         except Exception as exc:  # noqa: BLE001
             errors.append(f'close-out: drafts: {_error(exc)}')
         aborted = aborted or bool(errors)
         gated = record_dir/'submissions'
         if not aborted and gated.is_dir() and not any(r.startswith('submissions:') for r in refused):
-            for submission in sorted(p for p in gated.iterdir() if p.is_dir()):
+            submissions = sorted(path for path in gated.iterdir() if path.is_dir())
+            if provider_error:
+                try:
+                    count = _validated_prefix(record_dir, submissions)
+                except OSError as exc:
+                    errors.append(f'close-out: validation events: {_error(exc)}')
+                    count = 0
+                refused.extend(f'submission {path.name!r}: outside the validated provider-error prefix'
+                               for path in submissions[count:])
+                submissions = submissions[:count]
+            for submission in submissions:
                 try:
                     verdict = gate(repo, submission, session_id=session_id, window_frames=window_frames,
                                    coverage=coverage, session_kind=session_kind, session_labels=window_frames.sessions)
@@ -388,7 +507,8 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
                         inputs={}, pinned={}, budgets={}, lifecycle=dict(state='aborted'), provenance={},
                         retention=dict(policy='session record kept; workspace deleted'))
     manifest['lifecycle'] = dict(manifest['lifecycle'], state='aborted' if aborted else 'sealed', ended_wall=time.time(),
-                                 stopped=getattr(result, 'stopped', None), returncode=getattr(result, 'returncode', None),
+                                 stopped='provider-error' if provider_error else getattr(result, 'stopped', None),
+                                 returncode=getattr(result, 'returncode', None),
                                  survivors=survivors, errors=errors, refused=refused)
     if result is not None:
         manifest['provenance'].update(peak_memory_bytes=result.peak_memory_bytes,

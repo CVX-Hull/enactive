@@ -45,10 +45,12 @@ def frame_id(actor: int, step: int, session_id: str = SESSION_ID) -> str:
     return f'{session_id}-{actor * 1000 + step}'
 
 
-def record_package(session: Path, *, labels: dict, schema: str = 'campaign-run/12',
-                   session_id: str = SESSION_ID, live: bool = False) -> None:
+def record_package(session: Path, *, labels: dict, schema: str = 'campaign-run/13',
+                   session_id: str = SESSION_ID, live: bool = False, context: dict | None = None) -> None:
     source_commit = 'c' * 40
-    current = dict(live_knowledge_updates=live) if schema == 'campaign-run/12' else {}
+    current = dict(live_knowledge_updates=live) if schema in ('campaign-run/12', 'campaign-run/13') else {}
+    if schema == 'campaign-run/13':
+        current['context'] = {} if context is None else context
     package = json.dumps(dict(schema=schema, session=session_id, source_commit=source_commit, **current,
                               labels=labels, private_files={'private-note': 'raw package sentinel'})).encode()
     (session/'manifest.json').write_bytes(package)

@@ -115,7 +115,9 @@ def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(
     assert first['provider'] == dict(only=['openai'], order=['openai'], allow_fallbacks=False, require_parameters=True)
     assert first['reasoning'] == {'effort': 'medium'} and first['service_tier'] == 'default' and 'max_tokens' not in first
     assert all(request['body']['service_tier'] == 'default' for request in stand_in.requests)
-    assert [t['function']['name'] for t in first['tools']] == ['list_dir', 'read_file', 'view_frame', 'write_file', 'run_workbench', 'finish']
+    assert {t['function']['name'] for t in first['tools']} == {
+        'list_dir', 'read_file', 'view_frame', 'write_file', 'run_workbench', 'validate_submission', 'finish'
+    }
     assert 'data:image/png;base64,' in json.dumps(stand_in.requests[2]['body'])
     # Telemetry: every tool outcome, token usage and cost; never the session token or the key.
     rows = events(log)
@@ -340,8 +342,10 @@ def test_the_hosts_node_unit_tests_pass():
 
 def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('curator-submission/1', 'curator-fact/4', 'curator-type/2', 'add_fact', 'supersede_fact', 'add_type', 'base_version',
-                   'scope.world', 'known', 'identity', 'reason', 'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench', 'finish', '256 KiB', '200'):
+    for needed in ('curator-submission/2', 'curator-fact/5', 'add_fact', 'supersede_fact', 'narrow_fact',
+                   'edit_article', 'remap_citations', 'retag', 'validate_submission', 'base_version',
+                   'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench',
+                   'finish', '256 KiB', '200'):
         assert needed in prompt, needed
     # P-GENERALITY and the blinding of #449 probes: nothing about the game, its items or the recorded runs.
     lowered = prompt.lower()
@@ -354,7 +358,7 @@ def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
 
 def test_the_prompt_defines_game_neutral_facts_articles_and_grooming():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('`subject`', '`text`', '`seen`', '`last_confirmed`', 'retire_fact', 'revise_types',
+    for needed in ('`subject`', '`text`', '`seen`', '`last_confirmed`', 'retire_fact',
                    'add_article', 'revise_article', 'retire_article', 'grooming.md', 'hypotheses'):
         assert needed in prompt, needed
     for path in ('knowledge/coverage.json', 'knowledge/provenance.json', 'grooming.md'):
@@ -736,7 +740,7 @@ def test_an_upstream_retry_veto_survives_the_real_proxy(tmp_path, world):
         finally:
             proxy.close()
     life = record['manifest']['lifecycle']
-    assert life['state'] == 'aborted' and life['survivors'] == [] and record['published_after'] == 'v0'
+    assert life['state'] == 'sealed' and life['stopped'] == 'provider-error' and life['survivors'] == [] and record['published_after'] == 'v0'
     assert len(stand_in.requests) == 1
     ledger = shadow._lines(tmp_path/'proxy-ledger.jsonl')
     assert len(ledger) == 1 and ledger[0]['status'] == 429 and ledger[0]['usage_missing']
@@ -818,8 +822,8 @@ def test_a_revoked_proxy_stops_the_run(tmp_path, monkeypatch):
 
 
 @native
-@pytest.mark.parametrize('file_all', [True, False], ids=['files-every-fact', 'rejects-unfiled-fact'])
-def test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact(tmp_path, world, file_all):
+@pytest.mark.parametrize('file_all', [True, False], ids=['files-every-fact', 'advises-about-unfiled-fact'])
+def test_grooming_runs_end_to_end_with_the_stand_in_and_advises_about_unfiled_facts(tmp_path, world, file_all):
     from harness.curator.gate import current
 
     repo, trace = world
@@ -836,13 +840,14 @@ def test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact
         finally:
             proxy.close()
     assert grooming['manifest']['lifecycle']['state'] == 'sealed', grooming
-    if not file_all:
-        assert [v['status'] for v in grooming['verdicts']] == ['rejected'], grooming
-        assert grooming['published_after'] == 'v1'
-        assert grooming['verdicts'][0]['diagnostics'] == ["grooming: unfiled current facts ['f1']"]
-        return
     assert [v['status'] for v in grooming['verdicts']] == ['published'], grooming
     assert grooming['published_after'] == 'v2'
+    session_brief = (repo.state/'sessions'/'grooming'/'brief.md').read_text()
+    assert '### Advisory' in session_brief and '`f1` (active): unfiled' in session_brief
+    if not file_all:
+        assert repo.articles() == []
+        assert repo.facts()[0]['tags'] == ['unfiled']
+        return
     stored_brief = repo.state/'sessions'/'grooming'/'grooming.md'
     assert 'Configured brief marker.' in stored_brief.read_text()
     assert hashlib.sha256(stored_brief.read_bytes()).hexdigest() == grooming['manifest']['pinned']['grooming_sha256']

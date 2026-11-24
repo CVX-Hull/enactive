@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
+import { emptyKnowledge } from './host-scenario.mjs';
 
 const python=process.env.ENACTIVE_TEST_PYTHON;
 const runner=fileURLToPath(new URL('../run.mjs',import.meta.url));
@@ -20,7 +21,7 @@ async function cli(t, handle, extraEnv = {}, enabledTools = ['observe'], extraAr
   const route={schema:'player-host/11',endpoint_costs:null,context_cut:null,context_reserve_tokens:512,service_tier:'default',model,recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),knowledge:join(dir,'delivered-knowledge.json'),prompt:join(dir,'prompt.txt'),final:join(dir,'final.txt')};
-  await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.prompt,'Offline mission'),writeFile(paths.final,'reserved'),writeFile(paths.knowledge,JSON.stringify({schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]}))]);
+  await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.prompt,'Offline mission'),writeFile(paths.final,'reserved'),writeFile(paths.knowledge,JSON.stringify(emptyKnowledge()))]);
   const child=spawn(process.execPath,[runner,'run','--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--prompt',paths.prompt,'--session','2'.repeat(32),'--actor-id','3'.repeat(32),'--pending-control-id','none','--delivered-knowledge',paths.knowledge,'--finish-reserve-usd','0','--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final,...extraArgs(dir)],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
   t.after(()=>{if(child.exitCode===null) child.kill('SIGKILL');});
   let stdout='',stderr='';child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);

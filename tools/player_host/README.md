@@ -410,8 +410,25 @@ to analyze traces; future telemetry versions are not silently interpreted.
 
 ## Knowledge delivery
 
-The required `--delivered-knowledge` file is `delivered-knowledge/2`; it has no
-text-size cap. `--finish-reserve-usd` is the frozen reserve from the package.
+The required `--delivered-knowledge` file is `delivered-knowledge/3`; it has no
+text-size cap. `validateKnowledge` accepts only its closed forms (articles,
+facts, `history` and aliased `sN` sessions, as the
+[player host contract](../../docs/contracts/player-host.md#delivered-knowledge-and-recall)
+defines them) and refuses every other file. That includes a file whose revisions are
+out of order, or whose derived fields (`cited_by_articles`, `backlinks`, `shadowed_by`,
+`contradicted_by`, `lifecycle_state` and an article's inherited flags) disagree with
+the links and citations they are derived from. It agrees with
+`harness/player/knowledge.py` on every file in `tests/fixtures/delivered-knowledge-3/`.
+`--finish-reserve-usd` is the frozen reserve from the package.
+
+Every projected entry (briefing and reminder leads, recall and briefing index
+rows, cut briefing leads and index rows, update `added` and `updated` entries)
+comes from `lead()` or `knowledgeIndex()`. Each carries `status`, the
+`statusOf()` list in the order `contested`, `unverified_branch`, `needs_review`,
+`condition_unverified`, only when that list is non-empty. A plainly active entry
+keeps its earlier bytes for the provider cache. The cut briefing's character cap
+counts the added bytes. `updateDelivery` compares status as well as prose, so a
+change of status alone is an `updated` entry.
 With `--knowledge-updates LIST`, an unref'd refresh in `runHost` (at start, every
 `UPDATE_POLL_MS` and after each player response, one at a time) reads the driver's
 list and its files through the isolated `update-reader.mjs` helper (terminated on

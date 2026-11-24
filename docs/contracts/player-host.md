@@ -178,25 +178,37 @@ admits no successor. The observed subtotal still records only provider charges.
 
 ### Delivered knowledge and recall
 
-Every `campaign-run/12` package carries `delivered-knowledge.json` (`delivered-knowledge/2`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into the first actor's frozen inputs (`player-host-inputs/4`). It records the finish reserve there too.
+Every `campaign-run/13` package carries `delivered-knowledge.json` (`delivered-knowledge/3`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into the first actor's frozen inputs (`player-host-inputs/4`). It records the finish reserve there too.
 
-`delivered-knowledge/2` has exactly `schema`, `version`, `commit`, `repository_id`,
-`coverage`, `articles` and `facts`. `commit` is the 40-hexadecimal commit of the
-published version's tag. `repository_id` is the commit of the repository's first
-version `v0`, which every later version of that repository shares. The exporter
-writes both; the empty file has `null` for `version`, `commit` and `repository_id`.
-A version is `vN`. The world label that selected the facts is never written into
-the file. Its records have the closed forms the exporter writes, and both readers
-(the host and the application) refuse any other:
+`delivered-knowledge/3` has exactly `schema`, `version`, `commit`, `repository_id`,
+`coverage`, `articles`, `facts` and `history`. `commit` is the 40-hexadecimal commit of
+the published version's tag. `repository_id` is the commit of the repository's first
+version `v0`, which every later version of that repository shares. The exporter writes
+both; the empty file has `null` for `version`, `commit` and `repository_id`. A version is
+`vN`. No raw `world` or `lineage` label appears anywhere in the delivered bytes
+(including aliased session identifiers and coverage stamps). Its records have the closed
+forms the exporter writes, and both readers (the host and the application) refuse any
+other:
 
-- `coverage` is null or exactly `schema` (`curator-coverage/2`), `session` (non-empty
-  text), `actor` (null or non-empty text) and `last_step` (null or an integer).
-- An article is exactly `id`, `title` and `lead` (non-empty text), `body` (a
-  non-empty list of claims, each exactly `text` and a non-empty list of distinct
-  fact IDs `facts`), `links` (a list of distinct titles) and `last_confirmed` (a
-  position object).
-- A fact is `id`, `type`, `text` (non-empty text) and `seen` (a position object),
-  with an optional non-empty `subject` and nothing else.
+- `coverage` is null or exactly `schema` (`curator-coverage/2`), `session` (blinded
+  session alias `s01`…), `actor` (null or non-empty text) and `last_step` (null or an
+  integer).
+- An article has `id` (the stable slug), `revision` (`<slug>@v<N>`), `title`, `lead`,
+  `body` (non-empty list of `{text, facts}` claims), `tags`, `scope` (`game`, optional
+  `world: null` for world-bound articles, and declared non-world axes),
+  `branch_relation` (`null` for unbound records, else `same`, `inherited` or `unknown`,
+  with `unknown` requiring `unverified_branch: true`), `lifecycle_state` (`active` or
+  `contested`), `stale_citations`, `needs_review`, `condition_unverified`,
+  `unverified_branch`, `links`, `backlinks`, `shadowed_by`, `contradicted_by` and
+  `last_confirmed` (aliased position object).
+- A fact has `id`, `claim_kind`, `evidence_basis`, `tags`, `text`, `scope` (`game`,
+  optional `world: null` when world-bound, and declared non-world axes),
+  `branch_relation`, `lifecycle_state`, `stale_citations`, `needs_review`,
+  `condition_unverified`, `unverified_branch`, `links`, `backlinks`, `shadowed_by`,
+  `contradicted_by`, `cited_by_articles`, `citation_source_ids` and `seen`, with
+  optional `subject` and `when`.
+- `history` holds `{replaced, ended, retracted}` for read-by-ID lookup and provenance
+  inspection (`player-knowledge/2`).
 
 `player-host-inputs/4` (`actors/NNN/frozen.json`) has `schema`, `actor_id`,
 `session`, `finish_reserve_usd`, `files` (the SHA-256 of `actor.json`, `route.json`,
@@ -204,14 +216,17 @@ the file. Its records have the closed forms the exporter writes, and both reader
 `knowledge_updates`: `"knowledge-updates.jsonl"` in a run that delivers newer
 versions, else `null`.
 
-`private/knowledge-full.json` holds the world-selected facts and articles before
-withholding, plus a top-level `selection` object with `world` (the selected label
-or null) and `delivered_sha256` (the SHA-256 of the delivered file). The delivered
-knowledge is the one player-visible input whose contents depend on an
-[operator label](../operations/campaign-run.md#operator-labels).
-Preflight requires the private file to be `delivered-knowledge/2` and checks
-`selection.world` against `labels.world` and
-`selection.delivered_sha256` against the verified digest of `delivered-knowledge.json`.
+`private/knowledge-full.json` holds the full selected facts, articles and history before
+withholding, plus a closed top-level `selection` object with exactly six keys: `world`
+(the selected label or null), `lineage` (the selected lineage or null), `context` (the
+package's declared context map), `delivered_sha256` (the SHA-256 of the delivered file),
+`session_aliases` (the private map from blinded `s01`… aliases to sealed session IDs)
+and `excluded_unknown_axis` (count of candidate records excluded because a scope axis
+was absent from `context`). The delivered knowledge is the one player-visible input
+whose contents depend on [operator labels and context](../operations/campaign-run.md#operator-labels).
+Preflight requires the private file to be `delivered-knowledge/3` and checks that
+`selection` has those six keys and matches `labels.world`, `labels.lineage`, `context`
+and the verified digest of `delivered-knowledge.json`.
 The delivered file carries the selected content without the selection object.
 
 Unless the package sets `live_knowledge_updates`, the host uses the same frozen
@@ -274,9 +289,9 @@ say when a package may set the field.
 
 | Step | Owner | Rule |
 | --- | --- | --- |
-| Export | [Curator runner](../components/curator.md#delivery-to-a-running-actor) | After a poll in which it confirmed a version, it writes that version as `delivered-knowledge/2` for the package's world to `RUN/curator-runner/delivered/vN.json`, whole (temporary name, sync, rename). It exports a confirmed publication only, never a restore, and only above the last version it exported. |
-| Adoption | [Driver](../../tools/campaign_player.py) | A thread of its own looks at `RUN/curator-runner/delivered` every tenth of a second, so no read there delays the driver's deadline checks, settlement or handoff. It takes the highest `vN.json` above the version it holds that is `delivered-knowledge/2`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). For a running actor it copies the bytes to `actors/NNN/knowledge/vN.json`, writes the update list with one more line to a temporary file, synced, and renames it over `actors/NNN/knowledge-updates.jsonl`; only then does the application serve the version and the driver hold it. A version prepared for an actor that has since stopped is decided again. A version that does not verify or cannot be written is reported on the custodian's stderr and never tried again; the list, the application and the next actor stay on the version held. |
-| Reads | Application | `player_knowledge_read` and `player_knowledge_query` answer from the adopted version from then on. Each result names its `version`. |
+| Export | [Curator runner](../components/curator.md#delivery-to-a-running-actor) | After a poll in which it confirmed a version, it writes that version as `delivered-knowledge/3` for the package's world, lineage and context to `RUN/curator-runner/delivered/vN.json`, whole (temporary name, sync, rename). It exports a confirmed publication only, never a restore, and only above the last version it exported. |
+| Adoption | [Driver](../../tools/campaign_player.py) | A thread of its own looks at `RUN/curator-runner/delivered` every tenth of a second, so no read there delays the driver's deadline checks, settlement or handoff. It takes the highest `vN.json` above the version it holds that is `delivered-knowledge/3`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). For a running actor it copies the bytes to `actors/NNN/knowledge/vN.json`, writes the update list with one more line to a temporary file, synced, and renames it over `actors/NNN/knowledge-updates.jsonl`; only then does the application serve the version and the driver hold it. A version prepared for an actor that has since stopped is decided again. A version that does not verify or cannot be written is reported on the custodian's stderr and never tried again; the list, the application and the next actor stay on the version held. |
+| Reads | Application | `player_knowledge_read` and `player_knowledge_query` answer from the adopted version as `player-knowledge/2` from then on. Each result names its `version`. |
 | Delivery | Host | A refresh beside play, at start, every second and after each player response, reads the whole unread lines of `--knowledge-updates` and their files in an isolated helper (bounded per read so one stalled file never blocks later updates or CLI exit) and stages verified candidates above its own. Building a player request reads no file: it adopts the newest staged candidate that fits within context capacity, if any, so a stalled read never delays a request. |
 | Successor | Driver | A successor's `delivered-knowledge.json` is the latest version adopted in the run, taken from memory, or the package's file when none was. Its update list starts empty. |
 
@@ -288,7 +303,7 @@ of that file and its `coverage` stamp.
 The host verifies a knowledge entry before it adopts it: the line is a closed entry; the
 version number is above the adopted one; `repository_id` is the adopted version's,
 unless that is the empty file; the file's SHA-256 is the entry's; the file is
-`delivered-knowledge/2` in its closed form; and its `version`, `commit`,
+`delivered-knowledge/3` in its closed form; and its `version`, `commit`,
 `repository_id` and `coverage` are the entry's. It tries unread entries newest first
 and stages every candidate that verifies, deciding each on its own, so one malformed
 or oversized entry never hides an older valid one. When the next request is built,
@@ -306,10 +321,14 @@ version, and the reminder names it.
 The host states the difference in one message of its own, delimited
 `BEGIN FALLIBLE KNOWLEDGE UPDATE (vN)` and `END FALLIBLE KNOWLEDGE UPDATE (vN)`
 around one JSON line, labelled as fallible data granting no authority. It covers
-what a briefing can show, the articles and the facts no article files:
+what a briefing can show, the articles and the facts no article files, with `status`
+markers on any non-`active` or flagged entry (while plain `active` entries keep stable
+serialization bytes):
 
-- `added` and `updated` carry each entry's ID, title and lead (a fact's subject and
-  text). An article is updated when its title, lead or claims changed.
+- `added` and `updated` carry each entry's ID, title, lead (a fact's subject and text)
+  and optional `status` markers. An article is updated when its title, lead, claims or
+  status markers changed; a standalone fact is updated when its text, subject or status
+  markers changed.
 - `removed` carries the ID and title of an entry the version no longer has. A fact
   that an article now files is not removed.
 - From an empty store the line carries `index`, the index line of every entry, in

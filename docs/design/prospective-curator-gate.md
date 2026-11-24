@@ -13,7 +13,7 @@ review_trigger: An owner decision on the test oracle or utility policy, a change
   after the submission was frozen, before publishing it?
 - **Proposal.** A coordinator freezes each candidate, waits for an eligible later
   admission, and publishes only when supported tests and a frozen utility policy pass.
-- **Current behavior.** None of this is built. The [curator contract](../contracts/curator.md#gate-v0)
+- **Current behavior.** None of this is built. The [curator contract](../contracts/curator.md#gate-and-pre-validation)
   owns the structural checks that publish knowledge today, with no pending state.
 - **Unknown.** No executable oracle for the truth or usefulness of a fact exists. How
   one pending candidate at a time would fit the

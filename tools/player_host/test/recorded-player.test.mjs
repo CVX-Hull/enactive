@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { runHost } from '../host.mjs';
+import { emptyKnowledge } from './host-scenario.mjs';
 
 const python = process.env.ENACTIVE_TEST_PYTHON;
 const root = fileURLToPath(new URL('../../../', import.meta.url));
@@ -76,7 +77,7 @@ async function scenario(t, sequence, {count=3, damage, spendLimit='100'}={}) {
     else process.env.RECORDED_PLAYER_TEST_SENTINEL = priorSentinel;
   });
   const payloads=[], bodies=[], events=[];
-  const result = await runHost({knowledge:{schema:'delivered-knowledge/2',version:null,commit:null,repository_id:null,coverage:null,articles:[],facts:[]},finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,
+  const result = await runHost({knowledge:emptyKnowledge(),finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,
     control:new PassThrough(),configuration:{...configuration(),spend_limit_usd:spendLimit},mcpConfig:{
       command:resolve(python),args:[fixture,'--packet',packetPath,'--log',log,'--pid',pid],cwd:dir,
       enabled:true,required:true,enabled_tools:Object.keys(expected),startup_timeout_sec:5,tool_timeout_sec:2,

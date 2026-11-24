@@ -25,8 +25,8 @@ remains available when a hint fails and mechanical custody is healthy.
 The player does not maintain its own long-term memory. A separate
 [curator](components/curator.md) reads what happened, publishes cited facts and articles
 through a gate, and holds no custody. It can work beside play without making the player
-wait, and between runs. Each fact (`curator-fact/4`) applies either to one world or to
-the game in general, so knowledge of one world is not delivered into another.
+wait, and between runs. Each fact (`curator-fact/5`) carries an open scope map and
+typed links, so world-bound and context-scoped knowledge is delivered only to matching runs.
 
 ## How it works
 

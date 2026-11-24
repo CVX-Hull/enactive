@@ -170,6 +170,7 @@ class Outcome:
     stop: str | None = None
     error: str | None = None
     details: dict = field(default_factory=dict)
+    provider_error: bool = False
 
 
 Snapshotter = Callable[[Path], Reading]  # stage into this new parent, or raise as `stage` does
@@ -283,6 +284,9 @@ def classify(outcome: Outcome) -> tuple[str, bool, bool]:
     if outcome.state != 'sealed':
         return 'aborted', False, True
     statuses = [v.get('status') for v in outcome.verdicts if v.get('operation', 'submission') == 'submission']
+    if outcome.provider_error:
+        label = 'unconfirmed' if 'unknown' in statuses else 'rejected' if 'rejected' in statuses else 'provider-error'
+        return label, any(status in ('published', 'unknown') for status in statuses), True
     if 'rejected' in statuses:
         return 'rejected', True, True
     if 'unknown' in statuses:

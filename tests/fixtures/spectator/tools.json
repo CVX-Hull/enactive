@@ -1,5 +1,5 @@
 {
- "schema": "spectator-view/2",
+ "schema": "spectator-view/3",
  "tools": [
   {
    "tool": "computer_input",

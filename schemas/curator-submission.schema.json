@@ -1,0 +1,565 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "curator-submission/2: curator submission payload validated by harness/curator/check.py",
+  "description": "Closed shape for curator-submission/2 submissions and every allowed operation. Cross-record checks (base_version, declared axes, scope lattice, citation carry-over, end-frame novelty, old_text guards, grooming-only retag, fixed point) live in harness/curator/check.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "base_version", "summary", "changes"],
+  "properties": {
+    "schema": {"const": "curator-submission/2"},
+    "base_version": {"$ref": "#/$defs/version"},
+    "summary": {"type": "string"},
+    "from_drafts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/id_or_slug"}
+    },
+    "changes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": {"$ref": "#/$defs/operation"},
+      "contains": {
+        "type": "object",
+        "required": ["op"],
+        "properties": {"op": {"const": "retag"}}
+      },
+      "minContains": 0,
+      "maxContains": 1
+    }
+  },
+  "$defs": {
+    "nonblank": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v(0|[1-9][0-9]*)$",
+      "not": {"pattern": "\\n"}
+    },
+    "id_or_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+      "not": {"pattern": "\\n"}
+    },
+    "frame_source_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}-[1-9][0-9]*$",
+      "not": {"pattern": "\\n"}
+    },
+    "axis_value": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "not": {"pattern": "[^ -~]"}
+    },
+    "tag": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "not": {"pattern": "\\n"}
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/tag"}
+    },
+    "claim_kind": {
+      "type": "string",
+      "enum": ["interface", "mechanic", "entity_property", "instance_state", "strategy"]
+    },
+    "evidence_basis": {
+      "type": "string",
+      "enum": ["observed", "inferred", "hinted"]
+    },
+    "curator_scope": {
+      "type": "object",
+      "maxProperties": 7,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$",
+        "not": {
+          "anyOf": [
+            {"enum": ["game", "world", "lineage"]},
+            {"pattern": "\\n"}
+          ]
+        }
+      },
+      "additionalProperties": {"$ref": "#/$defs/axis_value"}
+    },
+    "requires_map": {
+      "type": "object",
+      "maxProperties": 8,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$",
+        "not": {
+          "anyOf": [
+            {"enum": ["game", "world", "lineage"]},
+            {"pattern": "\\n"}
+          ]
+        }
+      },
+      "additionalProperties": {"$ref": "#/$defs/axis_value"}
+    },
+    "binds": {
+      "type": "array",
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": {"const": "world"}
+    },
+    "when": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["note", "requires"],
+      "properties": {
+        "note": {"$ref": "#/$defs/nonblank"},
+        "requires": {"$ref": "#/$defs/requires_map"}
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rel", "target"],
+      "properties": {
+        "rel": {
+          "type": "string",
+          "enum": ["depends_on", "contradicts", "part_of", "see_also"]
+        },
+        "target": {"$ref": "#/$defs/id_or_slug"}
+      }
+    },
+    "links": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/link"}
+    },
+    "citations_nonempty": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/frame_source_id"}
+    },
+    "citations_any": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/frame_source_id"}
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "facts"],
+      "properties": {
+        "text": {"$ref": "#/$defs/nonblank"},
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        }
+      }
+    },
+    "submitted_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "record",
+        "id",
+        "claim_kind",
+        "evidence_basis",
+        "tags",
+        "text",
+        "scope",
+        "links",
+        "citations"
+      ],
+      "properties": {
+        "schema": {"const": "curator-fact/5"},
+        "record": {"const": "fact"},
+        "id": {"$ref": "#/$defs/id_or_slug"},
+        "claim_kind": {"$ref": "#/$defs/claim_kind"},
+        "evidence_basis": {"$ref": "#/$defs/evidence_basis"},
+        "tags": {"$ref": "#/$defs/tags"},
+        "text": {"$ref": "#/$defs/nonblank"},
+        "subject": {"$ref": "#/$defs/nonblank"},
+        "scope": {"$ref": "#/$defs/curator_scope"},
+        "binds": {"$ref": "#/$defs/binds"},
+        "when": {"$ref": "#/$defs/when"},
+        "links": {"$ref": "#/$defs/links"},
+        "citations": {"$ref": "#/$defs/citations_nonempty"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"claim_kind": {"const": "instance_state"}}},
+          "then": {
+            "required": ["binds"],
+            "properties": {
+              "binds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {"const": "world"}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["binds"],
+            "properties": {"binds": {"minItems": 1}}
+          },
+          "then": {
+            "properties": {"scope": {"maxProperties": 6}}
+          }
+        }
+      ]
+    },
+    "superseded_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "record",
+        "id",
+        "claim_kind",
+        "evidence_basis",
+        "tags",
+        "text",
+        "links",
+        "citations"
+      ],
+      "properties": {
+        "schema": {"const": "curator-fact/5"},
+        "record": {"const": "fact"},
+        "id": {"$ref": "#/$defs/id_or_slug"},
+        "claim_kind": {"$ref": "#/$defs/claim_kind"},
+        "evidence_basis": {"$ref": "#/$defs/evidence_basis"},
+        "tags": {"$ref": "#/$defs/tags"},
+        "text": {"$ref": "#/$defs/nonblank"},
+        "subject": {"$ref": "#/$defs/nonblank"},
+        "scope": {"$ref": "#/$defs/curator_scope"},
+        "binds": {"$ref": "#/$defs/binds"},
+        "when": {"$ref": "#/$defs/when"},
+        "links": {"$ref": "#/$defs/links"},
+        "citations": {"$ref": "#/$defs/citations_any"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["binds"],
+            "properties": {"claim_kind": {"const": "instance_state"}}
+          },
+          "then": {
+            "properties": {
+              "binds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {"const": "world"}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["binds"],
+            "properties": {"binds": {"minItems": 1}}
+          },
+          "then": {
+            "properties": {"scope": {"maxProperties": 6}}
+          }
+        }
+      ]
+    },
+    "submitted_article": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "record",
+        "slug",
+        "title",
+        "lead",
+        "body",
+        "tags",
+        "links"
+      ],
+      "properties": {
+        "schema": {"const": "curator-fact/5"},
+        "record": {"const": "article"},
+        "slug": {"$ref": "#/$defs/id_or_slug"},
+        "title": {"$ref": "#/$defs/nonblank"},
+        "lead": {"$ref": "#/$defs/nonblank"},
+        "body": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/claim"}
+        },
+        "tags": {"$ref": "#/$defs/tags"},
+        "scope": {"$ref": "#/$defs/curator_scope"},
+        "links": {"$ref": "#/$defs/links"}
+      }
+    },
+    "op_add_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "fact"],
+      "properties": {
+        "op": {"const": "add_fact"},
+        "fact": {"$ref": "#/$defs/submitted_fact"}
+      }
+    },
+    "op_add_article": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "article"],
+      "properties": {
+        "op": {"const": "add_article"},
+        "article": {"$ref": "#/$defs/submitted_article"}
+      }
+    },
+    "op_supersede_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "ids", "reason_kind", "fact"],
+      "properties": {
+        "op": {"const": "supersede_fact"},
+        "ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        },
+        "reason_kind": {
+          "type": "string",
+          "enum": ["restated", "corrected"]
+        },
+        "fact": {"$ref": "#/$defs/superseded_fact"}
+      },
+      "if": {"properties": {"reason_kind": {"const": "corrected"}}},
+      "then": {
+        "properties": {
+          "fact": {
+            "properties": {
+              "citations": {"$ref": "#/$defs/citations_nonempty"}
+            }
+          }
+        }
+      }
+    },
+    "op_narrow_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "id", "facts"],
+      "properties": {
+        "op": {"const": "narrow_fact"},
+        "id": {"$ref": "#/$defs/id_or_slug"},
+        "facts": {
+          "type": "array",
+          "minItems": 2,
+          "items": {"$ref": "#/$defs/submitted_fact"}
+        }
+      }
+    },
+    "op_retire_fact_wrong": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "id", "reason", "reason_kind", "citations"],
+      "properties": {
+        "op": {"const": "retire_fact"},
+        "id": {"$ref": "#/$defs/id_or_slug"},
+        "reason": {"$ref": "#/$defs/nonblank"},
+        "reason_kind": {"const": "wrong"},
+        "citations": {"$ref": "#/$defs/citations_nonempty"}
+      }
+    },
+    "op_retire_fact_ended": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "id", "reason", "reason_kind", "end", "end_citations"],
+      "properties": {
+        "op": {"const": "retire_fact"},
+        "id": {"$ref": "#/$defs/id_or_slug"},
+        "reason": {"$ref": "#/$defs/nonblank"},
+        "reason_kind": {"const": "ended"},
+        "end": {
+          "type": "string",
+          "enum": ["transition", "absence"]
+        },
+        "end_citations": {"$ref": "#/$defs/citations_nonempty"},
+        "citations": {"$ref": "#/$defs/citations_any"}
+      }
+    },
+    "op_retire_article": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "slug", "reason", "reason_kind"],
+      "properties": {
+        "op": {"const": "retire_article"},
+        "slug": {"$ref": "#/$defs/id_or_slug"},
+        "reason": {"$ref": "#/$defs/nonblank"},
+        "reason_kind": {
+          "type": "string",
+          "enum": ["wrong", "editorial"]
+        }
+      }
+    },
+    "op_revise_article": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "slug"],
+      "minProperties": 3,
+      "properties": {
+        "op": {"const": "revise_article"},
+        "slug": {"$ref": "#/$defs/id_or_slug"},
+        "title": {"$ref": "#/$defs/nonblank"},
+        "lead": {"$ref": "#/$defs/nonblank"},
+        "tags": {"$ref": "#/$defs/tags"},
+        "links": {"$ref": "#/$defs/links"},
+        "scope": {"$ref": "#/$defs/curator_scope"},
+        "body": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/claim"}
+        }
+      }
+    },
+    "replace_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "old_text", "old_facts", "text", "facts"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0},
+        "old_text": {"$ref": "#/$defs/nonblank"},
+        "old_facts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        },
+        "text": {"$ref": "#/$defs/nonblank"},
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        }
+      }
+    },
+    "remove_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "old_text", "old_facts"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0},
+        "old_text": {"$ref": "#/$defs/nonblank"},
+        "old_facts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        }
+      }
+    },
+    "op_edit_article": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "slug"],
+      "minProperties": 3,
+      "properties": {
+        "op": {"const": "edit_article"},
+        "slug": {"$ref": "#/$defs/id_or_slug"},
+        "set_title": {"$ref": "#/$defs/nonblank"},
+        "set_lead": {"$ref": "#/$defs/nonblank"},
+        "set_scope": {"$ref": "#/$defs/curator_scope"},
+        "add_claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/claim"}
+        },
+        "replace_claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/replace_claim"}
+        },
+        "remove_claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/remove_claim"}
+        },
+        "add_links": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/link"}
+        },
+        "remove_links": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/link"}
+        },
+        "add_tags": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/tag"}
+        },
+        "remove_tags": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/tag"}
+        }
+      }
+    },
+    "op_remap_citations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "from", "to", "in"],
+      "properties": {
+        "op": {"const": "remap_citations"},
+        "from": {"$ref": "#/$defs/id_or_slug"},
+        "to": {"$ref": "#/$defs/id_or_slug"},
+        "in": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        }
+      }
+    },
+    "op_retag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "assignments"],
+      "properties": {
+        "op": {"const": "retag"},
+        "assignments": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"$ref": "#/$defs/id_or_slug"},
+          "additionalProperties": {"$ref": "#/$defs/tags"}
+        }
+      }
+    },
+    "operation": {
+      "oneOf": [
+        {"$ref": "#/$defs/op_add_fact"},
+        {"$ref": "#/$defs/op_add_article"},
+        {"$ref": "#/$defs/op_supersede_fact"},
+        {"$ref": "#/$defs/op_narrow_fact"},
+        {"$ref": "#/$defs/op_retire_fact_wrong"},
+        {"$ref": "#/$defs/op_retire_fact_ended"},
+        {"$ref": "#/$defs/op_retire_article"},
+        {"$ref": "#/$defs/op_revise_article"},
+        {"$ref": "#/$defs/op_edit_article"},
+        {"$ref": "#/$defs/op_remap_citations"},
+        {"$ref": "#/$defs/op_retag"}
+      ]
+    }
+  }
+}

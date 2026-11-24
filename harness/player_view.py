@@ -9,6 +9,7 @@ import copy
 
 from .computer.protocol import receipt, source
 from .player.contracts import PlayerError, common_arguments, references
+from .player.knowledge import QUERY_LIMIT, REVISION, delivered_record, version_number
 
 
 class UnsupportedResult(PlayerError):
@@ -134,13 +135,55 @@ def _service(value):
     return result
 
 
+def _resolution(resolution, identity, resolved_from, records):
+    """The resolution's row of the read table, as `Knowledge.read` and `Knowledge.query` produce it: the record
+    count and kind, `resolved_from`, and how the records answer `identity`. Records are already delivered records."""
+    one = len(records) == 1
+    article = one and 'body' in records[0]
+    if resolution == 'current':
+        return one and resolved_from is None and records[0]['id'] == identity
+    if resolution == 'revision':
+        revision = REVISION.fullmatch(identity)
+        return (article and resolved_from == identity and revision is not None
+                and revision.group(1) == records[0]['id'])
+    if resolution in ('restated', 'narrowed', 'corrected'):
+        return bool(records) and all('body' not in r for r in records) and resolved_from == identity
+    if resolution in ('ended', 'retracted'):
+        return records == [] and resolved_from == identity
+    if resolution == 'title':
+        return article and records[0]['title'] == identity and resolved_from is None
+    if resolution == 'unknown':
+        return records == [] and resolved_from is None
+    if resolution == 'query':
+        return len(records) <= QUERY_LIMIT and resolved_from is None
+    return False
+
+
+def _knowledge(value):
+    """A `player-knowledge/2` read or query: its version, its resolution's row of the read table, and every record
+    a closed, blinded delivered record. The empty file (`version` null) answers only `unknown` and `query`, with no
+    record. Article and fact text is opaque data, never another envelope."""
+    result = _fields(value, {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'records'})
+    version, records, resolution = result['version'], result['records'], result['resolution']
+    identity, resolved_from = result['identity'], result['resolved_from']
+    if (result['grants_authority'] is not False or not isinstance(identity, str) or not isinstance(resolution, str)
+            or not isinstance(records, list)):
+        raise UnsupportedResult('Unsupported delivered knowledge result')
+    if version is None:
+        consistent = resolution in ('unknown', 'query') and records == [] and resolved_from is None
+    else:
+        consistent = (version_number(version) is not None
+                      and all(delivered_record(record, version) for record in records)
+                      and _resolution(resolution, identity, resolved_from, records))
+    if not consistent:
+        raise UnsupportedResult('Unsupported delivered knowledge result')
+    return result
+
+
 def _project(value):
     schema = value.get('schema')
-    if schema == 'player-knowledge/1':
-        result = _fields(value, {'schema', 'version', 'records', 'grants_authority'})
-        if result['grants_authority'] is not False or not isinstance(result['records'], list):
-            raise UnsupportedResult('Unsupported delivered knowledge result')
-        return result  # Article and fact text is opaque data, never another envelope.
+    if schema == 'player-knowledge/2':
+        return _knowledge(value)
     if schema == 'computer-operation/1':
         return _operation(value)
     if schema == 'player-service-result/2':

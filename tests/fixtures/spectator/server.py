@@ -188,7 +188,7 @@ def make_handler(state: State):
                 if found:
                     self.json(200, found[0])
                 else:
-                    self.json(404, {'schema': 'spectator-view/2', 'error': 'unknown_container', 'detail': wanted})
+                    self.json(404, {'schema': 'spectator-view/3', 'error': 'unknown_container', 'detail': wanted})
                 return
             if route == 'improve/changes':
                 self.json(200, load('improve-changes.json')); return
@@ -230,7 +230,7 @@ def make_handler(state: State):
                 found = synthetic.delivered(shown, first('version'), first('q', ''), first('scope', 'all'), int(first('after', 0)), limit) \
                     if traced else synthetic.no_knowledge(limit)
                 if found is None:
-                    self.json(404, {'schema': 'spectator-view/2', 'error': 'unknown_version', 'detail': first('version')}); return
+                    self.json(404, {'schema': 'spectator-view/3', 'error': 'unknown_version', 'detail': first('version')}); return
                 self.json(200, found); return
             if sub == 'summary':
                 if run in ('aidA1', 'aidA2', 'aidA3', 'aidA4'):
@@ -257,7 +257,7 @@ def make_handler(state: State):
                 limit = min(500, int(first('limit', 100)))
                 rows = [s for s in state.steps[:visible] if s['seq'] > after]
                 page = rows[:limit]
-                self.json(200, dict(schema='spectator-view/2', items=page, limit=limit,
+                self.json(200, dict(schema='spectator-view/3', items=page, limit=limit,
                                     next=page[-1]['seq'] if len(rows) > limit else None)); return
             if sub == 'requests':
                 body = load('requests.json')

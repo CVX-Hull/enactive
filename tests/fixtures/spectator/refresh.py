@@ -76,7 +76,7 @@ def main(argv=None) -> int:
     write('memory.json', get(args.live, f'{live}/memory'))
     write('handoffs.json', get(args.live, f'{live}/handoffs'))
 
-    programs = {'schema': 'spectator-view/2', 'programs': [], 'runs': [], 'saves': [], 'provenance': 'player_claim'}
+    programs = {'schema': 'spectator-view/3', 'programs': [], 'runs': [], 'saves': [], 'provenance': 'player_claim'}
     for row in runs['items']:
         found = get(args.archive, f"/api/view/run/{row['run']}/programs")
         if found['programs'] or found['runs']:

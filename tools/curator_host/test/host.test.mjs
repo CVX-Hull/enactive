@@ -1,11 +1,49 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile as writeNodeFile } from 'node:fs/promises';
+import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
+import { chmod, copyFile, link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile as writeNodeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setTimeout as realDelay } from 'node:timers/promises';
-import { projectImages, proxyFrom, runCurator, validateConfiguration } from '../host.mjs';
-import { listDir, readFile as readTool, viewFrame, writeFile as writeTool } from '../workspace-tools.mjs';
+import { PROVIDER_ERROR_EXIT_CODE, projectImages, proxyFrom, runCurator, validateConfiguration } from '../host.mjs';
+import { listDir, readFile as readTool, validateSubmission, viewFrame, writeFile as writeTool } from '../workspace-tools.mjs';
+
+// The repository root, whose harness/curator validator and schemas the validation tests stage into workbench/.
+const REPOSITORY = fileURLToPath(new URL('../../..', import.meta.url));
+
+/** The absolute path of the first interpreter that imports jsonschema: CURATOR_PYTHON, the main checkout's .venv
+ * (beside the git common directory, or three levels above a worktree under .runtime/worktrees/), then python3. */
+function resolvePython() {
+  const commonDirectory = spawnSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+    { cwd: REPOSITORY, encoding: 'utf8' });
+  const candidates = [process.env.CURATOR_PYTHON, join(REPOSITORY, '.venv/bin/python'), join(REPOSITORY, '../../../.venv/bin/python'),
+    commonDirectory.status === 0 ? join(dirname(commonDirectory.stdout.trim()), '.venv/bin/python') : undefined, 'python3'];
+  for (const candidate of candidates.filter(Boolean)) {
+    const probe = spawnSync(candidate, ['-c', 'import jsonschema, sys; print(sys.executable)'], { encoding: 'utf8' });
+    const executable = probe.status === 0 ? probe.stdout.trim() : '';
+    if (isAbsolute(executable)) return executable;
+  }
+  return undefined;
+}
+const PYTHON = resolvePython();
+const requirePythonForValidator = () => assert.ok(PYTHON,
+  'no interpreter that imports jsonschema: set CURATOR_PYTHON or create the project .venv (the real-validator tests never skip)');
+
+/** Stage the validator and its schemas into workbench/ as harness/curator/session.py does. */
+async function stageWorkbench(root) {
+  const curator = join(root, 'workbench/harness/curator'), schemas = join(root, 'workbench/schemas');
+  await mkdir(curator, { recursive: true });
+  await mkdir(schemas, { recursive: true });
+  await writeNodeFile(join(root, 'workbench/harness/__init__.py'), '');
+  await writeNodeFile(join(curator, '__init__.py'), '');
+  for (const name of ['check.py', 'validate.py']) await copyFile(join(REPOSITORY, 'harness/curator', name), join(curator, name));
+  for (const name of ['curator-fact.schema.json', 'curator-submission.schema.json']) {
+    await copyFile(join(REPOSITORY, 'schemas', name), join(schemas, name));
+  }
+}
 
 const TOKEN = 'a1'.repeat(32);
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=', 'base64');
@@ -41,8 +79,27 @@ async function workspace(t) {
   return root;
 }
 
-async function session(t, replies, overrides = {}) {
+// A minimal curator-knowledge/4 export at v0 and a validation context with one frame in the window.
+const SEALED = '0123456789abcdef0123456789abcdef';
+const FRAME = `${SEALED}-1`;
+async function knowledge(root) {
+  await stageWorkbench(root);
+  await writeNodeFile(join(root, 'knowledge/knowledge.json'), JSON.stringify({ schema: 'curator-knowledge/4', game: 'g' }));
+  await writeNodeFile(join(root, 'knowledge/provenance.json'), JSON.stringify({ frames: {}, sessions: {}, branches: {}, restores: [], last_admission: null }));
+  await writeNodeFile(join(root, 'knowledge/validation-context.json'), JSON.stringify({
+    base_version: 'v0', session_id: 'session', reserved_ids: [], reserved_sessions: { sessions: {}, branches: {}, restores: [] },
+    session_kind: 'admission', window_frames: { [FRAME]: { session: 's1', actor: '001', step: 1, order: [1, '001', 1] } },
+    session_labels: { [SEALED]: { name: 's1', world: null, lineage: null, admission: null, context: {} } }, declared_axes: [] }));
+}
+const addFact = (id, base) => JSON.stringify({ schema: 'curator-submission/2', base_version: base, summary: `add ${id}`,
+  changes: [{ op: 'add_fact', fact: { schema: 'curator-fact/5', record: 'fact', id, claim_kind: 'mechanic', evidence_basis: 'observed',
+    tags: [], text: 'An observed rule.', scope: {}, links: [], citations: [FRAME] } }] });
+const sha256 = async path => createHash('sha256').update(await readFile(path)).digest('hex');
+const validatorOptions = { python: PYTHON, env: { PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1' }, timeoutSeconds: 60 };
+
+async function session(t, replies, overrides = {}, prepare = undefined) {
   const root = await workspace(t);
+  await prepare?.(root);
   const events = [], payloads = [];
   let index = 0;
   const fetch = async (url, init) => {
@@ -81,7 +138,7 @@ test('only the proxy on loopback is an endpoint', () => {
 });
 
 test('a scripted session lists, writes a submission and a draft, views a frame and finishes', async t => {
-  const submission = { schema: 'curator-submission/1', base_version: 'v0', summary: 's', changes: [] };
+  const submission = JSON.parse(addFact('f1', 'v0'));
   const { root, events, payloads, result } = await session(t, [
     sse([['list_dir', { path: 'trace/frames' }], ['view_frame', { frames: ['s-2'] }]]),
     sse([['write_file', { path: 'submissions/s1/submission.json', content: JSON.stringify(submission) }],
@@ -100,7 +157,7 @@ test('a scripted session lists, writes a submission and a draft, views a frame a
   assert.deepEqual(body.reasoning, { effort: 'medium' });
   assert.deepEqual(body.provider, configuration().model.compat.openRouterRouting);
   assert.deepEqual(body.tools.map(tool => tool.function.name),
-    ['list_dir', 'read_file', 'view_frame', 'write_file', 'run_workbench', 'finish']);
+    ['list_dir', 'read_file', 'view_frame', 'write_file', 'validate_submission', 'run_workbench', 'finish']);
   assert.ok(payloads[1].body.messages.some(m => JSON.stringify(m).includes('data:image/png;base64,')));
   // Telemetry: tokens, cost and tool outcomes; never the token.
   const ends = events.filter(event => event.type === 'request-end');
@@ -142,6 +199,166 @@ test('write_file refuses everything outside the writable directories', async t =
   assert.equal(await readFile(join(root, 'brief.md'), 'utf8'), '# Session brief');
   await writeTool(root, { path: 'scratch/deep/er/file.txt', content: 'ok' });
   assert.equal(await readFile(join(root, 'scratch/deep/er/file.txt'), 'utf8'), 'ok');
+});
+
+test('write_file replaces a file by renaming a whole new one into its path', async t => {
+  const root = await workspace(t);
+  await writeTool(root, { path: 'submissions/01/submission.json', content: 'first' });
+  // A second name for the old file keeps the old bytes: the write made a new file, never truncated the old one.
+  await link(join(root, 'submissions/01/submission.json'), join(root, 'scratch/old'));
+  await writeTool(root, { path: 'submissions/01/submission.json', content: 'second, longer' });
+  assert.equal(await readFile(join(root, 'submissions/01/submission.json'), 'utf8'), 'second, longer');
+  assert.equal(await readFile(join(root, 'scratch/old'), 'utf8'), 'first');
+  assert.deepEqual(await readdir(join(root, 'submissions/01')), ['submission.json'], 'no temporary file is left');
+  // A failed write leaves neither a partial file nor a temporary one.
+  await mkdir(join(root, 'scratch/folder'));
+  await assert.rejects(writeTool(root, { path: 'scratch/folder', content: 'x' }), { name: 'ToolError' });
+  await chmod(join(root, 'drafts'), 0o555);
+  try {
+    await assert.rejects(writeTool(root, { path: 'drafts/new.md', content: 'x' }), { name: 'ToolError' });
+  } finally { await chmod(join(root, 'drafts'), 0o755); }
+  assert.deepEqual((await readdir(join(root, 'scratch'))).sort(), ['folder', 'old']);
+  assert.deepEqual(await readdir(join(root, 'drafts')), []);
+});
+
+test('write_file writes a destination name near the file-system limit, since the temporary name is short', async t => {
+  const root = await workspace(t);
+  for (const length of [240, 255]) {
+    const name = 'n'.repeat(length);
+    assert.equal((await writeTool(root, { path: `drafts/${name}`, content: `long ${length}` })).isError, false);
+    assert.equal(await readFile(join(root, 'drafts', name), 'utf8'), `long ${length}`);
+  }
+  assert.deepEqual((await readdir(join(root, 'drafts'))).map(name => name.length).sort(), [240, 255], 'no temporary file is left');
+});
+
+test('validate_submission refuses names and files outside one submission directory', async t => {
+  const root = await workspace(t);
+  await mkdir(join(root, 'submissions/folder/submission.json'), { recursive: true });
+  await mkdir(join(root, 'submissions/linked'));
+  await symlink(join(root, 'brief.md'), join(root, 'submissions/linked/submission.json'));
+  await symlink(join(root, 'submissions/folder'), join(root, 'submissions/alias'));
+  for (const submission of ['', '.', '..', '../x', 'a/b', 'a\\b', 'a\nb', 'a\0b', 'x'.repeat(256), 'missing', 'folder', 'linked', 'alias', 7]) {
+    await assert.rejects(validateSubmission(root, { submission }, { python: '/bin/sh', env: {}, timeoutSeconds: 5 }),
+      { name: 'ToolError' }, String(submission));
+  }
+});
+
+test('validate_submission reports a validator that cannot run without leaking its output', async t => {
+  const root = await workspace(t);
+  await writeTool(root, { path: 'submissions/01/submission.json', content: '{}' });
+  const fake = join(root, 'scratch/python');
+  for (const [script, expected] of [
+    ['echo not json; echo noise >&2', /the validator returned an unexpected result/],
+    ['echo "error: expected curator-knowledge/4" >&2; exit 2', /could not run: error: expected curator-knowledge\/4/],
+    ['echo \'{"ok":true,"all_passed":true,"submission":"02","prefix":[],"diagnostics":[],"scope_changes":[]}\'', /unexpected result/],
+  ]) {
+    await writeNodeFile(fake, `#!/bin/sh\n${script}\n`);
+    await chmod(fake, 0o755);
+    const result = await validateSubmission(root, { submission: '01' }, { python: fake, env: { PATH: '/usr/bin:/bin' }, timeoutSeconds: 5 });
+    assert.equal(result.isError, true);
+    assert.equal(result.validation, null);
+    assert.match(result.content[0].text, expected);
+  }
+});
+
+test('validate_submission runs the real validator over the ordered prefix', async t => {
+  requirePythonForValidator();
+  const root = await workspace(t);
+  await knowledge(root);
+  await writeTool(root, { path: 'submissions/01/submission.json', content: addFact('f1', 'v7') });
+  await writeTool(root, { path: 'submissions/02/submission.json', content: addFact('f2', 'v0') });
+  await writeTool(root, { path: 'submissions/03/submission.json', content: addFact('f3', 'v1') });
+  const rejectedFirst = await validateSubmission(root, { submission: '02' }, validatorOptions);
+  assert.equal(rejectedFirst.isError, false);
+  assert.deepEqual([rejectedFirst.validation.ok, rejectedFirst.validation.all_passed], [true, false]);
+  assert.deepEqual(rejectedFirst.validation.prefix.map(row => row.status), ['rejected', 'passed']);
+  const text = rejectedFirst.content[0].text;
+  assert.match(text, /^submission 02: passes \(nothing was published\)/);
+  assert.match(text, /Not every submission up to it passes/);
+  assert.match(text, /- 01: rejected, v0 -> \(no new version\)\n {2}diagnostic: .*based on v7 but the published version is v0/);
+  assert.match(text, /- 02: passed, v0 -> v1/);
+  // A rejected earlier submission does not advance the version, so 03 (expecting v1) passes after 02.
+  const third = await validateSubmission(root, { submission: '03' }, validatorOptions);
+  assert.deepEqual(third.validation.prefix.map(row => [row.id, row.status, row.candidate_version]),
+    [['01', 'rejected', null], ['02', 'passed', 'v1'], ['03', 'passed', 'v2']]);
+});
+
+test('validate_submission passes a submission directory name that starts with "-" as a value', async t => {
+  requirePythonForValidator();
+  const root = await workspace(t);
+  await knowledge(root);
+  await writeTool(root, { path: 'submissions/-repair/submission.json', content: addFact('f1', 'v0') });
+  const result = await validateSubmission(root, { submission: '-repair' }, validatorOptions);
+  assert.equal(result.isError, false, result.content[0].text);
+  assert.deepEqual([result.validation.submission, result.validation.ok, result.validation.all_passed], ['-repair', true, true]);
+  assert.deepEqual(result.validation.prefix.map(row => [row.id, row.status]), [['-repair', 'passed']]);
+});
+
+test('validate_submission works past four fifths of the budget and records only an all-passing prefix', async t => {
+  requirePythonForValidator();
+  const env = { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin' };
+  const replies = [
+    () => sse([['write_file', { path: 'submissions/01/submission.json', content: addFact('f1', 'v0') }],
+      ['write_file', { path: 'submissions/02/submission.json', content: addFact('f1', 'v1') }]]),
+    ...Array.from({ length: 3 }, () => () => sse([['list_dir', {}]])),
+    // The fifth request uses 5/6 of the budget: reading is refused, validation is not.
+    () => sse([['list_dir', {}], ['validate_submission', { submission: '01' }], ['validate_submission', { submission: '02' }],
+      ['validate_submission', { submission: '../01' }]]),
+    () => sse([['finish', { summary: 'validated' }]]),
+  ];
+  const { root, events, payloads, result } = await session(t, replies, { env, python: PYTHON }, knowledge);
+  assert.equal(result.ok, true);
+  const calls = events.filter(event => event.type === 'tool-call').slice(-5);
+  assert.deepEqual(calls.map(call => [call.name, call.ok]), [['list_dir', false], ['validate_submission', true],
+    ['validate_submission', true], ['validate_submission', false], ['finish', true]]);
+  assert.match(calls[0].error, /budget is nearly spent/);
+  const validated = events.filter(event => event.type === 'submission-validated');
+  assert.equal(validated.length, 2, 'a refused call records nothing');
+  assert.deepEqual(validated.map(({ type, submission, ok, all_passed, prefix }) => ({ type, submission, ok, all_passed, prefix })), [
+    { type: 'submission-validated', submission: '01', ok: true, all_passed: true,
+      prefix: [{ path: 'submissions/01/submission.json', sha256: await sha256(join(root, 'submissions/01/submission.json')) }] },
+    // 02 repeats f1, so it is rejected and nothing is authorized for a provider-error close-out.
+    { type: 'submission-validated', submission: '02', ok: false, all_passed: false, prefix: [] },
+  ]);
+  assert.ok(validated.every(event => typeof event.wall_time === 'string' && typeof event.monotonic_ms === 'number'));
+  // The model sees each verdict and the rejection's diagnostic.
+  const shown = JSON.stringify(payloads.at(-1).body.messages);
+  assert.match(shown, /submission 01: passes/);
+  assert.match(shown, /submission 02: rejected/);
+  assert.match(shown, /f1/);
+});
+
+async function runHost(t, respond, args) {
+  const root = await workspace(t);
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) { /* drain */ }
+    const reply = await respond();
+    response.writeHead(reply.status, Object.fromEntries(reply.headers));
+    response.end(await reply.text());
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  await writeNodeFile(join(root, 'scratch/config.json'), JSON.stringify(configuration()));
+  const child = spawn(process.execPath, [fileURLToPath(new URL('../run.mjs', import.meta.url)), ...(args ?? ['--config', 'scratch/config.json'])], {
+    cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { PATH: '/usr/bin:/bin', CURATOR_PROXY_URL: `http://127.0.0.1:${server.address().port}`, CURATOR_PROXY_TOKEN: TOKEN },
+  });
+  let stdout = '';
+  child.stdout.on('data', chunk => { stdout += chunk; });
+  const code = await new Promise(resolve => child.on('close', resolve));
+  return { code, end: JSON.parse(stdout.trim().split('\n').at(-1)) };
+}
+
+test('run.mjs exits with the reserved code for a provider error and 1 for every other failure', async t => {
+  assert.equal(PROVIDER_ERROR_EXIT_CODE, 75);
+  const refused = await runHost(t, () => new Response(JSON.stringify({ error: { message: 'refused' } }), { status: 400 }));
+  assert.deepEqual([refused.code, refused.end.type, refused.end.reason], [75, 'host-end', 'provider-error']);
+  const unfinished = await runHost(t, () => sse([]));
+  assert.deepEqual([unfinished.code, unfinished.end.reason], [1, 'ended-without-finish']);
+  const invalid = await runHost(t, () => sse([]), ['--wrong']);
+  assert.deepEqual([invalid.code, invalid.end.reason], [1, 'invalid-arguments']);
+  const finished = await runHost(t, () => sse([['finish', { summary: 'ok' }]]));
+  assert.deepEqual([finished.code, finished.end.reason], [0, 'finished']);
 });
 
 test('read tools stay inside the workspace, refuse links and binary files', async t => {

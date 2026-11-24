@@ -601,15 +601,13 @@ def test_three_runner_windows_publish_when_the_first_two_share_a_frame(tmp_path,
         base = (workspace/'brief.md').read_text().split('`')[1]
         step = json.loads((workspace/'trace'/RUN/'001'/'steps.jsonl').read_text())
         changes = []
-        if base == 'v0':
-            changes.append(dict(op='add_type', type=dict(schema='curator-type/2', name='container',
-                                                        description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')))
-        changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id=f'f{step["seq"]}',
-                                                     type='container', text='the cupboard holds bottles', known='observed',
-                                                     scope=dict(game=repo.game, level='game'), citations=[step['frame']])))
+        changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id=f'f{step["seq"]}',
+                                                     claim_kind='entity_property', tags=['container'],
+                                                     text='the cupboard holds bottles', evidence_basis='observed',
+                                                     scope={}, links=[], citations=[step['frame']])))
         directory = workspace/'submissions'/'s1'
         directory.mkdir()
-        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/1', base_version=base,
+        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/2', base_version=base,
                                                                  summary='window fact', changes=changes)))
         return sandbox.Result(0, None, 0, 0, 0., [])
 
@@ -653,7 +651,7 @@ def test_three_runner_windows_publish_when_the_first_two_share_a_frame(tmp_path,
 
 
 # ---------------------------------------------------------------- versions left for the driver (#838)
-def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export_is_tried_again(tmp_path, monkeypatch, capsys):
+def test_live_runner_leaves_each_confirmed_version_whole_and_retries_a_failed_export(tmp_path, monkeypatch, capsys):
     """R-REGRESSION: the runner's part of live delivery, over a real repository and gate. Each version the runner
     confirms is exported for the package's world as `delivered-knowledge/2` under `delivered/`; a failed export is
     reported once and tried again at the next poll; a restarted runner exports nothing it already left."""
@@ -669,19 +667,16 @@ def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export
         base = (workspace/'brief.md').read_text().split('`')[1]
         step = json.loads((workspace/'trace'/RUN/'001'/'steps.jsonl').read_text())
         changes = []
-        if base == 'v0':
-            changes.append(dict(op='add_type', type=dict(schema='curator-type/2', name='container',
-                                                        description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')))
         # One fact of the game and one of the run's world (the gate stamps the world from the cited session),
         # which only an export for that world selects.
-        for identity, scope in ((f'f{step["seq"]}', dict(game=repo.game, level='game')),
-                                (f'w{step["seq"]}', dict(game=repo.game, level='world'))):
-            changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id=identity, type='container',
-                                                         text=f'the cupboard {identity} holds bottles', known='observed',
-                                                         scope=scope, citations=[step['frame']])))
+        for identity, binds in ((f'f{step["seq"]}', []), (f'w{step["seq"]}', ['world'])):
+            changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id=identity,
+                                                         claim_kind='entity_property', tags=['container'],
+                                                         text=f'the cupboard {identity} holds bottles', evidence_basis='observed',
+                                                         scope={}, binds=binds, links=[], citations=[step['frame']])))
         directory = workspace/'submissions'/'s1'
         directory.mkdir()
-        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/1', base_version=base,
+        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/2', base_version=base,
                                                                  summary='window fact', changes=changes)))
         return sandbox.Result(0, None, 0, 0, 0., [])
 
@@ -694,8 +689,8 @@ def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export
     run.mkdir()
     (run/CURATOR_READ_LOCK).touch()
     record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
-    enabled, world, session_id = live_runner.delivery_world(run)
-    assert (enabled, world, session_id) == (True, 'the farm', SESSION_ID)
+    enabled, world, lineage, context, session_id = live_runner.delivery_target(run)
+    assert (enabled, world, lineage, context, session_id) == (True, 'the farm', None, {}, SESSION_ID)
     delivered = tmp_path/'runner'/'delivered'
     prefix = delivered/live_runner.COVERED_PREFIX_FILE
 
@@ -715,7 +710,7 @@ def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export
         value = json.loads((delivered/'v1.json').read_text())
         assert value == knowledge_export.published(repo.path, 'v1', world='the farm') and Knowledge.from_dict(value).value == value
         root = _git(repo.path, 'rev-parse', 'v0^{commit}').decode().strip()
-        assert (value['schema'], value['version'], value['repository_id']) == ('delivered-knowledge/2', 'v1', root)
+        assert (value['schema'], value['version'], value['repository_id']) == ('delivered-knowledge/3', 'v1', root)
         assert value['commit'] == _git(repo.path, 'rev-parse', 'v1^{commit}').decode().strip() != root
         # The facts are those of the package's world; the label itself is never written into the file.
         assert [f['id'] for f in value['facts']] == ['f1', 'w1'] and value['coverage']['last_step'] == 1
@@ -727,7 +722,7 @@ def test_each_confirmed_version_is_left_whole_for_the_driver_and_a_failed_export
         published = knowledge_export.published
         calls = []
 
-        def failing(path, version, *, world):
+        def failing(path, version, *, world, lineage=None, context=None):
             calls.append(version)
             raise OSError('disk refused the export')
 
@@ -759,7 +754,7 @@ def test_only_a_confirmed_publication_that_is_not_a_restore_is_left_for_the_driv
     from tools import knowledge_export
     exported = []
     monkeypatch.setattr(knowledge_export, 'published',
-                        lambda path, version, *, world: exported.append((version, world)) or dict(version=version))
+                        lambda path, version, *, world, lineage=None, context=None: exported.append((version, world)) or dict(version=version))
     deliver = live_runner.Delivery(tmp_path, tmp_path/'repository', 'farm')
     versions = {'v1': dict(restored_from=None), 'v2': dict(restored_from='v1'), 'v3': dict(restored_from=live.UNKNOWN),
                 'v4': dict(restored_from=None)}
@@ -779,7 +774,7 @@ def test_delivery_leaves_the_prefix_before_a_gap_until_a_restore_invalidates_it(
     world = World(tmp_path/'runner', Settings(trigger_steps=1, ceiling_steps=1))
     world.outcomes = ['accepted', gap, 'accepted']
     monkeypatch.setattr(live_runner.knowledge_export, 'published',
-                        lambda path, version, *, world: dict(version=version))
+                        lambda path, version, *, world, lineage=None, context=None: dict(version=version))
     runner = world.runner()
     deliver = live_runner.Delivery(world.directory, tmp_path/'repository', None, session=SESSION_ID)
     delivered = world.directory/'delivered'
@@ -807,13 +802,13 @@ def test_delivery_is_read_from_the_current_package_manifest(tmp_path):
     run = tmp_path/RUN
     run.mkdir()
     record_package(run, labels=dict(world='the farm', lineage='L1', admission=1))
-    assert live_runner.delivery_world(run) == (False, 'the farm', SESSION_ID)
+    assert live_runner.delivery_target(run) == (False, 'the farm', 'L1', {}, SESSION_ID)
     record_package(run, labels=dict(lineage='L1', admission=1), schema='campaign-run/10')
-    with pytest.raises(ValueError, match='not a campaign-run/12 manifest'):
-        live_runner.delivery_world(run)
+    with pytest.raises(ValueError, match='not a campaign-run/13 manifest'):
+        live_runner.delivery_target(run)
     (run/'manifest.json').unlink()
     with pytest.raises(OSError):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
 
 
 def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch(tmp_path):
@@ -823,16 +818,16 @@ def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch
     run = tmp_path/RUN
     run.mkdir()
     record_package(run, labels=dict(world='the farm', lineage=None, admission=None), live=True)
-    assert live_runner.delivery_world(run) == (True, 'the farm', SESSION_ID)
-    assert live_runner.delivery_world(run, session_id=SESSION_ID) == (True, 'the farm', SESSION_ID)
+    assert live_runner.delivery_target(run) == (True, 'the farm', None, {}, SESSION_ID)
+    assert live_runner.delivery_target(run, session_id=SESSION_ID) == (True, 'the farm', None, {}, SESSION_ID)
     with pytest.raises(ValueError, match='launched session'):
-        live_runner.delivery_world(run, session_id='b' * 32)
+        live_runner.delivery_target(run, session_id='b' * 32)
     original = (run/'manifest.json').read_bytes()
     replaced = json.loads(original)
     replaced['labels']['world'] = 'another farm'
     (run/'manifest.json').write_text(json.dumps(replaced))
     with pytest.raises(ValueError, match='SHA-256 differs from the supervisor launch record'):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
     # Missing session in both manifest and watch-start (even with matching SHA-256) is refused.
     no_session = json.loads(original)
     no_session.pop('session')
@@ -843,16 +838,16 @@ def test_delivery_is_never_enabled_from_a_manifest_the_supervisor_did_not_launch
     no_session_opening['manifest_sha256'] = hashlib.sha256(no_session_bytes).hexdigest()
     (run/'watch-start.json').write_text(json.dumps(no_session_opening))
     with pytest.raises(ValueError, match='missing or invalid session'):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
     (run/'manifest.json').write_bytes(original)
     (run/'watch-start.json').write_text(json.dumps(opening))
     for change, message in ((dict(session='b' * 32), 'session differs'), (dict(schema='campaign-watch-start/3'), 'unsupported')):
         (run/'watch-start.json').write_text(json.dumps(dict(opening, **change)))
         with pytest.raises(ValueError, match=message):
-            live_runner.delivery_world(run)
+            live_runner.delivery_target(run)
     (run/'watch-start.json').unlink()
     with pytest.raises(OSError):
-        live_runner.delivery_world(run)
+        live_runner.delivery_target(run)
 
 
 # ---------------------------------------------------------------- beside a growing trace, with a real session
@@ -865,12 +860,11 @@ manifest = json.load(open('trace/manifest.json'))
 frame = sorted(k[7:-4] for k in manifest['files'] if k.startswith('frames/'))[0]
 version = open('brief.md').read().split('`')[1]
 os.makedirs('submissions/s1')
-json.dump(dict(schema='curator-submission/1', base_version=version, summary='first fact', from_drafts=[],
-               changes=[dict(op='add_type', type=dict(schema='curator-type/2', name='container',
-                                                    description='a place that holds items', fields=['holds'], identity=[], reason='Describe a container')),
-                        dict(op='add_fact', fact=dict(schema='curator-fact/4', record='fact', id='f1', type='container',
-                                                      text='the cupboard holds bottles', known='observed', scope=dict(game='testgame', level='game'),
-                                                      citations=[frame], subject='cupboard'))]),
+json.dump(dict(schema='curator-submission/2', base_version=version, summary='first fact', from_drafts=[],
+               changes=[dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id='f1',
+                                                      claim_kind='entity_property', tags=['container'],
+                                                      text='the cupboard holds bottles', evidence_basis='observed', scope={},
+                                                      links=[], citations=[frame], subject='cupboard'))]),
           open('submissions/s1/submission.json', 'w'))
 '''
 
@@ -1101,12 +1095,15 @@ def grooming_run(tmp_path, monkeypatch):
 def publish_admission(repo: Repository, submission: Path, name: str) -> None:
     repo.ensure()
     submission.mkdir()
-    kind = dict(schema='curator-type/2', name='control', description='what an input does',
-                fields=[], identity=[], reason='Describe a control')
+    frame = SESSION_ID + '-1'
+    fact = dict(schema='curator-fact/5', record='fact', id='control', claim_kind='interface',
+                evidence_basis='observed', tags=['control'], text='An observed control.', scope={}, links=[],
+                citations=[frame])
     (submission/'submission.json').write_text(json.dumps(dict(
-        schema='curator-submission/1', base_version='v0', summary='admission type',
-        changes=[dict(op='add_type', type=kind)])))
-    verdict = gate(repo, submission, session_id='admission', window_frames={}, session_kind='admission',
+        schema='curator-submission/2', base_version='v0', summary='admission fact',
+        changes=[dict(op='add_fact', fact=fact)])))
+    positions = {frame: dict(session=name, actor='001', step=1, order=[1, '001', 1])}
+    verdict = gate(repo, submission, session_id='admission', window_frames=positions, session_kind='admission',
                    coverage=dict(schema=COVERAGE, session=name, actor='001', last_step=1))
     assert verdict['status'] == 'published', verdict
 
@@ -1116,9 +1113,9 @@ def test_boundary_grooming_skips_a_repository_without_a_published_admission(groo
     assert repo.ensure() == 'v0'
     assert groom.main(args) == 0
     result = json.loads((out/'grooming-summary.json').read_text())
-    assert result == dict(schema='curator-boundary-grooming/1', status='skipped', reason='no-published-admission',
+    assert result == dict(schema='curator-boundary-grooming/2', status='skipped', reason='no-published-admission',
                           run=run.name, knowledge_root=str(repo.path.parent), published_before='v0', published_after='v0',
-                          cost_usd='0', summary=None)
+                          stale_records=0, cost_usd='0', summary=None)
     assert 'skipped' in capsys.readouterr().out
 
 
@@ -1214,9 +1211,10 @@ def test_boundary_grooming_freezes_the_session_and_reports_its_outcome(grooming_
     monkeypatch.setattr(shadow, 'run_one', run_one)
     assert groom.main([*args, '--cap-usd', '0.25']) == (0 if reason is None else 1)
     result = json.loads((out/'grooming-summary.json').read_text())
-    assert result == dict(schema='curator-boundary-grooming/1', status='completed' if reason is None else 'failed',
+    assert result == dict(schema='curator-boundary-grooming/2', status='completed' if reason is None else 'failed',
                           reason=reason, run=run.name, knowledge_root=str(repo.path.parent), cap_usd='0.25',
-                          published_before='v1', published_after=session['published_after'], cost_usd='0.07',
+                          published_before='v1', published_after=session['published_after'],
+                          stale_records=None if session['published_after'] is None else 0, cost_usd='0.07',
                           verdicts=session['verdicts'], session_state=session['session_state'], proxy=session['proxy'],
                           sandbox=session['sandbox'], summary=relative)
 
@@ -1289,7 +1287,7 @@ def test_boundary_grooming_files_game_facts_and_keeps_world_facts_after_live_win
                 game_fact = changes[-1]['fact']
                 game_fact.update(id=f'f{number}', text=f'observed control {number}')
                 world_fact = dict(game_fact, id=f'world-f{number}', text=f'observed place {number}',
-                                  scope=dict(game=shadow.GAME, level='world'))
+                                  binds=['world'])
                 submission['changes'] = [*(changes if number == 1 else changes[-1:]), dict(op='add_fact', fact=world_fact)]
             params['content'] = json.dumps(submission)
         return calls
@@ -1315,7 +1313,7 @@ def test_boundary_grooming_files_game_facts_and_keeps_world_facts_after_live_win
                     writer(op='step')
                 assert runner.poll()
                 assert repo.published() == version, status_of(runner)
-                assert {f['scope']['level'] for f in repo.facts(version)} == {'game', 'world'}
+                assert {'world' in f['scope'] for f in repo.facts(version)} == {False, True}
             examined = status_of(runner)['examined']
             assert [(e['window']['first'], e['window']['last'], e['outcome']) for e in examined] == [
                 (1, 2, 'accepted'), (3, 4, 'accepted')]
@@ -1338,7 +1336,44 @@ def test_boundary_grooming_files_game_facts_and_keeps_world_facts_after_live_win
     assert repo.published() == 'v3' and repo.provenance()['last_admission'] == admission
     facts = {f['id']: f for f in repo.facts() if current(f)}
     assert set(facts) == {'f1', 'f2', 'world-f1', 'world-f2'}
-    assert all(f['schema'] == 'curator-fact/4' for f in facts.values())
-    assert {f['id']: f['scope'] for f in facts.values() if f['scope']['level'] == 'world'} == dict.fromkeys(
-        ('world-f1', 'world-f2'), dict(game=shadow.GAME, level='world', world='pond'))
+    assert all(f['schema'] == 'curator-fact/5' for f in facts.values())
+    assert {f['id']: f['scope'] for f in facts.values() if 'world' in f['scope']} == dict.fromkeys(
+        ('world-f1', 'world-f2'), dict(game=shadow.GAME, world='pond'))
     assert {f for a in repo.articles() if current(a) for claim in a['body'] for f in claim['facts']} == {'f1', 'f2'}
+
+
+@pytest.mark.parametrize('verdicts, label, advances', [
+    ((), 'provider-error', False),
+    (('published',), 'provider-error', True),
+    (('rejected',), 'rejected', False),
+    (('published', 'rejected'), 'rejected', True),
+    (('rejected', 'unknown'), 'unconfirmed', True),
+])
+def test_provider_error_advances_only_if_a_publication_may_have_happened(world, verdicts, label, advances):
+    world.reading = read({'001': 60})
+
+    def session(window):
+        rows = tuple(dict(status=status, version=world.publish(window) if status == 'published' else None)
+                     for status in verdicts)
+        return Outcome('sealed', rows, provider_error=True)
+
+    world.outcomes = [session, 'nothing']
+    runner = world.runner()
+    assert runner.poll()
+    assert runner.session_failures() == 1
+    assert runner.cursor == ({'001': 40} if advances else {})
+    assert status(world)['examined'][0]['outcome'] == label
+    assert runner.poll() and status(world)['state'] == 'polling'
+    assert world.calls == [Window(RUN, '001', 1, 40),
+                           Window(RUN, '001', 41, 60) if advances else Window(RUN, '001', 1, 40)]
+
+
+def test_two_provider_errors_for_the_same_window_stop_the_runner(world):
+    world.reading = read({'001': 60})
+    world.outcomes = [lambda _: Outcome('sealed', provider_error=True)] * 2
+    runner = world.runner()
+    assert runner.poll()
+    assert not runner.poll()
+    assert world.calls == [Window(RUN, '001', 1, 40)] * 2
+    assert runner.cursor == {} and runner.session_failures() == 2
+    assert status(world)['stop_reason'] == '2 consecutive failed sessions'

@@ -161,8 +161,8 @@ def test_gate_input_keeps_session_labels_separate_from_the_four_frame_position_k
     manifest = restrict(out, project([first, second], out), FULL)
     gate_input = positions(out, manifest, {})
     assert gate_input.sessions == {
-        SESSION_ID: dict(name='pond', **pond, label_check=None, label_error=None),
-        second_id: dict(name='forest', **forest, label_check=None, label_error=None),
+        SESSION_ID: dict(name='pond', **pond, context={}, label_check=None, label_error=None),
+        second_id: dict(name='forest', **forest, context={}, label_check=None, label_error=None),
     }
     assert gate_input == {
         frame_id(1, 1): dict(session='pond', actor='001', step=1, order=[1, '001', 1]),
@@ -179,9 +179,9 @@ def test_session_labels_are_available_from_the_manifest_after_copying_positions(
     manifest = project([first, second], out)
     frame_positions = positions(out, manifest, {})
     assert session_labels(manifest) == frame_positions.sessions == {
-        SESSION_ID: dict(name='pond', world=None, lineage=None, admission=None,
+        SESSION_ID: dict(name='pond', world=None, lineage=None, admission=None, context={},
                          label_check='manifest-schema', label_error='manifest.json missing or unreadable'),
-        second_id: dict(name='forest', world='forest', lineage='survivor', admission=3, label_check=None, label_error=None),
+        second_id: dict(name='forest', world='forest', lineage='survivor', admission=3, context={}, label_check=None, label_error=None),
     }
     for copy in (dict(frame_positions), frame_positions | {}, json.loads(json.dumps(frame_positions))):
         assert copy == frame_positions
@@ -201,7 +201,7 @@ def test_sightings_follow_trace_order_even_when_windows_are_replayed_backwards(t
     assert added[frame_id(1, 4)]['order'] < known[frame_id(1, 7)]['order']
     assert positions(later, later_manifest, known | added) == known
     assert added[frame_id(1, 2)] == dict(session='s1', actor='001', step=2, order=[1, '001', 2])
-    assert added.sessions == known.sessions == {SESSION_ID: dict(name='s1', **labels, label_check=None, label_error=None)}
+    assert added.sessions == known.sessions == {SESSION_ID: dict(name='s1', **labels, context={}, label_check=None, label_error=None)}
 
 
 @pytest.mark.parametrize('recorded_step', [3, 5])
@@ -249,7 +249,7 @@ def test_grooming_projection_keeps_cited_frames_and_actor_boundaries(tmp_path):
     gate_input = positions(out, reduced, {})
     assert gate_input.keys() == cited | boundaries
     assert gate_input.sessions == {
-        SESSION_ID: dict(name='s1', world='pond', lineage='survivor', admission=3, label_check=None, label_error=None),
+        SESSION_ID: dict(name='s1', world='pond', lineage='survivor', admission=3, context={}, label_check=None, label_error=None),
     }
     with pytest.raises(WindowError, match='missing from trace'):
         grooming_context(out, reduced, {'absent'})

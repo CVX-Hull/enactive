@@ -303,6 +303,20 @@ def test_sealed_version_ten_package_supplies_no_world(tmp_path, lineage, admissi
         None, lineage, admission, None, None)
 
 
+def test_version_twelve_labels_require_closed_archive_index(tmp_path):
+    indexed_sid = '49964eb42a7d4dabaef0c5ff6230a9be'  # indexed #889 campaign-run/12 session
+    indexed = make_long_session(tmp_path, 'indexed-889', steps=1, actors=('001',), session_id=indexed_sid)
+    record_package(indexed, schema='campaign-run/12', session_id=indexed_sid,
+                   labels=dict(world='campground-889', lineage='l889', admission=1))
+    unindexed = make_long_session(tmp_path, 'unindexed-12', steps=1, actors=('001',), session_id='c' * 32)
+    record_package(unindexed, schema='campaign-run/12', session_id='c' * 32,
+                   labels=dict(world='secret-world', lineage='secret-lineage', admission=1))
+    ok, refused = project([indexed, unindexed], tmp_path/'trace')['sessions']
+    assert (ok['world'], ok['lineage'], ok['admission'], ok['label_check']) == ('campground-889', 'l889', 1, None)
+    assert (refused['world'], refused['lineage'], refused['admission'], refused['label_check']) == (
+        None, None, None, 'manifest-schema')
+
+
 def test_world_label_can_have_null_lineage_and_admission(tmp_path):
     session = make_long_session(tmp_path, steps=1, actors=('001',))
     labels = dict(world='pond', lineage=None, admission=None)

@@ -16,7 +16,7 @@ from typing import Any
 from harness.evaluation.core.records import (EvaluationError, open_readonly, read_metadata, read_metrics, read_run_facts)
 from harness.evaluation.core.sources import read_json_file, read_json_lines, read_manifest
 
-API = 'spectator-view/2'
+API = 'spectator-view/3'
 #: Bounds shared by the projections: a text is cut and says so, an identifier is whole or absent, a list states its omissions.
 TEXT_LIMIT = 1024
 ID_LIMIT = 512

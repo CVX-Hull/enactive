@@ -219,8 +219,10 @@ test('Memory: curator strip, version rail, delivery diff, reader, and a citation
     assert.match(await text(page, '#curator-spend'), /\$1\.23\s*proxy-accounted · 3\/4 settled\s*incomplete/i);
     // A version is said to be delivered only where the trace records it.
     assert.match(await text(page, '.browser header'), /v3 · Exported snapshot · confirmed delivered at step 170 · fallible/);
-    assert.deepEqual(await page.$$eval('.browserbar .seg button', n => n.map(b => b.innerText.trim())), ['Articles 2', 'Facts 4']);
-    assert.equal(await text(page, '#kb-scope'), 'Scope is not recorded in delivered-knowledge/2 exports.');
+    assert.deepEqual(await page.$$eval('.browserbar .seg button', n => n.map(b => b.innerText.trim())), ['Articles 2', 'World facts 2', 'Game facts 2', 'All facts 4']);
+    assert.equal(await page.$('#kb-scope'), null, 'every fact of a delivered-knowledge/3 version records its scope');
+    // The tag and claim-kind view, counted from the delivered records.
+    assert.match(await text(page, '#kb-summary'), /instance state\s*2[\s\S]*mechanic\s*1[\s\S]*strategy\s*1[\s\S]*#fire\s*2[\s\S]*#water\s*2/);
     assert.deepEqual(await page.$$eval('#versions .vpill b', n => n.map(x => x.textContent)), ['v1', 'v2', 'v3']);
     assert.equal(await page.$eval('#versions [aria-current="true"] b', n => n.textContent), 'v3', 'the latest version by default');
     await page.$eval('#versions .vpill:nth-child(2)', a => a.click());
@@ -228,23 +230,41 @@ test('Memory: curator strip, version rail, delivery diff, reader, and a citation
     assert.match(await text(page, '#delivery-diff'), /Delivered at step 110\s*\+1 article · \+2 facts\s*after v1/);
     await page.$eval('#delivery-diff details', d => { d.open = true; });
     assert.match(await text(page, '#delivery-diff .difflist'), /added Making fire Making fire in one sentence\./);
-    // Articles: a linked fact opens on the reading side, and a linked article by its title.
-    assert.match(await text(page, '[data-reading="article-water"]'), /Finding water in one sentence\.[\s\S]*Last confirmed/);
+    // Articles: a cited fact and a typed link open on the reading side by their exact IDs.
+    assert.match(await text(page, '[data-reading="article-water"]'), /this world scope[\s\S]*#water[\s\S]*Finding water in one sentence\.[\s\S]*Last confirmed/);
     await page.$$eval('#kb-items .item', items => items[1].click());
-    await S.until(page, () => document.querySelector('[data-reading="article-fire"] .factpill'));
-    await page.click('[data-reading="article-fire"] .factpill');
+    await S.until(page, () => document.querySelector('[data-reading="article-fire"] [data-links] .factpill'));
+    assert.match(await text(page, '[data-reading="article-fire"] [data-links]'), /see also article-water/);
+    await page.click('[data-reading="article-fire"] [data-links] .factpill');
+    await S.until(page, () => document.activeElement?.dataset.reading === 'article-water');
+    await page.$$eval('#kb-items .item', items => items[1].click());
+    await S.until(page, () => document.querySelector('[data-reading="article-fire"] .refs .factpill'));
+    await page.click('[data-reading="article-fire"] .refs .factpill');
     await S.until(page, () => document.activeElement?.dataset.reading === 'fact-fire');
     assert.ok((await text(page, '[data-reading]')).includes('<script>window.knowledgeExecuted=true</script>'));
+    assert.match(await text(page, '[data-reading]'), /game-wide scope[\s\S]*ruleset: standard[\s\S]*mechanic[\s\S]*observed[\s\S]*depends on fact-water/);
     assert.equal(await page.evaluate(() => window.knowledgeExecuted), undefined);
-    // Facts, with the provenance they record and nothing the format does not.
+    // Facts, with the scope class, kind and flags they record, and their cited frames.
     await page.click('#kb-all');
     await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 4 && document.querySelector('[data-reading="fact-water"]'));
-    assert.match(await text(page, '[data-reading]'), /site observation[\s\S]*actor 001 · step 20/);
-    assert.doesNotMatch(await text(page, '[data-reading]'), /scope|known/i);
+    assert.match(await text(page, '[data-reading]'), /this world scope[\s\S]*instance state[\s\S]*session s01 · actor 001 · step 20/);
+    assert.ok(await page.$('[data-reading="fact-water"] [data-citation-seq="20"]'), 'a frame of this run is clickable');
     await page.$$eval('#kb-items .item', items => items[3].click());
     await S.until(page, () => document.querySelector('[data-reading="fact-old"]'));
-    assert.equal(await page.$('[data-reading="fact-old"] [data-jump-seq]'), null, 'another admission\'s step is not a frame of this run');
-    assert.match(await text(page, '[data-reading]'), /not a step of this run/);
+    assert.equal(await page.$('[data-reading="fact-old"] [data-jump-seq], [data-reading="fact-old"] [data-citation-seq]'), null, 'another session\'s frame is not a frame of this run');
+    const old = await text(page, '[data-reading]');
+    for (const pattern of [/contested/, /unverified branch/, /needs review/, /Contradicted by\s*fact-water/, /Stale citations: fact-gone/, /Frame unavailable/, /no cited frame of this run/])
+      assert.match(old, pattern);
+    await page.click('#kb-world');
+    await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 2);
+    assert.deepEqual(await page.$$eval('#kb-items .item b', n => n.map(b => b.textContent)), ['Subject of fact-water', 'Subject of fact-old']);
+    await page.click('#kb-all');
+    await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 4);
+    // A tag searches the version.
+    await page.click('#kb-summary [data-tag-count="fire"]');
+    await S.until(page, () => document.getElementById('kb-search').value === 'fire' && document.querySelectorAll('#kb-items .item').length === 1);
+    await page.$eval('#kb-search', input => { input.value = ''; input.dispatchEvent(new Event('input', {bubbles: true})); });
+    await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 4);
     // Search keeps its focus while it fetches.
     await page.type('#kb-search', 'lighter');
     await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 1);
@@ -258,12 +278,12 @@ test('Memory: curator strip, version rail, delivery diff, reader, and a citation
   } finally { await page.close(); }
 });
 
-test('Memory: an exported version nobody recorded as delivered says so, scope filters need recorded scopes, and a run without any is an honest blank', {timeout: 30000}, async () => {
+test('Memory: an exported version nobody recorded as delivered says so, a fact without a recorded scope is counted, and a run without any is an honest blank', {timeout: 30000}, async () => {
   const page = await S.open(browser, `${fx.url}#memory`, {width: 900});
   try {
     await S.ready(page);
     await S.until(page, () => document.querySelector('[data-reading]'));
-    assert.equal(await page.$('#kb-world, #kb-game'), null);
+    assert.deepEqual(await page.$$eval('.browserbar .seg button', n => n.map(b => b.dataset.value)), ['articles', 'world', 'game', 'all']);
     let scoped = false;
     await page.setRequestInterception(true);
     page.on('request', async request => {
@@ -272,8 +292,8 @@ test('Memory: an exported version nobody recorded as delivered says so, scope fi
       if ((!knowledge && !feed) || url.pathname.includes(S.SESSIONS.aidA1)) return request.continue();
       const body = await (await fetch(request.url())).json();
       if (feed) body.items = body.items.map(e => (e.knowledge_version === 'v3' && e.entry_kind === 'knowledge_update' ? {...e, outcome: 'refused'} : e.knowledge_version === 'v2' && e.entry_kind === 'knowledge_update' ? {...e, outcome: 'undelivered'} : e));
-      // No format the viewer reads records a scope; a listing that did would offer the filters.
-      if (knowledge && scoped) Object.assign(body, {scope_recorded: true, scope_counts: {world: 3, game: 1, unrecorded: 0}});
+      // A listing that counts a fact with no readable scope says so.
+      if (knowledge && scoped) body.scope_counts = {...body.scope_counts, unrecorded: 1};
       request.respond({status: 200, contentType: 'application/json', body: JSON.stringify(body)});
     });
     await page.reload({waitUntil: 'load'});
@@ -285,10 +305,9 @@ test('Memory: an exported version nobody recorded as delivered says so, scope fi
     await go(page, '#memory/v1');
     await S.until(page, () => /v1 · Exported snapshot · confirmed delivered at step 60/.test(document.querySelector('.browser header')?.innerText || ''));
     scoped = true;
-    await S.until(page, () => document.getElementById('kb-world') && !document.getElementById('kb-scope'));
-    assert.deepEqual(await page.$$eval('.browserbar .seg button', n => n.map(b => b.dataset.value)), ['articles', 'world', 'game', 'all']);
+    await S.until(page, () => /^1 fact without a recorded scope\.$/.test(document.getElementById('kb-scope')?.textContent || ''));
     scoped = false;
-    await S.until(page, () => !document.getElementById('kb-world'));
+    await S.until(page, () => !document.getElementById('kb-scope'));
     await S.pick(page, 'aidA1');
     await S.until(page, () => document.getElementById('curator-empty') && document.getElementById('knowledge-empty'));
     assert.match(await text(page, '#curator-empty'), /^No curator data for this run\.$/);
@@ -537,7 +556,7 @@ test('current hints stay unverified text', {timeout: 30000}, async () => {
   try {
     await S.ready(page);
     page.on('request', request => {
-      const value = new URL(request.url()).pathname.endsWith('/memory') ? {schema: 'spectator-view/2', available: true, store_schema: 'player-journal/1', records: [], hints: [hint], hints_omitted: 0} : null;
+      const value = new URL(request.url()).pathname.endsWith('/memory') ? {schema: 'spectator-view/3', available: true, store_schema: 'player-journal/1', records: [], hints: [hint], hints_omitted: 0} : null;
       if (value) request.respond({status: 200, contentType: 'application/json', body: JSON.stringify(value)});
       else request.continue();
     });
@@ -574,6 +593,11 @@ test('recorded reader keeps delivery, reports, operation and outcome distinct on
     await S.until(page, () => document.getElementById('app').innerText.includes('Entry fact-visible'));
     await S.until(page, () => document.activeElement?.matches('[data-reader-entry] > summary'));
     assert.equal(await page.evaluate(() => window.readerExecuted), undefined);
+    // The frozen snapshot entry's delivered state: kind, evidence, scope class and axes, flags, tags, typed links and cited frames.
+    const entry = await text(page, '[data-reader-entry]');
+    for (const expected of [/Kind: entity property · evidence: observed · scope: world \(ruleset: standard\) · state: active · needs review · tags: passage/,
+      /Links: see_also fact-other · cited frames: c6c09be0b7d43fba2839147651a4f6a5-2/]) assert.match(entry, expected);
+    assert.doesNotMatch(entry, /source IDs/, 'a current entry names its frames only as citations');
     assert.equal(await S.overflow(page), 0);
     await S.shot(page, 'recorded-reader-phone');
     await page.select('[data-reader-actor]', 'actor-2');
@@ -596,7 +620,7 @@ test('recorded reader refreshes actors and public reports while staying on the p
       let body;
       if (!url.searchParams.get('actor')) {
         emptySeen ||= phase === 0;
-        body = {schema: 'spectator-view/2', actors: phase ? fixture.actors : [], actors_omitted: 0, actor: null, request_id: null};
+        body = {schema: 'spectator-view/3', actors: phase ? fixture.actors : [], actors_omitted: 0, actor: null, request_id: null};
       } else {
         body = structuredClone(fixture);
         if (phase === 2) { body.hints[0].text = 'A later public hint'; body.requests.push('request-2'); }
@@ -738,7 +762,7 @@ test('curator paging and refresh keep empty, changed and failed sources distinct
       } else if (url.pathname.endsWith('/frame/curator-results')) {
         const source = url.searchParams.get('source'), old = url.searchParams.get('snapshot');
         if (source === 'failed' && fail) { failedRequests++; status = 503; body = {viewer: 'unavailable'}; }
-        else if (old && old !== digest) { status = 409; body = {schema: 'spectator-view/2', error: 'source_changed'}; }
+        else if (old && old !== digest) { status = 409; body = {schema: 'spectator-view/3', error: 'source_changed'}; }
         else {
           const state = ['empty', 'missing', 'malformed'].includes(source) ? source : 'available';
           body = {schema: 'spectator-frame/1', source, source_status: state, snapshot: ['missing'].includes(source) ? null : {sha256: digest, bytes: 123},
@@ -808,7 +832,7 @@ test('curator session selects a receipt and resets detail when its snapshot chan
       const url = new URL(request.url());
       if (url.pathname.endsWith('/frame/curator-session-sources')) return request.respond({status: 200, contentType: 'application/json', body: JSON.stringify({schema: 'spectator-frame/1', items: [{label: 'receipt'}], total: 1, next: null, limit: 500})});
       if (url.pathname.endsWith('/frame/curator-session')) {
-        if (changed && url.searchParams.has('snapshot')) return request.respond({status: 409, contentType: 'application/json', body: JSON.stringify({schema: 'spectator-view/2', error: 'source_changed'})});
+        if (changed && url.searchParams.has('snapshot')) return request.respond({status: 409, contentType: 'application/json', body: JSON.stringify({schema: 'spectator-view/3', error: 'source_changed'})});
         return request.respond({status: 200, contentType: 'application/json', body: JSON.stringify({schema: 'spectator-frame/1', source: 'receipt', source_status: 'available', snapshot: {sha256: digest, bytes: 20}, header: {id: 's1', inputs: {session_kind: 'admission'}, pinned: {}, budgets: {cap_usd: '2'}, lifecycle: {state: 'sealed'}, resources: {}, published_after: 'v1'}, drafts: null, items: [row], total: 1, next: null, limit: 25})});
       }
       request.continue();

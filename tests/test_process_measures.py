@@ -743,7 +743,7 @@ def test_every_admission_packet_excludes_real_forbidden_fixture_inputs(tmp_path)
     for name, tag in [('admission-a', 'a'), ('admission-b', 'b')]:
         source = admission(tmp_path / 'evidence', name, tag, [1, 2, None, 'handoff', 3, 4, None])
         (source / 'prompt.txt').write_text('Reach the destination.')
-        save(source / 'delivered-knowledge.json', dict(schema='delivered-knowledge/2', facts=['DELIVERED KNOWLEDGE']))
+        save(source / 'delivered-knowledge.json', dict(schema='delivered-knowledge/3', facts=['DELIVERED KNOWLEDGE']))
         for actor in (source / 'actors').iterdir():
             (actor / 'prompt.txt').write_text('Continue. <player-context>{"carry":"HANDOFF CARRY"}</player-context>'
                 '<knowledge>ACTOR KNOWLEDGE</knowledge> SECRET REPORT')

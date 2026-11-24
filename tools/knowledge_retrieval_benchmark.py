@@ -170,14 +170,33 @@ DIRECT_ANSWERS = (
 )
 
 
+def _v2_weighted_terms(record: dict) -> tuple[dict[str, int], int]:
+    """Historical #920 field-weighted BM25 index over sealed `delivered-knowledge/2` records."""
+    if 'body' in record:
+        fields = ((3, record['title']), (2, record['lead']), (1, ' '.join(c['text'] for c in record['body'])))
+    else:
+        fields = ((3, record.get('subject', '')), (2, record.get('type', '')), (1, record['text']))
+    weights: dict[str, int] = {}
+    length = 0
+    for weight, text in fields:
+        for term in production.terms_of(text):
+            weights[term] = weights.get(term, 0) + weight
+            length += weight
+    return weights, length
+
+
 class Corpus:
-    """One delivered file under the production reader, with the BM25 index and the projected one-hop graph."""
+    """One sealed `delivered-knowledge/2` file with the #920 BM25 baseline index and the projected one-hop graph."""
 
     def __init__(self, name: str, value: dict, where: str = 'delivered knowledge'):
+        if (not isinstance(value, dict) or value.get('schema') != 'delivered-knowledge/2'
+                or not isinstance(value.get('articles'), list) or not isinstance(value.get('facts'), list)):
+            raise ValueError(f'{where}: expected sealed delivered-knowledge/2 benchmark input')
         self.name = name
-        self.knowledge = production.Knowledge.from_dict(value, where)
-        self.records = self.knowledge.records
-        self.index = [production._weighted_terms(r) for r in self.records]
+        self.article_count = len(value['articles'])
+        self.fact_count = len(value['facts'])
+        self.records = list(value['articles']) + list(value['facts'])
+        self.index = [_v2_weighted_terms(r) for r in self.records]
         self.position = {r['id']: i for i, r in enumerate(self.records)}
         self.article = [('body' in r) for r in self.records]
         titles = {r['title']: i for i, r in enumerate(self.records) if 'body' in r}
@@ -255,14 +274,12 @@ class Corpus:
 
     def rank(self, method: str, query: str) -> list[int]:
         if method == 'prod_bm25':
-            return [self.position[r['id']] for r in self.knowledge.query(query)['records']]
+            return self.ordered(self.bm25(query))[:LIMIT]
         order = self.ordered(self.one_hop(self.bm25(query)))
         return self.walk(order, skip=method == 'bm25_1hop_skip')
 
     def query(self, method: str, query: str) -> list[dict]:
         """The full result a player would receive, deep-copied as the production reader does; used for timing."""
-        if method == 'prod_bm25':
-            return self.knowledge.query(query)['records']
         return [copy.deepcopy(self.records[i]) for i in self.rank(method, query)]
 
     def ids(self, positions: list[int]) -> list[str]:
@@ -373,8 +390,8 @@ def retrieval(corpus: Corpus, queries: list[Query], repeat: int) -> dict:
         rows.append(dict(label=q.label, group=q.group, query=q.text, gold=list(q.gold),
                          ranks={m: first_rank(corpus, corpus.rank(m, q.text), q.gold) for m in METHODS},
                          top5={m: corpus.ids(corpus.rank(m, q.text)[:CUT]) for m in METHODS}))
-    return dict(corpus=corpus.name, articles=len(corpus.knowledge.value['articles']),
-                facts=len(corpus.knowledge.value['facts']), edges=sum(map(len, corpus.neighbours)) // 2,
+    return dict(corpus=corpus.name, articles=corpus.article_count,
+                facts=corpus.fact_count, edges=sum(map(len, corpus.neighbours)) // 2,
                 queries=len(queries), methods=summary, rows=rows)
 
 
@@ -476,18 +493,20 @@ def overall_gate(results: dict) -> dict:
 
 def benchmark(evidence: Path, repeat: int) -> dict:
     corpora = {name: Corpus.load(name, evidence / path) for name, path in CORPORA.items()}
-    for q in QUERIES + LIVE:
-        corpus = corpora[q.corpus]
-        if corpus.rank('prod_bm25', q.text) != corpus.ordered(corpus.bm25(q.text))[:LIMIT]:
-            raise ValueError(f'{q.corpus} {q.label}: recomputed BM25 order differs from Knowledge.query')
     results = {name: retrieval(corpora[name], [q for q in QUERIES if q.corpus == name], repeat)
                for name in ('v91', 'v17')}
+    # Guard against accidental drift in the historical #920 baseline scorer.
+    expected_baseline = {'v91': (1.0, 0.7), 'v17': (1.0, 0.65)}
+    for name, (hit5, mrr5) in expected_baseline.items():
+        actual = results[name]['methods']['prod_bm25']
+        if (actual['hit_at_5'], actual['article_mrr_at_5']) != (hit5, mrr5):
+            raise ValueError(f'{name}: #920 baseline metrics drifted: {(actual["hit_at_5"], actual["article_mrr_at_5"])} != {(hit5, mrr5)}')
     live = [dict(label=q.label, corpus=q.corpus, query=q.text,
                  top5={m: corpora[q.corpus].ids(corpora[q.corpus].rank(m, q.text)[:CUT]) for m in METHODS})
             for q in LIVE]
     return dict(schema='knowledge-retrieval-benchmark/1', repeat=repeat,
-                corpora={name: dict(path=CORPORA[name], articles=len(c.knowledge.value['articles']),
-                                    facts=len(c.knowledge.value['facts']), edges=sum(map(len, c.neighbours)) // 2,
+                corpora={name: dict(path=CORPORA[name], articles=c.article_count,
+                                    facts=c.fact_count, edges=sum(map(len, c.neighbours)) // 2,
                                     links=c.links, unresolved_links=c.unresolved_links)
                          for name, c in corpora.items()},
                 retrieval=results, live=live, overall_gate=overall_gate(results),

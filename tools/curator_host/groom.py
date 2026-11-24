@@ -7,16 +7,30 @@ import sqlite3
 import subprocess
 import sys
 
+from harness.curator import check
 from harness.curator.knowledge import Repository
 from harness.curator.window import Window
 from harness.trace.stores import sealed
 from tools.curator_host import live_runner, shadow
 
-SCHEMA = 'curator-boundary-grooming/1'
+SCHEMA = 'curator-boundary-grooming/2'
 SUMMARY = 'grooming-summary.json'
 
 
+def stale_records(repo: Repository, version: str | None) -> int | None:
+    """Current records at `version` with non-empty `stale_citations`; None when the version cannot be read."""
+    if version is None:
+        return None
+    try:
+        records = repo.records(version)
+        return sum(1 for record in records if check.current(record) and record['stale_citations'])
+    except (OSError, ValueError, KeyError, TypeError, RecursionError):
+        return None
+
+
 def failure_reason(summary: dict) -> str | None:
+    """The first failure in priority order. The stale-citation rule comes last, so a cap, proxy, sealing or
+    provider failure is reported first; a missing `stale_records` counts as unreadable."""
     if summary['run_state'] != 'completed':
         return summary['run_state']
     if summary.get('unresolved'):
@@ -30,8 +44,15 @@ def failure_reason(summary: dict) -> str | None:
         return 'cap-reached'
     if summary.get('session_state') != 'sealed':
         return 'session-not-sealed'
+    if summary.get('sandbox', {}).get('stopped') == 'provider-error':
+        return 'provider-error'
     if summary.get('sandbox', {}).get('survivors') != []:
         return 'cleanup-unconfirmed'
+    stale = summary.get('stale_records')
+    if stale is None:
+        return 'stale-citations-unreadable'
+    if stale > 0:
+        return 'stale-citations-remain'
     return None
 
 
@@ -73,7 +94,8 @@ def main(argv: list[str] | None = None) -> int:
         if last_admission is None:
             out.mkdir(parents=True)
             shadow._write(out/SUMMARY, dict(report, status='skipped', reason='no-published-admission',
-                                            published_after=before, cost_usd='0', summary=None))
+                                            published_after=before, stale_records=stale_records(repo, before),
+                                            cost_usd='0', summary=None))
             print(f'curator_groom: skipped {run.name}: no published admission')
             return 0
 
@@ -109,8 +131,6 @@ def main(argv: list[str] | None = None) -> int:
         summary = dict(run_state=f'error: {type(exc).__name__}: {exc}')
         summary_path = None
 
-    reason = failure_reason(summary)
-    status = 'completed' if reason is None else 'failed'
     if 'published_after' in summary:
         after = summary['published_after']
     else:
@@ -118,9 +138,13 @@ def main(argv: list[str] | None = None) -> int:
             after = repo.published()
         except (OSError, ValueError):
             after = None
+    # A grooming close-out succeeds only when no current record at published_after cites a non-current one.
+    stale = stale_records(repo, after)
+    reason = failure_reason(dict(summary, stale_records=stale))
+    status = 'completed' if reason is None else 'failed'
     try:
         shadow._write(out/SUMMARY, dict(
-            report, status=status, reason=reason, cap_usd=str(cap), published_after=after,
+            report, status=status, reason=reason, cap_usd=str(cap), published_after=after, stale_records=stale,
             cost_usd=summary.get('cost_usd'), session_state=summary.get('session_state'),
             verdicts=summary.get('verdicts', []), proxy=summary.get('proxy'), sandbox=summary.get('sandbox'),
             summary=summary_path.as_posix() if summary_path else None))

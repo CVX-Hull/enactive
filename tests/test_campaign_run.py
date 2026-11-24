@@ -18,16 +18,19 @@ from tools import campaign_run
 from tools.configure_player_tools import configuration
 
 
-KNOWLEDGE=dict(schema='delivered-knowledge/2',version='v1',commit='c'*40,repository_id='d'*40,coverage=None,articles=[],
-               facts=[dict(id='fact',type='claim',text='Fallible data',seen=dict(session='s1',actor='001',step=1,order=[1,'001',1]))])
+from tests.test_knowledge_export import delivered_fixture
 
 
-def package(root, *, world=None, knowledge=None, live=False, seed=None):
+KNOWLEDGE = delivered_fixture(['fact'])
+KNOWLEDGE['facts'][0]['text'] = 'Fallible data'
+
+
+def package(root, *, world=None, lineage=None, context=None, knowledge=None, live=False, seed=None):
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     from harness.player.knowledge import empty
     from tools.knowledge_export import export
-    hashes=export(directory,empty() if knowledge is None else knowledge,seed,world=world)
+    hashes=export(directory,empty() if knowledge is None else knowledge,seed,world=world,lineage=lineage,context=context)
     values={
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
         'route.json':dict(schema='player-host/11',endpoint_costs=None,service_tier='default',context_reserve_tokens=200,context_cut=None,
@@ -40,8 +43,10 @@ def package(root, *, world=None, knowledge=None, live=False, seed=None):
     values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,unpriced_request_usd='0.00063',endpoint_costs=None)
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/12',session='a'*32,source_commit='f'*40,live_knowledge_updates=live,
-        labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None,world=world),
+    profile=dict(schema='campaign-run/13',context={} if context is None else context,session='a'*32,
+        source_commit='f'*40,live_knowledge_updates=live,
+        labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=lineage,
+                    admission=None if lineage is None else 1,world=world),
         files={name:artifact(directory/name)['sha256'] for name in (*values, 'delivered-knowledge.json')},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
@@ -356,13 +361,13 @@ def test_invalid_operator_labels_refuse_before_effects(tmp_path,labels):
     dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None,world='World !@#'),
 ])
 def test_valid_operator_labels_are_admitted(tmp_path,labels):
-    directory,profile=package(tmp_path,world=labels['world'])
+    directory,profile=package(tmp_path,world=labels['world'],lineage=labels['lineage'])
     profile['labels']=labels
     (directory/'manifest.json').write_text(json.dumps(profile))
     assert validate(directory,tmp_path)[0]['labels']==labels
 
 
-@pytest.mark.parametrize('fault', ['missing', 'world', 'delivered'])
+@pytest.mark.parametrize('fault', ['missing', 'world', 'lineage', 'context', 'extra', 'delivered'])
 def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_hashes(tmp_path, fault):
     directory, profile = package(tmp_path, world='the farm')
     path = directory/'private/knowledge-full.json'
@@ -371,6 +376,12 @@ def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_h
         del full['selection']
     elif fault == 'world':
         profile['labels']['world'] = 'another world'
+    elif fault == 'lineage':
+        profile['labels'].update(lineage='different lineage', admission=1)
+    elif fault == 'context':
+        profile['context'] = {'ruleset': 'different'}
+    elif fault == 'extra':
+        full['selection']['extra'] = 1
     else:
         delivered = directory/'delivered-knowledge.json'
         delivered.write_bytes(delivered.read_bytes() + b'\n')
@@ -385,13 +396,13 @@ def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_h
 
 
 def test_a_current_package_with_a_private_export_of_the_retired_knowledge_version_refuses_preflight(tmp_path):
-    """R-REGRESSION (B5), S-MIGRATION: a `/12` package whose private full export is `delivered-knowledge/1` is
+    """R-REGRESSION (B5), S-MIGRATION: a `/13` package whose private full export is `delivered-knowledge/2` is
     refused even when its hashes and selection match the manifest."""
     directory, profile = package(tmp_path, world='the farm')
     path = directory/'private/knowledge-full.json'
     full = json.loads(path.read_text())
-    assert full['schema'] == 'delivered-knowledge/2' and full['selection']['world'] == 'the farm'
-    path.write_text(json.dumps(dict(full, schema='delivered-knowledge/1')))
+    assert full['schema'] == 'delivered-knowledge/3' and full['selection']['world'] == 'the farm'
+    path.write_text(json.dumps(dict(full, schema='delivered-knowledge/2')))
     profile['private_files'][path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run') as validator:

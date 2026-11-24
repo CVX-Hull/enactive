@@ -76,7 +76,7 @@ before telemetry tooling is added.
      - So a viewer outage cannot block a required check.
    - **Viewer.** A separate read-only process outside supervision runs the evaluator
      incrementally over the live run's records and serves the
-     [`spectator-view/1`](../contracts/spectator-view.md#spectator-view-api-spectator-view2) API. The gateway
+     [`spectator-view/1`](../contracts/spectator-view.md#spectator-view-api-spectator-view3) API. The gateway
      forwards view requests with a short timeout and a size cap.
    - **Failure.** A viewer failure shows "viewer unavailable" on the page. It never
      ends, pauses or gates a run, and Pause never depends on it.

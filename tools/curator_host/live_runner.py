@@ -56,6 +56,7 @@ from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.curator.runner import SPEND_EXHAUSTED, SPEND_REFUSED, Outcome, Reading, Runner, RunnerError, Settings, TagLook, staged  # noqa: E402
 from harness.curator.window import Window  # noqa: E402
 from harness.evaluation.core.sources import MANIFEST_SCHEMA  # noqa: E402
+from harness.trace.projection import valid_context  # noqa: E402
 from tools import knowledge_export  # noqa: E402
 from tools.campaign_package import DELIVERED_DIRECTORY  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
@@ -228,11 +229,14 @@ class Sessions:
             stop = SPEND_REFUSED
         details = dict(cost_usd=summary['cost_usd'], summary=str(self.out/read.directory.name/label/'summary.json'))
         error = summary['run_state'] if summary['run_state'] != 'completed' else None
+        provider_error = summary.get('sandbox', {}).get('stopped') == 'provider-error'
         if 'session_id' not in summary and error and error.startswith('error: SessionError:'):
             # run_session raises SessionError only when the repository lock refuses a second session.
-            return Outcome(state=None, refused=True, stop=stop, error=error, details=details)
+            return Outcome(state=None, refused=True, stop=stop, error=error, details=details,
+                           provider_error=provider_error)
         return Outcome(state=summary.get('session_state'), verdicts=tuple(summary.get('verdicts', ())),
-                       session_id=summary.get('session_id'), stop=stop, error=error, details=details)
+                       session_id=summary.get('session_id'), stop=stop, error=error, details=details,
+                       provider_error=provider_error)
 
 
 VERSION_FILE = re.compile(r'v(0|[1-9][0-9]*)\.json')
@@ -241,8 +245,8 @@ COVERED_PREFIX_FILE = 'covered-prefix.json'
 COVERED_PREFIX_SCHEMA = 'curator-covered-prefix/1'
 
 
-def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, str | None, str]:
-    """Whether the package delivers newer versions, the world its facts are selected for, and the session ID.
+def delivery_target(run: Path, *, session_id: str | None = None) -> tuple[bool, str | None, str | None, dict, str]:
+    """Whether the package delivers newer versions, its selection target, and the session ID.
 
     The manifest is trusted only as the supervisor launched it: its bytes must have the SHA-256 that the
     supervisor's `campaign-watch-start/4` launch record names for the same 32-hex session (and matching any
@@ -264,13 +268,17 @@ def delivery_world(run: Path, *, session_id: str | None = None) -> tuple[bool, s
         raise ValueError(f'{run/"manifest.json"}: manifest session differs from the launched session')
     if opening.get('manifest_sha256') != hashlib.sha256(data).hexdigest():
         raise ValueError(f'{run/"manifest.json"}: SHA-256 differs from the supervisor launch record')
-    return manifest['live_knowledge_updates'] is True, knowledge_export.world_label(manifest['labels']['world']), session
+    if not valid_context(manifest.get('context')):
+        raise ValueError(f'{run/"manifest.json"}: missing or invalid context axes')
+    world, lineage, context = knowledge_export.target_labels(
+        manifest['labels']['world'], manifest['labels']['lineage'], manifest['context'])
+    return manifest['live_knowledge_updates'] is True, world, lineage, context, session
 
 
 class Delivery:
     """Leaves confirmed versions and the unbroken covered prefix in `<runner directory>/delivered/`.
 
-    The file is the version exported as `delivered-knowledge/2` for the package's world
+    The file is the version exported as `delivered-knowledge/3` for the package's target
     (`tools.knowledge_export.published`), written whole to a temporary name, synced and renamed, so the
     driver only ever sees a complete file. Only a version the runner has confirmed in this admission is
     exported (its tag was seen, an examined session reports it and its stamp is that window), never a
@@ -278,8 +286,10 @@ class Delivery:
     on stderr once per version and error and tried again at the next poll; it never ends the runner.
     """
 
-    def __init__(self, directory: Path, repository: Path, world: str | None, session: str | None = None):
+    def __init__(self, directory: Path, repository: Path, world: str | None, session: str | None = None,
+                 *, lineage: str | None = None, context: dict | None = None):
         self.directory, self.repository, self.world = Path(directory)/DELIVERED_DIRECTORY, repository, world
+        self.lineage, self.context = lineage, context
         self.session = session
         self.actor_ids: dict[str, str] = {}
         self.last_prefix = None
@@ -312,7 +322,8 @@ class Delivery:
                               if runner.versions[c['version']]['restored_from'] is None), default=-1)
             if number > self.last:
                 version = f'v{number}'
-                self._write(f'{version}.json', knowledge_export.published(self.repository, version, world=self.world))
+                self._write(f'{version}.json', knowledge_export.published(
+                    self.repository, version, world=self.world, lineage=self.lineage, context=self.context))
                 self.last = number
         except Exception as exc:  # noqa: BLE001 - delivery is beside curation: reported, retried, never fatal
             self._report(version, exc)
@@ -399,8 +410,9 @@ def main(argv: list[str] | None = None) -> int:
             directory = args.directory.resolve()
             deliver = None
             try:
-                enabled, world, session = delivery_world(run, session_id=args.session)
-                deliver = Delivery(directory, repo.path, world, session=session) if enabled else None
+                enabled, world, lineage, context, session = delivery_target(run, session_id=args.session)
+                if enabled:
+                    deliver = Delivery(directory, repo.path, world, session=session, lineage=lineage, context=context)
             except (OSError, ValueError, KeyError, TypeError) as error:
                 # Curation does not depend on delivery: the runner starts and leaves no version for the driver.
                 print(f'curator_runner: delivery to the running actor is off: {type(error).__name__}: {error}',

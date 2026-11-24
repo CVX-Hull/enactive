@@ -1,0 +1,538 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "curator-fact/5: stored fact and article revision records in facts.jsonl",
+  "description": "Closed shape for published curator-fact/5 records (facts and article revisions) in a curator-knowledge/4 repository. Cross-record checks (provenance frames, declared axes, scope lattice, references, lifecycle fixed point) live in harness/curator/check.py.",
+  "oneOf": [
+    {"$ref": "#/$defs/stored_fact"},
+    {"$ref": "#/$defs/stored_article"}
+  ],
+  "$defs": {
+    "nonblank": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v(0|[1-9][0-9]*)$",
+      "not": {"pattern": "\\n"}
+    },
+    "id_or_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+      "not": {"pattern": "\\n"}
+    },
+    "article_revision_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}@v(0|[1-9][0-9]*)$",
+      "not": {"pattern": "\\n"}
+    },
+    "frame_source_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}-[1-9][0-9]*$",
+      "not": {"pattern": "\\n"}
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "not": {"pattern": "[^ -~]"}
+    },
+    "axis_value": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "not": {"pattern": "[^ -~]"}
+    },
+    "tag": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "not": {"pattern": "\\n"}
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/tag"}
+    },
+    "claim_kind": {
+      "type": "string",
+      "enum": ["interface", "mechanic", "entity_property", "instance_state", "strategy"]
+    },
+    "evidence_basis": {
+      "type": "string",
+      "enum": ["observed", "inferred", "hinted"]
+    },
+    "lifecycle_state": {
+      "type": "string",
+      "enum": ["active", "contested", "superseded", "retracted", "ended"]
+    },
+    "stored_scope": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 8,
+      "required": ["game"],
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$",
+        "not": {
+          "anyOf": [
+            {"const": "lineage"},
+            {"pattern": "\\n"}
+          ]
+        }
+      },
+      "properties": {
+        "game": {"$ref": "#/$defs/axis_value"},
+        "world": {"$ref": "#/$defs/label"}
+      },
+      "additionalProperties": {"$ref": "#/$defs/axis_value"}
+    },
+    "requires_map": {
+      "type": "object",
+      "maxProperties": 8,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$",
+        "not": {
+          "anyOf": [
+            {"enum": ["game", "world", "lineage"]},
+            {"pattern": "\\n"}
+          ]
+        }
+      },
+      "additionalProperties": {"$ref": "#/$defs/axis_value"}
+    },
+    "when": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["note", "requires"],
+      "properties": {
+        "note": {"$ref": "#/$defs/nonblank"},
+        "requires": {"$ref": "#/$defs/requires_map"}
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rel", "target"],
+      "properties": {
+        "rel": {
+          "type": "string",
+          "enum": ["depends_on", "contradicts", "part_of", "see_also"]
+        },
+        "target": {"$ref": "#/$defs/id_or_slug"}
+      }
+    },
+    "links": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/link"}
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session", "actor", "step", "order"],
+      "properties": {
+        "session": {"$ref": "#/$defs/nonblank"},
+        "actor": {"$ref": "#/$defs/nonblank"},
+        "step": {"type": "integer"},
+        "order": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            {"type": "integer"},
+            {"type": "string"},
+            {"type": "integer"}
+          ],
+          "items": false
+        }
+      }
+    },
+    "lineages": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "oneOf": [
+          {"$ref": "#/$defs/label"},
+          {"type": "null"}
+        ]
+      }
+    },
+    "citations_nonempty": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/frame_source_id"}
+    },
+    "citations_any": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/frame_source_id"}
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "facts"],
+      "properties": {
+        "text": {"$ref": "#/$defs/nonblank"},
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        }
+      }
+    },
+    "retag_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "version"],
+      "properties": {
+        "from": {"$ref": "#/$defs/tags"},
+        "to": {"$ref": "#/$defs/tags"},
+        "version": {"$ref": "#/$defs/version"}
+      }
+    },
+    "retagged": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/retag_entry"}
+    },
+    "fact_retired_wrong": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "reason_kind", "citations", "published_in", "session"],
+      "properties": {
+        "reason": {"$ref": "#/$defs/nonblank"},
+        "reason_kind": {"const": "wrong"},
+        "citations": {"$ref": "#/$defs/citations_nonempty"},
+        "published_in": {"$ref": "#/$defs/version"},
+        "session": {"$ref": "#/$defs/nonblank"}
+      }
+    },
+    "fact_end_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "end", "end_citations", "valid_to", "published_in", "session"],
+      "properties": {
+        "reason": {"$ref": "#/$defs/nonblank"},
+        "end": {
+          "type": "string",
+          "enum": ["transition", "absence"]
+        },
+        "end_citations": {"$ref": "#/$defs/citations_nonempty"},
+        "citations": {"$ref": "#/$defs/citations_any"},
+        "valid_to": {
+          "oneOf": [
+            {"$ref": "#/$defs/position"},
+            {"type": "null"}
+          ]
+        },
+        "published_in": {"$ref": "#/$defs/version"},
+        "session": {"$ref": "#/$defs/nonblank"}
+      }
+    },
+    "fact_retired_ended": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason_kind", "events"],
+      "properties": {
+        "reason_kind": {"const": "ended"},
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/fact_end_event"}
+        }
+      }
+    },
+    "article_retired": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "reason_kind", "published_in", "session"],
+      "properties": {
+        "reason": {"$ref": "#/$defs/nonblank"},
+        "reason_kind": {
+          "type": "string",
+          "enum": ["wrong", "editorial"]
+        },
+        "published_in": {"$ref": "#/$defs/version"},
+        "session": {"$ref": "#/$defs/nonblank"}
+      }
+    },
+    "stored_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "record",
+        "id",
+        "claim_kind",
+        "evidence_basis",
+        "tags",
+        "text",
+        "scope",
+        "links",
+        "citations",
+        "seen",
+        "valid_from",
+        "valid_to",
+        "lifecycle_state",
+        "stale_citations",
+        "needs_review",
+        "published_in",
+        "session"
+      ],
+      "properties": {
+        "schema": {"const": "curator-fact/5"},
+        "record": {"const": "fact"},
+        "id": {"$ref": "#/$defs/id_or_slug"},
+        "claim_kind": {"$ref": "#/$defs/claim_kind"},
+        "evidence_basis": {"$ref": "#/$defs/evidence_basis"},
+        "tags": {"$ref": "#/$defs/tags"},
+        "text": {"$ref": "#/$defs/nonblank"},
+        "subject": {"$ref": "#/$defs/nonblank"},
+        "scope": {"$ref": "#/$defs/stored_scope"},
+        "when": {"$ref": "#/$defs/when"},
+        "links": {"$ref": "#/$defs/links"},
+        "citations": {"$ref": "#/$defs/citations_nonempty"},
+        "lineages": {"$ref": "#/$defs/lineages"},
+        "seen": {"$ref": "#/$defs/position"},
+        "valid_from": {"$ref": "#/$defs/position"},
+        "valid_to": {
+          "oneOf": [
+            {"$ref": "#/$defs/position"},
+            {"type": "null"}
+          ]
+        },
+        "lifecycle_state": {"$ref": "#/$defs/lifecycle_state"},
+        "stale_citations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        },
+        "needs_review": {"type": "boolean"},
+        "superseded_by": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        },
+        "retired": {
+          "oneOf": [
+            {"$ref": "#/$defs/fact_retired_wrong"},
+            {"$ref": "#/$defs/fact_retired_ended"}
+          ]
+        },
+        "retagged": {"$ref": "#/$defs/retagged"},
+        "published_in": {"$ref": "#/$defs/version"},
+        "session": {"$ref": "#/$defs/nonblank"}
+      },
+      "allOf": [
+        {
+          "not": {"required": ["superseded_by", "retired"]}
+        },
+        {
+          "if": {"properties": {"scope": {"required": ["world"]}}},
+          "then": {"required": ["lineages"]},
+          "else": {
+            "not": {"required": ["lineages"]},
+            "properties": {
+              "valid_to": {"type": "null"},
+              "retired": {
+                "properties": {
+                  "events": {
+                    "items": {
+                      "properties": {
+                        "valid_to": {"type": "null"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["lineages"],
+            "anyOf": [
+              {"properties": {"lineages": {"minItems": 2}}},
+              {"properties": {"lineages": {"contains": {"type": "null"}}}}
+            ]
+          },
+          "then": {"properties": {"valid_to": {"type": "null"}}}
+        },
+        {
+          "if": {
+            "required": ["retired"],
+            "properties": {
+              "retired": {
+                "properties": {
+                  "reason_kind": {"const": "ended"},
+                  "events": {"minItems": 2}
+                },
+                "required": ["reason_kind", "events"]
+              }
+            }
+          },
+          "then": {"properties": {"valid_to": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"claim_kind": {"const": "instance_state"}}},
+          "then": {"properties": {"scope": {"required": ["world"]}}}
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"enum": ["active", "contested"]}}},
+          "then": {
+            "not": {"anyOf": [{"required": ["superseded_by"]}, {"required": ["retired"]}]},
+            "properties": {"valid_to": {"type": "null"}}
+          }
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"const": "superseded"}}},
+          "then": {
+            "required": ["superseded_by"],
+            "not": {"required": ["retired"]},
+            "properties": {"valid_to": {"type": "null"}}
+          }
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"const": "ended"}}},
+          "then": {
+            "required": ["retired"],
+            "not": {"required": ["superseded_by"]},
+            "properties": {
+              "retired": {"properties": {"reason_kind": {"const": "ended"}}}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"const": "retracted"}}},
+          "then": {
+            "properties": {"valid_to": {"type": "null"}},
+            "oneOf": [
+              {
+                "required": ["superseded_by"],
+                "not": {"required": ["retired"]},
+                "properties": {"superseded_by": {"minItems": 1, "maxItems": 1}}
+              },
+              {
+                "required": ["retired"],
+                "not": {"required": ["superseded_by"]},
+                "properties": {
+                  "retired": {"properties": {"reason_kind": {"const": "wrong"}}}
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "stored_article": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "record",
+        "id",
+        "slug",
+        "title",
+        "lead",
+        "body",
+        "tags",
+        "scope",
+        "links",
+        "last_confirmed",
+        "valid_from",
+        "valid_to",
+        "lifecycle_state",
+        "stale_citations",
+        "needs_review",
+        "published_in",
+        "session"
+      ],
+      "properties": {
+        "schema": {"const": "curator-fact/5"},
+        "record": {"const": "article"},
+        "id": {"$ref": "#/$defs/article_revision_id"},
+        "slug": {"$ref": "#/$defs/id_or_slug"},
+        "title": {"$ref": "#/$defs/nonblank"},
+        "lead": {"$ref": "#/$defs/nonblank"},
+        "body": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/claim"}
+        },
+        "tags": {"$ref": "#/$defs/tags"},
+        "scope": {"$ref": "#/$defs/stored_scope"},
+        "links": {"$ref": "#/$defs/links"},
+        "lineages": {"$ref": "#/$defs/lineages"},
+        "last_confirmed": {"$ref": "#/$defs/position"},
+        "valid_from": {"$ref": "#/$defs/position"},
+        "valid_to": {"type": "null"},
+        "lifecycle_state": {"$ref": "#/$defs/lifecycle_state"},
+        "stale_citations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        },
+        "needs_review": {"type": "boolean"},
+        "superseded_by": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {"$ref": "#/$defs/article_revision_id"}
+        },
+        "retired": {"$ref": "#/$defs/article_retired"},
+        "retagged": {"$ref": "#/$defs/retagged"},
+        "published_in": {"$ref": "#/$defs/version"},
+        "session": {"$ref": "#/$defs/nonblank"}
+      },
+      "allOf": [
+        {
+          "not": {"required": ["superseded_by", "retired"]}
+        },
+        {
+          "if": {"properties": {"scope": {"required": ["world"]}}},
+          "then": {"required": ["lineages"]},
+          "else": {"not": {"required": ["lineages"]}}
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"enum": ["active", "contested"]}}},
+          "then": {
+            "not": {"anyOf": [{"required": ["superseded_by"]}, {"required": ["retired"]}]}
+          }
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"const": "superseded"}}},
+          "then": {
+            "required": ["superseded_by"],
+            "not": {"required": ["retired"]}
+          }
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"const": "ended"}}},
+          "then": {
+            "required": ["retired"],
+            "not": {"required": ["superseded_by"]},
+            "properties": {
+              "retired": {"properties": {"reason_kind": {"const": "editorial"}}}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"lifecycle_state": {"const": "retracted"}}},
+          "then": {
+            "required": ["retired"],
+            "not": {"required": ["superseded_by"]},
+            "properties": {
+              "retired": {"properties": {"reason_kind": {"const": "wrong"}}}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

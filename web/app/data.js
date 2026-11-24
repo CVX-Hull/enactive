@@ -53,7 +53,7 @@ export function useStore() {
 /* ---------------------------------------------------------------- fetching */
 export class ViewerDown extends Error {}
 
-export async function viewerGet(path, schema = 'spectator-view/2') {
+export async function viewerGet(path, schema = 'spectator-view/3') {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), VIEW_TIMEOUT_MS);
   let response;
@@ -90,7 +90,7 @@ export const framePath = (run, sourceId) => `/api/view/${runPath(run, `frame/${e
 
 /** Fetch one viewer route into component state, again on an interval if it has one. A one-shot read (`every` 0) that
  *  failed is repeated when the viewer returns; one that succeeded is of something that does not change, and is kept. */
-export function useView(path, every = 5000, schema = 'spectator-view/2', refresh = 0) {
+export function useView(path, every = 5000, schema = 'spectator-view/3', refresh = 0) {
   const [state, setState] = useState({path: null, data: null, error: null});
   useEffect(() => {
     if (!path) return undefined;

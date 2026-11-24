@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/12` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/13` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -108,10 +108,11 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/12",
+  "schema": "campaign-run/13",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "S1", "scenario": "SCENARIO", "lineage": null, "admission": null, "world": null},
+  "context": {},
   "files": {
     "route.json": "SHA256", "mcp-template.json": "SHA256",
     "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256",
@@ -162,13 +163,14 @@ diagnostics can use the existing package preflight for their declared scope.
 ### Freeze delivered knowledge
 
 Before hashing the package, run `python -m tools.knowledge_export REPOSITORY --version vN --package DIR`.
-Pass `--world WORLD` with the exact value of `labels.world` when it is set. The
-exporter selects current articles, game facts and facts of that world before drawing
-units. Omit `--world` to select current articles and game facts alone.
-`--empty --package DIR` creates the required files with no units or coverage and
-takes the same world option. Freeze the returned hashes in `files` and
-`private_files`. Preflight verifies the private selection against `labels.world`
-and the delivered file's SHA-256. The
+Pass `--world WORLD` with the exact value of `labels.world` when it is set, `--lineage LINEAGE`
+with `labels.lineage` when set, and `--context KEY=VALUE` for each declared run-wide axis in
+`context`. The exporter selects every current record whose scope is satisfied by that target
+and blinds all raw world and lineage labels before drawing units. Omit `--world` to select
+unbound records alone. `--empty --package DIR` creates the required files with no units or
+coverage and takes the same selection options. Freeze the returned hashes in `files` and
+`private_files`. Preflight verifies the private selection against `labels.world`,
+`labels.lineage`, `context` and the delivered file's SHA-256. The
 [host contract](../contracts/player-host.md#delivered-knowledge-and-recall) specifies
 which files reach the player.
 
@@ -269,11 +271,18 @@ Strings are printable ASCII only (space through `~`), with no control or non-ASC
 characters. Preflight checks the start code against the current ledger schema
 before dispatch. A missing field, extra field or out-of-bound value refuses the
 package before effects, like the rest of the manifest. Preflight accepts only
-`campaign-run/12`.
+`campaign-run/13`.
+
+The required top-level `context` object (`{}` by default) declares 0 to 8 **run-wide
+invariant** axes (`[a-z][a-z0-9_]{0,31}`, never `game`, `world` or `lineage`; printable
+ASCII values of 1 to 64 characters) that remain constant for the entire run — such as
+game build, modset or scenario rules. Never place transient in-run state in `context`;
+transient conditions belong in a fact's `when` clause.
 
 Keep the label values out of the player's argv, prompt, context, route, target,
-MCP configuration and environment. The sole effect of the labels on a player-visible
-input is that `labels.world` determines the [frozen knowledge selection](#freeze-delivered-knowledge).
+MCP configuration and environment. The sole effect of the labels and `context` on a
+player-visible input is determining the
+[frozen knowledge selection](#freeze-delivered-knowledge).
 
 ### Ending reserve and external stop
 
