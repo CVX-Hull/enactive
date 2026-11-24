@@ -21,6 +21,8 @@
       "properties": {
         "survival.game_hours": {},
         "mode.out_of_play_share": {},
+        "mode.ui_share": {"description": "Core version 3 and later: share of play decisions on a game screen the player works in."},
+        "mode.interruption_share": {"description": "Core version 3 and later: share of play decisions out of play and not on such a screen; with mode.ui_share it sums to mode.out_of_play_share."},
         "pace.routine_seconds_per_decision": {},
         "pace.long_activities": {},
         "stall.longest": {},

@@ -107,28 +107,29 @@ def plain(amount: Decimal) -> str:
 
 def package_row(package: Path, *, study: int, label: str, upper_bound: bool = False) -> dict:
     """Derive observed cost and unknown attempts from a current, owned campaign receipt."""
-    from harness.evaluation.core.sources import MANIFEST_SCHEMA, RECEIPT_SCHEMA, EvaluationError, read_manifest
+    from harness.evaluation.core.sources import MANIFEST_SCHEMA, RECEIPT_SCHEMA, EvaluationError, read_manifest, run_name
+    name = run_name(package)
     try:
         manifest = read_manifest(package)
     except EvaluationError as exc:
         raise LedgerError(str(exc)) from exc
     if manifest['schema'] != MANIFEST_SCHEMA:
-        raise LedgerError(f'{package.name}: archived manifests cannot produce new ledger rows')
+        raise LedgerError(f'{name}: archived manifests cannot produce new ledger rows')
     receipt_path = package / 'receipt.json'
     if not receipt_path.is_file():
-        raise LedgerError(f'{package.name}: no receipt.json; reconcile the admission before recording it')
+        raise LedgerError(f'{name}: no receipt.json; reconcile the admission before recording it')
     receipt = _json(receipt_path)
     if receipt.get('schema') != RECEIPT_SCHEMA:
-        raise LedgerError(f'{package.name}: unsupported receipt {receipt.get("schema")!r}')
+        raise LedgerError(f'{name}: unsupported receipt {receipt.get("schema")!r}')
     labels = manifest['labels']
     if receipt['session'] != manifest['session'] or receipt['source_commit'] != manifest['source_commit']:
-        raise LedgerError(f'{package.name}: receipt and manifest disagree on session or source')
+        raise LedgerError(f'{name}: receipt and manifest disagree on session or source')
     spend = receipt['accounting']
     if spend['spend_complete'] is not True and not upper_bound:
-        raise LedgerError(f'{package.name}: the receipt records its spend as incomplete; the lead records it with '
+        raise LedgerError(f'{name}: the receipt records its spend as incomplete; the lead records it with '
             '--record-upper-bound (docs/operations/campaign-run.md) before any further run of the study is admitted')
     if spend['spend_complete'] is True and upper_bound:
-        raise LedgerError(f'{package.name}: the receipt records its spend as complete; --record-upper-bound is only for '
+        raise LedgerError(f'{name}: the receipt records its spend as complete; --record-upper-bound is only for '
             'a receipt whose spend is incomplete')
     bound = None
     if upper_bound:
@@ -140,7 +141,7 @@ def package_row(package: Path, *, study: int, label: str, upper_bound: bool = Fa
         bound = plain(spend_of(str(observed_or_limit), 1, spend['unpriced_request_usd'],
                                recall_count, spend['unpriced_recall_request_usd']))
     ended = datetime.fromtimestamp(receipt['ended_wall'], timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    return dict(schema=SCHEMA, study=study, run=package.name, label=label, arm=labels['arm'], start=labels['start'],
+    return dict(schema=SCHEMA, study=study, run=name, label=label, arm=labels['arm'], start=labels['start'],
         lineage=labels.get('lineage'), admission=labels.get('admission'), session=receipt['session'],
         source_commit=receipt['source_commit'], ended=ended, outcome=receipt['outcome'],
         attempts=spend['observed_attempts'], wall_seconds=round(receipt['elapsed_seconds']),
@@ -160,7 +161,8 @@ def decimal_text(value: str, name: str) -> str:
 
 
 def record(arguments: argparse.Namespace) -> dict:
-    row = package_row(arguments.package, study=arguments.study, label=arguments.label or arguments.package.name,
+    from harness.evaluation.core.sources import run_name
+    row = package_row(arguments.package, study=arguments.study, label=arguments.label or run_name(arguments.package),
         upper_bound=arguments.record_upper_bound)
     rows = read_ledger(arguments.ledger)
     if any((r['study'], r['run']) == (row['study'], row['run']) for r in rows):
@@ -169,6 +171,12 @@ def record(arguments: argparse.Namespace) -> dict:
     if errors:
         raise LedgerError(f'derived row is invalid: {errors[0].message}')
     validate_accounting(row)
+    # One admission is one session (`read_ledger` refuses a repeat): the same package reached under another
+    # name, such as a sealed `<bundle>/run` beside its original directory, must not become a second row.
+    same = next((r for r in rows if r['session'] == row['session']), None)
+    if same is not None:
+        raise LedgerError(f'{row["run"]}: session {row["session"]} is already recorded as study {same["study"]} '
+                          f'run {same["run"]}')
     with arguments.ledger.open('a') as stream:
         stream.write(json.dumps(row, sort_keys=True) + '\n')
     return row
@@ -201,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     add = commands.add_parser('record', help='append one finished admission')
     add.add_argument('package', type=Path)
     add.add_argument('--study', type=int, required=True)
-    add.add_argument('--label', help="the run's short name in its study's dated record (default: the package name)")
+    add.add_argument('--label', help="the run's short name in its study's dated record (default: the run name: the package directory name, or its bundle name for a sealed <bundle>/run)")
     add.add_argument('--record-upper-bound', action='store_true', help='for a receipt whose spend is incomplete only: '
                      'record an admission amount based on the limit, observed charges and possible in-flight attempts')
     total = commands.add_parser('totals', help="a study's provider subtotal and admission amounts, optionally against an envelope")

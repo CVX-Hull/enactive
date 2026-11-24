@@ -65,10 +65,13 @@ class RunInfo:
 
 
 def stamp(path: Path) -> tuple:
+    """The record's and its write-ahead log's (mtime, size). A symlinked record is stamped by its target,
+    whose directory holds the `-wal` SQLite writes, so a commit through the link changes the stamp."""
     parts = []
+    target = Path(path).resolve()
     for suffix in ('', '-wal'):
         try:
-            status = Path(str(path) + suffix).stat()
+            status = Path(str(target) + suffix).stat()
             parts.append((status.st_mtime_ns, status.st_size))
         except OSError:
             parts.append(None)

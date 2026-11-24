@@ -1641,3 +1641,46 @@ def test_placed_preserves_null_call_decision_separately_from_step_decision():
     step = Step(seq=5, operation_id='op-5', actor='a1', wall=100.0, decision=4, game_time=3600, mode='in_play', source_id='s-5')
     out = placed(step, None, 100.0, None)
     assert out['decision'] is None and out['step_decision'] == 4 and out['seq'] == 5
+
+
+def test_split_mode_metrics_are_read_and_need_the_ui_boundary_validated(archive):
+    from harness.viewer.views import validated
+    client, _, _ = archive
+    summary = client.get('/api/view/run/' + 'a' * 32 + '/summary').json()
+    assert {m['name']: m['source'] for m in summary['metrics'] if m['name'].startswith('mode.')} == {
+        'mode.out_of_play_share': 'read', 'mode.ui_share': 'read', 'mode.interruption_share': 'read'}
+    passing = {'mode': {'pass': True}}
+    assert validated('mode.out_of_play_share', passing) is True
+    assert validated('mode.ui_share', passing) is False and validated('mode.interruption_share', passing) is False
+    assert validated('mode.ui_share', passing | {'mode_ui': {'pass': True}}) is True
+
+
+def test_a_version_2_ui_or_prompt_reading_is_checked_against_the_ui_boundary():
+    from harness.viewer.views import reading_validation_key
+    validation = {'mode': {'version': 1, 'pass': True}, 'mode_ui': {'version': 2, 'pass': None}}
+    assert [reading_validation_key('mode', 2, value, validation) for value in ('ui', 'prompt', 'in_play', None)] == [
+        'mode_ui', 'mode_ui', 'mode', 'mode']
+    # A version-1 reading (a core-2 record) keeps the mode entry's held-out result.
+    assert reading_validation_key('mode', 1, 'prompt', validation) == 'mode'
+    assert reading_validation_key('game_time', 1, 3600, validation) == 'clock'
+    tracked = json.loads((Path(__file__).resolve().parents[1] / 'data' / 'evaluation' / 'reader-validation.json').read_text())
+    assert tracked['mode_ui']['pass'] is None and tracked['mode']['pass'] is True
+
+
+def test_a_symlinked_record_is_restamped_when_only_its_log_changes(tmp_path):
+    from harness.evaluation.core.records import RecordWriter
+    from harness.viewer.catalog import stamp
+    from tests.test_evaluation_core import main_scenario
+    record = evaluate(main_scenario(tmp_path / 'run'), FakeBinding(), tmp_path / 'evaluations', created_wall=1.0)
+    link = tmp_path / 'links' / record.name
+    link.parent.mkdir()
+    link.symlink_to(record)
+    writer = RecordWriter.open(record)
+    try:
+        writer.connection.execute('PRAGMA wal_autocheckpoint=0')
+        before = stamp(link)
+        writer.set_metadata(dict(last_seq=99))
+        assert Path(f'{record}-wal').stat().st_size > 0
+        assert stamp(link) != before and stamp(link) == stamp(record)
+    finally:
+        writer.close()

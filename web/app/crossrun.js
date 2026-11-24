@@ -4,6 +4,7 @@ import {store, useView} from './data.js';
 import {Chart, survivalOption} from './charts.js';
 
 const METRICS = [['survival.game_hours', 'Survival game h'], ['pace.routine_seconds_per_decision', 'Routine pace (game s / decision)'], ['mode.out_of_play_share', 'Out-of-play share'],
+  ['mode.ui_share', 'Game-screen share'], ['mode.interruption_share', 'Interruption share'],
   ['stall.longest', 'Longest stall'], ['stall.count', 'Stalls'], ['host.dollars_per_decision', '$ per decision'], ['host.large_rewrite_share', 'Large-rewrite share of spend']];
 const COLUMNS = ['run', 'arm', 'start', 'outcome', 'reason', 'game_h', 'decisions', 'dollars', 'value'];
 
@@ -39,7 +40,7 @@ export function Explore() {
       ${data ? (data.before_death.length ? html`<div id="alignbody" class="aligned">${data.before_death.map(a => html`<div><div class="note"><b class="mono">${a.run}</b> · ${a.start} start</div>
         <div class="seq">${a.decisions.map(x => html`<span class=${x.mode || 'unknown'} title=${`decision ${x.decision}: ${x.mode}${x.keys && x.keys.length ? ` · ${x.keys.join(' ')}` : ''}${x.creatures ? ` · ${x.creatures} creatures` : ''}`}>${x.threat === 'lethal' ? 'L' : x.threat === 'high' ? 'H' : ''}</span>`)}</div></div>`)}
           <p class="note">L marks a lethal crowd and H a high one on the creature list <${Pv} source="read" detail="threat reader" />. With few deaths, any pattern here is a lead to check, not a finding.</p></div>` : html`<${Insufficient}>No deaths in this cohort.<//>`) : html`<${Waiting} store=${store} what="deaths" error=${error} />`}
-      <div class="legend"><span><i class="s-in_play"></i>in play</span><span><i class="s-prompt"></i>prompt</span><span><i class="s-menu"></i>menu</span><span><i class="s-dead"></i>dead</span><span>L lethal · H high crowd</span></div><//></section>`;
+      <div class="legend"><span><i class="s-in_play"></i>in play</span><span><i class="s-ui"></i>game screen</span><span><i class="s-prompt"></i>prompt</span><span><i class="s-menu"></i>menu</span><span><i class="s-dead"></i>dead</span><span>L lethal · H high crowd</span></div><//></section>`;
 }
 
 export function Compare() {

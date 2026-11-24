@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import os
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterable, Sequence
@@ -17,7 +18,7 @@ from typing import Any, Iterable, Sequence
 from harness.jsonio import canonical, strict_loads
 
 SCHEMA = 'evaluation-record/1'
-CORE_VERSION = 2
+CORE_VERSION = 3
 EVENT_SOURCES = ('harness', 'reader', 'derived', 'player_claim', 'human')
 EVENT_KINDS = ('mode_change', 'long_activity', 'stall', 'ineffective_repeat', 'vital_change', 'threat_change',
     'milestone', 'death', 'handoff', 'memory_write', 'memory_read', 'program_save', 'program_run',
@@ -351,12 +352,32 @@ def read_events(connection: sqlite3.Connection) -> list[dict]:
         for r in connection.execute('SELECT id,seq_start,seq_end,kind,source,confidence,payload FROM events ORDER BY id')]
 
 
+def connect_readonly(path: Path, timeout: float) -> sqlite3.Connection:
+    """A read-only SQLite connection that writes nothing beside `path`.
+
+    A writable store (a live run, or a record a live pass is still updating) opens with `mode=ro`, so
+    rows in its write-ahead log stay visible. A sealed store, whose file or directory is not writable,
+    cannot open a write-ahead-log database with `mode=ro`; it opens with `immutable=1`, which ignores
+    the log, so a sealed store whose `-wal` is not empty is refused, never read incomplete (the rule of
+    `harness.trace.stores.sealed`). A symlinked `path` is judged by its target, whose directory holds
+    the sidecars SQLite uses."""
+    target = Path(path).resolve()
+    uri = target.as_uri() + '?mode=ro'
+    if not (os.access(target, os.W_OK) and os.access(target.parent, os.W_OK)):
+        wal = Path(f'{target}-wal')
+        if wal.is_file() and wal.stat().st_size > 0:
+            raise EvaluationError(f'{path}: sealed read-only store with an un-checkpointed write-ahead log '
+                f'({wal}, {wal.stat().st_size} bytes); it would read incomplete')
+        uri += '&immutable=1'
+    return sqlite3.connect(uri, uri=True, timeout=timeout)
+
+
 def open_readonly(path: Path) -> sqlite3.Connection:
-    """Read-only access to a finished or live record for comparison and views."""
+    """Read-only access to a finished, sealed or live record for comparison and views (see `connect_readonly`)."""
     path = Path(path)
     if not path.is_file():
         raise EvaluationError(f'{path}: missing evaluation record')
-    connection = sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=1)
+    connection = connect_readonly(path, 1)
     _check_record(connection, path)
     return connection
 
