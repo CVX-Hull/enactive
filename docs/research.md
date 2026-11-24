@@ -7,7 +7,11 @@ status: active
 # Evidence and design consequences
 
 Recheck a fast-moving finding before a design depends on it. The sources below
-distinguish observed findings from engineering inferences.
+distinguish observed findings from engineering inferences. Every new research note
+uses **open-horizon discovery**: actively search for newer paradigms, competing
+approaches and negative ablations outside the initial framing, verify every external
+claim against its primary source (never trust search-snippet identifiers or numbers),
+and state exact read scope honestly.
 
 ## Research pages
 
@@ -37,6 +41,7 @@ records their rationale. Current owner decisions are in the
 | Page | Subject | Open question | Current rule or evidence |
 | --- | --- | --- | --- |
 | [Memory, ontology and oversight](research-curated-memory.md) | Write and retrieval policies, concurrent consolidation, ontology evaluation and oversight interfaces | Which delivery, ontology grooming and spectator methods help play or supervision? | The [curator](components/curator.md) writes the knowledge store |
+| [Meta-ontology, scoping and wiki/graph retrieval](research-knowledge-graph-scoping.md) | Game-neutral epistemic meta-ontologies, hierarchical scope paths, bi-temporal rollback invalidation, wiki/graph retrieval and competing 2025–2026 paradigms | Which game-neutral schema, cross-scope transfer, staleness invalidation and local retrieval design governs the next knowledge migration ([#925](https://github.com/CVX-Hull/enactive/issues/925))? | Primary synthesis and `$0` offline retrieval ablation on sealed `#896-b` and `#889` corpora |
 | [Belief under conflicting observations](research-belief-under-conflict.md) | Revision, reliability, staleness and calibration | How do qualitative and numerical representations perform on matched evidence? | [Decision to compare representations](decisions/owner-decisions.md#compare-belief-representations-on-matched-cases) |
 | [Programs, supervision, evaluation and study design](research-curated-programs.md) | Program libraries, model slots, supervision, novelty, expectations, offline evaluation, practice environments and study design | Do programs and monitoring help in play, and can practice instances support valid trials? | [Curator memory study](acceptance/2026-11-12-p1-descriptive-completion-178.md) |
 | [Curator sandbox](research-curator-sandbox.md) | Isolation mechanisms, host checks, session costs and residual risks | Do the residual risks of the adopted mechanism still hold after a host update or a change to the isolation boundary? | [Curator isolation](components/curator.md) and [host checks](operations/curator-hosts.md#claude-code-and-codex-cli-curator-host-rules) |
