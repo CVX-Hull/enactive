@@ -10,7 +10,7 @@ import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration } from '../host.mjs';
 import { compactSourceIds, coverageEntry, cutBriefing, cutMarker, CUT_BRIEFING_ARTICLES, CUT_BRIEFING_CHARS,
   CUT_BRIEFING_FACTS, CUT_BRIEFING_SNIPPET_CHARS, validateKnowledge } from '../knowledge.mjs';
-import { knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
+import { contest, knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
 import { actorId, article, fact, model, png, position, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
 
 const tokenCut = {high_mark:20_000, low_mark:2_600, min_free:1};
@@ -98,7 +98,7 @@ async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, block
     // Give the off-path reader a polling interval while the provider holds its response.
     await realDelay(1200);
   };
-  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
     session:sessionId, actorId, pendingControlId:null, control, finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
@@ -305,21 +305,25 @@ test('a cut briefing whose entries carry every status marker stays within its ca
   const filed = articles.map((_, n) => fact(`filed-${n}`, {...flagged, cited_by_articles:[`article-${n}`], seen:position(n)}));
   const standalone = Array.from({length:CUT_BRIEFING_FACTS + 8}, (_, n) => fact(`fact-${n}`, {...flagged,
     subject:`Fact ${n}`, text:`${'F'.repeat(200)}.`, seen:position(n)}));
-  const bounded = cutBriefing(validateKnowledge({...knowledge(), articles, facts:[...filed, ...standalone]}));
+  const store = {...knowledge(), articles, facts:[...filed, ...standalone]};
+  // Each fact is contested by a real peer of equal scope, and each article inherits `contested` from its fact.
+  for (const group of [filed, standalone])
+    for (let n = 0; n < group.length; n += 2) contest(store, group[n].id, group[n + 1].id);
+  const bounded = cutBriefing(validateKnowledge(store));
   const text = bounded.text.split('\n')[1], data = JSON.parse(text);
   assert.ok(text.length <= CUT_BRIEFING_CHARS, `payload ${text.length} chars`);
   assert.ok(data.leads.length > 0 && data.index.length > 0 && data.unlisted_entries > 0, 'the cap, not the counts, bounds it');
   for (const entry of [...data.leads, ...data.index])
     assert.deepEqual(entry.status, ['contested', 'unverified_branch', 'needs_review', 'condition_unverified']);
   // Without the markers the same store fits more entries: the cap counted the added bytes.
-  const plain = cutBriefing({...knowledge(), articles:articles.map(a => article(a.id, {...a, ...flaggedOff})),
-    facts:[...filed, ...standalone].map(f => fact(f.id, {...f, ...flaggedOff}))});
+  const plain = cutBriefing(validateKnowledge({...knowledge(), articles:articles.map(a => article(a.id, {...a, ...flaggedOff})),
+    facts:[...filed, ...standalone].map(f => fact(f.id, {...f, ...flaggedOff}))}));
   const plainData = JSON.parse(plain.text.split('\n')[1]);
   assert.ok(plainData.unlisted_entries < data.unlisted_entries);
   assert.ok([...plainData.leads, ...plainData.index].every(entry => !Object.hasOwn(entry, 'status')));
 });
 const flaggedOff = {scope:{game:'example'}, branch_relation:null, lifecycle_state:'active', unverified_branch:false,
-  needs_review:false, condition_unverified:false};
+  needs_review:false, condition_unverified:false, links:[], backlinks:[], contradicted_by:[]};
 
 test('an otherwise eligible prefix below min_free falls back to image eviction', async t => {
   const {events, payloads} = await play(t, async (n, {publish}) => {
@@ -418,7 +422,7 @@ test('an unknown player-transport/2 operation in a batch prevents cutting that b
         actor_id:actorId, session:sessionId, operation_id:operationId(calls), source:{source_id:sourceId(calls)}}};
   });
   const events = [], payloads = [];
-  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
     session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
@@ -481,7 +485,7 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
   });
   const events = [];
   let reqs = 0;
-  const result = await runHost({configuration, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list,
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
     session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
@@ -508,7 +512,7 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
   operations = 0;
   const events2 = [];
   let reqs2 = 0;
-  const res2 = await runHost({configuration:config2, knowledge:{...knowledge(), version:'v1'}, knowledgeUpdates:list2,
+  const res2 = await runHost({configuration:config2, knowledge:knowledge('v1'), knowledgeUpdates:list2,
     session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir2,

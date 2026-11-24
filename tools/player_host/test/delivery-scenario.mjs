@@ -6,17 +6,33 @@ import { PassThrough } from 'node:stream';
 import { runHost } from '../host.mjs';
 import { model, route, reply, realDelay, article, fact, position } from './host-scenario.mjs';
 
-export const knowledge = () => ({schema:'delivered-knowledge/3',version:'v2',commit:'c'.repeat(40),repository_id:'d'.repeat(40),
+/** The scenario's store as version `version`; its articles are revised at that version, never later than it. */
+export const knowledge = (version = 'v2') => ({schema:'delivered-knowledge/3',version,commit:'c'.repeat(40),repository_id:'d'.repeat(40),
   coverage:{schema:'curator-coverage/2',session:'s01',actor:null,last_step:4},
   articles:[
-    article('article-a',{revision:'article-a@v2',title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],
+    article('article-a',{revision:`article-a@${version}`,title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],
       links:[{rel:'see_also',target:'article-b'}],last_confirmed:position(1)}),
-    article('article-b',{revision:'article-b@v2',title:'B subject',lead:'A useful later lead.',body:[{text:'Second claim.',facts:['fact-b']}],
+    article('article-b',{revision:`article-b@${version}`,title:'B subject',lead:'A useful later lead.',body:[{text:'Second claim.',facts:['fact-b']}],
       backlinks:[{rel:'see_also',source:'article-a'}],last_confirmed:position(2)})],
   facts:[fact('fact-a',{text:'First claim.',cited_by_articles:['article-a'],seen:position(1)}),
     fact('fact-b',{text:'Second claim.',cited_by_articles:['article-b'],seen:position(2)}),
     fact('fact-alone',{subject:'Unfiled subject',text:'An unfiled claim.',seen:position(3)})],
   history:{replaced:{},ended:[],retracted:[]}});
+
+/** Make records `from` and `to` of `value` contradict each other as a valid file states it: one `contradicts` link
+ * and its backlink, each in the other's `contradicted_by`, and both contested. The two must have equal or
+ * incomparable compatible scopes, so the pair conflicts rather than one shadowing the other; an article citing
+ * either must then be marked contested too. */
+export function contest(value, from, to) {
+  const byId = id => [...value.articles, ...value.facts].find(item => item.id === id);
+  const source = byId(from), target = byId(to);
+  source.links.push({rel:'contradicts',target:to});
+  target.backlinks.push({rel:'contradicts',source:from});
+  source.contradicted_by.push(to);
+  target.contradicted_by.push(from);
+  source.lifecycle_state = target.lifecycle_state = 'contested';
+  return value;
+}
 
 export function recallReply(ids, cost = .002, finishReason = 'stop') {
   return recallTextReply(JSON.stringify({articles:ids}), cost, finishReason);

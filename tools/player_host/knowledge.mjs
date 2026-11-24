@@ -55,21 +55,36 @@ const validLinks = (value, end, owner, publicIds) => Array.isArray(value)
 const validWhen = value => exactly(value, ['note','requires']) && nonblank(value.note) && record(value.requires)
   && Object.keys(value.requires).length <= 8 && Object.entries(value.requires)
   .every(([axis, label]) => AXIS.test(axis) && axis !== 'game' && axis !== 'world' && matches(ASCII, label));
-/** The fields an article and a fact share; `publicIds` is P and `historyIds` is H. */
+/** The fields an article and a fact share; `publicIds` is P and `historyIds` is H. A world-bound record of unknown
+ * lineage is always delivered `unverified_branch`. */
 const validShared = (item, publicIds, historyIds) => {
   if (!validTags(item.tags) || !validScope(item.scope)) return false;
   const bound = Object.hasOwn(item.scope, 'world');
   return (bound ? BRANCHES.includes(item.branch_relation) : item.branch_relation === null && item.unverified_branch === false)
     && LIFECYCLES.includes(item.lifecycle_state) && FLAGS.every(flag => typeof item[flag] === 'boolean')
+    && (item.branch_relation !== 'unknown' || item.unverified_branch === true)
     && strings(item.stale_citations, id => historyIds.has(id))
     && validLinks(item.links, 'target', item.id, publicIds) && validLinks(item.backlinks, 'source', item.id, publicIds)
     && ['shadowed_by','contradicted_by'].every(field => strings(item[field], id => publicIds.has(id) && id !== item.id));
 };
-const validArticle = (value, facts, publicIds, historyIds) => exactly(value, ARTICLE_FIELDS)
-  && matches(REVISION, value.revision) && value.revision.startsWith(`${value.id}@`) && nonblank(value.title)
-  && nonblank(value.lead) && validShared(value, publicIds, historyIds) && validPosition(value.last_confirmed)
-  && Array.isArray(value.body) && value.body.length > 0 && value.body.every(claim => exactly(claim, ['text','facts'])
-    && nonblank(claim.text) && claim.facts.length > 0 && strings(claim.facts, id => facts.has(id)));
+/** The slug and revision number M of a well-formed `<slug>@vM`, else null. M is a BigInt so that, as in Python,
+ * no digit string loses precision when compared. */
+const revisionOf = value => {
+  if (!matches(REVISION, value)) return null;
+  const at = value.lastIndexOf('@v');
+  return {slug:value.slice(0, at), number:BigInt(value.slice(at + 2))};
+};
+/** An article whose revision `<slug>@vM` is no later than the file's version `vN` (M <= N). */
+const validArticle = (value, facts, publicIds, historyIds, version) => {
+  if (!exactly(value, ARTICLE_FIELDS)) return false;
+  const revision = revisionOf(value.revision);
+  return revision !== null && revision.slug === value.id && revision.number <= BigInt(version)
+    && nonblank(value.title) && nonblank(value.lead) && validShared(value, publicIds, historyIds)
+    && validPosition(value.last_confirmed)
+    && Array.isArray(value.body) && value.body.length > 0 && value.body.every(claim => exactly(claim, ['text','facts'])
+      && nonblank(claim.text) && Array.isArray(claim.facts) && claim.facts.length > 0
+      && strings(claim.facts, id => facts.has(id)));
+};
 const validFact = (value, articles, publicIds, historyIds) => exactly(value, FACT_FIELDS, ['subject','when'])
   && CLAIM_KINDS.includes(value.claim_kind) && BASES.includes(value.evidence_basis) && nonblank(value.text)
   && (!Object.hasOwn(value, 'subject') || nonblank(value.subject)) && (!Object.hasOwn(value, 'when') || validWhen(value.when))
@@ -78,20 +93,79 @@ const validFact = (value, articles, publicIds, historyIds) => exactly(value, FAC
   && value.citation_source_ids?.length > 0 && strings(value.citation_source_ids, id => SOURCE.test(id))
   && strings(value.cited_by_articles, id => articles.has(id));
 // `history`: ended and retracted name fact IDs and retired slugs outside P; a replaced fact ID names the facts that
-// replace it, and an earlier article revision names its own current slug.
+// replace it, and an earlier article revision `<slug>@vK` names its own current slug and is strictly earlier than
+// the delivered `<slug>@vM` (K < M). `revisions` maps each delivered slug to M.
 const validHistory = (history, articles, facts, publicIds, revisions) => {
   const {replaced, ended, retracted} = history;
   if (!strings(ended, id => ID.test(id) && !publicIds.has(id))
       || !strings(retracted, id => ID.test(id) && !publicIds.has(id) && !ended.includes(id))) return false;
   return Object.entries(replaced).every(([key, entry]) => {
-    if (publicIds.has(key) || revisions.has(key) || ended.includes(key) || retracted.includes(key)
+    if (publicIds.has(key) || ended.includes(key) || retracted.includes(key)
         || !exactly(entry, ['reason','by']) || !Array.isArray(entry.by) || entry.by.length === 0) return false;
-    if (REVISION.test(key)) {
-      const slug = key.split('@', 1)[0];
-      return entry.reason === 'restated' && entry.by.length === 1 && entry.by[0] === slug && articles.has(slug);
+    const revision = revisionOf(key);
+    if (revision !== null) {
+      const {slug, number} = revision;
+      return entry.reason === 'restated' && entry.by.length === 1 && entry.by[0] === slug && articles.has(slug)
+        && revisions.has(slug) && number < revisions.get(slug);
     }
     return ID.test(key) && REASONS.includes(entry.reason) && strings(entry.by, id => facts.has(id));
   });
+};
+
+/** A record's `scope` joined with its `when.requires`. Delivered world-bound records all hold `world: null`, so two
+ * of them agree on `world`: they are bound to the one world being played. */
+const constraint = item => ({...item.scope, ...(item.when?.requires ?? {})});
+/** Whether every axis of scope `a` is in scope `b` with the same label, and `b` has more axes (a strict subset). */
+const narrower = (a, b) => Object.keys(a).length < Object.keys(b).length
+  && Object.entries(a).every(([axis, label]) => Object.hasOwn(b, axis) && b[axis] === label);
+/** `shadowed_by` and `contradicted_by` as the scoping contract's table derives them from the delivered
+ * `contradicts` pairs: disjoint constraints neither shadow nor conflict; compatible constraints with comparable,
+ * unequal scopes let the specific record shadow the general one; equal or incomparable scopes conflict. */
+const classified = (records, links) => {
+  const byId = new Map(records.map(item => [item.id, item]));
+  const shadowed = new Map(records.map(item => [item.id, new Set()]));
+  const contradicted = new Map(records.map(item => [item.id, new Set()]));
+  const pairs = new Set(links.filter(([, rel]) => rel === 'contradicts')
+    .map(([source, , target]) => [source, target].sort().join(' ')));
+  for (const pair of pairs) {
+    const [a, b] = pair.split(' ').map(id => byId.get(id));
+    const left = constraint(a), right = constraint(b);
+    if (Object.keys(left).some(axis => Object.hasOwn(right, axis) && left[axis] !== right[axis])) continue;
+    if (narrower(a.scope, b.scope)) shadowed.get(a.id).add(b.id);
+    else if (narrower(b.scope, a.scope)) shadowed.get(b.id).add(a.id);
+    else {
+      contradicted.get(a.id).add(b.id);
+      contradicted.get(b.id).add(a.id);
+    }
+  }
+  return {shadowed, contradicted};
+};
+const sameSet = (list, set) => list.length === set.size && list.every(id => set.has(id));
+/** The derived fields agree with what they derive from: `cited_by_articles` with citations, `backlinks` with
+ * `links`, `shadowed_by`, `contradicted_by` and `lifecycle_state` with the classified `contradicts` pairs, and an
+ * article's inherited flags with the facts it cites (an article is no more certain than its facts, and citing a
+ * contested fact makes it contested). Runs after every record has passed its own check. */
+const validDerived = (articles, facts) => {
+  const records = [...articles, ...facts];
+  const links = records.flatMap(item => item.links.map(link => [item.id, link.rel, link.target]));
+  const forward = new Set(links.map(triple => triple.join(' ')));
+  const reverse = new Set(records.flatMap(item => item.backlinks.map(back => [back.source, back.rel, item.id].join(' '))));
+  if (forward.size !== reverse.size || [...forward].some(triple => !reverse.has(triple))) return false;
+  const {shadowed, contradicted} = classified(records, links);
+  if (records.some(item => !sameSet(item.shadowed_by, shadowed.get(item.id))
+      || !sameSet(item.contradicted_by, contradicted.get(item.id)))) return false;
+  const byId = new Map(facts.map(fact => [fact.id, fact]));
+  const contested = new Set(records.filter(item => contradicted.get(item.id).size > 0).map(item => item.id));
+  const citing = new Map(facts.map(fact => [fact.id, new Set()]));
+  for (const article of articles) {
+    const cited = article.body.flatMap(claim => claim.facts.map(id => byId.get(id)));
+    for (const fact of cited) citing.get(fact.id).add(article.id);
+    if (article.condition_unverified !== cited.some(fact => fact.condition_unverified)
+        || (cited.some(fact => fact.unverified_branch) && article.unverified_branch !== true)) return false;
+    if (cited.some(fact => contested.has(fact.id))) contested.add(article.id);
+  }
+  if (facts.some(fact => !sameSet(fact.cited_by_articles, citing.get(fact.id)))) return false;
+  return records.every(item => item.lifecycle_state === (contested.has(item.id) ? 'contested' : 'active'));
 };
 
 export function validateKnowledge(value) {
@@ -114,10 +188,15 @@ export function validateKnowledge(value) {
   const allIds = [...articleIds, ...factIds];
   if (!strings(allIds, id => ID.test(id))) invalid();
   const articles = new Set(articleIds), facts = new Set(factIds), publicIds = new Set(allIds);
-  if (!validHistory(history, articles, facts, publicIds, new Set(value.articles.map(article => article.revision)))) invalid();
+  // Only well-formed revisions enter the map; an article with any other `revision` fails its own check below.
+  const revisions = new Map(value.articles.map(article => revisionOf(article.revision)).filter(Boolean)
+    .map(({slug, number}) => [slug, number]));
+  if (!validHistory(history, articles, facts, publicIds, revisions)) invalid();
   const historyIds = new Set([...Object.keys(history.replaced), ...history.ended, ...history.retracted]);
-  if (!value.articles.every(article => validArticle(article, facts, publicIds, historyIds))
-      || !value.facts.every(fact => validFact(fact, articles, publicIds, historyIds))) invalid();
+  const version = versionNumber(value.version);
+  if (!value.articles.every(article => validArticle(article, facts, publicIds, historyIds, version))
+      || !value.facts.every(fact => validFact(fact, articles, publicIds, historyIds))
+      || !validDerived(value.articles, value.facts)) invalid();
   return value;
 }
 
