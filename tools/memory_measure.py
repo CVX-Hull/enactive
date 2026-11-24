@@ -623,7 +623,8 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     """Build judged-facts from delivered data and the order of actual player exposures."""
     from harness.evaluation.core.host import host_facts, returned_records
     from harness.evaluation.core.sources import archive_entry, read_host, read_manifest
-    from tools.knowledge_export import units, delivered_fact_ids
+    from harness.player.knowledge import SCHEMA
+    from tools.knowledge_export import units, selection_matches
     admissions, recall_events = {}, []
     for directory in runs:
         manifest = read_manifest(directory)
@@ -643,13 +644,11 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
         full, drawn = read_json(directory/'private/knowledge-full.json'), read_json(directory/'private/units.json')
         delivered = read_json(directory/'delivered-knowledge.json')
         # A sealed historical package keeps the knowledge version it was frozen with (closed archive read).
-        if full.get('schema') != ('delivered-knowledge/2' if current else 'delivered-knowledge/1') or delivered.get('schema') != full['schema'] \
+        if full.get('schema') != (SCHEMA if current else 'delivered-knowledge/1') or delivered.get('schema') != full['schema'] \
                 or drawn.get('schema') not in ('knowledge-units/1', 'knowledge-units/2') or drawn['version'] != full['version']:
             raise MeasureError(f'{directory}: unsupported frozen knowledge')
-        if current:
-            selection = dict(world=manifest['labels']['world'], delivered_sha256=delivered_sha256)
-            if full.get('selection') != selection:
-                raise MeasureError(f'{directory}: private knowledge selection differs from the package world or delivered SHA-256')
+        if current and not selection_matches(full.get('selection'), manifest):
+            raise MeasureError(f'{directory}: private knowledge selection differs from the package world, lineage, context or delivered SHA-256')
         expected = units(full)
         if ([{k:v for k,v in u.items() if k not in (('withheld', 'placebo') if drawn['schema'] == 'knowledge-units/2' else ('withheld',))} for u in drawn['units']] != expected['units']
                 or drawn['shared'] != expected['shared']):

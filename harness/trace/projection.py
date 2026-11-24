@@ -48,6 +48,7 @@ from .stores import SealedStoreError, sealed
 
 # Label fields supplied by each supported sealed run package version.
 PACKAGE_LABELS = {
+    'campaign-run/13': ('world', 'lineage', 'admission'),
     'campaign-run/12': ('world', 'lineage', 'admission'),
     'campaign-run/10': ('lineage', 'admission'),
 }
@@ -63,7 +64,7 @@ TOOL_ARGUMENTS = {
     'player_result': ('operation_id',),
     'player_handoff': ('ids', 'summary'),
     'player_memory_append': ('record',),
-    'player_knowledge_read': ('id_or_title',),
+    'player_knowledge_read': ('id_or_title', 'by'),
     'player_knowledge_query': ('query',),
     'player_memory_read': ('record_id',),
     'player_memory_query': ('kind', 'limit', 'include_superseded'),
@@ -161,6 +162,14 @@ def _label_evidence(path: Path, limit: int, check: _LabelCheck) -> tuple[bytes, 
         raise _LabelEvidenceError(check, f'{path.name} has invalid JSON') from exc
 
 
+def valid_context(value: object) -> bool:
+    """A run's declared curator axes, shared by the package readers and exporter."""
+    return (isinstance(value, dict) and len(value) <= 8
+            and all(isinstance(key, str) and re.fullmatch(r'[a-z][a-z0-9_]{0,31}', key)
+                    and key not in ('game', 'world') and isinstance(text, str)
+                    and re.fullmatch(r'[ -~]{1,64}', text) for key, text in value.items()))
+
+
 def _verified_labels(session: Path, session_id: str) -> dict:
     data, package = _label_evidence(session/'manifest.json', 1048576, 'manifest-schema')
     schema = package.get('schema') if isinstance(package, dict) else None
@@ -194,12 +203,15 @@ def _verified_labels(session: Path, session_id: str) -> dict:
     # Sealed /10 sessions retain their verified lineage with no world.
     if 'world' in fields and selected['lineage'] is not None and selected['world'] is None:
         raise _LabelEvidenceError('manifest-schema', 'run package manifest must label the world of a lineage')
-    return selected
+    context = package.get('context') if schema == 'campaign-run/13' else {}
+    if not valid_context(context):
+        raise _LabelEvidenceError('manifest-schema', 'run package manifest has invalid context axes')
+    return dict(selected, context=context)
 
 
 def _session_labels(session: Path, session_id: str) -> dict:
     """Read only the label fields bound to this sealed session at launch."""
-    labels = dict(world=None, lineage=None, admission=None, label_check=None, label_error=None)
+    labels = dict(world=None, lineage=None, admission=None, context={}, label_check=None, label_error=None)
     try:
         labels.update(_verified_labels(session, session_id))
     except _LabelEvidenceError as exc:

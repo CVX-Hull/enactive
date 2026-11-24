@@ -33,7 +33,7 @@ def admission(root: Path, name: str, tag: str, shades: list, size=(8, 8)) -> Pat
     record and returns no frame; 'lost' presses a key whose frame never came back; 'handoff' starts the next actor."""
     run, wall, number, actor = root / name, BASE, 0, 0
     (run / 'sources').mkdir(parents=True)
-    save(run / 'manifest.json', dict(schema='campaign-run/12', session=tag * 8))
+    save(run / 'manifest.json', dict(schema='campaign-run/13', context={}, session=tag * 8))
     groups = [[]]
     for shade in shades:
         if shade == 'handoff':

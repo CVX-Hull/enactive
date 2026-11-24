@@ -14,13 +14,14 @@ from harness.computer.protocol import MAX_FRAME_BYTES, ControlError, closed, dec
 from harness.evaluation.core.sources import HOST_SCHEMA, MANIFEST_SCHEMA
 from harness.jsonio import file_sha256, strict_loads
 from harness.prepared_app import game_lock_path
+from harness.trace.projection import valid_context
 from tools.configure_player_tools import ROOT,configuration
 from tools.run_ledger import validator as ledger_validator
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json','delivered-knowledge.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
         'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','limits','ending_reserve',
-        'spend_limit_usd','labels','private_files','live_knowledge_updates'}
+        'spend_limit_usd','labels','context','private_files','live_knowledge_updates'}
 #: The curator runner's own directory inside a run directory, and inside that the versions it leaves for
 #: delivery to a running actor when the package sets `live_knowledge_updates`.
 RUNNER_DIRECTORY='curator-runner'
@@ -146,6 +147,8 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     if type(profile['live_knowledge_updates']) is not bool:
         raise ControlError('live_knowledge_updates must be true or false')
     labels(profile['labels'])
+    if not valid_context(profile['context']):
+        raise ControlError('Invalid package context axes')
     host_argv(profile['host'])
     if not isinstance(profile['session'],str) or re.fullmatch('[0-9a-f]{32}',profile['session']) is None:
         raise ControlError('Invalid fresh mechanical session')
@@ -161,7 +164,8 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
         if (name!='delivered-knowledge.json' and path.stat().st_size>1048576) or file_sha256(path)!=sha:raise ControlError('Frozen driver input differs')
-    from harness.player.knowledge import Knowledge
+    from harness.player.knowledge import Knowledge, SCHEMA
+    from tools.knowledge_export import selection_matches
     knowledge=Knowledge(directory/'delivered-knowledge.json')
     closed(profile['private_files'],{'knowledge-full.json','units.json'})
     full_bytes = local_file(str(directory/'private/knowledge-full.json')).read_bytes()
@@ -173,18 +177,18 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
         full = strict_loads(full_bytes, ControlError)
     except (ValueError, RecursionError) as exc:
         raise ControlError('Invalid private full knowledge') from exc
-    selection = dict(world=profile['labels']['world'], delivered_sha256=profile['files']['delivered-knowledge.json'])
-    if not isinstance(full, dict) or full.get('schema') != 'delivered-knowledge/2':
-        raise ControlError('Unsupported private full knowledge; expected delivered-knowledge/2')
-    if full.get('selection') != selection:
-        raise ControlError('Private knowledge selection differs from the package world or delivered SHA-256')
+    if not isinstance(full, dict) or full.get('schema') != SCHEMA:
+        raise ControlError(f'Unsupported private full knowledge; expected {SCHEMA}')
+    if not selection_matches(full.get('selection'), profile):
+        raise ControlError('Private knowledge selection differs from the package world, lineage, context or delivered SHA-256')
     if profile['live_knowledge_updates']:
         # A newer version is exported whole, so it would deliver what a draw withheld.
         try:
             drawn = strict_loads(units_path.read_bytes(), ControlError)
         except (ValueError, RecursionError) as exc:
             raise ControlError('Invalid private unit record') from exc
-        if not isinstance(drawn, dict) or drawn.get('seed') is not None or 'draw_sha256' in drawn:
+        if (not isinstance(drawn, dict) or drawn.get('schema') == 'knowledge-units/2'
+                or 'draw_sha256' in drawn or drawn.get('seed') is not None):
             raise ControlError('live_knowledge_updates cannot be combined with withholding: private/units.json '
                                'records a withholding seed or a study draw')
     for name in ('native','library'):
