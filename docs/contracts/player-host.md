@@ -92,7 +92,7 @@ rules set its length:
 
 The driver sets `spend_limit_usd` to the dollars the run has left ([Spend](#spend)).
 A logical player request admits at most two host HTTP attempts. The initial
-attempt and the one shared retry can each use the same declared endpoint order.
+attempt and the one shared retry use the same declared endpoint order.
 Once per actor, an HTTP 200 stream may reach its request deadline after
 producing content, reasoning or tool arguments and before a provider finish reason. After aborting and accounting for that attempt, the adapter may
 make one inference with a fresh request deadline from the identical serialized
@@ -104,6 +104,12 @@ permanently fences native input on Pause, including during final-report grace. A
 session and custody deadlines stay fixed. Missing charges remain unknown. The
 [adapter reference](../../tools/player_host/README.md) defines the eligible failures. For an eligible pre-output refusal, the original request deadline covers the
 backoff and the retry. Actor time and custodian mechanical resources are separate.
+An HTTP 403 is eligible for the shared retry only when its redacted diagnostic
+class is `upstream-provider` and the response permits retry. The
+`provider-403-failover` retry resends the same declared endpoint order so an
+aggregator can route around a failing upstream endpoint. On a single-endpoint
+route, it acts as one bounded retry. Credit or limit, moderation, authorization
+and unknown 403 refusals stop after that attempt.
 [Pre-output retry contract](https://github.com/CVX-Hull/enactive/issues/308) · [Live refusal evidence](../acceptance/2026-11-19-joanna-campground-memory-803.md) · [Backoff review and the unsaved-stop tradeoff](../acceptance/2026-11-19-request-deadline-during-provider-backoff-805.md).
 These operator counts do not enter the assignment, repeated model messages or
 actor tool results.
@@ -154,8 +160,15 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   `reported_cost_usd` is null, the host stops with reason `cost-unreported` and
   dispatches no tool call from it. This keys on the cost, not on `usage_available`:
   token counts without a cost stop the run, and a cost without token counts does not.
-- **No notice.** The host sends no tail notice for dollars. The driver's ending
-  reserve asks for an orderly finish before the limit ([External control](#external-control)).
+- **Spend notice.** The work budget is `spend_limit_usd` less the ending reserve,
+  floored at zero. Its remaining amount subtracts counted spend and is also floored
+  at zero. The host latches a `spend-limit` notice when that remainder reaches
+  the greater of 15% of the work budget and $0.25, capped at the work budget.
+  The first notice reports the remaining amount and advises wrapping up with
+  `player_finish`. When `player_handoff` is enabled and no orderly-stop control
+  has been accepted, it advises finishing instead of starting a fresh actor.
+  The driver's ending reserve still triggers its own orderly-stop control
+  ([External control](#external-control)).
 
 The driver reconciles each `request-start` with its cost record and sums returned
 charges. A trace is complete when every attempt has a cost record, including
@@ -437,15 +450,15 @@ handoff successor and a new admission's first actor, with no provider call:
 - **Notices** go at the end of the request in which they are first sent, and then stay
   in the retained history there unchanged. A retry resends the same body below the notice step,
   so it adds no notice. Once a threshold is passed, every later request adds a new
-  notice. The first context and time notices explain how to wrap up. The context
+  notice. The first context, time and [spend](#spend) notices explain how to wrap up. The context
   notice latches when the `context_reserve_tokens` line is crossed and reports the
   tokens of room before the stop. A cut clears that latch and checks the threshold
   again. The time notice starts when the work deadline is
   within a tenth of the allowance, at least a minute and at most half. An accepted
   ending control carries its own ending instruction. Later notices update the
-  applicable figures. Each emission is a `tail-notice` event with `request_id` and
-  `kinds`; the notice text itself is not telemetry. Provider errors cannot be warned
-  of before they happen, and the dollar limit has no notice.
+  applicable figures. A cut refreshes the full spend notice while leaving its
+  threshold latched. Each `tail-notice` event records `request_id` and `kinds`.
+  The model receives the notice text in its request.
 
 ## External control
 

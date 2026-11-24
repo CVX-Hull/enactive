@@ -432,7 +432,7 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
         raise ControlError("Select a bounded regular trace file")
     tokenizers = tokenizers or {}
     tokenizer = tokenizer_failure = None
-    omitted, notices, calls, results = {}, set(), Counter(), {}
+    omitted, notices, tail_notices, calls, results = {}, set(), {}, Counter(), {}
     cuts = set()
     rows, tools, tool_intervals = {}, {}, []
     counts = Counter()
@@ -475,7 +475,11 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 # A reminder or a delivered knowledge update is a message the host added to the receiving request.
                 notices.add(event.get('receiving_player_request_id'))
             elif kind == "tail-notice":
-                notices.add(event.get("request_id"))
+                identity, kinds = event.get("request_id"), event.get("kinds")
+                if isinstance(identity, str):
+                    notices.add(identity)
+                    if isinstance(kinds, list):
+                        tail_notices[identity] = [kind for kind in kinds if kind in ("context-capacity", "host-timeout", "spend-limit")]
             elif kind == "context-cut" and event.get("outcome") == "cut":
                 cuts.add(event.get("request_id"))
             elif kind == "request-start":
@@ -497,8 +501,8 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 if kind == "response-headers":
                     row["http_status"] = event.get("status")
                 elif kind == "provider-refusal":
-                    row["error_type"], row["error_code"] = event.get("error_type"), event.get("error_code")
-                    row["limit_source"], row["provider_error_code"] = event.get("limit_source"), event.get("provider_error_code")
+                    row.update({key: event.get(key) for key in ("refusal_class", "provider_name", "error_type", "error_code",
+                        "limit_source", "provider_error_code", "reason")})
                 elif kind == "response-complete":
                     provider = event.get("reported_provider") or (event.get("response_progress") or {}).get("reported_provider")
                     row["reported_provider"] = provider if isinstance(provider, str) and provider else None
@@ -554,6 +558,8 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
     usage_fields = {key: [] for key in ("input", "output", "reasoning", "cacheRead", "cacheWrite")}
     incomplete = unknown_usage = 0
     for row in rows.values():
+        if row["request_id"] in tail_notices:
+            row["tail_notice_kinds"] = tail_notices[row["request_id"]]
         progress = row.get("progress") if isinstance(row.get("progress"), dict) else {}
         end = row.get("end_ms")
         # An aborted interval is observed/censored, never a completed success sample.

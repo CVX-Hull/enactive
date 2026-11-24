@@ -103,11 +103,10 @@ removed frames' source IDs. If a trimmed frame or detail matters later, check th
 current screen or use `player_source`, `player_knowledge_read` or
 `player_knowledge_query`.
 
-Host notices appear at the end of your context and stay in your history until a context
-cut clears earlier warnings and reevaluates the limits; the newest is current. They warn
-before the host must stop you for context capacity or remaining host time; when one
-appears, wrap up with `player_handoff` or `player_finish`. If a notice identifies
-omitted pixels, read the frame again with `player_source` when needed.
+Host notices appear at the end of your context and stay until a context cut. Follow
+the newest notice about context capacity, host time or spend budget. When spend
+runs low, wrap up with `player_finish`. If a notice identifies omitted pixels,
+read the frame again with `player_source` when needed.
 
 When fresh context helps and control remains available, call `player_handoff` with a
 concise unfinished-task summary. It seals you; later reads and original collection do

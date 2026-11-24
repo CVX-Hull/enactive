@@ -93,6 +93,8 @@ test('every other 402 stays terminal',async t=>{
     ['credits',()=>inFlightBudget(undefined,{limit_source:'openrouter_credits',reason:'weight_exceeds_budget'})],
     ['no-limit-source',()=>inFlightBudget(undefined,{reason:'in_flight_budget_exhausted'})],
     ['mismatched-reason',()=>inFlightBudget(undefined,{limit_source:'openrouter_in_flight_budget',reason:'weight_exceeds_budget'})],
+    ['top-level-metadata',()=>new Response(JSON.stringify({metadata:{limit_source:'openrouter_in_flight_budget',
+      reason:'in_flight_budget_exhausted'}}),{status:402,headers:{'retry-after':'0'}})],
     ['not-json',()=>new Response('in_flight_budget_exhausted openrouter_in_flight_budget',{status:402,headers:{'retry-after':'0'}})],
   ]) await t.test(name,async sub=>{
     // An over-cap server delay is refused by the SDK helper after eligibility.

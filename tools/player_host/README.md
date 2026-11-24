@@ -107,9 +107,9 @@ the player can request the exact source again through its available tools. No to
 
 The request projection adds no standing countdown. Instead, once a threshold is
 passed, each request adds a notice. The notice stays in the history where it was
-first sent for as long as that history survives. It
-warns before context capacity and the work deadline (a tenth left, at least a
-minute and at most half). See the contract's
+first sent for as long as that history survives. Notices cover context capacity,
+remaining time and the spend budget above the ending reserve. The first spend
+notice asks the player to wrap up with `player_finish`. See the contract's
 [request-stability rules](../../docs/contracts/player-host.md#request-stability-and-tail-notices).
 Every actor shares one system prompt and tool table. The ongoing user objective
 survives actor turnover; experiment quotas, final-actor policy and ending reserves
@@ -195,6 +195,12 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   are eligible, as is a refusal body that fails or exceeds 16 KiB while being read.
 - `pre-header-rejection`: a rejected fetch with no response headers. A request
   timeout, cancellation or host deadline latches first and is never retried.
+- `provider-403-failover`: HTTP 403 classified as `upstream-provider` after a
+  bounded JSON read. A sanitized provider label attributes the refusal upstream.
+  The retry resends the same declared endpoint order so an aggregator can route
+  around a failing upstream endpoint. On a single-endpoint route, it acts as one
+  bounded retry.
+  Credit or limit, moderation, authorization and unknown refusals stay terminal.
 - `rate-limit`: HTTP 429 whose classifier reads at most 16 KiB of a JSON error
   object; explicit authorization/invalid-request kinds, quota/billing/budget/credit
   limits, malformed or unrecognized errors stay terminal. A 429 whose metadata has
@@ -388,12 +394,14 @@ cut policy (`context_cut`) and image policy (`max_context_images`,
 these are transmitted configuration, not backend effort attestation. Sanitized
 bounded response/provider IDs and `x-request-id` permit later correlation when
 reported. After bounded reading of an HTTP error response, `provider-refusal`
-records its status, `body_read`, and allowlisted error type/code, provider code and
-server-reported `limit_source` and `reason` when available, including terminal
-refusals and second attempts. Missing, malformed or unsafe identifiers remain null.
+records its status, `body_read`, a closed `refusal_class`, and sanitized
+`provider_name`, error type/code, provider code, `limit_source` and `reason`
+when available, including terminal refusals and second attempts. Missing,
+malformed or unsafe identifiers remain null. See the
+[telemetry contract](../../docs/contracts/player-host-telemetry.md#telemetry).
 A body-read failure prevents the event except for a 502/503/504, which records
 `body_read:false` and null identifiers. `response-headers` adds the server's
-requested delay and suppression for 402, 429, 502, 503 and 504. Raw error
+requested delay and suppression for 402, 403, 429, 502, 503 and 504. Raw error
 messages/bodies and credentials are not logged. This observation adds no fetch,
 retry, timer renewal or dispatch; only an eligible first attempt can authorize the
 one retry described above. Use the existing
