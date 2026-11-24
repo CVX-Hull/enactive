@@ -123,10 +123,12 @@ def test_closed_forms_refuse_edge_cases_beyond_the_shared_fixtures(change):
 
 
 def graph(version: str = 'v3', revision: str = 'v2', **guide) -> dict:
-    """An article citing `fact-a`, and `fact-b` contradicting and shadowing `fact-a`; derived fields as exported."""
+    """An article citing `fact-a`, and `fact-b`, scoped more narrowly, contradicting and so shadowing `fact-a`;
+    derived fields as exported."""
     return document([article('guide', 'Guide', 'Lead.', ('Claim.', ['fact-a']), version=revision, **guide)],
                     [fact('fact-a', 'A claim.', shadowed_by=['fact-b']),
-                     fact('fact-b', 'A narrower claim.', step=2, links=[dict(rel='contradicts', target='fact-a')])],
+                     fact('fact-b', 'A narrower claim.', step=2, scope=dict(game='example', ruleset='standard'),
+                          links=[dict(rel='contradicts', target='fact-a')])],
                     dict(replaced={'guide@v1': dict(reason='restated', by=['guide'])}, ended=[], retracted=[]),
                     version=version)
 
@@ -141,13 +143,67 @@ def test_derived_fields_and_inherited_flags_that_agree_are_accepted():
     value = graph()
     bound(value['articles'][0], unverified_branch=True)
     bound(value['facts'][0], 'unknown', unverified_branch=True)
-    value['facts'][0].update(condition_unverified=True, lifecycle_state='contested')
-    value['articles'][0].update(condition_unverified=True, lifecycle_state='contested')
+    # Both bound records hold `world: null`, so `fact-b` is still the narrower one.
+    bound(value['facts'][1])
+    value['facts'][1]['scope'].update(ruleset='standard')
+    value['facts'][0].update(condition_unverified=True)
+    value['articles'][0].update(condition_unverified=True)
     Knowledge.from_dict(value)
     # An article may be unverified_branch by its own unknown lineage when no cited fact is.
     value = graph()
     bound(value['articles'][0], 'unknown', unverified_branch=True)
     Knowledge.from_dict(value)
+
+
+def conflict(value: dict) -> dict:
+    """`fact-a` and `fact-b` in conflict: both contested, and the article citing `fact-a` inherits it."""
+    value['facts'][0].update(shadowed_by=[], contradicted_by=['fact-b'], lifecycle_state='contested')
+    value['facts'][1].update(contradicted_by=['fact-a'], lifecycle_state='contested')
+    value['articles'][0].update(lifecycle_state='contested')
+    return value
+
+
+def test_contradicts_pairs_are_classified_by_constraint_and_scope_order():
+    # Equal scopes conflict.
+    value = graph()
+    value['facts'][1].update(scope=dict(game='example'))
+    Knowledge.from_dict(conflict(value))
+    # Incomparable scopes with compatible constraints conflict too.
+    value = graph()
+    bound(value['facts'][0])
+    Knowledge.from_dict(conflict(value))
+    # A shared axis that differs, here a scope against a `requires`, is disjoint: neither shadows nor conflicts.
+    value = graph()
+    value['facts'][0].update(when=dict(note='hard rules only', requires=dict(ruleset='hard')), shadowed_by=[])
+    Knowledge.from_dict(value)
+    # A `requires` on the general record that agrees keeps the pair compatible, so the shadow stands.
+    value = graph()
+    value['facts'][0].update(when=dict(note='standard rules', requires=dict(ruleset='standard')))
+    Knowledge.from_dict(value)
+
+
+@pytest.mark.parametrize('change', [
+    lambda d: d['facts'][0].update(shadowed_by=[]),
+    lambda d: d['facts'][1].update(shadowed_by=['fact-a']),
+    lambda d: conflict(d),
+    lambda d: (d['facts'][1].update(scope=dict(game='example')), conflict(d), d['articles'][0].update(lifecycle_state='active')),
+    lambda d: (d['facts'][1].update(scope=dict(game='example')), conflict(d), d['facts'][1].update(lifecycle_state='active')),
+    lambda d: (d['facts'][1].update(scope=dict(game='example')), conflict(d), d['facts'][1].update(contradicted_by=[])),
+    lambda d: d['facts'][0].update(when=dict(note='hard rules only', requires=dict(ruleset='hard'))),
+], ids=lambda _: 'mutation')
+def test_shadows_and_conflicts_that_disagree_with_the_classification_are_refused(change):
+    value = graph()
+    change(value)
+    with pytest.raises(PlayerError, match='unsupported delivered knowledge'):
+        Knowledge.from_dict(value)
+
+
+def test_the_full_graph_fixture_refuses_a_cleared_shadow():
+    value = json.loads(FULL.read_text())
+    Knowledge.from_dict(value)
+    next(f for f in value['facts'] if f['id'] == 'fire-rule')['shadowed_by'] = []
+    with pytest.raises(PlayerError, match='unsupported delivered knowledge'):
+        Knowledge.from_dict(value)
 
 
 @pytest.mark.parametrize('change', [
@@ -478,6 +534,19 @@ def test_the_player_view_projects_every_resolution_of_the_read_table():
     ('Camp water', lambda r: r.update(resolved_from='Camp water')),
     ('unknown-id', lambda r: r.update(records=Knowledge(FULL).read('boil-water')['records'])),
     ('unknown-id', lambda r: r.update(resolved_from='unknown-id')),
+    # The empty file's null version answers only `unknown` and `query`.
+    ('ended-fire', lambda r: r.update(version=None)),
+    ('wrong-fact', lambda r: r.update(version=None)),
+    ('unknown-id', lambda r: r.update(version=None, resolved_from='unknown-id')),
+    # Records and `resolved_from` that do not answer the identity asked for.
+    ('camp-water', lambda r: r.update(identity='boil-water')),
+    ('camp-water@v12', lambda r: r.update(identity='boil-water@v12', resolved_from='boil-water@v12')),
+    ('camp-water@v4', lambda r: r.update(resolved_from='camp-water@v12')),
+    ('old-water-fact', lambda r: r.update(resolved_from='other-fact')),
+    ('old-water-fact', lambda r: r.update(records=Knowledge(FULL).read('camp-water')['records'])),
+    ('broad-fire-claim', lambda r: r['records'].append(Knowledge(FULL).read('camp-water')['records'][0])),
+    ('ended-fire', lambda r: r.update(resolved_from='wrong-fact')),
+    ('Camp water', lambda r: r.update(identity='Other title')),
     # A record that is not a closed, blinded delivered record.
     ('camp-water', lambda r: r['records'][0].update(status=['contested'])),
     ('camp-water', lambda r: r['records'][0]['scope'].update(world='world-alpha')),
@@ -497,18 +566,29 @@ def test_the_player_view_refuses_an_inconsistent_or_unblinded_knowledge_result(i
         actor_result(_changed(result, change))
 
 
+def test_the_player_view_refuses_a_query_longer_than_the_limit():
+    query = Knowledge(FULL).query('camp water')
+    full = _changed(query, lambda r: r.update(records=(r['records'] * QUERY_LIMIT)[:QUERY_LIMIT]))
+    assert actor_result(full) == full
+    with pytest.raises(UnsupportedResult):
+        actor_result(_changed(full, lambda r: r['records'].append(r['records'][0])))
+    with pytest.raises(UnsupportedResult):
+        actor_result(_changed(query, lambda r: r.update(resolved_from='camp water')))
+
+
 # Gate 9: the #924 queries on test-only projections of sealed files into `delivered-knowledge/3`.
 
 def _sealed(corpus: str) -> Path:
     """The sealed file, or a skip when this checkout holds no store. A clone recorded as holding the store
-    (`enactive.evidenceStore = expected`) fails instead, so a lost store cannot pass Gate 9 as a skip."""
+    (`enactive.evidenceStore = expected`) fails instead when the file is missing, so a lost store or a lost sealed
+    file cannot pass Gate 9 as a skip."""
     from tools.evidence import default_store, store_expected
     from tools.knowledge_retrieval_benchmark import CORPORA
     store_root = default_store()
     path = store_root / CORPORA[corpus]
     if not path.is_file():
-        if not store_root.is_dir() and store_expected():
-            pytest.fail(f'this clone is recorded as holding the evidence store, but {store_root} is missing')
+        if store_expected():
+            pytest.fail(f'missing sealed corpus {path}')
         pytest.skip(f'sealed {corpus} is not in this checkout\'s evidence store')
     return path
 

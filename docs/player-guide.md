@@ -91,8 +91,8 @@ A read result's `resolution` says what the identity named:
 
 An entry whose `status` lists `contested`, `unverified_branch`, `needs_review` or
 `condition_unverified` is disputed, may come from another timeline of this world,
-cites something since replaced or relies on a disputed or other-timeline entry, or
-holds under a condition not yet confirmed. Records
+has a stale dependency or relies on an entry that is disputed, from an uncertain
+timeline or itself needs review, or holds under a condition not yet confirmed. Records
 carry the same marks as `lifecycle_state` and flags. Weigh such an entry lower and check
 it first.
 

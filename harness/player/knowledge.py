@@ -204,28 +204,63 @@ def _history(value: object, articles: set[str], facts: set[str], revisions: dict
     return True
 
 
+def _constraint(record: dict) -> dict:
+    """A record's `scope` joined with its `when.requires`. Delivered world-bound records all hold `world: null`, so
+    two of them agree on `world`: they are bound to the one world being played."""
+    return {**record['scope'], **record.get('when', {}).get('requires', {})}
+
+
+def _classified(records: list[dict], links: set[tuple[str, str, str]]) -> tuple[dict, dict]:
+    """`shadowed_by` and `contradicted_by` as the scoping contract's table derives them from the delivered
+    `contradicts` pairs: disjoint constraints neither shadow nor conflict; compatible constraints with comparable,
+    unequal scopes let the specific record shadow the general one; equal or incomparable scopes conflict."""
+    by_id = {r['id']: r for r in records}
+    shadowed: dict[str, set[str]] = {r['id']: set() for r in records}
+    contradicted: dict[str, set[str]] = {r['id']: set() for r in records}
+    for pair in {frozenset((source, target)) for source, rel, target in links if rel == 'contradicts'}:
+        a, b = (by_id[i] for i in sorted(pair))
+        left, right = _constraint(a), _constraint(b)
+        if any(left[k] != right[k] for k in left.keys() & right.keys()):
+            continue
+        general, specific = a['scope'].items(), b['scope'].items()
+        if general < specific:
+            shadowed[a['id']].add(b['id'])
+        elif specific < general:
+            shadowed[b['id']].add(a['id'])
+        else:
+            contradicted[a['id']].add(b['id'])
+            contradicted[b['id']].add(a['id'])
+    return shadowed, contradicted
+
+
 def _derived(articles: list[dict], facts: list[dict]) -> bool:
     """The derived fields agree with what they derive from: `cited_by_articles` with citations, `backlinks` with
-    `links`, `shadowed_by` and `contradicted_by` with `contradicts` edges, and an article's inherited flags with the
-    facts it cites (an article is no more certain than its facts, and citing a contested fact makes it contested)."""
+    `links`, `shadowed_by`, `contradicted_by` and `lifecycle_state` with the classified `contradicts` pairs, and an
+    article's inherited flags with the facts it cites (an article is no more certain than its facts, and citing a
+    contested fact makes it contested)."""
     records = articles + facts
+    links = {(r['id'], link['rel'], link['target']) for r in records for link in r['links']}
+    if links != {(back['source'], back['rel'], r['id']) for r in records for back in r['backlinks']}:
+        return False
+    shadowed, contradicted = _classified(records, links)
+    if any(set(r['shadowed_by']) != shadowed[r['id']] or set(r['contradicted_by']) != contradicted[r['id']]
+           for r in records):
+        return False
     by_id = {f['id']: f for f in facts}
+    contested = {r['id'] for r in records if contradicted[r['id']]}
     citing: dict[str, set[str]] = {f['id']: set() for f in facts}
     for a in articles:
         cited = [by_id[f] for claim in a['body'] for f in claim['facts']]
         for f in cited:
             citing[f['id']].add(a['id'])
         if (a['condition_unverified'] is not any(f['condition_unverified'] for f in cited)
-                or (any(f['unverified_branch'] for f in cited) and a['unverified_branch'] is not True)
-                or (any(f['lifecycle_state'] == 'contested' for f in cited) and a['lifecycle_state'] != 'contested')):
+                or (any(f['unverified_branch'] for f in cited) and a['unverified_branch'] is not True)):
             return False
+        if any(f['id'] in contested for f in cited):
+            contested.add(a['id'])
     if any(set(f['cited_by_articles']) != citing[f['id']] for f in facts):
         return False
-    links = {(r['id'], link['rel'], link['target']) for r in records for link in r['links']}
-    if links != {(back['source'], back['rel'], r['id']) for r in records for back in r['backlinks']}:
-        return False
-    joined = {frozenset((source, target)) for source, rel, target in links if rel == 'contradicts'}
-    return all(frozenset((r['id'], other)) in joined for r in records for other in r['shadowed_by'] + r['contradicted_by'])
+    return all(r['lifecycle_state'] == ('contested' if r['id'] in contested else 'active') for r in records)
 
 
 def delivered_record(value: object, version: object) -> bool:

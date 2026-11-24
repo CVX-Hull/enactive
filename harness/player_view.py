@@ -9,7 +9,7 @@ import copy
 
 from .computer.protocol import receipt, source
 from .player.contracts import PlayerError, common_arguments, references
-from .player.knowledge import REVISION, delivered_record, version_number
+from .player.knowledge import QUERY_LIMIT, REVISION, delivered_record, version_number
 
 
 class UnsupportedResult(PlayerError):
@@ -135,49 +135,47 @@ def _service(value):
     return result
 
 
-def _nonblank(value):
-    return isinstance(value, str) and bool(value.strip())
-
-
-def _none(value):
-    return value is None
-
-
-def _revision(value):
-    return isinstance(value, str) and REVISION.fullmatch(value) is not None
-
-
-def _one(n):
-    return n == 1
-
-
-# Each resolution's row as `Knowledge.read` and `Knowledge.query` produce it: the record count, whether the one
-# record must be an article, and what `resolved_from` must be.
-_KNOWLEDGE_RESOLUTIONS = {
-    'current': (_one, False, _none),
-    'revision': (_one, True, _revision),
-    **{reason: ((lambda n: n >= 1), False, _nonblank) for reason in ('restated', 'narrowed', 'corrected')},
-    **{gone: ((lambda n: n == 0), False, _nonblank) for gone in ('ended', 'retracted')},
-    'title': (_one, True, _none),
-    'unknown': ((lambda n: n == 0), False, _none),
-    'query': ((lambda n: True), False, _none),
-}
+def _resolution(resolution, identity, resolved_from, records):
+    """The resolution's row of the read table, as `Knowledge.read` and `Knowledge.query` produce it: the record
+    count and kind, `resolved_from`, and how the records answer `identity`. Records are already delivered records."""
+    one = len(records) == 1
+    article = one and 'body' in records[0]
+    if resolution == 'current':
+        return one and resolved_from is None and records[0]['id'] == identity
+    if resolution == 'revision':
+        revision = REVISION.fullmatch(identity)
+        return (article and resolved_from == identity and revision is not None
+                and revision.group(1) == records[0]['id'])
+    if resolution in ('restated', 'narrowed', 'corrected'):
+        return bool(records) and all('body' not in r for r in records) and resolved_from == identity
+    if resolution in ('ended', 'retracted'):
+        return records == [] and resolved_from == identity
+    if resolution == 'title':
+        return article and records[0]['title'] == identity and resolved_from is None
+    if resolution == 'unknown':
+        return records == [] and resolved_from is None
+    if resolution == 'query':
+        return len(records) <= QUERY_LIMIT and resolved_from is None
+    return False
 
 
 def _knowledge(value):
     """A `player-knowledge/2` read or query: its version, its resolution's row of the read table, and every record
-    a closed, blinded delivered record. Article and fact text is opaque data, never another envelope."""
+    a closed, blinded delivered record. The empty file (`version` null) answers only `unknown` and `query`, with no
+    record. Article and fact text is opaque data, never another envelope."""
     result = _fields(value, {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'records'})
     version, records, resolution = result['version'], result['records'], result['resolution']
-    row = _KNOWLEDGE_RESOLUTIONS.get(resolution) if isinstance(resolution, str) else None
-    if row is None:
+    identity, resolved_from = result['identity'], result['resolved_from']
+    if (result['grants_authority'] is not False or not isinstance(identity, str) or not isinstance(resolution, str)
+            or not isinstance(records, list)):
         raise UnsupportedResult('Unsupported delivered knowledge result')
-    count, article, resolved_from = row
-    if (result['grants_authority'] is not False or not isinstance(result['identity'], str)
-            or not (version is None or version_number(version) is not None) or not isinstance(records, list)
-            or not count(len(records)) or not resolved_from(result['resolved_from'])
-            or not all(delivered_record(record, version) for record in records)
-            or (article and 'body' not in records[0])):
+    if version is None:
+        consistent = resolution in ('unknown', 'query') and records == [] and resolved_from is None
+    else:
+        consistent = (version_number(version) is not None
+                      and all(delivered_record(record, version) for record in records)
+                      and _resolution(resolution, identity, resolved_from, records))
+    if not consistent:
         raise UnsupportedResult('Unsupported delivered knowledge result')
     return result
 
