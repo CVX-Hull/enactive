@@ -81,13 +81,19 @@ for (const provider of ['fixture', 'openrouter']) test(`${provider} recall paylo
   for (const completion of completions.slice(1)) assert.equal(completion.reported_provider, null);
   const recalls = payloads.filter(p => p.model === 'recall-fixture');
   assert.ok(recalls.length >= 2);
-  const userTexts = recalls.map(p => p.messages.find(m => m.role === 'user').content)
-    .map(content => typeof content === 'string' ? content : content.find(p => p.type === 'text').text);
-  for (const [i, text] of userTexts.entries()) {
-    assert.ok(text.startsWith('{"index":'));
-    assert.deepEqual(Object.keys(JSON.parse(text)), ['index', 'kind', i === 0 ? 'first_message' : 'recent_calls']);
-    assert.equal(text.slice(0, text.indexOf(',"kind":')), userTexts[0].slice(0, userTexts[0].indexOf(',"kind":')));
+  // The stable prefix is the system prompt and a user message holding only the index; the request's kind,
+  // its first message or recent calls and the latest screen follow in a second user message.
+  const prefix = p => JSON.stringify(p.messages.slice(0, 2));
+  for (const [i, payload] of recalls.entries()) {
+    assert.deepEqual(payload.messages.map(m => m.role), ['system', 'user', 'user']);
+    assert.equal(prefix(payload), prefix(recalls[0]), 'the cacheable prefix is byte-identical across recalls of one version');
+    const [indexText, requestText] = payload.messages.slice(1).map(m => m.content.find(p => p.type === 'text').text);
+    assert.deepEqual(Object.keys(JSON.parse(indexText)), ['index']);
+    assert.equal(payload.messages[1].content.length, 1);
+    assert.deepEqual(Object.keys(JSON.parse(requestText)), ['kind', i === 0 ? 'first_message' : 'recent_calls']);
   }
+  assert.notEqual(JSON.stringify(recalls[0].messages[2]), JSON.stringify(recalls[1].messages[2]), 'only the request changes');
+  assert.ok(recalls[0].messages[0].content.startsWith('Choose relevant leads'), 'the recall instructions reach the provider');
   for (const payload of recalls) {
     if (provider === 'openrouter') {
       assert.deepEqual(payload.provider, routeModel.compat.openRouterRouting);

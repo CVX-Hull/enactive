@@ -64,7 +64,7 @@ test('a listed newer version reaches the next request as its own delimited messa
   const requestedAfter = new Set(events.slice(events.indexOf(update)).filter(e => e.type === 'request-start' && e.request_role === 'recall').map(e => e.request_id));
   const after = events.filter(e => e.type === 'knowledge-recall' && requestedAfter.has(e.request_id));
   assert.ok(after.length && after.every(e => e.version === 'v3'));
-  const index = JSON.parse(payloads.filter(p => p.model === 'recall-fixture').at(-1).messages.at(-1).content[0].text).index.map(row => row.id);
+  const index = JSON.parse(payloads.filter(p => p.model === 'recall-fixture').at(-1).messages.find(m => m.role === 'user').content[0].text).index.map(row => row.id);
   assert.deepEqual(index,['article-a','article-b','article-c']);
 });
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { payloadManifestParts, projectImageContext } from '../host.mjs';
+import { imageOmission, payloadManifestParts, projectImageContext } from '../host.mjs';
 import { png, model, route, reply, rateLimit, scenario } from './host-scenario.mjs';
 
 test('image projection copies canonical messages and protects the entire latest tool batch',()=>{
@@ -64,6 +64,8 @@ test('block eviction omits whole blocks of the oldest images at count boundaries
   for (const [n,omitted] of [[39,0],[40,10],[41,10],[49,10],[50,20],[59,20],[60,30]]) {
     const projection=projectImageContext(imageHistory(n),39,10);
     assert.equal(projection.summary.omitted_images,omitted,`n=${n}`);
+    // The cut's image trigger counts the same omission without copying the history.
+    assert.equal(imageOmission(imageHistory(n),39,10).omitted,omitted,`n=${n}`);
     assert.equal(pixels(projection),n-omitted);
     assert.equal(projection.summary.context_image_block,10);
   }
