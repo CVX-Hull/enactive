@@ -82,6 +82,20 @@ def run_campaign(directory: Path) -> dict:
     def cancel(signum,frame):
         stopped.set()
         if owner.channel is not None:owner.channel.stop('Operator signal cancellation')
+    def attempt(name,function):
+        try:return function()
+        except BaseException as exc:
+            report[name+'_error']=type(exc).__name__;return None
+    def close_native():
+        cleanup=attempt('native_cleanup',owner.close)
+        if cleanup is None:return False
+        report['cleanup']=cleanup
+        report['native_absence_verified']=cleanup['native_absence_verified']
+        native=cleanup.get('native',{})
+        normal=(cleanup['normal_native_exit_zero'] is True and native.get('returncode')==0
+                and native.get('signals')==[])
+        report['normal_native_exit_zero']=normal
+        return normal and not stopped.is_set()
     previous={sig:signal.signal(sig,cancel) for sig in (signal.SIGINT,signal.SIGTERM)}
     try:
         owner.reserve()
@@ -103,23 +117,17 @@ def run_campaign(directory: Path) -> dict:
             viewer_url=f"http://127.0.0.1:{profile['port']}/",ready_wall=time.time()))
         # A package that delivers newer knowledge versions reads them where the curator runner leaves them.
         live_updates=directory/RUNNER_DIRECTORY/DELIVERED_DIRECTORY if profile['live_knowledge_updates'] else None
-        driver=run_hosts(directory,profile,route,application,secret,stopped,deadline,live_updates)
+        driver=run_hosts(directory,profile,route,application,secret,stopped,deadline,live_updates,
+            native_exit_zero=close_native)
         report['driver']=driver
         report['deciding_hosts_quiescent']=all(r['cleanup']['process_absent'] and r['cleanup']['group_absent'] for r in driver['actors'])
         report['outcome']=driver['outcome']
     except (Exception,KeyboardInterrupt) as exc:
         report['reason']=f'{type(exc).__name__}: {str(exc)[:600]}'
     finally:
-        def attempt(name,function):
-            try:return function()
-            except BaseException as exc:
-                report[name+'_error']=type(exc).__name__;return None
         if runtime is not None:attempt('pause',lambda:runtime.stop('Custodian closeout; no rearm'))
-        cleanup=attempt('native_cleanup',owner.close)
-        if cleanup is not None:
-            report['cleanup']=cleanup
-            report['native_absence_verified']=cleanup['native_absence_verified']
-            report['normal_native_exit_zero']=cleanup['normal_native_exit_zero']
+        # An accepted finish after EOF can ask for the cleanup evidence early.
+        if 'cleanup' not in report and 'native_cleanup_error' not in report:close_native()
         report['input_authority_revoked']=bool(owner.channel and owner.channel.stopped.is_set()) or report['native_absence_verified']
         if server is not None:
             attempt('server_shutdown',server.shutdown);attempt('server_close',server.server_close)

@@ -69,7 +69,7 @@ class ArchiveCombination:
 _MANIFEST_4 = ('schema', 'session', 'player_store', 'source_commit', 'effort', 'files', 'accounting', 'limits',
                'ending_reserve', 'wall_seconds', 'host_seconds', 'max_hosts', 'max_http_attempts')
 _MANIFEST_5 = (*_MANIFEST_4, 'labels')
-#: `read_end_facts` takes `outcome` and `driver`; host-summary (tools/host_analysis.py) takes the rest.
+#: `read_end_facts` takes `outcome`, `normal_native_exit_zero` and `driver`; host-summary takes the rest.
 _RECEIPT_3 = ('session', 'source_commit', 'outcome', 'normal_save_claimed_by_harness', 'native_absence_verified',
               'normal_native_exit_zero', 'deciding_hosts_quiescent', 'input_authority_revoked', 'driver')
 #: `read_end_facts` takes `actors` (each one's `settled` and `player_finish`) and `ending_request`; host-summary
@@ -184,7 +184,7 @@ class MemoryFacts:
 @dataclass(frozen=True)
 class EndFacts:
     """How the run ended, from the custodian's `receipt.json` and the gateway's `watch-terminal.json`.
-    Both are absent while a run is live; every field is then None or empty."""
+    Both are absent while a run is live."""
 
     outcome: str | None = None
     ending_trigger: str | None = None
@@ -192,6 +192,8 @@ class EndFacts:
     finishes: tuple[str | None, ...] = ()
     paused: bool = False
     pause_reason: str | None = None
+    normal_native_exit_zero: bool = False
+    host_finish_failed: bool = False
 
 
 @dataclass(frozen=True)
@@ -535,12 +537,23 @@ def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
                 f'{watch.get("session")!r} differs from the manifest session {manifest.get("session")!r}')
         watch = {key: watch.get(key) for key in fields}
     reason = watch.get('pause_reason')
+    cleanup = receipt.get('cleanup')
+    native = cleanup.get('native') if isinstance(cleanup, dict) else None
+    normal_exit = (receipt.get('normal_native_exit_zero') is True and isinstance(native, dict)
+        and native.get('signals') == [] and native.get('returncode') == 0)
+    final_actor = actors[-1] if actors else {}
+    host_cleanup = final_actor.get('cleanup')
+    host_cleanup = host_cleanup if isinstance(host_cleanup, dict) else {}
+    host_failed = (final_actor.get('accounting_complete') is False or final_actor.get('orchestration_error') is not None
+        or host_cleanup.get('returncode', 0) != 0 or bool(host_cleanup.get('signals'))
+        or host_cleanup.get('process_absent') is False or host_cleanup.get('group_absent') is False)
     return EndFacts(receipt.get('outcome') if isinstance(receipt.get('outcome'), str) else None,
         ending.get('trigger') if isinstance(ending.get('trigger'), str) else None,
         tuple(a['settled'] for a in actors if isinstance(a.get('settled'), dict)),
         tuple((a.get('player_finish') or {}).get('disposition') for a in actors),
         watch.get('reason') == 'operator_pause',
-        reason if isinstance(reason, str) else None)
+        reason if isinstance(reason, str) else None,
+        normal_native_exit_zero=normal_exit, host_finish_failed=host_failed)
 
 
 def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool = False,

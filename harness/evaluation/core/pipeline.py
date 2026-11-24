@@ -100,7 +100,7 @@ def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, ex
     for row in clock:  # the guarded clock is a reader of its own, replacing any earlier pass's rows
         timeline.readings.setdefault(row.seq, {})[READER_CLOCK] = row
     resolve = seq_resolver([(s.seq, s.wall) for s in steps])
-    events = [*core_events(timeline, binding), *operation_events(inputs.operations),
+    events = [*core_events(timeline, binding), *operation_events(inputs.operations, inputs.end),
         *host_events(facts, resolve, inputs.memory)]
     human = frozenset(e['payload'].get('rung') for e in writer.events() if e['source'] == 'human' and e['kind'] == 'milestone')
     metrics = compute_metrics(timeline, inputs.operations, events, facts, binding, inputs.carry, human, external, inputs.end)

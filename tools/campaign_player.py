@@ -16,6 +16,7 @@ import threading
 import time
 import uuid
 
+from harness.computer.channel import NATIVE_EOF_REASON
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
 from harness.jsonio import strict_loads
@@ -471,21 +472,19 @@ def _send_control(child,target,session,actor_id,request):
     child.stdin.write(data);child.stdin.flush()
 
 
-def finish_interruption(channel):
-    """Retain earlier fencing; expected post-claim MCP closure is distinct.
-
-    Called only after a validated direct finish and successful host closure.
-    The owned MCP adapter's normal close is expected then. Other/unknown first
-    stop origins remain interruptions; no cross-process clock ordering is guessed.
-    """
+def finish_interruption(channel, *, accepted_finish: bool=True, native_exit_zero: Callable[[], bool] | None=None):
+    """Classify the first fence. Only accepted cleanup can excuse a stop origin."""
     if not channel.stopped.is_set():return None
     origin=channel.stop_origin()
-    if origin['reason']==ADAPTER_CLOSE_REASON:return None
+    if accepted_finish:
+        if origin['reason']==ADAPTER_CLOSE_REASON:return None
+        if origin['reason']==NATIVE_EOF_REASON and native_exit_zero is not None and native_exit_zero():return None
     return dict(reason='Input permanently fenced outside accepted host cleanup',stop=origin)
 
 
 def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
-              stopped: threading.Event,deadline: float,live_updates: Path | None=None) -> dict:
+              stopped: threading.Event,deadline: float,live_updates: Path | None=None,
+              *,native_exit_zero: Callable[[], bool] | None=None) -> dict:
     """`live_updates` is the directory where newer delivered-knowledge versions arrive during the run,
     or None when the package does not deliver them (`LiveKnowledge`)."""
     actors=directory/'actors';actors.mkdir(mode=0o700)
@@ -614,7 +613,9 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                         raise ControlError('Host stop report differs from original control request')
                 elif settled.get('control_id') is not None or claim.get('control_id') is not None:
                     raise ControlError('Player finish has unrelated external control identity')
-                interruption=finish_interruption(application.runtime.channel)
+                verify_exit=(native_exit_zero if disposition in ('task_complete','external_stop_complete')
+                    and not cleanup['signals'] and not stopped.is_set() else None)
+                interruption=finish_interruption(application.runtime.channel,native_exit_zero=verify_exit)
                 if interruption is not None:
                     record['interruption']=interruption
                     outcome='interrupted';reason=interruption['reason'];break
@@ -648,6 +649,11 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 # No trace: a host that was started may have spent; one that never started spent nothing.
                 record.update(accounting_complete=False,observed_attempts=0,observed_recall_attempts=0,
                     reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,spent_usd='0',spend_complete=child is None)
+            if child is not None and outcome=='incomplete' and application.runtime.channel.fault is not None:
+                interruption=finish_interruption(application.runtime.channel,accepted_finish=False)
+                if interruption is not None:
+                    record['interruption']=interruption
+                    outcome='interrupted';reason=interruption['reason']
             record['elapsed_seconds']=time.monotonic()-started
             total_recall_attempts+=record['observed_recall_attempts']
             total_attempts+=record['observed_attempts'];host_seconds_used+=record['elapsed_seconds']
@@ -655,7 +661,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             records.append(record)
             try:write_new(target/'driver-receipt.json',record)
             except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
-        if record.get('orchestration_error'):break
+        if outcome=='interrupted' or record.get('orchestration_error'):break
     if live is not None:live.close()
     reported=usd_sum(Decimal(r['reported_usd']) for r in records);unpriced=sum(r['unpriced_requests'] for r in records)
     recall_unpriced=sum(r['unpriced_recall_requests'] for r in records)

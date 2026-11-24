@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from harness.computer.channel import NativeChannel
+from harness.computer.channel import NATIVE_EOF_REASON,NativeChannel
 from harness.computer.protocol import NoDispatch,decode_json,encode_packet
 
 
@@ -95,6 +95,29 @@ def test_request_inside_collection_margin_is_refused_before_publication():
         with pytest.raises(socket.timeout):right.recv(4096)
     finally:
         channel.close();right.close()
+
+
+def test_native_eof_leaves_the_original_input_unknown_and_fences_new_input():
+    left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123);results=[]
+    right.settimeout(2)
+    identity='b'*32
+    request=threading.Thread(target=lambda:results.append(channel.request(
+        'input',dict(type='key',key='y',modifiers=[]),time.monotonic()+2,identity)))
+    try:
+        request.start()
+        header,_=receive_packet(right)
+        assert header['value']['id']==identity
+        right.close()
+        request.join(2)
+        assert not request.is_alive()
+        receipt,png=results[0]
+        assert receipt['id']==identity and receipt['disposition']=='unknown' and png is None
+        assert receipt['reason']==channel.stop_origin()['reason']==NATIVE_EOF_REASON
+        assert channel.collect(identity) is None and channel.stopped.is_set()
+        with pytest.raises(NoDispatch,match='original collection only'):
+            channel.request('input',{},time.monotonic()+1,'c'*32)
+    finally:
+        channel.close();right.close();request.join(2)
 
 
 def test_pause_has_no_continuation():

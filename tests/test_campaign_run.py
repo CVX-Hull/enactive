@@ -672,3 +672,110 @@ def test_the_store_closes_only_after_input_authority_is_revoked(tmp_path,live):
     assert hosts.call_args.args[7]==(directory.resolve()/'curator-runner'/'delivered' if live else None)
     assert events==['pause','native_cleanup','server_shutdown','close_store']
     assert result['input_authority_revoked'] and not [key for key in result if key.endswith('_error')]
+
+
+@pytest.mark.parametrize('suffix,returncode,native_signals,expected',[
+    ('',0,[],'player_task_complete_unassessed'),
+    (' READ_CONTROL',0,[],'player_external_stop_complete_unassessed'),
+    ('',1,[],'interrupted'),
+    ('',-11,[],'interrupted'),
+    ('',0,['SIGTERM'],'interrupted'),
+    ('',0,['SIGKILL'],'interrupted'),
+    (' NO_FINISH',0,[],'interrupted'),
+    (' HOST_FAILURE',0,[],'interrupted'),
+])
+def test_cli_uses_host_finish_and_owned_native_exit_evidence(tmp_path,monkeypatch,capsys,suffix,returncode,native_signals,expected):
+    from tests.test_campaign_player import driver_case,fence_on_host_settlement
+
+    directory,profile=package(tmp_path)
+    host_profile,route,application=driver_case(directory,'Frozen mission'+suffix)
+    profile.update(host_profile)
+    runtime=application.runtime
+    runtime.store=Mock()
+    runtime.channel.stop=Mock()
+    fence_on_host_settlement(monkeypatch,runtime)
+    native_calls=[]
+
+    class Owner:
+        channel=None
+        process=Mock(pid=4242)
+
+        def __init__(self,*args):pass
+        def reserve(self):pass
+        def wait_target(self):pass
+        def start(self):
+            self.channel=runtime.channel
+            return self.channel
+        def close(self):
+            assert self.channel.stopped.is_set()
+            native_calls.append('close')
+            return dict(native_absence_verified=True,normal_native_exit_zero=returncode==0,
+                native=dict(returncode=returncode,signals=native_signals))
+
+    monkeypatch.setattr(campaign_run,'preflight',lambda directory:(profile,route,{}))
+    monkeypatch.setattr(campaign_run,'OwnedTarget',Owner)
+    monkeypatch.setattr(campaign_run,'ComputerRuntime',Mock(return_value=runtime))
+    monkeypatch.setattr(campaign_run,'Journal',Mock())
+    monkeypatch.setattr(campaign_run,'Application',Mock(return_value=application))
+    monkeypatch.setattr(campaign_run,'serve',lambda *args:(Mock(),Mock()))
+    monkeypatch.setenv('FIXTURE_KEY','fixture-secret')
+
+    code=campaign_run.main(['--run',str(directory)])
+    report=json.loads(capsys.readouterr().out)
+    assert code==int(expected=='interrupted'),report
+    assert report==json.loads((directory/'receipt.json').read_text())
+    assert report['outcome']==report['driver']['outcome']==expected
+    assert report['normal_native_exit_zero']==(returncode==0 and not native_signals)
+    assert report['cleanup']['native']==dict(returncode=returncode,signals=native_signals)
+    assert report['input_authority_revoked'] and native_calls==['close']
+    actor,=report['driver']['actors']
+    assert actor['accounting_complete'] and actor['settled']['ok']==('HOST_FAILURE' not in suffix)
+    if 'READ_CONTROL' in suffix:assert report['driver']['ending_request']['trigger']=='spend'
+
+
+def test_cli_keeps_operator_signal_during_clean_eof_as_interrupted(tmp_path,monkeypatch,capsys):
+    from tests.test_campaign_player import driver_case,fence_on_host_settlement
+
+    directory,profile=package(tmp_path)
+    host_profile,route,application=driver_case(directory,'Frozen mission')
+    profile.update(host_profile)
+    runtime=application.runtime
+    runtime.store=Mock()
+    runtime.channel.stop=Mock()
+    fence_on_host_settlement(monkeypatch,runtime)
+    handlers={}
+    real_signal=campaign_run.signal.signal
+
+    def capture_signal(sig,handler):
+        handlers[sig]=handler
+        return real_signal(sig,handler)
+
+    class Owner:
+        channel=None
+        process=Mock(pid=4242)
+
+        def __init__(self,*args):pass
+        def reserve(self):pass
+        def wait_target(self):pass
+        def start(self):
+            self.channel=runtime.channel
+            return self.channel
+        def close(self):
+            handlers[campaign_run.signal.SIGINT](campaign_run.signal.SIGINT,None)
+            return dict(native_absence_verified=True,normal_native_exit_zero=True,
+                native=dict(returncode=0,signals=[]))
+
+    monkeypatch.setattr(campaign_run,'preflight',lambda directory:(profile,route,{}))
+    monkeypatch.setattr(campaign_run,'OwnedTarget',Owner)
+    monkeypatch.setattr(campaign_run,'ComputerRuntime',Mock(return_value=runtime))
+    monkeypatch.setattr(campaign_run,'Journal',Mock())
+    monkeypatch.setattr(campaign_run,'Application',Mock(return_value=application))
+    monkeypatch.setattr(campaign_run,'serve',lambda *args:(Mock(),Mock()))
+    monkeypatch.setattr(campaign_run.signal,'signal',capture_signal)
+    monkeypatch.setenv('FIXTURE_KEY','fixture-secret')
+
+    code=campaign_run.main(['--run',str(directory)])
+    report=json.loads(capsys.readouterr().out)
+    assert code==1
+    assert report['outcome']==report['driver']['outcome']=='interrupted'
+    assert report['normal_native_exit_zero'] is True

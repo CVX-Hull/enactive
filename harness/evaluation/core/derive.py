@@ -18,7 +18,7 @@ from PIL import Image
 
 from .binding import Binding, FrameReading, Reading, Vital
 from .records import CORE_VERSION, EvaluationError, EventRow, ReadingRow, StepRow
-from .sources import Operation
+from .sources import EndFacts, Operation
 
 READER_FRAME = 'core.frame'
 READER_INPUT = 'core.input'
@@ -425,16 +425,25 @@ def receipt_uncertain(receipt: dict) -> bool:
     return receipt.get('disposition') in ('partial', 'unknown')
 
 
-def operation_events(operations: Sequence[Operation]) -> list[EventRow]:
+def operation_events(operations: Sequence[Operation], end: EndFacts | None = None) -> list[EventRow]:
     """Handoffs and custody stops, which are recorded mechanical facts."""
+    clean_finish = (end is not None and end.normal_native_exit_zero is True and not end.paused
+        and end.outcome in ('player_task_complete_unassessed', 'player_external_stop_complete_unassessed')
+        and not end.host_finish_failed and bool(end.finishes) and len(end.settled) == len(end.finishes)
+        and end.finishes[-1] in ('task_complete', 'external_stop_complete')
+        and end.settled[-1].get('ok') is True and end.settled[-1].get('reason') == end.finishes[-1])
     events = []
-    for op in operations:
+    for index, op in enumerate(operations):
         if op.kind == 'handoff' and op.status == 'sealed' and op.handoff:
             events.append(EventRow(op.seq, op.seq, 'handoff', 'harness', None, dict(actor=op.actor,
                 operation_id=op.operation_id, context_id=op.handoff.get('context_id'),
                 context_sha256=op.handoff.get('context_sha256'))))
         uncertain = [r for r in op.receipts if receipt_uncertain(r)]
         if op.status in ('partial', 'unknown') or uncertain:
+            # Match the recorded reason without importing the live channel.
+            if (clean_finish and index == len(operations) - 1 and op.status == 'unknown'
+                    and op.reason == 'Native receive failed: Native channel EOF'):
+                continue
             events.append(EventRow(op.seq, op.seq, 'custody_stop', 'harness', None, dict(actor=op.actor,
                 cause=op.status if op.status in ('partial', 'unknown') else uncertain[0]['disposition'],
                 operation_id=op.operation_id, reason=op.reason,

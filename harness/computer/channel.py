@@ -19,6 +19,8 @@ from .protocol import (COLLECTION_MARGIN_SECONDS, ControlError, NoDispatch, MAX_
                        MAX_HEADER_BYTES, SCHEMA, START_SECONDS, decode_json, encode_packet,
                        receipt, state, wire_header)
 
+NATIVE_EOF_REASON = 'Native receive failed: Native channel EOF'
+
 
 @dataclass
 class _Pending:
@@ -149,6 +151,9 @@ class NativeChannel:
         with self._condition:
             if self._fault is None:
                 self._fault = reason[:600]
+            # A waiting request can now report this fault. Publish its fence
+            # before the request can latch its fallback stop reason.
+            self._latch_stop(reason)
             self._condition.notify_all()
         self.stop(reason)
 
@@ -262,7 +267,9 @@ class NativeChannel:
                 except BlockingIOError:
                     continue
                 if not chunk:
-                    raise ConnectionError('Native channel EOF')
+                    if not self.closed.is_set():
+                        self._fail(NATIVE_EOF_REASON)
+                    return
                 buffer.extend(chunk)
                 if len(buffer) > MAX_FRAME_BYTES + MAX_HEADER_BYTES + 65540:
                     raise ControlError('Native receive byte capacity exceeded')

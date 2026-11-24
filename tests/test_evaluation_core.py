@@ -200,7 +200,7 @@ class Run:
 
     def step(self, actor: str, kind: str = 'input', actions: list | None = None, frame: F | None = None,
              status: str = 'completed', receipt: str = 'delivered', usage: dict | None = None,
-             request: bool = True, handoff: dict | None = None, pending: bool = False) -> str:
+             request: bool = True, handoff: dict | None = None, pending: bool = False, reason: str = 'fixture') -> str:
         self.count += 1
         wall = self.wall()
         operation = f'{0x1000 + self.count:032x}'
@@ -210,7 +210,7 @@ class Run:
             self.call(actor, tool, dict(actions=actions or []), dict(operation_id=operation), wall=wall - 1)
         record = dict(schema='computer-operation/1', operation_id=operation, session=self.session, actor_id=actor,
             kind=kind, status=status, created_wall=wall, deadline_monotonic=1e9, receipts=[], source=None,
-            remaining={}, reason='fixture', handoff=handoff)
+            remaining={}, reason=reason, handoff=handoff)
         self.store.begin(record, actions if kind == 'input' else None, len(actions or []))
         native = f'native-{self.count}'
         if kind != 'handoff':
@@ -1409,6 +1409,82 @@ def test_censor_reasons(tmp_path, name, options, reason):
     assert value['outcome'] == ('died' if reason == 'died' else 'censored')
     assert metrics_of(path)['run.infrastructure_loss'].value == int(reason in ('infrastructure', 'custody'))
     assert metrics_of(path)['run.provider_loss'].value == int(reason == 'infrastructure')
+
+
+@pytest.mark.parametrize('scenario,expected_stop,expected_censor', [
+    ('task_complete', False, 'player_stop'),
+    ('external_stop_complete', False, 'budget'),
+    ('interrupted_outcome', True, 'custody'),
+    ('missing_returncode', True, 'custody'),
+    ('nonzero', True, 'custody'),
+    ('crash', True, 'custody'),
+    ('signalled', True, 'custody'),
+    ('missing_flag', True, 'custody'),
+    ('invalid_flag', True, 'custody'),
+    ('provider_error', True, 'custody'),
+    ('missing_finish', True, 'custody'),
+    ('host_nonzero', True, 'custody'),
+    ('wrong_reason', True, 'custody'),
+    ('mid_run', True, 'custody'),
+    ('operator_pause', True, 'owner_pause'),
+])
+def test_terminal_native_eof_classifies_custody_without_rewriting_delivery(tmp_path, scenario, expected_stop, expected_censor):
+    from harness.evaluation.core.derive import operation_events
+    from harness.evaluation.core.sources import read_run
+
+    directory = tmp_path / 'run'
+    run = Run(directory)
+    actor = run.actor()
+    run.step(actor, 'input', [key('j')], F('in_play', 3600))
+    run.step(actor, 'input', [key('s')], F('menu'))
+    reason = 'Native receive failed: Native channel EOF' if scenario != 'wrong_reason' else 'Native receive failed: Bad header'
+    quit_op = run.step(actor, 'input', [key('y'), dict(type='wait', seconds=2)], status='unknown', receipt='unknown', reason=reason)
+    if scenario == 'mid_run':
+        run.step(actor, 'observe', frame=F('menu'))
+
+    disposition = 'external_stop_complete' if scenario == 'external_stop_complete' else 'task_complete'
+    control_id = 'c' * 32 if disposition == 'external_stop_complete' else None
+    finish = dict(disposition=disposition, control_id=control_id)
+    if scenario in ('provider_error', 'missing_finish'):
+        finish = None
+    if finish:
+        run.host[actor].append(run.event(actor, 'player-finish', iso(BASE + 50), report='fixture', **finish))
+    settled = dict(ok=scenario != 'provider_error', reason='provider-error' if scenario == 'provider_error' else disposition,
+        control_id=control_id)
+    run.finish(settled=settled)
+
+    host = dict(settled=settled, player_finish=finish)
+    if scenario == 'host_nonzero':
+        host['cleanup'] = dict(returncode=1, signals=[])
+    driver = dict(schema='player-driver/7', actors=[host], ending_request=dict(trigger='spend') if control_id else None)
+    native_signals = ['SIGTERM'] if scenario == 'signalled' else []
+    returncode = {'nonzero': 1, 'crash': -11}.get(scenario, 0)
+    native_cleanup = dict(signals=native_signals) if scenario == 'missing_returncode' else dict(returncode=returncode, signals=native_signals)
+    outcome = ('interrupted' if scenario == 'interrupted_outcome'
+        else f'player_{disposition}_unassessed')
+    receipt = dict(schema='campaign-receipt/7', outcome=outcome, driver=driver,
+        cleanup=dict(native=native_cleanup))
+    if scenario != 'missing_flag':
+        receipt['normal_native_exit_zero'] = 1 if scenario == 'invalid_flag' else returncode == 0 and not native_signals
+    (directory / 'receipt.json').write_text(json.dumps(receipt))
+    if scenario == 'operator_pause':
+        (directory / 'watch-terminal.json').write_text(json.dumps(dict(schema='campaign-watch-terminal/4', reason='operator_pause')))
+
+    path = evaluate(directory, FakeBinding(), tmp_path / 'evals', created_wall=1.0)
+    inputs = read_run(directory)
+    # The old operation-only call has no verified ending facts.
+    assert [event.payload['operation_id'] for event in operation_events(inputs.operations)] == [quit_op]
+    stops = events_of(path, 'custody_stop')
+    assert [event['payload']['operation_id'] for event in stops] == ([quit_op] if expected_stop else [])
+    assert survival_of(path)['censor_reason'] == expected_censor
+    metrics = metrics_of(path)
+    assert metrics['run.infrastructure_loss'].value == int(expected_censor == 'custody')
+    assert metrics['custody.stopped'].value is expected_stop
+    uncertain = metrics['custody.uncertain_receipts']
+    assert (uncertain.count, uncertain.denominator) == (1, len(inputs.operations))
+    assert uncertain.value == pytest.approx(1 / len(inputs.operations))
+    if finish:
+        assert [event['payload']['reason'] for event in events_of(path, 'run_end')] == [disposition]
 
 
 def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path, monkeypatch):
