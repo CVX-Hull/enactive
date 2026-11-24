@@ -18,9 +18,9 @@ Without that, a few-hundred-byte request could make the provider fetch any URL o
 above the reservation.
 
 The dollar cap is enforced by reservation:
-- **Reserve.** Before forwarding, the proxy reserves the worst case: every body byte counted
-  as an input token at the highest input-side price, plus the requested output limit at the
-  output price. A request whose reservation would exceed the cap is refused.
+- **Reserve.** Before forwarding, the proxy bounds the prompt and requested output and
+  reserves their worst possible charge across the reachable price tiers. A request whose
+  reservation would exceed the cap is refused.
 - **Settle.** Afterwards it settles at the reported usage. The response is read to the end
   even if the client has gone, so usage is not lost.
 - **Refused requests cost nothing.** A response with an HTTP error status that was read to
@@ -75,10 +75,25 @@ class Price:
     output: Decimal
     cache_write: Decimal = Decimal(0)
     cache_read: Decimal = Decimal(0)
+    long_prompt: tuple[int, Price] | None = None
 
     @property
     def worst_input(self) -> Decimal:
         return max(self.input, self.cache_write, self.cache_read)
+
+    def at(self, prompt_tokens: int) -> Price:
+        if self.long_prompt is not None and prompt_tokens >= self.long_prompt[0]:
+            return self.long_prompt[1]
+        return self
+
+    def charge(self, prompt_tokens: int, output_tokens: int) -> Decimal:
+        return (prompt_tokens * self.worst_input + output_tokens * self.output) / Decimal(1_000_000)
+
+    def reservation(self, prompt_bound: int, output_limit: int) -> Decimal:
+        if self.long_prompt is None or prompt_bound < self.long_prompt[0]:
+            return self.charge(prompt_bound, output_limit)
+        threshold, longer = self.long_prompt
+        return max(self.charge(threshold - 1, output_limit), longer.charge(prompt_bound, output_limit))
 
 
 def no_refusal(_request: dict) -> str | None:
@@ -108,6 +123,7 @@ class Provider:
     beta_header: str | None = None  # header listing beta flags; only flags in the proxy's frozen set pass
     affinity_header: str | None = None  # session-affinity header the proxy itself sets, if the provider has one
     response_error: Callable[[bytes], dict | None] = no_response_error  # safe provider-specific classifications only
+    prompt_bound: Callable[[str, bytes, object], int] | None = None
 
     def __post_init__(self):
         # The proxy sets these itself; a provider must not let the host's values through.
@@ -176,10 +192,7 @@ def refusal(provider: Provider, request: object) -> str | None:
     return None
 
 
-# Each inline image reserves this many input tokens instead of its base64 bytes. Providers bill an
-# image by its pixels, not its encoding, after scaling it to a bounded size (about 1,600 tokens at
-# most for the providers in `tools/curator_host/providers.py`). 10,000 leaves several times that
-# headroom. A charge above the reservation still revokes the session.
+# Generic inline image bound for routes without a more specific bound.
 IMAGE_TOKENS = 10_000
 
 
@@ -187,15 +200,14 @@ IMAGE_MEDIA = re.compile(r'image/(png|jpeg|gif|webp)')
 IMAGE_DATA_URL = re.compile(r'data:image/(png|jpeg|gif|webp);base64,')
 
 
-def inline_images(request: object) -> tuple[int, int]:
-    """The base64 bytes and count of inline images in an already-allowlisted request body.
+def inline_images(request: object):
+    """The encoded strings of inline images in an already-allowlisted request body.
 
     Only image content blocks count: an `image` block with a base64 `image/*` source,
     or an `image_url`/`input_image` part with a `data:image/...;base64,` URL. The walk skips the
     same opaque fields as `refusal`, so a tool argument or text that merely looks like an image
     is billed by its bytes.
     """
-    total = count = 0
     stack = [request.get('messages'), request.get('system'), request.get('input')] if isinstance(request, dict) else []
     while stack:
         item = stack.pop()
@@ -215,13 +227,13 @@ def inline_images(request: object) -> tuple[int, int]:
                 if isinstance(url, str) and IMAGE_DATA_URL.match(url):
                     data = url
             if isinstance(data, str):
-                # The body is re-serialized compactly with ASCII escapes, so a base64 string's byte
-                # length in the body equals its character length.
-                total += len(data)
-                count += 1
+                yield data
                 continue
             stack.extend(v for k, v in item.items() if k not in OPAQUE)
-    return total, count
+
+
+def body_token_bound(_model: str, body: bytes, request: object) -> int:
+    return len(body) + sum(IMAGE_TOKENS - len(data) for data in inline_images(request))
 
 
 # Fields whose values are tool arguments or schemas, not content blocks.
@@ -317,9 +329,8 @@ class ModelProxy:
             return f'model {model!r} has no frozen price'
         if not (0 < output_limit <= self.max_output_tokens):
             return f'output limit must be between 1 and {self.max_output_tokens}'
-        image_bytes, images = inline_images(request)
-        input_tokens = len(body) - image_bytes + images * IMAGE_TOKENS
-        worst = (input_tokens * price.worst_input + output_limit * price.output) / Decimal(1_000_000)
+        input_tokens = (self.provider.prompt_bound or body_token_bound)(model, body, request)
+        worst = price.reservation(input_tokens, output_limit)
         with self._lock:
             if self.revoked or self._closed:
                 return 'session token revoked'
@@ -392,6 +403,8 @@ class ModelProxy:
                 self.send_response(status)
                 self.send_header('content-type', 'application/json')
                 self.send_header('content-length', str(len(data)))
+                if reason == 'spend cap reached':
+                    self.send_header('x-curator-spend-refused', '1')
                 self.end_headers()
                 self.wfile.write(data)
 
@@ -441,14 +454,12 @@ class ModelProxy:
                 if reason:
                     return self.refuse(400, reason)
                 model = request.get('model')
-                try:
-                    output_limit = int(request.get(proxy.provider.output_field) or 0)
-                except (TypeError, ValueError):
-                    output_limit = 0
+                output_limit = request.get(proxy.provider.output_field)
                 listed = self.headers.get(proxy.provider.beta_header) if proxy.provider.beta_header else None
                 betas = [b.strip() for b in (listed or '').split(',') if b.strip()]
                 dropped = sorted(set(betas) - proxy.betas)
-                reservation = proxy._reserve(model if isinstance(model, str) else '', body, output_limit, request)
+                reservation = proxy._reserve(model if isinstance(model, str) else '', body,
+                                             output_limit if type(output_limit) is int else 0, request)
                 if isinstance(reservation, str):
                     return self.refuse(429, reservation, model=model)
                 status, received, actual, error = 502, b'', None, None

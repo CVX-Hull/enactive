@@ -63,7 +63,7 @@ actor uses the covered prefix.
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests through a provider-neutral `Provider` value. Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Providers](../../tools/curator_host/providers.py) (an adapter) | Model service adapters define routes, key and forwarding headers, request validation and conversion of reported usage to dollars. Provider and model identities stay in the curator host's adapters; the proxy receives them from its caller. |
 | [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. The gate writes the repository through validated submissions, under the [gate checks](../contracts/curator.md#gate-v0), and through the [operator restore](../contracts/curator.md#operator-restore) of a compatible snapshot. |
-| [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Decision-window and citations-only views remove the entire journal JSON; only filtered in-window calls can carry hints. [Window rules](../contracts/curator.md#windows-of-decisions) and [coverage stamp](../contracts/curator.md#coverage-stamp-curator-coverage2) |
+| [Windows](../../harness/curator/window.py) | A range of one actor's steps as the whole of a session's trace, and the coverage stamp the gate publishes with each version. Windowed admission and grooming projections remove the journal JSON. Only retained tool calls can carry hints. [Window rules](../contracts/curator.md#windows-of-decisions) and [coverage stamp](../contracts/curator.md#coverage-stamp-curator-coverage2) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | Draft lifecycle (open, stale, abandoned, promoted) and ephemeral sandboxed sessions whose close-out never follows a link. [Drafts](../contracts/curator.md#drafts) and [close-out](../contracts/curator.md#session-close-out) |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/curator-memory-study-protocol-revised.md#limitations) records that exposure. |
@@ -177,8 +177,8 @@ After the admission's trace is sealed, the operator can start
 [boundary grooming](../operations/curator-hosts.md#post-admission-boundary-grooming)
 on that repository using the trace of its last published admission. A repository
 with no published admission yields a skipped summary. Grooming uses the
-[last admission's citations](../contracts/curator.md#admission-and-grooming),
-including citations accumulated across published windows of that admission.
+[last admission's citations and actor boundary observations](../contracts/curator.md#admission-and-grooming).
+The citations accumulate across published windows of that admission.
 The [first-run rationale](../design/live-curator-integration.md#what-a-first-live-run-measures)
 explains which lag, cost, staging and player-pace questions require real play.
 
@@ -211,10 +211,13 @@ adoption by the driver and the host.
 - **Close-out and the gate.** Execution failure, unknown cleanup or surviving processes
   prevents gating. Handled failures record an abort where writable; a later close-out error
   cannot undo an earlier atomic publication. Each gate publishes atomically or not at all.
-- **Runner failure.** Two consecutive failed sessions or three consecutive failed or over-bound snapshots stop the runner. A missing store retries, a closing store ends the runner, and other read refusals stop it. Cap exhaustion, a refused reservation, proxy revocation, unsettled accounting or unconfirmed host cleanup also stop it. [Runner process](../../tools/curator_host/live_runner.py) and [guardian cleanup](../operations/campaign-supervision.md#failure-and-owned-cleanup)
-- **The proxy.** Missing usage keeps the reservation except on a fully read HTTP
-  refusal with no usage. An over-reservation charge revokes the session. The runner
-  stops on unsettled exposure. See [accounting and shutdown](../operations/curator-hosts.md#pi-curator-host-the-shadow-session-host).
+- **Runner failure.** Two consecutive failed sessions or three consecutive failed or over-bound snapshots stop the runner. A missing store retries, a closing store ends the runner, and other read refusals stop it. A refused reservation leaves any published work in place. If the window did not publish, the runner retries the same starting step over half as many steps. A refusal at one step stops it as `spend-reservation-refused`. A fully spent cap stops it as `spend-cap-exhausted`. Proxy revocation, unsettled accounting and unconfirmed host cleanup also stop it. [Runner process](../../tools/curator_host/live_runner.py) and [guardian cleanup](../operations/campaign-supervision.md#failure-and-owned-cleanup)
+- **The proxy.** It reserves the worst charge for the bounded prompt and full output
+  limit across the reachable frozen price tiers. Missing usage keeps the reservation
+  except on a fully read HTTP refusal with no usage. An over-reservation charge
+  revokes the session. The runner stops on unsettled exposure and holds the session
+  cap across restart if the proxy left no closure receipt.
+  [Accounting and shutdown](../operations/curator-hosts.md#pi-curator-host-the-shadow-session-host)
 - **Knowledge and records.** Close-out retains session records and removes workspaces.
 - **Ownership.** The lead owns this code.
 

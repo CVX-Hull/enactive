@@ -216,7 +216,8 @@ the tables above are refused in a submission, as is any other unexpected field.
 
 - **Targets.** Each target is current and changed at most once per submission.
 - **Citations.** A citation names a frame in the session's trace. In grooming, a
-  replacement may also cite frames of the facts it supersedes.
+  replacement may also cite frames of the facts it supersedes. Retirement of a world
+  fact may also cite that fact's own recorded frames.
 - **Articles.** To split or merge articles, add the resulting articles and retire or
   revise their predecessors in one submission, repairing links and fact references.
 
@@ -325,7 +326,7 @@ store.
 | Path | Holds | Writable |
 | --- | --- | --- |
 | `trace/` | The [trace projection](measurement-tools.md#trace-projection), narrowed to the session's window | No |
-| `knowledge/` | An export of the published version without `.git` | No |
+| `knowledge/` | The published version without `.git`, plus `current-facts.jsonl` with only current facts and articles | No |
 | `brief.md` | Software-written: the window, drafts, recent gate results and type list | No |
 | `grooming.md` | The grooming instructions, in grooming sessions | No |
 | `workbench/` | A copy of `harness/trace` | No |
@@ -389,8 +390,8 @@ coverage-gated cuts for the run ([player-host coverage updates](player-host.md#a
 
 | Rule | Admission session | Grooming session |
 | --- | --- | --- |
-| Trace | The supplied sessions or one window | Only the last admission's cited frames, with their steps and tool calls |
-| Store | The whole published export | The whole published export |
+| Trace | The supplied sessions or one window | The last admission's cited frames, their steps and tool calls, and the first and last framed operations of each actor |
+| Store | Current records in `current-facts.jsonl` and the published export | Current records in `current-facts.jsonl` and the published export |
 | Instructions | Brief and [shared instructions](../../tools/curator_host/prompt.md) | Also its own [`grooming.md`](../../tools/curator_host/grooming.md) |
 | Window | Full or restricted | Full only |
 | `revise_types` | Refused | Allowed |
@@ -402,8 +403,9 @@ coverage-gated cuts for the run ([player-host coverage updates](player-host.md#a
   restricted window, a trace other than the last published admission, or a retained
   citation absent from that trace stops the session before the host starts.
 - **Inherited citations.** A grooming replacement may cite the union of the superseded
-  facts' citations and the session's frames. Software takes inherited positions from
-  recorded provenance. Citations of unrelated facts do not qualify.
+  facts' citations and the session's frames. A world fact retirement may cite that
+  fact's recorded citations and session frames from its own world. Citations of unrelated
+  facts do not qualify. Software takes inherited positions from recorded provenance.
 - **Growth.** Grooming addresses the store's growth, and the store has no hard cap
   ([decision](../decisions/owner-decisions.md#groom-the-store-between-admissions)).
   Submission and host resource limits still apply.
@@ -426,7 +428,10 @@ last published admission, and writes `grooming-summary.json`.
 
 A failure reason is the session error, `unresolved-result`, `proxy-unsettled`,
 `proxy-revoked-or-breached`, `cap-reached`, `session-not-sealed` or
-`cleanup-unconfirmed`. A clean rejection that leaves the version unchanged completes.
+`cleanup-unconfirmed`. When a session stops on a local spend refusal after earlier
+submissions already sealed and published, `status` is `failed` with reason
+`cap-reached` while `published_after` still reflects the published version. A clean
+rejection that leaves the version unchanged completes.
 
 ## Drafts
 

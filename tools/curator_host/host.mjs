@@ -199,7 +199,7 @@ export async function runCurator(options) {
     monotonic_ms: Math.round(performance.now() * 1000) / 1000, ...fields });
   const model = { ...configuration.model, api: 'openai-completions', provider: 'openrouter', baseUrl: proxy.baseUrl };
   const effort = configuration.effort;
-  let agent, fatal, finished, requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
+  let agent, fatal, finished, spendRefused = false, requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
   let rawUsage, httpStatus, providerChunks = 0, sawFinish = false, lastPromptTokens = 0, contextWarning = false, spent = 0;
   // Notes sent so far, each with the number of history messages it followed (append-only).
   const placedNotes = [];
@@ -319,7 +319,7 @@ export async function runCurator(options) {
             return withPlacedNotes(projection.messages, placedNotes);
           } catch { stop('context-projection-failed'); return messages; }
         },
-        finishTurn: () => (fatal || finished ? { action: 'end' } : undefined),
+        finishTurn: () => (fatal || finished || spendRefused ? { action: 'end' } : undefined),
         streamFn: (streamModel, context, streamOptions) => {
           if (fatal) return failureStream(streamModel, fatal);
           if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(streamModel, fatal); }
@@ -362,6 +362,12 @@ export async function runCurator(options) {
                   throw error;
                 }
                 httpStatus = response.status;
+                if (httpStatus === 429 && response.headers.get('x-curator-spend-refused') === '1') {
+                  // No generation took place. Close cleanly so the gate can check work
+                  // the curator already wrote. The runner can retry an uncovered window.
+                  spendRefused = true;
+                  return response;
+                }
                 if (response.status >= 400) {
                   const headers = retryHeaders(response);
                   if (attempt === 1 && headers && !signal.aborted && !fatal) {
@@ -405,7 +411,8 @@ export async function runCurator(options) {
         if (inFlight) {
           const usage = rawUsage ?? {};
           const number = value => (typeof value === 'number' && Number.isFinite(value) ? value : null);
-          const failure = requestFailure(message, httpStatus, providerChunks, sawFinish,
+          const failure = spendRefused ? { kind: 'spend-reservation-refused', phase: 'http-error' }
+            : requestFailure(message, httpStatus, providerChunks, sawFinish,
             number(usage.prompt_tokens) !== null && number(usage.completion_tokens) !== null && number(usage.cost) !== null);
           lastPromptTokens = number(usage.prompt_tokens) ?? lastPromptTokens;
           spent += number(usage.cost) ?? 0;
@@ -417,12 +424,12 @@ export async function runCurator(options) {
             ...(failure ? { failure } : {}) });
         }
         inFlight = false;
-        if (['error', 'aborted', 'length'].includes(message.stopReason) && !fatal) {
+        if (['error', 'aborted', 'length'].includes(message.stopReason) && !fatal && !spendRefused) {
           stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
         }
       });
       await agent.prompt(options.brief);
-      if (!fatal && !finished) stop('ended-without-finish');
+      if (!fatal && !finished && !spendRefused) stop('ended-without-finish');
     } finally {
       clearTimeout(requestTimer);
       clearTimeout(wallTimer);
@@ -430,7 +437,8 @@ export async function runCurator(options) {
   } catch (error) {
     if (!fatal) fatal = error instanceof HostError ? error.reason : 'host-failed';
   }
-  const result = { ok: !fatal && finished !== undefined, reason: fatal ?? 'finished', requests, tool_calls: toolCalls };
+  const result = { ok: !fatal && (finished !== undefined || spendRefused),
+    reason: fatal ?? (spendRefused ? 'spend-reservation-refused' : 'finished'), requests, tool_calls: toolCalls };
   emit('host-end', { ...result, summary_chars: finished ? finished.summary.length : 0, elapsed_ms: Math.round(performance.now() - started) });
   return result;
 }

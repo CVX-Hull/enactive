@@ -29,8 +29,8 @@ from harness.trace.sidecar import validate
 
 from . import sandbox, type_usage
 from .containers import Drafts, UnsafeTree, read_tree, write_tree
-from .gate import FACT, TYPE, gate, journal as gate_journal
-from .window import FULL, Window, coverage as window_coverage, restrict, positions, citations_only
+from .gate import FACT, TYPE, current, gate, journal as gate_journal
+from .window import FULL, Window, coverage as window_coverage, restrict, positions, grooming_context
 from .knowledge import Repository
 
 TRACE_PACKAGE = Path(__file__).resolve().parents[1]/'trace'
@@ -160,8 +160,10 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
                       f"{window['steps_available']} of actor `{window['actor']}`, and nothing else. Frames outside "
                       'it are not in the trace and cannot be cited. The step numbers are `seq` in `steps.jsonl`.']
     if session_kind == 'grooming':
-        lines += ['', 'Read `grooming.md` for this session. The whole published store is in `knowledge/`; '
-                  'the trace contains only the last admission\'s cited frames and their steps.']
+        lines += ['', 'Read `grooming.md` for this session. The trace contains the last admission\'s cited '
+                  'frames and the first and last framed operations of each actor.']
+    lines += ['', 'Read current facts and articles in `knowledge/current-facts.jsonl`. '
+              'Use `knowledge/facts.jsonl` for specific historical records.']
     lines += ['', 'Frames are in `trace/frames/`; `python -m harness.trace.workbench --help` lists tools '
               '(run from `workbench/`).', '', '## Drafts', '']
     lines += [f"- `{d['id']}` ({d['lifecycle']['state']}, untouched for {d['lifecycle'].get('untouched_sessions', 0)} "
@@ -237,11 +239,16 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         home.mkdir()
         home = home.resolve()
         version = repo.published()
-        if any(item.get('schema') != FACT for item in repo.records(version)):
+        records = repo.records(version)
+        if any(item.get('schema') != FACT for item in records):
             raise SessionError(f'published store is not {FACT}; start a new repository')
         if any(item.get('schema') != TYPE for item in repo.types(version)):
             raise SessionError(f'published types are not {TYPE}; start a new repository')
         repo.export(version, workspace/'knowledge')
+        with (workspace/'knowledge'/'current-facts.jsonl').open('w', encoding='utf-8') as stream:
+            for record in records:
+                if current(record):
+                    stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
         trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory, journal=journal), window)
         provenance = repo.provenance()
         if session_kind == 'grooming':
@@ -250,7 +257,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
                 raise SessionError('grooming needs a published admission')
             if ','.join(p.name for p in trace_sessions) != last['coverage']['session']:
                 raise SessionError('grooming trace must be the last admission')
-            trace_manifest = citations_only(workspace/'trace', trace_manifest, set(last['citations']))
+            trace_manifest = grooming_context(workspace/'trace', trace_manifest, set(last['citations']))
             coverage = last['coverage']
         else:
             coverage = window_coverage(window, [p.name for p in trace_sessions], trace_manifest)

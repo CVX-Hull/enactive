@@ -4,15 +4,16 @@ The proxy is provider-neutral; each `Provider` here carries what is specific to 
 route, key header, request allowlists, extra refusals, forwarded headers and how a response's
 usage becomes dollars. Provider and model names belong in the host adapters (S-ARCH, ADR 010).
 
-Image reservation (`harness.curator.proxy.IMAGE_TOKENS`): a provider bills an image by its pixels
-after scaling, not by its encoding. Anthropic bills about width x height / 750 tokens after scaling
-to at most about 1.15 megapixels (about 1,600 tokens).
+Image reservation uses pixels after provider scaling. The Terra bound for 960x640 PNGs
+is route-specific. Other images retain the proxy's generic bound.
 """
 from __future__ import annotations
 
+import base64
 from decimal import Decimal
+import json
 
-from harness.curator.proxy import Price, Provider, response_events, usage_events
+from harness.curator.proxy import IMAGE_TOKENS, Price, Provider, body_token_bound, inline_images, response_events, usage_events
 
 PER = Decimal(1_000_000)
 
@@ -70,6 +71,38 @@ ANTHROPIC = Provider(
 
 # Provider preferences that only choose among backends for the requested model.
 ROUTING = frozenset({'order', 'only', 'ignore', 'allow_fallbacks', 'require_parameters', 'data_collection', 'zdr'})
+TERRA = 'openai/gpt-6.1-terra'
+CDDA_FRAME_PREFIX = 'data:image/png;base64,' + base64.b64encode(
+    b'\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR' + (960).to_bytes(4) + (640).to_bytes(4)).decode()
+# Four such frames added about 3,600 prompt tokens in the sealed #896-b A7 trace.
+# Reserve for the route's full image detail, including variation across frames.
+TERRA_FRAME_TOKENS = 3_000
+
+
+def _openrouter_prompt_bound(model: str, body: bytes, request: object) -> int:
+    if (model != TERRA or not isinstance(request, dict)
+            or request.get('provider') != dict(only=['openai'], order=['openai'],
+                                               allow_fallbacks=False, require_parameters=True)):
+        return body_token_bound(model, body, request)
+    messages = request.get('messages') or []
+    tools = request.get('tools') or []
+    if not isinstance(messages, list) or not isinstance(tools, list):
+        return body_token_bound(model, body, request)
+    # Text in a message is tokenized as decoded content. Exclude the wire JSON's
+    # escaping for that content only. Keep the complete byte bound for arguments,
+    # schemas and unfamiliar shapes, and allow for provider-side prompt framing.
+    saved = 0
+    for message in messages:
+        content = message.get('content') if isinstance(message, dict) else None
+        parts = content if isinstance(content, list) else []
+        texts = [content] if isinstance(content, str) else [
+            part.get('text') for part in parts if isinstance(part, dict) and part.get('type') == 'text']
+        for value in texts:
+            if isinstance(value, str):
+                saved += len(json.dumps(value)) - 2 - len(value.encode('utf-8', 'backslashreplace'))
+    image_adjustment = sum((TERRA_FRAME_TOKENS if data.startswith(CDDA_FRAME_PREFIX) else IMAGE_TOKENS) - len(data)
+                           for data in inline_images(request))
+    return len(body) - saved + image_adjustment + 256 + 32 * (len(messages) + len(tools))
 
 
 def _openrouter_tool(tool: dict) -> str | None:
@@ -134,7 +167,8 @@ def _openrouter_cost(price: Price, usage: dict[str, int], body: bytes) -> Decima
     if reported is not None:
         return reported
     _checked_token_usage(usage, body, ('prompt_tokens', 'completion_tokens'))
-    return (usage.get('prompt_tokens', 0) * price.worst_input + usage.get('completion_tokens', 0) * price.output) / PER
+    prompt = usage['prompt_tokens']
+    return price.at(prompt).charge(prompt, usage['completion_tokens'])
 
 
 # OpenRouter's canonical error types (errors-and-debugging, checked 11 November 2026).
@@ -167,4 +201,4 @@ OPENROUTER = Provider(
                'tools', 'tool_choice', 'reasoning', 'provider', 'store', 'service_tier'}),
     frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}),
     tool_refusal=_openrouter_tool, cost=_openrouter_cost, request_refusal=_openrouter_request,
-    affinity_header='x-session-id', response_error=_openrouter_error, **COMMON)
+    affinity_header='x-session-id', response_error=_openrouter_error, prompt_bound=_openrouter_prompt_bound, **COMMON)

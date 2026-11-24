@@ -205,25 +205,25 @@ def positions(out: Path, manifest: dict, previous: dict[str, dict]) -> FramePosi
     return result
 
 
-def citations_only(out: Path, manifest: dict, citations: set[str]) -> dict:
-    """Grooming reads the last admission's cited frames, with their trace positions."""
+def grooming_context(out: Path, manifest: dict, citations: set[str]) -> dict:
+    """Retain the last admission's citations and each actor's boundary observations."""
     require_current(manifest)
     available = {Path(name).stem for name in manifest['files'] if name.startswith('frames/')}
     if citations - available:
         raise WindowError(f'last admission citations missing from trace: {sorted(citations - available)}')
-    for frame in (out/'frames').iterdir():
-        if frame.stem not in citations:
-            frame.unlink()
-    # Other trace content could disclose uncited observations. Retain only cited steps.
+    boundaries = set()
     for session in manifest['sessions']:
         for actor in session['actors']:
             directory = out/session['name']/actor['directory']
             all_steps = _jsonl(directory/'steps.jsonl')
-            steps = [s for s in all_steps if s.get('frame') in citations]
+            framed = [s for s in all_steps if s.get('frame')]
+            ends = {framed[0]['seq'], framed[-1]['seq']} if framed else set()
+            steps = [s for s in framed if s['frame'] in citations or s['seq'] in ends]
+            boundaries.update(s['frame'] for s in framed if s['seq'] in ends)
             calls = _jsonl(directory/'tools.jsonl')
             owners = _owners(calls, {s['operation_id']: s['seq'] for s in all_steps},
                              max((s['seq'] for s in all_steps), default=0))
-            kept_seq = {s['seq'] for s in steps}
+            kept_seq = {s['seq'] for s in steps if s['frame'] in citations}
             calls = [call for call, owner in zip(calls, owners) if owner in kept_seq]
             for path in directory.iterdir():
                 if path.name not in ('steps.jsonl', 'tools.jsonl'):
@@ -238,11 +238,15 @@ def citations_only(out: Path, manifest: dict, citations: set[str]) -> dict:
         if handoffs.exists():
             shutil.rmtree(handoffs)
         session['handoffs'] = []
+    for frame in (out/'frames').iterdir():
+        if frame.stem not in citations and frame.stem not in boundaries:
+            frame.unlink()
     (out/'memory.json').unlink(missing_ok=True)
     (out/'journal.json').unlink(missing_ok=True)
     manifest['hints'] = 'cited-step tool calls only'
     manifest['files'] = {str(p.relative_to(out)): hashlib.sha256(p.read_bytes()).hexdigest()
                          for p in sorted(out.rglob('*')) if p.is_file() and p.name != MANIFEST}
-    manifest['citations_only'] = sorted(citations)
+    manifest['grooming_citations'] = sorted(citations)
+    manifest['grooming_boundary_frames'] = sorted(boundaries)
     (out/MANIFEST).write_text(json.dumps(manifest, sort_keys=True, indent=1))
     return manifest

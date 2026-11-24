@@ -366,7 +366,9 @@ def test_the_prompt_defines_game_neutral_facts_articles_and_grooming():
 def test_the_frozen_prices_cover_exactly_the_two_arms():
     assert sorted(PRICES) == sorted(arm.model for arm in shadow.ARMS.values())
     terra, opus = PRICES['openai/gpt-6.1-terra'], PRICES['anthropic/claude-opus-5.5']
-    assert (terra.input, terra.output, terra.cache_read, terra.cache_write) == (Decimal(2), Decimal('7.5'), Decimal('0.1'), Decimal('2.5'))
+    assert (terra.input, terra.output, terra.cache_read, terra.cache_write) == (Decimal(1), Decimal(5), Decimal('0.05'), Decimal('1.25'))
+    longer = terra.at(272000)
+    assert (longer.input, longer.output, longer.cache_read, longer.cache_write) == (Decimal(2), Decimal('7.5'), Decimal('0.1'), Decimal('2.5'))
     assert (opus.input, opus.output, opus.cache_read, opus.cache_write) == (Decimal(4), Decimal(20), Decimal('0.2'), Decimal(8))
     data = json.loads(shadow.DEFAULT_PRICES.read_text())
     assert data['source'] == 'https://openrouter.ai/api/v1/models' and data['fetched'] == '2026-11-08'
@@ -399,15 +401,16 @@ def test_a_present_long_prompt_tier_must_be_complete(tmp_path, tier):
         shadow.load_prices(path)
 
 
-def test_each_price_component_is_bounded_independently(tmp_path):
+def test_the_reservation_bounds_reachable_tiers_without_mixing_prices(tmp_path):
     data = json.loads(shadow.DEFAULT_PRICES.read_text())
     tier = data['models']['openai/gpt-6.1-terra']['long_prompt']
     tier.update(input='0.5', cache_write='0')
     path = tmp_path/'prices.json'
     path.write_text(json.dumps(data))
     price = shadow.load_prices(path)['openai/gpt-6.1-terra']
-    assert (price.input, price.output, price.cache_read, price.cache_write) == (
-        Decimal(1), Decimal('7.5'), Decimal('0.1'), Decimal('1.25'))
+    assert price.reservation(271999, 100) == price.charge(271999, 100)
+    assert price.reservation(272000, 100) == price.charge(271999, 100)
+    assert price.reservation(700000, 100) == price.at(700000).charge(700000, 100)
 
 
 def test_long_prompt_prices_bound_reservation_and_fallback_without_repricing_reported_cost(tmp_path):
@@ -418,6 +421,10 @@ def test_long_prompt_prices_bound_reservation_and_fallback_without_repricing_rep
     fallback = OPENROUTER.cost(price, usage, response)
     standard_long_charge = (280000 * Decimal(2) + 16384 * Decimal('7.5')) / Decimal(1000000)
     assert fallback == Decimal('0.82288') >= standard_long_charge == Decimal('0.68288')
+    for prompt, expected in [(271999, '0.42191875'), (272000, '0.80288')]:
+        use = dict(usage, prompt_tokens=prompt)
+        assert OPENROUTER.cost(price, use, json.dumps(dict(usage=use)).encode()) == Decimal(expected)
+        assert price.reservation(prompt, 16384) == Decimal(expected)
     proxy = ModelProxy(provider=OPENROUTER, upstream='http://127.0.0.1:1', key=KEY, prices=PRICES,
                        cap_usd=Decimal(2), ledger=tmp_path/'ledger.jsonl', max_output_tokens=16384)
     request = json.dumps(dict(messages=[dict(role='user', content='x' * 280000)])).encode()
@@ -617,18 +624,19 @@ def test_stop_on_reject_stops_the_run_at_the_first_rejected_submission(tmp_path,
 @native
 def test_a_sessions_cap_is_bounded_by_what_the_run_cap_leaves(tmp_path, monkeypatch):
     windows = [dict(session='sd1a1', actor='001', first=2*n + 1, last=2*n + 2) for n in range(6)]
-    with StandIn(cost=0.05) as stand_in:  # three requests of $0.05 make a session $0.15
-        code, out, _ = run_windows(tmp_path, stand_in.url, windows, monkeypatch, '--cap-usd', '0.40',
-                                   '--session-cap-usd', '0.30')
+    run_cap, session_cap = Decimal('0.30'), Decimal('0.24')
+    with StandIn(cost=0.025) as stand_in:  # three base-tier requests cost $0.075
+        code, out, _ = run_windows(tmp_path, stand_in.url, windows, monkeypatch, '--cap-usd', str(run_cap),
+                                   '--session-cap-usd', str(session_cap))
     assert code == 0
     run = json.loads((out/'summary.json').read_text())
     caps, spent = [], Decimal(0)
     for session in run['sessions']:
         caps.append(Decimal(session['cap_usd']))
-        assert caps[-1] == min(Decimal('0.40') - spent, Decimal('0.30'))
+        assert caps[-1] == min(run_cap - spent, session_cap)
         spent += Decimal(session['cost_usd'])
-    assert caps[0] == Decimal('0.30') and caps[1] < Decimal('0.30') and caps == sorted(caps, reverse=True)
-    assert run['stopped'] == 'cap-reached' and run['sessions_run'] < 6 and spent <= Decimal('0.40')
+    assert len(caps) > 1 and caps[0] == session_cap and caps[1] < session_cap and caps == sorted(caps, reverse=True)
+    assert run['stopped'] == 'cap-reached' and run['sessions_run'] < 6 and spent <= run_cap
 
 
 @native
@@ -773,14 +781,13 @@ def test_grooming_cannot_follow_windows(tmp_path, monkeypatch, capsys):
 
 @native
 def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
-    # Tier bounds reserve about $0.06 for the first body plus 4,096 output tokens, then settle at
-    # $0.02: against a $0.075 cap the first is admitted and the larger second request refused.
+    # A base-tier request fits once, then the settled charge leaves too little for the next.
     with StandIn(cost=0.02) as stand_in:
         runtime = tmp_path/'runtime'
         evidence = synthetic_evidence(tmp_path, '397', ('sd1a1', 'sd1a2'))
         monkeypatch.setenv(shadow.KEY_VARIABLE, KEY)
         out = runtime/'curator-shadow'/'cap'
-        code = shadow.main(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', '--cap-usd', '0.075', '--upstream', stand_in.url, '--runtime-root', str(runtime),
+        code = shadow.main(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', '--cap-usd', '0.052', '--upstream', stand_in.url, '--runtime-root', str(runtime),
                             '--evidence-root', str(evidence), '--out', str(out), '--max-output-tokens', '4096', '--wall-seconds', '120'])
     assert code == 0
     run = json.loads((out/'summary.json').read_text())
@@ -788,8 +795,8 @@ def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
     assert run['stopped'] == 'cap-reached' and run['sessions_run'] == 1 and not (out/'397'/'sd1a2').exists()
     assert first['stopped_by_cap'] is True and 'spend cap reached' in first['proxy']['refusal_reasons']
     assert len(stand_in.requests) == 1
-    assert Decimal(run['total_cost_usd']) == Decimal('0.02') <= Decimal('0.075')
-    assert first['session_state'] == 'aborted' and first['host_end'] == dict(reason='provider-error', ok=False)
+    assert Decimal(run['total_cost_usd']) == Decimal('0.02') <= Decimal('0.052')
+    assert first['session_state'] == 'sealed' and first['host_end'] == dict(reason='spend-reservation-refused', ok=True)
     assert first['model_status'] == [200, 429] and first['published_after'] == 'v0' and first['submissions'] == 0
 
 
@@ -846,4 +853,4 @@ def test_grooming_runs_end_to_end_with_the_stand_in_and_files_every_current_fact
     assert repo.provenance()['last_admission']['citations'] == facts['f1']['citations']
     messages = [m for request in stand_in.requests for m in request['body']['messages']]
     assert any('Grooming instructions' in str(m) for m in messages if m['role'] == 'tool')
-    assert any('citations_only' in str(m) for m in messages if m['role'] == 'tool')
+    assert any('grooming_boundary_frames' in str(m) for m in messages if m['role'] == 'tool')

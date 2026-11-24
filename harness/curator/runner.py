@@ -44,13 +44,17 @@ neither advance nor fail. An interruption that lands after a session returned bu
 `end` row is written is still recorded as `interrupted`: coverage is then understated, never
 overstated.
 
+A spend reservation refusal without a publication leaves the cursor in place. The next
+poll retries from that step over half as many steps. A refusal at one step is terminal.
+
 **Why it stops** (`stop_reason`). It *ends* with `store-closing` when the closing marker refuses
 its read, `store-closed` when the run directory holds the custodian's `receipt.json`, and
 `interrupted` on a signal. It *stops* for the rest of the admission with
 `2 consecutive failed sessions`, `3 consecutive snapshots failed or passed their bound`,
 `read refused: no-read-lock` (no reader is configured), `error: <type>` (an unexpected exception
 in the runner itself), or a session's own stop reason: `proxy-revoked` (a charge passed its
-reservation), `spend-reservation-refused`, `cap-reached` (the runner's cap is spent),
+reservation), `spend-reservation-refused` (a one-step window cannot reserve),
+`spend-cap-exhausted` (the runner's cap is spent),
 `proxy-unsettled` (requests the proxy could not settle), `cleanup-unconfirmed` (host processes
 survived, or the host ran and its result is missing) and `host-unavailable: <why>`.
 
@@ -93,6 +97,8 @@ STOPPED_SCHEMA = 'curator-runner-stopped/1'
 STATUS, EXAMINED, VERSIONS, POLLS, STOPPED, SNAPSHOTS = (
     'status.json', 'examined.jsonl', 'versions.jsonl', 'polls.jsonl', 'stopped.json', 'snapshots')
 RECEIPT = 'receipt.json'  # the custodian's terminal receipt, written as it exits
+SPEND_REFUSED = 'spend-reservation-refused'
+SPEND_EXHAUSTED = 'spend-cap-exhausted'
 UNKNOWN = 'unknown'
 NOT_RUN = ('lock-refused', 'not-started', 'host-unavailable')  # endings in which no session ran
 SESSION_FAILURES = 2  # consecutive failed sessions that stop the runner
@@ -155,7 +161,7 @@ class Reading:
 class Outcome:
     """What one session call returned. `state` is the session record's `sealed` or `aborted`, or None
     when no record came back; `refused` when the repository lock refused it before anything ran;
-    `stop` a reason the runner must stop (a refused spend reservation, say)."""
+    `stop` a session stop reason, which the runner can act on."""
 
     state: str | None
     verdicts: tuple[dict, ...] = ()
@@ -269,6 +275,9 @@ def classify(outcome: Outcome) -> tuple[str, bool, bool]:
     """How a session ended, whether the cursor advances over its window, and whether it failed."""
     if outcome.refused:
         return 'lock-refused', False, False
+    if (outcome.stop == SPEND_REFUSED and outcome.state == 'sealed'
+            and not any(v.get('status') in ('published', 'unknown') for v in outcome.verdicts)):
+        return SPEND_REFUSED, False, False
     if outcome.state is None and outcome.error is None and outcome.stop is not None:
         return ('host-unavailable' if outcome.stop.startswith('host-unavailable') else 'not-started'), False, False
     if outcome.state != 'sealed':
@@ -389,7 +398,7 @@ class Runner:
     def session_failures(self) -> int:
         count = 0
         for row in reversed(self._ends()):
-            if row['outcome'] in (*NOT_RUN, 'interrupted'):
+            if row['outcome'] in (*NOT_RUN, 'interrupted', SPEND_REFUSED):
                 continue
             if not row['failed']:
                 break
@@ -664,6 +673,14 @@ class Runner:
         if window is None:
             self._write_status()
             return True
+        for end in reversed(self._ends()):
+            if end['outcome'] != SPEND_REFUSED:
+                continue
+            prior = Window.read(end['window'])
+            if (prior.session, prior.actor, prior.first) == (window.session, window.actor, window.first):
+                size = (prior.last - prior.first + 1) // 2
+                window = Window(window.session, window.actor, window.first, min(window.last, window.first + max(1, size) - 1))
+                break
         return self._session(read, window)
 
     def _session(self, read: Reading, window: Window) -> bool:
@@ -689,8 +706,10 @@ class Runner:
             stop.set()
             watcher.join()
         self._look()  # once after it returns
-        self._end(label, outcome, classify(outcome))
-        if outcome.stop is not None:
+        how = classify(outcome)
+        self._end(label, outcome, how)
+        retry_spend = outcome.stop == SPEND_REFUSED and (how[1] or (how[0] == SPEND_REFUSED and window.first < window.last))
+        if outcome.stop is not None and not retry_spend:
             self._finish('stopped', outcome.stop)
             return False
         if self.session_failures() >= SESSION_FAILURES:
