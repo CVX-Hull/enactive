@@ -8,7 +8,8 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration } from '../host.mjs';
-import { compactSourceIds, coverageEntry, cutMarker } from '../knowledge.mjs';
+import { compactSourceIds, coverageEntry, cutBriefing, cutMarker, CUT_BRIEFING_ARTICLES, CUT_BRIEFING_CHARS,
+  CUT_BRIEFING_FACTS, CUT_BRIEFING_SNIPPET_CHARS } from '../knowledge.mjs';
 import { knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
 import { actorId, model, png, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
 
@@ -67,12 +68,12 @@ const messageText = message => typeof message.content === 'string' ? message.con
 const markerText = payload => payload.messages.map(messageText).find(text => text.startsWith('BEGIN CONTEXT CUT'));
 const cutEvents = events => events.filter(event => event.type === 'context-cut');
 
-async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, onEvent} = {}) {
+async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, block = 1, onEvent} = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'player-context-cut-'));
   t.after(() => rm(dir, {recursive:true, force:true}));
   const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
   await mkdir(actor, {recursive:true});
-  const configuration = {...route(), context_cut:contextCut, max_context_images:maxImages};
+  const configuration = {...route(), context_cut:contextCut, max_context_images:maxImages, context_image_block:block};
   configuration.recall.model.id = 'recall-fixture';
   configuration.recall.every = 100;
   const control = new PassThrough();
@@ -112,7 +113,7 @@ async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, onEve
   return {result, events, payloads};
 }
 
-test('a high-mark cut delivers all leads, clears stale usage and warning, and keeps the new prefix stable', async t => {
+test('a high-mark cut delivers a bounded briefing, clears stale usage and warning, and keeps the new prefix stable', async t => {
   const {events, payloads} = await play(t, async (n, {publish}) => {
     if (n === 4) await publish(publication(3));
     if (n >= 7) return reply();
@@ -148,9 +149,11 @@ test('a high-mark cut delivers all leads, clears stale usage and warning, and ke
   ]);
   const briefings = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'briefing');
   assert.deepEqual(briefings.map(event => [event.receiving_player_request_id, event.recall_request_id, event.article_ids, event.index_ids]),
-    [['request-1', 'recall-1', ['article-a'], ['article-b', 'fact-alone']], ['request-5', null, ['article-a', 'article-b'], []]]);
+    [['request-1', 'recall-1', ['article-a'], ['article-b', 'fact-alone']], ['request-5', null, ['article-a', 'article-b'], ['fact-alone']]]);
   const briefing = briefings.at(-1);
-  assert.deepEqual(JSON.parse(briefing.text.split('\n')[1]).leads.map(lead => lead.id), ['article-a','article-b','fact-alone']);
+  const data = JSON.parse(briefing.text.split('\n')[1]);
+  assert.deepEqual([data.leads.map(lead => lead.id), data.index, data.unlisted_entries],
+    [['article-a', 'article-b'], [{id:'fact-alone', title:'Unfiled subject', index:'An unfiled claim'}], 0]);
   assert.equal(messageText(after.messages[1]), 'Offline mission\n\n' + briefing.text);
   assert.equal(events.filter(event => event.type === 'request-start' && event.request_role === 'recall').length, 1);
 
@@ -188,6 +191,112 @@ test('image peak holds an only partly covered batch, then cuts it whole and accu
     ['request-5', ['image_peak'], 2, 3]);
   const marker5 = JSON.parse(markerText(payloads[4]).split('\n')[1]);
   assert.deepEqual([marker5.source_id_prefix, marker5.source_ids], [`${sessionId}-`, ['1..3']]);
+});
+
+test('the image trigger fires only at a new block eviction, so a cut replaces an eviction instead of following it', async t => {
+  // Peak 3, block 2: the projection first omits two images at four (request-5), then four at six (request-7).
+  const {events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 5) await publish(publication(3));
+    return n === 8 ? reply() : observe(n);
+  }, {maxImages:3, block:2});
+  assert.deepEqual(cutEvents(events).map(event => [event.request_id, event.outcome, event.reason, event.triggers]),
+    [['request-5', 'held-back', 'uncovered', ['image_peak']], ['request-7', 'cut', undefined, ['image_peak']],
+      ['request-8', 'held-back', 'uncovered', ['image_peak']]]);
+  const omitted = id => events.find(event => event.type === 'context-image-projection' && event.request_id === id).omitted_images;
+  assert.deepEqual(['request-4', 'request-5', 'request-6', 'request-7', 'request-8'].map(omitted), [0, 2, 2, 0, 2]);
+  // Coverage that arrives between evictions waits for the next one: request-6 extends request-5 byte for byte.
+  assert.equal(JSON.stringify(payloads[5].messages.slice(0, payloads[4].messages.length)), JSON.stringify(payloads[4].messages));
+  const manifest = id => events.find(event => event.type === 'context-manifest' && event.request_id === id);
+  assert.equal(manifest('request-6').reused_prefix_parts, manifest('request-5').part_count);
+  const cut = cutEvents(events)[1];
+  assert.deepEqual([cut.removed_turns, cut.images_before, cut.images_after], [3, 6, 3]);
+});
+
+test('an image cut leaves a block of headroom, so the next request extends the cut prefix without eviction', async t => {
+  // Peak 3, block 2: request-5 holds four images and would omit a block. Coverage through turn 3 lets the cut
+  // reach its target of one image (3 - 2), so requests 6 and 7 add images without another cut or eviction.
+  const {events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 4) await publish(publication(3));
+    return n === 7 ? reply() : observe(n);
+  }, {maxImages:3, block:2});
+  assert.deepEqual(cutEvents(events).map(event => [event.request_id, event.outcome, event.triggers, event.removed_turns,
+    event.images_before, event.images_after]), [['request-5', 'cut', ['image_peak'], 3, 4, 1]]);
+  const omitted = id => events.find(event => event.type === 'context-image-projection' && event.request_id === id).omitted_images;
+  assert.deepEqual(['request-5', 'request-6', 'request-7'].map(omitted), [0, 0, 0]);
+  const manifest = id => events.find(event => event.type === 'context-manifest' && event.request_id === id);
+  for (const [previous, next] of [[5, 6], [6, 7]]) {
+    assert.equal(manifest(`request-${next}`).reused_prefix_parts, manifest(`request-${previous}`).part_count);
+    assert.equal(JSON.stringify(payloads[next - 1].messages.slice(0, payloads[previous - 1].messages.length)),
+      JSON.stringify(payloads[previous - 1].messages));
+  }
+});
+
+test('a cut briefing is bounded: recent articles as leads and recent standalone facts as index lines', () => {
+  const at = n => ({session:'s1', actor:'001', step:n, order:[1, '001', n]});
+  // Delivered order is not recency: the first three articles are the most recently confirmed.
+  const articles = Array.from({length:CUT_BRIEFING_ARTICLES + 3}, (_, n) => ({id:`article-${n}`, title:`Article ${n}`,
+    lead:`Lead ${n}. More detail.`, body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}], links:[],
+    last_confirmed:at(n < 3 ? 10_000 + n : n)}));
+  const filed = articles.map((_, n) => ({id:`filed-${n}`, type:'observation', text:`Claim ${n}.`, seen:at(n)}));
+  const store = count => ({...knowledge(), articles, facts:[...filed, ...Array.from({length:count}, (_, n) =>
+    ({id:`fact-${n}`, subject:`Fact ${n}`, type:'observation', text:`Standalone claim ${n}. Detail.`, seen:at(n)}))]});
+  const small = cutBriefing(store(CUT_BRIEFING_FACTS + 5));
+  const data = JSON.parse(small.text.split('\n')[1]);
+  const kept = [0, 1, 2, ...Array.from({length:CUT_BRIEFING_ARTICLES - 3}, (_, n) => n + 6)].map(n => `article-${n}`);
+  assert.deepEqual([small.kind, small.recall_request_id, small.article_ids, data.leads.map(lead => lead.id)],
+    ['briefing', null, kept, kept]);
+  assert.deepEqual(data.leads[0], {id:'article-0', title:'Article 0', lead:'Lead 0. More detail.'});
+  const recent = Array.from({length:CUT_BRIEFING_FACTS}, (_, n) => `fact-${n + 5}`);
+  assert.deepEqual([small.index_ids, data.index[0], data.unlisted_entries],
+    [recent, {id:'fact-5', title:'Fact 5', index:'Standalone claim 5'}, 3 + 5]);
+  const large = cutBriefing(store(5_000));
+  assert.equal(JSON.parse(large.text.split('\n')[1]).unlisted_entries, 3 + 5_000 - CUT_BRIEFING_FACTS);
+  assert.ok(large.text.length < small.text.length * 1.1, 'the briefing does not grow with the store');
+});
+
+test('a cut briefing stays within its serialized size cap however long the entries are', () => {
+  const at = n => ({session:'s1', actor:'001', step:n, order:[1, '001', n]});
+  const payload = briefing => JSON.parse(briefing.text.split('\n')[1]);
+  const size = briefing => briefing.text.split('\n')[1].length;
+  const huge = 100_000;
+  // Five valid articles with 100 KB leads, the newest titled too long to fit even clipped, and thirty standalone
+  // facts of 100 KB with no sentence break, so their index lines are 100 KB before clipping.
+  const articles = Array.from({length:5}, (_, n) => ({id:`article-${n}`, title:n === 4 ? 'T'.repeat(CUT_BRIEFING_CHARS) : `Article ${n}`,
+    lead:'L'.repeat(huge), body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}], links:[], last_confirmed:at(n)}));
+  const filed = articles.map((_, n) => ({id:`filed-${n}`, type:'observation', text:`Claim ${n}.`, seen:at(n)}));
+  const standalone = Array.from({length:30}, (_, n) => ({id:`fact-${n}`, subject:`Fact ${n}`, type:'observation',
+    text:'F'.repeat(huge), seen:at(n)}));
+  const store = {...knowledge(), articles, facts:[...filed, ...standalone]};
+  assert.ok(JSON.stringify(store).length > 30 * huge, 'the store itself is megabytes');
+  const bounded = cutBriefing(store), data = payload(bounded);
+  assert.ok(size(bounded) <= CUT_BRIEFING_CHARS, `payload ${size(bounded)} chars`);
+  assert.deepEqual(data.leads.map(lead => lead.id), ['article-0', 'article-1', 'article-2', 'article-3']);
+  for (const row of [...data.leads.map(lead => lead.lead), ...data.index.map(row => row.index)]) {
+    assert.equal(row.length, CUT_BRIEFING_SNIPPET_CHARS);
+    assert.ok(row.endsWith('…'));
+  }
+  // The newest facts fill what is left; every article and fact not shown is counted.
+  const listed = data.index.map(row => row.id);
+  assert.ok(listed.length > 0 && listed.length < CUT_BRIEFING_FACTS, `${listed.length} index lines`);
+  assert.deepEqual(listed, Array.from({length:listed.length}, (_, n) => `fact-${30 - listed.length + n}`));
+  assert.equal(data.unlisted_entries, 5 + 30 - data.leads.length - listed.length);
+  assert.deepEqual([bounded.article_ids, bounded.index_ids], [data.leads.map(lead => lead.id), listed]);
+
+  // Edge cases: an empty store and a store whose only article cannot fit are bounded too.
+  const empty = cutBriefing({...knowledge(), articles:[], facts:[]});
+  assert.deepEqual([payload(empty).leads, payload(empty).index, payload(empty).unlisted_entries], [[], [], 0]);
+  const lone = cutBriefing({...knowledge(), articles:[articles[4]], facts:[filed[4]]});
+  assert.ok(size(lone) <= CUT_BRIEFING_CHARS);
+  assert.deepEqual([payload(lone).leads, payload(lone).unlisted_entries], [[], 1]);
+  const single = cutBriefing({...knowledge(), articles:[articles[0]], facts:[filed[0]]});
+  assert.deepEqual([payload(single).leads.map(lead => lead.lead.length), payload(single).unlisted_entries],
+    [[CUT_BRIEFING_SNIPPET_CHARS], 0]);
+  const giantEnvelope = cutBriefing({...knowledge(),
+    coverage:{schema:'curator-coverage/2', session:'s'.repeat(CUT_BRIEFING_CHARS), actor:null, last_step:null},
+    articles:[], facts:[]});
+  assert.ok(size(giantEnvelope) <= CUT_BRIEFING_CHARS, `oversized coverage payload ${size(giantEnvelope)} chars`);
+  assert.deepEqual([payload(giantEnvelope).coverage, payload(giantEnvelope).leads, payload(giantEnvelope).unlisted_entries],
+    [null, [], 0]);
 });
 
 test('an otherwise eligible prefix below min_free falls back to image eviction', async t => {

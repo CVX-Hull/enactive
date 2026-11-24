@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 from pathlib import Path
 import re
 
@@ -106,6 +107,7 @@ class Knowledge:
             raise PlayerError(f'{where}: unsupported delivered knowledge')
         self.value = value
         self.records = value['articles'] + value['facts']
+        self._index = [_weighted_terms(r) for r in self.records]
 
     def read(self, identity: str) -> dict:
         found = next((r for r in self.records if r['id'] == identity or r.get('title') == identity), None)
@@ -113,7 +115,56 @@ class Knowledge:
                     records=[] if found is None else [copy.deepcopy(found)])
 
     def query(self, query: str) -> dict:
-        words = query.casefold().split()
-        records = [copy.deepcopy(r) for r in self.records
-                   if all(w in json.dumps(r, ensure_ascii=False).casefold() for w in words)]
+        """The records that share a term with the query, best first. A record need not hold every term."""
+        terms = list(dict.fromkeys(terms_of(query)))
+        count = len(self._index)
+        average = sum(length for _, length in self._index) / count if count else 0.0
+        frequency = {t: sum(1 for weights, _ in self._index if t in weights) for t in terms}
+        scored = []
+        for position, (weights, length) in enumerate(self._index):
+            score = 0.0
+            for term in terms:
+                tf = weights.get(term, 0)
+                if tf:
+                    idf = math.log(1 + (count - frequency[term] + 0.5) / (frequency[term] + 0.5))
+                    score += idf * tf * (BM25_K1 + 1) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * length / average))
+            if score > 0:
+                scored.append((-score, position))
+        scored.sort()
+        records = [copy.deepcopy(self.records[position]) for _, position in scored[:QUERY_LIMIT]]
         return dict(schema='player-knowledge/1', version=self.value['version'], grants_authority=False, records=records)
+
+
+# Ranked search: BM25 over casefolded word tokens, a title or subject counting three times a body or fact
+# word and a lead or fact type twice; an underscore separates words, so `crafting_recipe` is `crafting` and
+# `recipe`. Ties keep delivered order. Standard BM25 constants; no tuning data exists.
+QUERY_LIMIT = 10
+BM25_K1, BM25_B = 1.2, 0.75
+_WORD = re.compile(r'[^\W_]+')
+_SUFFIXES = (('ies', 'y'), ('ing', ''), ('ed', ''), ('s', ''))
+
+
+def _fold(word: str) -> str:
+    """One regular English inflection removed, the same way for query and record, so `plants` meets `plant`."""
+    for suffix, replacement in _SUFFIXES:
+        if word.endswith(suffix) and not word.endswith('ss') and len(word) - len(suffix) >= 3:
+            return word[:-len(suffix)] + replacement
+    return word
+
+
+def terms_of(text: str) -> list[str]:
+    return [_fold(w) for w in _WORD.findall(text.casefold())]
+
+
+def _weighted_terms(record: dict) -> tuple[dict[str, int], int]:
+    if 'body' in record:
+        fields = ((3, record['title']), (2, record['lead']), (1, ' '.join(c['text'] for c in record['body'])))
+    else:
+        fields = ((3, record.get('subject', '')), (2, record.get('type', '')), (1, record['text']))
+    weights: dict[str, int] = {}
+    length = 0
+    for weight, text in fields:
+        for term in terms_of(text):
+            weights[term] = weights.get(term, 0) + weight
+            length += weight
+    return weights, length

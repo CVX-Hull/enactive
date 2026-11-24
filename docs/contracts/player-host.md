@@ -234,9 +234,12 @@ settles its accounting. Player requests retain the unpriced-success stop.
 Settlement, driver and receipt distinguish unpriced player and recall counts.
 The planning bounds are reported separately from the combined provider subtotal.
 
-The recall request's user text is one JSON object. The first key is `index`,
-followed by `kind` and then `first_message` (briefing) or `recent_calls` (reminder).
-This keeps the prefix stable across actors and reminders. A route that requests
+The recall request is the recall system prompt and two user messages. The first holds
+only the JSON object `{"index":[...]}`. The second holds a JSON object with `kind` and
+then `first_message` (briefing) or `recent_calls` (reminder), followed by the latest
+screen for a reminder. Recalls of one version, across actors and reminders, therefore
+share a byte-identical prefix that ends at a message boundary, which the provider can
+reuse from its cache. A route that requests
 strict structured output requires the pinned upstream to support the selection schema. Its
 real-model check covers that capability before use. The [adapter reference](../../tools/player_host/README.md#knowledge-delivery)
 owns provider serialization. The joined, trimmed reply text must contain exactly
@@ -323,18 +326,34 @@ An accepted orderly stop also prevents any further cuts and sends its control
 instruction in the surviving request history.
 
 The host considers a cut when the token estimate above the current briefing
-exceeds `high_mark`, or the active history's image count exceeds
-`max_context_images`. A turn is one assistant message and its contiguous tool
+exceeds `high_mark`, or when image block eviction would omit more images from the
+active history than it omitted from the previous request (`image_peak`). Between
+evictions the projection already bounds the request's images without rewriting its
+prefix, so a cut for images is considered only where an eviction would rewrite the
+prefix anyway, and a held-back cut is recorded once per eviction. A turn is one assistant message and its contiguous tool
 results. The coverage operation must be the last creating operation in its
 turn for the host to remove that turn. Earlier complete turns are eligible,
 and the latest turn always survives. The host removes a leading sequence of
-eligible turns toward `low_mark` above the fresh briefing and the image peak,
-up to the covered boundary. It applies the cut only if the plan removes at least
-`min_free` turns. Image block eviction still applies after each decision.
+eligible turns toward `low_mark` above the fresh briefing and toward one image
+block of headroom, at most `max_context_images - context_image_block` images, up
+to the covered boundary. Like `high_mark` to `low_mark` for tokens, the headroom
+lets later images extend the cut prefix before the next block eviction. When the
+covered turns run out first, the plan stops there with less headroom. It applies
+the cut only if the plan removes at least `min_free` turns. Image block eviction
+still applies after each decision.
 
 The cut preserves the system prompt and tools. It replaces the first user
 message with the frozen mission prompt and a fallible briefing from the adopted
-version, with every article lead and standalone fact and no recall request.
+version and no recall request. Its size does not grow with the store: its JSON
+payload is at most 24,000 characters. The version and coverage envelope is counted
+first (and an oversized `coverage` object that alone exceeds 24,000 characters is
+omitted as `null` so the payload cap always holds). Then, in recency order, it gives as leads up to the 64 most recently
+confirmed articles and lists on its index up to the 24 most recently seen standalone
+facts. Each lead or index line longer than 1,000 characters is clipped to that
+length and ends with `…`, and an entry that would still exceed the payload limit is
+skipped. Kept entries appear in delivered order, and `unlisted_entries` counts every
+entry left out. `player_knowledge_read` and `player_knowledge_query` still reach
+every entry.
 The following user message is delimited by `BEGIN CONTEXT CUT` and
 `END CONTEXT CUT`. Its JSON line contains `grants_authority:false`, the cumulative
 `removed_turns`, `covered_through_operation_id`, the coverage `knowledge_version`
@@ -355,7 +374,7 @@ flowchart TB
   accDescr: Between requests the host places finished reminders, applies coverage lines and adopts the newest staged knowledge version that fits. It considers a cut only when cuts are enabled and no orderly stop is accepted. A triggered cut is applied when enough covered complete turns can be removed and no restore was seen. Otherwise it is held back and the history stays. Image-block eviction, capacity stop, tail notices and the dollar limit follow before the model call. Settlement stops are handoff, player finish, the dollar limit and an unreported cost. Pause, uncertain input and the driver's deadlines are independent of this loop.
   R["Request boundary<br/>Place finished reminders<br/>Apply coverage and restore lines<br/>Adopt newest staged version that fits"] --> Q{"Cuts enabled, and<br/>no orderly stop accepted?"}
   Q -->|"No"| V
-  Q -->|"Yes"| T{"Cut trigger?<br/>Tokens above briefing exceed high_mark,<br/>or images exceed max_context_images"}
+  Q -->|"Yes"| T{"Cut trigger?<br/>Tokens above briefing exceed high_mark,<br/>or image eviction would omit a new block"}
   T -->|"No"| V
   T -->|"Yes"| L{"Eligible?<br/>No restore seen, and the cut plan removes<br/>at least min_free eligible turns"}
   L -->|"No"| H["Held back<br/>History unchanged, reason recorded"]
@@ -397,7 +416,8 @@ handoff successor and a new admission's first actor, with no provider call:
   ([context stability and prompt-cache findings (#489)](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
   A coverage-gated cut starts a new message prefix. Image eviction can also
   rewrite history when a whole block of the oldest pixels first becomes
-  omission markers. Both projections preserve the system prompt, tool table,
+  omission markers; a cut for images is considered only at that request, so an
+  applied cut replaces the eviction rather than following it. Both projections preserve the system prompt, tool table,
   limits and routing.
 - **System prompt and tool table.** The system prompt is the frozen context plus the
   MCP server instructions, and holds no per-actor identity. Every actor of a package
