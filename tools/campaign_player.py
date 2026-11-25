@@ -309,6 +309,7 @@ class HostEvents:
     def __init__(self,path: Path):
         self.stream=path.open('rb');self.buffer=b''
         self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
+        self.spend_reserve_reached=None
         self.usage={};self.error=None;self.started=False
         # A present key with value None has a finished attempt and unknown provider cost.
         self.costs={}
@@ -379,9 +380,13 @@ class HostEvents:
                 # These records are copied into the receipt. Reject data the writer cannot retain.
                 canonical(value).encode('utf-8')
             if kind=='host-start':
-                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=11
-                        or value.get('schema')!='player-host/11'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=12
+                        or value.get('schema')!='player-host/12'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
+            elif kind=='spend-reserve-reached':
+                if not self.started:raise ControlError('Host spend reserve event lacks current origin')
+                if self.spend_reserve_reached is None:
+                    self.spend_reserve_reached=value
             elif kind=='request-start':
                 match=re.fullmatch(r'(request|recall)-([1-9][0-9]*)',value.get('request_id',''))
                 if not self.started or not match:raise ControlError('Host request lacks current origin')
@@ -458,8 +463,9 @@ def ending_trigger(reserve: dict,seconds: float,dollars: Decimal,mechanical: dic
     return None
 
 
-def _record_ending(directory,reserve,seconds,dollars,remaining):
+def _record_ending(directory,reserve,seconds,dollars,remaining,*,force_spend: bool=False):
     trigger=ending_trigger(reserve,seconds,dollars,remaining)
+    if trigger is None and force_spend:trigger='spend'
     if trigger is None:return None
     request=dict(id=uuid.uuid4().hex,trigger=trigger,requested_wall=time.time(),remaining=remaining,
                  spend_remaining_usd=usd_text(dollars))
@@ -585,8 +591,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                         if now>=ending_at:reason=stop_reason='Original final-report grace exhausted';break
                     elif ending_request is None:
                         dollars_left=EXACT.subtract(dollars,events.counted_usd())
+                        reserve_reached=(events.spend_reserve_reached is not None
+                            and events.spend_reserve_reached.get('actor_id')==actor['actor_id'])
                         ending_request=_record_ending(directory,profile['ending_reserve'],
-                            started+seconds-now,dollars_left,application.runtime.remaining())
+                            started+seconds-now,dollars_left,application.runtime.remaining(),force_spend=reserve_reached)
                         if ending_request is not None:
                             _send_control(child,target,profile['session'],actor['actor_id'],ending_request)
                             record['ending_control_id']=ending_request['id']

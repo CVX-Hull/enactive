@@ -10,7 +10,12 @@ import re
 from .contracts import PlayerError
 
 SCHEMA = 'delivered-knowledge/3'
-RESULT = 'player-knowledge/2'
+RESULT = 'player-knowledge/3'
+MAX_SAFE_INT = (1 << 53) - 1
+SNIPPET_LIMIT = 240
+HIT_CITED_BY_LIMIT = 3
+STATUS_MARKERS = ('contested', 'unverified_branch', 'needs_review', 'condition_unverified')
+HIT_VIA = frozenset(('match', 'hop'))
 FIELDS = frozenset(('schema', 'version', 'commit', 'repository_id', 'coverage', 'articles', 'facts', 'history'))
 # `\Z`, never `$`: `$` also matches before a final newline, so `fullmatch` alone would not refuse `v1\n`.
 VERSION = re.compile(r'v(0|[1-9][0-9]*)\Z')
@@ -37,9 +42,38 @@ def empty() -> dict:
                 history=copy.deepcopy(EMPTY_HISTORY))
 
 
+def _safe_digits(digits: str) -> int | None:
+    if len(digits) > 16:
+        return None
+    number = int(digits)
+    return number if 0 <= number <= MAX_SAFE_INT else None
+
+
+def _safe_nonneg_int(value: object) -> bool:
+    if type(value) is int:
+        return 0 <= value <= MAX_SAFE_INT
+    if isinstance(value, float):
+        return math.isfinite(value) and value.is_integer() and 0.0 <= value <= MAX_SAFE_INT and 0 <= int(value) <= MAX_SAFE_INT
+    return False
+
+
 def version_number(version: object) -> int | None:
-    """The number N of a published version `vN`, else None."""
-    return int(version[1:]) if isinstance(version, str) and VERSION.fullmatch(version) else None
+    """The number N of a published version `vN` within 0..2**53-1, else None."""
+    if not isinstance(version, str):
+        return None
+    match = VERSION.fullmatch(version)
+    return _safe_digits(match.group(1)) if match is not None else None
+
+
+def revision_parts(value: object) -> tuple[str, int] | None:
+    """The `(slug, number)` of `<slug>@vM` with `0 <= M <= 2**53-1`, else None."""
+    if not isinstance(value, str):
+        return None
+    match = REVISION.fullmatch(value)
+    if match is None:
+        return None
+    number = _safe_digits(match.group(2))
+    return None if number is None else (match.group(1), number)
 
 
 # The public record forms `tools/knowledge_export.py` writes; `tools/player_host/knowledge.mjs` checks the same ones,
@@ -52,6 +86,8 @@ SHARED_FIELDS = frozenset(('id', 'tags', 'scope', 'branch_relation', 'lifecycle_
 ARTICLE_FIELDS = SHARED_FIELDS | {'revision', 'title', 'lead', 'body', 'last_confirmed'}
 FACT_REQUIRED = SHARED_FIELDS | {'claim_kind', 'evidence_basis', 'text', 'cited_by_articles', 'citation_source_ids', 'seen'}
 FACT_FIELDS = FACT_REQUIRED | {'subject', 'when'}
+ARTICLE_HIT_REQUIRED = frozenset(('id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'))
+FACT_HIT_REQUIRED = frozenset(('id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via'))
 
 
 def _matches(pattern: re.Pattern, value: object) -> bool:
@@ -63,8 +99,13 @@ def _member(value: object, allowed: frozenset[str]) -> bool:
     return isinstance(value, str) and value in allowed
 
 
+def _valid_utf8(value: str) -> bool:
+    """Reject unpaired UTF-16 surrogates (which JSON `\\uD800` escapes allow but UTF-8 encoding rejects)."""
+    return not any(0xD800 <= ord(ch) <= 0xDFFF for ch in value)
+
+
 def _nonblank(value: object) -> bool:
-    return isinstance(value, str) and bool(value.strip())
+    return isinstance(value, str) and bool(value.strip()) and _valid_utf8(value)
 
 
 def _identifier(value: str) -> bool:
@@ -73,7 +114,7 @@ def _identifier(value: str) -> bool:
 
 def _historical(value: str) -> bool:
     """A name the public history set can hold: an old fact ID or slug, or an earlier article revision."""
-    return IDENTIFIER.fullmatch(value) is not None or REVISION.fullmatch(value) is not None
+    return IDENTIFIER.fullmatch(value) is not None or revision_parts(value) is not None
 
 
 def _distinct(value: object, allowed=None, *, nonempty: bool = False) -> bool:
@@ -90,14 +131,15 @@ def _coverage(value: object) -> bool:
     return value is None or (
         isinstance(value, dict) and set(value) == COVERAGE_FIELDS and value['schema'] == 'curator-coverage/2'
         and _matches(ALIAS, value['session']) and (value['actor'] is None or _nonblank(value['actor']))
-        and (value['last_step'] is None or type(value['last_step']) is int))
+        and (value['last_step'] is None or _safe_nonneg_int(value['last_step'])))
 
 
 def _position(value: object) -> bool:
     return (isinstance(value, dict) and set(value) == POSITION_FIELDS
-            and _matches(ALIAS, value['session']) and _nonblank(value['actor']) and type(value['step']) is int
+            and _matches(ALIAS, value['session']) and _nonblank(value['actor']) and _safe_nonneg_int(value['step'])
             and isinstance(value['order'], list) and len(value['order']) == 3
-            and type(value['order'][0]) is int and isinstance(value['order'][1], str) and type(value['order'][2]) is int)
+            and _safe_nonneg_int(value['order'][0]) and _valid_utf8(value['order'][1])
+            and _safe_nonneg_int(value['order'][2]))
 
 
 def _tags(value: object) -> bool:
@@ -155,8 +197,8 @@ def _article(value: object, facts, public, history, version: int) -> bool:
     """An article whose revision `<slug>@vM` is no later than the file's version `vN` (M <= N)."""
     if not isinstance(value, dict) or set(value) != ARTICLE_FIELDS:
         return False
-    revision = REVISION.fullmatch(value['revision']) if isinstance(value['revision'], str) else None
-    return (revision is not None and revision.group(1) == value['id'] and int(revision.group(2)) <= version
+    revision = revision_parts(value['revision'])
+    return (revision is not None and revision[0] == value['id'] and revision[1] <= version
             and _nonblank(value['title']) and _nonblank(value['lead']) and _position(value['last_confirmed'])
             and isinstance(value['body'], list) and bool(value['body'])
             and all(isinstance(c, dict) and set(c) == {'text', 'facts'} and _nonblank(c['text'])
@@ -194,11 +236,11 @@ def _history(value: object, articles: set[str], facts: set[str], revisions: dict
         if (not isinstance(key, str) or key in public or key in gone or not isinstance(entry, dict)
                 or set(entry) != {'reason', 'by'} or not _distinct(entry['by'], nonempty=True)):
             return False
-        revision = REVISION.fullmatch(key)
+        revision = revision_parts(key)
         if revision is not None:  # An earlier revision of a delivered slug redirects to that slug alone.
-            slug = revision.group(1)
+            slug, number = revision
             if (entry['reason'] != 'restated' or entry['by'] != [slug] or slug not in articles
-                    or slug not in revisions or int(revision.group(2)) >= revisions[slug]):
+                    or slug not in revisions or number >= revisions[slug]):
                 return False
         elif not _identifier(key) or not _member(entry['reason'], REASONS) or not set(entry['by']) <= facts:
             return False
@@ -264,6 +306,80 @@ def _derived(articles: list[dict], facts: list[dict]) -> bool:
     return all(r['lifecycle_state'] == ('contested' if r['id'] in contested else 'active') for r in records)
 
 
+def status_of(record: dict) -> list[str]:
+    """Status markers that hold for a delivered record, in contract order; empty when plainly active."""
+    markers = []
+    if record['lifecycle_state'] == 'contested':
+        markers.append('contested')
+    if record['unverified_branch'] is True:
+        markers.append('unverified_branch')
+    if record['needs_review'] is True:
+        markers.append('needs_review')
+    if record['condition_unverified'] is True:
+        markers.append('condition_unverified')
+    return markers
+
+
+def _valid_status(value: object) -> bool:
+    if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in value):
+        return False
+    return value == [marker for marker in STATUS_MARKERS if marker in value]
+
+
+def _clip_snippet(text: str, limit: int = SNIPPET_LIMIT) -> str:
+    if len(text) <= limit:
+        return text
+    return text[:limit - 1].rstrip() + '…'
+
+
+def _hit(record: dict, via: str) -> dict:
+    """Compact `player-knowledge/3` query hit for one delivered article or fact."""
+    if 'body' in record:
+        hit = dict(id=record['id'], kind='article', revision=record['revision'], title=record['title'],
+                   snippet=_clip_snippet(record['lead']), tags=list(record['tags']), via=via)
+    else:
+        hit = dict(id=record['id'], kind='fact', subject=record.get('subject'), claim_kind=record['claim_kind'],
+                   scope=copy.deepcopy(record['scope']), snippet=_clip_snippet(record['text']),
+                   cited_by_articles=sorted(set(record['cited_by_articles']))[:HIT_CITED_BY_LIMIT], via=via)
+    status = status_of(record)
+    if status:
+        hit['status'] = status
+    return hit
+
+
+def query_hit(value: object, version: object) -> bool:
+    """One closed compact `player-knowledge/3` query hit for `version`."""
+    number = version_number(version)
+    if number is None or not isinstance(value, dict):
+        return False
+    kind = value.get('kind')
+    if kind == 'article':
+        if not ARTICLE_HIT_REQUIRED <= set(value) <= (ARTICLE_HIT_REQUIRED | {'status'}):
+            return False
+        revision = revision_parts(value['revision'])
+        return (_matches(IDENTIFIER, value['id']) and revision is not None and revision[0] == value['id']
+                and revision[1] <= number and _nonblank(value['title'])
+                and _nonblank(value['snippet']) and len(value['snippet']) <= SNIPPET_LIMIT
+                and _tags(value['tags']) and _member(value['via'], HIT_VIA)
+                and ('status' not in value or _valid_status(value['status'])))
+    if kind == 'fact':
+        if not FACT_HIT_REQUIRED <= set(value) <= (FACT_HIT_REQUIRED | {'status'}):
+            return False
+        return (_matches(IDENTIFIER, value['id'])
+                and (value['subject'] is None or _nonblank(value['subject']))
+                and _member(value['claim_kind'], CLAIM_KINDS) and _scope(value['scope'])
+                and (value['claim_kind'] != 'instance_state' or 'world' in value['scope'])
+                and _nonblank(value['snippet']) and len(value['snippet']) <= SNIPPET_LIMIT
+                and _distinct(value['cited_by_articles'], _identifier)
+                and value['id'] not in value['cited_by_articles']
+                and len(value['cited_by_articles']) <= HIT_CITED_BY_LIMIT
+                and value['cited_by_articles'] == sorted(value['cited_by_articles'])
+                and _member(value['via'], HIT_VIA)
+                and ('status' not in value or _valid_status(value['status']))
+                and ('world' in value['scope'] or 'unverified_branch' not in value.get('status', ())))
+    return False
+
+
 def delivered_record(value: object, version: object) -> bool:
     """One closed delivered article or fact as a read returns it, apart from its file: its closed shape, a blinded
     `world`, aliased positions and a revision no later than `version`. What needs the whole file (public set,
@@ -296,8 +412,8 @@ def _valid(value: object) -> bool:
     if len(articles | facts) != len(records):
         return False
     # Only well-formed revisions enter the map; an article with any other `revision` fails its own check below.
-    revisions = {m.group(1): int(m.group(2)) for a in value['articles']
-                 if isinstance(a.get('revision'), str) and (m := REVISION.fullmatch(a['revision'])) is not None}
+    revisions = {parts[0]: parts[1] for a in value['articles']
+                 if (parts := revision_parts(a.get('revision'))) is not None}
     if not _history(value['history'], articles, facts, revisions):
         return False
     history = value['history']
@@ -331,17 +447,23 @@ class Knowledge:
         self._position = {r['id']: i for i, r in enumerate(self.records)}
         self._revisions = {a['revision']: a for a in value['articles']}
         self._titles: dict[str, dict] = {}
+        self._casefolded_titles: dict[str, dict] = {}
         for a in value['articles']:
             self._titles.setdefault(a['title'], a)
+            self._casefolded_titles.setdefault(a['title'].casefold(), a)
         self._neighbours = _graph(self.records, self._position)
 
     def _result(self, identity: str, resolution: str, resolved_from: str | None, records: list[dict]) -> dict:
         return dict(schema=RESULT, version=self.value['version'], grants_authority=False, identity=identity,
                     resolution=resolution, resolved_from=resolved_from, records=copy.deepcopy(records))
 
+    def _query_result(self, query: str, hits: list[dict]) -> dict:
+        return dict(schema=RESULT, version=self.value['version'], grants_authority=False, identity=query,
+                    resolution='query', resolved_from=None, hits=hits)
+
     def read(self, identity: str, *, by: str = 'any') -> dict:
         """One delivered record, or where an old identifier went. Rows are tried in this order, so an ID or slug
-        wins over an equal title; `by='id'` skips the title row."""
+        wins over an equal title, and exact literal title wins over a casefolded fallback; `by='id'` skips titles."""
         if by not in READ_BY:
             raise PlayerError('Knowledge read `by` must be "any" or "id"')
         history = self.value['history']
@@ -351,25 +473,32 @@ class Knowledge:
             return self._result(identity, 'revision', identity, [self._revisions[identity]])
         if identity in history['replaced']:
             entry = history['replaced'][identity]
-            revision = REVISION.fullmatch(identity)
+            revision = revision_parts(identity)
             resolution = 'revision' if revision is not None else entry['reason']
             return self._result(identity, resolution, identity,
                                 [self.records[self._position[rid]] for rid in entry['by']])
         for resolution in ('ended', 'retracted'):
             if identity in history[resolution]:
                 return self._result(identity, resolution, identity, [])
-        if by == 'any' and identity in self._titles:
-            return self._result(identity, 'title', None, [self._titles[identity]])
+        if by == 'any':
+            if identity in self._titles:
+                return self._result(identity, 'title', None, [self._titles[identity]])
+            folded = identity.casefold()
+            if folded in self._casefolded_titles:
+                return self._result(identity, 'title', None, [self._casefolded_titles[folded]])
         return self._result(identity, 'unknown', None, [])
 
     def query(self, query: str) -> dict:
         """`bm25_1hop`: BM25 seeds lift their graph neighbours one hop, best first. A record need not hold every
         term, and a record no query term reaches through a seed is never returned."""
-        order = sorted((-s, i) for i, s in enumerate(self._one_hop(query)) if s > 0)
-        return self._result(query, 'query', None, [self.records[i] for _, i in order[:QUERY_LIMIT]])
-
-    def _one_hop(self, query: str) -> list[float]:
         scores = self._bm25(query)
+        order = sorted((-s, i) for i, s in enumerate(self._one_hop(query, scores)) if s > 0)
+        hits = [_hit(self.records[i], 'match' if scores[i] > 0 else 'hop') for _, i in order[:QUERY_LIMIT]]
+        return self._query_result(query, hits)
+
+    def _one_hop(self, query: str, scores: list[float] | None = None) -> list[float]:
+        if scores is None:
+            scores = self._bm25(query)
         combined = list(scores)
         seeds = sorted((-s, i) for i, s in enumerate(scores) if s > 0 and self._neighbours[i])[:SEEDS]
         for negative, u in seeds:

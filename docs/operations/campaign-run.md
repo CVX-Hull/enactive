@@ -42,7 +42,7 @@ and normal input configuration. The target receives only the permitted environme
 and inherited mechanical descriptors, not provider credentials.
 The custodian creates `.runtime/logs/` before launch for the prepared wrapper's log.
 
-`route.json` uses current `player-host/11` with text/image input and explicit
+`route.json` uses current `player-host/12` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. Set `endpoint_costs` for the player and recall as specified
 by the [route envelope](../contracts/player-host.md#route-envelope). Set
@@ -221,9 +221,10 @@ The validator recomputes `unpriced_request_usd` as
 from the frozen rates and refuses a mismatch or zero. For two-endpoint routing
 the frozen model rates are the per-category maxima across the two endpoints.
 Set `ending_reserve.usd` at
-or above the player bound plus the recall bound, with zero recall contribution for
-empty knowledge in a package without [live knowledge updates](#live-knowledge-updates),
-and below the declared limit.
+or above the player bound plus the recall bound (with zero recall contribution for
+empty knowledge in a package without [live knowledge updates](#live-knowledge-updates)),
+and ensure `ending_reserve.usd` plus that reserve bound stays strictly below
+`spend_limit_usd` so ordinary work can start before the ending reserve is reached.
 
 The host contract defines [spend accounting and stops](../contracts/player-host.md#spend)
 and [recall accounting](../contracts/player-host.md#delivered-knowledge-and-recall).
@@ -247,7 +248,8 @@ wall 60–86400 s, host/aggregate-host 30–86400 s, one or two hosts.
 Host seconds ≤ aggregate-host seconds < wall seconds minus 30 s cleanup. Each positive
 computer capacity is ≤2^40. `spend_limit_usd` is above zero. `ending_reserve.usd`
 covers the player's pending-request bound and, with delivered knowledge or live
-knowledge updates, the recall bound. It stays below the declared limit. The selected directory must have no prior started marker,
+knowledge updates, the recall bound, and `ending_reserve.usd` plus that combined bound
+stays strictly below the declared limit. The selected directory must have no prior started marker,
 session DB, native-process receipt, actors or contexts. An existing selected player
 store must be current; it never restores computer custody. The maintained
 validator is authoritative and rejects changed bytes/unsupported fields before

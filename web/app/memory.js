@@ -70,7 +70,7 @@ function DeliveryDiff({run, version, delivery, choose}) {
   if (isBriefing) return html`<div class="delivery" id="delivery-diff"><div class="cardrow"><span class="mtitle">Delivered in opening briefing</span>
       ${entry.knowledge_version ? html`<span class="note">version ${entry.knowledge_version}</span>` : null}
       ${entry.seq !== null && entry.seq !== undefined ? html`<button type="button" class="btn" onClick=${() => jumpToSeq(entry.seq)}>Jump to frame #${entry.seq}</button>` : null}</div></div>`;
-  const event = data && data.events.find(e => e.type === 'knowledge-delivery' && e.kind === 'update' && e.version === version);
+  const event = data && data.events.find(e => e.type === 'knowledge-delivery' && e.kind === 'update' && e.version === version && e.outcome === 'delivered');
   const rows = event ? ['added', 'updated', 'removed', 'index'].flatMap(kind => (event[kind] || []).map(row => ({kind: kind === 'index' ? 'listed' : kind, ...row}))) : [];
   const omitted = event ? ['added', 'updated', 'removed', 'index'].reduce((n, kind) => n + (event[`${kind}_omitted`] || 0), 0) : 0;
   return html`<div class="delivery" id="delivery-diff"><div class="cardrow"><span class="mtitle">Delivered at step ${entry.seq ?? '—'}</span><span class="num">${entry.summary || 'difference unrecorded'}</span>

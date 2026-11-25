@@ -68,8 +68,8 @@ is their authority. It maps the internal error and transport envelopes to
 
 ## Player knowledge and executable proposals
 
-The player receives curated knowledge through the delivered-knowledge tools and
-may submit a fallible `player_hint`. The journal is public trace and hint storage;
+The player receives curated knowledge through the delivered-knowledge tools (`player-knowledge/3`) and
+may submit a fallible `player_hint`. `player_knowledge_read` returns `"records": [...]` (trying exact ID/revision/history first, then exact literal title, then casefolded title in delivered order when `by` is `"any"`); `player_knowledge_query` returns `"resolution": "query", "hits": [...]` (up to 10 compact hits ordered by `bm25_1hop`, with closed per-kind fields `{id, kind: "article", revision, title, snippet, tags, via, status?}` and `{id, kind: "fact", subject, claim_kind, scope, snippet, cited_by_articles, via, status?}`, snippets clipped to 240 characters, and `cited_by_articles` capped to 3 sorted distinct IDs; follow up with `player_knowledge_read` for full body claims, links or text). The journal is public trace and hint storage;
 it is separate from the curator's assertions and cannot publish facts. Every
 public player tool call, including host-local `player_finish`, requires `intent`:
 nonempty one-line text of at most 512 characters. Optional `cites` contains at

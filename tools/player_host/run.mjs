@@ -2,7 +2,7 @@
 import { lstat, open, readFile, writeFile } from 'node:fs/promises';
 import { INPUT_LIMIT_BYTES, HostError, runHost, validateConfiguration, validateMcpConfiguration } from './host.mjs';
 
-// player-host/11 modes: `run` hosts one actor, `validate` checks route and MCP
+// player-host/12 modes: `run` hosts one actor, `validate` checks route and MCP
 // table offline. Each required flag occurs exactly once and each optional flag at
 // most once; values are non-empty. The flag set is closed.
 function parseFlags(argv, required, optional = new Set()) {

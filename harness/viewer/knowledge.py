@@ -5,7 +5,7 @@ import json
 import re
 
 from harness.evaluation.core import context
-from harness.evaluation.core.host import host_facts, returned_records
+from harness.evaluation.core.host import host_facts, record_ids
 from harness.evaluation.core.records import EvaluationError, loads
 from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_manifest, read_operations
 from .catalog import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, ViewError
@@ -326,7 +326,7 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
             operation_id=call.operation_id, source_id=source.get('source_id')), ('request_id', 'tool_call_id', 'tool', 'intent', 'query', 'operation_id', 'source_id'))
         projected['status'] = 'refused' if call.refused else 'error' if call.error else 'finished' if call.finished else 'pending'
         add_ids(projected, 'cites', call.arguments.get('cites'))
-        add_ids(projected, 'returned_ids', [x['id'] for x in returned_records(call)])
+        add_ids(projected, 'returned_ids', record_ids(call))
         projected['step'] = None if step is None else dict(seq=step[0], **fields({'source_id':step[1]}, ('source_id',)))
         projected['result'] = fields(result, ('status', 'reason', 'delivered', 'operation_id'))
         projected['operation'] = None if operation is None else dict(**fields(dict(status=operation.status, reason=operation.reason), ('status','reason')),

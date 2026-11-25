@@ -102,7 +102,7 @@ test('pending control supersedes the unsent pre-control batch without cancelling
 });
 test('orderly stop fences a pre-control response and leaves budget for finishing input',async t=>{
   let control;
-  const configuration={...route(),spend_limit_usd:'0.00012'};
+  const configuration={...route(),spend_limit_usd:'0.00012',unpriced_request_usd:'0.00001'};
   const {result,calls,events,payloads}=await scenario(t,[
     reply(null,[['mutate',{mode:'ok',index:1}]]),
     reply(null,[['mutate',{mode:'ok',index:2}]]),
@@ -155,4 +155,78 @@ test('cancellation still dominates a directly accepted finish claim',async t=>{
   }});
   assert.equal(events.filter(event=>event.type==='player-finish').length,1);
   assert.equal(result.reason,'cancelled');assert.equal(result.finalText,'');
+});
+
+test('exact ordinary reserve equality waits for control and sends a body carrying its ID', async t => {
+  let pipe;
+  const {result, events, payloads} = await scenario(t, [
+    reply(null, [['player_finish', finishArgs('external_stop_complete', stopCommand.id)]]),
+  ], {configuration:{...route(), spend_limit_usd:'1', unpriced_request_usd:'0.25'}, finishReserveUsd:'0.75',
+    controlReady:control => { pipe = control; }, onEvent:event => {
+      if (event.type === 'spend-reserve-reached') pipe.write(JSON.stringify(stopCommand) + '\n');
+    }});
+  assert.equal(result.reason, 'external_stop_complete');
+  assert.equal(payloads.length, 1);
+  assert.match(JSON.stringify(payloads[0].messages), new RegExp(`control_id: ${stopCommand.id}`));
+  const triggers = events.filter(event => event.type === 'spend-reserve-reached');
+  assert.deepEqual(triggers.map(event => [event.actor_id, event.spent_usd, event.spend_limit_usd,
+    event.finish_reserve_usd, event.unpriced_bound_usd]), [[stopCommand.actor_id, '0', '1', '0.75', '0.25']]);
+});
+
+test('control during transport backoff supersedes only the unsent retry', async t => {
+  let pipe;
+  const {result, events, payloads} = await scenario(t, [
+    new Response('{}', {status:503, headers:{'retry-after-ms':'5000'}}),
+    reply(null, [['player_finish', finishArgs('external_stop_complete', stopCommand.id)]]),
+  ], {controlReady:control => { pipe = control; }, onEvent:event => {
+    if (event.type === 'provider-retry' && event.stage === 'eligible') {
+      setImmediate(() => pipe.write(JSON.stringify(stopCommand) + '\n'));
+    }
+  }});
+  assert.equal(result.reason, 'external_stop_complete');
+  assert.equal(payloads.length, 2);
+  assert.ok(!JSON.stringify(payloads[0].messages).includes(stopCommand.id));
+  assert.match(JSON.stringify(payloads[1].messages), new RegExp(`control_id: ${stopCommand.id}`));
+  assert.deepEqual(events.filter(event => event.type === 'request-start').map(event => event.logical_request_id),
+    ['request-1', 'request-2']);
+  assert.deepEqual(events.filter(event => event.type === 'response-complete').map(event => event.request_id),
+    ['request-1', 'request-2']);
+  assert.equal(events.some(event => event.type === 'provider-retry' && event.stage === 'started'), false);
+});
+
+for (const reason of ['cancelled', 'control-eof', 'host-timeout']) {
+  test(`spend-reserve wait preserves ${reason}`, async t => {
+    let pipe;
+    const abort = new AbortController();
+    const {result, events, payloads} = await scenario(t, [], {
+      configuration:{...route(), spend_limit_usd:'1', unpriced_request_usd:'0.25'}, finishReserveUsd:'0.75',
+      timeoutSeconds:reason === 'host-timeout' ? 2 : 10, signal:abort.signal,
+      controlReady:control => { pipe = control; }, onEvent:event => {
+        if (event.type !== 'spend-reserve-reached') return;
+        if (reason === 'control-eof') pipe.end();
+        if (reason === 'cancelled') abort.abort();
+      }});
+    assert.equal(result.reason, reason);
+    assert.equal(payloads.length, 0);
+    assert.equal(events.filter(event => event.type === 'spend-reserve-reached').length, 1);
+  });
+}
+
+test('a priced retry entering the reserve asks for control before provider backoff', async t => {
+  let pipe;
+  const {result, events, payloads} = await scenario(t, [
+    new Response(JSON.stringify({usage:{cost:0.15}}), {status:503, headers:{'retry-after-ms':'60000'}}),
+    reply(null, [['player_finish', finishArgs('external_stop_complete', stopCommand.id)]]),
+  ], {configuration:{...route(), spend_limit_usd:'0.5', unpriced_request_usd:'0.2'}, finishReserveUsd:'0.2',
+    controlReady:control => { pipe = control; }, onEvent:event => {
+      if (event.type === 'spend-reserve-reached') pipe.write(JSON.stringify(stopCommand) + '\n');
+    }});
+  assert.equal(result.reason, 'external_stop_complete');
+  assert.equal(payloads.length, 2);
+  assert.match(JSON.stringify(payloads[1].messages), new RegExp(`control_id: ${stopCommand.id}`));
+  assert.deepEqual(events.filter(event => event.type === 'request-start').map(event => event.logical_request_id),
+    ['request-1', 'request-2']);
+  const reserve = events.find(event => event.type === 'spend-reserve-reached');
+  assert.equal(reserve.spent_usd, '0.15');
+  assert.ok(events.indexOf(reserve) > events.findIndex(event => event.type === 'response-complete'));
 });

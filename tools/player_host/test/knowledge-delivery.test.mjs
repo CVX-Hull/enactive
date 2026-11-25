@@ -4,11 +4,12 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PassThrough } from 'node:stream';
+import { McpClient } from '@earendil-works/pi-mcp';
 import { contest, deliveryScenario, knowledge, recallReply } from './delivery-scenario.mjs';
-import { cutBriefing, delivery, knowledgeIndex, selection, statusOf, updateDelivery, validateKnowledge } from '../knowledge.mjs';
-import { emptyKnowledge, reply } from './host-scenario.mjs';
-import { route, model } from './host-scenario.mjs';
-import { validateConfiguration } from '../host.mjs';
+import { cutBriefing, delivery, recallIndex, selection, statusOf, updateDelivery, validateKnowledge, completeLeadItems, CUT_BRIEFING_CHARS } from '../knowledge.mjs';
+import { article, emptyKnowledge, fact, model, position, realDelay, reply, route } from './host-scenario.mjs';
+import { runHost, validateConfiguration } from '../host.mjs';
 
 async function scenario(t, options) {
   const dir = await mkdtemp(join(tmpdir(),'knowledge-delivery-'));
@@ -81,7 +82,7 @@ for (const failure of ['failed','rejected-fetch','unpriced']) test(`${failure} r
 test('empty knowledge never requests recall and reserve suppresses nonempty recall',async t => {
   const empty = await scenario(t,{knowledge:emptyKnowledge()});
   assert.ok(empty.events.every(e => e.request_role !== 'recall'));
-  const reserved = await scenario(t,{configuration:{spend_limit_usd:'0.3'},finishReserveUsd:'0.3'});
+  const reserved = await scenario(t,{configuration:{spend_limit_usd:'0.3',unpriced_request_usd:'0.01'},finishReserveUsd:'0.25', spendReserveWaitMs:5});
   assert.ok(reserved.events.every(e => e.request_role !== 'recall'));
   assert.ok(reserved.events.some(e => e.reason === 'finish-reserve'));
 });
@@ -142,7 +143,7 @@ test('cadence counts computer inputs while hints and knowledge reads do not adva
 });
 
 test('a recall that would use the finish reserve leaves the player free to finish',async t => {
-  const {events,result} = await scenario(t,{configuration:{spend_limit_usd:'0.35'},finishReserveUsd:'0.15',
+  const {events,result} = await scenario(t,{configuration:{spend_limit_usd:'0.35',unpriced_request_usd:'0.01'},finishReserveUsd:'0.15',
     recallFetch:()=>assert.fail('the recall would consume ending headroom')});
   assert.equal(result.reason,'task_complete');
   assert.ok(events.every(e => e.request_role !== 'recall'));
@@ -160,7 +161,10 @@ test('article and fact injection stays quoted fallible data and recall cannot in
   assert.throws(() => selection({content:[{type:'text',text:'{"articles":[],"grants_authority":true}'}]},value));
   assert.throws(() => selection({content:[{type:'text',text:'{"articles":["withheld"]}'}]},value));
   value.articles[0].lead='x'.repeat(1_100_000);
-  assert.ok(delivery(value,[value.articles[0]],'briefing','recall-1').text.length>1_100_000,'no delivered-text cap');
+  const capped = payloadOf(delivery(value,[value.articles[0]],'briefing','recall-1'));
+  assert.equal(capped.leads[0].lead.length, 1000);
+  const full = payloadOf(delivery(value,[value.articles[0]],'reminder','recall-1'));
+  assert.equal(full.leads[0].lead.length, 1_100_000);
 });
 
 // Evidence gate 1 (reader parity), Node half: tests/test_shared_shapes.py loads the same directory for the Python
@@ -228,8 +232,8 @@ test('status markers are absent from plainly active entries, so their bytes do n
   assert.ok([...plain.articles,...plain.facts].every(item => statusOf(item).length === 0));
   assert.equal(JSON.stringify(payloadOf(delivery(plain,[plain.articles[0]],'briefing','recall-1')).leads),
     '[{"id":"article-a","title":"A subject","lead":"A useful first lead."}]');
-  assert.equal(JSON.stringify(knowledgeIndex(plain)),'[{"id":"article-a","title":"A subject","index":"A useful first lead"},'
-    +'{"id":"article-b","title":"B subject","index":"A useful later lead"},{"id":"fact-alone","title":"Unfiled subject","index":"An unfiled claim"}]');
+  assert.equal(JSON.stringify(recallIndex(plain).index),'[{"id":"article-b","title":"B subject","index":"A useful later lead"},'
+    +'{"id":"article-a","title":"A subject","index":"A useful first lead"},{"id":"fact-alone","title":"Unfiled subject","index":"An unfiled claim"}]');
   assert.equal(JSON.stringify(payloadOf(cutBriefing(plain)).leads),'[{"id":"article-a","title":"A subject","lead":"A useful first lead."},'
     +'{"id":"article-b","title":"B subject","lead":"A useful later lead."}]');
 });
@@ -256,14 +260,14 @@ test('every projection carries status in the contract order when a marker holds'
   const expected = {'article-a':['needs_review','condition_unverified'],'article-b':ORDER,'article-new':ORDER,'fact-alone':['contested']};
   const check = (entries,ids,field) => {
     assert.deepEqual(entries.map(entry => entry.id),ids);
-    for (const entry of entries) assert.deepEqual(Object.entries(entry),[['id',entry.id],['title',entry.title],[field,entry[field]],
-      ['status',expected[entry.id]]],entry.id);
+    for (const entry of entries) assert.deepEqual(entry, {id:entry.id, title:entry.title,
+      [field]:entry[field], status:expected[entry.id]}, entry.id);
   };
   const briefing = payloadOf(delivery(marked,[marked.articles[0]],'briefing','recall-1'));
   check(briefing.leads,['article-a'],'lead');
   check(briefing.index,['article-b','fact-alone'],'index');
   check(payloadOf(delivery(marked,[marked.articles[1],marked.facts[2]],'reminder','recall-2')).leads,['article-b','fact-alone'],'lead');
-  check(knowledgeIndex(marked),['article-a','article-b','fact-alone'],'index');
+  check(recallIndex(marked).index,['article-b','article-a','fact-alone'],'index');
   const cut = payloadOf(cutBriefing(marked));
   check(cut.leads,['article-a','article-b'],'lead');
   check(cut.index,['fact-alone'],'index');
@@ -293,3 +297,134 @@ test('a flag-only change with unchanged prose is an updated entry, and so is cle
   unseen.facts[2].tags = ['water'];
   assert.deepEqual(payloadOf(updateDelivery(before,unseen)).updated,[]);
 });
+
+test('briefing and first update budget the serialized rows, choosing equal positions in delivered order', () => {
+  const value = {...knowledge(), articles:[], facts:[]};
+  const confirmed = position(1);
+  for (let at = 0; at < 75; at++) {
+    value.articles.push(article(`article-${at}`, {last_confirmed:confirmed}));
+  }
+  value.facts.push(fact('old-mechanic', {seen:position(0)}));
+  for (let at = 0; at < 30; at++) {
+    value.facts.push(fact(`state-${at}`, {claim_kind:'instance_state', seen:position(9)}));
+  }
+  const recalled = value.articles.at(-1);
+  recalled.lead = 'x'.repeat(998) + '😀' + 'y';
+  value.articles[0].title = '"'.repeat(24_000);
+  value.coverage = {...value.coverage, actor:'"'.repeat(24_000)};
+  const briefing = delivery(value, [recalled], 'briefing', 'recall-1');
+  const data = payloadOf(briefing);
+  assert.equal(data.coverage, null);
+  assert.equal(data.leads[0].lead, 'x'.repeat(998) + '…');
+  assert.deepEqual(completeLeadItems(briefing), []);
+  assert.deepEqual(data.index.slice(0, 2).map(row => row.id), ['article-1', 'article-2']);
+  assert.ok(data.index.some(row => row.id === 'old-mechanic'));
+  assert.ok(!data.index.some(row => row.id === 'state-23'));
+  assert.equal(data.leads.length + data.index.length + data.unlisted_entries, 106);
+  const cut = payloadOf(cutBriefing(value));
+  assert.deepEqual(cut.leads.slice(0, 2).map(row => row.id), ['article-1', 'article-2']);
+  const update = payloadOf(updateDelivery(emptyKnowledge(), value));
+  assert.equal(update.coverage, null);
+  assert.equal(update.index.length + update.unlisted_entries, 106);
+  for (const message of [briefing.text.split('\n')[1], JSON.stringify(update)]) assert.ok(message.length <= CUT_BRIEFING_CHARS);
+});
+
+test('the bounded recall index keeps titles before snippets and selections only resolve sent rows', () => {
+  const title = '"'.repeat(118) + '😀' + 'tail';
+  const entries = Array.from({length:150}, (_, at) => article(`article-${at}`, {
+    title, last_confirmed:position(1), lead:'\\'.repeat(2000)}));
+  const value = {...knowledge(), articles:entries, facts:[]};
+  const index = recallIndex(value);
+  assert.ok(JSON.stringify(index).length <= CUT_BRIEFING_CHARS);
+  assert.equal(index.index.length + index.unlisted_entries, entries.length);
+  assert.deepEqual(index.index.map(row => row.id), entries.slice(0, index.index.length).map(item => item.id));
+  assert.equal(index.index[0].title, '"'.repeat(118) + '…');
+  assert.ok(index.index.every(row => !Object.hasOwn(row, 'index')));
+  const reply = id => ({content:[{type:'text', text:JSON.stringify({articles:[id]})}]});
+  assert.throws(() => selection(reply(entries.at(-1).id), value, index.index), /invalid-recall-selection/);
+  assert.throws(() => selection(reply(title), value, index.index), /invalid-recall-selection/);
+  assert.equal(selection(reply(index.index[0].title), value, index.index)[0], entries[0]);
+  const smaller = recallIndex({...value, articles:entries.slice(0, 80)});
+  assert.equal(smaller.index.length, 80);
+  assert.equal(smaller.index[0].index.length, 1000);
+  assert.equal(smaller.index.at(-1).index, undefined);
+  assert.ok(JSON.stringify(smaller).length <= CUT_BRIEFING_CHARS);
+});
+
+async function mockDelivery(t, value, fetch) {
+  const configuration = route();
+  configuration.recall.model.id = 'recall-fixture';
+  configuration.recall.every = 1;
+  t.mock.method(McpClient.prototype, 'connect', async () => {});
+  t.mock.method(McpClient.prototype, 'close', async () => {});
+  t.mock.method(McpClient.prototype, 'listTools', async () => [
+    {name:'computer_input', inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent']}},
+  ]);
+  t.mock.method(McpClient.prototype, 'callTool', async () => ({content:[{type:'text', text:'Fixture receipt'}],
+    structuredContent:{schema:'player-computer-operation/1', status:'completed', kind:'input',
+      actor_id:'3'.repeat(32), session:'2'.repeat(32)}}));
+  const events = [], payloads = [];
+  const result = await runHost({configuration, knowledge:value, finishReserveUsd:'0', session:'2'.repeat(32),
+    actorId:'3'.repeat(32), pendingControlId:null, control:new PassThrough(), context:'Fixture guide', prompt:'Fixture objective',
+    model:model.id, effort:'off', timeoutSeconds:5, env:{OFFLINE_TEST_KEY:'stand-in-only'},
+    mcpConfig:{command:process.execPath, args:[], cwd:tmpdir(), enabled:true, required:true, enabled_tools:['computer_input'],
+      startup_timeout_sec:2, tool_timeout_sec:2},
+    fetch:(_url, init) => {
+      const payload = JSON.parse(init.body);
+      payloads.push(payload);
+      return fetch(payload, init);
+    }, onEvent:event => events.push(event)});
+  return {result, events, payloads};
+}
+
+test('only complete leads count as already in context, with the same recall index on every fetch', async t => {
+  const value = knowledge();
+  value.articles[0].lead = 'x'.repeat(1001);
+  let recall = 0, player = 0;
+  const {result, events, payloads} = await mockDelivery(t, value, async payload => {
+    if (payload.model === 'recall-fixture') return recallReply(++recall === 1
+      ? ['article-a', 'article-b', 'fact-alone'] : ['article-a', 'article-b'], 0);
+    await realDelay(15);
+    return ++player < 5 ? reply(null, [['computer_input', {}]]) : reply();
+  });
+  assert.equal(result.ok, true);
+  const recalls = payloads.filter(payload => payload.model === 'recall-fixture');
+  assert.ok(recalls.length >= 2);
+  for (const payload of recalls) assert.deepEqual(payload.messages[1], recalls[0].messages[1]);
+  assert.deepEqual(recalls.slice(0, 2).map(payload => JSON.parse(payload.messages[2].content[0].text).already_in_context),
+    [[], ['article-b', 'fact-alone']]);
+  assert.ok(events.some(event => event.type === 'knowledge-recall' && event.reason === 'all-delivered'));
+  assert.deepEqual(events.find(event => event.type === 'knowledge-recall' && event.request_id === 'recall-2').article_ids,
+    ['article-a', 'article-b']);
+  const reminders = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'reminder');
+  assert.equal(reminders.length, 1);
+  assert.deepEqual(reminders[0].article_ids, ['article-a']);
+  assert.equal(payloadOf(reminders[0]).leads[0].lead.length, 1001);
+});
+
+for (const terminal of ['pre-headers', '503', 'length', 'cost-unreported', 'retry-success']) {
+  test(`one logical knowledge-delivery outcome after ${terminal}`, async t => {
+    let attempts = 0;
+    const {events} = await mockDelivery(t, knowledge(), payload => {
+      if (payload.model === 'recall-fixture') return recallReply(['article-a'], 0);
+      attempts++;
+      if (terminal === 'length') return recallReply([], 0.01, 'length');
+      if (terminal === 'cost-unreported') return reply('Done', [], false);
+      if (terminal === 'pre-headers') throw Error('fixture rejection');
+      if (terminal === 'retry-success' && attempts === 2) return reply();
+      return new Response('{}', {status:503, headers:{'retry-after-ms':'0'}});
+    });
+    const placed = events.filter(event => event.type === 'knowledge-delivery');
+    assert.equal(placed.length, 1);
+    const [event] = placed;
+    assert.equal(event.outcome, terminal === 'retry-success' ? 'delivered' : 'undelivered');
+    assert.deepEqual(event.article_ids, ['article-a']);
+    assert.deepEqual(event.fact_ids, ['fact-a']);
+    assert.deepEqual(event.index_ids, ['article-b', 'fact-alone']);
+    assert.equal(event.recall_request_id, 'recall-1');
+    assert.equal(event.receiving_player_request_id, `request-${attempts}`);
+    const response = events.find(item => item.type === 'response-complete' && item.request_id === event.receiving_player_request_id);
+    assert.ok(response && events.indexOf(response) < events.indexOf(event));
+    assert.equal(response.reported_cost_usd, terminal === 'length' ? '0.01' : terminal === 'retry-success' ? '0.000038' : null);
+  });
+}

@@ -1,4 +1,4 @@
-"""`delivered-knowledge/3` reader, `player-knowledge/2` reads and `bm25_1hop` ranking (#937).
+"""`delivered-knowledge/3` reader, `player-knowledge/3` reads/compact queries and `bm25_1hop` ranking (#937, #950).
 
 Gate 1's Python half loads the shared reader fixtures; Gate 9 replays the #924 queries on test-only projections of
 the sealed `#896-b v91` and `#889 v17` files when the main checkout's evidence store holds them, and synthetic
@@ -17,13 +17,27 @@ from harness.application import Application
 from harness.computer.protocol import ControlError
 from harness.player.contracts import PlayerError
 from harness.player.journal import Journal
-from harness.player.knowledge import QUERY_LIMIT, RESULT, SCHEMA, Knowledge, _valid, empty, terms_of
+from harness.player.knowledge import (
+    HIT_CITED_BY_LIMIT,
+    MAX_SAFE_INT,
+    QUERY_LIMIT,
+    RESULT,
+    SCHEMA,
+    SNIPPET_LIMIT,
+    Knowledge,
+    _valid,
+    empty,
+    revision_parts,
+    terms_of,
+    version_number,
+)
 from harness.player_tools import tool_specs
 from harness.player_view import UnsupportedResult, actor_result
 from test_computer_runtime import make_runtime
 
 FIXTURES = Path(__file__).with_name('fixtures')
 SHARED = FIXTURES / 'delivered-knowledge-3'
+PK3_FIXTURES = FIXTURES / 'player-knowledge-3'
 FULL = SHARED / 'valid' / 'full-graph-and-history.json'
 
 
@@ -69,6 +83,10 @@ def store(articles: list[dict], facts: list[dict], history: dict | None = None) 
 
 
 def ids(result: dict) -> list[str]:
+    if result['resolution'] == 'query':
+        assert 'hits' in result and 'records' not in result
+        return [h['id'] for h in result['hits']]
+    assert 'records' in result and 'hits' not in result
     return [r['id'] for r in result['records']]
 
 
@@ -259,7 +277,37 @@ def test_the_caller_changing_its_dict_after_from_dict_changes_nothing():
     assert ids(knowledge.query('zebra')) == []
 
 
-# `player-knowledge/2` reads, in table order.
+def test_safe_integer_version_revision_and_step_guards_avoid_int_str_limit():
+    huge = '9' * 5000
+    assert version_number('v0') == 0
+    assert version_number(f'v{MAX_SAFE_INT}') == MAX_SAFE_INT
+    assert version_number(f'v{MAX_SAFE_INT + 1}') is None
+    assert version_number(f'v{huge}') is None
+    assert version_number('v1\n') is None
+    assert revision_parts(f'guide@v{MAX_SAFE_INT}') == ('guide', MAX_SAFE_INT)
+    assert revision_parts(f'guide@v{MAX_SAFE_INT + 1}') is None
+    assert revision_parts(f'guide@v{huge}') is None
+    assert revision_parts('guide@v1\n') is None
+
+    # Safe non-negative integral JSON numbers are accepted; booleans, negatives, fractions, NaN/Inf and >=2**53 are refused.
+    base = document([article('guide', 'Guide', 'Lead.', ('Claim.', ['fact-a']))], [fact('fact-a', 'A claim.')])
+    base['coverage'] = dict(schema='curator-coverage/2', session='s01', actor='001', last_step=0.0)
+    base['facts'][0]['seen']['step'] = float(MAX_SAFE_INT)
+    base['facts'][0]['seen']['order'] = [0.0, '001', float(MAX_SAFE_INT)]
+    Knowledge.from_dict(base)
+    for bad in (True, False, -1, -1.0, 1.5, float('nan'), float('inf'), MAX_SAFE_INT + 1, float(MAX_SAFE_INT + 1)):
+        for mut in (
+            lambda d, v=bad: d['coverage'].update(last_step=v),
+            lambda d, v=bad: d['facts'][0]['seen'].update(step=v),
+            lambda d, v=bad: d['facts'][0]['seen']['order'].__setitem__(0, v),
+            lambda d, v=bad: d['facts'][0]['seen']['order'].__setitem__(2, v),
+        ):
+            value = copy.deepcopy(base)
+            mut(value)
+            assert not _valid(value), bad
+
+
+# `player-knowledge/3` reads, in table order.
 
 def read(knowledge: Knowledge, identity: str, **options) -> tuple[str, str | None, list[str]]:
     result = knowledge.read(identity, **options)
@@ -270,6 +318,7 @@ def read(knowledge: Knowledge, identity: str, **options) -> tuple[str, str | Non
 
 def test_every_resolution_on_the_shared_full_graph_fixture():
     knowledge = Knowledge(FULL)
+    assert RESULT == 'player-knowledge/3'
     assert read(knowledge, 'camp-water') == ('current', None, ['camp-water'])
     assert read(knowledge, 'boil-water') == ('current', None, ['boil-water'])
     assert read(knowledge, 'camp-water@v12') == ('revision', 'camp-water@v12', ['camp-water'])
@@ -281,10 +330,32 @@ def test_every_resolution_on_the_shared_full_graph_fixture():
     assert read(knowledge, 'retired-guide') == ('ended', 'retired-guide', [])
     assert read(knowledge, 'wrong-fact') == ('retracted', 'wrong-fact', [])
     assert read(knowledge, 'Camp water') == ('title', None, ['camp-water'])
+    assert read(knowledge, 'camp water') == ('title', None, ['camp-water'])
+    assert read(knowledge, 'CAMP WATER') == ('title', None, ['camp-water'])
     assert read(knowledge, 'Camp water', by='id') == ('unknown', None, [])
-    for missing in ('camp-water@v5', 'camp water', 'unicorn', ''):
+    assert read(knowledge, 'camp water', by='id') == ('unknown', None, [])
+    for missing in ('camp-water@v5', 'unicorn', ''):
         assert read(knowledge, missing) == ('unknown', None, [])
     assert knowledge.read('camp-water')['version'] == knowledge.value['version']
+
+
+def test_casefolded_title_lookup_prefers_exact_literal_breaks_ties_in_delivered_order_and_respects_by_id():
+    knowledge = store([
+        article('first-upper', 'CAMP WATER', 'Lead 1.', ('Claim 1.', ['fact-a'])),
+        article('second-mixed', 'Camp water', 'Lead 2.', ('Claim 2.', ['fact-a'])),
+        article('unicode-title', 'Straße', 'Lead 3.', ('Claim 3.', ['fact-a'])),
+    ], [fact('fact-a', 'A claim.')])
+    # Exact literal title wins over an earlier casefolded-equivalent title.
+    assert read(knowledge, 'Camp water') == ('title', None, ['second-mixed'])
+    assert read(knowledge, 'CAMP WATER') == ('title', None, ['first-upper'])
+    # When no literal title matches, casefold tie-breaks by first in delivered order.
+    assert read(knowledge, 'camp water') == ('title', None, ['first-upper'])
+    assert read(knowledge, 'cAmP wAtEr') == ('title', None, ['first-upper'])
+    # Full Unicode casefolding matches `Straße` and `STRASSE`.
+    assert read(knowledge, 'STRASSE') == ('title', None, ['unicode-title'])
+    # `by='id'` never falls back to exact or casefolded title lookup.
+    for title in ('Camp water', 'CAMP WATER', 'camp water', 'STRASSE'):
+        assert read(knowledge, title, by='id') == ('unknown', None, [])
 
 
 def test_an_identifier_wins_over_an_equal_title_and_by_id_never_falls_back_to_a_title():
@@ -432,19 +503,75 @@ def test_no_coverage_skip_keeps_a_cited_fact_beside_its_article():
     assert ids(knowledge.query('wooden spear pointy stick')) == ['spear', 'stick-pierce']
 
 
-def test_no_match_or_no_words_returns_no_records_with_the_current_envelope():
+def test_no_match_or_no_words_returns_no_hits_with_the_current_envelope():
     for query in ('unicorn', '   ', '?!'):
         assert FIELD.query(query) == dict(schema=RESULT, version='v1', grants_authority=False, identity=query,
-                                          resolution='query', resolved_from=None, records=[])
-    assert Knowledge.from_dict(empty()).query('water')['records'] == []
+                                          resolution='query', resolved_from=None, hits=[])
+    assert Knowledge.from_dict(empty()).query('water')['hits'] == []
 
 
-def test_ties_keep_delivered_order_the_result_is_capped_and_records_are_copies():
-    many = store([], [fact(f'fact-{n:02}', 'Claim about water.', step=n + 1) for n in range(QUERY_LIMIT + 5)])
+def test_ties_keep_delivered_order_the_result_is_capped_and_hits_are_copies():
+    many = store([], [fact(f'fact-{n:02}', 'Claim about water.', step=n + 1, tags=['water']) for n in range(QUERY_LIMIT + 5)])
     assert ids(many.query('water')) == [f'fact-{n:02}' for n in range(QUERY_LIMIT)]
-    record = many.query('water')['records'][0]
-    record['text'] = 'changed'
-    assert many.query('water')['records'][0]['text'] == 'Claim about water.'
+    hit = many.query('water')['hits'][0]
+    hit['snippet'] = 'changed'
+    hit['scope']['game'] = 'changed'
+    hit['cited_by_articles'].append('changed')
+    fresh = many.query('water')['hits'][0]
+    assert fresh['snippet'] == 'Claim about water.' and fresh['scope'] == {'game': 'example'} and fresh['cited_by_articles'] == []
+
+
+def test_compact_query_hits_shape_via_status_clipping_and_cited_by_cap():
+    long_lead = ('alpha ' * 60).strip()
+    long_text = 'x' * (SNIPPET_LIMIT - 2) + '   tail'
+    arts = [
+        article('art-direct', 'Zebra guide', long_lead, ('C.', ['fact-hop']), tags=['zebra'],
+                scope=dict(game='example', world=None), branch_relation='same', lifecycle_state='contested',
+                unverified_branch=True, needs_review=True, condition_unverified=True),
+        *[article(f'ref-{c}', f'Ref {c}', 'Short lead.', ('C.', ['fact-hop']),
+                  scope=dict(game='example', world=None), branch_relation='same', lifecycle_state='contested',
+                  unverified_branch=True, condition_unverified=True) for c in ('d', 'b', 'a', 'c')],
+        article('art-clean', 'Zebra clean', 'Exact length lead.', ('C.', ['fact-clean']), tags=['zebra']),
+    ]
+    facts = [
+        fact('fact-hop', long_text, subject=None, step=1, scope=dict(game='example', world=None),
+             branch_relation='unknown', unverified_branch=True, needs_review=True, condition_unverified=True,
+             links=[dict(rel='contradicts', target='fact-conflict')], contradicted_by=['fact-conflict'],
+             lifecycle_state='contested'),
+        fact('fact-conflict', 'Opposing claim.', subject='Other', step=2,
+             scope=dict(game='example', world=None), branch_relation='same', contradicted_by=['fact-hop'],
+             lifecycle_state='contested'),
+        fact('fact-clean', 'Plain active fact.', subject='Plain', step=3),
+    ]
+    compact_store = store(arts, facts)
+    result = compact_store.query('zebra')
+    assert set(result) == {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'hits'}
+    assert result['schema'] == RESULT and result['resolution'] == 'query'
+    by_id = {h['id']: h for h in result['hits']}
+    assert set(by_id['art-direct']) == {'id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via', 'status'}
+    assert by_id['art-direct']['kind'] == 'article' and by_id['art-direct']['via'] == 'match'
+    assert len(by_id['art-direct']['snippet']) <= SNIPPET_LIMIT and by_id['art-direct']['snippet'].endswith('…')
+    assert not by_id['art-direct']['snippet'][:-1].endswith(' ')
+    assert by_id['art-direct']['status'] == ['contested', 'unverified_branch', 'needs_review', 'condition_unverified']
+    # Plainly active article omits `status`.
+    assert set(by_id['art-clean']) == {'id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'}
+    assert 'status' not in by_id['art-clean'] and by_id['art-clean']['snippet'] == 'Exact length lead.'
+    # 1-hop fact carries `via: 'hop'`, explicit `subject: None`, clipped snippet, sorted capped `cited_by_articles` (3),
+    # and status markers in contract order.
+    assert set(by_id['fact-hop']) == {
+        'id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via', 'status'
+    }
+    assert by_id['fact-hop']['kind'] == 'fact' and by_id['fact-hop']['via'] == 'hop'
+    assert by_id['fact-hop']['subject'] is None
+    assert len(by_id['fact-hop']['snippet']) <= SNIPPET_LIMIT and by_id['fact-hop']['snippet'].endswith('…')
+    assert not by_id['fact-hop']['snippet'][:-1].endswith(' ')
+    assert by_id['fact-hop']['cited_by_articles'] == ['art-direct', 'ref-a', 'ref-b']
+    assert len(by_id['fact-hop']['cited_by_articles']) == HIT_CITED_BY_LIMIT
+    assert by_id['fact-hop']['status'] == ['contested', 'unverified_branch', 'needs_review', 'condition_unverified']
+    # Plainly active 1-hop fact omits `status` and preserves non-null subject.
+    assert 'status' not in by_id['fact-clean'] and by_id['fact-clean']['subject'] == 'Plain'
+    assert by_id['fact-clean']['via'] == 'hop'
+    assert actor_result(result) == result
 
 
 def test_terms_fold_case_punctuation_and_one_regular_inflection_alike_for_query_and_record():
@@ -456,9 +583,16 @@ def test_terms_fold_case_punctuation_and_one_regular_inflection_alike_for_query_
 # Callers: the tool schema, the application and the player view.
 
 def test_the_read_tool_takes_an_optional_by_and_the_application_passes_it(tmp_path):
+    # `actor_result` rejects a revision read newer than the returned article's own revision.
+    newer_rev = dict(Knowledge(FULL).read('article-camp@v1'), version='v3', identity='article-camp@v2',
+                     resolved_from='article-camp@v2')
+    with pytest.raises(UnsupportedResult):
+        actor_result(newer_rev)
     _, schema = tool_specs()['player_knowledge_read']
     assert schema['properties']['by'] == dict(type='string', enum=['any', 'id'])
     assert 'by' not in schema['required'] and 'id_or_title' in schema['required']
+    query_desc, _ = tool_specs()['player_knowledge_query']
+    assert 'compact hits' in query_desc and 'player_knowledge_read' in query_desc
     runtime, _, actor = make_runtime(tmp_path)
     journal = Journal(tmp_path / 'player.sqlite3')
     app = Application(runtime, journal, tmp_path / 'contexts', knowledge=FULL)
@@ -466,9 +600,12 @@ def test_the_read_tool_takes_an_optional_by_and_the_application_passes_it(tmp_pa
         def call(name, **args):
             return app.call(actor['token'], name, dict(args, intent='look up knowledge'), uuid.uuid4().hex)[0]
         assert call('player_knowledge_read', id_or_title='Camp water')['resolution'] == 'title'
+        assert call('player_knowledge_read', id_or_title='camp water')['resolution'] == 'title'
         assert call('player_knowledge_read', id_or_title='Camp water', by='id')['resolution'] == 'unknown'
+        assert call('player_knowledge_read', id_or_title='camp water', by='id')['resolution'] == 'unknown'
         assert call('player_knowledge_read', id_or_title='old-water-fact', by='any')['records'][0]['id'] == 'boil-water'
-        assert call('player_knowledge_query', query='camp water')['resolution'] == 'query'
+        query = call('player_knowledge_query', query='camp water')
+        assert query['schema'] == RESULT and query['resolution'] == 'query' and 'hits' in query and 'records' not in query
         with pytest.raises(PlayerError, match='`by`'):
             call('player_knowledge_read', id_or_title='camp-water', by='title')
         with pytest.raises(PlayerError, match='optional by'):
@@ -483,7 +620,12 @@ def test_the_player_view_projects_only_the_current_knowledge_result():
     knowledge = Knowledge(FULL)
     for result in (knowledge.read('old-water-fact'), knowledge.read('unicorn'), knowledge.query('camp water')):
         assert actor_result(result) == result
+    for fixture_name in ('read-article.json', 'query-compact-hits.json'):
+        fixture = json.loads((PK3_FIXTURES / fixture_name).read_text())
+        assert actor_result(fixture) == fixture
     for bad in (dict(knowledge.read('camp-water'), schema='player-knowledge/1'),
+                dict(knowledge.read('camp-water'), schema='player-knowledge/2'),
+                dict(knowledge.query('camp water'), schema='player-knowledge/2'),
                 dict(knowledge.read('camp-water'), resolution='guess'),
                 dict(knowledge.read('camp-water'), grants_authority=True),
                 {k: v for k, v in knowledge.read('camp-water').items() if k != 'resolved_from'}):
@@ -500,15 +642,16 @@ def _changed(result: dict, change) -> dict:
 def test_the_player_view_projects_every_resolution_of_the_read_table():
     knowledge = Knowledge(FULL)
     for identity in ('camp-water', 'boil-water', 'camp-water@v12', 'camp-water@v4', 'old-water-fact', 'broad-fire-claim',
-                     'broken-tank-claim', 'ended-fire', 'wrong-fact', 'Camp water', 'unicorn'):
+                     'broken-tank-claim', 'ended-fire', 'wrong-fact', 'Camp water', 'camp water', 'unicorn'):
         assert actor_result(knowledge.read(identity)) == knowledge.read(identity)
     for result in (Knowledge.from_dict(empty()).read('water'), Knowledge.from_dict(empty()).query('water')):
         assert actor_result(result) == result
-    # Every ranked record is checked as well: one raw world label refuses the whole query result.
+    # Every ranked compact hit is checked as well: one raw world label refuses the whole query result.
     query = knowledge.query('camp water')
-    assert len(query['records']) > 1
+    fact_index = next(i for i, h in enumerate(query['hits']) if h['kind'] == 'fact')
+    assert len(query['hits']) > 1
     with pytest.raises(UnsupportedResult):
-        actor_result(_changed(query, lambda r: r['records'][-1]['scope'].update(world='world-alpha')))
+        actor_result(_changed(query, lambda r: r['hits'][fact_index]['scope'].update(world='world-alpha')))
 
 
 @pytest.mark.parametrize('identity, change', [
@@ -566,14 +709,57 @@ def test_the_player_view_refuses_an_inconsistent_or_unblinded_knowledge_result(i
         actor_result(_changed(result, change))
 
 
-def test_the_player_view_refuses_a_query_longer_than_the_limit():
+def test_the_player_view_refuses_malformed_or_oversized_compact_query_results():
+    from harness.jsonio import canonical
     query = Knowledge(FULL).query('camp water')
-    full = _changed(query, lambda r: r.update(records=(r['records'] * QUERY_LIMIT)[:QUERY_LIMIT]))
+    article_hit = next(h for h in query['hits'] if h['kind'] == 'article')
+    fact_hit = next(h for h in query['hits'] if h['kind'] == 'fact')
+    full = _changed(query, lambda r: r.update(hits=[dict(fact_hit, id=f'fact-{i}') for i in range(QUERY_LIMIT)]))
     assert actor_result(full) == full
-    with pytest.raises(UnsupportedResult):
-        actor_result(_changed(full, lambda r: r['records'].append(r['records'][0])))
-    with pytest.raises(UnsupportedResult):
-        actor_result(_changed(query, lambda r: r.update(resolved_from='camp water')))
+    # Supplementary Unicode at the 240-char snippet clipping boundary stays valid UTF-8.
+    base_doc = json.loads(FULL.read_text())
+    emoji_lead = 'a' * 238 + '😀' + 'tail'
+    emoji_doc = copy.deepcopy(base_doc)
+    emoji_doc['articles'][0]['lead'] = emoji_lead
+    emoji_query = Knowledge.from_dict(emoji_doc).query('camp water')
+    assert actor_result(emoji_query) == emoji_query
+    assert canonical(emoji_query).encode('utf-8')
+    # Lone surrogate in delivered text is rejected before query/serialization.
+    surrogate_doc = copy.deepcopy(base_doc)
+    surrogate_doc['articles'][0]['lead'] = 'bad \ud800 lead'
+    with pytest.raises(PlayerError):
+        Knowledge.from_dict(surrogate_doc)
+    for bad in (
+        _changed(full, lambda r: r['hits'].append(dict(fact_hit, id='fact-extra'))),
+        _changed(query, lambda r: r.update(hits=[fact_hit, fact_hit])),
+        _changed(query, lambda r: r.update(resolved_from='camp water')),
+        # Discriminated envelope: `query` cannot carry `records`, and `read` cannot carry `hits`.
+        _changed(query, lambda r: (r.update(records=[]), r.pop('hits'))),
+        _changed(query, lambda r: r.update(records=[])),
+        _changed(Knowledge(FULL).read('camp-water'), lambda r: (r.update(hits=[]), r.pop('records'))),
+        _changed(Knowledge(FULL).read('camp-water'), lambda r: r.update(hits=[])),
+        # Closed per-kind compact hit validation.
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, status=[])])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, status=['needs_review', 'contested'])])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, status=['contested', 'contested'])])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, via='direct')])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, snippet='x' * (SNIPPET_LIMIT + 1))])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, snippet='   ')])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, snippet='bad \ud800 snippet')])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, revision='camp-water@v99')])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, extra=1)])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, status=[])])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=['a', 'b', 'c', 'd'])])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=['b', 'a'])])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=[fact_hit['id']])])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, scope={'game': 'example'}, status=['unverified_branch'])])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, claim_kind='instance_state', scope={'game': 'example'})])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, kind='other')])),
+        _changed(query, lambda r: r.update(hits=[{k: v for k, v in fact_hit.items() if k != 'subject'}])),
+        _changed(query, lambda r: r.update(version=None)),
+    ):
+        with pytest.raises(UnsupportedResult):
+            actor_result(bad)
 
 
 # Gate 9: the #924 queries on test-only projections of sealed files into `delivered-knowledge/3`.

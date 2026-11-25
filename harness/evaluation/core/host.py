@@ -1,4 +1,4 @@
-"""Facts from player-host/11 traces: decisions, cost, tool calls and host-side events.
+"""Facts from player-host/12 traces: decisions, cost, tool calls and host-side events.
 
 Dollars here are the configured-rate estimate of each response (`usage.cost.total`), the one figure every run
 carries. The cost the provider reported, which the host counts toward the dollar limit, is not read.
@@ -28,7 +28,7 @@ import re
 from typing import Callable, Sequence
 
 from .records import EventRow, RequestRow, ToolCallRow
-from .sources import HostEvent, MemoryFacts, Operation
+from .sources import HostEvent, MemoryFacts, Operation, is_delivered_exposure
 
 CREATING_TOOLS = ('computer_input', 'computer_observe', 'player_handoff', 'player_program_run')
 MEMORY_READ_TOOLS = ('player_memory_query', 'player_memory_read', 'player_memory_context', 'player_knowledge_read', 'player_knowledge_query')
@@ -226,7 +226,10 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
         def request_for(key: object) -> Request | None:
             return by_key.get(key) or by_logical.get(key)  # type: ignore[arg-type]
 
-        for event in host.get(actor, ()):
+        events = host.get(actor, ())
+        host_telemetry = (events[0].fields.get('telemetry_version')
+            if events and events[0].type == 'host-start' and type(events[0].fields.get('telemetry_version')) is int else None)
+        for event in events:
             fields = event.fields
             kind = event.type
             if kind == 'request-start':
@@ -325,9 +328,11 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                 if _number(fields.get('tokens')):
                     facts.estimates[actor].append(int(fields['tokens']))
             elif kind == 'knowledge-delivery':
-                delivery = fields.get('kind')
-                if delivery in ('briefing', 'reminder') or (delivery == 'update' and fields.get('outcome') == 'delivered'):
+                if is_delivered_exposure(fields, host_telemetry):
+                    delivery = fields.get('kind')
                     receiving = fields.get('receiving_player_request_id')
+                    if not isinstance(receiving, str):
+                        receiving = fields.get('request_id')
                     text = fields.get('text')
                     facts.deliveries.append(DeliveryEvent(actor, delivery, receiving if isinstance(receiving, str) else None,
                         len(text.encode('utf-8')) if isinstance(text, str) else 0))
@@ -355,8 +360,14 @@ def returned_records(call: ToolCall) -> list[dict]:
 
 
 def record_ids(call: ToolCall) -> list[str]:
-    """IDs a memory read returned: one record, a query's records or a context's records."""
-    return [n['id'] for n in returned_records(call)]
+    """IDs a memory read returned: one record, a query's records or compact `player-knowledge/3` hits, or a context's records."""
+    records = returned_records(call)
+    if records:
+        return [n['id'] for n in records]
+    value = call.result
+    if isinstance(value, dict) and isinstance(value.get('hits'), list):
+        return [h['id'] for h in value['hits'] if isinstance(h, dict) and isinstance(h.get('id'), str)]
+    return []
 
 
 def typed_text(call: ToolCall) -> list[str]:

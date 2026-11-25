@@ -699,11 +699,15 @@ def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls
     recall = run.event(actor, 'knowledge-recall', status='selected', request_id='recall-1', article_ids=['article-a'], fact_ids=['fact-a'], reply_text='private-reasoning')
     recall['kind'] = 'briefing'
     run.host[actor].append(recall)
-    delivery = run.event(actor, 'knowledge-delivery', recall_request_id='recall-1', receiving_player_request_id='request-1', version='v18', article_ids=['article-a'], fact_ids=['fact-a'])
+    delivery = run.event(actor, 'knowledge-delivery', outcome='delivered', recall_request_id='recall-1', receiving_player_request_id='request-1', version='v18', article_ids=['article-a'], fact_ids=['fact-a'])
     delivery['kind'] = 'briefing'
     run.host[actor].append(delivery)
     run.call(actor, 'player_knowledge_read', dict(intent='inspect', cites=['fact-a'], id_or_title='fact-a', secret='credential'), dict(records=[dict(id='fact-a',text='A fact')]))
     run.call(actor, 'player_knowledge_read', dict(intent='Look for missing entry', cites=[], id_or_title='missing-entry'), dict(records=[]))
+    run.call(actor, 'player_knowledge_query', dict(intent='search facts', cites=[], query='fact'),
+             dict(schema='player-knowledge/3', version='v18', grants_authority=False, identity='fact', resolution='query',
+                  resolved_from=None, hits=[dict(id='fact-a', kind='fact', subject=None, claim_kind='instance_state',
+                  scope=dict(game='cdda'), snippet='A fact', cited_by_articles=['article-a'], via='match')]))
     run.finish()
     actor_dir = next((directory/'actors').iterdir())
     articles, facts = published([article_record('article-a', ['fact-a'], 'v18', title='A', lead='Lead', body=[dict(text='Claim', facts=['fact-a'])],
@@ -734,6 +738,7 @@ def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls
     assert page['calls'][0]['returned_ids']==['fact-a'] and page['calls'][0]['intent']=='inspect'
     assert page['calls'][0]['query']=='fact-a'
     assert page['calls'][1]['query']=='missing-entry' and page['calls'][1]['returned_ids']==[]
+    assert page['calls'][2]['query']=='fact' and page['calls'][2]['returned_ids']==['fact-a']
     assert 'credential' not in json.dumps(page) and 'private-reasoning' not in json.dumps(page)
     selection=client.get(url,params=dict(actor=actor,request='recall-1')).json()
     assert [e['type'] for e in selection['events']]==['knowledge-recall','knowledge-delivery']
@@ -887,7 +892,7 @@ def delivered_document(version: str | None, articles=(), facts=(), coverage=COVE
 
 
 def mission_run(directory: Path, settle: bool = True, **options):
-    """A run in the shapes of a `player-host/11` trace: priced responses, a recall, a held-back and an applied cut, a first
+    """A run in the shapes of a `player-host/12` trace: priced responses, a recall, a held-back and an applied cut, a first
     and a later knowledge update and a refused one, live curator sessions and exported versions."""
     run = Run(directory, **options)
     a = run.actor()
@@ -1906,8 +1911,12 @@ def test_delivered_knowledge_confirms_opening_briefing_delivery_for_initial(miss
     initial_version = json.loads((directory / 'delivered-knowledge.json').read_text()).get('version')
     trace = directory / 'actors' / '001' / 'host.jsonl'
     lines = trace.read_text().splitlines()
-    briefing = json.dumps(dict(type='knowledge-delivery', kind='briefing', version=initial_version,
-        wall_time=iso(BASE + 0.5), monotonic_ms=5.0, request_id='request-1'))
+    undelivered = json.dumps(dict(type='knowledge-delivery', kind='briefing', outcome='undelivered', version=initial_version,
+        wall_time=iso(BASE + 0.4), monotonic_ms=4.0, receiving_player_request_id='request-1'))
+    trace.write_text('\n'.join([lines[0], undelivered, *lines[1:]]) + '\n')
+    assert client.get('/api/view/run/mission/delivered-knowledge?version=initial').json()['delivery'] is None
+    briefing = json.dumps(dict(type='knowledge-delivery', kind='briefing', outcome='delivered', version=initial_version,
+        wall_time=iso(BASE + 0.5), monotonic_ms=5.0, receiving_player_request_id='request-1'))
     trace.write_text('\n'.join([lines[0], briefing, *lines[1:]]) + '\n')
     body = client.get('/api/view/run/mission/delivered-knowledge?version=initial').json()
     assert body['delivery'] is not None and body['delivery']['kind'] == 'briefing' and body['delivery']['knowledge_version'] == initial_version

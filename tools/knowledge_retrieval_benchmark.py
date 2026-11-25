@@ -378,10 +378,11 @@ def folding_pairs(porter2=None) -> list[dict]:
 def query_envelopes(corpus: Corpus, query: str) -> tuple[dict, dict]:
     scores = corpus.bm25(query)
     order = corpus.ordered(corpus.one_hop(scores))[:LIMIT]
-    # Use the production envelope and deep copy over the exact sealed records on the full side.
-    reader = production.Knowledge.from_dict(production.empty())
-    reader.value['version'] = corpus.version
-    full = reader._result(query, 'query', None, [corpus.records[i] for i in order])
+    # Historical `player-knowledge/2` full-record baseline vs. production `player-knowledge/3` compact hits.
+    full = dict(schema='player-knowledge/2', version=corpus.version, grants_authority=False,
+                identity=query, resolution='query', resolved_from=None,
+                records=[copy.deepcopy(corpus.records[i]) for i in order])
+    clip = getattr(production, '_clip_snippet', lambda text: text if len(text) <= 240 else text[:239].rstrip() + '…')
     hits = []
     for i in order:
         item = corpus.records[i]
@@ -389,19 +390,18 @@ def query_envelopes(corpus: Corpus, query: str) -> tuple[dict, dict]:
         if corpus.article[i]:
             # The archive has no revisions or tags. Use the snapshot tag as an as-of revision.
             hit = dict(id=item['id'], kind='article', revision=f"{item['id']}@{corpus.version}",
-                       title=item['title'], snippet=item['lead'][:240], tags=[], via=via)
+                       title=item['title'], snippet=clip(item['lead']), tags=[], via=via)
         else:
             kind = LEGACY_CLAIM_KINDS[item['type']]
             scope = {'game': 'cdda'}
             if kind == 'instance_state':
                 scope['world'] = None
             hit = dict(id=item['id'], kind='fact', subject=item.get('subject'), claim_kind=kind, scope=scope,
-                       snippet=item['text'][:240], cited_by_articles=sorted(set(corpus.ids(corpus.citing[i])))[:3],
+                       snippet=clip(item['text']), cited_by_articles=sorted(set(corpus.ids(corpus.citing[i])))[:3],
                        via=via)
         hits.append(hit)
-    compact = reader._result(query, 'query', None, hits)
-    compact['schema'] = 'player-knowledge/3'
-    compact['hits'] = compact.pop('records')
+    compact = dict(schema='player-knowledge/3', version=corpus.version, grants_authority=False,
+                   identity=query, resolution='query', resolved_from=None, hits=hits)
     return full, compact
 
 

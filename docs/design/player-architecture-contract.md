@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: Completion of player-host/12 S-MIGRATION (#950) or contract changes
+status: historical
+date: '2026-11-24'
+scope: 'Approved working specification for one coordinated S-MIGRATION from player-host/11 and player-knowledge/2 to player-host/12 and player-knowledge/3 (issues 949 and 950); adopted into the player-host, player-host-telemetry, player-ports, evaluation-record, measurement-tools and spectator-view contracts.'
+replacement: docs/contracts/player-host.md
 ---
 
 # Player architecture, delivery ergonomics and runtime control: `player-host/12` and `player-knowledge/3`

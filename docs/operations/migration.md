@@ -23,13 +23,13 @@ Before changing a deployment:
 
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
-callers move together with `player-host/11`, telemetry 11, `campaign-run/13`,
-`player-host-inputs/4`, `delivered-knowledge/3`, `player-knowledge/2`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
+callers move together with `player-host/12`, telemetry 12, `campaign-run/13`,
+`player-host-inputs/4`, `delivered-knowledge/3`, `player-knowledge/3`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
 `player-driver/7`, `campaign-receipt/7` and `spectator-view/3`. The live spectator requires
 `computer-status/2`; its host block carries observed attempts. The evaluator
 reads older versions only for sealed sessions individually pinned to those
 versions in its [closed archive index](../standards/migration.md) (including `#889`'s
-sealed `campaign-run/12` manifests, journals and handoffs). Use the original
+and `#896`'s sealed `campaign-run/12` manifests, journals and handoffs). Use the original
 source commit and readers for preserved evidence outside that index. Native wire,
 canonical `computer-operation/1`, `computer-source/1` and computer-session storage
 are separate versions; the actor projection does not migrate the canonical database.
