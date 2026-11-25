@@ -1734,14 +1734,18 @@ def test_a_sealed_pre_world_session_keeps_its_frozen_snapshot_readable(tmp_path)
     assert client.get(url, params=dict(actor=actor)).json()['snapshot_status'] == 'hash_unavailable'
 
 
+@pytest.mark.parametrize('session', [
+    ARCHIVED_SESSIONS['campaign-run/12'],
+    '7a28b7bea730dce80c4ea14cbb16e421',  # indexed #896 seven-day-896-b-admission-10 campaign-run/12 + player-host/11
+])
 @pytest.mark.parametrize('frozen_schema, knowledge_schema', [('player-host-inputs/4', 'delivered-knowledge/2'),
     ('player-host-inputs/3', 'delivered-knowledge/1'), ('player-host-inputs/4', 'delivered-knowledge/3'), (None, None)])
-def test_a_sealed_889_session_reports_its_snapshot_hash_unavailable(tmp_path, frozen_schema, knowledge_schema):
-    """S-MIGRATION, closed archive reads: a sealed `#889` `campaign-run/12` session carries `delivered-knowledge/2`, which
-    nothing reads now. Its snapshot is `hash_unavailable`, never verified as the archived `/1` nor as the current `/3`, and
-    its files are not read: an actor without them (`None`) is `hash_unavailable` too."""
-    session = ARCHIVED_SESSIONS['campaign-run/12']
-    directory = tmp_path/'runs'/'sealed-889'
+def test_sealed_campaign_run_12_snapshot_hash_is_unavailable(tmp_path, session, frozen_schema, knowledge_schema):
+    """S-MIGRATION, closed archive reads: a sealed `#889` or `#896` `campaign-run/12` session carries
+    `delivered-knowledge/2`, which nothing reads now. Its snapshot is `hash_unavailable`, never verified as the
+    archived `/1` nor as the current `/3`, and its files are not read: an actor without them (`None`) is
+    `hash_unavailable` too."""
+    directory = tmp_path/'runs'/'sealed-12'
     run = Run(directory, session=session)
     actor = run.actor()
     run.request(actor)

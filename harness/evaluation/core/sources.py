@@ -131,6 +131,11 @@ ARCHIVE_COMBINATIONS = (
         dict(manifest='campaign-run/12', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/9',
              host_telemetry=9, run_ending='campaign-watch-terminal/4'),
         dict(manifest=_MANIFEST_12, host=_HOST_3)),
+    # Owner decision, 24 November 2026: #896's 11 sealed seven-day campaign admissions (`campaign-run/12`, `player-host/11`).
+    ArchiveCombination(
+        dict(manifest='campaign-run/12', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/11',
+             host_telemetry=11, run_ending='campaign-watch-terminal/4'),
+        dict(manifest=_MANIFEST_12)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
 MANIFEST_SCHEMAS = tuple(dict.fromkeys([*(c.versions['manifest'] for c in ARCHIVE_COMBINATIONS), MANIFEST_SCHEMA]))

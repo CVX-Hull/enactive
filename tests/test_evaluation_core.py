@@ -1626,9 +1626,23 @@ OLD_MANIFEST = ('campaign-run/4', 'campaign-receipt/3', 'player-driver/3', 'play
 OLD_TERMINAL = ('campaign-run/5', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/3')
 CURRENT_TERMINAL = ('campaign-run/5', 'campaign-receipt/3', 'player-driver/3', 'player-host/3', 3, 'campaign-watch-terminal/4')
 PRE_CONTEXT_CUT = ('campaign-run/12', 'campaign-receipt/7', 'player-driver/7', 'player-host/9', 9, 'campaign-watch-terminal/4')
+SEVEN_DAY_896 = ('campaign-run/12', 'campaign-receipt/7', 'player-driver/7', 'player-host/11', 11, 'campaign-watch-terminal/4')
 LIVE_VALIDATION_ARCHIVES = {
     '49964eb42a7d4dabaef0c5ff6230a9be': ('live-validation-run-889-aux', 'aborted-launch'),
     'a02d8069d0434813a41acc7009217da6': ('live-validation-run-889', 'run'),
+}
+SEVEN_DAY_896_ARCHIVES = {
+    'b55e1a8d35000e10190c07f499284d60': ('seven-day-896-admission-01', 'seven-day-896-a01-b55e1a8d3500'),
+    'c949ed5cecf2cc637b89cb7da82a8add': ('seven-day-896-b-admission-01', 'seven-day-896-b-a01-c949ed5cecf2'),
+    '20551a8e9e25b17798593d66d4aca321': ('seven-day-896-b-admission-02', 'seven-day-896-b-a02-20551a8e9e25'),
+    'b312d2c8e50907120e580a67bb7f5b4b': ('seven-day-896-b-admission-03', 'seven-day-896-b-a03-b312d2c8e509'),
+    '9d8f05986ffa0490c4edcbddddcb5deb': ('seven-day-896-b-admission-04', 'seven-day-896-b-a04-9d8f05986ffa'),
+    '4d06a351c23c9927ecc00ef30d0607ad': ('seven-day-896-b-admission-05', 'seven-day-896-b-a05-4d06a351c23c'),
+    'aaf541c340e10bccbbfe699f3bda2ec4': ('seven-day-896-b-admission-06', 'seven-day-896-b-a06-aaf541c340e1'),
+    '1d14589af7c24170c8a3d28d1e92b3f8': ('seven-day-896-b-admission-07', 'seven-day-896-b-a07-1d14589af7c2'),
+    '17610f3033b2e8dc90ac0fcbcb6848de': ('seven-day-896-b-admission-08', 'seven-day-896-b-a08-17610f3033b2'),
+    'a6a0013cd0397da8fb47a5e316ab5ef3': ('seven-day-896-b-admission-09', 'seven-day-896-b-a09-a6a0013cd039'),
+    '7a28b7bea730dce80c4ea14cbb16e421': ('seven-day-896-b-admission-10', 'seven-day-896-b-a10-7a28b7bea730'),
 }
 
 
@@ -1659,32 +1673,34 @@ def test_the_shipped_archive_index_preserves_exact_approved_sessions():
     from collections import Counter
     import harness.evaluation.core.sources as sources
     sessions = sources.archive_sessions()
-    assert len(sessions) == 149 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
+    assert len(sessions) == 160 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in sessions)
     assert all(key == item.session for key, item in sessions.items())
-    assert len({(item.study, item.run) for item in sessions.values()}) == 149
+    assert len({(item.study, item.run) for item in sessions.values()}) == 160
     spend_limit = ('campaign-run/6','campaign-receipt/4','player-driver/4','player-host/4',4,'campaign-watch-terminal/4')
     memory_adoption = ('campaign-run/7','campaign-receipt/5','player-driver/5','player-host/5',5,'campaign-watch-terminal/4')
     pre_world = ('campaign-run/10', 'campaign-receipt/7', 'player-driver/7', 'player-host/8', 8, 'campaign-watch-terminal/4')
     assert [tuple(c.versions.items()) for c in sources.ARCHIVE_COMBINATIONS] == [
         tuple(zip(sources.ARCHIVE_VERSION_KEYS, versions)) for versions in (
-            OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit, memory_adoption, pre_world, PRE_CONTEXT_CUT)]
+            OLD_MANIFEST, OLD_TERMINAL, CURRENT_TERMINAL, spend_limit, memory_adoption, pre_world, PRE_CONTEXT_CUT, SEVEN_DAY_896)]
     assert Counter(tuple(item.combination.versions.values()) for item in sessions.values()) == {
         OLD_MANIFEST: 30, OLD_TERMINAL: 22, CURRENT_TERMINAL: 2, spend_limit: 1, memory_adoption: 80, pre_world: 12,
-        PRE_CONTEXT_CUT: 2}
+        PRE_CONTEXT_CUT: 2, SEVEN_DAY_896: 11}
     # A combination names the fields read from exactly the records the reader takes in an old version.
     current = dict(manifest=sources.MANIFEST_SCHEMA, receipt=sources.RECEIPT_SCHEMA, driver=sources.DRIVER_SCHEMA,
                    host=sources.HOST_SCHEMA, run_ending=sources.WATCH_TERMINAL_SCHEMA)
     for combination in sources.ARCHIVE_COMBINATIONS:
         assert set(combination.fields) == {key for key, value in current.items() if combination.versions[key] != value}
-        assert combination.versions['host_telemetry'] != sources.HOST_TELEMETRY and 'host' in combination.fields
-    assert sources.ARCHIVE_COMBINATIONS[-1].fields == dict(
+        assert (combination.versions['host_telemetry'] != sources.HOST_TELEMETRY) == ('host' in combination.fields)
+    assert sources.ARCHIVE_COMBINATIONS[-2].fields == dict(
         host=sources.ARCHIVE_COMBINATIONS[0].fields['host'],
-        manifest=(*sources.ARCHIVE_COMBINATIONS[-2].fields['manifest'], 'live_knowledge_updates'))
+        manifest=(*sources.ARCHIVE_COMBINATIONS[-3].fields['manifest'], 'live_knowledge_updates'))
+    assert sources.ARCHIVE_COMBINATIONS[-1].fields == dict(
+        manifest=sources.ARCHIVE_COMBINATIONS[-2].fields['manifest'])
     assert sources.MANIFEST_SCHEMAS == ('campaign-run/4', 'campaign-run/5', 'campaign-run/6', 'campaign-run/7',
                                        'campaign-run/10', 'campaign-run/12', 'campaign-run/13')
     assert [c.fields.get('run_ending') for c in sources.ARCHIVE_COMBINATIONS] == [
-        ('reason',), ('session', 'reason', 'pause_reason'), None, None, None, None, None]
-    assert ['labels' in c.fields.get('manifest', ()) for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True, True, True]
+        ('reason',), ('session', 'reason', 'pause_reason'), None, None, None, None, None, None]
+    assert ['labels' in c.fields.get('manifest', ()) for c in sources.ARCHIVE_COMBINATIONS] == [False, True, True, True, True, True, True, True]
     assert all('accounting' in c.fields['manifest'] for c in sources.ARCHIVE_COMBINATIONS[:3])
     assert 'spend_limit_usd' in sources.ARCHIVE_COMBINATIONS[3].fields['manifest']
     # The operator labels are on the 30 older sessions and nowhere else.
@@ -1704,6 +1720,8 @@ def test_the_shipped_archive_index_preserves_exact_approved_sessions():
     assert {session: (item.study, item.run) for session, item in sessions.items()
             if tuple(item.combination.versions.values()) == PRE_CONTEXT_CUT} == {
         session: (study, f'live-validation-run-889-{session[:12]}') for session, (study, _) in LIVE_VALIDATION_ARCHIVES.items()}
+    assert {session: (item.study, item.run) for session, item in sessions.items()
+            if tuple(item.combination.versions.values()) == SEVEN_DAY_896} == SEVEN_DAY_896_ARCHIVES
 
 
 def test_only_the_listed_sessions_can_read_pre_context_cut_host_traces(tmp_path):
@@ -1725,6 +1743,19 @@ def test_only_the_listed_sessions_can_read_pre_context_cut_host_traces(tmp_path)
     trace.write_text(json.dumps(dict(start, session=SESSION)) + '\n')
     with pytest.raises(HostTraceUnsupported, match='player-host/9'):
         read_host(trace, '001', entry)
+
+
+def test_only_the_listed_896_sessions_can_read_campaign_run_12_with_host_11(tmp_path):
+    import harness.evaluation.core.sources as sources
+
+    listed = '7a28b7bea730dce80c4ea14cbb16e421'
+    run = as_archived(ended_run(tmp_path / 'listed', session=listed), SEVEN_DAY_896)
+    inputs = sources.read_run(run, digests=False)
+    assert inputs.manifest['schema'] == 'campaign-run/12'
+    assert survival_of(evaluate(run, FakeBinding(), tmp_path / 'evals', created_wall=1.0)) is not None
+    unlisted = as_archived(ended_run(tmp_path / 'unlisted', session='e' * 32), SEVEN_DAY_896)
+    with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/12.*not listed'):
+        sources.read_run(unlisted, digests=False)
 
 
 def sealed_store() -> Path:
@@ -1784,6 +1815,12 @@ def test_the_archive_index_matches_the_sealed_store():
             assert all(item.combination.versions[key] == value for key, value in versions.items()), directory
             for trace in directory.glob('actors/*/host.jsonl'):
                 assert next(sources.iter_host(trace, trace.parent.name, entry=item)).fields['schema'] == 'player-host/9'
+        elif session in SEVEN_DAY_896_ARCHIVES:
+            assert directory.relative_to(store) == Path(item.study, 'run')
+            assert item.run == ledger[session]['run']
+            assert all(item.combination.versions[key] == value for key, value in versions.items()), directory
+            for trace in directory.glob('actors/*/host.jsonl'):
+                assert next(sources.iter_host(trace, trace.parent.name, entry=item)).fields['schema'] == 'player-host/11'
         else:
             assert directory.name == item.run
             assert all(item.combination.versions[key] == value for key, value in versions.items()), directory
