@@ -1,0 +1,50 @@
+{
+  "schema": "player-knowledge/3",
+  "grants_authority": false,
+  "version": "v1",
+  "query": "water-treatment",
+  "resolution": "exact",
+  "message": null,
+  "records": [
+    {
+      "id": "water-treatment",
+      "revision": "water-treatment@v1",
+      "title": "Water treatment",
+      "lead": "Boil murky water over a fire to obtain clean water.",
+      "body": [
+        {
+          "text": "Boiling murky water over a fire yields clean water.",
+          "facts": [
+            "boiling-makes-water-safe"
+          ]
+        }
+      ],
+      "tags": [
+        "water"
+      ],
+      "scope": {
+        "game": "example"
+      },
+      "branch_relation": null,
+      "lifecycle_state": "active",
+      "needs_review": false,
+      "stale_citations": [],
+      "condition_unverified": false,
+      "unverified_branch": false,
+      "links": [],
+      "backlinks": [],
+      "shadowed_by": [],
+      "contradicted_by": [],
+      "last_confirmed": {
+        "session": "s01",
+        "actor": "001",
+        "step": 12,
+        "order": [
+          1,
+          "001",
+          12
+        ]
+      }
+    }
+  ]
+}

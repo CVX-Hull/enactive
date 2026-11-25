@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -46,9 +47,12 @@ _AXIS_RE = re.compile(r'^[a-z][a-z0-9_]{0,31}\Z')
 _ASCII_RE = re.compile(r'^[ -~]{1,64}\Z')
 
 EXPECTED_VALID_FIXTURES = {
+    'bom-only-nonblank.json',
     'empty.json',
     'full-graph-and-history.json',
     'high-session-alias.json',
+    'integral-json-number.json',
+    'max-safe-integer-version.json',
     'minimal.json',
     'standalone-facts-only.json',
 }
@@ -59,6 +63,7 @@ EXPECTED_INVALID_FIXTURES = {
     'empty-version-with-records.json',
     'extra-fact-field-type.json',
     'extra-top-level-key.json',
+    'fractional-step.json',
     'history-ended-revision-id.json',
     'history-overlap-ended-retracted.json',
     'history-replaced-target-outside-public.json',
@@ -70,6 +75,7 @@ EXPECTED_INVALID_FIXTURES = {
     'link-outside-public-set.json',
     'malformed-citation-source-id.json',
     'missing-history.json',
+    'negative-step.json',
     'old-schema-v2.json',
     'raw-session-name-in-coverage.json',
     'raw-session-name-in-last-confirmed.json',
@@ -77,8 +83,13 @@ EXPECTED_INVALID_FIXTURES = {
     'raw-world-label.json',
     'self-link.json',
     'stale-citation-outside-history.json',
+    'terminal-newline-version.json',
     'unbound-with-branch-relation.json',
     'unbound-with-unverified-branch.json',
+    'unsafe-integer-step.json',
+    'unsafe-integer-version.json',
+    'whitespace-control-separators-lead.json',
+    'whitespace-nel-title.json',
     'world-bound-null-branch-relation.json',
 }
 
@@ -175,6 +186,17 @@ def _nonblank(v: object) -> bool:
     return isinstance(v, str) and bool(v.strip())
 
 
+MAX_SAFE_INT = (1 << 53) - 1
+
+
+def _safe_nonneg_int(v: object) -> bool:
+    if type(v) is int:
+        return 0 <= v <= MAX_SAFE_INT
+    if isinstance(v, float) and math.isfinite(v) and v.is_integer():
+        return 0 <= int(v) <= MAX_SAFE_INT
+    return False
+
+
 def _is_valid_delivered_3(doc: object) -> bool:
     """Reference structural validator for `delivered-knowledge/3` shared fixtures."""
     top_keys = {'schema', 'version', 'commit', 'repository_id', 'coverage', 'articles', 'facts', 'history'}
@@ -195,6 +217,9 @@ def _is_valid_delivered_3(doc: object) -> bool:
         )
     if not (isinstance(doc['version'], str) and _VERSION_RE.match(doc['version'])):
         return False
+    version_num = int(doc['version'][1:])
+    if version_num > MAX_SAFE_INT:
+        return False
     if not (isinstance(doc['commit'], str) and _HEX40_RE.match(doc['commit'])):
         return False
     if not (isinstance(doc['repository_id'], str) and _HEX40_RE.match(doc['repository_id'])):
@@ -205,16 +230,16 @@ def _is_valid_delivered_3(doc: object) -> bool:
                 or cov['schema'] != 'curator-coverage/2'
                 or not (isinstance(cov['session'], str) and _ALIAS_RE.match(cov['session']))
                 or (cov['actor'] is not None and not _nonblank(cov['actor']))
-                or (cov['last_step'] is not None and type(cov['last_step']) is not int)):
+                or (cov['last_step'] is not None and not _safe_nonneg_int(cov['last_step']))):
             return False
 
     def valid_pos(p: object) -> bool:
         return (
             isinstance(p, dict) and set(p) == {'session', 'actor', 'step', 'order'}
             and isinstance(p['session'], str) and bool(_ALIAS_RE.match(p['session']))
-            and _nonblank(p['actor']) and type(p['step']) is int
+            and _nonblank(p['actor']) and _safe_nonneg_int(p['step'])
             and isinstance(p['order'], list) and len(p['order']) == 3
-            and type(p['order'][0]) is int and isinstance(p['order'][1], str) and type(p['order'][2]) is int
+            and _safe_nonneg_int(p['order'][0]) and isinstance(p['order'][1], str) and _safe_nonneg_int(p['order'][2])
         )
 
     def valid_scope(s: object) -> bool:
@@ -295,7 +320,8 @@ def _is_valid_delivered_3(doc: object) -> bool:
         if set(art) != art_req:
             return False
         if (not isinstance(art['revision'], str) or not _REV_RE.match(art['revision'])
-                or not art['revision'].startswith(art['id'] + '@')):
+                or not art['revision'].startswith(art['id'] + '@')
+                or int(art['revision'].rsplit('@v', 1)[1]) > version_num):
             return False
         if not (_nonblank(art['title']) and _nonblank(art['lead']) and valid_tags(art['tags']) and valid_scope(art['scope'])):
             return False
@@ -910,3 +936,24 @@ def test_synthetic_builder_enforces_article_lineages_and_end_evidence(tmp_path: 
             'f-uncertain', reason='Out on B after unknown parent restore.', end='transition',
             end_citations=[r_c1], published_in='v2', session='curator-v2',
         )
+
+
+def test_player_knowledge_3_contract_fixtures():
+    pk3 = REPO_ROOT / 'tests' / 'fixtures' / 'player-knowledge-3'
+    read_doc = json.loads((pk3 / 'read-article.json').read_text(encoding='utf-8'))
+    assert set(read_doc) == {'schema', 'grants_authority', 'version', 'query', 'resolution', 'message', 'records'}
+    assert read_doc['schema'] == 'player-knowledge/3'
+    assert read_doc['grants_authority'] is False
+    assert read_doc['resolution'] == 'exact'
+    assert len(read_doc['records']) == 1
+
+    query_doc = json.loads((pk3 / 'query-compact-hits.json').read_text(encoding='utf-8'))
+    assert set(query_doc) == {'schema', 'grants_authority', 'version', 'query', 'resolution', 'message', 'hits'}
+    assert query_doc['schema'] == 'player-knowledge/3'
+    assert query_doc['grants_authority'] is False
+    assert query_doc['resolution'] == 'query'
+    art_hit, fact_hit = query_doc['hits']
+    assert set(art_hit) == {'id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'}
+    assert art_hit['kind'] == 'article' and art_hit['via'] in ('match', 'hop')
+    assert set(fact_hit) == {'id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via', 'status'}
+    assert fact_hit['kind'] == 'fact' and fact_hit['via'] in ('match', 'hop') and fact_hit['status'] == ['needs_review']
