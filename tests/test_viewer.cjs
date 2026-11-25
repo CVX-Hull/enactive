@@ -14,19 +14,7 @@ let fx, browser;
 before(async () => { fx = await S.startFixture(); browser = await S.launch(); });
 after(async () => { if (browser) await browser.close(); if (fx) fx.stop(); });
 
-async function openPage(url, options) {
-  const page = await S.open(browser, 'about:blank', options);
-  // The shared fixture server has no configured draft sources. Supply its empty list here.
-  await page.evaluateOnNewDocument(() => {
-    const fetchOriginal = window.fetch;
-    window.fetch = (url, ...args) => {
-      if (String(url).split('?')[0] !== '/api/view/frame/curator-draft-sources') return fetchOriginal(url, ...args);
-      return Promise.resolve(Response.json({schema: 'spectator-frame/1', items: [], total: 0, next: null, limit: 1}));
-    };
-  });
-  if (url !== 'about:blank') await page.goto(url, {waitUntil: 'load'});
-  return page;
-}
+const openPage = (url, options) => S.open(browser, url, options);
 
 const go = async (page, hash) => { await page.evaluate(h => { location.hash = h; }, hash); await S.settle(page, 100); };
 const text = (page, selector) => page.$eval(selector, node => node.innerText);

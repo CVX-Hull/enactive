@@ -535,8 +535,10 @@ Nothing is sent to the curator, and no figure is derived beyond what the file st
 
 The spectator's `/api/view/frame/*` routes follow the view API rules above and carry
 `"schema": "spectator-frame/1"`. Errors keep the `spectator-view/3` envelope. They read
-tracked data, the catalog's stores, explicitly configured curator result files and the curator runner's status file, and nothing they compute reaches the player or the
-curator (ADR008). The container and probe directories default to the repository's
+tracked data, the catalog's stores, explicitly configured curator result files, session
+receipts, draft directories and the curator runner's status file, and nothing they compute
+reaches the player or the curator (ADR008). The container and probe directories default to
+the repository's
 `data/containers` and `data/evaluation/probes`; `create_app(frame_sources=)` overrides
 them for tests.
 

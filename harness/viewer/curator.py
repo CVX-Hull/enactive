@@ -165,9 +165,15 @@ def rooted_status(root, *parts):
 
 def rooted_entries(root, *parts):
     """(name, `lstat`) of each entry of a run package's directory, by name. A missing directory or one behind a symlink
-    is an OSError."""
+    is an OSError; an entry that disappears concurrently between listing and stat is skipped."""
     with opened_directory(root, *parts) as directory:
-        return [(name, os.stat(name, dir_fd=directory, follow_symlinks=False)) for name in sorted(os.listdir(directory))]
+        found = []
+        for name in sorted(os.listdir(directory)):
+            try:
+                found.append((name, os.stat(name, dir_fd=directory, follow_symlinks=False)))
+            except FileNotFoundError:
+                continue
+        return found
 
 
 def read(path):
@@ -238,7 +244,7 @@ def draft_projection(manifest, directory, draft_id):
     policy = manifest['retention']['policy']
     if (not all(isinstance(v, str) for v in (created, touched, policy))
             or (promoted is not None and not isinstance(promoted, str))
-            or (life['state'] == 'promoted' and promoted is None)
+            or ((life['state'] == 'promoted') != (promoted is not None))
             or not isinstance(sessions, list) or not all(isinstance(v, str) for v in sessions)
             or not all(type(v) is int and 0 <= v <= 2**53 - 1 for v in (untouched, max_bytes))):
         raise ValueError('draft metadata')

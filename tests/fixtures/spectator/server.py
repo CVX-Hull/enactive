@@ -176,7 +176,7 @@ def make_handler(state: State):
                     rows = [dict(row, state='unfinished') if index == 0 and after == 0 else row for index, row in enumerate(rows)]
                 body.update(items=rows[:limit], next=after + limit if len(rows) > limit else None, limit=limit)
                 self.json(200, body); return
-            if route in ('frame/curator-sources', 'frame/curator-session-sources'):
+            if route in ('frame/curator-sources', 'frame/curator-session-sources', 'frame/curator-draft-sources'):
                 self.json(200, dict(schema='spectator-frame/1', items=[], total=0, next=None, limit=500)); return
             if route == 'frame/curator-runner':
                 self.json(200, synthetic.runner_status(first('run') in (LIVE_RUN, SESSION))); return
