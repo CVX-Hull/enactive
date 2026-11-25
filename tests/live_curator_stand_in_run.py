@@ -68,6 +68,8 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -199,8 +201,9 @@ def write_manifest(run: Path, session: str, commit: str) -> None:
     from harness.player.knowledge import empty
 
     run.mkdir(parents=True)
-    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/12', session=session, source_commit=commit,
-                                                     labels=dict(world=None, lineage=None, admission=None),
+    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', session=session, source_commit=commit,
+                                                     labels=dict(world='stand-in-world', lineage=None, admission=None),
+                                                     context=dict(ruleset='standard'),
                                                      live_knowledge_updates=True,
                                                      substitute='no frozen package: tests.live_curator_stand_in_run')))
     (run/'delivered-knowledge.json').write_text(json.dumps(empty()) + '\n')
@@ -236,6 +239,62 @@ class Sampler(threading.Thread):
                 if stopping:
                     return
                 time.sleep(SAMPLE_SECONDS)
+
+
+class ViewerProber(threading.Thread):
+    """Probes the guardian's real live viewer over the growing WAL store, including #464 JSON 404/405 envelopes."""
+
+    def __init__(self, run_dir: Path, session: str):
+        super().__init__(name='viewer-wal-prober', daemon=True)
+        self.run_dir, self.session, self.stop = run_dir, session, threading.Event()
+        self.result: dict = dict(checked=False, viewer_port=None, runs_ok=False, summary_ok=False,
+                                 runner_status_ok=False, not_found_json_ok=False, method_not_allowed_json_ok=False,
+                                 error=None)
+
+    @staticmethod
+    def _request(url: str, method: str = 'GET') -> tuple[int, dict | None]:
+        req = urllib.request.Request(url, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                return resp.status, json.loads(resp.read().decode('utf-8'))
+        except urllib.error.HTTPError as exc:
+            try:
+                body = json.loads(exc.read().decode('utf-8'))
+            except (OSError, ValueError):
+                body = None
+            return exc.code, body
+
+    def run(self):
+        watch_start = self.run_dir/'watch-start.json'
+        while not self.stop.is_set():
+            try:
+                port = json.loads(watch_start.read_text()).get('viewer_port') if watch_start.is_file() else None
+            except (OSError, ValueError):
+                port = None
+            if isinstance(port, int) and port > 0:
+                self.result['viewer_port'] = port
+                base = f'http://127.0.0.1:{port}/api/view'
+                try:
+                    c1, b1 = self._request(f'{base}/runs')
+                    c2, b2 = self._request(f'{base}/run/{self.session}/summary')
+                    c3, b3 = self._request(f'{base}/frame/curator-runner?run={self.session}')
+                    c4, b4 = self._request(f'{base}/nonexistent')
+                    c5, b5 = self._request(f'{base}/runs', method='POST')
+                    self.result.update(
+                        runs_ok=c1 == 200 and isinstance(b1, dict) and b1.get('schema') == 'spectator-view/3',
+                        summary_ok=c2 == 200 and isinstance(b2, dict) and b2.get('schema') == 'spectator-view/3' and b2.get('session') == self.session,
+                        runner_status_ok=c3 == 200 and isinstance(b3, dict) and b3.get('schema') == 'spectator-frame/1',
+                        not_found_json_ok=c4 == 404 and isinstance(b4, dict) and b4.get('schema') == 'spectator-view/3' and b4.get('error') == 'not_found',
+                        method_not_allowed_json_ok=c5 == 405 and isinstance(b5, dict) and b5.get('schema') == 'spectator-view/3' and b5.get('error') == 'method_not_allowed',
+                        error=None,
+                    )
+                    if all(self.result[k] for k in ('runs_ok', 'summary_ok', 'runner_status_ok',
+                                                    'not_found_json_ok', 'method_not_allowed_json_ok')):
+                        self.result['checked'] = True
+                        return
+                except (OSError, ValueError) as exc:
+                    self.result['error'] = f'{type(exc).__name__}: {exc}'
+            time.sleep(0.25)
 
 
 def live_run(out: Path, knowledge_root: Path, args: argparse.Namespace) -> dict:
@@ -283,18 +342,22 @@ def live_run(out: Path, knowledge_root: Path, args: argparse.Namespace) -> dict:
         guard.preflight = lambda directory: (profile, dict(api_key_env=DUMMY_KEY_VARIABLE), {})
         os.environ[DUMMY_KEY_VARIABLE] = DUMMY_KEY
         sampler = Sampler(run/guard.RUNNER_DIRECTORY/'status.json', out/'status-samples.jsonl')
+        viewer = ViewerProber(run, session)
         sampler.start()
+        viewer.start()
         began = time.time()
         try:
             terminal = guard.run_supervised(run, popen=popen, curator_runner=config)
         finally:
             sampler.stop.set()
+            viewer.stop.set()
             sampler.join()
+            viewer.join()
         requests = [dict(path=r['path'], model=r['body'].get('model')) for r in stand_in.requests]
     (out/'stand-in-requests.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in requests))
     return dict(run=run, session=session, commit=commit, terminal=terminal, substitutions=substitutions,
-                requests=requests, rewritten=rewritten, samples=sampler.samples, began_wall=began, ended_wall=time.time(),
-                config=json.loads(config.read_text()))
+                requests=requests, rewritten=rewritten, samples=sampler.samples, viewer_wal=viewer.result,
+                began_wall=began, ended_wall=time.time(), config=json.loads(config.read_text()))
 
 
 def writer_alone(out: Path, args: argparse.Namespace) -> Path:
@@ -521,7 +584,7 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
         stderr=(run/'curator-runner'/'stderr.txt').read_text()[-600:])
     checks['runner_ended_at_teardown'] = (cleanup.get('launched') is True and cleanup.get('process_absent') is True
                                           and cleanup.get('group_absent') is True and status['state'] == 'ended'
-                                          and status['stop_reason'] in ('store-closing', 'interrupted'))
+                                          and status['stop_reason'] in ('store-closing', 'store-closed', 'interrupted'))
 
     # Time to publication, from each covered step's frame to the first sight of its version.
     confirmed = {v['version']: v for v in versions if not v['baseline']}
@@ -577,6 +640,8 @@ def measure(out: Path, live: dict, alone_record: Path) -> dict:
 
     delivery_checks, report['live_delivery'] = live_delivery(out, run, repo, windows, writer_live, order)
     checks.update(delivery_checks)
+    report['live_viewer_wal'] = live['viewer_wal']
+    checks['live_viewer_wal_and_json_errors'] = bool(live['viewer_wal'].get('checked'))
 
     report['not_measured'] = {
         'whether a player uses a delivered update': 'no player model: the host replay answers from a script',
