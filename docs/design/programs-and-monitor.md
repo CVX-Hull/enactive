@@ -10,7 +10,7 @@ review_trigger: "The owner decides whether to take up the programs line, the bou
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The [decision on the bounded program interface brief](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief) set this unbuilt proposal aside until the fact store's field table merged. The [curator contract](../contracts/curator.md#facts-curator-fact5) holds that table, so the owner's revisit condition is met. The proposal authorizes no build.
+**Answer.** Under the [25 November 2026 consolidation decision](../decisions/owner-decisions.md#consolidate-wave-3-and-4-live-validation-943) (narrowing the [20 November brief decision](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief)), the owner will revisit the bounded program interface brief after the combined Wave 3 and Wave 4 live validation reports. The proposal authorizes no build.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
