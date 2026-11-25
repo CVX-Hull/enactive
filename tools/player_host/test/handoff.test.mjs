@@ -51,10 +51,27 @@ test('ordinary plain-text collection errors preserve explicit correction',async 
   ],{enabledTools:handoffTools});
   assert.equal(result.reason,'handoff');assert.equal(result.requests,3);
 });
-test('refused and pending handoffs allow a new explicit model decision',async t=>{
-  for(const mode of ['refused','pending','error']) await t.test(mode,async sub=>{
+test('refused and failed handoffs allow a new explicit model decision',async t=>{
+  for(const mode of ['refused','error']) await t.test(mode,async sub=>{
     const {result,events}=await scenario(sub,[reply(null,[['player_handoff',{...handoffArgs,mode}]]),reply()],{enabledTools:handoffTools});
     assert.equal(result.reason,'task_complete');assert.equal(result.requests,2);
+    assert.equal(events.filter(e=>e.type==='handoff').length,0);
+  });
+});
+test('a pending handoff refuses player_finish until a definitive refusal collection clears it',async t=>{
+  // R-REGRESSION (#946): a finish beside an unresolved handoff could settle an actor whose handoff later seals,
+  // and a refused collection left the actor holding a pending origin that nothing could resolve.
+  for(const mode of ['pending','transport-uncertain']) await t.test(mode,async sub=>{
+    const {result,events,payloads}=await scenario(sub,[
+      reply(null,[['player_handoff',{...handoffArgs,mode}]]),
+      reply(),
+      reply(null,[['computer_result',{...collectArgs,mode:'refused'}]]),
+      reply()
+    ],{enabledTools:handoffTools});
+    assert.equal(result.ok,true);assert.equal(result.reason,'task_complete');assert.equal(result.requests,4);
+    const refusedFinish=payloads[2].messages.filter(m=>m.role==='tool').at(-1).content;
+    assert.match(typeof refusedFinish==='string'?refusedFinish:JSON.stringify(refusedFinish),/handoff-pending/);
+    assert.equal(events.filter(e=>e.type==='player-finish').length,1,'only the finish after the refusal is accepted');
     assert.equal(events.filter(e=>e.type==='handoff').length,0);
   });
 });
@@ -67,9 +84,11 @@ test('incoherent claimed handoffs stop before another input or provider request'
 });
 test('reading a different operation cannot settle this host pending handoff',async t=>{
   for(const args of [{operation_id:'4'.repeat(32)},{operation_id:'unrelated'}]) await t.test(args.operation_id,async sub=>{
+    // The unrelated read leaves the original pending, so finishing waits for its own refused collection.
     const {result,events}=await scenario(sub,[reply(null,[['player_handoff',{...handoffArgs,mode:'pending'}]]),
-      reply(null,[['computer_result',args]]),reply()],{enabledTools:handoffTools});
-    assert.equal(result.ok,true);assert.equal(result.reason,'task_complete');assert.equal(result.requests,3);
+      reply(null,[['computer_result',args]]),reply(null,[['computer_result',{...collectArgs,mode:'refused'}]]),reply()],
+      {enabledTools:handoffTools});
+    assert.equal(result.ok,true);assert.equal(result.reason,'task_complete');assert.equal(result.requests,4);
     assert.equal(events.filter(e=>e.type==='handoff').length,0);
   });
 });

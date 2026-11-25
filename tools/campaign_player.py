@@ -33,6 +33,8 @@ COVERED_PREFIX_FILE='covered-prefix.json'
 COVERED_PREFIX_SCHEMA='curator-covered-prefix/1'
 VERSION_FILE=re.compile(r'v(0|[1-9][0-9]*)\.json')
 HEX_ID=re.compile(r'[0-9a-f]{32}')
+#: The longest one host telemetry line may be.
+EVENT_LINE_LIMIT=32*1048576
 
 
 def write_new(path: Path,value,*,text=False) -> None:
@@ -364,8 +366,10 @@ class HostEvents:
         chunk=self.stream.read(1048576)
         if not chunk:return False
         self.buffer+=chunk
-        if len(self.buffer)>32*1048576:raise ControlError('Host event line exceeds original telemetry bound')
         lines=self.buffer.split(b'\n');self.buffer=lines.pop()
+        # The bound is per line: each complete line, and the line still arriving.
+        if any(len(line)>EVENT_LINE_LIMIT for line in (*lines,self.buffer)):
+            raise ControlError('Host event line exceeds original telemetry bound')
         for line in lines:
             if not line:continue
             value=json.loads(line)
@@ -504,7 +508,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         target=actors/f'{index:03d}'
         child=None;events=None
         record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_usd=usd_text(dollars))
-        started=time.monotonic();ending_at=None
+        # Why the driver itself ended this actor, which a later cleanup failure must not replace.
+        started=time.monotonic();ending_at=None;stop_reason=None
         try:
             actor=application.runtime.add_actor()
             target.mkdir(mode=0o700)
@@ -572,11 +577,12 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                         observed_attempts=total_attempts+len(events.requests),
                         host_seconds_remaining=max(0.,started+seconds-now),latest_response_wall=events.last_response_wall)
                     if stopped.is_set() or now>=min(deadline-30,started+seconds):
-                        application.runtime.stop('Original host deadline/operator cancellation');reason='Original host deadline/cancellation';break
+                        application.runtime.stop('Original host deadline/operator cancellation')
+                        reason=stop_reason='Original host deadline/cancellation';break
                     code=application.runtime.process.poll()
                     if code is not None or application.runtime.channel.stopped.is_set():
                         if ending_at is None:ending_at=now+(45 if code is not None else 30)
-                        if now>=ending_at:reason='Original final-report grace exhausted';break
+                        if now>=ending_at:reason=stop_reason='Original final-report grace exhausted';break
                     elif ending_request is None:
                         dollars_left=EXACT.subtract(dollars,events.counted_usd())
                         ending_request=_record_ending(directory,profile['ending_reserve'],
@@ -624,8 +630,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             reason='Unknown host terminal disposition';break
         except Exception as exc:
             application.runtime.stop('Actor orchestration failed; no successor')
-            reason=f'{type(exc).__name__}: {str(exc)[:500]}'
-            record['orchestration_error']=reason
+            record['orchestration_error']=f'{type(exc).__name__}: {str(exc)[:500]}'
+            # A driver stop (deadline, cancellation, exhausted grace) stays the run's reason; the failure
+            # it led to, such as unresolved accounting of the stopped host, is the orchestration error.
+            reason=stop_reason if stop_reason is not None else record['orchestration_error']
         finally:
             # Nothing more is listed for an actor that has stopped; a version left now waits for the next one.
             if live is not None:live.end()

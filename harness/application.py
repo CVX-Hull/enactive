@@ -58,7 +58,7 @@ class Application:
 
     def snapshot(self, actor_id: str, summary: str) -> tuple[str, str]:
         if not isinstance(summary, str) or len(summary) > 8192:
-            raise PlayerError('Handoff summary must be within8192 characters')
+            raise PlayerError('Handoff summary must be within 8192 characters')
         identity = uuid.uuid4().hex
         packet = dict(schema='player-handoff-context/2', context_id=identity, session=self.runtime.session,
                       actor_id=actor_id, summary=summary, summary_is_hint=True, created_wall=time.time(),

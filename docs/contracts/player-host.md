@@ -309,14 +309,18 @@ and stages every candidate that verifies, deciding each on its own, so one malfo
 or oversized entry never hides an older valid one. When the next request is built,
 the host adopts the newest staged candidate whose message fits within context
 capacity and refuses the rest (`context-capacity` for oversized newer ones,
-`superseded` for older ones). An entry that fails, an older one and one passed over
+`superseded` for older ones); if a same-boundary context cut is possible, an
+oversized candidate stays staged and is decided again after the cut frees room.
+An entry that fails, an older one and one passed over
 for a newer are each recorded as refused with a reason when the next request is
 built (or when the actor ends), and the adopted version stays.
 
 An adopted version is the host's version for every later recall, reminder and
-delivery of that actor. A recall already in flight keeps the version it was
-requested from: its index, the check of its reply and its reminder all use that
-version, and the reminder names it.
+delivery of that actor. Pending knowledge updates are adopted before queued
+reminders are placed: an in-flight recall's index and reply check still use the
+version it was requested from, while placement rebuilds its reminder against the
+adopted version using the selected entries that still exist (dropping it with
+`knowledge-undelivered` reason `superseded` if none remain).
 
 The host states the difference in one message of its own, delimited
 `BEGIN FALLIBLE KNOWLEDGE UPDATE (vN)` and `END FALLIBLE KNOWLEDGE UPDATE (vN)`

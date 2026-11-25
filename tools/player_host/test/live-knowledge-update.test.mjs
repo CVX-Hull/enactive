@@ -9,7 +9,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { deliveryScenario, knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
 import { updateDelivery, updateEntry, validateKnowledge } from '../knowledge.mjs';
-import { article, emptyKnowledge as empty, fact, position, reply } from './host-scenario.mjs';
+import { INPUT_LIMIT_BYTES } from '../host.mjs';
+import { article, emptyKnowledge as empty, fact, position, realDelay, reply } from './host-scenario.mjs';
 
 const input = () => reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]]);
 const messageText = m => typeof m.content === 'string' ? m.content : (m.content ?? []).filter(p => p.type === 'text').map(p => p.text).join('');
@@ -70,27 +71,47 @@ test('a listed newer version reaches the next request as its own delimited messa
   assert.deepEqual(index,['article-a','article-b','article-c']);
 });
 
-test('a recall in flight when a version is adopted is validated against the version it was requested from',async t => {
+// The reminder recall starts on v2 and answers only after v3 was delivered, selecting `selected`.
+async function inFlightRecall(t, selected) {
   const dir = await directory(t);
   let delivered, recalled;
   const wasDelivered = new Promise(resolve => { delivered = resolve; }), wasRecalled = new Promise(resolve => { recalled = resolve; });
-  const {result,events,payloads} = await deliveryScenario(dir,{knowledgeUpdates:true,
+  const run = await deliveryScenario(dir,{knowledgeUpdates:true,
     onEvent:event => {
       if (event.type === 'knowledge-delivery' && event.kind === 'update') delivered();
       if (event.type === 'knowledge-recall' && event.request_id === 'recall-2') recalled();
     },
-    // The reminder recall starts on v2 and answers only after v3 was delivered, naming an entry v3 no longer has.
-    recallFetch:async n => { if (n === 2) await wasDelivered; return recallReply(n === 1 ? ['article-a'] : n === 2 ? ['fact-alone'] : []); },
+    recallFetch:async n => { if (n === 2) await wasDelivered; return recallReply(n === 1 ? ['article-a'] : n === 2 ? selected : []); },
     playerFetch:play({1:() => listUpdate(dir,newer()),2:() => wasRecalled},3)});
-  assert.equal(result.ok,true);
-  const recall = events.find(e => e.type === 'knowledge-recall' && e.request_id === 'recall-2');
-  assert.deepEqual([recall.status,recall.version,recall.fact_ids],['selected','v2',['fact-alone']]);
-  const update = updates(events)[0], reminder = events.find(e => e.type === 'knowledge-delivery' && e.kind === 'reminder');
-  assert.ok(events.indexOf(update) < events.indexOf(recall),'the version was adopted while the recall was in flight');
-  assert.deepEqual([reminder.version,reminder.recall_request_id,reminder.receiving_player_request_id],['v2','recall-2','request-3']);
-  assert.equal(JSON.parse(reminder.text.split('\n')[1]).version,'v2');
+  assert.equal(run.result.ok,true);
+  const recall = run.events.find(e => e.type === 'knowledge-recall' && e.request_id === 'recall-2');
+  // The reply itself is still checked against the version the recall was requested from.
+  assert.deepEqual([recall.status,recall.version],['selected','v2']);
+  const update = updates(run.events)[0];
+  assert.ok(run.events.indexOf(update) < run.events.indexOf(recall),'the version was adopted while the recall was in flight');
+  return {...run, update};
+}
+
+test('a recall in flight when a version is adopted is validated against its own version and its reminder is rebuilt from the adopted one',async t => {
+  // R-REGRESSION (#946): a reminder from v2 was injected after the player had adopted v3.
+  const {events,payloads,update} = await inFlightRecall(t,['article-b']);
+  const reminder = events.find(e => e.type === 'knowledge-delivery' && e.kind === 'reminder');
+  assert.deepEqual([reminder.version,reminder.recall_request_id,reminder.receiving_player_request_id,reminder.article_ids],
+    ['v3','recall-2','request-3',['article-b']]);
+  const data = JSON.parse(reminder.text.split('\n')[1]);
+  assert.deepEqual([data.version,data.leads.map(lead => lead.lead)],['v3',['A revised later lead.']]);
   const sent = players(payloads).at(-1).messages.map(messageText);
   assert.ok(sent.indexOf(update.text) >= 0 && sent.indexOf(update.text) < sent.indexOf(reminder.text),'each message stays where it was first sent');
+  assert.ok(!events.some(e => e.type === 'knowledge-delivery' && e.kind === 'reminder' && e.version === 'v2'),
+    'no v2 reminder reaches the player after v3');
+});
+
+test('a reminder whose selections the adopted version no longer lists is not sent',async t => {
+  const {events,payloads} = await inFlightRecall(t,['fact-alone']);
+  assert.equal(events.filter(e => e.type === 'knowledge-delivery' && e.kind === 'reminder').length,0);
+  const dropped = events.find(e => e.type === 'knowledge-undelivered' && e.kind === 'reminder');
+  assert.deepEqual([dropped.version,dropped.recall_request_id,dropped.fact_ids,dropped.reason],['v2','recall-2',['fact-alone'],'superseded']);
+  assert.ok(!players(payloads).at(-1).messages.map(messageText).some(text => text.includes('An unfiled claim.')));
 });
 
 test('an entry or file that does not verify is refused with its reason and play goes on with the adopted version',async t => {
@@ -116,6 +137,29 @@ test('an entry or file that does not verify is refused with its reason and play 
   assert.deepEqual(refused.find(e => e.version === 'v3').coverage,base.coverage);
   assert.ok(events.filter(e => e.type === 'knowledge-recall').every(e => e.version === 'v2'));
   assert.equal(events.at(-1).reason,'task_complete');
+});
+
+test('a list line over the input bound is consumed through its newline, so its tail is never read as an entry',async t => {
+  // R-REGRESSION (#946): the refresh skipped only the first bound's bytes of an oversized line, so the rest of
+  // that line was read as a fresh line and a valid-looking entry at its end was adopted.
+  const dir = await directory(t), smuggled = newer(), later = newer({version:'v4'});
+  const list = join(dir,'actors/001/knowledge-updates.jsonl');
+  const {result,events} = await deliveryScenario(dir,{knowledgeUpdates:true,
+    recallFetch:() => recallReply([]),
+    // Each wait stays inside the route's request deadline while the refresh polls the list more than once.
+    playerFetch:play({
+      1:async () => {
+        // The file and its entry exist; the entry only ever appears as the tail of one oversized line.
+        const entry = await listUpdate(dir,smuggled,{line:''});
+        await appendFile(list,'x'.repeat(INPUT_LIMIT_BYTES)+JSON.stringify(entry)+'\n');
+        await realDelay(1500);
+      },
+      2:() => realDelay(1500),
+      3:async () => { await listUpdate(dir,later); await realDelay(1500); },
+    },5)});
+  assert.equal(result.ok,true,result.reason);
+  assert.deepEqual(updates(events).map(e => [e.outcome,e.version,e.reason ?? null]),
+    [['refused',null,'invalid-entry'],['delivered','v4',null]]);
 });
 
 test('from an empty store the update is the index of the version, and recall begins with the next input',async t => {

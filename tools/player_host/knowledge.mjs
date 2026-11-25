@@ -269,7 +269,8 @@ export function selection(message, knowledge) {
   const index = knowledgeIndex(knowledge);
   const selected = new Map();
   for (const id of value.articles) {
-    const row = index.find(item => item.id === id || item.title === id);
+    // An exact ID names its own entry even when another entry has that text as its title.
+    const row = index.find(item => item.id === id) ?? index.find(item => item.title === id);
     if (!row) invalid('unknown-entry');
     const item = knowledge.articles.find(a => a.id === row.id) ?? knowledge.facts.find(f => f.id === row.id);
     selected.set(item.id, item);

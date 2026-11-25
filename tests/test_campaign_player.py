@@ -919,3 +919,45 @@ def test_successor_starts_in_ending_if_predecessor_crossed_reserve_between_polls
     assert not (tmp_path/'actors/001/control.json').exists()
     launched=json.loads((tmp_path/'actors/002/host-process.json').read_text())['argv']
     assert launched[launched.index('--pending-control-id')+1]==intent['id']
+
+
+def test_a_trace_line_within_the_bound_is_read_wherever_read_boundaries_fall(tmp_path):
+    """R-REGRESSION (#946): the bound was checked on the read buffer, so an allowed line that began
+    partway through a read made the buffer exceed the bound and the whole trace unreadable."""
+    padding=lambda size:dict(type='assistant-text',text='x'*size)
+    # The long line starts three quarters into the first read and ends inside a later, full read.
+    rows=[START,padding(786432),padding(31*1048576+524288),padding(1048576),
+          dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
+          dict(type='settled',unpriced_recall_requests=0,requests=1,player_requests=1,recall_requests=0,ok=True,spent_usd='0.1',unpriced_requests=0)]
+    result=finished(tmp_path,rows)
+    assert result['accounting_complete'] and result['spent_usd']=='0.1',result
+    path=tmp_path/'host.jsonl'
+    path.write_text(json.dumps(START)+'\n'+json.dumps(padding(32*1048576)))
+    events=HostEvents(path)
+    try:
+        with pytest.raises(ControlError,match='exceeds original telemetry bound'):events.finish()
+    finally:events.close()
+
+
+def test_a_driver_stop_stays_the_reason_when_the_stopped_hosts_accounting_is_unresolved(tmp_path):
+    """R-REGRESSION (#946): the driver's own stop reason was replaced by the ControlError its stopped,
+    unsettled host then raised, hiding why the run ended."""
+    profile,route,application=driver_case(tmp_path,'Frozen mission HANG')
+    stopped=threading.Event();threading.Timer(1,stopped.set).start()
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',stopped,time.monotonic()+300)
+    actor=result['actors'][0]
+    assert result['reason']=='Original host deadline/cancellation',result
+    assert actor['orchestration_error'].startswith('ControlError: Host accounting'),actor
+    assert not actor['accounting_complete']
+
+
+def test_exhausted_final_report_grace_stays_the_reason_when_the_stopped_hosts_accounting_is_unresolved(tmp_path):
+    profile,route,application=driver_case(tmp_path,'Frozen mission HANG')
+    application.runtime.channel.stopped.set()
+    # Only the driver's clock runs fast, so the 30-second grace passes in about a second and a half.
+    start=time.monotonic()
+    fast=SimpleNamespace(monotonic=lambda:start+(time.monotonic()-start)*20,sleep=time.sleep,time=time.time)
+    with patch('tools.campaign_player.time',fast):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),fast.monotonic()+300)
+    assert result['reason']=='Original final-report grace exhausted',result
+    assert result['actors'][0]['orchestration_error'].startswith('ControlError: Host accounting')

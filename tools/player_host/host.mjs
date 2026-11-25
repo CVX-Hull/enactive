@@ -12,7 +12,6 @@ import { normalizeContext } from '@earendil-works/pi-ai/utils/transcript';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
 import { validateKnowledge, knowledgeIndex, selection, delivery, updateDelivery, updateEntry, coverageEntry,
   cutBriefing, cutMarker, versionNumber } from './knowledge.mjs';
-import { createValidationFeedback } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
 export const CONTROL_LIMIT_BYTES = 4096;
@@ -225,20 +224,26 @@ export function imageOmission(messages, maxImages, block) {
 /** Request-only projection. Canonical messages stay intact; telemetry separately projects image references.
  * Count-only block eviction: beyond maxImages, the oldest images are omitted in whole
  * blocks, so the serialized prefix stays byte-stable between evictions. Block 1 omits
- * exactly the overflow. `sourceIds` maps a tool call to the source identity of its result;
- * an omission marker names it, so the player can read the frame again by source ID. The
- * marker is a function of the frame alone, so it stays byte-identical on every later request. */
-export function projectImageContext(messages, maxImages, block, sourceIds = new Map()) {
+ * exactly the overflow. `sourceOf` gives the source identity of one canonical tool-result
+ * message (keyed by that message, never by its tool call ID, which a later response may
+ * reuse); an omission marker names it, so the player can read the frame again by source ID.
+ * The marker is a function of the frame alone, so it stays byte-identical on every later request. */
+export function projectImageContext(messages, maxImages, block, sourceOf = () => null) {
   requireThat(Number.isSafeInteger(block) && block > 0 && block <= maxImages);
   const projected = structuredClone(messages);
   const {protectedImages, blocked, omitted:omittedCount} = imageOmission(messages, maxImages, block);
-  const images = [];
+  const images = [], occurrences = new Map();
   for (const [messageIndex, message] of projected.entries()) {
     let imageIndex = 0;
     if (!Array.isArray(message.content)) continue;
+    const toolCallId = message.toolCallId ?? null;
+    // Which result with this tool call ID this is, so a reused ID still names its own message.
+    const occurrence = toolCallId === null ? 0 : occurrences.get(toolCallId) ?? 0;
+    if (toolCallId !== null && message.role === 'toolResult') occurrences.set(toolCallId, occurrence + 1);
+    const sourceId = sourceOf(messages[messageIndex]) ?? null;
     for (const [contentIndex, part] of message.content.entries()) {
       if (part.type === 'image') images.push({messageIndex, contentIndex, imageIndex:imageIndex++,
-        toolCallId:message.toolCallId ?? null, part});
+        toolCallId, occurrence, sourceId, part});
     }
   }
   const omitted = images.slice(0, omittedCount);
@@ -250,12 +255,14 @@ export function projectImageContext(messages, maxImages, block, sourceIds = new 
     const sha256 = createHash('sha256').update(decoded).digest('hex');
     omittedDetails.set(image, {sha256, bytes:decoded.length});
     const provenance = {tool_call_id:image.toolCallId, image_index:image.imageIndex, sha256};
-    const sourceId = sourceIds.get(image.toolCallId);
+    const {sourceId} = image;
     projected[image.messageIndex].content[image.contentIndex] = {type:'text',
       text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; ${sourceId != null ? `source_id=${sourceId}; ` : ''}image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.${sourceId != null ? ` To see this frame again, read source_id ${sourceId} with player_source.` : ''}`};
     if (omissions.length < 16) omissions.push(provenance);
   }
+  // `source_id` and `occurrence` attribute each image to its own canonical result for the manifest.
   return {messages:projected, images:images.map(image => ({tool_call_id:image.toolCallId, image_index:image.imageIndex,
+    source_id:image.sourceId, occurrence:image.occurrence,
     ...(omittedDetails.has(image) ? {omitted:true, ...omittedDetails.get(image)} : {omitted:false})})),
     summary:{max_context_images:maxImages, context_image_block:block, input_images:images.length,
     protected_images:protectedImages, retained_images:images.length - omitted.length,
@@ -348,21 +355,26 @@ const TEXT_FIELDS = ['reasoning_content', 'reasoning', 'reasoning_text'];
  * Parts are listed per message in payload order (reasoning, text/content, tool calls);
  * an image evicted from the request is listed as an `omitted` image directly after the
  * tool-result text that carries its marker. `images` is projectImageContext's ordered
- * image list, which attributes sent images to tool calls; `sourceIds` maps tool call to
- * the source identity of its result. Bodies and image bytes are never returned. */
-export function payloadManifestParts(payload, images = [], sourceIds = new Map()) {
-  const parts = [], toolNames = new Map(), omitted = new Map();
-  for (const image of images) if (image.omitted) omitted.set(image.tool_call_id, [...omitted.get(image.tool_call_id) ?? [], image]);
+ * image list, which attributes each image to the tool call and the source identity of its
+ * own result, even when a later result reuses the call ID. Bodies and image bytes are never returned. */
+export function payloadManifestParts(payload, images = []) {
+  const parts = [], toolNames = new Map(), omitted = new Map(), toolSeen = new Map();
+  // Omitted images wait for their own tool message: the n-th result with a call ID is the n-th tool message with it.
+  const resultKey = (id, occurrence) => JSON.stringify([id, occurrence ?? 0]);
+  for (const image of images) if (image.omitted) {
+    const key = resultKey(image.tool_call_id, image.occurrence);
+    omitted.set(key, [...omitted.get(key) ?? [], image]);
+  }
   const sentImages = images.filter(image => !image.omitted);
   const sentParts = (payload.messages ?? []).flatMap(message => Array.isArray(message.content) ? message.content : [])
     .filter(part => part?.type === 'image_url').length;
   const attributed = sentImages.length === sentParts;
   let sentSeen = 0;
   const textPart = (role, kind, value, extra = {}) => parts.push({role, kind, bytes:Buffer.byteLength(value), sha256:sha256Hex(value), ...extra});
-  const imagePart = (role, image, source) => parts.push({role, kind:'image', bytes:image.bytes, sha256:image.sha256,
+  const imagePart = (role, image) => parts.push({role, kind:'image', bytes:image.bytes, sha256:image.sha256,
     ...(image.tool_call_id != null ? {tool_call_id:image.tool_call_id, image_index:image.image_index} : {}),
-    ...(source != null ? {source_id:source} : {}), state:image.omitted ? 'omitted' : 'sent'});
-  const emitOmitted = id => { for (const image of omitted.get(id) ?? []) imagePart('tool', image, sourceIds.get(id)); omitted.delete(id); };
+    ...(image.source_id != null ? {source_id:image.source_id} : {}), state:image.omitted ? 'omitted' : 'sent'});
+  const emitOmitted = key => { for (const image of omitted.get(key) ?? []) imagePart('tool', image); omitted.delete(key); };
   for (const message of payload.messages ?? []) {
     const role = message.role === 'developer' ? 'system' : message.role;
     for (const key of TEXT_FIELDS) if (typeof message[key] === 'string' && message[key]) textPart(role, 'reasoning', message[key]);
@@ -378,14 +390,19 @@ export function payloadManifestParts(payload, images = [], sourceIds = new Map()
         const bytes = comma < 0 ? Buffer.from(url) : Buffer.from(url.slice(comma + 1), 'base64');
         const attribution = attributed ? sentImages[sentSeen] : undefined;
         sentSeen++;
-        imagePart(role, {...attribution, omitted:false, bytes:bytes.length, sha256:sha256Hex(bytes)}, attribution && sourceIds.get(attribution.tool_call_id));
+        imagePart(role, {tool_call_id:attribution?.tool_call_id, image_index:attribution?.image_index,
+          source_id:attribution?.source_id, omitted:false, bytes:bytes.length, sha256:sha256Hex(bytes)});
       }
     }
     for (const call of message.tool_calls ?? []) {
       toolNames.set(call.id, call.function?.name ?? null);
       textPart(role, 'tool_call', JSON.stringify(call), {tool_call_id:call.id, tool:call.function?.name ?? null});
     }
-    if (tool) emitOmitted(message.tool_call_id);
+    if (tool) {
+      const occurrence = toolSeen.get(message.tool_call_id) ?? 0;
+      toolSeen.set(message.tool_call_id, occurrence + 1);
+      emitOmitted(resultKey(message.tool_call_id, occurrence));
+    }
   }
   // A marker whose tool message is not in the payload still stays visible.
   for (const id of [...omitted.keys()]) emitOmitted(id);
@@ -423,6 +440,19 @@ function resultSourceId(result) {
   }
   return null;
 }
+
+/** Whether one computer input result leaves its delivery uncertain: a partial or unknown operation record, or a
+ * transport receipt (no record; its first text) whose outcome is unknown. */
+function uncertainDelivery(result, record) {
+  if (record) return record.schema === 'player-computer-operation/1' && ['partial', 'unknown'].includes(record.status);
+  let value;
+  try { value = JSON.parse((Array.isArray(result?.content) ? result.content : []).find(part => part.type === 'text')?.text); }
+  catch { return false; }
+  return object(value) && value.schema === 'player-transport/2' && value.status === 'unknown';
+}
+/** Calls that may still follow an uncertain input in its turn: collection, reads and the input stop. */
+const AFTER_UNCERTAIN_INPUT = new Set(['computer_result', 'player_result', 'player_source', 'player_knowledge_read',
+  'player_knowledge_query', 'computer_stop']);
 
 function assistantNarration(content) {
   const bytes = Buffer.from((content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n'));
@@ -623,8 +653,31 @@ async function peekFirstEvent(response, signal) {
   const cancel = () => { void reader.cancel().catch(() => {}); };
   signal.addEventListener('abort', cancel, {once:true});
   const chunks = [];
-  let bytes = 0, text = '', done = false, broken = false, first = null;
+  let bytes = 0, done = false, broken = false, first = null;
+  // Event-stream fields parsed line by line as chunks arrive, so the first event does not depend on where
+  // chunk boundaries fall: a CR LF may be split across chunks, and one event may carry several data lines.
+  let pending = '', dataLines = [], sawData = false;
   const decoder = new TextDecoder();
+  const feed = (text, final = false) => {
+    pending += text;
+    for (;;) {
+      const end = /\r\n|\r|\n/.exec(pending);
+      // A CR at the end of what has arrived may be the first half of a CR LF.
+      if (!end || (end[0] === '\r' && end.index === pending.length - 1 && !final)) return;
+      const line = pending.slice(0, end.index);
+      pending = pending.slice(end.index + end[0].length);
+      if (line === '') {
+        if (dataLines.length) { first = dataLines.join('\n'); return; }
+        continue;
+      }
+      if (line.startsWith(':')) continue;
+      const colon = line.indexOf(':');
+      if ((colon < 0 ? line : line.slice(0, colon)) !== 'data') continue;
+      const value = colon < 0 ? '' : line.slice(colon + 1);
+      dataLines.push(value.startsWith(' ') ? value.slice(1) : value);
+      sawData = true;
+    }
+  };
   try {
     while (first === null && bytes < PEEK_LIMIT) {
       signal.throwIfAborted();
@@ -633,12 +686,10 @@ async function peekFirstEvent(response, signal) {
       try { step = await reader.read(); }
       catch (error) { signal.throwIfAborted(); broken = true; break; }
       signal.throwIfAborted();
-      if (step.done) { done = true; break; }
+      if (step.done) { done = true; feed(decoder.decode(), true); break; }
       chunks.push(step.value);
       bytes += step.value.byteLength;
-      text += decoder.decode(step.value, {stream:true}).replace(/\r\n?/g, '\n');
-      const match = /(?:^|\n)data:[ ]?([^\n]*)\n\n/.exec(text);
-      if (match) first = match[1];
+      feed(decoder.decode(step.value, {stream:true}));
     }
   } catch (error) {
     cancel();
@@ -651,8 +702,8 @@ async function peekFirstEvent(response, signal) {
     try { event = JSON.parse(first); } catch { /* Leave malformed events for the SDK. */ }
   }
   const errorEvent = object(event?.error);
-  // A partial data event that then breaks stays terminal, as before.
-  const noData = !/(?:^|\n)data:/.test(text);
+  // A partial data event that then breaks stays terminal, as before, including a data line still arriving.
+  const noData = !sawData && !/^data(?::|$)/.test(pending);
   const failed = errorEvent || first?.trim() === '[DONE]' || ((broken || done) && noData);
   const replay = new ReadableStream({
     start(controller) { for (const chunk of chunks) controller.enqueue(chunk); if (done) controller.close(); },
@@ -665,6 +716,15 @@ async function peekFirstEvent(response, signal) {
   const usage = errorEvent ? event.usage ?? event.choices?.[0]?.usage : null;
   return {failed, reported:object(usage) ? withUsageRecord(null, usage) : null, cancel:() => reader.cancel().catch(() => {}),
     response:new Response(replay, {status:response.status, statusText:response.statusText, headers:response.headers})};
+}
+
+/** The parsed body of one serialized provider attempt, or a HostError naming why it must not be sent: a body
+ * that is not JSON text, or (on an OpenRouter route) a missing session-affinity header. Pi enables that header
+ * by its own detection; this fails closed before any charge if a maintained-SDK change ever stops sending it. */
+export function providerPayload(init, provider, affinityId) {
+  requireThat(typeof init?.body === 'string', 'invalid-provider-payload');
+  if (provider === 'openrouter') requireThat(new Headers(init.headers).get('x-session-id') === affinityId, 'session-affinity-missing');
+  try { return JSON.parse(init.body); } catch { throw new HostError('invalid-provider-payload'); }
 }
 
 function retryableRefusal(error) {
@@ -728,7 +788,8 @@ function inspectHandoff(name, args, result, pending, session, actorId) {
   }
   if (value.status === 'refused') {
     valid(value.handoff === null);
-    return {};
+    // Collection proves the pending original will never seal.
+    return {refused:true};
   }
   const issued = value.handoff;
   valid(value.status === 'sealed' && object(issued)
@@ -765,6 +826,10 @@ export async function runHost(options) {
   // `projectedOmissions` is how many images the last request's projection omitted from its active history.
   let briefing, currentBriefingTokens, cutState, cutRestored = false, projectedOmissions = 0;
   let pendingReminders = [], unsentDeliveries = [], completedInputs = 0, latestResult;
+  // The assistant message whose call is being dispatched, and the one whose input delivery became uncertain.
+  let dispatchingTurn, uncertainTurn;
+  // The ids each reminder selected, so a reminder outlived by a newer adopted version is rebuilt from that version.
+  const reminderSelections = new WeakMap();
   const recentCalls = [];
   const countAttempt = (reported, role = "player") => {
     const priced = reported !== null && reported !== MALFORMED_COST;
@@ -855,6 +920,7 @@ export async function runHost(options) {
       if (amountText(reported) === null) throw new Error('cost-unreported');
       const articles = selection(message, version);
       const selectedDelivery = delivery(version, articles, mode, id);
+      reminderSelections.set(selectedDelivery, articles.map(item => item.id));
       emit('knowledge-recall', {kind:mode, status:articles.length ? 'selected' : 'silence', request_id:id,
         article_ids:articles.filter(a => a.body).map(a => a.id), fact_ids:selectedDelivery.fact_ids,
         version:version.version, ...replyFields()});
@@ -878,7 +944,7 @@ export async function runHost(options) {
   // off the request path reads whole unread lines and their files in an isolated helper process, verifies
   // them and stages them in memory; building a player request only takes what is staged, and closing the
   // helper kills any stalled read immediately so it never delays settlement or CLI exit.
-  let updatesOffset = 0, updateRefresh = null, refreshAgain = false, updatesPoll, updatesClosed = false;
+  let updatesOffset = 0, skippingUpdateLine = false, updateRefresh = null, refreshAgain = false, updatesPoll, updatesClosed = false;
   let updateReader = null, updateReaderBuf = '', updateReadSeq = 0;
   const pendingReads = new Map();
   const pendingKnowledgeUpdates = new Map();
@@ -948,15 +1014,24 @@ export async function runHost(options) {
   const unreadUpdateLines = async () => {
     const data = await readUpdateFile(options.knowledgeUpdates, updatesOffset, INPUT_LIMIT_BYTES);
     if (!data || data.length === 0) return [];
+    let start = 0;
+    if (skippingUpdateLine) {
+      // The rest of a line over the input bound is consumed through its newline, never read as an entry.
+      const newline = data.indexOf(10);
+      if (newline < 0) { updatesOffset += data.length; return []; }
+      skippingUpdateLine = false;
+      start = newline + 1;
+    }
     const end = data.lastIndexOf(10);
-    if (end < 0) {
+    if (end < start) {
       // A line still being appended is read once it is whole; one over the input bound is never an entry.
-      if (data.length < INPUT_LIMIT_BYTES) return [];
+      if (start > 0 || data.length < INPUT_LIMIT_BYTES) { updatesOffset += start; return []; }
       updatesOffset += data.length;
+      skippingUpdateLine = true;
       return [''];
     }
     updatesOffset += end + 1;
-    return data.subarray(0, end).toString('utf8').split('\n').filter(line => line.trim());
+    return data.subarray(start, end).toString('utf8').split('\n').filter(line => line.trim());
   };
   // Refusals wait in memory with the version held when they were decided and are recorded when the next
   // request is built (or when the actor ends), so the refresh itself never writes telemetry between events.
@@ -1023,16 +1098,17 @@ export async function runHost(options) {
   // Notices sent so far, each with the number of history messages it followed (append-only), and
   // the kinds already announced in full.
   const placedNotices = [], noticed = new Set();
-  // Context manifest state: the latest projection's ordered images, tool-result source
-  // identities, and the previous manifest (part keys and omitted indexes) for deltas.
+  // Context manifest state: the latest projection's ordered images and the previous manifest
+  // (part keys and omitted indexes) for deltas.
   let contextImages = [], manifestBase = null;
-  const sourceIds = new Map();
   const toolOperations = new Map();
+  // A tool result's source identity is pinned to its canonical content, never to its call ID.
   const operationsByResult = new WeakMap(), sourcesByContent = new WeakMap();
+  const sourceOf = message => Array.isArray(message?.content) ? sourcesByContent.get(message.content) ?? null : null;
   // Delta against the previous attempt's manifest: the leading parts identical to it are
   // counted, not repeated. Replay rule: contract `context-manifest` row.
   const nextContextManifest = (attemptId, payload) => {
-    const parts = payloadManifestParts(payload, contextImages, sourceIds);
+    const parts = payloadManifestParts(payload, contextImages);
     const keys = parts.map(part => JSON.stringify(part));
     const previous = manifestBase?.keys ?? [];
     let reused = 0;
@@ -1187,17 +1263,20 @@ export async function runHost(options) {
         if (name === 'computer_stop') streamRecoveryAvailable = false;
         const createsOperation = name === 'computer_input' || name === 'computer_observe';
         const record = resultRecord(result);
-        if (createsOperation) {
-          streamRecoveryAvailable &&= record?.schema === 'player-computer-operation/1'
-            && record.status === 'completed' && name === `computer_${record.kind}`
-            && record.actor_id === options.actorId && record.session === options.session;
-        }
-        const latest = toLlmContent(result);
-        if (latest.some(part => part.type === 'image')) latestResult = latest;
+        const completedOperation = createsOperation && record?.schema === 'player-computer-operation/1'
+          && record.status === 'completed' && name === `computer_${record.kind}`
+          && record.actor_id === options.actorId && record.session === options.session;
+        if (createsOperation) streamRecoveryAvailable &&= completedOperation;
+        // The rest of this turn was chosen before this delivery was known; only collection and reads follow it.
+        if (name === 'computer_input' && uncertainDelivery(result, record)) uncertainTurn = dispatchingTurn;
+        // One model-facing content array: its identity pins the result's source for projection and cuts.
+        const content = toLlmContent(result);
+        if (content.some(part => part.type === 'image')) latestResult = content;
         const sourceId = resultSourceId(result);
-        if (sourceId !== null) sourceIds.set(toolCallId, sourceId);
+        if (sourceId !== null) sourcesByContent.set(content, sourceId);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
-        if (name === 'computer_input') {
+        // The reminder cadence counts completed inputs only, never a partial, unknown or refused one.
+        if (name === 'computer_input' && completedOperation) {
           completedInputs++;
           if (completedInputs % configuration.recall.every === 0 && !recallFlight) {
             recallTask = recall('reminder').then(value => { if (value) pendingReminders.push(value); });
@@ -1208,6 +1287,8 @@ export async function runHost(options) {
         try {
           const transition = inspectHandoff(name, args, result, pendingHandoff, options.session, options.actorId);
           if (transition.pending) pendingHandoff = transition.pending;
+          // A definitive refusal of the pending original leaves nothing to collect.
+          if (transition.refused) pendingHandoff = undefined;
           if (transition.completed) { handoff = transition.completed; endRecall(); }
           if (handoff) emit('handoff', {request_id:requestId, tool_call_id:toolCallId, ...handoff, grants_authority:false});
         } catch {
@@ -1216,15 +1297,11 @@ export async function runHost(options) {
           stop('invalid-handoff-receipt');
           throw new HostError(fatal);
         }
-        const content = toLlmContent(result);
         if (result.isError === true) content.unshift({type:'text', text:'MCP isError: true'});
-        if (configuration.context_cut !== null) {
-          if (sourceId !== null) sourcesByContent.set(content, sourceId);
-          if (createsOperation || name === 'player_handoff') {
-            const op = identity(record?.operation_id) && record.actor_id === options.actorId
-              && record.session === options.session ? record.operation_id : UNCOVERED_OPERATION;
-            toolOperations.set(toolCallId, op);
-          }
+        if (configuration.context_cut !== null && (createsOperation || name === 'player_handoff')) {
+          const op = identity(record?.operation_id) && record.actor_id === options.actorId
+            && record.session === options.session ? record.operation_id : UNCOVERED_OPERATION;
+          toolOperations.set(toolCallId, op);
         }
         return {content, details:undefined, isError:result.isError === true};
       }};
@@ -1238,6 +1315,8 @@ export async function runHost(options) {
         control_id:{anyOf:[{type:'null'}, {type:'string', pattern:'^[a-f0-9]{32}$'}]}}}),
       async execute(toolCallId, args) {
         requireThat(!fatal && !handoff && !finish, 'host-already-stopped');
+        // An unresolved handoff may still seal; collect it with computer_result before finishing.
+        requireThat(!pendingHandoff, 'handoff-pending');
         requireThat(args.intent.trim().length > 0 && args.intent.isWellFormed()
           && (args.cites ?? []).every(id => id.isWellFormed()), 'invalid-finish');
         requireThat(args.report.isWellFormed() && args.source_ids.every(id => id.isWellFormed()), 'invalid-finish');
@@ -1249,8 +1328,6 @@ export async function runHost(options) {
         emit('player-finish', {request_id:requestId, tool_call_id:toolCallId, ...finish, player_claim:true, game_persistence:'unverified', native_exit:'unverified'});
         return {content:[{type:'text', text:'Player finish claim accepted; automation is ending.'}], details:undefined, terminate:true};
       }});
-    const validationFeedback = createValidationFeedback(tools, diagnostic =>
-      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
     const survivingNotices = cutIndex => placedNotices.filter(({at}) => at >= cutIndex)
       .map(({at, message}) => ({at:at - cutIndex, message}));
     const activeContext = validated => {
@@ -1351,6 +1428,66 @@ export async function runHost(options) {
         tokens_after:contextTokens(after).tokens, briefing_tokens:briefingTokens, images_after:imageCount(after), source_ids_count:omittedSources.size});
       return after;
     };
+    // Adopts the newest staged version whose message fits the request built so far, refusing the others with
+    // their reasons. With `deferOversized`, a newest valid version that does not fit stays staged with every
+    // older one, and the call returns true: the caller decides them again after this boundary's cut.
+    const adoptStaged = (validated, at, deferOversized) => {
+      if (!options.knowledgeUpdates) return false;
+      try {
+        flushRefusals();
+        const candidates = [...pendingKnowledgeUpdates.values()].sort((a, b) => b.entry.number - a.entry.number);
+        pendingKnowledgeUpdates.clear();
+        if (!candidates.length) return false;
+        const projected = projectImageContext(activeContext(validated), configuration.max_context_images,
+          configuration.context_image_block, sourceOf);
+        const before = contextTokens(projected.messages).tokens;
+        const previousVersion = knowledge.version;
+        let adopted = false;
+        for (const [index, candidate] of candidates.entries()) {
+          if (adopted) { refuseUpdate(candidate.entry, 'superseded', {previous_version:previousVersion}); continue; }
+          if (candidate.entry.number <= heldNumber()) { refuseUpdate(candidate.entry, 'not-newer'); continue; }
+          if (knowledge.repository_id !== null && candidate.entry.repository_id !== knowledge.repository_id) {
+            refuseUpdate(candidate.entry, 'repository-mismatch'); continue;
+          }
+          let update;
+          try { update = updateDelivery(knowledge, candidate.knowledge); } catch {
+            refuseUpdate(candidate.entry, 'invalid-delivered-knowledge'); continue;
+          }
+          const message = userMessage(update.text);
+          if (before + estimateMessageTokens(message) + configuration.context_reserve_tokens < configuration.model.contextWindow) {
+            knowledge = candidate.knowledge;
+            placedNotices.push({at, message});
+            unsentDeliveries.push(update);
+            adopted = true;
+          } else if (deferOversized) {
+            for (const rest of candidates.slice(index)) pendingKnowledgeUpdates.set(rest.entry.number, rest);
+            flushRefusals();
+            return true;
+          } else {
+            refuseUpdate(candidate.entry, 'context-capacity');
+          }
+        }
+        flushRefusals();
+      } catch (error) {
+        emit('knowledge-delivery', {kind:'update', outcome:'refused', version:null, previous_version:knowledge.version,
+          coverage:null, reason:'update-check-failed', error_name:error?.name ?? null});
+      }
+      return false;
+    };
+    // A completed reminder is placed as selected when its version is still the one held. A reminder outlived
+    // by a newer adopted version is rebuilt from that version with the selected entries it still lists, and
+    // one with none left is not sent.
+    const placeReminder = (value, at) => {
+      if (value.version !== knowledge.version) {
+        const listed = new Set(knowledgeIndex(knowledge).map(row => row.id));
+        const items = (reminderSelections.get(value) ?? []).filter(id => listed.has(id))
+          .map(id => knowledge.articles.find(item => item.id === id) ?? knowledge.facts.find(item => item.id === id));
+        if (!items.length) { emit('knowledge-undelivered', {...value, reason:'superseded'}); return; }
+        value = delivery(knowledge, items, 'reminder', value.recall_request_id);
+      }
+      placedNotices.push({at, message:userMessage(value.text)});
+      unsentDeliveries.push(value);
+    };
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
@@ -1361,62 +1498,26 @@ export async function runHost(options) {
         // Pi requires this hook never to throw/reject. Latch a terminal stop and
         // return safe canonical context; streamFn checks it before charging/fetch.
         try {
-          // Memoize against canonical SDK objects before image projection clones
-          // them. Earlier diagnostic text remains stable in subsequent prefixes.
-          const validated = validationFeedback(messages);
-          // Notices already sent stay where they were first sent (see below), so they count here.
-          for (const value of pendingReminders.splice(0)) {
-            placedNotices.push({at:messages.length, message:userMessage(value.text)});
-            unsentDeliveries.push(value);
-          }
+          const validated = messages;
           for (const entry of pendingCoverageUpdates.splice(0)) {
             if (entry.restored) cutRestored = true;
             else if (entry.actor_id === options.actorId) coveredByVersion.set(versionNumber(entry.version), entry.operation_id);
           }
           // A staged newer version becomes the adopted one here, between requests, and its difference is one
           // more placed message. Only memory is read: the files were read and verified by the refresh. This
-          // has its own failure boundary: it can refuse an update, never stop the host.
-          if (options.knowledgeUpdates) {
-            try {
-              flushRefusals();
-              const candidates = [...pendingKnowledgeUpdates.values()].sort((a, b) => b.entry.number - a.entry.number);
-              pendingKnowledgeUpdates.clear();
-              if (candidates.length) {
-                const projected = projectImageContext(activeContext(validated), configuration.max_context_images,
-                  configuration.context_image_block, sourceIds);
-                const before = contextTokens(projected.messages).tokens;
-                const previousVersion = knowledge.version;
-                let adopted = false;
-                for (const candidate of candidates) {
-                  if (adopted) { refuseUpdate(candidate.entry, 'superseded', {previous_version:previousVersion}); continue; }
-                  if (candidate.entry.number <= heldNumber()) { refuseUpdate(candidate.entry, 'not-newer'); continue; }
-                  if (knowledge.repository_id !== null && candidate.entry.repository_id !== knowledge.repository_id) {
-                    refuseUpdate(candidate.entry, 'repository-mismatch'); continue;
-                  }
-                  let update;
-                  try { update = updateDelivery(knowledge, candidate.knowledge); } catch {
-                    refuseUpdate(candidate.entry, 'invalid-delivered-knowledge'); continue;
-                  }
-                  const message = userMessage(update.text);
-                  if (before + estimateMessageTokens(message) + configuration.context_reserve_tokens < configuration.model.contextWindow) {
-                    knowledge = candidate.knowledge;
-                    placedNotices.push({at:messages.length, message});
-                    unsentDeliveries.push(update);
-                    adopted = true;
-                  } else {
-                    refuseUpdate(candidate.entry, 'context-capacity');
-                  }
-                }
-                flushRefusals();
-              }
-            } catch (error) {
-              emit('knowledge-delivery', {kind:'update', outcome:'refused', version:null, previous_version:knowledge.version,
-                coverage:null, reason:'update-check-failed', error_name:error?.name ?? null});
-            }
-          }
-          const activeMessages = cutContext(validated, activeContext(validated));
+          // has its own failure boundary: it can refuse an update, never stop the host. When a cut can still
+          // happen at this boundary, a version too large for the uncut history is decided again after it.
+          const deferred = adoptStaged(validated, messages.length,
+            configuration.context_cut !== null && !control && !cutRestored);
+          cutContext(validated, activeContext(validated));
+          if (deferred) adoptStaged(validated, messages.length, false);
+          // Reminders are placed after adoption, so none carries a version the player no longer holds.
+          // Notices already sent stay where they were first sent (see below), so they count here.
+          for (const value of pendingReminders.splice(0)) placeReminder(value, messages.length);
+          // The cut and every notice placed at this boundary, as the request will carry them.
+          const activeMessages = activeContext(validated);
           const projectionStarted = performance.now();
-          const projection = projectImageContext(activeMessages, configuration.max_context_images, configuration.context_image_block, sourceIds);
+          const projection = projectImageContext(activeMessages, configuration.max_context_images, configuration.context_image_block, sourceOf);
           const withNotices = projection.messages;
           requestControlId = control && withNotices.some(message => message.role === 'user'
             && Array.isArray(message.content) && message.content.some(part => part.type === 'text'
@@ -1493,10 +1594,15 @@ export async function runHost(options) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'orderly-stop', dispatched:false, delivery:'undelivered'});
           return {block:true, reason:'Undelivered: automation stop supersedes this unsent call. Follow the labelled control message; no new handoff is admitted.'};
         }
+        if (uncertainTurn === assistantMessage && !AFTER_UNCERTAIN_INPUT.has(toolCall.name)) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'uncertain-input', dispatched:false});
+          return {block:true, reason:'Not sent: an earlier computer_input in this turn has a partial or unknown delivery. Collect it with computer_result and decide again; input is never replayed.'};
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
           return {block:true, reason:'MCP input not sent: SDK changed arguments; explicitly correct the call.'};
         }
+        dispatchingTurn = assistantMessage;
       },
       // Pi's per-result terminate hint requires every result in the batch to
       // terminate. finishTurn also handles ordinary tools preceding a handoff.
@@ -1542,7 +1648,13 @@ export async function runHost(options) {
             }
             throw error;
           };
-          const observedFetch = (url, init) => retryProviderRequest(async () => {
+          // The SDK turns a thrown fetch error into its own generic failure. A host reason is latched first,
+          // so the first fail-closed reason is the one the actor settles with. A retry signal is no HostError.
+          const latched = attempt => async (url, init) => {
+            try { return await attempt(url, init); }
+            catch (error) { if (error instanceof HostError) stop(error.reason); throw error; }
+          };
+          const observedFetch = (url, init) => retryProviderRequest(latched(async () => {
             requestSignal.throwIfAborted();
             if (fatal) throw new HostError(fatal);
             if (!canSpend()) {
@@ -1550,11 +1662,7 @@ export async function runHost(options) {
               throw new HostError(fatal);
             }
             const fetchEntered = performance.now();
-            requireThat(typeof init?.body === 'string', 'invalid-provider-payload');
-            // Pi enables affinity headers for an OpenRouter route by its own detection; fail closed
-            // before any charge if a maintained-SDK change ever stops sending this session's value.
-            if (model.provider === 'openrouter') requireThat(new Headers(init.headers).get('x-session-id') === affinityId, 'session-affinity-missing');
-            const payload = JSON.parse(init.body);
+            const payload = providerPayload(init, model.provider, affinityId);
             const sizes = {...payloadSize(payload), payload_bytes:Buffer.byteLength(init.body),
               payload_sha256:createHash('sha256').update(init.body).digest('hex')};
             if (stalled) {
@@ -1614,7 +1722,8 @@ export async function runHost(options) {
               catch (error) { if (!fatal && !requestSignal.aborted) stop('provider-error'); throw new HostError(fatal ?? 'provider-error'); }
               requestReportedCost = peeked.reported;
               if (peeked.failed && attempts === 1 && response.headers.get('x-should-retry') !== 'false' && !fatal && !requestSignal.aborted) {
-                await peeked.cancel();
+                // Release the refused stream without waiting on an untrusted source's cancel hook.
+                void peeked.cancel();
                 emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:true, stream_start_error:true,
                   ...refusalDiagnostic(null, apiKey)});
                 retry(attemptId, 'stream-start-error', response.status, response.headers);
@@ -1645,7 +1754,7 @@ export async function runHost(options) {
             }
             if (errorBody === null) throw new HostError('provider-error');
             return new Response(errorBody, {status:response.status, headers:response.headers});
-          }, {maxRetries:stalled ? 0 : 1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
+          }), {maxRetries:stalled ? 0 : 1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // Transport refusals share one deadline across classification, backoff and retry.
           // The provider stream itself must never retry.
           const providerStream = () => stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
@@ -1709,10 +1818,17 @@ export async function runHost(options) {
             }, Math.min(timeoutMs, totalMs));
             let terminal;
             for await (const event of providerStream()) {
-              if (event.type === 'done' || event.type === 'error') terminal = event;
+              if (!terminal && (event.type === 'done' || event.type === 'error')) {
+                terminal = event;
+                // The attempt has finished, so its deadline no longer applies to it.
+                clearTimeout(requestTimer);
+              }
             }
             clearTimeout(requestTimer);
-            requireThat(terminal, 'incomplete-provider-stream');
+            if (!terminal) {
+              stop('incomplete-provider-stream');
+              return failureStream(model, fatal);
+            }
             if (deadline.signal.aborted && !fatal) {
               // Settle the old stream before sending anything else. Abort races,
               // new control and exhausted ending headroom retain the conservative stop.
@@ -1739,8 +1855,9 @@ export async function runHost(options) {
             completed.end();
             return completed;
           }
-        } catch {
-          stop('provider-error');
+        } catch (error) {
+          // A host reason raised here (or already latched) is the reason the actor settles with.
+          stop(error instanceof HostError ? error.reason : 'provider-error');
           return failureStream(model, fatal);
         }
       },
