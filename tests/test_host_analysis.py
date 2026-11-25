@@ -56,6 +56,40 @@ class HostAnalysisTests(unittest.TestCase):
             fields = {"schema": "player-host/12", "telemetry_version": 12, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
+    def test_cut_results_and_reserve_events_roll_up_from_traces_to_runs_and_selection(self):
+        e = self.event
+        reserve = dict(actor_id="actor-a", spent_usd="4.7500", spend_limit_usd="5",
+            finish_reserve_usd="0.25", unpriced_bound_usd="0.05")
+        first = self.trace([e("host-start", 0),
+            e("context-cut", 1, outcome="cut", cut_result="target", request_id="request-1"),
+            e("context-cut", 2, outcome="cut", cut_result="best_effort", request_id="request-2"),
+            e("context-cut", 3, outcome="held-back", cut_result="rescue", request_id="request-3"),
+            e("spend-reserve-reached", 4, **reserve), e("settled", 5)])
+        second = self.trace([e("host-start", 0), e("context-cut", 1, outcome="cut", cut_result="rescue"),
+            e("settled", 2)], name="second.jsonl")
+        other_dir = self.root / "other"
+        other_dir.mkdir()
+        third = self.trace([e("host-start", 0), e("context-cut", 1, outcome="cut", cut_result="target"),
+            e("spend-reserve-reached", 2, **dict(reserve, actor_id="actor-c")), e("settled", 3)], name="other/third.jsonl")
+
+        row = analyze_trace(first)
+        self.assertEqual(row["context_cuts"], dict(applied=2, held_back=1,
+            by_result=dict(target=1, best_effort=1, rescue=0, unrecorded=0)))
+        self.assertEqual(row["spend_reserve_reached"], dict(count=1, events=[dict(reserve, monotonic_ms=4)]))
+        self.assertEqual(analyze_trace(second)["spend_reserve_reached"], dict(count=0, events=[]))
+        report = host_summary([first, second, third])
+        self.assertEqual(report["schema"], "host-analysis/1")
+        run, other = report["runs"]
+        self.assertEqual(run["context_cuts"], dict(applied=3, held_back=1,
+            by_result=dict(target=1, best_effort=1, rescue=1, unrecorded=0)))
+        self.assertEqual(other["context_cuts"], dict(applied=1, held_back=0,
+            by_result=dict(target=1, best_effort=0, rescue=0, unrecorded=0)))
+        self.assertEqual(run["spend_reserve_reached"], dict(count=1))
+        self.assertEqual(other["spend_reserve_reached"], dict(count=1))
+        self.assertEqual(report["selection"]["context_cuts"], dict(applied=4, held_back=1,
+            by_result=dict(target=2, best_effort=1, rescue=1, unrecorded=0)))
+        self.assertEqual(report["selection"]["spend_reserve_reached"], dict(count=2))
+
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
         e = self.event
         events = [e("host-start", 0, model="fixture"), e("request-start", 10, request_id="r1"),
@@ -403,13 +437,22 @@ class HostAnalysisTests(unittest.TestCase):
         actor.mkdir(parents=True)
         path = actor / "host.jsonl"
         old = dict(schema="player-host/3", telemetry_version=3)
-        path.write_text(json.dumps(self.event("host-start", 0, session=session, **old)) + "\n")
+        path.write_text("".join(json.dumps(event) + "\n" for event in [
+            self.event("host-start", 0, session=session, **old),
+            self.event("context-cut", 1, outcome="cut", request_id="request-1")]))
         (run / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/5", session=session, source_commit="abc")))
         (run / "receipt.json").write_text(json.dumps(dict(schema="campaign-receipt/3", outcome="incomplete",
             driver=dict(schema="player-driver/3", attempts_charged=2, configured_estimate_usd=0.5))))
         with mock.patch("harness.evaluation.core.sources.ARCHIVE_INDEX", index):
             row = analyze_trace(path)
             self.assertEqual((row["coverage"], row["configuration"]["schema"]), ("player_host", "player-host/3"))
+            self.assertEqual(row["context_cuts"], dict(applied=1, held_back=0,
+                by_result=dict(target=0, best_effort=0, rescue=0, unrecorded=1)))
+            self.assertEqual(row["spend_reserve_reached"], dict(count=0, events=[]))
+            summary = host_summary([run])
+            for grouped in (summary["runs"][0], summary["selection"]):
+                self.assertEqual(grouped["context_cuts"], row["context_cuts"])
+                self.assertEqual(grouped["spend_reserve_reached"], dict(count=0))
             evidence = row["campaign_evidence"]
             self.assertEqual(evidence["metadata_coverage"], {"manifest.json": "recorded", "receipt.json": "recorded"})
             self.assertEqual(evidence["receipt.json"]["driver"], dict(schema="player-driver/3", outcome=None, attempts_charged=2,

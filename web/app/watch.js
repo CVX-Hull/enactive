@@ -236,8 +236,12 @@ const FILTERS = [['all', 'All', e => !(e.entry_kind === 'context_cut' && e.outco
   ['memory', 'Memory', e => e.entry_kind === 'knowledge_update'], ['alerts', 'Alerts', isAlertEntry]];
 const WINDOW = 60, MORE = 120;
 
-const searchText = e => [e.intent, e.tool, e.summary, e.knowledge_version, e.reason, e.finding_kind && findingText({kind: e.finding_kind, payload: e.payload}),
-  (e.keys || []).map(keyText).join(' '), e.seq === null ? '' : `#${e.seq}`].filter(Boolean).join(' ').toLowerCase();
+const searchText = e => {
+  const cutResult = e.entry_kind !== 'context_cut' || e.outcome === 'applied' ? e.cut_result : null;
+  return [e.intent, e.tool, e.summary, e.knowledge_version, e.reason, cutResult, cutResult && label(cutResult),
+    e.finding_kind && findingText({kind: e.finding_kind, payload: e.payload}),
+    (e.keys || []).map(keyText).join(' '), e.seq === null ? '' : `#${e.seq}`].filter(Boolean).join(' ').toLowerCase();
+};
 export const toolText = tool => label(tool || 'recorded step');
 export const usd = (value, digits = 4) => (value === null || value === undefined ? null : `$${Number(value).toFixed(digits)}`);
 
@@ -253,7 +257,7 @@ function StepCard({entry}) {
 function CutCard({entry}) {
   const applied = entry.outcome === 'applied';
   const saved = applied && entry.tokens_before !== null && entry.tokens_after !== null ? entry.tokens_before - entry.tokens_after : null;
-  return html`<span class="mtitle">${applied ? 'Context cut' : 'Cut held back'}${entry.knowledge_version ? ` · ${entry.knowledge_version}` : ''}</span>
+  return html`<span class="mtitle">${applied ? 'Context cut' : 'Cut held back'}${applied && entry.cut_result ? ` · ${label(entry.cut_result)}` : ''}${entry.knowledge_version ? ` · ${entry.knowledge_version}` : ''}</span>
     ${applied ? html`<span class="num">${kilo(entry.tokens_before)} → ${kilo(entry.tokens_after)} tokens${saved === null ? '' : ` (−${kilo(saved)})`}</span>
       <span class="meta num">${entry.images_before ?? '—'} → ${entry.images_after ?? '—'} imgs · ${entry.removed_turns ?? '—'} turns cut${entry.triggers.length ? ` · ${entry.triggers.map(label).join(', ')}` : ''}</span>`
     : html`<span class="meta num">${kilo(entry.tokens_before)} tokens · ${label(entry.reason || 'reason unknown')}</span>`}`;

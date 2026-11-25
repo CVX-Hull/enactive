@@ -124,11 +124,20 @@ the same limits and may not itself be a symlink; its directories are the operato
   every actor has settled, its settlement equals the events read, every start has a priced
   response and every response a start. Otherwise the cost is a subtotal. A trace that
   records no cost field has `null` unpriced counts and completeness. The summary's
-  `dollars` stays the configured-rate estimate.
+  `dollars` stays the configured-rate estimate. `spend_reserve_reached` has the
+  event `count` and the `latest` event in actor and trace order, or `null`. The latest
+  event has `actor`, recorded `actor_id`, `wall_time`, and decimal text or `null` for
+  `spent_usd`, `spend_limit_usd`, `finish_reserve_usd` and `unpriced_bound_usd`.
 - **Routing.** `response_by_endpoint` counts responses by `reported_provider`, with
   `unknown` for a response without a label. It is empty when the trace records none.
   `latest_provider` is the label of the response that completed last by its own time.
 - **Context.** `context_cuts` has `applied`, `held_back` and the `latest` applied cut.
+  `by_result` counts applied cuts with each recorded result (`target`, `best_effort`
+  and `rescue`). The latest cut includes the four result and count fields listed in
+  [Story feed](#story-feed). `tail_notices.count` counts notice events and `by_kind`
+  counts each recorded occurrence of `context-capacity`, `host-timeout` and
+  `spend-limit`, including repeated kinds in one event. Traces without reserve or
+  tail-notice events have zero counts.
   `token_summary` has the latest, median (`p50_prompt_tokens`) and largest prompt of the
   player's own requests, and `cache_hit_share` over every response with usage, recall
   included. A prompt is `input + cacheRead + cacheWrite`.
@@ -183,7 +192,7 @@ request number; neither replaces the other.
 | `entry_kind` | Further fields |
 | --- | --- |
 | `step` | `tool`, `intent` (`intent_source` is `player_claim`), `keys`, `status` (`ok`, `error`, `refused` or `pending`), `latency_ms`, `arguments_preview`, the request's `reported_provider`, `reported_cost_usd` and token counts, the identifiers, and `result` (mechanical status, reason and receipt dispositions). One request may issue several calls, each carrying the request's cost |
-| `context_cut` | `outcome` (`applied` or `held_back`), `triggers`, `knowledge_version`, tokens and images before and after, `removed_turns`, `reason` |
+| `context_cut` | `outcome` (`applied` or `held_back`), `triggers`, `knowledge_version`, tokens and images before and after, `removed_turns`, `reason`. Applied cuts can also record `cut_result` (`target`, `best_effort`, `rescue`), `cumulative_removed_turns`, `briefing_tokens` and `source_ids_count`. These four fields are `null` when unrecorded. |
 | `knowledge_update` | `knowledge_version`, `previous_version`, `outcome` (`delivered`, `undelivered` or `refused`), `reason`, `request_id`, `covered_step`, the counts the delivered text states, and `summary`. A refused update has `null` counts, never zero; Watch renders `undelivered` updates distinctly and links only `delivered` updates to Memory |
 | `finding` | `finding_kind` (`stall`, `death`, `custody_stop`, `handoff` or `run_end`), `seq_end`, `source`, `payload` |
 
@@ -196,10 +205,15 @@ calls and findings only, with no intent, cost, cut or update.
 `requests` lists each response, player and recall, with its `index`, `seq` (the latest
 step at or before it, or `null`), token counts,
 `reported_cost_usd` and, separately, the configured-rate `estimated_dollars`. `cuts` lists
-every context cut at the `index` of the request that carried it. Over 2,000 requests the
+context cuts at the `index` of the request that carried each, with the cut fields from
+the story feed. Over 2,000 requests the
 series is thinned evenly, keeping the requests beside an applied cut;
-`requests_omitted` and `cuts_omitted` say how many are left out. `spend` repeats the
-player, limit and curator figures above.
+`requests_omitted` and `cuts_omitted` say how many are left out. `spend_reserve_reached`
+lists reserve events with the same actor and amount fields as the summary, plus
+`wall` and the latest `seq` at or before that time, or `null`. Both event lists
+keep up to the last 1,000 entries in actor and trace order. The reserve list reports
+`spend_reserve_reached_omitted`. `tail_notices` repeats the summary counts, with zeros
+when no trace is available. `spend` repeats the player, limit and curator figures above.
 
 ### Delivered knowledge
 
@@ -335,10 +349,13 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
   in their recorded units). It pages `items` with
   `total`, `limit` and `next`. An absent entry is unavailable, not proof of withholding.
   No private full export, withheld-unit file or curator repository is read.
-- `calls` expose public intent/cites, knowledge query/read returned IDs (including compact
-  `player-knowledge/3` query `hits`), status and
+- `calls` expose public intent/cites, knowledge query/read `returned_ids`, status and
   explicit operation/source/step IDs, allowlisted tool-result status/reason/delivery,
-  and original operation status/receipt dispositions. Intent, hints and finish
+  and original operation status/receipt dispositions. `returned_hits` carries the first
+  20 compact `player-knowledge/3` query hits with string IDs, in returned order, with
+  `returned_hits_omitted` counting the rest. Each hit exposes bounded `id`, `kind`,
+  `title`, `subject`, `via`, `snippet`, `status` and `cited_by_articles`.
+  Calls without compact hits have an empty list and zero omitted. Intent, hints and finish
   claims are unverified player reports; SDL delivery and evaluator outcome have
   their separate meanings. No expectation or private reasoning is inferred.
 - `anchors` resolve only explicitly recorded source IDs through the existing

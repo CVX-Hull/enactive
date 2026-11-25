@@ -115,8 +115,13 @@ test('Story feed: cards, filters, search and the step they select', {timeout: 30
     await page.click('#story-cuts');
     await S.until(page, () => document.querySelectorAll('#story .card').length === 9);
     assert.equal(await page.$$eval('#story .card.held', n => n.length), 4);
-    assert.match(await text(page, '#story .card.cut:not(.held)'), /Context cut · v3[\s\S]*61\.4k → 24\.8k tokens \(−36\.6k\)[\s\S]*39 → 19 imgs · 20 turns cut/);
+    assert.match(await text(page, '#story .card.cut:not(.held)'), /Context cut · best effort · v3[\s\S]*61\.4k → 24\.8k tokens \(−36\.6k\)[\s\S]*39 → 19 imgs · 20 turns cut/);
     assert.match(await text(page, '#story-count'), /4 held back/);
+    await page.type('#story-search', 'best effort');
+    await S.until(page, () => document.querySelectorAll('#story .card').length === 1);
+    assert.match(await text(page, '#story .card'), /Context cut · best effort/);
+    await page.$eval('#story-search', n => { n.value = ''; n.dispatchEvent(new Event('input', {bubbles: true})); });
+    await S.until(page, () => document.querySelectorAll('#story .card').length === 9);
     await page.click('#story .card.cut:not(.held) .cardmain');
     await S.until(page, () => /STEP #200 · HISTORY/.test(document.querySelector('.stagepill').textContent));
     assert.match(await text(page, '#playinfo'), /^Step 200/);
@@ -331,6 +336,8 @@ test('Diagnostics: four cards, the context sawtooth, spend, tools, and no figure
     assert.doesNotMatch(await text(page, '#kpi-spend'), /\$0\.00|provider-reported, player \+ recall \+ live curator/i, 'no part is a silent zero, and no basis covers them all');
     assert.match(await page.$eval('#kpi-spend [data-exact]', n => n.dataset.exact), /^2\.\d{4}$/, 'the exact provider text is kept');
     assert.match(await text(page, '#kpi-context'), /32\.8k tok[\s\S]*max 49\.9k[\s\S]*93\.1%[\s\S]*5 applied · 4 held back/);
+    assert.match(await text(page, '#kpi-context'), /Cut results\s*2 target · 1 best effort · 1 rescue[\s\S]*Tail notices\s*2/);
+    assert.match(await text(page, '#kpi-spend'), /Spend reserve\s*Reached 1 time · latest \$2\.50 spent of \$5\.00 · \$2\.50 finish reserve/);
     assert.match(await text(page, '#kpi-routing'), /endpoint-a:\s*\d+\s*endpoint-b:\s*4/);
     assert.match(await text(page, '#kpi-custody'), /live[\s\S]*writes its receipt when the run ends/);
     // The sawtooth's option draws both series and one dashed line for each applied cut.
@@ -347,9 +354,15 @@ test('Diagnostics: four cards, the context sawtooth, spend, tools, and no figure
     assert.match(option[3], /cut: 61\.4k → 24\.8k \(20 turns\)/);
     const cuts = await page.$$eval('.panel details table.data tbody tr', n => n.length);
     assert.equal(cuts, 5, 'the cuts are also a table');
+    const results = await page.$eval('.panel details table.data', table => {
+      const col = [...table.querySelectorAll('th')].findIndex(th => th.textContent === 'Result');
+      return [...table.querySelectorAll('tbody tr')].map(row => row.cells[col]?.textContent);
+    });
+    assert.deepEqual(results, ['—', 'target', 'rescue', 'target', 'best effort']);
     await S.pick(page, 'aidA2');
     await S.until(page, () => /no host trace for this run/.test(document.getElementById('kpi-context')?.innerText || ''));
     assert.match(await text(page, '#kpi-spend'), /—\s*no provider-reported cost[\s\S]*Player \+ recall\s*provider-reported\s*Unavailable[\s\S]*no session recorded[\s\S]*recorded outside admission/i);
+    assert.doesNotMatch(await text(page, '#kpi-spend'), /Spend reserve/);
     assert.match(await text(page, '#kpi-routing'), /answering endpoint not recorded/);
     await S.until(page, () => /configured-rate estimate: no provider cost is recorded/.test(document.getElementById('app').innerText));
     assert.deepEqual(page.problems, []);
@@ -589,13 +602,18 @@ test('recorded reader keeps delivery, reports, operation and outcome distinct on
     let body = await page.$eval('.knowledge-reader', n => n.innerText);
     for (const expected of ['knowledge-delivery', 'Move carefully', 'fact-visible', 'The visible passage may be blocked',
       'Receipt disposition: delivered', 'I believe I am done', 'Evaluator outcome', 'Original frame']) assert.ok(body.toLowerCase().includes(expected.toLowerCase()), expected);
-    const buttons = await page.$$('.knowledge-reader button');
-    const names = await Promise.all(buttons.map(b => b.evaluate(el => el.textContent)));
-    await buttons[names.indexOf('fact-visible')].focus();
+    const hits = await text(page, '.query-hits');
+    assert.match(hits, /fact-visible · fact · The passage · match · needs review/);
+    assert.match(hits, /<img src=x onerror=window\.hitExecuted=true>/);
+    assert.equal(await page.$('.query-hits img'), null);
+    assert.deepEqual(await page.$$eval('.query-hits button', buttons => buttons.map(b => b.textContent)), ['fact-visible', 'article-passage']);
+    await page.focus('.query-hits li > button');
     await page.keyboard.press('Enter');
     await S.until(page, () => document.getElementById('app').innerText.includes('Entry fact-visible'));
     await S.until(page, () => document.activeElement?.matches('[data-reader-entry] > summary'));
     assert.equal(await page.evaluate(() => window.readerExecuted), undefined);
+    assert.equal(await page.evaluate(() => window.hitExecuted), undefined);
+    assert.equal(await page.$eval('#pause', button => button.disabled), false);
     // The frozen snapshot entry's delivered state: kind, evidence, scope class and axes, flags, tags, typed links and cited frames.
     const entry = await text(page, '[data-reader-entry]');
     for (const expected of [/Kind: entity property · evidence: observed · scope: world \(ruleset: standard\) · state: active · needs review · tags: passage/,

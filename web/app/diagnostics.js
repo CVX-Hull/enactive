@@ -47,6 +47,7 @@ export function spendParts(s) {
 
 function SpendCard({s}) {
   const p = spendParts(s), curator = s.curator_spend, grooming = s.boundary_grooming;
+  const reserve = s.host_telemetry?.spend_reserve_reached;
   const limit = s.facts && typeof s.facts.spend_allowance_usd === 'number' ? s.facts.spend_allowance_usd : null;
   const reported = p.player.usd, curated = p.live.usd;
   const included = [reported !== null && 'player + recall', curated !== null && 'live curator', p.boundary.usd !== null && 'boundary grooming'].filter(Boolean).join(' + ');
@@ -61,6 +62,7 @@ function SpendCard({s}) {
     <dl class="kv"><dt>${p.open ? 'Player + recall subtotal' : 'Player + recall'} <small>provider-reported</small></dt><dd title=${reported === null ? '' : `$${reported}`} data-exact=${reported}>${reported === null ? 'Unavailable' : money2(reported)}${reported !== null && limit !== null ? ` of ${fmtMoney(limit)}` : ''}</dd></dl>
     ${reported !== null && limit ? html`<progress class="meterbar" max=${limit} value=${Number(reported)} aria-label="Player spend against its limit"></progress>` : null}
     <dl class="kv">${p.open ? html`<dt>${s.live ? 'Unpriced or in flight' : 'Unpriced attempts'}</dt><dd>${p.unpriced.player} player · ${p.unpriced.recall} recall</dd>` : null}
+      ${reserve?.count > 0 ? html`<dt>Spend reserve</dt><dd>Reached ${plural(reserve.count, 'time')}${reserve.latest ? ` · latest ${money2(reserve.latest.spent_usd)} spent of ${money2(reserve.latest.spend_limit_usd)} · ${money2(reserve.latest.finish_reserve_usd)} finish reserve` : ''}</dd>` : null}
       <dt>Live curator <small>proxy-accounted</small></dt><dd title=${curated === null ? '' : `$${curated}; a charge is the reservation where the actual cost is unknown`} data-exact=${curated}>${!curator ? 'no session recorded' : `${curated === null ? 'Unavailable' : money2(curated)} · ${curator.sessions_settled}/${curator.sessions_total} settled`}</dd>
       <dt>Boundary grooming <small>proxy-accounted</small></dt><dd id="spend-grooming" title=${p.boundary.usd === null ? '' : `$${p.boundary.usd}`} data-exact=${p.boundary.usd}>${groomed}</dd>
       <dt>Configured-rate estimate</dt><dd>${fmtMoney(s.dollars)}</dd></dl><//>`;
@@ -70,9 +72,12 @@ function ContextCard({s}) {
   const host = s.host_telemetry;
   if (!host) return html`<${Card} id="kpi-context" title="Context and cache" big="—" sub="no host trace for this run" />`;
   const t = host.token_summary, cuts = host.context_cuts;
+  const results = Object.entries(cuts.by_result || {}).filter(([, n]) => n > 0).map(([result, n]) => `${count(n)} ${label(result)}`);
   return html`<${Card} id="kpi-context" title="Context and cache" big=${`${kilo(t.p50_prompt_tokens)} tok`} sub=${`p50 prompt · max ${kilo(t.max_prompt_tokens)}`} chips=${html`<${Pv} source="recorded" detail="host trace" />`}>
     <dl class="kv"><dt>Latest prompt</dt><dd>${kilo(t.latest_prompt_tokens)} tok</dd><dt>Cache hit share</dt><dd>${pct(t.cache_hit_share, 1)}</dd>
       <dt>Context cuts</dt><dd>${cuts.applied} applied · ${cuts.held_back} held back</dd>
+      ${results.length ? html`<dt>Cut results</dt><dd>${results.join(' · ')}</dd>` : null}
+      ${host.tail_notices?.count > 0 ? html`<dt>Tail notices</dt><dd>${count(host.tail_notices.count)}</dd>` : null}
       <dt>Memory updates</dt><dd>${host.knowledge_updates.count}${host.knowledge_updates.latest_version ? ` · ${host.knowledge_updates.latest_version}` : ''}</dd></dl><//>`;
 }
 
@@ -124,7 +129,7 @@ function ContextChart({data}) {
   return html`<${Panel} title="Context tokens and cuts" note="per player request · dashed: a context cut · click to open Watch" span="s7">
     ${option ? html`<${Chart} option=${option} epoch=${`${store.themeEpoch}-${store.runId}`} onReady=${pick} label="Prompt tokens per player request, cached and uncached, with context cuts" className="ctxchart" />` : html`<${Insufficient}>No request in this run carries usage.<//>`}
     ${cuts.length ? html`<details><summary class="note">Context cuts as a table</summary><div class="tall"><${Table} columns=${[{title: 'Step', render: c => (c.seq === null ? '—' : html`#${c.seq}`)}, {title: 'Tokens', num: true, render: c => `${kilo(c.tokens_before)} → ${kilo(c.tokens_after)}`},
-      {title: 'Images', num: true, render: c => `${c.images_before ?? '—'} → ${c.images_after ?? '—'}`}, {title: 'Turns cut', num: true, render: c => c.removed_turns ?? '—'}, {title: 'Version', render: c => c.knowledge_version || '—'}, {title: 'Why', render: c => c.triggers.map(label).join(', ')}]}
+      {title: 'Images', num: true, render: c => `${c.images_before ?? '—'} → ${c.images_after ?? '—'}`}, {title: 'Turns cut', num: true, render: c => c.removed_turns ?? '—'}, {title: 'Result', render: c => c.cut_result ? label(c.cut_result) : '—'}, {title: 'Version', render: c => c.knowledge_version || '—'}, {title: 'Why', render: c => c.triggers.map(label).join(', ')}]}
       rows=${cuts} onPick=${(i, c) => { if (c.seq !== null) jumpToSeq(c.seq); }} /></div></details>` : null}
     ${data.requests_omitted ? html`<p class="note">${count(data.requests_omitted)} of ${count(data.requests_total)} requests are not drawn.</p>` : null}<//>`;
 }
