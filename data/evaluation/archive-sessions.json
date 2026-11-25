@@ -81,6 +81,18 @@
         "run_ending": "campaign-watch-terminal/3"
       }
     },
+    "17610f3033b2e8dc90ac0fcbcb6848de": {
+      "run": "seven-day-896-b-a08-17610f3033b2",
+      "study": "seven-day-896-b-admission-08",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "199adb42772e47118d82727c5ce599c4": {
       "run": "seven-day-end-01",
       "study": "start-load-checks",
@@ -114,6 +126,30 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "1d14589af7c24170c8a3d28d1e92b3f8": {
+      "run": "seven-day-896-b-a07-1d14589af7c2",
+      "study": "seven-day-896-b-admission-07",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "20551a8e9e25b17798593d66d4aca321": {
+      "run": "seven-day-896-b-a02-20551a8e9e25",
+      "study": "seven-day-896-b-admission-02",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },
@@ -567,6 +603,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "4d06a351c23c9927ecc00ef30d0607ad": {
+      "run": "seven-day-896-b-a05-4d06a351c23c",
+      "study": "seven-day-896-b-admission-05",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "4e14a90ad858f9b70d04d8aa6166a48f": {
       "labels": {
         "admission": 6,
@@ -882,6 +930,18 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "7a28b7bea730dce80c4ea14cbb16e421": {
+      "run": "seven-day-896-b-a10-7a28b7bea730",
+      "study": "seven-day-896-b-admission-10",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },
@@ -1232,6 +1292,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "9d8f05986ffa0490c4edcbddddcb5deb": {
+      "run": "seven-day-896-b-a04-9d8f05986ffa",
+      "study": "seven-day-896-b-admission-04",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "a02d8069d0434813a41acc7009217da6": {
       "run": "live-validation-run-889-a02d8069d043",
       "study": "live-validation-run-889",
@@ -1306,6 +1378,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "a6a0013cd0397da8fb47a5e316ab5ef3": {
+      "run": "seven-day-896-b-a09-a6a0013cd039",
+      "study": "seven-day-896-b-admission-09",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "a7d4748fb051580bbeaa8b8015818124": {
       "labels": {
         "admission": null,
@@ -1323,6 +1407,18 @@
         "manifest": "campaign-run/4",
         "receipt": "campaign-receipt/3",
         "run_ending": "campaign-watch-terminal/2"
+      }
+    },
+    "aaf541c340e10bccbbfe699f3bda2ec4": {
+      "run": "seven-day-896-b-a06-aaf541c340e1",
+      "study": "seven-day-896-b-admission-06",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
       }
     },
     "ac243818c2cb67b937b4e0618b9b708f": {
@@ -1404,6 +1500,18 @@
         "run_ending": "campaign-watch-terminal/4"
       }
     },
+    "b312d2c8e50907120e580a67bb7f5b4b": {
+      "run": "seven-day-896-b-a03-b312d2c8e509",
+      "study": "seven-day-896-b-admission-03",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
     "b328dac77cd4b4f1b5d2ee9a0c82894b": {
       "labels": {
         "admission": null,
@@ -1433,6 +1541,18 @@
         "manifest": "campaign-run/5",
         "receipt": "campaign-receipt/3",
         "run_ending": "campaign-watch-terminal/3"
+      }
+    },
+    "b55e1a8d35000e10190c07f499284d60": {
+      "run": "seven-day-896-a01-b55e1a8d3500",
+      "study": "seven-day-896-admission-01",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
+        "run_ending": "campaign-watch-terminal/4"
       }
     },
     "b68c77805e143c4fab55ab7b1ebd26dd": {
@@ -1609,6 +1729,18 @@
         "host_telemetry": 5,
         "manifest": "campaign-run/7",
         "receipt": "campaign-receipt/5",
+        "run_ending": "campaign-watch-terminal/4"
+      }
+    },
+    "c949ed5cecf2cc637b89cb7da82a8add": {
+      "run": "seven-day-896-b-a01-c949ed5cecf2",
+      "study": "seven-day-896-b-admission-01",
+      "versions": {
+        "driver": "player-driver/7",
+        "host": "player-host/11",
+        "host_telemetry": 11,
+        "manifest": "campaign-run/12",
+        "receipt": "campaign-receipt/7",
         "run_ending": "campaign-watch-terminal/4"
       }
     },
