@@ -58,12 +58,12 @@ image eviction and new tail notices.
   (`delivered` or `undelivered`) and a null `recall_request_id`.
 - `outcome: "held-back"` also reports `reason`, `available_turns` and
   `min_free`. Holds are edge-reported once on entering a `(reason, coverage_frontier)`
-  state while cut pressure remains armed. The reason is `restored` after invalidation,
-  `uncovered` when no surviving turn is eligible, `below-min-free` when eligible
-  covered turns are below `min_free`, or `insufficient-cover` when no candidate prefix
-  (including best-effort `k = E`) fits and strictly reduces estimated tokens.
-  `available_turns` is zero for `restored` and `uncovered`, and the eligible turn count
-  otherwise.
+  state while cut pressure remains armed (a restore clears cut pressure and emits no
+  `held-back` event). The reason is `uncovered` when no surviving turn is eligible,
+  `below-min-free` when eligible covered turns are below `min_free`, or
+  `insufficient-cover` when no candidate prefix meets targets and even the full covered
+  prefix (`k = E`) does not fit and strictly reduce estimated tokens.
+  `available_turns` is zero for `uncovered`, and the eligible turn count otherwise.
 
 ### Context manifest
 
