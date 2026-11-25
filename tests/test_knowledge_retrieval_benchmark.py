@@ -259,3 +259,57 @@ def test_the_recount_reads_tags_gates_and_sessions_and_writes_nothing(history):
         (1, 'completed', 1, 605, 600, base, 600 - base)]
     text = recount.markdown(result)
     assert '| Published versions | `2` |' in text and '| `a02` | `1` | `1` | no | `stopped` / ' in text
+
+
+def test_original_folding_misses_each_of_the_five_pairs():
+    pairs = bench.folding_pairs()
+    assert [tuple(row['words']) for row in pairs] == [
+        ('zombie', 'zombies'), ('speed', 'speeds'), ('focus', 'focused'), ('spring', 'springs'), ('bleed', 'bleeding')]
+    assert all(not row['original_conflates'] and row['porter2_conflates'] is None for row in pairs)
+
+
+def test_optional_english_porter2_conflates_the_five_pairs():
+    snowball = pytest.importorskip('snowballstemmer')
+    english = snowball.stemmer('english')
+    results = bench.folding_pairs(lambda word: english.stemWord(word.casefold()))
+    assert all(row['porter2_conflates'] for row in results)
+
+
+def test_porter2_arm_rebuilds_the_index_and_restores_the_original_fold(monkeypatch):
+    value = delivered([article('guide', 'Zombie', 'A warning.', [])], [])
+    query = bench.Query('v91', 'query-label', 'group', 'zombies', ('guide',))
+    original = bench.retrieval(bench.Corpus('v91', value), [query], 1)
+    monkeypatch.setattr(bench, 'QUERIES', (query,))
+    monkeypatch.setattr(bench.Corpus, 'load', lambda name, path: bench.Corpus(name, value))
+    saved = bench.production._fold
+    gate = bench.compare_porter2(Path('.'), {'v91': original}, 1,
+                                 lambda word: 'zombi' if word in ('zombie', 'zombies') else saved(word))
+    assert original['rows'][0]['ranks']['bm25_1hop'] is None
+    assert original['rows'][0]['ranks'][bench.PORTER2] == 1
+    assert all(gate['v91'].values()) and bench.production._fold is saved
+
+
+def test_compact_hits_use_exact_envelopes_canonical_bytes_and_sorted_distinct_citations():
+    from harness.jsonio import canonical
+
+    unicode_text = 'é' * 245
+    articles = [article(rid, rid, 'A short lead.', [('An indirect citation.', ['match'])])
+                for rid in ('z-article', 'a-article', 'm-article', 'b-article')]
+    value = delivered(articles, [fact('match', 'Water', unicode_text, 'control')])
+    corpus = bench.Corpus('v91', value)
+    query = bench.Query('v91', 'query-label', 'group', 'water', ('a-article',))
+    full, compact = bench.query_envelopes(corpus, query.text)
+    assert full == dict(schema='player-knowledge/2', version='v1', grants_authority=False, identity='water',
+                        resolution='query', resolved_from=None,
+                        records=[value['facts'][0], *articles])
+    assert compact['schema'] == 'player-knowledge/3' and 'records' not in compact
+    assert compact['hits'][0] == dict(id='match', kind='fact', subject='Water', claim_kind='interface',
+                                     scope={'game': 'cdda'}, snippet='é' * 240,
+                                     cited_by_articles=['a-article', 'b-article', 'm-article'], via='match')
+    assert compact['hits'][1] == dict(id='z-article', kind='article', revision='z-article@v1', title='z-article',
+                                     snippet='A short lead.', tags=[], via='hop')
+    measured = bench.compact_serialization(corpus, [query], 2)
+    for name, envelope in (('full', full), ('compact', compact)):
+        assert measured[name]['total_bytes'] == len(canonical(envelope).encode('utf-8'))
+        assert measured[name]['total_bytes'] > len(canonical(envelope))
+        assert measured[name]['samples'] == 2
