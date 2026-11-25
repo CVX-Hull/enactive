@@ -705,13 +705,28 @@ def test_the_player_view_refuses_an_inconsistent_or_unblinded_knowledge_result(i
 
 
 def test_the_player_view_refuses_malformed_or_oversized_compact_query_results():
+    from harness.jsonio import canonical
     query = Knowledge(FULL).query('camp water')
-    full = _changed(query, lambda r: r.update(hits=(r['hits'] * QUERY_LIMIT)[:QUERY_LIMIT]))
-    assert actor_result(full) == full
     article_hit = next(h for h in query['hits'] if h['kind'] == 'article')
     fact_hit = next(h for h in query['hits'] if h['kind'] == 'fact')
+    full = _changed(query, lambda r: r.update(hits=[dict(fact_hit, id=f'fact-{i}') for i in range(QUERY_LIMIT)]))
+    assert actor_result(full) == full
+    # Supplementary Unicode at the 240-char snippet clipping boundary stays valid UTF-8.
+    base_doc = json.loads(FULL.read_text())
+    emoji_lead = 'a' * 238 + '😀' + 'tail'
+    emoji_doc = copy.deepcopy(base_doc)
+    emoji_doc['articles'][0]['lead'] = emoji_lead
+    emoji_query = Knowledge.from_dict(emoji_doc).query('camp water')
+    assert actor_result(emoji_query) == emoji_query
+    assert canonical(emoji_query).encode('utf-8')
+    # Lone surrogate in delivered text is rejected before query/serialization.
+    surrogate_doc = copy.deepcopy(base_doc)
+    surrogate_doc['articles'][0]['lead'] = 'bad \ud800 lead'
+    with pytest.raises(PlayerError):
+        Knowledge.from_dict(surrogate_doc)
     for bad in (
-        _changed(full, lambda r: r['hits'].append(r['hits'][0])),
+        _changed(full, lambda r: r['hits'].append(dict(fact_hit, id='fact-extra'))),
+        _changed(query, lambda r: r.update(hits=[fact_hit, fact_hit])),
         _changed(query, lambda r: r.update(resolved_from='camp water')),
         # Discriminated envelope: `query` cannot carry `records`, and `read` cannot carry `hits`.
         _changed(query, lambda r: (r.update(records=[]), r.pop('hits'))),
@@ -725,11 +740,14 @@ def test_the_player_view_refuses_malformed_or_oversized_compact_query_results():
         _changed(query, lambda r: r.update(hits=[dict(article_hit, via='direct')])),
         _changed(query, lambda r: r.update(hits=[dict(article_hit, snippet='x' * (SNIPPET_LIMIT + 1))])),
         _changed(query, lambda r: r.update(hits=[dict(article_hit, snippet='   ')])),
+        _changed(query, lambda r: r.update(hits=[dict(article_hit, snippet='bad \ud800 snippet')])),
         _changed(query, lambda r: r.update(hits=[dict(article_hit, revision='camp-water@v99')])),
         _changed(query, lambda r: r.update(hits=[dict(article_hit, extra=1)])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, status=[])])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=['a', 'b', 'c', 'd'])])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=['b', 'a'])])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=[fact_hit['id']])])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, scope={'game': 'example'}, status=['unverified_branch'])])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, claim_kind='instance_state', scope={'game': 'example'})])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, kind='other')])),
         _changed(query, lambda r: r.update(hits=[{k: v for k, v in fact_hit.items() if k != 'subject'}])),

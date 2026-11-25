@@ -99,8 +99,13 @@ def _member(value: object, allowed: frozenset[str]) -> bool:
     return isinstance(value, str) and value in allowed
 
 
+def _valid_utf8(value: str) -> bool:
+    """Reject unpaired UTF-16 surrogates (which JSON `\\uD800` escapes allow but UTF-8 encoding rejects)."""
+    return not any(0xD800 <= ord(ch) <= 0xDFFF for ch in value)
+
+
 def _nonblank(value: object) -> bool:
-    return isinstance(value, str) and bool(value.strip())
+    return isinstance(value, str) and bool(value.strip()) and _valid_utf8(value)
 
 
 def _identifier(value: str) -> bool:
@@ -366,10 +371,12 @@ def query_hit(value: object, version: object) -> bool:
                 and (value['claim_kind'] != 'instance_state' or 'world' in value['scope'])
                 and _nonblank(value['snippet']) and len(value['snippet']) <= SNIPPET_LIMIT
                 and _distinct(value['cited_by_articles'], _identifier)
+                and value['id'] not in value['cited_by_articles']
                 and len(value['cited_by_articles']) <= HIT_CITED_BY_LIMIT
                 and value['cited_by_articles'] == sorted(value['cited_by_articles'])
                 and _member(value['via'], HIT_VIA)
-                and ('status' not in value or _valid_status(value['status'])))
+                and ('status' not in value or _valid_status(value['status']))
+                and ('world' in value['scope'] or 'unverified_branch' not in value.get('status', ())))
     return False
 
 

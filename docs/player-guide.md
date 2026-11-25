@@ -45,7 +45,7 @@ status unknown and is neither a harness stop rule nor permission to replay input
 | `computer_input` | Send basic controls, then inspect the returned frame when available. Non-`completed` statuses give `operation_id` and a reason. A refused retained operation may follow some delivered input: collect it before sending again; an argument error that submitted nothing can be corrected as a new choice. |
 | `computer_result` | Collect the original operation and its delivery receipts without repeating input. |
 | `computer_stop` | Permanently fence further automation. It does not save, quit or permit another actor. |
-| `player_source` | Read exact retained PNG bytes by `source_id`, including prior-session evidence, frames with omitted pixels and frames trimmed by a context cut. |
+| `player_source` | Read exact retained PNG bytes by `source_id`, including explicitly remembered prior-session evidence, frames with omitted pixels and frames trimmed by a context cut. |
 | `player_knowledge_read` | Open a full article by slug, revision or title (exact title first, then case-insensitive fallback), or a fact by ID; `by: "id"` skips titles. Returns version, resolution and full fallible record. |
 | `player_knowledge_query` | Ranked search of curated articles and facts (word matches plus one hop along citations and links). Returns up to ten compact hits (snippets, tags or scope, `cited_by_articles`, `via` and optional `status`); call `player_knowledge_read` for full body claims, links or text. |
 | `player_hint` | Report a fallible observation or suggestion for the curator, optionally citing sources. It does not publish a fact or write curated knowledge. |

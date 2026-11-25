@@ -184,7 +184,8 @@ def _knowledge(value):
         if not isinstance(hits, list) or resolved_from is not None or len(hits) > QUERY_LIMIT:
             raise UnsupportedResult('Unsupported delivered knowledge result')
         consistent = hits == [] if version is None else (
-            version_number(version) is not None and all(query_hit(hit, version) for hit in hits))
+            version_number(version) is not None and all(query_hit(hit, version) for hit in hits)
+            and len({hit['id'] for hit in hits}) == len(hits))
     else:
         records = result['records']
         if not isinstance(records, list):
