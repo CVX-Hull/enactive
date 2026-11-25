@@ -396,7 +396,7 @@ class Hysteresis:
     def check(self, policy: CutPolicy, uncut: Projection, eligible: int,
               candidates: Callable[[], Iterator[Projection]], frontier: str | None,
               *, version: str | None = None, enabled: bool = True, restored: bool = False,
-              orderly_stop: bool = False) -> tuple[str, int]:
+              orderly_stop: bool = False, best_effort: bool = False) -> tuple[str, int]:
         omitted = uncut.omissions(policy)
         if not enabled or restored or orderly_stop:
             self.armed, self.hold, self.plan, self.prior_omissions = False, None, None, omitted
@@ -406,11 +406,17 @@ class Hysteresis:
         plan = (frontier, eligible, version)
         if self.armed and eligible >= policy.min_free and self.plan != plan:
             self.plan = plan
+            fallback = None
             for k, projected in enumerate(candidates(), 1):
-                if (k >= policy.min_free and projected.tokens - projected.briefing_tokens <= policy.low
-                        and projected.images <= policy.max_images - policy.block
-                        and projected.tokens < policy.hard_limit):
-                    return self.cut('cut', k, projected.omissions(policy))
+                if k >= policy.min_free and projected.tokens < policy.hard_limit:
+                    if (projected.tokens - projected.briefing_tokens <= policy.low
+                            and projected.images <= policy.max_images - policy.block):
+                        return self.cut('cut', k, projected.omissions(policy))
+                    if best_effort and projected.tokens < uncut.tokens:
+                        fallback = (k, projected)
+            if fallback is not None:
+                k, projected = fallback
+                return self.cut('cut', k, projected.omissions(policy))
         if uncut.tokens >= policy.hard_limit:
             for k, projected in enumerate(candidates(), 1):
                 if projected.tokens < min(uncut.tokens, policy.hard_limit):
@@ -557,7 +563,8 @@ def cut_candidates(turns: list[Turn], eligible: int, policy: CutPolicy, *, fixed
         yield Projection(total, fresh_tokens, len(deltas) - dropped_images, protected)
 
 
-def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, coverage: dict) -> dict:
+def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, coverage: dict,
+                *, best_effort: bool = False) -> dict:
     start = events[0]
     cfg = start['context_cut']
     policy = CutPolicy(cfg['high_mark'], cfg['low_mark'], cfg['min_free'], start['max_context_images'],
@@ -684,7 +691,7 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
                                           source_ids=dropped_sources)
 
         outcome, count = state.check(policy, uncut, eligible, candidates, frontier, version=version, restored=restored,
-                                     orderly_stop=logged['monotonic_ms'] >= control_at)
+                                     orderly_stop=logged['monotonic_ms'] >= control_at, best_effort=best_effort)
         counts[outcome] += 1
         if count:
             projected_removed += count
@@ -743,26 +750,35 @@ def benchmark(evidence: Path) -> dict:
                                projected_briefing_json_chars=size(proposed),
                                omitted_briefing_entries=proposed['unlisted_entries'],
                                recall=replay_recall(events, snapshots, indexes),
-                               cut=replay_cuts(events, snapshots, proposed, coverage)))
+                               cut=replay_cuts(events, snapshots, proposed, coverage),
+                               cut_best_effort=replay_cuts(events, snapshots, proposed, coverage, best_effort=True)))
     recall = Counter()
-    cut = Counter()
+
+    def aggregate_cut(field: str) -> dict:
+        agg = Counter()
+        for actor in actors:
+            agg.update({k: v for k, v in actor[field].items()
+                        if k not in ('min_uncut_headroom_tokens', 'max_archive_heuristic_error_tokens', 'stop_details')})
+        agg['projected_holds'] = sum(agg[k] for k in ('uncovered', 'below-min-free', 'insufficient-cover'))
+        agg['hold_reduction_pct'] = round(100 * (1 - agg['projected_holds'] / agg['observed_holds']), 2)
+        agg['wider_census_observed_holds'] = WIDER_CENSUS_HELD_BACK
+        agg['min_uncut_headroom_tokens'] = min(a[field]['min_uncut_headroom_tokens'] for a in actors)
+        agg['max_archive_heuristic_error_tokens'] = max(a[field]['max_archive_heuristic_error_tokens'] for a in actors)
+        return dict(agg)
+
     for actor in actors:
         recall.update(actor['recall'])
-        cut.update({k: v for k, v in actor['cut'].items()
-                    if k not in ('min_uncut_headroom_tokens', 'max_archive_heuristic_error_tokens', 'stop_details')})
     recall['projected_usd'] = recall['observed_usd'] - recall['avoided_usd']
     recall['spend_reduction_pct'] = round(100 * recall['avoided_usd'] / recall['observed_usd'], 2)
     recall['silent_or_skipped_pct'] = round(100 * (recall['all_delivered'] + recall['placement_silent']) / recall['fetches'], 2)
-    cut['projected_holds'] = sum(cut[k] for k in ('uncovered', 'below-min-free', 'insufficient-cover'))
-    cut['hold_reduction_pct'] = round(100 * (1 - cut['projected_holds'] / cut['observed_holds']), 2)
-    cut['wider_census_observed_holds'] = WIDER_CENSUS_HELD_BACK
-    cut['min_uncut_headroom_tokens'] = min(a['cut']['min_uncut_headroom_tokens'] for a in actors)
-    cut['max_archive_heuristic_error_tokens'] = max(a['cut']['max_archive_heuristic_error_tokens'] for a in actors)
-    return dict(actors=actors, versions=versions, recall=dict(recall), cut=dict(cut),
+    cut = aggregate_cut('cut')
+    cut_best_effort = aggregate_cut('cut_best_effort')
+    return dict(actors=actors, versions=versions, recall=dict(recall), cut=cut, cut_best_effort=cut_best_effort,
                 caps_ok=all(a['projected_briefing_json_chars'] <= CUT_BRIEFING_CHARS for a in actors)
                 and all(max(v['title_chars'], v['sent_chars'], v['main_cut_chars'], v['proposed_cut_chars'])
                         <= CUT_BRIEFING_CHARS for v in versions),
-                no_increase_in_projected_stops=cut['projected_stops'] <= cut['observed_stops'])
+                no_increase_in_projected_stops=cut['projected_stops'] <= cut['observed_stops'],
+                best_effort_no_increase_in_projected_stops=cut_best_effort['projected_stops'] <= cut_best_effort['observed_stops'])
 
 
 def markdown(result: dict) -> str:
@@ -799,6 +815,15 @@ def markdown(result: dict) -> str:
             lines.append(f"  - {actor['admission']} actor {actor['actor']}, {stop['request']}, {stop['version']}. "
                          f"{stop['tokens']:,} estimated tokens against a {stop['hard_limit']:,}-token limit. "
                          f"Orderly stop {'accepted' if stop['orderly_stop'] else 'absent'}.")
+    be = result['cut_best_effort']
+    lines += ['', '### Diagnostic arm: best-effort `k = E` fallback when uncovered tail exceeds `low_mark` / `M - B`', '',
+              f"- {be['observed_holds']:,} observed holds and {be['projected_holds']:,} projected edge holds "
+              f"({be['hold_reduction_pct']}% lower).",
+              f"- Projected normal cuts {be.get('cut', 0):,} and strict-fit rescues {be.get('rescue', 0):,}.",
+              f"- {be['observed_stops']:,} observed and {be['projected_stops']:,} projected hard capacity stops "
+              f"over {be['checks']:,} checks. Minimum uncut headroom is {be['min_uncut_headroom_tokens']:,} "
+              f"estimated tokens.",
+              f"- **Diagnostic capacity gate {'passes' if result['best_effort_no_increase_in_projected_stops'] else 'does not pass'}.**"]
     lines += ['', '## Per-version recall indexes and cut briefings', '',
               '| Version | Source | Title-only chars | Sent chars | Unlisted | Main cut chars | Proposed cut chars |',
               '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |']

@@ -3,21 +3,22 @@ owner: lead
 status: historical
 kind: study
 date: 2026-11-25
-scope: "Read-only #896-b replay of bounded briefings, recall deduplication and cut hysteresis, and compact query serialization on the #924 v91 queries. English Porter2 comparison pending."
+scope: "Read-only #896-b replay of bounded briefings, recall deduplication and cut hysteresis (Ballot 4 literal gate FAILED with best-effort k=E diagnostic PASS), compact query serialization on #924 v91 queries, and English Porter2 (snowballstemmer==3.1.1) retrieval gate NO-GO."
 ---
 
-# Player host replay gates and compact query serialization (#949)
+# Player host replay gates, compact query serialization and Porter2 benchmark (#949)
 
 ## At a glance
 
 | Check | Result |
 | --- | --- |
-| Bounded actor-start briefing | All 12 actor starts fit. Projected JSON ranged from 100 to 20,042 UTF-16 code units against a 24,000-unit cap. |
-| Bounded recall index | All 92 versions fit. Title-only JSON ranged from 12 to 17,738 units. The index with snippets reached 24,000 units. Every version listed all its eligible titles. |
-| Recall deduplication | Placement filtering silenced 75 of 358 recall fetches (20.95%). Pre-fetch filtering skipped zero. Charged recall spend was $3.49635150, unchanged by this projection. |
-| Cut hysteresis | Edge holds fell from 2,128 to 88 (95.86%) and the capacity gate did not pass. One continuous replay projected a hard capacity stop against zero observed. |
-| Compact query hits | Canonical UTF-8 size fell 63.9% in total and 62.0% at the median across 20 queries. Serialization p95 fell from 0.0533 ms to 0.0188 ms in one run. |
-| English Porter2 | The original fold missed all five pairs. The optional comparison across 30 queries is pending. |
+| Bounded actor-start briefing | **PASS.** All 12 actor starts fit. Projected JSON ranged from 100 to 20,042 UTF-16 code units against a 24,000-unit cap. |
+| Bounded recall index | **PASS.** All 92 versions fit. Title-only JSON ranged from 12 to 17,738 units. The index with snippets reached 24,000 units. Every version listed all its eligible titles. |
+| Recall deduplication | **MEASURED.** Placement filtering silenced 75 of 358 recall fetches (20.95%). Pre-fetch filtering skipped zero. Charged recall spend was $3.49635150, unchanged by this projection. |
+| Cut hysteresis (Ballot 4 literal) | **FAIL (escalate before `#950`).** Edge holds fell from 2,128 to 88 (95.86%), but `insufficient-cover` refused 76 of 77 healthy cuts (normal cuts dropped 77 → 1) and projected 1 hard capacity stop against 0 observed (`-266` tokens headroom at `A01 request-584`). |
+| Cut hysteresis (diagnostic best-effort `k = E` fallback) | **PASS.** Preserves all 77 cuts, cuts edge holds from 2,128 to 85 (96.01% reduction), projects 0 hard capacity stops across all 3,744 checks, and keeps `+112,444` tokens minimum uncut headroom. |
+| Compact query hits | **PASS.** Canonical UTF-8 size fell 63.9% in total (`232,144` → `83,921` B) and 62.0% at the median (`10,946` → `4,155` B) across 20 `v91` queries. Serialization p95 fell from `0.0472` ms to `0.0156` ms. |
+| English Porter2 (`snowballstemmer==3.1.1`) | **NO-GO.** Conflated 5/5 folding pairs and tied `#889 v17` (`1.000` / `1.000`), but regressed `#896-b v91` Article MRR@5 from `0.917` to `0.908` (`Q13` dropped rank `2` → `3`). `requirements.in` and `requirements-dev.lock` stay unchanged; `_fold` stays in `#950`. |
 
 The replay used [the sealed campaign lineage](2026-11-22-seven-day-campaign-896.md),
 [the proposed host contract](../design/player-architecture-contract.md#83-verification-gates-offline-0-first-then-pre-merge-qualification)
@@ -62,8 +63,23 @@ The archive contains request-part digests and sizes. The replay reconstructs
 tool arguments and results from their events, projects image eviction, and
 estimates remaining text from the recorded part lengths. The reconstruction
 differed from the recorded heuristic by up to 8,583 tokens on the archived
-prefixes. The 266-token overshoot is inside that observed error range, so the
-stop is a projection and the required zero-increase claim remains unverified.
+prefixes. Even accounting for reconstruction error, the underlying failure is
+structural: in `#896-b`, live curator `trigger_steps: 35` leaves roughly 20–35
+uncovered tail turns (`29k–54k` post-cut tokens > `low_mark: 20,000` and `> 19`
+images = `max_context_images - context_image_block`) at almost every cut point.
+Refusing to cut `k = E` unless both `T_k <= low_mark` and `I_k <= M - B` blocked
+76 of 77 recorded cuts (`insufficient-cover`), letting prompts grow near the
+245,760-token hard limit (`+338` tokens headroom in `A03`, `-266` in `A01`).
+
+A paired diagnostic arm (`cut_best_effort`, keeping Ballot 4's arm/edge-hold
+hysteresis and strict-fit rescue, preferring the smallest `k in [min_free, E]`
+meeting `T_k <= L`, `I_k <= M - B` and `fits(R_k)`, and falling back to the
+largest strictly-reducing fitting prefix `k = E` when the uncovered tail alone
+exceeds `L` or `M - B`) restores all 77 cuts, reduces edge holds from 2,128 to
+85 (`96.01%` reduction), projects `0` hard capacity stops across all `3,744`
+boundaries, and keeps `+112,444` tokens minimum uncut headroom. Amending Ballot 4
+to adopt this best-effort `k = E` fallback is escalated to the owner before
+implementing `#950`.
 
 ## Compact query serialization
 
@@ -76,22 +92,31 @@ and the first three distinct citing article IDs in sorted order.
 
 | Envelope | Total bytes | Median bytes | Max bytes | Mean time | p95 time |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Full records | 232,144 | 10,946 | 15,193 | 0.0394 ms | 0.0533 ms |
-| Compact hits | 83,921 | 4,155 | 4,507 | 0.0151 ms | 0.0188 ms |
+| Full records | 232,144 | 10,946 | 15,193 | 0.0367 ms | 0.0472 ms |
+| Compact hits | 83,921 | 4,155 | 4,507 | 0.0136 ms | 0.0156 ms |
 
-## English Porter2 comparison
+## English Porter2 comparison (NO-GO)
 
-The baseline fold produced distinct forms for `zombie/zombies`,
-`speed/speeds`, `focus/focused`, `spring/springs` and `bleed/bleeding`.
-The `--porter2` arm reports exact folded forms and a Go/No-Go result against
-the one-hop baseline, requiring all five pairs to conflate and zero Hit@5 or
-Article MRR@5 regression on either corpus. The comparison is pending a run in
-an isolated Python environment with the optional `snowballstemmer` package.
+Measured in an isolated temporary Python 3.14 virtual environment with pure-Python
+BSD-3 `snowballstemmer==3.1.1` (`EnglishStemmer`) against the sealed `#896-b v91`
+and `#889 v17` corpora (`tools/knowledge_retrieval_benchmark.py --porter2 --markdown`).
+The baseline `_fold` produced distinct forms for all five pairs (`zombie/zombies`,
+`speed/speeds`, `focus/focused`, `spring/springs`, `bleed/bleeding`), whereas
+Porter2 conflated all five (`zombi`, `speed`, `focus`, `spring`, `bleed`).
 
-| Corpus | Baseline Hit@5 | Baseline Article MRR@5 | Porter2 Hit@5 | Porter2 Article MRR@5 |
-| --- | ---: | ---: | ---: | ---: |
-| `#896-b v91` | 1.000 | 0.917 | Pending | Pending |
-| `#889 v17` | 1.000 | 1.000 | Pending | Pending |
+However, on `#896-b v91`, `bm25_1hop_porter2` regressed **Article MRR@5** from
+`0.917` to `0.908` (`-0.009`), caused by query `Q13` (`safe indoor heat source to
+purify drinking supply without smoke`) dropping its gold article from rank `2` to
+rank `3`. Under the owner's zero-regression gate
+([`#pin-snowballstemmer-for-player-knowledge`](../decisions/owner-decisions.md#pin-snowballstemmer-for-player-knowledge)),
+the verdict is **NO-GO**: `snowballstemmer` is **not** pinned in `requirements.in`
+or `requirements-dev.lock`, the temporary environment was deleted, and `#950`
+retains `_fold`.
+
+| Corpus | Baseline Hit@5 | Baseline Article MRR@5 | Porter2 Hit@5 | Porter2 Article MRR@5 | Gate |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `#896-b v91` | `1.000` | `0.917` | `1.000` | `0.908` | **FAIL** (`Q13`: `2` → `3`) |
+| `#889 v17` | `1.000` | `1.000` | `1.000` | `1.000` | PASS |
 
 ## Reproduction
 

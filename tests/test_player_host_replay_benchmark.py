@@ -160,3 +160,16 @@ def test_insufficient_cover_holds_and_strict_fit_rescue_is_independent(policy):
     assert check(replay.Hysteresis(), policy, hard, [hard]) == ('stop', 0)
     for guard in (dict(enabled=False), dict(restored=True), dict(orderly_stop=True)):
         assert check(replay.Hysteresis(), policy, hard, [insufficient], **guard) == ('stop', 0)
+
+
+def test_best_effort_fallback_cuts_largest_strictly_reducing_prefix_when_tail_exceeds_low_mark(policy):
+    high = replay.Projection(90, 0, 11)
+    still_over_low = replay.Projection(65, 0, 9)
+    smaller = replay.Projection(55, 0, 9)
+    non_shrinking = replay.Projection(92, 0, 9)
+    state = replay.Hysteresis()
+    assert check(state, policy, high, [still_over_low, still_over_low, smaller], best_effort=True) == ('cut', 3)
+    assert not state.armed
+    # Without strict token reduction, best-effort still holds back as insufficient-cover.
+    state2 = replay.Hysteresis()
+    assert check(state2, policy, high, [non_shrinking, non_shrinking], best_effort=True) == ('insufficient-cover', 0)
