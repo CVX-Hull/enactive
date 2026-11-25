@@ -17,7 +17,7 @@ from tools.campaign_player import COVERED_PREFIX_FILE,UPDATES_FILE,HostEvents,Li
 from tools.configure_player_tools import configuration
 
 
-START=dict(type='host-start',telemetry_version=11,schema='player-host/11')
+START=dict(type='host-start',telemetry_version=12,schema='player-host/12')
 
 
 def cost(request,amount,how='provider-reported',kind='response-complete'):
@@ -126,8 +126,8 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
 
 
 @pytest.mark.parametrize('schema,telemetry',
-    [('pi-player-host/6',4), ('player-host/3',4), ('player-host/11',10), ('player-host/9',11), (None,4)]
-    + [(f'player-host/{version}',version) for version in (3, 6, 7, 8, 9, 10)])
+    [('pi-player-host/6',4), ('player-host/3',4), ('player-host/12',11), ('player-host/11',12), (None,4)]
+    + [(f'player-host/{version}',version) for version in (3, 6, 7, 8, 9, 10, 11)])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
@@ -198,7 +198,7 @@ assert prompt.startswith('Frozen mission') and 'Software actor/resource note' no
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
-emit(type='host-start', telemetry_version=11, schema='player-host/11', spend_limit_usd=route['spend_limit_usd'])
+emit(type='host-start', telemetry_version=12, schema='player-host/12', spend_limit_usd=route['spend_limit_usd'])
 if 'HANG' in prompt: time.sleep(120)  # a host still playing when the driver must stop it
 recall_made = int('WITH_RECALL' in prompt and flags['--pending-control-id']=='none')
 if recall_made:
@@ -214,7 +214,11 @@ request_id = f'request-{1+unpriced}'
 emit(type='request-start', request_id=request_id)
 spent = '0.0034500000000000004' if 'LONG_COST' in prompt else '0.004'
 emit(type='response-complete', request_id=request_id, reported_cost_usd=spent, counted_cost_usd=spent, cost_counted_as='provider-reported')
-ending = 'READ_CONTROL' in prompt or flags['--pending-control-id']!='none'
+if 'RESERVE_REACHED' in prompt:
+    emit(type='spend-reserve-reached', actor_id='0'*32 if 'WRONG_ACTOR_RESERVE' in prompt else flags['--actor-id'],
+         spent_usd=spent, spend_limit_usd=route['spend_limit_usd'],
+         finish_reserve_usd=flags['--finish-reserve-usd'], unpriced_bound_usd=route['unpriced_request_usd'])
+ending = 'READ_CONTROL' in prompt or 'RESERVE_REACHED' in prompt or flags['--pending-control-id']!='none'
 handoff = 'HANDOFF_RACE' in prompt and flags['--actor-id'] == 'a'*32
 control = json.loads(sys.stdin.readline()) if ending else None
 if control:
@@ -716,7 +720,8 @@ def test_the_applications_knowledge_tools_answer_from_the_version_the_driver_ado
         token=runtime.add_actor()['token']
         def tool(name,**args):
             result,_=application.call(token,name,dict(intent='Check delivered knowledge',cites=[],**args),uuid.uuid4().hex)
-            return result['version'],[r['id'] for r in result['records']]
+            items=result['hits'] if name=='player_knowledge_query' else result['records']
+            return result['version'],[r['id'] for r in items]
         assert tool('player_knowledge_read',id_or_title='fact-3')==('v2',[])
         assert tool('player_knowledge_query',query='claim')==('v2',['fact-1','fact-2'])
         live.begin(actor);leave(published(3))
@@ -974,3 +979,23 @@ def test_a_driver_stop_stays_the_reason_even_when_the_stopped_host_settles_clean
         result=run_hosts(tmp_path,profile,route,application,'fixture-secret',stopped,time.monotonic()+300)
     assert result['reason']=='Original host deadline/cancellation',result
     assert len(result['actors'])==1 and 'orchestration_error' not in result['actors'][0]
+
+
+def test_spend_reserve_reached_triggers_orderly_stop_even_above_raw_ending_reserve(tmp_path):
+    """Ballot 7: when `spend-reserve-reached` arrives for the active actor, the driver sends `orderly_stop`
+    immediately even though `dollars_left` is still above raw `ending_reserve.usd`."""
+    profile, route, application = driver_case(tmp_path, 'Frozen mission RESERVE_REACHED')
+    result = run_hosts(tmp_path, profile, route, application, 'fixture-secret', threading.Event(), time.monotonic() + 300)
+    assert result['outcome'] == 'player_external_stop_complete_unassessed', result
+    assert result['ending_request'] is not None and result['ending_request']['trigger'] == 'spend'
+    assert result['actors'][0]['ending_control_id'] == result['ending_request']['id']
+    assert result['actors'][0]['accounting_complete'] is True
+    # Pre-host-start spend-reserve-reached is rejected cleanly.
+    bad = tmp_path / 'bad-host.jsonl'
+    bad.write_text(json.dumps(dict(type='spend-reserve-reached', actor_id='a' * 32)) + '\n')
+    events = HostEvents(bad)
+    try:
+        with pytest.raises(ControlError, match='lacks current origin'):
+            events.finish()
+    finally:
+        events.close()

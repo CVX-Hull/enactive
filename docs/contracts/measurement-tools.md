@@ -214,15 +214,16 @@ actor, initially zero.
 With `--recorded-deliveries`, `cut` reads `knowledge-delivery` events from each
 actor's `host.jsonl` and approximates tokens as `ceil(bytes / 4)` of the UTF-8 text.
 
-- **Starting briefing.** An actor's first `briefing` event sets its starting briefing
+- **Starting briefing.** An actor's first delivered `briefing` event sets its starting briefing
   size, which is zero only when no such event appears. An empty start still emits a short
   `version: null` briefing, and a successor carries its own. Replacement briefings
   emitted on a cut add nothing to the starting size.
-- **Updates and reminders.** Delivered `update` events (`outcome: "delivered"`) and
-  `reminder` events add their tokens on the logical player request that
-  `receiving_player_request_id` names, matching retries and skipping recall requests.
-  Refused updates and `knowledge-undelivered` events add none. A delivery that matches no
-  logical player request is counted as unmatched.
+- **Updates and reminders.** Delivered `update` and `reminder` events (`outcome: "delivered"`,
+  or historical archived `reminder`/`briefing` rows without `outcome` on admitted traces) add
+  their tokens on the logical player request that `receiving_player_request_id` names, matching
+  retries and skipping recall requests. Refused updates, `outcome: "undelivered"` placements and
+  `knowledge-undelivered` events add none. A delivery that matches no logical player request is
+  counted as unmatched.
 - **Release.** A delivery on a turn after the first request is released when a cut
   removes that turn. A delivery on the first request belongs to no turn and stays.
 
@@ -298,7 +299,7 @@ facts outside it.
        "reminders": [{"decision": 40, "text": "..."}]}}}}
 
 - A fact has one route for an actor; an id listed twice is refused.
-- The route is the first lead or read exposure in time, with `index` only if neither occurs. Withheld facts come from `private/units.json`.
+- The route is the first delivered lead or full read exposure in time, with `index` only if neither occurs. Only `knowledge-delivery` events with `outcome: "delivered"` (or admitted archived `/5`, `/8`, `/9`, `/11` briefings/reminders without `outcome`) credit `lead` exposure; compact `player-knowledge/3` query `hits` are ignored by `build_facts` (neither promoting to `read` nor pre-populating `index`), while full `player_knowledge_read` results credit `read`. Withheld facts come from `private/units.json`.
 - `from_decision` is optional: the last player decision completed before that same
   exposure. Briefing leads and index lines have none. Recall requests have
   `decision: null` and never advance this numbering.
@@ -397,9 +398,10 @@ use packets:
 - `recall` records precision and silence when the facts builder recorded recall inputs
   (`private/recall.json`); older judge runs report `recorded:false`.
   - Precision is the applied share (`in_line`, `against`, `found_again`) of judged fact
-    windows after an actually delivered recall selection, excluding `cannot_tell`. A
-    selection counts even if the fact's first route was an earlier read. A reminder still
-    unsent at actor end contributes no exposure.
+    windows after an actually delivered recall placement, credited strictly from that
+    placement's delivered `fact_ids` (so leads filtered out at placement are not credited),
+    excluding `cannot_tell`. A selection counts even if the fact's first route was an
+    earlier read. An undelivered or unsent reminder contributes no exposure.
   - Silence is explicit empty reminder selections divided by successful reminder
     selections. Failures and opportunities not made are reported separately.
 

@@ -45,7 +45,7 @@ class Trace:
 
     def __init__(self, actor: str, start: float) -> None:
         self.actor, self.wall, self.requests, self.images, self.omitted = actor, start, 0, 0, 0
-        self.events = [dict(type='host-start', schema='player-host/11', telemetry_version=11, session=SESSION,
+        self.events = [dict(type='host-start', schema='player-host/12', telemetry_version=12, session=SESSION,
             actor_id=actor, wall_time=self.iso(), monotonic_ms=0)]
 
     def iso(self) -> str:
@@ -104,6 +104,8 @@ class Trace:
 
     def deliver(self, kind: str, receiving: str | None, text: str, *, event_type: str = 'knowledge-delivery',
                 **fields) -> None:
+        if event_type == 'knowledge-delivery' and 'outcome' not in fields:
+            fields['outcome'] = 'delivered'
         self.events.append(dict(type=event_type, kind=kind, receiving_player_request_id=receiving, text=text, **fields))
 
 
@@ -273,6 +275,7 @@ def test_recorded_deliveries_are_written_at_the_receiving_request_and_cut_with_i
     trace.deliver('update', 'request-2', 'é' * 201, outcome='delivered', previous_version='v0', version='v1')
     trace.operate('op-2')
     trace.deliver('update', 'request-3', 'x' * 4000, outcome='refused')
+    trace.deliver('reminder', 'request-3', 'x' * 4000, outcome='undelivered')
     trace.operate('op-3')
     trace.deliver('update', 'request-4', 'x' * 4000, outcome='delivered', event_type='knowledge-undelivered')
     trace.operate('op-4')

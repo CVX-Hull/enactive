@@ -114,7 +114,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/11` adapter selection and return its argv."""
+    """Validate the closed `player-host/12` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -262,10 +262,14 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     if bound<=0:raise ControlError("The route's configured rates give no in-flight request bound")
     if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:
         raise ControlError(f"route.json unpriced_request_usd must be {usd_text(bound)} for this route's rates")
-    # Allow for in-flight player and recall requests before an orderly finish.
+    # Allow for in-flight player and recall requests before an orderly finish, and leave room to start ordinary work.
     if Decimal(reserve['usd'])<reserve_bound:
         raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(reserve_bound)}, "
             'so an in-flight attempt still leaves an orderly finish')
+    if usd_sum([Decimal(reserve['usd']),reserve_bound])>=limit:
+        raise ControlError(f"ending_reserve.usd {reserve['usd']} plus unpriced_request_usd {usd_text(reserve_bound)} "
+            f"must be below spend_limit_usd {profile['spend_limit_usd']}, "
+            'so ordinary work can start before the ending reserve is reached')
     return profile, route, target, sha256(manifest_bytes).hexdigest()
 
 

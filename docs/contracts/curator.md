@@ -544,6 +544,6 @@ A change to a format here migrates its readers and writers in the same change
 | `tools/curator_host/shadow.py`, `groom.py` | Gate results, `curator-boundary-grooming/2` summaries and `last_admission` |
 | `tools/curator_host/prompt.md`, `grooming.md` | Restate the `curator-submission/2` and `curator-fact/5` shapes to the curator |
 | `tools/knowledge_export.py`, `tools/campaign_package.py` | Scoped selection, timeline history, blinding aliases, `delivered-knowledge/3` and `campaign-run/13` |
-| `harness/player/`, `tools/player_host/` | Delivered `delivered-knowledge/3` validation, `player-knowledge/2` reads, ranking and projections |
+| `harness/player/`, `tools/player_host/` | Delivered `delivered-knowledge/3` validation, `player-knowledge/3` reads and compact query hits, ranking and projections |
 | `tools/memory_screen_checks.py` | Fact and article records of every version |
 | `harness/viewer/`, `tools/campaign_watch.py` | Gate results, close-out receipts, coverage stamps, `curator-boundary-grooming/2` and delivered snapshots |

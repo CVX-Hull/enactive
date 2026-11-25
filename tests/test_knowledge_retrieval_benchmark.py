@@ -304,7 +304,7 @@ def test_compact_hits_use_exact_envelopes_canonical_bytes_and_sorted_distinct_ci
                         records=[value['facts'][0], *articles])
     assert compact['schema'] == 'player-knowledge/3' and 'records' not in compact
     assert compact['hits'][0] == dict(id='match', kind='fact', subject='Water', claim_kind='interface',
-                                     scope={'game': 'cdda'}, snippet='é' * 240,
+                                     scope={'game': 'cdda'}, snippet='é' * 239 + '…',
                                      cited_by_articles=['a-article', 'b-article', 'm-article'], via='match')
     assert compact['hits'][1] == dict(id='z-article', kind='article', revision='z-article@v1', title='z-article',
                                      snippet='A short lead.', tags=[], via='hop')

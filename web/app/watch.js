@@ -178,7 +178,7 @@ const TIMELINE_NAME = 'Timeline playhead';
 export const isAlertEntry = e => e.entry_kind === 'finding' || (e.entry_kind === 'step' && (e.status === 'error' || e.status === 'refused'));
 /** The story entries the timeline marks: three lanes, so a mark is told by its place as well as its colour. */
 const LANES = [['cut', 'Context cut', e => e.entry_kind === 'context_cut' && e.outcome === 'applied'],
-  ['memory', 'Memory update', e => e.entry_kind === 'knowledge_update' && e.outcome !== 'refused'],
+  ['memory', 'Memory update', e => e.entry_kind === 'knowledge_update' && e.outcome === 'delivered'],
   ['alert', 'Alert', isAlertEntry]];
 const VIEW_W = 1000, LANE_H = 10;
 
@@ -260,8 +260,10 @@ function CutCard({entry}) {
 }
 function UpdateCard({entry}) {
   const refused = entry.outcome === 'refused';
-  return html`<span class="mtitle">${refused ? 'Memory update refused' : 'Memory updated'}${entry.knowledge_version ? ` · ${entry.knowledge_version}` : ''}</span>
-    <span class="num">${refused ? label(entry.reason || 'reason unknown') : entry.summary || 'what changed is not recorded'}</span>
+  const undelivered = entry.outcome === 'undelivered';
+  const title = refused ? 'Memory update refused' : undelivered ? 'Memory update undelivered' : 'Memory updated';
+  return html`<span class="mtitle">${title}${entry.knowledge_version ? ` · ${entry.knowledge_version}` : ''}</span>
+    <span class="num">${refused ? label(entry.reason || 'reason unknown') : undelivered ? (entry.reason ? label(entry.reason) : entry.summary || 'delivery did not complete') : entry.summary || 'what changed is not recorded'}</span>
     <span class="meta num">${entry.covered_step !== null ? `covers through step ${entry.covered_step}` : 'coverage unrecorded'}</span>`;
 }
 function FindingCard({entry}) {
@@ -315,7 +317,7 @@ function StoryFeed() {
           return html`<li key=${entry.id} class="card ${KLASS(entry)} ${here ? 'here' : ''}" aria-current=${here ? 'true' : null} data-entry=${entry.id} data-kind=${entry.entry_kind}>
             <button type="button" class="cardmain" data-jump=${entry.seq} disabled=${entry.seq === null} onClick=${() => setCursorSeq(entry.seq)}><${Card} entry=${entry} /></button>
             ${entry.entry_kind === 'step' ? html`<button type="button" class="inspect" aria-label=${`Inspect step ${entry.seq ?? ''}`} onClick=${() => { if (entry.seq !== null) setCursorSeq(entry.seq); set({inspect: entry.id}); }}>Inspect</button>`
-              : entry.entry_kind === 'knowledge_update' && entry.knowledge_version && entry.outcome !== 'refused' ? html`<a class="inspect" href=${`#memory/${encodeURIComponent(entry.knowledge_version)}`}>Open in Memory →</a>` : null}</li>`;
+              : entry.entry_kind === 'knowledge_update' && entry.knowledge_version && entry.outcome === 'delivered' ? html`<a class="inspect" href=${`#memory/${encodeURIComponent(entry.knowledge_version)}`}>Open in Memory →</a>` : null}</li>`;
         })}
         ${to < rows.length ? html`<li class="more"><button type="button" class="btn" onClick=${() => setExtra({...extra, older: extra.older + MORE})}>${count(rows.length - to)} older</button></li>` : null}
         ${rows.length ? null : html`<li class="more note" role="status">${needle ? 'No entry matches.' : 'Nothing of this kind in this run.'}</li>`}

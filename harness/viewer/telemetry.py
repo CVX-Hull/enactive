@@ -28,7 +28,7 @@ from typing import Any
 from harness.evaluation.core.host import HostFacts, ToolCall, host_facts
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError
-from harness.evaluation.core.sources import HostEvent, read_host, run_archive_entry
+from harness.evaluation.core.sources import HostEvent, is_delivered_exposure, read_host, run_archive_entry
 
 from .catalog import ID_LIMIT, RunInfo
 from .curator import read_file, read_rooted, rooted_entries, rooted_status
@@ -215,6 +215,8 @@ def project(actors: list[tuple[str, str, tuple[HostEvent, ...]]], untraced: tupl
     facts: HostFacts = host_facts(out.actors, {a: events for _, a, events in actors})
     out.calls = facts.calls
     for index, (_, actor, events) in enumerate(actors):
+        host_telemetry = (events[0].fields.get('telemetry_version')
+            if events and events[0].type == 'host-start' and type(events[0].fields.get('telemetry_version')) is int else None)
         # By request ID (None: not an identifier): attempts started, answered, and answered with a provider's price.
         started: Counter = Counter()
         answered: Counter = Counter()
@@ -235,12 +237,14 @@ def project(actors: list[tuple[str, str, tuple[HostEvent, ...]]], untraced: tupl
             elif event.type == 'context-cut':
                 out.cuts.append(Mark(actor, index, event.line, event.wall, cut_fields(f)))
             elif event.type == 'knowledge-delivery':
+                delivered = is_delivered_exposure(f, host_telemetry)
                 if f.get('kind') == 'update':
                     out.updates.append(Mark(actor, index, event.line, event.wall, update_fields(f)))
-                elif f.get('kind') == 'briefing':
+                elif f.get('kind') == 'briefing' and delivered:
                     out.briefings.append(Mark(actor, index, event.line, event.wall, dict(
-                        request_id=identifier(f.get('request_id')), knowledge_version=identifier(f.get('version')))))
-                if f.get('kind') == 'briefing' or (f.get('kind') == 'update' and f.get('outcome') == 'delivered'):
+                        request_id=identifier(f.get('receiving_player_request_id')) or identifier(f.get('request_id')),
+                        knowledge_version=identifier(f.get('version')))))
+                if delivered and f.get('kind') in ('briefing', 'update'):
                     out.latest_version = identifier(f.get('version')) or out.latest_version
             elif event.type == 'tool-refused':
                 reason = identifier(f.get('reason'), 1024)

@@ -33,7 +33,7 @@ def package(root, *, world=None, lineage=None, context=None, knowledge=None, liv
     hashes=export(directory,empty() if knowledge is None else knowledge,seed,world=world,lineage=lineage,context=context)
     values={
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
-        'route.json':dict(schema='player-host/11',endpoint_costs=None,service_tier='default',context_reserve_tokens=200,context_cut=None,
+        'route.json':dict(schema='player-host/12',endpoint_costs=None,service_tier='default',context_reserve_tokens=200,context_cut=None,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
@@ -96,7 +96,7 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
-@pytest.mark.parametrize('version', [9, 10])
+@pytest.mark.parametrize('version', [9, 10, 11])
 def test_preflight_rejects_an_old_host_route_before_dispatch(tmp_path, version):
     directory,profile=package(tmp_path)
     rewrite_route(directory,profile,schema=f'player-host/{version}')
@@ -217,6 +217,30 @@ def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both
     profile['private_files'].pop('unexpected.json');profile['files'].pop('delivered-knowledge.json')
     (directory/'manifest.json').write_text(json.dumps(profile))
     with pytest.raises(ControlError,match='Freeze every'):validate(directory,tmp_path)
+
+
+def test_preflight_requires_room_for_ordinary_work_beyond_ending_reserve_and_bound(tmp_path):
+    """Ballot 7: `ending_reserve.usd + reserve_bound < spend_limit_usd` prevents Turn-1 deadlock."""
+    directory, profile = package(tmp_path)
+    # Empty knowledge: reserve_bound == 0.00063; spend_limit_usd == 1.
+    for reserve_usd in ('0.99937', '0.9995'):
+        profile['ending_reserve']['usd'] = reserve_usd
+        (directory/'manifest.json').write_text(json.dumps(profile))
+        with pytest.raises(ControlError, match='below spend_limit_usd'):
+            validate(directory, tmp_path)
+    profile['ending_reserve']['usd'] = '0.99936'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    assert validate(directory, tmp_path)
+    with_kb = tmp_path / 'with-kb'
+    directory, profile = package(with_kb, knowledge=KNOWLEDGE)
+    # Populated knowledge: reserve_bound == 0.00126 (player + recall); equality fails.
+    profile['ending_reserve']['usd'] = '0.99874'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with pytest.raises(ControlError, match='below spend_limit_usd'):
+        validate(directory, with_kb)
+    profile['ending_reserve']['usd'] = '0.99873'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    assert validate(directory, with_kb)
 
 
 def test_live_knowledge_updates_is_a_required_boolean_that_reserves_a_recall_and_excludes_withholding(tmp_path):

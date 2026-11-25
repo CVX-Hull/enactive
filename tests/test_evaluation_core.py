@@ -147,7 +147,7 @@ class Run:
         actor = name or f'{len(self.actors) + 1:032x}'
         self.store.add_actor(actor, hashlib.sha256(actor.encode()).hexdigest())
         self.actors.append(actor)
-        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/5' if self.historical else 'player-host/11', telemetry_version=5 if self.historical else 11, actor_id=actor,
+        self.host[actor] = [self.event(actor, 'host-start', schema='player-host/5' if self.historical else 'player-host/12', telemetry_version=5 if self.historical else 12, actor_id=actor,
             session=self.session)]
         return actor
 
@@ -1165,9 +1165,9 @@ def test_unsupported_input_versions_are_errors(tmp_path):
     host = directory / 'actors' / '001' / 'host.jsonl'
     original = host.read_text()
     # An older trace, the immediately previous version included, is not read for a session the index does not list.
-    for telemetry in (3, 8, 9, 10):
+    for telemetry in (3, 8, 9, 10, 11):
         schema = f'player-host/{telemetry}'
-        host.write_text(original.replace('"schema": "player-host/11", "telemetry_version": 11', f'"schema": "{schema}", "telemetry_version": {telemetry}'))
+        host.write_text(original.replace('"schema": "player-host/12", "telemetry_version": 12', f'"schema": "{schema}", "telemetry_version": {telemetry}'))
         assert host.read_text() != original
         with pytest.raises(EvaluationError, match=rf'host\.jsonl.*{schema}'):
             evaluate(directory, FakeBinding(), tmp_path / 'e2')
@@ -1694,8 +1694,7 @@ def test_the_shipped_archive_index_preserves_exact_approved_sessions():
     assert sources.ARCHIVE_COMBINATIONS[-2].fields == dict(
         host=sources.ARCHIVE_COMBINATIONS[0].fields['host'],
         manifest=(*sources.ARCHIVE_COMBINATIONS[-3].fields['manifest'], 'live_knowledge_updates'))
-    assert sources.ARCHIVE_COMBINATIONS[-1].fields == dict(
-        manifest=sources.ARCHIVE_COMBINATIONS[-2].fields['manifest'])
+    assert sources.ARCHIVE_COMBINATIONS[-1].fields == sources.ARCHIVE_COMBINATIONS[-2].fields
     assert sources.MANIFEST_SCHEMAS == ('campaign-run/4', 'campaign-run/5', 'campaign-run/6', 'campaign-run/7',
                                        'campaign-run/10', 'campaign-run/12', 'campaign-run/13')
     assert [c.fields.get('run_ending') for c in sources.ARCHIVE_COMBINATIONS] == [
@@ -2165,7 +2164,7 @@ def test_input_digests_are_the_sha256_of_each_file(tmp_path):
 
 def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     from harness.evaluation.core.sources import HostTraceUnsupported, read_host
-    start = dict(type='host-start', schema='player-host/11', telemetry_version=11, actor_id='actor-1', monotonic_ms=0,
+    start = dict(type='host-start', schema='player-host/12', telemetry_version=12, actor_id='actor-1', monotonic_ms=0,
         wall_time='2026-11-07T01:02:03.500Z')
     path = tmp_path / 'host.jsonl'
     path.write_text(json.dumps(start) + '\n' + json.dumps(dict(type='settled', monotonic_ms=1, wall_time='not a time')) + '\n')
@@ -2175,7 +2174,8 @@ def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
     for lines, kind in (([], 'empty'), ([dict(type='thread.started')], 'format'),
             ([dict(start, schema='player-host/3', telemetry_version=3)], 'version'), ([dict(start, schema='player-host/3')], 'version'),
             ([dict(start, schema='player-host/8', telemetry_version=8)], 'version'),
-            ([dict(start, telemetry_version=3)], 'version'), ([dict(start, telemetry_version=11.0)], 'version')):
+            ([dict(start, schema='player-host/11', telemetry_version=11)], 'version'),
+            ([dict(start, telemetry_version=3)], 'version'), ([dict(start, telemetry_version=12.0)], 'version')):
         path.write_text(''.join(json.dumps(line) + '\n' for line in lines))
         with pytest.raises(HostTraceUnsupported) as error:
             read_host(path, 'hint')

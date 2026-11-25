@@ -849,7 +849,7 @@ def markdown(result: dict) -> str:
               f"- Archive heuristic reconstruction error: max overestimate {cut['max_archive_overestimate_tokens']:,} "
               f"tokens, max underestimate {cut['max_archive_underestimate_tokens']:,} tokens "
               f"(max absolute {cut['max_archive_heuristic_error_tokens']:,}).",
-              f"- **Capacity gate {'passes' if result['no_increase_in_projected_stops'] else 'does not pass'}.**"]
+              f"- **Literal-threshold diagnostic capacity check {'passes' if result['no_increase_in_projected_stops'] else 'does not pass'}.**"]
     if 'insufficient_summary' in cut:
         s = cut['insufficient_summary']
         lines.append(f"  - Across {s['count']} `insufficient-cover` holds at `k = E`: post-cut tokens above briefing "
@@ -863,14 +863,14 @@ def markdown(result: dict) -> str:
                          f"{stop['tokens']:,} estimated tokens against a {stop['hard_limit']:,}-token limit. "
                          f"Orderly stop {'accepted' if stop['orderly_stop'] else 'absent'}.")
     be = result['cut_best_effort']
-    lines += ['', '### Diagnostic arm: best-effort `k = E` fallback when uncovered tail exceeds `low_mark` / `M - B`', '',
+    lines += ['', '### Owner-approved Ballot 4 arm: best-effort `k = E` fallback when uncovered tail exceeds `low_mark` / `M - B`', '',
               f"- {be['observed_holds']:,} observed holds and {be['projected_holds']:,} projected edge holds "
               f"({be['hold_reduction_pct']}% lower).",
               f"- Projected normal cuts {be.get('cut', 0):,} and strict-fit rescues {be.get('rescue', 0):,}.",
               f"- {be['observed_stops']:,} observed and {be['projected_stops']:,} projected hard capacity stops "
               f"over {be['checks']:,} checks. Minimum uncut headroom is {be['min_uncut_headroom_tokens']:,} "
               f"estimated tokens.",
-              f"- **Diagnostic capacity gate {'passes' if result['best_effort_no_increase_in_projected_stops'] else 'does not pass'}.**"]
+              f"- **Capacity gate {'passes' if result['best_effort_no_increase_in_projected_stops'] else 'does not pass'}.**"]
     lines += ['', '## Per-version recall indexes and cut briefings', '',
               '| Version | Source | Title-only chars | Sent chars | Unlisted | Main cut chars | Proposed cut chars |',
               '| --- | --- | ---: | ---: | ---: | ---: | ---: |']
@@ -892,7 +892,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, indent=2, default=str))
     else:
         print(markdown(result), end='')
-    return int(not (result['caps_ok'] and result['no_increase_in_projected_stops']))
+    return int(not (result['caps_ok'] and result['best_effort_no_increase_in_projected_stops']))
 
 
 if __name__ == '__main__':

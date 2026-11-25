@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/11` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/12` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -77,7 +77,7 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/11", spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/12", spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
@@ -99,13 +99,13 @@ def text_response(text: str) -> tuple:
              usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16, cost=RESPONSE_COST_USD))))
 
 
-def tool_response(name: str, arguments: dict) -> tuple:
+def tool_response(name: str, arguments: dict, *, cost: float = RESPONSE_COST_USD) -> tuple:
     if name == 'player_finish': arguments = {'intent':'Report the task disposition',**arguments}
     call = dict(index=0, id="call-0", type="function", function=dict(name=name, arguments=json.dumps(arguments)))
     return ("sse", sse(
         dict(id="ref", model="ref-backend", choices=[dict(index=0, delta=dict(role="assistant", tool_calls=[call]), finish_reason=None)]),
         dict(id="ref", model="ref-backend", choices=[dict(index=0, delta={}, finish_reason="tool_calls")],
-             usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16, cost=RESPONSE_COST_USD))))
+             usage=dict(prompt_tokens=11, completion_tokens=5, total_tokens=16, cost=cost))))
 
 
 def http_response(status: int, body: dict, headers=None) -> tuple:
@@ -369,7 +369,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/11" and events[0]["telemetry_version"] == 11
+    assert events[0]["schema"] == "player-host/12" and events[0]["telemetry_version"] == 12
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
@@ -614,21 +614,26 @@ def test_upstream_403_uses_the_shared_retry_through_the_cli(adapter, host_factor
 
 
 def test_spend_notice_crosses_the_work_budget_threshold_and_keeps_prior_messages(adapter, host_factory):
-    """R-OVERSPEND and R-REGRESSION: finish guidance before the reserve with stable request prefixes."""
-    calls = [tool_response("integer", dict(value=7)) for _ in range(3)]
+    """R-OVERSPEND and R-REGRESSION: halving-step finish guidance before the reserve with stable request prefixes."""
+    # Work budget = $2.00 above $0.10 finish reserve (15% warning threshold = $0.30, above $0.25 unpriced bound).
+    calls = [
+        tool_response("integer", dict(value=7), cost=1.696),
+        tool_response("integer", dict(value=7), cost=0.004),
+        tool_response("integer", dict(value=7), cost=0.004),
+    ]
     finish = tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None))
-    hosted = host_factory([*calls, finish], enabled_tools=("integer",), spend_limit_usd="0.358", finish_reserve_usd="0.1")
+    hosted = host_factory([*calls, finish], enabled_tools=("integer",), spend_limit_usd="2.10", finish_reserve_usd="0.10")
     assert hosted.start().wait() == 0
     events = hosted.events()
-    assert events[0]["telemetry_version"] == 11
+    assert events[0]["telemetry_version"] == 12
     notices = [e for e in events if e["type"] == "tail-notice"]
-    # $0.258 of work at start and exact $0.004 per response cross the $0.25 band after two responses.
-    assert [(e["request_id"], e["kinds"]) for e in notices] == [("request-3", ["spend-limit"]), ("request-4", ["spend-limit"])]
+    # $2.00 work budget -> $0.30 after $1.70 crosses 100% ($0.30) on request-3;
+    # $0.296 on request-4 stays above 50% ($0.15) and still admits ordinary work ($1.704 + $0.10 + $0.25 < $2.10).
+    assert [(e["request_id"], e["kinds"]) for e in notices] == [("request-3", ["spend-limit"])]
     payloads = [json.loads(request["body"])["messages"] for request in hosted.provider.requests]
     assert all(after[:len(before)] == before for before, after in zip(payloads, payloads[1:]))
-    first, second = (messages[-1]["content"][0]["text"] for messages in payloads[2:])
-    assert "$0.25" in first and "ending reserve" in first and "Wrap up with player_finish" in first
-    assert "$0.246" in second and len(second) < len(first)
+    first = payloads[2][-1]["content"][0]["text"]
+    assert "$0.30" in first and "ending reserve" in first and "Wrap up with player_finish" in first
 
 
 def test_sigterm_cancels_closes_the_mcp_child_and_leaves_no_process_group(adapter, host_factory):

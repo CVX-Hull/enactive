@@ -25,7 +25,7 @@ The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the package's dollar limit and operational capacities.
 
-The package freezes `route.json` (`player-host/11`), `delivered-knowledge.json`, `mcp-template.json`,
+The package freezes `route.json` (`player-host/12`), `delivered-knowledge.json`, `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, the dollar limit, the planning bound for an in-flight

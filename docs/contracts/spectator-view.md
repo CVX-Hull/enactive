@@ -176,7 +176,7 @@ request number; neither replaces the other.
 | --- | --- |
 | `step` | `tool`, `intent` (`intent_source` is `player_claim`), `keys`, `status` (`ok`, `error`, `refused` or `pending`), `latency_ms`, `arguments_preview`, the request's `reported_provider`, `reported_cost_usd` and token counts, the identifiers, and `result` (mechanical status, reason and receipt dispositions). One request may issue several calls, each carrying the request's cost |
 | `context_cut` | `outcome` (`applied` or `held_back`), `triggers`, `knowledge_version`, tokens and images before and after, `removed_turns`, `reason` |
-| `knowledge_update` | `knowledge_version`, `previous_version`, `outcome`, `reason`, `request_id`, `covered_step`, the counts the delivered text states, and `summary`. A refused update has `null` counts, never zero |
+| `knowledge_update` | `knowledge_version`, `previous_version`, `outcome` (`delivered`, `undelivered` or `refused`), `reason`, `request_id`, `covered_step`, the counts the delivered text states, and `summary`. A refused update has `null` counts, never zero; Watch renders `undelivered` updates distinctly and links only `delivered` updates to Memory |
 | `finding` | `finding_kind` (`stall`, `death`, `custody_stop`, `handoff` or `run_end`), `seq_end`, `source`, `payload` |
 
 Intents are unverified player reports, at most 1,024 characters, with the omitted count.
@@ -305,7 +305,8 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
 
 - `events` allowlist `knowledge-recall`, `knowledge-delivery` and
   `knowledge-undelivered` fields, selected article/fact/index IDs, delivery leads/index
-  and original trace line. An update event also has `outcome`, `previous_version`,
+  and original trace line (with `outcome: "undelivered"` rows labelled as attempted
+  rather than delivered in the page). An update event also has `outcome`, `previous_version`,
   its coverage marker, `removed_ids` and the `added`, `updated` and `removed` rows of
   its text. Selection, delivery and an explicit read are distinct.
   Missing delivery text or a missing join stays unavailable; proximity proves no use.
@@ -325,7 +326,8 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
   in their recorded units). It pages `items` with
   `total`, `limit` and `next`. An absent entry is unavailable, not proof of withholding.
   No private full export, withheld-unit file or curator repository is read.
-- `calls` expose public intent/cites, knowledge query/read returned IDs, status and
+- `calls` expose public intent/cites, knowledge query/read returned IDs (including compact
+  `player-knowledge/3` query `hits`), status and
   explicit operation/source/step IDs, allowlisted tool-result status/reason/delivery,
   and original operation status/receipt dispositions. Intent, hints and finish
   claims are unverified player reports; SDL delivery and evaluator outcome have

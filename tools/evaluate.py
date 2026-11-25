@@ -7,7 +7,7 @@ docs/contracts/evaluation-record.md): each value carries its source and confiden
 evaluator still accepts no run or claim. Acceptance stays with frames, receipts, review
 and the issue's decision rule.
 
-host-summary selects current player-host/11 (telemetry version 11) files, actor directories or campaign
+host-summary selects current player-host/12 (telemetry version 12) files, actor directories or campaign
 folders (4096 files / 8 GiB; 64 MiB per line; two million lines per trace); an older trace is read only inside
 the run directory of a session the closed archive index lists.
 control-summary selects 1..32 computer-session/1 databases/directories (512 MiB

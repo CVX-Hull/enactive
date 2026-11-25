@@ -10,45 +10,36 @@ This contract covers [player host](player-host.md) JSONL events, accounting and 
 
 ## Knowledge delivery and recall events
 
-Telemetry records `knowledge-delivery` with kind, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. `knowledge-recall` records selections, silence, failures and opportunities not made; a recall aborted because the actor ended has reason `actor-ended`. Every `knowledge-recall` for a recall whose attempt received a response (a stop other than an error or abort; status `selected`, `silence` or `failure`) carries `reply_text` and `reply_omitted_bytes`, the reply's text bounded at 8192 bytes on a UTF-8 boundary as the player's `assistant-text` is. An invalid reply has reason `invalid-recall-selection` and `selection_error`, one of `not-json`, `not-one-object`, `wrong-keys`, `repeated-entry`, `unknown-entry`; an unexpected exception has reason `recall-failed` and `error_name`. Each recall attempt has exactly one `response-complete`, emitted before its reply is parsed. `knowledge-undelivered` records text still unsent at actor end (an adopted update's included) and any queued reminder whose selected entries no longer exist in a newly adopted version (`reason: "superseded"`). Recall requests are never player decisions.
+Telemetry records `knowledge-delivery` with `kind` (`briefing`, `reminder` or `update`), explicit `outcome`, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. Every `knowledge-delivery` event carries `outcome`:
 
-A [newer version during play](player-host.md#a-newer-version-during-play) records
-`knowledge-delivery` with kind `update`, `version`, `previous_version` and the new
-version's `coverage`, and `outcome`:
+- `delivered` (`briefing`, `reminder` or `update`): the logical player request carrying that placement reached a settled successful `response-complete` with usable provider-reported cost. Carries `receiving_player_request_id`, full `text`, `article_ids`, `fact_ids`, `index_ids`, `delivered_knowledge_schema`, `version` and `recall_request_id` (plus `previous_version`, `coverage` and `removed_ids` on `kind: "update"`).
+- `undelivered` (`briefing`, `reminder` or `update`): emitted on every other terminal outcome for a logical player request carrying that placement (including pre-header failure, terminal HTTP error, aborted stream, `cost-unreported` or priced non-tool/length terminal failure). Carries the same placement fields for diagnostics without crediting player exposure.
+- `refused` (`update` only): pre-request refusal before placement; carries `version`, `previous_version`, `coverage` and `reason` with no `receiving_player_request_id`, `text` or `fact_ids`. `reason` is one of `invalid-entry` (the line failed both supported schemas, with null `version` and `coverage`), `not-newer`, `superseded` (a newer listed version verified), `repository-mismatch`, `file-unreadable`, `sha256-mismatch`, `invalid-delivered-knowledge`, `entry-mismatch`, `context-capacity`, or `update-check-failed` for an unexpected exception, with `error_name` and null `version` and `coverage`.
 
-- `delivered`: the update message reached the receiving player request. It also has
-  the full text, `article_ids`, `fact_ids` and `index_ids` of the entries it shows,
-  `removed_ids`, `delivered_knowledge_schema`, `receiving_player_request_id` and a
-  null `recall_request_id`.
-- `refused`: the host kept the version it holds. `reason` is one of `invalid-entry`
-  (the line failed both supported schemas, with null `version` and `coverage`),
-  `not-newer`,
-  `superseded` (a newer listed version verified), `repository-mismatch`,
-  `file-unreadable`, `sha256-mismatch`, `invalid-delivered-knowledge`,
-  `entry-mismatch`, `context-capacity`, or `update-check-failed` for an unexpected
-  exception, with `error_name` and null `version` and `coverage`.
+`knowledge-recall` records selections, silence, failures and opportunities not made (`reason: "all-delivered"` when every row on the sent recall index is already active in context; `reason: "actor-ended"` when aborted because the actor ended). Every `knowledge-recall` for a recall whose attempt received a response (a stop other than an error or abort; status `selected`, `silence` or `failure`) carries `reply_text` and `reply_omitted_bytes`, the reply's text bounded at 8192 bytes on a UTF-8 boundary as the player's `assistant-text` is. An invalid reply has reason `invalid-recall-selection` and `selection_error`, one of `not-json`, `not-one-object`, `wrong-keys`, `repeated-entry`, `unknown-entry`; an unexpected exception has reason `recall-failed` and `error_name`. Each recall attempt has exactly one `response-complete`, emitted before its reply is parsed. `knowledge-undelivered` records text still unsent at actor end (an adopted update's included), any queued reminder whose selected entries no longer exist in a newly adopted version (`reason: "superseded"`), and any reminder whose selected entries are all already active in context at placement (`reason: "already-in-context"`). Recall requests are never player decisions.
 
 ## Telemetry
 
-Stdout is JSONL telemetry version 11. The driver rejects other versions for live
+Stdout is JSONL telemetry version 12. The driver rejects other versions for live
 accounting. Each line has `type`. The driver ignores event kinds it does not
 account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:11` and `schema:"player-host/11"`. It records `session_affinity_id` and the route's `spend_limit_usd`, `unpriced_request_usd` and `context_cut`, including null when cuts are disabled. `provider_routing` records the configured routing policy with one or two tags in both `only` and `order`, or null on a direct route. `endpoint_costs` records the frozen rates per declared endpoint on a two-endpoint route and is null otherwise. `recall` includes its own frozen model and endpoint costs. |
-| `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `host-timeout`, `spend-limit`) and the context `tokens` estimate. The driver ignores this event. |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:12` and `schema:"player-host/12"`. It records `session_affinity_id` and the route's `spend_limit_usd`, `unpriced_request_usd` and `context_cut`, including null when cuts are disabled. `provider_routing` records the configured routing policy with one or two tags in both `only` and `order`, or null on a direct route. `endpoint_costs` records the frozen rates per declared endpoint on a two-endpoint route and is null otherwise. `recall` includes its own frozen model and endpoint costs. |
+| `tail-notice` | One per request that actually placed a notice at a halving-step crossing (`100%`, `50%`, `25%`, `12.5%` of the warning threshold; earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `host-timeout`, `spend-limit`) and the context `tokens` estimate. The driver ignores this event. |
+| `spend-reserve-reached` | At most one per actor when ordinary-work spend admission fails while `spent < spend_limit`: `actor_id`, `spent_usd`, `spend_limit_usd`, `finish_reserve_usd`, `unpriced_bound_usd`. Consumed by the live driver to issue `orderly_stop` before the host's 2 s wait expires. |
 | `request-start` | Every observed HTTP start, including retries and failures. Each role has a contiguous ID sequence, `request-1` or `recall-1` onward. |
-| `context-cut` | One per triggered [cut decision](#context-cut), before the next player request's image projection. |
+| `context-cut` | One per triggered [cut decision](#context-cut) (edge-reported per `(reason, coverage_frontier)` state for holds), before the next player request's image projection. |
 | `context-manifest` | Exactly one per player HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). For a sealed archive trace without this event, the evaluator reports the manifest as `absent`. |
-| `provider-refusal` | A bounded player refusal diagnostic with `request_id`, HTTP `status` and `body_read`. `refusal_class` is `credits-or-limit`, `moderation`, `auth`, `upstream-provider` or `unknown`. `provider_name` is a sanitized label from refusal metadata or null. `error_type`, `error_code`, `provider_error_code`, `limit_source` and `reason` are sanitized identifiers or null. The event excludes raw messages, refusal bodies and credentials. Older version 11 traces can omit `refusal_class` and `provider_name`. |
+| `provider-refusal` | A bounded player refusal diagnostic with `request_id`, HTTP `status` and `body_read`. `refusal_class` is `credits-or-limit`, `moderation`, `auth`, `upstream-provider` or `unknown`. `provider_name` is a sanitized label from refusal metadata or null. `error_type`, `error_code`, `provider_error_code`, `limit_source` and `reason` are sanitized identifiers or null. The event excludes raw messages, refusal bodies and credentials. Older archived traces can omit `refusal_class` and `provider_name`. |
 | `response-complete` | One per player or recall HTTP attempt, a failed or aborted one included. Top-level `reported_provider` is the first usable, sanitized `provider` label in the response stream, or null when unavailable. Player events also retain it in `response_progress`. `usage_available` distinguishes unknown usage. `usage.cost` is an estimate from the route's configured rates, labelled `cost_source:"configured-rates"`; it is not counted. `reported_cost_usd` is the cost the provider itself reported for the response, as decimal text in US dollars, or `null` when the response carried no usable cost; a missing or malformed cost stays unknown and is never estimated. `counted_cost_usd` matches the provider cost, or is `null` when the attempt has unknown cost. `cost_counted_as` is `provider-reported` or `unpriced`. `spent_usd` is the running provider subtotal. |
 | `tool-result` | The MCP result as the host received it, with each image replaced by an `image_reference`. The operation payload follows the [tool server's result formats](player-ports.md#mcp-projection-and-envelopes). Readers take the full record from `structuredContent` when present and from JSON text otherwise, including for sealed traces with text-only records. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
 | `settled` | Last, with `ok`, reason, control identity where applicable, integer combined, player and recall counts matching the observed starts by role, the host's total `spent_usd` and both unpriced counts. A settlement written before the host started carries neither. |
 
-Stop reasons the [host contract](player-host.md) adds to a failed settlement: `spend-limit` and
+Stop reasons the [host contract](player-host.md) adds to a failed settlement: `spend-limit`, `spend-reserve-timeout` and
 `cost-unreported` ([Spend](player-host.md#spend)).
 
 ### Context cut
@@ -62,14 +53,17 @@ image eviction and new tail notices.
 
 - `outcome: "cut"` also reports `removed_turns`, `cumulative_removed_turns`,
   `tokens_after`, `briefing_tokens`, `images_after` and `source_ids_count` for
-  the cumulative distinct sources. The first HTTP attempt carrying the cut
-  gets a `knowledge-delivery` with `kind: "briefing"` and a null
-  `recall_request_id`.
+  the cumulative distinct sources. The logical request carrying the cut
+  gets a `knowledge-delivery` with `kind: "briefing"`, explicit `outcome`
+  (`delivered` or `undelivered`) and a null `recall_request_id`.
 - `outcome: "held-back"` also reports `reason`, `available_turns` and
-  `min_free`. The reason is `restored` after invalidation, `uncovered` when
-  no surviving turn is eligible, or `below-min-free` when the planned
-  number of turns is below the configured minimum. `available_turns` is zero
-  for the first two reasons and the planned number for the last.
+  `min_free`. Holds are edge-reported once on entering a `(reason, coverage_frontier)`
+  state while cut pressure remains armed. The reason is `restored` after invalidation,
+  `uncovered` when no surviving turn is eligible, `below-min-free` when eligible
+  covered turns are below `min_free`, or `insufficient-cover` when no candidate prefix
+  (including best-effort `k = E`) fits and strictly reduces estimated tokens.
+  `available_turns` is zero for `restored` and `uncovered`, and the eligible turn count
+  otherwise.
 
 ### Context manifest
 

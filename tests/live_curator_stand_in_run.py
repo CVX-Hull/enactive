@@ -708,11 +708,11 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
     delivered = [u for u in host.get('updates', ()) if u.get('outcome') == 'delivered']
     others = [u for u in host.get('updates', ()) if u.get('outcome') != 'delivered']
     checks['host_delivered_the_newest_listed_version_to_its_next_request'] = (
-        host.get('ok') is True and host.get('host') == dict(schema='player-host/11', telemetry_version=11)
+        host.get('ok') is True and host.get('host') == dict(schema='player-host/12', telemetry_version=12)
         and len(delivered) == 1 and delivered[0]['type'] == 'knowledge-delivery' and delivered[0]['version'] == newest
         and delivered[0]['previous_version'] == actors[chosen]['frozen_version']
         and delivered[0]['coverage'] == exported[newest]['coverage']
-        and delivered[0]['delivered_knowledge_schema'] == 'delivered-knowledge/2'
+        and delivered[0]['delivered_knowledge_schema'] == 'delivered-knowledge/3'
         and isinstance(delivered[0].get('receiving_player_request_id'), str)
         and all(u.get('reason') == 'superseded' for u in others) and len(others) == len(actors[chosen]['listed']) - 1)
     return checks, dict(published=published, exported=exported, leftovers=leftovers, covered_prefix=prefix, actors=actors,

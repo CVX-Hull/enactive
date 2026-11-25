@@ -622,7 +622,7 @@ DELIVERY_VERSIONS = f'{MANIFEST_SCHEMA} or indexed historical /10 or /7'
 def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     """Build judged-facts from delivered data and the order of actual player exposures."""
     from harness.evaluation.core.host import host_facts, returned_records
-    from harness.evaluation.core.sources import archive_entry, read_host, read_manifest
+    from harness.evaluation.core.sources import archive_entry, is_delivered_exposure, read_host, read_manifest
     from harness.player.knowledge import SCHEMA
     from tools.knowledge_export import units, selection_matches
     admissions, recall_events = {}, []
@@ -665,6 +665,8 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
         facts = host_facts(tuple(host), host)
         entries = {}
         for actor, events in host.items():
+            host_telemetry = (events[0].fields.get('telemetry_version')
+                if events and events[0].type == 'host-start' and type(events[0].fields.get('telemetry_version')) is int else None)
             entry = {route:[] for route in ROUTES}
             entry.update(briefing='', reminders=[])
             exposed, last = {}, 0
@@ -673,19 +675,26 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
             for event in events:
                 fields = event.fields
                 if event.type == 'knowledge-delivery':
+                    if not is_delivered_exposure(fields, host_telemetry):
+                        continue
                     kind = fields['kind']
+                    delivered_facts = sorted(set(fields.get('fact_ids', ())) & available)
                     source = recalls.get(fields.get('recall_request_id'))
-                    if source is not None:source.update(delivered=True,from_decision=last)
-                    if kind == 'briefing':entry['briefing'] = fields['text']
-                    else:entry['reminders'].append(dict(decision=last,text=fields['text']))
-                    for identity in fields['fact_ids']:
-                        if identity in available:
-                            exposed.setdefault(identity, ('lead', None if kind == 'briefing' or not last else last))
+                    if source is not None:
+                        source.update(delivered=True, from_decision=last, delivered_fact_ids=delivered_facts)
+                    if kind == 'briefing':
+                        entry['briefing'] = fields['text']
+                    elif kind == 'reminder':
+                        entry['reminders'].append(dict(decision=last, text=fields['text']))
+                    for identity in delivered_facts:
+                        exposed.setdefault(identity, ('lead', None if kind == 'briefing' or not last else last))
                 elif event.type == 'tool-result':
                     call = calls.get((fields.get('request_id'),fields.get('tool_call_id')))
                     if call is not None:
                         # The result completes this player decision before the next request can use it.
                         last = max(last,call.decision or 0)
+                        # Compact `player-knowledge/3` query hits carry `hits` (never `records`), so `returned_records`
+                        # ignores them without promoting hits to `'read'` or pre-populating `'index'`.
                         if call.tool in ('player_knowledge_read','player_knowledge_query') and not call.error:
                             for record in returned_records(call):
                                 identities = {f for claim in record['body'] for f in claim['facts']} if 'body' in record else {record['id']}
@@ -715,7 +724,8 @@ def recall_measure(run: Path, rows: Sequence[dict]) -> dict:
     completed = [e for e in events if e['kind'] == 'reminder' and e['status'] in ('silence','selected')]
     leads = [row for event in events if event['status'] == 'selected' and event.get('delivered')
              for row in rows if row['start'] == event['start'] and row['actor'] == event['actor']
-             and row['fact'] in event['fact_ids'] and row['last'] > event['from_decision'] and row['label'] != 'cannot_tell']
+             and row['fact'] in event.get('delivered_fact_ids', event['fact_ids'])
+             and row['last'] > event['from_decision'] and row['label'] != 'cannot_tell']
     applied = sum(r['label'] in judge.APPLIED for r in leads)
     silence = sum(e['status'] == 'silence' for e in completed)
     return dict(recorded=True,precision=dict(numerator=applied,denominator=len(leads),value=applied/len(leads) if leads else None),
