@@ -405,9 +405,13 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   2. `owner_pause` (the watch terminal record's `reason` is `operator_pause`, with
      `pause_reason` when recorded);
   3. `custody`;
-  4. `infrastructure` (the last actor settled not ok);
+  4. `infrastructure` (the last actor settled not ok for a reason other than a spend stop,
+     such as a provider error or `cost-unreported`; failed settlements with reason
+     `spend-limit` or `spend-reserve-timeout` classify as `budget` instead per
+     [owner decision](../decisions/owner-decisions.md#spend-stop-censor-reason-budget-958));
   5. `player_stop`;
-  6. `budget`.
+  6. `budget` (failed settlements with reason `spend-limit` or `spend-reserve-timeout`,
+     accepted orderly stops, or an uncontinued handoff).
 - **Episodes.**
   - A new episode starts when game time moves back by more than one day, or identity
     changes, and the next reading confirms it.

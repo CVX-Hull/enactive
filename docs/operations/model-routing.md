@@ -41,20 +41,20 @@ determines which changes get reviewed and how many reviewers they get.
 
 | Kind of work here | First choice | Substitutes, in order | Avoid | What it rests on |
 | --- | --- | --- | --- | --- |
-| Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku and Luna, read at Max; Argon, effort not read | Index 58 at High and at Extra-high; the patch score of 49 was read at Extra-high only |
-| Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at Extra-high, then Claude Opus 5.5 at High (not read) | Claude Sonnet 5.5 at Max as the first choice | Sol scores 50 on the public index and has the shortest time among the configurations examined. The index does not isolate work from a brief. |
+| Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku and Luna, read at Max; Argon, effort not read | Index 58 at High and Extra-high; patch score 49 at Extra-high only. Local ledger has 16 unmatched worker attempts (GPT-6.2 Sol at High/Extra-high, Claude Opus 5.5 at High, one failed Fable High attempt); defaults stay unchanged without matched runs. |
+| Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at Extra-high, then Claude Opus 5.5 at High (not read) | Claude Sonnet 5.5 at Max as the first choice | Sol scores 50 on the public index and has the shortest time among the configurations examined. One local matched run (`#834`) favored Sol over Opus; defaults stay unchanged. |
 | Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Sonnet 5.5 at Medium (not read) as a sub-agent | Claude Haiku 5.5 and GPT-6 Luna, both read at Max | Codebase question scores of 64 to 68 for the four of these that were read against 34 and 38; Sonnet at Medium was not read |
 | Locating files and mechanical sweeps | the smallest model the host serves | none needed | a large model | Cost only; no figure read |
-| Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations |
-| Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | Judgment; no public evidence found |
-| Standards and pull-request prose | the lead | GPT-6.2 Sol at Extra-high | none known | Judgment. No public comparison for this work is recorded. |
-| Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found |
+| Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations. Two unmatched local worker passes (GPT-6.2 Sol at Extra-high on `#905`, GPT-6.2 Astra at Medium on `#914`). |
+| Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | Judgment; no public evidence found. One local review observation (GPT-6.2 Astra at High on `#896`, 2 confirmed findings). |
+| Standards and pull-request prose | the lead | GPT-6.2 Sol at Extra-high | none known | Judgment; one local matched run (`#811`) favored Fable over Sol. No public comparison for this work is recorded. |
+| Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found. Four unmatched local worker passes (Claude Opus 5.5 at High on `#925`). |
 | Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | The first choice is judgment; wrong-answer rates were read for those two models only |
 | Review of code | the host's reviewer role, clean context | another family's reviewer when the window is spent | acting on a quoted passage before checking it against the tree | The choice is judgment; reviewer products built on two Claude models were read, with no effort reported |
 | Review of documents | If the [review workflow](../workflows/review.md) selects a review, use the host's clean-context reviewer or a second family's clean-context reviewer with quota. | none known | none known | Judgment, with weak support from one preprint read second-hand. |
 
-The local code and prose comparisons do not yet meet the [threshold for changing a
-default](#reading-the-ledger).
+Only two local matched comparisons exist (`#811` prose and `#834` bounded code), so no
+row meets the [threshold for changing a default](#reading-the-ledger).
 
 ## Roles and their default models
 
@@ -102,7 +102,7 @@ below is a starting point.
 | What is spent | Where to start | Then | Why |
 | --- | --- | --- | --- |
 | Only the limit of Claude Fable 5.2 | Claude Code on Claude Opus 5.5, at High or above | Codex on GPT-6.2 Sol at Extra-high, then GPT-6.2 Astra at Extra-high | Opus accounts for more lead requests than Fable in the sampled transcripts on this host. Its lead effort is unknown. A general public index favors Max over High. |
-| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high, then the Antigravity app on Gemini 4 Neon at High for engineering work that needs no gameplay | Sol has local evidence for bounded implementation and code review. Consider Astra first for a hard change with open design, a judgment without a local comparison to Sol. The maker estimates about a third as many Astra messages as Sol messages in five hours on smaller plans. Neon may come before Astra for a watched documentation leaf. Unattended leading remains unverified. |
+| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high, then the Antigravity app on Gemini 4 Neon at High for engineering work that needs no gameplay | Sol has local evidence across bounded implementation, hard changes and code review. Astra has local evidence across code review (22 reviews across High and Medium), document review, exploration and tooling (with one false report at High on `#873` and one 600 s High explorer timeout on `#945`), and remains a judgment call for open design without a matched comparison to Sol. The maker estimates about a third as many Astra messages as Sol messages in five hours on smaller plans. Neon may come before Astra for a watched documentation leaf. Unattended leading remains unverified. |
 
 - **Check which limit the session shows as spent first.** Each coding agent shows what
   remains in a session ([delegate profiles](delegate-profiles.md)).

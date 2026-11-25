@@ -24,6 +24,7 @@ from .sources import EndFacts, Operation
 VERSION = 1
 INSUFFICIENT = 5
 LOST_REASONS = ('infrastructure', 'custody')
+BUDGET_FAILURE_REASONS = ('spend-limit', 'spend-reserve-timeout')
 
 
 def nearest_rank(values: Sequence[float], fraction: float) -> float | None:
@@ -42,8 +43,9 @@ def censor_reason(died: bool, events: Sequence[EventRow], facts: HostFacts, end:
     1. `died`: a death event in the survival episode (or after it).
     2. `owner_pause`: the gateway's `watch-terminal.json` records a forwarded Pause or a pause reason.
     3. `custody`: a `custody_stop` event (partial or unknown delivery, or a custody fence).
-    4. `infrastructure`: the last actor's host settled unsuccessfully (a provider error), from the host
-       trace or `receipt.json`.
+    4. `infrastructure` (or `budget` on spend stops): the last actor's host settled unsuccessfully, from
+       the host trace or `receipt.json`; `spend-limit` and `spend-reserve-timeout` classify as `budget`,
+       while provider errors, `cost-unreported` and other failed settlements classify as `infrastructure`.
     5. `player_stop`: the last player finish was `cannot_continue` or `task_complete`.
     6. `budget`: an orderly stop was requested (a `control-accepted` host event, or an ending request in
        `receipt.json`), or the last actor settled with a handoff that no successor continued (hosts exhausted).
@@ -57,6 +59,8 @@ def censor_reason(died: bool, events: Sequence[EventRow], facts: HostFacts, end:
     last = end.settled[-1] if end.settled else (facts.settles[facts.actors[-1]].fields
         if facts.actors and facts.actors[-1] in facts.settles else None)
     if last is not None and last.get('ok') is False:
+        if last.get('reason') in BUDGET_FAILURE_REASONS:
+            return 'budget'
         return 'infrastructure'
     finishes = [e.fields.get('disposition') for e in facts.finishes] or [d for d in end.finishes if d]
     if finishes and finishes[-1] in ('cannot_continue', 'task_complete'):
