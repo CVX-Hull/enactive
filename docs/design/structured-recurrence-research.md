@@ -3,7 +3,7 @@ owner: lead
 status: proposed
 date: '2026-11-16'
 scope: 'CDDA-only research proposal for structured recurrent memory and representation search across diverse real starts and visible-trace replay. Other games and their unforeseen generalization problems are deferred to future versions. No runtime adoption or study spending is authorized.'
-review_trigger: A live run supplies a curator-written fact about an earlier sighting, or the comparison's claims or scope change
+review_trigger: "A multi-day standard-build campaign under #136 produces contested or retracted belief revisions or recurrence friction across starts that makes #666, #677 or #681 decision-relevant, or the comparison's claims or scope change"
 ---
 
 # Structured recurrence through diverse CDDA starts
@@ -16,10 +16,14 @@ replay, fixed recurrence and editable representations. Whether editable structur
 improves visible play enough to justify its cost remains unknown.
 
 Revisit the [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/666)
-when a live run has a curator-written fact about an earlier sighting. At that
-point, decide whether the comparison is feasible and worth pricing. Claims of
-benefit from delivered memory come from the
-[seven-day campaign outcome (#145)](https://github.com/CVX-Hull/enactive/issues/145).
+when multi-day standard-build campaigns under the
+[player-owned campaign outcome (#136)](https://github.com/CVX-Hull/enactive/issues/136),
+starting with [#968](https://github.com/CVX-Hull/enactive/issues/968), show
+recurrence friction across starts that makes a structured-recurrence comparison
+feasible and worth pricing (the bounded
+[`#963` live validation](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
+ran one bounded admission). Claims of benefit from delivered memory come from
+campaign outcomes under #136.
 [Decision on measuring memory benefit in campaigns](../decisions/owner-decisions.md#memory-benefit-measured-in-campaigns)
 
 The proposal tests genuine starts within CDDA and keeps the update and read
