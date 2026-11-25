@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: proposed
-review_trigger: "The owner decides whether to take up the programs line, the bounded program interface brief (#839) lands, the curator contract's fact or gate rules change, or a program producer is built."
+review_trigger: "The owner decides whether to take up the programs line, the curator contract's fact or gate rules change, or a program producer is built."
 ---
 
 # Programs and monitor
@@ -10,7 +10,7 @@ review_trigger: "The owner decides whether to take up the programs line, the bou
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The bounded program interface brief may be drafted ([25 November disposition](../decisions/owner-decisions-archive.md#wave3-wave4-live-validation-accepted-963), following the [20 November brief decision](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief)). A program build remains deferred; this proposal authorizes no build.
+**Answer.** The [bounded program interface brief](bounded-program-interface.md) specifies the interface boundary ([25 November disposition](../decisions/owner-decisions-archive.md#wave3-wave4-live-validation-accepted-963), following the [20 November brief decision](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief)). A program build remains deferred; this proposal authorizes no build.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
