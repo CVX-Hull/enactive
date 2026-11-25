@@ -38,6 +38,7 @@ from harness.curator.check import current
 from harness.curator.knowledge import Repository
 from harness.curator.proxy import Price
 from harness.curator.runner import Runner, Settings, TagLook, staged
+from harness.evaluation.cdda import CddaBinding
 from harness.evaluation.core.pipeline import evaluate
 from harness.trace.sidecar import validate as validate_container
 from harness.viewer.app import create_app
@@ -51,7 +52,7 @@ from tools import host_analysis, knowledge_export
 from tools.curator_host import groom, live_runner, shadow
 
 ROOT = Path(__file__).resolve().parents[1]
-REPLAY_SCRIPT = ROOT / 'tools' / 'player_host' / 'test' / 'combined-rehearsal-replay.mjs'
+REPLAY_SCRIPT = ROOT / 'tests' / 'fixtures' / 'combined_rehearsal_replay.mjs'
 PLAYER_HOST_READY = shutil.which('node') is not None and (ROOT / 'tools' / 'player_host' / 'node_modules').is_dir()
 CURATOR_HOST_READY = (
     platform.system() == 'Darwin'
@@ -141,16 +142,18 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     #    under `context={"ruleset": "standard"}`.
     run_dir = tmp_path / 'runs' / 'combined-rehearsal'
     (run_dir / 'actors' / '001').mkdir(parents=True)
+    (run_dir / 'actors' / '002').mkdir(parents=True)
     v1_export = knowledge_export.published(repo, 'v1', world='rehearsal-world', context=dict(ruleset='standard'))
     v3_export = knowledge_export.published(repo, 'v3', world='rehearsal-world', context=dict(ruleset='standard'))
     assert v1_export['schema'] == 'delivered-knowledge/3' and v3_export['schema'] == 'delivered-knowledge/3'
     v1_bytes = (json.dumps(v1_export) + '\n').encode('utf-8')
     (run_dir / 'delivered-knowledge.json').write_bytes(v1_bytes)
     (run_dir / 'actors' / '001' / 'delivered-knowledge.json').write_bytes(v1_bytes)
+    (run_dir / 'actors' / '002' / 'delivered-knowledge.json').write_bytes(v1_bytes)
     v3_path = tmp_path / 'v3-update.json'
     v3_path.write_text(json.dumps(v3_export) + '\n')
 
-    # 3. Run real Node `player-host/12` over real Python MCP (`player-knowledge/3`).
+    # 3. Run two real Node `player-host/12` actors in place over real Python MCP (`player-knowledge/3`).
     completed = subprocess.run(
         ['node', str(REPLAY_SCRIPT), str(run_dir), str(v3_path)],
         cwd=ROOT, capture_output=True, text=True, timeout=120,
@@ -159,37 +162,42 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     assert completed.returncode == 0, completed.stderr + '\n' + completed.stdout
     rehearsal = json.loads(completed.stdout.strip().splitlines()[-1])
 
-    assert rehearsal['ok'] is True and rehearsal['reason'] == 'external_stop_complete', rehearsal
-    assert rehearsal['host']['schema'] == 'player-host/12' and rehearsal['host']['telemetry_version'] == 12
-    assert rehearsal['recall_count'] >= 2 and rehearsal['reminder_has_already_in_context'] is True
+    assert rehearsal['actor1'] == dict(ok=True, reason='external_stop_complete'), rehearsal['actor1']
+    assert rehearsal['actor2'] == dict(ok=False, reason='provider-error'), rehearsal['actor2']
+    assert rehearsal['host1']['schema'] == 'player-host/12' and rehearsal['host1']['telemetry_version'] == 12
+    assert rehearsal['host1']['actor_id'] == ACTOR_ID
+    assert rehearsal['host2']['schema'] == 'player-host/12' and rehearsal['host2']['telemetry_version'] == 12
+    assert rehearsal['host2']['actor_id'] == '4' * 32
+    assert rehearsal['recall_count'] >= 2
+    assert any('water-purification' in items for items in rehearsal['reminder_already_in_context']), rehearsal['reminder_already_in_context']
+    assert all(not (set(r.get('article_ids') or ()) & {'water-purification'}) for r in rehearsal['reminder_recalls'])
     assert rehearsal['cut_prompt_has_recent_intents'] is True
     applied_cuts = [c for c in rehearsal['cuts'] if c.get('outcome') == 'cut']
     assert any(c.get('cut_result') == 'best_effort' for c in applied_cuts), rehearsal['cuts']
     assert len(rehearsal['tail_notices']) >= 1
     assert len(rehearsal['spend_reserves']) >= 1
-    update_outcomes = [u.get('outcome') for u in rehearsal['updates']]
-    assert 'undelivered' in update_outcomes and 'delivered' in update_outcomes, rehearsal['updates']
+    assert [u.get('outcome') for u in rehearsal['actor1_updates']] == ['delivered'], rehearsal['actor1_updates']
+    assert [u.get('outcome') for u in rehearsal['actor2_updates']] == ['undelivered'], rehearsal['actor2_updates']
 
-    # 4. Complete `campaign-run/13` run directory so evaluator, `spectator-view/3`, and `host_analysis` inspect it.
+    # 4. Complete `campaign-run/13` run directory with real `player-host-inputs/4` frozen manifests
+    #    so evaluator, `spectator-view/3`, and `host_analysis` verify snapshots and inspect both actors.
     manifest = dict(
         schema='campaign-run/13', session=SESSION_ID, source_commit='c' * 40,
         labels=dict(arm='rehearsal', start='S1', scenario='Wilderness / Campground / Survivor',
                     world='rehearsal-world', lineage=None, admission=None),
         context=dict(ruleset='standard'), live_knowledge_updates=True,
-        spend_limit_usd='1.00', host=dict(argv=['/usr/bin/node']),
+        spend_limit_usd='2.00', host=dict(argv=['/usr/bin/node']),
     )
     (run_dir / 'manifest.json').write_text(json.dumps(manifest))
-    (run_dir / 'actors' / '001' / 'actor.json').write_text(json.dumps(dict(actor_id=ACTOR_ID)))
-    (run_dir / 'actors' / '001' / 'frozen.json').write_text(json.dumps(dict(
-        schema='player-frozen/3', session=SESSION_ID, actor_id=ACTOR_ID,
-        files={'delivered-knowledge.json': hashlib.sha256(v1_bytes).hexdigest()},
-    )))
-    actor2_id = '4' * 32
-    (run_dir / 'actors' / '002' / 'actor.json').write_text(json.dumps(dict(actor_id=actor2_id)))
-    (run_dir / 'actors' / '002' / 'frozen.json').write_text(json.dumps(dict(
-        schema='player-frozen/3', session=SESSION_ID, actor_id=actor2_id,
-        files={'delivered-knowledge.json': hashlib.sha256(v1_bytes).hexdigest()},
-    )))
+    for actor_dir_name, actor_hex in (('001', ACTOR_ID), ('002', '4' * 32)):
+        actor_dir = run_dir / 'actors' / actor_dir_name
+        (actor_dir / 'actor.json').write_text(json.dumps(dict(actor_id=actor_hex)))
+        actual_sha = hashlib.sha256((actor_dir / 'delivered-knowledge.json').read_bytes()).hexdigest()
+        (actor_dir / 'frozen.json').write_text(json.dumps(dict(
+            schema='player-host-inputs/4', session=SESSION_ID, actor_id=actor_hex,
+            finish_reserve_usd='0.50', knowledge_updates='knowledge-updates.jsonl',
+            files={'delivered-knowledge.json': actual_sha},
+        )))
     (run_dir / 'receipt.json').write_text(json.dumps(dict(
         schema='campaign-receipt/7', session=SESSION_ID, source_commit='c' * 40,
         started_wall=1.0, ended_wall=5.0, elapsed_seconds=4.0, outcome='player_external_stop_complete_unassessed',
@@ -263,6 +271,8 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     assert len(telem['spend_reserve_reached']) >= 1 and telem['tail_notices']['count'] >= 1
 
     knowledge_page = client.get(f'/api/view/run/{SESSION_ID}/knowledge', params=dict(actor=ACTOR_ID)).json()
+    assert knowledge_page['snapshot_status'] == 'verified'
+    assert knowledge_page['snapshot']['version'] == 'v1'
     query_calls = [c for c in knowledge_page['calls'] if c['tool'] == 'player_knowledge_query']
     read_calls = [c for c in knowledge_page['calls'] if c['tool'] == 'player_knowledge_read']
     assert len(query_calls) == 1 and query_calls[0]['returned_hits'], query_calls
@@ -382,3 +392,16 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
     articles = [a for a in repo.articles('v3') if current(a)]
     assert len(articles) == 1 and articles[0]['lead'] == 'Updated stand-in lead after grooming.'
     assert articles[0]['body'][0]['facts'] == ['f2']
+
+    # Pass the real `tools.curator_host.groom` receipt directly into `spectator-view/3`.
+    eval_root = tmp_path / 'seatbelt-evaluations'
+    evaluate(run, CddaBinding(), eval_root, created_wall=1.0)
+    client = TestClient(create_app(
+        Catalog(eval_root, (run.parent,), data_dir=data_directory(tmp_path)),
+        frame_sources=FrameSources(curator_grooming=out / 'grooming-summary.json'),
+    ))
+    viewer_summary = client.get(f'/api/view/run/{SESSION_ID}/summary').json()
+    assert viewer_summary['schema'] == 'spectator-view/3'
+    assert viewer_summary['boundary_grooming']['source_status'] == 'available'
+    assert viewer_summary['boundary_grooming']['status'] == 'completed'
+    assert viewer_summary['boundary_grooming']['published_after'] == 'v3'

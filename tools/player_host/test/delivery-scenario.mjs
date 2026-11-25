@@ -49,7 +49,7 @@ export function recallTextReply(text, cost = .002, finishReason = 'stop', provid
  * whole `knowledge-update-entry/1` line. `change` makes the faults a test needs: other `data` in the file, no file
  * (`skipFile`), other `entry` fields, a raw `line`, or a line still without its newline (`partial`). */
 export async function listUpdate(directory, value, change = {}) {
-  const actor = directory+'/actors/001';
+  const actor = `${directory}/actors/${change.actorDir ?? '001'}`;
   await mkdir(actor+'/knowledge',{recursive:true});
   const data = JSON.stringify(value);
   if (!change.skipFile) await writeFile(`${actor}/knowledge/${value.version}.json`,change.data ?? data);
@@ -61,7 +61,9 @@ export async function listUpdate(directory, value, change = {}) {
 
 export async function deliveryScenario(directory, overrides = {}) {
   const value = overrides.knowledge ?? knowledge();
-  const actor = directory+'/actors/001';
+  const actorDir = overrides.actorDir ?? '001';
+  const actorId = overrides.actorId ?? '3'.repeat(32);
+  const actor = `${directory}/actors/${actorDir}`;
   await mkdir(actor,{recursive:true});
   const path = directory+'/delivered-knowledge.json';
   if (!overrides.preserveKnowledgeFile) await writeFile(path,JSON.stringify(value));
@@ -76,11 +78,11 @@ export async function deliveryScenario(directory, overrides = {}) {
     const result = await runHost({configuration,knowledge:value,
       knowledgeUpdates:overrides.knowledgeUpdates ? actor+'/knowledge-updates.jsonl' : null,
       updateReadTimeoutMs:overrides.updateReadTimeoutMs,spendReserveWaitMs:overrides.spendReserveWaitMs,finishReserveUsd:overrides.finishReserveUsd ?? '0.5',
-      session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:overrides.pendingControlId ?? null,control,
+      session:'a'.repeat(32),actorId,pendingControlId:overrides.pendingControlId ?? null,control,
       context:'Frozen stand-in guide',prompt:'Inspect the receiver stand-in.',model:model.id,effort:'off',timeoutSeconds:10,
       env:{OFFLINE_TEST_KEY:'stand-in-only'},
       mcpConfig:{command:process.env.ENACTIVE_TEST_PYTHON,
-        args:[fileURLToPath(new URL('./delivery-mcp.py',import.meta.url)),path,'--stdio','--workspace',workspace,'--actor-id','3'.repeat(32)],
+        args:[fileURLToPath(new URL('./delivery-mcp.py',import.meta.url)),path,'--stdio','--workspace',workspace,'--actor-id',actorId],
         cwd:fileURLToPath(new URL('../../../',import.meta.url)),enabled:true,required:true,
         enabled_tools:overrides.enabledTools ?? ['computer_input','player_knowledge_read','player_knowledge_query'],startup_timeout_sec:5,tool_timeout_sec:2},
       fetch:async (_url,init) => {
