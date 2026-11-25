@@ -109,7 +109,8 @@ panel says so there.
   the selected run's [runner status](../contracts/spectator-view.md#curator-runner-status)
   and [curator spend](../contracts/spectator-view.md#host-telemetry-and-curator-spend), then
   every [exported version](../contracts/spectator-view.md#delivered-knowledge), whether its
-  delivery is recorded, and a reader whose citations open Watch at their step.
+  delivery is recorded, and a reader whose citations open Watch at their step. Its
+  *Curator drafts & gate results* panel appears when the operator configures a source.
 - **Diagnostics** answers “what did it cost, and did it run well?”: the parts of the loop's
   spend, each on its own basis and marked partial where one is missing or open, context and
   cache, routing, and [custodian receipt facts](../contracts/spectator-view.md#recorded-custodian-receipt)
@@ -139,10 +140,12 @@ episodes from the [seven-day development lineage (#397)](../acceptance/2026-11-0
 can open Watch at a recorded step or explain why its frame is unavailable. *Containers*
 shows the sidecar inventory and manifests.
 
+The curator panel's [draft view](../contracts/spectator-view.md#curator-drafts) shows
+active and archived lifecycle metadata from explicitly configured state directories.
 From configured terminal session receipts, *Curator sessions* shows recorded metadata, draft
 collection events and paged gate results. See the [session contract](../contracts/spectator-view.md#recorded-curator-sessions).
 Operator-configured result journals show submission and restore statuses and versions at a
-fixed digest and byte cutoff. These journals establish neither run association, a semantic
+fixed digest and byte cutoff, with draft IDs recorded by the gate. These journals establish neither run association, a semantic
 verdict, the current published head nor lag. Missing, empty, unsupported, malformed and
 changed sources remain distinct. See the [result contract](../contracts/spectator-view.md#recorded-curator-results).
 The curator runner's status shows no figure when its file is missing or partly written, and

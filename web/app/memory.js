@@ -2,7 +2,7 @@
 // its delivery is recorded, and a reader over one version whose citations open Watch at the frame they name.
 import {html, useEffect, useRef, useState, Panel, Pv, Segmented, Disclosure, Waiting, Insufficient, count, label, plural} from './ui.js';
 import {store, runPath, useView, jumpToSeq} from './data.js';
-import {Records, RunnerDetail, RUNNER_STATES, SOURCES, known, useFrame} from './records.js';
+import {CuratorRecords, Records, RunnerDetail, RUNNER_STATES, SOURCES, isCuratorSource, known, useFrame} from './records.js';
 
 /* ---------------------------------------------------------------- curator strip */
 function Stat({name, value, sub, chip, id}) {
@@ -212,15 +212,16 @@ function Browser({run, version}) {
 export function MemoryTab({section}) {
   const run = store.runId;
   const source = SOURCES.some(s => s[0] === section) ? section : '';
+  const curatorSource = isCuratorSource(source);
   const version = !source && section ? section : '';
   const [last, setLast] = useState('');
   useEffect(() => { if (version) setLast(version); }, [version]);
   useEffect(() => { setLast(''); }, [run]);
-  if (!run) return html`<section class="grid" data-view="memory" aria-label="Memory and curator"><${Panel} title="Memory & Curator" span="s12"><${Waiting} store=${store} what="the run list" /><//></section>`;
   // Opening a recorded source keeps the version being read.
   const shown = version || (source ? last : '');
   return html`<section class="grid" data-view="memory" aria-label="Memory and curator">
-    <${CuratorStrip} run=${run} key=${`curator-${run}`} />
-    <${Browser} run=${run} version=${shown} key=${`browser-${run}`} />
-    <${Disclosure} id="more-sources" title="Additional recorded sources" note="delivery by request, player records, configured curator journals and receipts, containers, episodes" open=${!!source}>${() => html`<${Records} section=${source} />`}<//></section>`;
+    ${run ? html`<${CuratorStrip} run=${run} key=${`curator-${run}`} />` : html`<${Panel} title="Memory & Curator" span="s12"><${Waiting} store=${store} what="the run list" /><//>`}
+    <${CuratorRecords} section=${curatorSource ? source : ''} />
+    ${run ? html`<${Browser} run=${run} version=${shown} key=${`browser-${run}`} />
+    <${Disclosure} id="more-sources" title="Additional recorded sources" note="delivery by request, player records, containers, episodes" open=${!!source && !curatorSource}>${() => html`<${Records} section=${curatorSource ? '' : source} />`}<//>` : null}</section>`;
 }

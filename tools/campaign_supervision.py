@@ -227,7 +227,7 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
 
 def run_supervised(directory: Path, *, runs: Path | None = None, popen=subprocess.Popen,
                    clock=time, viewer_port: Callable[[], int] = free_loopback_port, curator_results=(), curator_sessions=(),
-                   curator_runner: Path | None = None) -> dict:
+                   curator_drafts=(), curator_runner: Path | None = None) -> dict:
     directory = directory.resolve(strict=True)
     if any((directory/name).exists() or (directory/name).is_symlink() for name in MARKERS):
         raise ValueError('Selected package has prior/partial supervision; never rearm it')
@@ -300,6 +300,7 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
                                 '--port', str(port), '--host', '127.0.0.1',
                                 *[arg for value in curator_results for arg in ('--curator-results', value)],
                                 *[arg for value in curator_sessions for arg in ('--curator-sessions', value)],
+                                *[arg for value in curator_drafts for arg in ('--curator-drafts', value)],
                                 *(['--curator-runner-status', str(directory/RUNNER_DIRECTORY/'status.json')]
                                   if runner_config is not None else [])]
                         handle = popen(argv, start_new_session=True, cwd=ROOT, env=env,
@@ -463,11 +464,13 @@ def main(argv=None) -> int:
         help='directory of archived run directories for the viewer to list beside the live run')
     parser.add_argument('--curator-results', action='append', default=[], metavar='LABEL=FILE')
     parser.add_argument('--curator-sessions', action='append', default=[], metavar='LABEL=FILE')
+    parser.add_argument('--curator-drafts', action='append', default=[], metavar='LABEL=DIR')
     parser.add_argument('--curator-runner', type=Path, default=None, metavar='CONFIG',
         help='start the curator runner beside the custodian with this curator-runner-config/1 file')
     options = parser.parse_args(argv)
     result = run_supervised(options.run, runs=options.runs, curator_results=options.curator_results,
-                            curator_sessions=options.curator_sessions, curator_runner=options.curator_runner)
+                            curator_sessions=options.curator_sessions, curator_drafts=options.curator_drafts,
+                            curator_runner=options.curator_runner)
     print(json.dumps(result))
     return 0 if (result['reason'] == 'custodian_terminal' and result['terminal_coverage_verified']
         and result['cleanup_verified'] and result['manifest_unchanged']

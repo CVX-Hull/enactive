@@ -7,12 +7,26 @@ const fs = require('node:fs');
 const path = require('node:path');
 const S = require('./fixtures/spectator/support.cjs');
 
-const ROUTES = ['#watch', '#memory', '#memory/v2', '#memory/requests', '#memory/player', '#memory/results', '#memory/sessions', '#memory/containers', '#memory/episodes',
+const ROUTES = ['#watch', '#memory', '#memory/v2', '#memory/requests', '#memory/player', '#memory/curator-drafts', '#memory/results', '#memory/sessions', '#memory/containers', '#memory/episodes',
   '#diagnostics', '#diagnostics/metrics', '#diagnostics/readers', '#diagnostics/compare', '#diagnostics/explore', '#diagnostics/changes', '#diagnostics/failures', '#diagnostics/components'];
 const CONFIGS = [['light', 1440, 'light', false], ['dark', 1440, 'dark', false], ['narrow', 900, 'light', false], ['phone', 390, 'light', true]];
 let fx, browser;
 before(async () => { fx = await S.startFixture(); browser = await S.launch(); });
 after(async () => { if (browser) await browser.close(); if (fx) fx.stop(); });
+
+async function openPage(url, options) {
+  const page = await S.open(browser, 'about:blank', options);
+  // The shared fixture server has no configured draft sources. Supply its empty list here.
+  await page.evaluateOnNewDocument(() => {
+    const fetchOriginal = window.fetch;
+    window.fetch = (url, ...args) => {
+      if (String(url).split('?')[0] !== '/api/view/frame/curator-draft-sources') return fetchOriginal(url, ...args);
+      return Promise.resolve(Response.json({schema: 'spectator-frame/1', items: [], total: 0, next: null, limit: 1}));
+    };
+  });
+  if (url !== 'about:blank') await page.goto(url, {waitUntil: 'load'});
+  return page;
+}
 
 const go = async (page, hash) => { await page.evaluate(h => { location.hash = h; }, hash); await S.settle(page, 100); };
 const text = (page, selector) => page.$eval(selector, node => node.innerText);
@@ -20,7 +34,7 @@ const click = (page, selector) => page.$eval(selector, node => node.click());
 
 for (const [name, width, scheme, mobile] of CONFIGS) {
   test(`every view renders cleanly: ${name} (${width}px)`, {timeout: 180000}, async () => {
-    const page = await S.open(browser, `${fx.url}#watch`, {width, height: name === 'narrow' ? 760 : mobile ? 800 : 900, scheme, mobile});
+    const page = await openPage(`${fx.url}#watch`, {width, height: name === 'narrow' ? 760 : mobile ? 800 : 900, scheme, mobile});
     try {
       await S.ready(page);
       for (const route of ROUTES) {
@@ -32,6 +46,7 @@ for (const [name, width, scheme, mobile] of CONFIGS) {
         assert.doesNotMatch(body, /undefined|NaN|\[object|Loading/, `${route} shows a broken value: ${body.match(/.{0,30}(undefined|NaN|\[object|Loading).{0,30}/)}`);
         assert.doesNotMatch(body, /not yet measured|arrives in|\bbelief\b|\bstaleness\b/i, `${route} shows a placeholder`);
         assert.equal(await S.overflow(page), 0, `${route} scrolls horizontally at ${width}px`);
+        assert.equal(await page.$('.curator-records'), null, 'unconfigured curator sources remain hidden');
         assert.deepEqual(page.problems, [], `${route} had problems`);
         await S.shot(page, `${route.replace(/[#/]/g, '_')}-${name}`);
       }
@@ -42,7 +57,7 @@ for (const [name, width, scheme, mobile] of CONFIGS) {
 }
 
 test('the navigation is three tabs, and the Mission Control bar is one slim row at desktop width', {timeout: 30000}, async () => {
-  const page = await S.open(browser, fx.url, {width: 1440});
+  const page = await openPage(fx.url, {width: 1440});
   try {
     await S.ready(page);
     assert.deepEqual(await page.$$eval('nav.jobs a', links => links.map(a => a.textContent)), ['Watch', 'Memory & Curator', 'Diagnostics']);
@@ -73,7 +88,7 @@ test('the navigation is three tabs, and the Mission Control bar is one slim row 
 });
 
 test('Pause is calm until a Pause condition is met, and the same button either way', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`);
+  const page = await openPage(`${fx.url}#watch`);
   try {
     await S.ready(page);
     const look = () => page.$eval('#pause', b => [getComputedStyle(b).backgroundColor, b.disabled, b.firstChild.textContent]);
@@ -99,7 +114,7 @@ test('Pause is calm until a Pause condition is met, and the same button either w
 });
 
 test('Story feed: cards, filters, search and the step they select', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`, {width: 1440});
+  const page = await openPage(`${fx.url}#watch`, {width: 1440});
   try {
     await S.ready(page);
     const top = await text(page, '#story .card');
@@ -141,7 +156,7 @@ test('Story feed: cards, filters, search and the step they select', {timeout: 30
 });
 
 test('Story feed: a delivered version opens in Memory, and the timeline marks each kind in its own lane', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`, {width: 1440});
+  const page = await openPage(`${fx.url}#watch`, {width: 1440});
   try {
     await S.ready(page);
     await S.until(page, () => document.querySelectorAll('.mark-memory line').length === 3);
@@ -174,7 +189,7 @@ test('Story feed: a delivered version opens in Memory, and the timeline marks ea
 });
 
 test('Step Inspector: opens by button or key, shows the mechanics, loads the context on request, closes with Escape', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`, {width: 1440});
+  const page = await openPage(`${fx.url}#watch`, {width: 1440});
   try {
     await S.ready(page);
     assert.equal(await page.$('#inspector'), null);
@@ -211,7 +226,7 @@ test('Step Inspector: opens by button or key, shows the mechanics, loads the con
 });
 
 test('Memory: curator strip, version rail, delivery diff, reader, and a citation that opens Watch at its frame', {timeout: 45000}, async () => {
-  const page = await S.open(browser, `${fx.url}#memory`, {width: 1440});
+  const page = await openPage(`${fx.url}#memory`, {width: 1440});
   try {
     await S.ready(page);
     await S.until(page, () => document.querySelector('[data-reading]') && document.getElementById('curator-spend'));
@@ -279,7 +294,7 @@ test('Memory: curator strip, version rail, delivery diff, reader, and a citation
 });
 
 test('Memory: an exported version nobody recorded as delivered says so, a fact without a recorded scope is counted, and a run without any is an honest blank', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#memory`, {width: 900});
+  const page = await openPage(`${fx.url}#memory`, {width: 900});
   try {
     await S.ready(page);
     await S.until(page, () => document.querySelector('[data-reading]'));
@@ -319,7 +334,7 @@ test('Memory: an exported version nobody recorded as delivered says so, a fact w
 });
 
 test('Diagnostics: four cards, the context sawtooth, spend, tools, and no figure where none is recorded', {timeout: 45000}, async () => {
-  const page = await S.open(browser, `${fx.url}#diagnostics`, {width: 1440});
+  const page = await openPage(`${fx.url}#diagnostics`, {width: 1440});
   try {
     await S.ready(page);
     await S.until(page, () => document.querySelector('.ctxchart canvas') && document.querySelector('.spendchart canvas') && document.querySelectorAll('table.data tbody tr').length > 2);
@@ -354,7 +369,7 @@ test('Diagnostics: four cards, the context sawtooth, spend, tools, and no figure
 });
 
 test('Diagnostics: each part of the spend keeps its basis, and a combined figure is whole only when every part is closed', {timeout: 45000}, async () => {
-  const page = await S.open(browser, `${fx.url}#diagnostics`, {width: 1440});
+  const page = await openPage(`${fx.url}#diagnostics`, {width: 1440});
   const closedPlayer = {reported_cost_usd: '3.6427473', spent_usd: '3.6427473', spend_complete: true, unpriced_requests: 0, unpriced_recall_requests: 0};
   const closedCurator = {sessions_total: 2, sessions_settled: 2, sessions_unsettled: 0, spent_usd: '1.5', unsettled_requests: 0, spend_complete: true};
   const groomed = {source_status: 'available', status: 'completed', reason: null, spent_usd: '0.36140535', spend_complete: true, published_before: 'v31', published_after: 'v33'};
@@ -397,7 +412,7 @@ test('Diagnostics: each part of the spend keeps its basis, and a combined figure
 
 for (const [name, width, scheme, mobile] of [CONFIGS[0], CONFIGS[3]]) {
   test(`Diagnostics shows the selected recorded custodian receipt: ${name}`, {timeout: 30000}, async () => {
-    const page = await S.open(browser, `${fx.url}#diagnostics`, {width, scheme, mobile});
+    const page = await openPage(`${fx.url}#diagnostics`, {width, scheme, mobile});
     try {
       await S.ready(page);
       await S.until(page, live => document.querySelector('#runpick')?.value === live && document.querySelector('#evaluation-note'), S.SESSIONS.ceil09);
@@ -423,7 +438,7 @@ for (const [name, width, scheme, mobile] of [CONFIGS[0], CONFIGS[3]]) {
 
 test('recorded Diagnostics shows exact provider cost, unpriced attempts and unavailable accounting', {timeout: 30000}, async () => {
   await fx.viewer('nolive');
-  const page = await S.open(browser, `${fx.url}recorded/#diagnostics`, {width: 390, mobile: true});
+  const page = await openPage(`${fx.url}recorded/#diagnostics`, {width: 390, mobile: true});
   try {
     const amount = name => page.$$eval('#kpi-spend .kv dt', (terms, name) => terms.find(term => term.firstChild.textContent.trim() === name)?.nextElementSibling.textContent.trim(), name);
     const waitFor = (name, value) => S.until(page, ([name, value]) => Array.from(document.querySelectorAll('#kpi-spend .kv dt')).some(term => term.firstChild.textContent.trim() === name
@@ -447,7 +462,7 @@ test('recorded Diagnostics shows exact provider cost, unpriced attempts and unav
 
 test('recorded viewer opens Watch and follows findings without a control path', {timeout: 30000}, async () => {
   await fx.viewer('stale-recorded');
-  const page = await S.open(browser, 'about:blank', {width: 390, mobile: true});
+  const page = await openPage('about:blank', {width: 390, mobile: true});
   const requests = [];
   page.on('request', request => requests.push([request.method(), new URL(request.url()).pathname]));
   try {
@@ -477,7 +492,7 @@ test('recorded viewer opens Watch and follows findings without a control path', 
 });
 
 test('an episode anchor opens Watch at its step, and a container opens its manifest', {timeout: 60000}, async () => {
-  const page = await S.open(browser, `${fx.url}#memory/episodes`, {scheme: 'light'});
+  const page = await openPage(`${fx.url}#memory/episodes`, {scheme: 'light'});
   try {
     await S.ready(page);
     await S.until(page, () => document.querySelector('[data-anchor="observed"] button.btn'));
@@ -495,7 +510,7 @@ test('an episode anchor opens Watch at its step, and a container opens its manif
 });
 
 test('theme button switches tokens and keeps the page clean', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`, {scheme: 'light'});
+  const page = await openPage(`${fx.url}#watch`, {scheme: 'light'});
   try {
     await S.ready(page);
     const before = await page.$eval('body', el => getComputedStyle(el).backgroundColor);
@@ -509,7 +524,7 @@ test('theme button switches tokens and keeps the page clean', {timeout: 30000}, 
 
 for (const scheme of ['light', 'dark']) {
   test(`text tokens keep at least 4.5:1 contrast on their surfaces: ${scheme}`, {timeout: 30000}, async () => {
-    const page = await S.open(browser, `${fx.url}#watch`, {scheme});
+    const page = await openPage(`${fx.url}#watch`, {scheme});
     try {
       const low = await page.evaluate(() => {
         const style = getComputedStyle(document.documentElement);
@@ -550,7 +565,7 @@ test('every module under web/app is reachable from the page', () => {
 });
 
 test('current hints stay unverified text', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`, {width: 390, height: 900, mobile: true});
+  const page = await openPage(`${fx.url}#watch`, {width: 390, height: 900, mobile: true});
   const hint = {id: 'hint-visible', actor_id: 'a'.repeat(32), text: '<script>window.hintExecuted=true</script> An uncertain report',
     intent: 'Report what needs checking', cites: ['fact-visible'], source_ids: ['source-unverified']};
   try {
@@ -574,7 +589,7 @@ test('current hints stay unverified text', {timeout: 30000}, async () => {
 });
 
 test('recorded reader keeps delivery, reports, operation and outcome distinct on a phone', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#memory/requests`, {width: 390, height: 900, mobile: true});
+  const page = await openPage(`${fx.url}#memory/requests`, {width: 390, height: 900, mobile: true});
   try {
     await S.ready(page);
     await S.until(page, () => [...(document.querySelector('[data-reader-actor]')?.options || [])].some(o => o.value === 'actor-1'));
@@ -609,7 +624,7 @@ test('recorded reader keeps delivery, reports, operation and outcome distinct on
 });
 
 test('recorded reader refreshes actors and public reports while staying on the page', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#memory/requests`, {width: 390, height: 900, mobile: true});
+  const page = await openPage(`${fx.url}#memory/requests`, {width: 390, height: 900, mobile: true});
   const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/spectator/knowledge.json'), 'utf8'));
   let phase = 0, emptySeen = false;
   try {
@@ -644,8 +659,109 @@ test('recorded reader refreshes actors and public reports while staying on the p
   } finally { await page.close(); }
 });
 
-test('curator results select and show escaped recorded detail on a phone', {timeout: 30000}, async () => {
+test('Memory & Curator opens configured draft manifests and gate results with the keyboard', {timeout: 30000}, async () => {
   const page = await S.open(browser, `${fx.url}#watch`, {width: 390, height: 900, mobile: true});
+  const markup = '<img src=x onerror=window.curatorExecuted=true>';
+  const active = {id: 'open-draft', bucket: 'active', state: 'open', untouched_sessions: 2,
+    created_by_session: markup, last_touched_session: 'session-2', promoted_by_session: null,
+    sessions: {items: ['session-1', 'session-2'], omitted: 0, values_omitted: 0}, max_bytes: 4096, retention_policy: 'retained'};
+  const archived = {...active, id: 'promoted-draft', bucket: 'archived', state: 'promoted', promoted_by_session: 'session-3'};
+  const gate = {index: 0, operation_id: 'b'.repeat(32), operation: 'submission', status: 'published', base_version: 'v1',
+    restored_from: null, version: 'v2', submission: markup, session: 'session-3', from_drafts: [archived.id],
+    from_drafts_omitted: 1, diagnostics: []};
+  const schema = 'spectator-frame/1';
+  const sources = {schema, items: [{label: 'fixture'}], total: 1, next: null, limit: 500};
+  let digest = 'a'.repeat(64);
+  const pages = [];
+  try {
+    await S.ready(page);
+    await page.evaluate(() => { window.curatorPauseButton = document.getElementById('pause'); });
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      const url = new URL(request.url());
+      const route = url.pathname.split('/').at(-1);
+      let body, status = 200;
+      if (route === 'curator-draft-sources' || route === 'curator-sources') body = sources;
+      if (route === 'curator-drafts') {
+        const after = +url.searchParams.get('after'), snapshot = url.searchParams.get('snapshot');
+        pages.push({after, snapshot});
+        if (snapshot && snapshot !== digest) {
+          status = 409;
+          body = {schema: 'spectator-view/3', error: 'source_changed', detail: ''};
+        } else {
+          body = {schema, source: 'fixture', source_status: 'available', snapshot: {sha256: digest, bytes: 300},
+            items: [after ? archived : active], total: 26, next: after ? null : 25, limit: 25};
+        }
+      }
+      if (route === 'curator-results') body = {schema, source: 'fixture', source_status: 'available', snapshot: {sha256: digest, bytes: 100},
+        items: [gate], total: 1, next: null, limit: 25};
+      if (body) return request.respond({status, contentType: 'application/json', body: JSON.stringify(body)});
+      return request.continue();
+    });
+    await page.click('[data-nav="memory"]');
+    const nav = 'nav[aria-label="Curator records"]';
+    const drafts = '[data-curator-draft-source]';
+    const row = '.curator-source-view button.link';
+    const press = async selector => { await page.focus(selector); await page.keyboard.press('Enter'); };
+    const button = async name => {
+      await page.evaluate(n => Array.from(document.querySelectorAll('.curator-source-view button')).find(b => b.textContent === n).focus(), name);
+      await page.keyboard.press('Enter');
+    };
+    await page.waitForSelector(`${nav} a[href="#memory/curator-drafts"]`);
+    assert.match(await text(page, '.curator-records'), /Curator drafts & gate results/);
+    assert.equal(await page.$('#more-sources [href="#memory/results"]'), null);
+    assert.equal(await page.$eval('#more-sources', node => node.open), false);
+    await press(`${nav} a[href="#memory/curator-drafts"]`);
+    await page.waitForSelector(drafts);
+    await page.focus(drafts);
+    await page.keyboard.press('ArrowDown');
+    await S.until(page, () => document.querySelector('[data-curator-draft-status]')?.textContent.includes('available'));
+    await S.until(page, () => document.querySelector('.curator-source-view button.link'));
+    await press(row);
+    await S.until(page, () => document.activeElement?.hasAttribute('data-curator-draft-detail'));
+    assert.match(await text(page, '.curator-source-view table'), /open-draft\s+Active\s+open\s+2/);
+    assert.match(await text(page, '.curator-source-view'), /Snapshot SHA-256: a{64} · 300 manifest bytes/);
+    const detail = await text(page, '[data-curator-draft-detail]');
+    assert.ok(detail.includes(markup) && detail.includes('session-2') && detail.includes('session-1, session-2'));
+    assert.equal(await page.$('[data-curator-draft-detail] img'), null);
+
+    digest = 'c'.repeat(64);
+    await button('Next drafts');
+    await S.until(page, () => document.querySelector('[data-curator-draft-error]')?.textContent.includes('Source changed'));
+    assert.deepEqual(pages.at(-1), {after: 25, snapshot: 'a'.repeat(64)});
+    assert.equal(await page.$('.curator-source-view table'), null);
+    await button('Refresh drafts');
+    await S.until(page, () => document.querySelector('.curator-source-view table'));
+    assert.equal(await page.$eval(drafts, n => document.activeElement === n), true);
+    await button('Next drafts');
+    await S.until(page, () => document.querySelector('.curator-source-view table')?.textContent.includes('promoted-draft'));
+    assert.deepEqual(pages.at(-1), {after: 25, snapshot: digest});
+    await press(row);
+    assert.match(await text(page, '.curator-source-view table'), /promoted-draft\s+Archived\s+promoted/);
+    assert.match(await text(page, '[data-curator-draft-detail]'), /Promoted by session\s+session-3/);
+
+    await press(`${nav} a[href="#memory/results"]`);
+    await page.waitForSelector('[data-curator-source]');
+    await page.select('[data-curator-source]', 'fixture');
+    await S.until(page, () => document.querySelector('.curator-source-view button.link'));
+    await press(row);
+    await S.until(page, () => document.activeElement?.hasAttribute('data-curator-detail'));
+    assert.match(await text(page, '[data-curator-detail]'), /From drafts\s+promoted-draft · 1 more omitted/);
+    assert.equal(await page.$('[data-curator-detail] img'), null);
+    assert.equal(await page.evaluate(() => window.curatorExecuted), undefined);
+    assert.equal(await S.overflow(page), 0);
+    assert.equal(await page.$eval('#pause', n => n === window.curatorPauseButton && !n.disabled), true);
+    assert.equal(await page.$eval('#frame', n => !n.hidden && n.naturalWidth > 0), true);
+    await press('#pause');
+    await S.until(page, () => !document.getElementById('sheet').hidden);
+    await press('#sheetcancel');
+    await S.until(page, () => document.getElementById('sheet').hidden);
+    assert.deepEqual(page.problems.filter(p => p !== 'http 409: /api/view/frame/curator-drafts'), []);
+  } finally { await page.close(); }
+});
+
+test('curator results select and show escaped recorded detail on a phone', {timeout: 30000}, async () => {
+  const page = await openPage(`${fx.url}#watch`, {width: 390, height: 900, mobile: true});
   const digest = 'a'.repeat(64);
   const row = {index: 0, operation_id: 'b'.repeat(32), operation: 'submission', status: 'unknown', base_version: 'v1',
     restored_from: null, version: null, submission: '<img src=x onerror=window.curatorExecuted=true>', session: 'session',
@@ -663,8 +779,8 @@ test('curator results select and show escaped recorded detail on a phone', {time
     await go(page, '#memory/results');
     await S.until(page, () => Array.from(document.querySelector('[data-curator-source]')?.options || []).some(o => o.value === 'fixture'));
     await page.select('[data-curator-source]', 'fixture');
-    await S.until(page, () => document.querySelector('#more-sources table.data button.link'));
-    await page.focus('#more-sources table.data button.link');
+    await S.until(page, () => document.querySelector('.curator-source-view table.data button.link'));
+    await page.focus('.curator-source-view table.data button.link');
     await page.keyboard.press('Enter');
     await S.until(page, () => document.querySelector('[data-curator-detail]'));
     const body = await page.$eval('[data-curator-detail]', n => n.innerText);
@@ -680,7 +796,7 @@ test('curator results select and show escaped recorded detail on a phone', {time
 });
 
 test('curator runner status shows a present, a missing and a partly written file as such', {timeout: 60000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`, {width: 390, height: 900, mobile: true});
+  const page = await openPage(`${fx.url}#watch`, {width: 390, height: 900, mobile: true});
   const place = (step, ordinal) => ({actor: 'actor-a', step, operation: `op-${step}`, ordinal});
   const walls = {began: 1700000000, ended: 1700000001};
   const stamp = {session: 'run', actor: 'actor-a', last_step: 25};
@@ -745,8 +861,8 @@ test('curator runner status shows a present, a missing and a partly written file
 });
 
 test('curator paging and refresh keep empty, changed and failed sources distinct', {timeout: 45000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`);
-  const rows = '#more-sources table.data';
+  const page = await openPage(`${fx.url}#watch`);
+  const rows = '.curator-source-view table.data';
   let digest = 'a'.repeat(64), fail = true, failedRequests = 0;
   const labels = ['first', 'empty', 'missing', 'malformed', 'failed', ...Array.from({length: 495}, (_, i) => `extra-${i}`)];
   const row = {index: 0, operation_id: 'b'.repeat(32), operation: 'restore', status: 'unchanged', base_version: 'v2',
@@ -820,8 +936,8 @@ test('curator paging and refresh keep empty, changed and failed sources distinct
 });
 
 test('curator session selects a receipt and resets detail when its snapshot changes', {timeout: 30000}, async () => {
-  const page = await S.open(browser, `${fx.url}#watch`, {width: 390, height: 900, mobile: true});
-  const digest = 'a'.repeat(64), rows = '#more-sources table.data';
+  const page = await openPage(`${fx.url}#watch`, {width: 390, height: 900, mobile: true});
+  const digest = 'a'.repeat(64), rows = '.curator-source-view table.data';
   const row = {index: 0, operation_id: 'b'.repeat(32), operation: 'submission', status: 'unknown', base_version: 'v1',
     restored_from: null, version: null, submission: 's', session: 'session', diagnostics: [], diagnostics_omitted: 0};
   let changed = false;

@@ -9,11 +9,31 @@ import time
 from types import SimpleNamespace
 
 import pytest
+from starlette.testclient import TestClient
 
+from harness.viewer.app import create_app
+from harness.viewer.catalog import Catalog
+from tests.test_campaign_watch import fixture as watch_fixture
 from tools import campaign_supervision as guard
 
 SESSION = 'a' * 32
 COMMIT = 'b' * 40
+
+
+def test_gateway_passes_viewer_routing_errors_as_json(tmp_path):
+    client = TestClient(create_app(Catalog(tmp_path / 'evaluation')))
+    with watch_fixture(tmp_path) as gateway:
+        for method, path, code, error in (
+                ('GET', '/api/view/no-such-route', 404, 'not_found'),
+                ('POST', '/api/view/frame/curator-drafts', 405, 'method_not_allowed')):
+            # The gateway forwards GET only, including a 405 returned by the upstream viewer.
+            upstream = client.request(method, path)
+            assert upstream.status_code == code
+            gateway.state['view'].update(status=code, media=upstream.headers['content-type'], body=upstream.content)
+            response, data = gateway.reply(path)
+            assert response.status == code and gateway.state['view']['paths'][-1] == path
+            assert response.getheader('Content-Type') == 'application/json'
+            assert data == upstream.content and json.loads(data)['error'] == error
 
 
 def markers(directory, *, deadline=200):
@@ -225,7 +245,8 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
     monkeypatch.setattr(guard, 'supervise', supervision)
     original = signal.getsignal(signal.SIGTERM)
     result = guard.run_supervised(tmp_path, popen=launch, viewer_port=lambda: 54321,
-                                  curator_results=('alpha=one', 'beta=two'), curator_sessions=('receipt=three',))
+                                  curator_results=('alpha=one', 'beta=two'), curator_sessions=('receipt=three',),
+                                  curator_drafts=('drafts=four', 'archive=five'))
     assert signal.getsignal(signal.SIGTERM) == original
     assert all(child.poll() is not None for child in launched)
     assert result['cleanup_verified'] and not result['terminal_coverage_verified']
@@ -255,9 +276,11 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
     if fail_at != 0:
         argv = calls[1][0]
         assert argv[1:3] == ['-m', 'harness.viewer'] and argv[argv.index('--port')+1] == '54321'
-        assert argv[-6:] == ['--curator-results', 'alpha=one', '--curator-results', 'beta=two', '--curator-sessions', 'receipt=three']
+        assert argv[-10:] == ['--curator-results', 'alpha=one', '--curator-results', 'beta=two', '--curator-sessions', 'receipt=three',
+                              '--curator-drafts', 'drafts=four', '--curator-drafts', 'archive=five']
         assert all('--curator-sessions' not in args for args, _ in calls if 'harness.viewer' not in args)
         assert all('--curator-results' not in args for args, _ in calls if 'harness.viewer' not in args)
+        assert all('--curator-drafts' not in args for args, _ in calls if 'harness.viewer' not in args)
         assert argv[argv.index('--host')+1] == '127.0.0.1' and argv[argv.index('--run')+1] == str(tmp_path)
         assert argv[argv.index('--root')+1] == str(guard.ROOT/'.runtime'/'evaluations') and '--runs' not in argv
     for index, (_, options) in enumerate(calls):

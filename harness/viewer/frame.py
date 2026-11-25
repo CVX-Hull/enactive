@@ -33,6 +33,7 @@ class FrameSources:
     curator_sessions: tuple[tuple[str, Path], ...] = ()
     curator_runner_status: Path | None = None  # the curator runner's status.json, read at each request
     curator_grooming: Path | None = None  # one boundary grooming receipt, shown only for the run it names
+    curator_drafts: tuple[tuple[str, Path], ...] = ()
 
 
 # The health strip's slots (ADR 009's spectator direction) and the phase that first delivers each. `actor_cadence` is measured from sealed

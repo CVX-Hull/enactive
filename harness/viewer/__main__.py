@@ -37,6 +37,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--curator-results', action='append', default=[], metavar='LABEL=FILE')
     parser.add_argument('--curator-sessions', action='append', default=[], metavar='LABEL=FILE')
+    parser.add_argument('--curator-drafts', action='append', default=[], metavar='LABEL=DIR')
     parser.add_argument('--curator-runner-status', type=Path, default=None, metavar='FILE',
                         help="the curator runner's status.json, read without a lock at each request")
     parser.add_argument('--curator-grooming', type=Path, default=None, metavar='FILE',
@@ -45,6 +46,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         curator_results = parse_sources(arguments.curator_results)
         curator_sessions = parse_sources(arguments.curator_sessions)
+        curator_drafts = parse_sources(arguments.curator_drafts, 'LABEL=DIR')
     except ValueError as exc:
         parser.error(str(exc))
     if arguments.host not in LOOPBACK_HOSTS:
@@ -60,7 +62,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         app = create_app(catalog, evaluator, frame_sources=FrameSources(curator_results=curator_results,
             curator_sessions=curator_sessions, curator_runner_status=arguments.curator_runner_status,
-            curator_grooming=arguments.curator_grooming), recorded_page=arguments.recorded_page)
+            curator_grooming=arguments.curator_grooming, curator_drafts=curator_drafts), recorded_page=arguments.recorded_page)
         uvicorn.run(app, host=arguments.host, port=arguments.port, log_level='warning')
     finally:
         if evaluator is not None:

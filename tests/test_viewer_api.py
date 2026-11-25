@@ -16,11 +16,12 @@ from starlette.testclient import TestClient
 
 from harness.evaluation.core.pipeline import evaluate
 from harness.evaluation.core.records import CORE_VERSION, open_readonly, read_metadata
-from harness.evaluation.core.sources import MANIFEST_SCHEMA, RECEIPT_SCHEMA
+from harness.evaluation.core.sources import MANIFEST_SCHEMA, MAX_JSON_FILE_BYTES, RECEIPT_SCHEMA
 from harness.player.contracts import PlayerError
 from harness.player.knowledge import Knowledge
 from harness.viewer.app import MAX_BYTES, create_app
-from harness.viewer.catalog import API, Catalog
+from harness.viewer.catalog import API, LIST_LIMIT, Catalog
+from harness.viewer.frame import FrameSources
 from harness.viewer.live import LiveEvaluator
 from harness.viewer.pause import dollars_per_minute, looping_streak
 from tests.legacy_player_store import legacy_player_archive
@@ -101,9 +102,180 @@ def test_recorded_page_is_opt_in_read_only_and_loopback(archive):
             assert client.get(path).status_code == 404, path
         assert client.post('/api/pause', json={'reason': 'other'}).status_code == 404
         assert client.post('/recorded/').status_code == 405
+        assert client.post('/recorded/').headers['content-type'].startswith('text/plain')
         for path in ('/recorded/', '/api/view/runs'):
             assert client.get(path, headers={'Origin': 'https://other.example'}).status_code == 403
             assert client.get(path, headers={'Host': 'other.example:8765'}).status_code == 403
+
+
+@pytest.mark.parametrize(('method', 'path', 'status', 'error', 'detail'), [
+    ('GET', '/api/view/no-such-route', 404, 'not_found', 'route not found'),
+    ('POST', '/api/view/frame/curator-drafts', 405, 'method_not_allowed', 'method not allowed'),
+])
+def test_api_routing_errors_use_the_view_envelope(tmp_path, method, path, status, error, detail):
+    client = TestClient(create_app(Catalog(tmp_path)))
+    response = client.request(method, path)
+    assert response.status_code == status
+    assert response.json() == dict(schema=API, error=error, detail=detail)
+    assert response.headers['content-type'] == 'application/json'
+    assert response.headers['cache-control'] == 'no-store'
+    assert response.headers['x-content-type-options'] == 'nosniff'
+    if status == 405:
+        assert set(response.headers['allow'].split(', ')) == {'GET', 'HEAD'}
+    assert client.get('/no-such-route').headers['content-type'].startswith('text/plain')
+
+
+def draft_manifest(draft_id, state='open'):
+    life = dict(state=state, untouched_sessions=2, last_touched_session='session-later')
+    if state == 'promoted':
+        life['promoted_by_session'] = 'session-promoted'
+    return dict(schema='container-manifest/1', id=draft_id, kind='draft', owner_role='curator',
+                inputs=dict(created_by_session='session-first'), pinned={}, budgets=dict(max_bytes=4096),
+                lifecycle=life, provenance=dict(sessions=['session-first', 'session-later']),
+                retention=dict(policy='stale after untouched sessions'))
+
+
+def write_draft(root, bucket, manifest):
+    path = root / bucket / manifest['id'] / 'manifest.json'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest))
+    return path
+
+
+def test_curator_draft_sources_page_by_manifest_snapshot(tmp_path):
+    root = tmp_path / 'private-curator-state'
+    sources = FrameSources(curator_drafts=(('drafts', root), ('other', tmp_path / 'absent')))
+    client = TestClient(create_app(Catalog(tmp_path / 'evaluation'), frame_sources=sources))
+    route = '/api/view/frame/curator-drafts'
+    labels = client.get('/api/view/frame/curator-draft-sources?limit=1').json()
+    assert labels == dict(schema='spectator-frame/1', items=[dict(label='drafts')], total=2, next=1, limit=1)
+    assert client.get('/api/view/frame/curator-draft-sources?after=1&limit=1').json()['items'] == [dict(label='other')]
+    assert client.get(route, params=dict(source='unknown')).json()['error'] == 'unknown_source'
+
+    removed = write_draft(root, 'drafts-archive', draft_manifest('a-abandoned', 'abandoned'))
+    promoted = write_draft(root, 'drafts-archive', draft_manifest('z-promoted', 'promoted'))
+    stale = write_draft(root, 'drafts', draft_manifest('z-stale', 'stale'))
+    manifest = draft_manifest('a-open')
+    manifest['inputs']['created_by_session'] = '/private/created'
+    manifest['pinned']['withheld'] = '/private/pinned'
+    manifest['provenance']['sessions'] = ['first', 'C:\\private\\session'] + ['later'] * LIST_LIMIT
+    manifest['retention']['policy'] = 'read /private/policy'
+    opened = write_draft(root, 'drafts', manifest)
+    body = opened.with_name('notes.md')
+    body.write_text('private draft body')
+    params = dict(source='drafts', limit=2)
+    response = client.get(route, params=params)
+    first = response.json()
+    assert first['schema'] == 'spectator-frame/1' and first['source_status'] == 'available'
+    assert first['total'] == 4 and first['next'] == 2 and first['limit'] == 2
+    assert [(r['id'], r['bucket'], r['state']) for r in first['items']] == [('a-open', 'active', 'open'), ('z-stale', 'active', 'stale')]
+    assert first['items'][0] == dict(id='a-open', bucket='active', state='open', untouched_sessions=2,
+        created_by_session=None, last_touched_session='session-later', promoted_by_session=None, max_bytes=4096,
+        retention_policy=None, sessions=dict(items=['first', None] + ['later'] * (LIST_LIMIT - 2), omitted=2, values_omitted=1))
+    assert '/private' not in response.text and 'private draft body' not in response.text
+    before = {path: path.read_bytes() for path in (opened, stale, removed, promoted)}
+    entries = [(p.parent.parent.name, p.parent.name, hashlib.sha256(data).hexdigest(), len(data)) for p, data in before.items()]
+    fingerprint = b''.join(json.dumps(row, separators=(',', ':')).encode() + b'\n' for row in sorted(entries))
+    assert first['snapshot'] == dict(sha256=hashlib.sha256(fingerprint).hexdigest(), bytes=sum(map(len, before.values())))
+    digest = first['snapshot']['sha256']
+    for missing in (dict(after=2), dict(snapshot='invalid')):
+        bad = client.get(route, params=dict(params, **missing))
+        assert bad.status_code == 400 and bad.json()['error'] == 'bad_snapshot'
+    body.write_text('different private draft body')
+    second_params = dict(params, after=2, snapshot=digest)
+    second = client.get(route, params=second_params).json()
+    assert second['snapshot'] == first['snapshot'] and second['next'] is None
+    assert [(r['id'], r['bucket'], r['state'], r['promoted_by_session']) for r in second['items']] == [
+        ('a-abandoned', 'archived', 'abandoned', None), ('z-promoted', 'archived', 'promoted', 'session-promoted')]
+    assert {path: path.read_bytes() for path in before} == before
+    promoted.write_bytes(before[promoted] + b'\n')
+    changed = client.get(route, params=second_params)
+    assert changed.status_code == 409 and changed.json()['error'] == 'source_changed'
+
+
+def test_curator_draft_source_reports_missing_empty_and_invalid_manifests(tmp_path):
+    root = tmp_path / 'state'
+    sources = FrameSources(curator_drafts=(('state', root),))
+    client = TestClient(create_app(Catalog(tmp_path / 'evaluation'), frame_sources=sources))
+    def read(status):
+        value = client.get('/api/view/frame/curator-drafts?source=state').json()
+        assert value['source_status'] == status and value['items'] == [] and value['total'] == 0
+        assert (value['snapshot'] is None) == (status in ('missing', 'unreadable'))
+        return value
+
+    read('missing')
+    root.mkdir()
+    read('empty')
+    (root / 'drafts' / 'unfinished').mkdir(parents=True)
+    read('empty')
+    write_draft(root, 'drafts', draft_manifest('valid'))
+    path = write_draft(root, 'drafts', draft_manifest('broken'))
+    for data in (b'{', b'', b'\xff'):
+        path.write_bytes(data)
+        read('malformed')
+    manifest = draft_manifest('broken')
+    for broken in (dict(manifest, schema='container-manifest/2'), dict(manifest, id='different'),
+                   dict(manifest, owner_role='actor'), dict(manifest, kind=[]),
+                   dict(manifest, lifecycle=dict(manifest['lifecycle'], state='abandoned')),
+                   dict(manifest, lifecycle=dict(manifest['lifecycle'], untouched_sessions=True))):
+        path.write_text(json.dumps(broken))
+        read('unsupported')
+    path.unlink()
+    wrong_id = write_draft(root, 'drafts', draft_manifest('Invalid-ID'))
+    read('unsupported')
+    wrong_id.unlink()
+    path.write_bytes(b'x' * (MAX_JSON_FILE_BYTES + 1))
+    read('too_large')
+
+
+def test_curator_drafts_refuse_symlinks_and_non_directories(tmp_path):
+    root = tmp_path / 'state'
+    outside = tmp_path / 'outside'
+    manifest = write_draft(outside, 'drafts', draft_manifest('secret'))
+    sources = FrameSources(curator_drafts=(('state', root),))
+    client = TestClient(create_app(Catalog(tmp_path / 'evaluation'), frame_sources=sources))
+    def unreadable():
+        response = client.get('/api/view/frame/curator-drafts?source=state')
+        value = response.json()
+        assert value['source_status'] == 'unreadable' and value['snapshot'] is None and value['items'] == []
+        assert 'secret' not in response.text
+
+    root.touch()
+    unreadable()
+    root.unlink()
+    root.symlink_to(outside, target_is_directory=True)
+    unreadable()
+    root.unlink()
+    root.mkdir()
+    bucket = root / 'drafts'
+    bucket.symlink_to(outside / 'drafts', target_is_directory=True)
+    unreadable()
+    bucket.unlink()
+    bucket.mkdir()
+    draft = bucket / 'linked'
+    draft.symlink_to(manifest.parent, target_is_directory=True)
+    unreadable()
+    draft.unlink()
+    draft.mkdir()
+    (draft / 'manifest.json').symlink_to(manifest)
+    unreadable()
+
+
+def test_gate_results_and_session_verdicts_project_bounded_draft_ids(tmp_path):
+    result = dict(schema='curator-gate/2', operation='submission', operation_id='a' * 32, status='published',
+                  base_version='v1', restored_from=None, version='v2', submission='submission', session='receipt',
+                  from_drafts=[f'draft-{i}' for i in range(LIST_LIMIT + 1)], diagnostics=[])
+    gate, receipt = tmp_path / 'gate.jsonl', tmp_path / 'close-out.json'
+    gate.write_text(json.dumps(result) + '\n')
+    manifest = dict(schema='container-manifest/1', kind='curator-session', id='receipt', owner_role='curator',
+                    inputs={}, pinned={}, budgets={}, provenance={}, retention={}, lifecycle=dict(state='aborted',
+                    ended_wall=1, stopped=None, returncode=None, survivors=None, errors=[], refused=[]))
+    receipt.write_text(json.dumps(dict(manifest=manifest, verdicts=[result], drafts={}, published_after='v2')))
+    sources = FrameSources(curator_results=(('journal', gate),), curator_sessions=(('receipt', receipt),))
+    client = TestClient(create_app(Catalog(tmp_path / 'evaluation'), frame_sources=sources))
+    for path in ('curator-results?source=journal', 'curator-session?source=receipt'):
+        item = client.get('/api/view/frame/' + path).json()['items'][0]
+        assert item['from_drafts'] == result['from_drafts'][:LIST_LIMIT] and item['from_drafts_omitted'] == 1
 
 
 def test_every_json_route_has_the_schema_and_stays_bounded(archive):
@@ -1282,6 +1454,19 @@ def test_the_viewer_command_passes_the_grooming_receipt(monkeypatch, tmp_path):
     assert seen['frame_sources'].curator_grooming == tmp_path / 'receipt.json'
     command.main(['--root', str(tmp_path)])
     assert seen['frame_sources'].curator_grooming is None
+
+
+def test_the_viewer_command_parses_repeatable_draft_source_labels(monkeypatch, tmp_path):
+    from harness.viewer import __main__ as command
+    seen = {}
+    monkeypatch.setattr(command, 'create_app', lambda catalog, evaluator, **options: seen.update(options))
+    monkeypatch.setattr(command.uvicorn, 'run', lambda *a, **k: None)
+    base = ['--root', str(tmp_path)]
+    first, second = tmp_path / 'state-a', tmp_path / 'state-b'
+    assert command.main([*base, '--curator-drafts', f'a={first}', '--curator-drafts', f'b={second}']) == 0
+    assert seen['frame_sources'].curator_drafts == (('a', first), ('b', second))
+    with pytest.raises(SystemExit, match='2'):
+        command.main([*base, '--curator-drafts', f'a={first}', '--curator-drafts', f'a={second}'])
 
 
 def test_the_feed_tells_steps_cuts_and_updates_in_one_order(mission):

@@ -11,9 +11,10 @@ import json
 from typing import Any, Callable
 
 from starlette.applications import Starlette
+from starlette.exceptions import HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse, PlainTextResponse, Response
 from starlette.routing import Route
 
 from harness.spectator_assets import PAGE_POLICY, WEB, static_file
@@ -85,6 +86,15 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
     def error_reply(error: ViewError) -> Response:
         return Response(json.dumps(dict(schema=API, error=error.code, detail=error.detail)), error.status, headers=HEADERS,
             media_type='application/json')
+
+    async def routing_error(request: Request, exc: HTTPException) -> Response:
+        if not request.url.path.startswith('/api/view/'):
+            return PlainTextResponse(exc.detail, status_code=exc.status_code, headers=exc.headers)
+        code, detail = ('not_found', 'route not found') if exc.status_code == 404 else ('method_not_allowed', 'method not allowed')
+        response = error_reply(ViewError(exc.status_code, code, detail))
+        if exc.headers:
+            response.headers.update(exc.headers)
+        return response
 
     def runs(request: Request) -> Response:
         after, limit = paging(request)
@@ -190,11 +200,14 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
     def frame_episodes(request: Request) -> Response:
         return frame_reply(frame_view.episodes(catalog, sources))
 
-    def curator_sources(request: Request) -> Response:
+    def source_labels(request: Request, configured) -> Response:
         after, limit = paging(request)
-        rows = [dict(label=label) for label, _ in sources.curator_results]
-        return frame_reply(dict(items=rows[after:after + limit], total=len(rows),
-                                next=after + limit if after + limit < len(rows) else None, limit=limit))
+        return frame_reply(dict(items=[dict(label=label) for label, _ in configured[after:after + limit]],
+                                total=len(configured), next=after + limit if after + limit < len(configured) else None,
+                                limit=limit))
+
+    def curator_sources(request: Request) -> Response:
+        return source_labels(request, sources.curator_results)
 
     def curator_results(request: Request) -> Response:
         after, limit = paging(request)
@@ -202,15 +215,20 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
                                            after, limit, request.query_params.get('snapshot')))
 
     def curator_session_sources(request: Request) -> Response:
-        after, limit = paging(request)
-        rows = [dict(label=label) for label, _ in sources.curator_sessions]
-        return frame_reply(dict(items=rows[after:after + limit], total=len(rows),
-                                next=after + limit if after + limit < len(rows) else None, limit=limit))
+        return source_labels(request, sources.curator_sessions)
 
     def curator_session(request: Request) -> Response:
         after, limit = paging(request)
         return frame_reply(curator.session(sources.curator_sessions, request.query_params.get('source'),
                                            after, limit, request.query_params.get('snapshot')))
+
+    def curator_draft_sources(request: Request) -> Response:
+        return source_labels(request, sources.curator_drafts)
+
+    def curator_drafts(request: Request) -> Response:
+        after, limit = paging(request)
+        return frame_reply(curator.drafts(sources.curator_drafts, request.query_params.get('source'),
+                                         after, limit, request.query_params.get('snapshot')))
 
     def curator_runner_status(request: Request) -> Response:
         run = request.query_params.get('run') or None
@@ -227,6 +245,8 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
 
     prefix = '/api/view'
     routes = [Route(f'{prefix}/frame/curator-runner', plain(curator_runner_status), methods=['GET']),
+        Route(f'{prefix}/frame/curator-draft-sources', plain(curator_draft_sources), methods=['GET']),
+        Route(f'{prefix}/frame/curator-drafts', plain(curator_drafts), methods=['GET']),
         Route(f'{prefix}/frame/curator-session-sources', plain(curator_session_sources), methods=['GET']),
         Route(f'{prefix}/frame/curator-session', plain(curator_session), methods=['GET']),
         Route(f'{prefix}/frame/curator-sources', plain(curator_sources), methods=['GET']),
@@ -269,7 +289,7 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         routes.extend(Route(path, asset, methods=['GET']) for path in (
             '/recorded/', '/app/{file:path}', '/vendor/{file:path}'))
 
-    app = Starlette(routes=routes)
+    app = Starlette(routes=routes, exception_handlers={404: routing_error, 405: routing_error})
     if recorded_page:
         async def local_only(request: Request, call_next):
             host = request.headers.get('host', '')
