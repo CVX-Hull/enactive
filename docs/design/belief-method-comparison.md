@@ -3,7 +3,7 @@ owner: lead
 status: proposed
 date: '2026-11-16'
 scope: 'Compare provenance-aware belief revision and mathematical uncertainty methods on real CDDA visible-trace replay, with staged mechanical checks and later decision-use tests. No production belief choice, paid study or model switch is authorized.'
-review_trigger: A live run supplies a curator-written fact about an earlier sighting, or the production belief decision or comparison evidence changes
+review_trigger: 'A multi-day standard-build campaign under #136 produces contested or retracted belief revisions or recurrence friction across starts that makes #666, #677 or #681 decision-relevant, or the production belief decision or comparison evidence changes'
 ---
 
 # Belief methods that earn their cost in CDDA
@@ -16,11 +16,19 @@ revision and numerical belief on matched CDDA evidence. Whether numerical
 belief improves predictions or changes decisions remains unknown.
 
 The [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/666)
-is revisited when a live run has a curator-written fact about an earlier sighting.
+is revisited when multi-day standard-build campaigns under the
+[player-owned campaign outcome (#136)](https://github.com/CVX-Hull/enactive/issues/136),
+starting with [#968](https://github.com/CVX-Hull/enactive/issues/968), produce
+contested or retracted belief revisions or recurrence friction across starts that
+makes it decision-relevant. The earlier trigger, a live run with a curator-written
+fact about an earlier sighting, was met; the
+[bounded live validation (#963)](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
+on its own (`151` active facts, `40` world-scoped, `1` retracted and `0` contested
+in `1.80` game hours) has too few conflict or revisit cases.
 Then the owner can reconsider whether the proposed
 [belief-method comparison (#677)](https://github.com/CVX-Hull/enactive/issues/677)
-is warranted. Any claim of benefit from delivered memory comes from
-the [seven-day campaign outcome (#145)](https://github.com/CVX-Hull/enactive/issues/145).
+is warranted. Any claim of benefit from delivered memory comes from campaign
+outcomes under #136.
 [Owner decision of 20 November 2026, “No study has shown that delivered memory improves play”](../decisions/owner-decisions.md#in-force)
 
 The [measurement audit](../acceptance/2026-11-16-experiment-measurement-review.md)
