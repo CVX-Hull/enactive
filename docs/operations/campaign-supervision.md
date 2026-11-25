@@ -90,6 +90,8 @@ below own [launch](#freeze-launch-and-inspect) and [cleanup](#failure-and-owned-
    ```
 
    Add `--runs DIR` to let the viewer list archived run directories beside the live run.
+   Repeat `--curator-drafts LABEL=DIR` to let the Curator tab read configured curator
+   state directories (`drafts/` and `drafts-archive/` manifests, [draft contract](../contracts/spectator-view.md#curator-drafts)).
    Repeat `--curator-sessions LABEL=FILE` to select terminal curator close-out
    receipts by operator-supplied alias ([session contract](../contracts/spectator-view.md#recorded-curator-sessions)).
    Repeat `--curator-results LABEL=FILE` to let the Curator tab read explicitly selected

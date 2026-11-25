@@ -46,18 +46,25 @@ displays inform you and gate nothing; the Pause conditions it computes are advic
 After the supervisor exits, open completed runs through the
 [recorded browser entry](#recorded-browser-entry).
 
+For recorded curator drafts, repeat `--curator-drafts LABEL=DIR` on the supervisor
+command, naming curator state directories holding `drafts/` and `drafts-archive/`.
+Under **Memory & Curator** → **Curator drafts & gate results** → **Curator drafts**,
+select those labels to inspect active and archived draft manifests without reading
+draft body files. See the [draft contract](../contracts/spectator-view.md#curator-drafts).
+
 For recorded curator results, repeat `--curator-results LABEL=FILE` on the supervisor
 command, naming existing current result files or snapshots. Under **Memory & Curator** →
-**Additional recorded sources**, select those labels to display recorded submission/restore
-status and versions. No source is selected by default; labels do not associate a journal with
-the live player run. Files are read only, with a 16 MiB input ceiling and digest-bound paging.
-Empty, unavailable, unsupported and unknown data stay explicit; publication is not factual
-verification or measured lag. See the [result contract](../contracts/spectator-view.md#recorded-curator-results).
+**Curator drafts & gate results** → **Gate results**, select those labels to display
+recorded submission/restore status, `from_drafts` IDs and versions. No source is selected
+by default; labels do not associate a journal with the live player run. Files are read
+only, with a 16 MiB input ceiling and digest-bound paging. Empty, unavailable, unsupported
+and unknown data stay explicit; publication is not factual verification or measured lag.
+See the [result contract](../contracts/spectator-view.md#recorded-curator-results).
 
 For recorded curator sessions, repeat `--curator-sessions LABEL=FILE` with individual
 terminal `close-out.json` files. Select the operator-supplied alias under **Memory & Curator** →
-**Additional recorded sources**; the recorded session and its draft collection events do not
-establish a run association or current draft state. See the
+**Curator drafts & gate results** → **Curator sessions**; the recorded session and its
+draft collection events do not establish a run association or current draft state. See the
 [session contract](../contracts/spectator-view.md#recorded-curator-sessions).
 
 If the page says **viewer unavailable**, the run, the frame and

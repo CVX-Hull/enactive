@@ -317,7 +317,7 @@ ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
 .seq { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 2px; } .seq span { height: 22px; border-radius: 2px; font: 600 .7rem var(--mono); display: grid; place-items: center; color: var(--surface); } .seq .in_play { background: var(--quiet); } .seq .ui { background: var(--teal); } .seq .prompt { background: var(--watch); } .seq .menu { background: var(--muted); } .seq .dead { background: var(--alert); } .seq .unknown { background: var(--sunk); color: var(--muted); } .aligned { display: grid; gap: 10px; }
 .anchors { display: grid; gap: 8px; } .anchor { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; font-size: .86rem; min-width: 0; } .anchor .acts { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
 /* Recorded reader controls stay usable with long identifiers on narrow screens. */
-.knowledge-reader select, .knowledge-reader button { max-width: 100%; } .knowledge-reader button { white-space: normal; overflow-wrap: anywhere; } .knowledge-reader details, .knowledge-reader summary { overflow-wrap: anywhere; }
+.knowledge-reader select, .knowledge-reader button, .curator-source-view select { max-width: 100%; } .knowledge-reader button { white-space: normal; overflow-wrap: anywhere; } .knowledge-reader details, .knowledge-reader summary { overflow-wrap: anywhere; }
 
 /* ------------------------------------------------------------ Pause sheet */
 .sheet-bg { position: fixed; inset: 0; background: rgba(8, 11, 15, .6); display: grid; place-items: center; z-index: 20; padding: 16px; }

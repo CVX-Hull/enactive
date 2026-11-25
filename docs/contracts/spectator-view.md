@@ -27,7 +27,7 @@ outage therefore cannot block the strip, a Pause or a run.
   2 seconds from forwarding start, with a 4 MiB body cap;
 - at most eight forwards at once;
 - only `application/json` and `image/png` responses, never HTML or script;
-- the viewer's `200`, `400`, `404`, `409` and `413` pass through unchanged, and any other
+- the viewer's `200`, `400`, `404`, `405`, `409` and `413` pass through unchanged, and any other
   status is a forwarding failure;
 - the gateway's own security headers on every response.
 
@@ -39,7 +39,7 @@ connection, timeout, unlisted viewer status or unavailable forwarding slot retur
 **Launch and lifetime.**
 - The supervisor starts `python -m harness.viewer` as an **unsupervised** child on a free
   loopback port with the live run directory and evaluation root (`.runtime/evaluations`).
-  It can also pass archived run directories, labelled curator result and session files,
+  It can also pass archived run directories, labelled curator draft directories, result and session files,
   and the configured runner's status file.
 - A launch failure or exit leaves the run running. The supervisor stops the viewer at
   the end and records its port in `campaign-watch-start/4` and its child entry in
@@ -57,6 +57,12 @@ connection, timeout, unlisted viewer status or unavailable forwarding slot retur
 All routes are `GET`, return JSON with `"schema": "spectator-view/3"` unless noted, stay
 under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 `after`/`limit` (`limit` ≤ 500).
+
+Unmatched paths under `/api/view/` return `404` with `error: "not_found"` and
+`detail: "route not found"`. Unsupported methods on a matched view route return
+`405` with `error: "method_not_allowed"` and `detail: "method not allowed"`. Both
+use the `spectator-view/3` JSON error envelope and the viewer's `no-store` and
+`nosniff` headers. Static routes keep their own responses.
 
 | Route | Returns |
 | --- | --- |
@@ -86,6 +92,8 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 | `/api/view/frame/curator-results?source=&after=&limit=&snapshot=` | One source’s recorded current submission/restore results and read-snapshot provenance (`spectator-frame/1`, below) |
 | `/api/view/frame/curator-session-sources?after=&limit=` | Operator-configured receipt labels |
 | `/api/view/frame/curator-session?source=&after=&limit=&snapshot=` | One terminal curator session receipt and its paged gate results |
+| `/api/view/frame/curator-draft-sources?after=&limit=` | Operator-configured draft source labels (`spectator-frame/1`, [below](#curator-drafts)) |
+| `/api/view/frame/curator-drafts?source=&after=&limit=&snapshot=` | Paged active and archived draft metadata and snapshot provenance (`spectator-frame/1`, [below](#curator-drafts)) |
 | `/api/view/frame/curator-runner?run=` | A curator runner's status file, read at this request: how far the curator trails play (`spectator-frame/1`, [below](#curator-runner-status)) |
 
 ### Host telemetry and curator spend
@@ -251,7 +259,8 @@ The bar, three tabs and their fallbacks read only the routes above.
   feed, is a finding or a call that failed or was refused.
 - **Memory & Curator** shows the selected run's runner status and curator spend, the
   exported versions with each recorded delivery's difference, and a reader whose citations
-  open Watch at their step. Other recorded sources are in a closed section.
+  open Watch at their step. The *Curator drafts & gate results* panel links to configured
+  draft sources, gate journals and session receipts. Other recorded sources are in a closed section.
 - **Diagnostics** shows spend, context, routing and custody, then the charts, tools, Pause
   conditions, game state and findings. Calls, requests, metrics, readers and cross-run
   views are closed sections that fetch nothing until opened.
@@ -383,7 +392,9 @@ returns that label, `source_status`, `snapshot`, `items`, `total`, `next` and `l
   The existing response ceiling remains `413 response_too_large`.
 - Rows preserve journal order with an `index`, exact `operation_id`, `operation`,
   `status`, `base_version`, `restored_from`, `version`, `submission`, `session` and
-  bounded `diagnostics`. Only the exact [`curator-gate/2`](curator.md#gate-result-curator-gate2)
+  bounded `diagnostics`. When the gate records draft IDs, `from_drafts` lists the first
+  100 in recorded order and `from_drafts_omitted` counts any excess. The same fields
+  appear on session verdict rows. Only the exact [`curator-gate/2`](curator.md#gate-result-curator-gate2)
   shape and its operation, status and null conventions are accepted, with no alias or
   historical converter.
 - Text, identifiers and lists use the existing bounded omission conventions. An overlong
@@ -427,6 +438,42 @@ means no collection report was recorded; a report with empty lists is distinct. 
 collection events are historical, not current draft states or complete promotion
 history. Empty verdicts establish no result, not zero publications or acceptance.
 The reader uses no producer lock, writes no records and makes no Git or provider call.
+
+### Curator drafts
+
+Repeat `--curator-drafts LABEL=DIR` on the supervisor or standalone viewer to
+configure curator state directories. Labels follow the [result-source rules](#recorded-curator-results)
+and the supervisor forwards the arguments only to the viewer. The source list exposes
+labels with `items`, `total`, `next` and `limit`. Drafts and gate records are separate
+operator-selected views, independent of delivered knowledge and run selection.
+
+The viewer reads only `drafts/<draft_id>/manifest.json` and
+`drafts-archive/<draft_id>/manifest.json` beneath the configured directory. It opens
+the configured directory and its entries without following symlinks, reads at most
+16 MiB plus one byte per manifest, and uses no producer lock. It accepts
+`container-manifest/1` for curator-owned drafts whose ID matches the directory name
+and whose lifecycle state matches the bucket.
+
+The response includes `source`, `source_status`, `snapshot`, `items`, `total`, `next`
+and `limit`. Items are ordered by directory bucket and draft ID. Each item exposes
+`id`, `bucket` (`active` or `archived`), `state` (`open`, `stale`, `promoted` or
+`abandoned`), `untouched_sessions`, `created_by_session`, `last_touched_session`,
+nullable `promoted_by_session`, `sessions`, `max_bytes` and `retention_policy`.
+Text omits path-like or oversized values. `sessions` uses the bounded list shape
+`{items, omitted, values_omitted}`. Draft bodies and raw manifest metadata stay private.
+
+- `available` means valid manifests were read. `empty` means the readable directory
+  had no manifests. `missing` means the configured directory is absent. `unreadable`
+  covers directory or manifest I/O failures and symlinks refused along the read path.
+  Oversized manifests are `too_large`, invalid JSON is `malformed`, and invalid schema,
+  identity, lifecycle or metadata is `unsupported`. Failure statuses return no rows.
+- `snapshot` is `null` for `missing` and `unreadable`. Otherwise its `sha256` hashes the
+  sorted `(directory bucket, draft ID, manifest SHA-256, bytes read)` entries as compact
+  JSON lines, and `bytes` sums manifest bytes read. An oversized manifest contributes
+  only its bounded prefix to this fingerprint. Draft body changes do not affect it.
+- Bad paging or digests return `400`. `after > 0` requires a `snapshot` digest.
+  An unknown label returns `404 unknown_source` and a changed digest returns
+  `409 source_changed`. The page offers a refresh from the first page.
 
 ### Curator runner status
 
@@ -488,8 +535,10 @@ Nothing is sent to the curator, and no figure is derived beyond what the file st
 
 The spectator's `/api/view/frame/*` routes follow the view API rules above and carry
 `"schema": "spectator-frame/1"`. Errors keep the `spectator-view/3` envelope. They read
-tracked data, the catalog's stores, explicitly configured curator result files and the curator runner's status file, and nothing they compute reaches the player or the
-curator (ADR008). The container and probe directories default to the repository's
+tracked data, the catalog's stores, explicitly configured curator result files, session
+receipts, draft directories and the curator runner's status file, and nothing they compute
+reaches the player or the curator (ADR008). The container and probe directories default to
+the repository's
 `data/containers` and `data/evaluation/probes`; `create_app(frame_sources=)` overrides
 them for tests.
 

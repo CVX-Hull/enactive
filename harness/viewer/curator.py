@@ -1,4 +1,4 @@
-"""Read-only, bounded projection of configured curator result journals, and the viewer's bounded file reads."""
+"""Read-only projections of configured curator records and the viewer's bounded file reads."""
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -22,13 +22,13 @@ KEYS = {'schema', 'operation', 'operation_id', 'status', 'base_version', 'restor
         'version', 'submission', 'session', 'from_drafts', 'diagnostics'}
 
 
-def parse_sources(values: list[str]) -> tuple[tuple[str, Path], ...]:
+def parse_sources(values: list[str], entry: str = 'LABEL=FILE') -> tuple[tuple[str, Path], ...]:
     sources = []
     seen = set()
     for value in values:
         label, separator, path = value.partition('=')
         if not separator or not LABEL.fullmatch(label) or not path or label in seen:
-            raise ValueError('curator results must be unique LABEL=FILE entries')
+            raise ValueError(f'curator sources must be unique {entry} entries')
         seen.add(label)
         sources.append((label, Path(path)))
     return tuple(sources)
@@ -70,6 +70,10 @@ def project(row, index):
             omitted[key] = len(value)
             value = None
         item[key] = value
+    if row['from_drafts']:
+        item['from_drafts'] = row['from_drafts'][:LIST_LIMIT]
+        if len(row['from_drafts']) > LIST_LIMIT:
+            item['from_drafts_omitted'] = len(row['from_drafts']) - LIST_LIMIT
     item['diagnostics'] = []
     item['diagnostics_omitted'] = max(0, len(row['diagnostics']) - LIST_LIMIT)
     for i, value in enumerate(row['diagnostics'][:LIST_LIMIT]):
@@ -123,9 +127,8 @@ def read_file(path):
 
 @contextmanager
 def opened_directory(root, *parts):
-    """A descriptor of `root`/`parts`, opened one component at a time: a symlink at any of them, `root` included, is an
-    OSError. Nothing under a run directory can therefore lead a reader out of it."""
-    fd = os.open(root, DIRECTORY)
+    """Open each component from a plain directory path or an already opened directory descriptor."""
+    fd = os.dup(root) if isinstance(root, int) else os.open(root, DIRECTORY)
     try:
         for name in parts:
             inner = os.open(component(name), DIRECTORY, dir_fd=fd)
@@ -162,9 +165,15 @@ def rooted_status(root, *parts):
 
 def rooted_entries(root, *parts):
     """(name, `lstat`) of each entry of a run package's directory, by name. A missing directory or one behind a symlink
-    is an OSError."""
+    is an OSError; an entry that disappears concurrently between listing and stat is skipped."""
     with opened_directory(root, *parts) as directory:
-        return [(name, os.stat(name, dir_fd=directory, follow_symlinks=False)) for name in sorted(os.listdir(directory))]
+        found = []
+        for name in sorted(os.listdir(directory)):
+            try:
+                found.append((name, os.stat(name, dir_fd=directory, follow_symlinks=False)))
+            except FileNotFoundError:
+                continue
+        return found
 
 
 def read(path):
@@ -182,15 +191,23 @@ def read(path):
     return 'available', snapshot, [project(row, i) for i, row in enumerate(rows)]
 
 
-def results(sources, label, after, limit, digest):
+def snapshot_source(sources, label, after, digest):
     path = next((path for name, path in sources if name == label), None)
     if path is None:
         raise ViewError(404, 'unknown_source')
     if (digest is not None and not re.fullmatch(r'[0-9a-f]{64}', digest)) or (after > 0 and digest is None):
         raise ViewError(400, 'bad_snapshot')
-    status, snapshot, rows = read(path)
+    return path
+
+
+def check_snapshot(digest, snapshot):
     if digest is not None and (snapshot is None or digest != snapshot['sha256']):
         raise ViewError(409, 'source_changed')
+
+
+def results(sources, label, after, limit, digest):
+    status, snapshot, rows = read(snapshot_source(sources, label, after, digest))
+    check_snapshot(digest, snapshot)
     return dict(source=label, source_status=status, snapshot=snapshot, items=rows[after:after + limit],
                 total=len(rows), next=after + limit if after + limit < len(rows) else None, limit=limit)
 
@@ -205,6 +222,94 @@ def _safe(value: str | None) -> str | None:
 def _text_list(values: list[str]) -> dict:
     items = [_safe(v) for v in values[:LIST_LIMIT]]
     return dict(items=items, omitted=max(0, len(values) - LIST_LIMIT), values_omitted=sum(v is None for v in items))
+
+
+DRAFT_BUCKETS = {'drafts': ('active', ('open', 'stale')),
+                 'drafts-archive': ('archived', ('promoted', 'abandoned'))}
+
+
+def draft_projection(manifest, directory, draft_id):
+    validate(manifest)
+    bucket, states = DRAFT_BUCKETS[directory]
+    life = manifest['lifecycle']
+    if (manifest['kind'] != 'draft' or manifest['owner_role'] != 'curator' or manifest['id'] != draft_id
+            or not DRAFT.fullmatch(draft_id) or life['state'] not in states):
+        raise ValueError('draft identity or lifecycle')
+    created = manifest['inputs']['created_by_session']
+    touched = life['last_touched_session']
+    promoted = life.get('promoted_by_session')
+    sessions = manifest['provenance']['sessions']
+    untouched = life['untouched_sessions']
+    max_bytes = manifest['budgets']['max_bytes']
+    policy = manifest['retention']['policy']
+    if (not all(isinstance(v, str) for v in (created, touched, policy))
+            or (promoted is not None and not isinstance(promoted, str))
+            or ((life['state'] == 'promoted') != (promoted is not None))
+            or not isinstance(sessions, list) or not all(isinstance(v, str) for v in sessions)
+            or not all(type(v) is int and 0 <= v <= 2**53 - 1 for v in (untouched, max_bytes))):
+        raise ValueError('draft metadata')
+    return dict(id=draft_id, bucket=bucket, state=life['state'], untouched_sessions=untouched,
+                created_by_session=_safe(created), last_touched_session=_safe(touched),
+                promoted_by_session=_safe(promoted), sessions=_text_list(sessions),
+                max_bytes=max_bytes, retention_policy=_safe(policy))
+
+
+def read_drafts(root, after, limit):
+    """Fingerprint the configured manifests in bucket and ID order and keep only the requested page."""
+    sha = hashlib.sha256()
+    size = total = 0
+    rows = []
+    failure = None
+    for bucket in sorted(DRAFT_BUCKETS):
+        try:
+            entries = rooted_entries(root, bucket)
+        except FileNotFoundError:
+            continue
+        for draft_id, entry in entries:
+            if not (stat.S_ISDIR(entry.st_mode) or stat.S_ISLNK(entry.st_mode)):
+                continue
+            status, snapshot, data = read_rooted(root, bucket, draft_id, 'manifest.json')
+            if status == 'missing':
+                continue
+            if status == 'unreadable':
+                return status, None, [], 0
+            sha.update(json.dumps((bucket, draft_id, snapshot['sha256'], snapshot['bytes']),
+                                  separators=(',', ':')).encode() + b'\n')
+            size += snapshot['bytes']
+            if status == 'too_large':
+                failure = status
+                continue
+            try:
+                manifest = json.loads(data or b'')
+            except (ValueError, RecursionError):
+                failure = failure or 'malformed'
+                continue
+            try:
+                row = draft_projection(manifest, bucket, draft_id)
+            except (ValueError, TypeError, KeyError):
+                failure = failure or 'unsupported'
+                continue
+            if after <= total < after + limit:
+                rows.append(row)
+            total += 1
+    snapshot = dict(sha256=sha.hexdigest(), bytes=size)
+    if failure is not None:
+        return failure, snapshot, [], 0
+    return 'available' if total else 'empty', snapshot, rows, total
+
+
+def drafts(sources, label, after, limit, digest):
+    path = snapshot_source(sources, label, after, digest)
+    try:
+        with opened_directory(path) as root:
+            status, snapshot, rows, total = read_drafts(root, after, limit)
+    except FileNotFoundError:
+        status, snapshot, rows, total = 'missing', None, [], 0
+    except OSError:
+        status, snapshot, rows, total = 'unreadable', None, [], 0
+    check_snapshot(digest, snapshot)
+    return dict(source=label, source_status=status, snapshot=snapshot, items=rows, total=total,
+                next=after + limit if after + limit < total else None, limit=limit)
 
 
 def _number(value: object) -> bool:
@@ -321,12 +426,8 @@ def session_projection(record: object) -> tuple[dict, dict | None, list]:
 
 def session(sources: tuple[tuple[str, Path], ...], label: str | None, after: int, limit: int,
             digest: str | None) -> dict:
-    path = next((path for name, path in sources if name == label), None)
-    if path is None: raise ViewError(404, 'unknown_source')
-    if (digest is not None and not re.fullmatch(r'[0-9a-f]{64}', digest)) or (after > 0 and digest is None):
-        raise ViewError(400, 'bad_snapshot')
-    status, snapshot, data = read_file(path)
-    if digest is not None and (snapshot is None or digest != snapshot['sha256']): raise ViewError(409, 'source_changed')
+    status, snapshot, data = read_file(snapshot_source(sources, label, after, digest))
+    check_snapshot(digest, snapshot)
     header, report, verdicts = None, None, []
     if status == 'available':
         try:
