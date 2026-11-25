@@ -12,6 +12,7 @@ import random
 from pathlib import Path
 import subprocess
 import sys
+import zlib
 
 import pytest
 
@@ -85,6 +86,159 @@ def seeded(tmp_path: Path) -> Repository:
     return repo
 
 
+def assert_history_rejected(repo, tmp_path, base, diagnostic):
+    directory = submission(tmp_path, [change_fact('fresh')], name='rejected-history', base_version=base)
+    before = snapshot(repo)
+    for reader in (repo, Repository(repo.path.parent, repo.game)):
+        assert reader.published() == base
+        result = run(reader, directory)
+        assert result['status'] == 'rejected' and result['version'] is None
+        assert result['diagnostics'][0].startswith('publication failed: incompatible history at ')
+        assert diagnostic in result['diagnostics'][0]
+        restored = restore(reader, expected_base=base, target='v0')
+        assert restored['status'] == 'rejected' and restored['version'] is None
+        assert restored['diagnostics'] == ['incompatible or unavailable history']
+        assert snapshot(reader) == before
+
+
+def test_repointed_historical_tag_with_identical_snapshot_is_rejected(tmp_path):
+    repo = seeded(tmp_path)
+    assert restore(repo, expected_base='v1', target='v0')['version'] == 'v2'
+    snapshots, _, _ = _history(repo)
+    tree = git(repo, 'rev-parse', 'v1^{tree}').strip()
+    replacement = knowledge._git(repo.path, 'commit-tree', tree, '-p', 'v0', '-m', 'different commit').decode().strip()
+    git(repo, 'update-ref', 'refs/tags/v1', replacement)
+    assert repo.snapshot('v1') == snapshots['v1']
+    assert_history_rejected(repo, tmp_path, 'v2', 'consecutive commit history')
+
+
+@pytest.mark.parametrize('revision, kind, old, new', [
+    ('v1', 'commit', b'Publish v1', b'Rewrite v1'),
+    ('v1^{tree}', 'tree', b'facts.jsonl', b'Facts.jsonl'),
+    ('v1:facts.jsonl', 'blob', b'text f1', b'fake f1'),
+    ('v1:provenance.json', 'blob', b'"step": 1', b'"step": 9'),
+])
+def test_mutated_git_object_with_unchanged_oid_is_rejected(tmp_path, revision, kind, old, new):
+    repo = seeded(tmp_path)
+    assert restore(repo, expected_base='v1', target='v0')['version'] == 'v2'
+    _history(repo)
+    oid = git(repo, 'rev-parse', revision).strip()
+    data = knowledge._git(repo.path, 'cat-file', kind, oid)
+    assert old in data
+    changed = data.replace(old, new, 1)
+    replacement = tmp_path / 'replaced-object'
+    replacement.write_bytes(zlib.compress(f'{kind} {len(changed)}\0'.encode() + changed))
+    replacement.replace(repo.path / '.git' / 'objects' / oid[:2] / oid[2:])
+    assert_history_rejected(repo, tmp_path, 'v2', 'Git object hash mismatch')
+
+
+@pytest.mark.parametrize('symlink, reason', [
+    (False, 'unsupported snapshot layout'),
+    (True, 'snapshot contains a non-regular file'),
+])
+def test_gate_and_restore_reject_bad_layout_in_an_older_tag(tmp_path, symlink, reason):
+    repo = seeded(tmp_path)
+    _history(repo)
+    extra = repo.path / 'tests' / 'extra'
+    if symlink:
+        extra.symlink_to('../facts.jsonl')
+    else:
+        extra.write_bytes(b'extra')
+    knowledge._git(repo.path, 'add', '-A')
+    knowledge._git(repo.path, 'commit', '-m', 'invalid snapshot')
+    knowledge._git(repo.path, 'tag', 'v2')
+    extra.unlink()
+    knowledge._git(repo.path, 'add', '-A')
+    knowledge._git(repo.path, 'commit', '-m', 'valid snapshot after invalid history')
+    knowledge._git(repo.path, 'tag', 'v3')
+    assert_history_rejected(repo, tmp_path, 'v3', f'v2: {reason}')
+
+
+@pytest.mark.parametrize('origin', [{'published_in': 'v0'}, {'published_in': 'v2'}, {'session': 'rewritten'}])
+def test_gate_and_restore_reject_a_forged_record_origin_in_an_older_tag(tmp_path, origin):
+    repo = seeded(tmp_path)
+    original = repo.snapshot('v1')
+    _history(repo)
+    record = repo.records()[0] | origin
+    check.validate_snapshot([record], repo.provenance(), repo.game, 'v2')
+    assert repo.commit({'facts.jsonl': (json.dumps(record) + '\n').encode()}, 'invalid origin') == 'v2'
+    assert repo.commit_snapshot(original, 'valid snapshot after invalid history') == 'v3'
+    assert_history_rejected(repo, tmp_path, 'v3', 'v2: invalid record origin')
+
+
+def test_cold_history_schema_dedup_still_checks_cross_snapshot_provenance(tmp_path):
+    repo = seeded(tmp_path)
+    original_fact_bytes = repo.snapshot('v1')['facts.jsonl']
+    empty_prov = json.dumps({'frames': {}, 'sessions': {}, 'branches': {}, 'restores': []}).encode()
+    assert repo.commit({'facts.jsonl': original_fact_bytes, 'provenance.json': empty_prov}, 'dropped provenance') == 'v2'
+    assert_history_rejected(repo, tmp_path, 'v2', 'has no recorded provenance')
+
+
+def test_warm_history_cache_rejects_consistent_rewrite_of_cached_tag(tmp_path):
+    repo = seeded(tmp_path)
+    _history(repo)
+    (repo.path / 'tests' / '.keep').write_bytes(b'payload')
+    knowledge._git(repo.path, 'add', 'tests/.keep')
+    knowledge._git(repo.path, 'commit', '--amend', '--no-edit')
+    knowledge._git(repo.path, 'tag', '-f', 'v1')
+    directory = submission(tmp_path, [change_fact('fresh')], name='warm-rewrite', base_version='v1')
+    before = snapshot(repo)
+
+    assert repo.published() == 'v1'
+    warm_gate = run(repo, directory)
+    assert warm_gate['status'] == 'rejected' and warm_gate['version'] is None
+    assert 'incompatible history at v1: published commit changed' in warm_gate['diagnostics'][0]
+    warm_restore = restore(repo, expected_base='v1', target='v0')
+    assert warm_restore['status'] == 'rejected' and warm_restore['version'] is None
+    assert warm_restore['diagnostics'] == ['incompatible or unavailable history']
+
+    cold = Repository(repo.path.parent, repo.game)
+    assert cold.published() == 'v1'
+    cold_gate = run(cold, directory)
+    assert cold_gate['status'] == 'rejected' and cold_gate['version'] is None
+    assert 'v1: unsupported program or test content' in cold_gate['diagnostics'][0]
+    cold_restore = restore(cold, expected_base='v1', target='v0')
+    assert cold_restore['status'] == 'rejected' and cold_restore['version'] is None
+    assert cold_restore['diagnostics'] == ['incompatible or unavailable history']
+    assert snapshot(cold) == before
+
+
+def test_misplaced_parent_header_after_committer_is_rejected(tmp_path):
+    repo = make_repo(tmp_path)
+    v0 = git(repo, 'rev-parse', 'v0').strip()
+    tree = git(repo, 'rev-parse', 'v0^{tree}').strip()
+    raw = (
+        f'tree {tree}\n'
+        'author Test <test@example.com> 1700000000 +0000\n'
+        'committer Test <test@example.com> 1700000000 +0000\n'
+        f'parent {v0}\n\n'
+        'misplaced parent\n'
+    ).encode()
+    forged = subprocess.run(
+        ['git', '-C', str(repo.path), 'hash-object', '-t', 'commit', '--literally', '-w', '--stdin'],
+        input=raw,
+        capture_output=True,
+        check=True,
+    ).stdout.decode().strip()
+    git(repo, 'tag', 'v1', forged)
+    assert_history_rejected(repo, tmp_path, 'v1', 'consecutive commit history')
+
+
+def test_ensure_refuses_existing_git_head_without_v0(tmp_path):
+    repo = Repository(tmp_path / 'knowledge', 'cdda')
+    repo.path.mkdir(parents=True)
+    knowledge._git(repo.path, 'init', '-q', '-b', knowledge.BRANCH)
+    knowledge._git(repo.path, 'commit', '--allow-empty', '-m', 'stray root')
+    with pytest.raises(KnowledgeError, match='has commits without v0'):
+        repo.ensure()
+
+
+def test_validate_snapshot_rejects_mismatched_raw_lines(tmp_path):
+    repo = seeded(tmp_path)
+    with pytest.raises(ValueError, match='mismatched raw fact lines'):
+        check.validate_snapshot(repo.records(), repo.provenance(), repo.game, 'v1', _raw_lines=[], _schema_valid=set())
+
+
 def test_restore_exact_v0_and_reserves_historical_identity(tmp_path):
     repo = seeded(tmp_path)
     before = repo.snapshot('v0')
@@ -95,6 +249,34 @@ def test_restore_exact_v0_and_reserves_historical_identity(tmp_path):
     assert repeated['status'] == 'unchanged' and repeated['version'] == 'v2'
     again = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact())], name='reuse', base_version='v2'))
     assert again['status'] == 'rejected' and any('not new' in d for d in again['diagnostics'])
+
+
+def test_repeated_restore_reserves_ids_and_slugs_from_both_discarded_histories(tmp_path):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact(), change_article()])['version'] == 'v1'
+    assert restore(repo, expected_base='v1', target='v0')['version'] == 'v2'
+    assert publish(repo, tmp_path, [change_fact('later'), change_article('later-guide', facts=['later'])])['version'] == 'v3'
+    assert restore(repo, expected_base='v3', target='v0')['version'] == 'v4'
+    for identity, changes in [
+        ('f1', [change_fact()]),
+        ('later', [change_fact('later')]),
+        ('guide', [change_fact('fresh'), change_article(facts=['fresh'])]),
+        ('later-guide', [change_fact('fresh'), change_article('later-guide', facts=['fresh'])]),
+    ]:
+        rejected = publish(repo, tmp_path, changes, name=f'reuse-{identity}')
+        assert rejected['status'] == 'rejected' and f"identifier {identity!r} is not new" in rejected['diagnostics'][0]
+    assert repo.snapshot('v4') == repo.snapshot('v0') and not (repo.path / 'coverage.json').exists()
+
+
+def test_historical_session_label_conflict_after_restore_is_rejected(tmp_path):
+    repo = make_repo(tmp_path)
+    assert publish(repo, tmp_path, [change_fact()], session_labels={SEALED: labels()})['version'] == 'v1'
+    assert restore(repo, expected_base='v1', target='v0')['version'] == 'v2'
+    _history(repo)
+    provenance = dict(repo.provenance(), sessions={SEALED: labels(world='different')})
+    check.validate_snapshot([], provenance, repo.game, 'v3')
+    assert repo.commit({'provenance.json': json.dumps(provenance).encode()}, 'conflicting session labels') == 'v3'
+    assert_history_rejected(repo, tmp_path, 'v3', 'different recorded labels')
 
 
 def test_restore_refuses_stale_or_legacy_before_mutation(tmp_path):
@@ -266,13 +448,17 @@ def test_submission_reconciles_untagged_commit_before_publication(tmp_path):
 
 def test_restoring_a_tag_preserves_its_record_ages_and_exact_bytes(tmp_path):
     repo = seeded(tmp_path)
-    original = repo.snapshot('v1')
+    odd_bytes = {name: b' \n' + data + b'\n ' for name, data in repo.snapshot('v1').items()
+                 if name in ('facts.jsonl', 'provenance.json', 'coverage.json')}
+    assert repo.commit(odd_bytes, 'different JSON whitespace') == 'v2'
+    original = repo.snapshot('v2')
+    _history(repo)
     newer = run(repo, submission(tmp_path, [dict(op='add_fact', fact=fact('f2'))],
-                                     name='newer', base_version='v1'))
+                                     name='newer', base_version='v2'))
     assert newer['status'] == 'published'
-    result = restore(repo, expected_base='v2', target='v1')
-    assert result['status'] == 'published' and result['version'] == 'v3'
-    assert repo.snapshot('v3') == original
+    result = restore(repo, expected_base='v3', target='v2')
+    assert result['status'] == 'published' and result['version'] == 'v4'
+    assert repo.snapshot('v4') == original
     assert repo.records()[0]['published_in'] == 'v1'
 
 

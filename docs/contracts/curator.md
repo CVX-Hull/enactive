@@ -63,7 +63,10 @@ A published tree holds exactly these files:
 
 - **Versions.** Each publication is one commit on `main` and one tag `v<N>`. Tagging
   establishes publication, and the highest tag is the published version. Initialization
-  writes `v0` with no records.
+  writes `v0` with no records. Version tags `v0` through `v<N>` must be consecutive
+  lightweight tags forming a single parent chain rooted at `v0` with no
+  `refs/replace/*` overrides and valid Git object hashes; the gate verifies this
+  commit and object chain on every history read.
 - **Other formats.** Readers and writers refuse another repository or record schema with
   a message to start a new repository. There is no layout migration and no import;
   `ontology/types.json` and `curator-type/2` are retired.

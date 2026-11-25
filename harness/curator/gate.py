@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
+from dataclasses import dataclass
 import fcntl
 import json
 from pathlib import Path
@@ -10,7 +12,7 @@ import uuid
 
 from . import check
 from .check import DRAFT_ID, FACT as FACT, SUBMISSION as SUBMISSION, VERSION as _VERSION, current as current
-from .knowledge import SCHEMA, KnowledgeError, Repository
+from .knowledge import SCHEMA, KnowledgeError, Repository, _knowledge_metadata
 
 VERDICT = 'curator-gate/2'
 COVERAGE = 'curator-coverage/2'
@@ -73,24 +75,50 @@ def _failed_publication(repo: Repository, version: str) -> tuple[str, str | None
         return 'unknown', None
 
 
+@dataclass(frozen=True)
+class _ValidatedHistory:
+    game: str
+    commits: dict[str, bytes]
+    origins: dict[str, tuple[str, str, str]]
+    identities: set[str]
+    reservations: dict
+
 
 def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], dict]:
-    """Validate compatible published snapshots and reserve identifiers across restores."""
+    """Verify the tagged objects on every call and validate new snapshots in causal order."""
     required = {'knowledge.json', 'facts.jsonl', 'provenance.json', 'programs/.keep', 'tests/.keep'}
-    snapshots, identities, records_by_version = {}, set(), {}
-    reservations = check.empty_reservations()
-    for version in sorted(repo._tags(), key=lambda v: int(v[1:])):
+    snapshots, commits = {}, {}
+    for version, oid, files in repo._verified_snapshots():
+        snapshots[version], commits[version] = files, oid
+
+    cached = repo._validated_history
+    if cached is not None and cached.game != repo.game:
+        cached = None
+    if cached is None:
+        origins, identities, reservations = {}, set(), check.empty_reservations()
+    else:
+        for version, oid in cached.commits.items():
+            if commits.get(version) != oid:
+                raise KnowledgeError(f'incompatible history at {version}: published commit changed')
+        origins, identities = cached.origins.copy(), cached.identities.copy()
+        reservations = deepcopy(cached.reservations)
+
+    schema_valid: set[str] = set()
+    for version, files in snapshots.items():
+        if cached is not None and version in cached.commits:
+            continue
         try:
-            files = repo.snapshot(version)
             if set(files) not in (required, required | {'coverage.json'}):
                 raise ValueError('unsupported snapshot layout')
             if files['programs/.keep'] or files['tests/.keep']:
                 raise ValueError('unsupported program or test content')
-            if json.loads(files['knowledge.json']) != {'schema': SCHEMA, 'game': repo.game}:
+            if _knowledge_metadata(files['knowledge.json']) != {'schema': SCHEMA, 'game': repo.game}:
                 raise ValueError('foreign knowledge metadata')
             provenance = json.loads(files['provenance.json'])
-            rows = [json.loads(line) for line in files['facts.jsonl'].decode().split('\n') if line.strip()]
-            records = check.validate_snapshot(rows, provenance, repo.game, version)
+            raw_lines = [line for line in files['facts.jsonl'].decode().split('\n') if line.strip()]
+            rows = [json.loads(line) for line in raw_lines]
+            records = check.validate_snapshot(rows, provenance, repo.game, version,
+                                              _raw_lines=raw_lines, _schema_valid=schema_valid)
             if 'coverage.json' in files:
                 _coverage(json.loads(files['coverage.json']))
             if 'last_admission' in provenance:
@@ -103,17 +131,16 @@ def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], d
                 _coverage(admission['coverage'])
             check._merge_sessions(reservations, provenance)
             for identity, record in records.items():
-                published = record['published_in']
-                origin = records if published == version else records_by_version.get(published, {})
-                if identity not in origin or any(record[key] != origin[identity][key]
-                                                 for key in ('published_in', 'record', 'session')):
+                claimed = record['published_in'], record['record'], record['session']
+                if claimed[0] == version:
+                    origins.setdefault(identity, claimed)
+                if origins.get(identity) != claimed:
                     raise ValueError('invalid record origin')
-        except (ValueError, KeyError, TypeError, UnicodeError, RecursionError, KnowledgeError) as error:
+        except (ValueError, KeyError, TypeError, RecursionError) as error:
             raise KnowledgeError(f'incompatible history at {version}: {error}') from error
-        snapshots[version] = files
-        records_by_version[version] = records
         identities.update(check.owner(record) for record in rows)
-    return snapshots, identities, reservations
+    repo._validated_history = _ValidatedHistory(repo.game, commits, origins, identities, reservations)
+    return snapshots, identities.copy(), deepcopy(reservations)
 
 
 def _publication(candidate: check.Candidate, coverage: dict, session_kind: str) -> dict[str, bytes]:

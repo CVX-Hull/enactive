@@ -852,7 +852,9 @@ def _validate_retirement(row: dict, provenance: dict, version: str) -> None:
         earlier_events.append(event)
 
 
-def validate_snapshot(records: list[dict], provenance: dict, game: str, version: str) -> dict[str, dict]:
+def validate_snapshot(records: list[dict], provenance: dict, game: str, version: str, *,
+                      _raw_lines: list[str] | None = None,
+                      _schema_valid: set[str] | None = None) -> dict[str, dict]:
     """Validate a complete stored snapshot, including derived positions, references and flags."""
     if (not isinstance(provenance, dict) or not set(provenance) <=
             {'frames', 'sessions', 'branches', 'restores', 'last_admission'}
@@ -870,13 +872,19 @@ def validate_snapshot(records: list[dict], provenance: dict, game: str, version:
     by_id, namespace = {}, {}
     active_titles, active_slugs = set(), set()
     axes = declared_axes(provenance, {})
+    if _raw_lines is not None and len(_raw_lines) != len(records):
+        raise ValueError('mismatched raw fact lines')
     validator = _validator('curator-fact.schema.json')
-    for row in records:
-        if not validator.is_valid(row):
-            definition = 'stored_article' if isinstance(row, dict) and row.get('record') == 'article' else 'stored_fact'
-            errors = _validator('curator-fact.schema.json', definition).iter_errors(row)
-            error = next(errors)
-            raise ValueError(f'{FACT} {_diagnostic(list(error.path), error.message)}')
+    for index, row in enumerate(records):
+        raw = _raw_lines[index] if _raw_lines is not None else None
+        if raw is None or _schema_valid is None or raw not in _schema_valid:
+            if not validator.is_valid(row):
+                definition = 'stored_article' if isinstance(row, dict) and row.get('record') == 'article' else 'stored_fact'
+                errors = _validator('curator-fact.schema.json', definition).iter_errors(row)
+                error = next(errors)
+                raise ValueError(f'{FACT} {_diagnostic(list(error.path), error.message)}')
+            if raw is not None and _schema_valid is not None:
+                _schema_valid.add(raw)
         identity, public_id, kind = row['id'], owner(row), row['record']
         if identity in by_id or namespace.get(public_id, kind) != kind:
             raise ValueError(f'duplicate record identity {public_id!r}')
