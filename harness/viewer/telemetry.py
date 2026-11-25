@@ -47,6 +47,10 @@ SESSIONS = ('curator-runner', 'sessions')
 UNKNOWN_ENDPOINT = 'unknown'
 #: `context-cut` outcomes as the host writes them, and as the view names them.
 CUT_OUTCOMES = {'cut': 'applied', 'held-back': 'held_back'}
+CUT_RESULTS = ('target', 'best_effort', 'rescue')
+CUT_DETAIL_FIELDS = ('cut_result', 'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count')
+RESERVE_AMOUNTS = ('spent_usd', 'spend_limit_usd', 'finish_reserve_usd', 'unpriced_bound_usd')
+TAIL_NOTICE_KINDS = ('context-capacity', 'host-timeout', 'spend-limit')
 
 
 def count(value: object) -> int | None:
@@ -105,7 +109,7 @@ class Response:
 
 @dataclass(frozen=True)
 class Mark:
-    """A trace event shown beside the steps: a `context-cut` or a newer knowledge version during play."""
+    """A projected trace event with its actor, trace position and wall time."""
     actor: str
     actor_index: int
     line: int
@@ -123,6 +127,9 @@ class HostProjection:
     calls: list[ToolCall] = field(default_factory=list)
     refusals: dict[tuple[str, str | None, str | None], str] = field(default_factory=dict)
     cuts: list[Mark] = field(default_factory=list)
+    spend_reserves: list[Mark] = field(default_factory=list)
+    tail_notice_events: int = 0
+    tail_notice_kinds: Counter = field(default_factory=Counter)
     updates: list[Mark] = field(default_factory=list)
     briefings: list[Mark] = field(default_factory=list)
     settled: dict[str, dict] = field(default_factory=dict)
@@ -156,10 +163,13 @@ def _response(actor: str, event: HostEvent) -> Response | None:
 
 def cut_fields(f: dict) -> dict:
     triggers = f.get('triggers') if isinstance(f.get('triggers'), list) else []
+    result = f.get('cut_result')
     return dict(request_id=identifier(f.get('request_id')), outcome=CUT_OUTCOMES.get(identifier(f.get('outcome')), 'unknown'),
         reason=identifier(f.get('reason')), knowledge_version=identifier(f.get('knowledge_version')),
         triggers=[t for t in (identifier(v, LABEL_LIMIT) for v in triggers[:TRIGGER_LIMIT]) if t is not None],
-        **{key: count(f.get(key)) for key in ('tokens_before', 'tokens_after', 'images_before', 'images_after', 'removed_turns')})
+        cut_result=result if result in CUT_RESULTS else None,
+        **{key: count(f.get(key)) for key in ('tokens_before', 'tokens_after', 'images_before', 'images_after', 'removed_turns',
+            'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count')})
 
 
 #: The rows of an update's text that state a difference; from an empty store the host writes `index` in their place.
@@ -236,6 +246,16 @@ def project(actors: list[tuple[str, str, tuple[HostEvent, ...]]], untraced: tupl
                     out.by_request[(actor, response.request_id)] = response
             elif event.type == 'context-cut':
                 out.cuts.append(Mark(actor, index, event.line, event.wall, cut_fields(f)))
+            elif event.type == 'spend-reserve-reached':
+                amounts = {key: usd(f.get(key)) for key in RESERVE_AMOUNTS}
+                out.spend_reserves.append(Mark(actor, index, event.line, event.wall, dict(
+                    actor_id=identifier(f.get('actor_id')),
+                    **{key: None if amount is None else usd_text(amount) for key, amount in amounts.items()})))
+            elif event.type == 'tail-notice':
+                out.tail_notice_events += 1
+                kinds = f.get('kinds')
+                if isinstance(kinds, list):
+                    out.tail_notice_kinds.update(kind for kind in kinds if kind in TAIL_NOTICE_KINDS)
             elif event.type == 'knowledge-delivery':
                 delivered = is_delivered_exposure(f, host_telemetry)
                 if f.get('kind') == 'update':
@@ -445,6 +465,11 @@ def token_summary(host: HostProjection) -> dict:
         cache_hit_share=sum(r.cache_read or 0 for r in used) / total if total else None)
 
 
+def tail_notice_summary(host: HostProjection | None) -> dict:
+    return dict(count=host.tail_notice_events if host is not None else 0,
+        by_kind={kind: host.tail_notice_kinds[kind] if host is not None else 0 for kind in TAIL_NOTICE_KINDS})
+
+
 def summary(host: HostProjection | None) -> dict | None:
     if host is None:
         return None
@@ -453,9 +478,15 @@ def summary(host: HostProjection | None) -> dict | None:
     if applied:
         mark = applied[-1]
         latest = dict({key: mark.fields[key] for key in ('request_id', 'knowledge_version', 'tokens_before', 'tokens_after',
-            'images_before', 'images_after', 'removed_turns', 'triggers')}, wall_time=mark.wall)
+            'images_before', 'images_after', 'removed_turns', 'triggers', *CUT_DETAIL_FIELDS)}, wall_time=mark.wall)
+    by_result = Counter(mark.fields['cut_result'] for mark in applied)
+    reserve = host.spend_reserves[-1] if host.spend_reserves else None
     return dict(**spend(host), response_by_endpoint=endpoints(host), latest_provider=latest_provider(host),
-        context_cuts=dict(applied=len(applied), held_back=sum(c.fields['outcome'] == 'held_back' for c in host.cuts), latest=latest),
+        context_cuts=dict(applied=len(applied), held_back=sum(c.fields['outcome'] == 'held_back' for c in host.cuts),
+            latest=latest, by_result={result: by_result[result] for result in CUT_RESULTS}),
+        spend_reserve_reached=dict(count=len(host.spend_reserves),
+            latest=None if reserve is None else dict(actor=reserve.actor, wall_time=reserve.wall, **reserve.fields)),
+        tail_notices=tail_notice_summary(host),
         knowledge_updates=dict(count=sum(u.fields['outcome'] == 'delivered' for u in host.updates), latest_version=host.latest_version),
         token_summary=token_summary(host))
 
@@ -482,6 +513,7 @@ def telemetry(info: RunInfo, connection: sqlite3.Connection) -> dict:
         return None if step is None else step.seq
 
     cuts: list[dict] = []
+    reserves = host.spend_reserves if host is not None else []
     if host is not None:
         rows = [dict(request_id=r.request_id, actor=r.actor, seq=seq(r.wall), wall=r.wall, prompt_tokens=r.prompt_tokens,
             cache_read=r.cache_read, cache_write=r.cache_write, output_tokens=r.output_tokens,
@@ -491,9 +523,8 @@ def telemetry(info: RunInfo, connection: sqlite3.Connection) -> dict:
         position: dict[tuple[str, str], int] = {}
         for index, r in enumerate(host.responses):
             position.setdefault((r.actor, r.request_id), index)
-        cuts = [dict({key: mark.fields[key] for key in ('request_id', 'outcome', 'tokens_before', 'tokens_after', 'images_before',
-            'images_after', 'removed_turns', 'knowledge_version', 'triggers', 'reason')},
-            index=position.get((mark.actor, mark.fields['request_id'])), seq=seq(mark.wall)) for mark in host.cuts]
+        cuts = [dict(**mark.fields, index=position.get((mark.actor, mark.fields['request_id'])),
+            seq=seq(mark.wall)) for mark in host.cuts]
         money, by_endpoint = spend(host), endpoints(host)
     else:
         rows = []
@@ -512,6 +543,9 @@ def telemetry(info: RunInfo, connection: sqlite3.Connection) -> dict:
     return dict(source='host_trace' if host is not None else 'evaluation_record',
         requests=[dict(index=i, **rows[i]) for i in kept], requests_total=len(rows), requests_omitted=len(rows) - len(kept),
         cuts=cuts[-MAX_CUTS:], cuts_omitted=max(0, len(cuts) - MAX_CUTS), response_by_endpoint=by_endpoint,
+        spend_reserve_reached=[dict(actor=mark.actor, seq=seq(mark.wall), wall=mark.wall, **mark.fields)
+            for mark in reserves[-MAX_CUTS:]],
+        spend_reserve_reached_omitted=max(0, len(reserves) - MAX_CUTS), tail_notices=tail_notice_summary(host),
         spend=dict(player_reported_usd=money.get('reported_cost_usd'), player_estimated_usd=info.dollars,
             spend_limit_usd=info.facts.get('spend_allowance_usd'), spend_complete=money.get('spend_complete'),
             unpriced_requests=money.get('unpriced_requests'), unpriced_recall_requests=money.get('unpriced_recall_requests'),

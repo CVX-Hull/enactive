@@ -408,6 +408,15 @@ function EntryButtons({ids, choose}) {
   return ids.length ? ids.map(id => html`<button type="button" class="wrapany" onClick=${() => choose(id)}>${id}</button>`) : 'none recorded';
 }
 
+function QueryHits({hits, choose}) {
+  return html`<ul class="query-hits">${hits.map(h => {
+    const metadata = [h.kind, h.title || h.subject, h.via, ...(h.status || []).map(label)].filter(Boolean);
+    return html`<li class="wrapany">${h.id ? html`<button type="button" class="wrapany" onClick=${() => choose(h.id)}>${h.id}</button>` : 'ID unavailable'}
+      ${metadata.length ? ` · ${metadata.join(' · ')}` : ''}${h.snippet ? html`<p>${h.snippet}</p>` : null}
+      ${h.cited_by_articles?.length ? html`<p>Cited by <${EntryButtons} ids=${h.cited_by_articles} choose=${choose} /></p>` : null}</li>`;
+  })}</ul>`;
+}
+
 function RecordedKnowledge() {
   const {runId} = useStore();
   const [actor, setActor] = useState('');
@@ -445,7 +454,14 @@ function RecordedKnowledge() {
         <${Omissions} value=${{coverage:data.snapshot.coverage,omitted_characters:data.snapshot.omitted_characters}} />
         ${entry && !data.snapshot.items.length ? html`<p>Entry unavailable in this snapshot.</p>` : null}${data.snapshot.items.map(item => html`<details data-reader-entry open=${!!entry}><summary class="wrapany">${item.kind}: ${item.title || item.subject || item.id || 'ID unavailable'}</summary><p class="mono wrapany">${item.id || 'ID unavailable'}</p><p class="wrapany">${item.lead || item.text || ''}</p>${item.body.map(part => html`<p class="wrapany">${part.text} · facts: ${part.facts.join(', ') || 'unavailable'}</p>`)}<${EntryState} item=${item} /><p class="wrapany">Seen: <${RecordedMarker} value=${item.seen} /> · last confirmed: <${RecordedMarker} value=${item.last_confirmed} />${item.source_ids.length ? ` · source IDs: ${item.source_ids.join(', ')}` : ''}</p><${SourceAnchors} anchors=${item.anchors} /><${Omissions} value=${item} /></details>`)}
         <p><button type="button" disabled=${after === 0} onClick=${() => setAfter(Math.max(0, after-25))}>Previous entries</button> <button type="button" disabled=${data.snapshot.next === null} onClick=${() => setAfter(data.snapshot.next)}>Next entries</button></p>` : html`<p>Frozen delivered snapshot unavailable (${data.snapshot_status || 'unavailable'}).</p>`}
-      <h3>Recorded calls and results</h3>${data.calls.length ? data.calls.map(c => html`<details><summary class="wrapany">${c.tool} · ${c.status} · ${c.request_id || 'request unavailable'}</summary><p class="wrapany">Call: ${c.tool_call_id || 'unavailable'} · intent (unverified): ${c.intent || 'unavailable'} · cites: ${c.cites.join(', ') || 'none recorded'}</p><p class="wrapany">Query: ${c.query || 'unavailable'} · returned IDs: <${EntryButtons} ids=${c.returned_ids} choose=${choose} /> · operation: ${c.operation_id || 'unavailable'}</p><p class="wrapany">Tool result status: ${c.result.status || 'unavailable'} · reason: ${c.result.reason || 'unavailable'} · delivered: ${c.result.delivered ?? 'unavailable'}</p><p class="wrapany">Operation status: ${c.operation ? c.operation.status : 'unavailable'} · reason: ${c.operation && c.operation.reason || 'unavailable'}</p>${c.operation ? c.operation.receipts.map(r => html`<p class="wrapany">Receipt disposition: ${r.disposition || 'unavailable'} · status: ${r.status || 'unavailable'} · reason: ${r.reason || 'unavailable'}</p>`) : null}<${SourceAnchors} anchors=${c.anchors} /><${Omissions} value=${c} /></details>`) : html`<p>No matching calls recorded.</p>`}<${Omissions} value=${{calls_omitted:data.calls_omitted}} />
+      <h3>Recorded calls and results</h3>${data.calls.length ? data.calls.map(c => html`<details><summary class="wrapany">${c.tool} · ${c.status} · ${c.request_id || 'request unavailable'}</summary>
+        <p class="wrapany">Call: ${c.tool_call_id || 'unavailable'} · intent (unverified): ${c.intent || 'unavailable'} · cites: ${c.cites.join(', ') || 'none recorded'}</p>
+        <p class="wrapany">Query: ${c.query || 'unavailable'} · returned IDs: <${EntryButtons} ids=${c.returned_ids} choose=${choose} /> · operation: ${c.operation_id || 'unavailable'}</p>
+        ${c.returned_hits?.length ? html`<${QueryHits} hits=${c.returned_hits} choose=${choose} />` : null}
+        <p class="wrapany">Tool result status: ${c.result.status || 'unavailable'} · reason: ${c.result.reason || 'unavailable'} · delivered: ${c.result.delivered ?? 'unavailable'}</p>
+        <p class="wrapany">Operation status: ${c.operation ? c.operation.status : 'unavailable'} · reason: ${c.operation && c.operation.reason || 'unavailable'}</p>
+        ${c.operation ? c.operation.receipts.map(r => html`<p class="wrapany">Receipt disposition: ${r.disposition || 'unavailable'} · status: ${r.status || 'unavailable'} · reason: ${r.reason || 'unavailable'}</p>`) : null}
+        <${SourceAnchors} anchors=${c.anchors} /><${Omissions} value=${c} /></details>`) : html`<p>No matching calls recorded.</p>`}<${Omissions} value=${{calls_omitted:data.calls_omitted}} />
       <h3>Public hints (unverified)</h3><p class="note">Hints and finish claims cover this actor; they are not attributed to the selected request.</p>${!data.journal_available ? html`<p>Public journal unavailable.</p>` : data.hints.length ? data.hints.map(h => html`<div><p class="wrapany">${h.text} · intent: ${h.intent || 'unavailable'} · cites: ${h.cites.join(', ') || 'none recorded'}</p><${SourceAnchors} anchors=${h.anchors} /><${Omissions} value=${h} /></div>`) : html`<p>No public hints recorded.</p>`}<${Omissions} value=${{hints_omitted:data.hints_omitted}} />
       <h3>Player finish claims (unverified)</h3>${data.finishes.length ? data.finishes.map(f => html`<div><p class="wrapany">${f.disposition || 'unavailable'} · ${f.report || 'unavailable'} · cites: ${f.cites.join(', ') || 'none recorded'}</p><${SourceAnchors} anchors=${f.anchors} /><${Omissions} value=${f} /></div>`) : html`<p>No finish claim recorded.</p>`}<${Omissions} value=${{finishes_omitted:data.finishes_omitted}} /><h3>Evaluator outcome</h3><p class="wrapany"><${RecordedOutcome} value=${data.outcome} /></p>` : null}<//>`;
 }

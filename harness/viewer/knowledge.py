@@ -5,7 +5,7 @@ import json
 import re
 
 from harness.evaluation.core import context
-from harness.evaluation.core.host import host_facts, record_ids
+from harness.evaluation.core.host import host_facts, record_ids, returned_hits
 from harness.evaluation.core.records import EvaluationError, loads
 from harness.evaluation.core.sources import MANIFEST_SCHEMA, read_manifest, read_operations
 from .catalog import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, ViewError
@@ -19,6 +19,8 @@ ALIAS = re.compile(r's(?:0[1-9]|[1-9][0-9]+)')
 SOURCE = re.compile(r'[0-9a-f]{32}-[1-9][0-9]*')
 #: A current entry resolves at most this many distinct cited frames; the rest are counted in `anchors_omitted`.
 ANCHOR_LIMIT = 20
+HIT_LIMIT = 20
+HIT_FIELDS = ('id', 'kind', 'title', 'subject', 'via', 'snippet')
 
 #: The versions of an actor's frozen inputs and delivered knowledge: the current ones for a current run, and
 #: the ones the sealed sessions of the archive index carry (S-MIGRATION, closed archive reads).
@@ -69,6 +71,14 @@ def id_list(value, limit=LIST_LIMIT, pattern=None):
 
 def add_ids(target, name, value, limit=LIST_LIMIT, pattern=None):
     target[name], target[name + '_omitted'] = id_list(value, limit, pattern)
+
+
+def compact_hit(hit):
+    projected = fields({name: hit[name] for name in HIT_FIELDS
+        if name in hit and (hit[name] is None or isinstance(hit[name], str))}, HIT_FIELDS)
+    for name in ('status', 'cited_by_articles'):
+        add_ids(projected, name, hit.get(name))
+    return projected
 
 
 def citations(value, limit=LIST_LIMIT):
@@ -327,6 +337,9 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
         projected['status'] = 'refused' if call.refused else 'error' if call.error else 'finished' if call.finished else 'pending'
         add_ids(projected, 'cites', call.arguments.get('cites'))
         add_ids(projected, 'returned_ids', record_ids(call))
+        hits = returned_hits(call)
+        projected['returned_hits'] = [compact_hit(hit) for hit in hits[:HIT_LIMIT]]
+        projected['returned_hits_omitted'] = len(hits) - len(projected['returned_hits'])
         projected['step'] = None if step is None else dict(seq=step[0], **fields({'source_id':step[1]}, ('source_id',)))
         projected['result'] = fields(result, ('status', 'reason', 'delivered', 'operation_id'))
         projected['operation'] = None if operation is None else dict(**fields(dict(status=operation.status, reason=operation.reason), ('status','reason')),

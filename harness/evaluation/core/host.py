@@ -359,15 +359,17 @@ def returned_records(call: ToolCall) -> list[dict]:
     return []
 
 
-def record_ids(call: ToolCall) -> list[str]:
-    """IDs a memory read returned: one record, a query's records or compact `player-knowledge/3` hits, or a context's records."""
-    records = returned_records(call)
-    if records:
-        return [n['id'] for n in records]
+def returned_hits(call: ToolCall) -> list[dict]:
+    """Compact query hits with a recorded string ID, in the order returned."""
     value = call.result
     if isinstance(value, dict) and isinstance(value.get('hits'), list):
-        return [h['id'] for h in value['hits'] if isinstance(h, dict) and isinstance(h.get('id'), str)]
+        return [h for h in value['hits'] if isinstance(h, dict) and isinstance(h.get('id'), str)]
     return []
+
+
+def record_ids(call: ToolCall) -> list[str]:
+    """IDs a memory read returned: one record, a query's records or compact `player-knowledge/3` hits, or a context's records."""
+    return [row['id'] for row in returned_records(call) or returned_hits(call)]
 
 
 def typed_text(call: ToolCall) -> list[str]:

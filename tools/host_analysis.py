@@ -30,6 +30,8 @@ PROMPT_BANDS = ((0, 20_000, "under 20,000"), (20_000, 60_000, "20,000 to 60,000"
 RESPONSE_LIMITS_MS = {"within_2s": 2000, "within_5s": 5000}
 #: A `HostTraceUnsupported.kind` is reported as this coverage.
 UNSUPPORTED_COVERAGE = {"empty": "empty", "format": "unsupported_format", "version": "unsupported_version"}
+CUT_RESULTS = ("target", "best_effort", "rescue")
+RESERVE_FIELDS = ("actor_id", "spent_usd", "spend_limit_usd", "finish_reserve_usd", "unpriced_bound_usd", "monotonic_ms")
 
 
 def number(value):
@@ -434,6 +436,9 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
     tokenizer = tokenizer_failure = None
     omitted, notices, tail_notices, calls, results = {}, set(), {}, Counter(), {}
     cuts = set()
+    cut_results = dict.fromkeys((*CUT_RESULTS, "unrecorded"), 0)
+    held_back_cuts = 0
+    spend_reserves = []
     rows, tools, tool_intervals = {}, {}, []
     counts = Counter()
     start = terminal = previous = None
@@ -480,8 +485,18 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                     notices.add(identity)
                     if isinstance(kinds, list):
                         tail_notices[identity] = [kind for kind in kinds if kind in ("context-capacity", "host-timeout", "spend-limit")]
-            elif kind == "context-cut" and event.get("outcome") == "cut":
-                cuts.add(event.get("request_id"))
+            elif kind == "context-cut":
+                outcome = event.get("outcome")
+                if outcome == "cut":
+                    identity = event.get("request_id")
+                    if isinstance(identity, str):
+                        cuts.add(identity)
+                    result = event.get("cut_result")
+                    cut_results[result if result in CUT_RESULTS else "unrecorded"] += 1
+                elif outcome == "held-back":
+                    held_back_cuts += 1
+            elif kind == "spend-reserve-reached":
+                spend_reserves.append({key: event.get(key) for key in RESERVE_FIELDS})
             elif kind == "request-start":
                 identity = event.get("request_id")
                 if not isinstance(identity, str) or not identity or identity in rows or len(rows) >= MAX_REQUESTS:
@@ -643,6 +658,8 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
         "reported_output_per_post_body_second": distribution(rates),
         "context": {key: distribution(x.get(key) for x in context) for key in
             ("projection_ms", "input_images", "omitted_images", "retained_images")},
+        "context_cuts": dict(applied=sum(cut_results.values()), held_back=held_back_cuts, by_result=cut_results),
+        "spend_reserve_reached": dict(count=len(spend_reserves), events=spend_reserves),
         "event_output": output_sink, "campaign_evidence": campaign_evidence(path, archived), "requests": list(rows.values())}
 
 
@@ -661,12 +678,19 @@ def host_summary(paths: list[Path], tokenizers=None) -> dict:
     for r in hosts:
         by_run.setdefault(str(run_root(Path(r["path"]))), []).append(r)
     # The pairs are inputs to the pooled fits; the report carries each trace's own fit, not its raw pairs.
-    runs = [{"run": run, "traces": len(group), "response_by_prompt": response_by_requests(row for r in group for row in r["requests"]),
-        "response_by_endpoint": response_by_endpoint(row for r in group for row in r["requests"]),
-        "prompt_composition": compositions(group, resolved)} for run, group in sorted(by_run.items())]
-    selection = {"traces": len(hosts), "response_by_prompt": response_by_requests(row for r in hosts for row in r["requests"]),
-        "response_by_endpoint": response_by_endpoint(row for r in hosts for row in r["requests"]),
-        "prompt_composition": compositions(hosts, resolved)}
+    def summarize_group(group):
+        return {"traces": len(group), "response_by_prompt": response_by_requests(row for r in group for row in r["requests"]),
+            "response_by_endpoint": response_by_endpoint(row for r in group for row in r["requests"]),
+            "prompt_composition": compositions(group, resolved),
+            "context_cuts": dict(
+                applied=sum(r["context_cuts"]["applied"] for r in group),
+                held_back=sum(r["context_cuts"]["held_back"] for r in group),
+                by_result={result: sum(r["context_cuts"]["by_result"][result] for r in group)
+                    for result in (*CUT_RESULTS, "unrecorded")}),
+            "spend_reserve_reached": dict(count=sum(r["spend_reserve_reached"]["count"] for r in group))}
+
+    runs = [{"run": run, **summarize_group(group)} for run, group in sorted(by_run.items())]
+    selection = summarize_group(hosts)
     for r in hosts:
         del r["composition_pairs"], r["composition_left_out"], r["tokenizer_failure"]
     return {"complete": all(r["coverage"] == "player_host" for r in reports),"schema": "host-analysis/1", "scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",

@@ -16,11 +16,11 @@ from starlette.testclient import TestClient
 
 from harness.evaluation.core.pipeline import evaluate
 from harness.evaluation.core.records import CORE_VERSION, open_readonly, read_metadata
-from harness.evaluation.core.sources import MANIFEST_SCHEMA, MAX_JSON_FILE_BYTES, RECEIPT_SCHEMA
+from harness.evaluation.core.sources import MANIFEST_SCHEMA, MAX_JSON_FILE_BYTES, RECEIPT_SCHEMA, archive_sessions
 from harness.player.contracts import PlayerError
 from harness.player.knowledge import Knowledge
 from harness.viewer.app import MAX_BYTES, create_app
-from harness.viewer.catalog import API, LIST_LIMIT, Catalog
+from harness.viewer.catalog import API, ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, Catalog
 from harness.viewer.frame import FrameSources
 from harness.viewer.live import LiveEvaluator
 from harness.viewer.pause import dollars_per_minute, looping_streak
@@ -879,7 +879,12 @@ def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls
     run.call(actor, 'player_knowledge_query', dict(intent='search facts', cites=[], query='fact'),
              dict(schema='player-knowledge/3', version='v18', grants_authority=False, identity='fact', resolution='query',
                   resolved_from=None, hits=[dict(id='fact-a', kind='fact', subject=None, claim_kind='instance_state',
-                  scope=dict(game='cdda'), snippet='A fact', cited_by_articles=['article-a'], via='match')]))
+                  scope=dict(game='cdda'), snippet='A fact', cited_by_articles=['article-a'], via='match', status=['needs_review']),
+                  dict(id='article-a', kind='article', title='A', via='citation', snippet='Lead')]))
+    long_hit = dict(id='x' * (ID_LIMIT + 1), kind='fact', snippet='s' * (TEXT_LIMIT + 1),
+        status=['contested', 12], cited_by_articles=['article-a', 'x' * (ID_LIMIT + 1)])
+    run.call(actor, 'player_knowledge_query', dict(query='oversized results'),
+        dict(hits=[long_hit, None, dict(id=42), *[dict(id=f'fact-{n}') for n in range(21)]]))
     run.finish()
     actor_dir = next((directory/'actors').iterdir())
     articles, facts = published([article_record('article-a', ['fact-a'], 'v18', title='A', lead='Lead', body=[dict(text='Claim', facts=['fact-a'])],
@@ -910,7 +915,22 @@ def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls
     assert page['calls'][0]['returned_ids']==['fact-a'] and page['calls'][0]['intent']=='inspect'
     assert page['calls'][0]['query']=='fact-a'
     assert page['calls'][1]['query']=='missing-entry' and page['calls'][1]['returned_ids']==[]
-    assert page['calls'][2]['query']=='fact' and page['calls'][2]['returned_ids']==['fact-a']
+    assert page['calls'][0]['returned_hits'] == [] and page['calls'][0]['returned_hits_omitted'] == 0
+    query = page['calls'][2]
+    assert query['query'] == 'fact' and query['returned_ids'] == ['fact-a', 'article-a']
+    assert query['returned_hits_omitted'] == 0
+    assert query['returned_hits'] == [
+        dict(id='fact-a', kind='fact', subject=None, via='match', snippet='A fact', status=['needs_review'],
+            status_omitted=0, cited_by_articles=['article-a'], cited_by_articles_omitted=0),
+        dict(id='article-a', kind='article', title='A', via='citation', snippet='Lead', status=[],
+            status_omitted=0, cited_by_articles=[], cited_by_articles_omitted=0)]
+    oversized = page['calls'][3]
+    assert oversized['returned_ids'] == [f'fact-{n}' for n in range(21)]
+    assert len(oversized['returned_hits']) == 20 and oversized['returned_hits_omitted'] == 2
+    assert oversized['returned_hits'][-1]['id'] == 'fact-18'
+    assert oversized['returned_hits'][0] == dict(id=None, kind='fact', snippet='s' * TEXT_LIMIT,
+        status=['contested'], status_omitted=1, cited_by_articles=['article-a'], cited_by_articles_omitted=1,
+        omitted_characters=dict(id=ID_LIMIT + 1, snippet=1))
     assert 'credential' not in json.dumps(page) and 'private-reasoning' not in json.dumps(page)
     selection=client.get(url,params=dict(actor=actor,request='recall-1')).json()
     assert [e['type'] for e in selection['events']]==['knowledge-recall','knowledge-delivery']
@@ -1088,7 +1108,7 @@ def mission_run(directory: Path, settle: bool = True, **options):
         if index == 1:
             run.host[a].append(run.event(a, 'context-cut', wall + 1, request_id='request-3', triggers=['high_mark', 'image_peak'],
                 covered_through_operation_id='op', knowledge_version='v1', tokens_before=73510, images_before=45, outcome='cut', removed_turns=22,
-                cumulative_removed_turns=22, tokens_after=41059, briefing_tokens=352, images_after=23, source_ids_count=22))
+                cut_result='target', cumulative_removed_turns=22, tokens_after=41059, briefing_tokens=352, images_after=23, source_ids_count=22))
             for version, previous, rows, ids in (('v1', None, dict(index=[dict(id='article-a', title='A', index='a')]), []),
                     ('v2', 'v1', dict(added=[dict(id='article-b', title='B', lead='b'), dict(id='fact-c', title='C', lead='c')],
                         updated=[dict(id='article-a', title='A', lead='a')], removed=[dict(id='fact-a', title='gone')]), ['article-b', 'article-a'])):
@@ -1170,8 +1190,10 @@ def test_summary_reads_real_spend_endpoints_cuts_and_prompts_from_the_host_trace
     assert host['spend_complete'] is False     # every actor settled and agrees, but the recall has no provider price
     assert host['response_by_endpoint'] == {'Endpoint A': 3, 'Endpoint B': 1, 'unknown': 1}
     assert host['latest_provider'] == 'Endpoint A'      # the one that answered last, not the most frequent
-    assert host['context_cuts'] == dict(applied=1, held_back=1, latest=dict(request_id='request-3', knowledge_version='v1', tokens_before=73510,
-        tokens_after=41059, images_before=45, images_after=23, removed_turns=22, triggers=['high_mark', 'image_peak'], wall_time=BASE + 21))
+    assert host['context_cuts'] == dict(applied=1, held_back=1, by_result=dict(target=1, best_effort=0, rescue=0),
+        latest=dict(request_id='request-3', knowledge_version='v1', tokens_before=73510, tokens_after=41059, images_before=45,
+            images_after=23, removed_turns=22, triggers=['high_mark', 'image_peak'], wall_time=BASE + 21,
+            cut_result='target', cumulative_removed_turns=22, briefing_tokens=352, source_ids_count=22))
     assert host['knowledge_updates'] == dict(count=2, latest_version='v2')     # the refused one is not an update the player holds
     # Prompt sizes are the player's own requests; the cache share is over every response with usage.
     assert host['token_summary'] == dict(latest_prompt_tokens=2100, p50_prompt_tokens=2100, max_prompt_tokens=2100,
@@ -1347,7 +1369,8 @@ def test_an_older_trace_states_no_price_or_endpoint_it_does_not_record(archive):
     host = client.get('/api/view/run/aid1/summary').json()['host_telemetry']
     assert host['reported_cost_usd'] is None and host['spend_complete'] is None and host['response_by_endpoint'] == {}
     assert host['unpriced_requests'] is None and host['unpriced_recall_requests'] is None
-    assert host['player_requests'] > 0 and host['context_cuts'] == dict(applied=0, held_back=0, latest=None)
+    assert host['player_requests'] > 0 and host['context_cuts'] == dict(applied=0, held_back=0, latest=None,
+        by_result=dict(target=0, best_effort=0, rescue=0))
     assert host['knowledge_updates'] == dict(count=0, latest_version=None)
     assert client.get('/api/view/run/aid1/summary').json()['curator_spend'] is None
     trace = runs / 'aid1' / 'actors' / '001' / 'host.jsonl'
@@ -1666,12 +1689,67 @@ def test_telemetry_series_marks_cuts_at_their_requests_and_keeps_both_costs(miss
         curator_sessions_total=3)
 
 
+def test_current_cut_reserve_and_tail_notice_telemetry(tmp_path, monkeypatch):
+    from harness.viewer import telemetry
+
+    directory = tmp_path / 'runs' / 'telemetry'
+    run = Run(directory)
+    actor = run.actor()
+    run.step(actor, 'observe', frame=F('in_play', 3600))
+    request = 'request-1'
+    fields = ('cut_result', 'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count')
+    expected = [(result, n * 20, n * 100, n * 2) for n, result in enumerate(('target', 'best_effort', 'rescue'), 1)]
+    wall = BASE + 11
+    for values in expected:
+        run.host[actor].append(run.event(actor, 'context-cut', wall, request_id=request, outcome='cut', **dict(zip(fields, values))))
+    run.host[actor].append(run.event(actor, 'context-cut', wall, request_id=request, outcome='held-back',
+        cut_result=['invalid'], cumulative_removed_turns=-1, briefing_tokens=True, source_ids_count='6'))
+    run.host[actor].append(run.event(actor, 'spend-reserve-reached', wall, actor_id='x' * (ID_LIMIT + 1),
+        spent_usd='NaN', spend_limit_usd=-1, finish_reserve_usd='-0.5', unpriced_bound_usd='0.00'))
+    run.host[actor].append(run.event(actor, 'tail-notice', wall, request_id=request,
+        kinds=['context-capacity', 'context-capacity', 'spend-limit', 'invalid', {}], tokens=42))
+    next_actor = run.actor()
+    amount = dict(spent_usd='4.75', spend_limit_usd='5', finish_reserve_usd='0.25', unpriced_bound_usd='0.01')
+    run.host[next_actor].append(run.event(next_actor, 'spend-reserve-reached', wall + 1,
+        actor_id=next_actor, **dict(amount, spent_usd='4.7500', unpriced_bound_usd='1e-2')))
+    run.host[next_actor].append(run.event(next_actor, 'tail-notice', wall + 1, request_id='request-2',
+        kinds=['host-timeout', 'spend-limit'], tokens=22))
+    run.finish()
+    evaluate(directory, FakeBinding(), tmp_path / 'root', created_wall=1.0)
+    client = TestClient(create_app(Catalog(tmp_path / 'root', (directory.parent,), data_dir=data_directory(tmp_path))))
+    url = f'/api/view/run/{SESSION}'
+    host = client.get(f'{url}/summary').json()['host_telemetry']
+    cuts = host['context_cuts']
+    assert (cuts['applied'], cuts['held_back'], cuts['by_result']) == (3, 1, dict(target=1, best_effort=1, rescue=1))
+    assert tuple(cuts['latest'][field] for field in fields) == expected[-1]
+    latest = dict(actor=next_actor, actor_id=next_actor, **amount)
+    assert host['spend_reserve_reached'] == dict(count=2, latest=dict(latest, wall_time=wall + 1))
+    notices = dict(count=2, by_kind={'context-capacity': 2, 'host-timeout': 1, 'spend-limit': 2})
+    assert host['tail_notices'] == notices
+
+    feed = [row for row in client.get(f'{url}/feed').json()['items'] if row['entry_kind'] == 'context_cut']
+    series = client.get(f'{url}/telemetry').json()
+    for rows in (feed, series['cuts']):
+        assert [row['outcome'] for row in rows] == ['applied', 'applied', 'applied', 'held_back']
+        assert [tuple(row[field] for field in fields) for row in rows] == [*expected, (None, None, None, None)]
+    first = dict(actor=actor, actor_id=None, seq=1, wall=wall, spent_usd=None, spend_limit_usd=None,
+        finish_reserve_usd=None, unpriced_bound_usd='0')
+    latest_row = dict(latest, seq=1, wall=wall + 1)
+    assert series['spend_reserve_reached'] == [first, latest_row] and series['spend_reserve_reached_omitted'] == 0
+    assert series['tail_notices'] == notices
+    monkeypatch.setattr(telemetry, 'MAX_CUTS', 1)
+    bounded = client.get(f'{url}/telemetry').json()
+    assert bounded['spend_reserve_reached'] == [latest_row] and bounded['spend_reserve_reached_omitted'] == 1
+
+
 def test_telemetry_without_a_trace_or_curator_is_the_record_alone(archive):
     client, _, runs = archive
     for trace in (runs / 'base2').glob('actors/*/host.jsonl'):
         trace.unlink()
     body = client.get('/api/view/run/base2/telemetry').json()
     assert body['source'] == 'evaluation_record' and body['requests'] and body['cuts'] == [] and body['response_by_endpoint'] == {}
+    assert body['spend_reserve_reached'] == [] and body['spend_reserve_reached_omitted'] == 0
+    assert body['tail_notices'] == dict(count=0, by_kind={'context-capacity': 0, 'host-timeout': 0, 'spend-limit': 0})
     assert all(r['reported_cost_usd'] is None and r['reported_provider'] is None for r in body['requests'])
     assert body['spend']['player_reported_usd'] is None and body['spend']['spend_complete'] is None and body['spend']['curator_spent_usd'] is None
 
@@ -1938,7 +2016,11 @@ def test_sealed_campaign_run_12_snapshot_hash_is_unavailable(tmp_path, session, 
     directory = tmp_path/'runs'/'sealed-12'
     run = Run(directory, session=session)
     actor = run.actor()
-    run.request(actor)
+    versions = archive_sessions()[session].combination.versions
+    run.host[actor][0].update(schema=versions['host'], telemetry_version=versions['host_telemetry'])
+    request = run.request(actor)
+    run.call(actor, 'player_knowledge_query', dict(query='fact'), dict(schema='player-knowledge/2', records=[dict(id='fact-a')]))
+    run.host[actor].append(run.event(actor, 'context-cut', BASE + 1, request_id=request, outcome='cut', removed_turns=3))
     run.finish()
     (directory/'manifest.json').write_text(json.dumps(dict({k: v for k, v in run.manifest.items() if k != 'context'}, schema='campaign-run/12')))
     actor_dir = next((directory/'actors').iterdir())
@@ -1949,8 +2031,22 @@ def test_sealed_campaign_run_12_snapshot_hash_is_unavailable(tmp_path, session, 
             files={'delivered-knowledge.json': hashlib.sha256(path.read_bytes()).hexdigest()})))
     evaluate(directory, FakeBinding(), tmp_path/'root', created_wall=1.0)
     client = TestClient(create_app(Catalog(tmp_path/'root', (tmp_path/'runs',), data_dir=data_directory(tmp_path))))
-    value = client.get(f'/api/view/run/{session}/knowledge', params=dict(actor=actor)).json()
+    url = f'/api/view/run/{session}'
+    value = client.get(f'{url}/knowledge', params=dict(actor=actor)).json()
     assert value['schema'] == 'spectator-view/3' and value['snapshot_status'] == 'hash_unavailable' and value['snapshot'] is None
+    call = value['calls'][0]
+    assert call['returned_ids'] == ['fact-a'] and call['returned_hits'] == [] and call['returned_hits_omitted'] == 0
+    host = client.get(f'{url}/summary').json()['host_telemetry']
+    assert host['context_cuts']['applied'] == 1 and host['context_cuts']['by_result'] == dict(target=0, best_effort=0, rescue=0)
+    assert host['spend_reserve_reached'] == dict(count=0, latest=None)
+    notices = dict(count=0, by_kind={'context-capacity': 0, 'host-timeout': 0, 'spend-limit': 0})
+    assert host['tail_notices'] == notices
+    feed_cut = next(row for row in client.get(f'{url}/feed').json()['items'] if row['entry_kind'] == 'context_cut')
+    series = client.get(f'{url}/telemetry').json()
+    assert series['spend_reserve_reached'] == [] and series['tail_notices'] == notices
+    for cut in (host['context_cuts']['latest'], feed_cut, series['cuts'][0]):
+        assert cut['removed_turns'] == 3
+        assert all(cut[field] is None for field in ('cut_result', 'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count'))
 
 
 def frozen_reader(tmp_path: Path, articles=(), facts=(), coverage=COVERAGE):
