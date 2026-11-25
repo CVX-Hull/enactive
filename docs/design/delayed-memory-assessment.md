@@ -20,14 +20,10 @@ Revisit the [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/66
 when multi-day standard-build campaigns under the
 [player-owned campaign outcome (#136)](https://github.com/CVX-Hull/enactive/issues/136),
 starting with [#968](https://github.com/CVX-Hull/enactive/issues/968), produce
-contested or retracted belief revisions or recurrence friction across starts that
-makes it decision-relevant. The earlier trigger, a live run with a curator-written
-fact about an earlier sighting, was met; the
-[bounded live validation (#963)](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
-on its own (`151` active facts, `40` world-scoped, `1` retracted and `0` contested
-in `1.80` game hours) has too few conflict or revisit cases. At that point, decide
-whether the evidence supports a comparison of later choices. Claims of benefit
-from delivered memory come from campaign outcomes under #136.
+delayed-memory revisit or conflict cases that support comparing later choices
+(the bounded [`#963` live validation](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
+left too few revisit cases). Claims of benefit from delivered memory come from
+campaign outcomes under #136.
 [Decision on measuring memory benefit in campaigns](../decisions/owner-decisions.md#memory-benefit-measured-in-campaigns)
 
 The [structured recurrence proposal](structured-recurrence-research.md) owns

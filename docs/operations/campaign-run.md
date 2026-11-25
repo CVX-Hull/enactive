@@ -304,13 +304,15 @@ finish-up is requested, how the command is delivered and how it survives handoff
 **Pace host time against the dollar limit.** On `player-host/12` a decision costs far
 less than before, so host time can end a run long before its dollars do. In the
 [bounded live validation (#963)](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
-the player made `690` decisions at `$0.0051` each, with a p50 response latency of
-`5,837.5 ms`, inside `host_seconds: 5700` less a `600` s time reserve: roughly 7 to 8
-host seconds per decision, more than the response latency alone. The time reserve
-triggered an orderly `host_seconds` stop with `$2.17` of `$5.50` unspent and
-`spend_reserve_reached: 0`. At that pace the `$4.10` above `ending_reserve.usd` would
-have funded about 800 decisions, or about 6,000 to 6,700 host seconds. Before freezing
-a package, decide which limit should end the run and size the other one past it:
+the player made `690` decisions across `5,327.4` host seconds (`5,329` wall seconds)
+for `$3.498` (`$0.00507` per decision, rounded to `$0.0051`, and `7.72` host seconds
+per decision against a `5,837.5 ms` p50 player-request latency). The `600` s time
+reserve inside `host_seconds: 5700` triggered an orderly `host_seconds` stop at
+`5,100` s with `$2.17` of `$5.50` unspent and `spend_reserve_reached: 0`. At that
+whole-run pace the `$4.10` above `ending_reserve.usd` (`$1.40`) funds about `809`
+decisions, or about `6,244` working host seconds (`6,844` s including the `600` s
+time reserve). Before freezing a package, decide which limit should end the run and
+size the other one past it:
 
 1. Divide `spend_limit_usd` minus `ending_reserve.usd` by the cost per decision of the
    latest comparable run to get the decisions the dollars fund.

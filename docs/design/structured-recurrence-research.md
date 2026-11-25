@@ -18,15 +18,12 @@ improves visible play enough to justify its cost remains unknown.
 Revisit the [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/666)
 when multi-day standard-build campaigns under the
 [player-owned campaign outcome (#136)](https://github.com/CVX-Hull/enactive/issues/136),
-starting with [#968](https://github.com/CVX-Hull/enactive/issues/968), produce
-contested or retracted belief revisions or recurrence friction across starts that
-makes it decision-relevant. The earlier trigger, a live run with a curator-written
-fact about an earlier sighting, was met; the
-[bounded live validation (#963)](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
-on its own (`151` active facts, `40` world-scoped, `1` retracted and `0` contested
-in `1.80` game hours) has too few conflict or revisit cases. At that point, decide
-whether the comparison is feasible and worth pricing. Claims of benefit from
-delivered memory come from campaign outcomes under #136.
+starting with [#968](https://github.com/CVX-Hull/enactive/issues/968), show
+recurrence friction across starts that makes a structured-recurrence comparison
+feasible and worth pricing (the bounded
+[`#963` live validation](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
+ran one bounded admission). Claims of benefit from delivered memory come from
+campaign outcomes under #136.
 [Decision on measuring memory benefit in campaigns](../decisions/owner-decisions.md#memory-benefit-measured-in-campaigns)
 
 The proposal tests genuine starts within CDDA and keeps the update and read
