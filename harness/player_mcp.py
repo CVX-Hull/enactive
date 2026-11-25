@@ -6,6 +6,7 @@ import base64
 from pathlib import Path
 import signal
 import threading
+import time
 
 import anyio
 from mcp import types
@@ -38,8 +39,9 @@ class StopRequests:
         self.threads.append(thread)
 
     def join(self, timeout: float = STOP_JOIN_SECONDS) -> None:
+        deadline = time.monotonic() + max(0.0, timeout)
         for thread in self.threads:
-            thread.join(timeout)
+            thread.join(max(0.0, deadline - time.monotonic()))
 
 
 def make_server(client: PlayerClient, stops: StopRequests | None = None) -> Server:

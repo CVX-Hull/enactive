@@ -688,8 +688,10 @@ async function peekFirstEvent(response, signal) {
       signal.throwIfAborted();
       if (step.done) { done = true; feed(decoder.decode(), true); break; }
       chunks.push(step.value);
+      const remaining = PEEK_LIMIT - bytes;
       bytes += step.value.byteLength;
-      feed(decoder.decode(step.value, {stream:true}));
+      const slice = step.value.byteLength > remaining ? step.value.subarray(0, remaining) : step.value;
+      feed(decoder.decode(slice, {stream:true}));
     }
   } catch (error) {
     cancel();
@@ -773,11 +775,13 @@ function inspectHandoff(name, args, result, pending, session, actorId) {
   }
   const id = value => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
   const valid = condition => requireThat(condition, 'invalid-handoff-receipt');
+  const isTransport = object(value) && value.schema === 'player-transport/2';
   valid(object(value) && id(value.operation_id) && id(value.session) && id(value.actor_id)
-    && value.kind === 'handoff' && value.session === session && value.actor_id === actorId);
+    && (isTransport ? value.kind === (direct ? 'handoff' : name) : value.kind === 'handoff')
+    && value.session === session && value.actor_id === actorId);
   const origin = {operation_id:value.operation_id, session:value.session, actor_id:value.actor_id};
   if (pending) valid(isDeepStrictEqual(origin, pending));
-  if (direct && value.schema === 'player-transport/2') {
+  if (isTransport) {
     valid(value.status === 'unknown' && typeof value.reason === 'string');
     return {pending:origin};
   }
@@ -1431,6 +1435,17 @@ export async function runHost(options) {
     // Adopts the newest staged version whose message fits the request built so far, refusing the others with
     // their reasons. With `deferOversized`, a newest valid version that does not fit stays staged with every
     // older one, and the call returns true: the caller decides them again after this boundary's cut.
+    // Resolve a queued reminder against `targetKnowledge` without side effects so adoption can
+    // budget update + due reminders jointly before committing.
+    const resolveReminder = (value, targetKnowledge) => {
+      if (value.version === targetKnowledge.version) return {value, dropped:false};
+      const listed = new Set(knowledgeIndex(targetKnowledge).map(row => row.id));
+      const items = (reminderSelections.get(value) ?? []).filter(id => listed.has(id))
+        .map(id => targetKnowledge.articles.find(item => item.id === id)
+          ?? targetKnowledge.facts.find(item => item.id === id));
+      if (!items.length) return {value, dropped:true};
+      return {value:delivery(targetKnowledge, items, 'reminder', value.recall_request_id), dropped:false};
+    };
     const adoptStaged = (validated, at, deferOversized) => {
       if (!options.knowledgeUpdates) return false;
       try {
@@ -1454,7 +1469,11 @@ export async function runHost(options) {
             refuseUpdate(candidate.entry, 'invalid-delivered-knowledge'); continue;
           }
           const message = userMessage(update.text);
-          if (before + estimateMessageTokens(message) + configuration.context_reserve_tokens < configuration.model.contextWindow) {
+          const reminderTokens = pendingReminders.reduce((sum, item) => {
+            const resolved = resolveReminder(item, candidate.knowledge);
+            return sum + (resolved.dropped ? 0 : estimateMessageTokens(userMessage(resolved.value.text)));
+          }, 0);
+          if (before + estimateMessageTokens(message) + reminderTokens + configuration.context_reserve_tokens < configuration.model.contextWindow) {
             knowledge = candidate.knowledge;
             placedNotices.push({at, message});
             unsentDeliveries.push(update);
@@ -1478,15 +1497,10 @@ export async function runHost(options) {
     // by a newer adopted version is rebuilt from that version with the selected entries it still lists, and
     // one with none left is not sent.
     const placeReminder = (value, at) => {
-      if (value.version !== knowledge.version) {
-        const listed = new Set(knowledgeIndex(knowledge).map(row => row.id));
-        const items = (reminderSelections.get(value) ?? []).filter(id => listed.has(id))
-          .map(id => knowledge.articles.find(item => item.id === id) ?? knowledge.facts.find(item => item.id === id));
-        if (!items.length) { emit('knowledge-undelivered', {...value, reason:'superseded'}); return; }
-        value = delivery(knowledge, items, 'reminder', value.recall_request_id);
-      }
-      placedNotices.push({at, message:userMessage(value.text)});
-      unsentDeliveries.push(value);
+      const resolved = resolveReminder(value, knowledge);
+      if (resolved.dropped) { emit('knowledge-undelivered', {...value, reason:'superseded'}); return; }
+      placedNotices.push({at, message:userMessage(resolved.value.text)});
+      unsentDeliveries.push(resolved.value);
     };
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},

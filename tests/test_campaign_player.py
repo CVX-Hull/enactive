@@ -961,3 +961,16 @@ def test_exhausted_final_report_grace_stays_the_reason_when_the_stopped_hosts_ac
         result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),fast.monotonic()+300)
     assert result['reason']=='Original final-report grace exhausted',result
     assert result['actors'][0]['orchestration_error'].startswith('ControlError: Host accounting')
+
+
+def test_a_driver_stop_stays_the_reason_even_when_the_stopped_host_settles_cleanly(tmp_path):
+    """R-REGRESSION (#946): when a cancelled host still emits a complete settlement and exits cleanly,
+    the latched driver stop reason must survive instead of being overwritten by generic host failure."""
+    profile,route,application=driver_case(tmp_path,'Frozen mission HANG')
+    stopped=threading.Event();threading.Timer(0.3,stopped.set).start()
+    clean_events={'accounting_complete':True,'settled':{'ok':False,'reason':'cancelled','requests':0,'player_requests':0,'recall_requests':0,'spent_usd':'0','unpriced_requests':0,'unpriced_recall_requests':0},
+        'handoff':None,'player_finish':None,'observed_attempts':0,'observed_recall_attempts':0,'requests':[],'spent_usd':'0','unpriced_requests':0,'unpriced_recall_requests':0,'spend_complete':True,'reported_usd':'0'}
+    with patch.object(HostEvents,'finish',return_value=clean_events):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',stopped,time.monotonic()+300)
+    assert result['reason']=='Original host deadline/cancellation',result
+    assert len(result['actors'])==1 and 'orchestration_error' not in result['actors'][0]

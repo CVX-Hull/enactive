@@ -596,6 +596,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             record.update(events.finish())
             if not record['accounting_complete'] or not cleanup['process_absent'] or not cleanup['group_absent']:
                 raise ControlError('Host accounting or exact process-group quiescence is unresolved')
+            if stop_reason is not None:
+                reason=stop_reason;break
             settled=record['settled']
             if child.returncode!=0 or settled.get('ok') is not True:
                 reason='Deciding host ended unsuccessfully';break

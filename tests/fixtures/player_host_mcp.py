@@ -134,6 +134,10 @@ def handoff_receipt(mode):
         return dict(schema="player-transport/2", operation_id=OPERATION,
             session=SESSION, actor_id=ACTOR, kind="handoff", status="unknown",
             reason="Submission response unavailable; collect the original operation")
+    if mode == "collect-transport-uncertain":
+        return dict(schema="player-transport/2", operation_id=OPERATION,
+            session=SESSION, actor_id=ACTOR, kind="computer_result", status="unknown",
+            reason="Collection response unavailable; retry computer_result")
     if mode == "not-admitted":
         return dict(error="Correct this draft; no submission")
     if mode == "foreign":

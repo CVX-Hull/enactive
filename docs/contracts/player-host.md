@@ -407,8 +407,8 @@ request.
 ```mermaid
 flowchart TB
   accTitle: What the player host does on each request
-  accDescr: Between requests the host places finished reminders, applies coverage lines and adopts the newest staged knowledge version that fits. It considers a cut only when cuts are enabled and no orderly stop is accepted. A triggered cut is applied when enough covered complete turns can be removed and no restore was seen. Otherwise it is held back and the history stays. Image-block eviction, capacity stop, tail notices and the dollar limit follow before the model call. Settlement stops are handoff, player finish, the dollar limit and an unreported cost. Pause, uncertain input and the driver's deadlines are independent of this loop.
-  R["Request boundary<br/>Place finished reminders<br/>Apply coverage and restore lines<br/>Adopt newest staged version that fits"] --> Q{"Cuts enabled, and<br/>no orderly stop accepted?"}
+  accDescr: Between requests the host applies coverage and restore lines and adopts the newest staged knowledge version that fits (deferring an oversized update across a same-boundary cut). It considers a cut only when cuts are enabled and no orderly stop is accepted. A triggered cut is applied when enough covered complete turns can be removed and no restore was seen. Otherwise it is held back and the history stays. Deferred updates are then re-checked and finished reminders are placed against the adopted version. Image-block eviction, capacity stop, tail notices and the dollar limit follow before the model call. Settlement stops are handoff, player finish, the dollar limit and an unreported cost. Pause, uncertain input and the driver's deadlines are independent of this loop.
+  R["Request boundary<br/>Apply coverage and restore lines<br/>Adopt newest staged version that fits<br/>(defer oversized if cut is possible)"] --> Q{"Cuts enabled, and<br/>no orderly stop accepted?"}
   Q -->|"No"| V
   Q -->|"Yes"| T{"Cut trigger?<br/>Tokens above briefing exceed high_mark,<br/>or image eviction would omit a new block"}
   T -->|"No"| V

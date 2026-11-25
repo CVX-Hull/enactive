@@ -91,3 +91,24 @@ def test_a_failed_collection_names_the_original_and_its_own_collector(client, to
     assert (value['operation_id'], value['collect_with'], value['status'], error) == (HANDOFF, tool, 'unknown', False)
     # Collection sends no input, so it fences nothing.
     assert stops == []
+
+
+def test_stop_requests_join_shares_one_monotonic_deadline():
+    """R-REGRESSION (#946): joining multiple slow stop threads must share one deadline, not timeout per thread."""
+    import threading
+    import time
+    from harness.player_mcp import StopRequests
+
+    block = threading.Event()
+    class SlowClient:
+        def stop(self, reason):
+            block.wait(timeout=2.0)
+
+    stops = StopRequests(SlowClient())
+    for _ in range(3):
+        stops.request('cancel')
+    started = time.monotonic()
+    stops.join(timeout=0.15)
+    elapsed = time.monotonic() - started
+    block.set()
+    assert elapsed < 0.35, f'expected shared ~0.15s deadline, took {elapsed:.3f}s'

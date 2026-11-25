@@ -299,6 +299,19 @@ test('an update that would bring the context to its capacity warning is refused 
   assert.ok(!events.some(e => e.type === 'tail-notice'));
 });
 
+test('update admission budgets a reminder due on the same request boundary',async t => {
+  const dir = await directory(t), value = newer();
+  // Neither update (~85k tokens) nor rebuilt reminder (~85k tokens) alone crosses contextWindow (262144) - reserve (16384),
+  // but together with existing context they exceed the reserve threshold and must refuse the update rather than crash.
+  value.articles[0].lead = 'r'.repeat(300_000);
+  value.articles[2].lead = 'u'.repeat(400_000);
+  const {result,events} = await deliveryScenario(dir,{knowledgeUpdates:true,
+    recallFetch:n => recallReply(n === 1 ? ['article-a'] : ['article-a']),
+    playerFetch:play({1:() => listUpdate(dir,value)},3)});
+  assert.equal(result.ok,true);
+  assert.deepEqual(updates(events).map(e => [e.outcome,e.version,e.reason]),[['refused','v3','context-capacity']]);
+});
+
 test('without the update list a host never looks for one',async t => {
   const dir = await directory(t);
   const {result,events} = await deliveryScenario(dir,{recallFetch:n => recallReply(n === 1 ? ['article-a'] : []),

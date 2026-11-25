@@ -154,3 +154,12 @@ test('the retired result name is not a handoff receipt',async t=>{
   const {result,payloads}=await scenario(t,[reply(null,[['player_handoff',{...handoffArgs,mode:'retired-result'}],['mutate',{mode:'ok'}]])],{enabledTools:handoffTools});
   assert.equal(result.ok,false);assert.equal(result.reason,'invalid-handoff-receipt');assert.equal(payloads.length,1);
 });
+test('a lost computer_result transport reply preserves a pending handoff for retry collection',async t=>{
+  const {result,calls}=await scenario(t,[
+    reply(null,[['player_handoff',{...handoffArgs,mode:'pending'}]]),
+    reply(null,[['computer_result',{...collectArgs,mode:'collect-transport-uncertain'}]]),
+    reply(null,[['computer_result',collectArgs]]),
+  ],{enabledTools:handoffTools});
+  assert.equal(result.ok,true);assert.equal(result.reason,'handoff');assert.equal(result.requests,3);
+  assert.deepEqual(calls.map(c=>c.tool),['player_handoff','computer_result','computer_result']);
+});
