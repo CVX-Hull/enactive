@@ -19,7 +19,7 @@ scope: 'Consolidated $0 Wave 3 + Wave 4 + Wave 4C end-to-end stand-in rehearsal 
   - **Planning ceiling:** **`$24.00`** (`$5.50` play + `$12.00` live curator + `$5.00` boundary grooming + `$1.50` unallocated margin).
   - **`$24.00` is a planning ceiling, not a hard billing cap.** Roughly `$10.00` of the ceiling is worst-case proxy reservation headroom across the live curator runner and boundary grooming. The only hard billing cap is the credit limit on the provider API key, which the owner controls outside the codebase.
 
-[Issue #943](https://github.com/CVX-Hull/enactive/issues/943) · [Owner decision: Wave 3 + Wave 4 consolidation](../decisions/owner-decisions.md#consolidate-wave-3-and-4-live-validation-943) · [Campaign admission workflow](../workflows/campaign-admission.md) · [Live validation #889](2026-11-22-live-validation-run-889.md) · [Seven-day campaign #896](2026-11-22-seven-day-campaign-896.md) · [Replay gates #949](2026-11-25-player-host-12-porter2-and-replay-gates-949.md) · [Pre-merge model check #950](2026-11-25-player-host-12-model-check-950.md)
+[Issue #943](https://github.com/CVX-Hull/enactive/issues/943) · [Owner decision: Wave 3 + Wave 4 consolidation](../decisions/owner-decisions-archive.md#consolidate-wave-3-and-4-live-validation-943) · [Campaign admission workflow](../workflows/campaign-admission.md) · [Live validation #889](2026-11-22-live-validation-run-889.md) · [Seven-day campaign #896](2026-11-22-seven-day-campaign-896.md) · [Replay gates #949](2026-11-25-player-host-12-porter2-and-replay-gates-949.md) · [Pre-merge model check #950](2026-11-25-player-host-12-model-check-950.md)
 
 ## Consolidated `$0` stand-in rehearsal results
 
