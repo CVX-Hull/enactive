@@ -90,6 +90,7 @@ def assert_history_rejected(repo, tmp_path, base, diagnostic):
     directory = submission(tmp_path, [change_fact('fresh')], name='rejected-history', base_version=base)
     before = snapshot(repo)
     for reader in (repo, Repository(repo.path.parent, repo.game)):
+        assert reader.published() == base
         result = run(reader, directory)
         assert result['status'] == 'rejected' and result['version'] is None
         assert result['diagnostics'][0].startswith('publication failed: incompatible history at ')
@@ -170,7 +171,72 @@ def test_cold_history_schema_dedup_still_checks_cross_snapshot_provenance(tmp_pa
     original_fact_bytes = repo.snapshot('v1')['facts.jsonl']
     empty_prov = json.dumps({'frames': {}, 'sessions': {}, 'branches': {}, 'restores': []}).encode()
     assert repo.commit({'facts.jsonl': original_fact_bytes, 'provenance.json': empty_prov}, 'dropped provenance') == 'v2'
-    assert_history_rejected(repo, tmp_path, 'v2', 'v2: ')
+    assert_history_rejected(repo, tmp_path, 'v2', 'has no recorded provenance')
+
+
+def test_warm_history_cache_rejects_consistent_rewrite_of_cached_tag(tmp_path):
+    repo = seeded(tmp_path)
+    _history(repo)
+    (repo.path / 'tests' / '.keep').write_bytes(b'payload')
+    knowledge._git(repo.path, 'add', 'tests/.keep')
+    knowledge._git(repo.path, 'commit', '--amend', '--no-edit')
+    knowledge._git(repo.path, 'tag', '-f', 'v1')
+    directory = submission(tmp_path, [change_fact('fresh')], name='warm-rewrite', base_version='v1')
+    before = snapshot(repo)
+
+    assert repo.published() == 'v1'
+    warm_gate = run(repo, directory)
+    assert warm_gate['status'] == 'rejected' and warm_gate['version'] is None
+    assert 'incompatible history at v1: published commit changed' in warm_gate['diagnostics'][0]
+    warm_restore = restore(repo, expected_base='v1', target='v0')
+    assert warm_restore['status'] == 'rejected' and warm_restore['version'] is None
+    assert warm_restore['diagnostics'] == ['incompatible or unavailable history']
+
+    cold = Repository(repo.path.parent, repo.game)
+    assert cold.published() == 'v1'
+    cold_gate = run(cold, directory)
+    assert cold_gate['status'] == 'rejected' and cold_gate['version'] is None
+    assert 'v1: unsupported program or test content' in cold_gate['diagnostics'][0]
+    cold_restore = restore(cold, expected_base='v1', target='v0')
+    assert cold_restore['status'] == 'rejected' and cold_restore['version'] is None
+    assert cold_restore['diagnostics'] == ['incompatible or unavailable history']
+    assert snapshot(cold) == before
+
+
+def test_misplaced_parent_header_after_committer_is_rejected(tmp_path):
+    repo = make_repo(tmp_path)
+    v0 = git(repo, 'rev-parse', 'v0').strip()
+    tree = git(repo, 'rev-parse', 'v0^{tree}').strip()
+    raw = (
+        f'tree {tree}\n'
+        'author Test <test@example.com> 1700000000 +0000\n'
+        'committer Test <test@example.com> 1700000000 +0000\n'
+        f'parent {v0}\n\n'
+        'misplaced parent\n'
+    ).encode()
+    forged = subprocess.run(
+        ['git', '-C', str(repo.path), 'hash-object', '-t', 'commit', '--literally', '-w', '--stdin'],
+        input=raw,
+        capture_output=True,
+        check=True,
+    ).stdout.decode().strip()
+    git(repo, 'tag', 'v1', forged)
+    assert_history_rejected(repo, tmp_path, 'v1', 'consecutive commit history')
+
+
+def test_ensure_refuses_existing_git_head_without_v0(tmp_path):
+    repo = Repository(tmp_path / 'knowledge', 'cdda')
+    repo.path.mkdir(parents=True)
+    knowledge._git(repo.path, 'init', '-q', '-b', knowledge.BRANCH)
+    knowledge._git(repo.path, 'commit', '--allow-empty', '-m', 'stray root')
+    with pytest.raises(KnowledgeError, match='has commits without v0'):
+        repo.ensure()
+
+
+def test_validate_snapshot_rejects_mismatched_raw_lines(tmp_path):
+    repo = seeded(tmp_path)
+    with pytest.raises(ValueError, match='mismatched raw fact lines'):
+        check.validate_snapshot(repo.records(), repo.provenance(), repo.game, 'v1', _raw_lines=[], _schema_valid=set())
 
 
 def test_restore_exact_v0_and_reserves_historical_identity(tmp_path):

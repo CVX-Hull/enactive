@@ -872,6 +872,8 @@ def validate_snapshot(records: list[dict], provenance: dict, game: str, version:
     by_id, namespace = {}, {}
     active_titles, active_slugs = set(), set()
     axes = declared_axes(provenance, {})
+    if _raw_lines is not None and len(_raw_lines) != len(records):
+        raise ValueError('mismatched raw fact lines')
     validator = _validator('curator-fact.schema.json')
     for index, row in enumerate(records):
         raw = _raw_lines[index] if _raw_lines is not None else None

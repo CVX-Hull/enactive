@@ -179,6 +179,13 @@ class Repository:
         self.path.mkdir(parents=True, exist_ok=True)
         if not (self.path / '.git').exists():
             _git(self.path, 'init', '-q', '-b', BRANCH)
+        else:
+            try:
+                _git(self.path, 'rev-parse', '--verify', '-q', 'HEAD')
+            except KnowledgeError:
+                pass
+            else:
+                raise KnowledgeError(f'{self.path} has commits without v0; start a fresh repository')
         files = {
             'knowledge.json': _dump({'schema': SCHEMA, 'game': self.game}),
             'facts.jsonl': b'',
@@ -277,8 +284,12 @@ class Repository:
                 try:
                     commit = objects.read(oid, b'commit')
                     headers = commit.split(b'\n\n', 1)[0].split(b'\n')
-                    if (version != f'v{number}' or not headers[0].startswith(b'tree ')
-                            or [line[7:] for line in headers if line.startswith(b'parent ')] != parents):
+                    commit_parents = []
+                    for line in headers[1:]:
+                        if not line.startswith(b'parent '):
+                            break
+                        commit_parents.append(line[7:])
+                    if version != f'v{number}' or not headers[0].startswith(b'tree ') or commit_parents != parents:
                         raise KnowledgeError('version tags do not form a consecutive commit history')
                     files = objects.snapshot(headers[0][5:])
                 except (ValueError, OSError, RecursionError) as error:
