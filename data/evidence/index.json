@@ -1703,6 +1703,25 @@
       },
       "visibility": "private"
     },
+    "wave3-wave4-validation-963": {
+      "availability": "present",
+      "bytes": 145752336,
+      "cited_by": [
+        "docs/acceptance/2026-11-25-wave3-wave4-live-validation-963.md"
+      ],
+      "files": 1360,
+      "manifest_sha256": "dcbea1b8d0aae056ab1345f4376cf6bfbb4b6f0a49269e83cb33755efbc949fa",
+      "note": "Combined Wave 3 + Wave 4 + Wave 4C standard-build live validation admission (#963) on main 19a19451, session 3bf4413b14c83ceff112ca69a99e2715 (Doering / Rowan Reed, 8/8/8/8 standard build): campaign-run/13 + player-host/12 + player-knowledge/3 run directory with curator-runner/ (27/27 accepted windows v1-v29 and delivered exports), runner config, curator-knowledge/4 repository (v0-v30, stale_records=0), post-admission boundary grooming (v29->v30), saved study userdir, and native bridge build.",
+      "sources": {
+        "build": ".runtime/computer-builds/wave3-wave4-validation-963@19a19451",
+        "config": ".runtime/wave3-wave4-validation/curator-runner-config.json@19a19451",
+        "grooming": ".runtime/wave3-wave4-validation/grooming@19a19451",
+        "knowledge": ".runtime/knowledge/wave3-wave4-validation/cdda@19a19451",
+        "run": ".runtime/computer-sessions/wave3-wave4-validation-963-3bf4413b14c8@19a19451",
+        "study-userdir": ".runtime/user@19a19451"
+      },
+      "visibility": "private"
+    },
     "wilderness-delayed-memory-762": {
       "availability": "present",
       "bytes": 105395011,
