@@ -7,17 +7,23 @@ published version unchanged. Nothing here runs anything the repository contains.
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
+from typing import BinaryIO
 
 SCHEMA = 'curator-knowledge/4'
 BRANCH = 'main'
 IDENTITY = ('-c', 'user.name=enactive-gate', '-c', 'user.email=gate@localhost',
             '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', '-c', 'core.hooksPath=/dev/null')
 _VERSION = re.compile(r'v(0|[1-9][0-9]*)')
+_OID = re.compile(rb'(?:[0-9a-f]{40}|[0-9a-f]{64})')
+_SCHEMA_ERROR = f'unsupported knowledge schema: expected {SCHEMA}; start a new repository'
 
 
 class KnowledgeError(ValueError):
@@ -31,6 +37,7 @@ def _environment() -> dict[str, str]:
     environment['GIT_CONFIG_GLOBAL'] = '/dev/null'
     environment['GIT_CONFIG_SYSTEM'] = '/dev/null'
     environment['GIT_TERMINAL_PROMPT'] = '0'
+    environment['GIT_NO_REPLACE_OBJECTS'] = '1'
     return environment
 
 
@@ -60,6 +67,96 @@ def _safe(relative: str) -> PurePosixPath:
     return path
 
 
+class _GitObjects:
+    """Read raw objects from one Git process, checking the hash of each distinct object."""
+
+    def __init__(self, requests: BinaryIO, responses: BinaryIO):
+        self.requests, self.responses = requests, responses
+        self.objects: dict[bytes, tuple[bytes, bytes]] = {}
+
+    def _read(self, oid: bytes) -> tuple[bytes, bytes]:
+        self.requests.write(oid + b'\n')
+        self.requests.flush()
+        header = self.responses.readline().split()
+        if len(header) != 3 or header[0] != oid or not header[2].isdigit():
+            raise KnowledgeError(f'missing or unreadable Git object {oid.decode()}')
+        kind, size = header[1], int(header[2])
+        body = self.responses.read(size)
+        if len(body) != size or self.responses.read(1) != b'\n':
+            raise KnowledgeError(f'incomplete Git object {oid.decode()}')
+        return kind, body
+
+    def read(self, oid: bytes, expected_kind: bytes) -> bytes:
+        if oid not in self.objects:
+            if not _OID.fullmatch(oid):
+                raise KnowledgeError('invalid Git object ID')
+            kind, body = self._read(oid)
+            digest = hashlib.sha1() if len(oid) == 40 else hashlib.sha256()
+            digest.update(kind + b' ' + str(len(body)).encode() + b'\0')
+            digest.update(body)
+            if digest.hexdigest().encode() != oid:
+                raise KnowledgeError(f'Git object hash mismatch for {oid.decode()}')
+            self.objects[oid] = kind, body
+        kind, body = self.objects[oid]
+        if kind != expected_kind:
+            raise KnowledgeError(f'unexpected Git object type for {oid.decode()}')
+        return body
+
+    def snapshot(self, oid: bytes) -> dict[str, bytes]:
+        files: dict[str, bytes] = {}
+        self._read_tree(oid, '', files)
+        return files
+
+    def _read_tree(self, oid: bytes, prefix: str, files: dict[str, bytes]) -> None:
+        tree = self.read(oid, b'tree')
+        if not tree:
+            raise KnowledgeError('unsupported snapshot layout')
+        width = len(oid) // 2
+        cursor, names = 0, set()
+        while cursor < len(tree):
+            end = tree.find(b'\0', cursor)
+            if end < 0 or end + 1 + width > len(tree):
+                raise KnowledgeError('invalid Git tree entry')
+            mode, sep, raw = tree[cursor:end].partition(b' ')
+            cursor = end + 1 + width
+            if not sep:
+                raise KnowledgeError('invalid Git tree entry')
+            name = raw.decode()
+            if '/' in name or name in ('.', '..') or name in names:
+                raise KnowledgeError(f'unsafe repository path: {name!r}')
+            _safe(name)
+            names.add(name)
+            child = tree[end + 1:cursor].hex().encode()
+            if mode == b'40000':
+                self._read_tree(child, prefix + name + '/', files)
+            elif mode == b'100644':
+                files[prefix + name] = self.read(child, b'blob')
+            else:
+                raise KnowledgeError('snapshot contains a non-regular file')
+
+
+@contextmanager
+def _git_objects(path: Path) -> Iterator[_GitObjects]:
+    try:
+        with subprocess.Popen(['git', *IDENTITY, 'cat-file', '--batch'], cwd=path, env=_environment(),
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as process:
+            yield _GitObjects(process.stdin, process.stdout)
+    except OSError as error:
+        raise KnowledgeError(f'git cat-file failed: {error}') from error
+    if process.returncode:
+        raise KnowledgeError(f'git cat-file failed ({process.returncode})')
+
+
+def _knowledge_metadata(data: bytes) -> dict:
+    try:
+        metadata = json.loads(data)
+    except (ValueError, RecursionError) as error:
+        raise KnowledgeError(_SCHEMA_ERROR) from error
+    if not isinstance(metadata, dict) or metadata.get('schema') != SCHEMA:
+        raise KnowledgeError(_SCHEMA_ERROR)
+    return metadata
+
+
 class Repository:
     def __init__(self, root: Path, game: str):
         if not game or '/' in game or game.startswith('.'):
@@ -67,6 +164,7 @@ class Repository:
         self.game = game
         self.path = Path(root) / game
         self.state = Path(root) / f'{game}.state'
+        self._validated_history = None
 
     def _tags(self) -> list[str]:
         if not (self.path / '.git').exists():
@@ -109,13 +207,11 @@ class Repository:
         return version
 
     def _check_schema(self, version: str) -> None:
-        message = f'unsupported knowledge schema: expected {SCHEMA}; start a new repository'
         try:
-            metadata = json.loads(self._show(version, 'knowledge.json'))
-        except (KnowledgeError, ValueError, RecursionError) as error:
-            raise KnowledgeError(message) from error
-        if not isinstance(metadata, dict) or metadata.get('schema') != SCHEMA:
-            raise KnowledgeError(message)
+            data = self._show(version, 'knowledge.json')
+        except KnowledgeError as error:
+            raise KnowledgeError(_SCHEMA_ERROR) from error
+        _knowledge_metadata(data)
 
     def _show(self, version: str, relative: str) -> bytes:
         return _git(self.path, 'show', f'{version}:{relative}')
@@ -157,19 +253,38 @@ class Repository:
     def snapshot(self, version: str) -> dict[str, bytes]:
         """Read a published tree, refusing non-regular Git entries."""
         version = self._resolve(version)
-        entries = _git(self.path, 'ls-tree', '-r', '-z', version).split(b'\0')
-        files = {}
-        for entry in entries:
-            if not entry:
-                continue
-            metadata, raw = entry.split(b'\t', 1)
-            mode, kind, _ = metadata.split(b' ', 2)
-            if mode != b'100644' or kind != b'blob':
-                raise KnowledgeError('snapshot contains a non-regular file')
-            name = raw.decode('utf-8')
-            _safe(name)
-            files[name] = self._show(version, name)
-        return files
+        tree = _git(self.path, 'rev-parse', '--verify', f'refs/tags/{version}^{{tree}}').strip()
+        with _git_objects(self.path) as objects:
+            return objects.snapshot(tree)
+
+    def _verified_snapshots(self) -> Iterator[tuple[str, bytes, dict[str, bytes]]]:
+        """Read version tags by object ID and verify the chain of published commits."""
+        if not (self.path / '.git').exists():
+            return
+        refs = _git(self.path, 'for-each-ref', '--format=%(refname) %(objectname)', 'refs/tags', 'refs/replace')
+        tags = {}
+        for line in refs.splitlines():
+            ref, oid = line.rsplit(b' ', 1)
+            if ref.startswith(b'refs/replace/'):
+                raise KnowledgeError('incompatible or unavailable history: Git replacement refs')
+            version = ref.removeprefix(b'refs/tags/').decode('utf-8')
+            if _VERSION.fullmatch(version):
+                tags[version] = oid
+        with _git_objects(self.path) as objects:
+            parents = []
+            for number, version in enumerate(sorted(tags, key=_number)):
+                oid = tags[version]
+                try:
+                    commit = objects.read(oid, b'commit')
+                    headers = commit.split(b'\n\n', 1)[0].split(b'\n')
+                    if (version != f'v{number}' or not headers[0].startswith(b'tree ')
+                            or [line[7:] for line in headers if line.startswith(b'parent ')] != parents):
+                        raise KnowledgeError('version tags do not form a consecutive commit history')
+                    files = objects.snapshot(headers[0][5:])
+                except (ValueError, OSError, RecursionError) as error:
+                    raise KnowledgeError(f'incompatible history at {version}: {error}') from error
+                yield version, oid, files
+                parents = [oid]
 
     def reconcile(self) -> None:
         """Discard unpublished work and return the writer to the highest tag."""
