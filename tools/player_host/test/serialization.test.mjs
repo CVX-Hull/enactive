@@ -20,7 +20,7 @@ const openRouterModel = { id: 'vendor/fixture', name: 'OpenRouter fixture', api:
   contextWindow: 100000, maxTokens: 1024,
   compat: { supportsDeveloperRole: false, supportsStore: false, supportsUsageInStreaming: true,
     openRouterRouting: { only: ['fixture-backend'], order: ['fixture-backend'], allow_fallbacks: false, require_parameters: true } } };
-const route = (overrides = {}) => ({ schema:'player-host/11',endpoint_costs:null,context_cut:null, context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},
+const route = (overrides = {}) => ({ schema:'player-host/12',endpoint_costs:null,context_cut:null, context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},
   api_key_env: 'OFFLINE_TEST_KEY', spend_limit_usd: '100', unpriced_request_usd: '0.25', max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
 
 function reply(content, calls = [], prefix = 'call') {
@@ -154,9 +154,11 @@ test('the context notice persists on every request once passed and warns before 
   const warned = payloads.map(payload => isNotice(payload.messages.at(-1)) && /^Host context capacity/.test(text(payload.messages.at(-1))));
   const first = warned.indexOf(true);
   assert.ok(first >= 0, 'the warning came before the stop');
-  assert.ok(warned.slice(first).every(Boolean), 'once passed, every later request carries it');
-  assert.ok(!warned.slice(0, first).some(Boolean));
-  assert.match(text(payloads.at(-1).messages.at(-1)), /tokens of room remain before the host must stop/);
+  const warningIds = events.filter(event => event.type === 'tail-notice' && event.kinds.includes('context-capacity'))
+    .map(event => event.request_id);
+  assert.deepEqual(warningIds, warned.flatMap((isWarned, index) => isWarned ? [`request-${index + 1}`] : []));
+  assert.ok(warningIds.length <= 4);
+  assert.match(text(payloads[first].messages.at(-1)), /tokens of room remain before the host must stop/);
   assertStablePrefixes(payloads);
   const estimates = events.filter(event => event.type === 'context-estimate').map(event => event.tokens);
   assert.ok(estimates.at(-1) + 1024 >= 24000, 'the stop is the capacity rule');
@@ -176,7 +178,7 @@ test('the time notice warns before the work deadline and does not alter the pref
   assert.equal(payloads.length, 4);
   const noticed = payloads.map(payload => isNotice(payload.messages.at(-1)) && /^Host time allowance/.test(text(payload.messages.at(-1))));
   assert.equal(noticed[0], false);
-  assert.ok(noticed.at(-1), 'the last request warns of the deadline');
+  assert.deepEqual(noticed, [false, false, true, false]);
   assert.ok(events.some(event => event.type === 'tail-notice' && event.kinds.includes('host-timeout')));
   assertStablePrefixes(payloads);
 });

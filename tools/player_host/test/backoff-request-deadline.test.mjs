@@ -126,34 +126,32 @@ test('a 60-second delay requested 34 seconds into a 60-second request is cut off
   ]);
 });
 
-test('an accepted orderly stop during the backoff does not shorten it; the request timer still decides',async t=>{
+test('an accepted orderly stop wakes the backoff and sends a fresh logical request',async t=>{
   const clock = controlledClock(t), state = {};
   const configuration = route(); configuration.request_timeout_seconds = REQUEST_DEADLINE_SECONDS;
   let fetchStarted = false, control;
   const {result,payloads,calls,events} = await scenario(t,[
     init => { fetchStarted = true; return after(REFUSAL_AT_MS, () => badGateway(60))(init); },
-    () => reply(null,[['mutate',{mode:'ok'}]]),
-  ],{configuration,timeoutSeconds:3600,expectedAbort:'request-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
+    () => reply(null,[['player_finish',{disposition:'external_stop_complete',report:'Finished',source_ids:[],control_id:stopCommand.id}]]),
+  ],{configuration,timeoutSeconds:3600,advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     controlReady:stream=>{control=stream;},onEvent:watch(clock,state),
     synchronize:releaseOnFailure(t,async()=>{
       await until(() => fetchStarted, 'first fetch');
       clock.advance(REFUSAL_AT_MS); await until(() => state.eligible, 'eligible refusal');
-      clock.advance(6000); // 40 s into the request, 6 s into the backoff
+      clock.advance(6000);
       control.write(JSON.stringify(stopCommand)+'\n');
-      await until(() => state.controlAccepted, 'control accepted');
+      await until(() => clock.at('request-start','request-2') !== undefined, 'fresh control request');
       assert.equal(clock.at('control-accepted'),40_000);
-      clock.advance(19_999); await settleMicrotasks();
-      assert.equal(state.aborted,undefined,'the stop does not interrupt the backoff');
-      clock.advance(1); await until(() => state.aborted, 'request timer');
-      assert.equal(clock.at('abort'),60_000);
+      assert.equal(clock.at('request-start','request-2'),40_000);
+      assert.equal(state.started,undefined);
+      assert.equal(state.aborted,undefined);
     }),
   });
-  assert.equal(result.ok,false);assert.equal(result.reason,'request-timeout');
-  assert.equal(payloads.length,1);assert.equal(calls.length,0);
-  const {settled} = summary(events);
-  assert.equal(settled.accepted_control_id,stopCommand.id);
-  assert.equal(events.filter(e=>e.type==='player-finish').length,0,'the player never acknowledged the stop');
-  assert.equal(settled.unpriced_requests,1);
+  assert.equal(result.reason,'external_stop_complete');
+  assert.equal(payloads.length,2);assert.equal(calls.length,0);
+  assert.match(JSON.stringify(payloads[1].messages), new RegExp(`control_id: ${stopCommand.id}`));
+  assert.deepEqual(events.filter(e=>e.type==='request-start').map(e=>e.logical_request_id),['request-1','request-2']);
+  assert.equal(summary(events).settled.unpriced_requests,1);
 });
 
 test('when the host allowance ends before the request timer, the actor limit cuts the backoff',async t=>{

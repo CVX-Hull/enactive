@@ -24,7 +24,7 @@ const model = {id:'recorded-offline-model',name:'Offline fixture',api:'openai-co
   baseUrl:'https://fixture.invalid/v1',reasoning:false,input:['text','image'],
   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:1000000,maxTokens:1024,
   compat:{supportsDeveloperRole:false,supportsStore:false,supportsUsageInStreaming:true}};
-const configuration = () => ({schema:'player-host/11',endpoint_costs:null,context_cut:null,service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},
+const configuration = () => ({schema:'player-host/12',endpoint_costs:null,context_cut:null,service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},
   api_key_env:'OFFLINE_TEST_KEY',spend_limit_usd:'100',unpriced_request_usd:'0.25',max_context_images:30,context_image_block:1,
   context_reserve_tokens:4096,request_timeout_seconds:2});
 const finish = ['player_finish',{intent:'Report the recorded assessment',disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];
@@ -78,7 +78,7 @@ async function scenario(t, sequence, {count=3, damage, spendLimit='100'}={}) {
   });
   const payloads=[], bodies=[], events=[];
   const result = await runHost({knowledge:emptyKnowledge(),finishReserveUsd:'0',session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,
-    control:new PassThrough(),configuration:{...configuration(),spend_limit_usd:spendLimit},mcpConfig:{
+    control:new PassThrough(),configuration:{...configuration(),spend_limit_usd:spendLimit,unpriced_request_usd:'0.00001'},mcpConfig:{
       command:resolve(python),args:[fixture,'--packet',packetPath,'--log',log,'--pid',pid],cwd:dir,
       enabled:true,required:true,enabled_tools:Object.keys(expected),startup_timeout_sec:5,tool_timeout_sec:2,
       default_tools_approval_mode:'never',tools:{}},

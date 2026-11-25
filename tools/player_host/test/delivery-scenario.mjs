@@ -75,7 +75,7 @@ export async function deliveryScenario(directory, overrides = {}) {
   try {
     const result = await runHost({configuration,knowledge:value,
       knowledgeUpdates:overrides.knowledgeUpdates ? actor+'/knowledge-updates.jsonl' : null,
-      updateReadTimeoutMs:overrides.updateReadTimeoutMs,finishReserveUsd:overrides.finishReserveUsd ?? '0.5',
+      updateReadTimeoutMs:overrides.updateReadTimeoutMs,spendReserveWaitMs:overrides.spendReserveWaitMs,finishReserveUsd:overrides.finishReserveUsd ?? '0.5',
       session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:overrides.pendingControlId ?? null,control,
       context:'Frozen stand-in guide',prompt:'Inspect the receiver stand-in.',model:model.id,effort:'off',timeoutSeconds:10,
       env:{OFFLINE_TEST_KEY:'stand-in-only'},

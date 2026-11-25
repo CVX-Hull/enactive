@@ -76,7 +76,7 @@ test('secret-bearing diagnostic fields are null even when surrounded by identifi
 });
 
 test('an upstream HTTP 403 retries with the identical body, one notice and separate cost records', async t => {
-  const configuration = {...route(), spend_limit_usd:'0.5'};
+  const configuration = {...route(), spend_limit_usd:'0.5',unpriced_request_usd:'0.05'};
   const {result, events, bodies} = await scenario(t, [response(upstream(), {usage:{cost:0.03}}), reply()],
     {configuration, finishReserveUsd:'0.4'});
   assert.equal(result.ok, true);

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import OpenAI from 'openai';
 import { recallRefusal } from '../host.mjs';
-import { knowledgeIndex, selection } from '../knowledge.mjs';
+import { recallIndex, selection } from '../knowledge.mjs';
 import { deliveryScenario, knowledge, recallReply } from './delivery-scenario.mjs';
 import { model, reply } from './host-scenario.mjs';
 
@@ -40,7 +40,7 @@ test('reminder fetch refuses the finish reserve in flight and later recall remai
     // Let the later reminder fetch while no player bound is in flight.
     if(context.options.body.model==='fixture-model' && ++playerPrepared===3) await laterReminderStarted;
   });
-  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.9'},finishReserveUsd:'0.5',
+  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.9',unpriced_request_usd:'0.15'},finishReserveUsd:'0.5',
     recallFetch:()=>recallReply(['article-a'],0),
     playerFetch:async n=>{
       if(n===1) return reply(null,[['computer_input',{actions:[{type:'key',key:'x',modifiers:[]}]}]],
@@ -99,7 +99,7 @@ test('finish reserve refuses before preparing recall and leaves enough budget to
   let armed=false,reads=0;
   const recallModel={...structuredClone(model),id:'recall-fixture'};
   Object.defineProperty(recallModel,'api',{enumerable:true,get(){if(armed)reads++;return model.api;}});
-  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.8',
+  const {result,events}=await scenario(t,{configuration:{spend_limit_usd:'0.8',unpriced_request_usd:'0.1',
     recall:{model:recallModel,every:1,unpriced_request_usd:'0.2',endpoint_costs:null}},
     finishReserveUsd:'0.65',
     onEvent:e=>{if(e.type==='mcp-connected')armed=true;if(e.type==='settled')armed=false;},playerFetch:()=>reply('Done')});
@@ -174,7 +174,7 @@ test('selection deduplicates article id/title and delivers standalone fact text 
 test('recall accepts exactly the delivered index ids and titles',()=>{
   const value=knowledge();
   const message=ids=>({content:[{type:'text',text:JSON.stringify({articles:ids})}]});
-  for(const row of knowledgeIndex(value)) for(const name of [row.id,row.title]) {
+  for(const row of recallIndex(value).index) for(const name of [row.id,row.title]) {
     assert.deepEqual(selection(message([name]),value).map(item=>item.id),[row.id]);
   }
   for(const name of ['fact-a','fact-b','unknown-id','Unknown title']) {

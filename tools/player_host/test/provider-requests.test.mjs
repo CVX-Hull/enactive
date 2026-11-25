@@ -129,7 +129,7 @@ for (const barrier of ['reserve', 'orderly-stop', 'cancel', 'provider-finish', '
     let control;
     const {events, result, calls, bodies} = await scenario(t, [
       stalledReply(barrier === 'usage-only' ? {} : {content:'unfinished'}, barrier === 'provider-finish' ? 'content_filter' : null),
-    ], {configuration, finishReserveUsd:'0.10', signal:controller.signal,
+    ], {configuration, finishReserveUsd:'0.10', spendReserveWaitMs:5, signal:controller.signal,
       controlReady:pipe => { control = pipe; },
       onEvent:event => {
         if (event.type !== 'response-backend') return;
@@ -138,7 +138,7 @@ for (const barrier of ['reserve', 'orderly-stop', 'cancel', 'provider-finish', '
           id:'a'.repeat(32), session:'2'.repeat(32), actor_id:'3'.repeat(32), type:'orderly_stop'}) + '\n');
       },
     });
-    assert.equal(result.reason, {reserve:'spend-limit', cancel:'cancelled'}[barrier] ?? 'request-timeout');
+    assert.equal(result.reason, {reserve:'spend-reserve-timeout', cancel:'cancelled'}[barrier] ?? 'request-timeout');
     assert.equal(bodies.length, 1);
     assert.equal(calls.length, 0);
     assert.equal(events.some(e => e.type === 'provider-retry'), false);
