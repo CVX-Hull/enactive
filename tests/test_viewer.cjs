@@ -336,7 +336,7 @@ test('Diagnostics: four cards, the context sawtooth, spend, tools, and no figure
     assert.doesNotMatch(await text(page, '#kpi-spend'), /\$0\.00|provider-reported, player \+ recall \+ live curator/i, 'no part is a silent zero, and no basis covers them all');
     assert.match(await page.$eval('#kpi-spend [data-exact]', n => n.dataset.exact), /^2\.\d{4}$/, 'the exact provider text is kept');
     assert.match(await text(page, '#kpi-context'), /32\.8k tok[\s\S]*max 49\.9k[\s\S]*93\.1%[\s\S]*5 applied · 4 held back/);
-    assert.match(await text(page, '#kpi-context'), /Cut results\s*2 target · 1 rescue · 1 best effort[\s\S]*Tail notices\s*2/);
+    assert.match(await text(page, '#kpi-context'), /Cut results\s*2 target · 1 best effort · 1 rescue[\s\S]*Tail notices\s*2/);
     assert.match(await text(page, '#kpi-spend'), /Spend reserve\s*Reached 1 time · latest \$2\.50 spent of \$5\.00 · \$2\.50 finish reserve/);
     assert.match(await text(page, '#kpi-routing'), /endpoint-a:\s*\d+\s*endpoint-b:\s*4/);
     assert.match(await text(page, '#kpi-custody'), /live[\s\S]*writes its receipt when the run ends/);

@@ -236,9 +236,12 @@ const FILTERS = [['all', 'All', e => !(e.entry_kind === 'context_cut' && e.outco
   ['memory', 'Memory', e => e.entry_kind === 'knowledge_update'], ['alerts', 'Alerts', isAlertEntry]];
 const WINDOW = 60, MORE = 120;
 
-const searchText = e => [e.intent, e.tool, e.summary, e.knowledge_version, e.reason, e.cut_result, e.cut_result && label(e.cut_result),
-  e.finding_kind && findingText({kind: e.finding_kind, payload: e.payload}),
-  (e.keys || []).map(keyText).join(' '), e.seq === null ? '' : `#${e.seq}`].filter(Boolean).join(' ').toLowerCase();
+const searchText = e => {
+  const cutResult = e.entry_kind !== 'context_cut' || e.outcome === 'applied' ? e.cut_result : null;
+  return [e.intent, e.tool, e.summary, e.knowledge_version, e.reason, cutResult, cutResult && label(cutResult),
+    e.finding_kind && findingText({kind: e.finding_kind, payload: e.payload}),
+    (e.keys || []).map(keyText).join(' '), e.seq === null ? '' : `#${e.seq}`].filter(Boolean).join(' ').toLowerCase();
+};
 export const toolText = tool => label(tool || 'recorded step');
 export const usd = (value, digits = 4) => (value === null || value === undefined ? null : `$${Number(value).toFixed(digits)}`);
 

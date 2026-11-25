@@ -73,7 +73,9 @@ def usd(value: object) -> Decimal | None:
         amount = Decimal(value)
     except InvalidOperation:
         return None
-    return amount if amount.is_finite() and amount >= 0 and abs(amount.adjusted()) < 60 else None
+    if not (amount.is_finite() and amount >= 0 and abs(amount.adjusted()) < 60):
+        return None
+    return Decimal(0) if amount == 0 else amount
 
 
 def usd_sum(amounts: Iterable[Decimal]) -> Decimal:
@@ -163,13 +165,15 @@ def _response(actor: str, event: HostEvent) -> Response | None:
 
 def cut_fields(f: dict) -> dict:
     triggers = f.get('triggers') if isinstance(f.get('triggers'), list) else []
-    result = f.get('cut_result')
-    return dict(request_id=identifier(f.get('request_id')), outcome=CUT_OUTCOMES.get(identifier(f.get('outcome')), 'unknown'),
+    outcome = CUT_OUTCOMES.get(identifier(f.get('outcome')), 'unknown')
+    applied = outcome == 'applied'
+    result = f.get('cut_result') if applied else None
+    return dict(request_id=identifier(f.get('request_id')), outcome=outcome,
         reason=identifier(f.get('reason')), knowledge_version=identifier(f.get('knowledge_version')),
         triggers=[t for t in (identifier(v, LABEL_LIMIT) for v in triggers[:TRIGGER_LIMIT]) if t is not None],
         cut_result=result if result in CUT_RESULTS else None,
-        **{key: count(f.get(key)) for key in ('tokens_before', 'tokens_after', 'images_before', 'images_after', 'removed_turns',
-            'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count')})
+        **{key: count(f.get(key)) for key in ('tokens_before', 'tokens_after', 'images_before', 'images_after', 'removed_turns')},
+        **{key: count(f.get(key)) if applied else None for key in ('cumulative_removed_turns', 'briefing_tokens', 'source_ids_count')})
 
 
 #: The rows of an update's text that state a difference; from an empty store the host writes `index` in their place.

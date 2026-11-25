@@ -219,12 +219,13 @@ def make_handler(state: State):
                 if traced:
                     host = body['host_telemetry']
                     results = [result for seq, result in CUT_RESULTS.items() if seq <= shown[-1]['seq']]
-                    host['context_cuts']['by_result'] = {result: results.count(result) for result in CUT_RESULTS.values()}
+                    host['context_cuts']['by_result'] = {result: results.count(result) for result in ('target', 'best_effort', 'rescue')}
                     host['context_cuts']['latest']['cut_result'] = CUT_RESULTS.get(
                         int(host['context_cuts']['latest']['request_id'].removeprefix('request-')))
                     host['tail_notices'] = dict(count=2, by_kind={'context-capacity': 1, 'host-timeout': 0, 'spend-limit': 1})
                     host['spend_reserve_reached'] = dict(count=1, latest=dict(
-                        spent_usd='2.5', spend_limit_usd='5', finish_reserve_usd='2.5'))
+                        actor='actor-1', actor_id='actor-1', wall_time=shown[-1]['wall'],
+                        spent_usd='2.5', spend_limit_usd='5', finish_reserve_usd='2.5', unpriced_bound_usd='0.05'))
                 body['curator_spend'] = synthetic.curator_spend() if traced else None
                 body['boundary_grooming'] = synthetic.boundary_grooming()
                 body.update(run=run, session=session)
@@ -234,12 +235,18 @@ def make_handler(state: State):
                 items = synthetic.feed(shown, body['findings'], not traced)
                 for item in items:
                     if item['entry_kind'] == 'context_cut':
-                        item['cut_result'] = CUT_RESULTS.get(item['seq'])
+                        item['cut_result'] = CUT_RESULTS.get(item['seq']) if item['outcome'] == 'applied' else None
                 self.json(200, synthetic.feed_page(items, int(first('after', 0)), min(500, int(first('limit', 100))), not traced)); return
             if sub == 'telemetry':
                 telemetry = synthetic.telemetry(shown, body, not traced)
                 for cut in telemetry['cuts']:
-                    cut['cut_result'] = CUT_RESULTS.get(cut['seq'])
+                    cut['cut_result'] = CUT_RESULTS.get(cut['seq']) if cut['outcome'] == 'applied' else None
+                telemetry['spend_reserve_reached'] = ([dict(actor='actor-1', actor_id='actor-1', seq=shown[-1]['seq'],
+                    wall=shown[-1]['wall'], spent_usd='2.5', spend_limit_usd='5', finish_reserve_usd='2.5', unpriced_bound_usd='0.05')]
+                    if traced else [])
+                telemetry['spend_reserve_reached_omitted'] = 0
+                telemetry['tail_notices'] = (dict(count=2, by_kind={'context-capacity': 1, 'host-timeout': 0, 'spend-limit': 1})
+                    if traced else dict(count=0, by_kind={'context-capacity': 0, 'host-timeout': 0, 'spend-limit': 0}))
                 self.json(200, telemetry); return
             if sub == 'delivered-knowledge':
                 limit = min(500, int(first('limit', 100)))

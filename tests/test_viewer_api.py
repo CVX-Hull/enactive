@@ -1703,9 +1703,9 @@ def test_current_cut_reserve_and_tail_notice_telemetry(tmp_path, monkeypatch):
     for values in expected:
         run.host[actor].append(run.event(actor, 'context-cut', wall, request_id=request, outcome='cut', **dict(zip(fields, values))))
     run.host[actor].append(run.event(actor, 'context-cut', wall, request_id=request, outcome='held-back',
-        cut_result=['invalid'], cumulative_removed_turns=-1, briefing_tokens=True, source_ids_count='6'))
+        cut_result='rescue', cumulative_removed_turns=5, briefing_tokens=10, source_ids_count=2))
     run.host[actor].append(run.event(actor, 'spend-reserve-reached', wall, actor_id='x' * (ID_LIMIT + 1),
-        spent_usd='NaN', spend_limit_usd=-1, finish_reserve_usd='-0.5', unpriced_bound_usd='0.00'))
+        spent_usd='NaN', spend_limit_usd=-1, finish_reserve_usd='-0.5', unpriced_bound_usd='-0.00'))
     run.host[actor].append(run.event(actor, 'tail-notice', wall, request_id=request,
         kinds=['context-capacity', 'context-capacity', 'spend-limit', 'invalid', {}], tokens=42))
     next_actor = run.actor()
