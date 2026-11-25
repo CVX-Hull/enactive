@@ -189,6 +189,13 @@ def _nonblank(v: object) -> bool:
 MAX_SAFE_INT = (1 << 53) - 1
 
 
+def _safe_digits(text: str) -> int | None:
+    if len(text) > 16:
+        return None
+    val = int(text)
+    return val if 0 <= val <= MAX_SAFE_INT else None
+
+
 def _safe_nonneg_int(v: object) -> bool:
     if type(v) is int:
         return 0 <= v <= MAX_SAFE_INT
@@ -217,8 +224,8 @@ def _is_valid_delivered_3(doc: object) -> bool:
         )
     if not (isinstance(doc['version'], str) and _VERSION_RE.match(doc['version'])):
         return False
-    version_num = int(doc['version'][1:])
-    if version_num > MAX_SAFE_INT:
+    version_num = _safe_digits(doc['version'][1:])
+    if version_num is None:
         return False
     if not (isinstance(doc['commit'], str) and _HEX40_RE.match(doc['commit'])):
         return False
@@ -286,6 +293,14 @@ def _is_valid_delivered_3(doc: object) -> bool:
         return False
     art_set, fact_set, public_ids = set(art_ids), set(fact_ids), set(all_ids)
     delivered_revs = {a.get('revision') for a in doc['articles']}
+    delivered_rev_nums: dict[str, int] = {}
+    for art in doc['articles']:
+        rev = art.get('revision')
+        if isinstance(rev, str) and _REV_RE.match(rev):
+            slug, _, digits = rev.rpartition('@v')
+            num = _safe_digits(digits)
+            if slug == art.get('id') and num is not None:
+                delivered_rev_nums[slug] = num
 
     # Validate history sets first so stale_citations can be checked against H.
     ended, retracted = hist['ended'], hist['retracted']
@@ -301,8 +316,10 @@ def _is_valid_delivered_3(doc: object) -> bool:
                 or len(set(entry['by'])) != len(entry['by'])):
             return False
         if _REV_RE.match(key):
-            slug = key.split('@', 1)[0]
-            if entry['reason'] != 'restated' or entry['by'] != [slug] or slug not in art_set:
+            slug, _, digits = key.rpartition('@v')
+            rev_num = _safe_digits(digits)
+            if (entry['reason'] != 'restated' or entry['by'] != [slug] or slug not in art_set
+                    or slug not in delivered_rev_nums or rev_num is None or rev_num >= delivered_rev_nums[slug]):
                 return False
         elif _ID_RE.match(key):
             if entry['reason'] not in ('restated', 'narrowed', 'corrected') or not set(entry['by']) <= fact_set:
@@ -320,8 +337,10 @@ def _is_valid_delivered_3(doc: object) -> bool:
         if set(art) != art_req:
             return False
         if (not isinstance(art['revision'], str) or not _REV_RE.match(art['revision'])
-                or not art['revision'].startswith(art['id'] + '@')
-                or int(art['revision'].rsplit('@v', 1)[1]) > version_num):
+                or not art['revision'].startswith(art['id'] + '@')):
+            return False
+        art_rev_num = _safe_digits(art['revision'].rsplit('@v', 1)[1])
+        if art_rev_num is None or art_rev_num > version_num:
             return False
         if not (_nonblank(art['title']) and _nonblank(art['lead']) and valid_tags(art['tags']) and valid_scope(art['scope'])):
             return False
@@ -941,19 +960,24 @@ def test_synthetic_builder_enforces_article_lineages_and_end_evidence(tmp_path: 
 def test_player_knowledge_3_contract_fixtures():
     pk3 = REPO_ROOT / 'tests' / 'fixtures' / 'player-knowledge-3'
     read_doc = json.loads((pk3 / 'read-article.json').read_text(encoding='utf-8'))
-    assert set(read_doc) == {'schema', 'grants_authority', 'version', 'query', 'resolution', 'message', 'records'}
+    assert set(read_doc) == {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'records'}
     assert read_doc['schema'] == 'player-knowledge/3'
     assert read_doc['grants_authority'] is False
-    assert read_doc['resolution'] == 'exact'
+    assert read_doc['resolution'] == 'current'
+    assert read_doc['resolved_from'] is None
     assert len(read_doc['records']) == 1
 
     query_doc = json.loads((pk3 / 'query-compact-hits.json').read_text(encoding='utf-8'))
-    assert set(query_doc) == {'schema', 'grants_authority', 'version', 'query', 'resolution', 'message', 'hits'}
+    assert set(query_doc) == {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'hits'}
     assert query_doc['schema'] == 'player-knowledge/3'
     assert query_doc['grants_authority'] is False
     assert query_doc['resolution'] == 'query'
-    art_hit, fact_hit = query_doc['hits']
-    assert set(art_hit) == {'id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'}
-    assert art_hit['kind'] == 'article' and art_hit['via'] in ('match', 'hop')
-    assert set(fact_hit) == {'id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via', 'status'}
-    assert fact_hit['kind'] == 'fact' and fact_hit['via'] in ('match', 'hop') and fact_hit['status'] == ['needs_review']
+    assert query_doc['resolved_from'] is None
+    article_req = {'id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'}
+    fact_req = {'id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via'}
+    for hit in query_doc['hits']:
+        req = article_req if hit['kind'] == 'article' else fact_req
+        assert req <= set(hit) <= (req | {'status'})
+        assert hit['via'] in ('match', 'hop')
+        if 'status' in hit:
+            assert isinstance(hit['status'], list) and len(hit['status']) > 0
