@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Player-host, player-ports, recall, context-cut, or cross-game input architecture changes
-status: active
+status: historical
+date: '2026-11-24'
+scope: 'Empirical $0 baseline over the 12 sealed #889 and #896 runs and ten-dimension player architecture assessment (#945), settled by the 24 November 2026 owner approval of all 15 #947 RFC recommendations.'
+replacement: docs/design/player-architecture-contract.md
 ---
 
 # Player architecture, ergonomics, caching, recall and portability research
