@@ -17,6 +17,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import re
+import statistics
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -618,7 +619,8 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
     fixed_tokens = next(iter(estimates.values()))['heuristic_tokens'] - original_prefix
     fresh_prefixes = {}
     min_headroom = policy.hard_limit
-    max_archive_error = 0
+    max_archive_error = max_archive_over = max_archive_under = 0
+    insufficient_details = []
     observed_stops = sum(e['type'] == 'settled' and e['reason'] == 'context-capacity' for e in events)
     for rid, logged in estimates.items():
         cut = cuts.get(rid)
@@ -657,7 +659,10 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
                                 + sum(turn.request_tokens + turn.notice_tokens for turn in archived)
                                 + eviction_delta([n for turn in archived for n in turn.eviction_deltas],
                                                  protected, policy))
-            max_archive_error = max(max_archive_error, abs(archive_estimate - logged['heuristic_tokens']))
+            delta = archive_estimate - logged['heuristic_tokens']
+            max_archive_error = max(max_archive_error, abs(delta))
+            max_archive_over = max(max_archive_over, delta)
+            max_archive_under = max(max_archive_under, -delta)
 
         current = turns[projected_removed:]
         eligible = 0
@@ -693,6 +698,19 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
         outcome, count = state.check(policy, uncut, eligible, candidates, frontier, version=version, restored=restored,
                                      orderly_stop=logged['monotonic_ms'] >= control_at, best_effort=best_effort)
         counts[outcome] += 1
+        if outcome == 'insufficient-cover' and eligible:
+            last = None
+            for last in candidates():
+                pass
+            if last is not None:
+                post_tokens = last.tokens - last.briefing_tokens
+                insufficient_details.append(dict(
+                    post_tokens=post_tokens,
+                    images=last.images,
+                    uncovered_turns=len(current) - eligible,
+                    exceeds_low=post_tokens > policy.low,
+                    exceeds_images=last.images > policy.max_images - policy.block,
+                ))
         if count:
             projected_removed += count
             for turn in current[:count]:
@@ -709,7 +727,9 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
     return dict(counts, observed_holds=sum(c['outcome'] == 'held-back' for c in cuts.values()),
                 observed_cuts=sum(c['outcome'] == 'cut' for c in cuts.values()),
                 observed_stops=observed_stops, projected_stops=counts['stop'], stop_details=stop_details,
-                min_uncut_headroom_tokens=min_headroom, max_archive_heuristic_error_tokens=max_archive_error)
+                insufficient_details=insufficient_details,
+                min_uncut_headroom_tokens=min_headroom, max_archive_heuristic_error_tokens=max_archive_error,
+                max_archive_overestimate_tokens=max_archive_over, max_archive_underestimate_tokens=max_archive_under)
 
 
 def benchmark(evidence: Path) -> dict:
@@ -755,15 +775,34 @@ def benchmark(evidence: Path) -> dict:
     recall = Counter()
 
     def aggregate_cut(field: str) -> dict:
+        skip_keys = ('min_uncut_headroom_tokens', 'max_archive_heuristic_error_tokens',
+                     'max_archive_overestimate_tokens', 'max_archive_underestimate_tokens',
+                     'stop_details', 'insufficient_details')
         agg = Counter()
         for actor in actors:
-            agg.update({k: v for k, v in actor[field].items()
-                        if k not in ('min_uncut_headroom_tokens', 'max_archive_heuristic_error_tokens', 'stop_details')})
+            agg.update({k: v for k, v in actor[field].items() if k not in skip_keys})
         agg['projected_holds'] = sum(agg[k] for k in ('uncovered', 'below-min-free', 'insufficient-cover'))
         agg['hold_reduction_pct'] = round(100 * (1 - agg['projected_holds'] / agg['observed_holds']), 2)
         agg['wider_census_observed_holds'] = WIDER_CENSUS_HELD_BACK
         agg['min_uncut_headroom_tokens'] = min(a[field]['min_uncut_headroom_tokens'] for a in actors)
         agg['max_archive_heuristic_error_tokens'] = max(a[field]['max_archive_heuristic_error_tokens'] for a in actors)
+        agg['max_archive_overestimate_tokens'] = max(a[field]['max_archive_overestimate_tokens'] for a in actors)
+        agg['max_archive_underestimate_tokens'] = max(a[field]['max_archive_underestimate_tokens'] for a in actors)
+        insuff = [row for a in actors for row in a[field]['insufficient_details']]
+        if insuff:
+            post = [row['post_tokens'] for row in insuff]
+            turns_left = [row['uncovered_turns'] for row in insuff]
+            agg['insufficient_summary'] = dict(
+                count=len(insuff),
+                post_tokens_min=min(post),
+                post_tokens_median=round(statistics.median(post)),
+                post_tokens_max=max(post),
+                exceeds_low=sum(row['exceeds_low'] for row in insuff),
+                exceeds_images=sum(row['exceeds_images'] for row in insuff),
+                uncovered_turns_min=min(turns_left),
+                uncovered_turns_median=round(statistics.median(turns_left)),
+                uncovered_turns_max=max(turns_left),
+            )
         return dict(agg)
 
     for actor in actors:
@@ -807,9 +846,17 @@ def markdown(result: dict) -> str:
               f"- {cut['observed_stops']:,} observed and {cut['projected_stops']:,} projected hard capacity stops "
               f"over {cut['checks']:,} checks. Minimum uncut headroom is {cut['min_uncut_headroom_tokens']:,} "
               f"estimated tokens. {cut.get('estimates_without_manifest', 0)} estimates lack a request manifest.",
-              f"- Maximum absolute error against recorded heuristic estimates is "
-              f"{cut['max_archive_heuristic_error_tokens']:,} tokens.",
+              f"- Archive heuristic reconstruction error: max overestimate {cut['max_archive_overestimate_tokens']:,} "
+              f"tokens, max underestimate {cut['max_archive_underestimate_tokens']:,} tokens "
+              f"(max absolute {cut['max_archive_heuristic_error_tokens']:,}).",
               f"- **Capacity gate {'passes' if result['no_increase_in_projected_stops'] else 'does not pass'}.**"]
+    if 'insufficient_summary' in cut:
+        s = cut['insufficient_summary']
+        lines.append(f"  - Across {s['count']} `insufficient-cover` holds at `k = E`: post-cut tokens above briefing "
+                     f"ranged {s['post_tokens_min']:,}–{s['post_tokens_max']:,} (median {s['post_tokens_median']:,}; "
+                     f"{s['exceeds_low']}/{s['count']} > `low_mark`), {s['exceeds_images']}/{s['count']} > `M - B` images, "
+                     f"uncovered tail turns {s['uncovered_turns_min']}–{s['uncovered_turns_max']} "
+                     f"(median {s['uncovered_turns_median']}).")
     for actor in result['actors']:
         for stop in actor['cut']['stop_details']:
             lines.append(f"  - {actor['admission']} actor {actor['actor']}, {stop['request']}, {stop['version']}. "
@@ -826,7 +873,7 @@ def markdown(result: dict) -> str:
               f"- **Diagnostic capacity gate {'passes' if result['best_effort_no_increase_in_projected_stops'] else 'does not pass'}.**"]
     lines += ['', '## Per-version recall indexes and cut briefings', '',
               '| Version | Source | Title-only chars | Sent chars | Unlisted | Main cut chars | Proposed cut chars |',
-              '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+              '| --- | --- | ---: | ---: | ---: | ---: | ---: |']
     for row in result['versions']:
         lines.append(f"| {row['version']} | {row['source']} | {row['title_chars']:,} | {row['sent_chars']:,} | "
                      f"{row['unlisted_entries']:,} | {row['main_cut_chars']:,} | {row['proposed_cut_chars']:,} |")

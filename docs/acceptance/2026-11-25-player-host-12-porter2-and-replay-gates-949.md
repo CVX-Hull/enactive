@@ -61,15 +61,23 @@ projected stop.
 
 The archive contains request-part digests and sizes. The replay reconstructs
 tool arguments and results from their events, projects image eviction, and
-estimates remaining text from the recorded part lengths. The reconstruction
-differed from the recorded heuristic by up to 8,583 tokens on the archived
-prefixes. Even accounting for reconstruction error, the underlying failure is
-structural: in `#896-b`, live curator `trigger_steps: 35` leaves roughly 20–35
-uncovered tail turns (`29k–54k` post-cut tokens > `low_mark: 20,000` and `> 19`
-images = `max_context_images - context_image_block`) at almost every cut point.
-Refusing to cut `k = E` unless both `T_k <= low_mark` and `I_k <= M - B` blocked
-76 of 77 recorded cuts (`insufficient-cover`), letting prompts grow near the
-245,760-token hard limit (`+338` tokens headroom in `A03`, `-266` in `A01`).
+estimates remaining text from the recorded part lengths. Across every archived
+prefix of all 12 actors, the reconstruction was at or below the recorded
+heuristic (`0` overestimate, up to `8,583` tokens underestimate; printed by
+`tools/player_host_replay_benchmark.py --markdown`). Because the estimator errs
+strictly downward, the projected `266`-token overflow at Admission 01
+`request-584` is conservative rather than a replay artifact, and Admission 03's
+`338`-token minimum headroom is likely a second hard stop.
+
+The underlying failure is structural: in `#896-b`, live curator
+`trigger_steps: 35` leaves `9–35` uncovered tail turns (median `17`) at the `76`
+literal `insufficient-cover` holds, where the `k = E` candidate still carried
+`20,107–62,483` post-cut tokens above briefing (median `34,475`; `76/76`
+exceeding `low_mark: 20,000`) and exceeded `M - B = 19` images on `29/76` holds
+(all emitted directly by `tools/player_host_replay_benchmark.py --markdown`).
+Because Ballot 4 refuses the cut whenever either `T_k > low_mark` or
+`I_k > M - B`, the token condition alone blocked 76 of 77 healthy cuts, letting
+prompts grow into the 245,760-token hard limit.
 
 A paired diagnostic arm (`cut_best_effort`, keeping Ballot 4's arm/edge-hold
 hysteresis and strict-fit rescue, preferring the smallest `k in [min_free, E]`

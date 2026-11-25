@@ -574,7 +574,7 @@ def compare_porter2(evidence: Path, results: dict, repeat: int, fold) -> dict:
                 row['top5'].update(alternative['top5'])
             before = [r['ranks']['bm25_1hop'] for r in original['rows']]
             after = [r['ranks'][PORTER2] for r in original['rows']]
-            gates[name] = dict(hit_at_5=sum(r is not None for r in after) >= sum(r is not None for r in before),
+            gates[name] = dict(hit_at_5=arm['methods'][PORTER2]['hit_at_5'] >= original['methods']['bm25_1hop']['hit_at_5'],
                                article_mrr_at_5=math.fsum(1 / r for r in after if r)
                                >= math.fsum(1 / r for r in before if r))
     return gates
