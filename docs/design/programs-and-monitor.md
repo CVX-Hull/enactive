@@ -44,7 +44,7 @@ The first program phase includes a low-cost model slot that watches program prog
 
 ## Fitting and the library
 
-Offline replay filters candidates for supervised play by checking preconditions, success predicates and agreement with recorded inputs. Replay establishes agreement only for observed inputs. A new program is probationary until scored on traces that arrive after publication.
+Offline replay filters candidates for supervised play by checking preconditions, success predicates and agreement with recorded inputs. Replay establishes agreement only for observed inputs. A stored program enters as `stored_ineligible`, becomes `probationary` only after passing gate-owned offline qualification, and stays probationary until scored on traces that arrive after publication ([pre-qualification storage and eligibility](bounded-program-interface.md#pre-qualification-storage-and-eligibility)).
 
 The library tracks invocations, successes, yields, aborts and regressions. Revisions cite their parents, and programs retire below a performance threshold.
 
