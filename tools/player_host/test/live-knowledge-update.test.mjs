@@ -103,7 +103,7 @@ test('a reminder whose selections the adopted version no longer lists is not sen
   assert.equal(events.filter(e => e.type === 'knowledge-delivery' && e.kind === 'reminder').length,0);
   const dropped = events.find(e => e.type === 'knowledge-undelivered' && e.kind === 'reminder');
   assert.deepEqual([dropped.version,dropped.recall_request_id,dropped.fact_ids,dropped.reason],
-    ['v2','recall-2',['fact-alone'],'already-in-context']);
+    ['v2','recall-2',['fact-alone'],'superseded']);
   // The original index may still name the entry. The player receives the removal, with no reminder lead.
   assert.ok(!players(payloads).at(-1).messages.map(messageText).some(text => text.includes('"lead":"An unfiled claim."')));
 });

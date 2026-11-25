@@ -456,8 +456,9 @@ operation boundary for that version, or permanently invalidates further cuts
 for this actor after a restore. The host cuts whole turns only through applicable
 coverage for adopted knowledge. Pressure arms the cut until coverage allows it.
 The host chooses the smallest fitting covered prefix that meets both targets or,
-when neither target combination is reachable, the largest strictly reducing
-prefix that fits. Independent capacity rescue can remove fewer than
+when no prefix reaches both targets, falls back to the full covered prefix (`k = E`)
+if it fits and strictly reduces estimated tokens (otherwise holding with
+`insufficient-cover`). Independent capacity rescue can remove fewer than
 `min_free` turns. The new prefix carries a bounded briefing and a marker with
 the omitted frames' sources and the last five distinct committed public intents.
 The

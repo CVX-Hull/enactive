@@ -28,7 +28,7 @@ const TOP_FIELDS = ['schema','version','commit','repository_id','coverage','arti
 // Python's `str.strip()` whitespace (JavaScript's `\s` without U+FEFF, plus U+001C..U+001F and U+0085), so a
 // blank string is blank to both readers.
 const BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
-const nonblank = value => typeof value === 'string'
+const nonblank = value => typeof value === 'string' && value.isWellFormed()
   && [...value].some(character => character === BYTE_ORDER_MARK || !/[\s\x1c-\x1f\x85]/.test(character));
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const matches = (pattern, value) => typeof value === 'string' && pattern.test(value);

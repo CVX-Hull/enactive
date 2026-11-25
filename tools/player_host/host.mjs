@@ -1563,9 +1563,9 @@ export async function runHost(options) {
       const entries = new Map(pendingReminders.length ? topLevelEntries(target).map(item => [item.id, item]) : []);
       const dropped = [];
       for (const value of pendingReminders) {
-        const items = (reminderSelections.get(value) ?? []).map(id => entries.get(id)).filter(item =>
-          item && active.get(item.id)?.fingerprint !== fingerprint(item));
-        if (!items.length) { dropped.push(value); continue; }
+        const surviving = (reminderSelections.get(value) ?? []).map(id => entries.get(id)).filter(Boolean);
+        const items = surviving.filter(item => active.get(item.id)?.fingerprint !== fingerprint(item));
+        if (!items.length) { dropped.push({value, reason:surviving.length ? 'already-in-context' : 'superseded'}); continue; }
         const reminder = delivery(target, items, 'reminder', value.recall_request_id);
         const note = placed(reminder, at);
         notices.push(note);
@@ -1624,7 +1624,7 @@ export async function runHost(options) {
         const recentIntents = new Set(cutState?.recentIntents);
         const alreadyRemoved = cutState?.removedTurns ?? 0;
         const imageTarget = configuration.max_context_images - configuration.context_image_block;
-        let result, fallback, rescuePlan, hasTargets = false, cutMessageIndex = start;
+        let result, fallback, rescuePlan, cutMessageIndex = start;
         for (const [offset, turn] of cuttable.entries()) {
           const k = offset + 1;
           for (const message of validated.slice(cutMessageIndex, turn.end)) {
@@ -1649,14 +1649,13 @@ export async function runHost(options) {
           if (normalSearch && k >= cfg.min_free) {
             const meetsTargets = plan.estimate.tokens - briefingTokens <= cfg.low_mark
               && plan.projection.summary.input_images <= imageTarget;
-            hasTargets ||= meetsTargets;
             if (meetsTargets && plan.fits) result ??= plan;
-            if (plan.fits && reduces) fallback = plan;
+            if (k === cuttable.length && !result && plan.fits && reduces) fallback = plan;
           }
           if (rescue && plan.fits && reduces) rescuePlan ??= plan;
           if (!normalSearch && rescuePlan) break;
         }
-        const plan = result ?? (hasTargets ? null : fallback) ?? rescuePlan;
+        const plan = result ?? fallback ?? rescuePlan;
         if (plan) return {plan, demand:[], event:{...decision, outcome:'cut',
           removed_turns:plan.state.removedTurns - alreadyRemoved, cumulative_removed_turns:plan.state.removedTurns,
           tokens_after:plan.estimate.tokens, briefing_tokens:briefingTokens,
@@ -1722,7 +1721,7 @@ export async function runHost(options) {
       briefing = null;
       flushRefusals();
       const nextId = `request-${requests + 1}`;
-      for (const value of plan.dropped) emit('knowledge-undelivered', {...value, reason:'already-in-context'});
+      for (const {value, reason} of plan.dropped) emit('knowledge-undelivered', {...value, reason});
       if (choice.event) emit('context-cut', {request_id:nextId, ...choice.event});
       const {projection, estimate} = plan;
       contextImages = projection.images;
