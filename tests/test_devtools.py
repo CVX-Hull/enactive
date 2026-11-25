@@ -126,10 +126,19 @@ class DevToolTests(unittest.TestCase):
             "application": "from .computer import runtime\nfrom .player import memory\n",
             "server": "import http.server\nfrom .computer import protocol\n",
         }
-        for source in ("player/memory", "player_client", "player_tools", "player_mcp", "computer/runtime",
-                       "application", "server", "evaluation/core/__init__", "viewer/__init__"):
+        for source, expected in (
+            ("player/memory", "harness.player"),
+            ("player_client", "harness.player_client"),
+            ("player_tools", "harness.player_tools"),
+            ("player_mcp", "harness.player_mcp"),
+            ("computer/runtime", "harness.computer"),
+            ("application", "harness.application"),
+            ("server", "harness.server"),
+            ("evaluation/core/__init__", "harness.evaluation"),
+            ("viewer/__init__", "harness.viewer"),
+        ):
             self.write(source + ".py", "import harness.curator\n")
-            self.assert_broken(self.lint_imports(), "is not allowed to import harness.curator")
+            self.assert_broken(self.lint_imports(), f"{expected} is not allowed to import harness.curator")
             self.write(source + ".py", defaults.get(source, ""))
 
     def test_server_cannot_depend_on_cli_or_tooling(self):

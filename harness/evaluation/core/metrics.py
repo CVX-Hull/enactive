@@ -79,10 +79,12 @@ def survival(timeline: Timeline, events: Sequence[EventRow], binding: Binding, f
     """Survival within the last episode that has an accepted in-play clock reading."""
     clock = timeline.clock
     if not any(value is not None for value in clock):
-        return _row('survival.game_hours', None, 0, None, 'no_clock_reading'), None, None
+        reason = censor_reason(any(e.kind == 'death' for e in events), events, facts, end)
+        return _row('survival.game_hours', None, 0, None, 'no_clock_reading'), None, reason
     start, episode = timeline.survival_start, timeline.play_episode
     if start is None or episode is None:
-        return _row('survival.game_hours', None, sum(v is not None for v in clock), None, 'no_in_play_clock'), None, None
+        reason = censor_reason(any(e.kind == 'death' for e in events), events, facts, end)
+        return _row('survival.game_hours', None, sum(v is not None for v in clock), None, 'no_in_play_clock'), None, reason
     span = timeline.episode_range(episode)
     readable = [i for i in span if clock[i] is not None]
     hours = (clock[readable[-1]] - clock[start]) * unit_seconds(binding) / 3600

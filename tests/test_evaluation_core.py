@@ -924,6 +924,30 @@ def test_survival_is_missing_without_a_clock_or_an_in_play_reading(tmp_path):
     row = metrics_of(run_and_evaluate(tmp_path, build))['survival.game_hours']
     assert row.value is None and row.missing == 'no_clock_reading'
 
+    def failed_before_clock(directory):
+        run = Run(directory)
+        a = run.actor()
+        run.step(a, 'input', [key('j')], F('menu'))
+        run.finish(settled=dict(ok=False, reason='provider-error'))
+        return directory
+    failed_metrics = metrics_of(run_and_evaluate(tmp_path / 'f', failed_before_clock))
+    assert failed_metrics['survival.game_hours'].missing == 'no_clock_reading'
+    assert failed_metrics['run.infrastructure_loss'].value == 1
+    assert failed_metrics['run.provider_loss'].value == 1
+    assert failed_metrics['run.infrastructure_loss'].missing is None
+
+    def spend_before_clock(directory):
+        run = Run(directory)
+        a = run.actor()
+        run.step(a, 'input', [key('j')], F('menu'))
+        run.finish(settled=dict(ok=False, reason='spend-limit'))
+        return directory
+    spend_metrics = metrics_of(run_and_evaluate(tmp_path / 's', spend_before_clock))
+    assert spend_metrics['survival.game_hours'].missing == 'no_clock_reading'
+    assert spend_metrics['run.infrastructure_loss'].value == 0
+    assert spend_metrics['run.provider_loss'].value == 0
+    assert spend_metrics['run.infrastructure_loss'].missing is None
+
     def censored(directory):
         run = Run(directory)
         a = run.actor()
