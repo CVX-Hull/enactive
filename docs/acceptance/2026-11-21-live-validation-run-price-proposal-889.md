@@ -37,7 +37,7 @@ which the owner sets and the code cannot read. Nothing here is approved, no game
 launched, `.runtime/user/` was not touched, and **$0** was spent preparing this
 proposal.
 
-[First paid live run (#859)](2026-11-21-live-curator-run-859.md) · [Joanna Campground run (#803)](2026-11-19-joanna-campground-memory-803.md) · [Curator scoring (#618)](2026-11-13-curator-scoring.md) · [Price proposal (#836)](2026-11-20-live-curator-run-price-proposal-836.md) · [Price corrections (#836)](2026-11-20-live-curator-run-price-correction-836.md) · [Owner decision](../decisions/owner-decisions.md#post-838-validation-cut-failover-and-seven-day-sequence)
+[First paid live run (#859)](2026-11-21-live-curator-run-859.md) · [Joanna Campground run (#803)](2026-11-19-joanna-campground-memory-803.md) · [Curator scoring (#618)](2026-11-13-curator-scoring.md) · [Price proposal (#836)](2026-11-20-live-curator-run-price-proposal-836.md) · [Price corrections (#836)](2026-11-20-live-curator-run-price-correction-836.md) · [Owner decision](../decisions/owner-decisions-archive.md#post-838-validation-cut-failover-and-seven-day-sequence)
 
 ## Why `#889` needs a larger work budget than `#859` — and what budget cannot guarantee
 

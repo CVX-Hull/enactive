@@ -924,6 +924,30 @@ def test_survival_is_missing_without_a_clock_or_an_in_play_reading(tmp_path):
     row = metrics_of(run_and_evaluate(tmp_path, build))['survival.game_hours']
     assert row.value is None and row.missing == 'no_clock_reading'
 
+    def failed_before_clock(directory):
+        run = Run(directory)
+        a = run.actor()
+        run.step(a, 'input', [key('j')], F('menu'))
+        run.finish(settled=dict(ok=False, reason='provider-error'))
+        return directory
+    failed_metrics = metrics_of(run_and_evaluate(tmp_path / 'f', failed_before_clock))
+    assert failed_metrics['survival.game_hours'].missing == 'no_clock_reading'
+    assert failed_metrics['run.infrastructure_loss'].value == 1
+    assert failed_metrics['run.provider_loss'].value == 1
+    assert failed_metrics['run.infrastructure_loss'].missing is None
+
+    def spend_before_clock(directory):
+        run = Run(directory)
+        a = run.actor()
+        run.step(a, 'input', [key('j')], F('menu'))
+        run.finish(settled=dict(ok=False, reason='spend-limit'))
+        return directory
+    spend_metrics = metrics_of(run_and_evaluate(tmp_path / 's', spend_before_clock))
+    assert spend_metrics['survival.game_hours'].missing == 'no_clock_reading'
+    assert spend_metrics['run.infrastructure_loss'].value == 0
+    assert spend_metrics['run.provider_loss'].value == 0
+    assert spend_metrics['run.infrastructure_loss'].missing is None
+
     def censored(directory):
         run = Run(directory)
         a = run.actor()
@@ -1398,7 +1422,16 @@ def ended_run(directory: Path, *, finish: list[dict] = (), controls: list[dict] 
     ('budget', dict(controls=[dict(control_id='c' * 32, control_type='orderly_stop')],
         finish=[dict(disposition='external_stop_complete', control_id='c' * 32)]), 'budget'),
     ('handoff', dict(settled=dict(ok=True, reason='handoff')), 'budget'),
+    ('spend-limit', dict(settled=dict(ok=False, reason='spend-limit')), 'budget'),
+    ('spend-reserve-timeout', dict(settled=dict(ok=False, reason='spend-reserve-timeout')), 'budget'),
+    ('cost-unreported', dict(settled=dict(ok=False, reason='cost-unreported')), 'infrastructure'),
     ('infra', dict(settled=dict(ok=False, reason='provider-error')), 'infrastructure'),
+    ('spend-limit-died', dict(dead=True, settled=dict(ok=False, reason='spend-limit')), 'died'),
+    ('spend-limit-pause', dict(settled=dict(ok=False, reason='spend-limit'),
+        files={'watch-terminal.json': dict(schema='campaign-watch-terminal/4', reason='operator_pause',
+            pause_reason='spend')}), 'owner_pause'),
+    ('spend-reserve-timeout-custody', dict(status='unknown', receipt='unknown',
+        settled=dict(ok=False, reason='spend-reserve-timeout')), 'custody'),
     ('custody', dict(status='unknown', receipt='unknown'), 'custody'),
     ('pause', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/4', reason='operator_pause',
         pause_reason='spend')}), 'owner_pause'),

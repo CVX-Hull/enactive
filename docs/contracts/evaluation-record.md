@@ -398,16 +398,19 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   - `tools.calls` per tool, plus `player_source+zoom`;
   - `memory.records` per kind;
   - `handoff.*` as one summary row plus one row per handoff.
-- **Run-loss metrics.** `run.infrastructure_loss` covers infrastructure or custody loss;
-  `run.provider_loss` covers provider-error loss only.
+- **Run-loss metrics.** `run.infrastructure_loss` covers `infrastructure` or `custody`
+  loss; `run.provider_loss` covers every run classified as `infrastructure`.
 - **Censor reasons.** The first matching reason applies, in this order:
   1. `died`;
   2. `owner_pause` (the watch terminal record's `reason` is `operator_pause`, with
      `pause_reason` when recorded);
   3. `custody`;
-  4. `infrastructure` (the last actor settled not ok);
+  4. Unsuccessful host settlement (`settled.ok == false`): `budget` when the settlement
+     reason is `spend-limit` or `spend-reserve-timeout`
+     ([owner decision](../decisions/owner-decisions.md#spend-stop-censor-reason-budget-958)),
+     otherwise `infrastructure` (such as provider errors or `cost-unreported`);
   5. `player_stop`;
-  6. `budget`.
+  6. `budget` (accepted orderly stops or an uncontinued handoff).
 - **Episodes.**
   - A new episode starts when game time moves back by more than one day, or identity
     changes, and the next reading confirms it.

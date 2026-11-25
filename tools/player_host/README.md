@@ -94,9 +94,14 @@ ID, shared by every actor of the session and recorded as
 `x-session-id` on every OpenRouter request (on a direct `api.openai.com` route Pi
 would also send it as `prompt_cache_key`; none is configured); Pi enables that header for an OpenRouter
 route by itself, so no compat key is needed, and the host fails closed
-(`session-affinity-missing`) if a request would go out without it. Whether OpenRouter
-honours sticky routing with a pinned `provider.order` is unmeasured; the paid
-verification decides. The entire latest assistant tool-call batch is protected,
+(`session-affinity-missing`) if a request would go out without it. In the
+[#309 routing probe](../../docs/acceptance/2026-11-22-failover-routing-probe-309.md) and
+[#896 seven-day campaign](../../docs/acceptance/2026-11-22-seven-day-campaign-896.md),
+requests with `provider.order` sustained high prompt-cache reuse (97.4% on Azure in the
+probe; 92.27% overall and 93.57% on deciding-player turns across 4,100 primary-served
+responses in `#896-b`), though neither isolated `x-session-id` stickiness or `order`
+precedence from OpenRouter's default routing or observed a live primary-to-secondary
+failover. The entire latest assistant tool-call batch is protected,
 including when its final result contains only text. If that group alone exceeds
 the allowance, the host stops before another provider request or request charge.
 Historical omitted image parts become explicit text markers with original message/

@@ -116,7 +116,7 @@ However, on `#896-b v91`, `bm25_1hop_porter2` regressed **Article MRR@5** from
 `0.917` to `0.908` (`-0.009`), caused by query `Q13` (`safe indoor heat source to
 purify drinking supply without smoke`) dropping its gold article from rank `2` to
 rank `3`. Under the owner's zero-regression gate
-([`#pin-snowballstemmer-for-player-knowledge`](../decisions/owner-decisions.md#pin-snowballstemmer-for-player-knowledge)),
+([`#pin-snowballstemmer-for-player-knowledge`](../decisions/owner-decisions-archive.md#pin-snowballstemmer-for-player-knowledge)),
 the verdict is **NO-GO**: `snowballstemmer` is **not** pinned in `requirements.in`
 or `requirements-dev.lock`, the temporary environment was deleted, and `#950`
 retains `_fold`.

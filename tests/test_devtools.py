@@ -104,6 +104,43 @@ class DevToolTests(unittest.TestCase):
             self.assert_broken(self.lint_imports(), f"harness.viewer is not allowed to import {module}")
             self.write("viewer/__init__.py", "")
 
+    def test_trace_cannot_acquire_custody_player_evaluation_curator_or_network(self):
+        for module in ("harness.computer", "harness.application", "harness.server", "harness.player",
+                       "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.evaluation",
+                       "harness.viewer", "harness.curator", "harness.__main__", "tools", "http", "urllib", "socket",
+                       "subprocess"):
+            self.write("trace/__init__.py", f"import {module}\n")
+            self.assert_broken(self.lint_imports(), f"harness.trace is not allowed to import {module}")
+            self.write("trace/__init__.py", "")
+
+    def test_curator_cannot_acquire_custody_player_or_evaluation(self):
+        for module in ("harness.computer", "harness.application", "harness.server", "harness.player",
+                       "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.evaluation",
+                       "harness.viewer", "harness.__main__", "tools"):
+            self.write("curator/__init__.py", f"import {module}\n")
+            self.assert_broken(self.lint_imports(), f"harness.curator is not allowed to import {module}")
+            self.write("curator/__init__.py", "")
+
+    def test_player_computer_evaluation_and_viewer_cannot_reach_curator(self):
+        defaults = {
+            "application": "from .computer import runtime\nfrom .player import memory\n",
+            "server": "import http.server\nfrom .computer import protocol\n",
+        }
+        for source, expected in (
+            ("player/memory", "harness.player"),
+            ("player_client", "harness.player_client"),
+            ("player_tools", "harness.player_tools"),
+            ("player_mcp", "harness.player_mcp"),
+            ("computer/runtime", "harness.computer"),
+            ("application", "harness.application"),
+            ("server", "harness.server"),
+            ("evaluation/core/__init__", "harness.evaluation"),
+            ("viewer/__init__", "harness.viewer"),
+        ):
+            self.write(source + ".py", "import harness.curator\n")
+            self.assert_broken(self.lint_imports(), f"{expected} is not allowed to import harness.curator")
+            self.write(source + ".py", defaults.get(source, ""))
+
     def test_server_cannot_depend_on_cli_or_tooling(self):
         for module in ("harness.__main__", "tools"):
             self.write("server.py", f"import {module}\n")
