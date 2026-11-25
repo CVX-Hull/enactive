@@ -170,6 +170,8 @@ def test_best_effort_fallback_cuts_largest_strictly_reducing_prefix_when_tail_ex
     state = replay.Hysteresis()
     assert check(state, policy, high, [still_over_low, still_over_low, smaller], best_effort=True) == ('cut', 3)
     assert not state.armed
-    # Without strict token reduction, best-effort still holds back as insufficient-cover.
+    # Without strict token reduction at k == eligible (even if an earlier prefix shrunk), best-effort holds back.
     state2 = replay.Hysteresis()
-    assert check(state2, policy, high, [non_shrinking, non_shrinking], best_effort=True) == ('insufficient-cover', 0)
+    assert check(state2, policy, high, [smaller, non_shrinking], best_effort=True) == ('insufficient-cover', 0)
+    state3 = replay.Hysteresis()
+    assert check(state3, policy, high, [non_shrinking, non_shrinking], best_effort=True) == ('insufficient-cover', 0)

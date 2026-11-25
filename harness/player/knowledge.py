@@ -138,7 +138,7 @@ def _position(value: object) -> bool:
     return (isinstance(value, dict) and set(value) == POSITION_FIELDS
             and _matches(ALIAS, value['session']) and _nonblank(value['actor']) and _safe_nonneg_int(value['step'])
             and isinstance(value['order'], list) and len(value['order']) == 3
-            and _safe_nonneg_int(value['order'][0]) and isinstance(value['order'][1], str)
+            and _safe_nonneg_int(value['order'][0]) and _valid_utf8(value['order'][1])
             and _safe_nonneg_int(value['order'][2]))
 
 

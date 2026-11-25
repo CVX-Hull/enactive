@@ -154,8 +154,9 @@ def _resolution(resolution, identity, resolved_from, records, version):
         return one and resolved_from is None and records[0]['id'] == identity
     if resolution == 'revision':
         revision = revision_parts(identity)
-        return (article and resolved_from == identity and revision is not None
-                and revision[0] == records[0]['id'] and revision[1] <= version)
+        current = revision_parts(records[0]['revision']) if article else None
+        return (article and resolved_from == identity and revision is not None and current is not None
+                and revision[0] == records[0]['id'] and revision[1] <= current[1] <= version)
     if resolution in ('restated', 'narrowed', 'corrected'):
         return bool(records) and all('body' not in r for r in records) and resolved_from == identity
     if resolution in ('ended', 'retracted'):

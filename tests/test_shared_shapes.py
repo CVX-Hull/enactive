@@ -64,6 +64,7 @@ EXPECTED_INVALID_FIXTURES = {
     'extra-fact-field-type.json',
     'extra-top-level-key.json',
     'fractional-step.json',
+    'lone-surrogate-order.json',
     'history-ended-revision-id.json',
     'history-overlap-ended-retracted.json',
     'history-replaced-target-outside-public.json',
@@ -240,13 +241,22 @@ def _is_valid_delivered_3(doc: object) -> bool:
                 or (cov['last_step'] is not None and not _safe_nonneg_int(cov['last_step']))):
             return False
 
+    def valid_utf8(s: object) -> bool:
+        if not isinstance(s, str):
+            return False
+        try:
+            s.encode('utf-8')
+            return True
+        except UnicodeEncodeError:
+            return False
+
     def valid_pos(p: object) -> bool:
         return (
             isinstance(p, dict) and set(p) == {'session', 'actor', 'step', 'order'}
             and isinstance(p['session'], str) and bool(_ALIAS_RE.match(p['session']))
             and _nonblank(p['actor']) and _safe_nonneg_int(p['step'])
             and isinstance(p['order'], list) and len(p['order']) == 3
-            and _safe_nonneg_int(p['order'][0]) and isinstance(p['order'][1], str) and _safe_nonneg_int(p['order'][2])
+            and _safe_nonneg_int(p['order'][0]) and valid_utf8(p['order'][1]) and _safe_nonneg_int(p['order'][2])
         )
 
     def valid_scope(s: object) -> bool:

@@ -413,7 +413,7 @@ class Hysteresis:
                     if (projected.tokens - projected.briefing_tokens <= policy.low
                             and projected.images <= policy.max_images - policy.block):
                         return self.cut('cut', k, projected.omissions(policy))
-                    if best_effort and projected.tokens < uncut.tokens:
+                    if best_effort and k == eligible and projected.tokens < uncut.tokens:
                         fallback = (k, projected)
             if fallback is not None:
                 k, projected = fallback
@@ -457,6 +457,7 @@ class Turn:
     eviction_deltas: tuple[int, ...]
     request_tokens: int
     notice_tokens: int
+    intents: tuple[str, ...] = ()
 
     @property
     def images(self) -> int:
@@ -473,7 +474,8 @@ def omission_chars(part: dict) -> int:
                  f'{reread}')
 
 
-def latest_turn(parts: list[dict], operations: dict, call_chars: dict, text_chars: dict, tail_tokens: int = 0) -> Turn:
+def latest_turn(parts: list[dict], operations: dict, call_chars: dict, text_chars: dict, tail_tokens: int = 0,
+                intents: dict | None = None) -> Turn:
     end = next(i for i in range(len(parts) - 1, -1, -1) if parts[i]['role'] == 'assistant') + 1
     start = end - 1
     while start > 0 and parts[start - 1]['role'] == 'assistant':
@@ -482,6 +484,9 @@ def latest_turn(parts: list[dict], operations: dict, call_chars: dict, text_char
                    if p.get('tool_call_id') in operations)
     trailing = parts[end:]
     images = [p for p in trailing if p['kind'] == 'image']
+    turn_intents = tuple(intents[p['tool_call_id']] for p in trailing
+                         if intents and p['role'] == 'tool' and p['kind'] != 'image'
+                         and p.get('tool_call_id') in intents)
     # Use original call arguments rather than the renderer's tool-call wrapper.
     # Remaining digest-only text is approximated by its UTF-8 length.
     assistant = tokens(sum(call_chars.get(p.get('tool_call_id'), p['bytes']) for p in parts[start:end]))
@@ -506,7 +511,7 @@ def latest_turn(parts: list[dict], operations: dict, call_chars: dict, text_char
                 if p['role'] == 'user' and p['kind'] == 'text'
                 and not (i + 1 < len(trailing) and trailing[i + 1]['kind'] == 'image'))
     return Turn(op_ids, tuple(p['source_id'] for p in images if 'source_id' in p),
-                tuple(deltas), assistant + result_tokens, max(0, notes - tail_tokens))
+                tuple(deltas), assistant + result_tokens, max(0, notes - tail_tokens), turn_intents)
 
 
 def eviction_delta(deltas: list[int], protected: int, policy: CutPolicy) -> int:
@@ -514,7 +519,26 @@ def eviction_delta(deltas: list[int], protected: int, policy: CutPolicy) -> int:
     return sum(deltas[:omitted])
 
 
-def cut_marker(removed: int, frontier: str, version: str, sources: dict[str, None]) -> str:
+def _record_intent(recent: dict[str, None], intent: str) -> None:
+    recent.pop(intent, None)
+    recent[intent] = None
+    if len(recent) > 5:
+        recent.pop(next(iter(recent)))
+
+
+def _valid_intent(intent: object) -> bool:
+    if not isinstance(intent, str) or len(intent) > 512:
+        return False
+    try:
+        intent.encode('utf-8')
+    except UnicodeEncodeError:
+        return False
+    return (any(ch == '\ufeff' or not (ch.isspace() or '\x1c' <= ch <= '\x1f' or ch == '\x85') for ch in intent)
+            and not any(ch in '\r\n\v\f\x1c\x1d\x1e\x85\u2028\u2029' for ch in intent))
+
+
+def cut_marker(removed: int, frontier: str, version: str, sources: dict[str, None],
+               recent_intents: dict[str, None] | None = None) -> str:
     # This lineage uses numbered source IDs. As in the host, non-numbered IDs
     # pass through, and ranges preserve their digit width.
     def numbered(rid: str) -> tuple[str, str]:
@@ -541,6 +565,7 @@ def cut_marker(removed: int, frontier: str, version: str, sources: dict[str, Non
         data['source_id_prefix'] = prefix
         compacted = [rid[len(prefix):] for rid in compacted]
     data['source_ids'] = compacted
+    data['recent_intents'] = [clip(intent, 160) for intent in (recent_intents or ())]
     return ('BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false\n'
             f'{canonical(data)}\nEND CONTEXT CUT\n'
             'To inspect any omitted frame again, read its source_id (combining any source_id_prefix '
@@ -549,16 +574,20 @@ def cut_marker(removed: int, frontier: str, version: str, sources: dict[str, Non
 
 def cut_candidates(turns: list[Turn], eligible: int, policy: CutPolicy, *, fixed_tokens: int,
                    fresh_tokens: int, protected: int, removed: int, frontier: str,
-                   version: str, source_ids: dict[str, None]) -> Iterator[Projection]:
+                   version: str, source_ids: dict[str, None],
+                   recent_intents: dict[str, None] | None = None) -> Iterator[Projection]:
     deltas = [n for turn in turns for n in turn.eviction_deltas]
     dropped_images = 0
     remaining = sum(turn.request_tokens + turn.notice_tokens for turn in turns)
     sources = dict(source_ids)
+    intents = dict(recent_intents or {})
     for k, turn in enumerate(turns[:eligible], 1):
         dropped_images += turn.images
         remaining -= turn.request_tokens + turn.notice_tokens
         sources.update(dict.fromkeys(turn.image_sources))
-        marker = cut_marker(removed + k, frontier, version, sources)
+        for intent in turn.intents:
+            _record_intent(intents, intent)
+        marker = cut_marker(removed + k, frontier, version, sources, intents)
         total = (fixed_tokens + fresh_tokens + tokens(chars(marker)) + remaining + turn.notice_tokens
                  + eviction_delta(deltas[dropped_images:], protected, policy))
         yield Projection(total, fresh_tokens, len(deltas) - dropped_images, protected)
@@ -572,6 +601,7 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
                        start['context_image_block'], start['context_window'] - start['max_output_tokens'])
     cuts, estimates, images, manifests = {}, {}, {}, {}
     operations, call_chars, text_chars, tail, updates = {}, {}, {}, {}, {}
+    started_intents, committed_intents = {}, {}
     for e in events:
         typ = e['type']
         rid = e.get('request_id')
@@ -585,12 +615,19 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
             manifests[rid] = e
         elif typ == 'tool-start':
             call_chars[e['tool_call_id']] = chars(e['tool']) + chars(canonical(e['arguments']))
+            intent = e['arguments'].get('intent') if isinstance(e.get('arguments'), dict) else None
+            if e.get('tool') != 'player_finish' and _valid_intent(intent):
+                started_intents[e['tool_call_id']] = intent
         elif typ == 'tool-result':
             result = e['result']
             for part in result.get('content', []):
                 if part['type'] == 'text':
                     text_chars[digest(part['text'])] = chars(part['text'])
             record = result.get('structuredContent')
+            if (result.get('isError') is not True
+                    and not (isinstance(record, dict) and record.get('status') in ('refused', 'rejected'))
+                    and e['tool_call_id'] in started_intents):
+                committed_intents[e['tool_call_id']] = started_intents[e['tool_call_id']]
             if (e['tool'] in ('computer_input', 'computer_observe', 'player_handoff')
                     and isinstance(record, dict) and 'operation_id' in record):
                 operations[e['tool_call_id']] = record['operation_id']
@@ -606,6 +643,7 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
     turns = []
     parts = []
     dropped_sources = {}
+    dropped_intents = {}
     frontier = None
     restored = False
     archived_removed = projected_removed = 0
@@ -633,7 +671,7 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
             parts = parts[:manifest['reused_prefix_parts']] + manifest['parts']
             warning = tokens(parts[-1]['bytes']) if rid in tail else 0
             if counts['checks']:
-                turns.append(latest_turn(parts, operations, call_chars, text_chars, warning))
+                turns.append(latest_turn(parts, operations, call_chars, text_chars, warning, committed_intents))
         else:
             counts['estimates_without_manifest'] += 1
         counts['checks'] += 1
@@ -693,7 +731,7 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
                 yield from cut_candidates(current, eligible, policy, fixed_tokens=fixed_tokens + warning,
                                           fresh_tokens=fresh_prefixes[version], protected=protected,
                                           removed=projected_removed, frontier=frontier, version=version,
-                                          source_ids=dropped_sources)
+                                          source_ids=dropped_sources, recent_intents=dropped_intents)
 
         outcome, count = state.check(policy, uncut, eligible, candidates, frontier, version=version, restored=restored,
                                      orderly_stop=logged['monotonic_ms'] >= control_at, best_effort=best_effort)
@@ -715,7 +753,10 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
             projected_removed += count
             for turn in current[:count]:
                 dropped_sources.update(dict.fromkeys(turn.image_sources))
-            active_cut_marker_tokens = tokens(chars(cut_marker(projected_removed, frontier, version, dropped_sources)))
+                for intent in turn.intents:
+                    _record_intent(dropped_intents, intent)
+            active_cut_marker_tokens = tokens(chars(cut_marker(projected_removed, frontier, version, dropped_sources,
+                                                               dropped_intents)))
             proposed_prefix = fresh_prefixes[version]
         if outcome == 'stop':
             stop_details.append(dict(request=rid, version=version, tokens=estimated, hard_limit=policy.hard_limit,

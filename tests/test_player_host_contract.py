@@ -455,6 +455,8 @@ def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow
     """A run with a $0.01 limit and responses reporting $0.004 each: the third takes the total to $0.012, so the
     fourth request is never sent. The driver's reading of the trace and the receipt's record agree with it."""
     hosted = host_factory([tool_response("integer", dict(value=7)) for _ in range(4)], enabled_tools=("integer",), spend_limit_usd="0.01")
+    hosted.route["unpriced_request_usd"] = "0.001"
+    hosted.paths["route.json"].write_text(json.dumps(hosted.route))
     assert hosted.start().wait() != 0
     settled = hosted.settled()
     assert (settled["ok"], settled["reason"], settled["requests"]) == (False, "spend-limit", 3)
@@ -468,7 +470,7 @@ def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow
     assert (actor["observed_attempts"], actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"],
             actor["spend_complete"]) == (3, "0.012", 0, "0.012", True)
     receipt = campaign_run.accounting(dict(spend_limit_usd="0.01"), hosted.route, actor, True)
-    assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.25", unpriced_recall_requests=0,unpriced_recall_request_usd="0.25",
+    assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.001", unpriced_recall_requests=0,unpriced_recall_request_usd="0.25",
                            spent_usd="0.012", observed_attempts=3, observed_recall_attempts=0, spend_complete=True)
     # The overshoot is less than one response: the limit was not yet reached when the third request was sent.
     assert Decimal(receipt["spent_usd"]) - Decimal(receipt["spend_limit_usd"]) < Decimal("0.004")
@@ -633,7 +635,7 @@ def test_spend_notice_crosses_the_work_budget_threshold_and_keeps_prior_messages
     payloads = [json.loads(request["body"])["messages"] for request in hosted.provider.requests]
     assert all(after[:len(before)] == before for before, after in zip(payloads, payloads[1:]))
     first = payloads[2][-1]["content"][0]["text"]
-    assert "$0.30" in first and "ending reserve" in first and "Wrap up with player_finish" in first
+    assert "about $0.3 of work budget remains" in first and "ending reserve" in first and "Wrap up with player_finish" in first
 
 
 def test_sigterm_cancels_closes_the_mcp_child_and_leaves_no_process_group(adapter, host_factory):

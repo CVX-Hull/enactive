@@ -568,8 +568,8 @@ test('strict-fit rescue cuts a covered turn below min_free and independent of hi
     return n === 3 ? reply() : observe(n, 1, n === 2 ? 98_000 : 16);
   }, {maxImages:12, contextCut:{low_mark:95_000, high_mark:99_900, min_free:10}});
   const [cut] = cutEvents(events);
-  assert.deepEqual([cut.request_id, cut.outcome, cut.triggers, cut.removed_turns],
-    ['request-3', 'cut', [], 1]);
+  assert.deepEqual([cut.request_id, cut.outcome, cut.cut_result, cut.triggers, cut.removed_turns],
+    ['request-3', 'cut', 'rescue', [], 1]);
   assert.ok(cut.tokens_before + model.maxTokens >= model.contextWindow);
   assert.ok(cut.tokens_after + model.maxTokens < model.contextWindow && cut.tokens_after < cut.tokens_before);
   assert.ok(markerText(payloads[2]));
@@ -580,8 +580,8 @@ test('best effort cuts the largest fit prefix when no prefix reaches the low mar
     if (n === 4) await publish(publication(3));
     return n === 5 ? reply() : observe(n, 1, n >= 3 ? 8000 : 16);
   }, {maxImages:12, contextCut:{low_mark:1, high_mark:7000, min_free:2}});
-  assert.deepEqual(cutEvents(events).map(event => [event.outcome, event.removed_turns, event.covered_through_operation_id]),
-    [['held-back', undefined, null], ['cut', 3, operationId(3)]]);
+  assert.deepEqual(cutEvents(events).map(event => [event.outcome, event.cut_result, event.removed_turns, event.covered_through_operation_id]),
+    [['held-back', undefined, undefined, null], ['cut', 'best_effort', 3, operationId(3)]]);
   const cut = cutEvents(events).at(-1);
   assert.ok(cut.tokens_after - cut.briefing_tokens > 1);
   assert.ok(cut.tokens_after < cut.tokens_before);

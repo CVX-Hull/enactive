@@ -43,7 +43,7 @@ const validCoverage = value => value === null || (exactly(value, ['schema','sess
 const validPosition = value => exactly(value, ['session','actor','step','order'])
   && matches(ALIAS, value.session) && nonblank(value.actor) && safeNatural(value.step)
   && Array.isArray(value.order) && value.order.length === 3
-  && safeNatural(value.order[0]) && typeof value.order[1] === 'string' && safeNatural(value.order[2]);
+  && safeNatural(value.order[0]) && typeof value.order[1] === 'string' && value.order[1].isWellFormed() && safeNatural(value.order[2]);
 // `world` is only ever `null` in a delivered scope and `lineage` is reserved: the export never writes either label.
 const validScope = value => record(value) && Object.hasOwn(value, 'game') && Object.keys(value).length >= 1
   && Object.keys(value).length <= 8 && Object.entries(value).every(([axis, label]) => AXIS.test(axis)

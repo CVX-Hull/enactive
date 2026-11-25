@@ -74,7 +74,9 @@ def test_export_freezes_full_and_draw_privately_and_knowledge_misses_withheld_na
     for name in (absent['id'],absent['title']):
         assert reader.read(name)['records']==[]
     assert reader.read('missing')['grants_authority'] is False
-    assert all(a['id']!=absent['id'] for a in reader.query('Subject')['records'])
+    queried = reader.query('Subject')
+    assert 'records' not in queried
+    assert all(a['id'] != absent['id'] for a in queried['hits'])
 
 
 def test_empty_is_the_same_required_file_shape_and_old_formats_are_refused(tmp_path,capsys):

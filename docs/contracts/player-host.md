@@ -282,8 +282,9 @@ in deterministic tiers (articles by `last_confirmed.order` descending, then non-
 standalone facts, then `instance_state` standalone facts, breaking ties by ascending
 delivered order; `unlisted_entries` counts rows omitted on overflow), spending any
 remaining budget on first-sentence `index` snippets in the same order. The second holds
-a JSON object with `kind`, then `first_message` (briefing) or `recent_calls` and
-`already_in_context` (reminder), followed by the latest screen for a reminder. Recalls of
+a JSON object with `kind`, `already_in_context` (`[]` for `briefing`), and
+`first_message` (`briefing`) or `recent_calls` (`reminder`), followed by the latest screen
+for a reminder. Recalls of
 one version, across actors and reminders, therefore share a byte-identical message-1
 prefix that ends at a message boundary, which the provider can reuse from its cache. A route that requests
 strict structured output requires the pinned upstream to support the selection schema. Its
@@ -325,10 +326,10 @@ unless that is the empty file; the file's SHA-256 is the entry's; the file is
 `repository_id` and `coverage` are the entry's. It tries unread entries newest first
 and stages every candidate that verifies, deciding each on its own, so one malformed
 or oversized entry never hides an older valid one. When the next request is built,
-the host adopts the newest staged candidate whose message fits within context
-capacity and refuses the rest (`context-capacity` for oversized newer ones,
-`superseded` for older ones); if a same-boundary context cut is possible, an
-oversized candidate stays staged and is decided again after the cut frees room.
+the host evaluates staged candidates newest first jointly with context-cut planning
+(as specified below), adopting the newest candidate that fits within context capacity
+and refusing the rest (`context-capacity` for oversized newer ones, `superseded` for
+older ones).
 An entry that fails, an older one and one passed over
 for a newer are each recorded as refused with a reason when the next request is
 built (or when the actor ends), and the adopted version stays.
@@ -407,7 +408,8 @@ back to a `context-capacity` stop. Image block eviction still applies after each
 
 The cut preserves the system prompt and tools. It replaces the first user
 message with the frozen mission prompt and a fallible briefing from the adopted
-version and no recall request. Its size does not grow with the store: its JSON
+version and no recall request, filling `leads` from tiered articles and `index`
+from standalone facts. Its size does not grow with the store: its JSON
 payload is at most 24,000 characters, using the same tiered order, tie-break comparator
 (descending recency, breaking ties by ascending delivered order), 64-article / 24-fact
 caps, 1,000-character snippet clipping, skip-if-oversized rule and `unlisted_entries`
@@ -424,30 +426,33 @@ contiguous same-prefix numeric runs losslessly compacted as `start..end` and a
 shared prefix factored into `source_id_prefix` when all entries share one stem.
 The marker directs the player to `player_source` for those frames. Both
 messages stay fixed until the next cut. Knowledge notices at or after the cut
-boundary stay with the surviving turns; prior `tail-notice` messages and the
-`context-capacity` step tracker are reset on a cut, the token estimate disregards pre-cut
-provider usage, and capacity/time/spend warnings are re-evaluated against the new
-request.
+boundary stay with the surviving turns; `tail-notice` messages before the cut boundary
+and all `context-capacity` notice lines and step tracking reset on a cut (while
+`host-timeout` and `spend-limit` step trackers and any such notices at or after the
+cut boundary stay intact), the token estimate disregards pre-cut provider usage, and
+capacity/time/spend warnings are re-evaluated against the new request.
 [Cut telemetry](player-host-telemetry.md#context-cut) records the decision.
 
 ```mermaid
 flowchart TB
   accTitle: What the player host does on each request
-  accDescr: Between requests the host applies coverage and restore lines and adopts the newest staged knowledge version that fits (deferring an oversized update across a same-boundary cut). It considers a cut only when cuts are enabled and no orderly stop is accepted. A triggered cut is applied when enough covered complete turns can be removed and no restore was seen. Otherwise it is held back and the history stays. Deferred updates are then re-checked and finished reminders are placed against the adopted version. Image-block eviction, capacity stop, tail notices and the dollar limit follow before the model call. Settlement stops are handoff, player finish, the dollar limit and an unreported cost. Pause, uncertain input and the driver's deadlines are independent of this loop.
-  R["Request boundary<br/>Apply coverage and restore lines<br/>Adopt newest staged version that fits<br/>(defer oversized if cut is possible)"] --> Q{"Cuts enabled, and<br/>no orderly stop accepted?"}
+  accDescr: Between requests the host applies coverage and restore lines and plans staged knowledge updates newest-first jointly with context-cut planning, committing version, cut, reminder placement, image-block eviction and tail notices atomically. Cuts are evaluated only when enabled, no restore was seen and no orderly stop is accepted: a triggered cut picks the smallest eligible prefix meeting low_mark and the image target, falls back to best-effort k = E when that fits and reduces tokens, and independently rescues hard-capacity overflow with the smallest strict-fit prefix before holding back or stopping. Before the HTTP call, spend admission checks the limit, in-flight recall bound, ending reserve and unpriced bound, emitting spend-reserve-reached and waiting up to 2 s for orderly_stop when ordinary work can no longer be admitted while spent is below spend_limit_usd. Settlement stops are handoff, player finish, spend-limit, spend-reserve-timeout and cost-unreported. Pause, uncertain input and the driver's deadlines are independent of this loop.
+  R["Request boundary<br/>Apply coverage and restore lines<br/>Plan staged updates newest-first jointly with cuts"] --> Q{"Cuts enabled, no restore seen,<br/>and no orderly stop accepted?"}
   Q -->|"No"| V
-  Q -->|"Yes"| T{"Cut trigger?<br/>Tokens above briefing exceed high_mark,<br/>or image eviction would omit a new block"}
+  Q -->|"Yes"| T{"Cut trigger armed, or<br/>uncut request fails hard fit?"}
   T -->|"No"| V
-  T -->|"Yes"| L{"Eligible?<br/>No restore seen, and the cut plan removes<br/>at least min_free eligible turns"}
-  L -->|"No"| H["Held back<br/>History unchanged, reason recorded"]
-  L -->|"Yes"| K["Cut toward low_mark and the image peak<br/>Fresh briefing, cut marker, surviving turns"]
+  T -->|"Yes"| L{"Eligible covered prefix<br/>meets targets, best-effort k = E,<br/>or strict-fit rescue?"}
+  L -->|"No (when armed)"| H["Held back (edge-reported)<br/>History unchanged, reason recorded"]
+  L -->|"Yes"| K["Cut applied (target, best_effort, or rescue)<br/>Fresh briefing, cut marker, surviving turns"]
   H --> V
-  K --> V["Image-block eviction<br/>when images still exceed the peak"]
-  V --> P{"Estimate leaves room<br/>for the reply?"}
+  K --> V["Image-block eviction, reminders &amp; tail notices<br/>(context-capacity, host-timeout, spend-limit)"]
+  V --> P{"Projected estimate leaves room<br/>for the reply?"}
   P -->|"No"| X["Host stops<br/>No further model call"]
-  P -->|"Yes"| N["Tail notices<br/>near context capacity or the host deadline"]
-  N --> D{"Counted cost plus in-flight recall<br/>reserve strictly below spend_limit_usd?"}
-  D -->|"No: spend-limit"| X
+  P -->|"Yes"| D{"Spend admitted?<br/>Ordinary: spent + recall + reserve + bound &lt; limit<br/>With control_id: spent &lt; limit"}
+  D -->|"No: spend >= limit"| X
+  D -->|"Reserve reached: wait &lt;= 2 s for orderly_stop"| S{"orderly_stop<br/>received?"}
+  S -->|"Yes: release finish_reserve"| R
+  S -->|"No: spend-reserve-timeout"| X
   D -->|"Yes"| M["Model call"]
   M -->|"Success without a usable cost:<br/>cost-unreported"| X
   M -->|"Priced reply"| C["Sequential tool calls"]

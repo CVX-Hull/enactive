@@ -123,7 +123,8 @@ refresh your briefing and index, and insert a `BEGIN CONTEXT CUT` marker listing
 removed frames' source IDs and recent intents. Use `player_source` to re-read any
 needed trimmed or pixel-omitted frame, or check the current screen and knowledge tools.
 
-Host notices appear at the end of context and stay until a context cut. Follow the
+Host notices appear at the end of context; context-capacity notices reset on a
+context cut, while time and spend notices stay with surviving turns. Follow the
 newest notice about context capacity, host time or spend budget, and wrap up with
 `player_finish` when spend runs low.
 

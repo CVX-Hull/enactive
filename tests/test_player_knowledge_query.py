@@ -583,6 +583,11 @@ def test_terms_fold_case_punctuation_and_one_regular_inflection_alike_for_query_
 # Callers: the tool schema, the application and the player view.
 
 def test_the_read_tool_takes_an_optional_by_and_the_application_passes_it(tmp_path):
+    # `actor_result` rejects a revision read newer than the returned article's own revision.
+    newer_rev = dict(Knowledge(FULL).read('article-camp@v1'), version='v3', identity='article-camp@v2',
+                     resolved_from='article-camp@v2')
+    with pytest.raises(UnsupportedResult):
+        actor_result(newer_rev)
     _, schema = tool_specs()['player_knowledge_read']
     assert schema['properties']['by'] == dict(type='string', enum=['any', 'id'])
     assert 'by' not in schema['required'] and 'id_or_title' in schema['required']

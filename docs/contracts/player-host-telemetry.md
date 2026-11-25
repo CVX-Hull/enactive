@@ -13,8 +13,8 @@ This contract covers [player host](player-host.md) JSONL events, accounting and 
 Telemetry records `knowledge-delivery` with `kind` (`briefing`, `reminder` or `update`), explicit `outcome`, full text, article/fact/index IDs, delivered schema/version, recall request and receiving player request. Every `knowledge-delivery` event carries `outcome`:
 
 - `delivered` (`briefing`, `reminder` or `update`): the logical player request carrying that placement reached a settled successful `response-complete` with usable provider-reported cost. Carries `receiving_player_request_id`, full `text`, `article_ids`, `fact_ids`, `index_ids`, `delivered_knowledge_schema`, `version` and `recall_request_id` (plus `previous_version`, `coverage` and `removed_ids` on `kind: "update"`).
-- `undelivered` (`briefing`, `reminder` or `update`): emitted on every other terminal outcome for a logical player request carrying that placement (including pre-header failure, terminal HTTP error, aborted stream, `cost-unreported` or priced non-tool/length terminal failure). Carries the same placement fields for diagnostics without crediting player exposure.
-- `refused` (`update` only): pre-request refusal before placement; carries `version`, `previous_version`, `coverage` and `reason` with no `receiving_player_request_id`, `text` or `fact_ids`. `reason` is one of `invalid-entry` (the line failed both supported schemas, with null `version` and `coverage`), `not-newer`, `superseded` (a newer listed version verified), `repository-mismatch`, `file-unreadable`, `sha256-mismatch`, `invalid-delivered-knowledge`, `entry-mismatch`, `context-capacity`, or `update-check-failed` for an unexpected exception, with `error_name` and null `version` and `coverage`.
+- `undelivered` (`briefing`, `reminder` or `update`): emitted on every other terminal outcome for a logical player request carrying that placement (including pre-header failure, terminal HTTP error, aborted stream, `cost-unreported`, or priced `length`/`deferred` failure). Carries the same placement fields for diagnostics without crediting player exposure.
+- `refused` (`update` only): pre-request refusal before placement; carries `version`, `previous_version`, `coverage` and `reason` with no `receiving_player_request_id`, `text` or `fact_ids`. `reason` is one of `invalid-entry` (the line failed both supported schemas, with null `version` and `coverage`), `not-newer`, `superseded` (a newer listed version verified), `repository-mismatch`, `file-unreadable`, `sha256-mismatch`, `invalid-delivered-knowledge`, `entry-mismatch`, `context-capacity`, or `update-check-failed` for an unexpected exception, with `error_name` (and null `version` and `coverage` outside per-entry request planning, or the entry's `version` and `coverage` during planning).
 
 `knowledge-recall` records selections, silence, failures and opportunities not made (`reason: "all-delivered"` when every row on the sent recall index is already active in context; `reason: "actor-ended"` when aborted because the actor ended). Every `knowledge-recall` for a recall whose attempt received a response (a stop other than an error or abort; status `selected`, `silence` or `failure`) carries `reply_text` and `reply_omitted_bytes`, the reply's text bounded at 8192 bytes on a UTF-8 boundary as the player's `assistant-text` is. An invalid reply has reason `invalid-recall-selection` and `selection_error`, one of `not-json`, `not-one-object`, `wrong-keys`, `repeated-entry`, `unknown-entry`; an unexpected exception has reason `recall-failed` and `error_name`. Each recall attempt has exactly one `response-complete`, emitted before its reply is parsed. `knowledge-undelivered` records text still unsent at actor end (an adopted update's included), any queued reminder whose selected entries no longer exist in a newly adopted version (`reason: "superseded"`), and any reminder whose selected entries are all already active in context at placement (`reason: "already-in-context"`). Recall requests are never player decisions.
 
@@ -48,14 +48,18 @@ A `context-cut` event carries the next `request_id`, the `triggers` in order
 (`high_mark`, `image_peak`), `covered_through_operation_id` (null without
 eligible coverage), the adopted `knowledge_version`, `tokens_before` and
 `images_before`. The request may still stop before fetch. Token fields are
-approximate. Token and image counts describe the active history before ordinary
-image eviction and new tail notices.
+approximate. `images_before` and `images_after` count images in the active
+history before ordinary image eviction, while `tokens_before` and
+`tokens_after` are estimated from the projected messages after ordinary image
+eviction and any new tail notice.
 
-- `outcome: "cut"` also reports `removed_turns`, `cumulative_removed_turns`,
-  `tokens_after`, `briefing_tokens`, `images_after` and `source_ids_count` for
-  the cumulative distinct sources. The logical request carrying the cut
-  gets a `knowledge-delivery` with `kind: "briefing"`, explicit `outcome`
-  (`delivered` or `undelivered`) and a null `recall_request_id`.
+- `outcome: "cut"` also reports `cut_result` (`target` when a prefix met both
+  `low_mark` and the image target, `best_effort` when the `k = E` fallback ran,
+  or `rescue` when strict-fit hard-capacity rescue ran), `removed_turns`,
+  `cumulative_removed_turns`, `tokens_after`, `briefing_tokens`, `images_after`
+  and `source_ids_count` for the cumulative distinct sources. The logical request
+  carrying the cut gets a `knowledge-delivery` with `kind: "briefing"`, explicit
+  `outcome` (`delivered` or `undelivered`) and a null `recall_request_id`.
 - `outcome: "held-back"` also reports `reason`, `available_turns` and
   `min_free`. Holds are edge-reported once on entering a `(reason, coverage_frontier)`
   state while cut pressure remains armed (a restore clears cut pressure and emits no
