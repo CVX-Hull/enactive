@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline retrieval benchmark for Wave 3 (#936) on sealed delivered knowledge. Read-only, `$0`.
 
-  python tools/knowledge_retrieval_benchmark.py [--evidence DIR] [--repeat N] [--json | --markdown]
+  python tools/knowledge_retrieval_benchmark.py [--evidence DIR] [--repeat N] [--porter2] [--json | --markdown]
 
 It replays the 30 #924 queries (20 on `#896-b v91`, 10 on `#889 v17`) and the two live `#896-b` queries on the
 versions the player held (`A01 v3`, `A03 v38`) under three rankings:
@@ -39,11 +39,13 @@ from pathlib import Path
 import statistics
 import sys
 import time
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ''):
     sys.path.insert(0, str(ROOT))
 
+from harness.jsonio import canonical  # noqa: E402
 from harness.player import knowledge as production  # noqa: E402
 
 LIMIT = production.QUERY_LIMIT
@@ -51,6 +53,14 @@ CUT = 5
 SEEDS = 10
 HOP, ARTICLE_WEIGHT, FACT_WEIGHT = 0.35, 1.25, 0.70
 METHODS = ('prod_bm25', 'bm25_1hop', 'bm25_1hop_skip')
+PORTER2 = 'bm25_1hop_porter2'
+FOLDING_PAIRS = (('zombie', 'zombies'), ('speed', 'speeds'), ('focus', 'focused'),
+                 ('spring', 'springs'), ('bleed', 'bleeding'))
+LEGACY_CLAIM_KINDS = {
+    'control': 'interface', 'world_observation': 'instance_state', 'crafting_recipe': 'mechanic',
+    'item_property': 'entity_property', 'construction_project': 'mechanic',
+    'creation_option_property': 'entity_property',
+}
 CORPORA = {
     'v91': 'seven-day-896-b-admission-10/run/curator-runner/delivered/v91.json',
     'v17': 'live-validation-run-889/run/curator-runner/delivered/v17.json',
@@ -193,6 +203,7 @@ class Corpus:
                 or not isinstance(value.get('articles'), list) or not isinstance(value.get('facts'), list)):
             raise ValueError(f'{where}: expected sealed delivered-knowledge/2 benchmark input')
         self.name = name
+        self.version = value['version']
         self.article_count = len(value['articles'])
         self.fact_count = len(value['facts'])
         self.records = list(value['articles']) + list(value['facts'])
@@ -354,6 +365,66 @@ def timing(corpus: Corpus, method: str, queries: list[str], repeat: int) -> dict
                 samples=len(samples))
 
 
+def folding_pairs(porter2=None) -> list[dict]:
+    rows = []
+    for pair in FOLDING_PAIRS:
+        old = [production._fold(word) for word in pair]
+        new = [porter2(word) for word in pair] if porter2 is not None else None
+        rows.append(dict(words=list(pair), original=old, original_conflates=old[0] == old[1],
+                         porter2=new, porter2_conflates=None if new is None else new[0] == new[1]))
+    return rows
+
+
+def query_envelopes(corpus: Corpus, query: str) -> tuple[dict, dict]:
+    scores = corpus.bm25(query)
+    order = corpus.ordered(corpus.one_hop(scores))[:LIMIT]
+    # Use the production envelope and deep copy over the exact sealed records on the full side.
+    reader = production.Knowledge.from_dict(production.empty())
+    reader.value['version'] = corpus.version
+    full = reader._result(query, 'query', None, [corpus.records[i] for i in order])
+    hits = []
+    for i in order:
+        item = corpus.records[i]
+        via = 'match' if scores[i] > 0 else 'hop'
+        if corpus.article[i]:
+            # The archive has no revisions or tags. Use the snapshot tag as an as-of revision.
+            hit = dict(id=item['id'], kind='article', revision=f"{item['id']}@{corpus.version}",
+                       title=item['title'], snippet=item['lead'][:240], tags=[], via=via)
+        else:
+            kind = LEGACY_CLAIM_KINDS[item['type']]
+            scope = {'game': 'cdda'}
+            if kind == 'instance_state':
+                scope['world'] = None
+            hit = dict(id=item['id'], kind='fact', subject=item.get('subject'), claim_kind=kind, scope=scope,
+                       snippet=item['text'][:240], cited_by_articles=sorted(set(corpus.ids(corpus.citing[i])))[:3],
+                       via=via)
+        hits.append(hit)
+    compact = reader._result(query, 'query', None, hits)
+    compact['schema'] = 'player-knowledge/3'
+    compact['hits'] = compact.pop('records')
+    return full, compact
+
+
+def compact_serialization(corpus: Corpus, queries: list[Query], repeat: int) -> dict:
+    rows = [dict(label=q.label) for q in queries]
+    variants = list(zip(*(query_envelopes(corpus, q.text) for q in queries)))
+    measurements = {}
+    for name, envelopes in zip(('full', 'compact'), variants):
+        sizes = [len(canonical(envelope).encode('utf-8')) for envelope in envelopes]
+        for row, size in zip(rows, sizes):
+            row[f'{name}_bytes'] = size
+        samples = []
+        for _ in range(repeat):
+            for envelope in envelopes:
+                start = time.perf_counter()
+                canonical(envelope).encode('utf-8')
+                samples.append((time.perf_counter() - start) * 1000)
+        measurements[name] = dict(total_bytes=sum(sizes), median_bytes=statistics.median(sizes),
+                                  max_bytes=max(sizes), avg_ms=round(statistics.fmean(samples), 4),
+                                  p95_ms=round(percentile(samples, 0.95), 4), samples=len(samples))
+    return dict(corpus=corpus.name, queries=len(queries), rows=rows, **measurements)
+
+
 # Evaluation.
 
 def check_label(corpus: Corpus, label: DirectAnswer) -> None:
@@ -376,9 +447,9 @@ def check_label(corpus: Corpus, label: DirectAnswer) -> None:
                 raise ValueError(f'{label.label}: {corpus.records[article]["id"]} prose states {label.detail!r}')
 
 
-def retrieval(corpus: Corpus, queries: list[Query], repeat: int) -> dict:
+def retrieval(corpus: Corpus, queries: list[Query], repeat: int, methods: tuple[str, ...] = METHODS) -> dict:
     rows, summary = [], {}
-    for method in METHODS:
+    for method in methods:
         tops = [corpus.rank(method, q.text) for q in queries]
         summary[method] = dict(
             hit_at_5=round(statistics.fmean(hit(corpus, t, q.gold) for t, q in zip(tops, queries)), 3),
@@ -388,8 +459,8 @@ def retrieval(corpus: Corpus, queries: list[Query], repeat: int) -> dict:
             **timing(corpus, method, [q.text for q in queries], repeat))
     for q in queries:
         rows.append(dict(label=q.label, group=q.group, query=q.text, gold=list(q.gold),
-                         ranks={m: first_rank(corpus, corpus.rank(m, q.text), q.gold) for m in METHODS},
-                         top5={m: corpus.ids(corpus.rank(m, q.text)[:CUT]) for m in METHODS}))
+                         ranks={m: first_rank(corpus, corpus.rank(m, q.text), q.gold) for m in methods},
+                         top5={m: corpus.ids(corpus.rank(m, q.text)[:CUT]) for m in methods}))
     return dict(corpus=corpus.name, articles=corpus.article_count,
                 facts=corpus.fact_count, edges=sum(map(len, corpus.neighbours)) // 2,
                 queries=len(queries), methods=summary, rows=rows)
@@ -491,7 +562,25 @@ def overall_gate(results: dict) -> dict:
     return gate
 
 
-def benchmark(evidence: Path, repeat: int) -> dict:
+def compare_porter2(evidence: Path, results: dict, repeat: int, fold) -> dict:
+    gates = {}
+    with patch.object(production, '_fold', fold):
+        for name, original in results.items():
+            corpus = Corpus.load(name, evidence / CORPORA[name])
+            arm = retrieval(corpus, [q for q in QUERIES if q.corpus == name], repeat, (PORTER2,))
+            original['methods'].update(arm['methods'])
+            for row, alternative in zip(original['rows'], arm['rows']):
+                row['ranks'].update(alternative['ranks'])
+                row['top5'].update(alternative['top5'])
+            before = [r['ranks']['bm25_1hop'] for r in original['rows']]
+            after = [r['ranks'][PORTER2] for r in original['rows']]
+            gates[name] = dict(hit_at_5=sum(r is not None for r in after) >= sum(r is not None for r in before),
+                               article_mrr_at_5=math.fsum(1 / r for r in after if r)
+                               >= math.fsum(1 / r for r in before if r))
+    return gates
+
+
+def benchmark(evidence: Path, repeat: int, *, porter2=None) -> dict:
     corpora = {name: Corpus.load(name, evidence / path) for name, path in CORPORA.items()}
     results = {name: retrieval(corpora[name], [q for q in QUERIES if q.corpus == name], repeat)
                for name in ('v91', 'v17')}
@@ -504,14 +593,21 @@ def benchmark(evidence: Path, repeat: int) -> dict:
     live = [dict(label=q.label, corpus=q.corpus, query=q.text,
                  top5={m: corpora[q.corpus].ids(corpora[q.corpus].rank(m, q.text)[:CUT]) for m in METHODS})
             for q in LIVE]
+    gate = overall_gate(results)
+    pairs = folding_pairs(porter2)
+    porter2_gate = compare_porter2(evidence, results, repeat, porter2) if porter2 is not None else None
     return dict(schema='knowledge-retrieval-benchmark/1', repeat=repeat,
                 corpora={name: dict(path=CORPORA[name], articles=c.article_count,
                                     facts=c.fact_count, edges=sum(map(len, c.neighbours)) // 2,
                                     links=c.links, unresolved_links=c.unresolved_links)
                          for name, c in corpora.items()},
-                retrieval=results, live=live, overall_gate=overall_gate(results),
+                retrieval=results, live=live, overall_gate=gate,
                 omission_scan=[omission_scan(corpora[n], [q for q in QUERIES if q.corpus == n]) for n in ('v91', 'v17')],
-                paired_skip=paired_skip(corpora))
+                paired_skip=paired_skip(corpora), folding_pairs=pairs,
+                porter2=dict(gates=porter2_gate, passes=all(all(g.values()) for g in porter2_gate.values())
+                             and all(row['porter2_conflates'] for row in pairs)) if porter2_gate is not None else None,
+                compact_serialization=compact_serialization(corpora['v91'], [q for q in QUERIES if q.corpus == 'v91'],
+                                                            repeat))
 
 
 # Output.
@@ -546,12 +642,13 @@ def markdown(result: dict) -> str:
     for key, g in result['overall_gate'].items():
         out.append(f'| `{key}` | {_cell(g["hit_at_5"])} | {_cell(g["article_mrr_at_5"])} | {_cell(g["p95_under_5_ms"])} |')
     for name, r in result['retrieval'].items():
+        methods = r['methods']
         out += ['', f'## Per-query first gold-article rank in top 5, `{CORPUS_NAMES[name]}`', '',
-                '| Query | Group | Text | ' + ' | '.join(f'`{m}`' for m in METHODS) + ' |',
-                '| --- | --- | --- | ' + ' | '.join('---' for _ in METHODS) + ' |']
+                '| Query | Group | Text | ' + ' | '.join(f'`{m}`' for m in methods) + ' |',
+                '| --- | --- | --- | ' + ' | '.join('---' for _ in methods) + ' |']
         for row in r['rows']:
             out.append(f'| {row["label"]} | `{row["group"]}` | `{row["query"]}` | '
-                       + ' | '.join(_cell(row['ranks'][m]) for m in METHODS) + ' |')
+                       + ' | '.join(_cell(row['ranks'][m]) for m in methods) + ' |')
     out += ['', '## Live queries on the versions the player held', '']
     for row in result['live']:
         out.append(f'- **{row["label"]}** `{row["query"]}`')
@@ -584,6 +681,30 @@ def markdown(result: dict) -> str:
             + '; '.join(f'`{s["corpus"]}` {s["appearances"]} appearances of {s["distinct_facts"]} distinct facts, '
                         f'{s["appearances_skipped"]} appearances of {s["distinct_facts_skipped"]} facts skipped'
                         for s in result['omission_scan']) + '.']
+    out += ['', '## English folding pairs', '',
+            '| Words | Original forms | Original conflates | Porter2 forms | Porter2 conflates |',
+            '| --- | --- | --- | --- | --- |']
+    for row in result['folding_pairs']:
+        new = ' / '.join(row['porter2']) if row['porter2'] is not None else None
+        out.append(f'| {_cell(" / ".join(row["words"]))} | {_cell(" / ".join(row["original"]))} | '
+                   f'{_cell(row["original_conflates"])} | {_cell(new)} | {_cell(row["porter2_conflates"])} |')
+    porter2 = result['porter2']
+    if porter2 is None:
+        out += ['', 'Porter2 skipped. Use `--porter2` with the optional `snowballstemmer` package installed.']
+    else:
+        out += ['', f'**Porter2 gate: {"GO" if porter2["passes"] else "NO-GO"}.**', '',
+                '| Corpus | Hit@5 ≥ one-hop baseline | Article MRR@5 ≥ one-hop baseline |', '| --- | --- | --- |']
+        for name, gate in porter2['gates'].items():
+            out.append(f'| {name} | {_cell(gate["hit_at_5"])} | {_cell(gate["article_mrr_at_5"])} |')
+    compact = result['compact_serialization']
+    out += ['', f'## Canonical UTF-8 serialization on {compact["queries"]} `v91` queries', '',
+            'Envelope construction and scoring take place before this timer starts.', '',
+            '| Envelope | Total bytes | Median bytes | Max bytes | Avg ms | p95 ms | Samples |',
+            '| --- | --- | --- | --- | --- | --- | --- |']
+    for name in ('full', 'compact'):
+        row = compact[name]
+        out.append(f'| {name} | {row["total_bytes"]:,} | {row["median_bytes"]:,.1f} | {row["max_bytes"]:,} | '
+                   f'{row["avg_ms"]:.4f} | {row["p95_ms"]:.4f} | {row["samples"]:,} |')
     return '\n'.join(out) + '\n'
 
 
@@ -591,6 +712,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--evidence', type=Path, help='the sealed evidence store (default: the main checkout\'s)')
     parser.add_argument('--repeat', type=int, default=50, help='timing repetitions of every query (default 50)')
+    parser.add_argument('--porter2', action='store_true', help='also measure the optional English Porter2 arm')
     output = parser.add_mutually_exclusive_group()
     output.add_argument('--json', action='store_true')
     output.add_argument('--markdown', action='store_true')
@@ -598,7 +720,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.evidence is None:
         from tools.evidence import default_store
         args.evidence = default_store()
-    result = benchmark(args.evidence, max(1, args.repeat))
+    fold = None
+    if args.porter2:
+        try:
+            import snowballstemmer
+        except ModuleNotFoundError as error:
+            if error.name != 'snowballstemmer':
+                raise
+            parser.error('--porter2 requires the optional snowballstemmer package in this Python environment')
+        english = snowballstemmer.stemmer('english')
+
+        def fold(word: str) -> str:
+            return english.stemWord(word.casefold())
+
+    result = benchmark(args.evidence, max(1, args.repeat), porter2=fold)
     print(json.dumps(result, indent=2) if args.json else markdown(result), end='' if not args.json else '\n')
     return 0
 
