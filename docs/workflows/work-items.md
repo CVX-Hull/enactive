@@ -92,9 +92,9 @@ Keep one active integration slice and at most two implementation workers, each i
 project-local worktree (`.runtime/worktrees/<leaf>`, or where the host's worktree
 isolation puts it: [environment facts](../operations/coding-agents.md#environment-facts-for-agents))
 and one writer per checkout, with disjoint named paths except in a matched run
-([S-AGENT](../standards/agents.md#the-leads-duties)). A worktree installs its own npm
-dependencies with `npm ci` and uses the main checkout's `.venv`; a leaf that changes the
-Python lockfile builds its own. Explorers read only;
+([S-AGENT](../standards/agents.md#the-leads-duties)). A worktree installs its own npm dependencies with `npm ci` for each Node package it tests
+(repository root `.`, `--prefix tools/player_host`, and `--prefix tools/curator_host`) and
+uses the main checkout's `.venv`; a leaf that changes the Python lockfile builds its own. Explorers read only;
 reviewers get fresh context. The lead alone integrates and serializes the game, saves,
 bridge, ports, builds, dependency environments and caches; workers do not run native
 demonstrations. Pull new work only when implementation, review and validation capacity

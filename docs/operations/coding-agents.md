@@ -188,9 +188,11 @@ on repository tasks.
   output. The hook is never bypassed.
 - **Worktrees** are project-local and git-ignored. The lead creates one under
   `.runtime/worktrees/<leaf>`; Claude Code's worktree isolation creates its own under
-  `.claude/worktrees/`. Either is acceptable. A worktree that runs the adapter tests
-  installs its own Node packages with `npm ci`
-  ([work items](../workflows/work-items.md#ready-brief-and-execution-capacity)). The
+  `.claude/worktrees/`. Either is acceptable. A worktree that runs the Node, adapter,
+  curator-host, or browser suites installs its own Node packages with `npm ci` at the
+  three prefixes it exercises: repository root (`.`), `tools/player_host`, and
+  `tools/curator_host` (using `--userconfig /dev/null --cache "$PWD/.cache/npm" --ignore-scripts --no-audit --no-fund`;
+  [work items](../workflows/work-items.md#ready-brief-and-execution-capacity)). The
   browser suites look for Chrome under the checkout's `.cache/puppeteer`; from a
   worktree, set `PUPPETEER_CACHE_DIR` to the main checkout's for that command.
 - **Identity.** Commits use the repository-local identity already configured. An agent
