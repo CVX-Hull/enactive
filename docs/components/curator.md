@@ -19,10 +19,16 @@ custom-character and unablated caveats, alongside the offline
 [stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md)).
 The current `curator-knowledge/4` (`curator-fact/5` scoped claims, typed links,
 world-bound articles) and `delivered-knowledge/3` formats are verified by current-schema
-fixture tests, while field-weighted BM25 + 1-hop ranking was evaluated on projected
-`#889`/`#896-b` `delivered-knowledge/2` exports
-([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md)),
-with zero live campaign admissions on `curator-knowledge/4` yet.
+fixture tests and by bounded single-actor standard-build live validation (`27/27` live
+curator windows `v1`–`v29`, post-admission boundary grooming `v29` to `v30` with
+`stale_records: 0`, `151` active facts and `9` active articles including `4`
+world-scoped articles, all carrying `scope.ruleset == "standard"`,
+[live validation #963](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)).
+Field-weighted BM25 + 1-hop ranking was evaluated offline on projected `#889`/`#896-b`
+`delivered-knowledge/2` exports
+([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md)).
+Multi-actor live handoff on `curator-knowledge/4` and multi-day standard-build
+campaigns remain unexercised live.
 The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
 with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
 
@@ -258,7 +264,7 @@ articles an actor can read (including world-bound articles). A grooming session
 merges, narrows, retags, retires and refiles them between admissions. The
 [curator contract](../contracts/curator.md) owns the record and submission shapes,
 validation, the gate, sessions, drafts and restore; the
-[frozen instructions](../../tools/curator_host/prompt.md#submission-contract) restate the
+[frozen instructions](../../tools/curator_host/prompt.md#submission-contract-curator-submission2) restate the
 submission shapes to the curator. [Host operations](../operations/curator-hosts.md) owns
 adapter configuration and the zero-spend stand-in lane.
 
@@ -266,4 +272,6 @@ A curator variant is scored on sealed development admissions by comparing its pu
 facts with later visible actions and re-observations
 ([method and limits](../acceptance/2026-11-13-curator-scoring.md#method)). Publishing
 only after checks on later evidence is an unbuilt
-[proposal](../design/prospective-curator-gate.md).
+[proposal](../design/prospective-curator-gate.md), and curator-submitted programs remain
+an unbuilt proposal governed by the
+[bounded program interface brief](../design/bounded-program-interface.md).

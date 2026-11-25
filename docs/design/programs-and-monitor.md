@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: proposed
-review_trigger: "The owner decides whether to take up the programs line, the bounded program interface brief (#839) lands, the curator contract's fact or gate rules change, or a program producer is built."
+review_trigger: "The owner decides whether to take up the programs line, the curator contract's fact or gate rules change, or a program producer is built."
 ---
 
 # Programs and monitor
@@ -10,11 +10,11 @@ review_trigger: "The owner decides whether to take up the programs line, the bou
 
 **Question.** Should curator-written programs act in the playing model's place under a stop-only monitor, and what interfaces do they need?
 
-**Answer.** The bounded program interface brief may be drafted ([25 November disposition](../decisions/owner-decisions-archive.md#wave3-wave4-live-validation-accepted-963), following the [20 November brief decision](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief)). A program build remains deferred; this proposal authorizes no build.
+**Answer.** The [bounded program interface brief](bounded-program-interface.md) specifies the interface boundary ([25 November disposition](../decisions/owner-decisions-archive.md#wave3-wave4-live-validation-accepted-963), following the [20 November brief decision](../decisions/owner-decisions.md#register-the-bounded-program-interface-brief)). A program build remains deferred; this proposal authorizes no build.
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
-**Decision needed.** The owner decides whether to take up the line. The [bounded program interface brief (#839)](https://github.com/CVX-Hull/enactive/issues/839) must settle artifact and eligibility choices. Adoption depends on the integrated study.
+**Decision needed.** The owner decides whether to take up the line under the [bounded program interface brief](bounded-program-interface.md). Adoption depends on the integrated study.
 
 The reasons are in the retired [curated-player decision record](../decisions/009-curated-player.md).
 
@@ -44,7 +44,7 @@ The first program phase includes a low-cost model slot that watches program prog
 
 ## Fitting and the library
 
-Offline replay filters candidates for supervised play by checking preconditions, success predicates and agreement with recorded inputs. Replay establishes agreement only for observed inputs. A new program is probationary until scored on traces that arrive after publication.
+Offline replay filters candidates for supervised play by checking preconditions, success predicates and agreement with recorded inputs. Replay establishes agreement only for observed inputs. A stored program enters as `stored_ineligible`, becomes `probationary` only after passing gate-owned offline qualification, and stays probationary until scored on traces that arrive after publication ([pre-qualification storage and eligibility](bounded-program-interface.md#pre-qualification-storage-and-eligibility)).
 
 The library tracks invocations, successes, yields, aborts and regressions. Revisions cite their parents, and programs retire below a performance threshold.
 
@@ -75,7 +75,7 @@ Each field joins existing tool calls with the work that first reads it, under th
 - Partial or unknown delivery ends input permanently.
 - Views show missing data as absent or unknown.
 
-The bounded interface brief freezes artifact identity and layout, base and version pins, selection eligibility and revocation, and the passive envelope. It decides whether artifacts can be stored before they qualify and how revocation affects pinned selections.
+The [bounded program interface brief](bounded-program-interface.md) freezes artifact identity and layout, base and version pins, pre-qualification storage and selection eligibility, revocation semantics for pinned runs, the passive envelope, refused versions, and fact-store dependencies.
 
 ## Pages that change on adoption
 
