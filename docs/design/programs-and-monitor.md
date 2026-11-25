@@ -14,7 +14,7 @@ review_trigger: "The owner decides whether to take up the programs line, the bou
 
 **Unknown.** Does delegation help at a matched failure rate? Can the monitor detect anomalies?
 
-**Decision needed.** The owner decides whether to take up the line. The [bounded program interface brief (#839)](https://github.com/CVX-Hull/enactive/issues/839) must settle artifact and eligibility choices. Adoption depends on the integrated study.
+**Decision needed.** The owner decides whether to take up the line under the [bounded program interface brief](bounded-program-interface.md). Adoption depends on the integrated study.
 
 The reasons are in the retired [curated-player decision record](../decisions/009-curated-player.md).
 
@@ -75,7 +75,7 @@ Each field joins existing tool calls with the work that first reads it, under th
 - Partial or unknown delivery ends input permanently.
 - Views show missing data as absent or unknown.
 
-The bounded interface brief freezes artifact identity and layout, base and version pins, selection eligibility and revocation, and the passive envelope. It decides whether artifacts can be stored before they qualify and how revocation affects pinned selections.
+The [bounded program interface brief](bounded-program-interface.md) freezes artifact identity and layout, base and version pins, pre-qualification storage and selection eligibility, revocation semantics for pinned runs, the passive envelope, refused versions, and fact-store dependencies.
 
 ## Pages that change on adoption
 
