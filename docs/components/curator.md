@@ -8,12 +8,21 @@ status: active
 
 The curator reads projected traces and holds no custody or direct player access.
 The player and computer do not import curator code. The runner supports windowed
-sessions beside an admission. Live evidence covers full single-actor multi-window
-publication, `curator-fact/5` scoped claims and articles, within-admission delivery and
-post-admission boundary grooming ([live validation run #889](../acceptance/2026-11-22-live-validation-run-889.md),
-following [first paid live run #859](../acceptance/2026-11-21-live-curator-run-859.md));
-real-play actor handoff briefing adoption remains unverified beyond offline tests and the
-[stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md).
+sessions beside an admission. Live evidence on `curator-knowledge/3` covers full
+single-actor multi-window publication, within-admission delivery and post-admission
+boundary grooming ([live validation run #889](../acceptance/2026-11-22-live-validation-run-889.md),
+following [first paid live run #859](../acceptance/2026-11-21-live-curator-run-859.md))
+and ten-admission campaign play with `86/86` settled live sessions, coverage-gated
+context cuts and actor handoffs in `A4` and `A9`
+([seven-day campaign #896](../acceptance/2026-11-22-seven-day-campaign-896.md), with
+custom-character and unablated caveats, alongside the offline
+[stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md)).
+The current `curator-knowledge/4` (`curator-fact/5` scoped claims, typed links,
+world-bound articles) and `delivered-knowledge/3` formats are verified by current-schema
+fixture tests, while field-weighted BM25 + 1-hop ranking was evaluated on projected
+`#889`/`#896-b` `delivered-knowledge/2` exports
+([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md)),
+with zero live campaign admissions on `curator-knowledge/4` yet.
 The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
 with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
 

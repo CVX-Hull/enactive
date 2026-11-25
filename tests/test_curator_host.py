@@ -3,7 +3,7 @@
 A local stand-in streams scripted OpenRouter chat completions. The real Node host runs through the
 real model proxy and, on macOS, the real Seatbelt sandbox via `run_session` over a synthetic sealed
 trace. The portable tests (runner argument handling, prices) run everywhere; the sandboxed ones are a
-native lane and skip off macOS or without the host installed.
+native lane and skip off macOS. Missing curator-host Node packages fail explicitly rather than skipping.
 """
 from __future__ import annotations
 
@@ -33,11 +33,22 @@ from tools.curator_host import shadow
 from tools.curator_host.providers import OPENROUTER
 
 ROOT = Path(__file__).resolve().parents[1]
-INSTALLED = (shadow.HOST_DIR/'node_modules').is_dir() and shutil.which('node') is not None
-native = pytest.mark.skipif(sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists() or not INSTALLED,
-                            reason='Seatbelt lane: macOS with the curator host installed (npm ci in tools/curator_host)')
+INSTALL_HINT = (
+    "tools/curator_host/node_modules is missing; install the host's packages first: "
+    'npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/curator_host ci '
+    "--ignore-scripts --no-audit --no-fund (docs/setup.md)"
+)
+native = pytest.mark.skipif(sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists(),
+                            reason='Seatbelt lane: macOS with /usr/bin/sandbox-exec')
 PRICES = shadow.load_prices(shadow.DEFAULT_PRICES)
 KEY = 'stand-in-provider-key'
+
+
+def _require_curator_host() -> str:
+    assert (shadow.HOST_DIR/'node_modules').is_dir(), INSTALL_HINT
+    node = shutil.which('node')
+    assert node is not None, 'node is required to run curator host tests'
+    return node
 
 
 def host_config(tmp_path: Path, arm='terra', **override):
@@ -53,6 +64,7 @@ def host_config(tmp_path: Path, arm='terra', **override):
 
 
 def session_config(tmp_path, upstream, *, cap='1', arm='terra', argv=None, **override):
+    _require_curator_host()
     tools = shadow.host_tools()
     config, path, directory = host_config(tmp_path, arm, **override)
     proxy = ModelProxy(provider=OPENROUTER, upstream=upstream, key=KEY, prices={shadow.ARMS[arm].model: PRICES[shadow.ARMS[arm].model]},
@@ -209,6 +221,7 @@ def test_the_readable_host_files_hold_no_python_but_the_launcher():
 
 @native
 def test_the_sandbox_reads_exactly_the_readable_host_files():
+    _require_curator_host()
     tools = shadow.host_tools()  # needs the macOS loader tools to find node's libraries
     host = shadow.HOST_DIR.resolve()
     inside = [Path(root) for root in tools['roots'] if Path(root) == host or host in Path(root).parents]
@@ -223,6 +236,7 @@ def test_the_escape_suite_still_passes_with_the_curator_hosts_tool_roots(tmp_pat
     """tests/curator_adversary.py through tests/test_curator_sandbox.py's real-listener suite, with node, its libraries,
     the host package and the config directory added to the layout. The suite's own assertion is that only the
     five controls are allowed."""
+    _require_curator_host()
     from tests import test_curator_sandbox as suite
 
     tools = shadow.host_tools()
@@ -264,6 +278,7 @@ def synthetic_evidence(root: Path, lineage='397', names=('sd1a1',)) -> Path:
 
 
 def run_cli(tmp_path, upstream, *extra, names=('sd1a1',), monkeypatch=None, key=KEY, lineage='397'):
+    _require_curator_host()
     runtime = tmp_path/'runtime'
     evidence = synthetic_evidence(tmp_path, lineage, names)
     assert monkeypatch is not None
@@ -333,11 +348,17 @@ def test_tool_roots_that_expose_the_disk_home_or_runtime_are_refused():
     shadow.refuse_broad_root(Path(sys.base_prefix).resolve())
 
 
-@pytest.mark.skipif(not INSTALLED, reason='needs npm ci in tools/curator_host')
 def test_the_hosts_node_unit_tests_pass():
-    done = subprocess.run([shutil.which('node'), '--test', *sorted(str(p) for p in (shadow.HOST_DIR/'test').glob('*.test.mjs'))],
+    node = _require_curator_host()
+    done = subprocess.run([node, '--test', *sorted(str(p) for p in (shadow.HOST_DIR/'test').glob('*.test.mjs'))],
                           cwd=shadow.HOST_DIR, capture_output=True, text=True, timeout=300, check=False)
     assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
+
+
+def test_missing_curator_host_node_modules_fails_explicitly(tmp_path, monkeypatch):
+    monkeypatch.setattr(shadow, 'HOST_DIR', tmp_path)
+    with pytest.raises(AssertionError, match=r'--prefix tools/curator_host ci'):
+        _require_curator_host()
 
 
 def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
@@ -446,10 +467,10 @@ def test_both_arms_configure_a_host_the_proxy_allows():
         assert config['model']['compat']['openRouterRouting']['only'] == [arm.provider]
         script = ("import {validateConfiguration} from './host.mjs';"
                   "validateConfiguration(JSON.parse(process.argv[1]));console.log('valid')")
-        if INSTALLED:
-            done = subprocess.run(['node', '--input-type=module', '-e', script, json.dumps(config)], cwd=shadow.HOST_DIR,
-                                  capture_output=True, text=True)
-            assert done.stdout.strip() == 'valid', done.stderr
+        node = _require_curator_host()
+        done = subprocess.run([node, '--input-type=module', '-e', script, json.dumps(config)], cwd=shadow.HOST_DIR,
+                              capture_output=True, text=True)
+        assert done.stdout.strip() == 'valid', done.stderr
 
 
 SUMMARY_FIELDS = {'window', 'coverage', 'schema', 'kind', 'arm', 'model', 'effort', 'lineage', 'trace_session', 'memory', 'cap_usd', 'started_wall',
