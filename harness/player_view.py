@@ -9,7 +9,7 @@ import copy
 
 from .computer.protocol import receipt, source
 from .player.contracts import PlayerError, common_arguments, references
-from .player.knowledge import QUERY_LIMIT, REVISION, delivered_record, version_number
+from .player.knowledge import QUERY_LIMIT, delivered_record, query_hit, revision_parts, version_number
 
 
 class UnsupportedResult(PlayerError):
@@ -145,46 +145,57 @@ def _service(value):
     return result
 
 
-def _resolution(resolution, identity, resolved_from, records):
-    """The resolution's row of the read table, as `Knowledge.read` and `Knowledge.query` produce it: the record
-    count and kind, `resolved_from`, and how the records answer `identity`. Records are already delivered records."""
+def _resolution(resolution, identity, resolved_from, records, version):
+    """The resolution's row of the read table, as `Knowledge.read` produces it: the record count and kind,
+    `resolved_from`, and how the records answer `identity`. Records are already delivered records."""
     one = len(records) == 1
     article = one and 'body' in records[0]
     if resolution == 'current':
         return one and resolved_from is None and records[0]['id'] == identity
     if resolution == 'revision':
-        revision = REVISION.fullmatch(identity)
+        revision = revision_parts(identity)
         return (article and resolved_from == identity and revision is not None
-                and revision.group(1) == records[0]['id'])
+                and revision[0] == records[0]['id'] and revision[1] <= version)
     if resolution in ('restated', 'narrowed', 'corrected'):
         return bool(records) and all('body' not in r for r in records) and resolved_from == identity
     if resolution in ('ended', 'retracted'):
         return records == [] and resolved_from == identity
     if resolution == 'title':
-        return article and records[0]['title'] == identity and resolved_from is None
+        return article and records[0]['title'].casefold() == identity.casefold() and resolved_from is None
     if resolution == 'unknown':
         return records == [] and resolved_from is None
-    if resolution == 'query':
-        return len(records) <= QUERY_LIMIT and resolved_from is None
     return False
 
 
 def _knowledge(value):
-    """A `player-knowledge/2` read or query: its version, its resolution's row of the read table, and every record
-    a closed, blinded delivered record. The empty file (`version` null) answers only `unknown` and `query`, with no
-    record. Article and fact text is opaque data, never another envelope."""
-    result = _fields(value, {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'records'})
-    version, records, resolution = result['version'], result['records'], result['resolution']
+    """A discriminated `player-knowledge/3` read (`records`) or query (`hits`): its version, its resolution's row
+    of the read table, and every record or compact hit closed and blinded. The empty file (`version` null) answers
+    only `unknown` (with empty `records`) and `query` (with empty `hits`). Article and fact text is opaque data,
+    never another envelope."""
+    common = {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from'}
+    is_query = isinstance(value, dict) and value.get('resolution') == 'query'
+    result = _fields(value, common | ({'hits'} if is_query else {'records'}))
+    version, resolution = result['version'], result['resolution']
     identity, resolved_from = result['identity'], result['resolved_from']
-    if (result['grants_authority'] is not False or not isinstance(identity, str) or not isinstance(resolution, str)
-            or not isinstance(records, list)):
+    if result['grants_authority'] is not False or not isinstance(identity, str) or not isinstance(resolution, str):
         raise UnsupportedResult('Unsupported delivered knowledge result')
-    if version is None:
-        consistent = resolution in ('unknown', 'query') and records == [] and resolved_from is None
+    if is_query:
+        hits = result['hits']
+        if not isinstance(hits, list) or resolved_from is not None or len(hits) > QUERY_LIMIT:
+            raise UnsupportedResult('Unsupported delivered knowledge result')
+        consistent = hits == [] if version is None else (
+            version_number(version) is not None and all(query_hit(hit, version) for hit in hits))
     else:
-        consistent = (version_number(version) is not None
-                      and all(delivered_record(record, version) for record in records)
-                      and _resolution(resolution, identity, resolved_from, records))
+        records = result['records']
+        if not isinstance(records, list):
+            raise UnsupportedResult('Unsupported delivered knowledge result')
+        if version is None:
+            consistent = resolution == 'unknown' and records == [] and resolved_from is None
+        else:
+            number = version_number(version)
+            consistent = (number is not None
+                          and all(delivered_record(record, version) for record in records)
+                          and _resolution(resolution, identity, resolved_from, records, number))
     if not consistent:
         raise UnsupportedResult('Unsupported delivered knowledge result')
     return result
@@ -192,7 +203,7 @@ def _knowledge(value):
 
 def _project(value):
     schema = value.get('schema')
-    if schema == 'player-knowledge/2':
+    if schema == 'player-knowledge/3':
         return _knowledge(value)
     if schema == 'computer-operation/1':
         return _operation(value)
