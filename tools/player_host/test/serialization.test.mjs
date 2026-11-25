@@ -213,9 +213,10 @@ test('actors of one package share a byte-identical system prompt and tool table,
 test('image markers name the source of the frame and are a function of the frame alone', () => {
   const message = (id, n) => ({ role: 'toolResult', toolCallId: id, content: [{ type: 'text', text: '{}' }, { type: 'image', data: Buffer.from(`pixels-${n}`).toString('base64'), mimeType: 'image/png' }] });
   const history = Array.from({ length: 5 }, (_, n) => message(`t${n}`, n));
-  const sources = new Map(history.map((entry, n) => [entry.toolCallId, `src-${n}`]));
-  const first = projectImageContext(history.slice(0, 4), 3, 2, sources);
-  const second = projectImageContext(history, 3, 2, sources);
+  const sources = new Map(history.map((entry, n) => [entry, `src-${n}`]));
+  const sourceOf = entry => sources.get(entry);
+  const first = projectImageContext(history.slice(0, 4), 3, 2, sourceOf);
+  const second = projectImageContext(history, 3, 2, sourceOf);
   // Image 0 and 1 omitted in a block; the marker carries the source and does not change when more frames arrive.
   assert.match(first.messages[0].content[1].text, /toolCallId=t0; source_id=src-0; image_index=0; SHA256=[a-f0-9]{64}\. .*read source_id src-0 with player_source/);
   assert.equal(JSON.stringify(first.messages[0]), JSON.stringify(second.messages[0]));
@@ -223,4 +224,16 @@ test('image markers name the source of the frame and are a function of the frame
   const bare = projectImageContext(history, 3, 2);
   assert.match(bare.messages[0].content[1].text, /toolCallId=t0; image_index=0; SHA256=/);
   assert.ok(!bare.messages[0].content[1].text.includes('source_id'));
+});
+
+test('a request that would go out without its affinity header settles with that reason before any charge', async t => {
+  // R-REGRESSION (#946): the fail-closed reason was thrown into the SDK, which reported a generic provider error.
+  // Only the host's header read is masked; Pi still serializes the request and the fetch wrapper inspects it.
+  const original = Headers.prototype.get;
+  t.mock.method(Headers.prototype, 'get', function (name) { return name === 'x-session-id' ? null : original.call(this, name); });
+  const { result, captured, events } = await host(t, [finish()]);
+  assert.deepEqual([result.ok, result.reason], [false, 'session-affinity-missing']);
+  assert.equal(captured.length, 0, 'no request was sent');
+  assert.deepEqual(events.filter(event => event.type === 'abort').map(event => event.reason), ['session-affinity-missing']);
+  assert.equal(events.filter(event => event.type === 'request-start').length, 0);
 });

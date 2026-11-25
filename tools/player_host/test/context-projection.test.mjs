@@ -323,10 +323,30 @@ test('context manifest stays small over a long image history',async t=>{
   assert.ok(total*3<full,`delta ${total} vs full ${full}`);
   console.log(`manifest bytes: steady max ${Math.max(...steady)}, steady avg ${Math.round(steady.reduce((a,b)=>a+b,0)/steady.length)}, eviction max ${Math.max(...sizes)}, average ${Math.round(total/sizes.length)}, total ${total}, full-listing ${full}, parts ${lists.get(manifests.at(-1).request_id).length}`);
 });
+test('a tool call ID reused by later responses keeps every frame on its own source and marker',async t=>{
+  // R-REGRESSION (#946): source identity was keyed by tool call ID, so a provider that reused an ID moved every
+  // older frame's marker and manifest part onto the newest result's source.
+  const configuration=route();configuration.max_context_images=2;
+  const turns=4,source=n=>`${'a'.repeat(32)}-${n}`;
+  const sequence=[...Array.from({length:turns},(_,turn)=>reply(null,[['observe_source',{n:turn+1}]],true,undefined,'same')),reply()];
+  const observed=await scenario(t,sequence,{configuration,enabledTools:sourceTools});
+  assert.equal(observed.result.ok,true);
+  const manifests=observed.events.filter(event=>event.type==='context-manifest');
+  const {lists}=replayManifests(manifests);
+  const images=lists.get(manifests.at(-1).request_id).filter(part=>part.kind==='image');
+  assert.deepEqual(images.map(part=>[part.tool_call_id,part.sha256,part.source_id,part.state]),
+    Array.from({length:turns},(_,k)=>['same-0',sha(`fixture-image-${k+1}`),source(k+1),k<turns-2?'omitted':'sent']));
+  const results=observed.payloads.at(-1).messages.filter(message=>message.role==='tool');
+  assert.equal(results.length,turns);
+  for(const [k,message] of results.entries()) {
+    const text=typeof message.content==='string'?message.content:JSON.stringify(message.content);
+    if(k<turns-2) assert.ok(text.includes(`source_id=${source(k+1)};`),`marker ${k+1} names its own frame`);
+  }
+});
 test('payload manifest never lists bodies and tolerates an unattributable image list',()=>{
   const payload={messages:[{role:'developer',content:'secret system'},
     {role:'user',content:[{type:'text',text:'secret mission'},{type:'image_url',image_url:{url:'data:image/png;base64,'+png}}]}]};
-  const parts=payloadManifestParts(payload,[],new Map());
+  const parts=payloadManifestParts(payload,[]);
   assert.deepEqual(parts.map(part=>[part.role,part.kind]),[['system','text'],['user','text'],['user','image']]);
   assert.equal(parts[2].sha256,sha(Buffer.from(png,'base64')));assert.equal(parts[2].state,'sent');
   assert.equal('tool_call_id' in parts[2],false);

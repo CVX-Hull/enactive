@@ -28,7 +28,7 @@ def request_identity(value: str | None) -> str:
     if value is None:
         return uuid.uuid4().hex
     if not isinstance(value, str) or re.fullmatch('[0-9a-f]{32}', value) is None:
-        raise ControlError('Operation ID must be32 lowercase hexadecimal characters')
+        raise ControlError('Operation ID must be 32 lowercase hexadecimal characters')
     return value
 
 

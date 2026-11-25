@@ -368,6 +368,43 @@ test('coverage from a newer version refused for capacity leaves the adopted cove
   assert.deepEqual(JSON.parse(markerText(payloads[3]).split('\n')[1]).source_ids, [sourceId(1)]);
 });
 
+test('a version too large for the uncut history is adopted when a cut at the same boundary makes room', async t => {
+  // R-REGRESSION (#946): adoption was decided against the history before that boundary's cut, so a version
+  // that fit the request actually sent was refused for capacity and never offered again.
+  const {events, payloads} = await play(t, async (n, {dir, publish}) => {
+    if (n === 3) {
+      await listUpdate(dir, knowledge('v2'));
+      await publish(publication(2));
+    }
+    if (n >= 4) return reply();
+    return observe(n, 1, n === 3 ? 97_000 : 16);
+  }, {contextCut:tokenCut, maxImages:12});
+  const [cut] = cutEvents(events);
+  assert.deepEqual([cut.request_id, cut.outcome, cut.knowledge_version], ['request-4', 'cut', 'v1']);
+  const updates = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'update');
+  assert.deepEqual(updates.map(event => [event.outcome, event.version, event.receiving_player_request_id]),
+    [['delivered', 'v2', 'request-4']]);
+  // The update follows the cut marker in the request that carries it.
+  const sent = payloads[3].messages.map(messageText);
+  assert.ok(sent.indexOf(updates[0].text) > sent.findIndex(text => text.startsWith('BEGIN CONTEXT CUT')));
+});
+
+test('a version too large even after the cut is still refused for capacity', async t => {
+  const {events} = await play(t, async (n, {dir, publish}) => {
+    if (n === 3) {
+      const huge = knowledge('v2');
+      huge.articles[0].lead = 'x'.repeat(600_000);
+      await listUpdate(dir, huge);
+      await publish(publication(2));
+    }
+    if (n >= 4) return reply();
+    return observe(n, 1, n === 3 ? 97_000 : 16);
+  }, {contextCut:tokenCut, maxImages:12});
+  assert.equal(cutEvents(events)[0].outcome, 'cut');
+  assert.deepEqual(events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'update')
+    .map(event => [event.outcome, event.version, event.reason]), [['refused', 'v2', 'context-capacity']]);
+});
+
 test('an accepted orderly stop fences new cuts and remains visible after an earlier cut', async t => {
   const command = {schema:'player-control/1', type:'orderly_stop', id:'c'.repeat(32), session:sessionId, actor_id:actorId};
   const {events, payloads, result} = await play(t, async (n, {publish}) => {

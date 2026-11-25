@@ -1,7 +1,11 @@
 """Actor serialization over real service records; no native/game/provider calls."""
+from contextlib import asynccontextmanager
 from pathlib import Path
 import copy
 import json
+import signal
+import threading
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
 import uuid
@@ -14,7 +18,7 @@ from harness.application import Application
 from harness.computer.protocol import ControlError
 from harness.player.contracts import PlayerError, canonical
 from harness.player.journal import Journal
-from harness.player_mcp import make_server
+from harness.player_mcp import StopRequests, make_server, run
 from harness.player_view import UnsupportedResult, actor_error, actor_result, short_result
 from test_computer_runtime import make_runtime, key
 
@@ -66,7 +70,7 @@ def test_malformed_collection_id_keeps_repairable_feedback_without_computer_call
     with pytest.raises(ControlError) as failure:
         call(app,actor,'computer_result',{'operation_id':'typo'})
     view=actor_result(dict(schema='player-error/1',error='ControlError',reason=str(failure.value),submission='rejected'))
-    assert view['reason']=='Operation ID must be32 lowercase hexadecimal characters'
+    assert view['reason']=='Operation ID must be 32 lowercase hexadecimal characters'
     assert view['input_replayed'] is False and channel.calls==[] and runtime.store.counts()['inputs']==0
 
 
@@ -294,3 +298,87 @@ def test_an_old_result_version_is_not_a_current_operation_record(service):
         short_result(dict(actor_result(call(app, actor, 'computer_observe', {})), schema='player-computer-result/1'))
     with pytest.raises(UnsupportedResult):
         short_result(call(app, actor, 'computer_observe', {}))
+
+
+@pytest.mark.parametrize('reason', ['Cannot write journal: database is locked', 'Cannot read source: disk I/O error',
+                                    'Cannot open current player journal: file is not a database'])
+def test_a_player_store_failure_reaches_the_model_without_the_storage_engines_text(reason):
+    """R-REGRESSION (#946): every PlayerError text passed through, including SQLite's own error text."""
+    failure = reason.split(':')[0]
+    for view in (actor_result(dict(schema='player-error/1', error='PlayerError', reason=reason, submission='none')),
+                 actor_error(PlayerError(reason))):
+        assert view['reason'].startswith(failure + ';') and reason.split(': ')[1] not in view['reason'], view
+    prefixed = actor_result(dict(schema='player-error/1', error='ControlError', reason='PlayerError: ' + reason, submission='none'))
+    assert prefixed['reason'].startswith('PlayerError: ' + failure + ';') and reason.split(': ')[1] not in prefixed['reason']
+    # Actionable player-data feedback still reads as written.
+    actionable = 'Handoff summary must be within 8192 characters'
+    assert actor_error(PlayerError(actionable))['reason'] == actionable
+
+
+@pytest.mark.parametrize('retired', ['Unknown memory-query fields', 'Yield/done actions must be null',
+    'Selection requires exactly crop and size', 'Selection size requires two dimensions', 'Crop requires x,y,width,height',
+    'Crop exceeds the captured image', 'Program duration must be finite within (0,20] seconds'])
+def test_retired_controller_texts_are_no_longer_passed_through(retired):
+    view = actor_result(dict(schema='player-error/1', error='ControlError', reason=retired, submission='none'))
+    assert view['reason'].startswith('Service unavailable')
+
+
+def test_a_cancelled_call_fences_at_once_without_blocking_the_event_loop():
+    """R-REGRESSION (#946): the cancellation handler sent the stop's HTTP request on the event loop."""
+    release, stopped = threading.Event(), []
+
+    def stop(reason):
+        stopped.append((threading.current_thread(), reason))
+        release.wait(5)
+
+    client = SimpleNamespace(config={}, call=lambda name, args: release.wait(5), stop=stop)
+    stops = StopRequests(client)
+    with patch('harness.player_mcp.Server') as server:
+        make_server(client, stops)
+        callback = server.call_args.kwargs['on_call_tool']
+
+    async def cancelled():
+        with anyio.move_on_after(.2):
+            await callback(None, types.CallToolRequestParams(name='computer_input', arguments={}))
+    started = time.monotonic()
+    try:
+        anyio.run(cancelled)
+        elapsed = time.monotonic() - started
+    finally:
+        release.set()
+        stops.join()
+    assert elapsed < 2, elapsed
+    assert [(thread is threading.main_thread(), reason) for thread, reason in stopped] == [
+        (False, 'MCP operation cancelled; original collection only')]
+
+
+def test_a_signal_fences_without_blocking_its_handler_and_the_adapter_still_closes(tmp_path):
+    """R-REGRESSION (#946): the SIGINT/SIGTERM handler sent the stop's HTTP request itself."""
+    release, events, handlers = threading.Event(), [], {}
+
+    class Client:
+        def stop(self, reason):
+            events.append(('stop', threading.current_thread() is threading.main_thread(), reason))
+            release.wait(5)
+
+        def close(self):
+            events.append(('close', threading.current_thread() is threading.main_thread(), None))
+
+    async def serve(read, write, options):
+        started = time.monotonic()
+        try:
+            handlers[signal.SIGTERM](signal.SIGTERM, None)
+        finally:
+            events.append(('handled', time.monotonic() - started < 1, None))
+            threading.Timer(.2, release.set).start()
+
+    @asynccontextmanager
+    async def stdio():
+        yield None, None
+    with (patch('harness.player_mcp.PlayerClient', return_value=Client()),
+          patch('harness.player_mcp.signal.signal', side_effect=lambda sig, handler: handlers.__setitem__(sig, handler)),
+          patch('harness.player_mcp.make_server', return_value=SimpleNamespace(run=serve, create_initialization_options=lambda: None)),
+          patch('harness.player_mcp.stdio_server', stdio)):
+        with pytest.raises(KeyboardInterrupt):
+            anyio.run(run, tmp_path / 'actor.json')
+    assert events == [('stop', False, 'MCP signal cancellation'), ('handled', True, None), ('close', False, None)]

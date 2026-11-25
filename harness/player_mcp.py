@@ -5,6 +5,8 @@ import argparse
 import base64
 from pathlib import Path
 import signal
+import threading
+import time
 
 import anyio
 from mcp import types
@@ -19,9 +21,31 @@ from .player_view import OPERATION_SCHEMA, actor_error, actor_result, short_resu
 
 #: Calls whose operation record the model reads in short form (`short_result`).
 SHORT_RESULT_TOOLS = frozenset({'computer_observe', 'computer_input', 'player_handoff'})
+#: The longest the adapter waits at exit for stop requests already started (each HTTP stop is bounded at 2 s).
+STOP_JOIN_SECONDS = 3.
 
 
-def make_server(client: PlayerClient) -> Server:
+class StopRequests:
+    """Fence requests started at once on their own threads, so neither a signal handler nor the event loop
+    blocks on the stop's HTTP request. `join` waits, bounded, for those already started."""
+
+    def __init__(self, client) -> None:
+        self.client = client
+        self.threads: list[threading.Thread] = []
+
+    def request(self, reason: str) -> None:
+        thread = threading.Thread(target=self.client.stop, args=(reason,), name='player-stop', daemon=True)
+        thread.start()
+        self.threads.append(thread)
+
+    def join(self, timeout: float = STOP_JOIN_SECONDS) -> None:
+        deadline = time.monotonic() + max(0.0, timeout)
+        for thread in self.threads:
+            thread.join(max(0.0, deadline - time.monotonic()))
+
+
+def make_server(client: PlayerClient, stops: StopRequests | None = None) -> Server:
+    stops = StopRequests(client) if stops is None else stops
     specs=tool_specs()
 
     async def list_tools(context,params):
@@ -36,7 +60,7 @@ def make_server(client: PlayerClient) -> Server:
             try:
                 value,png,error=await anyio.to_thread.run_sync(lambda:client.call(params.name,args),abandon_on_cancel=True)
             except anyio.get_cancelled_exc_class():
-                client.stop('MCP operation cancelled; original collection only')
+                stops.request('MCP operation cancelled; original collection only')
                 raise
             view=actor_result(value)
             # The model reads the short result; the full operation record rides beside it in structured content for the
@@ -62,19 +86,27 @@ def make_server(client: PlayerClient) -> Server:
     return server
 
 
+def _close(client: PlayerClient, stops: StopRequests) -> None:
+    stops.join()
+    client.close()
+
+
 async def run(config: Path) -> None:
     client=PlayerClient(config)
+    stops=StopRequests(client)
     def stop(signum,frame):
-        client.stop('MCP signal cancellation')
+        stops.request('MCP signal cancellation')
         raise KeyboardInterrupt
     for sig in (signal.SIGINT,signal.SIGTERM):
         signal.signal(sig,stop)
     try:
-        server=make_server(client)
+        server=make_server(client,stops)
         async with stdio_server() as (read,write):
             await server.run(read,write,server.create_initialization_options())
     finally:
-        client.close()
+        # Started stops finish, then the close, on a worker thread: cancellation cannot skip it.
+        with anyio.CancelScope(shield=True):
+            await anyio.to_thread.run_sync(_close,client,stops)
 
 
 if __name__ == '__main__':

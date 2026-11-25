@@ -32,28 +32,38 @@ _FEEDBACK = {
     'Unknown basic input', 'Invalid bounded wait', 'Choose 1..32 basic operations',
     'Combined waits exceed the original 15-second operation bound',
     'Pointer requires a source issued to this actor', 'Pointer exceeds original full-image coordinates',
-    'Input requires actions and optional source_id', 'Unknown memory-query fields',
+    'Input requires actions and optional source_id',
     'Actor sealed; original collection/read only', 'Actor is not the active writer',
     'Input fenced; original collection only', 'Unknown ephemeral actor capability',
     'Actor capability unavailable', 'Unsettled input cannot become a handoff',
     'Unknown retained source', 'Unknown original operation for this actor',
-    'Unknown original player-service operation', 'Yield/done actions must be null',
-    'Selection requires exactly crop and size', 'Selection size requires two dimensions',
-    'Crop requires x,y,width,height', 'Crop exceeds the captured image',
+    'Unknown original player-service operation',
     'Identity must be 1..128 characters',
-    'Program duration must be finite within (0,20] seconds',
     'Unknown current tool',
-    'Operation ID must be32 lowercase hexadecimal characters',
+    'Operation ID must be 32 lowercase hexadecimal characters',
 }
+
+# Player-store failures whose detail is the storage engine's own text. The model reads only which
+# operation failed; the detail stays in the service's own records.
+_STORAGE_FAILURES = ('Cannot open current player journal', 'Cannot write journal', 'Cannot read source')
+
+
+def _player_feedback(reason):
+    """A player-data error as the model reads it: its own text, except a store failure's engine detail."""
+    for failure in _STORAGE_FAILURES:
+        if reason == failure or reason.startswith(failure + ':'):
+            return failure + '; the player store did not complete this request. No authority is restored.'
+    return reason[:1100]
 
 
 def _diagnostic(reason, error=None):
     if error == 'PlayerError' and isinstance(reason, str):
-        return reason[:1100]
+        return _player_feedback(reason)
     if isinstance(reason, str) and reason in _FEEDBACK:
         return reason
-    if isinstance(reason, str) and reason.startswith(('Invalid player data: ', 'Invalid player JSON: ',
-                                                      'PlayerError: ')):
+    if isinstance(reason, str) and reason.startswith('PlayerError: '):
+        return ('PlayerError: ' + _player_feedback(reason.removeprefix('PlayerError: ')))[:1100]
+    if isinstance(reason, str) and reason.startswith(('Invalid player data: ', 'Invalid player JSON: ')):
         return reason[:1100]
     if reason == 'Owned native child exited':
         return 'Owned application exited'

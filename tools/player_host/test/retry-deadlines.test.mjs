@@ -70,6 +70,20 @@ test('a transport error or first [DONE] before any data event is retried once',a
     assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'stream-start-error');
   }
 });
+test('SSE first-event peek limit is invariant to chunk boundaries at 65536 bytes',async t=>{
+  // Identical stream: 65536-byte comment followed by an error event after the peek bound.
+  const comment=`: ${'x'.repeat(65533)}\n`;
+  assert.equal(Buffer.byteLength(comment),65536);
+  const tail='data: {"error":{"message":"upstream"}}\n\n';
+  const makeStream=parts=>new Response(new ReadableStream({
+    start(c){for(const part of parts) c.enqueue(new TextEncoder().encode(part)); c.close();}
+  }),{headers:{'content-type':'text/event-stream'}});
+  for (const [label,parts] of [['single-chunk',[comment+tail]],['split-at-65536',[comment,tail]]]) {
+    const {result,events}=await scenario(t,[makeStream(parts),reply()]);
+    assert.equal(result.ok,false,label);
+    assert.equal(events.some(e=>e.type==='provider-retry'),false,label);
+  }
+});
 test('both HTTP attempts share the original request timer',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});
   const configuration=route();configuration.request_timeout_seconds=1;

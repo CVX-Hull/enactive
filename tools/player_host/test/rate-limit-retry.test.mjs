@@ -31,6 +31,28 @@ test('a stream that fails before its first data event is retried once',async t=>
     assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'stream-start-error');
   }
 });
+/** An event stream delivered as exactly these chunks. */
+function chunkedStream(chunks) {
+  const encoder=new TextEncoder();
+  let next=0;
+  return new Response(new ReadableStream({
+    pull(controller) { if (next<chunks.length) controller.enqueue(encoder.encode(chunks[next++])); else controller.close(); },
+  }),{headers:{'content-type':'text/event-stream'}});
+}
+test('the first event is read the same wherever chunk boundaries fall',async t=>{
+  // R-REGRESSION (#946): the peek matched one data line per event over a text whose lone CRs became LFs chunk by
+  // chunk, so a CR LF split across chunks or a two-line data field hid a stream-start error from the retry.
+  const error=['data: {"error":{"message":"Upstream error",','data: "code":502}}'];
+  for (const chunks of [
+    [error[0]+'\r','\n'+error[1]+'\r\n','\r\n'],
+    [error[0]+'\n'+error[1].slice(0,9),error[1].slice(9)+'\n','\n'],
+    [': keep-alive\r\n\r\n'+error[0]+'\r',`\n${error[1]}\r`,'\r'],
+  ]) await t.test(JSON.stringify(chunks),async sub=>{
+    const {result,events}=await scenario(sub,[chunkedStream(chunks),reply()]);
+    assert.equal(result.ok,true);assert.equal(result.requests,2);
+    assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'stream-start-error');
+  });
+});
 test('a retry retains the charge returned by the failed first attempt',async t=>{
   const body=JSON.stringify({error:{message:'Upstream error',code:502},usage:{cost:0.25}});
   for (const failed of [eventStream(`data: ${body}\n\n`),new Response(body,{status:502,headers:{'retry-after-ms':'0'}})]) {

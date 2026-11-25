@@ -148,6 +148,17 @@ test('selection joins text parts, ignores reasoning and accepts one untagged or 
   }
 });
 
+test('an exact id selects its own entry even when another entry has that text as its title', () => {
+  // R-REGRESSION (#946): the index was searched for id or title in one pass, so an earlier entry titled with a
+  // later entry's id was selected in its place.
+  const value = knowledge();
+  value.articles[0].title = 'article-b';
+  const pick = ids => selection({content:[{type:'text', text:JSON.stringify({articles:ids})}]}, value).map(a => a.id);
+  assert.deepEqual(pick(['article-b']), ['article-b']);
+  // A title still names its entry when no id matches it.
+  assert.deepEqual(pick(['B subject']), ['article-b']);
+});
+
 test('invalid selections always expose the machine reason instead of a SyntaxError', () => {
   for (const [text, detail] of [
     ['', 'not-json'], ['{', 'not-json'], ['```js\n{"articles":[]}\n```', 'not-json'],

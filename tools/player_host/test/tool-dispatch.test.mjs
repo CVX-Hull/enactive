@@ -99,7 +99,7 @@ test('spend exhaustion exits unsuccessful if continuation is needed',async t=>{
   assert.equal(result.ok,false); assert.equal(result.reason,'spend-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
-test('fixture union schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
+test('fixture union schema refusal keeps the SDK feedback stable, explicit correction dispatches, MCP errors stay intact',async t=>{
   const entry={stage:'x'.repeat(244),available:[{subject:'small cardboard box'}]};
   const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry}};
   const fixed=structuredClone(bad);fixed.intent.entry.stage='partial';
@@ -115,20 +115,30 @@ test('fixture union schema refusal gives stable precise feedback, explicit corre
   assert.equal(result.ok,true);
   assert.deepEqual(calls.filter(c=>c.tool==='fixture_remember').map(c=>c.intent),[fixed.intent,mcpError.intent]);
   const first=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
-  assert.match(first,/entry.stage: must not have more than 128/);
-  assert.match(first,/entry.available.0.subject: must match pattern/);
-  // The validator's own wording comes first, unchanged; the narrowed diagnostic names only the selected branch.
-  const [own,narrowed]=first.split('\n\nThe errors above check every intent branch and may name another one. ');
-  assert.match(own,/intent.entry.value/);
-  assert.ok(narrowed.startsWith('For the selected intent.entry_type='));
-  assert.ok(!narrowed.includes('intent.entry.value'));
+  // The model reads the validator's own wording, unchanged and identical in every later request.
+  assert.match(first,/^Validation failed for tool "fixture_remember":/);
+  assert.match(first,/intent.entry.value/);
   for(const payload of payloads.slice(2)) {
     assert.equal(payload.messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content,first);
   }
-  const diagnostics=events.filter(e=>e.type==='tool-validation-feedback');assert.equal(diagnostics.length,1);
-  assert.match(diagnostics[0].original_result.content[0].text,/intent.entry.value/);
-  assert.equal(diagnostics[0].projected_text,first);
+  assert.equal(events.some(e=>e.type==='tool-validation-feedback'),false,'the retired rewrite emits nothing');
   const actualMcpError=payloads[4].messages.find(m=>m.role==='tool'&&m.tool_call_id==='mcp-error-0').content;
   assert.match(actualMcpError,/MCP isError: true/);assert.match(actualMcpError,/fixture MCP refusal/);
   assert.deepEqual(payloads[0].tools,payloads[4].tools,'the actual full schema remains stable');
+});
+test('a partial input ends the rest of its turn except collection, and is not a completed input',async t=>{
+  // R-REGRESSION (#946): calls queued after a partial delivery still dispatched, and the partial counted toward
+  // the reminder cadence, which counts completed inputs only.
+  const configuration=route();configuration.recall.every=1;
+  const {result,calls,events}=await scenario(t,[
+    reply(null,[['computer_input',{}],['mutate',{mode:'ok',index:1}],['computer_result',{operation_id:'1'.repeat(32)}],
+      ['mutate',{mode:'ok',index:2}]]),
+    reply(null,[['mutate',{mode:'ok',index:3}]]),reply()
+  ],{configuration,enabledTools:['computer_input','mutate','computer_result']});
+  assert.equal(result.ok,true);
+  assert.deepEqual(calls.filter(c=>c.phase!=='end').map(c=>c.tool==='mutate'?`mutate-${c.index}`:c.tool),
+    ['computer_input','computer_result','mutate-3'],'collection follows the partial input; the next turn decides again');
+  assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),
+    [['mutate','uncertain-input',false],['mutate','uncertain-input',false]]);
+  assert.equal(events.filter(e=>e.type==='knowledge-recall'&&e.kind==='reminder').length,0,'a partial input offers no reminder');
 });

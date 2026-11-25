@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { runHost, validateConfiguration } from '../host.mjs';
+import { HostError, providerPayload, runHost, sessionAffinityId, validateConfiguration } from '../host.mjs';
 import { realDelay, model, route, usageRecord, reply, rateLimit, scenario, emptyKnowledge } from './host-scenario.mjs';
 
 test('provider errors are nonzero without leaking exception or key',async t=>{
@@ -284,6 +284,17 @@ test('inspected refusal and provider identities retain bounded IDs without raw t
   assert.ok(!JSON.stringify(observed.events).includes('fixture-key'));
 });
 
+test('a provider attempt body is checked before any charge and refused with its own reason',()=>{
+  const affinity=sessionAffinityId('2'.repeat(32));
+  const reason=init=>{ try { providerPayload(init,'openrouter',affinity); return null; } catch (error) { assert.ok(error instanceof HostError); return error.reason; } };
+  assert.deepEqual(providerPayload({body:'{"messages":[]}',headers:{'x-session-id':affinity}},'openrouter',affinity),{messages:[]});
+  assert.equal(reason({body:new Uint8Array(2),headers:{'x-session-id':affinity}}),'invalid-provider-payload');
+  assert.equal(reason({body:'{"messages":',headers:{'x-session-id':affinity}}),'invalid-provider-payload');
+  assert.equal(reason({body:'{}',headers:{}}),'session-affinity-missing');
+  assert.equal(reason({body:'{}',headers:{'x-session-id':'enactive-other'}}),'session-affinity-missing');
+  // A direct route has no affinity header to check.
+  assert.deepEqual(providerPayload({body:'{}'},'fixture',affinity),{});
+});
 test('provider attempt and time countdowns are absent from model context',async t=>{
   const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()]);
   assert.equal(result.ok,true);

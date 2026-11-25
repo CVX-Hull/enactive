@@ -62,7 +62,12 @@ class PlayerClient:
 
     def _handoff(self, name, args, value) -> None:
         if name == 'player_handoff':
-            if value.get('schema') == 'player-transport/1' and value.get('status') == 'unknown':
+            # A submitted handoff whose outcome is not yet known stays collectable by its original ID,
+            # whether the transport lost the reply or the service reported it pending or unknown.
+            uncertain=(value.get('schema') == 'player-transport/1' and value.get('status') == 'unknown'
+                       or value.get('schema') == 'computer-operation/1' and value.get('kind') == 'handoff'
+                       and value.get('status') in ('pending','unknown'))
+            if uncertain and isinstance(value.get('operation_id'),str):
                 self.pending_handoff=value['operation_id']
         original = self.pending_handoff if name == 'computer_result' else value.get('operation_id')
         if name not in ('player_handoff','computer_result') or original is None:
@@ -84,6 +89,9 @@ class PlayerClient:
         kind='handoff' if name == 'player_handoff' else name
         try:
             response=self._post('/api/tool',dict(operation_id=identity,tool=name,arguments=args))
+            # Any other JSON value is an unsupported reply, inside the uncertainty fence below.
+            if not isinstance(response,dict):
+                raise ControlError('Unsupported player response')
             if response.get('schema') == 'player-error/1':
                 if response.get('submission') == 'uncertain':
                     raise ControlError('Service retained a possible original operation: '+response.get('reason',''))
@@ -95,9 +103,11 @@ class PlayerClient:
         except (OSError,ValueError) as exc:
             if name in EFFECT_TOOLS:
                 self.stop('Uncertain actor HTTP operation; original collection only')
-            value=dict(schema='player-transport/1',operation_id=identity,session=self.config['session'],
-                actor_id=self.config['actor_id'],kind=kind,status='unknown',reason=str(exc)[:600],
-                collect_with='computer_result' if name in ('computer_observe','computer_input','player_handoff') else 'player_result',
+            # A failed collection names the original it was collecting and the same collector, never this request.
+            collecting=name in ('computer_result','player_result') and isinstance(args.get('operation_id'),str)
+            value=dict(schema='player-transport/1',operation_id=args['operation_id'] if collecting else identity,
+                session=self.config['session'],actor_id=self.config['actor_id'],kind=kind,status='unknown',reason=str(exc)[:600],
+                collect_with=name if collecting else 'computer_result' if name in EFFECT_TOOLS else 'player_result',
                 input_replayed=False)
             self._handoff(name,args,value)
             return value,None,False

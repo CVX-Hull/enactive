@@ -129,11 +129,6 @@ projected body or private reasoning. Context projection events expose image
 omissions, and `context-cut` records cut decisions. Qualification must include
 actual continuation and apparent effects.
 
-`validation-feedback.mjs` narrows model-facing validation feedback for `intent`
-schemas with an `anyOf` union discriminated by `entry_type`. Current player tools
-use a string for `intent`, so the helper never runs its diagnostic for them and
-is a candidate for removal.
-
 ## Reasoning and credentials
 
 For nonreasoning models effort must be `off`. For reasoning models the selected
