@@ -36,7 +36,7 @@ test('a reported cost is counted as the provider reported it, beside the unchang
   const {result, events} = await scenario(t, [reply('finished', [], {...pilot, ...tokens})], {configuration});
   assert.equal(result.ok, true);
   const start = events.find(event => event.type === 'host-start');
-  assert.deepEqual([start.schema, start.telemetry_version, start.spend_limit_usd, start.unpriced_request_usd], ['player-host/11', 11, '100', '0.25']);
+  assert.deepEqual([start.schema, start.telemetry_version, start.spend_limit_usd, start.unpriced_request_usd], ['player-host/12', 12, '100', '0.25']);
   const {wall_time, monotonic_ms, response_progress, ...completed} = events.find(event => event.type === 'response-complete');
   // 11 input tokens at $1 and 5 output at $2 per million: the estimate keeps its floating-point value and its label.
   assert.deepEqual(completed, {type:'response-complete', request_id:'request-1', model:'fixture-model', provider:'fixture',
@@ -47,7 +47,7 @@ test('a reported cost is counted as the provider reported it, beside the unchang
 });
 test('the limit stops the host before the next request, and the overshoot is at most one request', async t => {
   // Limit $0.01 and three responses reporting $0.004 each: the third takes the total to $0.012, so the fourth is refused.
-  const {result, payloads, events, calls} = await scenario(t, [look(0.004), look(0.004), look(0.004), reply()], {configuration:limited('0.01')});
+  const {result, payloads, events, calls} = await scenario(t, [look(0.004), look(0.004), look(0.004), reply()], {configuration:limited('0.01','0.001')});
   assert.equal(result.ok, false); assert.equal(result.reason, 'spend-limit');
   assert.equal(result.requests, 3); assert.equal(payloads.length, 3); assert.equal(calls.length, 3);
   assert.deepEqual(counted(events), [['request-1', '0.004', 'provider-reported', '0.004'], ['request-2', '0.004', 'provider-reported', '0.008'],
@@ -103,12 +103,12 @@ test('a refused request is unknown, and its retry uses a separate attempt', asyn
   assert.equal(terminal.result.reason, 'provider-error');
   assert.deepEqual(counted(terminal.events), [['request-1', null, 'unpriced', '0']]);
 });
-test('an unpriced loss leaves room to retry even when its planning bound exceeds the dollar limit', async t => {
-  const {result, payloads, events} = await scenario(t, [rateLimit(), reply('finished', [], pilot)], {configuration:limited('0.1')});
-  assert.equal(result.ok, true);
-  assert.equal(payloads.length, 2); assert.equal(result.requests, 2);
-  assert.equal(events.some(event => event.type === 'provider-retry'), true);
-  assert.deepEqual(settled(events), {spent_usd:'0.000038', unpriced_requests:1});
+test('a planning bound greater than the remaining limit waits for control without a fetch', async t => {
+  const {result, payloads, events} = await scenario(t, [], {configuration:limited('0.1'), spendReserveWaitMs:5});
+  assert.equal(result.reason, 'spend-reserve-timeout');
+  assert.equal(payloads.length, 0);
+  assert.equal(events.filter(event => event.type === 'spend-reserve-reached').length, 1);
+  assert.deepEqual(settled(events), {spent_usd:'0', unpriced_requests:0});
 });
 test('a request aborted at its deadline consumes one attempt with unknown cost', async t => {
   const configuration = limited('1'); configuration.request_timeout_seconds = .05;

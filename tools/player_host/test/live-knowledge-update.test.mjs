@@ -63,12 +63,8 @@ test('a listed newer version reaches the next request as its own delimited messa
   assert.ok(!sent[0].messages.some(m => messageText(m).includes('KNOWLEDGE UPDATE')));
   assert.equal(sent[1].messages.filter(m => m.role === 'user' && messageText(m) === update.text).length,1,'the update is its own user message');
   for (let i=1;i<sent.length;i++) assert.deepEqual(sent[i].messages.slice(0,sent[i-1].messages.length),sent[i-1].messages,'every request extends the previous one');
-  // The recall requested after adoption reads the new version: its index and the version it records.
-  const requestedAfter = new Set(events.slice(events.indexOf(update)).filter(e => e.type === 'request-start' && e.request_role === 'recall').map(e => e.request_id));
-  const after = events.filter(e => e.type === 'knowledge-recall' && requestedAfter.has(e.request_id));
-  assert.ok(after.length && after.every(e => e.version === 'v3'));
-  const index = JSON.parse(payloads.filter(p => p.model === 'recall-fixture').at(-1).messages.find(m => m.role === 'user').content[0].text).index.map(row => row.id);
-  assert.deepEqual(index,['article-a','article-b','article-c']);
+  const after = events.slice(events.indexOf(update) + 1).filter(e => e.type === 'knowledge-recall');
+  assert.ok(after.some(e => e.version === 'v3' && e.status === 'not-made' && e.reason === 'all-delivered'));
 });
 
 // The reminder recall starts on v2 and answers only after v3 was delivered, selecting `selected`.
@@ -82,7 +78,7 @@ async function inFlightRecall(t, selected) {
       if (event.type === 'knowledge-recall' && event.request_id === 'recall-2') recalled();
     },
     recallFetch:async n => { if (n === 2) await wasDelivered; return recallReply(n === 1 ? ['article-a'] : n === 2 ? selected : []); },
-    playerFetch:play({1:() => listUpdate(dir,newer()),2:() => wasRecalled},3)});
+    playerFetch:play({1:() => listUpdate(dir,newer()),3:() => wasRecalled},3)});
   assert.equal(run.result.ok,true);
   const recall = run.events.find(e => e.type === 'knowledge-recall' && e.request_id === 'recall-2');
   // The reply itself is still checked against the version the recall was requested from.
@@ -92,26 +88,24 @@ async function inFlightRecall(t, selected) {
   return {...run, update};
 }
 
-test('a recall in flight when a version is adopted is validated against its own version and its reminder is rebuilt from the adopted one',async t => {
-  // R-REGRESSION (#946): a reminder from v2 was injected after the player had adopted v3.
+test('a reminder in flight is filtered against the full lead delivered by an intervening update',async t => {
   const {events,payloads,update} = await inFlightRecall(t,['article-b']);
-  const reminder = events.find(e => e.type === 'knowledge-delivery' && e.kind === 'reminder');
-  assert.deepEqual([reminder.version,reminder.recall_request_id,reminder.receiving_player_request_id,reminder.article_ids],
-    ['v3','recall-2','request-3',['article-b']]);
-  const data = JSON.parse(reminder.text.split('\n')[1]);
-  assert.deepEqual([data.version,data.leads.map(lead => lead.lead)],['v3',['A revised later lead.']]);
-  const sent = players(payloads).at(-1).messages.map(messageText);
-  assert.ok(sent.indexOf(update.text) >= 0 && sent.indexOf(update.text) < sent.indexOf(reminder.text),'each message stays where it was first sent');
-  assert.ok(!events.some(e => e.type === 'knowledge-delivery' && e.kind === 'reminder' && e.version === 'v2'),
-    'no v2 reminder reaches the player after v3');
+  assert.equal(events.filter(e => e.type === 'knowledge-delivery' && e.kind === 'reminder').length,0);
+  const dropped = events.find(e => e.type === 'knowledge-undelivered' && e.kind === 'reminder');
+  assert.deepEqual([dropped.version,dropped.recall_request_id,dropped.article_ids,dropped.reason],
+    ['v2','recall-2',['article-b'],'already-in-context']);
+  assert.equal(events.filter(e => e.type === 'knowledge-recall' && e.request_id === 'recall-2').length,1);
+  assert.ok(players(payloads).at(-1).messages.map(messageText).includes(update.text));
 });
 
 test('a reminder whose selections the adopted version no longer lists is not sent',async t => {
   const {events,payloads} = await inFlightRecall(t,['fact-alone']);
   assert.equal(events.filter(e => e.type === 'knowledge-delivery' && e.kind === 'reminder').length,0);
   const dropped = events.find(e => e.type === 'knowledge-undelivered' && e.kind === 'reminder');
-  assert.deepEqual([dropped.version,dropped.recall_request_id,dropped.fact_ids,dropped.reason],['v2','recall-2',['fact-alone'],'superseded']);
-  assert.ok(!players(payloads).at(-1).messages.map(messageText).some(text => text.includes('An unfiled claim.')));
+  assert.deepEqual([dropped.version,dropped.recall_request_id,dropped.fact_ids,dropped.reason],
+    ['v2','recall-2',['fact-alone'],'already-in-context']);
+  // The original index may still name the entry. The player receives the removal, with no reminder lead.
+  assert.ok(!players(payloads).at(-1).messages.map(messageText).some(text => text.includes('"lead":"An unfiled claim."')));
 });
 
 test('an entry or file that does not verify is refused with its reason and play goes on with the adopted version',async t => {
@@ -171,7 +165,7 @@ test('from an empty store the update is the index of the version, and recall beg
   assert.deepEqual([update.outcome,update.version,update.previous_version,update.receiving_player_request_id],['delivered','v3',null,'request-2']);
   assert.deepEqual([update.article_ids,update.fact_ids,update.index_ids],[[],[],['article-a','article-b','article-c']]);
   const data = JSON.parse(update.text.split('\n')[1]);
-  assert.deepEqual(Object.keys(data),['grants_authority','version','previous_version','coverage','index']);
+  assert.deepEqual(Object.keys(data),['grants_authority','version','previous_version','coverage','index','unlisted_entries']);
   assert.deepEqual(data.index.map(row => row.index),['A useful first lead','A revised later lead','A new lead']);
   // No recall request was possible on the empty store; the first one follows the input after adoption.
   const first = events.find(e => e.type === 'request-start' && e.request_role === 'recall');
@@ -245,7 +239,7 @@ test('a line still being appended is read once it is whole',async t => {
 test('an adopted version with no later request is recorded as undelivered',async t => {
   const dir = await directory(t);
   // The first response's reported cost reaches the dollar limit, so the host stops before a second fetch.
-  const {result,events} = await deliveryScenario(dir,{knowledge:empty(),knowledgeUpdates:true,configuration:{spend_limit_usd:'0.00003'},
+  const {result,events} = await deliveryScenario(dir,{knowledge:empty(),knowledgeUpdates:true,configuration:{spend_limit_usd:'0.00003',unpriced_request_usd:'0.00001'},
     finishReserveUsd:'0',playerFetch:play({1:() => listUpdate(dir,newer())},3)});
   assert.deepEqual([result.ok,result.reason],[false,'spend-limit']);
   const [update,...others] = updates(events);
@@ -299,17 +293,16 @@ test('an update that would bring the context to its capacity warning is refused 
   assert.ok(!events.some(e => e.type === 'tail-notice'));
 });
 
-test('update admission budgets a reminder due on the same request boundary',async t => {
+test('joint admission omits a due reminder whose full lead is in the update',async t => {
   const dir = await directory(t), value = newer();
-  // Neither update (~85k tokens) nor rebuilt reminder (~85k tokens) alone crosses contextWindow (262144) - reserve (16384),
-  // but together with existing context they exceed the reserve threshold and must refuse the update rather than crash.
-  value.articles[0].lead = 'r'.repeat(300_000);
-  value.articles[2].lead = 'u'.repeat(400_000);
+  value.articles[0].lead = 'r'.repeat(160_000);
+  value.articles[2].lead = 'u'.repeat(150_000);
   const {result,events} = await deliveryScenario(dir,{knowledgeUpdates:true,
-    recallFetch:n => recallReply(n === 1 ? ['article-a'] : ['article-a']),
+    recallFetch:n => recallReply(n === 1 ? [] : ['article-a']),
     playerFetch:play({1:() => listUpdate(dir,value)},3)});
   assert.equal(result.ok,true);
-  assert.deepEqual(updates(events).map(e => [e.outcome,e.version,e.reason]),[['refused','v3','context-capacity']]);
+  assert.deepEqual(updates(events).map(e => [e.outcome,e.version]),[['delivered','v3']]);
+  assert.ok(!events.some(e => e.type === 'knowledge-delivery' && e.kind === 'reminder'));
 });
 
 test('without the update list a host never looks for one',async t => {

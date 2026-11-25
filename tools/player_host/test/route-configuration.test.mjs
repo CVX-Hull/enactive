@@ -11,7 +11,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
   for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/6',
-    ...Array.from({length:11}, (_, version) => 'player-host/' + version)])
+    ...Array.from({length:12}, (_, version) => 'player-host/' + version)])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   // The dollar limit and the bound for a request with no cost record are plain decimal text; a number,
   // an exponent, a sign, a non-finite word or a limit of zero is refused, and so is leaving either out.

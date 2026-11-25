@@ -90,7 +90,7 @@ for (const provider of ['fixture', 'openrouter']) test(`${provider} recall paylo
     const [indexText, requestText] = payload.messages.slice(1).map(m => m.content.find(p => p.type === 'text').text);
     assert.deepEqual(Object.keys(JSON.parse(indexText)), ['index']);
     assert.equal(payload.messages[1].content.length, 1);
-    assert.deepEqual(Object.keys(JSON.parse(requestText)), ['kind', i === 0 ? 'first_message' : 'recent_calls']);
+    assert.deepEqual(Object.keys(JSON.parse(requestText)), ['kind', i === 0 ? 'first_message' : 'recent_calls', 'already_in_context']);
   }
   assert.notEqual(JSON.stringify(recalls[0].messages[2]), JSON.stringify(recalls[1].messages[2]), 'only the request changes');
   assert.ok(recalls[0].messages[0].content.startsWith('Choose relevant leads'), 'the recall instructions reach the provider');
@@ -108,8 +108,8 @@ for (const provider of ['fixture', 'openrouter']) test(`${provider} recall paylo
 
 test('recall telemetry bounds UTF-8 reply text without changing the parsed reply', async t => {
   const value = knowledge();
-  value.articles[0].title = 'a'.repeat(8176) + '😀'.repeat(8);
-  const text = JSON.stringify({articles:[value.articles[0].title]});
+  value.articles[0].title = '😀';
+  const text = ' '.repeat(8176) + JSON.stringify({articles:[value.articles[0].title]});
   const {events} = await scenario(t, {knowledge:value, recallFetch:() => recallTextReply(text)});
   const event = events.find(e => e.type === 'knowledge-recall' && e.request_id === 'recall-1');
   assert.equal(event.status, 'selected');

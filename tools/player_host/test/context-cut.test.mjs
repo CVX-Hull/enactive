@@ -120,7 +120,7 @@ test('a high-mark cut delivers a bounded briefing, clears stale usage and warnin
     return observe(n, 1, [3, 4].includes(n) ? 97_000 : n === 5 ? 12_345 : 16);
   }, {contextCut:tokenCut, maxImages:12});
   const start = events.find(event => event.type === 'host-start');
-  assert.deepEqual([start.schema, start.telemetry_version, start.context_cut], ['player-host/11', 11, tokenCut]);
+  assert.deepEqual([start.schema, start.telemetry_version, start.context_cut], ['player-host/12', 12, tokenCut]);
   assert.ok(start.unsupported_features.includes('compaction'));
   const [held, cut] = cutEvents(events);
   assert.equal(cutEvents(events).length, 2);
@@ -143,7 +143,7 @@ test('a high-mark cut delivers a bounded briefing, clears stale usage and warnin
   assert.deepEqual(marker, [
     'BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false',
     JSON.stringify({grants_authority:false, removed_turns:3, covered_through_operation_id:operationId(3),
-      knowledge_version:'v1', source_id_prefix:`${sessionId}-`, source_ids:['1..3']}),
+      knowledge_version:'v1', source_id_prefix:`${sessionId}-`, source_ids:['1..3'], recent_intents:['State the fixture action']}),
     'END CONTEXT CUT',
     'To inspect any omitted frame again, read its source_id (combining any source_id_prefix and expanding any start..end range) with player_source.',
   ]);
@@ -193,23 +193,19 @@ test('image peak holds an only partly covered batch, then cuts it whole and accu
   assert.deepEqual([marker5.source_id_prefix, marker5.source_ids], [`${sessionId}-`, ['1..3']]);
 });
 
-test('the image trigger fires only at a new block eviction, so a cut replaces an eviction instead of following it', async t => {
-  // Peak 3, block 2: the projection first omits two images at four (request-5), then four at six (request-7).
+test('armed image pressure retries when coverage arrives between block evictions', async t => {
   const {events, payloads} = await play(t, async (n, {publish}) => {
     if (n === 5) await publish(publication(3));
     return n === 8 ? reply() : observe(n);
   }, {maxImages:3, block:2});
   assert.deepEqual(cutEvents(events).map(event => [event.request_id, event.outcome, event.reason, event.triggers]),
-    [['request-5', 'held-back', 'uncovered', ['image_peak']], ['request-7', 'cut', undefined, ['image_peak']],
+    [['request-5', 'held-back', 'uncovered', ['image_peak']], ['request-6', 'cut', undefined, ['image_peak']],
       ['request-8', 'held-back', 'uncovered', ['image_peak']]]);
   const omitted = id => events.find(event => event.type === 'context-image-projection' && event.request_id === id).omitted_images;
-  assert.deepEqual(['request-4', 'request-5', 'request-6', 'request-7', 'request-8'].map(omitted), [0, 2, 2, 0, 2]);
-  // Coverage that arrives between evictions waits for the next one: request-6 extends request-5 byte for byte.
-  assert.equal(JSON.stringify(payloads[5].messages.slice(0, payloads[4].messages.length)), JSON.stringify(payloads[4].messages));
-  const manifest = id => events.find(event => event.type === 'context-manifest' && event.request_id === id);
-  assert.equal(manifest('request-6').reused_prefix_parts, manifest('request-5').part_count);
+  assert.deepEqual(['request-4', 'request-5', 'request-6', 'request-7', 'request-8'].map(omitted), [0, 2, 0, 0, 2]);
+  assert.ok(markerText(payloads[5]));
   const cut = cutEvents(events)[1];
-  assert.deepEqual([cut.removed_turns, cut.images_before, cut.images_after], [3, 6, 3]);
+  assert.deepEqual([cut.removed_turns, cut.images_before, cut.images_after], [3, 5, 2]);
 });
 
 test('an image cut leaves a block of headroom, so the next request extends the cut prefix without eviction', async t => {
@@ -341,11 +337,10 @@ test('restore permanently disables additional cuts even if later coverage arrive
     if (n === 2) await publish(publication(1));
     if (n === 3) await publish(restoration, publication(2));
     if (n === 4) await publish(publication(3));
-    return n === 5 ? reply() : observe(n);
+    return n === 5 ? reply() : observe(n, 1, 1000);
   }, {maxImages:1});
   assert.deepEqual(cutEvents(events).map(event => [event.request_id, event.outcome, event.reason, event.covered_through_operation_id]),
-    [['request-3', 'cut', undefined, operationId(1)], ['request-4', 'held-back', 'restored', null],
-      ['request-5', 'held-back', 'restored', null]]);
+    [['request-3', 'cut', undefined, operationId(1)]]);
   assert.equal(markerText(payloads[4]), markerText(payloads[2]));
 });
 
@@ -358,7 +353,7 @@ test('coverage from a newer version refused for capacity leaves the adopted cove
       await publish(publication(1), publication(2, 'v2'), {...publication(2), session:actorId},
         {...publication(2), actor_id:sessionId});
     }
-    return n === 4 ? reply() : observe(n);
+    return n === 4 ? reply() : observe(n, 1, 9000);
   });
   assert.ok(events.some(event => event.type === 'knowledge-delivery' && event.version === 'v2' && event.reason === 'context-capacity'));
   assert.ok(!events.some(event => event.type === 'knowledge-delivery' && event.reason === 'invalid-entry'));
@@ -374,16 +369,17 @@ test('a version too large for the uncut history is adopted when a cut at the sam
   const {events, payloads} = await play(t, async (n, {dir, publish}) => {
     if (n === 3) {
       await listUpdate(dir, knowledge('v2'));
-      await publish(publication(2));
+      await publish(publication(2, 'v2'));
     }
     if (n >= 4) return reply();
     return observe(n, 1, n === 3 ? 97_000 : 16);
   }, {contextCut:tokenCut, maxImages:12});
   const [cut] = cutEvents(events);
-  assert.deepEqual([cut.request_id, cut.outcome, cut.knowledge_version], ['request-4', 'cut', 'v1']);
+  assert.deepEqual([cut.request_id, cut.outcome, cut.knowledge_version], ['request-4', 'cut', 'v2']);
   const updates = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'update');
   assert.deepEqual(updates.map(event => [event.outcome, event.version, event.receiving_player_request_id]),
     [['delivered', 'v2', 'request-4']]);
+  assert.equal(JSON.parse(markerText(payloads[3]).split('\n')[1]).knowledge_version, 'v2');
   // The update follows the cut marker in the request that carries it.
   const sent = payloads[3].messages.map(messageText);
   assert.ok(sent.indexOf(updates[0].text) > sent.findIndex(text => text.startsWith('BEGIN CONTEXT CUT')));
@@ -411,7 +407,7 @@ test('an accepted orderly stop fences new cuts and remains visible after an earl
     if (n === 2) await publish(publication(1));
     if (n === 3) await publish(publication(2));
     return n === 4 ? reply(null, [['player_finish', {disposition:'external_stop_complete', report:'Stopped',
-      source_ids:[], control_id:command.id}]]) : observe(n);
+      source_ids:[], control_id:command.id}]]) : observe(n, 1, 1000);
   }, {maxImages:1, onEvent:(event, control) => {
     if (event.type === 'tool-result' && event.request_id === 'request-3') control.write(JSON.stringify(command) + '\n');
   }});
@@ -532,13 +528,13 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
       if (payload.model === 'recall-fixture') return recallReply(['article-a']);
       reqs++;
       if (reqs === 2) { await appendFile(list, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
-      return reqs === 3 ? reply(null, [['player_handoff', {}]]) : observe(reqs);
+      return reqs === 3 ? reply(null, [['player_handoff', {}]]) : observe(reqs, 1, 1000);
     }, onEvent:event => events.push(event)});
   assert.deepEqual([result.ok, result.reason], [true, 'handoff']);
   assert.deepEqual(cutEvents(events).map(c => [c.request_id, c.outcome]), [['request-3', 'cut']]);
   assert.ok(events.some(e => e.type === 'handoff' && e.handoff_id === handoffOp));
 
-  // Now verify knowledge-undelivered when spend limit stops right after cutContext queues a cut briefing.
+  // Verify an unplaced cut briefing when the spend limit stops the next fetch.
   const dir2 = await mkdtemp(join(tmpdir(), 'player-context-cut-undelivered-'));
   t.after(() => rm(dir2, {recursive:true, force:true}));
   const actor2 = join(dir2, 'actors', '001'), list2 = join(actor2, 'knowledge-updates.jsonl');
@@ -559,9 +555,52 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
       if (payload.model === 'recall-fixture') return recallReply(['article-a']);
       reqs2++;
       if (reqs2 === 2) { await appendFile(list2, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
-      return reply(null, [['computer_observe', {}]], {...usageRecord, cost:reqs2 === 2 ? 0.002 : 0.0005});
+      return reply(null, [['computer_observe', {}]], {...usage(1000), cost:reqs2 === 2 ? 0.002 : 0.0005});
     }, onEvent:event => events2.push(event)});
   assert.deepEqual([res2.ok, res2.reason], [false, 'spend-limit']);
   assert.ok(events2.some(e => e.type === 'context-cut' && e.outcome === 'cut' && e.request_id === 'request-3'));
   assert.ok(events2.some(e => e.type === 'knowledge-undelivered' && e.kind === 'briefing' && e.reason === 'actor-ended'));
+});
+
+test('strict-fit rescue cuts a covered turn below min_free and independent of high_mark', async t => {
+  const {events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 2) await publish(publication(1));
+    return n === 3 ? reply() : observe(n, 1, n === 2 ? 98_000 : 16);
+  }, {maxImages:12, contextCut:{low_mark:95_000, high_mark:99_900, min_free:10}});
+  const [cut] = cutEvents(events);
+  assert.deepEqual([cut.request_id, cut.outcome, cut.triggers, cut.removed_turns],
+    ['request-3', 'cut', [], 1]);
+  assert.ok(cut.tokens_before + model.maxTokens >= model.contextWindow);
+  assert.ok(cut.tokens_after + model.maxTokens < model.contextWindow && cut.tokens_after < cut.tokens_before);
+  assert.ok(markerText(payloads[2]));
+});
+
+test('best effort cuts the largest fit prefix when no prefix reaches the low mark', async t => {
+  const {events} = await play(t, async (n, {publish}) => {
+    if (n === 4) await publish(publication(3));
+    return n === 5 ? reply() : observe(n, 1, n >= 3 ? 8000 : 16);
+  }, {maxImages:12, contextCut:{low_mark:1, high_mark:7000, min_free:2}});
+  assert.deepEqual(cutEvents(events).map(event => [event.outcome, event.removed_turns, event.covered_through_operation_id]),
+    [['held-back', undefined, null], ['cut', 3, operationId(3)]]);
+  const cut = cutEvents(events).at(-1);
+  assert.ok(cut.tokens_after - cut.briefing_tokens > 1);
+  assert.ok(cut.tokens_after < cut.tokens_before);
+});
+
+test('cut markers accumulate distinct committed intents with the most recent occurrence last', async t => {
+  const clipped = 'x'.repeat(158) + '😀' + 'tail';
+  const intents = ['inspect', 'collect', 'inspect', clipped, 'plan', 'confirm', 'route', 'inspect'];
+  const {payloads} = await play(t, async (n, {publish}) => {
+    if (n === 5) await publish(publication(8));
+    if (n === 9) await publish(publication(16));
+    if (n === 10) return reply();
+    const intent = intents[n - 1] ?? 'latest protected';
+    return reply(null, [['computer_observe', {intent}], ['computer_observe', {intent:'malformed\nintent'}]],
+      usage([5, 9].includes(n) ? 8000 : 16), undefined, `turn-${n}`);
+  }, {maxImages:30, contextCut:{low_mark:1, high_mark:7000, min_free:2}});
+  const markers = [payloads[5], payloads[9]].map(payload => JSON.parse(markerText(payload).split('\n')[1]));
+  assert.deepEqual(markers.map(marker => marker.recent_intents), [
+    ['collect', 'inspect', 'x'.repeat(158) + '…'],
+    ['x'.repeat(158) + '…', 'plan', 'confirm', 'route', 'inspect'],
+  ]);
 });

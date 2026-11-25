@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/11`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/12`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [player interface component](../../docs/components/player-interface.md) describes
 the adapter's place in the run.
@@ -38,7 +38,7 @@ programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
 ## Frozen route and serving tier
 
-The closed route has exactly `schema: "player-host/11"`, `model`,
+The closed route has exactly `schema: "player-host/12"`, `model`,
 `api_key_env`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
@@ -105,11 +105,12 @@ marker grants no source-read proof or authority. The marker names the frame's
 `source_id` (from its tool result) and says to read it again with `player_source`;
 the player can request the exact source again through its available tools. No tool is called automatically to restore an image.
 
-The request projection adds no standing countdown. Instead, once a threshold is
-passed, each request adds a notice. The notice stays in the history where it was
-first sent for as long as that history survives. Notices cover context capacity,
-remaining time and the spend budget above the ending reserve. The first spend
-notice asks the player to wrap up with `player_finish`. See the contract's
+Notices report context capacity, remaining time, and the spend budget above the
+ending reserve at 100%, 50%, 25%, and 12.5% of each warning threshold. A request
+that crosses several steps of one kind receives a single notice for that kind.
+Simultaneous kinds share one append-only user message. A context cut resets
+the context-capacity steps. The first spend notice asks the player to wrap up
+with `player_finish`. See the contract's
 [request-stability rules](../../docs/contracts/player-host.md#request-stability-and-tail-notices).
 Every actor shares one system prompt and tool table. The ongoing user objective
 survives actor turnover; experiment quotas, final-actor policy and ending reserves
@@ -242,14 +243,23 @@ sent back as model context. Bounded diagnostic identifiers include OpenRouter
 metadata error_type, provider_code, limit_source and reason when present; raw
 metadata, remedy text and provider bodies are excluded.
 
-Each actual provider fetch emits a start, including a retry. A refused attempt
-has no request or completion event. All attempts send the same serialized context. The pre-output classes share the
-original request timer across classification, backoff and response reading.
+Each actual provider fetch emits a start and a completion, including a retry.
+A logical request's attempts send the same serialized context. The pre-output
+classes share the original request timer across classification, backoff and
+response reading. An accepted orderly stop supersedes any unsent ordinary body
+or retry with a fresh logical request carrying the control.
 Every class stays within the original host and custody deadlines. Pi rejects a
 provider-requested retry delay over 60 seconds (the pinned helper's maintained default); its bounded default backoff applies
 when no valid delay is supplied. Cancellation interrupts backoff and bounded error
-reading. The first eligible refusal records unknown usage, without a zero-price
-assumption; another attempt requires spare capacity before any backoff.
+reading. An eligible refusal without usable cost records an unpriced attempt.
+Before an ordinary player fetch, including a retry, counted spend plus the
+in-flight recall bound, finish reserve, and proposed player request bound must
+be strictly below the limit. If only the in-flight recall bound prevents
+admission, the host waits for recall settlement and rechecks. At the reserve
+the host emits `spend-reserve-reached` once and waits up to two seconds for
+orderly stop. The hard spend limit, EOF, cancellation, and deadlines retain
+their settlement reasons. A clean expiry settles as `spend-reserve-timeout`.
+Only a body carrying the accepted control ID can use the finish reserve.
 
 ## MCP tools and control
 
@@ -278,9 +288,10 @@ It reads a collection's JSON from the first MCP text part. Local MCP `isError`
 refusals preserve explicit correction. Invalid successful receipts or incoherent
 collections latch `invalid-handoff-receipt`.
 
-The adapter uses Pi's `steer` method to add the labelled finish-up message. It associates each
-assistant reply with the control ID sent in its request, then checks that ID in
-`beforeToolCall` to suppress calls that predate the control.
+Pi's `steer` method wakes the loop for an orderly stop. The host places the
+labelled message in the request projection and associates each assistant reply
+with its transmitted control ID. The `beforeToolCall` hook suppresses calls
+that predate the control.
 
 The adapter validates the [direct `player_finish` call](../../docs/contracts/player-host.md#settlement-and-handoff)
 locally. `beforeToolCall` blocks subsequent dispatch in the batch. Pi's `finishTurn`
@@ -295,7 +306,7 @@ cleanup share the host budget. SIGINT/SIGTERM use the same abort and closure pat
 ## Telemetry and accounting
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 11 retains request text/UTF-8 counts,
+call IDs where applicable. Telemetry version 12 retains request text/UTF-8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -368,7 +379,7 @@ progress neither extends the active request deadline nor authorizes tool input.
 The bounded timeout recovery requires observed assistant output before the deadline. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 11 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 12 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings
@@ -418,28 +429,38 @@ the links and citations they are derived from. It agrees with
 
 Every projected entry (briefing and reminder leads, recall and briefing index
 rows, cut briefing leads and index rows, update `added` and `updated` entries)
-comes from `lead()` or `knowledgeIndex()`. Each carries `status`, the
-`statusOf()` list in the order `contested`, `unverified_branch`, `needs_review`,
-`condition_unverified`, only when that list is non-empty. A plainly active entry
-keeps its earlier bytes for the provider cache. The cut briefing's character cap
-counts the added bytes. `updateDelivery` compares status as well as prose, so a
-change of status alone is an `updated` entry.
+carries `status` when any of these markers apply, in order: `contested`,
+`unverified_branch`, `needs_review`, `condition_unverified`. A status change alone
+produces an `updated` entry. Actor-start and cut briefings and the first update
+from an empty store fit their final JSON within 24,000 UTF-16 code units, including
+coverage, escaping, and overflow counts. They keep at most 64 articles and 24
+standalone facts and clip snippets at 1,000 code units. Actor-start briefings
+give recall-selected leads first claim on the budget, then fill the index in
+tiers of articles, other standalone facts, and instance-state facts. Each tier
+uses newest position first with delivered-order ties, and the kept entries
+appear in delivered order. Ordinary live updates carry full changed leads.
 With `--knowledge-updates LIST`, an unref'd refresh in `runHost` (at start, every
 `UPDATE_POLL_MS` and after each player response, one at a time) reads the driver's
 list and its files through the isolated `update-reader.mjs` helper (terminated on
 settlement so a stalled read never blocks CLI exit) and stages verified candidates
 above its own (`updateEntry`, `validateKnowledge`, `updateDelivery` in
 `knowledge.mjs`) and coverage lines (`coverageEntry`). Building a player request
-applies staged coverage and picks the newest staged version that fits within
-context capacity. The
+jointly plans coverage, the cut, and the pending reminders for candidate versions
+from newest to oldest. Adoption requires the final projection to fit below the
+context window with the configured token reserve. The
 [update rules](../../docs/contracts/player-host.md#a-newer-version-during-play)
 own what is checked and recorded. Nothing waits for the refresh, and it never stops the host.
 
 With `context_cut` enabled, a `coverage-update-entry/1` line supplies the verified
 operation boundary for that version, or permanently invalidates further cuts
 for this actor after a restore. The host cuts whole turns only through applicable
-coverage for adopted knowledge. It delivers a fresh bounded briefing and a marker
-listing the omitted turns' distinct sources. The
+coverage for adopted knowledge. Pressure arms the cut until coverage allows it.
+The host chooses the smallest fitting covered prefix that meets both targets or,
+when neither target combination is reachable, the largest strictly reducing
+prefix that fits. Independent capacity rescue can remove fewer than
+`min_free` turns. The new prefix carries a bounded briefing and a marker with
+the omitted frames' sources and the last five distinct committed public intents.
+The
 [cut contract](../../docs/contracts/player-host.md#coverage-gated-context-cut)
 defines the boundaries, and the
 [telemetry contract](../../docs/contracts/player-host-telemetry.md#context-cut)
@@ -448,7 +469,15 @@ defines the cut and holdback events.
 The route pins `recall:{model,every,unpriced_request_usd,endpoint_costs}` with the
 same provider and credential variable as the player. Recall validates its own
 endpoint tags and rates and makes one host HTTP attempt. Recall counts and
-request IDs begin at fetch.
+request IDs begin at fetch. Recall sends a version-stable, title-first index
+within 24,000 UTF-16 code units and validates selections against its actual rows.
+The second message carries `already_in_context`, computed from complete leads
+that survive in the player projection. If every sent row is already present, the
+host skips recall. It filters completed reminders again when placing them, after
+any update or cut. Delivery telemetry records one outcome per logical placement
+at terminal settlement. A successful response with usable cost is `delivered`.
+Other terminal outcomes are `undelivered`. Pre-request update refusals are
+`refused`.
 
 The [recall contract](../../docs/contracts/player-host.md#delivered-knowledge-and-recall)
 defines selection, delivery and accounting. For OpenRouter the adapter's `onPayload`
