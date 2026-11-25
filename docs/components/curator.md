@@ -18,9 +18,11 @@ context cuts and actor handoffs in `A4` and `A9`
 custom-character and unablated caveats, alongside the offline
 [stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md)).
 The current `curator-knowledge/4` (`curator-fact/5` scoped claims, typed links,
-world-bound articles) and `delivered-knowledge/3` formats are verified offline and on
-sealed traces ([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md)),
-with zero live campaign admissions yet.
+world-bound articles) and `delivered-knowledge/3` formats are verified by current-schema
+fixture tests, while field-weighted BM25 + 1-hop ranking was evaluated on projected
+`#889`/`#896-b` `delivered-knowledge/2` exports
+([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md)),
+with zero live campaign admissions on `curator-knowledge/4` yet.
 The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
 with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
 
