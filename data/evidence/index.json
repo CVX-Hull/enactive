@@ -1281,6 +1281,20 @@
       },
       "visibility": "private"
     },
+    "reviewer-recall-replay": {
+      "availability": "present",
+      "bytes": 1072059,
+      "cited_by": [
+        "docs/acceptance/2026-11-25-reviewer-recall-replay.md"
+      ],
+      "files": 307,
+      "manifest_sha256": "0a13d1a6ce95acf39ee3922351ff928025baad3bbc8d3fe8dde89a189acb5f32",
+      "note": "Scripts, defect set, 45 reviews with their results, refused Gemini starts, both judges' packets and replies, and scoring output of the reviewer recall replay of 25 November 2026 for issue 973; the shallow clones are reproducible from the commits in set.json and are not retained",
+      "sources": {
+        ".": "scratch-reviewer-recall-replay"
+      },
+      "visibility": "private"
+    },
     "seven-day-896-admission-01": {
       "availability": "present",
       "bytes": 127406061,
