@@ -25,15 +25,16 @@ the incident's own dated record states.
 | Gemini 4 Neon at High | 6 | 0 | 0 | 2 | 1,099 s |
 
 No configuration stated a wrong cause. The three GPT-6.2 configurations stopped short
-on the same two incidents: each named the failing step correctly and said the evidence
-did not show the rest, where the other configurations inferred it. On six of the eight
+on the same two incidents: each named the failing step correctly and went no further,
+where the other configurations inferred the reason. On six of the eight
 incidents every configuration that replied stated the recorded cause.
 
 The table does not rank the models. Eight incidents is a small sample, each start ran
-once, and the lead was the only judge, knew which configuration wrote each answer and
-chose the incidents and wrote their descriptions. The incidents are ones this
-repository already diagnosed and wrote up, so they are ones whose cause the evidence
-does show.
+once, and the lead judged the answers knowing which configuration wrote each, chose
+the incidents and wrote their descriptions. A reviewer from another family judged
+every answer again and agreed with all 56 verdicts. Each incident has a cause that a
+record of this repository states, and the answers are scored against that cause; the
+files given do not always prove it, as the two incidents below show.
 
 Not known: how any configuration does on an incident nobody has diagnosed; whether a
 second judge would draw the line between "states" and "stops short" in the same place;
@@ -59,20 +60,24 @@ figures here are printed by `scripts/tabulate.py` into `results/table.txt`.
   guess, and a three-line answer of at most 150 words giving cause, evidence and
   confidence. Each start ran once through `tools/delegate.py` as an explorer with a
   900-second limit. The five Claude and GPT-6.2 configurations ran at the same time on
-  each incident, and the two Gemini configurations a day later, after their quota
-  returned.
+  each incident, and the two Gemini configurations later the same evening, after their
+  quota returned.
 - **Judging.** The lead read each answer against the cause in the incident's record
   and a criterion written for that incident (`results/judgments.json`). "States" means
   the answer gives the record's cause, as fact or as a marked inference. "Stops short"
-  means it identifies the failing step correctly and says the rest is not shown.
-  "Wrong" means it gives a different cause.
+  means it identifies the failing step correctly and gives no reason for it, whether
+  or not it says the reason is missing. "Wrong" means it gives a different cause.
+  Codex GPT-6.2 Astra at High then read every answer against the same records and
+  criteria and agreed with all 56 verdicts; its reply is not in the sealed evidence,
+  and its ledger row records the attempt.
 - **Confinement.** The brief forbids reading outside the fixture. The Codex start
-  enforces read-only access but not the directory, and the Claude Code and Antigravity
-  starts enforce neither. The evidence files contain absolute paths into the
-  repository, where the records that state each cause are. No answer cites a file
-  outside its fixture (`grep` over the replies for the records and the evidence store),
-  and the starts' tool calls were not retained, so this is not shown beyond the
-  replies.
+  enforces read-only access but not the directory, the Claude Code start enforces
+  neither, and what the Antigravity start enforces is unverified. The evidence files
+  contain absolute paths into the repository, where the records that state each cause
+  are. No answer cites a file outside its fixture (`grep` over the replies for the
+  records and the evidence store). The Codex starts' output keeps each command they
+  ran, and the Claude Code and Antigravity starts' output does not keep their file
+  reads, so for those two this is not shown beyond the replies.
 
 ## The incidents
 
@@ -139,9 +144,10 @@ run once.
 - Every configuration that replied named the failing step of every incident, and none
   stated a wrong cause.
 - Where the evidence shows a failure and not its reason, the GPT-6.2 configurations
-  reported what was shown and said the rest was missing, and the Claude Opus 5.5 and
-  Gemini configurations inferred the reason and were right both times. Two incidents do
-  not show whether that inference is reliable.
+  stopped at what was shown, and on four of those six answers said the rest was
+  missing. The Claude Opus 5.5 and Gemini configurations inferred the reason and
+  matched the recorded cause both times. Two incidents do not show whether that
+  inference is reliable.
 - Effort made no difference to the verdicts for the two models run at two efforts.
 - GPT-6.2 Astra at Medium took the least time, 13 to 36 seconds a start, and Gemini 4
   Carbon the most, 197 to 474 seconds.
