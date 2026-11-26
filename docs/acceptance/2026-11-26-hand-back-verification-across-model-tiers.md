@@ -27,6 +27,14 @@ support.
 | GPT-6.1 Terra at Medium | 3 | 1 | 233 s |
 | GPT-6 Luna at High | 2 | 3 | 394 s |
 | GPT-6 Luna at Low | 2 | 3 | 155 s |
+| Claude Fable 5.2 at High, added | 3 | 3 | 434 s |
+| Gemini 4 Argon at High, added | 3 | 3 | 987 s |
+| Gemini 3.8 Flash at High, added | 3 | 3 | 1,699 s |
+| Gemini 4 Carbon at High, added | 2 of the 2 it finished | 3 | 5,772 s; three checks stopped at 900 s |
+| GPT-OSS 120B at Medium, added | 0: two verdicts in nine starts | 2 | 293 s |
+
+Five configurations were added later the same day so that every model the three coding
+agents offer is covered; the sentences below that count "ten" are about the first ten.
 
 - **Eight of ten catch every false fact.** A claim that a log lacks an input it
   records and a constant that exists nowhere in the tree are caught by all ten. A wrong
@@ -47,6 +55,8 @@ decision is requested.
 The scripts, the packets, the key, every reply and result and the table are retained
 as
 [`hand-back-verification-across-model-tiers`](../../data/evidence/hand-back-verification-across-model-tiers.sha256).
+The five added configurations' runs and the full table are retained as
+[`hand-back-verification-added-models`](../../data/evidence/hand-back-verification-added-models.sha256).
 The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 
 ## Method
@@ -71,6 +81,12 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
   GPT-6 Luna at High and Low, Gemini 4 Neon and Hydrogen at High. Each ran through
   `tools/delegate.py` with a 900-second limit, on Claude Code 2.1.329, Codex CLI
   0.171.0 and Antigravity CLI 1.5.18. All ninety starts handed back with a verdict.
+- **Added configurations.** Claude Fable 5.2, Gemini 4 Carbon, Gemini 4 Argon and
+  Gemini 3.8 Flash at High and GPT-OSS 120B at Medium, the models the first run left
+  out, three of which leave Antigravity on 30 November 2026. Of their 45 starts, 35
+  give a verdict: Gemini 4 Carbon is stopped at the 900-second limit on three, and
+  GPT-OSS 120B fails on the server's capacity error on three, returns nothing on three
+  and hands back without a verdict on one.
 - **Scoring.** A false fact counts as caught when the verdict is reject and a
   not-supported line names the keyed claim; the lead read those lines.
 
@@ -111,6 +127,11 @@ brief excludes, and no verifier names it.
 | GPT-6.1 Terra at Medium | 3 | 1 | 0 | reject | 18 to 35 s |
 | GPT-6 Luna at High | 2 | 3 | 1 | reject | 18 to 87 s |
 | GPT-6 Luna at Low | 2 | 3 | 1 | accept | 8 to 27 s |
+| Claude Fable 5.2 at High, added | 3 | 3 | 1 | accept | 29 to 105 s |
+| Gemini 4 Argon at High, added | 3 | 3 | 2 | accept | 42 to 255 s |
+| Gemini 3.8 Flash at High, added | 3 | 3 | 2 | accept | 90 to 308 s |
+| Gemini 4 Carbon at High, added | 2 of 2 | 3 | none finished | accept | 323 to 901 s |
+| GPT-OSS 120B at Medium, added | 0 | 2 | none | none | 8 to 72 s |
 
 - **The false fact GPT-6 Luna misses** is the frame legend. GPT-6 Luna at High wrote
   that hand-back in the diagnosis study, and accepts it here too. On packet 4 GPT-6
@@ -146,7 +167,12 @@ once.
   rejecting a stated cause the files do not record; the Claude, Gemini and GPT-6 Luna
   verifiers let more of those through. Which is wanted depends on the check, and the lead's own key let two
   through.
-- Checking nine hand-backs takes 155 to 502 seconds for every verifier but Gemini 4
+- Of the five added configurations, Claude Fable 5.2, Gemini 4 Argon and Gemini 3.8
+  Flash catch all three false facts and accept every plain-fact hand-back; Argon and
+  Flash also accept both hand-backs that state an unrecorded cause. Gemini 4 Carbon
+  does not finish a third of its checks in 900 seconds, and GPT-OSS 120B gives two
+  verdicts in nine starts.
+- Among the first ten, checking nine hand-backs takes 155 to 502 seconds for every verifier but Gemini 4
   Neon, which takes 1,577.
 - Nothing here shows a cheaper model can lead. It shows that checking a hand-back
   against its files is work a cheaper model does.
