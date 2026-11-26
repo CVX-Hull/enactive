@@ -42,7 +42,10 @@ verdicts. No routing first choice moves. No owner decision is requested.
 The scripts, the nine reviews, both judges' packets and replies and the table are
 retained as
 [`reviewer-recall-current-claude-code-start`](../../data/evidence/reviewer-recall-current-claude-code-start.sha256).
-The figures are printed by `scripts/tabulate_current.py` into `results/table.txt`.
+This study's figures are printed by `scripts/tabulate_current.py` into
+`results/table.txt`. The earlier rows' wall times and finding counts are the
+[first study's](2026-11-25-reviewer-recall-replay.md), and the defects K01 to K16 are
+listed in its sealed `results/set.json`.
 
 ## Method
 
@@ -105,17 +108,34 @@ twenty-four judging starts.
   the explorer role file, and three of the rebuilt trees, from commits older than that
   file, did not hold it. Both judges stopped on those three packets and said why. The
   role file was added to the three trees and the six starts were made again; the first
-  six are kept and marked not used. The first study's trees held the file, so this is a
-  fault of the rebuild and not of the judges.
+  six are kept and marked not used. The first study made the same error on the same
+  three trees and repaired it the same way
+  ([first study](2026-11-25-reviewer-recall-replay.md#method)); the rebuild repeated
+  it because the prepare step adds the reviewer role file and not the explorer one. It
+  is a fault of the lead's preparation and not of the judges.
+
+## Review of this study
+
+GPT-6.2 Astra at High on Codex read the record, the changed page rows and the ledger
+rows against the sealed evidence, in a clean context, and reported six findings. Five
+were corrected: the range a GPT-6.2 reviewer adds was attributed to the wrong start on
+the profiles page, the routing page's document figures left out this row, the packet
+sizes of the first study were misstated, the repeated role-file error was blamed on
+the rebuild alone, and the earlier rows' figures were not attributed to the first
+study. One was not taken: the ledger rows' wording for the findings count is the
+wording the first study's rows use. The review confirmed both tables, the pairs, the
+judges' agreement, the times, tokens and refused commands against the raw replies. Its
+start is a ledger row.
 
 ## Limits
 
 - **One run.** Each commit is reviewed once. The first study's rows for the same model
   differ from this one by start, by day and by chance, and the set cannot say how much
   of the two-defect difference each accounts for.
-- **A judge sees one review in a packet.** The first study's packets held two to five
-  reviews under shuffled labels. Here each packet holds the one review, so the judge
-  is not comparing reviews, and a judge from the reviewer's own family scores it.
+- **A judge sees one review in a packet.** The first study's packets held one to five
+  reviews under shuffled labels. Here each packet holds the one
+  review, so the judge is not comparing reviews, and a judge from the reviewer's own
+  family scores it.
 - **The set is the first study's:** nine commits, sixteen defects found later, and
   every document commit has a Claude co-author
   ([limits](2026-11-25-reviewer-recall-replay.md#limits)).
