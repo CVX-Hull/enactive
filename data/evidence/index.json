@@ -673,6 +673,20 @@
       },
       "visibility": "private"
     },
+    "delegate-wall-time-by-change-size": {
+      "availability": "present",
+      "bytes": 6439,
+      "cited_by": [
+        "docs/acceptance/2026-11-25-delegate-wall-time-and-time-limits.md"
+      ],
+      "files": 2,
+      "manifest_sha256": "80c2f3af1f9495453651ff2cd40fcc7b8ca037421ea873536edc6fcdb70a302a",
+      "note": "Script and output of the wall-time reading of the attempts ledger at 7873720f for issue 976; no transcript",
+      "sources": {
+        ".": "scratch-delegate-wall-time"
+      },
+      "visibility": "private"
+    },
     "delivery-check-642": {
       "availability": "present",
       "bytes": 30406381,
