@@ -59,66 +59,80 @@ row meets the [threshold for changing a default](#reading-the-ledger).
 
 ## Tiers by kind of work
 
-A tier groups the configurations the evidence does not separate for that work. The
-first choice in the table above is one member of the top tier. Inside a tier, choose
-by [what each configuration costs](#what-each-configuration-costs-and-can-do): the
-quota left, the wall time and what the start can do. Effort is the one read; where
-none is given the model was read at one effort only.
+This table groups configurations by what the cited evidence shows for each kind of
+work. A group holds configurations the evidence does not separate. The route table
+above stays the advice; a first choice there moves only under
+[reading the ledger](#reading-the-ledger). Inside a group, choose by
+[what each configuration costs](#what-each-configuration-costs-and-can-do): the quota
+left, the wall time and what the start can do.
 
-Each tier says what it rests on. "Local" is a result on this repository, in the
+"Local" is a result on this repository, in the
 [delegate profiles](delegate-profiles.md) or a dated record. "Public" is a figure in
 the [re-read of 26 November 2026](../acceptance/2026-11-26-coding-agent-model-evidence-reread.md),
-on tasks that are not this repository's; a local result replaces it when a leaf of
-[the model-tier outcome](https://github.com/CVX-Hull/enactive/issues/987) lands.
-Gemini 4 Argon, Gemini 3.8 Flash and GPT-OSS 120B leave Antigravity on 30 November
-2026 and are listed for the days that remain.
+measured on other tasks, nearly always in the maker's own coding agent and at the
+effort named. A local result from a leaf of
+[the model-tier outcome](https://github.com/CVX-Hull/enactive/issues/987) informs the
+row when it lands. A configuration in the last column has no figure for that work,
+which is not a finding against it. Gemini 4 Argon, Gemini 3.8 Flash and GPT-OSS 120B
+leave Antigravity on 30 November 2026.
 
-| Work | Top tier | Middle tier | Low tier | Do not use | What the tiers rest on |
+| Work | Strongest group | Middle group | Lowest group | No figure for this work | What the groups rest on |
 | --- | --- | --- | --- | --- | --- |
-| Leading a leaf | Claude Fable 5.2 at High | Claude Opus 5.5 at High or above; GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at Extra-high; Gemini 4 Neon at High in the app, watched | Claude Sonnet 5.5; Gemini 4 Carbon | the small models: Claude Haiku 5.5, GPT-6 Luna, GPT-6.1 Terra, Gemini 4 Hydrogen | Judgment and the [succession order](#when-the-leads-model-has-no-quota-left). No local or public comparison of leads exists; the low tier is public index only. |
-| Hard change that must merge | Claude Fable 5.2 at High or Extra-high; Claude Opus 5.5; Gemini 4 Neon at Extra-high; Claude Sonnet 5.5; Gemini 4 Carbon at High | GPT-6.2 Astra at High or above; Gemini 4 Hydrogen; Claude Fable 5.2 at Medium; GPT-6.2 Sol at High or Extra-high; GPT-6.1 Terra | Gemini 4 Argon; GPT-6.2 Sol at Medium | Claude Haiku 5.5; GPT-6 Luna; Fable at Max; any Low effort | Public index: 55.5 to 58.6 for the top tier, 47.5 to 53.5 for the middle, 45.4 and 45.5 below, 29.6 and 25.9 for the two excluded. Claude Opus 5.5, Sonnet 5.5 and Terra were read at Max only. Local: GPT-6.2 Sol workers handed back all 43 attempts, 9 of them hard changes, which the public index does not rank first. |
-| Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high or High; Claude Opus 5.5 at High | GPT-6.2 Astra; Claude Sonnet 5.5; Gemini 4 Neon; Gemini 4 Carbon; GPT-6.1 Terra; Gemini 4 Hydrogen | Gemini 4 Argon | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash; GPT-OSS 120B | Top tier is local: 43 of 43 and 25 of 31 worker attempts handed back, and one matched run favored Sol. Astra has 3 local attempts and one false report. The rest of the middle tier is public index and terminal scores with no local worker attempt; a Gemini worker edits files and runs no command, so the lead runs its check. |
-| Exploration that needs synthesis, and reading run evidence | Claude Opus 5.5 at High or Medium; Claude Fable 5.2 at High; Gemini 4 Carbon at High; Gemini 4 Argon at High | Claude Sonnet 5.5 at Medium or High; Gemini 4 Neon at High or Extra-high; GPT-6.2 Sol; GPT-6.2 Astra at High or Medium; GPT-6 Luna at High | GPT-6.1 Terra; Claude Haiku 5.5; Gemini 4 Hydrogen | GPT-6 Luna at Low; Gemini 3.8 Flash; GPT-OSS 120B; a Claude model through Antigravity | Local: recorded causes stated on eight incidents, 8 for the top tier, 6 or 7 for the middle, 4 or 5 below with the one wrong cause from Haiku, 1 for Luna at Low ([first study](../acceptance/2026-11-26-run-evidence-diagnosis.md), [across tiers](../acceptance/2026-11-26-diagnosis-and-frame-reading-across-model-tiers.md)). Public codebase questions agree on the ends and put Neon first at 67.7 and Sol lower at 42.5 to 51.3. |
-| Locating files and mechanical sweeps | Claude Haiku 5.5; GPT-6 Luna at Low; GPT-6.1 Terra at Medium; Claude Sonnet 5.5 at Medium | any larger model, at more quota | none | GPT-OSS 120B | Cost and speed only: the public output speed is 221 to 256 tokens a second for Haiku and 100 to 123 for Luna, against 40 to 66 for the GPT-6.2 models. No accuracy figure exists, locally or publicly; [the locator leaf](https://github.com/CVX-Hull/enactive/issues/990) measures it. |
-| Shell, checks and Python tooling | Claude Opus 5.5; Claude Fable 5.2; Gemini 4 Carbon; Claude Sonnet 5.5; GPT-6.2 Astra; GPT-6.2 Sol; Gemini 4 Neon | Gemini 4 Hydrogen; Gemini 4 Argon; GPT-6.1 Terra | Claude Haiku 5.5 | Gemini 3.8 Flash; GPT-6 Luna | Public terminal tasks: 61.2% to 65.8% with intervals near 3 points for the top tier, 53.3% to 56.4% for the middle, 40.0% for Haiku, 18.2% and 15.2% for the excluded. An Antigravity delegate runs no command, so a Gemini model does this work only as an app lead. |
-| Reading retained game frames | any configuration that answers the frame probe, chosen for speed: Claude Sonnet 5.5 at Medium, GPT-6.1 Terra, GPT-6 Luna at Low, Claude Haiku 5.5, Gemini 4 Hydrogen | the larger models, slower for the same answers | none | GPT-OSS 120B | Local: 17 of 19 configurations answer all eight questions; the fastest take 9 to 19 seconds. |
-| Standards, pull-request prose, acceptance and design records | the lead | GPT-6.2 Sol at Extra-high; Claude Opus 5.5 at High | not separated | none known | Judgment, one local matched run that favored Fable over Sol on prose, and four local Opus worker passes on records. No public evidence for this work. |
-| Research on outside systems | Gemini 4 Carbon; Gemini 4 Neon; Gemini 4 Hydrogen; Gemini 4 Argon | GPT-6.1 Terra; Claude Haiku 5.5; Claude Sonnet 5.5 | Claude Opus 5.5; GPT-6.2 Sol; GPT-6.2 Astra; Claude Fable 5.2 | GPT-6 Luna, answering from memory | Public closed-book recall: of the answers a model does not get right, the share that are wrong guesses is 4% to 14% for the Gemini 4 models, 34% to 43% for the middle tier, 50% to 59% for the low tier and 79% for Luna. Fable has the highest accuracy, 79%, and guesses when it does not know. A model that fetches the page it cites is not measured by this. |
-| Review of code | GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at High | GPT-6.2 Astra at Medium; Claude Opus 5.5 at High; Gemini 4 Carbon at High, which hands back 9 of 23 starts | not measured: Claude Fable 5.2, Claude Sonnet 5.5, GPT-6.1 Terra, Gemini 4 Hydrogen | Gemini 4 Neon through the delegate call, which hands back 2 of 28 starts; Claude Haiku 5.5; GPT-6 Luna | Local [replay](../acceptance/2026-11-25-reviewer-recall-replay.md): 16 known defects, found by both judges 10 and 8 for the top tier and 7, 4 to 6 and 3 of 14 for the middle. Public: inside other makers' reviewers, Opus recalls 55% to 61% of high-severity issues and Sonnet 44% to 48%, at 93% to 96% precision; no public row for the others. [The review leaf](https://github.com/CVX-Hull/enactive/issues/991) measures the unmeasured. |
-| Review of documents | GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at High or Medium | Claude Opus 5.5 at High or Medium | not measured: the same four as for code | the same as for code | Local replay: of ten known defects in four document commits, 4 to 7 for the top tier and 1 to 3 for Opus. Every one of those commits has a Claude co-author, so part of the gap may be a second family and not the model. |
-| Judging answers against written criteria | GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at High; Claude Opus 5.5 at High; the lead on Claude Fable 5.2 | not separated | not measured: every other configuration | a judge from the family that wrote the answers, alone | Local: Sol and Opus agree on 106 of 114 verdicts in the reviewer replay, and Astra agrees with the lead on 56 of 56 and 84 of 88 in the two diagnosis studies. Public: one vendor post gives Opus 94.7% on one judging benchmark; nothing for the others. [The judge leaf](https://github.com/CVX-Hull/enactive/issues/993) measures the small models. |
+| Leading a leaf | Claude Fable 5.2 at High, the current lead | the [succession order](#when-the-leads-model-has-no-quota-left): Claude Opus 5.5 at High or above; GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at Extra-high; Gemini 4 Neon at High in the app, watched | none | every other configuration | Judgment. No comparison of leads exists, locally or publicly. |
+| Hard change that must merge | index 55.5 to 58.6: Gemini 4 Neon at Extra-high; Claude Fable 5.2 at Extra-high, High and Max; Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High | index 47.5 to 53.5: GPT-6.2 Astra at Medium and above; Claude Fable 5.2 at Medium and Low; Gemini 4 Hydrogen at Extra-high; GPT-6.2 Sol at High and above; GPT-6.1 Terra at Max | index 25.9 to 45.5: Gemini 4 Argon at High; GPT-6.2 Sol at Medium and Low; GPT-6.2 Astra at Low; Claude Haiku 5.5 at Max; GPT-6 Luna at Max | Gemini 3.8 Flash; GPT-OSS 120B; the Claude models at efforts below Max, except Fable | Public index, each in its maker's agent. Fable at Max scores below Fable at High and takes four times as long, which is why the route avoids it. Local: nine hard changes by GPT-6.2 Sol workers at High and Extra-high all hand back. |
+| Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high, 17 of 17 handed back, and at High, 7 of 7 | Claude Opus 5.5 at High, 10 of 16 handed back; five of the six misses are time limits on one issue | none | every other configuration, GPT-6.2 Astra included: the hard-change row's public index is the nearest figure | Local worker attempts on this kind of work, and one matched run that favors Sol over Opus. A hand-back is not a pass. The route's substitute order, Astra before Opus, is judgment. A Gemini worker edits files and runs no command, so the lead runs its check. |
+| Exploration that needs synthesis | codebase questions 59.9 to 67.7: Gemini 4 Neon at Extra-high; Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Fable 5.2 at every effort; Gemini 4 Hydrogen at Extra-high | 50.3 to 55.1: GPT-6.2 Astra at Medium and above; Gemini 4 Argon at High; GPT-6.1 Terra at Max; GPT-6.2 Sol at Medium to Extra-high | 33.9 to 46.2: GPT-6.2 Sol at Max and Low; GPT-6 Luna at Max; GPT-6.2 Astra at Low; Claude Haiku 5.5 at Max | Gemini 3.8 Flash; GPT-OSS 120B | Public codebase questions. Local: four explorations by Gemini 4 Neon at Extra-high are all used, and explorers on Claude Opus 5.5, GPT-6.2 Sol and GPT-6.2 Astra hand back 92 of 93. |
+| Reading run ledgers, logs and tables | states the recorded cause on 8 of 8 incidents: Claude Opus 5.5 at High and Medium; Claude Fable 5.2 at High; Gemini 4 Carbon at High; Gemini 4 Argon at High | on 6 or 7: Claude Sonnet 5.5 at High and Medium; GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at High and Medium; GPT-6 Luna at High; Gemini 4 Neon at High, with two starts that return nothing | on 5 or fewer: GPT-6.1 Terra at High and Medium; Claude Haiku 5.5 at High, with one wrong cause; Gemini 4 Hydrogen at High; Gemini 3.8 Flash; GPT-6 Luna at Low; GPT-OSS 120B; a Claude model through Antigravity | other efforts | Local, the lead's verdicts on eight incidents each run once ([first study](../acceptance/2026-11-26-run-evidence-diagnosis.md), [across tiers](../acceptance/2026-11-26-diagnosis-and-frame-reading-across-model-tiers.md)). A second judge differs on four of 88 answers. No public figure for this work was found. |
+| Locating files and mechanical sweeps | not separated | not separated | not separated | every configuration | No accuracy figure is recorded here; [the locator leaf](https://github.com/CVX-Hull/enactive/issues/990) measures one. The route's choice of the smallest model rests on cost. Public output speed, in tokens a second: Claude Haiku 5.5 221 to 256, GPT-OSS 120B 174 to 192, Gemini 4 Hydrogen 149 to 176, GPT-6 Luna 100 to 123, GPT-6.1 Terra 61 to 66. |
+| Shell, checks and Python tooling | terminal tasks 61.2% to 65.8%: Claude Opus 5.5, Claude Fable 5.2, Claude Sonnet 5.5, GPT-6.2 Astra and GPT-6.2 Sol at Max; Gemini 4 Carbon at High; Gemini 4 Neon at Extra-high | 53.3% to 56.4%: Gemini 4 Hydrogen at High; Gemini 4 Argon at High; GPT-6.1 Terra at Max | 15.2% to 40.0%: Claude Haiku 5.5 at Max; Gemini 3.8 Flash at High, in another maker's agent; GPT-6 Luna at Max | GPT-OSS 120B | Public terminal tasks, intervals near 3 points; Neon's and Hydrogen's intervals overlap. The route's six overlapping models are the first group without Neon, whose row is newer. An Antigravity delegate runs no command, so a Gemini model does this work only as an app lead. |
+| Reading retained game frames | all eight answers in under 20 seconds: Claude Sonnet 5.5 at High and Medium; GPT-6.1 Terra at High and Medium; GPT-6 Luna at Low; Claude Haiku 5.5 at High; GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at Medium; Claude Opus 5.5 at High; Gemini 4 Hydrogen at High; Claude Sonnet 5.5 through Antigravity | all eight in 21 to 152 seconds: GPT-6 Luna at High; Claude Fable 5.2 at High; Gemini 4 Argon, Neon and Carbon at High; Gemini 3.8 Flash at High | no answers: GPT-OSS 120B, which reports no tool that renders an image; Claude Opus 5.5 through Antigravity, cause unknown | other efforts | Local probes, one start each, on text and a highlighted button. Comparing two frames and reading a map are untested. |
+| Standards and pull-request prose | the lead; Claude Fable 5.2 at High as a worker, preferred in the one matched run | GPT-6.2 Sol at Extra-high, the other side of that run | none | every other configuration | Local: one matched run. No public evidence for this work was found. |
+| Acceptance and design records | the lead | none | none | every configuration as a worker | Local observations only: four passes by Claude Opus 5.5 at High on one issue, and one dated record that Gemini 4 Neon at High writes from given sources and the lead merges unchanged. Neither separates configurations. |
+| Research on outside systems | not separated: the route's choice is a large model that fetches the page it cites | not separated | not separated | every configuration, for research with sources | No figure measures research with sources across these models. Two narrower public figures: answering from memory, the share of non-correct answers that are wrong guesses is 4% to 14% for the Gemini 4 models, 34% to 59% for the Claude and GPT-6 models and 79% for GPT-6 Luna, so a Gemini 4 model suits a question where a wrong answer costs more than none; and in summaries of a given source, unsupported content is 9.9% for Claude Opus 5.5, 12.1% for Gemini 4 Argon and 14.2% for GPT-OSS 120B. |
+| Review of code | 3 of 6 known defects: GPT-6.2 Sol at Extra-high; GPT-6.2 Astra at High and Medium; Claude Opus 5.5 at High started without plan mode | 2 of the 4 it reviewed: Gemini 4 Carbon at High, which hands back 3 of 13 code-review starts | 1 of 6: Claude Opus 5.5 at High and Medium through the tracked plan-mode start. No review returned: Gemini 4 Neon at High, 0 of 15 starts | Claude Fable 5.2; Claude Sonnet 5.5; Claude Haiku 5.5; GPT-6.1 Terra; GPT-6 Luna; Gemini 4 Hydrogen and Argon; Gemini 3.8 Flash; GPT-OSS 120B | Local [replay](../acceptance/2026-11-25-reviewer-recall-replay.md) of five code commits, each configuration once, counted when two judges agree. Hand-back counts are availability, not recall. Public, inside other makers' reviewers: Claude Opus 5.5 recalls 55% to 61% of high-severity issues and Claude Sonnet 5.5 44% to 48%. [The review leaf](https://github.com/CVX-Hull/enactive/issues/991) measures the last column. |
+| Review of documents | 4 to 7 of 10 known defects: GPT-6.2 Sol at Extra-high, 7; GPT-6.2 Astra at High, 5, and at Medium, 4 | 3 of 10: Claude Opus 5.5 at High, with or without plan mode | 1 of 10: Claude Opus 5.5 at Medium; Gemini 4 Carbon at High. Gemini 4 Neon at High finds 2 of 4 in its one returned review | the same configurations as for code | Local replay of four document commits. Every one of them has a Claude co-author, so part of the gap may be the second family and not the model. An Antigravity review counts as a second family's view, not as the clean-context review. |
+| Judging answers against written criteria | exercised here: GPT-6.2 Sol at Extra-high and Claude Opus 5.5 at High, which agree on 106 of 114 verdicts; GPT-6.2 Astra at High, which agrees with the lead on 56 of 56 and 84 of 88 | none | none | every other configuration | Local agreement between judges, which is not accuracy against independent labels. Pairing judges from two families is judgment. Public: one vendor post gives Claude Opus 5.5 both 94.7% and 94.4% on one judging benchmark and Claude Haiku 5.5 a rank correlation of 0.442 on another. [The judge leaf](https://github.com/CVX-Hull/enactive/issues/993) measures more configurations. |
+
+The role files' defaults are in [the table below](#roles-and-their-default-models).
+The Claude Code and Codex worker defaults are in the strongest group for bounded
+implementation. The synthesis-explorer defaults, Claude Sonnet 5.5 and GPT-6.1 Terra at
+Medium, are in the middle and lowest groups for reading run evidence, so the lead names
+a stronger configuration in the delegate call when a cause must be read from run
+evidence.
 
 ## What each configuration costs and can do
 
-Speed is the public output speed on the maker's own service, in tokens a second across
-efforts; time to a first answer grows steeply with effort. Local hand-backs are counts
-from the [attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) through
-the delegate call, all roles together. List price is a signal of relative quota cost
-only; no page gives the share of a subscription window a model uses.
+Speed is the public output speed in tokens a second across efforts, measured on the
+maker's own service except where noted; time to a first answer grows steeply with
+effort. Local hand-backs are counts from the
+[attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) through the
+delegate call, all roles and kinds of work together. List price is a signal of relative
+cost only; no page gives the share of a subscription window a model uses, and the
+limits named are those of the plans the pages describe.
 
 | Configuration | Limit it draws on | Relative cost | Speed | Local hand-backs | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Claude Fable 5.2, Claude Code | a separate weekly Fable limit, and the session and weekly limits all Claude models share | list price twice Opus | 109 to 113 | 10 of 12 | With the `-p` flag, which the delegate call uses, a Fable request that would bill usage credits is billed without asking. Start Fable as a delegate only with extra usage turned off. |
-| Claude Opus 5.5, Claude Code | the shared session and weekly limits | the maker: several times Sonnet for each turn | 105 to 116 | 144 of 153 | Six of the nine misses are 600-second time limits. |
-| Claude Sonnet 5.5, Claude Code | shared | half Opus by list price | 134 to 153 | 19 of 19 | |
-| Claude Haiku 5.5, Claude Code | shared | the cheapest Claude model | 221 to 256 | 10 of 10 | One reply reports writing scratch files against a read-only brief. |
-| GPT-6.2 Sol, Codex | the plan's Codex allowance | 17 to 180 messages in five hours on the smallest paid plan | 59 to 64 | 95 of 95 | |
-| GPT-6.2 Astra, Codex | the same allowance | 6 to 50 messages: about a third of Sol's, at four times its list price | 40 to 45 | 122 of 123 | One false report as a worker. |
-| GPT-6.1 Terra, Codex | the same allowance | 35 to 285 messages | 61 to 66 | 18 of 18 | |
-| GPT-6 Luna, Codex | the same allowance | 350 to 3,000 messages | 100 to 123 | 19 of 19 | |
-| Gemini 4 Neon, Antigravity | the Gemini group's five-hour and weekly limits | list price between Sonnet and Opus | 84 to 102 | 12 of 40 | 512,000-token context in Antigravity. Most misses are empty replies after a denied command, and refusals on quota. |
+| Claude Fable 5.2, Claude Code | a separate weekly Fable limit on larger plans, and the limits Claude models share | list price twice Opus | 109 to 113 | 10 of 12 | See [quota and spending](#quota-and-spending) for how a Fable request can bill usage credits. |
+| Claude Opus 5.5, Claude Code | the weekly limit Claude models share, and a five-hour limit on some plans | the maker: several times Sonnet for each turn | 105 to 116 | 144 of 153 | Eight of the nine misses are time limits of 480 to 1,200 seconds; one is quota. |
+| Claude Sonnet 5.5, Claude Code | the same shared limits | half Opus by list price | 134 to 153 | 19 of 19 | |
+| Claude Haiku 5.5, Claude Code | the same shared limits | the cheapest Claude model | 221 to 256 | 10 of 10 | One reply reports writing scratch files against a read-only brief. |
+| GPT-6.2 Sol, Codex | the plan's Codex allowance | an estimated 17 to 180 messages in five hours on the smallest paid plan | 59 to 64 | 95 of 95 | |
+| GPT-6.2 Astra, Codex | the plan's Codex allowance | an estimated 6 to 50 messages, at four times Sol's list price | 40 to 45 | 122 of 123 | One false report as a worker. |
+| GPT-6.1 Terra, Codex | the plan's Codex allowance | an estimated 35 to 285 messages | 61 to 66 | 18 of 18 | |
+| GPT-6 Luna, Codex | the plan's Codex allowance | an estimated 350 to 3,000 messages | 100 to 123 | 19 of 19 | |
+| Gemini 4 Neon, Antigravity | the Gemini group's limits | list price between Sonnet and Opus | 84 to 102 | 12 of 40 | Up to 512,000 tokens of context in Antigravity. Most misses are empty replies after a denied command, and refusals on quota. |
 | Gemini 4 Carbon, Antigravity | the Gemini group | list price doubles on 1 December 2026 to Opus's | 48 to 61 | 17 of 31 | The slowest: 197 to 474 seconds for an exploration, and reviews past 900 seconds. |
 | Gemini 4 Hydrogen, Antigravity | the Gemini group | below Sonnet by list price | 149 to 176 | 7 of 9 | |
 | Gemini 4 Argon, Antigravity | the Gemini group | Sonnet's list price until it leaves | 69 to 80 | 9 of 9 | Leaves on 30 November 2026. |
 | Gemini 3.8 Flash, Antigravity | the Gemini group | the cheapest Gemini model | 80 to 102 | 5 of 10 | Leaves on 30 November 2026. |
-| GPT-OSS 120B, Antigravity | the Claude and GPT group | the cheapest listed | 174 to 192 | 5 of 13 | Reads no image; 131,000-token context; leaves on 30 November 2026. |
-| Claude Opus 5.5 and Sonnet 5.5, Antigravity | the Claude and GPT group, apart from the Claude subscription and from the Gemini group | not published | not measured there | 2 of 9 and 3 of 9 | A third quota pool for a Claude model when the Claude window is spent. They ask for a shell command on most briefs that do not forbid one. |
+| GPT-OSS 120B, Antigravity | the Claude and GPT group | list price near Luna's | 174 to 192, a median across 15 providers | 5 of 13 | Reports no tool that renders an image; 131,000-token context; leaves on 30 November 2026. |
+| Claude Opus 5.5 and Sonnet 5.5, Antigravity | the Claude and GPT group, apart from the Claude subscription and from the Gemini group | not published | not measured there | 2 of 9 and 3 of 9 | A separate quota pool for a Claude model. They ask for a shell command on most briefs that do not forbid one. |
 
 What a start can do belongs to the coding agent and not the model
 ([starting a delegate](coding-agents.md#starting-a-delegate-on-any-coding-agent)): a
 Codex reviewer runs commands inside an enforced read-only sandbox, a Claude Code
 worker runs checks and commits, and an Antigravity delegate reads and edits files and
-runs no command. Every start reads an image except on GPT-OSS 120B.
+runs no command. The frame row above lists the starts shown to read an image.
 
 ## Roles and their default models
 
@@ -143,6 +157,11 @@ See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
 - **Included subscription quota only.** A spent window is a wait or the next
   substitute, never a purchase. No provider key is set in a shell that starts a coding
   agent ([R-KEY-LEAK](../risks.md)).
+- **A delegated Fable start can bill usage credits without asking.** The maker's page
+  says that with the `-p` flag, which the delegate call uses, a Fable request that
+  would bill usage credits is billed with no consent prompt. Whether Fable bills
+  credits depends on the plan and seat; the `/model` picker shows it
+  ([re-read](../acceptance/2026-11-26-coding-agent-model-evidence-reread.md#subscription-limits)).
 - **Read the remaining quota before a large delegation.** The settings that keep paid
   overflow off on each host have not been read for this project; check them in each
   host's own settings before relying on them.
