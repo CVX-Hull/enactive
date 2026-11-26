@@ -149,9 +149,17 @@ def test_a_roles_note_follows_the_role_instruction_in_the_brief_as_sent(stand_in
     roles = stand_ins.definitions["coding_agents"]["first"]["roles"]
     roles["reviewer"] = roles["reviewer"] | {"note": "Run no command."}
     result, _ = stand_ins("first", role="reviewer")
+    # What the delegate received on standard input, which the stand-in hands back after its first line.
+    assert Path(result["hand_back"]).read_text().split("\n", 1)[1].startswith("You are the reviewer.\nRun no command.\n\nRole: worker")
     assert (stand_ins.out / "brief.txt").read_text().startswith("You are the reviewer.\nRun no command.\n\nRole: worker")
-    stand_ins("first", role="worker")
-    assert (stand_ins.out / "brief.txt").read_text().startswith("You are the worker.\n\nRole: worker")
+    result, _ = stand_ins("first", role="worker")
+    assert Path(result["hand_back"]).read_text().split("\n", 1)[1].startswith("You are the worker.\n\nRole: worker")
+
+    # The same for a brief sent as an argument, which is how the tracked notes travel.
+    roles = stand_ins.definitions["coding_agents"]["second"]["roles"]
+    roles["reviewer"] = roles["reviewer"] | {"note": "Run no command."}
+    result, _ = stand_ins("second", role="reviewer")
+    assert Path(result["hand_back"]).read_text().startswith("reviewed: You are the reviewer.\nRun no command.\n\nR")
 
 
 def test_a_json_reply_file_contains_only_the_reply_and_the_report_contains_usage_and_sorted_models(stand_ins):
@@ -300,5 +308,6 @@ def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
             if how["reply"] != "file":
                 assert set(how["reply"]) == {"stdout_json"}
             assert set(how) <= {"argv", "brief", "reply", "note"}
+            assert isinstance(how.get("note", ""), str)
     for role in ROLES:
         assert (ROOT / ".agents/roles" / f"{role}.md").is_file()

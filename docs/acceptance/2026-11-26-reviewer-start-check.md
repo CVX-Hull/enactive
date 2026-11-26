@@ -20,14 +20,18 @@ the changed starts on three commits of the
 | Start, on the same three commits | Before | After the change |
 | --- | --- | --- |
 | Claude Code, Claude Opus 5.5 at High: reviews handed back | 3 of 3 | 3 of 3 |
-| The same: replies that mention plan mode or a plan file as their own instruction | 14 of 18 across the replay | 0 of 3 |
-| The same: replies carrying the owner's explanatory note blocks | 18 of 18 across the replay | 0 of 3 |
-| Antigravity, Gemini 4 Neon at High: reviews handed back | 0 of 6 starts, all empty | 3 of 3 |
-| Antigravity, Gemini 4 Carbon at High: reviews handed back | 3 of 3, in 1,125 to 1,471 seconds | 2 of 3; one stopped at the 1,500-second limit |
+| The same: replies that mention plan mode or a plan file as their own instruction | 3 of 3 | 0 of 3 |
+| The same: replies carrying the owner's explanatory note blocks | 3 of 3 | 0 of 3 |
+| Antigravity, Gemini 4 Neon at High: reviews handed back | 0 of 6 starts with quota available, all empty | 3 of 3 |
+| Antigravity, Gemini 4 Carbon at High: reviews handed back | 3 of 3 with quota available, in 1,125 to 1,471 seconds | 2 of 3; one stopped at the 1,500-second limit |
+
+The earlier Antigravity starts ran on CLI 1.5.17 and these on 1.5.18, so the note is
+not the only difference between the two columns. Each Gemini model also had three
+earlier starts on these commits refused on quota, which the table leaves out.
 
 - **Claude Code.** The start uses the `dontAsk` permission mode and the default output
-  style in place of plan mode. In a permission probe it refuses a file write, a shell
-  write and a script, and runs `git log`.
+  style in place of plan mode. In a permission probe on Claude Haiku 5.5 a file write,
+  a shell write and a script are each refused when attempted, and `git log` runs.
 - **Antigravity.** The delegate call adds a note to every reviewer, explorer and
   locator brief: run no shell command. No start in this check records a denied command.
 - **Cost of the Claude Code change.** The new mode also refuses compound commands and
@@ -37,8 +41,12 @@ the changed starts on three commits of the
   Three commits, each configuration once, do not measure that.
   [The review leaf](https://github.com/CVX-Hull/enactive/issues/991) can.
 
-No owner decision is requested: the changed Claude Code start still enforces that the
-reviewer cannot edit.
+No owner decision is requested. The file-editing tools are disabled as before, and
+the permission mode refuses a write the model attempts where plan mode asked the model
+not to attempt it. The exception is unchanged from before: a command the user's or the
+project's settings already allow still runs. These runs were in scratch directories
+Claude Code does not trust, where it ignored the project's three allowed command
+prefixes; in the trusted checkout those prefixes stay allowed.
 
 The scripts, briefs, replies and results are retained as
 [`reviewer-start-check`](../../data/evidence/reviewer-start-check.sha256).
@@ -63,7 +71,9 @@ The scripts, briefs, replies and results are retained as
   replay's prepared commit trees (`305cecc5`, `3942ae55`, `40960889`) with the replay's
   own review brief, through the changed `tools/delegate.py` and
   `.agents/delegates.json`, each with a 1,500-second limit. Up to five starts ran at
-  once. The "before" column is the replay's result for the same commits.
+  once. The "before" column is the replay's result for the same configuration on the
+  same commits; for the Gemini models it counts the starts made after their quota
+  returned.
 - **Permission probe.** One brief asks the reviewer to run `git log`, create a file with
   its file-writing tool, run `echo x > probe-b.txt`, run a one-line Python script, and
   say whether its instructions mention plan mode or an explanatory output style
@@ -85,9 +95,10 @@ The scripts, briefs, replies and results are retained as
   the subject of the commit it reviews, which changes the delegate starts. None
   describes a plan file or plan mode as its own instruction, and none carries a note
   block.
-- **Refused commands.** The six commands refused across the three Claude Opus 5.5
-  reviews are searches joined with pipes or command substitution, and one Python
-  one-liner over a data file. Each reply says what it could not run.
+- **Refused commands.** Six commands are refused across the three Claude Opus 5.5
+  reviews: four searches joined with pipes or command substitution, one directory
+  listing joined to a `git` command, and one Python program passed on the command
+  line. Each reply says what it could not run.
 - **The probe.**
 
 | Step | Changed start, Haiku | Changed start, Opus | Plan-mode start, Haiku |
@@ -101,9 +112,9 @@ The scripts, briefs, replies and results are retained as
 
   No probe run left a new file in the fixture.
 
-- **Antigravity.** None of the six starts that handed back, nor the one that timed out,
-  records a denied command. The same Gemini 4 Neon configuration returned an empty
-  reply on all six of its earlier starts on these three commits.
+- **Antigravity.** None of the five starts that handed back, nor the one that timed
+  out, records a denied command. The same Gemini 4 Neon configuration returned an empty
+  reply on all six of its earlier starts on these three commits that had quota.
 
 ## Limits
 
@@ -111,7 +122,10 @@ The scripts, briefs, replies and results are retained as
   starts work; they are not rates.
 - Gemini 4 Carbon needs 1,124 to 1,485 seconds for a review here and 1,125 to 1,471 in
   the replay, so a 1,500-second limit is not enough margin for it.
-- Under plan mode the model declined to write; under the changed start the write is
-  refused when attempted. Neither makes the filesystem read-only: a command the user's
-  or the project's settings already allow still runs.
+- Under plan mode the model declined to write. Under the changed start Claude Haiku 5.5
+  attempted both writes and was refused; Claude Opus 5.5 declined them, citing its role
+  file, so its refusals were not exercised. Neither start makes the filesystem
+  read-only: a command the user's or the project's settings already allow still runs.
+- No defect-recall figure exists for the changed Claude Code start. The replay's
+  figures belong to the plan-mode start and to an experimental start without it.
 - The reviews ran while other delegates were running on the same subscriptions.
