@@ -28,13 +28,14 @@ support.
 | GPT-6 Luna at High | 2 | 3 | 394 s |
 | GPT-6 Luna at Low | 2 | 3 | 155 s |
 
-- **Eight of ten catch every false fact.** A wrong quotation of a frame's legend, a
-  claim that a log lacks an input it records, and a constant that exists nowhere in
-  the tree are each caught by every configuration except GPT-6 Luna.
+- **Eight of ten catch every false fact.** A claim that a log lacks an input it
+  records and a constant that exists nowhere in the tree are caught by all ten. A wrong
+  quotation of a frame's legend is caught by every configuration except GPT-6 Luna.
 - **GPT-6 Luna accepts the misread frame** at both efforts.
-- **Five accept every hand-back that states only plain facts.** The other rejections
-  are one misreading of a frame by Gemini 4 Hydrogen, one objection to link paths by
-  GPT-6.1 Terra, and two objections to the word "because".
+- **Seven accept every hand-back that states only plain facts,** and five of those
+  also catch all three false facts. The other rejections are one misreading of a frame
+  by Gemini 4 Hydrogen, one objection to link paths by GPT-6.1 Terra, and two
+  objections that a console error is not shown to have caused the exit.
 - **The lead's key was too loose on two hand-backs.** Both state a cause that the files
   do not themselves show, and most verifiers reject them for it. They are reported
   apart and not counted as wrongly rejected.
@@ -89,10 +90,11 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 
 **Where the key fell short.** Packets 5 and 7 cite facts that hold and then state a
 cause: that a port mismatch explains an unknown-route response, and that a watch
-ended a host. No file in either packet records the response or the order of events.
-The lead keyed both as sound because their conclusions match the recorded cause.
-Eight of ten verifiers reject packet 5 and five reject packet 7, each for that causal
-sentence. Packet 6 is the reverse: its false element is a marked inference, which the
+ended a host. No file in packet 5 records the response, and none in packet 7 says
+that one event caused the next. The lead keyed both as sound because their conclusions
+match the recorded cause. Eight of ten verifiers reject packet 5 and five reject
+packet 7, for a causal statement. Four of those who check packet 7's order of events
+against the timestamps mark the order supported. Packet 6 is the reverse: its false element is a marked inference, which the
 brief excludes, and no verifier names it.
 
 ## Results
@@ -111,13 +113,16 @@ brief excludes, and no verifier names it.
 | GPT-6 Luna at Low | 2 | 3 | 1 | accept | 8 to 27 s |
 
 - **The false fact GPT-6 Luna misses** is the frame legend. GPT-6 Luna at High wrote
-  that hand-back in the diagnosis study, and accepts it here too.
+  that hand-back in the diagnosis study, and accepts it here too. On packet 4 GPT-6
+  Luna at Low rejects the right claim for a weaker reason: it cites other keypresses
+  in the log and does not find the Shift+C input.
 - **Rejections of plain-fact hand-backs.** Gemini 4 Hydrogen rejects packet 1, saying
   a city label is still in the second frame; the lead's reading of the frame is that
   it is gone. GPT-6.1 Terra rejects packet 1 because the hand-back's links point to
   the directory root and the files are under `evidence/`. GPT-6.2 Sol and GPT-6.1
-  Terra reject packet 3 because it says the missing path caused the launcher to fail,
-  where the console line reports the failure and does not use the word.
+  Terra reject packet 3 because it says the missing path caused the launcher to fail:
+  the console reports the error and the receipt the exit, and neither says one caused
+  the other.
 - **How strict a verifier is.** The three GPT-6.2 and GPT-6.1 verifiers accept neither
   causal hand-back; every other verifier accepts one of the two.
 - **Tokens,** as each coding agent reported them for nine checks, compare within a
@@ -137,9 +142,9 @@ once.
   as the two references: Claude Sonnet 5.5 at Medium, Claude Haiku 5.5 at High, GPT-6.2
   Astra at Medium, GPT-6.1 Terra at Medium and both Gemini 4 models catch all three.
 - GPT-6 Luna misses a false statement about a frame at either effort.
-- The GPT verifiers hold a hand-back to what the files literally show, rejecting a
-  stated cause the files do not record; the Claude and Gemini verifiers let more of
-  those through. Which is wanted depends on the check, and the lead's own key let two
+- The GPT-6.2 and GPT-6.1 verifiers hold a hand-back to what the files literally show,
+  rejecting a stated cause the files do not record; the Claude, Gemini and GPT-6 Luna
+  verifiers let more of those through. Which is wanted depends on the check, and the lead's own key let two
   through.
 - Checking nine hand-backs takes 155 to 502 seconds for every verifier but Gemini 4
   Neon, which takes 1,577.
