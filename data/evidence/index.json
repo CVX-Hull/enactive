@@ -1435,6 +1435,20 @@
       },
       "visibility": "private"
     },
+    "reviewer-recall-replay-lower-tier-reviewers": {
+      "availability": "present",
+      "bytes": 6347626,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-reviewer-recall-replay-added-reviewers.md"
+      ],
+      "files": 342,
+      "manifest_sha256": "5b9979a4f98efd63b758f678d47e319ed477b4e5152af88f0d36af9e499d6167",
+      "note": "Thirty-six reviews by four lower-tier reviewers on the replay's nine commits, both judges' packets and replies, scripts and table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "reviewer-start-check": {
       "availability": "present",
       "bytes": 534528,
