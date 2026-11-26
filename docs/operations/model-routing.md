@@ -91,11 +91,10 @@ See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
   about 300,000 tokens. Delegate wide reading and long command output with a brief
   that asks for a short report. The threshold is a judgment. It rests on the cost of rereading
   context in one session ([token-use measurement](../acceptance/2026-11-20-coding-agent-token-use.md))
-  and on six lead sessions, in which the two that kept their context under 400,000
-  tokens used the fewest tokens for each merged pull request
-  ([lead cost](../acceptance/2026-11-25-lead-cost-per-merged-pull-request.md)). The
-  sessions merged changes of different sizes, so the figures do not isolate the effect
-  of context size.
+  and on six lead sessions: among the five with a counted merge, the two lowest token
+  costs for each merge are in sessions whose context stays below 400,000 tokens
+  ([lead cost](../acceptance/2026-11-25-lead-cost-per-merged-pull-request.md)). That
+  comparison does not control for the size or difficulty of the merged changes.
 
 ## When the lead's model has no quota left
 

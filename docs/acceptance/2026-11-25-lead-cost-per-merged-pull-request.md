@@ -10,14 +10,14 @@ scope: 'Token use, context size, merges, delegations and check commands in the s
 
 ## At a glance
 
-The three lead sessions whose context stayed under 400,000 tokens used 5.3 and 8.6
-million tokens for each pull request they merged; the third merged none. The three
+Of the three lead sessions whose context stayed under 400,000 tokens, two used 5.3 and
+8.6 million tokens for each counted merge and the third has no counted merge. The three
 whose context passed 600,000 tokens used 12.0, 23.8 and 39.4 million. In the first
-group at most 47% of a session's tokens were spent in requests whose context was above
-300,000 tokens; in the second group 77% to 91% were.
+group the highest reported share of a session's tokens spent in requests above 300,000
+tokens of context is 47%; in the second group the shares are 77% to 91%.
 
-Not known: how large or hard each merged change was, which differs between sessions and
-is not controlled; the effort each lead ran at, which the transcripts do not record;
+Not known: how large or hard each merged change was, which is neither measured nor
+controlled; whether each counted merge completed; the effort each lead ran at, which the transcripts do not record;
 how many repairs a lead asked for; and anything about leads on Codex or Antigravity,
 whose sessions were not read. Six sessions are six observations. No owner decision is
 requested.
@@ -34,19 +34,22 @@ Every figure below is from that output.
   lead's own shell commands, and kept none of the text.
 - **Tokens** are, for each request counted once by its message identifier, the request's
   context (uncached input, cache read and cache write) plus its output.
-- **Merges** are the distinct pull request numbers in the lead's own merge commands
-  (`gh pr merge N` or a merge call on a numbered pull request). A merge made another
-  way is not counted, and a queued merge that did not complete is.
+- **Counted merges** are the distinct pull request numbers in merge commands in the
+  lead's shell input (`gh pr merge N` or a merge call on a numbered pull request), plus
+  one for each merge command that names no number. The script matches command text and
+  does not check that a merge completed; a merge made another way is not counted.
 - **Delegations** are the larger of the session's sub-agent starts and its sub-agent
-  transcript files, plus its `tools/delegate.py` calls.
-- **Check commands** are the lead's own shell commands that ran `pytest`,
+  transcript files, plus the mentions of `tools/delegate.py` in the lead's shell input.
+- **Check commands** are the lead's shell inputs that contain `pytest`,
   `tools/check.py` or a Node test command. They stand in for the lead rerunning a
   delegated result's acceptance check; the transcripts do not say which check answered
-  which delegation.
+  which delegation, and an input that only quotes such a command also matches.
+- **Summarized** counts the transcript's compaction markers, which may be more than one
+  for each summarization.
 
 ## The six sessions
 
-| Started | Models, by requests | Requests | Tokens | Largest context | Median context | Summarized | Tokens above 300,000 context | Merges | Tokens per merge |
+| Started | Models, by requests | Requests | Tokens | Largest context | Median context | Summarized | Tokens above 300,000 context | Counted merges | Tokens per counted merge |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 21 November | Fable 5.2: 106 | 106 | 26.3 M | 382,000 | 252,000 | 0 | 47% | 5 | 5.3 M |
 | 21 November | Fable 5.2: 106 | 106 | 25.9 M | 353,000 | 246,000 | 0 | 41% | 3 | 8.6 M |
@@ -71,11 +74,12 @@ transcripts.
 
 ## What this supports
 
-- In these six sessions the two with the smallest tokens per merge kept their context
-  under 400,000 tokens, and the two with the largest had a median context of 365,000
-  and 482,000 tokens.
-- The session of 20 November reached 965,000 tokens and was summarized ten times; its
-  median context was 339,000 and it used 12.0 million tokens per merge, between the two
-  groups.
-- Two sessions ran fewer than one check command for each delegation, and one ran none.
-  That is a count of commands, not a finding that a result went unverified.
+- Among the five sessions with a counted merge, the two with the fewest tokens per
+  counted merge kept their context under 400,000 tokens, and the two with the most had
+  a median context of 365,000 and 482,000 tokens.
+- The session of 20 November reached 965,000 tokens and has ten compaction markers; its
+  median context was 339,000 and its 12.0 million tokens per counted merge rank third
+  of the five.
+- Three sessions have fewer than one check command for each delegation, one of them
+  none. That is a count of matching commands, not a finding that a result went
+  unverified.
