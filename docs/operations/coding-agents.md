@@ -132,12 +132,10 @@ checkout or a worktree, with the main checkout's Python
   Antigravity report no served model, and Antigravity reports no cache writes. Claude
   Code's `input_tokens` leaves cached tokens out; Codex's includes them, and
   Antigravity's appears to. Compare token counts within one coding agent, not across
-  them. Usage is read from whatever the run printed. Every coding agent prints its counts
-  when a turn ends, so a run stopped at its time limit usually reports none. Compare
-  `models_reported` with the model named. Name a Claude model by its full identifier:
-  on 25 November 2026 a call that named the alias `haiku` reported Claude Sonnet 5.5,
-  and one that named `claude-haiku-5-5` reported that model (the ledger rows for issue
-  975 carry the two calls; the reported models are not retained).
+  them. A coding agent prints its counts when a turn ends, so a run stopped at its time
+  limit usually reports none. Name a Claude model by its full identifier and compare
+  `models_reported` with it: the alias `haiku` is served by Claude Sonnet 5.5 on this
+  host ([probes](../acceptance/2026-11-25-delegate-start-probes.md)).
 - **The acceptance check is run again outside.** With `--check`, the brief asks the
   delegate to end by saying whether it saw the check pass, fail or not run. After the
   run the call runs the same command in the worktree itself, outside any sandbox the
@@ -149,10 +147,9 @@ checkout or a worktree, with the main checkout's Python
   not commit, merge or push.
 
 [Delegate definitions](../../.agents/delegates.json) supply the starts below and say
-how each coding agent's reply and usage are read. The flags that turn on
-machine-readable output ran in locator starts on Codex CLI 0.171.0, Claude Code 2.1.329
-and Antigravity CLI 1.5.17, and in one Claude Code reviewer start. The other behaviour
-described below was observed before those flags were added, Antigravity's on 1.5.13. The
+how each coding agent's reply and usage are read. The starts are for
+Codex CLI 0.171.0, Claude Code 2.1.329 and Antigravity CLI 1.5.17. The Antigravity
+print-mode limits below are from 1.5.13 and are unchecked on 1.5.17. The
 [attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) holds outcomes
 on repository tasks.
 
@@ -171,12 +168,11 @@ on repository tasks.
   forbid them, and nothing mechanical does.
 - **Refusals.** When a run fails or returns nothing, the call looks in its output for
   quota or sign-in wording listed for each coding agent in the definitions file. It
-  never reads a reply for that wording, since a hand-back may discuss quotas. One real
-  refusal has been seen through the call: Antigravity CLI 1.5.17 ended a start on a
-  model whose quota was spent with a non-zero exit and "Individual quota reached",
-  and the call reported `refused` with the time until the quota resets. Detection on
-  Codex and Claude Code remains unproven.
-  One worded differently is reported as `failed` or `empty_reply`, and one that arrives
+  never reads a reply for that wording, since a hand-back may discuss quotas. The
+  call reports an Antigravity quota refusal as `refused`, with the time until the quota
+  resets in its detail ([probes](../acceptance/2026-11-25-delegate-start-probes.md)).
+  Detection on Codex and Claude Code is unproven.
+  A refusal worded differently is reported as `failed` or `empty_reply`, and one that arrives
   as an ordinary reply with exit code 0 is handed back as text for the lead to read.
   Either way nothing else is started.
 - **Claude Code settings.** A delegated run loads the user's settings as well as the
