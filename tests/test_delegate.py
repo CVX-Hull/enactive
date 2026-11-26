@@ -68,7 +68,11 @@ def stand_ins(tmp_path):
                  "print('stopped', file=sys.stderr)\nsys.exit(1)",
         # Fails with an output record that says in words that it was refused.
         "declining": "NAME = 'declining'\n" + mark
-                     + "print(json.dumps({'result': '', 'error': 'You have hit your usage limit'}))\nsys.exit(1)",
+                     + "print(json.dumps({'result': '', 'error': {'message': 'You have hit your usage limit'}}))\nsys.exit(1)",
+        # Fails after a line-per-record turn whose token count happens to be 429.
+        "counting": "NAME = 'counting'\n" + mark
+                    + "print(json.dumps({'type': 'turn.completed', 'usage': {'output_tokens': 429}}))\n"
+                    "print('stopped', file=sys.stderr)\nsys.exit(1)",
         # Never ends, and leaves a child that ignores the request to stop.
         "slow": "NAME = 'slow'\n" + mark + f"print({json.dumps(first_turn)!r}, flush=True)\n"
                 "print('{\"type\":', flush=True)\n"
@@ -109,6 +113,7 @@ def stand_ins(tmp_path):
                        "crashing": agent("Crashing", [sys.executable, commands["crashing"]]),
                        "timed": agent("Timed", [sys.executable, commands["timed"]]),
                        "declining": agent("Declining", [sys.executable, commands["declining"]]),
+                       "counting": agent("Counting", [sys.executable, commands["counting"]], reply="file", usage=jsonl_usage),
                        "slow": agent("Slow", [sys.executable, commands["slow"]], reply="file", usage=jsonl_usage),
                        "absent": agent("Absent", [str(tmp_path / "no-such-command")]),
                        "partly": {"name": "Partly", "version": version, "refusals": [], "usage": json_usage,
@@ -168,7 +173,7 @@ def test_usage_is_reported_even_when_a_run_fails(stand_ins):
 def test_stdout_without_a_usable_json_reply_gives_an_empty_reply_and_no_usage(stand_ins, stdout):
     stand_ins.definitions["coding_agents"]["silent"]["roles"]["worker"]["argv"].append(stdout)
     result, _ = stand_ins("silent")
-    assert result["outcome"] == "empty_reply"
+    assert result["outcome"] == "empty_reply" and "the reply was not read" in result["detail"]
     assert (stand_ins.out / "reply.md").read_text() == ""
     assert (stand_ins.out / "stdout.txt").read_text() == stdout + "\n"
     assert result["usage"] is None and result["models_reported"] is None
@@ -181,6 +186,7 @@ def test_stdout_without_a_usable_json_reply_gives_an_empty_reply_and_no_usage(st
     ("crashing", "failed", "exit code 3: boom", ["crashing"]),
     ("timed", "failed", "exit code 1: stopped", ["timed"]),
     ("declining", "refused", "usage limit", ["declining"]),
+    ("counting", "failed", "exit code 1: stopped", ["counting"]),
     ("partly", "unavailable", "no start that works", []),
 ])
 def test_a_run_with_no_hand_back_is_reported_as_what_it_was_and_nothing_else_is_started(stand_ins, coding_agent, outcome, detail, ran):

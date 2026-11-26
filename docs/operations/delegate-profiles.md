@@ -47,7 +47,7 @@ Read remaining quota with `/status` or on the account's usage page.
 
 Recorded models include `claude-fable-5-2`, `claude-opus-5-5`, `claude-sonnet-5-5`
 and `claude-haiku-5-5`. Efforts range from `low` to `max`. Name the full identifier in
-the delegate call: the alias `haiku` was served by Claude Sonnet 5.5 on this host
+the delegate call
 ([token use and the served model](coding-agents.md#starting-a-delegate-on-any-coding-agent)).
 
 | Role and configuration | What the evidence supports |

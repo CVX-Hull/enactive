@@ -132,6 +132,30 @@ def at_path(record: dict, path: str) -> object:
     return value
 
 
+def words(stdout: str) -> str:
+    """What the output says: each line as written, or, for a line that is a JSON record, its text values at
+    every depth. A count or a timing that happens to be 429 is not a refusal, so numbers and keys are left out."""
+    def texts(value: object):
+        if isinstance(value, str):
+            yield value
+        elif isinstance(value, dict):
+            for inner in value.values():
+                yield from texts(inner)
+        elif isinstance(value, list):
+            for inner in value:
+                yield from texts(inner)
+
+    said = []
+    for line in stdout.splitlines():
+        try:
+            record = json.loads(line)
+        except (ValueError, RecursionError):
+            said.append(line)
+            continue
+        said.extend(text for part in texts(record) for text in part.splitlines())
+    return "\n".join(said)
+
+
 def reported_usage(stdout: str, stdout_object: dict, how: dict) -> tuple[dict[str, int | None] | None, list[str] | None]:
     """Sum reported counts and collect served models from the matching output records."""
     records = (stdout_object,)
@@ -144,8 +168,8 @@ def reported_usage(stdout: str, stdout_object: dict, how: dict) -> tuple[dict[st
     models: set[str] | None = None
     models_path = how.get("models")
     for record in records:
-        for name, path in how["tokens"].items():
-            count = at_path(record, path)
+        for name in TOKEN_NAMES:
+            count = at_path(record, how["tokens"][name]) if name in how["tokens"] else None
             if type(count) is int and count >= 0:
                 totals[name] = (totals[name] or 0) + count
         if models_path is not None:
@@ -214,15 +238,16 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     else:
         value = stdout_object.get(reply_format["stdout_json"])
         reply = value if isinstance(value, str) else ""
-        reply_file.write_text(reply, encoding="utf-8")
+        reply_file.write_text(reply, encoding="utf-8", errors="replace")
     result["usage"], result["models_reported"] = reported_usage(stdout, stdout_object, usage_format)
 
     no_hand_back = exit_code != 0 or not reply.strip()
-    # A single output record is searched by what it says, not by its counts and timings: a field that
-    # happens to hold 429 is not a refusal.
-    said = "\n".join(value for value in stdout_object.values() if isinstance(value, str)) if stdout_object else stdout
+    said = words(stdout)
     refused = refusal(agent["refusals"], said, stderr) if no_hand_back else None
-    last_line = (stderr.strip().splitlines() or stdout.strip().splitlines() or ["no output"])[-1][:300]
+    last_line = (stderr.strip().splitlines() or said.strip().splitlines() or ["no output"])[-1][:300]
+    if exit_code == 0 and reply_format != "file" and stdout.strip() and not isinstance(stdout_object.get(reply_format["stdout_json"]), str):
+        last_line = (f"stdout is not one JSON object with a text `{reply_format['stdout_json']}`, so the reply was not "
+                     f"read (see stdout.txt): {last_line}")[:300]
     if exit_code is None:
         result |= {"outcome": "timed_out", "detail": f"no hand-back within {timeout:g} seconds"}
     elif refused:

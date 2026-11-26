@@ -117,7 +117,8 @@ checkout or a worktree, with the main checkout's Python
   0 when there is a hand-back and 1 when there is none. The result names the delegate,
   its version, the wall time, the commits made in the worktree during the run, the paths
   left uncommitted there and one outcome: `handed_back`; `failed_start` (the command is missing or
-  could not be run); `empty_reply` (exit code 0 and no reply, which is a failed run);
+  could not be run); `empty_reply` (exit code 0 and no reply, which is a failed run; its detail says when
+  the output could not be read as the record the reply comes in);
   `refused` (a run that failed or returned nothing, whose output carries a quota or
   sign-in message); `failed` (any other non-zero exit); `timed_out` (the delegate and
   everything it started are stopped); or `unavailable` (the role is recorded as having no start that works on
@@ -131,11 +132,12 @@ checkout or a worktree, with the main checkout's Python
   Antigravity report no served model, and Antigravity reports no cache writes. Claude
   Code's `input_tokens` leaves cached tokens out; Codex's includes them, and
   Antigravity's appears to. Compare token counts within one coding agent, not across
-  them. Usage is read from whatever the run printed, so a Codex run stopped at its time
-  limit reports the turns it finished, and a Claude Code or Antigravity run stopped
-  early reports none. Compare `models_reported` with the model named: on this host
-  `claude --model haiku` was served by Claude Sonnet 5.5, and `claude-haiku-5-5` was
-  served as named.
+  them. Usage is read from whatever the run printed. Every coding agent prints its counts
+  when a turn ends, so a run stopped at its time limit usually reports none. Compare
+  `models_reported` with the model named. Name a Claude model by its full identifier:
+  on 25 November 2026 a call that named the alias `haiku` reported Claude Sonnet 5.5,
+  and one that named `claude-haiku-5-5` reported that model (the ledger rows for issue
+  975 carry the two calls; the reported models are not retained).
 - **The acceptance check is run again outside.** With `--check`, the brief asks the
   delegate to end by saying whether it saw the check pass, fail or not run. After the
   run the call runs the same command in the worktree itself, outside any sandbox the
@@ -147,9 +149,10 @@ checkout or a worktree, with the main checkout's Python
   not commit, merge or push.
 
 [Delegate definitions](../../.agents/delegates.json) supply the starts below and say
-how each coding agent's reply and usage are read. The starts ran on Codex CLI 0.171.0,
-Claude Code 2.1.329 and Antigravity CLI 1.5.17; the Antigravity print-mode behaviour
-below was observed on 1.5.13. The
+how each coding agent's reply and usage are read. The flags that turn on
+machine-readable output ran in locator starts on Codex CLI 0.171.0, Claude Code 2.1.329
+and Antigravity CLI 1.5.17, and in one Claude Code reviewer start. The other behaviour
+described below was observed before those flags were added, Antigravity's on 1.5.13. The
 [attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) holds outcomes
 on repository tasks.
 
