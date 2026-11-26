@@ -37,12 +37,13 @@ codes that hide the model, gave the same verdict on 84 of 88 answers and the sam
 count on all fourteen frame replies. The four differences are listed
 [below](#where-the-judges-differ).
 
-One answer in 88 states a wrong cause: Claude Haiku 5.5 on the curator stop. Every
-other answer either states the recorded cause or stops at a step the evidence does
-show. Claude Fable 5.2 and Gemini 4 Argon state the recorded cause on all eight
+Of 88 non-empty hand-backs, two hold only an opening sentence. Of the 86 that answer,
+the lead judges 59 as stating the recorded cause, 26 as stopping short and one as
+wrong: Claude Haiku 5.5 on the curator stop. The second judge calls one more wrong.
+Claude Fable 5.2 and Gemini 4 Argon state the recorded cause on all eight
 incidents, as Claude Opus 5.5 and Gemini 4 Carbon did in the first study.
 
-Every configuration that can open an image reads the two frames correctly. The
+Twelve of the fourteen configurations answer all eight frame questions correctly. The
 difference between tiers shows in diagnosis, and mostly as stopping short.
 
 On Antigravity, 23 of 40 explorer starts on a model other than Gemini 4 Argon ended
@@ -65,8 +66,11 @@ The figures here are printed by `scripts/tabulate.py` into `results/table.txt`.
 - **What is reused.** The eight incident fixtures, the incident descriptions and the
   explorer brief are the first diagnosis study's; the two frames, the eight questions
   and the key are the frame-reading probe's. `scripts/tiers.py` reads them from the
-  copies those studies were sealed from and changes only the configuration named on
-  the brief's Role line.
+  copies those studies were sealed from. It names the configuration on the brief's
+  Role line and lists the evidence files found in the fixture directory. For the
+  curator stop that list has two more names than the first study's brief, the session
+  database's `-shm` and `-wal` side files, which a first-study start left when it
+  opened the database.
 - **The configurations.** Every model the coding agents offer that the first studies
   did not start, at High where the coding agent offers it: GPT-OSS 120B runs at
   Medium, the only effort Antigravity lists for it. Three models also run at the effort
@@ -119,29 +123,31 @@ empty reply, a failed start or a hand-back with no answer.
 | Map command | none, 12 | states, 70 | none, 20 | short, 29 | none, 5 | none, 3 |
 | Thirteen requests | states, 61 | states, 76 | none, 39 | short, 31 | none, 4 | none, 4 |
 
-- **Curator stop is the incident that separates the tiers.** Its cause is in a session
+- **Curator stop separates the configurations most.** Its cause is in a session
   database: two operations returned the same frame, and a later publication overwrote
-  the frame's step. Only Claude Fable 5.2 and Gemini 4 Argon found it, as every
-  configuration that replied did in the first study. Eight others reported the gate's
-  rejection message and said the reason was not shown.
+  the frame's step. Only Claude Fable 5.2 and Gemini 4 Argon found it here. In the
+  first study all six configurations that replied found it, GPT-6.2 Sol and Astra
+  among them. Eight others here stopped at the gate's rejection message; seven said
+  the reason behind it was not shown, and GPT-OSS 120B gave the message as the cause.
 - **The wrong cause.** Claude Haiku 5.5 proposed, as likely, that the rejected sessions
   cited frames the published history never admitted. It marked the link as inferred.
   The same reply says it wrote three scratch files outside the fixture, against the
   brief, and removed them.
-- **Thirteen requests.** The watch file names the watch deadline. Claude Haiku 5.5,
-  both GPT-6.1 Terra efforts, GPT-6 Luna at Low and GPT-OSS 120B reported the
-  cancellation and did not connect it to the deadline.
+- **Thirteen requests.** The watch file names the watch deadline. Claude Haiku 5.5
+  reported the cancellation and not the deadline. Both GPT-6.1 Terra efforts and
+  GPT-6 Luna at Low mentioned the deadline and did not say it caused the
+  cancellation. GPT-OSS 120B said only that the deciding host ended unsuccessfully.
 - **Map command.** GPT-6 Luna at High read the input as Shift+C and then misread the
   frame's legend as giving that key to "Center on destination", so it called the cause
-  not shown. GPT-OSS 120B said the event log holds no map-centering input, which it
-  does.
+  not shown. GPT-OSS 120B cited only early events of the log and said it holds no
+  map-centering action; the log records the Shift+C input later on.
 - **Effort.** Claude Sonnet 5.5 gives the same eight verdicts at High and Medium.
   GPT-6.1 Terra differs on one. GPT-6 Luna states the cause on six at High and on one
   at Low, where its answers take 8 to 22 seconds.
 - **No reply.** All 23 empty replies on Antigravity follow a denied command: 7 of 8
   starts on Claude Opus 5.5, 6 on Claude Sonnet 5.5, 5 on Gemini 3.8 Flash, 3 on
-  GPT-OSS 120B and 2 on Gemini 4 Hydrogen. Gemini 4 Argon ran no command and replied
-  on all eight. The two Claude models through Antigravity each handed back one opening
+  GPT-OSS 120B and 2 on Gemini 4 Hydrogen. Gemini 4 Argon replied on all eight and no result
+  of its starts records a denied command. The two Claude models through Antigravity each handed back one opening
   sentence as if it were an answer, and the call reports those as handed back.
 
 Token counts as each coding agent reported them, for eight starts, compare within a
@@ -187,8 +193,9 @@ Each configuration got the two frames and eight questions once.
 | Claude Opus 5.5 through Antigravity at High | no answer | 0 | 10 s |
 
 GPT-OSS 120B said it has no tool that renders an image and answered nothing, as the
-brief asks. Claude Opus 5.5 through Antigravity handed back two sentences saying it
-would read the role file, and no answers.
+brief asks. Claude Opus 5.5 through Antigravity handed back two sentences, that
+it would read the role file and that it had and would read the glossary and the
+images, and no answers; whether it could open the frames is not shown.
 
 Four Claude Code frame replies and one diagnosis reply mention plan mode or carry the
 session owner's explanatory note blocks, as the
@@ -200,13 +207,14 @@ Every statement is about these eight incidents and two frames, each configuratio
 started here and run once.
 
 - Reading text and a highlighted button from a frame does not need a large model:
-  every configuration that can open an image answers all eight questions correctly,
-  the fastest in 9 to 16 seconds. GPT-OSS 120B cannot open an image.
-- For a cause that takes cross-file work inside a database, only the largest model of
-  a family finds it here: Claude Fable 5.2 and Gemini 4 Argon, with Claude Opus 5.5
-  and Gemini 4 Carbon from the first study.
-- A smaller model usually fails by stopping short, not by stating a wrong cause: one
-  wrong cause in 88 answers, from Claude Haiku 5.5.
+  twelve of fourteen configurations answer all eight questions correctly, the fastest
+  in 9 to 16 seconds. GPT-OSS 120B reports no tool that renders an image in this
+  start, and Claude Opus 5.5 through Antigravity returns no answers.
+- On the curator stop, whose cause is inside a session database, Claude Fable 5.2 and
+  Gemini 4 Argon state the cause and ten smaller or cheaper configurations do not.
+  This is one incident.
+- An answer that misses the recorded cause usually stops short and does not state
+  another: 26 of 27 by the lead's verdict, the one wrong cause from Claude Haiku 5.5.
 - Claude Sonnet 5.5 at Medium states seven of eight causes in 9 to 33 seconds a start,
   the same verdicts as at High.
 - GPT-6 Luna at Low names a failing step and almost never the cause.
