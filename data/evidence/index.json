@@ -1032,6 +1032,20 @@
       },
       "visibility": "private"
     },
+    "locator-lookups-across-model-tiers": {
+      "availability": "present",
+      "bytes": 380256,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-locator-lookups-across-model-tiers.md"
+      ],
+      "files": 59,
+      "manifest_sha256": "867b86388134888a31eba147d945ca9bd1c12c645f2a94aca9aad20a7b049410",
+      "note": "Lookup script, key, scoring script, table and eleven locator starts",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "malvern-trunk-paired-replay-829": {
       "availability": "present",
       "bytes": 36002169,
