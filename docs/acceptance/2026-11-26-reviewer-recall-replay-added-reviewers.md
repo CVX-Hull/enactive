@@ -113,7 +113,7 @@ Sonnet adds nothing to the first study's eleven defects taken together.
 
 Four more reviewers, on the same commits, brief, judges and rule.
 
-| Reviewer, as started | Reviews handed back, of 9 | Found by both judges, of 16 | Documents, of 10 | Code, of 6 | Findings in all | Wall time |
+| Reviewer, as started | Starts handed back, of 9 | Found by both judges, of 16 | Documents, of 10 | Code, of 6 | Findings in all | Wall time |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Gemini 4 Hydrogen at High | 9 | 4 | 1 | 3 | 52 | 3,914 s |
 | Gemini 3.8 Flash at High | 9 | 3 | 1 | 2 | 33 | 8,138 s |
@@ -135,7 +135,9 @@ Four more reviewers, on the same commits, brief, judges and rule.
   1,318 seconds a review.
 - **GPT-6 Luna finds one of sixteen** and writes ten findings in nine reviews.
 - **GPT-OSS 120B finds none.** Three of its nine starts fail on the server's capacity
-  error and one returns nothing; the five reviews it hands back hold 25 findings.
+  error and one returns nothing. Of the five replies it hands back, one is a plan that
+  asks for direction and four are reviews, holding 25 findings; it is judged on three
+  code defects and four document defects.
 - **Judges.** The two judges give the same verdict on 52 of 55 cells for these four.
 - **Tokens,** as Codex and Antigravity reported them for nine reviews: GPT-6 Luna 5.5
   million input and 49,000 output; Gemini 4 Hydrogen 4.8 million input, 37 million
@@ -152,7 +154,8 @@ run once.
 - GPT-6.1 Terra adds nothing after a GPT-6.2 reviewer: its four defects are all found
   by each of them. The same is not true of Claude Sonnet 5.5 after Claude Opus 5.5
   through the plan-mode start, where it adds three or four.
-- GPT-6.1 Terra has the shortest total wall time of any reviewer here, 565 seconds
-  against 1,105 to 3,979, and finds a quarter of the known defects.
+- GPT-6.1 Terra has the shortest total wall time of any reviewer that returns all nine
+  reviews, 565 seconds against 1,105 to 8,138, and finds a quarter of the known
+  defects.
 - One defect that the five reviewers of the first study's main table miss is found by
   a middle model, so none of those five is a superset of it on this set.
