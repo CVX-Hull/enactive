@@ -952,6 +952,20 @@
       },
       "visibility": "private"
     },
+    "judging-across-model-tiers": {
+      "availability": "present",
+      "bytes": 15578524,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-judging-across-model-tiers.md"
+      ],
+      "files": 1443,
+      "manifest_sha256": "86723ae8da4acf36c7db6cfa1e40e6b8d12b76dfa62cacd8def69a4797ecc983",
+      "note": "Scripts, 216 judging starts by twelve configurations on the replay's eighteen packets, 72 starts refused a read, and the table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "lead-cost-per-merged-pull-request": {
       "availability": "present",
       "bytes": 4140,
