@@ -1148,6 +1148,90 @@
       },
       "visibility": "private"
     },
+    "multi-day-standard-build-998-admission-01": {
+      "availability": "present",
+      "bytes": 148470359,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md"
+      ],
+      "files": 1344,
+      "manifest_sha256": "d8db290ec245a5ee8b3d70023a43e5ab4233f32d4a925da118ff2a7cd369aa44",
+      "note": "Admission 1 of the multi-day standard-build campaign (#998) at 7c4bec87, session 088ba6385ed4d42f6e728ad34d8fe943 (Francis Mills / Rowan Vale): the campaign-run/13 run directory with its curator runner, the knowledge repository after boundary grooming (v38), the grooming session, the runner file, the saved user directory and the bridge build",
+      "sources": {
+        "build": ".runtime/computer-builds/multi-day-standard-build-998@7c4bec87",
+        "config": ".runtime/campaigns/standard-build-multi-day/curator-runner-config.json@7c4bec87",
+        "grooming": ".runtime/campaigns/standard-build-multi-day/grooming-a01@7c4bec87",
+        "knowledge": ".runtime/campaigns/standard-build-multi-day/admission-01-snapshots/knowledge@7c4bec87",
+        "run": ".runtime/computer-sessions/standard-build-multi-day-a01@7c4bec87",
+        "study-userdir": ".runtime/campaigns/standard-build-multi-day/admission-01-snapshots/study-userdir@7c4bec87"
+      },
+      "visibility": "private"
+    },
+    "multi-day-standard-build-998-admission-02": {
+      "availability": "present",
+      "bytes": 190359057,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md"
+      ],
+      "files": 1705,
+      "manifest_sha256": "0f3f51d4abdee829d148787f29642b3f40f430b9b3b7842b529345adf7d5f9d5",
+      "note": "Admission 02 of the multi-day standard-build campaign (#998) at 7c4bec87: the campaign-run/13 run directory with its curator runner, the knowledge repository after the boundary, the grooming session where one ran, and the saved user directory",
+      "sources": {
+        "grooming": ".runtime/campaigns/standard-build-multi-day/grooming-a02@7c4bec87",
+        "knowledge": ".runtime/campaigns/standard-build-multi-day/admission-02-snapshots/knowledge@7c4bec87",
+        "run": ".runtime/computer-sessions/standard-build-multi-day-a02@7c4bec87",
+        "study-userdir": ".runtime/campaigns/standard-build-multi-day/admission-02-snapshots/study-userdir@7c4bec87"
+      },
+      "visibility": "private"
+    },
+    "multi-day-standard-build-998-admission-03": {
+      "availability": "present",
+      "bytes": 198355784,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md"
+      ],
+      "files": 1887,
+      "manifest_sha256": "330419a6ffe9b1964fbeb78cb0b30ed9e31c1254d065855b5513d0165bdf82c2",
+      "note": "Admission 03 of the multi-day standard-build campaign (#998) at 7c4bec87: the campaign-run/13 run directory with its curator runner, the knowledge repository after the boundary, the grooming session where one ran, and the saved user directory",
+      "sources": {
+        "grooming": ".runtime/campaigns/standard-build-multi-day/grooming-a03@7c4bec87",
+        "knowledge": ".runtime/campaigns/standard-build-multi-day/admission-03-snapshots/knowledge@7c4bec87",
+        "run": ".runtime/computer-sessions/standard-build-multi-day-a03@7c4bec87",
+        "study-userdir": ".runtime/campaigns/standard-build-multi-day/admission-03-snapshots/study-userdir@7c4bec87"
+      },
+      "visibility": "private"
+    },
+    "multi-day-standard-build-998-admission-04": {
+      "availability": "present",
+      "bytes": 96053451,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md"
+      ],
+      "files": 1374,
+      "manifest_sha256": "4c97d22918f18b734b76c73450e9e2c56b55fd859b5171bb938bab29fb618361",
+      "note": "Admission 04 of the multi-day standard-build campaign (#998) at 7c4bec87: the campaign-run/13 run directory with its curator runner, the knowledge repository after the boundary, the grooming session where one ran, and the saved user directory",
+      "sources": {
+        "grooming": ".runtime/campaigns/standard-build-multi-day/grooming-a04@7c4bec87",
+        "knowledge": ".runtime/campaigns/standard-build-multi-day/admission-04-snapshots/knowledge@7c4bec87",
+        "run": ".runtime/computer-sessions/standard-build-multi-day-a04@7c4bec87",
+        "study-userdir": ".runtime/campaigns/standard-build-multi-day/admission-04-snapshots/study-userdir@7c4bec87"
+      },
+      "visibility": "private"
+    },
+    "multi-day-standard-build-998-campaign": {
+      "availability": "present",
+      "bytes": 78485,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md"
+      ],
+      "files": 26,
+      "manifest_sha256": "1e54ad95e93fc13e3d326a2e6416e55834930b21eee1c8afb13639734e7e91b3",
+      "note": "Campaign-level evidence of the multi-day standard-build campaign (#998): the operator note, the package review, two trace analyses with their briefs, the package builder and boundary scripts, the continuation prompt, the supervisor and grooming logs",
+      "sources": {
+        ".": ".runtime/campaigns/standard-build-multi-day and the lead's session scratch directory@7c4bec87"
+      },
+      "visibility": "private"
+    },
     "multi-day-standard-build-preflight-968": {
       "availability": "present",
       "bytes": 40526,
