@@ -270,6 +270,11 @@ wall-time wording, and the claim about the author's family. The arm without plan
 and its judging were added in answer to the design review. `study-reviews/` in the
 second study holds both briefs and replies.
 
+Codex GPT-6.2 Astra at High then read this text against both sealed studies. It
+reproduced the tables and the ledger rows, and reported seven defects of wording and
+scope, which the lead confirmed and corrected here; its reply is not in the sealed
+evidence, and its ledger row records the attempt.
+
 ## What this supports
 
 Every statement is about these nine commits and each configuration as started here,
