@@ -34,9 +34,11 @@ with every answer fixed from the tree beforehand.
   reported as not found by GPT-6 Luna at Low and by both Gemini 4 configurations.
 - **The set barely separates quality and clearly separates time.** Eight of eleven
   answer everything in 17 to 32 seconds. The two Gemini 4 configurations take 355 and
-  509 seconds, with no shell to search with.
-- **The smallest models do this work as well as the reference.** The route's choice of
-  the smallest model for locating is supported here, for lookups of this kind.
+  509 seconds; their starts have no shell to search with.
+- **Small models do this work as well as the reference.** Claude Haiku 5.5 at either
+  effort and GPT-6 Luna at High match it; GPT-6 Luna at Low misses one lookup. The
+  route's choice of the smallest model for locating is supported here, for lookups of
+  this kind.
 
 Limits: fourteen lookups, one start each, all in one brief; every lookup has a single
 searchable name; nothing here tests a lookup that needs judgment. One answer in the key
@@ -51,8 +53,9 @@ The figures here are printed by `scripts/score.py` into `results/table.txt`.
 
 - **The tree.** A shallow clone of this repository at `8f7b9158`, holding nothing else.
 - **The lookups.** Fourteen, in the four kinds the leaf names: where a name is defined
-  (six), where a rule or term is stated (four), every definition or caller of a
-  function (three), and two whose correct answer is that the thing does not exist. The
+  (five), where a rule or term is stated (four), a caller, every caller or every
+  definition of a function (three), and two whose correct answer is that the thing
+  does not exist. The
   lead fixed each answer with `git grep` before any start (`key.json`).
 - **The brief.** One brief holds all fourteen lookups and asks for one line each: the
   path and line, the value or words where the lookup asks for them, or "not found". It
@@ -116,19 +119,20 @@ The figures here are printed by `scripts/score.py` into `results/table.txt`.
 | Gemini 4 Neon at High | 355 s | 951,000 input, 3.2 million cached; 34,000 output |
 | Gemini 4 Hydrogen at High | 509 s | 2.0 million input, 7.4 million cached; 104,000 output |
 
-Token counts compare within one coding agent only. The Gemini 4 starts read files one
-at a time with no shell search, which is where their time and tokens go.
+Token counts compare within one coding agent only. The Gemini 4 starts have no shell
+to search with; the runs do not isolate how much of their time that accounts for.
 
 ## What this supports
 
 Every statement is about these fourteen lookups, each configuration as started here
 and run once.
 
-- For a lookup with one searchable name, the smallest model on Claude Code and on Codex
-  answers as exactly as the largest, in about the same time.
+- For a lookup with one searchable name, Claude Haiku 5.5 at either effort and GPT-6
+  Luna at High answer as exactly as GPT-6.2 Sol at Extra-high, in about the same time;
+  GPT-6 Luna at Low misses one.
 - Effort does not improve the answers for Claude Haiku 5.5, Claude Sonnet 5.5 or
   GPT-6.1 Terra. GPT-6 Luna misses one lookup at Low and none at High.
 - A locator's "not found" is the answer to check: three configurations report a thing
   in a test file as not found, and none invents a location.
-- An Antigravity locator costs ten to thirty times the wall time of the others for the
-  same answers.
+- The two Antigravity locators take ten to thirty times the wall time of the others
+  and answer 13 of 14.
