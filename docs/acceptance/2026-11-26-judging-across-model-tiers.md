@@ -16,7 +16,7 @@ each review found. They gave the same verdict on 106 of 114 cells. This study gi
 the same eighteen packets and brief to twelve more configurations and compares each
 with those 106 shared verdicts.
 
-| Judge, as started | Same as the shared verdict | Finds a defect the review did not find | Misses one it did | Wall time, 18 packets |
+| Judge, as started | Same as the shared verdict | Says found where the shared verdict is not | Says not found or partial where it is found | Wall time, 18 packets |
 | --- | ---: | ---: | ---: | ---: |
 | GPT-6.1 Terra at Medium | 106 of 106 | 0 | 0 | 873 s |
 | Claude Sonnet 5.5 at Medium | 104 of 106 | 1 | 1 | 703 s |
@@ -31,14 +31,16 @@ with those 106 shared verdicts.
 | GPT-6 Luna at High | 86 of 92 | 4 | 0 | 1,437 s |
 | GPT-6 Luna at Low | 68 of 85 | 3 | 5 | 842 s |
 
-- **Eight configurations agree with the shared verdict on 101 or more of 106 cells,**
-  about as closely as the two first judges agree with each other.
-- **A cheap model judges as well as a large one here.** GPT-6.1 Terra at Medium matches
-  every shared verdict and Claude Sonnet 5.5 at Medium departs on two, each in under
-  fifteen minutes for the eighteen packets.
-- **Errors lean toward crediting a review.** Where a judge departs from the shared
-  verdict it more often finds a defect the review did not find; only GPT-6 Luna at Low
-  more often misses one.
+- **Eight configurations give 101 or more of the shared verdicts:** seven of them out
+  of 106 cells, and Claude Sonnet 5.5 at High 102 of the 104 it judged. The two first
+  judges, for comparison, agree with each other on 106 of all 114 cells.
+- **Two cheap configurations match almost every shared verdict.** GPT-6.1 Terra at
+  Medium gives all 106 in 873 seconds for the eighteen packets, and Claude Sonnet 5.5
+  at Medium 104 in 703.
+- **Departures that cross "found" lean toward crediting a review.** Across the twelve
+  judges 23 say found where the shared verdict is partial or not found, and 12 the
+  reverse; only GPT-6 Luna at Low leans the other way. Another 25 swap partial and
+  not found.
 - **GPT-6 Luna does not hold up:** at Low it departs on 17 of 85 cells and three of its
   replies cannot be read; at High, six of 92 with one unreadable.
 
@@ -57,7 +59,8 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
   commit under shuffled labels, and the judge gives each review a verdict of found,
   partial or not found for each defect
   ([replay method](2026-11-25-reviewer-recall-replay.md#method)). `scripts/judges.py`
-  changes only the configuration named on the brief's Role line.
+  changes the Role line, naming the configuration as one more judge, and the issue
+  number; the judging rule is unchanged.
 - **The reference.** A cell is one defect in one review of one packet. The reference
   is the 106 cells on which the replay's two judges gave the same verdict: 42 found, 7
   partial, 57 not found. The eight cells on which they differ are reported apart.
@@ -77,8 +80,9 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
   starts ran after the start
   [allowed the file-reading tools everywhere](2026-11-26-reviewer-start-check.md#limits).
 - **Scoring.** `scripts/tabulate.py` reads the JSON object in each reply. A reply
-  without a readable object leaves that packet's cells unjudged, which is why four rows
-  have fewer than 106.
+  without a readable object leaves that packet's cells unjudged, which is why three
+  rows have fewer than 106; a fourth, Gemini 4 Hydrogen, has 105 because one readable
+  reply omits two verdicts.
 
 ## Results
 
@@ -97,19 +101,21 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 | GPT-6 Luna at High | 17 | 86 of 92 | 4 | 0 | 2 | 2, 5, 0 of 7 |
 | GPT-6 Luna at Low | 15 | 68 of 85 | 3 | 5 | 9 | 1, 5, 1 of 7 |
 
-- **Where the errors fall.** Across the twelve judges, 23 departures credit a review
-  with a defect the reference says it did not find, and 12 deny one the reference says
-  it found. Claude Fable 5.2 makes four of the first kind and none of the second.
-- **The disputed cells follow the family.** On the eight cells where the first judges
-  differ, the Codex judges mostly side with GPT-6.2 Sol and the Claude judges with
-  Claude Opus 5.5. GPT-6.1 Terra at Medium splits five to three, and Gemini 4 Neon
-  sides with Sol on seven.
+- **Where the departures fall.** Across the twelve judges, 23 departures say found
+  where the reference is partial or not found, 12 say partial or not found where it is
+  found, and 25 swap partial and not found. Claude Fable 5.2 makes four of the first
+  kind and none of the others.
+- **The disputed cells.** On the eight cells where the first judges differ, the six
+  Codex configurations together side with GPT-6.2 Sol 26 times and Claude Opus 5.5 19,
+  and the four Claude configurations side with Claude Opus 5.5 21 times and GPT-6.2
+  Sol 10. Both GPT-6 Luna configurations and Claude Haiku 5.5 go against their family.
+  Gemini 4 Neon sides with Sol on seven.
 - **Effort.** Medium agrees with the reference at least as often as High for GPT-6.1
   Terra, GPT-6.2 Astra and Claude Sonnet 5.5. No pair of efforts gives the same verdict
   on every cell.
 - **Unreadable replies.** One reply each from Claude Sonnet 5.5 at High and GPT-6 Luna
   at High, and three from GPT-6 Luna at Low, hold no readable JSON object. Gemini 4
-  Hydrogen leaves one cell without a verdict.
+  Hydrogen leaves one shared cell and one disputed cell without a verdict.
 - **Time and tokens.** A packet takes 16 to 129 seconds for the Codex and Claude
   Sonnet judges, 30 to 99 for Claude Fable 5.2, up to 214 for Claude Haiku 5.5, which writes 545,000 output tokens
   across its eighteen, and 100 to 265 for Gemini 4 Neon. Token counts are in the table
@@ -120,14 +126,15 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 Every statement is about these eighteen packets, each judge as started here and run
 once.
 
-- Judging which defects a review found against a written rule does not need the
-  largest model: GPT-6.1 Terra at Medium and Claude Sonnet 5.5 at Medium agree with the
-  two first judges' shared verdicts on 106 and 104 of 106 cells, in under fifteen
-  minutes for all eighteen packets.
-- A judge from each of the three families is available at that level of agreement:
-  GPT-6.1 Terra, Claude Sonnet 5.5 and Gemini 4 Neon, the last at four times the wall
+- GPT-6.1 Terra at Medium and Claude Sonnet 5.5 at Medium give the two first judges'
+  shared verdict on 106 and 104 of 106 cells, in 873 and 703 seconds for all eighteen
+  packets. This is agreement with two other models, not accuracy against independent
+  labels.
+- A judge from each of the three families reaches 104 or more: GPT-6.1 Terra, Claude
+  Sonnet 5.5 and Gemini 4 Neon, the last in 3,391 seconds, about four times Terra's
   time.
 - GPT-6 Luna at Low and Claude Haiku 5.5 at High depart from the shared verdict on one
   cell in five and one in twelve.
-- A judge tends to side with its own family on a disputed cell, which is a reason to
-  pair judges from two families.
+- On the eight disputed cells the Codex configurations taken together lean to GPT-6.2
+  Sol and the Claude configurations to Claude Opus 5.5, with exceptions in both.
+  Pairing judges from two families stays a judgment.
