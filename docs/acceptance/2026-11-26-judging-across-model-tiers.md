@@ -30,6 +30,13 @@ with those 106 shared verdicts.
 | Claude Haiku 5.5 at High | 97 of 106 | 3 | 2 | 2,364 s |
 | GPT-6 Luna at High | 86 of 92 | 4 | 0 | 1,437 s |
 | GPT-6 Luna at Low | 68 of 85 | 3 | 5 | 842 s |
+| Gemini 4 Argon at High, added | 101 of 106 | 4 | 0 | 2,764 s |
+| Gemini 3.8 Flash at High, added | 99 of 106 | 3 | 1 | 5,697 s |
+| Gemini 4 Carbon at High, added | 71 of 78 | 0 | 4 | 9,671 s; three packets stopped at 900 s |
+| GPT-OSS 120B at Medium, added | no readable verdicts in eighteen starts | | | 370 s |
+
+Four configurations were added later the same day so that every model not used as a
+judge before is started. The counts below that say "twelve" are about the first twelve.
 
 - **Eight configurations give 101 or more of the shared verdicts:** seven of them out
   of 106 cells, and Claude Sonnet 5.5 at High 102 of the 104 it judged. The two first
@@ -50,6 +57,8 @@ once. No owner decision is requested.
 
 The scripts, every brief, reply and result and the table are retained as
 [`judging-across-model-tiers`](../../data/evidence/judging-across-model-tiers.sha256).
+The four added judges' runs and the full table are retained as
+[`judging-added-models`](../../data/evidence/judging-added-models.sha256).
 The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 
 ## Method
@@ -71,9 +80,13 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
   Gemini 4 Hydrogen at High. Each ran once on each packet as an explorer through
   `tools/delegate.py` with a 900-second limit, on Codex CLI 0.171.0, Claude Code
   2.1.329 and Antigravity CLI 1.5.18.
-- **Left out.** Gemini 4 Carbon was started and stopped: its starts take many minutes
-  each, so eighteen of them cost more than a judge that slow is worth. The models
-  leaving Antigravity on 30 November 2026 were not started.
+- **Added afterwards.** The first run stopped Gemini 4 Carbon as too slow and did not
+  start the models leaving Antigravity on 30 November 2026. All four were then run on
+  the eighteen packets: Gemini 4 Carbon, Gemini 4 Argon and Gemini 3.8 Flash at High
+  and GPT-OSS 120B at Medium. Gemini 4 Carbon is stopped at the 900-second limit on
+  three packets. Of GPT-OSS 120B's eighteen starts, nine fail on the server's capacity
+  error, three return nothing, and the six that hand back each say the role file could not
+  be read and stop, though that file is in every tree.
 - **The Claude Code starts.** A first set of 72 Claude Code starts handed back only a
   refusal: the start then denied a read outside the working directory, where the
   packets are. They are retained under `refused-read/` and not scored. The scored
@@ -100,6 +113,10 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 | Claude Haiku 5.5 at High | 18 | 97 of 106 | 3 | 2 | 4 | 5, 3, 0 |
 | GPT-6 Luna at High | 17 | 86 of 92 | 4 | 0 | 2 | 2, 5, 0 of 7 |
 | GPT-6 Luna at Low | 15 | 68 of 85 | 3 | 5 | 9 | 1, 5, 1 of 7 |
+| Gemini 4 Argon at High, added | 18 | 101 of 106 | 4 | 0 | 1 | 1, 7, 0 |
+| Gemini 3.8 Flash at High, added | 18 | 99 of 106 | 3 | 1 | 3 | 3, 5, 0 |
+| Gemini 4 Carbon at High, added | 15 | 71 of 78 | 0 | 4 | 3 | 1, 1, 0 of 2 |
+| GPT-OSS 120B at Medium, added | 0 | none | | | | |
 
 - **Where the departures fall.** Across the twelve judges, 23 departures say found
   where the reference is partial or not found, 12 say partial or not found where it is
