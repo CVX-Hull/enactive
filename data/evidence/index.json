@@ -1148,6 +1148,36 @@
       },
       "visibility": "private"
     },
+    "memory-statement-kinds-research": {
+      "availability": "present",
+      "bytes": 1294217,
+      "cited_by": [
+        "docs/research-memory-statement-kinds.md"
+      ],
+      "files": 235,
+      "manifest_sha256": "556637e46c18c41f69f9e41925924c301f63e7ce011cd39fffc7335c14b6be17",
+      "note": "Briefs, full-text readings by three model families, reconciled digests, the claims list and the scripts behind the research page on what memory should hold; the downloaded source texts are not kept",
+      "sources": {
+        "method": "session-scratch/paper-tools",
+        "readings": "session-scratch/reads",
+        "reconciled": "session-scratch/reconciled"
+      },
+      "visibility": "private"
+    },
+    "memory-statement-kinds-research-review": {
+      "availability": "present",
+      "bytes": 107726,
+      "cited_by": [
+        "docs/research-memory-statement-kinds.md"
+      ],
+      "files": 10,
+      "manifest_sha256": "196530cb273f36c7c42da505e9c36ddc7890c61cee44753f0ec248ac53971d7e",
+      "note": "Two independent reviews of the research page on what memory should hold, the worker hand-back that applied them, and the script that builds its sources table",
+      "sources": {
+        ".": "session-scratch/review"
+      },
+      "visibility": "private"
+    },
     "multi-day-standard-build-998-admission-01": {
       "availability": "present",
       "bytes": 148470359,
