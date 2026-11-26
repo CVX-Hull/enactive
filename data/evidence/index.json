@@ -1365,6 +1365,20 @@
       },
       "visibility": "private"
     },
+    "reviewer-recall-replay-added-reviewers": {
+      "availability": "present",
+      "bytes": 4623989,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-reviewer-recall-replay-added-reviewers.md"
+      ],
+      "files": 238,
+      "manifest_sha256": "99e702ce96b9b7909dd968e18e0d4e515831be9c9ed3c9dbe80e33c44a26cda2",
+      "note": "Scripts, eighteen reviews by two added reviewers on the replay's nine commits, both judges' packets and replies, and the table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "reviewer-start-check": {
       "availability": "present",
       "bytes": 534528,
