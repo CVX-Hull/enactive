@@ -1309,6 +1309,20 @@
       },
       "visibility": "private"
     },
+    "run-evidence-diagnosis": {
+      "availability": "present",
+      "bytes": 8242071,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-run-evidence-diagnosis.md"
+      ],
+      "files": 354,
+      "manifest_sha256": "32f031c532295ee4439d3815086809f8422b3e412e825ae1615a39bfd42f3f1a",
+      "note": "Run-evidence diagnosis study of 25 and 26 November 2026 for issue 977: scripts, the scouting brief and reply, every diagnosis brief, reply and result for seven configurations on eight incidents, the lead's verdicts, the table, hashes of the fixture files copied from other sealed studies, and the frame-reading start repeated on Gemini 4 Neon",
+      "sources": {
+        ".": "scratch-run-evidence-diagnosis"
+      },
+      "visibility": "private"
+    },
     "seven-day-896-admission-01": {
       "availability": "present",
       "bytes": 127406061,
