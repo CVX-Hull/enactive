@@ -933,6 +933,20 @@
       },
       "visibility": "private"
     },
+    "hand-back-verification-across-model-tiers": {
+      "availability": "present",
+      "bytes": 5389797,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-hand-back-verification-across-model-tiers.md"
+      ],
+      "files": 464,
+      "manifest_sha256": "4803ddd1d67dde7fc3f4d53c8360dad7dfa94950d43b62722f04605860103879",
+      "note": "Scripts, the nine hand-backs, the key, ninety verification starts by ten configurations and the table; each packet's files are the diagnosis fixtures already sealed",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "joanna-campground-memory-803": {
       "availability": "present",
       "bytes": 101518312,
