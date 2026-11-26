@@ -747,6 +747,20 @@
       },
       "visibility": "private"
     },
+    "diagnosis-and-frame-reading-across-model-tiers": {
+      "availability": "present",
+      "bytes": 10920276,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-diagnosis-and-frame-reading-across-model-tiers.md"
+      ],
+      "files": 665,
+      "manifest_sha256": "e84a1f1a88026a09ffbb6199a8e4a254d065dafe6e8d2eeb5cca07d167ffad82",
+      "note": "Scripts, briefs, replies and results of fourteen configurations on the diagnosis fixture and the frame probe, both judges' verdicts and the table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "evacuee-continuity-744": {
       "availability": "present",
       "bytes": 10346299,
