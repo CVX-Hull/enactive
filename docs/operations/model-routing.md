@@ -117,8 +117,11 @@ The [attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) holds o
 for each delegated attempt on a code or review leaf. Each row names the worker,
 reviewer or explorer, the lead's reason for choosing it and the outcome. The lead adds the row in the pull request the
 attempt served. The delegate call's `result.json` supplies the coding agent, its
-version, the model, the effort, the date, the wall time and how the start ended
-(`hand_back`); the lead supplies the reason, its own rerun of the acceptance check, the
+version, the model, the effort, the date, the wall time, the token counts (`usage`) and
+how the start ended (`hand_back`); an attempt with several starts sums their wall time
+and token counts. The lead supplies, where it recorded them, three properties of the brief (whether it decided
+the design or left it open, an estimate of the change's extent, and whether it named an
+acceptance check the delegate could run), the reason, its own rerun of the acceptance check, the
 repairs it requested before the check passed or it gave up, whether it merged or
 used the result, the disposition of review findings, and any false report. A row whose `blind_preference` is not null is one
 of a matched run's two attempts.
@@ -136,6 +139,10 @@ of a matched run's two attempts.
 - **A default moves on a large one-sided split,** or on equal quality at clearly lower
   quota, as the hosts' own usage readings show. A move is a change to the row and, where
   it names a role's default, to the role file.
+- **A row's `usage` is what the coding agent reported.**
+  [Token use and the served model](coding-agents.md#starting-a-delegate-on-any-coding-agent)
+  says how far the counts compare. None reports the share of a subscription window an
+  attempt used. Rows from before the field existed carry null.
 - **One false report is enough to record.** A timeout reported as success, or quoted text
   that exists nowhere in the tree or its cited source, is written into that attempt's
   `false_report` field in the ledger, which carries its date and issue, whatever the

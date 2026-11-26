@@ -25,7 +25,7 @@ BRIEF = "Role: worker, named for the test\nGoal: write note.txt\n"
 
 
 def script(path: Path, body: str) -> str:
-    path.write_text(f"import os, pathlib, sys\n{body}\n", encoding="utf-8")
+    path.write_text(f"import json, os, pathlib, sys\n{body}\n", encoding="utf-8")
     return str(path)
 
 
@@ -39,41 +39,84 @@ def stand_ins(tmp_path):
     subprocess.run(["git", "init", "-q", str(worktree)], check=True)
     subprocess.run(["git", "-C", str(worktree), "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit",
                     "-q", "--allow-empty", "-m", "base"], check=True)
+    first_turn = {"type": "turn.completed", "usage": {"input_tokens": 10, "cached_input_tokens": 3, "output_tokens": 5}}
+    turns = "\n".join(json.dumps(record) for record in (
+        first_turn,
+        {"type": "item.completed", "usage": {"input_tokens": 1000}},
+        {"type": "turn.completed", "usage": {"input_tokens": 8, "cached_input_tokens": 2, "cache_write_input_tokens": 0,
+                                             "output_tokens": 4, "reasoning_output_tokens": 2}},
+    ))
     bodies = {
         # Writes its reply to the file it is told, like a coding agent with a last-message option, and edits the tree.
         "first": "NAME = 'first'\n" + mark + "brief = sys.stdin.read()\npathlib.Path('note.txt').write_text('written')\n"
                  "pathlib.Path(sys.argv[1]).write_text('model ' + sys.argv[2] + ' effort ' + sys.argv[3] + ' key ' "
-                 "+ os.environ.get('SECRET_KEY', 'absent') + '\\n' + brief + '\\nAcceptance check: not run\\n')",
-        # Prints its reply; takes the brief as an argument.
-        "second": "NAME = 'second'\n" + mark + "print('reviewed: ' + sys.argv[1][:40])",
-        "third": "NAME = 'third'\n" + mark + "print('explored')",
-        "silent": "NAME = 'silent'\n" + mark + "print('a tool was denied', file=sys.stderr)",
+                 "+ os.environ.get('SECRET_KEY', 'absent') + '\\n' + brief + '\\nAcceptance check: not run\\n')\n"
+                 f"print({turns!r})",
+        # Prints one object with its reply, usage and served models, and takes the brief as an argument.
+        "second": "NAME = 'second'\n" + mark + "print(json.dumps({'result': 'reviewed: ' + sys.argv[1][:40], "
+                  "'usage': {'input_tokens': 20, 'cache_read_input_tokens': 11, 'cache_creation_input_tokens': 4, "
+                  "'output_tokens': 7}, 'modelUsage': {'served-z': {}, 'served-a': {}}}))",
+        "third": "NAME = 'third'\n" + mark + "print(json.dumps({'status': 'SUCCESS', 'response': 'explored', "
+                 "'usage': {'input_tokens': 15, 'cache_read_tokens': 5, 'output_tokens': 4, 'thinking_tokens': 3}}))",
+        "silent": "NAME = 'silent'\n" + mark + "print('a tool was denied', file=sys.stderr)\n"
+                  "if len(sys.argv) > 1: print(sys.argv[1])",
         "refusing": "NAME = 'refusing'\n" + mark + "print('You have hit your usage limit', file=sys.stderr)\nsys.exit(1)",
-        "crashing": "NAME = 'crashing'\n" + mark + "print('boom', file=sys.stderr)\nsys.exit(3)",
+        "crashing": "NAME = 'crashing'\n" + mark + "print(json.dumps({'usage': {'output_tokens': 2}}))\n"
+                    "print('boom', file=sys.stderr)\nsys.exit(3)",
+        # Fails with an output record whose timing happens to be 429, and says nothing of a refusal.
+        "timed": "NAME = 'timed'\n" + mark + "print(json.dumps({'result': '', 'first_token_ms': 429}))\n"
+                 "print('stopped', file=sys.stderr)\nsys.exit(1)",
+        # Fails with an output record that says in words that it was refused.
+        "declining": "NAME = 'declining'\n" + mark
+                     + "print(json.dumps({'result': '', 'error': {'message': 'You have hit your usage limit'}}))\nsys.exit(1)",
+        # Fails after a line-per-record turn whose token count happens to be 429.
+        "counting": "NAME = 'counting'\n" + mark
+                    + "print(json.dumps({'type': 'turn.completed', 'usage': {'output_tokens': 429}}))\n"
+                    "print('stopped', file=sys.stderr)\nsys.exit(1)",
         # Never ends, and leaves a child that ignores the request to stop.
-        "slow": "NAME = 'slow'\n" + mark + "import subprocess, time\nchild = subprocess.Popen([sys.executable, '-c', "
+        "slow": "NAME = 'slow'\n" + mark + f"print({json.dumps(first_turn)!r}, flush=True)\n"
+                "print('{\"type\":', flush=True)\n"
+                "import subprocess, time\nchild = subprocess.Popen([sys.executable, '-c', "
                 "'import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)'])\n"
                 f"pathlib.Path({str(tmp_path / 'child')!r}).write_text(str(child.pid))\ntime.sleep(60)",
     }
     commands = {name: script(tmp_path / name, body) for name, body in bodies.items()}
     version = [sys.executable, "-c", "print('9.9.9')"]
 
-    def agent(name, argv, brief="stdin", reply="stdout"):
+    jsonl_usage = {"read": "stdout_jsonl", "where": {"type": "turn.completed"}, "tokens": {
+        "input_tokens": "usage.input_tokens", "cached_input_tokens": "usage.cached_input_tokens",
+        "cache_write_input_tokens": "usage.cache_write_input_tokens", "output_tokens": "usage.output_tokens"}}
+    json_usage = {"read": "stdout_json", "tokens": {
+        "input_tokens": "usage.input_tokens", "cached_input_tokens": "usage.cache_read_input_tokens",
+        "cache_write_input_tokens": "usage.cache_creation_input_tokens", "output_tokens": "usage.output_tokens"},
+        "models": "modelUsage"}
+    response_usage = {"read": "stdout_json", "tokens": {
+        "input_tokens": "usage.input_tokens", "cached_input_tokens": "usage.cache_read_tokens",
+        "output_tokens": "usage.output_tokens"}}
+
+    def agent(name, argv, brief="stdin", reply=None, usage=json_usage):
+        if reply is None:
+            reply = {"stdout_json": "result"}
         role = {"argv": argv, "brief": brief, "reply": reply}
-        return {"name": name, "version": version, "refusals": ["usage limit", "sign ?in"],
+        return {"name": name, "version": version, "refusals": ["usage limit", "sign ?in", r"\b429\b"], "usage": usage,
                 "roles": {"worker": role, "reviewer": role, "explorer": role, "locator": role}}
 
-    definitions = {"schema": "delegates/1", "role_instruction": "You are the {role}.", "drop_environment": ["SECRET_KEY"],
+    definitions = {"schema": "delegates/2", "role_instruction": "You are the {role}.", "drop_environment": ["SECRET_KEY"],
                    "coding_agents": {
-                       "first": agent("First", [sys.executable, commands["first"], "{reply_file}", "{model}", "{effort}"], reply="file"),
+                       "first": agent("First", [sys.executable, commands["first"], "{reply_file}", "{model}", "{effort}"],
+                                      reply="file", usage=jsonl_usage),
                        "second": agent("Second", [sys.executable, commands["second"], "{brief}"], brief="argument"),
-                       "third": agent("Third", [sys.executable, commands["third"]]),
+                       "third": agent("Third", [sys.executable, commands["third"]],
+                                      reply={"stdout_json": "response"}, usage=response_usage),
                        "silent": agent("Silent", [sys.executable, commands["silent"]]),
                        "refusing": agent("Refusing", [sys.executable, commands["refusing"]]),
                        "crashing": agent("Crashing", [sys.executable, commands["crashing"]]),
-                       "slow": agent("Slow", [sys.executable, commands["slow"]]),
+                       "timed": agent("Timed", [sys.executable, commands["timed"]]),
+                       "declining": agent("Declining", [sys.executable, commands["declining"]]),
+                       "counting": agent("Counting", [sys.executable, commands["counting"]], reply="file", usage=jsonl_usage),
+                       "slow": agent("Slow", [sys.executable, commands["slow"]], reply="file", usage=jsonl_usage),
                        "absent": agent("Absent", [str(tmp_path / "no-such-command")]),
-                       "partly": {"name": "Partly", "version": version, "refusals": [],
+                       "partly": {"name": "Partly", "version": version, "refusals": [], "usage": json_usage,
                                   "roles": {"worker": {"unavailable": "no start that works, 1 January 2026"}}}}}
 
     def start(coding_agent, role="worker", **options):
@@ -102,11 +145,48 @@ def test_the_named_delegate_is_started_with_its_model_effort_role_and_brief_and_
     assert Path(result["hand_back"]).read_text().startswith("reviewed: You are the reviewer.")
 
 
+def test_a_json_reply_file_contains_only_the_reply_and_the_report_contains_usage_and_sorted_models(stand_ins):
+    result, _ = stand_ins("second", role="reviewer")
+    stdout = json.loads((stand_ins.out / "stdout.txt").read_text())
+    reply = "reviewed: " + (stand_ins.out / "brief.txt").read_text()[:40]
+    assert (stand_ins.out / "reply.md").read_text() == stdout["result"] == reply
+    assert result["usage"] == {"input_tokens": 20, "cached_input_tokens": 11, "cache_write_input_tokens": 4,
+                               "output_tokens": 7}
+    assert result["models_reported"] == ["served-a", "served-z"]
+
+
+def test_usage_is_summed_over_only_the_matching_json_lines(stand_ins):
+    result, _ = stand_ins("first")
+    assert result["usage"] == {"input_tokens": 18, "cached_input_tokens": 5, "cache_write_input_tokens": 0,
+                               "output_tokens": 9}
+    assert result["models_reported"] is None
+
+
+def test_usage_is_reported_even_when_a_run_fails(stand_ins):
+    result, _ = stand_ins("crashing")
+    assert result["outcome"] == "failed"
+    assert result["usage"] == {"input_tokens": None, "cached_input_tokens": None, "cache_write_input_tokens": None,
+                               "output_tokens": 2}
+
+
+@pytest.mark.parametrize("stdout", ["not JSON", "[]", "{}", '{"result": 42}'])
+def test_stdout_without_a_usable_json_reply_gives_an_empty_reply_and_no_usage(stand_ins, stdout):
+    stand_ins.definitions["coding_agents"]["silent"]["roles"]["worker"]["argv"].append(stdout)
+    result, _ = stand_ins("silent")
+    assert result["outcome"] == "empty_reply" and "the reply was not read" in result["detail"]
+    assert (stand_ins.out / "reply.md").read_text() == ""
+    assert (stand_ins.out / "stdout.txt").read_text() == stdout + "\n"
+    assert result["usage"] is None and result["models_reported"] is None
+
+
 @pytest.mark.parametrize(("coding_agent", "outcome", "detail", "ran"), [
     ("absent", "failed_start", "is not on the path", []),
     ("silent", "empty_reply", "a tool was denied", ["silent"]),
     ("refusing", "refused", "usage limit", ["refusing"]),
     ("crashing", "failed", "exit code 3: boom", ["crashing"]),
+    ("timed", "failed", "exit code 1: stopped", ["timed"]),
+    ("declining", "refused", "usage limit", ["declining"]),
+    ("counting", "failed", "exit code 1: stopped", ["counting"]),
     ("partly", "unavailable", "no start that works", []),
 ])
 def test_a_run_with_no_hand_back_is_reported_as_what_it_was_and_nothing_else_is_started(stand_ins, coding_agent, outcome, detail, ran):
@@ -118,6 +198,9 @@ def test_a_run_with_no_hand_back_is_reported_as_what_it_was_and_nothing_else_is_
 def test_a_run_past_its_time_limit_is_reported_and_nothing_it_started_is_left_running(stand_ins):
     result, started = stand_ins("slow", timeout=2)
     assert result["outcome"] == "timed_out" and started == ["slow"] and result["wall_seconds"] < 20
+    assert result["usage"] == {"input_tokens": 10, "cached_input_tokens": 3, "cache_write_input_tokens": None,
+                               "output_tokens": 5}
+    assert (stand_ins.out / "stdout.txt").read_text().endswith('{"type":\n')
     child = int(stand_ins.child.read_text())
     for _ in range(50):  # the kill is sent before the call returns; the process table may take a moment
         try:
@@ -175,13 +258,27 @@ def test_the_command_line_requires_every_part_of_the_choice_and_exits_by_outcome
     assert refused.value.code == 2 and "none has a default: --effort" in capsys.readouterr().err
     assert delegate.main([*common, "--coding-agent", "third", "--model", "model-one", "--effort", "low"]) == 0
     assert "--- hand-back ---\nexplored" in capsys.readouterr().out
+    result = json.loads((stand_ins.out / "result.json").read_text())
+    assert result["usage"] == {"input_tokens": 15, "cached_input_tokens": 5, "cache_write_input_tokens": None,
+                               "output_tokens": 4}
+    assert result["models_reported"] is None
     assert delegate.main([*common, "--coding-agent", "silent", "--model", "model-one", "--effort", "low"]) == 1
     assert "Nothing else was started" in capsys.readouterr().out
-    assert json.loads((stand_ins.out / "result.json").read_text())["outcome"] == "empty_reply"
+    result = json.loads((stand_ins.out / "result.json").read_text())
+    assert result["outcome"] == "empty_reply"
+    assert result["usage"] is None and result["models_reported"] is None
+
+
+def test_the_previous_delegate_definitions_schema_is_refused(stand_ins, tmp_path):
+    definitions = tmp_path / "delegates.json"
+    definitions.write_text(json.dumps(stand_ins.definitions | {"schema": "delegates/1"}))
+    with pytest.raises(SystemExit, match="expected schema delegates/2, found 'delegates/1'"):
+        delegate.main(["--delegates", str(definitions), "--list"])
 
 
 def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
     definitions = delegate.read_delegates(delegate.DELEGATES)
+    assert definitions["schema"] == "delegates/2"
     assert len(definitions["coding_agents"]) == 3
     for agent in definitions["coding_agents"].values():
         assert set(agent["roles"]) == ROLES
@@ -191,5 +288,7 @@ def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
             used = set(re.findall(r"\{(\w+)\}", " ".join(how["argv"])))
             assert used <= {"worktree", "model", "effort", "reply_file", "brief"} and {"model", "effort"} <= used
             assert (how["brief"] == "argument") == ("brief" in used) and (how["reply"] == "file") == ("reply_file" in used)
+            if how["reply"] != "file":
+                assert set(how["reply"]) == {"stdout_json"}
     for role in ROLES:
         assert (ROOT / ".agents/roles" / f"{role}.md").is_file()
