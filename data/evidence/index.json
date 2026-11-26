@@ -1295,6 +1295,20 @@
       },
       "visibility": "private"
     },
+    "reviewer-recall-replay-added-arms": {
+      "availability": "present",
+      "bytes": 4225777,
+      "cited_by": [
+        "docs/acceptance/2026-11-25-reviewer-recall-replay.md"
+      ],
+      "files": 395,
+      "manifest_sha256": "0b6348f81976210cedab6a69acb377e5bde7142a108cf0e38f6aba4e6b541dd9",
+      "note": "Added to the reviewer recall replay for issue 973 on 25 and 26 November 2026: reviews by Claude Opus 5.5 at High started without plan mode and by Gemini 4 Neon and Carbon at High with every empty first start, both judges' packets and replies for those three configurations, the combined scoring script and its output, the start file and start check for the arm without plan mode, and the two clean-context reviews of the study record",
+      "sources": {
+        ".": "scratch-reviewer-recall-replay-added-arms"
+      },
+      "visibility": "private"
+    },
     "seven-day-896-admission-01": {
       "availability": "present",
       "bytes": 127406061,
