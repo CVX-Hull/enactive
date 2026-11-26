@@ -1050,6 +1050,20 @@
       },
       "visibility": "private"
     },
+    "multi-day-standard-build-preflight-968": {
+      "availability": "present",
+      "bytes": 40526,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-freeze-and-price-proposal-968.md"
+      ],
+      "files": 8,
+      "manifest_sha256": "95d79460e26f7bdeecf5c4a74386f27d0feb6a2446d6aa9b9168d51341155664",
+      "note": "Rehearsal package builder, offline preflight output, proposed curator runner file, test output and the explorer's background report for the multi-day standard-build price proposal",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "oceana-farm-memory-788": {
       "availability": "present",
       "bytes": 291881578,
