@@ -89,9 +89,13 @@ See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
 - **Keep the lead's context small.** Use one session for one leaf or a batch that
   merges together. Summarize or hand over to a fresh session before context passes
   about 300,000 tokens. Delegate wide reading and long command output with a brief
-  that asks for a short report. The threshold is a judgment from the cost of rereading
-  context in one session. No smaller-context session was measured alongside it.
-  [Token-use measurement](../acceptance/2026-11-20-coding-agent-token-use.md).
+  that asks for a short report. The threshold is a judgment. It rests on the cost of rereading
+  context in one session ([token-use measurement](../acceptance/2026-11-20-coding-agent-token-use.md))
+  and on six lead sessions, in which the two that kept their context under 400,000
+  tokens used the fewest tokens for each merged pull request
+  ([lead cost](../acceptance/2026-11-25-lead-cost-per-merged-pull-request.md)). The
+  sessions merged changes of different sizes, so the figures do not isolate the effect
+  of context size.
 
 ## When the lead's model has no quota left
 

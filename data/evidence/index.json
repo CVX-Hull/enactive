@@ -924,6 +924,20 @@
       },
       "visibility": "private"
     },
+    "lead-cost-per-merged-pull-request": {
+      "availability": "present",
+      "bytes": 4140,
+      "cited_by": [
+        "docs/acceptance/2026-11-25-lead-cost-per-merged-pull-request.md"
+      ],
+      "files": 2,
+      "manifest_sha256": "f4c3eaae0df237b4f9242f673a275824f5af6e96506f7395e9014b46a8febee0",
+      "note": "Script and count-only output of the lead cost reading of 25 November 2026 for issue 974; transcripts are not retained",
+      "sources": {
+        ".": "scratch-lead-cost"
+      },
+      "visibility": "private"
+    },
     "live-curator-run-859": {
       "availability": "present",
       "bytes": 23237547,
