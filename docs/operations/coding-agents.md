@@ -184,7 +184,7 @@ on repository tasks.
   name source files by path, and include the diff and any command output a review
   needs in the brief. Split a large diff to fit the shell's single-argument limit.
   On a review brief that gives the diff as a file and does not say to run no command,
-  Gemini 4 Neon at High returns an empty reply on 16 of 17 starts and Gemini 4 Carbon
+  and with quota available, Gemini 4 Neon at High returns an empty reply on 16 of 17 starts and Gemini 4 Carbon
   at High on 5 of 12
   ([replay](../acceptance/2026-11-25-reviewer-recall-replay.md#the-gemini-starts)).
 - **Credentials** ([R-KEY-LEAK](../risks.md)): the shell that starts the call holds no

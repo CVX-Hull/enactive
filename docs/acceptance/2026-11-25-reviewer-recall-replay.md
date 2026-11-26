@@ -3,7 +3,7 @@ owner: lead
 status: historical
 kind: study
 date: '2026-11-25'
-scope: 'Replay of clean-context review on nine past commits of this repository that hold sixteen defects later fixed, for issue #973: eight reviewer configurations from three model families, each as tools/delegate.py starts it, given the same commit and brief, and two judges; subscription quota only, no game launch, no game input'
+scope: 'Replay of review from a standalone clone on nine past commits of this repository that hold sixteen defects later fixed, for issue #973: eight reviewer configurations from three model families, each as tools/delegate.py starts it, given the same commit and brief, and two judges; subscription quota only, no game launch, no game input'
 ---
 
 # Reviewer recall replay
@@ -34,8 +34,10 @@ The counts do not rank the models as reviewers, for these reasons.
   uses plan mode, which gives the model a planning procedure that contradicts the
   brief, and loads the owner's output style. One added arm removed both and found 6
   where the tracked start found 4; each arm ran once, so the difference may be chance.
-- Seven of the nine commits carry a Claude co-author trailer and none a GPT or Gemini
-  trailer, so the design cannot separate the reviewer's family from the author's.
+- Who wrote each commit is known only in part. Seven of the nine carry a Claude
+  co-author trailer, and the ledger records two GPT-6.2 Sol workers on the issue of one
+  commit without a trailer (`305cecc5`). The design cannot separate the reviewer's
+  family from the author's.
 - Every defect in the set had already passed this repository's review once, and the
   defect statements were written by GPT-6.2 Sol explorers.
 - The lead chose the nine commits by hand, and sixteen defects are a small sample.
@@ -60,7 +62,9 @@ second study, except where another source is named.
   repaired by `ea2dfbcb` (#946), `b8c41ec9` (#923), `30332789` (#918), `dff250b9`
   (#844), `fdbf3f12` (#867) and `b1c2a926` (#820) to the single commit that introduced
   each, and wrote each defect down without reference to its fix (`defect-tracing/` in
-  the first study). They traced defects to nineteen commits.
+  the first study). Each explorer's brief stopped it at twelve
+  defects; the 36 they wrote down name nineteen commits, and one explorer listed a
+  further defect and commit (`13a6cb65`) as beyond its limit.
 - **The set.** The lead chose nine of the nineteen by hand; `scripts/build_set.py`
   names them. Four of the ten left out add between 2,564 and 34,206 lines
   (`git show --shortstat`), more than any commit kept. The other six add 62 to 2,035
@@ -231,12 +235,14 @@ so the quotation counts are not used here.
 
 | Configuration | Starts | Refused on quota | Empty reply | Handed back |
 | --- | ---: | ---: | ---: | ---: |
-| Gemini 4 Neon at High, first day | 9 | 6 | 3 | 0 |
-| Gemini 4 Carbon at High, first day | 9 | 9 | 0 | 0 |
+| Gemini 4 Neon at High, first batch | 9 | 6 | 3 | 0 |
+| Gemini 4 Carbon at High, first batch | 9 | 9 | 0 | 0 |
 | Gemini 4 Neon at High, after the quota returned | 17 | 0 | 16 | 1 |
 | Gemini 4 Carbon at High, after the quota returned | 12 | 0 | 5 | 7 |
 
-After the quota returned each configuration was started once on every commit, and each
+Antigravity keeps summaries between conversations, and whether a Gemini reviewer read
+any is unknown; the clone settles only which git history it could see. After the quota
+returned each configuration was started once on every commit, and each
 empty reply was started once more with the same brief. Every one of the 24 empty
 replies has the same detail in its result file: the model asked to run a command, the
 read-only print mode cannot ask for that permission and denied it, and the run ended
@@ -266,12 +272,14 @@ second study holds both briefs and replies.
 
 ## What this supports
 
-Every statement is about these nine commits, each configuration as started here and
-run once.
+Every statement is about these nine commits and each configuration as started here,
+with at most one scored review for each configuration and commit.
 
 - GPT-6.2 reviewers found known defects that no Claude Opus 5.5 reviewer found: five of
-  sixteen by both judges, four by either judge. In the other direction there is one
-  defect by either judge (K06) and, with Gemini 4 Carbon, one by both judges (K16).
+  sixteen by both judges, four by either judge. In the other direction a
+  Claude Opus 5.5 reviewer found one defect that no GPT-6.2 reviewer found by both
+  judges (K16, found without plan mode and also by Gemini 4 Carbon) and two by either
+  judge (K16 and K06).
 - The Claude Code reviewer start matters to the count. Under the tracked plan-mode
   start Claude Opus 5.5 at High found 4 (7 by either judge), and without plan mode and
   the output style it found 6 (6), including three of six code defects against one
@@ -288,4 +296,5 @@ run once.
 - Five of sixteen defects were found by no configuration.
 
 It does not support a statement about which family reviews another family's work
-better, because the set holds no commit written by a GPT-6.2 or Gemini model.
+better: the lead chose the set by hand, and who wrote each commit is known only in
+part.
