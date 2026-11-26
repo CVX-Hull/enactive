@@ -171,8 +171,11 @@ on repository tasks.
   forbid them, and nothing mechanical does.
 - **Refusals.** When a run fails or returns nothing, the call looks in its output for
   quota or sign-in wording listed for each coding agent in the definitions file. It
-  never reads a reply for that wording, since a hand-back may discuss quotas. No real
-  refusal has been seen through the call on any host, so detection remains unproven.
+  never reads a reply for that wording, since a hand-back may discuss quotas. One real
+  refusal has been seen through the call: Antigravity CLI 1.5.17 ended a start on a
+  model whose quota was spent with a non-zero exit and "Individual quota reached",
+  and the call reported `refused` with the time until the quota resets. Detection on
+  Codex and Claude Code remains unproven.
   One worded differently is reported as `failed` or `empty_reply`, and one that arrives
   as an ordinary reply with exit code 0 is handed back as text for the lead to read.
   Either way nothing else is started.
