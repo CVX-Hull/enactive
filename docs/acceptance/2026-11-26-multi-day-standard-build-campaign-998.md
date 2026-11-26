@@ -11,7 +11,8 @@ scope: 'One multi-day campaign on an unmodified standard character build under c
 ## At a glance
 
 - **Outcome: Partial.** The target is reached and six of the proposal's seven items
-  hold. Item 7, a stop on the dollar reserve, does not: no admission emitted
+  hold, one of them (normal endings) with one boundary clock not verified. Item 7, a
+  stop on the dollar reserve, does not hold: no admission emitted
   `spend-reserve-reached`. By the
   [proposal's outcome table](2026-11-26-multi-day-standard-build-campaign-freeze-and-price-proposal-968.md#what-the-campaign-must-show)
   that is "Partial: the target is reached and item 3, 4, 5 or 7 does not hold", and
@@ -37,7 +38,7 @@ scope: 'One multi-day campaign on an unmodified standard character build under c
 
 [Issue #998](https://github.com/CVX-Hull/enactive/issues/998) ·
 [outcome #136](https://github.com/CVX-Hull/enactive/issues/136) ·
-[owner approval](../decisions/owner-decisions.md#multi-day-standard-build-campaign-approved-998) ·
+[owner approval](../decisions/owner-decisions-archive.md#multi-day-standard-build-campaign-approved-998) ·
 [proposal](2026-11-26-multi-day-standard-build-campaign-freeze-and-price-proposal-968.md)
 
 Each admission's package, session store, curator runner, knowledge repository,
@@ -88,24 +89,43 @@ Attempts, wall time and play spend for each admission are the rows of study 998 
 | 3 | `f0e2b12e…` | 725 and 4 | 4,820 s | 252,495 (70 h 08 min 15 s) | player finish after the spend notice |
 | 4 | `a6979727…` | 208 and 4 | 1,301 s | 259,368 (72 h 02 min 48 s) | player finish: task complete |
 
-| Admission | Play | Live curator, sessions | Boundary grooming | Total |
+| Admission | Play | Live curator, sessions started | Boundary grooming | Total |
 | --- | ---: | ---: | ---: | ---: |
-| 1 | `$3.5333` | `$5.6276`, 26 | `$0.1582` | `$9.3191` |
+| 1 | `$3.5333` | `$5.6276`, 26 | `$0.1582` | `$9.3190` |
 | 2 | `$3.5060` | `$6.7327`, 28 | `$0.1869` | `$10.4256` |
 | 3 | `$3.5258` | `$8.2127`, 32 | `$0.3316` | `$12.0701` |
 | 4 | `$0.9258` | `$2.4382`, 7 | `$0.2720` | `$3.6360` |
 | All | `$11.4909` | `$23.0112`, 93 | `$0.9487` | `$35.4508` |
 
+Each total is rounded from the exact amounts, so a row can differ from the sum of its
+rounded parts by `$0.0001`. The evaluator's table for the four runs, generated from the
+metrics snapshot:
+
+<!-- evaluate-table study=998 core=3 binding=cdda:3 -->
+| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | UI | Interruptions | Longest stall | $ / decision | Large rewrites |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| standard-build-multi-day-a01 | standard-build-multi-day | S1 | custody | 22.96 | 673 | 18 | 3.0 | 12 · 21.30 h | 69% | 60% | 9% | 20 | 0.0052 | 8% |
+| standard-build-multi-day-a02 | standard-build-multi-day | S1 | custody | 23.59 | 729 | 3 | 4.5 | 13 · 21.29 h | 62% | 49% | 13% | 24 | 0.0048 | 5% |
+| standard-build-multi-day-a03 | standard-build-multi-day | S1 | custody | 23.58 | 618 | 3 | 5.0 | 15 · 21.10 h | 63% | 47% | 16% | 23 | 0.0057 | 13% |
+| standard-build-multi-day-a04 | standard-build-multi-day | S1 | custody | 1.91 | 177 | 2 | 3.0 | 2 · 1.18 h | 67% | 49% | 19% | 16 | 0.0052 | 6% |
+<!-- /evaluate-table -->
+
 - **Spend is complete.** Every receipt reports `spend_complete: true` with no unpriced
   request. Play spend is the receipt's; live curator spend sums each session's settled
   amount; grooming spend is the grooming summary's.
-- **Pace.** Admissions 1 to 3 each cover about 23 game hours in 729 to 887 requests,
-  31 to 38 requests for each game hour. The proposal could not choose between the
-  seven-day lineage's 21.6 and #963's 383; this lineage is close to the first.
+- **The live curator stopped early in admission 3.** Its runner examined 22 windows and
+  then refused ten more on its `$9.00` allocation, having spent `$8.21`; it stopped
+  with 62 player steps uncovered. Boundary grooming ran afterwards and published v92
+  to v94. In the other admissions the runner ended with the admission, with 14, 16 and
+  26 steps uncovered, and one session of admission 4 was interrupted at the end.
+- **Pace.** Admissions 1 to 3 each cover about 23 game hours in 725 to 817 player
+  requests, 31 to 35 for each game hour. The proposal's two cases, the seven-day
+  lineage's 21.6 and #963's 383, count decisions, of which there are fewer than
+  requests; the table above gives this lineage's decisions.
 - **Admission rule.** Before each start the lead applied the proposal's continuation
   rule and the actual-spend admission rule of the
   [operator permissions](../operator-permissions.md#finite-gameplay-budget-delegation)
-  and used the stricter. Before admission 4 the stricter figure was `$55.95`, inside
+  and used the stricter. Before admission 4 the stricter figure was `$55.96`, inside
   the envelope.
 - **Stop.** After admission 4 the saved clock passed the target and the campaign
   stopped under the proposal's stop rule 5. Two approved admissions were not used.
@@ -120,15 +140,20 @@ Attempts, wall time and play spend for each admission are the rows of study 998 
 2. **Multiple days: holds.** Admission 4's saved game file, decompressed as the
    seven-day campaign's was, gives `turn` 5,472,168 against `game_start` 5,212,800:
    259,368 game seconds.
-3. **Normal endings: holds, with one difference reported.** Every admission ended with
+3. **Normal endings: holds, with one boundary not settled.** Every admission ended with
    the player's Save, a separate Quit, a native exit of zero and verified custody
-   (native process absent, input authority revoked, cleanup verified). The receipts of
-   admissions 1 to 3 carry the outcome `interrupted`: the delivery of the player's Quit
-   input came back unknown because the game exited on it, as in the seven-day
-   lineage's admissions. At the boundaries the first clock the next admission observed
-   equals the saved clock twice, and at the first boundary is 111 game seconds later
-   than the save's clock (82,661 against 82,550). The cause of that difference is not
-   established; no game time was lost.
+   (native process absent, input authority revoked, cleanup verified). In all four the
+   delivery of the player's Quit input came back unknown, because the game exited on
+   it. The receipts of admissions 1 to 3 carry the outcome `interrupted` and admission
+   4's carries `player_task_complete_unassessed`; the seven-day lineage's admissions
+   ended the same way. At the second and third boundaries the first clock the next
+   admission observed equals the saved clock. At the first boundary admission 2 opened
+   on Spring day 62, 6:57:41 AM, the clock the player reported just before saving in
+   admission 1, while the save file's `turn` reads 111 game seconds earlier (82,550
+   against 82,661). No game time was lost. Why the file and the screen differ there is
+   not established, and the difference was not compared with the game's autosave
+   interval, so the proposal's "within one autosave" is not verified for that
+   boundary.
 4. **Retained memory: holds.** The repository's tags v0 to v101 form one parent chain,
    and every tag an earlier sealed copy shares points to the same commit. Live versions
    are v1 to v37, v39 to v67, v69 to v91 and v95 to v100; grooming published v38, v68,
@@ -146,8 +171,9 @@ Attempts, wall time and play spend for each admission are the rows of study 998 
      published in admission 1 at v17, then collected and boiled two portions of water
      (`request-162` to `request-186`).
    - In admission 4 the player read `rowan-day-63-bough-fire-craft-interruption`,
-     first published in admission 3 at v86, relit the brazier and resumed the
-     interrupted craft the record describes (`request-79` to `request-100`).
+     first published in admission 3 at v86, which describes resuming an interrupted
+     boiling batch at a fire; after its own fire went out it relit the brazier and
+     resumed its own batch the same way (`request-79` to `request-100`).
 
    This shows use of what was learned. Whether decisions improved is not claimed from
    one lineage. Each admission's last report gives full health bars and no hunger or
@@ -180,9 +206,11 @@ can fire.
 The proposal sized each admission "so that its dollar reserve is forecast to end it"
 and did not consider the notice. In the seven-day lineage six of ten admissions did
 end on the driver's dollar trigger, under a `$5.00` limit and an earlier host version.
-This campaign's admissions were ended by dollars each time, through the notice. The
-handshake, and the save and quit that follow it, remain unexercised in real play on
-this stack.
+Admissions 1 to 3 of this campaign were ended by dollars, through the notice, and
+admission 4 by reaching the target. The `$0.2054` between the two thresholds does not
+rule the handshake out: a player whose wrap-up spent through it would reach it. Here
+the three admissions finished at most `$0.05` past the notice threshold. The handshake, and the save and quit that follow
+it, remain unexercised in real play on this stack.
 
 ## Reviews and analyses
 
@@ -193,6 +221,20 @@ this stack.
   creation frame.
 - **What the analyses could not establish.** They found no operator note in the sealed
   admissions; it is sealed with the campaign evidence.
+- **The package review's findings.** Of its three, the lead acted on the carried-over
+  preset and corrected its own brief's wording on the route file, which is identical
+  to #963's; it did not take the third, that launch checks were unverified, because
+  both preflights were run on the launch package and the bridge build has no separate
+  qualification command.
+- **Review of this record.** GPT-6.2 Sol at Extra-high on Codex applied the outcome
+  table to the sealed evidence in a clean context and confirmed Partial as the first
+  row that applies, the totals, the threshold arithmetic and the three learning reads.
+  Its seven findings were all taken: item 3's first boundary is now reported as not
+  verified, the unknown Quit delivery is reported for all four admissions, the early
+  stop of the live curator in admission 3 is stated, the third learning case no
+  longer implies the same batch, two rounded figures are corrected, the used approval
+  is moved to the decision archive, and the package review's disposition is given
+  above.
 
 ## Limits
 
