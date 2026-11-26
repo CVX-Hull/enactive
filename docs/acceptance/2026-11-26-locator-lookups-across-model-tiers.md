@@ -74,8 +74,7 @@ added starts and their table are retained as
   and High, Claude Sonnet 5.5 at Medium and High. Gemini 4 Hydrogen and Gemini 4 Neon
   at High. GPT-6.2 Sol at Extra-high is the reference. Three starts were added later
   the same day on the small models that leave Antigravity on 30 November 2026, which
-  the first run had left out: Gemini 3.8 Flash at Low, the effort its native locator
-  alias uses, and at High, and GPT-OSS 120B at Medium. Each ran once as a locator through `tools/delegate.py`
+  the first run had left out: Gemini 3.8 Flash at Low and at High, and GPT-OSS 120B at Medium. Each ran once as a locator through `tools/delegate.py`
   with a 900-second limit, on Claude Code 2.1.329, Codex CLI 0.171.0 and Antigravity
   CLI 1.5.18.
 - **The starts.** The Claude Code starts use the `dontAsk` permission mode of the
@@ -145,8 +144,7 @@ and run once.
   GPT-6.1 Terra. GPT-6 Luna misses one lookup at Low and none at High.
 - A locator's "not found" is the answer to check: three configurations report a thing
   in a test file as not found, and none invents a location.
-- Gemini 3.8 Flash, which Antigravity's native locator alias names, is the weakest
-  locator measured: at Low it reports six of twelve existing things as not found, and
+- Gemini 3.8 Flash is the weakest locator measured: at Low it reports six of twelve existing things as not found, and
   at High it does not hand back in 900 seconds. GPT-OSS 120B hands back a plan and no
   answers.
 - The two Gemini 4 locators take ten to thirty times the wall time of the others
