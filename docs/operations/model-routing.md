@@ -113,17 +113,17 @@ limits named are those of the plans the pages describe.
 | Configuration | Limit it draws on | Relative cost | Speed | Local hand-backs | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Claude Fable 5.2, Claude Code | a separate weekly Fable limit on larger plans, and the limits Claude models share | list price twice Opus | 109 to 113 | 10 of 12 | See [quota and spending](#quota-and-spending) for how a Fable request can bill usage credits. |
-| Claude Opus 5.5, Claude Code | the weekly limit Claude models share, and a five-hour limit on some plans | the maker: several times Sonnet for each turn | 105 to 116 | 144 of 153 | Eight of the nine misses are time limits of 480 to 1,200 seconds; one is quota. |
+| Claude Opus 5.5, Claude Code | the weekly limit Claude models share, and a five-hour limit on some plans | the maker: several times Sonnet for each turn | 105 to 116 | 147 of 156 | Eight of the nine misses are time limits of 480 to 1,200 seconds; one is quota. |
 | Claude Sonnet 5.5, Claude Code | the same shared limits | half Opus by list price | 134 to 153 | 19 of 19 | |
 | Claude Haiku 5.5, Claude Code | the same shared limits | the cheapest Claude model | 221 to 256 | 10 of 10 | One reply reports writing scratch files against a read-only brief. |
-| GPT-6.2 Sol, Codex | the plan's Codex allowance | an estimated 17 to 180 messages in five hours on the smallest paid plan | 59 to 64 | 95 of 95 | |
-| GPT-6.2 Astra, Codex | the plan's Codex allowance | an estimated 6 to 50 messages, at four times Sol's list price | 40 to 45 | 122 of 123 | One false report as a worker. |
+| GPT-6.2 Sol, Codex | the plan's Codex allowance | an estimated 17 to 180 messages in five hours on the smallest paid plan | 59 to 64 | 96 of 96 | |
+| GPT-6.2 Astra, Codex | the plan's Codex allowance | an estimated 6 to 50 messages, at four times Sol's list price | 40 to 45 | 123 of 124 | One false report as a worker. |
 | GPT-6.1 Terra, Codex | the plan's Codex allowance | an estimated 35 to 285 messages | 61 to 66 | 18 of 18 | |
 | GPT-6 Luna, Codex | the plan's Codex allowance | an estimated 350 to 3,000 messages | 100 to 123 | 19 of 19 | |
-| Gemini 4 Neon, Antigravity | the Gemini group's limits | list price between Sonnet and Opus | 84 to 102 | 12 of 40 | Up to 512,000 tokens of context in Antigravity. Most misses are empty replies after a denied command, and refusals on quota. |
+| Gemini 4 Neon, Antigravity | the Gemini group's limits | list price between Sonnet and Opus | 84 to 102 | 13 of 41 | Up to 512,000 tokens of context in Antigravity. Most misses are empty replies after a denied command, and refusals on quota. |
 | Gemini 4 Carbon, Antigravity | the Gemini group | list price doubles on 1 December 2026 to Opus's | 48 to 61 | 17 of 31 | The slowest: 197 to 474 seconds for an exploration, and reviews past 900 seconds. |
 | Gemini 4 Hydrogen, Antigravity | the Gemini group | below Sonnet by list price | 149 to 176 | 7 of 9 | |
-| Gemini 4 Argon, Antigravity | the Gemini group | Sonnet's list price until it leaves | 69 to 80 | 9 of 9 | Leaves on 30 November 2026. |
+| Gemini 4 Argon, Antigravity | the Gemini group | Sonnet's list price until it leaves | 69 to 80 | 10 of 10 | One false report as an explorer. Leaves on 30 November 2026. |
 | Gemini 3.8 Flash, Antigravity | the Gemini group | the cheapest Gemini model | 80 to 102 | 5 of 10 | Leaves on 30 November 2026. |
 | GPT-OSS 120B, Antigravity | the Claude and GPT group | list price near Luna's | 174 to 192, a median across 15 providers | 5 of 13 | Reports no tool that renders an image; 131,000-token context; leaves on 30 November 2026. |
 | Claude Opus 5.5 and Sonnet 5.5, Antigravity | the Claude and GPT group, apart from the Claude subscription and from the Gemini group | not published | not measured there | 2 of 9 and 3 of 9 | A separate quota pool for a Claude model. They ask for a shell command on most briefs that do not forbid one. |
