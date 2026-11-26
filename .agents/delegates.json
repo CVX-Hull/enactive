@@ -68,17 +68,17 @@
           "reply": {"stdout_json": "result"}
         },
         "reviewer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
         "explorer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
         "locator": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         }
@@ -105,16 +105,19 @@
         "reviewer": {
           "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
           "brief": "argument",
+          "note": "Run no shell command and no terminal tool: this start cannot approve one, and asking for one ends the run with no reply. Use only your file reading and file search tools.",
           "reply": {"stdout_json": "response"}
         },
         "explorer": {
           "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
           "brief": "argument",
+          "note": "Run no shell command and no terminal tool: this start cannot approve one, and asking for one ends the run with no reply. Use only your file reading and file search tools.",
           "reply": {"stdout_json": "response"}
         },
         "locator": {
           "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
           "brief": "argument",
+          "note": "Run no shell command and no terminal tool: this start cannot approve one, and asking for one ends the run with no reply. Use only your file reading and file search tools.",
           "reply": {"stdout_json": "response"}
         }
       }

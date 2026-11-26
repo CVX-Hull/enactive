@@ -145,6 +145,23 @@ def test_the_named_delegate_is_started_with_its_model_effort_role_and_brief_and_
     assert Path(result["hand_back"]).read_text().startswith("reviewed: You are the reviewer.")
 
 
+def test_a_roles_note_follows_the_role_instruction_in_the_brief_as_sent(stand_ins):
+    roles = stand_ins.definitions["coding_agents"]["first"]["roles"]
+    roles["reviewer"] = roles["reviewer"] | {"note": "Run no command."}
+    result, _ = stand_ins("first", role="reviewer")
+    # What the delegate received on standard input, which the stand-in hands back after its first line.
+    assert Path(result["hand_back"]).read_text().split("\n", 1)[1].startswith("You are the reviewer.\nRun no command.\n\nRole: worker")
+    assert (stand_ins.out / "brief.txt").read_text().startswith("You are the reviewer.\nRun no command.\n\nRole: worker")
+    result, _ = stand_ins("first", role="worker")
+    assert Path(result["hand_back"]).read_text().split("\n", 1)[1].startswith("You are the worker.\n\nRole: worker")
+
+    # The same for a brief sent as an argument, which is how the tracked notes travel.
+    roles = stand_ins.definitions["coding_agents"]["second"]["roles"]
+    roles["reviewer"] = roles["reviewer"] | {"note": "Run no command."}
+    result, _ = stand_ins("second", role="reviewer")
+    assert Path(result["hand_back"]).read_text().startswith("reviewed: You are the reviewer.\nRun no command.\n\nR")
+
+
 def test_a_json_reply_file_contains_only_the_reply_and_the_report_contains_usage_and_sorted_models(stand_ins):
     result, _ = stand_ins("second", role="reviewer")
     stdout = json.loads((stand_ins.out / "stdout.txt").read_text())
@@ -290,5 +307,7 @@ def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
             assert (how["brief"] == "argument") == ("brief" in used) and (how["reply"] == "file") == ("reply_file" in used)
             if how["reply"] != "file":
                 assert set(how["reply"]) == {"stdout_json"}
+            assert set(how) <= {"argv", "brief", "reply", "note"}
+            assert isinstance(how.get("note", ""), str)
     for role in ROLES:
         assert (ROOT / ".agents/roles" / f"{role}.md").is_file()
