@@ -947,6 +947,20 @@
       },
       "visibility": "private"
     },
+    "hand-back-verification-added-models": {
+      "availability": "present",
+      "bytes": 265517,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-hand-back-verification-across-model-tiers.md"
+      ],
+      "files": 228,
+      "manifest_sha256": "b1f00453e9df7c29cfb82dfe1872c98a66a6b4bd9923d15acc927dd1dd84e784",
+      "note": "Forty-five verification starts by five added configurations, with the scripts and the full table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "joanna-campground-memory-803": {
       "availability": "present",
       "bytes": 101518312,
