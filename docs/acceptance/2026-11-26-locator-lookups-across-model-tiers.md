@@ -27,9 +27,16 @@ with every answer fixed from the tree beforehand.
 | GPT-6 Luna at Low | 13 | 1 | 0 | 22 s |
 | Gemini 4 Neon at High | 13 | 1 | 0 | 355 s |
 | Gemini 4 Hydrogen at High | 13 | 1 | 0 | 509 s |
+| Gemini 3.8 Flash at Low, added | 8 | 6 | 0 | 284 s |
+| Gemini 3.8 Flash at High, added | no hand-back within 900 s | | | 900 s |
+| GPT-OSS 120B at Medium, added | 0: hands back a plan and asks for approval | | | 25 s |
 
 - **No configuration states a wrong location.** Every answer that names a path and
-  line is right, and all eleven say "not found" for the two things that do not exist.
+  line is right, and every configuration that answers says "not found" for the two
+  things that do not exist.
+- **The models leaving Antigravity do worst.** Three starts were added afterwards so
+  that every small model is covered. Gemini 3.8 Flash at Low reports six existing
+  things as not found, at High it does not finish, and GPT-OSS 120B answers nothing.
 - **The one miss is the same lookup three times.** A class defined in a test file is
   reported as not found by GPT-6 Luna at Low and by both Gemini 4 configurations.
 - **The set barely separates quality and clearly separates time.** Eight of eleven
@@ -47,7 +54,9 @@ requested.
 
 The scripts, the key, every brief, reply and result and the table are retained as
 [`locator-lookups-across-model-tiers`](../../data/evidence/locator-lookups-across-model-tiers.sha256).
-The figures here are printed by `scripts/score.py` into `results/table.txt`.
+The figures here are printed by `scripts/score.py` into `results/table.txt`. The three
+added starts and their table are retained as
+[`locator-lookups-added-antigravity-models`](../../data/evidence/locator-lookups-added-antigravity-models.sha256).
 
 ## Method
 
@@ -63,8 +72,10 @@ The figures here are printed by `scripts/score.py` into `results/table.txt`.
 - **The configurations.** Each smaller model at its routing-default effort and at High:
   Claude Haiku 5.5 at Low and High, GPT-6 Luna at Low and High, GPT-6.1 Terra at Medium
   and High, Claude Sonnet 5.5 at Medium and High. Gemini 4 Hydrogen and Gemini 4 Neon
-  at High, since Antigravity's smaller models leave on 30 November 2026. GPT-6.2 Sol at
-  Extra-high is the reference. Each ran once as a locator through `tools/delegate.py`
+  at High. GPT-6.2 Sol at Extra-high is the reference. Three starts were added later
+  the same day on the small models that leave Antigravity on 30 November 2026, which
+  the first run had left out: Gemini 3.8 Flash at Low, the effort its native locator
+  alias uses, and at High, and GPT-OSS 120B at Medium. Each ran once as a locator through `tools/delegate.py`
   with a 900-second limit, on Claude Code 2.1.329, Codex CLI 0.171.0 and Antigravity
   CLI 1.5.18.
 - **The starts.** The Claude Code starts use the `dontAsk` permission mode of the
@@ -134,5 +145,9 @@ and run once.
   GPT-6.1 Terra. GPT-6 Luna misses one lookup at Low and none at High.
 - A locator's "not found" is the answer to check: three configurations report a thing
   in a test file as not found, and none invents a location.
-- The two Antigravity locators take ten to thirty times the wall time of the others
+- Gemini 3.8 Flash, which Antigravity's native locator alias names, is the weakest
+  locator measured: at Low it reports six of twelve existing things as not found, and
+  at High it does not hand back in 900 seconds. GPT-OSS 120B hands back a plan and no
+  answers.
+- The two Gemini 4 locators take ten to thirty times the wall time of the others
   and answer 13 of 14.

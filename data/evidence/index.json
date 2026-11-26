@@ -1074,6 +1074,20 @@
       },
       "visibility": "private"
     },
+    "locator-lookups-added-antigravity-models": {
+      "availability": "present",
+      "bytes": 20173,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-locator-lookups-across-model-tiers.md"
+      ],
+      "files": 18,
+      "manifest_sha256": "3b5e60764a4afae0f877126ea26fbb152c9ff7fab7f0479c4ca11c78c8f350e4",
+      "note": "Three locator starts added on the small models leaving Antigravity, with the scoring script and the full table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "malvern-trunk-paired-replay-829": {
       "availability": "present",
       "bytes": 36002169,
