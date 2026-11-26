@@ -552,6 +552,20 @@
       },
       "visibility": "private"
     },
+    "coding-agent-model-evidence-reread": {
+      "availability": "present",
+      "bytes": 14867818,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-coding-agent-model-evidence-reread.md"
+      ],
+      "files": 42,
+      "manifest_sha256": "efd99b33cfc1e60b9b2c65b20212d3509faf1a7a31fccbe1cc4aade743f42f10",
+      "note": "Three research files, the raw page downloads and extraction scripts behind them, and the worker's brief, reply and result for the dated record",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "coding-agent-token-use": {
       "availability": "present",
       "bytes": 14234,
