@@ -1407,6 +1407,20 @@
       },
       "visibility": "private"
     },
+    "reviewer-recall-current-claude-code-start": {
+      "availability": "present",
+      "bytes": 1395438,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-reviewer-recall-current-claude-code-start.md"
+      ],
+      "files": 225,
+      "manifest_sha256": "a93e3a5129c560b6ff642ff13757a0b6a45ff2a52981a1e731dae914afc01d67",
+      "note": "Scripts, nine reviews by Claude Opus 5.5 at High through the current Claude Code reviewer start on the replay's nine commits, both judges' packets and replies including six starts that stopped on a missing role file, and the table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "reviewer-recall-replay": {
       "availability": "present",
       "bytes": 1072059,
