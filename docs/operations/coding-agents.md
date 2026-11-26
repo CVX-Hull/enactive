@@ -156,7 +156,7 @@ on repository tasks.
 | Role | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
 | Worker | `codex exec --ignore-rules -s workspace-write` reads the brief on standard input. Its sandbox denies loopback connections and process listing, so the whole test suite fails inside it. It leaves changes uncommitted. Use the call's `--check` rerun outside the sandbox, then have the lead inspect the diff and commit. | `claude -p --permission-mode auto` reads the brief on standard input. It runs checks and can commit through the hook without a sandbox. | `agy --mode accept-edits -p BRIEF` edits files. Supply the worker's check with `--check`. |
-| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only` reads the brief on standard input and starts clean. The sandbox enforces read-only access. A test that writes a temporary directory fails inside it. | `claude -p --permission-mode plan --no-session-persistence` reads the brief on standard input and starts clean. File-editing tools are disabled. Plan mode directs the reviewer to run only read-only commands and refuse edits (observed by hand, no retained record). The filesystem does not enforce that rule. Plan mode also tells the model to explore with sub-agents, write a plan file and leave plan mode, which a review brief contradicts; reviews started this way spend words on it ([replay](../acceptance/2026-11-25-reviewer-recall-replay.md#method)). | `agy --mode plan -p BRIEF` opens files by path. Whether plan mode prevents edits is unverified. For clean context see [delegation roles](#delegation-roles). |
+| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only` reads the brief on standard input and starts clean. The sandbox enforces read-only access. A test that writes a temporary directory fails inside it. | `claude -p --permission-mode dontAsk --no-session-persistence` reads the brief on standard input and starts clean, with the default output style. File-editing tools are disabled, and the permission mode denies every tool call that is not already allowed: a shell write, a script and a compound command are refused, while file reads, searches and plain read-only commands such as `git log` run ([start check](../acceptance/2026-11-26-reviewer-start-check.md)). The filesystem itself is not read-only. A review that must run a script goes to the Codex reviewer, or the lead runs it. | `agy --mode plan -p BRIEF` opens files by path. The call adds a note to the brief telling the delegate to run no shell command. Whether plan mode prevents edits is unverified. For clean context see [delegation roles](#delegation-roles). |
 | Explorer, both forms | Use the reviewer's start. | Use the reviewer's start. | Use the reviewer's start. |
 
 - **No gameplay allowance** ([R-DELEGATION-ERROR](../risks.md)): `--ignore-rules`
@@ -176,17 +176,25 @@ on repository tasks.
   as an ordinary reply with exit code 0 is handed back as text for the lead to read.
   Either way nothing else is started.
 - **Claude Code settings.** A delegated run loads the user's settings as well as the
-  project's. The user's selected output style carries into the hand-back.
+  project's. The reviewer, explorer and locator starts set the default output style, so
+  the user's selected style does not carry into their hand-back; the worker start does
+  not set it.
+- **A note for what a start cannot do.** A role in the definitions file may carry a
+  `note`, which the call puts after the role's instruction in every brief. The
+  Antigravity reviewer, explorer and locator carry one that says to run no shell
+  command.
 - **Antigravity print mode.** The delegated modes run no shell command. A denied
   command ends the run with exit code 0 and an empty reply. The call reports
   `empty_reply` and lists any files changed. Verify the files even if the CLI status
-  line reports success. Tell the delegate to run no command,
-  name source files by path, and include the diff and any command output a review
-  needs in the brief. Split a large diff to fit the shell's single-argument limit.
-  On a review brief that gives the diff as a file and does not say to run no command,
-  and with quota available, Gemini 4 Neon at High returns an empty reply on 16 of 17 starts and Gemini 4 Carbon
-  at High on 5 of 12
-  ([replay](../acceptance/2026-11-25-reviewer-recall-replay.md#the-gemini-starts)).
+  line reports success. The call tells a reviewer, explorer or locator to run no
+  command; for a worker the lead writes it in the brief. Name source files by path, and
+  include the diff and any command output a review needs in the brief. Split a large
+  diff to fit the shell's single-argument limit. Without the instruction, and with quota
+  available, Gemini 4 Neon at High returns an empty reply on 16 of 17 review starts and
+  Gemini 4 Carbon at High on 5 of 12
+  ([replay](../acceptance/2026-11-25-reviewer-recall-replay.md#the-gemini-starts)); with
+  it, Neon hands back 3 of 3 and Carbon 2 of 3, the third stopped at a 1,500-second
+  limit ([start check](../acceptance/2026-11-26-reviewer-start-check.md)).
 - **Credentials** ([R-KEY-LEAK](../risks.md)): the shell that starts the call holds no
   provider key, since a coding agent reads its whole environment and would hand the key
   to a third provider, or bill it in place of the subscription. The call also starts

@@ -1351,6 +1351,20 @@
       },
       "visibility": "private"
     },
+    "reviewer-start-check": {
+      "availability": "present",
+      "bytes": 534528,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-reviewer-start-check.md"
+      ],
+      "files": 62,
+      "manifest_sha256": "043c8663da7c17fb693dd74943ab62ee87567fb24a162b52a02907daef9cc90d",
+      "note": "Start-check script, nine review starts on three replay commits through the changed delegate starts, and three permission probes",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "run-evidence-diagnosis": {
       "availability": "present",
       "bytes": 8242071,

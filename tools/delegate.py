@@ -203,7 +203,9 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     out.mkdir(parents=True, exist_ok=True)
     reply_file = out / "reply.md"
     reply_file.unlink(missing_ok=True)
-    sent = definitions["role_instruction"].replace("{role}", role) + "\n\n" + brief.strip() + "\n"
+    # A role's `note` says what this start cannot do, so the lead need not remember to write it into each brief.
+    sent = (definitions["role_instruction"].replace("{role}", role) + ("\n" + how["note"] if "note" in how else "")
+            + "\n\n" + brief.strip() + "\n")
     if check:
         sent += "\n" + REPORT_LINE + "\n"
     (out / "brief.txt").write_text(sent, encoding="utf-8")
