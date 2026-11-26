@@ -47,6 +47,7 @@ determines which changes get reviewed and how many reviewers they get.
 | Locating files and mechanical sweeps | the smallest model the host serves | none needed | a large model | Cost only; no figure read |
 | Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations. Two unmatched local worker passes (GPT-6.2 Sol at Extra-high on `#905`, GPT-6.2 Astra at Medium on `#914`). |
 | Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | Judgment; no public evidence found. One local review observation (GPT-6.2 Astra at High on `#896`, 2 confirmed findings). |
+| Reading retained game frames | a reviewer start the [delegate profiles](delegate-profiles.md#what-to-weigh) list as reading frames | another of those starts with quota | a start the profiles do not list | One local probe, cited in the profiles |
 | Standards and pull-request prose | the lead | GPT-6.2 Sol at Extra-high | none known | Judgment; one local matched run (`#811`) favored Fable over Sol. No public comparison for this work is recorded. |
 | Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found. Four unmatched local worker passes (Claude Opus 5.5 at High on `#925`). |
 | Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | The first choice is judgment; wrong-answer rates were read for those two models only |
@@ -142,7 +143,7 @@ of a matched run's two attempts.
 - **A row's `usage` is what the coding agent reported.**
   [Token use and the served model](coding-agents.md#starting-a-delegate-on-any-coding-agent)
   says how far the counts compare. None reports the share of a subscription window an
-  attempt used. Rows from before the field existed carry null.
+  attempt used. A row whose starts reported no counts carries null.
 - **One false report is enough to record.** A timeout reported as success, or quoted text
   that exists nowhere in the tree or its cited source, is written into that attempt's
   `false_report` field in the ledger, which carries its date and issue, whatever the
