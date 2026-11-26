@@ -994,6 +994,20 @@
       },
       "visibility": "private"
     },
+    "judging-added-models": {
+      "availability": "present",
+      "bytes": 490414,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-judging-across-model-tiers.md"
+      ],
+      "files": 363,
+      "manifest_sha256": "a189bc44c1d6221e8ae0d79c8c23ce4dce9f5c843858d53e7f98f0a2b51fb09c",
+      "note": "Seventy-two judging starts by four added configurations, with the scripts and the full table",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "lead-cost-per-merged-pull-request": {
       "availability": "present",
       "bytes": 4140,
