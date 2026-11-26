@@ -1164,6 +1164,20 @@
       },
       "visibility": "private"
     },
+    "memory-statement-kinds-research-review": {
+      "availability": "present",
+      "bytes": 107726,
+      "cited_by": [
+        "docs/research-memory-statement-kinds.md"
+      ],
+      "files": 10,
+      "manifest_sha256": "196530cb273f36c7c42da505e9c36ddc7890c61cee44753f0ec248ac53971d7e",
+      "note": "Two independent reviews of the research page on what memory should hold, the worker hand-back that applied them, and the script that builds its sources table",
+      "sources": {
+        ".": "session-scratch/review"
+      },
+      "visibility": "private"
+    },
     "multi-day-standard-build-998-admission-01": {
       "availability": "present",
       "bytes": 148470359,
