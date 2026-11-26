@@ -19,7 +19,7 @@ kind of work.
 | --- | --- |
 | How much design or risk does the worker take on? | The only matched comparisons cover one bounded code leaf and one prose leaf. No delegated worker has a recorded result on a brief with open design. |
 | Does the task need network access, the whole suite, a commit or an enforced read-only review? | Network access by a Codex or Claude Code worker is unverified through the call. For a worker that can run checks and commit, see the Claude Code [worker start](coding-agents.md#starting-a-delegate-on-any-coding-agent). The same table identifies the reviewer with enforced read-only access. |
-| Does the task need a game frame read? | Four reviewer starts opened two retained frames by path and answered eight questions of fact about them, all correctly, on 26 November 2026: Claude Code on Claude Opus 5.5 at High, Codex on GPT-6.2 Sol at Extra-high and on GPT-6.2 Astra at Medium (Codex CLI 0.171.0, Claude Code 2.1.329), and Antigravity on Gemini 4 Carbon at High (CLI 1.5.17). The questions read text and a highlighted button from an inventory screen and a prompt; judging a map or a difference between two frames is untested. Gemini 4 Neon was refused on quota and is unprobed. The ledger rows for issue 978 carry the runs. |
+| Does the task need a game frame read? | Four reviewer starts opened two retained frames by path and answered eight questions of fact about them, all correctly, on 25 November 2026: Claude Code on Claude Opus 5.5 at High, Codex on GPT-6.2 Sol at Extra-high and on GPT-6.2 Astra at Medium (Codex CLI 0.171.0, Claude Code 2.1.329), and Antigravity on Gemini 4 Carbon at High (CLI 1.5.17). The questions read text and a highlighted button from an inventory screen and a prompt; judging a map or a difference between two frames is untested. Gemini 4 Neon returned no frame answers. The ledger rows for issue 978 carry the runs. |
 | What quota and context are available? | Read quota in the host's session. The delegate call reports each run's token counts and exposes no remaining balance. The profiles below use the [subscription evidence](../acceptance/2026-11-20-lead-succession-evidence-866.md), which does not identify the owner's plans. No context-size limit is recorded for these configurations. |
 | How reliable is the hand-back? | The ledger records one false report (`#873`, 2026-11-21, Codex `gpt-6.2-astra` at High, worker: claimed an unbriefed status edit was briefed; the lead reverted it). Only the Antigravity app has a lead session audited against its transcript. |
 
@@ -79,7 +79,9 @@ separately, as in `gemini-4-neon` at `xhigh`.
 | Reviewer, print mode | A reviewer can use a diff supplied in the brief (no retained review report). |
 | App lead, Gemini 4 Neon at High | The [watched documentation leaf](../acceptance/2026-11-19-antigravity-lead-trial-810.md) supports leading as far as a queued merge with the owner present. Verification was partial, the report overstated what was checked, and another lead completed the merge. There is no comparable evidence for source work. |
 
-Quota is per model. The CLI changelog places `/usage`, `/quota` and `/credits` in an
+Quota is shown per model, and the account also has a limit across models: on
+25 November 2026, after Gemini 4 Neon was refused, starts on Gemini 4 Carbon and Gemini 4
+Hydrogen were refused with the same reset time, about 117 hours away. The CLI changelog places `/usage`, `/quota` and `/credits` in an
 interactive session. They return exit code 2 in print mode.
 
 ## Keeping this page current
