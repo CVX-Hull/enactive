@@ -26,12 +26,14 @@ judges and rule.
 | Claude Opus 5.5 at Medium, plan-mode start, first study | 2 | 1 | 1 | 2,478 s |
 
 - **Each finds four defects, and not the same four.** Together they find eight.
-- **Claude Sonnet 5.5 finds one defect no first-study reviewer found:** the host
-  decided whether a knowledge update fit before applying the context cut. It adds one
-  defect to GPT-6.2 Sol and three to GPT-6.2 Astra at High.
+- **Claude Sonnet 5.5 finds one defect that none of the five reviewers in the table
+  above it finds:** the host decided whether a knowledge update fit before applying the
+  context cut. Two of the first study's added arms did find it. Sonnet adds one defect
+  to GPT-6.2 Sol and three to GPT-6.2 Astra at High.
 - **GPT-6.1 Terra adds nothing to a GPT-6.2 reviewer.** All four of its defects are
   among those GPT-6.2 Sol, Astra at High and Astra at Medium find. It adds three to a
-  Claude Opus 5.5 reviewer, in a fifth of the wall time of any other reviewer here.
+  Claude Opus 5.5 reviewer. Its nine reviews take 565 seconds, about half the time of
+  the next shortest.
 - **As a first reviewer neither replaces a GPT-6.2 reviewer,** which finds seven to ten.
 
 The table does not rank the models: nine commits, each reviewed once, and every
@@ -66,7 +68,7 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 
 ## Results
 
-| Defect | Kind | Sonnet High | Terra High | Found in the first study by |
+| Defect | Kind | Sonnet High | Terra High | Found by, of the five first-study reviewers above |
 | --- | --- | --- | --- | --- |
 | A check that could not catch a file moved between packages | document | no | both judges | Sol, Astra High, Astra Medium |
 | The poll interval taken as the uncertainty on publication time | document | no | both judges | Sol, Astra High, Astra Medium |
@@ -74,13 +76,16 @@ The figures are printed by `scripts/tabulate.py` into `results/table.txt`.
 | A measured share attributed to the wrong model | document | both judges | no | Sol, Astra Medium |
 | An event-stream probe that mishandles split line endings | code | both judges | no | Sol, Astra High, Astra Medium |
 | Charges in flight not counted on a runner restart | code | no | both judges | Sol, Astra High, Astra Medium |
-| A ledger writer and reader that disagree on uniqueness | code | no | both judges | every first-study reviewer |
-| A fit check made before the context cut | code | both judges | no | none |
+| A ledger writer and reader that disagree on uniqueness | code | no | both judges | all five |
+| A fit check made before the context cut | code | both judges | no | none of the five |
 
 Neither finds the other eight. One judge and not the other credits Claude Sonnet 5.5
-with a ninth, a document defect.
+with a ninth, a document defect. The last column covers the five reviewers of the
+first study's main table. Its three added arms are not paired here: Claude Opus 5.5
+at High started without plan mode and Gemini 4 Carbon both find the fit check, so
+Sonnet adds nothing to the first study's eleven defects taken together.
 
-- **Pairs.** With each first-study reviewer, by both judges:
+- **Pairs.** With each of those five, by both judges:
 
 | Paired with | Union with Sonnet High | Sonnet adds | Union with Terra High | Terra adds |
 | --- | ---: | ---: | ---: | ---: |
@@ -104,12 +109,13 @@ with a ninth, a document defect.
 Every statement is about these nine commits, each configuration as started here and
 run once.
 
-- A second reviewer from another family adds defects here whichever tier it is from:
-  Claude Sonnet 5.5 adds one to three to a GPT-6.2 reviewer, and GPT-6.1 Terra adds
-  three to a Claude Opus 5.5 reviewer.
-- A smaller model of the same family as the first reviewer adds nothing here: GPT-6.1
-  Terra's four defects are all found by each GPT-6.2 reviewer.
-- GPT-6.1 Terra is the cheapest review measured here by a wide margin, and finds a
-  quarter of the known defects.
-- One defect that five first-study configurations missed is found by a middle model,
-  so a larger model is not a superset of a smaller one on this set.
+- A middle model from another family adds defects as a second reviewer in the pairs
+  shown: Claude Sonnet 5.5 adds one to three to a GPT-6.2 reviewer, and GPT-6.1 Terra
+  adds three to a Claude Opus 5.5 reviewer.
+- GPT-6.1 Terra adds nothing after a GPT-6.2 reviewer: its four defects are all found
+  by each of them. The same is not true of Claude Sonnet 5.5 after Claude Opus 5.5
+  through the plan-mode start, where it adds three or four.
+- GPT-6.1 Terra has the shortest total wall time of any reviewer here, 565 seconds
+  against 1,105 to 3,979, and finds a quarter of the known defects.
+- One defect that the five reviewers of the first study's main table miss is found by
+  a middle model, so none of those five is a superset of it on this set.
