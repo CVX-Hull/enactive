@@ -19,7 +19,7 @@ kind of work.
 | --- | --- |
 | How much design or risk does the worker take on? | The only matched comparisons cover one bounded code leaf and one prose leaf. No delegated worker has a recorded result on a brief with open design. |
 | Does the task need network access, the whole suite, a commit or an enforced read-only review? | Network access by a Codex or Claude Code worker is unverified through the call. For a worker that can run checks and commit, see the Claude Code [worker start](coding-agents.md#starting-a-delegate-on-any-coding-agent). The same table identifies the reviewer with enforced read-only access. |
-| What quota and context are available? | Read quota in the host's session. The delegate call exposes no remaining balance. The profiles below use the [subscription evidence](../acceptance/2026-11-20-lead-succession-evidence-866.md), which does not identify the owner's plans. No context-size limit is recorded for these configurations. |
+| What quota and context are available? | Read quota in the host's session. The delegate call reports each run's token counts and exposes no remaining balance. The profiles below use the [subscription evidence](../acceptance/2026-11-20-lead-succession-evidence-866.md), which does not identify the owner's plans. No context-size limit is recorded for these configurations. |
 | How reliable is the hand-back? | The ledger records one false report (`#873`, 2026-11-21, Codex `gpt-6.2-astra` at High, worker: claimed an unbriefed status edit was briefed; the lead reverted it). Only the Antigravity app has a lead session audited against its transcript. |
 
 ## Codex
@@ -46,7 +46,9 @@ Read remaining quota with `/status` or on the account's usage page.
 ## Claude Code
 
 Recorded models include `claude-fable-5-2`, `claude-opus-5-5`, `claude-sonnet-5-5`
-and `claude-haiku-5-5`. Efforts range from `low` to `max`.
+and `claude-haiku-5-5`. Efforts range from `low` to `max`. Name the full identifier in
+the delegate call: the alias `haiku` was served by Claude Sonnet 5.5 on this host
+([token use and the served model](coding-agents.md#starting-a-delegate-on-any-coding-agent)).
 
 | Role and configuration | What the evidence supports |
 | --- | --- |

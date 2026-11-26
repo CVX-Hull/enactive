@@ -1,5 +1,5 @@
 {
-  "schema": "delegates/1",
+  "schema": "delegates/2",
   "role_instruction": "You are the {role}. Before starting, read and follow `.agents/roles/{role}.md`; that file owns the role. If it cannot be read, stop and report it.",
   "drop_environment": [
     "OPENROUTER_API_KEY",
@@ -14,24 +14,34 @@
       "name": "Codex",
       "version": ["codex", "--version"],
       "refusals": ["usage limit", "rate limit", "quota", "not logged in", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
+      "usage": {
+        "read": "stdout_jsonl",
+        "where": {"type": "turn.completed"},
+        "tokens": {
+          "input_tokens": "usage.input_tokens",
+          "cached_input_tokens": "usage.cached_input_tokens",
+          "cache_write_input_tokens": "usage.cache_write_input_tokens",
+          "output_tokens": "usage.output_tokens"
+        }
+      },
       "roles": {
         "worker": {
-          "argv": ["codex", "exec", "--ignore-rules", "-s", "workspace-write", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--ignore-rules", "-s", "workspace-write", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
           "brief": "stdin",
           "reply": "file"
         },
         "reviewer": {
-          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
           "brief": "stdin",
           "reply": "file"
         },
         "explorer": {
-          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
           "brief": "stdin",
           "reply": "file"
         },
         "locator": {
-          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
           "brief": "stdin",
           "reply": "file"
         }
@@ -41,26 +51,36 @@
       "name": "Claude Code",
       "version": ["claude", "--version"],
       "refusals": ["usage limit", "rate limit", "quota", "not logged in", "/login", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
+      "usage": {
+        "read": "stdout_json",
+        "tokens": {
+          "input_tokens": "usage.input_tokens",
+          "cached_input_tokens": "usage.cache_read_input_tokens",
+          "cache_write_input_tokens": "usage.cache_creation_input_tokens",
+          "output_tokens": "usage.output_tokens"
+        },
+        "models": "modelUsage"
+      },
       "roles": {
         "worker": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--no-session-persistence", "--output-format", "text"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
-          "reply": "stdout"
+          "reply": {"stdout_json": "result"}
         },
         "reviewer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "text"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
-          "reply": "stdout"
+          "reply": {"stdout_json": "result"}
         },
         "explorer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "text"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
-          "reply": "stdout"
+          "reply": {"stdout_json": "result"}
         },
         "locator": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "text"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "plan", "--disallowedTools", "Edit Write NotebookEdit","--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
-          "reply": "stdout"
+          "reply": {"stdout_json": "result"}
         }
       }
     },
@@ -68,26 +88,34 @@
       "name": "Antigravity",
       "version": ["agy", "--version"],
       "refusals": ["usage limit", "rate limit", "quota", "not logged in", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
+      "usage": {
+        "read": "stdout_json",
+        "tokens": {
+          "input_tokens": "usage.input_tokens",
+          "cached_input_tokens": "usage.cache_read_tokens",
+          "output_tokens": "usage.output_tokens"
+        }
+      },
       "roles": {
         "worker": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "accept-edits", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "accept-edits", "--output-format", "json", "-p", "{brief}"],
           "brief": "argument",
-          "reply": "stdout"
+          "reply": {"stdout_json": "response"}
         },
         "reviewer": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
           "brief": "argument",
-          "reply": "stdout"
+          "reply": {"stdout_json": "response"}
         },
         "explorer": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
           "brief": "argument",
-          "reply": "stdout"
+          "reply": {"stdout_json": "response"}
         },
         "locator": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
           "brief": "argument",
-          "reply": "stdout"
+          "reply": {"stdout_json": "response"}
         }
       }
     }

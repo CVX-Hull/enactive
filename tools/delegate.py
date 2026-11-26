@@ -4,7 +4,8 @@
 The lead chooses the coding agent, model, effort and role; this starts exactly that and reports what happened.
 It holds no preference: every argument that selects a delegate is required, nothing has a default, and a run
 that does not start, returns nothing or is refused is reported as that and never tried on another delegate.
-How each coding agent is started is data, in `.agents/delegates.json`; this file knows none of them by name.
+How each coding agent is started and how it reports are data in `.agents/delegates.json`.
+This file knows none of them by name.
 
 Runs on the standard library, so a lead on any coding agent can start it with the main checkout's Python.
 """
@@ -24,7 +25,8 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DELEGATES = ROOT / ".agents/delegates.json"
-SCHEMA = "delegates/1"
+SCHEMA = "delegates/2"
+TOKEN_NAMES = ("input_tokens", "cached_input_tokens", "cache_write_input_tokens", "output_tokens")
 # The hand-back's own statement of the acceptance check, asked for in the brief when the lead names a check.
 REPORTED = re.compile(r"^Acceptance check: (passed|failed|not run)\s*$", re.MULTILINE)
 REPORT_LINE = ("End your hand-back with one line of exactly this form, saying what you saw when you ran the "
@@ -112,13 +114,57 @@ def refusal(patterns: list[str], out: str, err: str) -> str | None:
     return None
 
 
+def json_object(text: str) -> dict:
+    """Read an output record, treating malformed or non-object output as absent."""
+    try:
+        value = json.loads(text)
+    except (ValueError, RecursionError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def at_path(record: dict, path: str) -> object:
+    value: object = record
+    for key in path.split("."):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def reported_usage(stdout: str, stdout_object: dict, how: dict) -> tuple[dict[str, int | None] | None, list[str] | None]:
+    """Sum reported counts and collect served models from the matching output records."""
+    records = (stdout_object,)
+    if how["read"] == "stdout_jsonl":
+        where = how["where"]
+        records = (record for record in map(json_object, stdout.split("\n"))
+                   if all(key in record and record[key] == value for key, value in where.items()))
+
+    totals: dict[str, int | None] = dict.fromkeys(TOKEN_NAMES)
+    models: set[str] | None = None
+    models_path = how.get("models")
+    for record in records:
+        for name, path in how["tokens"].items():
+            count = at_path(record, path)
+            if type(count) is int and count >= 0:
+                totals[name] = (totals[name] or 0) + count
+        if models_path is not None:
+            reported = at_path(record, models_path)
+            if isinstance(reported, dict):
+                if models is None:
+                    models = set()
+                models.update(reported)
+    return (totals if any(count is not None for count in totals.values()) else None,
+            sorted(models) if models is not None else None)
+
+
 def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role: str, brief: str,
           worktree: Path, out: Path, check: str | None, timeout: float | None) -> dict:
     """Start the named delegate once and describe what happened. Never starts a different one."""
     result = {"coding_agent": coding_agent, "coding_agent_version": None, "model": model, "effort": effort,
               "role": role, "worktree": str(worktree), "date": date.today().isoformat(), "outcome": None,
               "detail": None, "exit_code": None, "wall_seconds": 0, "hand_back": None, "commits": None,
-              "uncommitted": None, "check": None}
+              "uncommitted": None, "check": None, "usage": None, "models_reported": None}
     agent = definitions["coding_agents"].get(coding_agent)
     if agent is None:
         raise SystemExit(f"No coding agent {coding_agent!r} in the delegate definitions; "
@@ -161,14 +207,21 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     result["exit_code"] = exit_code
     (out / "stdout.txt").write_text(stdout, encoding="utf-8")
     (out / "stderr.txt").write_text(stderr, encoding="utf-8")
-    if how["reply"] == "file":
+    reply_format, usage_format = how["reply"], agent["usage"]
+    stdout_object = json_object(stdout) if reply_format != "file" or usage_format["read"] == "stdout_json" else {}
+    if reply_format == "file":
         reply = reply_file.read_text(encoding="utf-8", errors="replace") if reply_file.is_file() else ""
     else:
-        reply = stdout
+        value = stdout_object.get(reply_format["stdout_json"])
+        reply = value if isinstance(value, str) else ""
         reply_file.write_text(reply, encoding="utf-8")
+    result["usage"], result["models_reported"] = reported_usage(stdout, stdout_object, usage_format)
 
     no_hand_back = exit_code != 0 or not reply.strip()
-    refused = refusal(agent["refusals"], stdout, stderr) if no_hand_back else None
+    # A single output record is searched by what it says, not by its counts and timings: a field that
+    # happens to hold 429 is not a refusal.
+    said = "\n".join(value for value in stdout_object.values() if isinstance(value, str)) if stdout_object else stdout
+    refused = refusal(agent["refusals"], said, stderr) if no_hand_back else None
     last_line = (stderr.strip().splitlines() or stdout.strip().splitlines() or ["no output"])[-1][:300]
     if exit_code is None:
         result |= {"outcome": "timed_out", "detail": f"no hand-back within {timeout:g} seconds"}

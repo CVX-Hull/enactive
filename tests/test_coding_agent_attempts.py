@@ -1,4 +1,4 @@
-"""The delegated-attempt ledger (coding-agent-attempt/2) has the shape its reading rules on the routing page need.
+"""The delegated-attempt ledger (coding-agent-attempt/3) has the shape its reading rules on the routing page need.
 
 Each row is one delegated attempt. A row with a blind preference is one of a matched run's two attempts; the two at
 one leaf from one base commit are a pair, read within the routing table's kind of work. A row with no blind
@@ -22,6 +22,7 @@ LEDGER = ROOT / 'data/evaluation/coding-agent-attempts.jsonl'
 SCHEMA = ROOT / 'schemas/coding-agent-attempt.schema.json'
 ROUTING = ROOT / 'docs/operations/model-routing.md'
 ROUTING_TABLE = '## Route by kind of work'
+USAGE = dict(input_tokens=100, cached_input_tokens=20, cache_write_input_tokens=None, output_tokens=0)
 
 
 def kinds_of_work(page: str) -> set[str]:
@@ -59,11 +60,12 @@ def read(path: Path) -> list[dict]:
 
 
 def attempt(**changes) -> dict:
-    row = dict(schema='coding-agent-attempt/2', issue=900, kind_of_work='Bounded implementation from a written brief',
+    row = dict(schema='coding-agent-attempt/3', issue=900, kind_of_work='Bounded implementation from a written brief',
                base_commit='b' * 40, role='worker', coding_agent='first agent', coding_agent_version='1.0.0',
                model='model-one', effort='high', reason='Matched run: the routing row\'s first choice',
                date='2026-11-20', hand_back='handed_back', acceptance='passed', repairs=0, wall_seconds=1200,
-               blind_preference='preferred', outcome='merged', findings=None, false_report=None)
+               blind_preference='preferred', outcome='merged', findings=None, false_report=None,
+               usage=None, brief_design=None, brief_extent=None, brief_check=None)
     return row | changes
 
 
@@ -111,6 +113,11 @@ def test_a_single_delegation_reads_without_a_pair():
     assert problems([unstarted], KINDS) == []
 
 
+def test_an_attempt_can_record_usage_and_brief_properties():
+    row = single(usage=USAGE, brief_design='pinned', brief_extent='medium', brief_check=True)
+    assert problems([row], KINDS) == []
+
+
 @pytest.mark.parametrize(('rows', 'message'), [
     (pair()[:1], '1 attempts from one base commit'),
     (pair() + [attempt(coding_agent='third agent')], '3 attempts from one base commit'),
@@ -122,8 +129,13 @@ def test_a_single_delegation_reads_without_a_pair():
     ([attempt(date='20 November 2026')], 'does not match'),
     ([attempt(wall_time=3)], 'Additional properties are not allowed'),
     ([{k: v for k, v in attempt().items() if k != 'outcome'}], "'outcome' is a required property"),
-    ([attempt(schema='coding-agent-attempt/0')], "'coding-agent-attempt/2' was expected"),
-    ([attempt(schema='coding-agent-attempt/1')], "'coding-agent-attempt/2' was expected"),
+    ([attempt(schema='coding-agent-attempt/0')], "'coding-agent-attempt/3' was expected"),
+    ([attempt(schema='coding-agent-attempt/1')], "'coding-agent-attempt/3' was expected"),
+    ([attempt(schema='coding-agent-attempt/2')], "'coding-agent-attempt/3' was expected"),
+    ([single(usage={k: v for k, v in USAGE.items() if k != 'input_tokens'})], "'input_tokens' is a required property"),
+    ([single(usage=USAGE | {'input_tokens': -1})], '-1 is less than the minimum of 0'),
+    ([single(usage=USAGE | {'total_tokens': 120})], "'total_tokens' was unexpected"),
+    ([single(brief_design='fixed')], "'fixed' is not one of ['pinned', 'open', None]"),
     ([review(outcome='merged')], "'merged' is not one of ['used', 'not_used']"),
     ([single(findings={'confirmed': 1, 'rejected': 0})], "is not of type 'null'"),
     ([review(role='explorer')], "is not of type 'null'"),

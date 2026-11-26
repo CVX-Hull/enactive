@@ -123,6 +123,19 @@ checkout or a worktree, with the main checkout's Python
   everything it started are stopped); or `unavailable` (the role is recorded as having no start that works on
   that coding agent). After any outcome but the first the call starts nothing else: the
   lead decides what to try next.
+- **Token use and the served model.** Each start turns on the coding agent's
+  machine-readable output, and the result carries what that output reports: `usage`,
+  with `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens` and
+  `output_tokens` summed over the run, and `models_reported`, the models the coding
+  agent says it served. A name the coding agent does not report is null. Codex and
+  Antigravity report no served model, and Antigravity reports no cache writes. Claude
+  Code's `input_tokens` leaves cached tokens out; Codex's includes them, and
+  Antigravity's appears to. Compare token counts within one coding agent, not across
+  them. Usage is read from whatever the run printed, so a Codex run stopped at its time
+  limit reports the turns it finished, and a Claude Code or Antigravity run stopped
+  early reports none. Compare `models_reported` with the model named: on this host
+  `claude --model haiku` was served by Claude Sonnet 5.5, and `claude-haiku-5-5` was
+  served as named.
 - **The acceptance check is run again outside.** With `--check`, the brief asks the
   delegate to end by saying whether it saw the check pass, fail or not run. After the
   run the call runs the same command in the worktree itself, outside any sandbox the
@@ -133,8 +146,10 @@ checkout or a worktree, with the main checkout's Python
   ([verify a delegated result](../standards/agents.md#the-leads-duties)). The call does
   not commit, merge or push.
 
-[Delegate definitions](../../.agents/delegates.json) supply the starts below for
-Codex CLI 0.171.0, Claude Code 2.1.329 and Antigravity CLI 1.5.13. The
+[Delegate definitions](../../.agents/delegates.json) supply the starts below and say
+how each coding agent's reply and usage are read. The starts ran on Codex CLI 0.171.0,
+Claude Code 2.1.329 and Antigravity CLI 1.5.17; the Antigravity print-mode behaviour
+below was observed on 1.5.13. The
 [attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) holds outcomes
 on repository tasks.
 
