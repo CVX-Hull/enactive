@@ -68,17 +68,17 @@
           "reply": {"stdout_json": "result"}
         },
         "reviewer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--allowedTools", "Read Grep Glob", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
         "explorer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--allowedTools", "Read Grep Glob", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
         "locator": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--allowedTools", "Read Grep Glob", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         }
