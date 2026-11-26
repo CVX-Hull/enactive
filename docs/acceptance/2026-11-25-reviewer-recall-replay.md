@@ -244,6 +244,10 @@ with exit code 0 and no reply, after 19 to 164 seconds. Neon returned an empty r
 eight of nine commits twice over. Carbon returned one on three commits, all of them
 code, and on the second start reviewed one of the three. The reviews Carbon handed back
 took 636 to 1,471 seconds each. The
+[host page](../operations/coding-agents.md#starting-a-delegate-on-any-coding-agent)
+advises telling an Antigravity delegate to run no command and putting the diff in the
+brief; this study's brief gave every configuration the diff as a file and did not say
+to run no command, so these figures are for a brief written without that advice. The
 [probe record](2026-11-25-delegate-start-probes.md#the-quota-refusal) describes the
 quota refusal.
 
