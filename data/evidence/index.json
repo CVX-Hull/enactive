@@ -659,6 +659,20 @@
       },
       "visibility": "private"
     },
+    "delegate-start-probes": {
+      "availability": "present",
+      "bytes": 29552,
+      "cited_by": [
+        "docs/acceptance/2026-11-25-delegate-start-probes.md"
+      ],
+      "files": 34,
+      "manifest_sha256": "46789c56b6680e9de67bda6bb9db003aa963127cf8d0b28e0fdf6da8e0827c1d",
+      "note": "Outputs of the delegate start probes of 25 November 2026: hand runs and delegate-call runs for usage output, the frame-reading replies and results, and two quota refusals; no transcript and no game evidence",
+      "sources": {
+        ".": "scratch-delegate-start-probes"
+      },
+      "visibility": "private"
+    },
     "delivery-check-642": {
       "availability": "present",
       "bytes": 30406381,

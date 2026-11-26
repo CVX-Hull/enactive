@@ -130,10 +130,10 @@ checkout or a worktree, with the main checkout's Python
   `output_tokens` summed over the run, and `models_reported`, the models the coding
   agent says it served. A name the coding agent does not report is null. Codex and
   Antigravity report no served model, and Antigravity reports no cache writes. Claude
-  Code's `input_tokens` leaves cached tokens out; Codex's includes them, and
-  Antigravity's appears to. Compare token counts within one coding agent, not across
+  Code's `input_tokens` leaves cached tokens out, Codex's includes them, and what
+  Antigravity's includes is undetermined. Compare token counts within one coding agent, not across
   them. A coding agent prints its counts when a turn ends, so a run stopped at its time
-  limit usually reports none. Name a Claude model by its full identifier and compare
+  limit may report none. Name a Claude model by its full identifier and compare
   `models_reported` with it: the alias `haiku` is served by Claude Sonnet 5.5 on this
   host ([probes](../acceptance/2026-11-25-delegate-start-probes.md)).
 - **The acceptance check is run again outside.** With `--check`, the brief asks the
@@ -170,7 +170,7 @@ on repository tasks.
   quota or sign-in wording listed for each coding agent in the definitions file. It
   never reads a reply for that wording, since a hand-back may discuss quotas. The
   call reports an Antigravity quota refusal as `refused`, with the time until the quota
-  resets in its detail ([probes](../acceptance/2026-11-25-delegate-start-probes.md)).
+  resets in its detail.
   Detection on Codex and Claude Code is unproven.
   A refusal worded differently is reported as `failed` or `empty_reply`, and one that arrives
   as an ordinary reply with exit code 0 is handed back as text for the lead to read.
