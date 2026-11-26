@@ -1365,6 +1365,20 @@
       },
       "visibility": "private"
     },
+    "reviewer-start-read-allowance": {
+      "availability": "present",
+      "bytes": 5504,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-reviewer-start-check.md"
+      ],
+      "files": 7,
+      "manifest_sha256": "f047b2bb23bc78dfdf773b1e3d0b71d54892bca5918dedf3f55dbf31076f20bf",
+      "note": "Permission probe of the Claude Code read-only start with the read tools allowed, and two of the judging starts that were refused a read outside their working directory",
+      "sources": {
+        ".": "session scratch directory of the lead"
+      },
+      "visibility": "private"
+    },
     "run-evidence-diagnosis": {
       "availability": "present",
       "bytes": 8242071,

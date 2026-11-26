@@ -120,6 +120,13 @@ The scripts, briefs, replies and results are retained as
 
 - Three commits and one start of each configuration. The hand-back counts show the
   starts work; they are not rates.
+- Every review here read files inside its working directory only. The start as checked
+  also refuses a read outside it, which this check did not exercise: later the same
+  day, 72 judging starts whose packets lay outside the working directory handed back
+  only the refusal. The tracked start now allows the file-reading and search tools
+  everywhere; a probe with that allowance reads an outside file and still refuses both
+  writes (`reviewer-start-read-allowance`, under
+  [the evidence manifests](../../data/evidence/reviewer-start-read-allowance.sha256)).
 - Gemini 4 Carbon needs 1,124 to 1,485 seconds for a review here and 1,125 to 1,471 in
   the replay, so a 1,500-second limit is not enough margin for it.
 - Under plan mode the model declined to write. Under the changed start Claude Haiku 5.5
