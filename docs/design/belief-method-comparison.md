@@ -18,7 +18,7 @@ belief improves predictions or changes decisions remains unknown.
 The [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/666)
 is revisited when multi-day standard-build campaigns under the
 [player-owned campaign outcome (#136)](https://github.com/CVX-Hull/enactive/issues/136),
-starting with [#968](https://github.com/CVX-Hull/enactive/issues/968), supply
+of which [#998](../acceptance/2026-11-26-multi-day-standard-build-campaign-998.md) is the first, supply
 contested or retracted belief revisions that make a belief-method comparison
 decision-relevant (the bounded [`#963` live validation](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
 left too few conflict cases; see the

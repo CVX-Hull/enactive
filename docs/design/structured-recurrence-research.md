@@ -18,7 +18,7 @@ improves visible play enough to justify its cost remains unknown.
 Revisit the [memory study (#666)](https://github.com/CVX-Hull/enactive/issues/666)
 when multi-day standard-build campaigns under the
 [player-owned campaign outcome (#136)](https://github.com/CVX-Hull/enactive/issues/136),
-starting with [#968](https://github.com/CVX-Hull/enactive/issues/968), show
+of which [#998](../acceptance/2026-11-26-multi-day-standard-build-campaign-998.md) is the first, show
 recurrence friction across starts that makes a structured-recurrence comparison
 feasible and worth pricing (the bounded
 [`#963` live validation](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)
