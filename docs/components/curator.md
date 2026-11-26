@@ -27,8 +27,9 @@ world-scoped articles, all carrying `scope.ruleset == "standard"`,
 Field-weighted BM25 + 1-hop ranking was evaluated offline on projected `#889`/`#896-b`
 `delivered-knowledge/2` exports
 ([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md)).
-Multi-actor live handoff on `curator-knowledge/4` and multi-day standard-build
-campaigns remain unexercised live.
+One multi-day standard-build campaign ran on `curator-knowledge/4`
+([#998](../acceptance/2026-11-26-multi-day-standard-build-campaign-998.md)); a
+multi-actor live handoff on it remains unexercised.
 The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
 with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
 
