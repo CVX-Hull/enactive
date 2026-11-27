@@ -29,10 +29,9 @@ instructions in `.agents/roles/`.
 
 Host-neutral playbooks live under `docs/workflows/` as the single source of truth.
 Where a workflow benefits from progressive-disclosure skill discovery across all three
-coding agents, track thin `SKILL.md` wrappers (standard `name` and `description`
-frontmatter only, pointing directly to the owning `docs/workflows/` page, with no
-duplicated rules and no symlinks since `tools/ci.py` treats non-regular objects as
-cross-cutting):
+coding agents, track regular-file thin `SKILL.md` wrappers (standard `name` and
+`description` frontmatter only, pointing directly to the owning `docs/workflows/` page,
+with no duplicated rules and no symlinks):
 
 | Host | Discovered project skill path |
 | --- | --- |
