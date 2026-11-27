@@ -8,12 +8,16 @@ status: active
 
 ## What we are building
 
-Enactive lets a designated agent play persistent, long-horizon CDDA-class games
-continuously—with operator-initiated pause and resume carrying over game knowledge
-and prior goals—from visible computer observations while a user watches and can stop
-automation. The [charter](charter.md) owns purpose, continuous-play scope and
-non-blocking latency constraints. CDDA is the first actual target; no second game or
-unattended survival service is qualified.
+Enactive lets a designated agent play CDDA-class survival/roguelike games from
+visible computer observations while a user watches and can stop automation. The
+[charter](charter.md) owns purpose, the continuous long-horizon play target (with
+operator-initiated pause and resume carrying over game knowledge and prior goals)
+and the non-blocking latency constraints. Today, Pause permanently fences automation
+for the running admission ([pause and timeout](operations/pause-timeout.md)), and
+player-agenda carryover across cuts, handoffs and resumed sessions is an approved
+scope decision ([player working-state agenda](decisions/owner-decisions.md#player-working-state-agenda-1026);
+[#1026](https://github.com/CVX-Hull/enactive/issues/1026)). CDDA is the first actual
+target; no second game or unattended survival service is qualified.
 The [glossary](glossary.md) defines the project's terms.
 
 The current source uses a basic computer-control boundary. The harness provides
@@ -25,14 +29,18 @@ Curated knowledge and fallible player hints support continuity; ordinary input
 remains available when a hint fails and mechanical custody is healthy.
 
 A separate [curator](components/curator.md) is the sole writer of durable long-term
-memory (Kinds 1–5 only, with no recommendations or plans;
-[decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five)):
-it reads what happened, publishes cited facts and articles through a gate, and holds
-no custody. It works beside play without making the player wait, and between runs.
-Each fact (`curator-fact/5`) carries an open scope map and typed links, so
-world-bound and context-scoped knowledge is delivered only to matching runs.
-Player-owned ephemeral working state and self-directed goals stay separate from
-curated memory ([decision](decisions/owner-decisions.md#player-working-state-agenda-1026)).
+memory: it reads what happened, publishes cited facts and articles through a gate,
+and holds no custody. It works beside play without making the player wait, and
+between runs. Each fact (`curator-fact/5`) carries an open scope map and typed links,
+so world-bound and context-scoped knowledge is delivered only to matching runs. The
+current schema still accepts `strategy` claims; the approved writing policy narrows
+curated memory to Kinds 1–5 only with no recommendations or plans
+([decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five);
+[#1024](https://github.com/CVX-Hull/enactive/issues/1024),
+[#1022](https://github.com/CVX-Hull/enactive/issues/1022)), and keeps player-owned
+ephemeral working state and self-directed goals separate from curated memory
+([decision](decisions/owner-decisions.md#player-working-state-agenda-1026);
+[#1026](https://github.com/CVX-Hull/enactive/issues/1026)).
 
 ## How it works
 
@@ -75,7 +83,12 @@ Knowledge moves beside play in four steps, each optional for a run:
 3. **Cut.** The `player-host/12` route can enable `context_cut`. The host then replaces
    older turns with a fresh briefing, and only turns that the curator's confirmed,
    [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut) has reached.
-   Without that coverage, play continues with image eviction and handoff.
+   Without that coverage, play continues with image eviction and handoff, or stops at
+   `context-capacity` when no eligible covered cut can fit the next request; the
+   current host can also wait on opening recall or in-flight recall spend settlement
+   ([non-blocking latency principle](decisions/owner-decisions.md#non-blocking-latency-contract-and-split-1026);
+   [#1036](https://github.com/CVX-Hull/enactive/issues/1036),
+   [#1037](https://github.com/CVX-Hull/enactive/issues/1037)).
 4. **Groom.** After a run is sealed, the operator can run
    [boundary grooming](operations/curator-hosts.md#post-admission-boundary-grooming) to
    merge, retire and reorganize the whole store for a later package.

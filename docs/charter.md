@@ -65,10 +65,11 @@ Gameplay must be apparently responsive to the observer. Admit the whole
 host/model/context/execution configuration on measured useful progress and
 quality. A slower model is acceptable only where useful execution covers its
 delay and the complete configuration still meets the declared cadence. Capability
-alone does not justify stalls. Context cuts stay deterministic with zero foreground
-compaction pauses, background services (curation, recall and any optional
-reconciliation) must not block foreground play, and working-state updates remain
-optional on routine or urgent turns ([decision](decisions/owner-decisions.md#non-blocking-latency-contract-and-split-1026)).
+alone does not justify stalls. Context cuts must be deterministic with zero
+foreground compaction pauses, background services (curation, recall and any optional
+reconciliation) must not block foreground play, and working-state updates must add
+zero mandatory overhead on routine or urgent turns
+([decision](decisions/owner-decisions.md#non-blocking-latency-contract-and-split-1026)).
 Numerical budgets belong in the prospective evaluation, with loading and long
 activities separately visible and bounded.
 

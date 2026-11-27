@@ -3,16 +3,20 @@ owner: lead
 status: active
 date: 2026-11-26
 scope: 'Outside evidence from 79 works on what statements player memory can hold, who writes them, and how stale entries are found and retired'
-review_trigger: 'The owner decides what the curator records beyond observations, what survives removal of earlier context or whether to add a separate long-horizon planner, or a study tests one of these questions in extended play'
+review_trigger: 'The owner decides how stale entries are found, revised and retired, or a study tests curator Kinds 1–5 writing, player_agenda working state or a separate strategist in extended play'
 ---
 
 # Research on what a player's memory should hold and who writes it
 
-The search cutoff was **26 November 2026** (America/New_York). The curator can
-record `strategy` claims and `inferred` evidence. Which supported statements
-the curator should routinely write is open. The owner prioritized world facts
-and deferred procedures and belief calculus. [Curator contract](contracts/curator.md#facts-curator-fact5) ·
-[Owner decision](decisions/owner-decisions.md#world-memory-first)
+The search cutoff was **26 November 2026** (America/New_York). The current curator
+schema still accepts `strategy` claims and `inferred` evidence; the owner has
+settled the target writing scope (Kinds 1–5 only, separate strategist deferred) and
+the player working-state boundary (`player_agenda`), while stale-entry retirement
+remains open. The owner previously prioritized world facts and deferred procedures
+and belief calculus. [Curator contract](contracts/curator.md#facts-curator-fact5) ·
+[Kinds 1–5 decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five) ·
+[Player working-state decision](decisions/owner-decisions.md#player-working-state-agenda-1026) ·
+[World memory first](decisions/owner-decisions.md#world-memory-first)
 
 The question arose in the [three-day campaign memory review (#1019)](https://github.com/CVX-Hull/enactive/issues/1019).
 Related research covers [memory, ontology and oversight](research-curated-memory.md)
@@ -340,21 +344,25 @@ The last column gives the result after checking claims from abstracts or summari
 The following are engineering inferences for the open questions.
 
 - **Checkable statements are candidates for curation.** Dated off-screen state,
-  causal inferences with conditions, and recommendations with a named goal give
-  a reader something to check. [World-state facts (#1020)](https://github.com/CVX-Hull/enactive/issues/1020) ·
-  [What the curator should record (#1024)](https://github.com/CVX-Hull/enactive/issues/1024)
+  causal inferences with conditions, and synthesized reserves give a reader
+  something to check; the owner narrowed curator scope to Kinds 1–5 only (excluding
+  Kind 6 recommendations and Kind 7 directives). [World-state facts (#1020)](https://github.com/CVX-Hull/enactive/issues/1020) ·
+  [What the curator should record (#1024)](https://github.com/CVX-Hull/enactive/issues/1024) ·
+  [Kinds 1–5 decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five)
 - **Reachable evidence is a design hypothesis.** A reader could consult the record
   when a lesson fails or its scope is unclear (S01). [Evidence access (#1025)](https://github.com/CVX-Hull/enactive/issues/1025)
-- **The player already owns live plans.** How to carry working state across a
-  context cut is open. The curator remains responsible for writing the long-term
-  knowledge store under the owner decision. [Player interface](components/player-interface.md) ·
+- **The player owns live plans and ephemeral working state.** The owner approved a
+  host-local typed `player_agenda` boundary (narrowing the earlier two-role split
+  for ephemeral working state only), while the curator remains sole writer of
+  durable Kinds 1–5 knowledge. [Player interface](components/player-interface.md) ·
   [Working state across cuts (#1026)](https://github.com/CVX-Hull/enactive/issues/1026) ·
-  [Owner decision](decisions/owner-decisions.md#actor-plays-and-curator-maintains-memory)
+  [Player working-state decision](decisions/owner-decisions.md#player-working-state-agenda-1026)
 - **A comparison here could measure regressions alongside gains.** WikiTrace
   offers one measure (S01). The project's withholding study left harm untested.
   [Withholding decision](decisions/owner-decisions.md#curator-and-memory-phase-adopted)
-- **A strategist's value here is unknown.** Whether the player's planning
-  limits play, and whether a second planner would help, remain open (S17, S23, S38).
+- **A strategist's value here is deferred.** The owner deferred adding a separate
+  strategist until after `#1020`–`#1026` are tested in extended play (S17, S23, S38).
+  [Strategist deferral](decisions/owner-decisions.md#separate-strategist-deferred-1024)
 
 ## What is not known
 
