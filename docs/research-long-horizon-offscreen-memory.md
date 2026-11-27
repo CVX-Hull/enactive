@@ -3,7 +3,7 @@ owner: lead
 status: active
 date: 2026-11-26
 scope: 'Outside evidence from 29 works beyond short-horizon game agents on stale memory precedence, evolving off-screen state, environmental tracking, active sensing, multi-session error carry-forward, scientific discovery and human-factors failure modes'
-review_trigger: 'The owner settles condition/confidence metadata, findability, post-cut delivery and curation cadence, or a study tests keyed inertial state, kinematic anchors, player_agenda or interleaved hygiene grooming in extended play'
+review_trigger: 'The owner settles findability, post-cut delivery and curation cadence, or a study tests keyed inertial state, kinematic anchors, grounded when/precedence, player_agenda or interleaved hygiene grooming in extended play'
 ---
 
 # Research on long-horizon off-screen state, environmental tracking and non-gaming memory analogues
@@ -24,11 +24,12 @@ scope ([Kinds 1–5 only](decisions/owner-decisions.md#curator-records-statement
 [player working state](decisions/owner-decisions.md#player-working-state-agenda-1026),
 [keyed inertial world state](decisions/owner-decisions.md#keyed-inertial-world-state-and-live-repair-1020),
 [zero-model lookup](decisions/owner-decisions.md#zero-model-lexical-index-embeddings-deferred-1020),
-[kinematic anchors and frame clock](decisions/owner-decisions.md#kinematic-anchors-frame-clock-and-on-demand-depictions-1021)
+[kinematic anchors and frame clock](decisions/owner-decisions.md#kinematic-anchors-frame-clock-and-on-demand-depictions-1021),
+[statement kinds, grounded `when` and precedence](decisions/owner-decisions.md#statement-kinds-grounded-when-two-strength-deps-and-precedence-1022)
 and [interleaved hygiene-only live grooming](decisions/owner-decisions.md#interleaved-hygiene-only-live-grooming-1027).
-Empirical and design questions on condition/confidence signals, record
-findability, post-cut delivery, live curation cadence and extended-play
-grounding stay active here; issue status lives on the [Project](https://github.com/users/CVX-Hull/projects/2).
+Empirical and design questions on record findability, post-cut delivery, live
+curation cadence and extended-play grounding and precedence stay active here;
+issue status lives on the [Project](https://github.com/users/CVX-Hull/projects/2).
 Related research covers [memory statement kinds](research-memory-statement-kinds.md),
 [memory, ontology and oversight](research-curated-memory.md) and
 [belief under conflict](research-belief-under-conflict.md).
