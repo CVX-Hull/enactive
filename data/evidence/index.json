@@ -478,6 +478,35 @@
       },
       "visibility": "private"
     },
+    "campaign-memory-review-1019": {
+      "availability": "present",
+      "bytes": 201505,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-campaign-memory-review-1019.md"
+      ],
+      "files": 17,
+      "manifest_sha256": "5758f0c40959d93f786b43514c54828a328b53edb04d05fae4243f491e63b243",
+      "note": "Initial handover model reports plus verified deterministic sealed-evidence audit (#1019, #1027) and multimodal PNG verification (#8-#13, consume screens, expiry checks) behind docs/acceptance/2026-11-26-campaign-memory-review-1019.md",
+      "sources": {
+        "handover-reports": ".runtime/handover/memory-review-998",
+        "verification-explorers": "session-scratch/1019-1027"
+      },
+      "visibility": "private"
+    },
+    "campaign-memory-review-1019-review": {
+      "availability": "present",
+      "bytes": 13660,
+      "cited_by": [
+        "docs/acceptance/2026-11-26-campaign-memory-review-1019.md"
+      ],
+      "files": 3,
+      "manifest_sha256": "e5ac094288ba2600154b8045c2c239a9ec6c20dcccb7d06c3647088466e1ad9e",
+      "note": "Clean-context review of the #1019/#1027 dated review record (11 findings confirmed, 0 rejected, all fixed in Commit 2)",
+      "sources": {
+        ".": "session-scratch/1019-1027-review"
+      },
+      "visibility": "private"
+    },
     "campground-opening-menu-799": {
       "availability": "present",
       "bytes": 958947,
