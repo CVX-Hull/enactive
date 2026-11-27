@@ -158,18 +158,18 @@ def seen(step: int, session: str = 's01') -> dict:
 
 def state(**extra) -> dict:
     """The record state a `spectator-view/3` row carries: active, bound to no world, nothing flagged or linked."""
-    rows = dict(branch_relation=None, lifecycle_state='active', needs_review=False, condition_unverified=False, unverified_branch=False,
+    rows = dict(branch_relation=None, lifecycle_state='active', needs_review=False, unverified_branch=False,
         scope='game', scope_axes={}, tags=[], stale_citations=[], shadowed_by=[], contradicted_by=[], links=[], backlinks=[]) | extra
     return dict(rows, **{f'{name}_omitted': 0 for name in ('tags', 'stale_citations', 'shadowed_by', 'contradicted_by', 'links', 'backlinks')})
 
 
 def fact(identity: str, text: str, kind: str, step: int, anchored: bool = True, **extra) -> dict:
-    """A fact of a `delivered-knowledge/3` export as the viewer lists it: anchored by the frames it cites."""
+    """A fact of a `delivered-knowledge/4` export as the viewer lists it."""
     cited = SOURCES[step] if anchored else ELSEWHERE
     anchor = dict(seq=step, source_id=cited) if anchored else None
-    return dict(id=identity, claim_kind=kind, evidence_basis='observed', subject=f'Subject of {identity}', text=text, when=None,
+    return dict(id=identity, statement_kind=kind, subject=f'Subject of {identity}', text=text,
         cited_by_articles=[], cited_by_articles_omitted=0, citation_source_ids=[cited], citation_source_ids_omitted=0, citation_anchors=[anchor],
-        seen=seen(step, 's01' if anchored else 's02'), anchor=anchor, **state(**extra))
+        seen=seen(step, 's01' if anchored else 's02'), frame_anchor=anchor, **state(**extra))
 
 
 def article(identity: str, title: str, facts: list[str], step: int, **extra) -> dict:
@@ -180,15 +180,19 @@ def article(identity: str, title: str, facts: list[str], step: int, **extra) -> 
 
 WORLD = dict(scope='world', branch_relation='same')
 ARTICLES = {'v1': [article('article-water', 'Finding water', ['fact-water'], 20, tags=['water'], **WORLD)]}
-FACTS = {'v1': [fact('fact-water', 'A stream runs past the east wall.', 'instance_state', 20, tags=['water'], **WORLD),
-    fact('fact-wait', 'A dot waits one turn.', 'interface', 25)]}
+FACTS = {'v1': [fact('fact-water', 'A stream runs past the east wall.', 'state', 20, tags=['water'], state_key='water-course',
+        depiction_source_id=SOURCES[20], **WORLD),
+    fact('fact-wait', 'A dot waits one turn.', 'observation', 25)]}
+FACTS['v1'][0]['seen']['clock_label'] = '09:00'
 ARTICLES['v2'] = [*ARTICLES['v1'], article('article-fire', 'Making fire', ['fact-fire', 'fact-water'], 90, tags=['fire'],
     links=[dict(rel='see_also', target='article-water')])]
-FACTS['v2'] = [*FACTS['v1'], fact('fact-fire', '<script>window.knowledgeExecuted=true</script> A lighter lights a fire ring.', 'mechanic', 90,
-        tags=['fire'], scope_axes=dict(ruleset='standard'), links=[dict(rel='depends_on', target='fact-water')]),
-    fact('fact-old', 'An earlier admission saw a shelter.', 'instance_state', 7, anchored=False, scope='world', branch_relation='unknown',
+FACTS['v2'] = [*FACTS['v1'], fact('fact-fire', '<script>window.knowledgeExecuted=true</script> A lighter lights a fire ring.', 'observation', 90,
+        tags=['fire'], scope_axes=dict(ruleset='standard'), links=[dict(rel='depends_on', target='water-course')]),
+    fact('fact-old', 'An earlier admission saw a shelter.', 'state', 7, anchored=False, scope='world', branch_relation='unknown',
+        state_key='shelter-state', anchor='water-course', anchor_display='Stream', when='while the passage is open',
         unverified_branch=True, needs_review=True, lifecycle_state='contested', contradicted_by=['fact-water'], stale_citations=['fact-gone'])]
-ARTICLES['v3'], FACTS['v3'] = ARTICLES['v2'], [f for f in FACTS['v2'] if f['id'] != 'fact-wait'] + [fact('fact-late', 'A fact of the third version.', 'strategy', 150)]
+FACTS['v2'][-1]['seen']['prior_clock'] = dict(label='08:45', step_offset=2)
+ARTICLES['v3'], FACTS['v3'] = ARTICLES['v2'], [f for f in FACTS['v2'] if f['id'] != 'fact-wait'] + [fact('fact-late', 'A fact of the third version.', 'inference', 150)]
 
 
 def counted(records: list[dict]) -> tuple[list[dict], dict]:
@@ -198,8 +202,8 @@ def counted(records: list[dict]) -> tuple[list[dict], dict]:
             tags[t] = tags.get(t, 0) + 1
     kinds: dict[str, int] = {}
     for r in records:
-        if 'claim_kind' in r:
-            kinds[r['claim_kind']] = kinds.get(r['claim_kind'], 0) + 1
+        if 'statement_kind' in r:
+            kinds[r['statement_kind']] = kinds.get(r['statement_kind'], 0) + 1
     return [dict(tag=t, count=n) for t, n in sorted(tags.items(), key=lambda i: (-i[1], i[0]))], dict(sorted(kinds.items()))
 
 
@@ -211,7 +215,8 @@ def delivered(steps: list[dict], version: str | None, query: str, scope: str, af
     coverage = {name: dict(session='s01', actor='001', last_step=seq - 10) for seq, name in UPDATES.items()}
     needle = query.strip().lower()
     articles = [a for a in ARTICLES[chosen] if needle in ' '.join((a['id'], a['title'], a['lead'], a['body'][0]['text'], *a['tags'])).lower()]
-    facts = [f for f in FACTS[chosen] if needle in ' '.join((f['id'], f['claim_kind'], f['subject'], f['text'], *f['tags'])).lower()]
+    facts = [f for f in FACTS[chosen] if needle == f.get('state_key') or needle in ' '.join(
+        (f['id'], f['statement_kind'], f['subject'], f['text'], f.get('anchor_display', ''), f.get('when', ''), *f['tags'])).lower()]
     counts = dict(world=sum(f['scope'] == 'world' for f in facts), game=sum(f['scope'] == 'game' for f in facts), unrecorded=0)
     if scope != 'all':
         facts = [f for f in facts if f['scope'] == scope]
@@ -220,14 +225,17 @@ def delivered(steps: list[dict], version: str | None, query: str, scope: str, af
     return dict(schema='spectator-view/3', source_status='available', versions=[dict(version=n, status='available', recorded_version=n,
         articles_count=len(ARTICLES[n]), facts_count=len(FACTS[n]), coverage=coverage[n]) for n in names], selected_version=chosen,
         recorded_version=chosen, coverage=coverage[chosen], articles=articles, articles_total=len(articles), articles_omitted=0, scope_recorded=True, scope_counts=counts,
-        tag_counts=tags, tag_counts_omitted=0, claim_kind_counts=kinds,
+        knowledge_schema='delivered-knowledge/4', tag_counts=tags, tag_counts_omitted=0, statement_kind_counts=kinds,
+        frame_clocks={SOURCES[20]: '09:00'} if any(SOURCES[20] in f['citation_source_ids'] for f in window) else {},
+        history=dict(replaced={'fact-shelter-before': dict(reason='changed', by=['fact-old'], by_omitted=0)} if chosen != 'v1' else {},
+                     replaced_omitted=0, ended=[], ended_omitted=0, retracted=[], retracted_omitted=0),
         facts=dict(items=window, total=len(facts), next=after + len(window) if after + len(window) < len(facts) else None, limit=limit))
 
 
 def no_knowledge(limit: int) -> dict:
     return dict(schema='spectator-view/3', source_status='unavailable', versions=[], selected_version=None, recorded_version=None, coverage=None,
         articles=[], articles_total=0, articles_omitted=0, scope_recorded=False, scope_counts=dict(world=0, game=0, unrecorded=0),
-        tag_counts=[], tag_counts_omitted=0, claim_kind_counts={}, facts=dict(items=[], total=0, next=None, limit=limit))
+        tag_counts=[], tag_counts_omitted=0, statement_kind_counts={}, facts=dict(items=[], total=0, next=None, limit=limit))
 
 
 def delivery_event(version: str) -> dict:

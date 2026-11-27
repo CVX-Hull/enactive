@@ -386,6 +386,21 @@ def _clip_snippet(text: str, limit: int = SNIPPET_LIMIT) -> str:
     return text[:limit - 1].rstrip() + '…'
 
 
+def _article_snippet(record: dict, query_terms: set[str]) -> str:
+    """Query-matched body claim snippet when a body claim matches strictly more query terms than `lead` (#1023)."""
+    lead = record['lead']
+    if not query_terms:
+        return lead
+    best_overlap = len(query_terms & set(terms_of(lead)))
+    best_text = lead
+    for claim in record['body']:
+        overlap = len(query_terms & set(terms_of(claim['text'])))
+        if overlap > best_overlap:
+            best_overlap = overlap
+            best_text = claim['text']
+    return best_text
+
+
 def _hit(record: dict, via: str, *, snippet: str | None = None) -> dict:
     """Compact `player-knowledge/4` query hit for one delivered article or fact."""
     if 'body' in record:
@@ -600,7 +615,15 @@ class Knowledge:
             if s > 0 and not self.records[i]['shadowed_by']
         )
         if order:
-            hits = [_hit(self.records[i], 'match' if scores[i] > 0 else 'hop') for _, i in order[:QUERY_LIMIT]]
+            query_terms = set(terms_of(query))
+            hits = [
+                _hit(
+                    self.records[i],
+                    'match' if scores[i] > 0 else 'hop',
+                    snippet=_article_snippet(self.records[i], query_terms) if 'body' in self.records[i] else None,
+                )
+                for _, i in order[:QUERY_LIMIT]
+            ]
             return self._query_result(query, hits)
         q_tri = _trigrams(query)
         if not q_tri:

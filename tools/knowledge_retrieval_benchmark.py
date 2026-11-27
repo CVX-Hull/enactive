@@ -8,18 +8,13 @@ Outputs `knowledge-retrieval-benchmark/2`. In addition to replaying the 30 #924 
 diagnostic probes (`PROBES_998`: `start-time`, `fire-ring`, `rv-door`, `crafting-filter`) on sealed `#998 v97`
 and read-only tag-exported `#998 v101`.
 
-- `prod_bm25`: `harness.player.knowledge.Knowledge(path).query(q)`, #920's merged field-weighted BM25, called as is.
-- `bm25_1hop`: the same BM25 scores (recomputed with the production index, terms and constants, and checked
-  against the production order on every query), plus one hop over an undirected graph of claim citations and
-  title-resolved links: each of the 10 best records `u` with score `s > 0` and degree above 0 adds
-  `0.35 * s / sqrt(deg(u))` to each neighbour, times `1.25` for an article and `0.70` for a fact; records with a
-  positive combined score are ordered by score, ties by delivered order; the first 10 are returned.
+- `prod_bm25`: production BM25 scores on the projected records, ordered without graph expansion.
+- `bm25_1hop`: the same scores with production one-hop expansion through claim citations and title-resolved links.
 - `bm25_1hop_skip`: the identical order walked with the rank-order coverage skip: a fact that an article already
   kept cites is skipped, and the walk stops at 10 records.
 
-The graph is the test-only projection that Gate 9 names: the old ID stands in for the slug, and a link (a title in
-`delivered-knowledge/2`) resolves to the article with that title. The old `type` stays indexed at weight 2, in the
-slot that tags take in `delivered-knowledge/3`, because the sealed files carry no tags.
+In the sealed delivered-knowledge/2 projection, the old ID stands in for the slug, links resolve by article title,
+and the old type becomes a tag to keep its weight of two.
 
 The paired coverage-skip comparison runs on the labelled direct-answer subset in DIRECT_ANSWERS: explicit questions,
 separate from the 30 #924 queries. Each label names gold facts and a detail string; the script checks that the
@@ -52,16 +47,13 @@ from harness.player import knowledge as production  # noqa: E402
 
 LIMIT = production.QUERY_LIMIT
 CUT = 5
-SEEDS = 10
-HOP, ARTICLE_WEIGHT, FACT_WEIGHT = 0.35, 1.25, 0.70
 METHODS = ('prod_bm25', 'bm25_1hop', 'bm25_1hop_skip')
 PORTER2 = 'bm25_1hop_porter2'
 FOLDING_PAIRS = (('zombie', 'zombies'), ('speed', 'speeds'), ('focus', 'focused'),
                  ('spring', 'springs'), ('bleed', 'bleeding'))
 LEGACY_CLAIM_KINDS = {
-    'control': 'interface', 'world_observation': 'instance_state', 'crafting_recipe': 'mechanic',
-    'item_property': 'entity_property', 'construction_project': 'mechanic',
-    'creation_option_property': 'entity_property',
+    'instance_state': 'state', 'interface': 'observation', 'entity_property': 'observation',
+    'mechanic': 'observation', 'strategy': 'inference',
 }
 CORPORA = {
     'v91': 'seven-day-896-b-admission-10/run/curator-runner/delivered/v91.json',
@@ -182,23 +174,27 @@ DIRECT_ANSWERS = (
 )
 
 
-def _v2_weighted_terms(record: dict) -> tuple[dict[str, int], int]:
-    """Historical #920 field-weighted BM25 index over sealed `delivered-knowledge/2` records."""
-    if 'body' in record:
-        fields = ((3, record['title']), (2, record['lead']), (1, ' '.join(c['text'] for c in record['body'])))
-    else:
-        fields = ((3, record.get('subject', '')), (2, record.get('type', '')), (1, record['text']))
-    weights: dict[str, int] = {}
-    length = 0
-    for weight, text in fields:
-        for term in production.terms_of(text):
-            weights[term] = weights.get(term, 0) + weight
-            length += weight
-    return weights, length
+def _project_v3_to_v4(snapshot: dict) -> dict:
+    """Project a sealed retrieval benchmark input to the current reader contract."""
+    if snapshot['schema'] != 'delivered-knowledge/3':
+        raise ValueError('expected sealed delivered-knowledge/3 benchmark input')
+    value = copy.deepcopy(snapshot)
+    value.update(schema=production.SCHEMA, frame_clocks={})
+    for record in value['articles'] + value['facts']:
+        record.pop('condition_unverified', None)
+    for fact in value['facts']:
+        fact['statement_kind'] = LEGACY_CLAIM_KINDS[fact.pop('claim_kind')]
+        if fact['statement_kind'] == 'state':
+            fact['state_key'] = f"legacy-key-{fact['id']}"
+        fact.pop('evidence_basis', None)
+        when = fact.pop('when', None)
+        if when and when['note'].strip():
+            fact['when'] = when['note']
+    return value
 
 
 class Corpus:
-    """One sealed `delivered-knowledge/2` file with the #920 BM25 baseline index and the projected one-hop graph."""
+    """Historical delivered-knowledge/2 corpus with a benchmark-only production reader projection."""
 
     def __init__(self, name: str, value: dict, where: str = 'delivered knowledge'):
         if (not isinstance(value, dict) or value.get('schema') != 'delivered-knowledge/2'
@@ -208,65 +204,71 @@ class Corpus:
         self.version = value['version']
         self.article_count = len(value['articles'])
         self.fact_count = len(value['facts'])
-        self.records = list(value['articles']) + list(value['facts'])
-        self.index = [_v2_weighted_terms(r) for r in self.records]
+        self.records = value['articles'] + value['facts']
         self.position = {r['id']: i for i, r in enumerate(self.records)}
         self.article = [('body' in r) for r in self.records]
-        titles = {r['title']: i for i, r in enumerate(self.records) if 'body' in r}
-        self.cites: list[frozenset[int]] = []
-        neighbours: list[set[int]] = [set() for _ in self.records]
         self.links = self.unresolved_links = 0
-        for i, record in enumerate(self.records):
-            cited = frozenset(self.position[f] for claim in record.get('body', ()) for f in claim['facts'])
-            self.cites.append(cited)
-            targets = set(cited)
-            for link in record.get('links', ()):
+        self.knowledge = production.Knowledge.from_dict(self._project(value), where)
+        self.neighbours = self.knowledge._neighbours
+        self.cites = [frozenset(self.position[f] for claim in r.get('body', ()) for f in claim['facts'])
+                      for r in self.records]
+        self.citing = [[self.position[slug] for slug in r.get('cited_by_articles', ())]
+                       for r in self.knowledge.records]
+
+    def _project(self, value: dict) -> dict:
+        """Resolve title links and keep legacy type terms at their original weight via tags."""
+        aliases: dict[str, str] = {}
+
+        def alias(position: dict) -> dict:
+            return dict(position, session=aliases.setdefault(position['session'], f's{len(aliases) + 1:02}'))
+
+        def common(record: dict, *, bound: bool = False) -> dict:
+            scope = {'game': 'cdda', 'world': None} if bound else {'game': 'cdda'}
+            return dict(id=record['id'], tags=[], scope=scope, branch_relation='same' if bound else None,
+                        lifecycle_state='active', needs_review=False, unverified_branch=False,
+                        stale_citations=[], links=[], backlinks=[], shadowed_by=[], contradicted_by=[])
+
+        titles = {a['title']: a['id'] for a in value['articles']}
+        articles, facts = [], []
+        for old in value['articles']:
+            article = dict(common(old), revision=f"{old['id']}@{self.version}", title=old['title'], lead=old['lead'],
+                           body=old['body'], last_confirmed=alias(old['last_confirmed']))
+            targets = []
+            for title in old.get('links', ()):
                 self.links += 1
-                if link in titles:
-                    targets.add(titles[link])
-                else:
+                target = titles.get(title)
+                if target is None:
                     self.unresolved_links += 1
-            targets.discard(i)
-            for j in targets:
-                neighbours[i].add(j)
-                neighbours[j].add(i)
-        self.neighbours = [sorted(n) for n in neighbours]
-        self.citing: list[list[int]] = [[] for _ in self.records]
-        for i, cited in enumerate(self.cites):
-            for j in sorted(cited):
-                self.citing[j].append(i)
+                elif target != old['id']:
+                    targets.append(target)
+            article['links'] = [dict(rel='see_also', target=target) for target in dict.fromkeys(targets)]
+            articles.append(article)
+        for n, old in enumerate(value['facts'], 1):
+            bound = old['type'] == 'world_observation'
+            fact = dict(common(old, bound=bound), statement_kind='state' if bound else 'observation',
+                        tags=[old['type'].replace('_', '-')], text=old['text'], seen=alias(old['seen']),
+                        cited_by_articles=[], citation_source_ids=[f'{n:032x}-1'])
+            if 'subject' in old:
+                fact['subject'] = old['subject']
+            if bound:
+                fact['state_key'] = f"legacy-v2-key-{n}"
+            facts.append(fact)
+        by_id = {record['id']: record for record in articles + facts}
+        for article in articles:
+            for link in article['links']:
+                by_id[link['target']]['backlinks'].append(dict(rel=link['rel'], source=article['id']))
+            for identity in dict.fromkeys(f for claim in article['body'] for f in claim['facts']):
+                by_id[identity]['cited_by_articles'].append(article['id'])
+        return dict(production.empty(), version=self.version, commit=value['commit'],
+                    repository_id=value['repository_id'], coverage=alias(value['coverage']) if value['coverage'] else None,
+                    articles=articles, facts=facts)
 
     @classmethod
     def load(cls, name: str, path: Path) -> 'Corpus':
         return cls(name, json.loads(path.read_text()), str(path))
 
     def bm25(self, query: str) -> list[float]:
-        """The production scores, in the production order of operations so ties fall the same way."""
-        terms = list(dict.fromkeys(production.terms_of(query)))
-        count = len(self.index)
-        average = sum(length for _, length in self.index) / count if count else 0.0
-        frequency = {t: sum(1 for weights, _ in self.index if t in weights) for t in terms}
-        scores = []
-        k1, b = production.BM25_K1, production.BM25_B
-        for weights, length in self.index:
-            score = 0.0
-            for term in terms:
-                tf = weights.get(term, 0)
-                if tf:
-                    idf = math.log(1 + (count - frequency[term] + 0.5) / (frequency[term] + 0.5))
-                    score += idf * tf * (k1 + 1) / (tf + k1 * (1 - b + b * length / average))
-            scores.append(score)
-        return scores
-
-    def one_hop(self, scores: list[float]) -> list[float]:
-        """Spread from the SEEDS best records with a positive score and a neighbour; an isolated record takes no slot."""
-        combined = list(scores)
-        seeds = sorted((-s, i) for i, s in enumerate(scores) if s > 0 and self.neighbours[i])[:SEEDS]
-        for negative, u in seeds:
-            spread = HOP * -negative / math.sqrt(len(self.neighbours[u]))
-            for v in self.neighbours[u]:
-                combined[v] += spread * (ARTICLE_WEIGHT if self.article[v] else FACT_WEIGHT)
-        return combined
+        return self.knowledge._bm25(query)
 
     def ordered(self, scores: list[float]) -> list[int]:
         return [i for _, i in sorted((-s, i) for i, s in enumerate(scores) if s > 0)]
@@ -288,7 +290,7 @@ class Corpus:
     def rank(self, method: str, query: str) -> list[int]:
         if method == 'prod_bm25':
             return self.ordered(self.bm25(query))[:LIMIT]
-        order = self.ordered(self.one_hop(self.bm25(query)))
+        order = self.ordered(self.knowledge._one_hop(query))
         return self.walk(order, skip=method == 'bm25_1hop_skip')
 
     def query(self, method: str, query: str) -> list[dict]:
@@ -379,31 +381,13 @@ def folding_pairs(porter2=None) -> list[dict]:
 
 def query_envelopes(corpus: Corpus, query: str) -> tuple[dict, dict]:
     scores = corpus.bm25(query)
-    order = corpus.ordered(corpus.one_hop(scores))[:LIMIT]
-    # Historical `player-knowledge/2` full-record baseline vs. production `player-knowledge/3` compact hits.
+    order = corpus.ordered(corpus.knowledge._one_hop(query, scores))[:LIMIT]
+    # Use identical ranking for both envelopes so the measurement isolates serialization.
     full = dict(schema='player-knowledge/2', version=corpus.version, grants_authority=False,
                 identity=query, resolution='query', resolved_from=None,
                 records=[copy.deepcopy(corpus.records[i]) for i in order])
-    clip = getattr(production, '_clip_snippet', lambda text: text if len(text) <= 240 else text[:239].rstrip() + '…')
-    hits = []
-    for i in order:
-        item = corpus.records[i]
-        via = 'match' if scores[i] > 0 else 'hop'
-        if corpus.article[i]:
-            # The archive has no revisions or tags. Use the snapshot tag as an as-of revision.
-            hit = dict(id=item['id'], kind='article', revision=f"{item['id']}@{corpus.version}",
-                       title=item['title'], snippet=clip(item['lead']), tags=[], via=via)
-        else:
-            kind = LEGACY_CLAIM_KINDS[item['type']]
-            scope = {'game': 'cdda'}
-            if kind == 'instance_state':
-                scope['world'] = None
-            hit = dict(id=item['id'], kind='fact', subject=item.get('subject'), claim_kind=kind, scope=scope,
-                       snippet=clip(item['text']), cited_by_articles=sorted(set(corpus.ids(corpus.citing[i])))[:3],
-                       via=via)
-        hits.append(hit)
-    compact = dict(schema='player-knowledge/3', version=corpus.version, grants_authority=False,
-                   identity=query, resolution='query', resolved_from=None, hits=hits)
+    compact = corpus.knowledge._query_result(
+        query, [production._hit(corpus.knowledge.records[i], 'match' if scores[i] > 0 else 'hop') for i in order])
     return full, compact
 
 
@@ -692,8 +676,8 @@ def load_corpora_998(admission: Path) -> dict[str, production.Knowledge]:
     path = run / 'curator-runner' / 'delivered' / 'v97.json'
     selection = json.loads((run / 'private' / 'knowledge-full.json').read_text(encoding='utf-8'))['selection']
     latest = export_sealed_v3_tag(admission / 'knowledge' / 'cdda' / 'cdda', 'v101', selection)
-    return {'998_v97': production.Knowledge.from_dict(json.loads(path.read_text(encoding='utf-8')), str(path)),
-            '998_v101': production.Knowledge.from_dict(latest)}
+    return {'998_v97': production.Knowledge.from_dict(_project_v3_to_v4(json.loads(path.read_text(encoding='utf-8'))), str(path)),
+            '998_v101': production.Knowledge.from_dict(_project_v3_to_v4(latest))}
 
 
 def benchmark(evidence: Path, repeat: int, *, porter2=None, include_998=True) -> dict:
@@ -744,7 +728,7 @@ def _cell(value: object) -> str:
 
 def markdown(result: dict) -> str:
     out = [f'# Knowledge retrieval benchmark (`{result["schema"]}`)', '',
-           f'Timing: {result["repeat"]} repetitions of every query; production order parity checked on all 32 queries; '
+           f'Timing: {result["repeat"]} repetitions of every query; production scoring and graph expansion; '
            'title links resolved: ' + ', '.join(f'`{n}` {x["links"] - x["unresolved_links"]} of {x["links"]}'
                                                for n, x in result['corpora'].items()) + '.', '']
     out += ['| Corpus | Method | Hit@5 | Article Recall@5 | Article MRR@5 | Reached@10 | Avg ms | p95 ms | Samples |',

@@ -7,8 +7,9 @@ import { runHost } from '../host.mjs';
 import { model, route, reply, realDelay, article, fact, position } from './host-scenario.mjs';
 
 /** The scenario's store as version `version`; its articles are revised at that version, never later than it. */
-export const knowledge = (version = 'v2') => ({schema:'delivered-knowledge/3',version,commit:'c'.repeat(40),repository_id:'d'.repeat(40),
+export const knowledge = (version = 'v2') => ({schema:'delivered-knowledge/4',version,commit:'c'.repeat(40),repository_id:'d'.repeat(40),
   coverage:{schema:'curator-coverage/2',session:'s01',actor:null,last_step:4},
+  frame_clocks:{},
   articles:[
     article('article-a',{revision:`article-a@${version}`,title:'A subject',lead:'A useful first lead.',body:[{text:'First claim.',facts:['fact-a']}],
       links:[{rel:'see_also',target:'article-b'}],last_confirmed:position(1)}),

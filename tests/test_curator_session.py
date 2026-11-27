@@ -37,11 +37,11 @@ frame = sorted(k[7:-4] for k in manifest['files'] if k.startswith('frames/'))[0]
 version = open('brief.md').read().split('`')[1]
 cite = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != '-' else frame
 os.makedirs('submissions/s1')
-json.dump(dict(schema='curator-submission/2', base_version=version, summary='first fact',
+json.dump(dict(schema='curator-submission/3', base_version=version, summary='first fact',
                from_drafts=[d for d in os.listdir('drafts')],
-               changes=[dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id='f1',
-                                                      claim_kind='entity_property', tags=['container'],
-                                                      text='the cupboard holds bottles', evidence_basis='observed',
+               changes=[dict(op='add_fact', fact=dict(schema='curator-fact/6', record='fact', id='f1',
+                                                      statement_kind='observation', tags=['container'],
+                                                      text='the cupboard holds bottles',
                                                       scope={}, links=[], citations=[cite],
                                                       subject='cupboard'))]),
           open('submissions/s1/submission.json', 'w'))
@@ -464,10 +464,10 @@ def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world,
         for i in range(1, 4):
             directory = workspace/'submissions'/f'{i:02}'
             directory.mkdir()
-            fact = dict(schema='curator-fact/5', record='fact', id=f'f{i}', claim_kind='mechanic',
-                        evidence_basis='observed', tags=[], scope={}, links=[], citations=[frame], text='Observed.')
+            fact = dict(schema='curator-fact/6', record='fact', id=f'f{i}', statement_kind='observation',
+                        tags=[], scope={}, links=[], citations=[frame], text='Observed.')
             (directory/'submission.json').write_text(json.dumps(dict(
-                schema='curator-submission/2', base_version=f'v{i - 1}', summary='valid prefix',
+                schema='curator-submission/3', base_version=f'v{i - 1}', summary='valid prefix',
                 changes=[dict(op='add_fact', fact=fact)])))
         for identifier in ('02', '01'):
             result = validate(workspace, identifier)

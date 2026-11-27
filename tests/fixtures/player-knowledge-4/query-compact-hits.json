@@ -1,0 +1,67 @@
+{
+  "schema": "player-knowledge/4",
+  "version": "v12",
+  "grants_authority": false,
+  "identity": "shelterr tankk shieldss",
+  "resolution": "query",
+  "resolved_from": null,
+  "hits": [
+    {
+      "id": "tank-empty",
+      "kind": "fact",
+      "subject": null,
+      "statement_kind": "state",
+      "scope": {
+        "game": "example",
+        "world": null,
+        "ruleset": "standard"
+      },
+      "snippet": "The shelter tank is empty.",
+      "cited_by_articles": [],
+      "via": "fuzzy",
+      "state_key": "shelter-tank",
+      "status": [
+        "contested"
+      ]
+    },
+    {
+      "id": "tank-full",
+      "kind": "fact",
+      "subject": "Shelter tank",
+      "statement_kind": "state",
+      "scope": {
+        "game": "example",
+        "world": null,
+        "ruleset": "standard"
+      },
+      "snippet": "The shelter tank holds 60 litres of clean water.",
+      "cited_by_articles": [
+        "camp-water"
+      ],
+      "via": "fuzzy",
+      "state_key": "shelter-tank",
+      "depiction_source_id": "44444444444444444444444444444444-40",
+      "status": [
+        "contested",
+        "unverified_branch",
+        "needs_review"
+      ]
+    },
+    {
+      "id": "fire-rule-camp",
+      "kind": "fact",
+      "subject": null,
+      "statement_kind": "inference",
+      "scope": {
+        "game": "example",
+        "world": null
+      },
+      "snippet": "In this world the courtyard brazier shields tinder from wind.",
+      "cited_by_articles": [],
+      "via": "fuzzy",
+      "when": "While the courtyard is sheltered",
+      "anchor": "shelter-tank",
+      "anchor_display": "Shelter tank"
+    }
+  ]
+}

@@ -278,7 +278,7 @@ def delivery_target(run: Path, *, session_id: str | None = None) -> tuple[bool, 
 class Delivery:
     """Leaves confirmed versions and the unbroken covered prefix in `<runner directory>/delivered/`.
 
-    The file is the version exported as `delivered-knowledge/3` for the package's target
+    The file is the version exported as `delivered-knowledge/4` for the package's target
     (`tools.knowledge_export.published`), written whole to a temporary name, synced and renamed, so the
     driver only ever sees a complete file. Only a version the runner has confirmed in this admission is
     exported (its tag was seen, an examined session reports it and its stamp is that window), never a

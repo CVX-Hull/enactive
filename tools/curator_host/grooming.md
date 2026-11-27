@@ -1,50 +1,53 @@
 # Grooming instructions
 
-Start from the brief's **Grooming worklist** instead of scanning the whole store. It lists records
-from `knowledge/current-facts.jsonl` in two parts, one line each with the record's ID, its state and
-the IDs it names. Read only the records and frames a repair needs. The trace holds the last
-admission's cited frames and each actor's first and last framed operations. Treat facts as
-hypotheses. Keep what a later actor could use, and preserve uncertainty and conditions.
+Start from the brief's **Grooming worklist** and **Hygiene worklist** instead of scanning the whole
+store. They list records and advisory candidates deterministically from active records. Read only
+the specific records and frames a repair needs. Treat facts as descriptive hypotheses (Kinds 1–5
+only; never Kind 6 recommendations or Kind 7 directives/plans).
 
-**Must clear.** Every current record with non-empty `stale_citations` cites or `depends_on` a record
-that is no longer current. The grooming fails while one remains at the version you leave, so clear
-every one. A batch may not add a stale citation to any record, including moving one from a record
-you repair to another.
+## Session kind boundaries
 
-- A one-to-one `restated` supersession: check that the replacement says the same thing, then use
-  `remap_citations` (`from` the stale ID, `to` its replacement, `in` every slug that cites it).
-- A restated merge or a `corrected` supersession: rewrite the affected claims with
-  `edit_article`'s `replace_claims`, copying `index`, `old_text` and `old_facts` exactly.
-- A narrowed fact: cite the child or children whose scope matches the article, with
-  `replace_claims`.
-- A retired fact (`wrong` or `ended`): there is no successor. Remove the claim with
-  `remove_claims`, rewrite it with `replace_claims` so that it cites only current facts (for
-  example, saying when the state held), or retire the article with `retire_article`.
-- A stale `depends_on` link: repoint or drop it (`edit_article`'s `add_links` and `remove_links` for
-  an article; a `restated` supersession with new `links` for a fact).
+- **`hygiene` (interleaved autonomous grooming):** strictly non-destructive cleanup. The gate
+  rejects retiring any active world-bound fact, running `corrected` or `changed` supersession,
+  merging or altering keyed or world-bound facts, or dropping any active world-bound fact from
+  world articles. Only unkeyed game-wide facts with identical `scope`, `statement_kind`, `anchor`,
+  and byte-equal `when`—and with zero inbound fact-ID `depends_on` reading pins—are eligible for
+  autonomous N→1 `restated` merges.
+- **`grooming` (between admissions):** may also resolve `contested` records with cited evidence
+  and perform full structural cleanup, while preserving the same safe-merge invariants on N→1
+  merges and introducing zero new stale citations.
 
-**Advisory.** These may remain when the evidence cannot resolve them: `contested` records and
-records flagged `needs review` only because of them; world-bound records whose `lineages` hold
-several labels or `null`; and `unfiled` facts. Resolve a contradiction only with evidence, by a
-`corrected` supersession, `narrow_fact` (splitting a claim by a declared axis or by
-`"binds": ["world"]` when each side holds under a different condition) or `retire_fact`.
+## Must clear
 
-**Filing rule.** File every current unbound fact in at least one current article. File a
-world-bound fact once an article bound to its world exists. Use one article per subject, choosing
-subjects from the evidence. Each article has a concise title, a lead of one or two useful sentences,
-body claims that cite current facts, and links to related records. Prefer surgical `edit_article`
-changes (`add_claims`, `replace_claims`, `set_lead`) to rewriting a body with `revise_article`.
-Split and merge articles by adding the new ones and retiring or editing their predecessors in the
-same submission, and repair the citations and links that pointed at them. No fixed categories or
-size cap apply.
+Every current record with non-empty `stale_citations` cites or `depends_on` a record (or ended
+`state_key`) that is no longer current. Grooming/hygiene fails while one remains, and a submission
+may never introduce a new stale citation.
 
-**Other repairs.** Merge repeated claims with a `restated` `supersede_fact` (the replaced facts must
-share one scope and `when`), then repair their citing articles. Make subjects consistent in the
-same way. Retire a world-bound fact that stopped holding with `retire_fact` as `ended`, citing frames
-from its own world that show the change. Use `retag`, once per submission, to make tags consistent
-with the brief's tag list and its nearest-tag pairs.
+- A `restated` supersession or safe N→1 restated merge: verify the replacement preserves meaning,
+  then use `remap_citations` (`"from": ["<old_id>", ...]`, `"to": "<new_id>"`, `"in": [<slugs>]`)
+  to update citing article claims cleanly.
+- A `changed` or `corrected` supersession: rewrite affected article claims with `edit_article`'s
+  `replace_claims`, copying `index`, `old_text`, and `old_facts` exactly.
+- A narrowed fact: cite the child(ren) matching the article's scope via `replace_claims`.
+- A retired fact (`wrong` or `ended`): remove or rewrite the claim so it cites only current facts,
+  or retire the article (never silently dropping other still-active world facts).
+- A stale `depends_on` link: repoint or drop it (`edit_article` for an article; `restated`
+  supersession for an unkeyed fact).
 
-Use the `curator-submission/2` operations and `curator-fact/5` shapes in the curator instructions.
-Several ordered submissions may repair the store step by step. Run `validate_submission` on each
-before `finish`: it reports the gate's diagnostics, including any stale citation a batch would add.
-Leave a draft for work that lacks evidence.
+## Advisory and structural hygiene
+
+Review the deterministic **Hygiene worklist** sections:
+
+- **Structural signals:** split oversized articles (advisory cutoff `8,192` UTF-8 bytes) into
+  topical current-state articles; untangle high bibliographic coupling (`>50%` overlap); prune
+  chronological world→world `see_also` chains; replace majority stopword tags (`>N/2`) or
+  scope-overlapping tags using `retag` (at most once per submission).
+- **Duplicate and containment candidates:** merge eligible unkeyed game-wide duplicates via
+  `supersede_fact(reason_kind="restated")` preserving all citations and outgoing
+  `depends_on`/`contradicts` links, then remap citing articles via `remap_citations` in the same
+  submission. Never clear a `contested` record with `restated`.
+- **Potential contradictions & key-alias candidates:** inspect evidence before acting; leave a
+  draft if the available frames cannot decide.
+
+Use `curator-submission/3` and `curator-fact/6`. Run `validate_submission` on every submission
+before `finish`.

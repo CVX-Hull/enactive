@@ -191,13 +191,14 @@ admits no successor. The observed subtotal still records only provider charges.
 
 ### Delivered knowledge and recall
 
-Every `campaign-run/13` package carries `delivered-knowledge.json` (`delivered-knowledge/3`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into the first actor's frozen inputs (`player-host-inputs/4`). It records the finish reserve there too.
+Every `campaign-run/13` package carries `delivered-knowledge.json` (`delivered-knowledge/4`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into the first actor's frozen inputs (`player-host-inputs/4`). It records the finish reserve there too.
 
-`delivered-knowledge/3` has exactly `schema`, `version`, `commit`, `repository_id`,
-`coverage`, `articles`, `facts` and `history`. `commit` is the 40-hexadecimal commit of
+`delivered-knowledge/4` has exactly `schema`, `version`, `commit`, `repository_id`,
+`coverage`, `frame_clocks`, `articles`, `facts` and `history`. `commit` is the 40-hexadecimal commit of
 the published version's tag. `repository_id` is the commit of the repository's first
 version `v0`, which every later version of that repository shares. The exporter writes
-both; the empty file has `null` for `version`, `commit` and `repository_id`. A version is
+both; the empty file has `null` for `version`, `commit` and `repository_id` and `{}` for
+`frame_clocks`. A version is
 `vN`. No raw `world` or `lineage` label appears anywhere in the delivered bytes
 (including aliased session identifiers and coverage stamps). Its records have the closed
 forms the exporter writes, and both readers (the host and the application) refuse any
@@ -206,22 +207,26 @@ other:
 - `coverage` is null or exactly `schema` (`curator-coverage/2`), `session` (blinded
   session alias `s01`…), `actor` (null or non-empty text) and `last_step` (null or an
   integer).
+- `frame_clocks` maps only directly observed `frame_source_id` keys present in delivered
+  facts' `citation_source_ids` to verbatim clock/phase labels (`{}` when empty or unlabelled).
+- Position objects (`seen`, `last_confirmed`) carry `session`, `actor`, `step`, `order`, plus
+  optional directly observed `clock_label` or tagged `prior_clock: {label, step_offset}` carry-forward.
 - An article has `id` (the stable slug), `revision` (`<slug>@v<N>`), `title`, `lead`,
   `body` (non-empty list of `{text, facts}` claims), `tags`, `scope` (`game`, optional
   `world: null` for world-bound articles, and declared non-world axes),
   `branch_relation` (`null` for unbound records, else `same`, `inherited` or `unknown`,
   with `unknown` requiring `unverified_branch: true`), `lifecycle_state` (`active` or
-  `contested`), `stale_citations`, `needs_review`, `condition_unverified`,
+  `contested`), `stale_citations`, `needs_review`,
   `unverified_branch`, `links`, `backlinks`, `shadowed_by`, `contradicted_by` and
   `last_confirmed` (aliased position object).
-- A fact has `id`, `claim_kind`, `evidence_basis`, `tags`, `text`, `scope` (`game`,
-  optional `world: null` when world-bound, and declared non-world axes),
+- A fact has `id`, `statement_kind` (`observation`, `state`, `outcome`, `inference`, `synthesis`),
+  `tags`, `text`, `scope` (`game`, optional `world: null` when world-bound, and declared non-world axes),
   `branch_relation`, `lifecycle_state`, `stale_citations`, `needs_review`,
-  `condition_unverified`, `unverified_branch`, `links`, `backlinks`, `shadowed_by`,
+  `unverified_branch`, `links`, `backlinks`, `shadowed_by`,
   `contradicted_by`, `cited_by_articles`, `citation_source_ids` and `seen`, with
-  optional `subject` and `when`.
+  optional `subject`, `when` (string), `state_key`, `anchor`, `anchor_display`, and `depiction_source_id`.
 - `history` holds `{replaced, ended, retracted}` for read-by-ID lookup and provenance
-  inspection (`player-knowledge/3`).
+  inspection (`player-knowledge/4`; `replaced[*].reason` is `restated`, `narrowed`, `corrected`, or `changed`).
 
 `player-host-inputs/4` (`actors/NNN/frozen.json`) has `schema`, `actor_id`,
 `session`, `finish_reserve_usd`, `files` (the SHA-256 of `actor.json`, `route.json`,
@@ -237,7 +242,7 @@ package's declared context map), `delivered_sha256` (the SHA-256 of the delivere
 and `excluded_unknown_axis` (count of candidate records excluded because a scope axis
 was absent from `context`). The delivered knowledge is the one player-visible input
 whose contents depend on [operator labels and context](../operations/campaign-run.md#operator-labels).
-Preflight requires the private file to be `delivered-knowledge/3` and checks that
+Preflight requires the private file to be `delivered-knowledge/4` and checks that
 `selection` has those six keys and matches `labels.world`, `labels.lineage`, `context`
 and the verified digest of `delivered-knowledge.json`.
 The delivered file carries the selected content without the selection object.
@@ -251,7 +256,7 @@ The [journal and knowledge component](../components/player-interface.md#journal-
 describes application reads and evaluation. The [delivery rationale](../design/player-context.md)
 records the prompt measurements and alternatives.
 
-The host appends a bounded briefing to the first user message: its serialized JSON envelope is budgeted within 24,000 characters (at most 64 articles and 24 standalone facts total, clipping individual leads/index lines to 1,000 characters and skipping any oversized entry) in deterministic tier order — recall-selected leads first, then articles by `last_confirmed.order` descending, non-`instance_state` standalone facts by `seen.order` descending, and `instance_state` standalone facts by `seen.order` descending (breaking equal-order ties by ascending delivered order) — with kept entries in delivered order, `unlisted_entries` counting omissions, and the coverage stamp. It labels the text as fallible data granting no authority. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
+The host appends a bounded briefing to the first user message: its serialized JSON envelope is budgeted within 24,000 characters (at most 64 articles and 24 standalone facts total, clipping individual leads/index lines to 1,000 characters and skipping any oversized entry) in deterministic tier order — recall-selected leads first, then articles by `last_confirmed.order` descending, unbound standalone facts by `seen.order` descending, and world-bound standalone facts by `seen.order` descending (breaking equal-order ties by ascending delivered order) — with kept entries in delivered order, `unlisted_entries` counting omissions, and the coverage stamp. It labels the text as fallible data granting no authority and notes that live same-scope screen observations override memory while off-screen memory stays valid. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
 
 Every `recall.every` completed `computer_input` result offers a reminder request beside continued play. The host tracks normalized unclipped lead fingerprints across surviving placements (`already_in_context`); clipped leads and index-only rows stay eligible for full-lead recall. If every entry on the sent recall index is already active in context, the host emits `knowledge-recall` (`status: "not-made", reason: "all-delivered"`) and skips the HTTP fetch. At placement, selected entries are re-filtered against the adopted version and final active-lead state; if none survives, no reminder message is injected and `knowledge-undelivered` (`reason: "already-in-context"`) is recorded. Otherwise a completed selection becomes its own delimited user message in the next player request; it is never joined with control or limit notices and stays where first sent. An empty selection is an explicit silence. If another recall is in flight the opportunity is recorded as not made.
 
@@ -278,8 +283,8 @@ The planning bounds are reported separately from the combined provider subtotal.
 The recall request is the recall system prompt and two user messages. The first holds
 only the JSON object `{"index":[...]}` budgeted within 24,000 serialized characters:
 compact title-first rows (`{id, title, status?}` with titles clipped to 120 characters)
-in deterministic tiers (articles by `last_confirmed.order` descending, then non-`instance_state`
-standalone facts, then `instance_state` standalone facts, breaking ties by ascending
+in deterministic tiers (articles by `last_confirmed.order` descending, then unbound
+standalone facts, then world-bound standalone facts, breaking ties by ascending
 delivered order; `unlisted_entries` counts rows omitted on overflow), spending any
 remaining budget on first-sentence `index` snippets in the same order. The second holds
 a JSON object with `kind`, `already_in_context` (`[]` for `briefing`), and
@@ -308,9 +313,9 @@ say when a package may set the field.
 
 | Step | Owner | Rule |
 | --- | --- | --- |
-| Export | [Curator runner](../components/curator.md#delivery-to-a-running-actor) | After a poll in which it confirmed a version, it writes that version as `delivered-knowledge/3` for the package's world, lineage and context to `RUN/curator-runner/delivered/vN.json`, whole (temporary name, sync, rename). It exports a confirmed publication only, never a restore, and only above the last version it exported. |
-| Adoption | [Driver](../../tools/campaign_player.py) | A thread of its own looks at `RUN/curator-runner/delivered` every tenth of a second, so no read there delays the driver's deadline checks, settlement or handoff. It takes the highest `vN.json` above the version it holds that is `delivered-knowledge/3`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). For a running actor it copies the bytes to `actors/NNN/knowledge/vN.json`, writes the update list with one more line to a temporary file, synced, and renames it over `actors/NNN/knowledge-updates.jsonl`; only then does the application serve the version and the driver hold it. A version prepared for an actor that has since stopped is decided again. A version that does not verify or cannot be written is reported on the custodian's stderr and never tried again; the list, the application and the next actor stay on the version held. |
-| Reads | Application | `player_knowledge_read` and `player_knowledge_query` answer from the adopted version as `player-knowledge/3` from then on (full records on read with exact-title-first casefolded fallback; compact hits on query). Each result names its `version`. |
+| Export | [Curator runner](../components/curator.md#delivery-to-a-running-actor) | After a poll in which it confirmed a version, it writes that version as `delivered-knowledge/4` for the package's world, lineage and context to `RUN/curator-runner/delivered/vN.json`, whole (temporary name, sync, rename). It exports a confirmed publication only, never a restore, and only above the last version it exported. |
+| Adoption | [Driver](../../tools/campaign_player.py) | A thread of its own looks at `RUN/curator-runner/delivered` every tenth of a second, so no read there delays the driver's deadline checks, settlement or handoff. It takes the highest `vN.json` above the version it holds that is `delivered-knowledge/4`, names version `vN` and has the `repository_id` of the version held (any repository after the empty file). For a running actor it copies the bytes to `actors/NNN/knowledge/vN.json`, writes the update list with one more line to a temporary file, synced, and renames it over `actors/NNN/knowledge-updates.jsonl`; only then does the application serve the version and the driver hold it. A version prepared for an actor that has since stopped is decided again. A version that does not verify or cannot be written is reported on the custodian's stderr and never tried again; the list, the application and the next actor stay on the version held. |
+| Reads | Application | `player_knowledge_read` and `player_knowledge_query` answer from the adopted version as `player-knowledge/4` from then on (full records on read with `state_key` and exact-title-first casefolded fallback; compact hits on query with zero-hit fuzzy fallback). Each result names its `version`. |
 | Delivery | Host | A refresh beside play, at start, every second and after each player response, reads the whole unread lines of `--knowledge-updates` and their files in an isolated helper (bounded per read so one stalled file never blocks later updates or CLI exit) and stages verified candidates above its own. Building a player request reads no file: it adopts the newest staged candidate that fits within context capacity, if any, so a stalled read never delays a request. |
 | Successor | Driver | A successor's `delivered-knowledge.json` is the latest version adopted in the run, taken from memory, or the package's file when none was. Its update list starts empty. |
 
@@ -322,7 +327,7 @@ of that file and its `coverage` stamp.
 The host verifies a knowledge entry before it adopts it: the line is a closed entry; the
 version number is above the adopted one; `repository_id` is the adopted version's,
 unless that is the empty file; the file's SHA-256 is the entry's; the file is
-`delivered-knowledge/3` in its closed form; and its `version`, `commit`,
+`delivered-knowledge/4` in its closed form; and its `version`, `commit`,
 `repository_id` and `coverage` are the entry's. It tries unread entries newest first
 and stages every candidate that verifies, deciding each on its own, so one malformed
 or oversized entry never hides an older valid one. When the next request is built,

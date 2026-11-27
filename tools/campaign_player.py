@@ -47,7 +47,7 @@ class LiveKnowledge:
     """Newer delivered-knowledge versions for the actors of one run (`live_knowledge_updates`).
 
     The curator runner leaves each confirmed version whole as `vN.json` in `source`. `poll` adopts the
-    highest one above the current version that is `delivered-knowledge/3`, names version `vN` and comes
+    highest one above the current version that is `delivered-knowledge/4`, names version `vN` and comes
     from the repository of the version already held (any repository after the empty file). For the
     running actor (`begin`) it copies the file to `knowledge/vN.json` in the actor's directory, publishes
     the actor's update list with one more `knowledge-update-entry/1` line and has the application serve the

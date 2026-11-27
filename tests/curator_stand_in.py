@@ -50,10 +50,10 @@ def script(messages: list[dict], attack: str | None = None, *, unfiled: bool = F
             tools = '\n'.join(_text(m) for m in messages if m.get('role') == 'tool')
             version = re.search(r'Published knowledge: `(v[0-9]+)`', tools).group(1)
             # This stand-in's admission publishes f1. Its grooming files that evidence.
-            article = dict(schema='curator-fact/5', record='article', slug='a1', tags=[], title='Stand-in subject',
-                           lead='A useful observed relation. Check before relying on it.',
+            article = dict(schema='curator-fact/6', record='article', slug='a1', tags=[], title='Stand-in subject',
+                           lead='An observed relation from the stand-in trace.',
                            body=[dict(text='An observed relation.', facts=['f1'])], links=[])
-            submission = dict(schema='curator-submission/2', base_version=version, summary='stand-in grooming',
+            submission = dict(schema='curator-submission/3', base_version=version, summary='stand-in grooming',
                               changes=([dict(op='retag', assignments={'f1': ['unfiled']})]
                                        if unfiled else [dict(op='add_article', article=article)]))
             return [('write_file', {'path': 'submissions/grooming/submission.json', 'content': json.dumps(submission)})]
@@ -65,10 +65,10 @@ def script(messages: list[dict], attack: str | None = None, *, unfiled: bool = F
         tools = '\n'.join(_text(m) for m in messages if m.get('role') == 'tool')
         version = re.search(r'Published knowledge: `(v[0-9]+)`', tools).group(1)
         frames = re.findall(r'file\t[0-9]+\t(.+?)\.png', tools)
-        submission = dict(schema='curator-submission/2', base_version=version, summary='stand-in: one fact',
-                          changes=[dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id='f1',
-                                                                 claim_kind='interface', tags=['control'],
-                                                                 text='stand-in statement', evidence_basis='observed',
+        submission = dict(schema='curator-submission/3', base_version=version, summary='stand-in: one fact',
+                          changes=[dict(op='add_fact', fact=dict(schema='curator-fact/6', record='fact', id='f1',
+                                                                 statement_kind='observation', tags=['control'],
+                                                                 text='stand-in statement',
                                                                  scope={}, links=[],
                                                                  citations=frames[:1], subject='stand-in subject'))])
         return [('view_frame', {'frames': frames[:2]}), ('run_workbench', {'args': ['--help']}),

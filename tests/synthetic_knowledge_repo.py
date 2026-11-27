@@ -1,7 +1,7 @@
-"""Synthetic `curator-knowledge/4` repository builders for Wave 3 gate and export tests.
+"""Synthetic `curator-knowledge/5` repository builders for Wave 3 gate and export tests.
 
 Each builder commits real Git snapshots (`v0..vN`) using the exact on-disk layout of
-`curator-knowledge/4` (no `ontology/types.json`, `curator-fact/5` rows in `facts.jsonl`,
+`curator-knowledge/5` (no `ontology/types.json`, `curator-fact/6` rows in `facts.jsonl`,
 `provenance.json` with `frames`, `sessions` (including `context`), `branches`, `restores`,
 and `coverage.json` from `v1` onward). Every written record is validated against
 `schemas/curator-fact.schema.json` by default so gate and export slices share one verified
@@ -19,8 +19,8 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 SCHEMA_DIR = Path(__file__).resolve().parent.parent / 'schemas'
-KNOWLEDGE_SCHEMA = 'curator-knowledge/4'
-FACT_SCHEMA = 'curator-fact/5'
+KNOWLEDGE_SCHEMA = 'curator-knowledge/5'
+FACT_SCHEMA = 'curator-fact/6'
 COVERAGE_SCHEMA = 'curator-coverage/2'
 IDENTITY = (
     '-c', 'user.name=enactive-gate',
@@ -91,86 +91,14 @@ def _order_key(pos: dict[str, Any]) -> tuple[int, str, int]:
     return (order[0], order[1], order[2])
 
 
-def _constraints_compatible(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    left_map = dict(left['scope'])
-    left_map.update(left.get('when', {}).get('requires', {}))
-    right_map = dict(right['scope'])
-    right_map.update(right.get('when', {}).get('requires', {}))
-    for key in left_map.keys() & right_map.keys():
-        if left_map[key] != right_map[key]:
-            return False
-    return True
-
-
-def _scopes_conflict(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    if not _constraints_compatible(left, right):
-        return False
-    ls, rs = left['scope'], right['scope']
-    if ls == rs:
-        return True
-    if ls.items() <= rs.items() or rs.items() <= ls.items():
-        return False
-    return True
-
-
 def recompute_stored_flags(records: list[dict[str, Any]]) -> None:
-    """Compute stored `lifecycle_state` (for current rows), `stale_citations`, and `needs_review`."""
-    current_by_public: dict[str, dict[str, Any]] = {}
-    for row in records:
-        if 'superseded_by' not in row and 'retired' not in row:
-            key = row['slug'] if row['record'] == 'article' else row['id']
-            current_by_public[key] = row
-
-    contested: set[str] = set()
-    for key, row in current_by_public.items():
-        for link in row['links']:
-            if link['rel'] != 'contradicts':
-                continue
-            other = current_by_public.get(link['target'])
-            if other is not None and _scopes_conflict(row, other):
-                contested.add(key)
-                contested.add(link['target'])
-
-    for key, row in current_by_public.items():
-        if row['record'] == 'article':
-            cited = {fid for claim in row['body'] for fid in claim['facts']}
-            if any(fid in contested for fid in cited):
-                contested.add(key)
-
-    for key, row in current_by_public.items():
-        row['lifecycle_state'] = 'contested' if key in contested else 'active'
-
-    deps: dict[str, set[str]] = {}
-    rev: dict[str, set[str]] = {key: set() for key in current_by_public}
-    for key, row in current_by_public.items():
-        relies = {link['target'] for link in row['links'] if link['rel'] == 'depends_on'}
-        if row['record'] == 'article':
-            relies.update(fid for claim in row['body'] for fid in claim['facts'])
-        deps[key] = relies
-        row['stale_citations'] = sorted(target for target in relies if target not in current_by_public)
-        for target in relies:
-            if target in rev:
-                rev[target].add(key)
-
-    flagged: set[str] = set()
-    queue: list[str] = []
-    for key, row in current_by_public.items():
-        if row['stale_citations'] or any(target in contested for target in deps[key]):
-            flagged.add(key)
-            queue.append(key)
-    while queue:
-        node = queue.pop()
-        for parent in rev.get(node, ()):
-            if parent not in flagged:
-                flagged.add(parent)
-                queue.append(parent)
-
-    for key, row in current_by_public.items():
-        row['needs_review'] = key in flagged
+    """Compute stored `lifecycle_state`, `stale_citations`, and `needs_review`."""
+    from harness.curator.check import recompute_flags
+    recompute_flags(records)
 
 
 class SyntheticKnowledgeBuilder:
-    """Imperative builder that writes valid tagged `curator-knowledge/4` snapshots."""
+    """Imperative builder that writes valid tagged `curator-knowledge/5` snapshots."""
 
     def __init__(self, root: Path, game: str = 'example', *, validate: bool = True):
         self.root = Path(root)
@@ -182,6 +110,7 @@ class SyntheticKnowledgeBuilder:
         self.records: list[dict[str, Any]] = []
         self.provenance: dict[str, Any] = {
             'frames': {},
+            'frame_clocks': {},
             'sessions': {},
             'branches': {},
             'restores': [],
@@ -246,6 +175,9 @@ class SyntheticKnowledgeBuilder:
         session_name = self.provenance['sessions'][sid]['name']
         self.provenance['frames'][fid] = position(session_name, step, actor=actor, order_index=order_index)
         return fid
+
+    def add_clock(self, fid: str, label: str) -> None:
+        self.provenance['frame_clocks'][fid] = label
 
     def add_restore(
         self,
@@ -374,8 +306,10 @@ class SyntheticKnowledgeBuilder:
         self,
         *,
         fact_id: str,
-        claim_kind: str,
-        evidence_basis: str = 'observed',
+        statement_kind: str = 'observation',
+        state_key: str | None = None,
+        anchor: str | None = None,
+        depiction_source_id: str | None = None,
         tags: list[str] | None = None,
         text: str,
         citations: list[str],
@@ -384,7 +318,7 @@ class SyntheticKnowledgeBuilder:
         scope_axes: dict[str, str] | None = None,
         bind_world: bool = False,
         subject: str | None = None,
-        when: dict[str, Any] | None = None,
+        when: str | None = None,
         links: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         positions = self._citation_positions(citations)
@@ -395,8 +329,7 @@ class SyntheticKnowledgeBuilder:
             'schema': FACT_SCHEMA,
             'record': 'fact',
             'id': fact_id,
-            'claim_kind': claim_kind,
-            'evidence_basis': evidence_basis,
+            'statement_kind': statement_kind,
             'tags': list(tags or []),
             'text': text,
             'scope': scope,
@@ -411,10 +344,18 @@ class SyntheticKnowledgeBuilder:
             'published_in': published_in,
             'session': session,
         }
+        if statement_kind == 'state' and state_key is None:
+            state_key = f'key-{fact_id}'
+        if state_key is not None:
+            record['state_key'] = state_key
+        if anchor is not None:
+            record['anchor'] = anchor
+        if depiction_source_id is not None:
+            record['depiction_source_id'] = depiction_source_id
         if subject is not None:
             record['subject'] = subject
         if when is not None:
-            record['when'] = copy.deepcopy(when)
+            record['when'] = when
         if bind_world:
             world, lineages = self._citation_world_and_lineages(citations)
             record['scope']['world'] = world
@@ -490,16 +431,21 @@ class SyntheticKnowledgeBuilder:
         raise KeyError(slug)
 
     def supersede_fact(self, old_ids: list[str], new_fact: dict[str, Any], *, reason_kind: str) -> None:
-        state = 'retracted' if reason_kind == 'corrected' else 'superseded'
+        from harness.curator.check import _changed_valid_to
+        state = {'corrected': 'retracted', 'changed': 'ended'}.get(reason_kind, 'superseded')
         for old_id in old_ids:
             old = self.find_record(old_id)
             old['superseded_by'] = [new_fact['id']]
+            old['superseded_reason'] = reason_kind
             old['lifecycle_state'] = state
+            if reason_kind == 'changed':
+                old['valid_to'] = _changed_valid_to(old, new_fact, self.provenance)
         self.records.append(new_fact)
 
     def narrow_fact(self, old_id: str, new_facts: list[dict[str, Any]]) -> None:
         old = self.find_record(old_id)
         old['superseded_by'] = [f['id'] for f in new_facts]
+        old['superseded_reason'] = 'narrowed'
         old['lifecycle_state'] = 'superseded'
         self.records.extend(new_facts)
 
@@ -643,7 +589,7 @@ class SyntheticKnowledgeBuilder:
                 errors = sorted(_FACT_VALIDATOR.iter_errors(row), key=lambda e: list(e.path))
                 if errors:
                     detail = '; '.join(f'{".".join(str(p) for p in e.path)}: {e.message}' for e in errors)
-                    raise ValueError(f'synthetic record {row.get("id")!r} failed curator-fact/5 schema: {detail}')
+                    raise ValueError(f'synthetic record {row.get("id")!r} failed curator-fact/6 schema: {detail}')
         coverage = {
             'schema': COVERAGE_SCHEMA,
             'session': coverage_session,
@@ -723,55 +669,55 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
 
     b.records.extend([
         b.make_fact(
-            fact_id='fire-tinder', claim_kind='mechanic', tags=['fire'],
+            fact_id='fire-tinder', statement_kind='observation', tags=['fire'],
             text='Dry tinder starts a fire with matches.',
             citations=[fa1], published_in='v1', session='curator-v1',
         ),
         b.make_fact(
-            fact_id='boil-water-old', claim_kind='mechanic', tags=['water', 'fire'],
+            fact_id='boil-water-old', statement_kind='observation', tags=['water', 'fire'],
             text='Boiling murky water cleans it.',
             citations=[fa1], published_in='v1', session='curator-v1',
-            when={'note': 'needs a lit heat source', 'requires': {}},
+            when='needs a lit heat source',
         ),
         b.make_fact(
-            fact_id='bad-claim-1', claim_kind='entity_property', tags=['water'],
+            fact_id='bad-claim-1', statement_kind='observation', tags=['water'],
             text='Tin cans hold ten litres.',
             citations=[fa1], published_in='v1', session='curator-v1',
         ),
         b.make_fact(
-            fact_id='broad-shelter-loot', claim_kind='strategy', tags=['loot'],
+            fact_id='broad-shelter-loot', statement_kind='inference', tags=['loot'],
             text='Every shelter basement holds clean water.',
             citations=[fa1], published_in='v1', session='curator-v1',
         ),
         b.make_fact(
-            fact_id='wrong-rumor', claim_kind='mechanic', tags=['fire'],
+            fact_id='wrong-rumor', statement_kind='observation', tags=['fire'],
             text='Wet bark burns faster than dry paper.',
             citations=[fa1], published_in='v1', session='curator-v1',
         ),
         b.make_fact(
-            fact_id='alpha-fire-lit', claim_kind='instance_state', tags=['camp', 'fire'],
+            fact_id='alpha-fire-lit', statement_kind='state', tags=['camp', 'fire'],
             text='The courtyard brazier is burning.',
             citations=[fa1], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='alpha-crate', claim_kind='instance_state', tags=['camp', 'loot'],
+            fact_id='alpha-crate', statement_kind='state', tags=['camp', 'loot'],
             text='The shelter crate holds rope and nails.',
             citations=[fa2], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='alpha-gate-a', claim_kind='instance_state', tags=['camp'],
+            fact_id='alpha-gate-a', statement_kind='state', state_key='key-alpha-gate', tags=['camp'],
             text='The north gate is unlocked.',
             citations=[fa2], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='shadow-standard', claim_kind='mechanic', tags=['fire'],
+            fact_id='shadow-standard', statement_kind='observation', tags=['fire'],
             text='In standard ruleset damp tinder needs extra kindling.',
             citations=[fa2], published_in='v1', session='curator-v1',
             scope_axes={'ruleset': 'standard'},
             links=[{'rel': 'contradicts', 'target': 'fire-tinder'}],
         ),
         b.make_fact(
-            fact_id='conflict-left', claim_kind='strategy', tags=['camp'],
+            fact_id='conflict-left', statement_kind='inference', tags=['camp'],
             text='Store clean water in the basement.',
             citations=[fa2], published_in='v1', session='curator-v1',
             scope_axes={'ruleset': 'standard'},
@@ -804,33 +750,33 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
 
     b.records.extend([
         b.make_fact(
-            fact_id='beta-only-crate', claim_kind='instance_state', tags=['camp'],
+            fact_id='beta-only-crate', statement_kind='state', tags=['camp'],
             text='The radio tower locker holds batteries.',
             citations=[fbeta1], published_in='v2', session='curator-v2', bind_world=True,
         ),
         b.make_fact(
-            fact_id='hard-only-rule', claim_kind='mechanic', tags=['combat'],
+            fact_id='hard-only-rule', statement_kind='observation', tags=['combat'],
             text='Hard mode doubles stamina drain.',
             citations=[fbeta1], published_in='v2', session='curator-v2',
             scope_axes={'difficulty': 'hard'},
         ),
         b.make_fact(
-            fact_id='winter-conditional', claim_kind='mechanic', tags=['weather'],
+            fact_id='winter-conditional', statement_kind='observation', tags=['weather'],
             text='Standing water freezes outdoors in winter.',
             citations=[fbeta2], published_in='v2', session='curator-v2',
-            when={'note': 'only under winter ruleset', 'requires': {'ruleset': 'winter'}},
+            scope_axes={'ruleset': 'winter'}, when='only under winter ruleset',
         ),
     ])
     b.narrow_fact(
         'broad-shelter-loot',
         [
             b.make_fact(
-                fact_id='alpha-shelter-loot', claim_kind='instance_state', tags=['loot'],
+                fact_id='alpha-shelter-loot', statement_kind='state', tags=['loot'],
                 text='In this world the shelter basement holds clean water.',
                 citations=[fa1], published_in='v2', session='curator-v2', bind_world=True,
             ),
             b.make_fact(
-                fact_id='beta-shelter-loot', claim_kind='instance_state', tags=['loot'],
+                fact_id='beta-shelter-loot', statement_kind='state', tags=['loot'],
                 text='In this world the shelter basement holds canned beans.',
                 citations=[fbeta1], published_in='v2', session='curator-v2', bind_world=True,
             ),
@@ -854,12 +800,12 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
 
     b.records.extend([
         b.make_fact(
-            fact_id='alpha-b-stash', claim_kind='instance_state', tags=['camp', 'loot'],
+            fact_id='alpha-b-stash', statement_kind='state', tags=['camp', 'loot'],
             text='A hidden cache lies behind the shed.',
             citations=[fb1], published_in='v3', session='curator-v3', bind_world=True,
         ),
         b.make_fact(
-            fact_id='conflict-right', claim_kind='strategy', tags=['camp'],
+            fact_id='conflict-right', statement_kind='inference', tags=['camp'],
             text='Store clean water beside the hearth.',
             citations=[fb1], published_in='v3', session='curator-v3',
             scope_axes={'ruleset': 'standard'},
@@ -869,7 +815,7 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
     b.supersede_fact(
         ['alpha-gate-a'],
         b.make_fact(
-            fact_id='alpha-mixed-note', claim_kind='instance_state', tags=['camp'],
+            fact_id='alpha-mixed-note', statement_kind='state', state_key='key-alpha-gate', tags=['camp'],
             text='The north gate is unlocked.',
             citations=[fa2, fb2], published_in='v3', session='curator-v3', bind_world=True,
         ),
@@ -878,10 +824,10 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
     b.supersede_fact(
         ['boil-water-old'],
         b.make_fact(
-            fact_id='boil-water-mid', claim_kind='mechanic', tags=['water', 'fire'],
+            fact_id='boil-water-mid', statement_kind='observation', tags=['water', 'fire'],
             text='Boiling murky water over a fire produces clean water.',
             citations=[fa1, fb1], published_in='v3', session='curator-v3',
-            when={'note': 'needs a lit heat source', 'requires': {}},
+            when='needs a lit heat source',
             links=[{'rel': 'depends_on', 'target': 'fire-tinder'}],
         ),
         reason_kind='restated',
@@ -889,7 +835,7 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
     b.supersede_fact(
         ['bad-claim-1'],
         b.make_fact(
-            fact_id='bad-claim-2', claim_kind='entity_property', tags=['water'],
+            fact_id='bad-claim-2', statement_kind='observation', tags=['water'],
             text='Large tin cans hold ten litres.',
             citations=[fa1], published_in='v3', session='curator-v3',
         ),
@@ -915,11 +861,11 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
     b.supersede_fact(
         ['boil-water-mid'],
         b.make_fact(
-            fact_id='boil-water-final', claim_kind='mechanic', tags=['water', 'fire'],
+            fact_id='boil-water-final', statement_kind='observation', tags=['water', 'fire'],
             text='Boiling murky water over a lit fire yields clean drinking water.',
             subject='water boiling',
             citations=[fa1, fb1, fa3], published_in='v4', session='curator-v4',
-            when={'note': 'needs a lit heat source', 'requires': {}},
+            when='needs a lit heat source',
             links=[{'rel': 'depends_on', 'target': 'fire-tinder'}],
         ),
         reason_kind='restated',
@@ -927,7 +873,7 @@ def build_two_world_two_lineage_repo(root: Path, game: str = 'example') -> dict[
     b.supersede_fact(
         ['bad-claim-2'],
         b.make_fact(
-            fact_id='tin-can-capacity', claim_kind='entity_property', tags=['water'],
+            fact_id='tin-can-capacity', statement_kind='observation', tags=['water'],
             text='A tin can holds 0.5 litres.',
             citations=[fa3], published_in='v4', session='curator-v4',
         ),
@@ -983,20 +929,20 @@ def build_nested_cut_repo(root: Path, game: str = 'example') -> dict[str, Any]:
 
     # v1, v2: filler facts so `lit-fire` lands at v3, end at v5, C fork at v7, C record at v8.
     b.records.append(b.make_fact(
-        fact_id='base-note-1', claim_kind='mechanic', tags=['camp'],
+        fact_id='base-note-1', statement_kind='observation', tags=['camp'],
         text='Matches light dry paper.', citations=[f_a1], published_in='v1', session='curator-v1',
     ))
     b.commit_version(coverage_session=sess_a, last_step=5, admission_citations=[f_a1])
 
     b.records.append(b.make_fact(
-        fact_id='base-note-2', claim_kind='mechanic', tags=['camp'],
+        fact_id='base-note-2', statement_kind='observation', tags=['camp'],
         text='Paper burns quickly.', citations=[f_a1], published_in='v2', session='curator-v2',
     ))
     b.commit_version(coverage_session=sess_a, last_step=6, admission_citations=[f_a1])
 
     # v3: A records `lit-fire` at step 10 (before B's fork_at step 12).
     b.records.append(b.make_fact(
-        fact_id='lit-fire', claim_kind='instance_state', tags=['fire'],
+        fact_id='lit-fire', statement_kind='state', tags=['fire'],
         text='The camp fire is lit.', citations=[f_a2], published_in='v3', session='curator-v3', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_a, last_step=10, admission_citations=[f_a2])
@@ -1008,7 +954,7 @@ def build_nested_cut_repo(root: Path, game: str = 'example') -> dict[str, Any]:
     )
     f_b1 = b.add_frame(sid_b, 1, 14, order_index=2)
     b.records.append(b.make_fact(
-        fact_id='b-camp-note', claim_kind='instance_state', tags=['camp'],
+        fact_id='b-camp-note', statement_kind='state', tags=['camp'],
         text='Branch B stacked extra firewood.', citations=[f_b1], published_in='v4', session='curator-v4', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_b, last_step=14, admission_citations=[f_b1])
@@ -1024,7 +970,7 @@ def build_nested_cut_repo(root: Path, game: str = 'example') -> dict[str, Any]:
     # v6: A records another post-fork fact.
     f_a4 = b.add_frame(sid_a, 4, 30, order_index=1)
     b.records.append(b.make_fact(
-        fact_id='a-post-fork', claim_kind='instance_state', tags=['camp'],
+        fact_id='a-post-fork', statement_kind='state', tags=['camp'],
         text='Lineage A moved camp south.', citations=[f_a4], published_in='v6', session='curator-v6', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_a, last_step=30, admission_citations=[f_a4])
@@ -1032,7 +978,7 @@ def build_nested_cut_repo(root: Path, game: str = 'example') -> dict[str, Any]:
     # v7: parent-view snapshot on B before C forks from B at v7.
     f_b2 = b.add_frame(sid_b, 2, 16, order_index=2)
     b.records.append(b.make_fact(
-        fact_id='b-pre-c-note', claim_kind='instance_state', tags=['camp'],
+        fact_id='b-pre-c-note', statement_kind='state', tags=['camp'],
         text='Branch B filled the rain barrel.', citations=[f_b2], published_in='v7', session='curator-v7', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_b, last_step=16, admission_citations=[f_b2])
@@ -1044,7 +990,7 @@ def build_nested_cut_repo(root: Path, game: str = 'example') -> dict[str, Any]:
     )
     f_c1 = b.add_frame(sid_c, 1, 18, order_index=3)
     b.records.append(b.make_fact(
-        fact_id='c-camp-note', claim_kind='instance_state', tags=['camp'],
+        fact_id='c-camp-note', statement_kind='state', tags=['camp'],
         text='Branch C built a lean-to.', citations=[f_c1], published_in='v8', session='curator-v8', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_c, last_step=18, admission_citations=[f_c1])
@@ -1074,14 +1020,14 @@ def build_parent_target_repo(root: Path, game: str = 'example') -> dict[str, Any
 
     # v1
     b.records.append(b.make_fact(
-        fact_id='seed-note', claim_kind='mechanic', tags=['fire'],
+        fact_id='seed-note', statement_kind='observation', tags=['fire'],
         text='Wood feeds fire.', citations=[f_a1], published_in='v1', session='curator-v1',
     ))
     b.commit_version(coverage_session=sess_a, last_step=5, admission_citations=[f_a1])
 
     # v2: A records `camp-fire` at step 10.
     b.records.append(b.make_fact(
-        fact_id='camp-fire', claim_kind='instance_state', tags=['fire'],
+        fact_id='camp-fire', statement_kind='state', tags=['fire'],
         text='The central camp fire is burning.', citations=[f_a2], published_in='v2', session='curator-v2', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_a, last_step=10, admission_citations=[f_a2])
@@ -1101,7 +1047,7 @@ def build_parent_target_repo(root: Path, game: str = 'example') -> dict[str, Any
     # v4: A adds another fact at step 25.
     f_a3 = b.add_frame(sid_a, 3, 25, order_index=1)
     b.records.append(b.make_fact(
-        fact_id='a-late-note', claim_kind='instance_state', tags=['camp'],
+        fact_id='a-late-note', statement_kind='state', tags=['camp'],
         text='A fetched water from the well.', citations=[f_a3], published_in='v4', session='curator-v4', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_a, last_step=25, admission_citations=[f_a3])
@@ -1113,7 +1059,7 @@ def build_parent_target_repo(root: Path, game: str = 'example') -> dict[str, Any
     )
     f_c1 = b.add_frame(sid_c, 1, 35, order_index=3)
     b.records.append(b.make_fact(
-        fact_id='c-note', claim_kind='instance_state', tags=['camp'],
+        fact_id='c-note', statement_kind='state', tags=['camp'],
         text='C pitched a tent.', citations=[f_c1], published_in='v5', session='curator-v5', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_c, last_step=35, admission_citations=[f_c1])
@@ -1139,7 +1085,7 @@ def build_restore_repo(root: Path, game: str = 'example') -> dict[str, Any]:
 
     # v1
     b.records.append(b.make_fact(
-        fact_id='general-rule', claim_kind='mechanic', tags=['camp'],
+        fact_id='general-rule', statement_kind='observation', tags=['camp'],
         text='Crates hold supplies.', citations=[f_5], published_in='v1', session='curator-v1',
     ))
     b.commit_version(coverage_session=sess_l, last_step=5, admission_citations=[f_5])
@@ -1147,11 +1093,11 @@ def build_restore_repo(root: Path, game: str = 'example') -> dict[str, Any]:
     # v2: f (`lit-fire`) and k (`cached-crate`) at step 10.
     b.records.extend([
         b.make_fact(
-            fact_id='lit-fire', claim_kind='instance_state', tags=['fire'],
+            fact_id='lit-fire', statement_kind='state', tags=['fire'],
             text='The shelter fire is lit.', citations=[f_10], published_in='v2', session='curator-v2', bind_world=True,
         ),
         b.make_fact(
-            fact_id='cached-crate', claim_kind='instance_state', tags=['loot'],
+            fact_id='cached-crate', statement_kind='state', tags=['loot'],
             text='The east crate holds dried food.', citations=[f_10], published_in='v2', session='curator-v2', bind_world=True,
         ),
     ])
@@ -1160,7 +1106,7 @@ def build_restore_repo(root: Path, game: str = 'example') -> dict[str, Any]:
     # v3: g (`abandoned-loot`) at step 15 on abandoned stretch (12, 20).
     f_15 = b.add_frame(sid_l, 3, 15, order_index=1)
     b.records.append(b.make_fact(
-        fact_id='abandoned-loot', claim_kind='instance_state', tags=['loot'],
+        fact_id='abandoned-loot', statement_kind='state', tags=['loot'],
         text='Found a crowbar on the abandoned timeline.', citations=[f_15], published_in='v3', session='curator-v3', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_l, last_step=15, admission_citations=[f_15])
@@ -1179,7 +1125,7 @@ def build_restore_repo(root: Path, game: str = 'example') -> dict[str, Any]:
         end='absence', end_citations=[f_22], published_in='v4', session='curator-v4',
     )
     b.records.append(b.make_fact(
-        fact_id='post-restore-note', claim_kind='instance_state', tags=['camp'],
+        fact_id='post-restore-note', statement_kind='state', tags=['camp'],
         text='Found bandages in the locker after restore.', citations=[f_22], published_in='v4', session='curator-v4', bind_world=True,
     ))
     b.commit_version(coverage_session=sess_l, last_step=22, admission_citations=[f_22])
@@ -1209,27 +1155,27 @@ def build_falsity_propagation_repo(root: Path, game: str = 'example') -> dict[st
     # v1: pre-fork facts on A.
     b.records.extend([
         b.make_fact(
-            fact_id='f-direct', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-direct', statement_kind='state', tags=['camp'],
             text='The bridge is intact.', citations=[f_a1], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='f-restated', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-restated', statement_kind='state', state_key='key-cellar-door', tags=['camp'],
             text='The cellar door is unlocked.', citations=[f_a1], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='f-merge-a', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-merge-a', statement_kind='observation', tags=['camp'],
             text='Two batteries sit on the bench.', citations=[f_a1], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='f-merge-b', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-merge-b', statement_kind='observation', tags=['camp'],
             text='Batteries are on the workshop bench.', citations=[f_a1], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='f-narrowed', claim_kind='instance_state', tags=['water'],
+            fact_id='f-narrowed', statement_kind='state', tags=['water'],
             text='The pond is drinkable.', citations=[f_a1], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='f-surviving', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-surviving', statement_kind='state', tags=['camp'],
             text='The roof does not leak.', citations=[f_a1], published_in='v1', session='curator-v1', bind_world=True,
         ),
     ])
@@ -1251,7 +1197,7 @@ def build_falsity_propagation_repo(root: Path, game: str = 'example') -> dict[st
     b.supersede_fact(
         ['f-restated'],
         b.make_fact(
-            fact_id='f-restated-2', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-restated-2', statement_kind='state', state_key='key-cellar-door', tags=['camp'],
             text='The cellar door has no lock.', citations=[f_a1, f_a2], published_in='v2', session='curator-v2', bind_world=True,
         ),
         reason_kind='restated',
@@ -1259,7 +1205,7 @@ def build_falsity_propagation_repo(root: Path, game: str = 'example') -> dict[st
     b.supersede_fact(
         ['f-merge-a', 'f-merge-b'],
         b.make_fact(
-            fact_id='f-merged', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-merged', statement_kind='observation', tags=['camp'],
             text='Two batteries sit on the workshop bench.', citations=[f_a1], published_in='v2', session='curator-v2', bind_world=True,
         ),
         reason_kind='restated',
@@ -1268,13 +1214,13 @@ def build_falsity_propagation_repo(root: Path, game: str = 'example') -> dict[st
         'f-narrowed',
         [
             b.make_fact(
-                fact_id='f-narrow-winter', claim_kind='instance_state', tags=['water'],
+                fact_id='f-narrow-winter', statement_kind='state', tags=['water'],
                 text='Under winter ruleset the pond is drinkable.',
                 citations=[f_a1], published_in='v2', session='curator-v2', bind_world=True,
                 scope_axes={'ruleset': 'winter'},
             ),
             b.make_fact(
-                fact_id='f-narrow-standard', claim_kind='instance_state', tags=['water'],
+                fact_id='f-narrow-standard', statement_kind='state', tags=['water'],
                 text='Under standard ruleset the pond is drinkable.',
                 citations=[f_a1], published_in='v2', session='curator-v2', bind_world=True,
                 scope_axes={'ruleset': 'standard'},
@@ -1288,7 +1234,7 @@ def build_falsity_propagation_repo(root: Path, game: str = 'example') -> dict[st
     b.supersede_fact(
         ['f-restated-2'],
         b.make_fact(
-            fact_id='f-cellar-locked', claim_kind='instance_state', tags=['camp'],
+            fact_id='f-cellar-locked', statement_kind='state', state_key='key-cellar-door', tags=['camp'],
             text='The cellar door is bolted shut.', citations=[f_a3], published_in='v3', session='curator-v3', bind_world=True,
         ),
         reason_kind='corrected',
@@ -1323,69 +1269,67 @@ def build_cycle_and_withholding_repo(root: Path, game: str = 'example') -> dict[
     b.records.extend([
         # Unseeded 2-cycle: both must remain needs_review=False.
         b.make_fact(
-            fact_id='clean-cycle-a', claim_kind='mechanic', tags=['cycle'],
+            fact_id='clean-cycle-a', statement_kind='observation', tags=['cycle'],
             text='Clean cycle node A.', citations=[f1], published_in='v1', session='curator-v1',
-            links=[{'rel': 'depends_on', 'target': 'clean-cycle-b'}],
+            links=[],
         ),
         b.make_fact(
-            fact_id='clean-cycle-b', claim_kind='mechanic', tags=['cycle'],
+            fact_id='clean-cycle-b', statement_kind='observation', tags=['cycle'],
             text='Clean cycle node B.', citations=[f1], published_in='v1', session='curator-v1',
             links=[{'rel': 'depends_on', 'target': 'clean-cycle-a'}],
         ),
         # Contested-seeded 2-cycle: both nodes in cycle become needs_review=True.
         b.make_fact(
-            fact_id='seed-conflict-1', claim_kind='strategy', tags=['cycle'],
+            fact_id='seed-conflict-1', statement_kind='inference', tags=['cycle'],
             text='Conflict side 1.', citations=[f1], published_in='v1', session='curator-v1',
             links=[{'rel': 'contradicts', 'target': 'seed-conflict-2'}],
         ),
         b.make_fact(
-            fact_id='seed-conflict-2', claim_kind='strategy', tags=['cycle'],
+            fact_id='seed-conflict-2', statement_kind='inference', tags=['cycle'],
             text='Conflict side 2.', citations=[f1], published_in='v1', session='curator-v1',
             links=[{'rel': 'contradicts', 'target': 'seed-conflict-1'}],
         ),
         b.make_fact(
-            fact_id='dirty-cycle-a', claim_kind='strategy', tags=['cycle'],
+            fact_id='dirty-cycle-a', statement_kind='inference', tags=['cycle'],
             text='Dirty cycle node A.', citations=[f1], published_in='v1', session='curator-v1',
             links=[
-                {'rel': 'depends_on', 'target': 'dirty-cycle-b'},
                 {'rel': 'depends_on', 'target': 'seed-conflict-1'},
             ],
         ),
         b.make_fact(
-            fact_id='dirty-cycle-b', claim_kind='strategy', tags=['cycle'],
+            fact_id='dirty-cycle-b', statement_kind='inference', tags=['cycle'],
             text='Dirty cycle node B.', citations=[f1], published_in='v1', session='curator-v1',
             links=[{'rel': 'depends_on', 'target': 'dirty-cycle-a'}],
         ),
         # Stale-citation premise retired at v2, with direct dependent and transitive 2-cycle.
         b.make_fact(
-            fact_id='stale-premise', claim_kind='mechanic', tags=['stale'],
+            fact_id='stale-premise', statement_kind='observation', tags=['stale'],
             text='Premise later retracted at v2.', citations=[f1], published_in='v1', session='curator-v1',
         ),
         b.make_fact(
-            fact_id='stale-dependent', claim_kind='strategy', tags=['stale'],
+            fact_id='stale-dependent', statement_kind='inference', tags=['stale'],
             text='Strategy directly relying on stale-premise.', citations=[f1], published_in='v1', session='curator-v1',
             links=[{'rel': 'depends_on', 'target': 'stale-premise'}],
         ),
         b.make_fact(
-            fact_id='stale-cycle-a', claim_kind='strategy', tags=['stale'],
+            fact_id='stale-cycle-a', statement_kind='inference', tags=['stale'],
             text='Stale cycle node A.', citations=[f1], published_in='v1', session='curator-v1',
             links=[
-                {'rel': 'depends_on', 'target': 'stale-cycle-b'},
                 {'rel': 'depends_on', 'target': 'stale-premise'},
             ],
         ),
         b.make_fact(
-            fact_id='stale-cycle-b', claim_kind='strategy', tags=['stale'],
+            fact_id='stale-cycle-b', statement_kind='inference', tags=['stale'],
             text='Stale cycle node B.', citations=[f1], published_in='v1', session='curator-v1',
             links=[{'rel': 'depends_on', 'target': 'stale-cycle-a'}],
         ),
         # Withheld-dependency test pair: `dependent-fact` depends only on current `base-dep`.
         b.make_fact(
-            fact_id='base-dep', claim_kind='mechanic', tags=['dep'],
+            fact_id='base-dep', statement_kind='observation', tags=['dep'],
             text='Base dependency fact.', citations=[f1], published_in='v1', session='curator-v1',
         ),
         b.make_fact(
-            fact_id='dependent-fact', claim_kind='strategy', tags=['dep'],
+            fact_id='dependent-fact', statement_kind='inference', tags=['dep'],
             text='Strategy depending on base-dep.', citations=[f2], published_in='v1', session='curator-v1',
             links=[{'rel': 'depends_on', 'target': 'base-dep'}],
         ),

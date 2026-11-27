@@ -128,7 +128,7 @@ tokens, with the same image treatment.
 **`store`** reads every published version of a curator knowledge repository from its
 loose objects without a Git process. It reports each version's session, its facts and
 articles (all and current), its bytes and the facts whose text matches a pattern. It
-reads `curator-knowledge/4` repositories of `curator-fact/5` records only, so it refuses
+reads `curator-knowledge/5` repositories of `curator-fact/6` records only, so it refuses
 older sealed stores.
 
 **`replay`** reports, for a known loss, the request that returned the frame at which play
@@ -196,7 +196,7 @@ each boundary. The end row gives the outcome and whether the cursor advanced.
 
 For frame age, match the evaluator's operation by ID and use the source's
 `received_wall` in the sealed session store. A step without a frame has no frame age.
-A fact's [`seen` position](curator.md#facts-curator-fact5)
+A fact's [`seen` position](curator.md#facts-curator-fact6)
 gives sighting order.
 
 The [schedule reader](../../tools/memory_screen_checks.py) joins the recorded
@@ -286,7 +286,7 @@ and `campaign-run/7` evidence (sealed `campaign-run/12` packages are read via th
 earlier source, not by `build_facts`). For `/13` the facts builder also verifies the
 [private selection](player-host.md#delivered-knowledge-and-recall) against the
 package's `world`, `lineage`, `context` and delivered file digest, and expects
-`delivered-knowledge/3`; indexed `/10` and `/7` packages expect `delivered-knowledge/1`.
+`delivered-knowledge/4`; indexed `/10` and `/7` packages expect `delivered-knowledge/1`.
 The builder refuses a `/13` run that sets [`live_knowledge_updates`](../operations/campaign-run.md#live-knowledge-updates):
 its judged facts are the frozen file's, and a version adopted during play delivers
 facts outside it.
@@ -299,7 +299,7 @@ facts outside it.
        "reminders": [{"decision": 40, "text": "..."}]}}}}
 
 - A fact has one route for an actor; an id listed twice is refused.
-- The route is the first delivered lead or full read exposure in time, with `index` only if neither occurs. Only `knowledge-delivery` events with `outcome: "delivered"` (or admitted archived `/5`, `/8`, `/9`, `/11` briefings/reminders without `outcome`) credit `lead` exposure; compact `player-knowledge/3` query `hits` are ignored by `build_facts` (neither promoting to `read` nor pre-populating `index`), while full `player_knowledge_read` results credit `read`. Withheld facts come from `private/units.json`.
+- The route is the first delivered lead or full read exposure in time, with `index` only if neither occurs. Only `knowledge-delivery` events with `outcome: "delivered"` (or admitted archived `/5`, `/8`, `/9`, `/11` briefings/reminders without `outcome`) credit `lead` exposure; compact `player-knowledge/4` query `hits` are ignored by `build_facts` (neither promoting to `read` nor pre-populating `index`), while full `player_knowledge_read` results credit `read`. Withheld facts come from `private/units.json`.
 - `from_decision` is optional: the last player decision completed before that same
   exposure. Briefing leads and index lines have none. Recall requests have
   `decision: null` and never advance this numbering.

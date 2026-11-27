@@ -221,28 +221,33 @@ The route browses the run package's own `delivered-knowledge.json` (`initial`, t
 the run started with) and `curator-runner/delivered/vN.json`, in version order. It reads no
 curator repository, private export, alias map or withheld-unit file and runs no Git command.
 Files are bounded at 16 MiB. Each of `versions` has its counts, coverage stamp, the version
-the file itself records, and `status`; a file that is not a readable `delivered-knowledge/3`
+the file itself records, and `status`; a file that is not a readable `delivered-knowledge/4`
+(or `delivered-knowledge/3` strictly for the five owner-approved `#963`/`#998` sealed sessions)
 is listed with its status and no counts.
 
 - `version` defaults to the latest readable one. An unknown version is
   `404 unknown_version`; one that cannot be read is `409 unsupported_knowledge`.
   Without any file, `source_status` is `unavailable`.
 - `q` (at most 200 characters) matches case-insensitively in articles and facts (including
-  tags and `claim_kind`). `scope` is `all`, `world`, `game` or `unrecorded` and filters
+  tags, `statement_kind`, `anchor_display`, `when`, and exact `state_key`, with exact ID or
+  `state_key` matches sorted first). `scope` is `all`, `world`, `game` or `unrecorded` and filters
   facts by delivered scope class (`world` key present vs absent, or missing scope), paging
   by `after` and `limit`. Articles are bounded, with `articles_omitted`.
 - Each record projects its delivered `scope` class (`world` or `game`), bounded non-world
   `scope_axes` (never exposing a world or lineage label), `tags`, `lifecycle_state`,
   `branch_relation`, review flags (`stale_citations`, `needs_review`,
-  `condition_unverified`, `unverified_branch`) and typed `links`/`backlinks`
-  (`shadowed_by`, `contradicted_by`). Facts also project `claim_kind`, `evidence_basis`,
-  `when`, `cited_by_articles` and `citation_source_ids`. The response includes
-  `scope_counts`, `tag_counts` (with `tag_counts_omitted`) and `claim_kind_counts`
-  computed over the delivered records.
-- `anchor` and `citation_anchors` resolve `citation_source_ids` belonging to this run's
+  `unverified_branch`) and typed `links`/`backlinks` (`shadowed_by`, `contradicted_by`),
+  plus clock labels (`clock_label` or tagged `prior_clock`) on position markers.
+  Current `/4` facts also project `statement_kind`, `state_key`, `anchor` (the kinematic
+  `state_key`), `anchor_display`, `when` (string), `depiction_source_id`, `cited_by_articles`
+  and `citation_source_ids`. The response includes `knowledge_schema`, `scope_counts`,
+  `tag_counts` (with `tag_counts_omitted`), `statement_kind_counts` (or `claim_kind_counts`
+  on the five archived `/3` sessions), `frame_clocks` for shown citations, and bounded `history`.
+- `frame_anchor` (on current `/4` facts; `anchor` on articles and archived `/3` facts) and
+  `citation_anchors` resolve `citation_source_ids` belonging to this run's
   own session (`<session>-<n>`) to that step's `{seq, source_id}` only when the per-run
   frame route would serve the frame (PNG present and SHA-256 verified), choosing the
-  latest verified step for a record's `anchor`. A citation of another admission, an
+  latest verified step for a record's Watch jump. A citation of another admission, an
   unverified frame, or a step this run never recorded has `null`.
 
 A listed version was exported for this run. Whether it reached the player is a feed
@@ -336,25 +341,31 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
 - `snapshot_status` is `verified`, `unavailable`, `hash_unavailable` or
   `hash_mismatch`. Entries are served only after the actor's `player-host-inputs/4`
   `frozen.json` names this actor/session and its `delivered-knowledge.json` digest
-  matches (`delivered-knowledge/3` for current `campaign-run/13` packages). Sealed
+  matches (`delivered-knowledge/4` for current `campaign-run/13` packages, or
+  `delivered-knowledge/3` strictly for the five owner-approved `#963`/`#998` sealed
+  sessions until Batch 2 registers them in the closed archive index). Sealed
   archived sessions before `/12` use `player-host-inputs/3` with `delivered-knowledge/1`;
   a sealed `campaign-run/12` run (whose snapshot is `delivered-knowledge/2`) or a run
   with no supported manifest reports explicit `hash_unavailable` and never falls through
   to `delivered-knowledge/1`.
   Missing/mismatched bytes are never presented as the frozen contents.
   The snapshot is the version the actor started with, never one adopted during play.
-  The `delivered-knowledge/3` snapshot exposes only public article/fact fields (including
-  scope class, non-world axes, `claim_kind`, `evidence_basis`, `tags`, lifecycle/review
-  flags, typed links/backlinks, `citation_source_ids`, coverage and confirmation markers
-  in their recorded units). It pages `items` with
+  The `delivered-knowledge/4` snapshot exposes only public article/fact fields (including
+  scope class, non-world axes, `statement_kind`, `state_key`, `anchor`, `anchor_display`,
+  `when`, `depiction_source_id`, `tags`, lifecycle/review flags, typed links/backlinks,
+  `citation_source_ids`, coverage, `frame_clocks`, bounded `history` and confirmation markers
+  in their recorded units) and supports `entry` lookup by ID or `state_key`. It pages `items` with
   `total`, `limit` and `next`. An absent entry is unavailable, not proof of withholding.
   No private full export, withheld-unit file or curator repository is read.
 - `calls` expose public intent/cites, knowledge query/read `returned_ids`, status and
-  explicit operation/source/step IDs, allowlisted tool-result status/reason/delivery,
+  explicit operation/source/step IDs, allowlisted tool-result status/reason/delivery/resolution,
   and original operation status/receipt dispositions. `returned_hits` carries the first
-  20 compact `player-knowledge/3` query hits with string IDs, in returned order, with
+  20 compact `player-knowledge/4` query hits (or `/3` on the five archived `#963`/`#998`
+  sessions) with string IDs, in returned order, with
   `returned_hits_omitted` counting the rest. Each hit exposes bounded `id`, `kind`,
-  `title`, `subject`, `via`, `snippet`, `status` and `cited_by_articles`.
+  `title`, `subject`, `via` (`match`, `hop` or `fuzzy`), `snippet`, `status`,
+  `cited_by_articles` and current fact metadata (`statement_kind`, `state_key`, `anchor`,
+  `anchor_display`, `when`, `depiction_source_id`).
   Calls without compact hits have an empty list and zero omitted. Intent, hints and finish
   claims are unverified player reports; SDL delivery and evaluator outcome have
   their separate meanings. No expectation or private reasoning is inferred.

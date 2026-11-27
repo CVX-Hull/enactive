@@ -228,9 +228,9 @@ test('Memory: curator strip, version rail, delivery diff, reader, and a citation
     // A version is said to be delivered only where the trace records it.
     assert.match(await text(page, '.browser header'), /v3 · Exported snapshot · confirmed delivered at step 170 · fallible/);
     assert.deepEqual(await page.$$eval('.browserbar .seg button', n => n.map(b => b.innerText.trim())), ['Articles 2', 'World facts 2', 'Game facts 2', 'All facts 4']);
-    assert.equal(await page.$('#kb-scope'), null, 'every fact of a delivered-knowledge/3 version records its scope');
-    // The tag and claim-kind view, counted from the delivered records.
-    assert.match(await text(page, '#kb-summary'), /instance state\s*2[\s\S]*mechanic\s*1[\s\S]*strategy\s*1[\s\S]*#fire\s*2[\s\S]*#water\s*2/);
+    assert.equal(await page.$('#kb-scope'), null, 'every fact of a delivered-knowledge/4 version records its scope');
+    // The tag and statement-kind view, counted from the delivered records.
+    assert.match(await text(page, '#kb-summary'), /inference\s*1[\s\S]*observation\s*1[\s\S]*state\s*2[\s\S]*#fire\s*2[\s\S]*#water\s*2/);
     assert.deepEqual(await page.$$eval('#versions .vpill b', n => n.map(x => x.textContent)), ['v1', 'v2', 'v3']);
     assert.equal(await page.$eval('#versions [aria-current="true"] b', n => n.textContent), 'v3', 'the latest version by default');
     await page.$eval('#versions .vpill:nth-child(2)', a => a.click());
@@ -250,18 +250,24 @@ test('Memory: curator strip, version rail, delivery diff, reader, and a citation
     await page.click('[data-reading="article-fire"] .refs .factpill');
     await S.until(page, () => document.activeElement?.dataset.reading === 'fact-fire');
     assert.ok((await text(page, '[data-reading]')).includes('<script>window.knowledgeExecuted=true</script>'));
-    assert.match(await text(page, '[data-reading]'), /game-wide scope[\s\S]*ruleset: standard[\s\S]*mechanic[\s\S]*observed[\s\S]*depends on fact-water/);
+    assert.match(await text(page, '[data-reading]'), /game-wide scope[\s\S]*ruleset: standard[\s\S]*observation[\s\S]*depends on water-course/);
     assert.equal(await page.evaluate(() => window.knowledgeExecuted), undefined);
+    await page.click('[data-reading="fact-fire"] [data-links] .factpill');
+    await S.until(page, () => document.activeElement?.dataset.reading === 'fact-water');
     // Facts, with the scope class, kind and flags they record, and their cited frames.
     await page.click('#kb-all');
     await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 4 && document.querySelector('[data-reading="fact-water"]'));
-    assert.match(await text(page, '[data-reading]'), /this world scope[\s\S]*instance state[\s\S]*session s01 · actor 001 · step 20/);
+    assert.match(await text(page, '[data-reading]'), /this world scope[\s\S]*state[\s\S]*State key: water-course[\s\S]*session s01 · actor 001 · step 20 · 09:00/);
+    assert.match(await text(page, '[data-citations]'), /depiction · 09:00/);
     assert.ok(await page.$('[data-reading="fact-water"] [data-citation-seq="20"]'), 'a frame of this run is clickable');
     await page.$$eval('#kb-items .item', items => items[3].click());
     await S.until(page, () => document.querySelector('[data-reading="fact-old"]'));
     assert.equal(await page.$('[data-reading="fact-old"] [data-jump-seq], [data-reading="fact-old"] [data-citation-seq]'), null, 'another session\'s frame is not a frame of this run');
     const old = await text(page, '[data-reading]');
     for (const pattern of [/contested/, /unverified branch/, /needs review/, /Contradicted by\s*fact-water/, /Stale citations: fact-gone/, /Frame unavailable/, /no cited frame of this run/])
+      assert.match(old, pattern);
+    for (const pattern of [/When: while the passage is open/, /State key: shelter-state/, /Anchor: Stream/,
+      /Replaces fact-shelter-before \(changed\)/, /08:45 \(2 steps earlier\)/])
       assert.match(old, pattern);
     await page.click('#kb-world');
     await S.until(page, () => document.querySelectorAll('#kb-items .item').length === 2);
@@ -603,10 +609,12 @@ test('recorded reader keeps delivery, reports, operation and outcome distinct on
     for (const expected of ['knowledge-delivery', 'Move carefully', 'fact-visible', 'The visible passage may be blocked',
       'Receipt disposition: delivered', 'I believe I am done', 'Evaluator outcome', 'Original frame']) assert.ok(body.toLowerCase().includes(expected.toLowerCase()), expected);
     const hits = await text(page, '.query-hits');
-    assert.match(hits, /fact-visible · fact · The passage · match · needs review/);
+    assert.match(hits, /fact-visible · fact · The passage · state · fuzzy · needs review/);
+    assert.match(hits, /State key: passage-state[\s\S]*Anchor: Entry[\s\S]*When: when the gate is open[\s\S]*Depiction: c6c09be0b7d43fba2839147651a4f6a5-2/);
     assert.match(hits, /<img src=x onerror=window\.hitExecuted=true>/);
     assert.equal(await page.$('.query-hits img'), null);
-    assert.deepEqual(await page.$$eval('.query-hits button', buttons => buttons.map(b => b.textContent)), ['fact-visible', 'article-passage']);
+    assert.deepEqual(await page.$eval('.query-hits', list => [...list.querySelectorAll('li > button')].map(b => b.textContent)), ['fact-visible', 'article-passage']);
+    assert.match(body, /resolution: state key/);
     await page.focus('.query-hits li > button');
     await page.keyboard.press('Enter');
     await S.until(page, () => document.getElementById('app').innerText.includes('Entry fact-visible'));
@@ -614,10 +622,12 @@ test('recorded reader keeps delivery, reports, operation and outcome distinct on
     assert.equal(await page.evaluate(() => window.readerExecuted), undefined);
     assert.equal(await page.evaluate(() => window.hitExecuted), undefined);
     assert.equal(await page.$eval('#pause', button => button.disabled), false);
-    // The frozen snapshot entry's delivered state: kind, evidence, scope class and axes, flags, tags, typed links and cited frames.
+    // The frozen snapshot entry's delivered metadata and cited frame.
     const entry = await text(page, '[data-reader-entry]');
-    for (const expected of [/Kind: entity property · evidence: observed · scope: world \(ruleset: standard\) · state: active · needs review · tags: passage/,
-      /Links: see_also fact-other · cited frames: c6c09be0b7d43fba2839147651a4f6a5-2/]) assert.match(entry, expected);
+    for (const expected of [/Kind: state · scope: world \(ruleset: standard\) · state: active · needs review · tags: passage/,
+      /Links: see_also fact-other · cited frames: c6c09be0b7d43fba2839147651a4f6a5-2/, /Anchor: Entry/, /When: when the gate is open/,
+      /Replaces passage-before \(changed\)/, /09:20 \(1 step earlier\)/, /Depiction c6c09be0b7d43fba2839147651a4f6a5-2 · 09:20/])
+      assert.match(entry, expected);
     assert.doesNotMatch(entry, /source IDs/, 'a current entry names its frames only as citations');
     assert.equal(await S.overflow(page), 0);
     await S.shot(page, 'recorded-reader-phone');

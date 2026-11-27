@@ -807,7 +807,7 @@ class _Batch:
 
     def reserve(self, identity: str) -> None:
         if identity in self.ids or identity in self.state_keys:
-            raise ValueError(f'identifier {identity!r} is already reserved as a record ID, slug, or state_key')
+            raise ValueError(f'identifier {identity!r} is not new (already reserved as a record ID, slug, or state_key)')
         self.ids.add(identity)
 
     def reserve_state_key(self, key: str) -> None:

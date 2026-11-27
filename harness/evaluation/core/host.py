@@ -368,7 +368,7 @@ def returned_hits(call: ToolCall) -> list[dict]:
 
 
 def record_ids(call: ToolCall) -> list[str]:
-    """IDs a memory read returned: one record, a query's records or compact `player-knowledge/3` hits, or a context's records."""
+    """IDs a memory read returned: one record, a query's records or compact `player-knowledge/4` hits, or a context's records."""
     return [row['id'] for row in returned_records(call) or returned_hits(call)]
 
 

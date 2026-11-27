@@ -783,7 +783,7 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
         and len(delivered) == 1 and delivered[0]['type'] == 'knowledge-delivery' and delivered[0]['version'] == newest
         and delivered[0]['previous_version'] == actors[chosen]['frozen_version']
         and delivered[0]['coverage'] == exported[newest]['coverage']
-        and delivered[0]['delivered_knowledge_schema'] == 'delivered-knowledge/3'
+        and delivered[0]['delivered_knowledge_schema'] == 'delivered-knowledge/4'
         and isinstance(delivered[0].get('receiving_player_request_id'), str)
         and all(u.get('reason') == 'superseded' for u in others) and len(others) == len(actors[chosen]['listed']) - 1)
     return checks, dict(published=published, exported=exported, leftovers=leftovers, covered_prefix=prefix, actors=actors,

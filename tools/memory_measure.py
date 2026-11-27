@@ -693,7 +693,7 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
                     if call is not None:
                         # The result completes this player decision before the next request can use it.
                         last = max(last,call.decision or 0)
-                        # Compact `player-knowledge/3` query hits carry `hits` (never `records`), so `returned_records`
+                        # Compact `player-knowledge/4` query hits carry `hits` (never `records`), so `returned_records`
                         # ignores them without promoting hits to `'read'` or pre-populating `'index'`.
                         if call.tool in ('player_knowledge_read','player_knowledge_query') and not call.error:
                             for record in returned_records(call):

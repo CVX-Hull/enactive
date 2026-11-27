@@ -24,7 +24,7 @@ def counts(records: list[dict]) -> dict[str, int]:
 
 def subject_counts(records: list[dict]) -> dict[str, int]:
     return dict(Counter(record['subject'] for record in records
-                        if current(record) and record['record'] == 'fact' and 'subject' in record))
+                        if current(record) and record.get('record') == 'fact' and 'subject' in record))
 
 
 def nearest(tags) -> list[tuple[str, str, tuple[str, ...], int]]:
@@ -46,7 +46,7 @@ def section(records: list[dict]) -> list[str]:
     scope_tokens = {
         str(val).lower()
         for record in active
-        for key, val in record['scope'].items()
+        for key, val in record.get('scope', {}).items()
         for val in (key, val)
     }
     lines = ['### Tags', '', f'Counts include {total} current facts and articles (`df/N`).', '']
@@ -69,7 +69,7 @@ def section(records: list[dict]) -> list[str]:
     if not rows:
         lines.append('No current tags.')
 
-    facts_total = sum(1 for record in active if record['record'] == 'fact')
+    facts_total = sum(1 for record in active if record.get('record') == 'fact')
     subjects = subject_counts(records)
     if subjects:
         lines += ['', '### Subjects', '']

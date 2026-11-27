@@ -57,8 +57,38 @@ def test_one_hop_reaches_a_seed_neighbour_but_never_an_unreached_record(corpus):
     assert corpus.rank('bm25_1hop', 'nothing matches') == []
 
 
+def test_sealed_v3_projection_preserves_the_frozen_statement_mapping_and_condition_note():
+    from test_player_knowledge_query import document, fact as player_fact
+
+    kinds = ['instance_state', 'interface', 'entity_property', 'mechanic', 'strategy']
+    snapshot = document([], [player_fact(kind.replace('_', '-'), 'Observation text.') for kind in kinds])
+    snapshot['schema'] = 'delivered-knowledge/3'
+    del snapshot['frame_clocks']
+    for f, kind in zip(snapshot['facts'], kinds):
+        del f['statement_kind']
+        f.update(claim_kind=kind, evidence_basis='observed', condition_unverified=True)
+    snapshot['facts'][0].update(
+        scope={'game': 'example', 'world': None}, branch_relation='same',
+        when={'note': 'While the latch is open.', 'requires': {'ruleset': 'standard'}},
+    )
+    snapshot['facts'][1]['when'] = {'note': '  ', 'requires': {}}
+    original = json.loads(json.dumps(snapshot))
+
+    projected = bench._project_v3_to_v4(snapshot)
+    knowledge = bench.production.Knowledge.from_dict(projected)
+    assert snapshot == original
+    assert projected['schema'] == 'delivered-knowledge/4' and projected['frame_clocks'] == {}
+    assert [f['statement_kind'] for f in knowledge.records] == [
+        'state', 'observation', 'observation', 'observation', 'inference',
+    ]
+    state, *unkeyed = knowledge.records
+    assert state['state_key'] == 'legacy-key-instance-state' and state['when'] == 'While the latch is open.'
+    assert all('state_key' not in f and 'when' not in f for f in unkeyed)
+    assert all(not {'claim_kind', 'evidence_basis', 'condition_unverified'}.intersection(f) for f in knowledge.records)
+
+
 def test_an_isolated_record_takes_no_seed_slot(corpus, monkeypatch):
-    monkeypatch.setattr(bench, 'SEEDS', 1)
+    monkeypatch.setattr(bench.production, 'SEEDS', 1)
     scores = corpus.bm25('snow lake water')
     snow, water = corpus.position['snow'], corpus.position['water']
     assert not corpus.neighbours[snow] and max(range(len(scores)), key=scores.__getitem__) == snow
@@ -276,7 +306,8 @@ def test_optional_english_porter2_conflates_the_five_pairs():
 
 
 def test_porter2_arm_rebuilds_the_index_and_restores_the_original_fold(monkeypatch):
-    value = delivered([article('guide', 'Zombie', 'A warning.', [])], [])
+    value = delivered([article('guide', 'Zombie', 'A warning.', [('A claim.', ['detail'])])],
+                      [fact('detail', 'Warning', 'A detail.')])
     query = bench.Query('v91', 'query-label', 'group', 'zombies', ('guide',))
     original = bench.retrieval(bench.Corpus('v91', value), [query], 1)
     monkeypatch.setattr(bench, 'QUERIES', (query,))
@@ -302,8 +333,8 @@ def test_compact_hits_use_exact_envelopes_canonical_bytes_and_sorted_distinct_ci
     assert full == dict(schema='player-knowledge/2', version='v1', grants_authority=False, identity='water',
                         resolution='query', resolved_from=None,
                         records=[value['facts'][0], *articles])
-    assert compact['schema'] == 'player-knowledge/3' and 'records' not in compact
-    assert compact['hits'][0] == dict(id='match', kind='fact', subject='Water', claim_kind='interface',
+    assert compact['schema'] == 'player-knowledge/4' and 'records' not in compact
+    assert compact['hits'][0] == dict(id='match', kind='fact', subject='Water', statement_kind='observation',
                                      scope={'game': 'cdda'}, snippet='é' * 239 + '…',
                                      cited_by_articles=['a-article', 'b-article', 'm-article'], via='match')
     assert compact['hits'][1] == dict(id='z-article', kind='article', revision='z-article@v1', title='z-article',
@@ -336,16 +367,16 @@ def test_998_probe_definitions_and_snippet_matching():
 def test_998_probes_use_production_snippets_and_full_rank_without_mutation():
     from dataclasses import replace
 
-    from test_player_knowledge_query import article as v3_article, document, fact as v3_fact
+    from test_player_knowledge_query import article as player_article, document, fact as player_fact
 
     start = bench.PROBES_998[0]
     article_id = start.gold_articles[0]
     latest_id = start.latest_facts[0]
     value = document(
-        [v3_article(article_id, 'Clock', 'Character creation', ('A claim', ['clock-detail']))],
-        [v3_fact('clock-detail', 'Clock starts at 8:00 AM.', 'Clock'),
-         *[v3_fact(f'clock-{i}', 'Clock', 'Clock') for i in range(10)],
-         v3_fact(latest_id, 'Clock with several unrelated words prolonging this record')],
+        [player_article(article_id, 'Clock', 'Character creation', ('A claim', ['clock-detail']))],
+        [player_fact('clock-detail', 'Clock starts at 8:00 AM.', 'Clock'),
+         *[player_fact(f'clock-{i}', 'Clock', 'Clock') for i in range(10)],
+         player_fact(latest_id, 'Clock with several unrelated words prolonging this record')],
     )
     before = json.dumps(value)
     knowledge = bench.production.Knowledge.from_dict(value)

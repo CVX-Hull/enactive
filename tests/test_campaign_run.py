@@ -420,13 +420,13 @@ def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_h
 
 
 def test_a_current_package_with_a_private_export_of_the_retired_knowledge_version_refuses_preflight(tmp_path):
-    """R-REGRESSION (B5), S-MIGRATION: a `/13` package whose private full export is `delivered-knowledge/2` is
+    """R-REGRESSION (B5), S-MIGRATION: a `/13` package whose private full export is `delivered-knowledge/3` is
     refused even when its hashes and selection match the manifest."""
     directory, profile = package(tmp_path, world='the farm')
     path = directory/'private/knowledge-full.json'
     full = json.loads(path.read_text())
-    assert full['schema'] == 'delivered-knowledge/3' and full['selection']['world'] == 'the farm'
-    path.write_text(json.dumps(dict(full, schema='delivered-knowledge/2')))
+    assert full['schema'] == 'delivered-knowledge/4' and full['selection']['world'] == 'the farm'
+    path.write_text(json.dumps(dict(full, schema='delivered-knowledge/3')))
     profile['private_files'][path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages, 'ROOT', tmp_path), git(), patch.object(packages.subprocess, 'run') as validator:

@@ -1,13 +1,23 @@
 """Delivery routes and role separation are facts of the trace, never judge choices."""
 import json
+
 import pytest
 
 from harness.evaluation.core.host import host_facts
 from harness.evaluation.core.sources import read_host
 from harness.jsonio import file_sha256
+from harness.player.knowledge import Knowledge
 from tools.knowledge_export import draw, export
 from tools.memory_measure import MeasureError, build_facts, recall_measure, read_facts
 from tools.memory_screen_checks import read_lineage
+from test_player_knowledge_query import article, document, fact
+
+
+def delivered_fixture(fact_ids, articles):
+    return document(
+        [article(identity, identity, identity, (identity, cited)) for identity, cited in articles.items()],
+        [fact(identity, identity) for identity in fact_ids],
+    )
 
 
 def test_recall_has_no_player_decision_and_never_charges_a_successor_briefing_to_its_predecessor():
@@ -28,8 +38,10 @@ def test_recall_has_no_player_decision_and_never_charges_a_successor_briefing_to
 
 @pytest.mark.parametrize('articles_delivered',[0,1,2])
 def test_judged_facts_builder_resolves_shared_facts_from_the_recorded_citing_articles(tmp_path,articles_delivered):
-    from tests.test_knowledge_export import store
-    full=store()
+    full = delivered_fixture(
+        [f'fact-{i}' for i in range(5)],
+        {f'article-{i}': [f'fact-{i}', 'fact-3'] for i in range(2)},
+    )
     seed=next(s for s in range(100) if len(draw(full,s)[0]['articles'])==articles_delivered)
     package=tmp_path/'package';hashes=export(package,full,seed)
     (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={},session='a'*32, labels=dict(world=None, lineage=None),
@@ -86,7 +98,7 @@ def test_facts_builder_requires_private_selection_only_on_current_packages(tmp_p
 
 @pytest.mark.parametrize('schema', ['campaign-run/13', 'campaign-run/10'])
 def test_facts_builder_reads_each_package_version_with_the_knowledge_version_it_was_frozen_with(tmp_path, schema):
-    """S-MIGRATION, closed archive reads: a sealed `/10` package keeps `delivered-knowledge/1`; a current one holds `/3`."""
+    """Sealed campaign-run/10 packages keep delivered-knowledge/1. Current packages hold delivered-knowledge/4."""
     from harness.player.knowledge import empty
     current = schema == 'campaign-run/13'
     other = frozen_package(tmp_path/'other', schema, ARCHIVED_EMPTY if current else empty())
@@ -119,7 +131,6 @@ def test_the_newly_archived_spend_limit_run_retains_its_recorded_spend(tmp_path)
 
 def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp_path):
     package=tmp_path/'admission';actor=package/'actors/001';actor.mkdir(parents=True)
-    from tests.test_knowledge_export import delivered_fixture
     full = delivered_fixture(['brief', 'read-first', 'lead-first', 'index', 'withheld'],
                              {'article-' + x: [x] for x in ('brief', 'read-first', 'lead-first', 'withheld')})
     seed=next(n for n in range(1000) if {f['id'] for f in draw(full,n)[0]['facts']}=={'brief','read-first','lead-first','index'})
@@ -166,10 +177,10 @@ def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp
 
 
 def test_player_host_12_undelivered_exposures_compact_query_hits_and_filtered_recall_precision(tmp_path):
-    """Under player-host/12 and player-knowledge/3:
+    """Under player-host/12 and player-knowledge/4:
     - `outcome='undelivered'` and missing `outcome` never count as delivered exposure, while archived `/11`
       briefings/reminders without `outcome` still do.
-    - Compact `player-knowledge/3` query `hits` are projected by `record_ids` but ignored by `memory_measure`
+    - Compact `player-knowledge/4` query `hits` are projected by `record_ids` but ignored by `memory_measure`
       (never promoted to `'read'` or pre-populating `'index'` before later `'read'`/`'lead'`).
     - `recall_measure` credits precision strictly from delivered placement `fact_ids`, not stripped selections.
     """
@@ -187,10 +198,10 @@ def test_player_host_12_undelivered_exposures_compact_query_hits_and_filtered_re
     package = tmp_path / 'admission'
     actor = package / 'actors/001'
     actor.mkdir(parents=True)
-    from tests.test_knowledge_export import delivered_fixture
     full = delivered_fixture(['kept', 'stripped', 'hit-only', 'hit-then-read', 'undelivered'],
                              {'article-kept': ['kept'], 'article-stripped': ['stripped']})
     hashes = export(package, full)
+    read = Knowledge.from_dict(full).read('hit-then-read')
     (package / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={}, session='a' * 32,
         labels=dict(world=None, lineage=None), live_knowledge_updates=False,
         files={'delivered-knowledge.json': hashes['delivered-knowledge.json']},
@@ -204,11 +215,11 @@ def test_player_host_12_undelivered_exposures_compact_query_hits_and_filtered_re
         dict(type='response-complete', request_id='request-1', stop_reason='toolUse'),
         dict(type='tool-start', request_id='request-1', tool_call_id='c1', tool='player_knowledge_query', arguments=dict(query='hit')),
         dict(type='tool-result', request_id='request-1', tool_call_id='c1', tool='player_knowledge_query',
-             result=dict(content=[dict(type='text', text=json.dumps(dict(schema='player-knowledge/3', version='v1',
+             result=dict(content=[dict(type='text', text=json.dumps(dict(schema='player-knowledge/4', version='v1',
                  grants_authority=False, identity='hit', resolution='query', resolved_from=None,
-                 hits=[dict(id='hit-only', kind='fact', subject=None, claim_kind='mechanic', scope=dict(game='cdda'),
+                 hits=[dict(id='hit-only', kind='fact', subject=None, statement_kind='observation', scope=dict(game='cdda'),
                             snippet='hit-only', cited_by_articles=[], via='match'),
-                       dict(id='hit-then-read', kind='fact', subject=None, claim_kind='mechanic', scope=dict(game='cdda'),
+                       dict(id='hit-then-read', kind='fact', subject=None, statement_kind='observation', scope=dict(game='cdda'),
                             snippet='hit-then-read', cited_by_articles=[], via='match'),
                        dict(id='article-stripped', kind='article', revision='article-stripped@v1', title='article-stripped',
                             snippet='lead', tags=[], via='hop')])))])),
@@ -217,9 +228,7 @@ def test_player_host_12_undelivered_exposures_compact_query_hits_and_filtered_re
         dict(type='response-complete', request_id='request-2', stop_reason='toolUse'),
         dict(type='tool-start', request_id='request-2', tool_call_id='c2', tool='player_knowledge_read', arguments=dict(id_or_title='hit-then-read')),
         dict(type='tool-result', request_id='request-2', tool_call_id='c2', tool='player_knowledge_read',
-             result=dict(content=[dict(type='text', text=json.dumps(dict(schema='player-knowledge/3', version='v1',
-                 grants_authority=False, identity='hit-then-read', resolution='exact', resolved_from=None,
-                 records=[dict(id='hit-then-read', text='hit-then-read')])))])),
+             result=dict(content=[dict(type='text', text=json.dumps(read))])),
         # Recall selects both article-kept and article-stripped, but placement filtering delivers only 'kept'.
         dict(type='knowledge-recall', kind='reminder', status='selected',
              article_ids=['article-kept', 'article-stripped'], request_id='recall-1'),

@@ -16,10 +16,10 @@ def delivered_fixture(fact_ids, articles=None):
                  coverage=dict(schema='curator-coverage/2', session='s01', actor=None, last_step=5))
     position = dict(session='s01', actor='001', step=3, order=[1, '001', 3])
     fields = dict(scope={'game': 'example'}, tags=[], branch_relation=None, lifecycle_state='active',
-                  condition_unverified=False, unverified_branch=False, needs_review=False, stale_citations=[],
+                  unverified_branch=False, needs_review=False, stale_citations=[],
                   shadowed_by=[], contradicted_by=[])
     articles = articles or {}
-    value['facts'] = [dict(fields, id=identity, claim_kind='mechanic', evidence_basis='observed', text=identity,
+    value['facts'] = [dict(fields, id=identity, statement_kind='observation', text=identity,
                            seen=dict(position), citation_source_ids=['1' * 32 + '-1'], links=[], backlinks=[],
                            cited_by_articles=sorted(a for a, ids in articles.items() if identity in ids))
                       for identity in fact_ids]
@@ -138,7 +138,7 @@ def edited(change):
 
 @pytest.mark.parametrize('label,change', [
     ('fact without text', lambda v: v['facts'][0].pop('text')),
-    ('fact with an empty claim kind', lambda v: v['facts'][0].update(claim_kind='')),
+    ('fact with an empty statement kind', lambda v: v['facts'][0].update(statement_kind='')),
     ('fact with invalid scope', lambda v: v['facts'][0].update(scope={})),
     ('fact without seen', lambda v: v['facts'][0].pop('seen')),
     ('fact with seen carrying world', lambda v: v['facts'][0].update(seen=dict(world='unexpected'))),
@@ -172,12 +172,12 @@ def test_the_reader_accepts_coverage_with_an_actor_and_no_step():
     assert Knowledge.from_dict(value).value['coverage']['actor'] == 'actor-1'
 
 
-@pytest.mark.parametrize('fields', [dict(schema='curator-fact/4'), dict(scope={'game': 'other'}),
+@pytest.mark.parametrize('fields', [dict(schema='curator-fact/5'), dict(scope={'game': 'other'}),
                                    dict(record='other')])
 def test_published_export_refuses_old_or_invalid_records_even_if_retired(tmp_path, monkeypatch, fields):
     from harness.curator.knowledge import KnowledgeError, Repository
     from tools.knowledge_export import published
-    record = dict(schema='curator-fact/5', record='fact', scope={'game': 'game'}, retired={})
+    record = dict(schema='curator-fact/6', record='fact', scope={'game': 'game'}, retired={})
     monkeypatch.setattr(Repository, 'records', lambda self, version: [record | fields])
     with pytest.raises(KnowledgeError, match='invalid record'):
         published(tmp_path/'game', 'v8')
@@ -357,34 +357,35 @@ def test_article_eligibility_and_scope_vs_when(tmp_path, two_worlds):
     world, beta = two_worlds['worlds']
     lineage = two_worlds['lineages'][0]
     reader, selection = freeze(tmp_path/'default', two_worlds, world=world, lineage=lineage)
-    assert selection['excluded_unknown_axis'] == 4
-    for name in ('shadow-standard', 'hard-only-rule'):
+    assert selection['excluded_unknown_axis'] == 6
+    for name in ('shadow-standard', 'hard-only-rule', 'winter-conditional'):
         assert reader.read(name, by='id')['resolution'] == 'unknown'
-    assert reader.read('winter-conditional', by='id')['records'][0]['condition_unverified'] is True
-    assert reader.read('camp-guide', by='id')['records'][0]['condition_unverified'] is True
+    assert 'condition_unverified' not in reader.read('camp-guide', by='id')['records'][0]
     standard = Knowledge.from_dict(publish(two_worlds, world=world, lineage=lineage, context={'ruleset': 'standard'}))
     assert standard.read('winter-conditional', by='id')['resolution'] == 'unknown'
     assert standard.read('camp-guide', by='id')['records'][0]['needs_review'] is True
     winter = Knowledge.from_dict(publish(two_worlds, world=beta, context={'ruleset': 'winter'}))
-    assert winter.read('winter-conditional', by='id')['records'][0]['condition_unverified'] is False
+    wc = winter.read('winter-conditional', by='id')['records'][0]
+    assert wc['when'] == 'only under winter ruleset' and 'condition_unverified' not in wc
     assert winter.read('camp-guide', by='id')['resolution'] == 'unknown'
 
-    # The article has only game scope. Its only claim still fails when its cited fact's condition is false.
+    # Grounded `when` string is delivered inline without condition_unverified; scope axes still gate delivery.
     builder = SyntheticKnowledgeBuilder(tmp_path/'conditional-article')
     sid = session_hex(1)
-    builder.add_session(sid, 'session')
+    builder.add_session(sid, 'session', context={'shelter': 'dry'})
     source = builder.add_frame(sid, 1, 1)
     assert source == frame_id(sid, 1)
-    builder.records.append(builder.make_fact(fact_id='condition', claim_kind='mechanic',
+    builder.records.append(builder.make_fact(fact_id='condition', statement_kind='observation',
         text='Threads stay dry inside.', citations=[source], tags=[], published_in='v1', session='curator-v1',
-        when=dict(note='Requires a dry shelter.', requires={'shelter': 'dry'})))
+        scope_axes={'shelter': 'dry'}, when='Requires a dry shelter.'))
     builder.records.append(builder.make_article(slug='thread-guide', title='Thread guide', lead='Keep threads dry.',
         body=[dict(text='Keep threads inside.', facts=['condition'])], tags=[], published_in='v1', session='curator-v1'))
     version = builder.commit_version(coverage_session='session', last_step=1)
     absent = Knowledge.from_dict(publish(dict(repo_path=builder.path, version=version), context={'shelter': 'wet'}))
     assert absent.records == []
-    unknown = Knowledge.from_dict(publish(dict(repo_path=builder.path, version=version)))
-    assert unknown.read('thread-guide', by='id')['records'][0]['condition_unverified'] is True
+    present = Knowledge.from_dict(publish(dict(repo_path=builder.path, version=version), context={'shelter': 'dry'}))
+    assert present.read('condition', by='id')['records'][0]['when'] == 'Requires a dry shelter.'
+    assert 'condition_unverified' not in present.read('thread-guide', by='id')['records'][0]
 
 
 def test_default_keeps_current_unbound_and_matching_world_only(tmp_path):
@@ -512,7 +513,7 @@ def test_descendant_keeps_prefix_its_parent_abandons_after_the_fork(tmp_path):
     builder.add_frame(parent, 1, 5)
     builder.commit_version(coverage_session='parent-session', last_step=5)
     source = builder.add_frame(parent, 2, 10)
-    builder.records.append(builder.make_fact(fact_id='branch-cache', claim_kind='instance_state',
+    builder.records.append(builder.make_fact(fact_id='branch-cache', statement_kind='state',
         text='The box is full.', citations=[source], tags=[], published_in='v2', session='curator-v2', bind_world=True))
     builder.commit_version(coverage_session='parent-session', last_step=10)
     builder.add_session(child, 'child-session', world='world', lineage='child', admission=1,
@@ -540,13 +541,13 @@ def test_unknown_restore_flags_evidence_on_both_sides_of_a_known_fork(tmp_path):
     builder.add_session(child, 'child-session', world='world', lineage='child', admission=1,
         branch=dict(parent='parent', fork_at=position('parent-session', 6), fork_version='v1'))
     before = builder.add_frame(child, 1, 10, order_index=2)
-    builder.records.append(builder.make_fact(fact_id='before-restore', claim_kind='instance_state',
+    builder.records.append(builder.make_fact(fact_id='before-restore', statement_kind='state',
         text='The box is full.', citations=[before], tags=[], published_in='v2', session='curator-v2', bind_world=True))
     builder.commit_version(coverage_session='child-session', last_step=10)
     builder.add_restore(lineage='child', saved_at=None, saved_version=None,
         restored_at=position('child-session', 20, order_index=2), restored_version='v2')
     after = builder.add_frame(child, 2, 21, order_index=2)
-    builder.records.append(builder.make_fact(fact_id='after-restore', claim_kind='instance_state',
+    builder.records.append(builder.make_fact(fact_id='after-restore', statement_kind='state',
         text='The gate is closed.', citations=[after], tags=[], published_in='v3', session='curator-v3', bind_world=True))
     version = builder.commit_version(coverage_session='child-session', last_step=21)
     reader, _ = freeze(tmp_path/'package', dict(repo_path=builder.path, version=version), world='world', lineage='child')
@@ -562,7 +563,7 @@ def test_editorial_retirement_in_grooming_is_visible_on_its_admitted_lineage(tmp
     parent, child = session_hex(1), session_hex(2)
     builder.add_session(parent, 'parent-session', world='world', lineage='parent', admission=1)
     source = builder.add_frame(parent, 1, 5)
-    builder.records.append(builder.make_fact(fact_id='cache', claim_kind='instance_state', text='The box is full.',
+    builder.records.append(builder.make_fact(fact_id='cache', statement_kind='state', text='The box is full.',
         citations=[source], tags=[], published_in='v1', session='curator-v1', bind_world=True))
     builder.records.append(builder.make_article(slug='cache-guide', title='Cache guide', lead='Check the box.',
         body=[dict(text='The box is full.', facts=['cache'])], tags=[], published_in='v1', session='curator-v1'))
@@ -591,7 +592,7 @@ def test_editorial_retirement_requires_every_session_in_whole_admission_to_match
     builder.add_session(session_hex(3), 'other-session', world='world', lineage='other', admission=1)
     builder.add_session(session_hex(4), 'unlabelled-session', world='world')
     source = builder.add_frame(first, 1, 5)
-    builder.records.append(builder.make_fact(fact_id='cache', claim_kind='instance_state', text='The box is full.',
+    builder.records.append(builder.make_fact(fact_id='cache', statement_kind='state', text='The box is full.',
         citations=[source], published_in='v1', session='curator-v1', bind_world=True))
     admissions = {'same-lineage': 'first-session,second-session', 'mixed-lineage': 'first-session,other-session',
                   'unknown-session': 'first-session,missing-session', 'unlabelled': 'first-session,unlabelled-session'}
@@ -615,7 +616,7 @@ def test_child_inherits_uncertainty_from_parent_restore_before_fork(tmp_path):
     parent, child = session_hex(1), session_hex(2)
     builder.add_session(parent, 'parent-session', world='world', lineage='parent', admission=1)
     source = builder.add_frame(parent, 1, 5)
-    builder.records.append(builder.make_fact(fact_id='cache', claim_kind='instance_state', text='The box is full.',
+    builder.records.append(builder.make_fact(fact_id='cache', statement_kind='state', text='The box is full.',
         citations=[source], published_in='v1', session='curator-v1', bind_world=True))
     builder.commit_version(coverage_session='parent-session', last_step=5)
     builder.add_restore(lineage='parent', saved_at=None, saved_version=None,
@@ -639,7 +640,7 @@ def test_editorial_retirement_needs_positive_version_evidence_after_unknown_rest
     sid = session_hex(1)
     builder.add_session(sid, 'main-session', world='world', lineage='main', admission=1)
     source = builder.add_frame(sid, 1, 5)
-    builder.records.append(builder.make_fact(fact_id='cache', claim_kind='instance_state', text='The box is full.',
+    builder.records.append(builder.make_fact(fact_id='cache', statement_kind='state', text='The box is full.',
         citations=[source], published_in='v1', session='curator-v1', bind_world=True))
     for slug in ('guide-ended-before-restore', 'guide-ended-after-restore'):
         builder.records.append(builder.make_article(slug=slug, title=slug, lead='Check the box.',
@@ -665,9 +666,9 @@ def test_article_history_keeps_applicable_citations_after_fact_restatement_or_en
     sid = session_hex(1)
     builder.add_session(sid, 'main-session', world='world', lineage='main', admission=1)
     source = builder.add_frame(sid, 1, 5)
-    builder.records.append(builder.make_fact(fact_id='cache-old', claim_kind='instance_state', text='The box is full.',
-        citations=[source], published_in='v1', session='curator-v1', bind_world=True))
-    builder.records.append(builder.make_fact(fact_id='camp-fire', claim_kind='instance_state', text='The fire is lit.',
+    builder.records.append(builder.make_fact(fact_id='cache-old', statement_kind='state', state_key='key-cache',
+        text='The box is full.', citations=[source], published_in='v1', session='curator-v1', bind_world=True))
+    builder.records.append(builder.make_fact(fact_id='camp-fire', statement_kind='state', text='The fire is lit.',
         citations=[source], published_in='v1', session='curator-v1', bind_world=True))
     builder.records.append(builder.make_article(slug='cache-guide', title='Cache guide', lead='Check the box.',
         body=[dict(text='The box is full.', facts=['cache-old'])], published_in='v1', session='curator-v1'))
@@ -675,8 +676,9 @@ def test_article_history_keeps_applicable_citations_after_fact_restatement_or_en
         builder.records.append(builder.make_article(slug=slug, title=slug, lead='Check the fire.',
             body=[dict(text='The fire is lit.', facts=['camp-fire'])], published_in='v1', session='curator-v1'))
     builder.commit_version(coverage_session='main-session', last_step=5)
-    builder.supersede_fact(['cache-old'], builder.make_fact(fact_id='cache', claim_kind='instance_state',
-        text='The storage box is full.', citations=[source], published_in='v2', session='curator-v2', bind_world=True),
+    builder.supersede_fact(['cache-old'], builder.make_fact(fact_id='cache', statement_kind='state',
+        state_key='key-cache', text='The storage box is full.', citations=[source], published_in='v2',
+        session='curator-v2', bind_world=True),
         reason_kind='restated')
     builder.revise_article('cache-guide', builder.make_article(slug='cache-guide', title='Cache guide',
         lead='Check the storage box.', body=[dict(text='The storage box is full.', facts=['cache'])],
@@ -688,7 +690,7 @@ def test_article_history_keeps_applicable_citations_after_fact_restatement_or_en
     builder.commit_version(coverage_session='main-session', last_step=5)
     end = builder.add_frame(sid, 2, 10)
     builder.retire_fact_ended('camp-fire', reason='The fire went out.', end='transition',
-                             end_citations=[end], published_in='v3', session='curator-v3')
+                              end_citations=[end], published_in='v3', session='curator-v3')
     version = builder.commit_version(coverage_session='main-session', last_step=10)
     fixture = dict(repo_path=builder.path, version=version)
     target = dict(world='world', lineage='main')
@@ -697,3 +699,78 @@ def test_article_history_keeps_applicable_citations_after_fact_restatement_or_en
     assert value['history']['replaced']['cache-guide@v1'] == dict(reason='restated', by=['cache-guide'])
     assert value['history']['ended'] == ['camp-fire', 'fire-guide']
     assert value['history']['retracted'] == ['wrong-fire-guide']
+
+
+def test_changed_clocks_anchor_display_mobile_frame_and_two_strength_depends_on(tmp_path):
+    """End-to-end Batch 1 export checks: `changed` MV-Register + pre-change fork survival, direct `clock_label`
+    and tagged `prior_clock` carry-forward, `anchor_display`, mobile-frame move-and-restore (#1021), and
+    two-strength `depends_on` (`state_key` entity pin vs fact-ID reading pin) with expanded backlinks."""
+    from tests.synthetic_knowledge_repo import SyntheticKnowledgeBuilder, position, session_hex
+    builder = SyntheticKnowledgeBuilder(tmp_path / 'batch1-export')
+    sid_main, sid_fork = session_hex(61), session_hex(62)
+    builder.add_session(sid_main, 'main-s1', world='world', lineage='main', admission=1)
+    f1 = builder.add_frame(sid_main, 1, 10)
+    f2_modal = builder.add_frame(sid_main, 2, 14)
+    builder.add_clock(f1, 'Spring, day 61 8:00 AM')
+    builder.records.extend([
+        builder.make_fact(fact_id='rv-parked-camp', statement_kind='state', state_key='luxury-rv',
+                          subject='Luxury RV', text='The Luxury RV is parked at the campground.',
+                          depiction_source_id=f1, citations=[f1], published_in='v1', session='c1', bind_world=True),
+        builder.make_fact(fact_id='rv-interior-bed', statement_kind='state', state_key='rv-bed',
+                          anchor='luxury-rv', text='The bed inside the RV holds a blanket.',
+                          citations=[f2_modal], published_in='v1', session='c1', bind_world=True),
+        builder.make_fact(fact_id='rv-door-toggle', statement_kind='inference',
+                          text='The RV side door unlocks from the interior panel.',
+                          links=[{'rel': 'depends_on', 'target': 'luxury-rv'}],
+                          citations=[f1], published_in='v1', session='c1', bind_world=True),
+        builder.make_fact(fact_id='fire-beside-rv', statement_kind='state', state_key='fire-ring-site',
+                          text='The fire ring sits two tiles east of the parked RV.',
+                          links=[{'rel': 'depends_on', 'target': 'rv-parked-camp'}],
+                          citations=[f1], published_in='v1', session='c1', bind_world=True),
+    ])
+    builder.commit_version(coverage_session='main-s1', last_step=14)
+
+    # Fork before the RV moves.
+    builder.add_session(sid_fork, 'fork-s1', world='world', lineage='fork', admission=1,
+                        branch=dict(parent='main', fork_at=position('main-s1', 15), fork_version='v1'))
+    ff1 = builder.add_frame(sid_fork, 1, 16, order_index=2)
+    builder.commit_version(coverage_session='fork-s1', last_step=16)
+
+    # Move the RV on `main` via `changed` supersession.
+    f3 = builder.add_frame(sid_main, 3, 25)
+    builder.add_clock(f3, 'Spring, day 61 11:30 AM')
+    builder.supersede_fact(
+        ['rv-parked-camp'],
+        builder.make_fact(fact_id='rv-parked-road', statement_kind='state', state_key='luxury-rv',
+                          subject='Luxury RV', text='The Luxury RV is parked along the north road.',
+                          citations=[f3], published_in='v3', session='c3', bind_world=True),
+        reason_kind='changed',
+    )
+    version = builder.commit_version(coverage_session='main-s1', last_step=25)
+    fixture = dict(repo_path=builder.path, version=version)
+
+    # Main lineage: RV moved -> interior anchored fact survives clean; entity-key pin stays quiet with backlink on new reading;
+    # extrinsic placement-coupled reading pin flags needs_review!
+    main_view, _ = freeze(tmp_path / 'main', fixture, world='world', lineage='main')
+    assert main_view.value['frame_clocks'] == {f1: 'Spring, day 61 8:00 AM', f3: 'Spring, day 61 11:30 AM'}
+    assert main_view.read('rv-parked-camp', by='id')['resolution'] == 'changed'
+    assert main_view.read('luxury-rv', by='id')['resolution'] == 'state_key'
+    assert [r['id'] for r in main_view.read('luxury-rv', by='id')['records']] == ['rv-parked-road']
+    rv_now = main_view.read('rv-parked-road', by='id')['records'][0]
+    assert rv_now['seen']['clock_label'] == 'Spring, day 61 11:30 AM'
+    assert {'rel': 'depends_on', 'source': 'rv-door-toggle'} in rv_now['backlinks']
+    bed = main_view.read('rv-interior-bed', by='id')['records'][0]
+    assert bed['needs_review'] is False
+    assert bed['anchor'] == 'luxury-rv' and bed['anchor_display'] == 'Luxury RV'
+    assert bed['seen']['prior_clock'] == {'label': 'Spring, day 61 8:00 AM', 'step_offset': 4}
+    assert 'clock_label' not in bed['seen']
+    toggle = main_view.read('rv-door-toggle', by='id')['records'][0]
+    assert toggle['needs_review'] is False and toggle['stale_citations'] == []
+    extrinsic = main_view.read('fire-beside-rv', by='id')['records'][0]
+    assert extrinsic['needs_review'] is True and extrinsic['stale_citations'] == ['rv-parked-camp']
+
+    # Pre-change fork keeps the old RV location alive and un-falsified!
+    fork_view, _ = freeze(tmp_path / 'fork', fixture, world='world', lineage='fork')
+    assert [r['id'] for r in fork_view.read('luxury-rv', by='id')['records']] == ['rv-parked-camp']
+    assert fork_view.read('fire-beside-rv', by='id')['records'][0]['needs_review'] is False
+    assert ff1 not in fork_view.value['frame_clocks']

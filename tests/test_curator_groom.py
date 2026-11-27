@@ -16,14 +16,14 @@ from tools.curator_host import groom, shadow
 
 FRAME = SESSION_ID + '-1'
 RUN = 'live-admission'
-FACT = dict(schema='curator-fact/5', record='fact', id='control', claim_kind='interface', evidence_basis='observed',
+FACT = dict(schema='curator-fact/6', record='fact', id='control', statement_kind='observation',
             tags=['control'], text='An observed control.', scope={}, links=[], citations=[FRAME])
-ARTICLE = dict(schema='curator-fact/5', record='article', slug='guide', title='Controls', lead='How to operate the screens.',
+ARTICLE = dict(schema='curator-fact/6', record='article', slug='guide', title='Controls', lead='How to operate the screens.',
                body=[dict(text='A control exists.', facts=['control'])], links=[], tags=[])
 ADMISSION = [dict(op='add_fact', fact=FACT), dict(op='add_article', article=ARTICLE)]
 RESTATE = [dict(op='supersede_fact', ids=['control'], reason_kind='restated',
                 fact={key: value for key, value in FACT.items() if key != 'scope'} | dict(id='control-restated', citations=[]))]
-REMAP = [{'op': 'remap_citations', 'from': 'control', 'to': 'control-restated', 'in': ['guide']}]
+REMAP = [{'op': 'remap_citations', 'from': ['control'], 'to': 'control-restated', 'in': ['guide']}]
 CONTRADICT = [dict(op='add_fact', fact=FACT | dict(id='control-absent', text='The control is absent.',
                                                    links=[dict(rel='contradicts', target='control')]))]
 
@@ -32,7 +32,7 @@ def publish(tmp_path: Path, repo: Repository, base: str, changes: list, kind: st
     directory = tmp_path/'submissions'/f'{kind}-{base}'
     directory.mkdir(parents=True)
     (directory/'submission.json').write_text(json.dumps(dict(
-        schema='curator-submission/2', base_version=base, summary='test', changes=changes)))
+        schema='curator-submission/3', base_version=base, summary='test', changes=changes)))
     frames = {FRAME: dict(session=RUN, actor='001', step=1, order=[1, '001', 1])} if kind == 'admission' else {}
     return gate(repo, directory, session_id=f'{kind}-{base}', window_frames=frames, session_kind=kind,
                 coverage=dict(schema=COVERAGE, session=RUN, actor='001', last_step=1))
