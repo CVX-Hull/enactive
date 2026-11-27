@@ -3,7 +3,7 @@ owner: lead
 status: active
 date: 2026-11-26
 scope: 'Outside evidence from 29 works beyond short-horizon game agents on stale memory precedence, evolving off-screen state, environmental tracking, active sensing, multi-session error carry-forward, scientific discovery and human-factors failure modes'
-review_trigger: 'The owner decides #1020–#1027 or the boundary between built-in game tracking, external memory and active re-observation, or a study tests one of these questions in extended play'
+review_trigger: 'The owner settles time/landmark anchoring, condition/confidence metadata, findability, post-cut delivery and curation cadence, or a study tests keyed inertial state, player_agenda or interleaved hygiene grooming in extended play'
 ---
 
 # Research on long-horizon off-screen state, environmental tracking and non-gaming memory analogues
@@ -18,15 +18,16 @@ project, a laboratory programme or a warehouse operation as much as solving
 isolated benchmark episodes.
 
 The question arose during the [three-day campaign memory review (#1019)](https://github.com/CVX-Hull/enactive/issues/1019)
-before settling open memory decisions:
-[world-state facts (#1020)](https://github.com/CVX-Hull/enactive/issues/1020),
-[dated, anchored world facts (#1021)](https://github.com/CVX-Hull/enactive/issues/1021),
-[condition and confidence metadata (#1022)](https://github.com/CVX-Hull/enactive/issues/1022),
-[record findability and lookup (#1023)](https://github.com/CVX-Hull/enactive/issues/1023),
-[what the curator should record (#1024)](https://github.com/CVX-Hull/enactive/issues/1024),
-[post-cut delivery, reminders and frame evidence (#1025)](https://github.com/CVX-Hull/enactive/issues/1025),
-[working state across context cuts (#1026)](https://github.com/CVX-Hull/enactive/issues/1026)
-and [live curation cost (#1027)](https://github.com/CVX-Hull/enactive/issues/1027).
+to inform memory design across `#1020`–`#1027`. Approved policy covers curator
+scope ([Kinds 1–5 only](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five),
+[strategist deferred](decisions/owner-decisions.md#separate-strategist-deferred-1024)),
+[player working state](decisions/owner-decisions.md#player-working-state-agenda-1026),
+[keyed inertial world state](decisions/owner-decisions.md#keyed-inertial-world-state-and-live-repair-1020),
+[zero-model lookup](decisions/owner-decisions.md#zero-model-lexical-index-embeddings-deferred-1020)
+and [interleaved hygiene-only live grooming](decisions/owner-decisions.md#interleaved-hygiene-only-live-grooming-1027).
+Empirical and design questions on time/landmark anchoring, condition/confidence
+signals, record findability, post-cut delivery and live curation cadence stay
+active here; issue status lives on the [Project](https://github.com/users/CVX-Hull/projects/2).
 Related research covers [memory statement kinds](research-memory-statement-kinds.md),
 [memory, ontology and oversight](research-curated-memory.md) and
 [belief under conflict](research-belief-under-conflict.md).
