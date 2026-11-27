@@ -13,7 +13,10 @@ from __future__ import annotations
 from collections import defaultdict
 import json
 from pathlib import Path
+import re
+import tomllib
 
+import frontmatter
 from jsonschema import Draft202012Validator
 import pytest
 
@@ -22,6 +25,8 @@ LEDGER = ROOT / 'data/evaluation/coding-agent-attempts.jsonl'
 SCHEMA = ROOT / 'schemas/coding-agent-attempt.schema.json'
 ROUTING = ROOT / 'docs/operations/model-routing.md'
 ROUTING_TABLE = '## Route by kind of work'
+ROLE_DEFAULTS_TABLE = '## Roles and their default models'
+EFFORT_LABEL = {'low': 'Low', 'medium': 'Medium', 'high': 'High', 'xhigh': 'Extra-high', 'max': 'Max'}
 USAGE = dict(input_tokens=100, cached_input_tokens=20, cache_write_input_tokens=None, output_tokens=0)
 
 
@@ -143,3 +148,48 @@ def test_an_attempt_can_record_usage_and_brief_properties():
 ])
 def test_a_row_the_reading_rules_cannot_use_is_refused(rows, message):
     assert any(message in problem for problem in problems(rows, KINDS)), problems(rows, KINDS)
+
+
+def role_default_cells(page: str) -> list[list[str]]:
+    section = page.split(ROLE_DEFAULTS_TABLE, 1)[1].split('\n## ', 1)[0]
+    rows = [line for line in section.splitlines() if line.startswith('|')]
+    return [[cell.strip() for cell in row.strip('|').split('|')] for row in rows[2:]]
+
+
+def _parse_wrapper_cell(cell: str) -> tuple[str, str, str | None]:
+    match = re.fullmatch(r'`([^`]+)`:\s*(?:alias\s+)?`([^`]+)`(?:\s+at\s+([A-Za-z-]+))?', cell)
+    assert match is not None, f'unparseable role-defaults cell: {cell!r}'
+    return match.group(1), match.group(2), match.group(3)
+
+
+def test_role_wrappers_match_routing_table_and_tool_policy():
+    rows = role_default_cells(ROUTING.read_text())
+    assert len(rows) == 4
+    seen_claude, seen_codex, seen_agy = set(), set(), set()
+    for _, claude_cell, codex_cell, agy_cell in rows:
+        name, model, effort = _parse_wrapper_cell(claude_cell)
+        seen_claude.add(name)
+        meta = frontmatter.loads((ROOT / '.claude/agents' / f'{name}.md').read_text()).metadata
+        assert meta['name'] == name and meta['model'] == model
+        assert (EFFORT_LABEL[meta['effort']] if 'effort' in meta else None) == effort
+
+        name, model, effort = _parse_wrapper_cell(codex_cell)
+        seen_codex.add(name)
+        data = tomllib.loads((ROOT / '.codex/agents' / f'{name}.toml').read_text())
+        assert data['name'] == name and data['model'] == model
+        assert EFFORT_LABEL[data['model_reasoning_effort']] == effort
+
+        name, alias, effort = _parse_wrapper_cell(agy_cell)
+        seen_agy.add(name)
+        meta = frontmatter.loads((ROOT / '.agents/agents' / name / 'agent.md').read_text()).metadata
+        assert meta['name'] == name and meta['model'] == alias and effort is None
+        tools = meta.get('tools')
+        assert isinstance(tools, list) and tools and 'run_command' not in tools
+        if name == 'worker':
+            assert {'read_file', 'edit_file', 'write_file'} <= set(tools)
+        else:
+            assert tools == ['read_file']
+
+    assert seen_claude == {p.stem for p in (ROOT / '.claude/agents').glob('*.md')}
+    assert seen_codex == {p.stem for p in (ROOT / '.codex/agents').glob('*.toml')}
+    assert seen_agy == {p.parent.name for p in (ROOT / '.agents/agents').glob('*/agent.md')}

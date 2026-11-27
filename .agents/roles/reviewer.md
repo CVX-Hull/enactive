@@ -30,6 +30,9 @@ one-off owner ruling:
    pointing to the current documentation.
 3. Verify that finished or replaced one-off owner rulings move to
    `docs/decisions/owner-decisions-archive.md` in the same change.
-4. Check that current pages state each caveat once at its owning boundary, use
-   sentences with subjects and verbs, preserve spaces between words and between
-   numbers and units, and keep table cells scannable.
+4. Check that current pages state each caveat once at its owning boundary, put decision
+   analysis on the page while keeping implementer detail in the work record, use
+   sentences with subjects and verbs, draw flows instead of narrating them, preserve
+   spaces between words and between numbers and units, and keep table cells scannable.
+5. When reviewing a pull request, verify that its `Models:` line accurately attributes
+   the lead and delegates.

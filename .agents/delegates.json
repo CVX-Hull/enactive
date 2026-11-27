@@ -1,5 +1,5 @@
 {
-  "schema": "delegates/2",
+  "schema": "delegates/3",
   "role_instruction": "You are the {role}. Before starting, read and follow `.agents/roles/{role}.md`; that file owns the role. If it cannot be read, stop and report it.",
   "drop_environment": [
     "OPENROUTER_API_KEY",
@@ -50,6 +50,12 @@
     "claude-code": {
       "name": "Claude Code",
       "version": ["claude", "--version"],
+      "outcome_checks": {
+        "error_flag": "is_error",
+        "ok_status": {"path": "subtype", "values": ["success"]},
+        "timeout_fields": ["subtype", "stop_reason"],
+        "timeout_patterns": ["error_max_turns", "max_turns", "timed_?out", "timeout"]
+      },
       "refusals": ["usage limit", "rate limit", "quota", "not logged in", "/login", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
       "usage": {
         "read": "stdout_json",
@@ -63,7 +69,7 @@
       },
       "roles": {
         "worker": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
@@ -87,6 +93,12 @@
     "antigravity": {
       "name": "Antigravity",
       "version": ["agy", "--version"],
+      "outcome_checks": {
+        "error_flag": "is_error",
+        "ok_status": {"path": "status", "values": ["SUCCESS"]},
+        "timeout_fields": ["finish_reason", "finishReason", "subtype"],
+        "timeout_patterns": ["print_timeout", "max_turns", "timed_?out", "timeout"]
+      },
       "refusals": ["usage limit", "rate limit", "quota", "not logged in", "log ?in", "sign ?in", "unauthorized", "\\b401\\b", "\\b429\\b"],
       "usage": {
         "read": "stdout_json",

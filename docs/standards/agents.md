@@ -33,8 +33,13 @@ to this list.
   [delegate profiles](../operations/delegate-profiles.md): how fully the brief pins the
   design, how much code changes and how risky it is, whether the task needs the network
   or the whole test suite, whether a reviewer must come from a different model family
-  than the author, what quota is left, and how the last attempts of this kind went. The
-  nearest delegate is not the default: every supported delegate is started the same way
+  than the author, what quota is left, and how the last attempts of this kind went.
+  When an independent executable check verifies the work (or local evidence already
+  places a cheaper tier in the strongest group), start at the cheapest passing tier
+  and escalate only on failure; reserve top tiers for open design, hard cross-boundary
+  changes and primary reviews
+  ([decision log](../decisions/owner-decisions.md#oracle-first-cheaper-tiers-and-bounded-worker-defaults)).
+  The nearest delegate is not the default: every supported delegate is started the same way
   ([starting a delegate](../operations/coding-agents.md#starting-a-delegate-on-any-coding-agent)).
   Starting any session, sub-agent or delegate to do work is a delegation, whatever tool
   starts it, and the model it runs on is part of the choice. The lead writes its choice

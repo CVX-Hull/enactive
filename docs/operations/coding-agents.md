@@ -112,17 +112,19 @@ checkout or a worktree, with the main checkout's Python
   `.agents/roles/<role>.md`. `WORKTREE` is where the delegate works; a worker gets a
   worktree of its own that the lead created. `OUT` is a directory in the lead's scratch
   space, outside the checkout; the call writes the brief as sent, the reply, the run's
-  output and `result.json` there.
+  output, `result.json` and a pre-filled `attempt-row-draft.json` (`coding-agent-attempt/3`
+  with all run-known fields populated) there.
 - **What comes back.** The call prints a result and then the hand-back, and exits with
   0 when there is a hand-back and 1 when there is none. The result names the delegate,
   its version, the wall time, the commits made in the worktree during the run, the paths
   left uncommitted there and one outcome: `handed_back`; `failed_start` (the command is missing or
   could not be run); `empty_reply` (exit code 0 and no reply, which is a failed run; its detail says when
   the output could not be read as the record the reply comes in);
-  `refused` (a run that failed or returned nothing, whose output carries a quota or
-  sign-in message); `failed` (any other non-zero exit); `timed_out` (the delegate and
-  everything it started are stopped); or `unavailable` (the role is recorded as having no start that works on
-  that coding agent). After any outcome but the first the call starts nothing else: the
+  `refused` (a run that failed, reported a structured error or returned nothing, whose output carries a quota or
+  sign-in message); `failed` (any other non-zero exit, or an exit-0 structured error such as `is_error: true` or a non-ok status/subtype);
+  `timed_out` (the delegate and everything it started are stopped, or an exit-0 structured record reports a timeout such as `error_max_turns` or `print_timeout`);
+  or `unavailable` (the role is recorded as having no start that works on
+  that coding agent). When `outcome` is not `handed_back`, any diagnostic reply text stays on disk in `reply.md` while `hand_back` is null. After any outcome but the first the call starts nothing else: the
   lead decides what to try next.
 - **Token use and the served model.** Each start turns on the coding agent's
   machine-readable output, and the result carries what that output reports: `usage`,
@@ -176,9 +178,17 @@ on repository tasks.
   as an ordinary reply with exit code 0 is handed back as text for the lead to read.
   Either way nothing else is started.
 - **Claude Code settings.** A delegated run loads the user's settings as well as the
-  project's. The reviewer, explorer and locator starts set the default output style, so
-  the user's selected style does not carry into their hand-back; the worker start does
-  not set it.
+  project's. Every delegated role (worker, reviewer, explorer and locator) sets the
+  default output style (`{"outputStyle": "default"}`), so the user's selected style
+  does not carry into delegated hand-backs.
+- **Antigravity role wrappers.** Tracked wrappers under `.agents/agents/` keep native
+  aliases (`pro`, `flash_lite`) rather than full model identifiers, which break wrapper
+  discovery (`agy agents`), and declare explicit `tools:` lists because an omitted
+  `tools:` list gives a role no tools (observed on Antigravity CLI 1.5.13 in the
+  sibling `Userspace` project, `M5`/`M8`). Enactive's wrappers list file tools only
+  (`read_file`, `edit_file`, `write_file` for worker; `read_file` for read-only roles)
+  with no `run_command`, keeping Antigravity delegates file-only with no edits to host
+  settings outside the repository.
 - **A note for what a start cannot do.** A role in the definitions file may carry a
   `note`, which the call puts after the role's instruction in every brief. The
   Antigravity reviewer, explorer and locator carry one that says to run no shell

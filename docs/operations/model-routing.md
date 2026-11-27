@@ -28,7 +28,18 @@ every row:
 - **Effort was read across its range for one model only.** On Claude Fable 5.2 the score
   moved ten points between Low and High, and the highest setting scored lower at
   several times the cost. Starting at High is a judgment carried from that one model to
-  the others.
+  the others for judgment-only work.
+- **Spend the model where nothing else checks the work**
+  ([decision](../decisions/owner-decisions.md#oracle-first-cheaper-tiers-and-bounded-worker-defaults)).
+  Ask first whether an independent executable check verifies the result (tests, schema
+  checks, `tools/delegate.py --check`), or whether local tier measurements already place
+  a cheaper tier in the strongest group (locating, reading frame text, judging,
+  checking hand-backs). Where they do, start at the cheapest passing tier and escalate
+  only on failure. Reserve top tiers for work where judgment itself is the control: open
+  design, hard cross-boundary changes, primary reviews and root-cause run diagnosis.
+- **One or two attempts are a fit check, not a ranking.** Single or paired runs separate
+  models that fail a kind of work from models that pass it; ranking two passing models
+  requires repeated runs wider than run-to-run spread.
 
 Use [matched runs](matched-runs.md#matched-runs-on-this-repositorys-leaves) to compare candidates on
 the same leaf. [Reading the ledger](#reading-the-ledger) gives the conditions for
@@ -36,26 +47,30 @@ changing a routing row.
 
 ## Route by kind of work
 
-“Not read” marks an effort chosen by judgment. The [review workflow](../workflows/review.md)
-determines which changes get reviewed and how many reviewers they get.
+“Not read” marks an effort chosen by judgment. Outside-repo observations from the
+sibling `Userspace` project (`M15`, `M21`, `M22`, `M23`, November 2026, same three CLI
+hosts) are marked as outside evidence until re-observed on Enactive leaves. The
+[review workflow](../workflows/review.md) determines which changes get reviewed and how
+many reviewers they get.
 
 | Kind of work here | First choice | Substitutes, in order | Avoid | What it rests on |
 | --- | --- | --- | --- | --- |
-| Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku and Luna, read at Max; Argon, effort not read | Index 58 at High and Extra-high; patch score 49 at Extra-high only. Local ledger has 16 unmatched worker attempts (GPT-6.2 Sol at High/Extra-high, Claude Opus 5.5 at High, one failed Fable High attempt); defaults stay unchanged without matched runs. |
-| Bounded implementation from a written brief | GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at Extra-high, then Claude Opus 5.5 at High (not read) | Claude Sonnet 5.5 at Max as the first choice | Sol scores 50 on the public index and has the shortest time among the configurations examined. One local matched run (`#834`) favored Sol over Opus; defaults stay unchanged. |
-| Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Max; Gemini 4 Carbon at High; Claude Sonnet 5.5 at Medium (not read) as a sub-agent | Claude Haiku 5.5 and GPT-6 Luna, both read at Max | Codebase question scores of 64 to 68 for the four of these that were read against 34 and 38; Sonnet at Medium was not read |
-| Locating files and mechanical sweeps | the smallest configuration the host serves that answered every lookup | none needed | a large model | Cost, and one local [lookup set](../acceptance/2026-11-26-locator-lookups-across-model-tiers.md): on fourteen lookups Claude Haiku 5.5, GPT-6.1 Terra at Medium and GPT-6 Luna at High answer as exactly as GPT-6.2 Sol at Extra-high, in 17 to 32 seconds, GPT-6 Luna at Low misses one, and no configuration states a wrong location. The Codex locator role names GPT-6.1 Terra at Medium, the faster of its two ([decision](../decisions/owner-decisions.md#locator-role-default-follows-the-lookup-measurement)). |
-| Shell, checks and Python tooling | one of the six models whose terminal scores overlap, at the effort read | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash | Terminal task scores, six configurations. Two unmatched local worker passes (GPT-6.2 Sol at Extra-high on `#905`, GPT-6.2 Astra at Medium on `#914`). |
-| Reading run ledgers, logs and tables | the synthesis explorer | none known | none known | The choice is judgment; no public evidence found. In a local [study](../acceptance/2026-11-26-run-evidence-diagnosis.md) of eight incidents already diagnosed here, no explorer configuration states a wrong cause; Claude Opus 5.5 and Gemini 4 Carbon state the recorded cause on all eight and the GPT-6.2 configurations on six. On the same incidents [across tiers](../acceptance/2026-11-26-diagnosis-and-frame-reading-across-model-tiers.md), Claude Fable 5.2 and Gemini 4 Argon state eight, Claude Sonnet 5.5 at Medium seven, and smaller models fewer; the lead judges one of 86 answers wrong. One local review observation (GPT-6.2 Astra at High on `#896`, 2 confirmed findings). |
-| Reading retained game frames | a reviewer start the [delegate profiles](delegate-profiles.md#what-to-weigh) list as reading frames | another of those starts with quota | a start the profiles do not list | Local probes on nineteen configurations, cited in the profiles; seventeen answer all eight questions correctly |
-| Standards and pull-request prose | the lead | GPT-6.2 Sol at Extra-high | none known | Judgment; one local matched run (`#811`) favored Fable over Sol. No public comparison for this work is recorded. |
-| Acceptance and design records | the lead | none known | none known | Judgment; no public evidence found. Four unmatched local worker passes (Claude Opus 5.5 at High on `#925`). |
-| Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | The first choice is judgment; wrong-answer rates were read for those two models only |
-| Review of code | the host's reviewer role, clean context | another family's reviewer when the window is spent | acting on a quoted passage before checking it against the tree | The choice is judgment; reviewer products built on two Claude models were read, with no effort reported. In a local [replay](../acceptance/2026-11-25-reviewer-recall-replay.md) of five past code commits holding six later-fixed defects, each GPT-6.2 reviewer finds 3, and Claude Opus 5.5 finds 1 through the plan-mode start the reviewer used then, 3 through an experimental start without plan mode and 2 through the [current start](../acceptance/2026-11-26-reviewer-recall-current-claude-code-start.md), each run once. The set is small and does not rank the models. |
-| Review of documents | If the [review workflow](../workflows/review.md) selects a review, use the host's clean-context reviewer or a second family's clean-context reviewer with quota. | none known | none known | Judgment, with weak support from one preprint read second-hand. In a local [replay](../acceptance/2026-11-25-reviewer-recall-replay.md) of four past document commits holding ten later-fixed defects, GPT-6.2 reviewers find 4 to 7 and Claude Opus 5.5 reviewers 1 to 4, the 4 through the [current start](../acceptance/2026-11-26-reviewer-recall-current-claude-code-start.md), each run once; a GPT-6.2 reviewer finds defects that no Claude Opus 5.5 reviewer finds. Every one of the four commits has a Claude co-author, so this does not rank the models. |
+| Hard change across harness, protocol and bridge that must merge | Claude Fable 5.2 at High | Claude Fable 5.2 at Extra-high; Claude Opus 5.5 at Max; Gemini 4 Neon at Extra-high; GPT-6.2 Astra at Extra-high | Fable at Max; Haiku and Luna, read at Max; Argon, effort not read | Index 58 at High and Extra-high; patch score 49 at Extra-high only. Local ledger has 16 unmatched worker attempts (GPT-6.2 Sol High/Extra-high, Claude Opus 5.5 High, one failed Fable High). |
+| Bounded implementation from a written brief | With an independent check: GPT-6.2 Sol at Low or Medium, GPT-6.1 Terra at Medium, or Claude Sonnet 5.5 at Medium. Without: GPT-6.2 Sol at Extra-high | GPT-6.2 Astra at High/Extra-high, then Claude Opus 5.5 at High | GPT-6.1 Terra at Low (falsely claimed an unrun check in `Userspace` `M21`); Haiku and Luna (slower, weaker on tooling) | Oracle-first decision (`#1032`), `Userspace` `M21` outside-repo evidence (Sol Low and Terra Medium 30/30 in 21 min), and Enactive `#1032` workers (Sol Low 125 s, Sonnet Medium 70 s, both 0 repairs). |
+| Exploration that needs synthesis across files | Gemini 4 Neon at Extra-high | Claude Opus 5.5 at Max; Claude Sonnet 5.5 at Medium/Max; Gemini 4 Carbon at High; GPT-6.1 Terra at Medium | Claude Haiku 5.5 and GPT-6 Luna, both read at Max | Codebase question scores of 64 to 68 for the four read against 34 and 38; Sonnet Medium and Terra Medium are the native explorer defaults. |
+| Locating files and mechanical sweeps | the smallest configuration the host serves that answered every lookup (`claude-haiku-5-5`, `gpt-6.1-terra` at Medium) | none needed | a large model; GPT-6 Luna at Low | Cost, and local [lookup set](../acceptance/2026-11-26-locator-lookups-across-model-tiers.md): Claude Haiku 5.5 and GPT-6.1 Terra at Medium answer 14/14 in 17–18 s; Luna Low misses one (`#1012`). |
+| Shell, checks and Python tooling | With an independent check: GPT-6.2 Sol at Low or Medium, GPT-6.1 Terra at Medium, or Claude Sonnet 5.5 at Medium. Otherwise one of the six overlapping terminal models | whichever of them has quota | Claude Haiku 5.5; GPT-6 Luna; Gemini 3.8 Flash; GPT-6.1 Terra at Low | `Userspace` `M21` outside-repo evidence (Sol Low, Terra Medium, Hydrogen Low 30/30; Haiku 1/4, Luna 2/4 tooling), Enactive `#1032` passes, and public terminal scores. |
+| Reading run ledgers, logs and tables | Claude Opus 5.5 at Medium/High, Claude Fable 5.2 at High, or Claude Sonnet 5.5 at Medium | Gemini 4 Carbon at High (slow); GPT-6.2 Sol/Astra | GPT-6 Luna at Low; Claude Haiku 5.5 (1 wrong cause in 86); GPT-OSS 120B | Local [diagnosis study](../acceptance/2026-11-26-run-evidence-diagnosis.md) and [tier study](../acceptance/2026-11-26-diagnosis-and-frame-reading-across-model-tiers.md): Opus/Fable/Carbon/Argon state 8/8, Sonnet Medium 7/8 in 9–33 s, GPT-6.2 6/8. |
+| Reading retained game frames | a fast reviewer/explorer start in the strongest frame group (`Sonnet 5.5` Med, `Terra` Med, `Haiku 5.5` High, `Hydrogen` High) | any other listed frame-reading start with quota | GPT-OSS 120B; Claude Opus 5.5 through Antigravity | Local probes on 19 configurations: 17 answer 8/8 text/button questions, the fastest in 9–19 s. Frame diffs and map legends remain untested. |
+| Standards and pull-request prose | the lead or the author's family under the [S-DOCS reviewability rules](../standards/documentation.md#writing-for-a-reviewer); GPT-6.2 Sol for short reports, Claude Opus 5.5 for flow/architecture sections | GPT-6.2 Sol at Medium/Extra-high | paying a second writer to rewrite the first's draft | `Userspace` `M22`/`M23` outside-repo blind owner comparisons (a 4-line standing rule beat switching families on reports; Opus won flow diagrams) and Enactive matched run `#811`. |
+| Acceptance and design records | the lead | Claude Opus 5.5 at High | none known | Judgment; four unmatched local worker passes (Claude Opus 5.5 at High on `#925`) and one Neon High record merged unchanged. |
+| Research on outside systems | a large model that fetches the page it cites | Gemini 4 Carbon or Argon where a wrong answer costs more than no answer | answering from memory | First choice is judgment; wrong-answer rates were read for those two models only. |
+| Review of code | clean-context reviewer from another model family at High (`gpt-6.2-sol` at High/Extra-high, `gpt-6.2-astra` at High, `claude-opus-5-5` at High) | another family's reviewer when the window is spent | acting on an unverified quote; reading an empty Opus review as clean; dropping below High for primary review | Local [replay](../acceptance/2026-11-25-reviewer-recall-replay.md), [added reviewers](../acceptance/2026-11-26-reviewer-recall-replay-added-reviewers.md) (Sonnet/Terra find 4/16 vs Sol 10/16), and `Userspace` `M15` outside-repo evidence (cross-family overlap; Opus empty on 6/21 buggy runs). |
+| Review of documents | clean-context reviewer (another family when the [review workflow](../workflows/review.md) selects one) | none known | unverified quotes; dropping to lowest tier | Local [replay](../acceptance/2026-11-25-reviewer-recall-replay.md) and [current start](../acceptance/2026-11-26-reviewer-recall-current-claude-code-start.md): GPT-6.2 finds 4–7/10 and Opus 4/10 on Claude-coauthored doc commits. |
 
-Only two local matched comparisons exist (`#811` prose and `#834` bounded code), so no
-row meets the [threshold for changing a default](#reading-the-ledger).
+Only two local matched comparisons exist (`#811` prose and `#834` bounded code);
+bounded-implementation and tooling rows use the owner's
+[oracle-first decision](../decisions/owner-decisions.md#oracle-first-cheaper-tiers-and-bounded-worker-defaults).
 
 ## Tiers by kind of work
 
@@ -95,8 +110,10 @@ leave Antigravity on 30 November 2026.
 | Judging answers against written criteria | the two reference judges, GPT-6.2 Sol at Extra-high and Claude Opus 5.5 at High, which agree on 106 of 114 verdicts; and the judges that give 101 to 106 of their 106 shared verdicts: GPT-6.1 Terra at Medium and High, Claude Sonnet 5.5 at Medium and, with 102 of 104 judged, at High, GPT-6.2 Astra at Medium and High, Gemini 4 Neon at High, Claude Fable 5.2 at High | 97 to 99 of 105 or 106: Gemini 3.8 Flash at High; Gemini 4 Hydrogen at High; Claude Haiku 5.5 at High. 71 of 78, with three packets unfinished at 900 seconds: Gemini 4 Carbon at High | 86 of 92 and 68 of 85, with unreadable replies: GPT-6 Luna at High and at Low. No readable verdict in eighteen starts: GPT-OSS 120B | other efforts | Local agreement between judges, which is not accuracy against independent labels. Pairing judges from two families is judgment. Public: one vendor post gives Claude Opus 5.5 both 94.7% and 94.4% on one judging benchmark and Claude Haiku 5.5 a rank correlation of 0.442 on another. The groups are from [judging across model tiers](../acceptance/2026-11-26-judging-across-model-tiers.md): eighteen packets, each judge once. GPT-6.1 Terra at Medium matches all 106 in 873 seconds and Claude Sonnet 5.5 at Medium 104 in 703; Gemini 4 Neon takes 3,391. On the eight cells the reference judges dispute, the Codex judges together lean to GPT-6.2 Sol and the Claude judges to Claude Opus 5.5, with exceptions in both. |
 
 The role files' defaults are in [the table below](#roles-and-their-default-models).
-For bounded implementation the Codex worker default, GPT-6.2 Sol at Extra-high, is in
-the strongest group and the Claude Code default, Claude Opus 5.5 at High, in the middle.
+For bounded check-backed implementation, the native worker defaults are GPT-6.2 Sol at
+Medium (Codex) and Claude Sonnet 5.5 at Medium (Claude Code), following the
+[oracle-first decision](../decisions/owner-decisions.md#oracle-first-cheaper-tiers-and-bounded-worker-defaults);
+for hard or open-design work the lead names a top-tier configuration in `tools/delegate.py`.
 The synthesis-explorer defaults, Claude Sonnet 5.5 and GPT-6.1 Terra at
 Medium, are in the middle and lowest groups for reading run evidence, so the lead names
 a stronger configuration in the delegate call when a cause must be read from run
@@ -142,16 +159,18 @@ These are the model settings in the repository's native role files.
 
 | Role | Claude Code (`.claude/agents/`) | Codex (`.codex/agents/`) | Antigravity (`.agents/agents/`) |
 | --- | --- | --- | --- |
-| Explorer, locating | `locator`: Haiku | `locator`: GPT-6.1 Terra at Medium | `locator`: alias `flash_lite` |
-| Explorer, synthesis | `Explore`: Sonnet at Medium | `explorer`: GPT-6.1 Terra at Medium | `explorer`: alias `pro` |
-| Worker | `worker`: Opus at High | `worker`: GPT-6.2 Sol at Extra-high | `worker`: alias `pro` |
-| Reviewer | `reviewer`: Opus at High | `reviewer`: GPT-6.2 Sol at Extra-high | `reviewer`: alias `pro` |
+| Explorer, locating | `locator`: `claude-haiku-5-5` | `locator`: `gpt-6.1-terra` at Medium | `locator`: alias `flash_lite` |
+| Explorer, synthesis | `Explore`: `sonnet` at Medium | `explorer`: `gpt-6.1-terra` at Medium | `explorer`: alias `pro` |
+| Worker | `worker`: `claude-sonnet-5-5` at Medium | `worker`: `gpt-6.2-sol` at Medium | `worker`: alias `pro` |
+| Reviewer | `reviewer`: `opus` at High | `reviewer`: `gpt-6.2-sol` at Extra-high | `reviewer`: alias `pro` |
 
 For a different host, model or effort, name it in the
 [delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent) and give
 the reason in the brief and pull request. The Codex selectors are verified on their
 own. Starting the tracked Codex roles natively is unverified. The Antigravity
-wrappers use native aliases. Full model identifiers in those wrappers are untested.
+wrappers keep native aliases (`pro`, `flash_lite`) and explicit `tools:` lists,
+because full model identifiers break `agy agents` discovery and an omitted `tools:`
+list leaves a role with no tools (`Userspace` `M5`/`M8`).
 See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
 
 ## Quota and spending
@@ -164,9 +183,13 @@ See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
   would bill usage credits is billed with no consent prompt. Whether Fable bills
   credits depends on the plan and seat; the `/model` picker shows it
   ([re-read](../acceptance/2026-11-26-coding-agent-model-evidence-reread.md#subscription-limits)).
-- **Read the remaining quota before a large delegation.** The settings that keep paid
-  overflow off on each host have not been read for this project; check them in each
-  host's own settings before relying on them.
+- **Keep paid overflow off and read remaining quota before large delegations.** On
+  this host (verified in the sibling `Userspace` project on 19–20 November 2026, same
+  accounts; recheck in each host's settings if a plan changes): Claude Code keeps
+  usage credits off under Settings → Usage with `ANTHROPIC_API_KEY` unset; Antigravity
+  sets "AI Credit Overages" to Never; Codex has no API key and no auto-refilling
+  credit purchases. Local `~/.claude/settings.json` sets `"outputStyle": "Explanatory"`,
+  which `delegates/3` overrides to `"default"` on every delegated Claude Code role.
 - **Spend the scarcest window on the work that needs it.** The hard-change row's first
   choice and substitutes are the candidates to consider for a hard change; bounded and
   locating work can go to cheaper models.

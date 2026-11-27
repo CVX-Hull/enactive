@@ -78,7 +78,9 @@ The lanes run as separate jobs because that roughly halved a full run in a
 
 Every hosted profile runs selected Ruff (including parse errors), import contracts, JavaScript
 syntax, document links and checks (`tools/documents.py`), the run ledger, evidence
-verification, generated run tables and whitespace. Local `--fast` runs the
+verification, generated run tables and whitespace. On `pull_request` events, `tools/ci.py`
+also verifies that the pull request description carries a non-empty `Models:` line
+(presence only; never restricts the model chosen) before selecting the profile. Local `--fast` runs the
 same structural checks and nothing else; it is not a hosted profile.
 
 | Profile | Runs on | Additional checks | Supported claim |
@@ -103,7 +105,8 @@ suite) and reports that lane only.
 **Editorial eligibility.** A complete nonempty Git diff from the pull request's merge
 base, with `--no-renames` and NUL-separated paths. Both sides of renames and deletions
 count, and every changed object must be regular. The five root documents and all
-`docs/**/*.md` qualify, including current guidance and contracts, as do acceptance
+`docs/**/*.md` qualify, except `docs/operations/model-routing.md` (parsed by
+`tests/test_coding_agent_attempts.py` for ledger kinds and wrapper defaults), as do acceptance
 assets and JSON, and `docs/assets/` images. Other Markdown, executable assets, configuration
 and schemas do not. Structural checks cannot prove prose or prompt
 semantics: review compares changed guidance with contracts and source and selects any
