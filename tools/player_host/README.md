@@ -421,27 +421,27 @@ to analyze traces; future telemetry versions are not silently interpreted.
 
 ## Knowledge delivery
 
-The required `--delivered-knowledge` file is `delivered-knowledge/3`; it has no
+The required `--delivered-knowledge` file is `delivered-knowledge/4`; it has no
 text-size cap. `validateKnowledge` accepts only its closed forms (articles,
-facts, `history` and aliased `sN` sessions, as the
+facts, `frame_clocks`, `history` and aliased `sN` sessions, as the
 [player host contract](../../docs/contracts/player-host.md#delivered-knowledge-and-recall)
 defines them) and refuses every other file. That includes a file whose revisions are
 out of order, or whose derived fields (`cited_by_articles`, `backlinks`, `shadowed_by`,
 `contradicted_by`, `lifecycle_state` and an article's inherited flags) disagree with
 the links and citations they are derived from. It agrees with
-`harness/player/knowledge.py` on every file in `tests/fixtures/delivered-knowledge-3/`.
+`harness/player/knowledge.py` on every file in `tests/fixtures/delivered-knowledge-4/`.
 `--finish-reserve-usd` is the frozen reserve from the package.
 
 Every projected entry (briefing and reminder leads, recall and briefing index
 rows, cut briefing leads and index rows, update `added` and `updated` entries)
 carries `status` when any of these markers apply, in order: `contested`,
-`unverified_branch`, `needs_review`, `condition_unverified`. A status change alone
+`unverified_branch`, `needs_review`. A status change alone
 produces an `updated` entry. Actor-start and cut briefings and the first update
 from an empty store fit their final JSON within 24,000 UTF-16 code units, including
 coverage, escaping, and overflow counts. They keep at most 64 articles and 24
 standalone facts and clip snippets at 1,000 code units. Actor-start briefings
 give recall-selected leads first claim on the budget, then fill the index in
-tiers of articles, other standalone facts, and instance-state facts. Each tier
+tiers of articles, unbound standalone facts, and world-bound standalone facts. Each tier
 uses newest position first with delivered-order ties, and the kept entries
 appear in delivered order. Ordinary live updates carry full changed leads.
 With `--knowledge-updates LIST`, an unref'd refresh in `runHost` (at start, every

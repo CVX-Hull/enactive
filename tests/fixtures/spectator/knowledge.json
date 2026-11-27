@@ -57,8 +57,6 @@
       {
         "id": "fact-visible",
         "subject": "Recorded example",
-        "claim_kind": "entity_property",
-        "evidence_basis": "observed",
         "text": "<script>window.readerExecuted=true</script> Public fact",
         "kind": "fact",
         "seen": {
@@ -71,13 +69,16 @@
             1
           ],
           "order_omitted": 0,
-          "order_omitted_characters": {}
+          "order_omitted_characters": {},
+          "prior_clock": {
+            "label": "09:20",
+            "step_offset": 1
+          }
         },
         "last_confirmed": null,
         "branch_relation": "same",
         "lifecycle_state": "active",
         "needs_review": true,
-        "condition_unverified": false,
         "unverified_branch": false,
         "scope": "world",
         "scope_axes": {
@@ -102,7 +103,7 @@
         "links_omitted": 0,
         "backlinks": [],
         "backlinks_omitted": 0,
-        "when": null,
+        "when": "when the gate is open",
         "cited_by_articles": [],
         "cited_by_articles_omitted": 0,
         "citation_source_ids": [
@@ -120,12 +121,37 @@
             "available": true,
             "reason": null
           }
-        ]
+        ],
+        "statement_kind": "state",
+        "state_key": "passage-state",
+        "anchor": "entry-state",
+        "anchor_display": "Entry",
+        "depiction_source_id": "c6c09be0b7d43fba2839147651a4f6a5-2"
       }
     ],
     "total": 1,
     "limit": 25,
-    "next": null
+    "next": null,
+    "knowledge_schema": "delivered-knowledge/4",
+    "frame_clocks": {
+      "c6c09be0b7d43fba2839147651a4f6a5-2": "09:20"
+    },
+    "history": {
+      "replaced": {
+        "passage-before": {
+          "reason": "changed",
+          "by": [
+            "fact-visible"
+          ],
+          "by_omitted": 0
+        }
+      },
+      "replaced_omitted": 0,
+      "ended": [],
+      "ended_omitted": 0,
+      "retracted": [],
+      "retracted_omitted": 0
+    }
   },
   "calls": [
     {
@@ -138,7 +164,7 @@
         "fact-visible"
       ],
       "cites_omitted": 0,
-      "query": "fact-visible",
+      "query": "passage-state",
       "returned_ids": [
         "fact-visible"
       ],
@@ -147,7 +173,9 @@
       "source_id": null,
       "step": null,
       "result": {
-        "status": "completed"
+        "status": "completed",
+        "resolution": "state_key",
+        "resolved_from": null
       },
       "operation": null,
       "anchors": []
@@ -193,6 +221,67 @@
           "reason": null
         }
       ]
+    },
+    {
+      "request_id": "request-1",
+      "tool_call_id": "current-query-call",
+      "tool": "player_knowledge_query",
+      "status": "finished",
+      "intent": "Inspect recorded fact",
+      "cites": [
+        "fact-visible"
+      ],
+      "cites_omitted": 0,
+      "query": "passage",
+      "returned_ids": [
+        "fact-visible",
+        "article-passage"
+      ],
+      "returned_ids_omitted": 0,
+      "operation_id": null,
+      "source_id": null,
+      "step": null,
+      "result": {
+        "resolution": "query",
+        "resolved_from": null
+      },
+      "operation": null,
+      "anchors": [],
+      "returned_hits": [
+        {
+          "id": "fact-visible",
+          "kind": "fact",
+          "subject": "The passage",
+          "statement_kind": "state",
+          "state_key": "passage-state",
+          "anchor": "entry-state",
+          "anchor_display": "Entry",
+          "when": "when the gate is open",
+          "depiction_source_id": "c6c09be0b7d43fba2839147651a4f6a5-2",
+          "via": "fuzzy",
+          "status": [
+            "needs_review"
+          ],
+          "status_omitted": 0,
+          "snippet": "<img src=x onerror=window.hitExecuted=true>",
+          "cited_by_articles": [
+            "article-passage"
+          ],
+          "cited_by_articles_omitted": 0
+        },
+        {
+          "id": "article-passage",
+          "kind": "article",
+          "title": "Passage",
+          "via": "hop",
+          "snippet": "Guide to the passage",
+          "status": [],
+          "status_omitted": 0,
+          "cited_by_articles": [],
+          "cited_by_articles_omitted": 0
+        }
+      ],
+      "returned_hits_omitted": 0
     }
   ],
   "calls_omitted": 0,

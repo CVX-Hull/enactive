@@ -1,0 +1,88 @@
+{
+  "schema": "delivered-knowledge/4",
+  "version": "v2",
+  "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "repository_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "coverage": null,
+  "articles": [],
+  "facts": [
+    {
+      "id": "menu-opens-with-e",
+      "tags": [
+        "controls"
+      ],
+      "text": "Pressing e examines adjacent tiles.",
+      "subject": "examine key",
+      "scope": {
+        "game": "example"
+      },
+      "branch_relation": null,
+      "lifecycle_state": "active",
+      "needs_review": false,
+      "stale_citations": [],
+      "unverified_branch": false,
+      "links": [],
+      "backlinks": [],
+      "shadowed_by": [],
+      "contradicted_by": [],
+      "cited_by_articles": [],
+      "citation_source_ids": [
+        "11111111111111111111111111111111-2"
+      ],
+      "seen": {
+        "session": "s01",
+        "actor": "001",
+        "step": 4,
+        "order": [
+          1,
+          "001",
+          4
+        ]
+      },
+      "statement_kind": "observation"
+    },
+    {
+      "id": "camp-crate-has-matches",
+      "tags": [
+        "camp",
+        "fire"
+      ],
+      "text": "The north crate holds twenty matches.",
+      "scope": {
+        "game": "example",
+        "world": null
+      },
+      "branch_relation": "same",
+      "lifecycle_state": "active",
+      "needs_review": false,
+      "stale_citations": [],
+      "unverified_branch": false,
+      "links": [],
+      "backlinks": [],
+      "shadowed_by": [],
+      "contradicted_by": [],
+      "cited_by_articles": [],
+      "citation_source_ids": [
+        "11111111111111111111111111111111-3"
+      ],
+      "seen": {
+        "session": "s01",
+        "actor": "001",
+        "step": 9,
+        "order": [
+          1,
+          "001",
+          9
+        ]
+      },
+      "statement_kind": "state",
+      "state_key": "menu-opens-with-e"
+    }
+  ],
+  "history": {
+    "replaced": {},
+    "ended": [],
+    "retracted": []
+  },
+  "frame_clocks": {}
+}

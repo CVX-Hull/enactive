@@ -1,0 +1,15 @@
+{
+  "schema": "delivered-knowledge/4",
+  "version": null,
+  "commit": null,
+  "repository_id": null,
+  "coverage": null,
+  "articles": [],
+  "facts": [],
+  "history": {
+    "replaced": {},
+    "ended": [],
+    "retracted": []
+  },
+  "frame_clocks": {}
+}

@@ -1,4 +1,4 @@
-"""Read-only browser over the knowledge versions exported for a run's player (`delivered-knowledge/3`).
+"""Read-only browser over the knowledge versions exported for a run's player.
 
 It reads only files of the run's own package, without following a symlink: the version the run started with
 (`delivered-knowledge.json`, shown as `initial`) and the versions exported during play (`curator-runner/delivered/vN.json`).
@@ -21,11 +21,14 @@ import threading
 
 from .catalog import ID_LIMIT, Catalog, RunInfo, ViewError
 from .curator import read_rooted, rooted_entries, rooted_status
-from .knowledge import SOURCE, add_ids, blind, citations, fields, marker, record, scope_class, when
+from .knowledge import (
+    ARCHIVED_DELIVERED_V3, ARCHIVED_DELIVERED_V3_SESSIONS, CURRENT_SNAPSHOT, SOURCE, add_fact_fields, add_ids, citations,
+    delivered_shape, fields, frame_clocks, history, marker, record, scope_class,
+)
 from .telemetry import HostProjection, Steps, identifier, read
 from . import views
 
-SCHEMA = 'delivered-knowledge/3'
+SCHEMA = CURRENT_SNAPSHOT[1]
 INITIAL = 'initial'
 STARTING = ('delivered-knowledge.json',)
 EXPORTS = ('curator-runner', 'delivered')
@@ -36,12 +39,11 @@ MAX_VERSIONS = 500
 MAX_ARTICLES = 200
 BODY_LIMIT = 50
 QUERY_LIMIT = 200
-#: The tag summary keeps the most used tags; a valid file has five claim kinds.
+#: The tag summary keeps the most used tags.
 TAG_LIMIT = 200
 KIND_LIMIT = 20
 #: A listing keeps its text under the response ceiling; what does not fit is counted as omitted.
 TEXT_BYTES = 2 * 1024 * 1024
-SEEN_FIELDS = ('session', 'actor', 'step')
 
 _lock = threading.Lock()
 _cache: dict[tuple, tuple[tuple, tuple[str, dict | None]]] = {}
@@ -50,13 +52,13 @@ CACHED_FILES = 128
 Parts = tuple[str, ...]
 
 
-def load(run_dir: Path, parts: Parts) -> tuple[str, dict | None]:
+def load(run_dir: Path, parts: Parts, session_id: str) -> tuple[str, dict | None]:
     """(`available`, the document) or (why not, None), once per state of the file."""
     status = rooted_status(run_dir, *parts)
     if status is None:
         return 'missing', None
     stamp = (status.st_mode, status.st_ino, status.st_mtime_ns, status.st_size)
-    key = (run_dir, parts)
+    key = (run_dir, parts, session_id)
     with _lock:
         cached = _cache.get(key)
         if cached is not None and cached[0] == stamp:
@@ -69,8 +71,8 @@ def load(run_dir: Path, parts: Parts) -> tuple[str, dict | None]:
         except (ValueError, UnicodeError, RecursionError):
             state = 'malformed'
         else:
-            if (not isinstance(document, dict) or document.get('schema') != SCHEMA
-                    or not isinstance(document.get('articles'), list) or not isinstance(document.get('facts'), list)):
+            if not (delivered_shape(document, SCHEMA) or
+                    (session_id in ARCHIVED_DELIVERED_V3_SESSIONS and delivered_shape(document, ARCHIVED_DELIVERED_V3))):
                 state, document = 'unsupported', None
     with _lock:
         _cache.pop(key, None)
@@ -95,8 +97,8 @@ def version_files(run_dir: Path) -> list[tuple[str, Parts]]:
     return ([(INITIAL, STARTING)] if rooted_status(run_dir, *STARTING) is not None else []) + rows
 
 
-def version_row(name: str, run_dir: Path, parts: Parts) -> dict:
-    state, document = load(run_dir, parts)
+def version_row(name: str, run_dir: Path, parts: Parts, session_id: str) -> dict:
+    state, document = load(run_dir, parts, session_id)
     if document is None:
         return dict(version=name, status=state, recorded_version=None, articles_count=None, facts_count=None, coverage=None)
     return dict(version=name, status=state, recorded_version=identifier(document.get('version')),
@@ -164,11 +166,14 @@ def article_text(article: dict) -> list:
             *(p.get('text') for p in body if isinstance(p, dict))]
 
 
-def fact_text(fact: dict) -> list:
-    return [fact.get('id'), fact.get('claim_kind'), fact.get('subject'), fact.get('text'), *tags_of(fact)]
+def fact_text(fact: dict, current: bool) -> list:
+    common = [fact.get('id'), fact.get('subject'), fact.get('text'), *tags_of(fact)]
+    if current:
+        return [*common, fact.get('statement_kind'), fact.get('anchor_display'), fact.get('when')]
+    return [*common, fact.get('claim_kind')]
 
 
-def article_row(article: dict, anchors: Anchors) -> dict:
+def article_row(article: dict, anchors: Anchors, current: bool) -> dict:
     out = dict(dict.fromkeys(('id', 'revision', 'title', 'lead')), **fields(article, ('id', 'revision', 'title', 'lead')))
     body = article.get('body') if isinstance(article.get('body'), list) else []
     out['body'] = []
@@ -178,34 +183,33 @@ def article_row(article: dict, anchors: Anchors) -> dict:
             add_ids(row, 'facts', part.get('facts'))
             out['body'].append(row)
     out['body_omitted'] = len(body) - len(out['body'])
-    record(out, article)
-    out['last_confirmed'] = marker(article.get('last_confirmed'), blinded=True)
+    record(out, article, legacy=not current)
+    out['last_confirmed'] = marker(article.get('last_confirmed'), blinded=True, clocks=current)
     out['anchor'] = anchors.article(article)
     return out
 
 
-def fact_row(fact: dict, anchors: Anchors) -> dict:
-    names = ('id', 'claim_kind', 'evidence_basis', 'subject', 'text')
+def fact_row(fact: dict, anchors: Anchors, current: bool) -> dict:
+    names = ('id', 'subject', 'text')
     out = dict(dict.fromkeys(names), **fields(fact, names))
-    record(out, fact)
-    out['when'] = when(fact.get('when'))
+    record(out, fact, legacy=not current)
+    add_fact_fields(out, fact, current)
     add_ids(out, 'cited_by_articles', fact.get('cited_by_articles'))
     add_ids(out, 'citation_source_ids', fact.get('citation_source_ids'), pattern=SOURCE)
     out['citation_anchors'] = [anchors.step(s) for s in out['citation_source_ids']]
-    seen = fact.get('seen')
-    out['seen'] = fields(blind(seen), SEEN_FIELDS) if isinstance(seen, dict) else None
-    out['anchor'] = anchors.latest(citations(fact.get('citation_source_ids'), None))
+    out['seen'] = marker(fact.get('seen'), blinded=True, clocks=current)
+    out['frame_anchor' if current else 'anchor'] = anchors.latest(citations(fact.get('citation_source_ids'), None))
     return out
 
 
-def summary(document: dict) -> tuple[list[dict], int, dict]:
+def summary(document: dict, kind_field: str) -> tuple[list[dict], int, dict]:
     """The tag view counted from the delivered records (most used first), how many tags it leaves out, and the facts
-    counted by `claim_kind`."""
+    counted by their kind."""
     records = [r for r in document['articles'] + document['facts'] if isinstance(r, dict)]
     tags = Counter(t for r in records for t in {t for t in tags_of(r) if isinstance(t, str) and len(t) <= ID_LIMIT})
     ranked = sorted(tags.items(), key=lambda item: (-item[1], item[0]))
-    kinds = Counter(f.get('claim_kind') for f in document['facts'] if isinstance(f, dict)
-                    and isinstance(f.get('claim_kind'), str) and len(f['claim_kind']) <= ID_LIMIT)
+    kinds = Counter(f[kind_field] for f in document['facts'] if isinstance(f, dict)
+                    and isinstance(f.get(kind_field), str) and len(f[kind_field]) <= ID_LIMIT)
     return ([dict(tag=t, count=n) for t, n in ranked[:TAG_LIMIT]], max(0, len(ranked) - TAG_LIMIT),
             dict(sorted(kinds.items())[:KIND_LIMIT]))
 
@@ -260,35 +264,48 @@ def browse(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, vers
         raise ViewError(404, 'unknown_version', version[:ID_LIMIT])
     empty = dict(source_status='unavailable', versions=[], selected_version=None, recorded_version=None, coverage=None,
         delivery=None, articles=[], articles_total=0, articles_omitted=0, scope_recorded=False,
-        scope_counts=dict(world=0, game=0, unrecorded=0), tag_counts=[], tag_counts_omitted=0, claim_kind_counts={},
+        scope_counts=dict(world=0, game=0, unrecorded=0), tag_counts=[], tag_counts_omitted=0, statement_kind_counts={},
         facts=dict(items=[], total=0, next=None, limit=limit))
     if info.run_dir is None or not files:
         return empty
-    rows = [version_row(name, info.run_dir, parts) for name, parts in files]
+    rows = [version_row(name, info.run_dir, parts, info.session) for name, parts in files]
     selected = version or next((r['version'] for r in reversed(rows) if r['status'] == 'available'), rows[-1]['version'])
-    state, document = load(info.run_dir, dict(files)[selected])
+    state, document = load(info.run_dir, dict(files)[selected], info.session)
     if document is None:
         if version is not None:
             raise ViewError(409, 'unsupported_knowledge', f'{selected}: {state}')
         return dict(empty, versions=rows, selected_version=selected)
     host = read(info)
     anchors = Anchors(catalog, info, connection, document['facts'])
+    current = document['schema'] == SCHEMA
     needle = (query or '').strip().casefold()
     articles = [a for a in document['articles'] if isinstance(a, dict) and contains(needle, *article_text(a))]
-    facts = [f for f in document['facts'] if isinstance(f, dict) and contains(needle, *fact_text(f))]
+    facts = [f for f in document['facts'] if isinstance(f, dict) and
+             (contains(needle, *fact_text(f, current)) or (current and needle == f.get('state_key')))]
     classes = Counter(scope_class(f.get('scope')) for f in facts)
     if scope != 'all':
         wanted = None if scope == 'unrecorded' else scope
         facts = [f for f in facts if scope_class(f.get('scope')) == wanted]
-    shown, omitted = bounded([article_row(a, anchors) for a in articles[:MAX_ARTICLES]])
-    window, cut = bounded([fact_row(f, anchors) for f in facts[after:after + limit]])
+    if current and needle:
+        facts.sort(key=lambda f: (f.get('id') != needle, f.get('state_key') != needle))
+    shown, omitted = bounded([article_row(a, anchors, current) for a in articles[:MAX_ARTICLES]])
+    window, _ = bounded([fact_row(f, anchors, current) for f in facts[after:after + limit]])
     end = after + len(window)
     chosen = next(r for r in rows if r['version'] == selected)
     delivery = delivery_for(host, anchors.steps, selected, chosen['recorded_version'])
-    tags, tags_omitted, kinds = summary(document)
-    return dict(source_status='available', versions=rows, selected_version=selected, recorded_version=chosen['recorded_version'],
+    kind_field = 'statement_kind' if current else 'claim_kind'
+    tags, tags_omitted, kinds = summary(document, kind_field)
+    result = dict(source_status='available', versions=rows, selected_version=selected, recorded_version=chosen['recorded_version'],
+        knowledge_schema=document['schema'],
         coverage=chosen['coverage'], delivery=delivery, articles=shown, articles_total=len(articles),
         articles_omitted=omitted + max(0, len(articles) - MAX_ARTICLES),
         scope_recorded=True, scope_counts=dict(world=classes['world'], game=classes['game'], unrecorded=classes[None]),
-        tag_counts=tags, tag_counts_omitted=tags_omitted, claim_kind_counts=kinds,
+        tag_counts=tags, tag_counts_omitted=tags_omitted,
         facts=dict(items=window, total=len(facts), next=end if window and end < len(facts) else None, limit=limit))
+    result[f'{kind_field}_counts'] = kinds
+    if current:
+        shown_sources = (source for row in window for source in row['citation_source_ids'])
+        article_sources = (row['anchor']['source_id'] for row in shown if row['anchor'])
+        result['frame_clocks'] = frame_clocks(document, (*shown_sources, *article_sources))
+        result['history'] = history(document)
+    return result

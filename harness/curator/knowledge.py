@@ -17,7 +17,7 @@ import re
 import subprocess
 from typing import BinaryIO
 
-SCHEMA = 'curator-knowledge/4'
+SCHEMA = 'curator-knowledge/5'
 BRANCH = 'main'
 IDENTITY = ('-c', 'user.name=enactive-gate', '-c', 'user.email=gate@localhost',
             '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', '-c', 'core.hooksPath=/dev/null')
@@ -189,7 +189,7 @@ class Repository:
         files = {
             'knowledge.json': _dump({'schema': SCHEMA, 'game': self.game}),
             'facts.jsonl': b'',
-            'provenance.json': _dump({'frames': {}, 'sessions': {}, 'branches': {}, 'restores': []}),
+            'provenance.json': _dump({'frames': {}, 'frame_clocks': {}, 'sessions': {}, 'branches': {}, 'restores': []}),
             'programs/.keep': b'',
             'tests/.keep': b'',
         }

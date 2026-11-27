@@ -18,6 +18,7 @@ from .catalog import ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, ViewError
 LABEL = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}')
 VERSION = re.compile(r'v(0|[1-9][0-9]*)')
 DRAFT = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')
+SESSION_KINDS = ('admission', 'grooming', 'hygiene')
 KEYS = {'schema', 'operation', 'operation_id', 'status', 'base_version', 'restored_from',
         'version', 'submission', 'session', 'from_drafts', 'diagnostics'}
 
@@ -348,7 +349,7 @@ def session_projection(record: object) -> tuple[dict, dict | None, list]:
         if (not {'session_kind', 'trace_sessions', 'window_frames', 'window', 'coverage', 'drafts'} <= inputs.keys()
                 or not {'knowledge_version', 'trace_manifest_sha256', 'brief_sha256'} <= pinned.keys()
                 or not {'wall_seconds', 'memory_bytes', 'disk_bytes', 'cap_usd'} <= budgets.keys()
-                or (inputs['session_kind'] == 'grooming' and 'grooming_sha256' not in pinned)):
+                or (inputs['session_kind'] in ('grooming', 'hygiene') and 'grooming_sha256' not in pinned)):
             raise ValueError('incomplete prepared session')
     elif life['state'] != 'aborted' or any((inputs, pinned, budgets, provenance)):
         raise ValueError('incomplete preparation abort')
@@ -358,7 +359,7 @@ def session_projection(record: object) -> tuple[dict, dict | None, list]:
     string = lambda v: isinstance(v, str)
     integer = lambda v: type(v) is int and v >= 0
     strings = lambda v: isinstance(v, list) and all(string(x) for x in v)
-    checks = [(inputs, 'session_kind', lambda v: v in ('admission', 'grooming')),
+    checks = [(inputs, 'session_kind', lambda v: v in SESSION_KINDS),
               (inputs, 'trace_sessions', strings), (inputs, 'drafts', strings), (inputs, 'window_frames', integer),
               (pinned, 'knowledge_version', lambda v: string(v) and VERSION.fullmatch(v)),
               *[(pinned, k, lambda v: string(v) and re.fullmatch(r'[0-9a-f]{64}', v)) for k in ('trace_manifest_sha256', 'brief_sha256', 'grooming_sha256')],

@@ -29,7 +29,7 @@ import uuid
 from harness.trace.projection import project
 from harness.trace.sidecar import validate
 
-from . import check, sandbox, type_usage
+from . import check, hygiene, sandbox, type_usage
 from .containers import Drafts, UnsafeTree, read_tree, write_tree
 from .gate import _history, gate, journal as gate_journal
 from .window import FULL, Window, coverage as window_coverage, restrict, positions, grooming_context
@@ -162,7 +162,7 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
         lines += ['', f"This trace is a window: steps {window['first']} to {window['last']} of "
                       f"{window['steps_available']} of actor `{window['actor']}`, and nothing else. Frames outside "
                       'it are not in the trace and cannot be cited. The step numbers are `seq` in `steps.jsonl`.']
-    if session_kind == 'grooming':
+    if session_kind in ('grooming', 'hygiene'):
         lines += ['', 'Read `grooming.md` for this session. The trace contains the last admission\'s cited '
                   'frames and the first and last framed operations of each actor.']
     lines += ['', 'Read current facts and articles in `knowledge/current-facts.jsonl`. '
@@ -181,9 +181,12 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
               'Player hints in the selected trace tool calls are fallible public reports, not published facts. '
               'Check their source evidence before proposing knowledge. No additional operator hints.']
     records = repo.records(version)
-    lines += ['', *_axes_section(trace_manifest, records), '', *type_usage.section(records)]
-    if session_kind == 'grooming':
-        lines += ['', *_grooming_worklist(records)]
+    active_world = trace_manifest['sessions'][-1].get('world') if trace_manifest['sessions'] else None
+    lines += ['', *_axes_section(trace_manifest, records), '',
+              *hygiene.state_key_section(records, world=active_world), '',
+              *type_usage.section(records)]
+    if session_kind in ('grooming', 'hygiene'):
+        lines += ['', *_grooming_worklist(records), '', *hygiene.worklist_section(records)]
     lines += ['', '## Close-out', '',
               'Put each proposed change in `submissions/<id>/submission.json`; work to continue later in '
               '`drafts/<id>/`. Everything else is discarded.', '']
@@ -241,8 +244,9 @@ def _stage_workbench(workspace: Path) -> None:
     curator = harness / 'curator'
     curator.mkdir()
     (curator / '__init__.py').write_text('')
-    for name in ('check.py', 'validate.py'):
+    for name in ('check.py', 'validate.py', 'hygiene.py'):
         shutil.copyfile(Path(__file__).with_name(name), curator / name)
+    shutil.copyfile(Path(__file__).resolve().parents[1] / 'jsonio.py', harness / 'jsonio.py')
     schemas = workbench / 'schemas'
     schemas.mkdir()
     for name in ('curator-submission.schema.json', 'curator-fact.schema.json'):
@@ -251,10 +255,10 @@ def _stage_workbench(workspace: Path) -> None:
 
 def run_session(repo: Repository, trace_sessions: list[Path], config: SessionConfig, *, window: Window = FULL,
                 memory: Path | None = None, journal: Path | None = None, session_id: str | None = None, session_kind: str = 'admission') -> dict:
-    if session_kind not in ('admission', 'grooming'):
+    if session_kind not in check.SESSION_KINDS:
         raise SessionError('unknown session kind')
-    if session_kind == 'grooming' and not window.full:
-        raise SessionError('grooming takes the last admission citations, not a window')
+    if session_kind in ('grooming', 'hygiene') and not window.full:
+        raise SessionError(f'{session_kind} takes the last admission citations, not a window')
     session_id = session_id or uuid.uuid4().hex[:16]
     repo.state.mkdir(parents=True, exist_ok=True)
     lock = (repo.state/'lock').open('w')
@@ -305,17 +309,17 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         home.mkdir()
         home = home.resolve()
         version = repo.published()
-        _, reserved_ids, reservations = _history(repo)
+        _, reserved_ids, reservations, reserved_state_keys = _history(repo)
         records = repo.records(version)
         repo.export(version, workspace/'knowledge')
         trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory, journal=journal), window)
         provenance = repo.provenance()
-        if session_kind == 'grooming':
+        if session_kind in ('grooming', 'hygiene'):
             last = provenance.get('last_admission')
             if last is None:
-                raise SessionError('grooming needs a published admission')
+                raise SessionError(f'{session_kind} needs a published admission')
             if ','.join(p.name for p in trace_sessions) != last['coverage']['session']:
-                raise SessionError('grooming trace must be the last admission')
+                raise SessionError(f'{session_kind} trace must be the last admission')
             trace_manifest = grooming_context(workspace/'trace', trace_manifest, set(last['citations']))
             coverage = last['coverage']
         else:
@@ -323,6 +327,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         window_frames = positions(workspace/'trace', trace_manifest, provenance['frames'])
         labels = window_frames.sessions
         context = dict(base_version=version, session_id=session_id, reserved_ids=sorted(reserved_ids),
+                       reserved_state_keys=sorted(reserved_state_keys),
                        reserved_sessions=reservations, session_kind=session_kind, window_frames=window_frames,
                        session_labels=labels, declared_axes=sorted(check.declared_axes(reservations, labels)))
         knowledge = workspace / 'knowledge'
@@ -339,9 +344,10 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
             # The shared candidate check reports conflicting labels in its normal stage.
             timeline = provenance
         active_labels = next(reversed(labels.values()), {})
+        by_id = {r['id']: r for r in records if r['record'] == 'fact'}
         with (knowledge / 'current-facts.jsonl').open('w', encoding='utf-8') as stream:
             for record in records:
-                if check.current(record) or check.ended_still_alive(record, active_labels, timeline):
+                if check.current(record) or check.ended_still_alive(record, active_labels, timeline, by_id):
                     stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
         for name in WRITABLE:
             (workspace/name).mkdir()
@@ -349,9 +355,9 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         before = drafts.checkout(workspace/'drafts')
         open_drafts = drafts.list()
         (workspace/'brief.md').write_text(brief(repo, version, trace_manifest, open_drafts, session_kind))
-        if session_kind == 'grooming':
+        if session_kind in ('grooming', 'hygiene'):
             if config.grooming_brief is None:
-                raise SessionError('grooming needs a configured grooming brief')
+                raise SessionError(f'{session_kind} needs a configured grooming brief')
             shutil.copyfile(config.grooming_brief, workspace/'grooming.md')
         if (config.expected_brief_sha256 is not None
                 and _sha(workspace/'brief.md') != config.expected_brief_sha256):
@@ -372,7 +378,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
                          cap_usd=str(getattr(config.proxy, 'cap', None)) if config.proxy else None),
             lifecycle=dict(state='active', started_wall=time.time()),
             provenance=dict(repository=str(repo.path)), retention=dict(policy='session record kept; workspace deleted'))
-        if session_kind == 'grooming':
+        if session_kind in ('grooming', 'hygiene'):
             manifest['pinned']['grooming_sha256'] = _sha(workspace/'grooming.md')
             shutil.copyfile(workspace/'grooming.md', record_dir/'grooming.md')
         validate(manifest)

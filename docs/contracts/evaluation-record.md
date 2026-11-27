@@ -131,7 +131,7 @@ program views unavailable for current runs.
 
 Mechanical (from host traces and the session store):
 - `handoff`;
-- `memory_write`, `memory_read` (with the returned record or compact `player-knowledge/3` hit IDs);
+- `memory_write`, `memory_read` (with the returned record or compact `player-knowledge/4` hit IDs);
 - `program_save`, `program_run`;
 - `tool_refused`;
 - `context_eviction` (images omitted or blocked);

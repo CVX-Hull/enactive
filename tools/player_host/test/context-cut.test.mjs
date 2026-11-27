@@ -295,7 +295,7 @@ test('a cut briefing stays within its serialized size cap however long the entri
 // Evidence gate 10 (cut and cache): the status markers are counted against the cap.
 test('a cut briefing whose entries carry every status marker stays within its cap', () => {
   const flagged = {scope:{game:'example', world:null}, branch_relation:'unknown', lifecycle_state:'contested',
-    unverified_branch:true, needs_review:true, condition_unverified:true};
+    unverified_branch:true, needs_review:true};
   const articles = Array.from({length:CUT_BRIEFING_ARTICLES + 8}, (_, n) => article(`article-${n}`, {...flagged,
     title:`Article ${n}`, lead:`${'L'.repeat(200)}.`, body:[{text:`Claim ${n}.`, facts:[`filed-${n}`]}], last_confirmed:position(n)}));
   const filed = articles.map((_, n) => fact(`filed-${n}`, {...flagged, cited_by_articles:[`article-${n}`], seen:position(n)}));
@@ -310,7 +310,7 @@ test('a cut briefing whose entries carry every status marker stays within its ca
   assert.ok(text.length <= CUT_BRIEFING_CHARS, `payload ${text.length} chars`);
   assert.ok(data.leads.length > 0 && data.index.length > 0 && data.unlisted_entries > 0, 'the cap, not the counts, bounds it');
   for (const entry of [...data.leads, ...data.index])
-    assert.deepEqual(entry.status, ['contested', 'unverified_branch', 'needs_review', 'condition_unverified']);
+    assert.deepEqual(entry.status, ['contested', 'unverified_branch', 'needs_review']);
   // Without the markers the same store fits more entries: the cap counted the added bytes.
   const plain = cutBriefing(validateKnowledge({...knowledge(), articles:articles.map(a => article(a.id, {...a, ...flaggedOff})),
     facts:[...filed, ...standalone].map(f => fact(f.id, {...f, ...flaggedOff}))}));
@@ -319,7 +319,7 @@ test('a cut briefing whose entries carry every status marker stays within its ca
   assert.ok([...plainData.leads, ...plainData.index].every(entry => !Object.hasOwn(entry, 'status')));
 });
 const flaggedOff = {scope:{game:'example'}, branch_relation:null, lifecycle_state:'active', unverified_branch:false,
-  needs_review:false, condition_unverified:false, links:[], backlinks:[], contradicted_by:[]};
+  needs_review:false, links:[], backlinks:[], contradicted_by:[]};
 
 test('an otherwise eligible prefix below min_free falls back to image eviction', async t => {
   const {events, payloads} = await play(t, async (n, {publish}) => {

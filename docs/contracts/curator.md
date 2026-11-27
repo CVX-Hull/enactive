@@ -14,9 +14,9 @@ Terms are in the [glossary](../glossary.md).
 
 | Format | Where | Written by |
 | --- | --- | --- |
-| [`curator-knowledge/4`](#knowledge-repository-curator-knowledge4) | `knowledge.json` | Repository initialization |
-| [`curator-fact/5`](#facts-curator-fact5) | `facts.jsonl`: [facts](#facts-curator-fact5) and [articles](#articles) | Gate, from submissions |
-| [`curator-submission/2`](#submissions-curator-submission2) | `submissions/<id>/submission.json` | Curator |
+| [`curator-knowledge/5`](#knowledge-repository-curator-knowledge5) | `knowledge.json` | Repository initialization |
+| [`curator-fact/6`](#facts-curator-fact6) | `facts.jsonl`: [facts](#facts-curator-fact6) and [articles](#articles) | Gate, from submissions |
+| [`curator-submission/3`](#submissions-curator-submission3) | `submissions/<id>/submission.json` | Curator |
 | [`curator-coverage/2`](#coverage-stamp-curator-coverage2) | `coverage.json` | Gate, from the session runner's stamp |
 | [`curator-gate/2`](#gate-result-curator-gate2) | `gate.jsonl` | Gate |
 | `container-manifest/1` | [Session](#session-close-out) and [draft](#drafts) manifests | Session runner |
@@ -35,7 +35,7 @@ whether an unbound fact holds in every world, or whether article prose repeats o
 world's detail. Facts are hypotheses that an actor is told to check cheaply before
 relying on them.
 
-## Knowledge repository (`curator-knowledge/4`)
+## Knowledge repository (`curator-knowledge/5`)
 
 One Git repository per game lives under a project-local root, by default
 `.runtime/knowledge/`
@@ -55,9 +55,9 @@ A published tree holds exactly these files:
 
 | File | Content |
 | --- | --- |
-| `knowledge.json` | Exactly `schema` (`curator-knowledge/4`) and `game` |
+| `knowledge.json` | Exactly `schema` (`curator-knowledge/5`) and `game` |
 | `facts.jsonl` | Fact and article revision records, current and historical |
-| `provenance.json` | [Frame positions, session labels, lineage edges and the last admission](#provenance) |
+| `provenance.json` | [Frame positions, sparse `frame_clocks`, session labels, lineage edges and the last admission](#provenance) |
 | `coverage.json` | The [coverage stamp](#coverage-stamp-curator-coverage2); present from the first publication of a submission |
 | `programs/.keep`, `tests/.keep` | Empty placeholders; the gate refuses any other content there |
 
@@ -69,17 +69,20 @@ A published tree holds exactly these files:
   commit and object chain on every history read.
 - **Other formats.** Readers and writers refuse another repository or record schema with
   a message to start a new repository. There is no layout migration and no import;
-  `ontology/types.json` and `curator-type/2` are retired.
+  `curator-knowledge/4`, `ontology/types.json` and `curator-type/2` are retired.
 
 ### Provenance
 
-`provenance.json` holds `frames`, `sessions`, `branches`, `restores` and, after an
+`provenance.json` holds `frames`, `frame_clocks`, `sessions`, `branches`, `restores` and, after an
 admission publishes, `last_admission`.
 
 - **`frames`** maps a frame source ID to its position: `session`, `actor`, `step` and
   `order`. `order` is the triple of admission ordinal, actor directory and step. It
   compares sightings and says nothing about elapsed time. A frame keeps its recorded
   position; a new frame takes its earliest occurrence in the window.
+- **`frame_clocks`** is a sparse map from a frame source ID to a verbatim non-blank HUD
+  clock or brief visual phase label (1 to 64 printable UTF-8 characters). Uninterpreted
+  by software, omitted when no clock or cue is visible, and immutable once recorded.
 - **`sessions`** maps a sealed session ID (32 hexadecimal digits) to its directory
   `name`, `world`, `lineage`, `admission` and `context` (a map of declared run-wide
   axes, `{}` when none are declared). A frame source ID begins with its sealed session
@@ -116,45 +119,60 @@ restore has since replaced, conflicts with the session labels:
 
 A session recorded with no world stays so.
 
-## Facts (`curator-fact/5`)
+## Facts (`curator-fact/6`)
 
 A fact is one durable claim. The JSON Schema in
 [`schemas/curator-fact.schema.json`](../../schemas/curator-fact.schema.json) closes its
 stored shape. [World memory first](../decisions/owner-decisions.md#world-memory-first),
-[free-text facts](../decisions/owner-decisions.md#free-text-facts-with-optional-subject)
-and the [knowledge graph and scoping decision](../decisions/owner-decisions.md#knowledge-graph-scoping-rfc-approved)
+[free-text facts](../decisions/owner-decisions.md#free-text-facts-with-optional-subject),
+the [knowledge graph and scoping decision](../decisions/owner-decisions.md#knowledge-graph-scoping-rfc-approved)
+and the [frozen store-migration contract](../design/store-migration-contract.md)
 govern the fields.
 
 | Field | Written by | Rule |
 | --- | --- | --- |
-| `schema`, `record` | curator | `curator-fact/5` and `fact` |
-| `id` | curator | Matches `[a-z0-9][a-z0-9-]{0,63}`; unused across compatible tagged history |
-| `claim_kind` | curator | Fixed kind: `interface`, `mechanic`, `entity_property`, `instance_state` or `strategy` |
-| `evidence_basis` | curator | `observed`, `inferred` or `hinted` |
+| `schema`, `record` | curator | `curator-fact/6` and `fact` |
+| `id` | curator | Matches `[a-z0-9][a-z0-9-]{0,63}`; unused across compatible tagged history and disjoint from all `state_key`s |
+| `statement_kind` | curator | Fixed kind: `observation`, `state`, `outcome`, `inference` or `synthesis` (Kinds 1–5; `synthesis` requires at least one `depends_on` link) |
+| `state_key` | curator | Optional opaque kebab identifier matching `id`; required on `state`, optional on world-bound `synthesis`, forbidden elsewhere; shares the global namespace with IDs and slugs |
+| `anchor` | curator | Optional same-world `state_key` on world-bound facts forming an acyclic parent forest |
+| `depiction_source_id` | curator | Optional frame source ID that must belong to `citations` |
 | `tags` | curator | 0 to 8 distinct hyphenated tags (`[a-z0-9]+(?:-[a-z0-9]+)*`, max 32 chars) |
 | `text` | curator | Non-blank claim in the curator's words |
 | `subject` | curator | Optional non-blank short name |
 | `scope` | curator + software | Open axis map (1 to 8 keys). Software sets `game` and, when `binds: ["world"]`, `world` |
-| `when` | curator | Optional `{note, requires}` for transient conditions not on `scope` |
-| `links` | curator | Distinct `{rel, target}` edges: `depends_on`, `contradicts`, `part_of`, `see_also` |
+| `when` | curator | Optional non-blank UTF-8 condition string (omitted when unconditional) |
+| `links` | curator | Distinct `{rel, target}` edges: `depends_on` (fact ID or `state_key`), `contradicts`, `part_of`, `see_also` |
 | `citations` | curator | Non-empty distinct frame source IDs |
-| `seen`, `valid_from`, `valid_to` | software | Sighting and end positions (`valid_to` is null until an `ended` retirement sets it) |
+| `seen`, `valid_from`, `valid_to` | software | Sighting and end positions (`valid_to` is null until an `ended` retirement or single-timeline `changed` supersession sets it) |
 | `lineages` | software | Lineages observed on cited frames (world-bound facts only) |
 | `lifecycle_state` | software | `active`, `contested`, `superseded`, `retracted` or `ended` |
-| `stale_citations`, `needs_review` | software | Fixed-point review flags propagated over `depends_on` and citations |
+| `stale_citations`, `needs_review` | software | Fixed-point review flags propagated over two-strength `depends_on` and citations (stored `stale_citations` may record a lapsed `state_key`; delivered `stale_citations` names history record IDs only while `needs_review` still propagates) |
 | `published_in`, `session` | software | Version and curator session that published it |
 | `retagged` | software | Optional list of `{from, to, version}` tag reassignments |
-| `superseded_by` or `retired` | software | Replacement ID list (lifecycle is `superseded` when restated, `retracted` when corrected), or retirement record (`wrong` or `ended` events); never both |
+| `superseded_by` + `superseded_reason` or `retired` | software | Replacement ID list and `superseded_reason` (`restated`, `narrowed`, `corrected`, `changed`; lifecycle is `superseded`, `retracted`, or `ended` for `changed`), or retirement record (`wrong` or `ended` events); mutually exclusive except per-lineage `ended` forks combining `changed` and `retired.events` with `valid_to: null` |
 
 - **Submitted and stored scope differ.** A submitted `scope` names only curator-declared
   axes (never `game` or `world`); the curator binds a fact to the cited world with
-  `binds: ["world"]`. Every `instance_state` fact must bind `world`. Software fills
+  `binds: ["world"]`. Every `state` fact must bind `world` and carry `state_key`. Software fills
   `scope.game` from the repository and `scope.world` from the one world of every cited
   frame's session, refusing mixed worlds or unlabelled sessions. Declared non-`game`,
   non-`world` axes must match the cited sessions' `context`.
+- **Keyed inertial fluents.** At most one active uncontested reading may hold per
+  `(world, surviving timeline, state_key)`; simultaneous readings for one key require
+  `contradicts` links (`contested`). `supersede_fact` with `reason_kind: "changed"` records
+  a temporal transition on the same `state_key`, sets the prior reading to `lifecycle_state: "ended"`
+  with `superseded_reason: "changed"`, and requires atomic repair of any citing current world
+  article in the same submission.
 - **Current records.** A record is current while its `lifecycle_state` is `active` or
   `contested`. `superseded`, `retracted` and `ended` records stay in `facts.jsonl` as
-  evidence; `superseded` records always hold a non-empty `superseded_by`.
+  evidence; `superseded` records always hold a non-empty `superseded_by` and `superseded_reason`.
+- **Two-strength `depends_on` and acyclicity.** A `depends_on` reading pin (fact ID) follows
+  verified 1-to-1 `restated` chains silently and invalidates on `changed`, `corrected`, `ended`,
+  `retracted`, `narrowed`, N→1 merge, or `contested`; a `state_key` entity-existence pin stays
+  quiet across `restated`, `changed`, and `contested` and invalidates only when no active or
+  contested reading exists for that key on the surviving timeline. The effective `depends_on`
+  graph on every surviving timeline must be acyclic.
 - **Scope lattice and replacement.** Scope `A` is at least as general as `B` when every
   key-value pair of `A` is present in `B`. `supersede_fact` preserves the superseded
   facts' scope (and world); `narrow_fact` replaces one fact with two or more strictly
@@ -171,58 +189,59 @@ govern the fields.
 
 Facts are the unit of evidence and articles the unit of reading
 ([decision](../decisions/owner-decisions.md#curator-writes-articles-over-facts)).
-Articles share `facts.jsonl` and `curator-fact/5`. Each article has a stable `slug`
+Articles share `facts.jsonl` and `curator-fact/6`. Each article has a stable `slug`
 across revisions; software assigns each revision ID `<slug>@v<N>`.
 
 | Field | Written by | Rule |
 | --- | --- | --- |
-| `schema`, `record` | curator | `curator-fact/5` and `article` |
-| `slug` | curator | Stable identifier (`[a-z0-9][a-z0-9-]{0,63}`); unique among current articles |
-| `id` | software | `<slug>@v<N>` assigned on publication; facts and slugs share one namespace |
+| `schema`, `record` | curator | `curator-fact/6` and `article` |
+| `slug` | curator | Stable identifier (`[a-z0-9][a-z0-9-]{0,63}`); unique among current articles and disjoint from fact IDs and `state_key`s |
+| `id` | software | `<slug>@v<N>` assigned on publication; facts, slugs and `state_key`s share one namespace |
 | `title` | curator | Non-blank; unique among current articles |
 | `lead` | curator | Non-blank summary an actor can act on |
 | `body` | curator | Non-empty list of `{text, facts}` claims citing current facts compatible with `scope` |
 | `tags` | curator | 0 to 8 distinct tags, counted alongside facts |
 | `scope` | curator + software | Open axis map combining cited facts' scopes plus declared axes; unbound articles cite unbound facts, world-bound articles bind one world |
-| `links` | curator | Distinct `{rel, target}` edges to facts or article slugs |
+| `links` | curator | Distinct `{rel, target}` edges to facts, article slugs or `state_key`s (for `depends_on`) |
 | `last_confirmed` | software | Latest `seen` among cited facts |
 | `lifecycle_state`, `stale_citations`, `needs_review` | software | Fixed-point state and flags |
-| `published_in`, `session`, `retagged`, `superseded_by`, `retired` | software | Revision provenance; article `retired` carries `reason` and `reason_kind` (`wrong` or `editorial`) |
+| `published_in`, `session`, `retagged`, `superseded_by`, `superseded_reason`, `retired` | software | Revision provenance; article `retired` carries `reason` and `reason_kind` (`wrong` or `editorial`) |
 
 An article's stored scope combines the scopes of its cited facts with any declared
 non-world axes: an unbound article cites unbound facts, and a world-bound article cites
 facts of that one world or unbound facts. Every claim traces through a fact to a frame.
 
-## Submissions (`curator-submission/2`)
+## Submissions (`curator-submission/3`)
 
 A submission is a directory `submissions/<id>/` with one `submission.json` of at most
 200 changes and 256 KiB, closed by
 [`schemas/curator-submission.schema.json`](../../schemas/curator-submission.schema.json).
 
 ```json
-{"schema": "curator-submission/2", "base_version": "v3", "summary": "…",
- "changes": [{"op": "add_fact", "fact": {"schema": "curator-fact/5", "record": "fact",
-              "id": "f12", "claim_kind": "mechanic", "evidence_basis": "observed",
+{"schema": "curator-submission/3", "base_version": "v3", "summary": "…",
+ "changes": [{"op": "add_fact", "fact": {"schema": "curator-fact/6", "record": "fact",
+              "id": "f12", "statement_kind": "observation",
               "tags": ["doors"], "text": "…", "scope": {}, "links": [],
               "citations": ["00000000000000000000000000000001-1"]}}]}
 ```
 
 The top level has exactly `schema`, `base_version`, `summary` (text) and `changes`
-(non-empty), with optional `from_drafts` (draft IDs). Software-owned fields and
+(non-empty), with optional `from_drafts` (draft IDs) and optional `frame_clocks`
+(sparse map of in-window `frame_source_id` to verbatim clock/phase label). Software-owned fields and
 unexpected keys are refused.
 
 | Operation | Exact fields beyond `op` |
 | --- | --- |
 | `add_fact` | `fact` |
-| `supersede_fact` | `ids` (distinct current fact IDs), `reason_kind` (`restated` or `corrected`), replacement `fact` |
+| `supersede_fact` | `ids` (distinct current fact IDs), `reason_kind` (`restated`, `corrected`, or `changed`), replacement `fact` |
 | `narrow_fact` | current fact `id`, `facts` (two or more strictly narrower facts) |
 | `retire_fact` | current `id`, `reason`, `reason_kind` (`wrong` with `citations`, or `ended` with `end`, `end_citations`, optional `citations`) |
 | `add_article` | `article` (with `slug`) |
 | `revise_article` | `slug` and one or more replacement fields (`title`, `lead`, `tags`, `links`, `scope`, `body`) |
 | `edit_article` | `slug` and targeted patches (`set_title`, `set_lead`, `set_scope`, `add_claims`, `replace_claims`, `remove_claims`, `add_links`, `remove_links`, `add_tags`, `remove_tags`) |
-| `remap_citations` | `from` fact ID, `to` fact ID, `in` list of article slugs |
+| `remap_citations` | `from` (non-empty list of distinct fact IDs), `to` fact ID, `in` list of article slugs |
 | `retire_article` | `slug`, `reason`, `reason_kind` (`wrong` or `editorial`) |
-| `retag` | `assignments` (map of current fact ID or article slug to new tag list); grooming only, at most once per submission |
+| `retag` | `assignments` (map of current fact ID or article slug to new tag list); grooming/hygiene only, at most once per submission |
 
 - **Targets and one revision per slug.** Each fact target is changed at most once per
   submission. Article edits, revisions and `remap_citations` targeting the same `slug`
@@ -252,7 +271,7 @@ nothing a submission or repository contains and calls no model. Its controls add
 Stages run in this order, and the first stage with a problem rejects the submission and
 lists that stage's diagnostics:
 
-1. **Well formed.** JSON Schema validation (`curator-submission/2`), exact fields and
+1. **Well formed.** JSON Schema validation (`curator-submission/3`), exact fields and
    size limits.
 2. **Base version.** `base_version` is the published version; otherwise the submission is
    stale.
@@ -348,8 +367,12 @@ cannot start a line.
 ### The tag list in the brief
 
 [`type_usage.py`](../../harness/curator/type_usage.py) lists every tag used by at least
-one current fact or article with its usage count. Unused tags leave the list
-automatically; `claim_kind` is fixed and needs no list.
+one current fact or article with its usage count, `df/N`, majority flag (`df > N/2`), and
+tag-vs-scope overlap. Unused tags leave the list automatically; `statement_kind` is fixed
+and needs no list. [`hygiene.py`](../../harness/curator/hygiene.py) supplies the per-world
+`state_key` index in admission briefs and the deterministic advisory worklist (article-size
+cutoff `8,192` UTF-8 bytes, bibliographic coupling, near-duplicate candidates, potential
+contradictions, and key-alias candidates) in grooming and `hygiene` briefs.
 
 - **Nearest tags.** A tag's words are its lower-cased alphanumeric tokens. Two tags are
   near when their shared words are at least 1/3 of all words of the two. At most 10 pairs
@@ -522,7 +545,7 @@ Proxy shutdown and unsettled accounting are separate
 
 The exporter selects every current record whose `scope` is satisfied by the package's
 `world`, `lineage` and `context` (with no `world`-bound records when no world is named),
-plus derived timeline history and aliases. The delivered `delivered-knowledge/3` file
+plus derived timeline history, sparse cited-frame `frame_clocks`, `anchor_display`, and aliases. The delivered `delivered-knowledge/4` file
 contains no raw `world` or `lineage` label anywhere in its bytes, including coverage
 stamps and aliased session identifiers.
 [Delivered knowledge and recall](player-host.md#delivered-knowledge-and-recall) owns the
@@ -540,13 +563,13 @@ A change to a format here migrates its readers and writers in the same change
 | Code | Reads or writes |
 | --- | --- |
 | `harness/curator/gate.py`, `knowledge.py`, `check.py`, `validate.py` | Every repository format, JSON Schemas, pure validation, publication, history validation and restore |
-| `harness/curator/session.py`, `type_usage.py`, `containers.py` | Record schemas, tag usage, provenance, gate results, staged workbench, session and draft manifests |
+| `harness/curator/session.py`, `type_usage.py`, `hygiene.py`, `containers.py` | Record schemas, tag usage, deterministic hygiene worklist, provenance, gate results, staged workbench, session and draft manifests |
 | `harness/curator/window.py`, `harness/trace/projection.py` | Session labels, `context`, frame positions and coverage stamps, from `trace-projection/3` |
 | `harness/curator/runner.py`, `tools/curator_host/live_runner.py` | Version tags, `last_admission` stamp, `provider-error` outcomes and gate results |
 | `tools/curator_host/host.mjs`, `run.mjs`, `workspace-tools.mjs` | Curator host tool set (`validate_submission`), atomic writes and `provider-error` exit `75` |
 | `tools/curator_host/shadow.py`, `groom.py` | Gate results, `curator-boundary-grooming/2` summaries and `last_admission` |
-| `tools/curator_host/prompt.md`, `grooming.md` | Restate the `curator-submission/2` and `curator-fact/5` shapes to the curator |
-| `tools/knowledge_export.py`, `tools/campaign_package.py` | Scoped selection, timeline history, blinding aliases, `delivered-knowledge/3` and `campaign-run/13` |
-| `harness/player/`, `tools/player_host/` | Delivered `delivered-knowledge/3` validation, `player-knowledge/3` reads and compact query hits, ranking and projections |
+| `tools/curator_host/prompt.md`, `grooming.md` | Restate the `curator-submission/3` and `curator-fact/6` shapes to the curator |
+| `tools/knowledge_export.py`, `tools/campaign_package.py` | Scoped selection, timeline history, blinding aliases, `delivered-knowledge/4` and `campaign-run/13` |
+| `harness/player/`, `tools/player_host/` | Delivered `delivered-knowledge/4` validation, `player-knowledge/4` reads and compact query hits, ranking and projections |
 | `tools/memory_screen_checks.py` | Fact and article records of every version |
 | `harness/viewer/`, `tools/campaign_watch.py` | Gate results, close-out receipts, coverage stamps, `curator-boundary-grooming/2` and delivered snapshots |

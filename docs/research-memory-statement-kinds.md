@@ -19,7 +19,7 @@ merges, post-cut claim-level deltas with retired LLM recall and same-lineage
 source access, non-real-time curation cost/cadence with interleaved hygiene-only
 grooming sub-caps, and earlier world-memory and belief-calculus priorities;
 empirical questions on extended-play grounding, precedence, findability, delivery
-and curation cost/cadence remain open for validation in live play. [Curator contract](contracts/curator.md#facts-curator-fact5) ·
+and curation cost/cadence remain open for validation in live play. [Curator contract](contracts/curator.md#facts-curator-fact6) ·
 [Kinds 1–5 decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five) ·
 [Player working-state decision](decisions/owner-decisions.md#player-working-state-agenda-1026) ·
 [Keyed inertial state decision](decisions/owner-decisions.md#keyed-inertial-world-state-and-live-repair-1020) ·

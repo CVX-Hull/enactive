@@ -2,7 +2,7 @@
 // its delivery is recorded, and a reader over one version whose citations open Watch at the frame they name.
 import {html, useEffect, useRef, useState, Panel, Pv, Segmented, Disclosure, Waiting, Insufficient, count, label, plural} from './ui.js';
 import {store, runPath, useView, jumpToSeq} from './data.js';
-import {CuratorRecords, Records, RunnerDetail, RUNNER_STATES, SOURCES, isCuratorSource, known, useFrame} from './records.js';
+import {CuratorRecords, Records, Replacements, RunnerDetail, RUNNER_STATES, SOURCES, clockText, conditionText, isCuratorSource, known, useFrame} from './records.js';
 
 /* ---------------------------------------------------------------- curator strip */
 function Stat({name, value, sub, chip, id}) {
@@ -85,22 +85,23 @@ function DeliveryDiff({run, version, delivery, choose}) {
 const FACT_PAGE = 100;
 const MODES = [['articles', 'Articles'], ['world', 'World facts'], ['game', 'Game facts'], ['all', 'All facts']];
 /** A position names an opaque session alias: its step numbers are that session's, not this run's frames. */
-const seenText = p => (p ? `${p.session ? `session ${p.session} · ` : ''}actor ${p.actor ?? 'unrecorded'} · step ${p.step ?? p.last_step ?? 'unrecorded'}` : 'unrecorded');
+const seenText = p => (p ? `${p.session ? `session ${p.session} · ` : ''}actor ${p.actor ?? 'unrecorded'} · step ${p.step ?? p.last_step ?? 'unrecorded'}${clockText(p)}` : 'unrecorded');
 /** The scope class: a world-bound record's world is never named, only that it is this run's world. */
 const SCOPE_TEXT = {world: 'this world', game: 'game-wide'};
 const FLAGS = [['unverified_branch', 'unverified branch'], ['needs_review', 'needs review'], ['condition_unverified', 'condition unverified']];
 
 function Jump({anchor, position}) {
-  return html`<p class="jump"><span class="note">${seenText(position)}</span> ${anchor ? html`<button type="button" class="btn primary" data-jump-seq=${anchor.seq} onClick=${() => jumpToSeq(anchor.seq)}>Jump to frame #${anchor.seq}</button>`
+  return html`<p class="jump"><span class="note wrapany">${seenText(position)}</span> ${anchor ? html`<button type="button" class="btn primary" data-jump-seq=${anchor.seq} onClick=${() => jumpToSeq(anchor.seq)}>Jump to frame #${anchor.seq}</button>`
     : html`<span class="note">no cited frame of this run</span>`}</p>`;
 }
 
 /** Scope, kind, lifecycle and review state as chips; tags search the version. */
 function Chips({value, search}) {
+  const kind = value.statement_kind || value.claim_kind;
   return html`<p class="cardrow" data-chips>
     ${value.scope ? html`<span class="tag scope-${value.scope}" data-scope=${value.scope}>${SCOPE_TEXT[value.scope] || value.scope} scope</span>` : html`<span class="tag">scope unrecorded</span>`}
     ${Object.entries(value.scope_axes || {}).map(([axis, v]) => html`<span class="tag" data-axis=${axis}>${label(axis)}: ${v}</span>`)}
-    ${value.claim_kind ? html`<span class="tag" data-kind>${label(value.claim_kind)}</span>` : null}${value.evidence_basis ? html`<span class="tag" data-evidence>${value.evidence_basis}</span>` : null}
+    ${kind ? html`<span class="tag" data-kind>${label(kind)}</span>` : null}${value.evidence_basis ? html`<span class="tag" data-evidence>${value.evidence_basis}</span>` : null}
     ${value.lifecycle_state === 'contested' ? html`<span class="state watch" data-flag="contested">contested</span>` : value.lifecycle_state ? html`<span class="tag">${value.lifecycle_state}</span>` : null}
     ${FLAGS.filter(([name]) => value[name]).map(([name, text]) => html`<span class="state watch" data-flag=${name}>${text}</span>`)}
     ${(value.tags || []).map(tag => html`<button type="button" class="factpill" data-tag=${tag} onClick=${() => search(tag)}>#${tag}</button>`)}</p>`;
@@ -119,34 +120,41 @@ function Graph({value, choose}) {
 
 /** A fact's cited frames: one of this run that the frame route serves opens Watch there; any other (another session's,
  * or one whose PNG is missing or not the recorded one) is listed without a frame. */
-function Citations({fact}) {
+function Citations({fact, clocks}) {
   const ids = fact.citation_source_ids || [];
   if (!ids.length) return null;
   return html`<h4>Cited frames</h4><ul class="difflist" data-citations>${ids.map((id, i) => {
     const at = (fact.citation_anchors || [])[i];
-    return html`<li class="wrapany">${at ? html`<button type="button" class="btn" data-citation-seq=${at.seq} onClick=${() => jumpToSeq(at.seq)}>Frame #${at.seq}</button>` : html`<span class="note">Frame unavailable</span>`} <span class="mono">${id}</span></li>`;
+    return html`<li class="wrapany">${at ? html`<button type="button" class="btn" data-citation-seq=${at.seq} onClick=${() => jumpToSeq(at.seq)}>Frame #${at.seq}</button>` : html`<span class="note">Frame unavailable</span>`} <span class="mono">${id}</span>${id === fact.depiction_source_id ? ' · depiction' : ''}${clocks?.[id] ? ` · ${clocks[id]}` : ''}</li>`;
   })}</ul>${fact.citation_source_ids_omitted ? html`<p class="note">${fact.citation_source_ids_omitted} more not shown.</p>` : null}`;
 }
 
-function ArticleView({article, choose, search}) {
+function ArticleView({article, choose, search, history}) {
   return html`<article class="reading" data-reading=${article.id} tabindex="-1"><h3 class="rtitle">${article.title || article.id}</h3><${Chips} value=${article} search=${search} /><p class="lead">${article.lead}</p>
     ${article.body.map(part => html`<p>${part.text}${part.facts.length ? html` <span class="refs">${part.facts.map(id => html`<button type="button" class="factpill" onClick=${() => choose(id)}>${id}</button>`)}</span>` : null}</p>`)}
     ${article.body_omitted ? html`<p class="note">${article.body_omitted} more claims not shown.</p>` : null}
     <${Graph} value=${article} choose=${choose} />
+    <${Replacements} history=${history} id=${article.id} />
     <h4>Last confirmed</h4><${Jump} anchor=${article.anchor} position=${article.last_confirmed} />
     <p class="note mono wrapany">${article.revision || article.id}</p></article>`;
 }
-function FactView({fact, choose, search}) {
+function FactView({fact, choose, search, clocks, history}) {
+  const when = conditionText(fact.when);
+  const anchor = typeof fact.anchor === 'string' ? fact.anchor : null;
+  const frame = fact.frame_anchor || (anchor ? null : fact.anchor);
   return html`<article class="reading" data-reading=${fact.id} tabindex="-1"><h3 class="rtitle">${fact.subject || fact.id}</h3><${Chips} value=${fact} search=${search} />
-    <p class="lead">${fact.text}</p>${fact.when ? html`<p class="note" data-when>When: ${fact.when.note}${Object.entries(fact.when.requires || {}).map(([k, v]) => ` · ${label(k)}: ${v}`).join('')}</p>` : null}
+    <p class="lead">${fact.text}</p>${when ? html`<p class="note wrapany" data-when>When: ${when}</p>` : null}
+    ${fact.state_key ? html`<p class="note wrapany">State key: ${fact.state_key}</p>` : null}
+    ${anchor ? html`<p class="note wrapany">Anchor: <button type="button" class="factpill" onClick=${() => choose(anchor)}>${fact.anchor_display || anchor}</button></p>` : null}
+    ${fact.depiction_source_id && !fact.citation_source_ids?.includes(fact.depiction_source_id) ? html`<p class="note wrapany">Depiction: ${fact.depiction_source_id}</p>` : null}
     ${(fact.cited_by_articles || []).length ? html`<p class="note">Cited by ${fact.cited_by_articles.map(id => html`<button type="button" class="factpill" onClick=${() => choose(id)}>${id}</button>`)}</p>` : null}
-    <${Graph} value=${fact} choose=${choose} /><${Citations} fact=${fact} />
-    <h4>Seen</h4><${Jump} anchor=${fact.anchor} position=${fact.seen} /><p class="note mono wrapany">${fact.id}</p></article>`;
+    <${Graph} value=${fact} choose=${choose} /><${Replacements} history=${history} id=${fact.id} /><${Citations} fact=${fact} clocks=${clocks} />
+    <h4>Seen</h4><${Jump} anchor=${frame} position=${fact.seen} /><p class="note mono wrapany">${fact.id}</p></article>`;
 }
 
-/** The tag and claim-kind view counted from the delivered records; a tag searches the version. */
+/** The tag and kind counts for the version; a tag searches the version. */
 function Summary({data, search}) {
-  const kinds = Object.entries(data.claim_kind_counts || {}), tags = data.tag_counts || [];
+  const kinds = Object.entries(data.statement_kind_counts || data.claim_kind_counts || {}), tags = data.tag_counts || [];
   if (!kinds.length && !tags.length) return null;
   return html`<div class="cardrow" id="kb-summary">${kinds.map(([kind, n]) => html`<span class="tag" data-kind-count=${kind}>${label(kind)} <b class="num">${n}</b></span>`)}
     ${tags.map(t => html`<button type="button" class="factpill" data-tag-count=${t.tag} onClick=${() => search(t.tag)}>#${t.tag} <b class="num">${t.count}</b></button>`)}
@@ -174,7 +182,9 @@ function Browser({run, version}) {
   // A picked fact may be on another page or under another filter: it is found by its exact ID.
   const onPage = data && (data.articles.find(a => a.id === pick) || data.facts.items.find(f => f.id === pick));
   const lookup = useView(pick && data && !onPage ? runPath(run, `delivered-knowledge?version=${encodeURIComponent(version || '')}&q=${encodeURIComponent(pick.slice(0, 200))}&limit=${FACT_PAGE}`) : null, 0);
-  const found = onPage || (lookup.data && (lookup.data.articles.find(a => a.id === pick) || lookup.data.facts.items.find(f => f.id === pick))) || null;
+  const pickedData = onPage ? data : lookup.data;
+  const readings = !onPage && lookup.data ? lookup.data.facts.items.filter(f => f.state_key === pick) : [];
+  const found = onPage || (lookup.data && (lookup.data.articles.find(a => a.id === pick) || lookup.data.facts.items.find(f => f.id === pick))) || readings[0] || null;
   const choose = id => { setPick(id); setFocus(true); };
   useEffect(() => {
     if (!focus || !found) return;
@@ -204,7 +214,8 @@ function Browser({run, version}) {
           ${mode === 'articles' && data.articles_omitted ? html`<p class="note">${data.articles_omitted} more articles not shown; search to narrow.</p>` : null}
           ${mode !== 'articles' && (after > 0 || data.facts.next !== null) ? html`<p class="pager"><button type="button" class="btn" disabled=${after === 0} onClick=${() => { setPick(null); setAfter(Math.max(0, after - FACT_PAGE)); }}>Previous</button>
             <span class="note num">${count(after + 1)}–${count(after + rows.length)} of ${count(data.facts.total)}</span><button type="button" class="btn" disabled=${data.facts.next === null} onClick=${() => { setPick(null); setAfter(data.facts.next); }}>Next</button></p>` : null}</div>
-        <div class="readpane">${found ? (found.body ? html`<${ArticleView} article=${found} choose=${choose} search=${search} />` : html`<${FactView} fact=${found} choose=${choose} search=${search} />`)
+        <div class="readpane">${readings.length > 1 ? html`<p class="chips">${readings.map(f => html`<button type="button" class="factpill" onClick=${() => choose(f.id)}>${f.id}</button>`)}</p>` : null}
+          ${found ? (found.body ? html`<${ArticleView} article=${found} choose=${choose} search=${search} history=${pickedData.history} />` : html`<${FactView} fact=${found} choose=${choose} search=${search} clocks=${pickedData.frame_clocks} history=${pickedData.history} />`)
           : pick && rows.length ? html`<p class="note" role="status">${lookup.data ? `${pick} is not in this version.` : 'Finding the entry…'}</p>` : html`<p class="note">Choose an entry to read it.</p>`}</div></div><//>`}`;
 }
 

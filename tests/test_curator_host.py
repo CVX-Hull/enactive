@@ -363,7 +363,7 @@ def test_missing_curator_host_node_modules_fails_explicitly(tmp_path, monkeypatc
 
 def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('curator-submission/2', 'curator-fact/5', 'add_fact', 'supersede_fact', 'narrow_fact',
+    for needed in ('curator-submission/3', 'curator-fact/6', 'add_fact', 'supersede_fact', 'narrow_fact',
                    'edit_article', 'remap_citations', 'retag', 'validate_submission', 'base_version',
                    'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench',
                    'finish', '256 KiB', '200'):

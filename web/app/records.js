@@ -377,15 +377,32 @@ function Omissions({value}) {
   return found.length ? html`<p class="note wrapany">Omitted: ${found.join(' · ')}</p>` : null;
 }
 
-function SourceAnchors({anchors}) {
-  return (anchors || []).map(anchor => html`<p class="note wrapany">Source ${anchor.source_id}: ${anchor.available
+function SourceAnchors({anchors, clocks, depiction}) {
+  return (anchors || []).map(anchor => html`<p class="note wrapany">${anchor.source_id === depiction ? 'Depiction' : 'Source'} ${anchor.source_id}${clocks?.[anchor.source_id] ? ` · ${clocks[anchor.source_id]}` : ''}: ${anchor.available
     ? html`<a href=${framePath(anchor.run, anchor.source_id)} target="_blank" rel="noopener">Original frame (${anchor.run})</a>`
     : `unavailable (${anchor.reason || 'unknown'})`}</p>`);
 }
 
+export function clockText(position) {
+  const prior = position?.prior_clock;
+  if (position?.clock_label) return ` · ${position.clock_label}`;
+  return prior ? ` · ${prior.label} (${prior.step_offset} ${prior.step_offset === 1 ? 'step' : 'steps'} earlier)` : '';
+}
+
+export function conditionText(when) {
+  if (typeof when === 'string') return when;
+  if (!when) return '';
+  return [when.note, ...Object.entries(when.requires || {}).map(([k, v]) => `${label(k)}: ${v}`)].filter(Boolean).join(' · ');
+}
+
+export function Replacements({history, id}) {
+  const rows = Object.entries(history?.replaced || {}).filter(([, row]) => row.by.includes(id));
+  return rows.length ? html`<p class="note wrapany">Replaces ${rows.map(([from, row]) => `${from} (${label(row.reason)})`).join(', ')}</p>` : null;
+}
+
 function RecordedMarker({value}) {
   if (!value) return 'unavailable';
-  return html`<span>session ${value.session ?? 'unavailable'} · actor ${value.actor ?? 'unavailable'} · step ${value.step ?? value.last_step ?? 'unavailable'}${value.order?.length ? ` · order ${value.order.join(', ')}` : ''}</span>`;
+  return html`<span>session ${value.session ?? 'unavailable'} · actor ${value.actor ?? 'unavailable'} · step ${value.step ?? value.last_step ?? 'unavailable'}${value.order?.length ? ` · order ${value.order.join(', ')}` : ''}${clockText(value)}</span>`;
 }
 
 function RecordedOutcome({value}) {
@@ -397,11 +414,20 @@ function RecordedOutcome({value}) {
 
 /** A snapshot entry's delivered state: kind, evidence, scope class, lifecycle, flags, tags and links. An archived
  *  entry names plain link IDs; a current one types each link. */
-function EntryState({item}) {
+function EntryState({item, choose}) {
   const link = (l, end) => (typeof l === 'string' ? l : `${l.rel} ${l[end]}`);
-  const flags = ['needs_review', 'condition_unverified', 'unverified_branch'].filter(name => item[name]);
-  return html`<p class="wrapany" data-entry-state>Kind: ${label(item.claim_kind || item.type || 'unrecorded')} · evidence: ${item.evidence_basis || 'unrecorded'} · scope: ${item.scope || 'unrecorded'}${Object.entries(item.scope_axes || {}).map(([k, v]) => ` (${k}: ${v})`).join('')} · state: ${item.lifecycle_state || 'unrecorded'}${flags.length ? ` · ${flags.map(label).join(', ')}` : ''} · tags: ${(item.tags || []).join(', ') || 'none'}</p>
+  const flags = ['needs_review', 'unverified_branch', 'condition_unverified'].filter(name => item[name]);
+  return html`<p class="wrapany" data-entry-state>Kind: ${label(item.statement_kind || item.claim_kind || item.type || item.kind)}${item.evidence_basis ? ` · evidence: ${item.evidence_basis}` : ''} · scope: ${item.scope || 'unrecorded'}${Object.entries(item.scope_axes || {}).map(([k, v]) => ` (${k}: ${v})`).join('')} · state: ${item.lifecycle_state || 'unrecorded'}${flags.length ? ` · ${flags.map(label).join(', ')}` : ''} · tags: ${(item.tags || []).join(', ') || 'none'}</p>
+    <${FactDetails} item=${item} choose=${choose} showDepiction=${!item.anchors?.some(anchor => anchor.source_id === item.depiction_source_id)} />
     <p class="wrapany">Links: ${(item.links || []).map(l => link(l, 'target')).join(', ') || 'none'}${(item.backlinks || []).length ? ` · linked from: ${item.backlinks.map(l => link(l, 'source')).join(', ')}` : ''} · cited frames: ${(item.citation_source_ids || []).join(', ') || 'none recorded'}</p>`;
+}
+
+function FactDetails({item, choose, showDepiction = false}) {
+  const when = conditionText(item.when);
+  return html`${item.state_key ? html`<p class="note wrapany">State key: ${item.state_key}</p>` : null}
+    ${item.anchor ? html`<p class="note wrapany">Anchor: <button type="button" onClick=${() => choose(item.anchor)}>${item.anchor_display || item.anchor}</button></p>` : null}
+    ${when ? html`<p class="note wrapany">When: ${when}</p>` : null}
+    ${showDepiction && item.depiction_source_id ? html`<p class="note wrapany">Depiction: ${item.depiction_source_id}</p>` : null}`;
 }
 
 function EntryButtons({ids, choose}) {
@@ -410,9 +436,10 @@ function EntryButtons({ids, choose}) {
 
 function QueryHits({hits, choose}) {
   return html`<ul class="query-hits">${hits.map(h => {
-    const metadata = [h.kind, h.title || h.subject, h.via, ...(h.status || []).map(label)].filter(Boolean);
+    const metadata = [h.kind, h.title || h.subject, label(h.statement_kind || h.claim_kind || ''), h.via, ...(h.status || []).map(label)].filter(Boolean);
     return html`<li class="wrapany">${h.id ? html`<button type="button" class="wrapany" onClick=${() => choose(h.id)}>${h.id}</button>` : 'ID unavailable'}
       ${metadata.length ? ` · ${metadata.join(' · ')}` : ''}${h.snippet ? html`<p>${h.snippet}</p>` : null}
+      <${FactDetails} item=${h} choose=${choose} showDepiction=${true} />
       ${h.cited_by_articles?.length ? html`<p>Cited by <${EntryButtons} ids=${h.cited_by_articles} choose=${choose} /></p>` : null}</li>`;
   })}</ul>`;
 }
@@ -452,11 +479,11 @@ function RecordedKnowledge() {
         <p>Articles: <${EntryButtons} ids=${e.article_ids} choose=${choose} /><br />Facts: <${EntryButtons} ids=${e.fact_ids} choose=${choose} /><br />Index: <${EntryButtons} ids=${e.index_ids} choose=${choose} /></p><${Omissions} value=${e} /></details>`) : html`<p>No matching selection or delivery recorded.</p>`}<${Omissions} value=${{events_omitted:data.events_omitted}} />
       <h3 data-reader-snapshot tabIndex="-1">Frozen delivered snapshot</h3>${entry ? html`<p class="wrapany">Entry ${entry} <button type="button" onClick=${() => choose('')}>Show all entries</button></p>` : null}${data.snapshot ? html`<p class="wrapany">Digest verified · version: ${data.snapshot.version || 'unavailable'} · coverage: <${RecordedMarker} value=${data.snapshot.coverage} /> · ${data.snapshot.total} entries. Citation source and absolute age are unavailable unless recorded.</p>
         <${Omissions} value=${{coverage:data.snapshot.coverage,omitted_characters:data.snapshot.omitted_characters}} />
-        ${entry && !data.snapshot.items.length ? html`<p>Entry unavailable in this snapshot.</p>` : null}${data.snapshot.items.map(item => html`<details data-reader-entry open=${!!entry}><summary class="wrapany">${item.kind}: ${item.title || item.subject || item.id || 'ID unavailable'}</summary><p class="mono wrapany">${item.id || 'ID unavailable'}</p><p class="wrapany">${item.lead || item.text || ''}</p>${item.body.map(part => html`<p class="wrapany">${part.text} · facts: ${part.facts.join(', ') || 'unavailable'}</p>`)}<${EntryState} item=${item} /><p class="wrapany">Seen: <${RecordedMarker} value=${item.seen} /> · last confirmed: <${RecordedMarker} value=${item.last_confirmed} />${item.source_ids.length ? ` · source IDs: ${item.source_ids.join(', ')}` : ''}</p><${SourceAnchors} anchors=${item.anchors} /><${Omissions} value=${item} /></details>`)}
+        ${entry && !data.snapshot.items.length ? html`<p>Entry unavailable in this snapshot.</p>` : null}${data.snapshot.items.map(item => html`<details data-reader-entry open=${!!entry}><summary class="wrapany">${item.kind}: ${item.title || item.subject || item.id || 'ID unavailable'}</summary><p class="mono wrapany">${item.id || 'ID unavailable'}</p><p class="wrapany">${item.lead || item.text || ''}</p>${item.body.map(part => html`<p class="wrapany">${part.text} · facts: ${part.facts.join(', ') || 'unavailable'}</p>`)}<${EntryState} item=${item} choose=${choose} /><${Replacements} history=${data.snapshot.history} id=${item.id} /><p class="wrapany">Seen: <${RecordedMarker} value=${item.seen} /> · last confirmed: <${RecordedMarker} value=${item.last_confirmed} />${item.source_ids.length ? ` · source IDs: ${item.source_ids.join(', ')}` : ''}</p><${SourceAnchors} anchors=${item.anchors} clocks=${data.snapshot.frame_clocks} depiction=${item.depiction_source_id} /><${Omissions} value=${item} /></details>`)}
         <p><button type="button" disabled=${after === 0} onClick=${() => setAfter(Math.max(0, after-25))}>Previous entries</button> <button type="button" disabled=${data.snapshot.next === null} onClick=${() => setAfter(data.snapshot.next)}>Next entries</button></p>` : html`<p>Frozen delivered snapshot unavailable (${data.snapshot_status || 'unavailable'}).</p>`}
       <h3>Recorded calls and results</h3>${data.calls.length ? data.calls.map(c => html`<details><summary class="wrapany">${c.tool} · ${c.status} · ${c.request_id || 'request unavailable'}</summary>
         <p class="wrapany">Call: ${c.tool_call_id || 'unavailable'} · intent (unverified): ${c.intent || 'unavailable'} · cites: ${c.cites.join(', ') || 'none recorded'}</p>
-        <p class="wrapany">Query: ${c.query || 'unavailable'} · returned IDs: <${EntryButtons} ids=${c.returned_ids} choose=${choose} /> · operation: ${c.operation_id || 'unavailable'}</p>
+        <p class="wrapany">Query: ${c.query || 'unavailable'} · returned IDs: <${EntryButtons} ids=${c.returned_ids} choose=${choose} />${c.result.resolution ? ` · resolution: ${label(c.result.resolution)}${c.result.resolved_from ? ` (${c.result.resolved_from})` : ''}` : ''} · operation: ${c.operation_id || 'unavailable'}</p>
         ${c.returned_hits?.length ? html`<${QueryHits} hits=${c.returned_hits} choose=${choose} />` : null}
         <p class="wrapany">Tool result status: ${c.result.status || 'unavailable'} · reason: ${c.result.reason || 'unavailable'} · delivered: ${c.result.delivered ?? 'unavailable'}</p>
         <p class="wrapany">Operation status: ${c.operation ? c.operation.status : 'unavailable'} · reason: ${c.operation && c.operation.reason || 'unavailable'}</p>

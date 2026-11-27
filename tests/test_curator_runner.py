@@ -601,13 +601,13 @@ def test_three_runner_windows_publish_when_the_first_two_share_a_frame(tmp_path,
         base = (workspace/'brief.md').read_text().split('`')[1]
         step = json.loads((workspace/'trace'/RUN/'001'/'steps.jsonl').read_text())
         changes = []
-        changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id=f'f{step["seq"]}',
-                                                     claim_kind='entity_property', tags=['container'],
-                                                     text='the cupboard holds bottles', evidence_basis='observed',
+        changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/6', record='fact', id=f'f{step["seq"]}',
+                                                     statement_kind='observation', tags=['container'],
+                                                     text='the cupboard holds bottles',
                                                      scope={}, links=[], citations=[step['frame']])))
         directory = workspace/'submissions'/'s1'
         directory.mkdir()
-        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/2', base_version=base,
+        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/3', base_version=base,
                                                                  summary='window fact', changes=changes)))
         return sandbox.Result(0, None, 0, 0, 0., [])
 
@@ -670,13 +670,13 @@ def test_live_runner_leaves_each_confirmed_version_whole_and_retries_a_failed_ex
         # One fact of the game and one of the run's world (the gate stamps the world from the cited session),
         # which only an export for that world selects.
         for identity, binds in ((f'f{step["seq"]}', []), (f'w{step["seq"]}', ['world'])):
-            changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id=identity,
-                                                         claim_kind='entity_property', tags=['container'],
-                                                         text=f'the cupboard {identity} holds bottles', evidence_basis='observed',
+            changes.append(dict(op='add_fact', fact=dict(schema='curator-fact/6', record='fact', id=identity,
+                                                         statement_kind='observation', tags=['container'],
+                                                         text=f'the cupboard {identity} holds bottles',
                                                          scope={}, binds=binds, links=[], citations=[step['frame']])))
         directory = workspace/'submissions'/'s1'
         directory.mkdir()
-        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/2', base_version=base,
+        (directory/'submission.json').write_text(json.dumps(dict(schema='curator-submission/3', base_version=base,
                                                                  summary='window fact', changes=changes)))
         return sandbox.Result(0, None, 0, 0, 0., [])
 
@@ -710,7 +710,7 @@ def test_live_runner_leaves_each_confirmed_version_whole_and_retries_a_failed_ex
         value = json.loads((delivered/'v1.json').read_text())
         assert value == knowledge_export.published(repo.path, 'v1', world='the farm') and Knowledge.from_dict(value).value == value
         root = _git(repo.path, 'rev-parse', 'v0^{commit}').decode().strip()
-        assert (value['schema'], value['version'], value['repository_id']) == ('delivered-knowledge/3', 'v1', root)
+        assert (value['schema'], value['version'], value['repository_id']) == ('delivered-knowledge/4', 'v1', root)
         assert value['commit'] == _git(repo.path, 'rev-parse', 'v1^{commit}').decode().strip() != root
         # The facts are those of the package's world; the label itself is never written into the file.
         assert [f['id'] for f in value['facts']] == ['f1', 'w1'] and value['coverage']['last_step'] == 1
@@ -860,10 +860,10 @@ manifest = json.load(open('trace/manifest.json'))
 frame = sorted(k[7:-4] for k in manifest['files'] if k.startswith('frames/'))[0]
 version = open('brief.md').read().split('`')[1]
 os.makedirs('submissions/s1')
-json.dump(dict(schema='curator-submission/2', base_version=version, summary='first fact', from_drafts=[],
-               changes=[dict(op='add_fact', fact=dict(schema='curator-fact/5', record='fact', id='f1',
-                                                      claim_kind='entity_property', tags=['container'],
-                                                      text='the cupboard holds bottles', evidence_basis='observed', scope={},
+json.dump(dict(schema='curator-submission/3', base_version=version, summary='first fact', from_drafts=[],
+               changes=[dict(op='add_fact', fact=dict(schema='curator-fact/6', record='fact', id='f1',
+                                                      statement_kind='observation', tags=['container'],
+                                                      text='the cupboard holds bottles', scope={},
                                                       links=[], citations=[frame], subject='cupboard'))]),
           open('submissions/s1/submission.json', 'w'))
 '''
@@ -1096,11 +1096,11 @@ def publish_admission(repo: Repository, submission: Path, name: str) -> None:
     repo.ensure()
     submission.mkdir()
     frame = SESSION_ID + '-1'
-    fact = dict(schema='curator-fact/5', record='fact', id='control', claim_kind='interface',
-                evidence_basis='observed', tags=['control'], text='An observed control.', scope={}, links=[],
+    fact = dict(schema='curator-fact/6', record='fact', id='control', statement_kind='observation',
+                tags=['control'], text='An observed control.', scope={}, links=[],
                 citations=[frame])
     (submission/'submission.json').write_text(json.dumps(dict(
-        schema='curator-submission/2', base_version='v0', summary='admission fact',
+        schema='curator-submission/3', base_version='v0', summary='admission fact',
         changes=[dict(op='add_fact', fact=fact)])))
     positions = {frame: dict(session=name, actor='001', step=1, order=[1, '001', 1])}
     verdict = gate(repo, submission, session_id='admission', window_frames=positions, session_kind='admission',
@@ -1336,7 +1336,7 @@ def test_boundary_grooming_files_game_facts_and_keeps_world_facts_after_live_win
     assert repo.published() == 'v3' and repo.provenance()['last_admission'] == admission
     facts = {f['id']: f for f in repo.facts() if current(f)}
     assert set(facts) == {'f1', 'f2', 'world-f1', 'world-f2'}
-    assert all(f['schema'] == 'curator-fact/5' for f in facts.values())
+    assert all(f['schema'] == 'curator-fact/6' for f in facts.values())
     assert {f['id']: f['scope'] for f in facts.values() if 'world' in f['scope']} == dict.fromkeys(
         ('world-f1', 'world-f2'), dict(game=shadow.GAME, world='pond'))
     assert {f for a in repo.articles() if current(a) for claim in a['body'] for f in claim['facts']} == {'f1', 'f2'}

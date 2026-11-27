@@ -1,4 +1,4 @@
-"""`delivered-knowledge/3` reader, `player-knowledge/3` reads/compact queries and `bm25_1hop` ranking (#937, #950).
+"""`delivered-knowledge/4` reader, `player-knowledge/4` reads/compact queries and `bm25_1hop` ranking (#937, #950).
 
 Gate 1's Python half loads the shared reader fixtures; Gate 9 replays the #924 queries on test-only projections of
 the sealed `#896-b v91` and `#889 v17` files when the main checkout's evidence store holds them, and synthetic
@@ -25,7 +25,9 @@ from harness.player.knowledge import (
     SCHEMA,
     SNIPPET_LIMIT,
     Knowledge,
+    _graph,
     _valid,
+    _weighted_terms,
     empty,
     revision_parts,
     terms_of,
@@ -36,8 +38,8 @@ from harness.player_view import UnsupportedResult, actor_result
 from test_computer_runtime import make_runtime
 
 FIXTURES = Path(__file__).with_name('fixtures')
-SHARED = FIXTURES / 'delivered-knowledge-3'
-PK3_FIXTURES = FIXTURES / 'player-knowledge-3'
+SHARED = FIXTURES / 'delivered-knowledge-4'
+PLAYER_FIXTURES = FIXTURES / 'player-knowledge-4'
 FULL = SHARED / 'valid' / 'full-graph-and-history.json'
 
 
@@ -47,7 +49,7 @@ def position(step: int, session: str = 's01') -> dict:
 
 def flags(**fields) -> dict:
     value = dict(tags=[], scope=dict(game='example'), branch_relation=None, lifecycle_state='active',
-                 needs_review=False, stale_citations=[], condition_unverified=False, unverified_branch=False,
+                 needs_review=False, stale_citations=[], unverified_branch=False,
                  links=[], backlinks=[], shadowed_by=[], contradicted_by=[])
     value.update(fields)
     return value
@@ -58,14 +60,14 @@ def article(slug: str, title: str, lead: str, *claims: tuple[str, list[str]], ve
                 body=[dict(text=text, facts=list(cited)) for text, cited in claims], **flags(**fields))
 
 
-def fact(identity: str, text: str, subject: str | None = None, *, step: int = 1, kind: str = 'mechanic', **fields) -> dict:
-    return dict(id=identity, claim_kind=kind, evidence_basis='observed', text=text, cited_by_articles=[],
+def fact(identity: str, text: str, subject: str | None = None, *, step: int = 1, kind: str = 'observation', **fields) -> dict:
+    return dict(id=identity, statement_kind=kind, text=text, cited_by_articles=[],
                 citation_source_ids=[f'{step:032x}-1'], seen=position(step),
                 **({} if subject is None else dict(subject=subject)), **flags(**fields))
 
 
 def document(articles: list[dict], facts: list[dict], history: dict | None = None, version: str = 'v1') -> dict:
-    """A closed `delivered-knowledge/3` file; backlinks and `cited_by_articles` are derived as the exporter does."""
+    """A closed `delivered-knowledge/4` file; backlinks and `cited_by_articles` are derived as the exporter does."""
     articles, facts = copy.deepcopy(articles), copy.deepcopy(facts)
     records = {r['id']: r for r in articles + facts}
     for record in articles + facts:
@@ -74,7 +76,7 @@ def document(articles: list[dict], facts: list[dict], history: dict | None = Non
     for a in articles:
         for cited in dict.fromkeys(f for claim in a['body'] for f in claim['facts']):
             records[cited]['cited_by_articles'].append(a['id'])
-    return dict(schema=SCHEMA, version=version, commit='a' * 40, repository_id='b' * 40, coverage=None,
+    return dict(schema=SCHEMA, version=version, commit='a' * 40, repository_id='b' * 40, coverage=None, frame_clocks={},
                 articles=articles, facts=facts, history=history or dict(replaced={}, ended=[], retracted=[]))
 
 
@@ -120,7 +122,8 @@ def test_the_empty_file_is_exact_and_the_fixture_directories_are_populated():
     lambda d: d['facts'][0].update(tags=['x' * 33]),
     lambda d: d['facts'][0].update(subject=' '),
     lambda d: d['facts'][0].update(type='mechanic'),
-    lambda d: d['facts'][0].update(claim_kind='observation'),
+    lambda d: d['facts'][0].update(statement_kind='strategy'),
+    lambda d: d['facts'][0].update(statement_kind='state', state_key='unbound-state'),
     lambda d: d['facts'][0].update(citation_source_ids=[]),
     lambda d: d['facts'][0].update(cited_by_articles=['missing-article']),
     lambda d: d['articles'][0].update(revision='other@v1'),
@@ -164,8 +167,6 @@ def test_derived_fields_and_inherited_flags_that_agree_are_accepted():
     # Both bound records hold `world: null`, so `fact-b` is still the narrower one.
     bound(value['facts'][1])
     value['facts'][1]['scope'].update(ruleset='standard')
-    value['facts'][0].update(condition_unverified=True)
-    value['articles'][0].update(condition_unverified=True)
     Knowledge.from_dict(value)
     # An article may be unverified_branch by its own unknown lineage when no cited fact is.
     value = graph()
@@ -190,15 +191,14 @@ def test_contradicts_pairs_are_classified_by_constraint_and_scope_order():
     value = graph()
     bound(value['facts'][0])
     Knowledge.from_dict(conflict(value))
-    # A shared axis that differs, here a scope against a `requires`, is disjoint: neither shadows nor conflicts.
+    # Different constraints on a shared scope axis are disjoint.
     value = graph()
-    value['facts'][0].update(when=dict(note='hard rules only', requires=dict(ruleset='hard')), shadowed_by=[])
+    value['facts'][0].update(scope=dict(game='example', ruleset='hard'), shadowed_by=[])
     Knowledge.from_dict(value)
-    # A `requires` on the general record that agrees keeps the pair compatible, so the shadow stands.
+    # Free-text conditions do not change scope compatibility.
     value = graph()
-    value['facts'][0].update(when=dict(note='standard rules', requires=dict(ruleset='standard')))
+    value['facts'][0].update(when='hard rules only')
     Knowledge.from_dict(value)
-
 
 @pytest.mark.parametrize('change', [
     lambda d: d['facts'][0].update(shadowed_by=[]),
@@ -207,7 +207,7 @@ def test_contradicts_pairs_are_classified_by_constraint_and_scope_order():
     lambda d: (d['facts'][1].update(scope=dict(game='example')), conflict(d), d['articles'][0].update(lifecycle_state='active')),
     lambda d: (d['facts'][1].update(scope=dict(game='example')), conflict(d), d['facts'][1].update(lifecycle_state='active')),
     lambda d: (d['facts'][1].update(scope=dict(game='example')), conflict(d), d['facts'][1].update(contradicted_by=[])),
-    lambda d: d['facts'][0].update(when=dict(note='hard rules only', requires=dict(ruleset='hard'))),
+    lambda d: d['facts'][0].update(scope=dict(game='example', ruleset='hard')),
 ], ids=lambda _: 'mutation')
 def test_shadows_and_conflicts_that_disagree_with_the_classification_are_refused(change):
     value = graph()
@@ -241,15 +241,15 @@ def test_the_full_graph_fixture_refuses_a_cleared_shadow():
     lambda d: d['articles'][0].update(contradicted_by=['fact-a']),
     # Uncertainty a record or article suppresses.
     lambda d: bound(d['facts'][0], 'unknown', unverified_branch=False),
-    lambda d: d['facts'][0].update(condition_unverified=True),
-    lambda d: d['articles'][0].update(condition_unverified=True),
+    lambda d: d['facts'][0]['seen'].update(step=-1),
+    lambda d: d['facts'][0].update(unverified_branch=True),
     lambda d: (bound(d['articles'][0]), bound(d['facts'][0], unverified_branch=True)),
     lambda d: d['facts'][0].update(lifecycle_state='contested'),
     # Unhashable or non-string JSON where a string is required: refused, never a `TypeError`.
     lambda d: d['articles'][0].update(revision=[]),
     lambda d: d['articles'][0].update(id=[]),
-    lambda d: d['facts'][0].update(claim_kind={}),
-    lambda d: d['facts'][0].update(evidence_basis=[]),
+    lambda d: d['facts'][0].update(statement_kind={}),
+    lambda d: d['facts'][0].update(when=[]),
     lambda d: d['facts'][0].update(lifecycle_state={}),
     lambda d: bound(d['facts'][0], []),
     lambda d: d['facts'][0].update(links=[{}]),
@@ -307,7 +307,7 @@ def test_safe_integer_version_revision_and_step_guards_avoid_int_str_limit():
             assert not _valid(value), bad
 
 
-# `player-knowledge/3` reads, in table order.
+# `player-knowledge/4` reads, in table order.
 
 def read(knowledge: Knowledge, identity: str, **options) -> tuple[str, str | None, list[str]]:
     result = knowledge.read(identity, **options)
@@ -318,7 +318,7 @@ def read(knowledge: Knowledge, identity: str, **options) -> tuple[str, str | Non
 
 def test_every_resolution_on_the_shared_full_graph_fixture():
     knowledge = Knowledge(FULL)
-    assert RESULT == 'player-knowledge/3'
+    assert RESULT == 'player-knowledge/4'
     assert read(knowledge, 'camp-water') == ('current', None, ['camp-water'])
     assert read(knowledge, 'boil-water') == ('current', None, ['boil-water'])
     assert read(knowledge, 'camp-water@v12') == ('revision', 'camp-water@v12', ['camp-water'])
@@ -326,6 +326,7 @@ def test_every_resolution_on_the_shared_full_graph_fixture():
     assert read(knowledge, 'old-water-fact') == ('restated', 'old-water-fact', ['boil-water'])
     assert read(knowledge, 'broad-fire-claim') == ('narrowed', 'broad-fire-claim', ['fire-rule-standard', 'fire-rule-camp'])
     assert read(knowledge, 'broken-tank-claim') == ('corrected', 'broken-tank-claim', ['tank-empty'])
+    assert read(knowledge, 'tank-previous') == ('changed', 'tank-previous', ['tank-full'])
     assert read(knowledge, 'ended-fire') == ('ended', 'ended-fire', [])
     assert read(knowledge, 'retired-guide') == ('ended', 'retired-guide', [])
     assert read(knowledge, 'wrong-fact') == ('retracted', 'wrong-fact', [])
@@ -337,6 +338,73 @@ def test_every_resolution_on_the_shared_full_graph_fixture():
     for missing in ('camp-water@v5', 'unicorn', ''):
         assert read(knowledge, missing) == ('unknown', None, [])
     assert knowledge.read('camp-water')['version'] == knowledge.value['version']
+
+
+@pytest.mark.parametrize('by', ['id', 'any'])
+def test_state_key_read_resolves_every_current_reading_before_title_lookup(by):
+    value = json.loads(FULL.read_text())
+    value['articles'][0]['title'] = 'shelter-tank'
+    knowledge = Knowledge.from_dict(value)
+    result = knowledge.read('shelter-tank', by=by)
+    assert (result['resolution'], result['resolved_from'], ids(result)) == (
+        'state_key', None, ['tank-full', 'tank-empty'],
+    )
+    assert all(record['lifecycle_state'] == 'contested' for record in result['records'])
+    assert actor_result(result) == result
+
+
+def test_graph_expands_state_key_dependencies_and_ignores_contradicts():
+    knowledge = Knowledge(FULL)
+    positions = {record['id']: i for i, record in enumerate(knowledge.records)}
+    readings = [positions['tank-full'], positions['tank-empty']]
+    neighbours = _graph(knowledge.records, positions, {'shelter-tank': readings})
+    dependent = positions['fire-rule-camp']
+    assert neighbours[dependent] == readings
+    assert neighbours[readings[0]] == [positions['camp-water'], dependent]
+    assert neighbours[readings[1]] == [dependent]
+    hits = {hit['id']: hit['via'] for hit in knowledge.query('courtyard')['hits']}
+    assert hits == {'fire-rule-camp': 'match', 'tank-full': 'hop', 'tank-empty': 'hop'}
+
+
+def test_query_filters_shadowed_records_and_keeps_current_contested_readings():
+    knowledge = Knowledge(FULL)
+    assert 'fire-rule' not in ids(knowledge.query('reliably'))
+    result = knowledge.query('fire shelter tank')
+    assert 'fire-rule' not in ids(result)
+    hits = {hit['id']: hit for hit in result['hits']}
+    for identity in ('tank-full', 'tank-empty'):
+        assert hits[identity]['status'][0] == 'contested'
+        assert knowledge.read(identity)['records'][0]['contradicted_by']
+    assert ids(knowledge.read('fire-rule')) == ['fire-rule']
+
+
+def test_when_and_anchor_display_are_weighted_and_identifiers_and_clocks_are_display_only():
+    entry = fact('opaqueid', 'The latch is open.', kind='state', state_key='opaquekey',
+                 scope=dict(game='example', world=None), branch_relation='same',
+                 when='After snowfall', anchor='parentkey', anchor_display='Western depot')
+    entry['seen']['clock_label'] = 'clockcue'
+    weights, _ = _weighted_terms(entry)
+    assert weights['snowfall'] == 1
+    assert weights['western'] == weights['depot'] == 2
+    knowledge = Knowledge.from_dict(document([], [entry]))
+    assert ids(knowledge.query('snowfall')) == ids(knowledge.query('depot')) == ['opaqueid']
+    for query in ('opaqueid', 'opaquekey', 'parentkey', 'state', 'clockcue'):
+        assert query not in weights
+        assert ids(knowledge.query(query)) == []
+
+
+def test_fuzzy_fallback_runs_only_when_word_and_hop_hits_are_empty():
+    knowledge = store([
+        article('bridge-guide', 'Bridge', 'Crossing notes.', ('A claim.', ['crossing'])),
+    ], [
+        fact('crossing', 'An inspection result.'),
+        fact('rope', 'Brazier'),
+    ])
+    fuzzy = knowledge.query('brazierz')['hits']
+    assert [(hit['id'], hit['via']) for hit in fuzzy] == [('rope', 'fuzzy')]
+    hits = knowledge.query('brazierz bridge')['hits']
+    assert [(hit['id'], hit['via']) for hit in hits] == [('bridge-guide', 'match'), ('crossing', 'hop')]
+    assert knowledge.query('zzzzz')['hits'] == []
 
 
 def test_casefolded_title_lookup_prefers_exact_literal_breaks_ties_in_delivered_order_and_respects_by_id():
@@ -438,16 +506,16 @@ def test_a_record_need_not_hold_every_term_and_a_better_match_ranks_higher():
     assert ids(titled.query('tent'))[:2] == ['a-title', 'a-body']
 
 
-def test_tags_match_at_lead_weight_a_hyphen_separates_words_and_claim_kind_is_not_indexed():
-    tagged = store([], [fact('fact-door', 'The cabin door was locked.', 'Cabin door', kind='interface', tags=['door-control']),
+def test_tags_match_at_lead_weight_a_hyphen_separates_words_and_statement_kind_is_not_indexed():
+    tagged = store([], [fact('fact-door', 'The cabin door was locked.', 'Cabin door', kind='observation', tags=['door-control']),
                         fact('fact-recipe', 'Needs two sticks and a rock.', 'Stone knife', tags=['crafting-recipe']),
-                        fact('fact-rain', 'Rain fell at dusk.', kind='instance_state',
+                        fact('fact-rain', 'Rain fell at dusk.', kind='state', state_key='camp-weather',
                              scope=dict(game='example', world=None), branch_relation='same')])
     # Neither the subject nor the text of these facts holds the query word; only a tag does.
     assert ids(tagged.query('control')) == ['fact-door']
     assert ids(tagged.query('crafting')) == ['fact-recipe']
     assert ids(tagged.query('recipe')) == ['fact-recipe']
-    assert ids(tagged.query('interface')) == [] and ids(tagged.query('instance state')) == []
+    assert ids(tagged.query('observation')) == [] and ids(tagged.query('state')) == []
     # A tag on an article counts with its lead, below its title.
     articles = store([article('by-tag', 'Shelter', 'Pitch it.', ('Here.', ['f']), tags=['tent']),
                       article('by-title', 'Tent', 'Pitch it.', ('Here.', ['f']))], [fact('f', 'Stakes hold.')])
@@ -527,15 +595,15 @@ def test_compact_query_hits_shape_via_status_clipping_and_cited_by_cap():
     arts = [
         article('art-direct', 'Zebra guide', long_lead, ('C.', ['fact-hop']), tags=['zebra'],
                 scope=dict(game='example', world=None), branch_relation='same', lifecycle_state='contested',
-                unverified_branch=True, needs_review=True, condition_unverified=True),
+                unverified_branch=True, needs_review=True),
         *[article(f'ref-{c}', f'Ref {c}', 'Short lead.', ('C.', ['fact-hop']),
                   scope=dict(game='example', world=None), branch_relation='same', lifecycle_state='contested',
-                  unverified_branch=True, condition_unverified=True) for c in ('d', 'b', 'a', 'c')],
+                  unverified_branch=True) for c in ('d', 'b', 'a', 'c')],
         article('art-clean', 'Zebra clean', 'Exact length lead.', ('C.', ['fact-clean']), tags=['zebra']),
     ]
     facts = [
         fact('fact-hop', long_text, subject=None, step=1, scope=dict(game='example', world=None),
-             branch_relation='unknown', unverified_branch=True, needs_review=True, condition_unverified=True,
+             branch_relation='unknown', unverified_branch=True, needs_review=True,
              links=[dict(rel='contradicts', target='fact-conflict')], contradicted_by=['fact-conflict'],
              lifecycle_state='contested'),
         fact('fact-conflict', 'Opposing claim.', subject='Other', step=2,
@@ -552,14 +620,14 @@ def test_compact_query_hits_shape_via_status_clipping_and_cited_by_cap():
     assert by_id['art-direct']['kind'] == 'article' and by_id['art-direct']['via'] == 'match'
     assert len(by_id['art-direct']['snippet']) <= SNIPPET_LIMIT and by_id['art-direct']['snippet'].endswith('…')
     assert not by_id['art-direct']['snippet'][:-1].endswith(' ')
-    assert by_id['art-direct']['status'] == ['contested', 'unverified_branch', 'needs_review', 'condition_unverified']
+    assert by_id['art-direct']['status'] == ['contested', 'unverified_branch', 'needs_review']
     # Plainly active article omits `status`.
     assert set(by_id['art-clean']) == {'id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'}
     assert 'status' not in by_id['art-clean'] and by_id['art-clean']['snippet'] == 'Exact length lead.'
     # 1-hop fact carries `via: 'hop'`, explicit `subject: None`, clipped snippet, sorted capped `cited_by_articles` (3),
     # and status markers in contract order.
     assert set(by_id['fact-hop']) == {
-        'id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via', 'status'
+        'id', 'kind', 'subject', 'statement_kind', 'scope', 'snippet', 'cited_by_articles', 'via', 'status'
     }
     assert by_id['fact-hop']['kind'] == 'fact' and by_id['fact-hop']['via'] == 'hop'
     assert by_id['fact-hop']['subject'] is None
@@ -567,7 +635,7 @@ def test_compact_query_hits_shape_via_status_clipping_and_cited_by_cap():
     assert not by_id['fact-hop']['snippet'][:-1].endswith(' ')
     assert by_id['fact-hop']['cited_by_articles'] == ['art-direct', 'ref-a', 'ref-b']
     assert len(by_id['fact-hop']['cited_by_articles']) == HIT_CITED_BY_LIMIT
-    assert by_id['fact-hop']['status'] == ['contested', 'unverified_branch', 'needs_review', 'condition_unverified']
+    assert by_id['fact-hop']['status'] == ['contested', 'unverified_branch', 'needs_review']
     # Plainly active 1-hop fact omits `status` and preserves non-null subject.
     assert 'status' not in by_id['fact-clean'] and by_id['fact-clean']['subject'] == 'Plain'
     assert by_id['fact-clean']['via'] == 'hop'
@@ -620,8 +688,8 @@ def test_the_player_view_projects_only_the_current_knowledge_result():
     knowledge = Knowledge(FULL)
     for result in (knowledge.read('old-water-fact'), knowledge.read('unicorn'), knowledge.query('camp water')):
         assert actor_result(result) == result
-    for fixture_name in ('read-article.json', 'query-compact-hits.json'):
-        fixture = json.loads((PK3_FIXTURES / fixture_name).read_text())
+    for fixture_name in ('read-state-key.json', 'query-compact-hits.json'):
+        fixture = json.loads((PLAYER_FIXTURES / fixture_name).read_text())
         assert actor_result(fixture) == fixture
     for bad in (dict(knowledge.read('camp-water'), schema='player-knowledge/1'),
                 dict(knowledge.read('camp-water'), schema='player-knowledge/2'),
@@ -642,7 +710,7 @@ def _changed(result: dict, change) -> dict:
 def test_the_player_view_projects_every_resolution_of_the_read_table():
     knowledge = Knowledge(FULL)
     for identity in ('camp-water', 'boil-water', 'camp-water@v12', 'camp-water@v4', 'old-water-fact', 'broad-fire-claim',
-                     'broken-tank-claim', 'ended-fire', 'wrong-fact', 'Camp water', 'camp water', 'unicorn'):
+                     'broken-tank-claim', 'tank-previous', 'shelter-tank', 'ended-fire', 'wrong-fact', 'Camp water', 'camp water', 'unicorn'):
         assert actor_result(knowledge.read(identity)) == knowledge.read(identity)
     for result in (Knowledge.from_dict(empty()).read('water'), Knowledge.from_dict(empty()).query('water')):
         assert actor_result(result) == result
@@ -697,7 +765,7 @@ def test_the_player_view_projects_every_resolution_of_the_read_table():
     ('camp-water', lambda r: r['records'][0].update(revision='camp-water@v13')),
     ('camp-water', lambda r: r['records'][0].update(unverified_branch=False)),
     ('camp-water', lambda r: r['records'][0].update(revision=[])),
-    ('boil-water', lambda r: r['records'][0].update(claim_kind={})),
+    ('boil-water', lambda r: r['records'][0].update(statement_kind={})),
     ('boil-water', lambda r: r['records'][0].pop('seen')),
     ('boil-water', lambda r: r['records'][0]['seen'].update(session='s1')),
     ('boil-water', lambda r: r['records'][0].update(links=[{}])),
@@ -753,7 +821,7 @@ def test_the_player_view_refuses_malformed_or_oversized_compact_query_results():
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=['b', 'a'])])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, cited_by_articles=[fact_hit['id']])])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, scope={'game': 'example'}, status=['unverified_branch'])])),
-        _changed(query, lambda r: r.update(hits=[dict(fact_hit, claim_kind='instance_state', scope={'game': 'example'})])),
+        _changed(query, lambda r: r.update(hits=[dict(fact_hit, statement_kind='state', scope={'game': 'example'})])),
         _changed(query, lambda r: r.update(hits=[dict(fact_hit, kind='other')])),
         _changed(query, lambda r: r.update(hits=[{k: v for k, v in fact_hit.items() if k != 'subject'}])),
         _changed(query, lambda r: r.update(version=None)),
@@ -762,7 +830,7 @@ def test_the_player_view_refuses_malformed_or_oversized_compact_query_results():
             actor_result(bad)
 
 
-# Gate 9: the #924 queries on test-only projections of sealed files into `delivered-knowledge/3`.
+# Gate 9: the #924 queries on test-only projections of sealed files into `delivered-knowledge/4`.
 
 def _sealed(corpus: str) -> Path:
     """The sealed file, or a skip when this checkout holds no store. A clone recorded as holding the store
@@ -779,49 +847,20 @@ def _sealed(corpus: str) -> Path:
     return path
 
 
-def project(old: dict) -> dict:
-    """A sealed `delivered-knowledge/2` file in the new closed form, for this test only and never a runtime reader.
-
-    The old ID stands in for the slug, and a link (a title) resolves to the article with that title as `see_also`.
-    The old `type`, kebab-cased, becomes the one tag, so it keeps the weight-2 slot #936 measured. Session names
-    become aliases; source IDs are synthetic in the canonical form."""
-    aliases: dict[str, str] = {}
-
-    def alias(where: dict) -> dict:
-        return dict(where, session=aliases.setdefault(where['session'], f's{len(aliases) + 1:02}'))
-
-    titles = {a['title']: a['id'] for a in old['articles']}
-    articles = []
-    for a in old['articles']:
-        links = [dict(rel='see_also', target=titles[t]) for t in dict.fromkeys(a['links']) if titles[t] != a['id']]
-        articles.append(dict(id=a['id'], revision=f"{a['id']}@{old['version']}", title=a['title'], lead=a['lead'],
-                             body=a['body'], last_confirmed=alias(a['last_confirmed']), **flags(links=links)))
-    facts = []
-    for n, f in enumerate(old['facts'], 1):
-        facts.append(dict(id=f['id'], claim_kind='mechanic', evidence_basis='observed', text=f['text'],
-                          cited_by_articles=[], citation_source_ids=[f'{n:032x}-1'], seen=alias(f['seen']),
-                          **({} if 'subject' not in f else dict(subject=f['subject'])),
-                          **flags(tags=[f['type'].replace('_', '-')])))
-    value = document(articles, facts, version=old['version'])
-    value.update(commit=old['commit'], repository_id=old['repository_id'],
-                 coverage=None if old['coverage'] is None else alias(old['coverage']))
-    return value
-
-
 def _percentile(samples: list[float], fraction: float) -> float:
     ordered = sorted(samples)
     return ordered[min(len(ordered) - 1, math.ceil(fraction * len(ordered)) - 1)]
 
 
-# #936's #920 baseline (prod_bm25) on the same queries: Hit@5 and article MRR@5.
-BASELINE = {'v91': (1.000, 0.700), 'v17': (1.000, 0.650)}
+# Frozen #1046 bm25_1hop reference: Hit@5 and article MRR@5.
+BASELINE = {'v91': (1.000, 0.917), 'v17': (1.000, 1.000)}
 
 
 @pytest.mark.parametrize('corpus', ['v91', 'v17'])
-def test_gate_9_bm25_1hop_meets_the_920_baseline_on_projected_sealed_files(corpus):
+def test_gate_9_bm25_1hop_meets_the_frozen_baseline_on_projected_sealed_files(corpus):
     path = _sealed(corpus)
-    from tools.knowledge_retrieval_benchmark import CUT, QUERIES
-    knowledge = Knowledge.from_dict(project(json.loads(path.read_text())), str(path))
+    from tools.knowledge_retrieval_benchmark import CUT, QUERIES, Corpus
+    knowledge = Corpus.load(corpus, path).knowledge
     cites = {a['id']: {f for c in a['body'] for f in c['facts']} for a in knowledge.value['articles']}
     queries = [q for q in QUERIES if q.corpus == corpus]
     hits, reciprocal = [], []
@@ -838,5 +877,21 @@ def test_gate_9_bm25_1hop_meets_the_920_baseline_on_projected_sealed_files(corpu
             samples.append((time.perf_counter() - start) * 1000)
     hit, mrr, p95 = sum(hits) / len(hits), sum(reciprocal) / len(reciprocal), _percentile(samples, 0.95)
     print(f'{corpus}: Hit@5 {hit:.3f} ArtMRR@5 {mrr:.3f} p95 {p95:.3f} ms over {len(samples)} samples')
-    assert hit >= BASELINE[corpus][0] and mrr >= BASELINE[corpus][1], (hit, mrr)
+    assert hit >= BASELINE[corpus][0] and round(mrr, 3) >= BASELINE[corpus][1], (hit, mrr)
     assert p95 < 5.0, p95
+
+
+def test_query_matched_article_claim_snippet_replaces_generic_lead():
+    """#1023 Candidate 1 (adopted on paired $0 replay): when a body claim matches strictly more query terms
+    than the article's lead, the compact article hit surfaces that claim as its snippet; otherwise it keeps lead."""
+    store = Knowledge.from_dict(document(
+        [article('camp-overview', 'Camp Overview', 'Recheck surroundings before acting.',
+                 ('Camp fire ring sits east of the tent with dry twigs.', ['f-fire']),
+                 ('Luxury RV driver door opens on the west side.', ['f-rv']))],
+        [fact('f-fire', 'Dry twigs beside fire ring.'), fact('f-rv', 'West-side RV driver door opens.')],
+    ))
+    rv_hit = next(h for h in store.query('Luxury RV west side driver door')['hits'] if h['id'] == 'camp-overview')
+    assert rv_hit['snippet'] == 'Luxury RV driver door opens on the west side.'
+    # When no body claim beats the lead's overlap, the lead stays intact.
+    lead_hit = next(h for h in store.query('recheck surroundings')['hits'] if h['id'] == 'camp-overview')
+    assert lead_hit['snippet'] == 'Recheck surroundings before acting.'

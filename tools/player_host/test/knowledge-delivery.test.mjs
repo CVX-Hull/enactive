@@ -33,7 +33,7 @@ test('briefing, standalone index, concurrent reminder, silence, read and exact s
   assert.deepEqual(briefing.article_ids,['article-a']);
   assert.deepEqual(briefing.index_ids,['article-b','fact-alone']);
   assert.equal(briefing.receiving_player_request_id,'request-1');
-  assert.equal(briefing.delivered_knowledge_schema,'delivered-knowledge/3');
+  assert.equal(briefing.delivered_knowledge_schema,'delivered-knowledge/4');
   assert.equal(briefing.grants_authority,false);
   assert.ok(briefing.text.includes('curator-coverage/2'));
   const reminder = deliveries.find(e => e.kind === 'reminder');
@@ -169,11 +169,11 @@ test('article and fact injection stays quoted fallible data and recall cannot in
 
 // Evidence gate 1 (reader parity), Node half: tests/test_shared_shapes.py loads the same directory for the Python
 // reference, and the Python reader's suite loads it too.
-test('the shared delivered-knowledge/3 fixtures are accepted and refused as the Python reader does',async () => {
+test('the shared delivered-knowledge/4 fixtures are accepted and refused as the Python reader does',async () => {
   const fixtures = fileURLToPath(new URL('../../../tests/fixtures/',import.meta.url));
   const load = async path => JSON.parse(await readFile(path,'utf8'));
   const all = async kind => {
-    const directory = join(fixtures,'delivered-knowledge-3',kind);
+    const directory = join(fixtures,'delivered-knowledge-4',kind);
     const names = (await readdir(directory)).filter(name => name.endsWith('.json')).sort();
     return Promise.all(names.map(async name => [name,await load(join(directory,name))]));
   };
@@ -190,8 +190,8 @@ test('revision order, derived fields and inherited flags are refused when they d
   const valid = () => {
     const value = contest(knowledge(),'fact-b','fact-alone');
     value.articles[1].lifecycle_state = 'contested';
-    // article-a inherits an unverified condition and branch from the world-bound fact of unknown lineage it cites.
-    const bound = {scope:{game:'example',world:null},condition_unverified:true,unverified_branch:true};
+    // article-a inherits an unverified branch from the world-bound fact of unknown lineage it cites.
+    const bound = {scope:{game:'example',world:null},unverified_branch:true};
     Object.assign(value.articles[0],{...bound,branch_relation:'inherited'});
     Object.assign(value.facts[0],{...bound,branch_relation:'unknown'});
     // A narrower fact shadows fact-alone instead of contradicting it.
@@ -213,7 +213,6 @@ test('revision order, derived fields and inherited flags are refused when they d
     ['cleared contradicted_by',v => { v.facts[1].contradicted_by = []; }],
     ['contested fact marked active',v => { v.facts[2].lifecycle_state = 'active'; }],
     ['unknown branch without unverified_branch',v => { v.facts[0].unverified_branch = false; }],
-    ['article clearing inherited condition_unverified',v => { v.articles[0].condition_unverified = false; }],
     ['article clearing inherited unverified_branch',v => { v.articles[0].unverified_branch = false; }],
     ['article clearing inherited contested',v => { v.articles[1].lifecycle_state = 'active'; }],
     ['claim facts null',v => { v.articles[0].body[0].facts = null; }]]) {
@@ -224,7 +223,7 @@ test('revision order, derived fields and inherited flags are refused when they d
 });
 
 // Evidence gate 10 (cut and cache): one status list on every projection, absent from plainly active entries.
-const ORDER = ['contested','unverified_branch','needs_review','condition_unverified'];
+const ORDER = ['contested','unverified_branch','needs_review'];
 const payloadOf = message => JSON.parse(message.text.split('\n')[1]);
 
 test('status markers are absent from plainly active entries, so their bytes do not change',() => {
@@ -241,23 +240,20 @@ test('status markers are absent from plainly active entries, so their bytes do n
 test('every projection carries status in the contract order when a marker holds',() => {
   const bound = {scope:{game:'example',world:null},branch_relation:'unknown'};
   for (const [flags,status] of [[{lifecycle_state:'contested'},['contested']],[{...bound,unverified_branch:true},['unverified_branch']],
-    [{needs_review:true},['needs_review']],[{condition_unverified:true},['condition_unverified']],
-    [{condition_unverified:true,needs_review:true,lifecycle_state:'contested'},['contested','needs_review','condition_unverified']],
-    [{...bound,lifecycle_state:'contested',unverified_branch:true,needs_review:true,condition_unverified:true},ORDER]]) {
+    [{needs_review:true},['needs_review']],
+    [{needs_review:true,lifecycle_state:'contested'},['contested','needs_review']],
+    [{...bound,lifecycle_state:'contested',unverified_branch:true,needs_review:true},ORDER]]) {
     const value = knowledge();
     Object.assign(value.articles[0],structuredClone(flags));
-    // An article inherits `condition_unverified` and `contested` from the fact it cites, so the fact carries them.
-    value.facts[0].condition_unverified = value.articles[0].condition_unverified;
     if (flags.lifecycle_state === 'contested') contest(value,'fact-a','fact-alone');
     assert.deepEqual(statusOf(validateKnowledge(value).articles[0]),status,JSON.stringify(flags));
   }
   // fact-b and fact-alone contradict each other, so article-b, which cites fact-b, is contested too.
   const marked = contest(knowledge(),'fact-b','fact-alone');
-  Object.assign(marked.articles[0],{condition_unverified:true,needs_review:true});
-  Object.assign(marked.articles[1],{...bound,lifecycle_state:'contested',unverified_branch:true,needs_review:true,condition_unverified:true});
-  marked.facts[0].condition_unverified = marked.facts[1].condition_unverified = true;
+  Object.assign(marked.articles[0],{needs_review:true});
+  Object.assign(marked.articles[1],{...bound,lifecycle_state:'contested',unverified_branch:true,needs_review:true});
   validateKnowledge(marked);
-  const expected = {'article-a':['needs_review','condition_unverified'],'article-b':ORDER,'article-new':ORDER,'fact-alone':['contested']};
+  const expected = {'article-a':['needs_review'],'article-b':ORDER,'article-new':ORDER,'fact-alone':['contested']};
   const check = (entries,ids,field) => {
     assert.deepEqual(entries.map(entry => entry.id),ids);
     for (const entry of entries) assert.deepEqual(entry, {id:entry.id, title:entry.title,
@@ -306,7 +302,7 @@ test('briefing and first update budget the serialized rows, choosing equal posit
   }
   value.facts.push(fact('old-mechanic', {seen:position(0)}));
   for (let at = 0; at < 30; at++) {
-    value.facts.push(fact(`state-${at}`, {claim_kind:'instance_state', seen:position(9)}));
+    value.facts.push(fact(`state-${at}`, {statement_kind:'state', state_key:`state-key-${at}`, scope:{game:'example', world:null}, branch_relation:'same', seen:position(9)}));
   }
   const recalled = value.articles.at(-1);
   recalled.lead = 'x'.repeat(998) + '😀' + 'y';
@@ -428,3 +424,17 @@ for (const terminal of ['pre-headers', '503', 'length', 'cost-unreported', 'retr
     assert.equal(response.reported_cost_usd, terminal === 'length' ? '0.01' : terminal === 'retry-success' ? '0.000038' : null);
   });
 }
+
+test('clock_label enforces 64 Unicode code points (astral-plane parity with Python)', () => {
+  const value = knowledge();
+  const src = value.facts[0].citation_source_ids[0];
+  const ok64 = '\u{1F31E}'.repeat(64); // 64 code points, 128 UTF-16 code units
+  value.frame_clocks = { [src]: ok64 };
+  value.facts[0].seen.clock_label = ok64;
+  delete value.facts[0].seen.prior_clock;
+  assert.equal(validateKnowledge(value).frame_clocks[src], ok64);
+  const bad65 = '\u{1F31E}'.repeat(65);
+  value.frame_clocks = { [src]: bad65 };
+  value.facts[0].seen.clock_label = bad65;
+  assert.throws(() => validateKnowledge(value), { message: 'invalid-delivered-knowledge' });
+});

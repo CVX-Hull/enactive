@@ -79,20 +79,20 @@ async function workspace(t) {
   return root;
 }
 
-// A minimal curator-knowledge/4 export at v0 and a validation context with one frame in the window.
+// A minimal curator-knowledge/5 export at v0 and a validation context with one frame in the window.
 const SEALED = '0123456789abcdef0123456789abcdef';
 const FRAME = `${SEALED}-1`;
 async function knowledge(root) {
   await stageWorkbench(root);
-  await writeNodeFile(join(root, 'knowledge/knowledge.json'), JSON.stringify({ schema: 'curator-knowledge/4', game: 'g' }));
-  await writeNodeFile(join(root, 'knowledge/provenance.json'), JSON.stringify({ frames: {}, sessions: {}, branches: {}, restores: [], last_admission: null }));
+  await writeNodeFile(join(root, 'knowledge/knowledge.json'), JSON.stringify({ schema: 'curator-knowledge/5', game: 'g' }));
+  await writeNodeFile(join(root, 'knowledge/provenance.json'), JSON.stringify({ frames: {}, frame_clocks: {}, sessions: {}, branches: {}, restores: [], last_admission: null }));
   await writeNodeFile(join(root, 'knowledge/validation-context.json'), JSON.stringify({
-    base_version: 'v0', session_id: 'session', reserved_ids: [], reserved_sessions: { sessions: {}, branches: {}, restores: [] },
+    base_version: 'v0', session_id: 'session', reserved_ids: [], reserved_state_keys: [], reserved_sessions: { sessions: {}, branches: {}, restores: [] },
     session_kind: 'admission', window_frames: { [FRAME]: { session: 's1', actor: '001', step: 1, order: [1, '001', 1] } },
     session_labels: { [SEALED]: { name: 's1', world: null, lineage: null, admission: null, context: {} } }, declared_axes: [] }));
 }
-const addFact = (id, base) => JSON.stringify({ schema: 'curator-submission/2', base_version: base, summary: `add ${id}`,
-  changes: [{ op: 'add_fact', fact: { schema: 'curator-fact/5', record: 'fact', id, claim_kind: 'mechanic', evidence_basis: 'observed',
+const addFact = (id, base) => JSON.stringify({ schema: 'curator-submission/3', base_version: base, summary: `add ${id}`,
+  changes: [{ op: 'add_fact', fact: { schema: 'curator-fact/6', record: 'fact', id, statement_kind: 'observation',
     tags: [], text: 'An observed rule.', scope: {}, links: [], citations: [FRAME] } }] });
 const sha256 = async path => createHash('sha256').update(await readFile(path)).digest('hex');
 const validatorOptions = { python: PYTHON, env: { PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1' }, timeoutSeconds: 60 };
@@ -249,7 +249,7 @@ test('validate_submission reports a validator that cannot run without leaking it
   const fake = join(root, 'scratch/python');
   for (const [script, expected] of [
     ['echo not json; echo noise >&2', /the validator returned an unexpected result/],
-    ['echo "error: expected curator-knowledge/4" >&2; exit 2', /could not run: error: expected curator-knowledge\/4/],
+    ['echo "error: expected curator-knowledge/5" >&2; exit 2', /could not run: error: expected curator-knowledge\/5/],
     ['echo \'{"ok":true,"all_passed":true,"submission":"02","prefix":[],"diagnostics":[],"scope_changes":[]}\'', /unexpected result/],
   ]) {
     await writeNodeFile(fake, `#!/bin/sh\n${script}\n`);

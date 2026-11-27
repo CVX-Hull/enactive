@@ -24,7 +24,7 @@ Before changing a deployment:
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
 callers move together with `player-host/12`, telemetry 12, `campaign-run/13`,
-`player-host-inputs/4`, `delivered-knowledge/3`, `player-knowledge/3`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
+`player-host-inputs/4`, `delivered-knowledge/4`, `player-knowledge/4`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
 `player-driver/7`, `campaign-receipt/7` and `spectator-view/3`. The live spectator requires
 `computer-status/2`; its host block carries observed attempts. The evaluator
 reads older versions only for sealed sessions individually pinned to those
@@ -34,10 +34,10 @@ source commit and readers for preserved evidence outside that index. Native wire
 canonical `computer-operation/1`, `computer-source/1` and computer-session storage
 are separate versions; the actor projection does not migrate the canonical database.
 
-The knowledge-graph and scoping migration starts a fresh `curator-knowledge/4`
-repository (`curator-fact/5`, `curator-submission/2`, `curator-boundary-grooming/2`)
-and fresh curator working state. Preserve older repositories and draws as sealed
-evidence. Build new packages and `withholding-study-draw/2` draws from the new
+The continuous-play memory store migration starts a fresh `curator-knowledge/5`
+repository (`curator-fact/6`, `curator-submission/3`, `curator-boundary-grooming/2`)
+and fresh curator working state. Preserve older `curator-knowledge/4` repositories and draws as sealed
+evidence; there is no `/4` to `/5` converter. Build new packages and `withholding-study-draw/2` draws from the new
 repository using the [knowledge export procedure](campaign-run.md#freeze-delivered-knowledge).
 
 Upstream saves are unchanged. Load them only through visible ordinary application

@@ -22,6 +22,7 @@ from harness.player.knowledge import Knowledge
 from harness.viewer.app import MAX_BYTES, create_app
 from harness.viewer.catalog import API, ID_LIMIT, LIST_LIMIT, TEXT_LIMIT, Catalog
 from harness.viewer.frame import FrameSources
+from harness.viewer.knowledge import ARCHIVED_DELIVERED_V3_SESSIONS
 from harness.viewer.live import LiveEvaluator
 from harness.viewer.pause import dollars_per_minute, looping_streak
 from tests.legacy_player_store import legacy_player_archive
@@ -874,13 +875,16 @@ def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls
     delivery = run.event(actor, 'knowledge-delivery', outcome='delivered', recall_request_id='recall-1', receiving_player_request_id='request-1', version='v18', article_ids=['article-a'], fact_ids=['fact-a'])
     delivery['kind'] = 'briefing'
     run.host[actor].append(delivery)
-    run.call(actor, 'player_knowledge_read', dict(intent='inspect', cites=['fact-a'], id_or_title='fact-a', secret='credential'), dict(records=[dict(id='fact-a',text='A fact')]))
+    run.call(actor, 'player_knowledge_read', dict(intent='inspect', cites=['fact-a'], id_or_title='passage-state', secret='credential'),
+             dict(schema='player-knowledge/4', resolution='state_key', resolved_from=None, records=[dict(id='fact-a', text='A fact')]))
     run.call(actor, 'player_knowledge_read', dict(intent='Look for missing entry', cites=[], id_or_title='missing-entry'), dict(records=[]))
     run.call(actor, 'player_knowledge_query', dict(intent='search facts', cites=[], query='fact'),
-             dict(schema='player-knowledge/3', version='v18', grants_authority=False, identity='fact', resolution='query',
-                  resolved_from=None, hits=[dict(id='fact-a', kind='fact', subject=None, claim_kind='instance_state',
-                  scope=dict(game='cdda'), snippet='A fact', cited_by_articles=['article-a'], via='match', status=['needs_review']),
-                  dict(id='article-a', kind='article', title='A', via='citation', snippet='Lead')]))
+             dict(schema='player-knowledge/4', version='v18', grants_authority=False, identity='fact', resolution='query',
+                  resolved_from=None, hits=[dict(id='fact-a', kind='fact', subject=None, statement_kind='state', state_key='passage-state',
+                  scope=dict(game='cdda', world=None), snippet='A fact', cited_by_articles=['article-a'], via='fuzzy',
+                  status=['needs_review'], anchor='entry-state', anchor_display='Entry', when='while open',
+                  depiction_source_id=f'{SESSION}-1'),
+                  dict(id='article-a', kind='article', title='A', via='hop', snippet='Lead')]))
     long_hit = dict(id='x' * (ID_LIMIT + 1), kind='fact', snippet='s' * (TEXT_LIMIT + 1),
         status=['contested', 12], cited_by_articles=['article-a', 'x' * (ID_LIMIT + 1)])
     run.call(actor, 'player_knowledge_query', dict(query='oversized results'),
@@ -889,8 +893,11 @@ def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls
     actor_dir = next((directory/'actors').iterdir())
     articles, facts = published([article_record('article-a', ['fact-a'], 'v18', title='A', lead='Lead', body=[dict(text='Claim', facts=['fact-a'])],
             last_confirmed=position(4), tags=['water'])],
-        [fact_record('fact-a', [f'{SESSION}-1'], text='A fact', seen=position(3), tags=['water'], **WORLD_BOUND, claim_kind='instance_state')])
-    knowledge = delivered_document('v18', articles, facts, coverage=dict(COVERAGE, actor=None, last_step=None))
+        [fact_record('fact-a', [f'{SESSION}-1'], text='A fact', seen=dict(position(3), prior_clock=dict(label='Dawn', step_offset=2)),
+                     tags=['water'], **WORLD_BOUND, statement_kind='state', state_key='passage-state',
+                     anchor='entry-state', anchor_display='Entry', when='while open', depiction_source_id=f'{SESSION}-1')])
+    knowledge = delivered_document('v18', articles, facts, coverage=dict(COVERAGE, actor=None, last_step=None),
+                                   frame_clocks={f'{SESSION}-1': 'Dawn'})
     Knowledge.from_dict(knowledge)
     (actor_dir/'delivered-knowledge.json').write_text(json.dumps(knowledge))
     snapshot_path = actor_dir/'delivered-knowledge.json'
@@ -906,23 +913,30 @@ def test_recorded_knowledge_projection_keeps_selection_delivery_and_public_calls
     assert page['snapshot']['items'][0]['last_confirmed']['order']==[1,'001',4]
     article = page['snapshot']['items'][0]
     assert (article['revision'], article['scope'], article['tags'], article['lifecycle_state']) == ('article-a@v18', 'game', ['water'], 'active')
-    fact = client.get(url,params=dict(actor=actor,entry='fact-a')).json()['snapshot']['items'][0]
-    assert (fact['claim_kind'], fact['evidence_basis'], fact['scope'], fact['scope_axes'], fact['branch_relation']) == ('instance_state', 'observed', 'world', {}, 'same')
+    keyed = client.get(url, params=dict(actor=actor, entry='passage-state')).json()['snapshot']
+    fact = keyed['items'][0]
+    assert fact['id'] == 'fact-a' and keyed['frame_clocks'] == {f'{SESSION}-1': 'Dawn'}
+    assert (fact['anchor'], fact['anchor_display'], fact['when'], fact['depiction_source_id']) == (
+        'entry-state', 'Entry', 'while open', f'{SESSION}-1')
+    assert fact['seen']['prior_clock'] == dict(label='Dawn', step_offset=2)
+    assert (fact['statement_kind'], fact['state_key'], fact['scope'], fact['scope_axes'], fact['branch_relation']) == ('state', 'passage-state', 'world', {}, 'same')
     assert fact['citation_source_ids'] == [f'{SESSION}-1'] and fact['cited_by_articles'] == ['article-a'] and fact['backlinks'] == []
     assert fact['anchors'] == [dict(run='recorded', source_id=f'{SESSION}-1', available=False, reason='unknown_frame')]     # a run with no step
     assert [e['type'] for e in page['events']]==['knowledge-delivery']
     assert page['events'][0]['recall_request_id']=='recall-1'
     assert page['calls'][0]['returned_ids']==['fact-a'] and page['calls'][0]['intent']=='inspect'
-    assert page['calls'][0]['query']=='fact-a'
+    assert page['calls'][0]['query'] == 'passage-state'
+    assert page['calls'][0]['result'] == dict(resolution='state_key', resolved_from=None)
     assert page['calls'][1]['query']=='missing-entry' and page['calls'][1]['returned_ids']==[]
     assert page['calls'][0]['returned_hits'] == [] and page['calls'][0]['returned_hits_omitted'] == 0
     query = page['calls'][2]
     assert query['query'] == 'fact' and query['returned_ids'] == ['fact-a', 'article-a']
     assert query['returned_hits_omitted'] == 0
     assert query['returned_hits'] == [
-        dict(id='fact-a', kind='fact', subject=None, via='match', snippet='A fact', status=['needs_review'],
+        dict(id='fact-a', kind='fact', subject=None, statement_kind='state', state_key='passage-state', via='fuzzy', snippet='A fact',
+            status=['needs_review'], anchor='entry-state', anchor_display='Entry', when='while open', depiction_source_id=f'{SESSION}-1',
             status_omitted=0, cited_by_articles=['article-a'], cited_by_articles_omitted=0),
-        dict(id='article-a', kind='article', title='A', via='citation', snippet='Lead', status=[],
+        dict(id='article-a', kind='article', title='A', via='hop', snippet='Lead', status=[],
             status_omitted=0, cited_by_articles=[], cited_by_articles_omitted=0)]
     oversized = page['calls'][3]
     assert oversized['returned_ids'] == [f'fact-{n}' for n in range(21)]
@@ -1039,7 +1053,7 @@ COVERAGE = dict(schema='curator-coverage/2', session='s01', actor='001', last_st
 OTHER_SESSION = 'b' * 32
 #: A blinded record's shared state: bound to no world, active, nothing flagged or linked.
 UNBOUND = dict(tags=[], scope=dict(game='cdda'), branch_relation=None, lifecycle_state='active', needs_review=False, stale_citations=[],
-    condition_unverified=False, unverified_branch=False, links=[], backlinks=[], shadowed_by=[], contradicted_by=[])
+    unverified_branch=False, links=[], backlinks=[], shadowed_by=[], contradicted_by=[])
 WORLD_BOUND = dict(scope=dict(game='cdda', world=None), branch_relation='same')
 
 
@@ -1054,7 +1068,7 @@ def position(step: int, session: str = 's01', actor: str = '001') -> dict:
 
 
 def fact_record(identity: str, citations, **extra) -> dict:
-    return dict(UNBOUND, id=identity, claim_kind='mechanic', evidence_basis='observed', text=f'Text of {identity}.', cited_by_articles=[],
+    return dict(UNBOUND, id=identity, statement_kind='observation', text=f'Text of {identity}.', cited_by_articles=[],
         citation_source_ids=list(citations), seen=position(1)) | extra
 
 
@@ -1077,9 +1091,9 @@ def published(articles, facts) -> tuple[list[dict], list[dict]]:
     return records[:len(articles)], records[len(articles):]
 
 
-def delivered_document(version: str | None, articles=(), facts=(), coverage=COVERAGE) -> dict:
-    return dict(schema='delivered-knowledge/3', version=version, commit=None if version is None else 'c' * 40,
-        repository_id=None if version is None else 'd' * 40, coverage=coverage, articles=list(articles), facts=list(facts),
+def delivered_document(version: str | None, articles=(), facts=(), coverage=COVERAGE, frame_clocks=None) -> dict:
+    return dict(schema='delivered-knowledge/4', version=version, commit=None if version is None else 'c' * 40,
+        repository_id=None if version is None else 'd' * 40, coverage=coverage, frame_clocks=frame_clocks or {}, articles=list(articles), facts=list(facts),
         history=dict(replaced={}, ended=[], retracted=[]))
 
 
@@ -1138,17 +1152,21 @@ def mission_version(number: int) -> dict:
     """The mission run's exported version `vN`: v1 one fact, v2 an article and two, v10 four. Facts cite this run's frames
     (`<SESSION>-n`), another session's and one this run never reached; one is world-bound."""
     article = article_record('article-a', ['fact-a'], title='Finding water', lead='A stream.', body=[dict(text='It runs east.', facts=['fact-a'])],
-        tags=['water'], links=[dict(rel='see_also', target='fact-b')], last_confirmed=position(2))
+        tags=['water'], links=[dict(rel='see_also', target='fact-b')], last_confirmed=dict(position(2), clock_label='09:01'))
     facts = [fact_record('fact-a', [f'{SESSION}-2'], subject='Stream', text='A stream runs east.', tags=['water', 'site'], seen=position(2),
             links=[dict(rel='depends_on', target='fact-b')]),
-        fact_record('fact-b', [f'{SESSION}-1', f'{SESSION}-3'], claim_kind='instance_state', evidence_basis='inferred', subject='Wait',
-            text='A dot waits.', seen=position(3), **WORLD_BOUND, when=dict(note='while it is dark', requires=dict(time_of_day='night'))),
+        fact_record('fact-b', [f'{SESSION}-1', f'{SESSION}-3'], statement_kind='state', state_key='wait-state', subject='Wait',
+            text='A dot waits.', seen=dict(position(3), prior_clock=dict(label='09:00', step_offset=2)), **WORLD_BOUND, when='while it is dark',
+            depiction_source_id=f'{SESSION}-1', anchor='landmark-state', anchor_display='Landmark'),
         fact_record('fact-other', [f'{OTHER_SESSION}-1'], subject='Old', text='Seen in another session.', seen=position(1, 's02'),
             links=[dict(rel='contradicts', target='fact-far')], **WORLD_BOUND),
         fact_record('fact-far', [f'{SESSION}-99'], subject='Far', text='A frame this run never reached.', seen=position(99),
             shadowed_by=['fact-other'])]
     articles, facts = published([article] if number > 1 else [], facts[:number])
-    return delivered_document(f'v{number}', articles, facts)
+    clocks = {f'{SESSION}-2': '09:01'}
+    if number > 1:
+        clocks[f'{SESSION}-1'] = '09:00'
+    return delivered_document(f'v{number}', articles, facts, frame_clocks=clocks)
 
 
 def curator_files(directory: Path) -> Path:
@@ -1778,26 +1796,30 @@ def test_delivered_knowledge_lists_versions_by_number_and_reads_the_latest(missi
     assert article['anchor'] == dict(seq=2, source_id=f'{SESSION}-2')     # the latest frame its cited facts cite
     facts = {f['id']: f for f in body['facts']['items']}
     here = lambda n: dict(seq=n, source_id=f'{SESSION}-{n}')
-    assert facts['fact-a'] == dict(id='fact-a', claim_kind='mechanic', evidence_basis='observed', subject='Stream', text='A stream runs east.',
-        branch_relation=None, lifecycle_state='active', needs_review=False, condition_unverified=False, unverified_branch=False,
+    assert facts['fact-a'] == dict(id='fact-a', statement_kind='observation', subject='Stream', text='A stream runs east.',
+        branch_relation=None, lifecycle_state='active', needs_review=False, unverified_branch=False,
         scope='game', scope_axes={}, tags=['water', 'site'], tags_omitted=0, stale_citations=[], stale_citations_omitted=0,
         shadowed_by=[], shadowed_by_omitted=0, contradicted_by=[], contradicted_by_omitted=0,
-        links=[dict(rel='depends_on', target='fact-b')], links_omitted=0, backlinks=[], backlinks_omitted=0, when=None,
+        links=[dict(rel='depends_on', target='fact-b')], links_omitted=0, backlinks=[], backlinks_omitted=0,
         cited_by_articles=['article-a'], cited_by_articles_omitted=0, citation_source_ids=[f'{SESSION}-2'], citation_source_ids_omitted=0,
-        citation_anchors=[here(2)], seen=dict(session='s01', actor='001', step=2), anchor=here(2))
+        citation_anchors=[here(2)], seen=dict(position(2), order_omitted=0, order_omitted_characters={}), frame_anchor=here(2))
     # A world-bound fact: its class and the frames it cites, the latest of them its anchor, and typed links back to it.
     b = facts['fact-b']
-    assert (b['scope'], b['scope_axes'], b['branch_relation'], b['claim_kind'], b['evidence_basis']) == ('world', {}, 'same', 'instance_state', 'inferred')
-    assert b['citation_anchors'] == [here(1), here(3)] and b['anchor'] == here(3)
+    assert (b['scope'], b['scope_axes'], b['branch_relation'], b['statement_kind'], b['state_key']) == ('world', {}, 'same', 'state', 'wait-state')
+    assert b['citation_anchors'] == [here(1), here(3)] and b['frame_anchor'] == here(3)
     assert b['backlinks'] == [dict(rel='see_also', source='article-a'), dict(rel='depends_on', source='fact-a')]
-    assert b['when'] == dict(note='while it is dark', requires=dict(time_of_day='night'))
+    assert b['when'] == 'while it is dark'
+    assert (b['anchor'], b['anchor_display'], b['depiction_source_id']) == ('landmark-state', 'Landmark', f'{SESSION}-1')
+    assert b['seen']['prior_clock'] == dict(label='09:00', step_offset=2) and 'clock_label' not in b['seen']
+    assert article['last_confirmed']['clock_label'] == '09:01'
+    assert body['frame_clocks'] == {f'{SESSION}-1': '09:00', f'{SESSION}-2': '09:01'}
     # Another session's frame, and a frame this run never reached, are no frames of this run.
-    assert facts['fact-other']['anchor'] is None and facts['fact-other']['citation_anchors'] == [None]
-    assert facts['fact-far']['anchor'] is None and facts['fact-far']['citation_anchors'] == [None]
+    assert facts['fact-other']['frame_anchor'] is None and facts['fact-other']['citation_anchors'] == [None]
+    assert facts['fact-far']['frame_anchor'] is None and facts['fact-far']['citation_anchors'] == [None]
     assert facts['fact-far']['shadowed_by'] == ['fact-other'] and facts['fact-far']['backlinks'] == [dict(rel='contradicts', source='fact-other')]
     assert body['scope_recorded'] is True and body['scope_counts'] == dict(world=2, game=2, unrecorded=0)
     assert body['tag_counts'] == [dict(tag='water', count=2), dict(tag='site', count=1)] and body['tag_counts_omitted'] == 0
-    assert body['claim_kind_counts'] == dict(instance_state=1, mechanic=3)
+    assert body['statement_kind_counts'] == dict(state=1, observation=3)
     assert client.get(f'{route}?version=initial').json()['articles'] == []
     assert client.get(f'{route}?version=v2').json()['facts']['total'] == 2
     for unknown in ('v3', 'v03', '../v1', 'covered-prefix', 'v' * 600):
@@ -1817,12 +1839,13 @@ def test_delivered_knowledge_searches_scopes_and_pages(mission):
     for bad, code in (('scope=belief', 'bad_scope'), ('limit=0', 'bad_limit'), ('after=x', 'bad_after'), ('q=' + 'x' * 201, 'bad_q')):
         response = client.get(f'{route}?{bad}')
         assert response.status_code == 400 and response.json()['error'] == code, bad
-    # Tags and claim kinds are searched too.
+    # Tags and statement kinds are searched too.
     assert [f['id'] for f in client.get(f'{route}?q=site').json()['facts']['items']] == ['fact-a']
-    assert [f['id'] for f in client.get(f'{route}?q=instance_state').json()['facts']['items']] == ['fact-b']
+    assert [f['id'] for f in client.get(f'{route}?q=state').json()['facts']['items']] == ['fact-b']
+    assert [f['id'] for f in client.get(f'{route}?q=wait-state').json()['facts']['items']] == ['fact-b']
     # The files here are what the player itself accepts.
     for path in (*(root / 'delivered').glob('v[0-9].json'), root / 'delivered' / 'v10.json', root.parent / 'delivered-knowledge.json'):
-        assert Knowledge(path).value['schema'] == 'delivered-knowledge/3'
+        assert Knowledge(path).value['schema'] == 'delivered-knowledge/4'
     # The scope filter uses the delivered classes: world-bound (label withheld) or bound to no world.
     for scope, ids in (('world', ['fact-b', 'fact-other']), ('game', ['fact-a', 'fact-far'])):
         listed = client.get(f'{route}?scope={scope}').json()
@@ -1861,8 +1884,8 @@ def test_a_delivered_anchor_is_only_a_frame_the_frame_route_serves(mission, brok
     facts = {f['id']: f for f in client.get(route).json()['facts']['items']}
     b = facts['fact-b']     # cites SESSION-1 and SESSION-3; the newer one fails verification
     assert b['citation_source_ids'] == [f'{SESSION}-1', f'{SESSION}-3']
-    assert b['citation_anchors'] == [here(1), None] and b['anchor'] == here(1)
-    assert facts['fact-a']['anchor'] == here(2)
+    assert b['citation_anchors'] == [here(1), None] and b['frame_anchor'] == here(1)
+    assert facts['fact-a']['frame_anchor'] == here(2)
     # An article's anchor is the latest verified frame among those its cited facts cite.
     (directory / 'sources' / f'{SESSION}-2.png').unlink()
     article = client.get(route).json()['articles'][0]
@@ -1874,14 +1897,34 @@ def test_a_delivered_anchor_is_only_a_frame_the_frame_route_serves(mission, brok
 
 
 def test_delivered_knowledge_shows_graph_flags_and_kinds_and_never_reads_private_files(mission, monkeypatch):
-    """The shared reader fixture with every field `delivered-knowledge/3` defines: contested pairs, a shadowing scope, flags,
-    stale citations, typed links both ways. Its frames are re-cited to this run's session where an anchor is expected."""
+    """A current export with contested readings, a shadowing scope, status flags, and typed links."""
     import io
     import os
     client, directory, root, _ = mission
-    fixture = Path(__file__).parent / 'fixtures' / 'delivered-knowledge-3' / 'valid' / 'full-graph-and-history.json'
-    text = fixture.read_text().replace('11111111111111111111111111111111-10', f'{SESSION}-2').replace('44444444444444444444444444444444-40', f'{SESSION}-3')
-    document = json.loads(text)
+    world = WORLD_BOUND | dict(scope=dict(game='cdda', world=None, ruleset='standard'),
+                              lifecycle_state='contested', branch_relation='unknown', unverified_branch=True)
+    tags = ['camp', 'fire', 'water']
+    articles, facts = published([
+        article_record('camp-water', ['boil-water', 'tank-full'], tags=tags, **world, needs_review=True,
+                       stale_citations=['old-water-fact'], links=[dict(rel='see_also', target='fire-rule')]),
+    ], [
+        fact_record('boil-water', [f'{SESSION}-2'], tags=tags, when='needs a lit heat source',
+                    links=[dict(rel='depends_on', target='fire-rule')]),
+        fact_record('fire-rule', [f'{OTHER_SESSION}-1'], tags=tags, shadowed_by=['fire-rule-standard']),
+        fact_record('fire-rule-standard', [f'{OTHER_SESSION}-1'], scope=dict(game='cdda', ruleset='standard'),
+                    links=[dict(rel='contradicts', target='fire-rule')]),
+        fact_record('fire-rule-camp', [f'{OTHER_SESSION}-1'], **WORLD_BOUND, statement_kind='inference'),
+        fact_record('tank-full', [f'{SESSION}-3'], tags=tags, **world, needs_review=True, stale_citations=['ended-fire'],
+                    statement_kind='state', state_key='tank-level', contradicted_by=['tank-empty'],
+                    links=[dict(rel='contradicts', target='tank-empty')]),
+        fact_record('tank-empty', [f'{OTHER_SESSION}-1'], **world, statement_kind='state', state_key='tank-level',
+                    contradicted_by=['tank-full'], links=[dict(rel='contradicts', target='tank-full')]),
+    ])
+    document = delivered_document('v12', articles, facts)
+    document['history'] = dict(replaced={
+        'old-water-fact': dict(reason='restated', by=['boil-water']),
+        'tank-reading': dict(reason='changed', by=['tank-full']),
+    }, ended=['ended-fire'], retracted=[])
     Knowledge.from_dict(document)
     (root / 'delivered' / 'v12.json').write_text(json.dumps(document))
     # The private export beside the delivered one names the world, the lineage and the alias map; none of it is read.
@@ -1903,30 +1946,32 @@ def test_delivered_knowledge_shows_graph_flags_and_kinds_and_never_reads_private
     assert 'farm-north' not in response.text and 'session_aliases' not in response.text
     body = response.json()
     assert body['schema'] == 'spectator-view/3' and body['scope_counts'] == dict(world=3, game=3, unrecorded=0)
-    assert body['claim_kind_counts'] == dict(instance_state=2, mechanic=3, strategy=1)
+    assert body['statement_kind_counts'] == dict(state=2, observation=3, inference=1)
+    assert body['history']['replaced']['tank-reading'] == dict(reason='changed', by=['tank-full'], by_omitted=0)
     assert body['tag_counts'] == [dict(tag='camp', count=4), dict(tag='fire', count=4), dict(tag='water', count=4)]
     article = body['articles'][0]
     assert (article['scope'], article['scope_axes'], article['lifecycle_state'], article['branch_relation']) == ('world', dict(ruleset='standard'), 'contested', 'unknown')
-    assert (article['needs_review'], article['condition_unverified'], article['unverified_branch'], article['stale_citations']) == (True, True, True, ['old-water-fact'])
+    assert (article['needs_review'], article['unverified_branch'], article['stale_citations']) == (True, True, ['old-water-fact'])
+    assert 'condition_unverified' not in article
     assert article['links'] == [dict(rel='see_also', target='fire-rule')]
     assert article['anchor'] == dict(seq=3, source_id=f'{SESSION}-3')     # the latest of its facts' frames of this run
     facts = {f['id']: f for f in body['facts']['items']}
     tank = facts['tank-full']
     assert (tank['lifecycle_state'], tank['contradicted_by'], tank['needs_review'], tank['stale_citations']) == ('contested', ['tank-empty'], True, ['ended-fire'])
     assert tank['links'] == [dict(rel='contradicts', target='tank-empty')] and tank['backlinks'] == [dict(rel='contradicts', source='tank-empty')]
-    assert tank['anchor'] == dict(seq=3, source_id=f'{SESSION}-3') and facts['tank-empty']['anchor'] is None
+    assert tank['frame_anchor'] == dict(seq=3, source_id=f'{SESSION}-3') and facts['tank-empty']['frame_anchor'] is None
     rule = facts['fire-rule']
     assert rule['shadowed_by'] == ['fire-rule-standard'] and rule['scope'] == 'game' and facts['fire-rule-standard']['scope_axes'] == dict(ruleset='standard')
     assert {b['source'] for b in rule['backlinks']} == {'boil-water', 'camp-water', 'fire-rule-standard'}
-    assert facts['boil-water']['when'] == dict(note='needs a lit heat source', requires={}) and facts['boil-water']['condition_unverified'] is True
-    assert facts['fire-rule-camp']['scope'] == 'world' and facts['fire-rule-camp']['claim_kind'] == 'strategy'
+    assert facts['boil-water']['when'] == 'needs a lit heat source'
+    assert facts['fire-rule-camp']['scope'] == 'world' and facts['fire-rule-camp']['statement_kind'] == 'inference'
 
 
 def test_an_unreadable_delivered_version_is_listed_as_such_and_never_shown(mission):
     client, directory, root, _ = mission
     route = '/api/view/run/mission/delivered-knowledge'
-    for text, status in (('{"schema":"delivered-knowledge/3"', 'malformed'), (json.dumps(dict(schema='delivered-knowledge/2', articles=[], facts=[])), 'unsupported'),
-                         ('', 'empty'), (json.dumps(dict(schema='delivered-knowledge/3', articles={}, facts=[])), 'unsupported')):
+    for text, status in (('{"schema":"delivered-knowledge/4"', 'malformed'), (json.dumps(dict(schema='delivered-knowledge/2', articles=[], facts=[])), 'unsupported'),
+                         ('', 'empty'), (json.dumps(dict(schema='delivered-knowledge/4', articles={}, facts=[], frame_clocks={})), 'unsupported')):
         (root / 'delivered' / 'v12.json').write_text(text)
         body = client.get(route).json()
         row = next(v for v in body['versions'] if v['version'] == 'v12')
@@ -1955,7 +2000,7 @@ def test_odd_values_in_a_trace_or_a_version_never_break_the_new_routes(mission):
     (root / 'delivered' / 'v11.json').write_text(json.dumps(delivered_document('v11', [7, dict(id=['x'], body=[3, dict(text=1, facts=[1])], links='x', last_confirmed=[],
             tags=[1, ['t']], scope=dict(world='farm', game=[1]), backlinks=[dict(rel=1, source={})], stale_citations='s')],
         [None, dict(id=1, text=['t'], seen=dict(session=['s01'], actor={}, step=True), scope=['world'], when=dict(note=[], requires=[1]),
-            citation_source_ids=[f'{SESSION}-1', 2, None], links=[None, dict(rel='see_also')], claim_kind={}, tags='water'),
+            citation_source_ids=[f'{SESSION}-1', 2, None], links=[None, dict(rel='see_also')], statement_kind={}, tags='water'),
          dict(id='x', citation_source_ids='x', scope={1: 'a', 'axis': 'x' * 100})], coverage='x')))
     for route in ('summary', 'feed', 'telemetry', 'delivered-knowledge', 'delivered-knowledge?q=x'):
         response = client.get(f'/api/view/run/mission/{route}')
@@ -2007,11 +2052,11 @@ def test_a_sealed_pre_world_session_keeps_its_frozen_snapshot_readable(tmp_path)
     '7a28b7bea730dce80c4ea14cbb16e421',  # indexed #896 seven-day-896-b-admission-10 campaign-run/12 + player-host/11
 ])
 @pytest.mark.parametrize('frozen_schema, knowledge_schema', [('player-host-inputs/4', 'delivered-knowledge/2'),
-    ('player-host-inputs/3', 'delivered-knowledge/1'), ('player-host-inputs/4', 'delivered-knowledge/3'), (None, None)])
+    ('player-host-inputs/3', 'delivered-knowledge/1'), ('player-host-inputs/4', 'delivered-knowledge/4'), (None, None)])
 def test_sealed_campaign_run_12_snapshot_hash_is_unavailable(tmp_path, session, frozen_schema, knowledge_schema):
     """S-MIGRATION, closed archive reads: a sealed `#889` or `#896` `campaign-run/12` session carries
     `delivered-knowledge/2`, which nothing reads now. Its snapshot is `hash_unavailable`, never verified as the
-    archived `/1` nor as the current `/3`, and its files are not read: an actor without them (`None`) is
+    archived `/1` nor as the current `/4`, and its files are not read: an actor without them (`None`) is
     `hash_unavailable` too."""
     directory = tmp_path/'runs'/'sealed-12'
     run = Run(directory, session=session)
@@ -2049,21 +2094,21 @@ def test_sealed_campaign_run_12_snapshot_hash_is_unavailable(tmp_path, session, 
         assert all(cut[field] is None for field in ('cut_result', 'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count'))
 
 
-def frozen_reader(tmp_path: Path, articles=(), facts=(), coverage=COVERAGE):
-    """A current run whose actor's verified frozen snapshot is a `delivered-knowledge/3` file of `articles` and `facts`,
+def frozen_reader(tmp_path: Path, articles=(), facts=(), coverage=COVERAGE, *, session=SESSION, document=None):
+    """A current run whose actor's verified frozen snapshot is a `delivered-knowledge/4` file of `articles` and `facts`,
     also exported as its `v1`, beside another catalog run whose first frame (`OTHER_SESSION-1`) they may cite."""
     runs = tmp_path/'runs'
     other = Run(runs/'other', session=OTHER_SESSION)
     other.step(other.actor(), 'observe', [], F('in_play', 3600))
     other.finish()
-    run = Run(runs/'reader')
+    run = Run(runs/'reader', session=session)
     actor = run.actor()
     run.request(actor)
     run.finish()
     actor_dir = runs/'reader'/'actors'/'001'
     path = actor_dir/'delivered-knowledge.json'
-    path.write_text(json.dumps(delivered_document('v1', articles, facts, coverage=coverage)))
-    (actor_dir/'frozen.json').write_text(json.dumps(dict(schema='player-host-inputs/4', session=SESSION, actor_id=actor, knowledge_updates=None,
+    path.write_text(json.dumps(document if document is not None else delivered_document('v1', articles, facts, coverage=coverage)))
+    (actor_dir/'frozen.json').write_text(json.dumps(dict(schema='player-host-inputs/4', session=session, actor_id=actor, knowledge_updates=None,
         files={'delivered-knowledge.json': hashlib.sha256(path.read_bytes()).hexdigest()})))
     exported = runs/'reader'/'curator-runner'/'delivered'
     exported.mkdir(parents=True)
@@ -2074,8 +2119,36 @@ def frozen_reader(tmp_path: Path, articles=(), facts=(), coverage=COVERAGE):
     return client, actor, actor_dir
 
 
+@pytest.mark.parametrize('session', [*sorted(ARCHIVED_DELIVERED_V3_SESSIONS), SESSION])
+def test_delivered_v3_reads_are_limited_to_the_approved_archive(tmp_path, session):
+    fact = dict(id='old-fact', claim_kind='instance_state', evidence_basis='observed',
+                condition_unverified=True, when=dict(note='while open', requires=dict(phase='late')),
+                seen=position(2), citation_source_ids=[f'{OTHER_SESSION}-1'])
+    document = dict(schema='delivered-knowledge/3', version='v1', coverage=COVERAGE, articles=[], facts=[fact])
+    client, actor, actor_dir = frozen_reader(tmp_path, session=session, document=document)
+    browse = f'/api/view/run/{session}/delivered-knowledge'
+    recorded = f'/api/view/run/{session}/knowledge'
+    initial_files = {path: path.read_bytes() for path in (
+        actor_dir/'frozen.json', actor_dir/'delivered-knowledge.json',
+        actor_dir.parents[1]/'curator-runner'/'delivered'/'v1.json')}
+    listing = client.get(browse).json()
+    snapshot = client.get(recorded, params=dict(actor=actor))
+    if session == SESSION:
+        assert listing['versions'][0]['status'] == 'unsupported'
+        assert client.get(browse, params=dict(version='v1')).json()['error'] == 'unsupported_knowledge'
+        assert snapshot.status_code == 409 and snapshot.json()['error'] == 'unsupported_knowledge'
+    else:
+        assert listing['versions'][0]['status'] == 'available' and snapshot.status_code == 200
+        assert listing['claim_kind_counts'] == {'instance_state': 1}
+        for row in (listing['facts']['items'][0], snapshot.json()['snapshot']['items'][0]):
+            for field in ('claim_kind', 'evidence_basis', 'condition_unverified', 'when'):
+                assert row[field] == fact[field]
+        assert client.post(browse).status_code == 405 and client.post(recorded).status_code == 405
+    assert all(path.read_bytes() == original for path, original in initial_files.items())
+
+
 def test_a_current_snapshot_anchors_only_cited_frames_and_an_article_through_its_facts(tmp_path):
-    """A current `/3` entry is anchored only by `citation_source_ids`: a stray `source_ids` field or a position's
+    """A current `/4` entry is anchored only by `citation_source_ids`: a stray `source_ids` field or a position's
     `source_id` is no citation. An article is anchored by the frames of the facts its body cites, looked up in the whole
     file, whether it is selected by `entry` or paged apart from those facts."""
     cited = f'{OTHER_SESSION}-1'
@@ -2096,7 +2169,7 @@ def test_a_current_snapshot_anchors_only_cited_frames_and_an_article_through_its
 
 
 def test_a_label_bearing_session_or_citation_is_never_served(tmp_path):
-    """Blinding: a `/3` position or coverage stamp whose session is no alias is withheld, and a citation that is no frame
+    """Blinding: a `/4` position or coverage stamp whose session is no alias is withheld, and a citation that is no frame
     source ID is omitted and counted, in both the frozen snapshot and the delivered-knowledge browser."""
     label = 'world-secret-admission'
     articles, facts = published([article_record('article', ['fact'], last_confirmed=position(2, label))],
@@ -2117,7 +2190,7 @@ def test_a_label_bearing_session_or_citation_is_never_served(tmp_path):
     assert listed['coverage']['session'] is None and listed['versions'][-1]['coverage']['session'] is None
     assert listed['articles'][0]['last_confirmed']['session'] is None
     rows = {f['id']: f for f in listed['facts']['items']}
-    assert rows['fact']['seen'] == dict(session=None, actor='001', step=1) and rows['fact-alias']['seen']['session'] == 's02'
+    assert rows['fact']['seen'] == dict(position(1, None), order_omitted=0, order_omitted_characters={}) and rows['fact-alias']['seen']['session'] == 's02'
     assert (rows['fact']['citation_source_ids'], rows['fact']['citation_source_ids_omitted']) == ([f'{SESSION}-1'], 2)
 
 
@@ -2259,28 +2332,28 @@ def test_blinded_markers_drop_source_id_archived_facts_keep_type_and_anchors_omi
     client, directory, _, actor = mission
     catalog = client.app.state.catalog
     runs = catalog.runs()
-    # 1. Blinded /3 marker drops stray `source_id` (raw label) while archived /1 marker keeps it.
+    # 1. Blinded /4 marker drops stray `source_id` (raw label) while archived /1 marker keeps it.
     raw = dict(session='s01', actor='001', step=1, order=[1, '001', 1], source_id='raw-world-label-1')
     assert 'source_id' not in marker(raw, blinded=True)
     assert marker(raw, blinded=False)['source_id'] == 'raw-world-label-1'
     # 2. Archived /1 fact preserves `type`.
     v1_fact = dict(id='f-old', type='container', text='old fact', seen=raw, source_ids=[])
-    assert project_entry(v1_fact, 'fact', catalog, runs, current=False)['type'] == 'container'
+    assert project_entry(v1_fact, 'fact', catalog, runs, schema='delivered-knowledge/1')['type'] == 'container'
     # 3. >20 distinct valid citations report exact `anchors_omitted` for both facts and articles.
     cites = [f'{"a" * 32}-{i}' for i in range(1, 24)]
-    fact_many = dict(id='f-many', claim_kind='mechanic', evidence_basis='observed', tags=[], text='many cites',
+    fact_many = dict(id='f-many', statement_kind='observation', tags=[], text='many cites',
                      scope=dict(game='cdda'), branch_relation=None, lifecycle_state='active', stale_citations=[],
-                     needs_review=False, condition_unverified=False, unverified_branch=False, links=[], backlinks=[],
+                     needs_review=False, unverified_branch=False, links=[], backlinks=[],
                      shadowed_by=[], contradicted_by=[], cited_by_articles=[], citation_source_ids=cites,
                      seen=dict(session='s01', actor='001', step=1, order=[1, '001', 1]))
     article_many = dict(id='art-many', revision='art-many@v1', title='Many', lead='Lead',
                         body=[dict(text='Claim', facts=['f-many'])], tags=[], scope=dict(game='cdda'),
                         branch_relation=None, lifecycle_state='active', stale_citations=[], needs_review=False,
-                        condition_unverified=False, unverified_branch=False, links=[], backlinks=[],
+                        unverified_branch=False, links=[], backlinks=[],
                         shadowed_by=[], contradicted_by=[],
                         last_confirmed=dict(session='s01', actor='001', step=1, order=[1, '001', 1]))
-    pf = project_entry(fact_many, 'fact', catalog, runs, current=True)
-    pa = project_entry(article_many, 'article', catalog, runs, current=True, facts={'f-many': fact_many})
+    pf = project_entry(fact_many, 'fact', catalog, runs)
+    pa = project_entry(article_many, 'article', catalog, runs, facts={'f-many': fact_many})
     assert len(pf['anchors']) == 20 and pf['anchors_omitted'] == 3
     assert len(pa['anchors']) == 20 and pa['anchors_omitted'] == 3
     # 4. Update event coverage in a /13 run blinds raw session names.
@@ -2295,3 +2368,30 @@ def test_blinded_markers_drop_source_id_archived_facts_keep_type_and_anchors_omi
     resp = client.get(f'/api/view/run/mission/knowledge?actor={actor}')
     assert resp.status_code == 200
     assert 'raw-secret-world-run' not in resp.text and 'raw-secret-source' not in resp.text
+
+
+def test_curator_viewer_accepts_hygiene_session_kind_with_grooming_sha256():
+    import copy
+    from harness.viewer.curator import session_projection
+
+    sha = '0' * 64
+    base_manifest = dict(
+        schema='container-manifest/1', kind='curator-session', id='hygiene-1', owner_role='curator',
+        inputs=dict(session_kind='hygiene', trace_sessions=[], window_frames=0, window={},
+                    coverage=dict(schema='curator-coverage/2', session='s1', actor='001', last_step=5), drafts=[]),
+        pinned=dict(knowledge_version='v1', trace_manifest_sha256=sha, brief_sha256=sha, grooming_sha256=sha),
+        budgets=dict(wall_seconds=60, memory_bytes=1024, disk_bytes=1024, cap_usd='0.30'),
+        provenance=dict(seconds=1.2, peak_memory_bytes=512, peak_disk_bytes=512),
+        retention={},
+        lifecycle=dict(state='sealed', started_wall=1.0, ended_wall=2.2, stopped=None, returncode=0,
+                       survivors=[], errors=[], refused=[]),
+    )
+    record = dict(manifest=base_manifest, verdicts=[], drafts={}, published_after='v2')
+    header, _, _ = session_projection(record)
+    assert header['inputs']['session_kind'] == 'hygiene'
+    assert header['pinned']['grooming_sha256'] == sha
+
+    missing_groom_sha = copy.deepcopy(record)
+    del missing_groom_sha['manifest']['pinned']['grooming_sha256']
+    with pytest.raises(ValueError, match='incomplete prepared session'):
+        session_projection(missing_groom_sha)

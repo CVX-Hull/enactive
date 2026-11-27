@@ -1,16 +1,18 @@
-"""Shared-shape validation for Wave 3 (`curator-fact/5`, `curator-submission/2`,
-`delivered-knowledge/3` fixtures, and synthetic two-world/two-lineage repositories).
+"""Shared-shape validation for Batch 1 (`curator-fact/6`, `curator-submission/3`,
+`delivered-knowledge/4` fixtures, and synthetic two-world/two-lineage repositories).
 """
 from __future__ import annotations
 
 import json
-import math
 from pathlib import Path
-import re
 import subprocess
 
 from jsonschema import Draft202012Validator
 import pytest
+
+from harness.player.contracts import PlayerError
+from harness.player.knowledge import Knowledge
+from harness.player_view import actor_result
 
 from tests.synthetic_knowledge_repo import (
     LINEAGE_A,
@@ -29,22 +31,12 @@ from tests.synthetic_knowledge_repo import (
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS = REPO_ROOT / 'schemas'
-FIXTURES = REPO_ROOT / 'tests' / 'fixtures' / 'delivered-knowledge-3'
+FIXTURES = REPO_ROOT / 'tests' / 'fixtures' / 'delivered-knowledge-4'
 
 SID1 = session_hex(1)
 SID2 = session_hex(2)
 F1 = frame_id(SID1, 1)
 F2 = frame_id(SID1, 2)
-
-_VERSION_RE = re.compile(r'^v(0|[1-9][0-9]*)\Z')
-_HEX40_RE = re.compile(r'^[0-9a-f]{40}\Z')
-_ID_RE = re.compile(r'^[a-z0-9][a-z0-9-]{0,63}\Z')
-_REV_RE = re.compile(r'^[a-z0-9][a-z0-9-]{0,63}@v(0|[1-9][0-9]*)\Z')
-_SOURCE_RE = re.compile(r'^[0-9a-f]{32}-[1-9][0-9]*\Z')
-_ALIAS_RE = re.compile(r'^s(?:0[1-9]|[1-9][0-9]+)\Z')
-_TAG_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*\Z')
-_AXIS_RE = re.compile(r'^[a-z][a-z0-9_]{0,31}\Z')
-_ASCII_RE = re.compile(r'^[ -~]{1,64}\Z')
 
 EXPECTED_VALID_FIXTURES = {
     'bom-only-nonblank.json',
@@ -58,17 +50,21 @@ EXPECTED_VALID_FIXTURES = {
 }
 
 EXPECTED_INVALID_FIXTURES = {
+    'state-key-collides-with-public-id.json',
+    'frame-clock-outside-citations.json',
+    'depiction-outside-citations.json',
+    'position-with-both-clock-fields.json',
+    'anchor-without-anchor-display.json',
+    'state-without-state-key.json',
     'article-cites-missing-fact.json',
     'article-raw-world-label.json',
     'empty-version-with-records.json',
-    'extra-fact-field-type.json',
     'extra-top-level-key.json',
     'fractional-step.json',
     'lone-surrogate-order.json',
     'history-ended-revision-id.json',
     'history-overlap-ended-retracted.json',
     'history-replaced-target-outside-public.json',
-    'instance-state-unbound.json',
     'invalid-lifecycle-state.json',
     'invalid-revision-prefix.json',
     'invalid-tag-format.json',
@@ -76,17 +72,13 @@ EXPECTED_INVALID_FIXTURES = {
     'link-outside-public-set.json',
     'malformed-citation-source-id.json',
     'missing-history.json',
-    'negative-step.json',
-    'old-schema-v2.json',
+    'old-schema-v3.json',
     'raw-session-name-in-coverage.json',
     'raw-session-name-in-last-confirmed.json',
-    'raw-session-name-in-seen.json',
-    'raw-world-label.json',
     'self-link.json',
     'stale-citation-outside-history.json',
     'terminal-newline-version.json',
     'unbound-with-branch-relation.json',
-    'unbound-with-unverified-branch.json',
     'unsafe-integer-step.json',
     'unsafe-integer-version.json',
     'whitespace-control-separators-lead.json',
@@ -107,11 +99,10 @@ def _pos(step: int = 10) -> dict:
 
 def _stored_fact(**overrides) -> dict:
     base = {
-        'schema': 'curator-fact/5',
+        'schema': 'curator-fact/6',
         'record': 'fact',
         'id': 'boil-water',
-        'claim_kind': 'mechanic',
-        'evidence_basis': 'observed',
+        'statement_kind': 'observation',
         'tags': ['water', 'fire'],
         'text': 'Boiling murky water yields clean water.',
         'scope': {'game': 'example'},
@@ -132,7 +123,7 @@ def _stored_fact(**overrides) -> dict:
 
 def _stored_article(**overrides) -> dict:
     base = {
-        'schema': 'curator-fact/5',
+        'schema': 'curator-fact/6',
         'record': 'article',
         'id': 'water-guide@v1',
         'slug': 'water-guide',
@@ -157,11 +148,10 @@ def _stored_article(**overrides) -> dict:
 
 def _submitted_fact(**overrides) -> dict:
     base = {
-        'schema': 'curator-fact/5',
+        'schema': 'curator-fact/6',
         'record': 'fact',
         'id': 'boil-water',
-        'claim_kind': 'mechanic',
-        'evidence_basis': 'observed',
+        'statement_kind': 'observation',
         'tags': ['water'],
         'text': 'Boiling murky water yields clean water.',
         'scope': {},
@@ -174,268 +164,13 @@ def _submitted_fact(**overrides) -> dict:
 
 def _submission(changes: list[dict], **overrides) -> dict:
     base = {
-        'schema': 'curator-submission/2',
+        'schema': 'curator-submission/3',
         'base_version': 'v0',
         'summary': 'Add initial knowledge.',
         'changes': changes,
     }
     base.update(overrides)
     return base
-
-
-def _nonblank(v: object) -> bool:
-    return isinstance(v, str) and bool(v.strip())
-
-
-MAX_SAFE_INT = (1 << 53) - 1
-
-
-def _safe_digits(text: str) -> int | None:
-    if len(text) > 16:
-        return None
-    val = int(text)
-    return val if 0 <= val <= MAX_SAFE_INT else None
-
-
-def _safe_nonneg_int(v: object) -> bool:
-    if type(v) is int:
-        return 0 <= v <= MAX_SAFE_INT
-    if isinstance(v, float) and math.isfinite(v) and v.is_integer():
-        return 0 <= int(v) <= MAX_SAFE_INT
-    return False
-
-
-def _is_valid_delivered_3(doc: object) -> bool:
-    """Reference structural validator for `delivered-knowledge/3` shared fixtures."""
-    top_keys = {'schema', 'version', 'commit', 'repository_id', 'coverage', 'articles', 'facts', 'history'}
-    if not isinstance(doc, dict) or set(doc) != top_keys or doc['schema'] != 'delivered-knowledge/3':
-        return False
-    if not isinstance(doc['articles'], list) or not isinstance(doc['facts'], list):
-        return False
-    hist = doc['history']
-    if not isinstance(hist, dict) or set(hist) != {'replaced', 'ended', 'retracted'}:
-        return False
-    if not isinstance(hist['replaced'], dict) or not isinstance(hist['ended'], list) or not isinstance(hist['retracted'], list):
-        return False
-    if doc['version'] is None:
-        return (
-            doc['commit'] is None and doc['repository_id'] is None and doc['coverage'] is None
-            and not doc['articles'] and not doc['facts']
-            and hist == {'replaced': {}, 'ended': [], 'retracted': []}
-        )
-    if not (isinstance(doc['version'], str) and _VERSION_RE.match(doc['version'])):
-        return False
-    version_num = _safe_digits(doc['version'][1:])
-    if version_num is None:
-        return False
-    if not (isinstance(doc['commit'], str) and _HEX40_RE.match(doc['commit'])):
-        return False
-    if not (isinstance(doc['repository_id'], str) and _HEX40_RE.match(doc['repository_id'])):
-        return False
-    cov = doc['coverage']
-    if cov is not None:
-        if (not isinstance(cov, dict) or set(cov) != {'schema', 'session', 'actor', 'last_step'}
-                or cov['schema'] != 'curator-coverage/2'
-                or not (isinstance(cov['session'], str) and _ALIAS_RE.match(cov['session']))
-                or (cov['actor'] is not None and not _nonblank(cov['actor']))
-                or (cov['last_step'] is not None and not _safe_nonneg_int(cov['last_step']))):
-            return False
-
-    def valid_utf8(s: object) -> bool:
-        if not isinstance(s, str):
-            return False
-        try:
-            s.encode('utf-8')
-            return True
-        except UnicodeEncodeError:
-            return False
-
-    def valid_pos(p: object) -> bool:
-        return (
-            isinstance(p, dict) and set(p) == {'session', 'actor', 'step', 'order'}
-            and isinstance(p['session'], str) and bool(_ALIAS_RE.match(p['session']))
-            and _nonblank(p['actor']) and _safe_nonneg_int(p['step'])
-            and isinstance(p['order'], list) and len(p['order']) == 3
-            and _safe_nonneg_int(p['order'][0]) and valid_utf8(p['order'][1]) and _safe_nonneg_int(p['order'][2])
-        )
-
-    def valid_scope(s: object) -> bool:
-        if not isinstance(s, dict) or not (1 <= len(s) <= 8) or 'game' not in s:
-            return False
-        for k, v in s.items():
-            if not isinstance(k, str) or not _AXIS_RE.match(k) or k == 'lineage':
-                return False
-            if k == 'world':
-                if v is not None:
-                    return False
-            elif not isinstance(v, str) or not _ASCII_RE.match(v):
-                return False
-        return True
-
-    def valid_tags(t: object) -> bool:
-        return (
-            isinstance(t, list) and len(t) <= 8 and len(set(t)) == len(t)
-            and all(isinstance(x, str) and len(x) <= 32 and _TAG_RE.match(x) for x in t)
-        )
-
-    def valid_links(items: object, key_name: str, owner_id: str, public_ids: set[str]) -> bool:
-        if not isinstance(items, list):
-            return False
-        seen = set()
-        for item in items:
-            if (not isinstance(item, dict) or set(item) != {'rel', key_name}
-                    or item['rel'] not in ('depends_on', 'contradicts', 'part_of', 'see_also')
-                    or not isinstance(item[key_name], str) or not _ID_RE.match(item[key_name])
-                    or item[key_name] == owner_id or item[key_name] not in public_ids):
-                return False
-            pair = (item['rel'], item[key_name])
-            if pair in seen:
-                return False
-            seen.add(pair)
-        return True
-
-    art_ids = [a.get('id') for a in doc['articles'] if isinstance(a, dict)]
-    fact_ids = [f.get('id') for f in doc['facts'] if isinstance(f, dict)]
-    if len(art_ids) != len(doc['articles']) or len(fact_ids) != len(doc['facts']):
-        return False
-    all_ids = art_ids + fact_ids
-    if len(set(all_ids)) != len(all_ids) or not all(isinstance(x, str) and _ID_RE.match(x) for x in all_ids):
-        return False
-    art_set, fact_set, public_ids = set(art_ids), set(fact_ids), set(all_ids)
-    delivered_revs = {a.get('revision') for a in doc['articles']}
-    delivered_rev_nums: dict[str, int] = {}
-    for art in doc['articles']:
-        rev = art.get('revision')
-        if isinstance(rev, str) and _REV_RE.match(rev):
-            slug, _, digits = rev.rpartition('@v')
-            num = _safe_digits(digits)
-            if slug == art.get('id') and num is not None:
-                delivered_rev_nums[slug] = num
-
-    # Validate history sets first so stale_citations can be checked against H.
-    ended, retracted = hist['ended'], hist['retracted']
-    if (len(set(ended)) != len(ended) or len(set(retracted)) != len(retracted)
-            or not all(isinstance(x, str) and _ID_RE.match(x) for x in ended + retracted)
-            or set(ended) & set(retracted) or (set(ended) | set(retracted)) & public_ids):
-        return False
-    for key, entry in hist['replaced'].items():
-        if (not isinstance(key, str) or key in public_ids or key in delivered_revs
-                or key in ended or key in retracted
-                or not isinstance(entry, dict) or set(entry) != {'reason', 'by'}
-                or not isinstance(entry['by'], list) or not entry['by']
-                or len(set(entry['by'])) != len(entry['by'])):
-            return False
-        if _REV_RE.match(key):
-            slug, _, digits = key.rpartition('@v')
-            rev_num = _safe_digits(digits)
-            if (entry['reason'] != 'restated' or entry['by'] != [slug] or slug not in art_set
-                    or slug not in delivered_rev_nums or rev_num is None or rev_num >= delivered_rev_nums[slug]):
-                return False
-        elif _ID_RE.match(key):
-            if entry['reason'] not in ('restated', 'narrowed', 'corrected') or not set(entry['by']) <= fact_set:
-                return False
-        else:
-            return False
-    history_ids = set(hist['replaced']) | set(ended) | set(retracted)
-
-    art_req = {
-        'id', 'revision', 'title', 'lead', 'body', 'tags', 'scope', 'branch_relation',
-        'lifecycle_state', 'needs_review', 'stale_citations', 'condition_unverified',
-        'unverified_branch', 'links', 'backlinks', 'shadowed_by', 'contradicted_by', 'last_confirmed',
-    }
-    for art in doc['articles']:
-        if set(art) != art_req:
-            return False
-        if (not isinstance(art['revision'], str) or not _REV_RE.match(art['revision'])
-                or not art['revision'].startswith(art['id'] + '@')):
-            return False
-        art_rev_num = _safe_digits(art['revision'].rsplit('@v', 1)[1])
-        if art_rev_num is None or art_rev_num > version_num:
-            return False
-        if not (_nonblank(art['title']) and _nonblank(art['lead']) and valid_tags(art['tags']) and valid_scope(art['scope'])):
-            return False
-        world_bound = 'world' in art['scope']
-        if (world_bound and art['branch_relation'] not in ('same', 'inherited', 'unknown')) or (
-            not world_bound and (art['branch_relation'] is not None or art['unverified_branch'] is not False)
-        ):
-            return False
-        if art['lifecycle_state'] not in ('active', 'contested'):
-            return False
-        if not all(type(art[k]) is bool for k in ('needs_review', 'condition_unverified', 'unverified_branch')):
-            return False
-        if (not isinstance(art['stale_citations'], list) or len(set(art['stale_citations'])) != len(art['stale_citations'])
-                or not all(isinstance(x, str) and x in history_ids for x in art['stale_citations'])):
-            return False
-        if not isinstance(art['body'], list) or not art['body']:
-            return False
-        for claim in art['body']:
-            if (not isinstance(claim, dict) or set(claim) != {'text', 'facts'} or not _nonblank(claim['text'])
-                    or not isinstance(claim['facts'], list) or not claim['facts']
-                    or len(set(claim['facts'])) != len(claim['facts'])
-                    or not set(claim['facts']) <= fact_set):
-                return False
-        if not (valid_links(art['links'], 'target', art['id'], public_ids)
-                and valid_links(art['backlinks'], 'source', art['id'], public_ids)
-                and valid_pos(art['last_confirmed'])):
-            return False
-        for k in ('shadowed_by', 'contradicted_by'):
-            if (not isinstance(art[k], list) or len(set(art[k])) != len(art[k])
-                    or not all(isinstance(x, str) and x in public_ids and x != art['id'] for x in art[k])):
-                return False
-
-    fact_req = {
-        'id', 'claim_kind', 'evidence_basis', 'tags', 'text', 'scope', 'branch_relation',
-        'lifecycle_state', 'needs_review', 'stale_citations', 'condition_unverified',
-        'unverified_branch', 'links', 'backlinks', 'shadowed_by', 'contradicted_by',
-        'cited_by_articles', 'citation_source_ids', 'seen',
-    }
-    fact_opt = {'subject', 'when'}
-    for f in doc['facts']:
-        if not (fact_req <= set(f) <= fact_req | fact_opt):
-            return False
-        if (f['claim_kind'] not in ('interface', 'mechanic', 'entity_property', 'instance_state', 'strategy')
-                or f['evidence_basis'] not in ('observed', 'inferred', 'hinted')
-                or not valid_tags(f['tags']) or not _nonblank(f['text']) or not valid_scope(f['scope'])):
-            return False
-        if 'subject' in f and not _nonblank(f['subject']):
-            return False
-        if 'when' in f:
-            w = f['when']
-            if (not isinstance(w, dict) or set(w) != {'note', 'requires'} or not _nonblank(w['note'])
-                    or not isinstance(w['requires'], dict) or len(w['requires']) > 8
-                    or not all(isinstance(k, str) and _AXIS_RE.match(k) and k not in ('game', 'world', 'lineage')
-                               and isinstance(v, str) and _ASCII_RE.match(v) for k, v in w['requires'].items())):
-                return False
-        world_bound = 'world' in f['scope']
-        if f['claim_kind'] == 'instance_state' and not world_bound:
-            return False
-        if (world_bound and f['branch_relation'] not in ('same', 'inherited', 'unknown')) or (
-            not world_bound and (f['branch_relation'] is not None or f['unverified_branch'] is not False)
-        ):
-            return False
-        if f['lifecycle_state'] not in ('active', 'contested'):
-            return False
-        if not all(type(f[k]) is bool for k in ('needs_review', 'condition_unverified', 'unverified_branch')):
-            return False
-        if (not isinstance(f['stale_citations'], list) or len(set(f['stale_citations'])) != len(f['stale_citations'])
-                or not all(isinstance(x, str) and x in history_ids for x in f['stale_citations'])):
-            return False
-        if (not isinstance(f['citation_source_ids'], list) or not f['citation_source_ids']
-                or len(set(f['citation_source_ids'])) != len(f['citation_source_ids'])
-                or not all(isinstance(x, str) and _SOURCE_RE.match(x) for x in f['citation_source_ids'])):
-            return False
-        if (not isinstance(f['cited_by_articles'], list) or len(set(f['cited_by_articles'])) != len(f['cited_by_articles'])
-                or not set(f['cited_by_articles']) <= art_set):
-            return False
-        if not (valid_links(f['links'], 'target', f['id'], public_ids)
-                and valid_links(f['backlinks'], 'source', f['id'], public_ids)
-                and valid_pos(f['seen'])):
-            return False
-        for k in ('shadowed_by', 'contradicted_by'):
-            if (not isinstance(f[k], list) or len(set(f[k])) != len(f[k])
-                    or not all(isinstance(x, str) and x in public_ids and x != f['id'] for x in f[k])):
-                return False
-    return True
 
 
 def test_schemas_are_valid_draft_2020_12():
@@ -450,16 +185,16 @@ def test_curator_fact_schema_accepts_all_valid_variants():
         _stored_fact(
             subject='water treatment',
             scope={'game': 'example', 'region': ' '},  # single printable ASCII space is legal
-            when={'note': 'needs a lit heat source', 'requires': {}},
+            when='needs a lit heat source',
             retagged=[{'from': ['water'], 'to': ['water', 'fire'], 'version': 'v2'}],
         ),
         _stored_fact(
-            id='camp-fire', claim_kind='instance_state',
+            id='camp-fire', statement_kind='state', state_key='camp-hearth',
             scope={'game': 'example', 'world': 'world-alpha', 'ruleset': 'standard'},
             lineages=['lin-a'],
         ),
-        _stored_fact(lifecycle_state='superseded', superseded_by=['boil-water-2']),
-        _stored_fact(lifecycle_state='retracted', superseded_by=['boil-water-fixed']),
+        _stored_fact(lifecycle_state='superseded', superseded_by=['boil-water-2'], superseded_reason='restated'),
+        _stored_fact(lifecycle_state='retracted', superseded_by=['boil-water-fixed'], superseded_reason='corrected'),
         _stored_fact(
             lifecycle_state='retracted',
             retired={
@@ -468,7 +203,7 @@ def test_curator_fact_schema_accepts_all_valid_variants():
             },
         ),
         _stored_fact(
-            id='camp-fire', claim_kind='instance_state',
+            id='camp-fire', statement_kind='state', state_key='camp-hearth',
             scope={'game': 'example', 'world': 'world-alpha'},
             lineages=['lin-a'],
             lifecycle_state='ended',
@@ -483,7 +218,7 @@ def test_curator_fact_schema_accepts_all_valid_variants():
             },
         ),
         _stored_fact(
-            id='camp-fire', claim_kind='instance_state',
+            id='camp-fire', statement_kind='state', state_key='camp-hearth',
             scope={'game': 'example', 'world': 'world-alpha'},
             lineages=['lin-a'],
             lifecycle_state='ended',
@@ -540,7 +275,7 @@ def test_curator_fact_schema_accepts_all_valid_variants():
     lambda r: r.__setitem__('tags', [f't{i}' for i in range(9)]),
     lambda r: r['scope'].__setitem__('axis\n', 'val'),
     lambda r: r['scope'].__setitem__('axis', 'line1\nline2'),
-    lambda r: r.__setitem__('claim_kind', 'instance_state'),  # missing scope.world
+    lambda r: r.__setitem__('statement_kind', 'state'),  # missing scope.world
     lambda r: r.__setitem__('lineages', ['lin-a']),  # unbound with lineages
     lambda r: r['scope'].__setitem__('world', 'world-alpha'),  # bound without lineages
     lambda r: (r.__setitem__('superseded_by', ['x']), r.__setitem__('retired', {
@@ -594,7 +329,7 @@ def test_curator_fact_schema_accepts_all_valid_variants():
         }),
     ),
     lambda r: r.__setitem__('links', [{'rel': 'supersedes', 'target': 'other'}]),
-    lambda r: r.__setitem__('when', {'note': 'x', 'requires': {'world': 'w1'}}),
+    lambda r: r.__setitem__('when', '   '),
 ])
 def test_curator_fact_schema_rejects_invalid_facts(mutator):
     validator = _load_validator('curator-fact.schema.json')
@@ -610,14 +345,14 @@ def test_curator_submission_schema_accepts_every_operation():
         {
             'op': 'add_fact',
             'fact': _submitted_fact(
-                id='camp-fire', claim_kind='instance_state', binds=['world'],
-                when={'note': 'while fuel lasts', 'requires': {}},
+                id='camp-fire', statement_kind='state', state_key='camp-hearth', binds=['world'],
+                when='while fuel lasts',
             ),
         },
         {
             'op': 'add_article',
             'article': {
-                'schema': 'curator-fact/5', 'record': 'article', 'slug': 'water-guide',
+                'schema': 'curator-fact/6', 'record': 'article', 'slug': 'water-guide',
                 'title': 'Water guide', 'lead': 'Boil water.',
                 'body': [{'text': 'Boil murky water.', 'facts': ['boil-water']}],
                 'tags': ['water'], 'links': [],
@@ -626,16 +361,16 @@ def test_curator_submission_schema_accepts_every_operation():
         {
             'op': 'supersede_fact', 'ids': ['camp-fire'], 'reason_kind': 'restated',
             'fact': {
-                'schema': 'curator-fact/5', 'record': 'fact', 'id': 'camp-fire-2',
-                'claim_kind': 'instance_state', 'evidence_basis': 'observed', 'tags': ['fire'],
+                'schema': 'curator-fact/6', 'record': 'fact', 'id': 'camp-fire-2',
+                'statement_kind': 'state', 'state_key': 'camp-hearth', 'tags': ['fire'],
                 'text': 'Restated inheriting world binding.', 'links': [], 'citations': [],
             },
         },
         {
             'op': 'supersede_fact', 'ids': ['boil-water'], 'reason_kind': 'corrected',
             'fact': {
-                'schema': 'curator-fact/5', 'record': 'fact', 'id': 'boil-water-fixed',
-                'claim_kind': 'mechanic', 'evidence_basis': 'observed', 'tags': ['water'],
+                'schema': 'curator-fact/6', 'record': 'fact', 'id': 'boil-water-fixed',
+                'statement_kind': 'observation', 'tags': ['water'],
                 'text': 'Corrected.', 'links': [], 'citations': [F2],
             },
         },
@@ -669,7 +404,7 @@ def test_curator_submission_schema_accepts_every_operation():
             'add_claims': [{'text': 'Store clean water.', 'facts': ['boil-water-2']}],
             'add_tags': ['fire'],
         },
-        {'op': 'remap_citations', 'from': 'boil-water', 'to': 'boil-water-2', 'in': ['water-guide']},
+        {'op': 'remap_citations', 'from': ['boil-water'], 'to': 'boil-water-2', 'in': ['water-guide']},
         {'op': 'retag', 'assignments': {'boil-water': ['water', 'survival'], 'water-guide': ['water']}},
     ]
     # Repeated draft IDs stay accepted, matching existing gate.py behavior.
@@ -689,20 +424,20 @@ def test_curator_submission_schema_accepts_every_operation():
     {'op': 'add_fact', 'fact': _submitted_fact(scope={'game': 'example'})},
     {'op': 'add_fact', 'fact': _submitted_fact(scope={'world': 'w1'})},
     {'op': 'add_fact', 'fact': _submitted_fact(scope={'world\n': 'w1'})},
-    {'op': 'add_fact', 'fact': _submitted_fact(claim_kind='instance_state')},
+    {'op': 'add_fact', 'fact': _submitted_fact(statement_kind='state', state_key='camp-hearth')},
     {
         'op': 'supersede_fact', 'ids': ['camp-fire'], 'reason_kind': 'restated',
         'fact': {
-            'schema': 'curator-fact/5', 'record': 'fact', 'id': 'camp-fire-2',
-            'claim_kind': 'instance_state', 'evidence_basis': 'observed', 'tags': [],
-            'text': 'Explicit empty binds refused for instance_state.', 'binds': [], 'links': [], 'citations': [],
+            'schema': 'curator-fact/6', 'record': 'fact', 'id': 'camp-fire-2',
+            'statement_kind': 'state', 'state_key': 'camp-hearth', 'tags': [],
+            'text': 'Explicit empty binds refused for state.', 'binds': [], 'links': [], 'citations': [],
         },
     },
     {
         'op': 'supersede_fact', 'ids': ['a'], 'reason_kind': 'corrected',
         'fact': {
-            'schema': 'curator-fact/5', 'record': 'fact', 'id': 'b',
-            'claim_kind': 'mechanic', 'evidence_basis': 'observed', 'tags': [],
+            'schema': 'curator-fact/6', 'record': 'fact', 'id': 'b',
+            'statement_kind': 'observation', 'tags': [],
             'text': 'Corrected without citation.', 'links': [], 'citations': [],
         },
     },
@@ -711,7 +446,7 @@ def test_curator_submission_schema_accepts_every_operation():
     {'op': 'revise_article', 'slug': 'g'},
     {'op': 'revise_article', 'slug': 'g', 'lead': None},
     {'op': 'edit_article', 'slug': 'g'},
-    {'op': 'remap_citations', 'from': 'a', 'to': 'b', 'in': []},
+    {'op': 'remap_citations', 'from': ['a'], 'to': 'b', 'in': []},
     {'op': 'retag', 'assignments': {}},
 ])
 def test_curator_submission_schema_rejects_invalid_operations(bad_op):
@@ -738,13 +473,37 @@ def test_shared_delivered_knowledge_fixtures_inventory_and_parity():
     assert {p.name for p in valid_paths} == EXPECTED_VALID_FIXTURES
     assert {p.name for p in invalid_paths} == EXPECTED_INVALID_FIXTURES
 
-    for path in valid_paths:
-        doc = json.loads(path.read_text(encoding='utf-8'))
-        assert _is_valid_delivered_3(doc), f'valid fixture failed reference check: {path.name}'
+    expected = {str(path): True for path in valid_paths} | {str(path): False for path in invalid_paths}
+    python = {}
+    for path in valid_paths + invalid_paths:
+        try:
+            Knowledge(path)
+        except PlayerError:
+            python[str(path)] = False
+        else:
+            python[str(path)] = True
 
-    for path in invalid_paths:
-        doc = json.loads(path.read_text(encoding='utf-8'))
-        assert not _is_valid_delivered_3(doc), f'invalid fixture passed reference check: {path.name}'
+    node = subprocess.run(
+        ['node', '--input-type=module', '-e', """
+            import {readFileSync} from 'node:fs';
+            import {validateKnowledge} from './tools/player_host/knowledge.mjs';
+            const paths = JSON.parse(readFileSync(0, 'utf8'));
+            const results = paths.map(path => {
+                const fixture = JSON.parse(readFileSync(path, 'utf8'));
+                try {
+                    validateKnowledge(fixture);
+                    return [path, true];
+                } catch (error) {
+                    if (error.message !== 'invalid-delivered-knowledge') throw error;
+                    return [path, false];
+                }
+            });
+            console.log(JSON.stringify(Object.fromEntries(results)));
+        """],
+        cwd=REPO_ROOT, input=json.dumps(list(expected)), capture_output=True, text=True, check=True,
+    )
+    assert python == expected
+    assert json.loads(node.stdout) == expected
 
     # Verify full-graph-and-history internal semantic consistency (last_confirmed & 1-to-1 session aliases).
     full = json.loads((FIXTURES / 'valid' / 'full-graph-and-history.json').read_text(encoding='utf-8'))
@@ -764,7 +523,7 @@ def test_shared_delivered_knowledge_fixtures_inventory_and_parity():
         assert len(facts_by_id[target_id]['scope']) >= 2
 
 
-def test_synthetic_repositories_build_clean_curator_knowledge_4_trees(tmp_path: Path):
+def test_synthetic_repositories_build_clean_curator_knowledge_5_trees(tmp_path: Path):
     builders = [
         ('two_world', build_two_world_two_lineage_repo),
         ('nested_cut', build_nested_cut_repo),
@@ -781,7 +540,7 @@ def test_synthetic_repositories_build_clean_curator_knowledge_4_trees(tmp_path: 
         ).stdout.splitlines()
         assert 'v0' in tags and info['version'] in tags
         metadata = json.loads((repo_path / 'knowledge.json').read_text(encoding='utf-8'))
-        assert metadata == {'schema': 'curator-knowledge/4', 'game': info['game']}
+        assert metadata == {'schema': 'curator-knowledge/5', 'game': info['game']}
         assert not (repo_path / 'ontology' / 'types.json').exists()
         assert (repo_path / 'coverage.json').exists()
 
@@ -863,11 +622,11 @@ def test_synthetic_builder_enforces_article_lineages_and_end_evidence(tmp_path: 
 
     b.records.extend([
         b.make_fact(
-            fact_id='bound-a', claim_kind='instance_state', tags=['camp'],
+            fact_id='bound-a', statement_kind='state', state_key='bound-a-key', tags=['camp'],
             text='Bound on A.', citations=[fa1], published_in='v1', session='curator-v1', bind_world=True,
         ),
         b.make_fact(
-            fact_id='unbound-b', claim_kind='mechanic', tags=['camp'],
+            fact_id='unbound-b', statement_kind='observation', tags=['camp'],
             text='Unbound observed on B.', citations=[fb1], published_in='v1', session='curator-v1',
         ),
     ])
@@ -913,7 +672,7 @@ def test_synthetic_builder_enforces_article_lineages_and_end_evidence(tmp_path: 
     b2.add_session(sa, sess_a, world=WORLD_ALPHA, lineage=LINEAGE_A, admission=1)
     p1 = b2.add_frame(sa, 1, 10, order_index=1)
     b2.records.append(b2.make_fact(
-        fact_id='f-parent', claim_kind='instance_state', tags=['fire'],
+        fact_id='f-parent', statement_kind='state', state_key='f-parent-key', tags=['fire'],
         text='Lit.', citations=[p1], published_in='v1', session='curator-v1', bind_world=True,
     ))
     b2.commit_version(coverage_session=sess_a, last_step=10, admission_citations=[p1])
@@ -927,7 +686,7 @@ def test_synthetic_builder_enforces_article_lineages_and_end_evidence(tmp_path: 
     b2.supersede_fact(
         ['f-parent'],
         b2.make_fact(
-            fact_id='f-parent-child', claim_kind='instance_state', tags=['fire'],
+            fact_id='f-parent-child', statement_kind='state', state_key='f-parent-key', tags=['fire'],
             text='Still lit.', citations=[p1, c1], published_in='v2', session='curator-v2', bind_world=True,
         ),
         reason_kind='restated',
@@ -945,7 +704,7 @@ def test_synthetic_builder_enforces_article_lineages_and_end_evidence(tmp_path: 
     b3.add_session(sa, sess_a, world=WORLD_ALPHA, lineage=LINEAGE_A, admission=1)
     r_p1 = b3.add_frame(sa, 1, 10, order_index=1)
     b3.records.append(b3.make_fact(
-        fact_id='f-uncertain', claim_kind='instance_state', tags=['fire'],
+        fact_id='f-uncertain', statement_kind='state', state_key='f-uncertain-key', tags=['fire'],
         text='Lit.', citations=[r_p1], published_in='v1', session='curator-v1', bind_world=True,
     ))
     b3.commit_version(coverage_session=sess_a, last_step=10, admission_citations=[r_p1])
@@ -967,27 +726,33 @@ def test_synthetic_builder_enforces_article_lineages_and_end_evidence(tmp_path: 
         )
 
 
-def test_player_knowledge_3_contract_fixtures():
-    pk3 = REPO_ROOT / 'tests' / 'fixtures' / 'player-knowledge-3'
-    read_doc = json.loads((pk3 / 'read-article.json').read_text(encoding='utf-8'))
-    assert set(read_doc) == {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'records'}
-    assert read_doc['schema'] == 'player-knowledge/3'
-    assert read_doc['grants_authority'] is False
-    assert read_doc['resolution'] == 'current'
-    assert read_doc['resolved_from'] is None
-    assert len(read_doc['records']) == 1
+def test_player_knowledge_4_contract_fixtures():
+    fixtures = REPO_ROOT / 'tests' / 'fixtures' / 'player-knowledge-4'
+    knowledge = Knowledge(FIXTURES / 'valid' / 'full-graph-and-history.json')
+    read_doc = json.loads((fixtures / 'read-state-key.json').read_text(encoding='utf-8'))
+    assert read_doc['schema'] == 'player-knowledge/4'
+    assert read_doc['resolution'] == 'state_key'
+    assert actor_result(read_doc) == knowledge.read(read_doc['identity']) == read_doc
 
-    query_doc = json.loads((pk3 / 'query-compact-hits.json').read_text(encoding='utf-8'))
-    assert set(query_doc) == {'schema', 'version', 'grants_authority', 'identity', 'resolution', 'resolved_from', 'hits'}
-    assert query_doc['schema'] == 'player-knowledge/3'
-    assert query_doc['grants_authority'] is False
+    query_doc = json.loads((fixtures / 'query-compact-hits.json').read_text(encoding='utf-8'))
+    assert query_doc['schema'] == 'player-knowledge/4'
     assert query_doc['resolution'] == 'query'
-    assert query_doc['resolved_from'] is None
-    article_req = {'id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'}
-    fact_req = {'id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via'}
-    for hit in query_doc['hits']:
-        req = article_req if hit['kind'] == 'article' else fact_req
-        assert req <= set(hit) <= (req | {'status'})
-        assert hit['via'] in ('match', 'hop')
-        if 'status' in hit:
-            assert isinstance(hit['status'], list) and len(hit['status']) > 0
+    assert actor_result(query_doc) == knowledge.query(query_doc['identity']) == query_doc
+    assert query_doc['hits'] and all(hit['via'] == 'fuzzy' for hit in query_doc['hits'])
+    fields = set().union(*(hit.keys() for hit in query_doc['hits']))
+    assert {'statement_kind', 'when', 'state_key', 'anchor', 'anchor_display', 'depiction_source_id'} <= fields
+
+
+def test_clock_label_astral_code_point_length_parity():
+    doc = json.loads((FIXTURES / 'valid' / 'full-graph-and-history.json').read_text(encoding='utf-8'))
+    src = doc['facts'][0]['citation_source_ids'][0]
+    ok_label = '\U0001F31E' * 64  # 64 Unicode code points (128 UTF-16 code units)
+    doc['frame_clocks'][src] = ok_label
+    doc['facts'][0]['seen']['clock_label'] = ok_label
+    doc['facts'][0]['seen'].pop('prior_clock', None)
+    assert Knowledge.from_dict(doc).value['frame_clocks'][src] == ok_label
+    too_long = '\U0001F31E' * 65
+    doc['frame_clocks'][src] = too_long
+    doc['facts'][0]['seen']['clock_label'] = too_long
+    with pytest.raises(ValueError):
+        Knowledge.from_dict(doc)

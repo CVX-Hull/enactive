@@ -1,7 +1,7 @@
-// Offline end-to-end player-host/12 + player-knowledge/3 rehearsal driven by tests/test_wave4c_combined_rehearsal.py.
+// Offline end-to-end player-host/12 + player-knowledge/4 rehearsal driven by tests/test_wave4c_combined_rehearsal.py.
 // Kept under tests/fixtures/ (outside tools/player_host/test/) so bare `node --test` does not execute this CLI.
 // Runs two real Node hosts (`actors/001` with actorId `33..33`, `actors/002` with actorId `44..44`) in place over
-// the real Python MCP (`delivery-mcp.py`) against a real exported `delivered-knowledge/3` file, with zero post-hoc
+// the real Python MCP (`delivery-mcp.py`) against a real exported `delivered-knowledge/4` file, with zero post-hoc
 // trace rewriting.
 import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';

@@ -1,0 +1,98 @@
+{
+  "schema": "delivered-knowledge/4",
+  "version": "v100",
+  "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "repository_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "coverage": {
+    "schema": "curator-coverage/2",
+    "session": "s100",
+    "actor": "001",
+    "last_step": 88
+  },
+  "articles": [
+    {
+      "id": "water-treatment",
+      "revision": "water-treatment@v100",
+      "title": "Water treatment",
+      "lead": "Boil murky water over a fire to obtain clean water.",
+      "body": [
+        {
+          "text": "Boiling murky water over a fire yields clean water.",
+          "facts": [
+            "boiling-makes-water-safe"
+          ]
+        }
+      ],
+      "tags": [
+        "water"
+      ],
+      "scope": {
+        "game": "example"
+      },
+      "branch_relation": null,
+      "lifecycle_state": "active",
+      "needs_review": false,
+      "stale_citations": [],
+      "unverified_branch": false,
+      "links": [],
+      "backlinks": [],
+      "shadowed_by": [],
+      "contradicted_by": [],
+      "last_confirmed": {
+        "session": "s100",
+        "actor": "001",
+        "step": 80,
+        "order": [
+          100,
+          "001",
+          80
+        ]
+      }
+    }
+  ],
+  "facts": [
+    {
+      "id": "boiling-makes-water-safe",
+      "tags": [
+        "water",
+        "fire"
+      ],
+      "text": "Boiling murky water over a fire yields clean water.",
+      "scope": {
+        "game": "example"
+      },
+      "branch_relation": null,
+      "lifecycle_state": "active",
+      "needs_review": false,
+      "stale_citations": [],
+      "unverified_branch": false,
+      "links": [],
+      "backlinks": [],
+      "shadowed_by": [],
+      "contradicted_by": [],
+      "cited_by_articles": [
+        "water-treatment"
+      ],
+      "citation_source_ids": [
+        "11111111111111111111111111111111-1"
+      ],
+      "seen": {
+        "session": "s100",
+        "actor": "001",
+        "step": 80,
+        "order": [
+          100,
+          "001",
+          80
+        ]
+      },
+      "statement_kind": "observation"
+    }
+  ],
+  "history": {
+    "replaced": {},
+    "ended": [],
+    "retracted": []
+  },
+  "frame_clocks": {}
+}

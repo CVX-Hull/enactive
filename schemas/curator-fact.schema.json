@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "curator-fact/5: stored fact and article revision records in facts.jsonl",
-  "description": "Closed shape for published curator-fact/5 records (facts and article revisions) in a curator-knowledge/4 repository. Cross-record checks (provenance frames, declared axes, scope lattice, references, lifecycle fixed point) live in harness/curator/check.py.",
+  "title": "curator-fact/6: stored fact and article revision records in facts.jsonl",
+  "description": "Closed shape for published curator-fact/6 records (facts and article revisions) in a curator-knowledge/5 repository. Cross-record checks (provenance frames, frame_clocks, declared axes, scope lattice, global id/slug/state_key namespace, keyed uniqueness, anchor forest, depends_on acyclicity, lifecycle fixed point) live in harness/curator/check.py.",
   "oneOf": [
     {"$ref": "#/$defs/stored_fact"},
     {"$ref": "#/$defs/stored_article"}
@@ -44,6 +44,13 @@
       "maxLength": 64,
       "not": {"pattern": "[^ -~]"}
     },
+    "clock_label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "\\S",
+      "not": {"pattern": "[\\u0000-\\u001f\\u007f]"}
+    },
     "tag": {
       "type": "string",
       "maxLength": 32,
@@ -56,13 +63,13 @@
       "uniqueItems": true,
       "items": {"$ref": "#/$defs/tag"}
     },
-    "claim_kind": {
+    "statement_kind": {
       "type": "string",
-      "enum": ["interface", "mechanic", "entity_property", "instance_state", "strategy"]
+      "enum": ["observation", "state", "outcome", "inference", "synthesis"]
     },
-    "evidence_basis": {
+    "superseded_reason": {
       "type": "string",
-      "enum": ["observed", "inferred", "hinted"]
+      "enum": ["restated", "narrowed", "corrected", "changed"]
     },
     "lifecycle_state": {
       "type": "string",
@@ -87,29 +94,6 @@
         "world": {"$ref": "#/$defs/label"}
       },
       "additionalProperties": {"$ref": "#/$defs/axis_value"}
-    },
-    "requires_map": {
-      "type": "object",
-      "maxProperties": 8,
-      "propertyNames": {
-        "pattern": "^[a-z][a-z0-9_]{0,31}$",
-        "not": {
-          "anyOf": [
-            {"enum": ["game", "world", "lineage"]},
-            {"pattern": "\\n"}
-          ]
-        }
-      },
-      "additionalProperties": {"$ref": "#/$defs/axis_value"}
-    },
-    "when": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["note", "requires"],
-      "properties": {
-        "note": {"$ref": "#/$defs/nonblank"},
-        "requires": {"$ref": "#/$defs/requires_map"}
-      }
     },
     "link": {
       "type": "object",
@@ -268,8 +252,7 @@
         "schema",
         "record",
         "id",
-        "claim_kind",
-        "evidence_basis",
+        "statement_kind",
         "tags",
         "text",
         "scope",
@@ -285,16 +268,18 @@
         "session"
       ],
       "properties": {
-        "schema": {"const": "curator-fact/5"},
+        "schema": {"const": "curator-fact/6"},
         "record": {"const": "fact"},
         "id": {"$ref": "#/$defs/id_or_slug"},
-        "claim_kind": {"$ref": "#/$defs/claim_kind"},
-        "evidence_basis": {"$ref": "#/$defs/evidence_basis"},
+        "statement_kind": {"$ref": "#/$defs/statement_kind"},
+        "state_key": {"$ref": "#/$defs/id_or_slug"},
+        "anchor": {"$ref": "#/$defs/id_or_slug"},
+        "depiction_source_id": {"$ref": "#/$defs/frame_source_id"},
         "tags": {"$ref": "#/$defs/tags"},
         "text": {"$ref": "#/$defs/nonblank"},
         "subject": {"$ref": "#/$defs/nonblank"},
         "scope": {"$ref": "#/$defs/stored_scope"},
-        "when": {"$ref": "#/$defs/when"},
+        "when": {"$ref": "#/$defs/nonblank"},
         "links": {"$ref": "#/$defs/links"},
         "citations": {"$ref": "#/$defs/citations_nonempty"},
         "lineages": {"$ref": "#/$defs/lineages"},
@@ -319,6 +304,7 @@
           "uniqueItems": true,
           "items": {"$ref": "#/$defs/id_or_slug"}
         },
+        "superseded_reason": {"$ref": "#/$defs/superseded_reason"},
         "retired": {
           "oneOf": [
             {"$ref": "#/$defs/fact_retired_wrong"},
@@ -329,15 +315,16 @@
         "published_in": {"$ref": "#/$defs/version"},
         "session": {"$ref": "#/$defs/nonblank"}
       },
+      "dependentRequired": {
+        "superseded_by": ["superseded_reason"],
+        "superseded_reason": ["superseded_by"]
+      },
       "allOf": [
-        {
-          "not": {"required": ["superseded_by", "retired"]}
-        },
         {
           "if": {"properties": {"scope": {"required": ["world"]}}},
           "then": {"required": ["lineages"]},
           "else": {
-            "not": {"required": ["lineages"]},
+            "not": {"anyOf": [{"required": ["lineages"]}, {"required": ["state_key"]}, {"required": ["anchor"]}]},
             "properties": {
               "valid_to": {"type": "null"},
               "retired": {
@@ -380,8 +367,34 @@
           "then": {"properties": {"valid_to": {"type": "null"}}}
         },
         {
-          "if": {"properties": {"claim_kind": {"const": "instance_state"}}},
-          "then": {"properties": {"scope": {"required": ["world"]}}}
+          "if": {"properties": {"statement_kind": {"const": "state"}}},
+          "then": {
+            "required": ["state_key"],
+            "properties": {"scope": {"required": ["world"]}}
+          }
+        },
+        {
+          "if": {"required": ["state_key"]},
+          "then": {
+            "properties": {
+              "scope": {"required": ["world"]},
+              "statement_kind": {"enum": ["state", "synthesis"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"statement_kind": {"const": "synthesis"}}},
+          "then": {
+            "properties": {
+              "links": {
+                "contains": {
+                  "type": "object",
+                  "required": ["rel"],
+                  "properties": {"rel": {"const": "depends_on"}}
+                }
+              }
+            }
+          }
         },
         {
           "if": {"properties": {"lifecycle_state": {"enum": ["active", "contested"]}}},
@@ -393,19 +406,77 @@
         {
           "if": {"properties": {"lifecycle_state": {"const": "superseded"}}},
           "then": {
-            "required": ["superseded_by"],
+            "required": ["superseded_by", "superseded_reason"],
             "not": {"required": ["retired"]},
-            "properties": {"valid_to": {"type": "null"}}
+            "properties": {
+              "valid_to": {"type": "null"},
+              "superseded_reason": {"enum": ["restated", "narrowed"]}
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "superseded_reason": {"const": "restated"},
+                  "superseded_by": {"minItems": 1, "maxItems": 1}
+                }
+              },
+              {
+                "properties": {
+                  "superseded_reason": {"const": "narrowed"},
+                  "superseded_by": {"minItems": 2}
+                }
+              }
+            ]
           }
         },
         {
           "if": {"properties": {"lifecycle_state": {"const": "ended"}}},
           "then": {
-            "required": ["retired"],
-            "not": {"required": ["superseded_by"]},
-            "properties": {
-              "retired": {"properties": {"reason_kind": {"const": "ended"}}}
-            }
+            "anyOf": [
+              {
+                "required": ["retired"],
+                "properties": {
+                  "retired": {"properties": {"reason_kind": {"const": "ended"}}}
+                }
+              },
+              {
+                "required": ["superseded_by", "superseded_reason", "state_key"],
+                "properties": {
+                  "superseded_reason": {"const": "changed"},
+                  "superseded_by": {"minItems": 1},
+                  "scope": {"required": ["world"]}
+                }
+              }
+            ],
+            "allOf": [
+              {
+                "if": {"required": ["retired"]},
+                "then": {
+                  "properties": {
+                    "retired": {"properties": {"reason_kind": {"const": "ended"}}}
+                  }
+                }
+              },
+              {
+                "if": {"required": ["superseded_by"]},
+                "then": {
+                  "required": ["superseded_reason", "state_key"],
+                  "properties": {
+                    "superseded_reason": {"const": "changed"},
+                    "superseded_by": {"minItems": 1},
+                    "scope": {"required": ["world"]}
+                  }
+                }
+              },
+              {
+                "if": {
+                  "anyOf": [
+                    {"required": ["retired", "superseded_by"]},
+                    {"required": ["superseded_by"], "properties": {"superseded_by": {"minItems": 2}}}
+                  ]
+                },
+                "then": {"properties": {"valid_to": {"type": "null"}}}
+              }
+            ]
           }
         },
         {
@@ -414,9 +485,12 @@
             "properties": {"valid_to": {"type": "null"}},
             "oneOf": [
               {
-                "required": ["superseded_by"],
+                "required": ["superseded_by", "superseded_reason"],
                 "not": {"required": ["retired"]},
-                "properties": {"superseded_by": {"minItems": 1, "maxItems": 1}}
+                "properties": {
+                  "superseded_reason": {"const": "corrected"},
+                  "superseded_by": {"minItems": 1, "maxItems": 1}
+                }
               },
               {
                 "required": ["retired"],
@@ -454,7 +528,7 @@
         "session"
       ],
       "properties": {
-        "schema": {"const": "curator-fact/5"},
+        "schema": {"const": "curator-fact/6"},
         "record": {"const": "article"},
         "id": {"$ref": "#/$defs/article_revision_id"},
         "slug": {"$ref": "#/$defs/id_or_slug"},

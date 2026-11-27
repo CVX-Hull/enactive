@@ -17,19 +17,24 @@ context cuts and actor handoffs in `A4` and `A9`
 ([seven-day campaign #896](../acceptance/2026-11-22-seven-day-campaign-896.md), with
 custom-character and unablated caveats, alongside the offline
 [stand-in run](../acceptance/2026-11-20-live-curator-stand-in-run-851.md)).
-The current `curator-knowledge/4` (`curator-fact/5` scoped claims, typed links,
-world-bound articles) and `delivered-knowledge/3` formats are verified by current-schema
-fixture tests and by bounded single-actor standard-build live validation (`27/27` live
+The prior `curator-knowledge/4` (`curator-fact/5`) and `delivered-knowledge/3` formats
+were verified by bounded single-actor standard-build live validation (`27/27` live
 curator windows `v1`–`v29`, post-admission boundary grooming `v29` to `v30` with
 `stale_records: 0`, `151` active facts and `9` active articles including `4`
 world-scoped articles, all carrying `scope.ruleset == "standard"`,
-[live validation #963](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md)).
+[live validation #963](../acceptance/2026-11-25-wave3-wave4-live-validation-963.md))
+and one multi-day standard-build campaign
+([#998](../acceptance/2026-11-26-multi-day-standard-build-campaign-998.md)).
+The current `curator-knowledge/5` (`curator-fact/6` keyed inertial fluents, kinematic
+anchors and sparse `frame_clocks`, five-value `statement_kind`, two-strength `depends_on`,
+deterministic hygiene worklist) and `delivered-knowledge/4` formats are verified by
+offline fixture, gate, exporter, retrieval-replay and stand-in suites; fresh-world live
+validation and a multi-actor live handoff on `curator-knowledge/5` remain unexercised.
 Field-weighted BM25 + 1-hop ranking was evaluated offline on projected `#889`/`#896-b`
 `delivered-knowledge/2` exports
-([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md)).
-One multi-day standard-build campaign ran on `curator-knowledge/4`
-([#998](../acceptance/2026-11-26-multi-day-standard-build-campaign-998.md)); a
-multi-actor live handoff on it remains unexercised.
+([retrieval baseline #936](../acceptance/2026-11-24-wave3-retrieval-baseline-and-curator-recount-936.md))
+and sealed `#998` snapshots
+([#1046](../acceptance/2026-11-27-store-migration-freeze-and-998-baselines-1046.md)).
 The run package can enable [delivery to a running actor](#delivery-to-a-running-actor)
 with `live_knowledge_updates`. Otherwise the actor uses its frozen knowledge export.
 
@@ -48,7 +53,7 @@ flowchart LR
   end
   W -->|"Submission"| G["Gate, curator-gate/2<br/>Pure checks, scopes, fixed point"]
   Q -->|"Submission"| G
-  G -->|"Publishes"| K["Knowledge repository<br/>curator-knowledge/4, curator-fact/5<br/>Version tag vN"]
+  G -->|"Publishes"| K["Knowledge repository<br/>curator-knowledge/5, curator-fact/6<br/>Version tag vN"]
   O["Operator restore<br/>of a compatible snapshot"] --> G
   K -->|"Runner exports confirmed live version,<br/>for package world, lineage and context"| D["delivered/vN.json"]
   K -->|"Runner writes unbroken confirmed coverage"| C["delivered/covered-prefix.json"]
@@ -204,7 +209,7 @@ When the package sets [`live_knowledge_updates`](../operations/campaign-run.md#l
 the [runner process](../../tools/curator_host/live_runner.py) looks once after each
 poll that returned for a newly confirmed version. It exports the highest confirmed
 publication that is not a restore and is above the last version it exported, restarts
-included, as `delivered-knowledge/3` for the package's world, lineage and context. It writes the file whole
+included, as `delivered-knowledge/4` for the package's world, lineage and context. It writes the file whole
 to `curator-runner/delivered/vN.json` (temporary name, sync, rename), so the driver
 never sees a partial file. A failed export is reported on stderr once per version and
 error and tried again at the next poll. The runner reads `live_knowledge_updates`
@@ -265,7 +270,7 @@ articles an actor can read (including world-bound articles). A grooming session
 merges, narrows, retags, retires and refiles them between admissions. The
 [curator contract](../contracts/curator.md) owns the record and submission shapes,
 validation, the gate, sessions, drafts and restore; the
-[frozen instructions](../../tools/curator_host/prompt.md#submission-contract-curator-submission2) restate the
+[frozen instructions](../../tools/curator_host/prompt.md#submission-contract-curator-submission3) restate the
 submission shapes to the curator. [Host operations](../operations/curator-hosts.md) owns
 adapter configuration and the zero-spend stand-in lane.
 

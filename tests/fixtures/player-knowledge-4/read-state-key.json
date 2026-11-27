@@ -1,0 +1,125 @@
+{
+  "schema": "player-knowledge/4",
+  "version": "v12",
+  "grants_authority": false,
+  "identity": "shelter-tank",
+  "resolution": "state_key",
+  "resolved_from": null,
+  "records": [
+    {
+      "id": "tank-full",
+      "tags": [
+        "water",
+        "camp"
+      ],
+      "text": "The shelter tank holds 60 litres of clean water.",
+      "scope": {
+        "game": "example",
+        "world": null,
+        "ruleset": "standard"
+      },
+      "branch_relation": "unknown",
+      "lifecycle_state": "contested",
+      "needs_review": true,
+      "stale_citations": [
+        "ended-fire"
+      ],
+      "unverified_branch": true,
+      "links": [
+        {
+          "rel": "contradicts",
+          "target": "tank-empty"
+        }
+      ],
+      "backlinks": [
+        {
+          "rel": "contradicts",
+          "source": "tank-empty"
+        },
+        {
+          "rel": "depends_on",
+          "source": "fire-rule-camp"
+        }
+      ],
+      "shadowed_by": [],
+      "contradicted_by": [
+        "tank-empty"
+      ],
+      "cited_by_articles": [
+        "camp-water"
+      ],
+      "citation_source_ids": [
+        "44444444444444444444444444444444-40"
+      ],
+      "seen": {
+        "session": "s04",
+        "actor": "001",
+        "step": 40,
+        "order": [
+          4,
+          "001",
+          40
+        ],
+        "clock_label": "Day 2 07:10"
+      },
+      "statement_kind": "state",
+      "state_key": "shelter-tank",
+      "subject": "Shelter tank",
+      "depiction_source_id": "44444444444444444444444444444444-40"
+    },
+    {
+      "id": "tank-empty",
+      "tags": [
+        "water",
+        "camp"
+      ],
+      "text": "The shelter tank is empty.",
+      "scope": {
+        "game": "example",
+        "world": null,
+        "ruleset": "standard"
+      },
+      "branch_relation": "inherited",
+      "lifecycle_state": "contested",
+      "needs_review": false,
+      "stale_citations": [],
+      "unverified_branch": false,
+      "links": [
+        {
+          "rel": "contradicts",
+          "target": "tank-full"
+        }
+      ],
+      "backlinks": [
+        {
+          "rel": "contradicts",
+          "source": "tank-full"
+        },
+        {
+          "rel": "depends_on",
+          "source": "fire-rule-camp"
+        }
+      ],
+      "shadowed_by": [],
+      "contradicted_by": [
+        "tank-full"
+      ],
+      "cited_by_articles": [],
+      "citation_source_ids": [
+        "33333333333333333333333333333333-80"
+      ],
+      "seen": {
+        "session": "s03",
+        "actor": "001",
+        "step": 80,
+        "order": [
+          3,
+          "001",
+          80
+        ]
+      },
+      "statement_kind": "state",
+      "state_key": "shelter-tank"
+    }
+  ]
+}

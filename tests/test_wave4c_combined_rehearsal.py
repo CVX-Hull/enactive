@@ -2,10 +2,10 @@
 
 Exercises the combined stack together with zero CDDA launches and zero live provider spend:
 - `campaign-run/13` (required top-level `context`);
-- `curator-knowledge/4`, `curator-submission/2` (`validate_submission`, `add_fact`, `add_article`,
+- `curator-knowledge/5`, `curator-submission/3` (`validate_submission`, `add_fact`, `add_article`,
   `edit_article`, `remap_citations`, `retire_fact`), `curator-boundary-grooming/2` stale-citation
   close-out and `#918` proxy reservation bounds;
-- `delivered-knowledge/3` export and `player-knowledge/3` (`bm25_1hop` + `_fold` morphological match,
+- `delivered-knowledge/4` export and `player-knowledge/4` (`bm25_1hop` + `_fold` morphological match,
   compact query `hits`, casefolded title read);
 - real Node `tools/player_host` (`player-host/12`, `telemetry_version: 12`, bounded briefing,
   `already_in_context` reminder recall, `context_cut` hysteresis + `cut_result: "best_effort"` +
@@ -68,7 +68,7 @@ def _submit(repo: Repository, work: Path, name: str, frames: list[str], changes:
             last_step: int = 2) -> dict:
     sub_dir = work / name
     sub_dir.mkdir(parents=True, exist_ok=True)
-    submission = dict(schema='curator-submission/2', base_version=repo.published(), summary=name, changes=changes)
+    submission = dict(schema='curator-submission/3', base_version=repo.published(), summary=name, changes=changes)
     if from_drafts:
         submission['from_drafts'] = from_drafts
     (sub_dir / 'submission.json').write_text(json.dumps(submission))
@@ -86,7 +86,7 @@ def _submit(repo: Repository, work: Path, name: str, frames: list[str], changes:
 
 @pytest.mark.skipif(not PLAYER_HOST_READY, reason='requires node and tools/player_host/node_modules')
 def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
-    # 1. Build a real `curator-knowledge/4` repository exercising `curator-submission/2`:
+    # 1. Build a real `curator-knowledge/5` repository exercising `curator-submission/3`:
     #    `add_fact`, `add_article`, `edit_article`, `remap_citations`, `retire_fact`.
     frames = [f'{SESSION_ID}-{1000 + i}' for i in range(1, 5)]
 
@@ -96,15 +96,15 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
 
     _submit(repo, sub_work, 'sub-v1', frames, [
         dict(op='add_fact', fact=dict(
-            schema='curator-fact/5', record='fact', id='fact-boil-old', claim_kind='mechanic',
+            schema='curator-fact/6', record='fact', id='fact-boil-old', statement_kind='observation',
             subject='Purify water', tags=['water'], text='Boiling river water in a pot purifies dirty water.',
-            evidence_basis='observed', scope=dict(ruleset='standard'), links=[], citations=[frames[0]])),
+            scope=dict(ruleset='standard'), links=[], citations=[frames[0]])),
         dict(op='add_fact', fact=dict(
-            schema='curator-fact/5', record='fact', id='fact-clean-water', claim_kind='mechanic',
+            schema='curator-fact/6', record='fact', id='fact-clean-water', statement_kind='observation',
             subject='Clean water container', tags=['water'], text='Store purified water inside sealed jugs.',
-            evidence_basis='observed', scope=dict(ruleset='standard'), links=[], citations=[frames[1]])),
+            scope=dict(ruleset='standard'), links=[], citations=[frames[1]])),
         dict(op='add_article', article=dict(
-            schema='curator-fact/5', record='article', slug='water-purification', tags=['water'],
+            schema='curator-fact/6', record='article', slug='water-purification', tags=['water'],
             title='Water Purification', lead='Boil dirty river water before drinking.',
             body=[dict(text='Purify water by boiling river water in a metal pot.', facts=['fact-boil-old'])],
             links=[])),
@@ -114,16 +114,16 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     # Supersede `fact-boil-old` (leaving a stale citation on `water-purification`) with a replacement fact.
     _submit(repo, sub_work, 'sub-v2', frames, [
         dict(op='supersede_fact', ids=['fact-boil-old'], reason_kind='restated', fact=dict(
-            schema='curator-fact/5', record='fact', id='fact-boil-new', claim_kind='mechanic',
+            schema='curator-fact/6', record='fact', id='fact-boil-new', statement_kind='observation',
             subject='Purify water', tags=['water'], text='Boil dirty river water over fire for five minutes.',
-            evidence_basis='observed', scope=dict(ruleset='standard'), links=[], citations=[frames[2]])),
+            scope=dict(ruleset='standard'), links=[], citations=[frames[2]])),
     ])
     assert repo.published() == 'v2'
     assert groom.stale_records(repo, 'v2') == 1
 
     # Grooming submission clears stale citations via `remap_citations` + `edit_article`.
     _submit(repo, sub_work, 'sub-v3-groom', frames, [
-        dict(op='remap_citations', **{'from': 'fact-boil-old', 'to': 'fact-boil-new', 'in': ['water-purification']}),
+        dict(op='remap_citations', **{'from': ['fact-boil-old'], 'to': 'fact-boil-new', 'in': ['water-purification']}),
         dict(op='edit_article', slug='water-purification',
              set_lead='Boil dirty river water over fire for five minutes before drinking.',
              add_claims=[dict(text='Keep purified water inside sealed jugs.', facts=['fact-clean-water'])]),
@@ -138,14 +138,14 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     reservation = terra_price.reservation(120_000, 16_384)
     assert Decimal('0') < reservation < Decimal('5.00')
 
-    # 2. Export real `delivered-knowledge/3` at `v1` (start, with `water-purification`) and `v3` (groomed live update)
+    # 2. Export real `delivered-knowledge/4` at `v1` (start, with `water-purification`) and `v3` (groomed live update)
     #    under `context={"ruleset": "standard"}`.
     run_dir = tmp_path / 'runs' / 'combined-rehearsal'
     (run_dir / 'actors' / '001').mkdir(parents=True)
     (run_dir / 'actors' / '002').mkdir(parents=True)
     v1_export = knowledge_export.published(repo, 'v1', world='rehearsal-world', context=dict(ruleset='standard'))
     v3_export = knowledge_export.published(repo, 'v3', world='rehearsal-world', context=dict(ruleset='standard'))
-    assert v1_export['schema'] == 'delivered-knowledge/3' and v3_export['schema'] == 'delivered-knowledge/3'
+    assert v1_export['schema'] == 'delivered-knowledge/4' and v3_export['schema'] == 'delivered-knowledge/4'
     v1_bytes = (json.dumps(v1_export) + '\n').encode('utf-8')
     (run_dir / 'delivered-knowledge.json').write_bytes(v1_bytes)
     (run_dir / 'actors' / '001' / 'delivered-knowledge.json').write_bytes(v1_bytes)
@@ -153,7 +153,7 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     v3_path = tmp_path / 'v3-update.json'
     v3_path.write_text(json.dumps(v3_export) + '\n')
 
-    # 3. Run two real Node `player-host/12` actors in place over real Python MCP (`player-knowledge/3`).
+    # 3. Run two real Node `player-host/12` actors in place over real Python MCP (`player-knowledge/4`).
     completed = subprocess.run(
         ['node', str(REPLAY_SCRIPT), str(run_dir), str(v3_path)],
         cwd=ROOT, capture_output=True, text=True, timeout=120,
@@ -323,7 +323,7 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
             submission = json.loads(params['content'])
             if params['path'].startswith('submissions/grooming/'):
                 submission['changes'] = [
-                    dict(op='remap_citations', **{'from': 'f1', 'to': 'f2', 'in': ['guide']}),
+                    dict(op='remap_citations', **{'from': ['f1'], 'to': 'f2', 'in': ['guide']}),
                     dict(op='edit_article', slug='guide', set_lead='Updated stand-in lead after grooming.'),
                 ]
                 calls[index] = (tool, dict(params, content=json.dumps(submission)))
@@ -334,7 +334,7 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
                 if number == 1:
                     fact.update(id='f1', text='initial observed control')
                     submission['changes'].append(dict(op='add_article', article=dict(
-                        schema='curator-fact/5', record='article', slug='guide', tags=['control'],
+                        schema='curator-fact/6', record='article', slug='guide', tags=['control'],
                         title='Stand-in guide', lead='Initial stand-in lead.',
                         body=[dict(text='Initial control claim.', facts=['f1'])], links=[],
                     )))
