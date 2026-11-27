@@ -1,5 +1,5 @@
 {
-  "schema": "delegates/3",
+  "schema": "delegates/4",
   "role_instruction": "You are the {role}. Before starting, read and follow `.agents/roles/{role}.md`; that file owns the role. If it cannot be read, stop and report it.",
   "drop_environment": [
     "OPENROUTER_API_KEY",
@@ -26,22 +26,26 @@
       },
       "roles": {
         "worker": {
-          "argv": ["codex", "exec", "--ignore-rules", "-s", "workspace-write", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "read_only": false,
           "brief": "stdin",
           "reply": "file"
         },
         "reviewer": {
-          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--ephemeral", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "read_only": true,
           "brief": "stdin",
           "reply": "file"
         },
         "explorer": {
-          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--ephemeral", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "read_only": true,
           "brief": "stdin",
           "reply": "file"
         },
         "locator": {
-          "argv": ["codex", "exec", "--ignore-rules", "--ephemeral", "-s", "read-only", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "argv": ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--ephemeral", "-m", "{model}", "-c", "model_reasoning_effort={effort}", "-C", "{worktree}", "--json", "-o", "{reply_file}", "-"],
+          "read_only": true,
           "brief": "stdin",
           "reply": "file"
         }
@@ -70,21 +74,25 @@
       "roles": {
         "worker": {
           "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "read_only": false,
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
         "reviewer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--allowedTools", "Read Grep Glob", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "read_only": true,
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
         "explorer": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--allowedTools", "Read Grep Glob", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "read_only": true,
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         },
         "locator": {
-          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "dontAsk", "--allowedTools", "Read Grep Glob", "--disallowedTools", "Edit Write NotebookEdit", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "argv": ["claude", "-p", "--model", "{model}", "--effort", "{effort}", "--permission-mode", "auto", "--settings", "{\"outputStyle\": \"default\"}", "--no-session-persistence", "--output-format", "json"],
+          "read_only": true,
           "brief": "stdin",
           "reply": {"stdout_json": "result"}
         }
@@ -110,26 +118,27 @@
       },
       "roles": {
         "worker": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "accept-edits", "--output-format", "json", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "auto", "--output-format", "json", "-p", "{brief}"],
+          "read_only": false,
           "brief": "argument",
           "reply": {"stdout_json": "response"}
         },
         "reviewer": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "auto", "--output-format", "json", "-p", "{brief}"],
+          "read_only": true,
           "brief": "argument",
-          "note": "Run no shell command and no terminal tool: this start cannot approve one, and asking for one ends the run with no reply. Use only your file reading and file search tools.",
           "reply": {"stdout_json": "response"}
         },
         "explorer": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "auto", "--output-format", "json", "-p", "{brief}"],
+          "read_only": true,
           "brief": "argument",
-          "note": "Run no shell command and no terminal tool: this start cannot approve one, and asking for one ends the run with no reply. Use only your file reading and file search tools.",
           "reply": {"stdout_json": "response"}
         },
         "locator": {
-          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "plan", "--output-format", "json", "-p", "{brief}"],
+          "argv": ["agy", "--model", "{model}", "--effort", "{effort}", "--mode", "auto", "--output-format", "json", "-p", "{brief}"],
+          "read_only": true,
           "brief": "argument",
-          "note": "Run no shell command and no terminal tool: this start cannot approve one, and asking for one ends the run with no reply. Use only your file reading and file search tools.",
           "reply": {"stdout_json": "response"}
         }
       }

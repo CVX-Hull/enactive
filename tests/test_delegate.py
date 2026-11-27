@@ -97,11 +97,11 @@ def stand_ins(tmp_path):
     def agent(name, argv, brief="stdin", reply=None, usage=json_usage):
         if reply is None:
             reply = {"stdout_json": "result"}
-        role = {"argv": argv, "brief": brief, "reply": reply}
         return {"name": name, "version": version, "refusals": ["usage limit", "sign ?in", r"\b429\b"], "usage": usage,
-                "roles": {"worker": role, "reviewer": role, "explorer": role, "locator": role}}
+                "roles": {name: {"argv": argv.copy(), "brief": brief, "reply": reply, "read_only": name != "worker"}
+                          for name in ROLES}}
 
-    definitions = {"schema": "delegates/3", "role_instruction": "You are the {role}.", "drop_environment": ["SECRET_KEY"],
+    definitions = {"schema": "delegates/4", "role_instruction": "You are the {role}.", "drop_environment": ["SECRET_KEY"],
                    "coding_agents": {
                        "first": agent("First", [sys.executable, commands["first"], "{reply_file}", "{model}", "{effort}"],
                                       reply="file", usage=jsonl_usage),
@@ -143,23 +143,6 @@ def test_the_named_delegate_is_started_with_its_model_effort_role_and_brief_and_
     result, ran = stand_ins("second", role="reviewer")
     assert ran == ["first", "second"] and result["outcome"] == "handed_back"
     assert Path(result["hand_back"]).read_text().startswith("reviewed: You are the reviewer.")
-
-
-def test_a_roles_note_follows_the_role_instruction_in_the_brief_as_sent(stand_ins):
-    roles = stand_ins.definitions["coding_agents"]["first"]["roles"]
-    roles["reviewer"] = roles["reviewer"] | {"note": "Run no command."}
-    result, _ = stand_ins("first", role="reviewer")
-    # What the delegate received on standard input, which the stand-in hands back after its first line.
-    assert Path(result["hand_back"]).read_text().split("\n", 1)[1].startswith("You are the reviewer.\nRun no command.\n\nRole: worker")
-    assert (stand_ins.out / "brief.txt").read_text().startswith("You are the reviewer.\nRun no command.\n\nRole: worker")
-    result, _ = stand_ins("first", role="worker")
-    assert Path(result["hand_back"]).read_text().split("\n", 1)[1].startswith("You are the worker.\n\nRole: worker")
-
-    # The same for a brief sent as an argument, which is how the tracked notes travel.
-    roles = stand_ins.definitions["coding_agents"]["second"]["roles"]
-    roles["reviewer"] = roles["reviewer"] | {"note": "Run no command."}
-    result, _ = stand_ins("second", role="reviewer")
-    assert Path(result["hand_back"]).read_text().startswith("reviewed: You are the reviewer.\nRun no command.\n\nR")
 
 
 def test_a_json_reply_file_contains_only_the_reply_and_the_report_contains_usage_and_sorted_models(stand_ins):
@@ -247,8 +230,89 @@ def test_changed_paths_are_listed_whole(stand_ins):
     (worktree / "tracked.txt").write_text("two")
     subprocess.run(["git", "-C", str(worktree), "mv", "old name.txt", "new name.txt"], check=True)
     (worktree / "untracked.txt").write_text("new")
-    assert sorted(delegate.uncommitted(worktree)) == ["new name.txt", "tracked.txt", "untracked.txt"]
+    assert sorted(delegate.uncommitted(worktree)) == ["new name.txt", "old name.txt", "tracked.txt", "untracked.txt"]
     assert delegate.uncommitted(worktree.parent) is None
+
+
+@pytest.mark.parametrize(("action", "changed"), [
+    ("pass", []),
+    ("pathlib.Path('new.txt').touch()", ["new.txt"]),
+    ("pathlib.Path('tracked.txt').write_text('modified')", ["tracked.txt"]),
+    ("pathlib.Path('tracked.txt').unlink()", ["tracked.txt"]),
+    ("pathlib.Path('dirty/nested.txt').write_text('edited')", ["dirty/nested.txt"]),
+    ("pathlib.Path('link').unlink(); pathlib.Path('link').symlink_to('new-target')", ["link"]),
+])
+def test_read_only_delegate_reports_only_changes_since_start(stand_ins, tmp_path, action, changed):
+    worktree = stand_ins.worktree
+    (worktree / "tracked.txt").write_text("original")
+    subprocess.run(["git", "-C", str(worktree), "add", "tracked.txt"], check=True)
+    subprocess.run(["git", "-C", str(worktree), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                    "commit", "-qm", "tracked"], check=True)
+    (worktree / "dirty").mkdir()
+    (worktree / "dirty/nested.txt").write_text("already dirty")
+    (worktree / "link").symlink_to("missing-target")
+    role = stand_ins.definitions["coding_agents"]["second"]["roles"]["reviewer"]
+    role["argv"] = [sys.executable, script(tmp_path / "editor", action + "\nprint(json.dumps({'result': 'reply'}))")]
+
+    result, _ = stand_ins("second", role="reviewer")
+
+    assert result["changed_paths"] == changed
+    assert result["commits"] == []
+    assert result["unexpected_edits"] == ({"commits": [], "paths": changed} if changed else None)
+    assert result["outcome"] == ("unexpected_edits" if changed else "handed_back")
+    assert (stand_ins.out / "reply.md").read_text() == "reply"
+    if changed:
+        assert result["hand_back"] is None
+        assert changed[0] in result["detail"]
+        row = json.loads((stand_ins.out / "attempt-row-draft.json").read_text())
+        assert row["hand_back"] == "failed"
+
+
+def test_read_only_delegate_reports_new_commits_and_their_paths(stand_ins, tmp_path):
+    editor = script(tmp_path / "editor", """import subprocess
+pathlib.Path('committed.txt').touch()
+subprocess.run(['git', 'add', 'committed.txt'], check=True)
+subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@example.invalid',
+                'commit', '-qm', 'new'], check=True)
+print(json.dumps({'result': 'reply'}))
+""")
+    stand_ins.definitions["coding_agents"]["second"]["roles"]["reviewer"]["argv"] = [sys.executable, editor]
+
+    result, _ = stand_ins("second", role="reviewer")
+
+    head = subprocess.check_output(["git", "-C", str(stand_ins.worktree), "rev-parse", "HEAD"], text=True).strip()
+    assert result["commits"] == [head]
+    assert result["uncommitted"] == []
+    assert result["changed_paths"] == ["committed.txt"]
+    assert result["unexpected_edits"] == {"commits": [head], "paths": ["committed.txt"]}
+    assert result["outcome"] == "unexpected_edits"
+    assert head in result["detail"]
+
+
+@pytest.mark.parametrize(("path", "exit_code"), [
+    ("owned/file.txt", 0),
+    ("other.txt", 0),
+    ("owned-neighbor/file.txt", 1),
+])
+def test_worker_cli_checks_owned_files_and_directories(stand_ins, tmp_path, path, exit_code):
+    editor = script(tmp_path / "editor", f"""path = pathlib.Path({path!r})
+path.parent.mkdir(exist_ok=True)
+path.write_text('edit')
+print(json.dumps({{'result': 'reply'}}))
+""")
+    stand_ins.definitions["coding_agents"]["second"]["roles"]["worker"]["argv"] = [sys.executable, editor]
+    definitions = tmp_path / "delegates.json"
+    definitions.write_text(json.dumps(stand_ins.definitions))
+    brief = tmp_path / "brief.txt"
+    brief.write_text(BRIEF)
+
+    assert delegate.main(["--delegates", str(definitions), "--role", "worker", "--brief", str(brief),
+                          "--worktree", str(stand_ins.worktree), "--out", str(stand_ins.out),
+                          "--coding-agent", "second", "--model", "model-one", "--effort", "low",
+                          "--owned-paths", "./owned/", "./other.txt"]) == exit_code
+    result = json.loads((stand_ins.out / "result.json").read_text())
+    assert result["unexpected_edits"] == ({"commits": [], "paths": [path]} if exit_code else None)
+    assert (stand_ins.worktree / path).read_text() == "edit"
 
 
 def test_the_acceptance_check_is_run_again_outside_the_delegate_and_both_results_are_reported(stand_ins):
@@ -288,8 +352,8 @@ def test_the_command_line_requires_every_part_of_the_choice_and_exits_by_outcome
 
 def test_the_previous_delegate_definitions_schema_is_refused(stand_ins, tmp_path):
     definitions = tmp_path / "delegates.json"
-    definitions.write_text(json.dumps(stand_ins.definitions | {"schema": "delegates/2"}))
-    with pytest.raises(SystemExit, match="expected schema delegates/3, found 'delegates/2'"):
+    definitions.write_text(json.dumps(stand_ins.definitions | {"schema": "delegates/3"}))
+    with pytest.raises(SystemExit, match="expected schema delegates/4, found 'delegates/3'"):
         delegate.main(["--delegates", str(definitions), "--list"])
 
 
@@ -358,7 +422,7 @@ def test_start_writes_a_draft_in_ledger_schema_order(stand_ins, role, agent, che
 
 def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
     definitions = delegate.read_delegates(delegate.DELEGATES)
-    assert definitions["schema"] == "delegates/3"
+    assert definitions["schema"] == "delegates/4"
     assert len(definitions["coding_agents"]) == 3
     agents = definitions["coding_agents"]
     argv = agents["claude-code"]["roles"]["worker"]["argv"]
@@ -373,17 +437,24 @@ def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
             assert isinstance(values, list) and values and all(isinstance(value, str) and value for value in values)
         for pattern in checks["timeout_patterns"]:
             re.compile(pattern, re.IGNORECASE)
-    for agent in definitions["coding_agents"].values():
+    for host, agent in agents.items():
         assert set(agent["roles"]) == ROLES
-        for how in agent["roles"].values():
-            if "unavailable" in how:
-                continue
+        for role, how in agent["roles"].items():
+            argv = how["argv"]
+            assert how["read_only"] is (role != "worker")
+            assert not set(argv) & {"--ignore-rules", "-s", "workspace-write", "read-only",
+                                    "dontAsk", "--allowedTools", "--disallowedTools", "accept-edits", "plan"}
+            if host == "codex":
+                assert argv[2] == "--dangerously-bypass-approvals-and-sandbox"
+                assert ("--ephemeral" in argv) is (role != "worker")
+            else:
+                mode = "--permission-mode" if host == "claude-code" else "--mode"
+                assert argv[argv.index(mode) + 1] == "auto"
             used = set(re.findall(r"\{(\w+)\}", " ".join(how["argv"])))
             assert used <= {"worktree", "model", "effort", "reply_file", "brief"} and {"model", "effort"} <= used
             assert (how["brief"] == "argument") == ("brief" in used) and (how["reply"] == "file") == ("reply_file" in used)
             if how["reply"] != "file":
                 assert set(how["reply"]) == {"stdout_json"}
-            assert set(how) <= {"argv", "brief", "reply", "note"}
-            assert isinstance(how.get("note", ""), str)
+            assert set(how) == {"argv", "brief", "reply", "read_only"}
     for role in ROLES:
         assert (ROOT / ".agents/roles" / f"{role}.md").is_file()

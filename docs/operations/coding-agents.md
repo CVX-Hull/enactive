@@ -9,11 +9,9 @@ status: active
 The lead's coding agent is engineering tooling. Project instructions, standards
 and gameplay design are host-neutral; this page is the one place that maps them
 to each supported coding agent. Codex, Claude Code and Antigravity may each lead
-engineering work, as the owner decided
-([decision log](../decisions/owner-decisions.md)), and a lead on one may hand the role
-to a lead on another. Codex and Claude Code hold the
-[gameplay command allowances](#gameplay-command-allowances); an Antigravity lead leads
-engineering work only. None is a
+engineering and gameplay work, as the owner decided
+([decision log](../decisions/owner-decisions.md#all-harnesses-on-auto-with-lightweight-accident-checks)),
+and a lead on one may hand the role to a lead on another. None is a
 deciding player host or a fallback for one: gameplay runs only through the
 [player host contract](../contracts/player-host.md).
 
@@ -37,26 +35,18 @@ version and approval mode are unknown. [App evidence](../acceptance/2026-11-19-a
 | Duty | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
 | Delegate with clean context | Start the named role with `fork_turns=none`. | Start the named role as a fresh agent. | Give the sub-agent the whole brief as its first message. For a clean review, use the route under [delegation roles](#delegation-roles). |
-| Choose the delegate for the task | The sandbox denies the network access the [delegate call](#starting-a-delegate-on-any-coding-agent) needs. Run it outside the sandbox with host approval. This route is unverified from a Codex lead. | Run the delegate call from the lead's shell for any of the three hosts. | The call is unverified from an Antigravity lead. For a blocked start, see [the app's terminal sandbox](#the-antigravity-apps-terminal-sandbox). |
+| Choose the delegate for the task | Run the [delegate call](#starting-a-delegate-on-any-coding-agent) from the lead's shell. | Run the delegate call from the lead's shell for any of the three hosts. | Run the delegate call from the lead's shell for any of the three hosts. |
 | Keep one writer per checkout | Create the worker's worktree under `.runtime/worktrees/<leaf>` and name it in the brief. | Use `isolation: worktree` or a worktree the lead creates. | Create a worktree for the worker and name its owned paths in the brief. |
 | Verify a delegated result from files and tests | Read the diff and rerun the brief's check in the worktree. | Read the diff and rerun the brief's check in the worktree. | Read the diff, rerun the check and verify each quoted passage against its file. The lead taking over or merging checks the session's report against the files. |
 | Commit before review | Commit through the hook in the worktree and give the reviewer that commit. | Commit through the hook in the worktree and give the reviewer that commit. | Commit through the hook in the worktree and give the reviewer that commit. |
 | Wait on CI | Watch in the waiting turn. | Start the watch in the background. | Watch in the waiting turn. The app and CLI have different [merge permissions](#waiting-on-ci). |
 | Ask the owner a structured question | Use the host's [approval mechanism](#owner-approvals). | Use `AskUserQuestion`. | The app supports [structured questions](#owner-approvals). |
-| Hold the runtime | One lead holds builds, installs and the [gameplay allowances](#gameplay-command-allowances). | One lead holds builds, installs and the gameplay allowances. | Hand gameplay to a Codex or Claude Code lead through the issue. Builds and installs are unverified. |
+| Hold the runtime | One lead holds builds, installs and gameplay. | One lead holds builds, installs and gameplay. | One lead holds builds, installs and gameplay. Builds and installs are unverified. |
 | Hand over through the issue | Replace the issue description with `gh`. | Replace the issue description with `gh`. | Use `gh`. Handover from an Antigravity lead is unverified. |
-
-### The Antigravity app's terminal sandbox
-
-The app's terminal sandbox can block git writes, GitHub commands and a reviewer
-that needs its configuration outside the project. Retry a blocked command outside
-the sandbox under the host's approval. The project-specific rules are under
-[per-user activation](#per-user-activation).
 
 An Antigravity lead session may run unattended, by the owner's decision of
 21 November 2026 in the [decision log](../decisions/owner-decisions.md#the-lead-trials-are-not-run). None has
 run, so unattended approvals remain unverified.
-If a leaf cannot afford a wait for approval, prefer Codex or Claude Code.
 
 ## Delegation roles
 
@@ -99,7 +89,7 @@ checkout or a worktree, with the main checkout's Python
 ```
 
 `--coding-agent` is `codex`, `claude-code` or `antigravity`; `--role` is `worker`,
-`reviewer`, `explorer` or `locator`; `--check` and `--timeout` are optional.
+`reviewer`, `explorer` or `locator`; `--check`, `--timeout` and `--owned-paths` are optional.
 
 - **The lead names the delegate; the call starts it.** The coding agent, model, effort
   and role have no default, and the call holds no preference among them
@@ -123,9 +113,13 @@ checkout or a worktree, with the main checkout's Python
   `refused` (a run that failed, reported a structured error or returned nothing, whose output carries a quota or
   sign-in message); `failed` (any other non-zero exit, or an exit-0 structured error such as `is_error: true` or a non-ok status/subtype);
   `timed_out` (the delegate and everything it started are stopped, or an exit-0 structured record reports a timeout such as `error_max_turns` or `print_timeout`);
-  or `unavailable` (the role is recorded as having no start that works on
-  that coding agent). When `outcome` is not `handed_back`, any diagnostic reply text stays on disk in `reply.md` while `hand_back` is null. After any outcome but the first the call starts nothing else: the
-  lead decides what to try next.
+  `unexpected_edits` (the post-run check found edits the role should not have made; see
+  the accidental-edit checks below); or `unavailable` (the role is
+  recorded as having no start that works on that coding agent). When `outcome` is not
+  `handed_back`, any diagnostic reply text stays on disk in `reply.md` while `hand_back`
+  is null. `unexpected_edits` exits 1 and the result lists `changed_paths`; the
+  attempt-row draft records it as `failed`. After any outcome but the first the call
+  starts nothing else: the lead decides what to try next.
 - **Token use and the served model.** Each start turns on the coding agent's
   machine-readable output, and the result carries what that output reports: `usage`,
   with `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens` and
@@ -140,8 +134,7 @@ checkout or a worktree, with the main checkout's Python
   host ([probes](../acceptance/2026-11-25-delegate-start-probes.md)).
 - **The acceptance check is run again outside.** With `--check`, the brief asks the
   delegate to end by saying whether it saw the check pass, fail or not run. After the
-  run the call runs the same command in the worktree itself, outside any sandbox the
-  delegate had, and reports both: what the delegate said and what the rerun showed.
+  run the call runs the same command in the worktree itself and reports both: what the delegate said and what the rerun showed.
   The rerun has the same time limit as the delegate.
 - **The hand-back is a report.** The lead still reads the diff and checks quoted
   passages against the tree
@@ -150,24 +143,28 @@ checkout or a worktree, with the main checkout's Python
 
 [Delegate definitions](../../.agents/delegates.json) supply the starts below and say
 how each coding agent's reply and usage are read. The starts are for
-Codex CLI 0.171.0, Claude Code 2.1.329 and Antigravity CLI 1.5.17. The Antigravity
-print-mode limits below are from 1.5.13 and are unchecked on 1.5.17. The
+Codex CLI 0.172.0, Claude Code 2.1.329 and Antigravity CLI 1.5.18. The
 [attempts ledger](../../data/evaluation/coding-agent-attempts.jsonl) holds outcomes
-on repository tasks.
+on repository tasks. Evidence recorded before this change came from earlier starts with
+sandboxes, permission limits or file-only wrappers; it describes those starts, not these.
+
+All three coding agents run on their automatic mode for every role, by the owner's
+decision of 26 November 2026
+([decision log](../decisions/owner-decisions.md#all-harnesses-on-auto-with-lightweight-accident-checks)).
 
 | Role | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
-| Worker | `codex exec --ignore-rules -s workspace-write` reads the brief on standard input. Its sandbox denies loopback connections and process listing, so the whole test suite fails inside it. It leaves changes uncommitted. Use the call's `--check` rerun outside the sandbox, then have the lead inspect the diff and commit. | `claude -p --permission-mode auto` reads the brief on standard input. It runs checks and can commit through the hook without a sandbox. | `agy --mode accept-edits -p BRIEF` edits files. Supply the worker's check with `--check`. |
-| Reviewer | `codex exec --ignore-rules --ephemeral -s read-only` reads the brief on standard input and starts clean. The sandbox enforces read-only access. A test that writes a temporary directory fails inside it. | `claude -p --permission-mode dontAsk --allowedTools "Read Grep Glob" --no-session-persistence` reads the brief on standard input and starts clean, with the default output style. File-editing tools are disabled, and the permission mode denies every tool call that is not already allowed: a shell write, a script and a compound command are refused, while plain read-only commands such as `git log` run. The file-reading and search tools are allowed everywhere, so a brief may name a file outside the worktree; without that allowance the mode refuses a read outside the working directory ([start check](../acceptance/2026-11-26-reviewer-start-check.md)). The filesystem itself is not read-only, and a command the user's or the project's settings allow still runs. A reviewer started this way cannot run a script or a compound command. | `agy --mode plan -p BRIEF` opens files by path. The call adds a note to the brief telling the delegate to run no shell command. Whether plan mode prevents edits is unverified. For clean context see [delegation roles](#delegation-roles). |
-| Explorer, both forms | Use the reviewer's start. | Use the reviewer's start. | Use the reviewer's start. |
+| Worker | `codex exec --dangerously-bypass-approvals-and-sandbox` reads the brief on standard input. It leaves changes uncommitted; the lead inspects the diff and commits. | `claude -p --permission-mode auto` reads the brief on standard input. It runs checks and can commit through the hook. | `agy --mode auto -p BRIEF` edits files and runs commands. |
+| Reviewer | `codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral` reads the brief on standard input and starts clean. | `claude -p --permission-mode auto --no-session-persistence` reads the brief on standard input and starts clean, with the default output style. | `agy --mode auto -p BRIEF`. For clean context see [delegation roles](#delegation-roles). |
+| Explorer and locator | Use the reviewer's start. | Use the reviewer's start. | Use the reviewer's start. |
 
-- **No gameplay allowance** ([R-DELEGATION-ERROR](../risks.md)): `--ignore-rules`
-  keeps the tracked [gameplay rules](../../.codex/rules/gameplay.rules), which allow
-  `harness run` without a prompt, out of a delegated Codex run, since reviewers and
-  workers never send game inputs. Cost: one flag. A delegated Claude Code run reads the
-  project's settings, whose only allowances are the three
-  [gameplay prefixes](#gameplay-command-allowances); the role instruction and the brief
-  forbid them, and nothing mechanical does.
+- **Lightweight accidental-edit checks** ([R-DELEGATION-ERROR](../risks.md)): no start
+  confines a read-only role, so after the run `tools/delegate.py` compares a worktree
+  snapshot taken before it with one taken after. On a reviewer, explorer or locator any
+  change is unexpected; on a worker, `--owned-paths` names the paths it may change and
+  anything else is unexpected. The check is not adversarial: it catches accidents inside
+  the worktree and never reverts. The lead reads `changed_paths` and `reply.md` and
+  decides. Cost: under 0.1 s of git per delegation.
 - **Refusals.** When a run fails (non-zero exit or an exit-0 structured error such as
   `is_error: true`) or returns nothing, the call looks in its output — including any
   error reply text — for quota or sign-in wording listed for each coding agent in the
@@ -184,35 +181,18 @@ on repository tasks.
   does not carry into delegated hand-backs.
 - **Antigravity role wrappers (native `--agent <role>` starts only).** Tracked wrappers
   under `.agents/agents/` apply to native wrapper starts and are not selected by
-  `tools/delegate.py`'s print-mode starts (`--mode accept-edits` and `--mode plan`). The
-  wrappers keep native aliases (`pro`, `flash_lite`) rather than full model identifiers,
-  which break wrapper discovery (`agy agents`), and declare explicit `tools:` lists
-  because an omitted `tools:` list leaves a native role with no tools (outside-repo
-  observation on Antigravity CLI 1.5.13 in private repository `CVX-Hull/Userspace`,
+  `tools/delegate.py`'s `--mode auto` starts. The wrappers keep native aliases (`pro`,
+  `flash_lite`) rather than full model identifiers, which break wrapper discovery
+  (`agy agents`), and declare explicit `tools:` lists because an omitted `tools:` list
+  leaves a native role with no tools (outside-repo observation on Antigravity CLI 1.5.13
+  in private repository `CVX-Hull/Userspace`,
   `docs/field-notes/harnesses/how-each-harness-runs-a-delegated-model.md`, `M5`/`M8`).
-  Enactive's wrappers list file tools only (`read_file`, `edit_file`, `write_file` for
-  worker; `read_file` for read-only roles) with no `run_command`, keeping Antigravity
-  delegates file-only with no edits to host settings outside the repository. Two details
-  remain unverified directly on Enactive's live Antigravity CLI: whether additional
-  read-only search tool names are supported in native wrapper `tools:` lists, and the
-  exact JSON field names (`finish_reason` / `finishReason`) emitted on a live
+  The worker lists `read_file`, `edit_file`, `write_file` and `run_command`; the
+  read-only roles list `read_file` and `run_command`. The earlier file-only restriction is
+  removed. Two details remain unverified on Enactive's live Antigravity CLI: whether
+  additional read-only search tool names are supported in native wrapper `tools:` lists,
+  and the exact JSON field names (`finish_reason` / `finishReason`) emitted on a live
   print-mode timeout (`outcome_checks` in `.agents/delegates.json`).
-- **A note for what a start cannot do.** A role in the definitions file may carry a
-  `note`, which the call puts after the role's instruction in every brief. The
-  Antigravity reviewer, explorer and locator carry one that says to run no shell
-  command.
-- **Antigravity print mode.** The delegated modes run no shell command. A denied
-  command ends the run with exit code 0 and an empty reply. The call reports
-  `empty_reply` and lists any files changed. Verify the files even if the CLI status
-  line reports success. The call tells a reviewer, explorer or locator to run no
-  command; for a worker the lead writes it in the brief. Name source files by path, and
-  include the diff and any command output a review needs in the brief. Split a large
-  diff to fit the shell's single-argument limit. Without the instruction, and with quota
-  available, Gemini 4 Neon at High returns an empty reply on 16 of 17 review starts and
-  Gemini 4 Carbon at High on 5 of 12
-  ([replay](../acceptance/2026-11-25-reviewer-recall-replay.md#the-gemini-starts)); with
-  it, Neon hands back 3 of 3 and Carbon 2 of 3, the third stopped at a 1,500-second
-  limit ([start check](../acceptance/2026-11-26-reviewer-start-check.md)).
 - **Credentials** ([R-KEY-LEAK](../risks.md)): the shell that starts the call holds no
   provider key, since a coding agent reads its whole environment and would hand the key
   to a third provider, or bill it in place of the subscription. The call also starts
@@ -261,30 +241,6 @@ requires the host's structured question tool where one exists.
 | --- | --- | --- | --- |
 | Mechanism | Use the available structured question tool. If none is available, ask one explicit question at the end of the turn. | Use `AskUserQuestion`, one decision at a time, with the recommendation first. | The app supports one structured question per decision with the recommendation marked. The tool's name is unrecorded. |
 
-## Gameplay command allowances
-
-Codex and Claude Code allow exactly the stable prefixes `.venv/bin/python -m harness status`,
-`… pause` and `… run` without a prompt; every other command keeps the host's
-default approval. Antigravity has no gameplay allowance and none is added: it leads
-engineering work only ([decision log](../decisions/owner-decisions.md)).
-[Operator permissions](../operator-permissions.md) explains why a
-match is not filesystem confinement, source pinning, credential loading or
-gameplay authority.
-
-| | Codex | Claude Code | Antigravity |
-| --- | --- | --- | --- |
-| Tracked file | [`.codex/rules/gameplay.rules`](../../.codex/rules/gameplay.rules) | [`.claude/settings.json`](../../.claude/settings.json) | None: no allowance is tracked for it. |
-| Loads when | The user trusts the exact checkout. | The user trusts the workspace, or passes `--settings .claude/settings.json`. | Nothing to load. A leaf that needs gameplay goes to a lead on Codex or Claude Code, handed over through the issue. |
-
-Change both files together and check both against the rule file's inline
-`match`/`not_match` examples. Codex: `codex execpolicy check --rules .codex/rules/gameplay.rules -- COMMAND…`
-(pass the command as separate tokens). Claude Code: a headless
-`claude -p --output-format json --permission-mode default --settings .claude/settings.json`
-attempt of each example from the checkout; a non-matching command must appear in
-`permission_denials`. Pin the default permission mode: a user-selected automatic
-mode may approve more than the project allowance, which is the user's choice, not
-project policy. Never widen one host to match a mistake in the other.
-
 ## Player MCP entry
 
 A coding agent may attach the player MCP adapter only for engineering inspection of
@@ -327,21 +283,14 @@ behind after the session ends, the incoming lead brings it up to date under the
 
 ## Per-user activation
 
-Trust and activation are per user and are not tracked or automated here. The project
-never edits user configuration except where the owner approved an edit, and another
-edit to the owner's Antigravity settings
-requires new approval.
+All three coding agents run in owner-managed automatic mode. The repository tracks no
+permission allowlists, and the project never edits user settings outside the
+repository ([decision log](../decisions/owner-decisions.md#all-harnesses-on-auto-with-lightweight-accident-checks)).
+Trust and activation are per user and are not automated here.
 
 | | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
-| Project files load when | Project rules and `.codex/config.toml` load only for a checkout trusted in the user's Codex configuration. A nested clone needs its own trust. A `-c projects…trust_level` override does not enable project files. | `CLAUDE.md` is read without trust. Project permissions apply after workspace trust, and the user is asked once before a project `.mcp.json` server starts. | `AGENTS.md` loads automatically. The trust step is unknown. For role-file discovery, see [delegation roles](#delegation-roles). |
-| For one invocation | Pass the generated entry as an inline override (`-c 'mcp_servers.enactive_player={…}'`). | Pass `--settings .claude/settings.json` and `--mcp-config .mcp.json`. | No per-invocation option is recorded. See [player MCP entry](#player-mcp-entry) for actor inspection. |
-| Git, GitHub and project commands | Host default approval. | Host default approval. | Open the app on the main project folder and work in a worktree beneath it. The project settings allow git and GitHub commands, deny force-push and credential commands, and prompt on `--no-verify`. Allow rules cover `tools/check.py` and `tools/delegate.py` with the main checkout's Python, from the main checkout or a worktree three levels below it. No command match has been demonstrated. Whether the git and GitHub rules apply inside the worktree is also unverified. |
-
-The owner's Antigravity settings apply to this project alone. The file under
-`~/.gemini/config/projects/` uses `allow`, `deny` and `ask` lists at
-`permissionGrants.permissionGrants`, as reported by the lead that made the edit.
-The git and GitHub rules have the owner's approval of 20 November 2026. The project
-command rules stay under the owner's decision of 21 November 2026 in the [decision log](../decisions/owner-decisions.md).
+| Project files load when | `.codex/config.toml` loads only for a checkout trusted in the user's Codex configuration. A nested clone needs its own trust. A `-c projects…trust_level` override does not enable project files. | `CLAUDE.md` is read without trust. The user is asked once before a project `.mcp.json` server starts. | `AGENTS.md` loads automatically. The trust step is unknown. For role-file discovery, see [delegation roles](#delegation-roles). |
+| For one invocation | Pass the generated entry as an inline override (`-c 'mcp_servers.enactive_player={…}'`). | Pass `--mcp-config .mcp.json`. | No per-invocation option is recorded. See [player MCP entry](#player-mcp-entry) for actor inspection. |
 
 [Operations index](../runbook.md).

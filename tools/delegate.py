@@ -13,19 +13,21 @@ from __future__ import annotations
 
 import argparse
 from datetime import date
+import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DELEGATES = ROOT / ".agents/delegates.json"
-SCHEMA = "delegates/3"
+SCHEMA = "delegates/4"
 TOKEN_NAMES = ("input_tokens", "cached_input_tokens", "cache_write_input_tokens", "output_tokens")
 # The hand-back's own statement of the acceptance check, asked for in the brief when the lead names a check.
 REPORTED = re.compile(r"^Acceptance check: (passed|failed|not run)\s*$", re.MULTILINE)
@@ -50,24 +52,50 @@ def fill(template: list[str], values: dict[str, str]) -> list[str]:
 
 def git(worktree: Path, *arguments: str) -> str | None:
     """A git command's output as written, or None when git refuses (the directory is not a repository)."""
-    done = subprocess.run(["git", "-C", str(worktree), *arguments], capture_output=True, text=True, errors="replace")
-    return done.stdout if done.returncode == 0 else None
+    done = subprocess.run(["git", "-C", str(worktree), *arguments], capture_output=True)
+    return os.fsdecode(done.stdout) if done.returncode == 0 else None
 
 
-def uncommitted(worktree: Path) -> list[str] | None:
-    """Paths `git status` lists as changed or untracked; a rename is listed under its new path."""
-    status = git(worktree, "status", "--porcelain", "-z")
+def uncommitted(worktree: Path) -> dict[str, str] | None:
+    """Porcelain status by changed path, including both paths of a rename."""
+    status = git(worktree, "status", "--porcelain", "-z", "--untracked-files=all")
     if status is None:
         return None
-    records, paths = status.split("\0"), []
-    while records:
-        record = records.pop(0)
-        if not record:
-            continue
-        paths.append(record[3:])
-        if record[0] in "RC":
-            records.pop(0)  # the path it was renamed or copied from
+    records, paths = iter(status.rstrip("\0").split("\0")), {}
+    for record in filter(None, records):
+        code = record[:2]
+        paths[record[3:]] = code
+        if "R" in code or "C" in code:
+            source = next(records)
+            if "R" in code:
+                paths[source] = code
     return paths
+
+
+def content_digest(worktree: Path, name: str) -> tuple[str, str | None]:
+    path = worktree / name
+    try:
+        if any((worktree / parent).is_symlink() for parent in Path(name).parents if parent != Path(".")):
+            return "missing", None
+        mode = path.lstat().st_mode
+        if stat.S_ISLNK(mode):
+            return "symlink", hashlib.sha256(os.fsencode(os.readlink(path))).hexdigest()
+        if stat.S_ISREG(mode):
+            with path.open("rb") as contents:
+                return "file", hashlib.file_digest(contents, "sha256").hexdigest()
+        return ("directory" if stat.S_ISDIR(mode) else "special"), None
+    except (FileNotFoundError, NotADirectoryError):
+        return "missing", None
+    except OSError:
+        return "unreadable", None
+
+
+def snapshot(worktree: Path) -> tuple[str, dict[str, tuple[str, tuple[str, str | None]]]] | None:
+    head = (git(worktree, "rev-parse", "--verify", "HEAD") or "").strip()
+    statuses = uncommitted(worktree)
+    if statuses is None:
+        return None
+    return head, {name: (code, content_digest(worktree, name)) for name, code in statuses.items()}
 
 
 def stop(process: subprocess.Popen) -> None:
@@ -214,7 +242,7 @@ def write_reports(out: Path, result: dict, head_before: str, check: str | None) 
             "effort": result["effort"],
             "reason": None,
             "date": result["date"],
-            "hand_back": result["outcome"],
+            "hand_back": "failed" if result["outcome"] == "unexpected_edits" else result["outcome"],
             "acceptance": rerun if result["role"] == "worker" and rerun in ("passed", "failed") else None,
             "repairs": 0,
             "wall_seconds": result["wall_seconds"],
@@ -233,12 +261,14 @@ def write_reports(out: Path, result: dict, head_before: str, check: str | None) 
 
 
 def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role: str, brief: str,
-          worktree: Path, out: Path, check: str | None, timeout: float | None) -> dict:
+          worktree: Path, out: Path, check: str | None, timeout: float | None,
+          owned_paths: list[str] | None = None) -> dict:
     """Start the named delegate once and describe what happened. Never starts a different one."""
     result = {"coding_agent": coding_agent, "coding_agent_version": None, "model": model, "effort": effort,
               "role": role, "worktree": str(worktree), "date": date.today().isoformat(), "outcome": None,
               "detail": None, "exit_code": None, "wall_seconds": 0, "hand_back": None, "commits": None,
-              "uncommitted": None, "check": None, "usage": None, "models_reported": None}
+              "uncommitted": None, "changed_paths": None, "unexpected_edits": None, "check": None,
+              "usage": None, "models_reported": None}
     agent = definitions["coding_agents"].get(coding_agent)
     if agent is None:
         raise SystemExit(f"No coding agent {coding_agent!r} in the delegate definitions; "
@@ -247,7 +277,8 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     if how is None:
         raise SystemExit(f"{agent['name']} has no role {role!r}; known: {', '.join(sorted(agent['roles']))}")
     result["coding_agent"] = agent["name"]
-    head_before = (git(worktree, "rev-parse", "HEAD") or "").strip()
+    before = snapshot(worktree)
+    head_before = before[0] if before is not None else ""
     if "unavailable" in how:
         result |= {"outcome": "unavailable", "detail": how["unavailable"]}
         return write_reports(out, result, head_before, check)
@@ -255,9 +286,7 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     out.mkdir(parents=True, exist_ok=True)
     reply_file = out / "reply.md"
     reply_file.unlink(missing_ok=True)
-    # A role's `note` says what this start cannot do, so the lead need not remember to write it into each brief.
-    sent = (definitions["role_instruction"].replace("{role}", role) + ("\n" + how["note"] if "note" in how else "")
-            + "\n\n" + brief.strip() + "\n")
+    sent = definitions["role_instruction"].replace("{role}", role) + "\n\n" + brief.strip() + "\n"
     if check:
         sent += "\n" + REPORT_LINE + "\n"
     (out / "brief.txt").write_text(sent, encoding="utf-8")
@@ -282,6 +311,7 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
         result |= {"outcome": "failed_start", "detail": str(error)}
         return write_reports(out, result, head_before, check)
     result["wall_seconds"] = round(time.monotonic() - began)
+    after = snapshot(worktree)
     result["exit_code"] = exit_code
     (out / "stdout.txt").write_text(stdout, encoding="utf-8")
     (out / "stderr.txt").write_text(stderr, encoding="utf-8")
@@ -320,11 +350,32 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     else:
         result |= {"outcome": "handed_back", "hand_back": str(reply_file)}
 
-    head_after = (git(worktree, "rev-parse", "HEAD") or "").strip()
-    if head_before and head_after:
-        # Commits the worktree's head reaches now and did not before the run, whoever made them.
-        result["commits"] = (git(worktree, "rev-list", f"{head_before}..{head_after}") or "").split()
-        result["uncommitted"] = uncommitted(worktree)
+    if before is not None and after is not None:
+        head_after, dirty_after = after
+        dirty_before = before[1]
+        changed = {path for path in dirty_before.keys() | dirty_after.keys()
+                   if dirty_before.get(path) != dirty_after.get(path)}
+        commits = []
+        if head_after and head_after != head_before:
+            revision = f"{head_before}..{head_after}" if head_before else head_after
+            commits = (git(worktree, "rev-list", revision) or "").split()
+            diff = (git(worktree, "diff", "--no-renames", "--name-only", "-z", revision, "--") if head_before
+                    else git(worktree, "ls-tree", "-r", "--name-only", "-z", head_after))
+            changed.update(filter(None, (diff or "").split("\0")))
+        changed_paths = sorted(changed)
+        result |= {"commits": commits, "uncommitted": list(dirty_after), "changed_paths": changed_paths}
+        if how.get("read_only") is True and (head_after != head_before or commits or changed_paths):
+            unexpected_commits = commits or ([f"HEAD->{head_after}"] if head_after != head_before else [])
+            result["unexpected_edits"] = {"commits": unexpected_commits, "paths": changed_paths}
+        elif not how.get("read_only") and owned_paths:
+            prefixes = [PurePosixPath(prefix).as_posix().rstrip("/") for prefix in owned_paths]
+            outside = [path for path in changed_paths
+                       if not any(prefix == "." or path == prefix or path.startswith(prefix + "/") for prefix in prefixes)]
+            if outside:
+                result["unexpected_edits"] = {"commits": [], "paths": outside}
+    if (edits := result["unexpected_edits"]) is not None and result["outcome"] == "handed_back":
+        details = [f"{kind}: {', '.join(values)}" for kind, values in edits.items() if values]
+        result |= {"outcome": "unexpected_edits", "hand_back": None, "detail": "Unexpected " + "; ".join(details)}
     if check:
         # Run again here, outside any sandbox the delegate had, whatever it reported: a delegate that could not
         # run the check, or returned nothing after editing, still leaves a tree the lead needs a result for.
@@ -361,6 +412,7 @@ def main(arguments: list[str] | None = None) -> int:
     parser.add_argument("--brief", help="a file holding the brief, or - for standard input")
     parser.add_argument("--worktree", type=Path, help="the worktree the delegate works in")
     parser.add_argument("--out", type=Path, help="a scratch directory outside the checkout for the reply and the run's output")
+    parser.add_argument("--owned-paths", nargs="+", help="worktree-relative files or directories the worker may edit")
     parser.add_argument("--check", help="the brief's acceptance check, run again here in the worktree after the hand-back")
     parser.add_argument("--timeout", type=float, help="seconds to wait for the hand-back; no limit when omitted")
     options = parser.parse_args(arguments)
@@ -379,7 +431,7 @@ def main(arguments: list[str] | None = None) -> int:
         parser.error("the brief is empty")
     result = start(definitions, coding_agent=options.coding_agent, model=options.model, effort=options.effort,
                    role=options.role, brief=brief, worktree=options.worktree.resolve(), out=options.out.resolve(),
-                   check=options.check, timeout=options.timeout)
+                   check=options.check, timeout=options.timeout, owned_paths=options.owned_paths)
     print(json.dumps(result, indent=2))
     if result["outcome"] == "handed_back":
         print("\n--- hand-back ---\n" + Path(result["hand_back"]).read_text(encoding="utf-8").rstrip())

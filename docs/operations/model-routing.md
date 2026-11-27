@@ -142,7 +142,7 @@ limits named are those of the plans the pages describe.
 | GPT-6.2 Astra, Codex | the plan's Codex allowance | an estimated 6 to 50 messages, at four times Sol's list price | 40 to 45 | 189 of 190 | One false report as a worker. |
 | GPT-6.1 Terra, Codex | the plan's Codex allowance | an estimated 35 to 285 messages | 61 to 66 | 99 of 99 | |
 | GPT-6 Luna, Codex | the plan's Codex allowance | an estimated 350 to 3,000 messages | 100 to 123 | 84 of 84 | |
-| Gemini 4 Neon, Antigravity | the Gemini group's limits | list price between Sonnet and Opus | 84 to 102 | 51 of 79 | Up to 512,000 tokens of context in Antigravity. Most misses are refusals on quota and empty replies after a denied command, from before the call told a read-only delegate to run no command; with it, 3 of 3 reviews hand back. |
+| Gemini 4 Neon, Antigravity | the Gemini group's limits | list price between Sonnet and Opus | 84 to 102 | 51 of 79 | Up to 512,000 tokens of context in Antigravity. Most misses are refusals on quota and empty replies after a denied command, from earlier print-mode starts, before the call told a read-only delegate to run no command; with that note, 3 of 3 reviews handed back. The automatic start is not re-measured. |
 | Gemini 4 Carbon, Antigravity | the Gemini group | list price doubles on 1 December 2026 to Opus's | 48 to 61 | 55 of 76 | The slowest: 197 to 474 seconds for an exploration, and reviews past 900 seconds. |
 | Gemini 4 Hydrogen, Antigravity | the Gemini group | below Sonnet by list price | 149 to 176 | 44 of 46 | |
 | Gemini 4 Argon, Antigravity | the Gemini group | Sonnet's list price until it leaves | 69 to 80 | 37 of 37 | One false report as an explorer. Leaves on 30 November 2026. |
@@ -151,10 +151,13 @@ limits named are those of the plans the pages describe.
 | Claude Opus 5.5 and Sonnet 5.5, Antigravity | the Claude and GPT group, apart from the Claude subscription and from the Gemini group | not published | not measured there | 2 of 9 and 3 of 9 | A separate quota pool for a Claude model. They ask for a shell command on most briefs that do not forbid one. |
 
 What a start can do belongs to the coding agent and not the model
-([starting a delegate](coding-agents.md#starting-a-delegate-on-any-coding-agent)): a
-Codex reviewer runs commands inside an enforced read-only sandbox, a Claude Code
-worker runs checks and commits, and an Antigravity delegate reads and edits files and
-runs no command. The frame row above lists the starts shown to read an image.
+([starting a delegate](coding-agents.md#starting-a-delegate-on-any-coding-agent)): all
+three coding agents now start on their automatic mode, so no reviewer runs under an
+enforced read-only sandbox and an Antigravity delegate can run commands. The
+call's post-run accidental-edit check reports unexpected changes. Counts and notes in
+the rows above come from earlier starts that used sandboxes, permission limits or a
+no-command note, and are not re-measured on the automatic starts. The frame row above
+lists the starts shown to read an image.
 
 ## Roles and their default models
 
@@ -171,9 +174,11 @@ For a different host, model or effort, name it in the
 [delegate call](coding-agents.md#starting-a-delegate-on-any-coding-agent) and give
 the reason in the brief and pull request. The Codex selectors are verified on their
 own. Starting the tracked Codex roles natively is unverified. The Antigravity
-wrappers keep native aliases (`pro`, `flash_lite`) and explicit `tools:` lists,
-because full model identifiers break `agy agents` discovery and an omitted `tools:`
-list leaves a role with no tools (`Userspace` `M5`/`M8`).
+wrappers keep native aliases (`pro`, `flash_lite`) and explicit `tools:` lists
+(worker: `read_file`, `edit_file`, `write_file`, `run_command`; read-only roles:
+`read_file`, `run_command`), because full model identifiers break `agy agents`
+discovery and an omitted `tools:` list leaves a role with no tools (`Userspace`
+`M5`/`M8`). The earlier file-only restriction is removed.
 See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
 
 ## Quota and spending
@@ -195,7 +200,7 @@ See [delegation roles](coding-agents.md#delegation-roles) for wrapper discovery.
   purchases; Google's plans page documents an Antigravity "AI Credit Overages" = Never
   setting, though this account's active value has not been directly verified in the
   account UI. Local `~/.claude/settings.json` sets `"outputStyle": "Explanatory"`, which
-  `delegates/3` overrides to `"default"` on every delegated Claude Code role.
+  `delegates/4` overrides to `"default"` on every delegated Claude Code role.
 - **Spend the scarcest window on the work that needs it.** The hard-change row's first
   choice and substitutes are the candidates to consider for a hard change; bounded and
   locating work can go to cheaper models.
@@ -219,7 +224,7 @@ below is a starting point.
 | What is spent | Where to start | Then | Why |
 | --- | --- | --- | --- |
 | Only the limit of Claude Fable 5.2 | Claude Code on Claude Opus 5.5, at High or above | Codex on GPT-6.2 Sol at Extra-high, then GPT-6.2 Astra at Extra-high | Opus accounts for more lead requests than Fable in the sampled transcripts on this host. Its lead effort is unknown. A general public index favors Max over High. |
-| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high, then the Antigravity app on Gemini 4 Neon at High for engineering work that needs no gameplay | Sol has local evidence across bounded implementation, hard changes and code review. Astra has local evidence across code review (24 reviews across High and Medium), document review, exploration and tooling (with one false report at High on `#873` and one 600 s High explorer timeout on `#945`), and remains a judgment call for open design without a matched comparison to Sol. The maker estimates about a third as many Astra messages as Sol messages in five hours on smaller plans. Neon may come before Astra for a watched documentation leaf. Unattended leading remains unverified. |
+| The whole Claude window | Codex on GPT-6.2 Sol at Extra-high | Codex on GPT-6.2 Astra at Extra-high, then the Antigravity app on Gemini 4 Neon at High | Sol has local evidence across bounded implementation, hard changes and code review. Astra has local evidence across code review (24 reviews across High and Medium), document review, exploration and tooling (with one false report at High on `#873` and one 600 s High explorer timeout on `#945`), and remains a judgment call for open design without a matched comparison to Sol. The maker estimates about a third as many Astra messages as Sol messages in five hours on smaller plans. Neon may come before Astra for a watched documentation leaf. Unattended leading remains unverified. |
 
 - **Check which limit the session shows as spent first.** Each coding agent shows what
   remains in a session ([delegate profiles](delegate-profiles.md)).

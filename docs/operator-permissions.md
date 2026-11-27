@@ -106,19 +106,6 @@ host). Record the agreement and its scope as a row in the
 pull request. Respect host or tool
 permission refusals and report the exact action and stated reason.
 
-## Command permissions
-
-Project-local [gameplay command allowances](operations/coding-agents.md#gameplay-command-allowances)
-authorize only the listed commands on eligible hosts. Managed policies and separate
-tool permissions still govern setup, credential retrieval, source and GitHub
-operations, and shell code. A matching command confers neither filesystem confinement
-nor gameplay custody, and establishes neither source identity nor credential loading.
-
-### Verified loading
-
-Confirm that changed rules load with execution evidence for the selected route.
-Follow the [host's activation instructions](operations/coding-agents.md#per-user-activation).
-
 ## Dedicated gameplay context
 
 The deciding actor gets the [player guide](player-guide.md), frozen task context
