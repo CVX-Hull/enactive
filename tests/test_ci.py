@@ -175,14 +175,17 @@ def _pull_request_body(body):
 
 class ModelsLineTests(unittest.TestCase):
     def test_inline_models_line_passes(self):
-        for body in ("Models: lead A at high; worker B at medium", "- **Models:** lead A", "model: human",
+        for body in ("Models: lead A at high; worker B at medium", "- **Models:** lead A",
+                     "**Models**: lead A at high", "model: human",
                      "## Models\n\nModels: x\n\n## Review"):
             with self.subTest(body=body):
                 self.assertIsNone(ci.check_pr_models_line(_pull_request_body(body)))
 
     def test_multiline_models_section_passes(self):
-        body = "## Models\n\nModels:\n- lead A at high\n- worker B at medium\n\n## Review\n"
-        self.assertIsNone(ci.check_pr_models_line(_pull_request_body(body)))
+        for body in ("## Models\n\nModels:\n- lead A at high\n- worker B at medium\n\n## Review\n",
+                     "Models:\n1. lead A at high\n"):
+            with self.subTest(body=body):
+                self.assertIsNone(ci.check_pr_models_line(_pull_request_body(body)))
 
     def test_missing_models_line_fails(self):
         for event in (_pull_request_body("## Problem\n\nNothing here"), _pull_request_body(None),
@@ -190,13 +193,19 @@ class ModelsLineTests(unittest.TestCase):
             with self.subTest(event=event):
                 self.assertIn("`Models:`", ci.check_pr_models_line(event))
 
-    def test_empty_template_placeholder_fails(self):
+    def test_empty_template_placeholder_and_fenced_examples_fail(self):
         template = Path(ci.ROOT / ".github" / "pull_request_template.md").read_text()
         self.assertIn("`Models:`", ci.check_pr_models_line(_pull_request_body(template)))
-        body = "## Models\n\nModels:\n\n<!-- State the lead's agent -->\n\n## Review\n"
-        self.assertIn("`Models:`", ci.check_pr_models_line(_pull_request_body(body)))
-        self.assertIn("`Models:`", ci.check_pr_models_line(_pull_request_body("Models:")))
-        self.assertIn("`Models:`", ci.check_pr_models_line(_pull_request_body("Models: <!-- later -->")))
+        for body in (
+            "## Models\n\nModels:\n\n<!-- State the lead's agent -->\n\n## Review\n",
+            "Models:",
+            "Models: <!-- later -->",
+            "Models:\n\nTests pass locally.\n",
+            "Models:\n-\n",
+            "```text\nModels: example only\n```\n",
+        ):
+            with self.subTest(body=body):
+                self.assertIn("`Models:`", ci.check_pr_models_line(_pull_request_body(body)))
 
     def test_commented_models_line_does_not_count(self):
         self.assertIsNotNone(ci.check_pr_models_line(_pull_request_body("<!--\nModels: hidden\n-->")))
@@ -206,7 +215,8 @@ class ModelsLineTests(unittest.TestCase):
             directory = Path(temporary)
             (directory / "event").write_text(json.dumps(event))
             environment = dict(GITHUB_EVENT_PATH=str(directory / "event"), GITHUB_EVENT_NAME=event_name,
-                               GITHUB_SHA="0" * 40, GITHUB_OUTPUT=str(directory / "output"))
+                               GITHUB_SHA="0" * 40, GITHUB_OUTPUT=str(directory / "output"),
+                               GITHUB_STEP_SUMMARY=str(directory / "summary"))
             choice = ci.Plan("full", "stub")
             with patch.dict(os.environ, environment), patch.object(ci, "choose", return_value=choice):
                 try:
@@ -267,7 +277,8 @@ class WorkflowPolicyTests(unittest.TestCase):
         return steps[0]
 
     def test_triggers_permissions_and_the_job_set(self):
-        self.assertEqual(self.workflow["on"]["pull_request"], dict(branches=["main"]))
+        self.assertEqual(self.workflow["on"]["pull_request"],
+                         dict(branches=["main"], types=["opened", "synchronize", "reopened", "edited"]))
         self.assertEqual(self.workflow["on"]["push"], dict(branches=["main"]))
         self.assertEqual(self.workflow["permissions"], {"contents": "read"})
         self.assertEqual(set(self.jobs), {*ci.LANES, "controller"})

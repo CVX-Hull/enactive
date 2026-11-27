@@ -164,15 +164,18 @@ def choose(repository: Repository, event_name: str, event: dict, sha: str) -> Pl
 
 
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
-_MODELS_LINE = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*)?Models?:(?:\*\*)?\s*(.*)$", re.IGNORECASE | re.MULTILINE)
+_FENCE = re.compile(r"(?m)^[ \t]*(`{3,}|~{3,})[^\n]*\n.*?^[ \t]*\1[ \t]*$", re.DOTALL)
+_MODELS_LINE = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*)?Models?(?:\*\*)?:(?:\*\*)?\s*(.*)$", re.IGNORECASE | re.MULTILINE)
+_LIST_ITEM = re.compile(r"^\s*(?:[-*+]|[0-9]+[.)])\s+\S")
 
 
 def check_pr_models_line(event: dict) -> str | None:
     """Return an error message unless the pull request body has a non-empty `Models:` line.
 
     Presence only: which coding agent, model or effort the lead chose is not restricted. The value may
-    follow on the same line or in the non-heading lines right after it (a bulleted list)."""
-    body = _COMMENT.sub("", (event.get("pull_request") or {}).get("body") or "")
+    follow on the same line or as a populated list item right after it; fenced examples and comments are ignored."""
+    raw = (event.get("pull_request") or {}).get("body") or ""
+    body = _FENCE.sub("", _COMMENT.sub("", raw))
     lines = body.splitlines()
     for index, line in enumerate(lines):
         match = _MODELS_LINE.match(line)
@@ -180,8 +183,8 @@ def check_pr_models_line(event: dict) -> str | None:
             continue
         if match.group(1).strip():
             return None
-        following = next((text.strip() for text in lines[index + 1:] if text.strip()), "")
-        if following and not following.startswith("#"):
+        following = next((text for text in lines[index + 1:] if text.strip()), "")
+        if _LIST_ITEM.match(following):
             return None
     return ("Pull requests must include a non-empty `Models:` line in the description (the lead's and each "
             "delegate's coding agent, model and effort, or human; see the pull request template). This "

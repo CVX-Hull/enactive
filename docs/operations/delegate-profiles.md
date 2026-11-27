@@ -40,7 +40,7 @@ cover these four selectors and leave the full model list unknown.
 
 | Role and configuration | What the evidence supports |
 | --- | --- |
-| Worker, GPT-6.2 Sol at Extra-high | 28 attempts across bounded implementation (16), prose (9), hard changes (2) and tooling (1). All 28 handed back: 25 passed acceptance (17 without repair, 11 repairs total), 2 failed, 26 merged and 2 discarded. Matched runs favor Sol on code (`#834`) and Fable on prose (`#811`). |
+| Worker, GPT-6.2 Sol at Extra-high | 30 attempts across bounded implementation (17), prose (10), hard changes (2) and tooling (1). All 30 handed back: 27 passed acceptance (19 without repair, 11 repairs total), 2 failed, 1 unrecorded acceptance; 28 merged and 2 discarded. Matched runs favor Sol on code (`#834`) and Fable on prose (`#811`). |
 | Worker, GPT-6.2 Sol at High | 14 attempts across hard changes (7, including `#918`, `#921`, `#922`, `#937`) and bounded implementation (7, including `#949` with 0 repairs, `#950` with 2 repairs, and `#464`, `#957` and `#944` with 1 repair each). All 14 handed back: 13 passed (4 without repair, 10 repairs total), 13 merged and 1 discarded (`#919`). |
 | Worker, GPT-6.2 Sol at Low | 1 bounded implementation attempt (`#1032`, `tools/delegate.py` hardening): handed back in 125 s and passed external pytest + ruff checks with 0 repairs. Supported for check-backed bounded work alongside `Userspace` `M21` outside-repo evidence (30/30). |
 | Worker, GPT-6.2 Astra at Extra-high, High and Medium | 3 attempts (1 Extra-high prose, 1 High prose, 1 Medium Python tooling on `#914`). All 3 handed back and passed without repair; Extra-high dropped two citations the lead restored, and High recorded one false report (`#873`, unbriefed edit reverted by the lead). |

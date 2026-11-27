@@ -186,7 +186,7 @@ def test_role_wrappers_match_routing_table_and_tool_policy():
         tools = meta.get('tools')
         assert isinstance(tools, list) and tools and 'run_command' not in tools
         if name == 'worker':
-            assert {'read_file', 'edit_file', 'write_file'} <= set(tools)
+            assert sorted(tools) == ['edit_file', 'read_file', 'write_file']
         else:
             assert tools == ['read_file']
 

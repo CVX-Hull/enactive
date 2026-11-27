@@ -168,27 +168,35 @@ on repository tasks.
   project's settings, whose only allowances are the three
   [gameplay prefixes](#gameplay-command-allowances); the role instruction and the brief
   forbid them, and nothing mechanical does.
-- **Refusals.** When a run fails or returns nothing, the call looks in its output for
-  quota or sign-in wording listed for each coding agent in the definitions file. It
-  never reads a reply for that wording, since a hand-back may discuss quotas. The
-  call reports an Antigravity quota refusal as `refused`, with the time until the quota
-  resets in its detail.
-  Detection on Codex and Claude Code is unproven.
-  A refusal worded differently is reported as `failed` or `empty_reply`, and one that arrives
-  as an ordinary reply with exit code 0 is handed back as text for the lead to read.
-  Either way nothing else is started.
+- **Refusals.** When a run fails (non-zero exit or an exit-0 structured error such as
+  `is_error: true`) or returns nothing, the call looks in its output — including any
+  error reply text — for quota or sign-in wording listed for each coding agent in the
+  definitions file. A successful hand-back's reply is never read for refusal wording,
+  since a hand-back may discuss quotas. The call reports an Antigravity quota refusal as
+  `refused`, with the time until the quota resets in its detail. Detection on Codex and
+  Claude Code is unproven. A refusal worded differently is reported as `failed` or
+  `empty_reply`, and one that arrives as an ordinary exit-0 reply without a structured
+  error flag is handed back as text for the lead to read. Either way nothing else is
+  started.
 - **Claude Code settings.** A delegated run loads the user's settings as well as the
   project's. Every delegated role (worker, reviewer, explorer and locator) sets the
   default output style (`{"outputStyle": "default"}`), so the user's selected style
   does not carry into delegated hand-backs.
-- **Antigravity role wrappers.** Tracked wrappers under `.agents/agents/` keep native
-  aliases (`pro`, `flash_lite`) rather than full model identifiers, which break wrapper
-  discovery (`agy agents`), and declare explicit `tools:` lists because an omitted
-  `tools:` list gives a role no tools (observed on Antigravity CLI 1.5.13 in the
-  sibling `Userspace` project, `M5`/`M8`). Enactive's wrappers list file tools only
-  (`read_file`, `edit_file`, `write_file` for worker; `read_file` for read-only roles)
-  with no `run_command`, keeping Antigravity delegates file-only with no edits to host
-  settings outside the repository.
+- **Antigravity role wrappers (native `--agent <role>` starts only).** Tracked wrappers
+  under `.agents/agents/` apply to native wrapper starts and are not selected by
+  `tools/delegate.py`'s print-mode starts (`--mode accept-edits` and `--mode plan`). The
+  wrappers keep native aliases (`pro`, `flash_lite`) rather than full model identifiers,
+  which break wrapper discovery (`agy agents`), and declare explicit `tools:` lists
+  because an omitted `tools:` list leaves a native role with no tools (outside-repo
+  observation on Antigravity CLI 1.5.13 in private repository `CVX-Hull/Userspace`,
+  `docs/field-notes/harnesses/how-each-harness-runs-a-delegated-model.md`, `M5`/`M8`).
+  Enactive's wrappers list file tools only (`read_file`, `edit_file`, `write_file` for
+  worker; `read_file` for read-only roles) with no `run_command`, keeping Antigravity
+  delegates file-only with no edits to host settings outside the repository. Two details
+  remain unverified directly on Enactive's live Antigravity CLI: whether additional
+  read-only search tool names are supported in native wrapper `tools:` lists, and the
+  exact JSON field names (`finish_reason` / `finishReason`) emitted on a live
+  print-mode timeout (`outcome_checks` in `.agents/delegates.json`).
 - **A note for what a start cannot do.** A role in the definitions file may carry a
   `note`, which the call puts after the role's instruction in every brief. The
   Antigravity reviewer, explorer and locator carry one that says to run no shell
