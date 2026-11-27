@@ -5,6 +5,7 @@ model: flash_lite
 subagent: true
 tools:
   - read_file
+  - run_command
 ---
 
 You are the locator. Before starting, read and follow `.agents/roles/locator.md`; that

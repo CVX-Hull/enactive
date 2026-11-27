@@ -5,6 +5,7 @@ model: pro
 subagent: true
 tools:
   - read_file
+  - run_command
 ---
 
 You are the explorer. Before starting, read and follow `.agents/roles/explorer.md`;

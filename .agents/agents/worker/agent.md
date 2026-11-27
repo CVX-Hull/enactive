@@ -7,6 +7,7 @@ tools:
   - read_file
   - edit_file
   - write_file
+  - run_command
 ---
 
 You are the worker. Before starting, read and follow `.agents/roles/worker.md`; that

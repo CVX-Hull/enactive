@@ -5,6 +5,7 @@ model: pro
 subagent: true
 tools:
   - read_file
+  - run_command
 ---
 
 You are the reviewer. Before starting, read and follow `.agents/roles/reviewer.md`;
