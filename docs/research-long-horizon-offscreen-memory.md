@@ -512,15 +512,16 @@ tested alongside them).
 The points below are **engineering inferences and testable hypotheses** for
 Enactive's open memory questions—not owner decisions.
 
-- **Test explicit observation-over-memory precedence for descriptive claims (`#1020`, `#1024`, `#1025`).**
+- **Test explicit observation-over-memory precedence for descriptive claims (`#1020`, `#1022`, `#1024`, `#1025`).**
   By analogy to L01's code-versus-instruction-file conflict (where agents often
   named the conflict yet still obeyed the stale file) and L27's finding that
   consistently high aid accuracy increased bias relative to alternating accuracy,
-  Enactive should test giving a fresh player-visible observation explicit
-  precedence whenever it resolves the same descriptive claim in the same scope,
-  and verify whether the player's *action* follows the live observation rather
-  than merely noting the discrepancy.
+  Enactive's approved `#1022` precedence policy gives a fresh player-visible
+  observation explicit precedence whenever it resolves the same descriptive claim
+  in the same scope; the open empirical question is whether that rule shifts the
+  player's *action* in extended play rather than merely noting the discrepancy.
   [World-state facts (#1020)](https://github.com/CVX-Hull/enactive/issues/1020) ·
+  [Statement kinds, grounded `when` and precedence (#1022)](https://github.com/CVX-Hull/enactive/issues/1022) ·
   [What the curator should record (#1024)](https://github.com/CVX-Hull/enactive/issues/1024) ·
   [Post-cut delivery (#1025)](https://github.com/CVX-Hull/enactive/issues/1025)
 - **Test how built-in game displays, external curated memory and fresh checks should divide the work (`#1020`, `#1024`, `#1026`).**
