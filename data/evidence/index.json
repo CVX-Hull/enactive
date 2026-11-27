@@ -1116,6 +1116,23 @@
       },
       "visibility": "private"
     },
+    "long-horizon-offscreen-memory-research": {
+      "availability": "present",
+      "bytes": 876619,
+      "cited_by": [
+        "docs/research-long-horizon-offscreen-memory.md"
+      ],
+      "files": 77,
+      "manifest_sha256": "69287077e0b1bf584c747985a5c0c12643da67de98a14b0bf2d955b91eb9bbd3",
+      "note": "Phase 1 explorer critiques, Phase 2 reading briefs and full-text reports across three model families, reconciled digests, claims list and scripts behind the companion research page on long-horizon off-screen state and environmental tracking; downloaded source texts are not kept",
+      "sources": {
+        "explorers": "session-scratch/explorers",
+        "method": "session-scratch/method",
+        "readings": "session-scratch/readings",
+        "reconciled": "session-scratch/reconciled"
+      },
+      "visibility": "private"
+    },
     "malvern-trunk-paired-replay-829": {
       "availability": "present",
       "bytes": 36002169,
