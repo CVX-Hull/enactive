@@ -134,7 +134,7 @@ To close the race where ordinary work exhausts `spend_limit_usd` before the driv
 | Ballot item | Governing row(s) in `docs/decisions/owner-decisions.md` | Effect if approved |
 | --- | --- | --- |
 | 1. Bounded actor-start briefing | [`#measure-knowledge-and-intent-before-capping`](../decisions/owner-decisions.md#measure-knowledge-and-intent-before-capping), [`#curator-writes-articles-over-facts`](../decisions/owner-decisions.md#curator-writes-articles-over-facts) | Narrows both (`51,601`-char actor-start brief satisfies "on shown need") |
-| 2. Context-aware recall dedup & title-first index | [`#recall-chooses-briefing-and-reminders`](../decisions/owner-decisions.md#recall-chooses-briefing-and-reminders) | Narrows (keeps recall model; adds `already_in_context` & index cap) |
+| 2. Context-aware recall dedup & title-first index | [`#recall-chooses-briefing-and-reminders`](../decisions/owner-decisions-archive.md#recall-chooses-briefing-and-reminders) | Narrows (keeps recall model; adds `already_in_context` & index cap) |
 | 3. Priced-transient recall fallthrough | [`#lost-requests-are-tolerated`](../decisions/owner-decisions.md#lost-requests-are-tolerated) | Preserves bounded exposure (unpriced failures still disable recall) |
 | 4. Cut hysteresis, rescue & atomic update+cut | [`#bounded-context-is-the-first-speed-lever`](../decisions/owner-decisions.md#bounded-context-is-the-first-speed-lever) | Refines `player-host/12` cut contract |
 | 5. Halving-step `tail-notice` placement | [`#bounded-context-is-the-first-speed-lever`](../decisions/owner-decisions.md#bounded-context-is-the-first-speed-lever) | Refines notice cadence; preserves wire kinds |

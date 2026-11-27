@@ -307,7 +307,7 @@ The reminder cadence trades off timeliness, request cost and repetition. Reminde
 persist in the actor's history, so their text contributes to subsequent requests.
 [Measured delivery cost and prompt burden](../acceptance/2026-11-14-recall-fix-delivery-check.md)
 
-[Decision on recall for briefings and reminders](../decisions/owner-decisions.md#recall-chooses-briefing-and-reminders)
+[Decision on recall for briefings and reminders](../decisions/owner-decisions-archive.md#recall-chooses-briefing-and-reminders)
 
 ## 3. Measurement
 
