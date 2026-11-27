@@ -160,6 +160,13 @@ reads ([R-UNREADABLE-DOCS](../risks.md#development-risks)).
 - **A design note and a dated record open with "At a glance"**: the question, the
   answer, what is not known, and the owner decisions needed, each in a line or two. A
   reader who trusts the page stops there; the rest is the evidence.
+- **Put decision analysis on the page and keep implementer detail in the work record.**
+  A document or report for the owner states what is wrong or proposed, why it matters,
+  the options with their costs and what is the owner's to decide; implementation
+  minutiae stay in the issue or pull request. Fit length to the item.
+- **Draw flows instead of narrating them.** Use a table for comparisons, numbered
+  steps for sequences and a Mermaid diagram for flows between parts or states rather
+  than paragraphs narrating who hands what to whom.
 - **Define a term where a reader starts.** Terms the project uses throughout are in the
   [glossary](../glossary.md); a page links it or defines its own terms at first use.
 - **Write sentences.** A rule is stated as a sentence with a subject and a verb, not as

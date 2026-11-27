@@ -25,7 +25,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DELEGATES = ROOT / ".agents/delegates.json"
-SCHEMA = "delegates/2"
+SCHEMA = "delegates/3"
 TOKEN_NAMES = ("input_tokens", "cached_input_tokens", "cache_write_input_tokens", "output_tokens")
 # The hand-back's own statement of the acceptance check, asked for in the brief when the lead names a check.
 REPORTED = re.compile(r"^Acceptance check: (passed|failed|not run)\s*$", re.MULTILINE)
@@ -105,8 +105,7 @@ def run(argv: list[str], *, cwd: Path, environment: dict, stdin: str | None, tim
 def refusal(patterns: list[str], out: str, err: str) -> str | None:
     """The line of a run's output that says the coding agent refused it (quota, sign-in), or None.
 
-    Asked only of a run that failed or returned nothing. A reply is never read for it: a hand-back may
-    discuss quotas, so a refusal that arrives as an ordinary reply with exit code 0 reaches the lead as text."""
+    Asked only of a run that failed or returned nothing. A successful hand-back can discuss quotas."""
     for text in (err, out):
         for line in text.splitlines():
             if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns):
@@ -130,6 +129,23 @@ def at_path(record: dict, path: str) -> object:
             return None
         value = value.get(key)
     return value
+
+
+def structured_outcome(record: dict, checks: dict) -> tuple[str | None, str | None]:
+    """Classify unsuccessful completion reported in an exit-zero output record."""
+    for path in checks.get("timeout_fields", []):
+        value = at_path(record, path)
+        if isinstance(value, str) and any(re.search(pattern, value, re.IGNORECASE)
+                                          for pattern in checks.get("timeout_patterns", [])):
+            return "timed_out", f"{path}={value!r}"
+    if (path := checks.get("error_flag")) and at_path(record, path) is True:
+        return "failed", f"{path}=True"
+    if status := checks.get("ok_status"):
+        path = status["path"]
+        value = at_path(record, path)
+        if isinstance(value, str) and value and value.lower() not in {ok.lower() for ok in status["values"]}:
+            return "failed", f"{path}={value!r}"
+    return None, None
 
 
 def words(stdout: str) -> str:
@@ -182,6 +198,40 @@ def reported_usage(stdout: str, stdout_object: dict, how: dict) -> tuple[dict[st
             sorted(models) if models is not None else None)
 
 
+def write_reports(out: Path, result: dict, head_before: str, check: str | None) -> dict:
+    """Save the result and the lead's draft ledger row when a run directory exists."""
+    if out.is_dir():
+        rerun = (result["check"] or {}).get("rerun")
+        row = {
+            "schema": "coding-agent-attempt/3",
+            "issue": None,
+            "kind_of_work": None,
+            "base_commit": head_before if re.fullmatch(r"[0-9a-f]{40}", head_before) else None,
+            "role": result["role"],
+            "coding_agent": result["coding_agent"],
+            "coding_agent_version": result["coding_agent_version"],
+            "model": result["model"],
+            "effort": result["effort"],
+            "reason": None,
+            "date": result["date"],
+            "hand_back": result["outcome"],
+            "acceptance": rerun if result["role"] == "worker" and rerun in ("passed", "failed") else None,
+            "repairs": 0,
+            "wall_seconds": result["wall_seconds"],
+            "blind_preference": None,
+            "outcome": None,
+            "findings": {"confirmed": 0, "rejected": 0} if result["role"] == "reviewer" else None,
+            "false_report": None,
+            "usage": result["usage"],
+            "brief_design": None,
+            "brief_extent": None,
+            "brief_check": True if check else None,
+        }
+        (out / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        (out / "attempt-row-draft.json").write_text(json.dumps(row, indent=2) + "\n", encoding="utf-8")
+    return result
+
+
 def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role: str, brief: str,
           worktree: Path, out: Path, check: str | None, timeout: float | None) -> dict:
     """Start the named delegate once and describe what happened. Never starts a different one."""
@@ -197,8 +247,10 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     if how is None:
         raise SystemExit(f"{agent['name']} has no role {role!r}; known: {', '.join(sorted(agent['roles']))}")
     result["coding_agent"] = agent["name"]
+    head_before = (git(worktree, "rev-parse", "HEAD") or "").strip()
     if "unavailable" in how:
-        return result | {"outcome": "unavailable", "detail": how["unavailable"]}
+        result |= {"outcome": "unavailable", "detail": how["unavailable"]}
+        return write_reports(out, result, head_before, check)
 
     out.mkdir(parents=True, exist_ok=True)
     reply_file = out / "reply.md"
@@ -214,21 +266,21 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     argv = fill(how["argv"], values)
 
     if shutil.which(argv[0], path=environment.get("PATH")) is None:
-        return result | {"outcome": "failed_start", "detail": f"{argv[0]} is not on the path"}
+        result |= {"outcome": "failed_start", "detail": f"{argv[0]} is not on the path"}
+        return write_reports(out, result, head_before, check)
     try:  # The version is a detail of the report; failing to read it does not stop the start.
         version = subprocess.run(agent["version"], capture_output=True, text=True, errors="replace", env=environment,
                                  timeout=VERSION_WAIT).stdout
         result["coding_agent_version"] = (version.strip().splitlines() or [None])[0]
     except (OSError, subprocess.TimeoutExpired):
         pass
-    head_before = (git(worktree, "rev-parse", "HEAD") or "").strip()
-
     began = time.monotonic()
     try:
         exit_code, stdout, stderr = run(argv, cwd=worktree, environment=environment, timeout=timeout,
                                         stdin=sent if how["brief"] == "stdin" else None)
     except OSError as error:
-        return result | {"outcome": "failed_start", "detail": str(error)}
+        result |= {"outcome": "failed_start", "detail": str(error)}
+        return write_reports(out, result, head_before, check)
     result["wall_seconds"] = round(time.monotonic() - began)
     result["exit_code"] = exit_code
     (out / "stdout.txt").write_text(stdout, encoding="utf-8")
@@ -243,19 +295,26 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
         reply_file.write_text(reply, encoding="utf-8", errors="replace")
     result["usage"], result["models_reported"] = reported_usage(stdout, stdout_object, usage_format)
 
-    no_hand_back = exit_code != 0 or not reply.strip()
+    structured, detail = (None, None)
+    if exit_code == 0 and reply_format != "file":
+        structured, detail = structured_outcome(stdout_object, agent.get("outcome_checks", {}))
+    no_hand_back = exit_code != 0 or structured == "failed" or not reply.strip()
     said = words(stdout)
-    refused = refusal(agent["refusals"], said, stderr) if no_hand_back else None
+    refused = refusal(agent["refusals"], said, stderr) if no_hand_back and structured != "timed_out" else None
     last_line = (stderr.strip().splitlines() or said.strip().splitlines() or ["no output"])[-1][:300]
     if exit_code == 0 and reply_format != "file" and stdout.strip() and not isinstance(stdout_object.get(reply_format["stdout_json"]), str):
         last_line = (f"stdout is not one JSON object with a text `{reply_format['stdout_json']}`, so the reply was not "
                      f"read (see stdout.txt): {last_line}")[:300]
     if exit_code is None:
         result |= {"outcome": "timed_out", "detail": f"no hand-back within {timeout:g} seconds"}
+    elif structured == "timed_out":
+        result |= {"outcome": "timed_out", "detail": f"exit code 0 reported a timeout: {detail}"}
     elif refused:
         result |= {"outcome": "refused", "detail": refused}
     elif exit_code != 0:
         result |= {"outcome": "failed", "detail": f"exit code {exit_code}: {last_line}"}
+    elif structured == "failed":
+        result |= {"outcome": "failed", "detail": f"exit code 0 reported {detail}: {last_line}"}
     elif not reply.strip():
         result |= {"outcome": "empty_reply", "detail": f"exit code 0 and no reply, which is a failed run: {last_line}"}
     else:
@@ -279,7 +338,7 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
         (out / "check.txt").write_text(rerun_out + rerun_err, encoding="utf-8")
         result["check"] |= {"rerun": "timed_out" if rerun_code is None else "passed" if rerun_code == 0 else "failed",
                             "rerun_exit_code": rerun_code}
-    return result
+    return write_reports(out, result, head_before, check)
 
 
 def listing(definitions: dict) -> str:
@@ -321,8 +380,6 @@ def main(arguments: list[str] | None = None) -> int:
     result = start(definitions, coding_agent=options.coding_agent, model=options.model, effort=options.effort,
                    role=options.role, brief=brief, worktree=options.worktree.resolve(), out=options.out.resolve(),
                    check=options.check, timeout=options.timeout)
-    if options.out.is_dir():
-        (options.out / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2))
     if result["outcome"] == "handed_back":
         print("\n--- hand-back ---\n" + Path(result["hand_back"]).read_text(encoding="utf-8").rstrip())

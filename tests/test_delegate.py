@@ -101,7 +101,7 @@ def stand_ins(tmp_path):
         return {"name": name, "version": version, "refusals": ["usage limit", "sign ?in", r"\b429\b"], "usage": usage,
                 "roles": {"worker": role, "reviewer": role, "explorer": role, "locator": role}}
 
-    definitions = {"schema": "delegates/2", "role_instruction": "You are the {role}.", "drop_environment": ["SECRET_KEY"],
+    definitions = {"schema": "delegates/3", "role_instruction": "You are the {role}.", "drop_environment": ["SECRET_KEY"],
                    "coding_agents": {
                        "first": agent("First", [sys.executable, commands["first"], "{reply_file}", "{model}", "{effort}"],
                                       reply="file", usage=jsonl_usage),
@@ -288,15 +288,91 @@ def test_the_command_line_requires_every_part_of_the_choice_and_exits_by_outcome
 
 def test_the_previous_delegate_definitions_schema_is_refused(stand_ins, tmp_path):
     definitions = tmp_path / "delegates.json"
-    definitions.write_text(json.dumps(stand_ins.definitions | {"schema": "delegates/1"}))
-    with pytest.raises(SystemExit, match="expected schema delegates/2, found 'delegates/1'"):
+    definitions.write_text(json.dumps(stand_ins.definitions | {"schema": "delegates/2"}))
+    with pytest.raises(SystemExit, match="expected schema delegates/3, found 'delegates/2'"):
         delegate.main(["--delegates", str(definitions), "--list"])
+
+
+@pytest.mark.parametrize(("host", "fields", "reply", "outcome", "detail"), [
+    ("claude-code", {"is_error": True}, "partial reply", "failed", "is_error=True"),
+    ("claude-code", {"subtype": "error"}, "partial reply", "failed", "subtype='error'"),
+    ("antigravity", {"status": "ERROR"}, "partial reply", "failed", "status='ERROR'"),
+    ("claude-code", {"subtype": "error_max_turns", "is_error": True}, "usage limit", "timed_out", "subtype='error_max_turns'"),
+    ("antigravity", {"finishReason": "PRINT_TIMEOUT"}, "partial reply", "timed_out", "finishReason='PRINT_TIMEOUT'"),
+    ("claude-code", {"is_error": True}, "You have hit your quota", "refused", "quota"),
+    ("claude-code", {"subtype": "SUCCESS", "is_error": 1}, "quota discussion", "handed_back", None),
+    ("antigravity", {"status": "success"}, "partial reply", "handed_back", None),
+])
+def test_structured_exit_zero_outcomes(stand_ins, tmp_path, host, fields, reply, outcome, detail):
+    tracked = json.loads(delegate.DELEGATES.read_text())["coding_agents"][host]
+    agent = stand_ins.definitions["coding_agents"]["silent"]
+    agent.update(outcome_checks=tracked["outcome_checks"], refusals=tracked["refusals"])
+    role = agent["roles"]["worker"]
+    role["reply"] = tracked["roles"]["worker"]["reply"]
+    role["argv"].append(json.dumps(fields | {role["reply"]["stdout_json"]: reply}, indent=2))
+    definitions = tmp_path / "delegates.json"
+    definitions.write_text(json.dumps(stand_ins.definitions))
+    brief = tmp_path / "brief.txt"
+    brief.write_text(BRIEF)
+
+    handed_back = outcome == "handed_back"
+    assert delegate.main(["--delegates", str(definitions), "--role", "worker", "--brief", str(brief),
+                          "--worktree", str(stand_ins.worktree), "--out", str(stand_ins.out),
+                          "--coding-agent", "silent", "--model", "model-one", "--effort", "low"]) == (0 if handed_back else 1)
+    result = json.loads((stand_ins.out / "result.json").read_text())
+    assert result["exit_code"] == 0 and result["outcome"] == outcome
+    reply_file = stand_ins.out / "reply.md"
+    assert result["hand_back"] == (str(reply_file.resolve()) if handed_back else None)
+    assert reply_file.read_text() == reply
+    if detail:
+        assert detail in result["detail"]
+    if outcome == "failed":
+        assert "a tool was denied" in result["detail"]
+    row = json.loads((stand_ins.out / "attempt-row-draft.json").read_text())
+    assert row["hand_back"] == outcome
+
+
+@pytest.mark.parametrize(("role", "agent", "check", "acceptance"), [
+    ("worker", "first", "test -f note.txt", "passed"),
+    ("worker", "first", "test -f absent.txt", "failed"),
+    ("reviewer", "second", None, None),
+])
+def test_start_writes_a_draft_in_ledger_schema_order(stand_ins, role, agent, check, acceptance):
+    head = subprocess.check_output(["git", "-C", str(stand_ins.worktree), "rev-parse", "HEAD"], text=True).strip()
+    result, _ = stand_ins(agent, role=role, check=check)
+    assert json.loads((stand_ins.out / "result.json").read_text()) == result
+    row = json.loads((stand_ins.out / "attempt-row-draft.json").read_text())
+    schema = json.loads((ROOT / "schemas/coding-agent-attempt.schema.json").read_text())
+    assert len(row) == 23
+    assert list(row) == schema["required"] == list(schema["properties"])
+    assert row == {
+        "schema": "coding-agent-attempt/3", "issue": None, "kind_of_work": None, "base_commit": head,
+        "role": role, "coding_agent": agent.title(), "coding_agent_version": "9.9.9", "model": "model-one",
+        "effort": "high", "reason": None, "date": result["date"], "hand_back": "handed_back",
+        "acceptance": acceptance, "repairs": 0, "wall_seconds": result["wall_seconds"],
+        "blind_preference": None, "outcome": None, "findings": {"confirmed": 0, "rejected": 0} if role == "reviewer" else None,
+        "false_report": None, "usage": result["usage"], "brief_design": None, "brief_extent": None,
+        "brief_check": True if check else None,
+    }
 
 
 def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
     definitions = delegate.read_delegates(delegate.DELEGATES)
-    assert definitions["schema"] == "delegates/2"
+    assert definitions["schema"] == "delegates/3"
     assert len(definitions["coding_agents"]) == 3
+    agents = definitions["coding_agents"]
+    argv = agents["claude-code"]["roles"]["worker"]["argv"]
+    assert json.loads(argv[argv.index("--settings") + 1]) == {"outputStyle": "default"}
+    for host in ("claude-code", "antigravity"):
+        checks = agents[host]["outcome_checks"]
+        assert set(checks) == {"error_flag", "ok_status", "timeout_fields", "timeout_patterns"}
+        assert isinstance(checks["error_flag"], str) and checks["error_flag"]
+        status = checks["ok_status"]
+        assert set(status) == {"path", "values"} and isinstance(status["path"], str) and status["path"]
+        for values in (status["values"], checks["timeout_fields"], checks["timeout_patterns"]):
+            assert isinstance(values, list) and values and all(isinstance(value, str) and value for value in values)
+        for pattern in checks["timeout_patterns"]:
+            re.compile(pattern, re.IGNORECASE)
     for agent in definitions["coding_agents"].values():
         assert set(agent["roles"]) == ROLES
         for how in agent["roles"].values():

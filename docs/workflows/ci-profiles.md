@@ -9,8 +9,10 @@ status: active
 ```mermaid
 flowchart TB
   accTitle: Proportional checks on pull requests, structural checks on main
-  accDescr: Main-targeting pull requests use documentation consistency, explicit component consumer tests, or full portable regression from the complete diff. The selected profile runs as lane jobs, and the required controller job passes only if every one of them succeeded, so a failure blocks protected merge. Main's ruleset requires the pull request to be up to date with main, so a squash merge gives main the tree the pull request's run tested, and a push to main runs the structural checks only. Native and gameplay acceptance remain separate.
-  P["Main-targeting PR<br/>complete original comparison"] --> E{"Eligible editorial paths?"}
+  accDescr: Main-targeting pull requests first check for a non-empty Models: line, then use documentation consistency, explicit component consumer tests, or full portable regression from the complete diff. The selected profile runs as lane jobs, and the required controller job passes only if every one of them succeeded, so a failure blocks protected merge. Main's ruleset requires the pull request to be up to date with main, so a squash merge gives main the tree the pull request's run tested, and a push to main runs the structural checks only. Native and gameplay acceptance remain separate.
+  P["Main-targeting PR<br/>complete original comparison"] --> MCheck{"Non-empty Models: line?"}
+  MCheck -- No --> MFail["Fail lane job<br/>blocks merge"]
+  MCheck -- Yes --> E{"Eligible editorial paths?"}
   E -- Yes --> D["Strict structure and documents"]
   E -- No --> B{"One explicit component?"}
   B -- Yes --> T["Consumer and boundary tests<br/>plus viewer logic"]
@@ -78,8 +80,12 @@ The lanes run as separate jobs because that roughly halved a full run in a
 
 Every hosted profile runs selected Ruff (including parse errors), import contracts, JavaScript
 syntax, document links and checks (`tools/documents.py`), the run ledger, evidence
-verification, generated run tables and whitespace. Local `--fast` runs the
-same structural checks and nothing else; it is not a hosted profile.
+verification, generated run tables and whitespace. On `pull_request` events (`opened`,
+`synchronize`, `reopened` and `edited`, so description edits immediately re-evaluate the
+check), `tools/ci.py` also verifies that the pull request description carries a non-empty
+`Models:` line (presence only; never restricts the model chosen) before selecting the
+profile. Local `--fast` runs the same structural checks and nothing else; it is not a
+hosted profile.
 
 | Profile | Runs on | Additional checks | Supported claim |
 | --- | --- | --- | --- |
@@ -103,7 +109,8 @@ suite) and reports that lane only.
 **Editorial eligibility.** A complete nonempty Git diff from the pull request's merge
 base, with `--no-renames` and NUL-separated paths. Both sides of renames and deletions
 count, and every changed object must be regular. The five root documents and all
-`docs/**/*.md` qualify, including current guidance and contracts, as do acceptance
+`docs/**/*.md` qualify, except `docs/operations/model-routing.md` (parsed by
+`tests/test_coding_agent_attempts.py` for ledger kinds and wrapper defaults), as do acceptance
 assets and JSON, and `docs/assets/` images. Other Markdown, executable assets, configuration
 and schemas do not. Structural checks cannot prove prose or prompt
 semantics: review compares changed guidance with contracts and source and selects any

@@ -77,6 +77,9 @@ BROWSER_SUITES = ("test_viewer", "test_investigation", "test_investigation_sessi
 
 
 def editorial(path: str) -> bool:
+    if path == "docs/operations/model-routing.md":
+        # Parsed by tests/test_coding_agent_attempts.py for ledger kinds and wrapper defaults.
+        return False
     value = PurePosixPath(path)
     if path in ROOT_DOCUMENTS or path.startswith("docs/") and value.suffix == ".md":
         return True
@@ -160,10 +163,41 @@ def choose(repository: Repository, event_name: str, event: dict, sha: str) -> Pl
         return Plan("full", f"{detail}; full validation required")
 
 
+_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_FENCE = re.compile(r"(?m)^[ \t]*(`{3,}|~{3,})[^\n]*\n.*?^[ \t]*\1[ \t]*$", re.DOTALL)
+_MODELS_LINE = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*)?Models?(?:\*\*)?:(?:\*\*)?\s*(.*)$", re.IGNORECASE | re.MULTILINE)
+_LIST_ITEM = re.compile(r"^\s*(?:[-*+]|[0-9]+[.)])\s+\S")
+
+
+def check_pr_models_line(event: dict) -> str | None:
+    """Return an error message unless the pull request body has a non-empty `Models:` line.
+
+    Presence only: which coding agent, model or effort the lead chose is not restricted. The value may
+    follow on the same line or as a populated list item right after it; fenced examples and comments are ignored."""
+    raw = (event.get("pull_request") or {}).get("body") or ""
+    body = _FENCE.sub("", _COMMENT.sub("", raw))
+    lines = body.splitlines()
+    for index, line in enumerate(lines):
+        match = _MODELS_LINE.match(line)
+        if match is None:
+            continue
+        if match.group(1).strip():
+            return None
+        following = next((text for text in lines[index + 1:] if text.strip()), "")
+        if _LIST_ITEM.match(following):
+            return None
+    return ("Pull requests must include a non-empty `Models:` line in the description (the lead's and each "
+            "delegate's coding agent, model and effort, or human; see the pull request template). This "
+            "checks presence only and does not restrict which coding agent, model or effort was chosen.")
+
+
 def main() -> None:
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+    event_name = os.environ["GITHUB_EVENT_NAME"]
+    if event_name == "pull_request" and (message := check_pr_models_line(event)):
+        raise SystemExit(message)
     repository = Repository(ROOT)
-    plan = choose(repository, os.environ["GITHUB_EVENT_NAME"], event, os.environ["GITHUB_SHA"])
+    plan = choose(repository, event_name, event, os.environ["GITHUB_SHA"])
     print(json.dumps(asdict(plan), indent=2))
     if destination := os.environ.get("GITHUB_OUTPUT"):
         with Path(destination).open("a") as stream:

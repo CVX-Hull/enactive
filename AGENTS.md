@@ -14,12 +14,17 @@ Use the [documentation map](docs/documentation.md) to scope a change from the
 highest affected responsibility through component design/contracts to code and
 select proportionate review. Current architecture is not an attempt log.
 Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and the
-[Project](https://github.com/users/CVX-Hull/projects/2) before changing relevant boundaries. Follow S-AGENT
-for delegation: the lead owns design/integration/verification; parallel workers use
-separate worktrees and disjoint ownership; one integrator and shared-runtime owner;
-named role; clean-context workers/reviewers; bounded briefs. These instructions
-are host-neutral; [coding-agent hosts](docs/operations/coding-agents.md) maps
-roles, tools and permissions for each supported coding agent.
+[Project](https://github.com/users/CVX-Hull/projects/2) before changing relevant boundaries. Follow [S-AGENT](docs/standards/agents.md#the-leads-duties) for delegation: the
+lead owns design/integration/verification; parallel workers use separate worktrees
+and disjoint ownership; one integrator and shared-runtime owner; named role;
+clean-context workers/reviewers; bounded briefs. Before delegating, choose role,
+host, model and effort first from [model routing](docs/operations/model-routing.md):
+start with the cheapest passing tier when an independent check verifies the result,
+and reserve top tiers for open design, hard cross-boundary changes and primary
+reviews. Record the choice on the brief's `Role:` line, the pull request's `Models:`
+line and the attempts ledger. These instructions are host-neutral;
+[coding-agent hosts](docs/operations/coding-agents.md) maps roles, tools and
+permissions for each supported coding agent.
 For gameplay, the lead may explicitly designate one general-purpose campaign
 operator under the frozen player host's bounded actor/handoff procedure.
 Explorers/reviewers never send game inputs.

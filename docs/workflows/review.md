@@ -59,8 +59,9 @@ when evidence is adequate for the next stage and material findings are resolved;
 unresolved required checks remain explicit blockers, never a green badge.
 
 Record the selection in the existing issue or pull request. For each review, record who
-reviewed: the reviewer's coding agent, model and effort, or that a person did. For each
-finding, record whether it is confirmed or rejected and its disposition: what was done
+reviewed: the reviewer's coding agent, model and effort, or that a person did. Verify
+that the pull request carries a complete `Models:` line attributing the lead and each
+delegate. For each finding, record whether it is confirmed or rejected and its disposition: what was done
 about it, or why it was rejected. The lead may review a tightly coupled change itself when delegating would
 add little; independent acceptance remains separate.
 
