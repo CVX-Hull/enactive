@@ -641,24 +641,27 @@ def _survives_on_lineage(row: dict, lineage: str, provenance: dict) -> bool:
 def _alive_on_lineage(row: dict, lineage: str, provenance: dict, by_id: dict[str, dict] | None = None) -> bool:
     if row['lifecycle_state'] in ('superseded', 'retracted'):
         return False
-    if not _survives_on_lineage(row, lineage, provenance):
-        return False
-    if row['lifecycle_state'] == 'ended' and _visible_end(row, lineage, provenance, by_id):
-        return False
-    return True
+    if row['lifecycle_state'] == 'ended':
+        lineages = row.get('lineages', [])
+        if len(lineages) != 1 or lineages[0] is None:
+            return False
+        if _visible_end(row, lineage, provenance, by_id):
+            return False
+    return _survives_on_lineage(row, lineage, provenance)
 
 
 def _co_live_on_timeline(left: dict, right: dict, provenance: dict, by_id: dict[str, dict] | None = None) -> bool:
     """Whether two world-bound facts can coexist alive on any surviving timeline."""
     ll, rl = left.get('lineages', []), right.get('lineages', [])
-    if len(ll) != 1 or ll[0] is None or len(rl) != 1 or rl[0] is None:
+    if current(left) and current(right) and (len(ll) != 1 or ll[0] is None or len(rl) != 1 or rl[0] is None):
         return True
-    la, lb = ll[0], rl[0]
     world = left['scope'].get('world')
-    candidates = {la, lb}
+    candidates = {lin for lin in (*ll, *rl) if lin is not None}
     for sess in provenance['sessions'].values():
         if sess.get('lineage') is not None and (world is None or sess.get('world') == world):
             candidates.add(sess['lineage'])
+    if not candidates:
+        return current(left) and current(right)
     return any(_alive_on_lineage(left, lin, provenance, by_id) and _alive_on_lineage(right, lin, provenance, by_id)
                for lin in candidates)
 

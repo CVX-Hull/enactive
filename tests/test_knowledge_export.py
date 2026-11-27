@@ -843,3 +843,20 @@ def test_b2_anchor_display_never_leaks_across_lineages_retracted_or_withheld_fac
         unit['withheld'] = (unit['id'] == 'van-burned')
     repo_filtered = knowledge_export._project(eligible, repo_draw, withholds=True, target=target)
     assert repo_filtered['facts'][0]['anchor_display'] == 'camp van'
+
+    # K2 parity: when an anchor key ended historically, filter_delivery under withholding matches repo-level _project.
+    f3 = builder.add_frame(sid_main, 3, 30)
+    builder.retire_fact_ended('van-burned', reason='Van towed away.', end='absence',
+                              end_citations=[f3], published_in='v3', session='c3')
+    v3 = builder.commit_version(coverage_session='main-s1', last_step=30)
+    main_ended_full = knowledge_export.published(builder.path, v3, world='world', lineage='main')
+    assert next(f for f in main_ended_full['facts'] if f['id'] == 'ash-in-van')['anchor_display'] == 'Burned-out van wreck'
+    ended_draw = knowledge_export._draw_record(main_ended_full, seed=0)
+    for unit in ended_draw['units']:
+        unit['withheld'] = False
+    ended_filtered = knowledge_export.filter_delivery(main_ended_full, ended_draw)
+    assert ended_filtered['facts'][0]['anchor_display'] == 'camp van'
+    target_v3 = knowledge_export._target(builder.path, v3, 'world', 'main', {})
+    elig_v3, _ = target_v3.knowledge()
+    repo_ended_filtered = knowledge_export._project(elig_v3, ended_draw, withholds=True, target=target_v3)
+    assert repo_ended_filtered['facts'][0]['anchor_display'] == 'camp van'

@@ -397,3 +397,58 @@ def test_b1_fork_changed_and_restore_keyed_uniqueness(tmp_path):
     assert res_restore['status'] == 'published', res_restore
     d_restored = knowledge_export.published(repo_r, repo_r.published(), world='w', lineage='main')
     assert [f['id'] for f in d_restored['facts']] == ['lamp-off']
+
+    # K1: Multi-lineage keyed fact transitioned via changed OR retired(ended) + new reading must NOT wedge its key.
+    repo_m = Repository(tmp_path / 'k-multi', 'cdda')
+    repo_m.ensure()
+    sm1, sm2 = 'e' * 32, 'f' * 32
+    mf1, ff1, ff2, ff3 = f'{sm1}-1', f'{sm2}-1', f'{sm2}-2', f'{sm2}-3'
+    m_frames = {
+        mf1: position('m-s1', 5, order_index=1),
+        ff1: position('f-s1', 12, order_index=2),
+        ff2: position('f-s1', 18, order_index=2),
+        ff3: position('f-s1', 25, order_index=2),
+    }
+    m_labels = {
+        sm1: {'name': 'm-s1', 'world': 'w', 'lineage': 'main', 'admission': 1, 'context': {}},
+        sm2: {
+            'name': 'f-s1', 'world': 'w', 'lineage': 'fork', 'admission': 1, 'context': {},
+            'branch': {'parent': 'main', 'fork_at': position('m-s1', 10, order_index=1), 'fork_version': 'v0'},
+        },
+    }
+
+    def run_m(changes, name, step):
+        folder = tmp_path / 'k1' / name
+        folder.mkdir(parents=True, exist_ok=True)
+        body = dict(schema='curator-submission/3', base_version=repo_m.published(), summary=name, changes=changes)
+        (folder / 'submission.json').write_text(json.dumps(body), encoding='utf-8')
+        return gate(repo_m, folder, session_id=f'sm-{name}', window_frames=m_frames,
+                    coverage={'schema': 'curator-coverage/2', 'session': 'f-s1', 'actor': '001', 'last_step': step},
+                    session_kind='admission', session_labels=m_labels)
+
+    # Route A: multi-lineage keyed fact transitioned via changed.
+    assert run_m([
+        {'op': 'add_fact', 'fact': _fact('gate-open', statement_kind='state', state_key='gate-k',
+                                         binds=['world'], text='Gate is open.', citations=[mf1, ff1])},
+    ], 'm1', 12)['status'] == 'published'
+    res_ma = run_m([
+        {'op': 'supersede_fact', 'ids': ['gate-open'], 'reason_kind': 'changed',
+         'fact': _fact('gate-closed', statement_kind='state', state_key='gate-k',
+                       binds=['world'], text='Gate is closed.', citations=[ff2])},
+    ], 'm2', 18)
+    assert res_ma['status'] == 'published', res_ma
+
+    # Route B: multi-lineage keyed fact ended via retire_fact(ended), then new reading added on same key.
+    assert run_m([
+        {'op': 'add_fact', 'fact': _fact('fire-lit', statement_kind='state', state_key='fire-k',
+                                         binds=['world'], text='Fire is lit.', citations=[mf1, ff1])},
+    ], 'm3', 18)['status'] == 'published'
+    assert run_m([
+        {'op': 'retire_fact', 'id': 'fire-lit', 'reason_kind': 'ended', 'reason': 'Fire out.',
+         'end': 'transition', 'end_citations': [ff2]},
+    ], 'm4', 18)['status'] == 'published'
+    res_mb = run_m([
+        {'op': 'add_fact', 'fact': _fact('fire-relit', statement_kind='state', state_key='fire-k',
+                                         binds=['world'], text='Fire is relit.', citations=[ff3])},
+    ], 'm5', 25)
+    assert res_mb['status'] == 'published', res_mb

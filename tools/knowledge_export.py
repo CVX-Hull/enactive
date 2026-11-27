@@ -623,7 +623,7 @@ def _project(eligible: dict, draw_record: dict, *, withholds: bool, target: _Tar
                     max(live_subj, key=lambda d: (d['seen']['order'], d['id']))['subject']
                     if live_subj else anchor.replace('-', ' ')
                 )
-            elif withholds and anchor in eligible_keys:
+            elif withholds:
                 f['anchor_display'] = anchor.replace('-', ' ')
             elif not f.get('anchor_display'):
                 f['anchor_display'] = anchor.replace('-', ' ')
