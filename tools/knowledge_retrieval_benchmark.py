@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Offline retrieval benchmark for Wave 3 (#936) on sealed delivered knowledge. Read-only, `$0`.
+"""Offline retrieval benchmark for Wave 3 (#936) and #1046/#1023 on sealed delivered knowledge. Read-only, `$0`.
 
   python tools/knowledge_retrieval_benchmark.py [--evidence DIR] [--repeat N] [--porter2] [--json | --markdown]
 
-It replays the 30 #924 queries (20 on `#896-b v91`, 10 on `#889 v17`) and the two live `#896-b` queries on the
-versions the player held (`A01 v3`, `A03 v38`) under three rankings:
+Outputs `knowledge-retrieval-benchmark/2`. In addition to replaying the 30 #924 queries (20 on `#896-b v91`,
+10 on `#889 v17`) and the two live `#896-b` queries (`A01 v3`, `A03 v38`), it evaluates the four pinned `#998`
+diagnostic probes (`PROBES_998`: `start-time`, `fire-ring`, `rv-door`, `crafting-filter`) on sealed `#998 v97`
+and read-only tag-exported `#998 v101`.
 
 - `prod_bm25`: `harness.player.knowledge.Knowledge(path).query(q)`, #920's merged field-weighted BM25, called as is.
 - `bm25_1hop`: the same BM25 scores (recomputed with the production index, terms and constants, and checked
@@ -644,6 +646,7 @@ def snippet_matches(snippet: str, probe: Probe998) -> bool:
 
 def evaluate_probes_998(knowledge: production.Knowledge, probes: tuple[Probe998, ...],
                         repeat: int, *, label: str) -> dict:
+    repeat = max(1, repeat)
     rows, samples = [], []
     for probe in probes:
         for _ in range(repeat):
@@ -683,13 +686,12 @@ def evaluate_probes_998(knowledge: production.Knowledge, probes: tuple[Probe998,
 
 
 def load_corpora_998(admission: Path) -> dict[str, production.Knowledge]:
-    from tools.knowledge_export import published
+    from tools.player_host_replay_benchmark import export_sealed_v3_tag
 
     run = admission / 'run'
     path = run / 'curator-runner' / 'delivered' / 'v97.json'
     selection = json.loads((run / 'private' / 'knowledge-full.json').read_text(encoding='utf-8'))['selection']
-    latest = published(admission / 'knowledge' / 'cdda' / 'cdda', 'v101',
-                       world=selection['world'], lineage=selection['lineage'], context=selection['context'])
+    latest = export_sealed_v3_tag(admission / 'knowledge' / 'cdda' / 'cdda', 'v101', selection)
     return {'998_v97': production.Knowledge.from_dict(json.loads(path.read_text(encoding='utf-8')), str(path)),
             '998_v101': production.Knowledge.from_dict(latest)}
 

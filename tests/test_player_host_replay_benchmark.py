@@ -1,4 +1,7 @@
-"""Synthetic coverage for the #949 replay. No sealed evidence is needed."""
+"""Synthetic coverage for the #949 and #1046 replays. No sealed evidence is needed."""
+import json
+import subprocess
+
 import pytest
 
 from harness.jsonio import canonical
@@ -206,13 +209,13 @@ def test_replay_updates_counts_delivered_payloads_and_briefing_pairs():
 def test_recall_v12_skips_without_fetch_keep_recorded_costs_matched():
     store = snapshot()
     events = [
-        dict(type='start', schema='player-host/12'),
-        dict(type='knowledge-recall', outcome='all-delivered', request_id='skipped'),
+        dict(type='host-start', schema='player-host/12'),
         dict(type='knowledge-recall', status='not-made', reason='all-delivered'),
-        dict(type='knowledge-recall', outcome='empty', request_id='empty'),
+        dict(type='knowledge-recall', status='not-made', reason='all-delivered'),
+        dict(type='knowledge-recall', status='not-made', reason='empty'),
         dict(type='request-fetch-start', request_role='recall', request_id='fetched'),
         dict(type='response-complete', request_role='recall', request_id='fetched', counted_cost_usd='0.10'),
-        dict(type='knowledge-recall', outcome='selected', request_id='fetched', version='v1'),
+        dict(type='knowledge-recall', status='selected', request_id='fetched', version='v1'),
     ]
     outcome = replay.replay_recall(events, {'v1': store}, {'v1': {'candidate'}})
     assert outcome['fetches'] == 1
@@ -235,3 +238,74 @@ def test_ancestor_frame_inventory_counts_only_prior_admission_png_files(tmp_path
         dict(admission='admission-02', pngs=0, ancestor_pngs=2),
         dict(admission='admission-03', pngs=1, ancestor_pngs=2),
     ]
+
+
+def test_export_sealed_v3_tag_projects_v0_and_v1_without_live_exporter(tmp_path):
+    repo = tmp_path / 'sealed-v4'
+    repo.mkdir()
+    git = lambda *args: subprocess.run(['git', *args], cwd=repo, check=True, capture_output=True, text=True)  # noqa: E731
+    git('init', '-q')
+    git('config', 'user.name', 'Test')
+    git('config', 'user.email', 'test@example.invalid')
+    (repo / 'README').write_text('seed\n', encoding='utf-8')
+    git('add', 'README')
+    git('commit', '-q', '-m', 'v0')
+    git('tag', 'v0')
+
+    seen = {'session': 'sess-a', 'actor': '001', 'step': 4, 'order': [1, '001', 4]}
+    (repo / 'coverage.json').write_text(json.dumps(seen), encoding='utf-8')
+    (repo / 'provenance.json').write_text(json.dumps({
+        'frames': {'sess-a-4': seen},
+        'sessions': {},
+        'branches': {},
+        'restores': [],
+    }), encoding='utf-8')
+    rows = [
+        {
+            'schema': 'curator-fact/5', 'record': 'fact', 'id': 'f2', 'published_in': 'v1',
+            'claim_kind': 'mechanic', 'evidence_basis': 'direct', 'tags': ['camp'],
+            'text': 'A second fact.',
+            'scope': {'game': 'example', 'ruleset': 'standard'},
+            'lifecycle_state': 'active', 'needs_review': False, 'links': [],
+            'citations': ['sess-a-4'], 'seen': seen,
+        },
+        {
+            'schema': 'curator-fact/5', 'record': 'fact', 'id': 'f1', 'published_in': 'v1',
+            'claim_kind': 'instance_state', 'evidence_basis': 'direct', 'tags': ['camp'],
+            'text': 'A world fact.', 'subject': 'camp',
+            'scope': {'game': 'example', 'world': 'w1', 'ruleset': 'standard'},
+            'lifecycle_state': 'active', 'needs_review': False, 'links': [{'rel': 'see_also', 'target': 'a1'}],
+            'citations': ['sess-a-4'], 'seen': seen,
+        },
+        {
+            'schema': 'curator-fact/5', 'record': 'fact', 'id': 'f-old', 'published_in': 'v1',
+            'claim_kind': 'instance_state', 'evidence_basis': 'direct', 'tags': ['camp'],
+            'text': 'Old world fact.', 'scope': {'game': 'example', 'world': 'w1', 'ruleset': 'standard'},
+            'lifecycle_state': 'ended', 'retired': True, 'needs_review': False, 'links': [],
+            'citations': ['sess-a-4'], 'seen': seen,
+        },
+        {
+            'schema': 'curator-fact/5', 'record': 'article', 'id': 'a1@v1', 'slug': 'a1', 'published_in': 'v1',
+            'title': 'Camp', 'lead': 'Camp lead.', 'body': [{'text': 'Body.', 'facts': ['f1']}],
+            'tags': ['camp'], 'scope': {'game': 'example', 'world': 'w1', 'ruleset': 'standard'},
+            'lifecycle_state': 'active', 'needs_review': False, 'links': [], 'last_confirmed': seen,
+        },
+    ]
+    (repo / 'facts.jsonl').write_text('\n'.join(json.dumps(r) for r in rows) + '\n', encoding='utf-8')
+    git('add', '.')
+    git('commit', '-q', '-m', 'v1')
+    git('tag', 'v1')
+
+    selection = {'world': 'w1', 'context': {'ruleset': 'standard'}}
+    empty = replay.export_sealed_v3_tag(repo, 'v0', selection)
+    assert empty['schema'] == 'delivered-knowledge/3' and empty['version'] is None and empty['facts'] == []
+
+    exported = replay.export_sealed_v3_tag(repo, 'v1', selection)
+    assert exported['schema'] == 'delivered-knowledge/3' and exported['version'] == 'v1'
+    assert [a['id'] for a in exported['articles']] == ['a1']
+    assert [f['id'] for f in exported['facts']] == ['f1', 'f2']
+    assert exported['facts'][0]['scope']['world'] is None
+    assert exported['facts'][0]['cited_by_articles'] == ['a1']
+    assert exported['articles'][0]['backlinks'] == [{'rel': 'see_also', 'source': 'f1'}]
+    assert exported['coverage']['session'] == 's01'
+    assert exported['history']['ended'] == ['f-old']

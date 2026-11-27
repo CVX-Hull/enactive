@@ -230,6 +230,163 @@ LINEAGES = {
 }
 
 
+def export_sealed_v3_tag(repo_path: Path, version: str, selection: dict) -> dict:
+    """Read-only benchmark projection of a sealed `curator-knowledge/4` tag into `delivered-knowledge/3`.
+
+    Avoids calling the live exporter so sealed `#998` replays continue working after `curator-knowledge/5`.
+    """
+    repo = Repository(repo_path)
+    world = selection['world']
+    context = selection.get('context', {})
+    if version == 'v0':
+        return dict(schema='delivered-knowledge/3', version=None, commit=None, repository_id=None, coverage=None,
+                    articles=[], facts=[], history={'replaced': {}, 'ended': [], 'retracted': []})
+    commit = repo.git('rev-parse', f'{version}^{{commit}}').strip()
+    repo_id = repo.git('rev-parse', 'v0^{commit}').strip()
+    coverage = json.loads(repo.git('show', f'{version}:coverage.json'))
+    provenance = json.loads(repo.git('show', f'{version}:provenance.json'))
+    raw_records = repo.records(version)
+
+    def _applicable(row: dict) -> bool:
+        scope = row['scope']
+        if 'world' in scope and scope['world'] != world:
+            return False
+        axes = {k: v for k, v in scope.items() if k not in ('game', 'world', 'lineage')}
+        if any(context.get(k) != v for k, v in axes.items()):
+            return False
+        if 'when' in row:
+            reqs = row['when'].get('requires', {})
+            if any(k in context and context[k] != v for k, v in reqs.items()):
+                return False
+        return True
+
+    def _cond_unverified(row: dict) -> bool:
+        if 'when' not in row:
+            return False
+        reqs = row['when'].get('requires', {})
+        return not reqs or not reqs.keys() <= context.keys()
+
+    facts_by_id: dict[str, dict] = {}
+    articles_list: list[dict] = []
+    facts_list: list[dict] = []
+    rows_by_id = {r['id']: r for r in raw_records}
+    for row in raw_records:
+        if 'superseded_by' in row or 'retired' in row or not _applicable(row):
+            continue
+        scope = dict(row['scope'])
+        bound = 'world' in scope
+        if bound:
+            scope['world'] = None
+        if row['record'] == 'fact':
+            item = dict(
+                id=row['id'], claim_kind=row['claim_kind'], evidence_basis=row['evidence_basis'],
+                tags=list(row['tags']), text=row['text'], scope=scope,
+                branch_relation='same' if bound else None, lifecycle_state=row['lifecycle_state'],
+                stale_citations=[], needs_review=row['needs_review'],
+                condition_unverified=_cond_unverified(row), unverified_branch=False,
+                links=list(row['links']), backlinks=[], shadowed_by=[], contradicted_by=[],
+                cited_by_articles=[], citation_source_ids=list(row['citations']),
+                seen=dict(row['seen']),
+            )
+            if 'subject' in row:
+                item['subject'] = row['subject']
+            if 'when' in row:
+                item['when'] = dict(row['when'])
+            facts_by_id[item['id']] = item
+            facts_list.append(item)
+    for row in raw_records:
+        if row['record'] != 'article' or 'superseded_by' in row or 'retired' in row or not _applicable(row):
+            continue
+        cited = [fid for claim in row['body'] for fid in claim['facts']]
+        if not set(cited) <= facts_by_id.keys():
+            continue
+        scope = dict(row['scope'])
+        bound = 'world' in scope
+        if bound:
+            scope['world'] = None
+        articles_list.append(dict(
+            id=row['slug'], revision=row['id'], title=row['title'], lead=row['lead'],
+            body=[dict(text=c['text'], facts=list(c['facts'])) for c in row['body']],
+            tags=list(row['tags']), scope=scope, branch_relation='same' if bound else None,
+            lifecycle_state=row['lifecycle_state'], stale_citations=[],
+            needs_review=row['needs_review'],
+            condition_unverified=any(facts_by_id[f]['condition_unverified'] for f in cited),
+            unverified_branch=False, links=list(row['links']), backlinks=[],
+            shadowed_by=[], contradicted_by=[], last_confirmed=dict(row['last_confirmed']),
+        ))
+
+    facts_list.sort(key=lambda r: r['id'])
+    articles_list.sort(key=lambda r: r['id'])
+
+    public = {r['id'] for r in [*articles_list, *facts_list]}
+    citing: dict[str, set[str]] = defaultdict(set)
+    for a in articles_list:
+        for c in a['body']:
+            for f in c['facts']:
+                citing[f].add(a['id'])
+    backlinks: dict[str, list[dict]] = defaultdict(list)
+    for r in [*articles_list, *facts_list]:
+        r['links'] = [lk for lk in r['links'] if lk['target'] in public and lk['target'] != r['id']]
+        for lk in r['links']:
+            backlinks[lk['target']].append(dict(rel=lk['rel'], source=r['id']))
+    for r in [*articles_list, *facts_list]:
+        r['backlinks'] = sorted(backlinks[r['id']], key=lambda x: (x['source'], x['rel']))
+    for f in facts_list:
+        f['cited_by_articles'] = sorted(citing[f['id']])
+
+    # Build public history map (replaced, ended, retracted) so production.Knowledge validates cleanly.
+    history: dict[str, object] = dict(replaced={}, ended=[], retracted=[])
+    article_rev = {a['id']: int(a['revision'].rsplit('@v', 1)[1]) for a in articles_list}
+    ranks = {'restated': 0, 'narrowed': 1, 'corrected': 2}
+
+    def _follow(fid: str) -> dict[str, str]:
+        row = rows_by_id[fid]
+        if fid in facts_by_id:
+            return {fid: 'restated'}
+        out: dict[str, str] = {}
+        reason = ('corrected' if row['lifecycle_state'] == 'retracted'
+                  else 'narrowed' if len(row.get('superseded_by', ())) > 1 else 'restated')
+        for succ in row.get('superseded_by', ()):
+            for target, r_name in _follow(succ).items():
+                out[target] = max(r_name, reason, out.get(target, 'restated'), key=ranks.get)
+        return out
+
+    for row in sorted(raw_records, key=lambda x: x['id']):
+        if ('superseded_by' not in row and 'retired' not in row) or not _applicable(row):
+            continue
+        if row['record'] == 'article':
+            slug = row['slug']
+            if slug in article_rev and int(row['published_in'][1:]) < article_rev[slug]:
+                history['replaced'][row['id']] = dict(reason='restated', by=[slug])
+        elif row.get('superseded_by'):
+            paths = _follow(row['id'])
+            if paths:
+                history['replaced'][row['id']] = dict(reason=max(paths.values(), key=ranks.get), by=sorted(paths))
+        elif row['lifecycle_state'] == 'ended':
+            history['ended'].append(row['id'])
+        elif row['lifecycle_state'] == 'retracted':
+            history['retracted'].append(row['id'])
+    history['ended'].sort()
+    history['retracted'].sort()
+
+    # Alias raw session names identically to tools/knowledge_export.py.
+    positions = [a['last_confirmed'] for a in articles_list] + [f['seen'] for f in facts_list]
+    names = {p['session'] for p in positions} | {coverage['session']}
+    first: dict[str, tuple] = {}
+    for pos in provenance.get('frames', {}).values():
+        sname, order = pos['session'], tuple(pos['order'])
+        if sname in names and (sname not in first or order < first[sname]):
+            first[sname] = order
+    ordered_names = sorted(names, key=lambda n: (n not in first, first.get(n), n))
+    aliases = {n: f's{idx:02d}' for idx, n in enumerate(ordered_names, 1)}
+    for pos in positions:
+        pos['session'] = aliases[pos['session']]
+    coverage['session'] = aliases[coverage['session']]
+
+    return dict(schema='delivered-knowledge/3', version=version, commit=commit, repository_id=repo_id,
+                coverage=coverage, articles=articles_list, facts=facts_list, history=history)
+
+
 def load_snapshots(runs: list[Path], lineage: Lineage = LINEAGES['896-b']) -> tuple[dict, dict]:
     snapshots = {}
     sources = {}
@@ -245,11 +402,8 @@ def load_snapshots(runs: list[Path], lineage: Lineage = LINEAGES['896-b']) -> tu
     selection = json.loads((runs[-1] / 'private' / 'knowledge-full.json').read_text(encoding='utf-8'))['selection']
     missing = [version for version in lineage.versions() if version not in snapshots]
     if lineage.delivered_schema == 'delivered-knowledge/3':
-        from tools.knowledge_export import published
-
         for version in missing:
-            snapshots[version] = Snapshot(published(repo_path, version, world=selection['world'],
-                                                    lineage=selection['lineage'], context=selection['context']))
+            snapshots[version] = Snapshot(export_sealed_v3_tag(repo_path, version, selection))
             sources[version] = 'sealed curator tag'
         return snapshots, sources
 
@@ -924,8 +1078,9 @@ def benchmark(evidence: Path, *, lineage: str = '896-b') -> dict:
     recall['silent_or_skipped_pct'] = round(100 * (recall['all_delivered'] + recall['placement_silent']) / recall['fetches'], 2)
     cut = aggregate_cut('cut')
     cut_best_effort = aggregate_cut('cut_best_effort')
-    return dict(lineage=lineage, actors=actors, versions=versions, recall=dict(recall), updates=dict(updates),
-                ancestor_frames=ancestor_frame_inventory(runs), cut=cut, cut_best_effort=cut_best_effort,
+    return dict(schema='player-host-replay-benchmark/2', lineage=lineage, actors=actors, versions=versions,
+                recall=dict(recall), updates=dict(updates), ancestor_frames=ancestor_frame_inventory(runs),
+                cut=cut, cut_best_effort=cut_best_effort,
                 caps_ok=all(a['projected_briefing_json_chars'] <= CUT_BRIEFING_CHARS for a in actors)
                 and all(max(v['title_chars'], v['sent_chars'], v['main_cut_chars'], v['proposed_cut_chars'])
                         <= CUT_BRIEFING_CHARS for v in versions),
@@ -938,6 +1093,8 @@ def markdown(result: dict) -> str:
         return '\n'.join(markdown(row) for row in result['lineages'].values())
     lineage = result['lineage']
     recall, cut = result['recall'], result['cut']
+    census = (f" The wider twelve-run census recorded {cut['wider_census_observed_holds']:,} holds."
+              if lineage == '896-b' else '')
     lines = [f'# Offline player host replay on sealed #{lineage}', '',
              '## Actor-start briefing', '',
              '| Admission | Actor | Version | Observed framed chars | Observed JSON chars | Projected JSON chars | Omitted |',
@@ -955,8 +1112,7 @@ def markdown(result: dict) -> str:
               f"${recall['projected_usd']:.6f} ({recall['spend_reduction_pct']}% lower).",
               '', '## Cut hysteresis on the recorded schedule', '',
               f"- {cut['observed_holds']:,} observed holds and {cut['projected_holds']:,} projected edge holds "
-              f"({cut['hold_reduction_pct']}% lower) in #{lineage}. The wider twelve-run census recorded "
-              f"{cut['wider_census_observed_holds']:,} holds.",
+              f"({cut['hold_reduction_pct']}% lower) in #{lineage}.{census}",
               f"- Recorded cuts {cut['observed_cuts']:,}. Projected normal cuts {cut.get('cut', 0):,} and "
               f"strict-fit rescues {cut.get('rescue', 0):,}.",
               f"- {cut['observed_stops']:,} observed and {cut['projected_stops']:,} projected hard capacity stops "
