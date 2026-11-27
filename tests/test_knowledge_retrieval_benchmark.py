@@ -313,3 +313,51 @@ def test_compact_hits_use_exact_envelopes_canonical_bytes_and_sorted_distinct_ci
         assert measured[name]['total_bytes'] == len(canonical(envelope).encode('utf-8'))
         assert measured[name]['total_bytes'] > len(canonical(envelope))
         assert measured[name]['samples'] == 2
+
+
+def test_998_probe_definitions_and_snippet_matching():
+    start, fire, rv, crafting = bench.PROBES_998
+    assert [(p.label, p.group, p.as_of_status) for p in bench.PROBES_998] == [
+        ('start-time', 'live_998_a04', 'current'),
+        ('fire-ring', 'live_998_a03', 'mixed-stale'),
+        ('rv-door', 'diagnostic_998', 'partial-stale'),
+        ('crafting-filter', 'diagnostic_998', 'current'),
+    ]
+    assert start.latest_facts == ('wilderness-default-calendar',)
+    assert len(fire.gold_facts) == 10
+    assert all(set(p.latest_facts) <= set(p.gold_facts) and p.note for p in bench.PROBES_998)
+    assert bench.snippet_matches('It starts at 8:00 AM.', start)
+    assert bench.snippet_matches('WEST-SIDE driver DOOR', rv)
+    assert not bench.snippet_matches('West-side window', rv)
+    assert bench.snippet_matches('Use Backspace', crafting)
+    assert not bench.snippet_matches('Open the filter', crafting)
+
+
+def test_998_probes_use_production_snippets_and_full_rank_without_mutation():
+    from dataclasses import replace
+
+    from test_player_knowledge_query import article as v3_article, document, fact as v3_fact
+
+    start = bench.PROBES_998[0]
+    article_id = start.gold_articles[0]
+    latest_id = start.latest_facts[0]
+    value = document(
+        [v3_article(article_id, 'Clock', 'Character creation', ('A claim', ['clock-detail']))],
+        [v3_fact('clock-detail', 'Clock starts at 8:00 AM.', 'Clock'),
+         *[v3_fact(f'clock-{i}', 'Clock', 'Clock') for i in range(10)],
+         v3_fact(latest_id, 'Clock with several unrelated words prolonging this record')],
+    )
+    before = json.dumps(value)
+    knowledge = bench.production.Knowledge.from_dict(value)
+    probe = replace(start, text='clock', gold_facts=('clock-detail', latest_id))
+    lead_probe = replace(probe, label='lead', snippet_all=('character creation',))
+    report = bench.evaluate_probes_998(knowledge, (probe, lead_probe), 2, label='synthetic')
+    detail, lead = report['rows']
+    assert report['samples'] == 4
+    assert report['hit_at_5'] == 1.0
+    assert detail['top5_snippet_pass'] is True
+    assert detail['gold_article_snippet_pass'] is False
+    assert lead['gold_article_snippet_pass'] is True
+    assert detail['latest_fact_rank_at_10'] is None
+    assert detail['latest_fact_full_rank'] == 13
+    assert json.dumps(value) == json.dumps(knowledge.value) == before

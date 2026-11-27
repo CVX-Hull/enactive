@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay #896-b briefing, recall and cut schedules offline. The sealed store is read-only.
+"""Replay #896-b and #998 briefing, recall and cut schedules offline. The sealed store is read-only.
 
 The archive keeps manifest part digests and byte lengths, not the original requests.
 Cut candidates use a manifest-based token estimate with recorded coverage and update
@@ -25,7 +25,7 @@ if __package__ in (None, ''):
     sys.path.insert(0, str(ROOT))
 
 from harness.jsonio import canonical  # noqa: E402
-from tools.curator_history_recount import ADMISSIONS, FINAL, LINEAGE, Repository  # noqa: E402
+from tools.curator_history_recount import ADMISSIONS, LINEAGE, Repository  # noqa: E402
 from tools.evidence import default_store  # noqa: E402
 
 CUT_BRIEFING_CHARS = 24_000
@@ -76,11 +76,11 @@ def index_row(item: dict, *, title_only: bool = False) -> dict:
 
 
 class Snapshot:
-    """Offline projection of an archived delivered-knowledge/2 snapshot."""
+    """Offline projection of an archived delivered-knowledge snapshot."""
 
     def __init__(self, value: dict):
-        if value['schema'] != 'delivered-knowledge/2':
-            raise ValueError('expected sealed delivered-knowledge/2')
+        if value['schema'] not in ('delivered-knowledge/2', 'delivered-knowledge/3'):
+            raise ValueError('expected sealed delivered-knowledge/2 or delivered-knowledge/3')
         self.version = value['version']
         self.coverage = value['coverage']
         self.articles = value['articles']
@@ -98,6 +98,8 @@ class Snapshot:
 
 
 def instance_state(fact: dict) -> bool:
+    if 'scope' in fact or 'claim_kind' in fact:
+        return 'world' in fact.get('scope', {})
     # The sealed ontology's world_observation type is world-bound throughout this lineage.
     return fact['type'] == 'world_observation'
 
@@ -209,7 +211,187 @@ class ActiveLeads:
                 del self.entries[rid]
 
 
-def load_snapshots(runs: list[Path]) -> tuple[dict, dict]:
+@dataclass(frozen=True)
+class Lineage:
+    prefix: str
+    admissions: range
+    final_version: int
+    repository: Path
+    delivered_schema: str
+
+    def versions(self) -> Iterator[str]:
+        return (f'v{n}' for n in range(self.final_version + 1))
+
+
+LINEAGES = {
+    '896-b': Lineage(LINEAGE, ADMISSIONS, 91, Path('knowledge/cdda'), 'delivered-knowledge/2'),
+    '998': Lineage('multi-day-standard-build-998', range(1, 5), 101,
+                   Path('knowledge/cdda/cdda'), 'delivered-knowledge/3'),
+}
+
+
+def export_sealed_v3_tag(repo_path: Path, version: str, selection: dict) -> dict:
+    """Read-only benchmark projection of a sealed `curator-knowledge/4` tag into `delivered-knowledge/3`.
+
+    Avoids calling the live exporter so sealed `#998` replays continue working after `curator-knowledge/5`.
+    """
+    repo = Repository(repo_path)
+    meta_raw = repo.show(version, 'knowledge.json')
+    meta = json.loads(meta_raw) if meta_raw else {}
+    if meta.get('schema') != 'curator-knowledge/4':
+        raise ValueError(f'{version}: expected sealed curator-knowledge/4, got {meta.get("schema")!r}')
+    world = selection['world']
+    context = selection.get('context', {})
+    if version == 'v0':
+        return dict(schema='delivered-knowledge/3', version=None, commit=None, repository_id=None, coverage=None,
+                    articles=[], facts=[], history={'replaced': {}, 'ended': [], 'retracted': []})
+    commit = repo.git('rev-parse', f'{version}^{{commit}}').strip()
+    repo_id = repo.git('rev-parse', 'v0^{commit}').strip()
+    coverage = json.loads(repo.git('show', f'{version}:coverage.json'))
+    provenance = json.loads(repo.git('show', f'{version}:provenance.json'))
+    raw_records = repo.records(version)
+
+    def _applicable(row: dict) -> bool:
+        scope = row['scope']
+        if 'world' in scope and scope['world'] != world:
+            return False
+        axes = {k: v for k, v in scope.items() if k not in ('game', 'world', 'lineage')}
+        if any(context.get(k) != v for k, v in axes.items()):
+            return False
+        if 'when' in row:
+            reqs = row['when'].get('requires', {})
+            if any(k in context and context[k] != v for k, v in reqs.items()):
+                return False
+        return True
+
+    def _cond_unverified(row: dict) -> bool:
+        if 'when' not in row:
+            return False
+        reqs = row['when'].get('requires', {})
+        return not reqs or not reqs.keys() <= context.keys()
+
+    facts_by_id: dict[str, dict] = {}
+    articles_list: list[dict] = []
+    facts_list: list[dict] = []
+    rows_by_id = {r['id']: r for r in raw_records}
+    for row in raw_records:
+        if 'superseded_by' in row or 'retired' in row or not _applicable(row):
+            continue
+        scope = dict(row['scope'])
+        bound = 'world' in scope
+        if bound:
+            scope['world'] = None
+        if row['record'] == 'fact':
+            item = dict(
+                id=row['id'], claim_kind=row['claim_kind'], evidence_basis=row['evidence_basis'],
+                tags=list(row['tags']), text=row['text'], scope=scope,
+                branch_relation='same' if bound else None, lifecycle_state=row['lifecycle_state'],
+                stale_citations=[], needs_review=row['needs_review'],
+                condition_unverified=_cond_unverified(row), unverified_branch=False,
+                links=list(row['links']), backlinks=[], shadowed_by=[], contradicted_by=[],
+                cited_by_articles=[], citation_source_ids=list(row['citations']),
+                seen=dict(row['seen']),
+            )
+            if 'subject' in row:
+                item['subject'] = row['subject']
+            if 'when' in row:
+                item['when'] = dict(row['when'])
+            facts_by_id[item['id']] = item
+            facts_list.append(item)
+    for row in raw_records:
+        if row['record'] != 'article' or 'superseded_by' in row or 'retired' in row or not _applicable(row):
+            continue
+        cited = [fid for claim in row['body'] for fid in claim['facts']]
+        if not set(cited) <= facts_by_id.keys():
+            continue
+        scope = dict(row['scope'])
+        bound = 'world' in scope
+        if bound:
+            scope['world'] = None
+        articles_list.append(dict(
+            id=row['slug'], revision=row['id'], title=row['title'], lead=row['lead'],
+            body=[dict(text=c['text'], facts=list(c['facts'])) for c in row['body']],
+            tags=list(row['tags']), scope=scope, branch_relation='same' if bound else None,
+            lifecycle_state=row['lifecycle_state'], stale_citations=[],
+            needs_review=row['needs_review'],
+            condition_unverified=any(facts_by_id[f]['condition_unverified'] for f in cited),
+            unverified_branch=False, links=list(row['links']), backlinks=[],
+            shadowed_by=[], contradicted_by=[], last_confirmed=dict(row['last_confirmed']),
+        ))
+
+    facts_list.sort(key=lambda r: r['id'])
+    articles_list.sort(key=lambda r: r['id'])
+
+    public = {r['id'] for r in [*articles_list, *facts_list]}
+    citing: dict[str, set[str]] = defaultdict(set)
+    for a in articles_list:
+        for c in a['body']:
+            for f in c['facts']:
+                citing[f].add(a['id'])
+    backlinks: dict[str, list[dict]] = defaultdict(list)
+    for r in [*articles_list, *facts_list]:
+        r['links'] = [lk for lk in r['links'] if lk['target'] in public and lk['target'] != r['id']]
+        for lk in r['links']:
+            backlinks[lk['target']].append(dict(rel=lk['rel'], source=r['id']))
+    for r in [*articles_list, *facts_list]:
+        r['backlinks'] = sorted(backlinks[r['id']], key=lambda x: (x['source'], x['rel']))
+    for f in facts_list:
+        f['cited_by_articles'] = sorted(citing[f['id']])
+
+    # Build public history map (replaced, ended, retracted) so production.Knowledge validates cleanly.
+    history: dict[str, object] = dict(replaced={}, ended=[], retracted=[])
+    article_rev = {a['id']: int(a['revision'].rsplit('@v', 1)[1]) for a in articles_list}
+    ranks = {'restated': 0, 'narrowed': 1, 'corrected': 2}
+
+    def _follow(fid: str) -> dict[str, str]:
+        row = rows_by_id[fid]
+        if fid in facts_by_id:
+            return {fid: 'restated'}
+        out: dict[str, str] = {}
+        reason = ('corrected' if row['lifecycle_state'] == 'retracted'
+                  else 'narrowed' if len(row.get('superseded_by', ())) > 1 else 'restated')
+        for succ in row.get('superseded_by', ()):
+            for target, r_name in _follow(succ).items():
+                out[target] = max(r_name, reason, out.get(target, 'restated'), key=ranks.get)
+        return out
+
+    for row in sorted(raw_records, key=lambda x: x['id']):
+        if ('superseded_by' not in row and 'retired' not in row) or not _applicable(row):
+            continue
+        if row['record'] == 'article':
+            slug = row['slug']
+            if slug in article_rev and int(row['published_in'][1:]) < article_rev[slug]:
+                history['replaced'][row['id']] = dict(reason='restated', by=[slug])
+        elif row.get('superseded_by'):
+            paths = _follow(row['id'])
+            if paths:
+                history['replaced'][row['id']] = dict(reason=max(paths.values(), key=ranks.get), by=sorted(paths))
+        elif row['lifecycle_state'] == 'ended':
+            history['ended'].append(row['id'])
+        elif row['lifecycle_state'] == 'retracted':
+            history['retracted'].append(row['id'])
+    history['ended'].sort()
+    history['retracted'].sort()
+
+    # Alias raw session names identically to tools/knowledge_export.py.
+    positions = [a['last_confirmed'] for a in articles_list] + [f['seen'] for f in facts_list]
+    names = {p['session'] for p in positions} | {coverage['session']}
+    first: dict[str, tuple] = {}
+    for pos in provenance.get('frames', {}).values():
+        sname, order = pos['session'], tuple(pos['order'])
+        if sname in names and (sname not in first or order < first[sname]):
+            first[sname] = order
+    ordered_names = sorted(names, key=lambda n: (n not in first, first.get(n), n))
+    aliases = {n: f's{idx:02d}' for idx, n in enumerate(ordered_names, 1)}
+    for pos in positions:
+        pos['session'] = aliases[pos['session']]
+    coverage['session'] = aliases[coverage['session']]
+
+    return dict(schema='delivered-knowledge/3', version=version, commit=commit, repository_id=repo_id,
+                coverage=coverage, articles=articles_list, facts=facts_list, history=history)
+
+
+def load_snapshots(runs: list[Path], lineage: Lineage = LINEAGES['896-b']) -> tuple[dict, dict]:
     snapshots = {}
     sources = {}
     for run in runs:
@@ -220,11 +402,18 @@ def load_snapshots(runs: list[Path]) -> tuple[dict, dict]:
             if (previous.articles, previous.facts, previous.coverage) != (item.articles, item.facts, item.coverage):
                 raise ValueError(f'{path}: inconsistent sealed exports for {item.version}')
             sources.setdefault(item.version, 'sealed export')
-    repo = Repository(runs[-1].parent / 'knowledge' / 'cdda')
-    world = json.loads((runs[-1] / 'private' / 'knowledge-full.json').read_text(encoding='utf-8'))['selection']['world']
-    for version in (f'v{n}' for n in range(92)):
-        if version in snapshots:
-            continue
+    repo_path = runs[-1].parent / lineage.repository
+    selection = json.loads((runs[-1] / 'private' / 'knowledge-full.json').read_text(encoding='utf-8'))['selection']
+    missing = [version for version in lineage.versions() if version not in snapshots]
+    if lineage.delivered_schema == 'delivered-knowledge/3':
+        for version in missing:
+            snapshots[version] = Snapshot(export_sealed_v3_tag(repo_path, version, selection))
+            sources[version] = 'sealed curator tag'
+        return snapshots, sources
+
+    repo = Repository(repo_path)
+    world = selection['world']
+    for version in missing:
         # Reproduce the sealed exporter for tags not archived as a runner or actor-start export.
         coverage = repo.git('show', f'{version}:coverage.json') if version != 'v0' else None
         articles, facts = [], []
@@ -246,6 +435,34 @@ def delivery_payload(event: dict) -> dict:
     return json.loads(event['text'].split('\n', 2)[1])
 
 
+def _empty_update(payload: dict) -> bool:
+    if 'index' in payload:
+        return not payload['index'] and not payload.get('unlisted_entries')
+    return all(not payload.get(key) for key in ('added', 'updated', 'removed'))
+
+
+def replay_updates(events: list[dict]) -> dict:
+    deliveries = [event for event in events if event['type'] == 'knowledge-delivery'
+                  and event.get('outcome', 'delivered') == 'delivered']
+    briefing_requests = {event['receiving_player_request_id'] for event in deliveries
+                         if event['kind'] == 'briefing' and event.get('receiving_player_request_id') is not None}
+    updates = [event for event in deliveries if event['kind'] == 'update']
+    empty = sum(_empty_update(payload) for payload in map(delivery_payload, updates))
+    return dict(total=len(updates), empty=empty, non_empty=len(updates) - empty,
+                paired_with_briefing=sum(event.get('receiving_player_request_id') in briefing_requests
+                                         for event in updates))
+
+
+def ancestor_frame_inventory(runs: list[Path]) -> list[dict]:
+    inventory = []
+    prior = 0
+    for run in runs:
+        pngs = sum(path.is_file() for path in (run / 'sources').glob('*.png'))
+        inventory.append(dict(admission=run.parent.name, pngs=pngs, ancestor_pngs=prior))
+        prior += pngs
+    return inventory
+
+
 def digest(text: str) -> str:
     return sha256(text.encode()).hexdigest()
 
@@ -257,12 +474,18 @@ def replay_recall(events: list[dict], snapshots: dict, indexes: dict) -> dict:
     costs = {}
     fetched = set()
     skips, silent, omitted = set(), set(), set()
+    modern = bool(events and events[0].get('schema') == 'player-host/12')
+    recorded_skips = 0
     for event in events:
         name = event['type']
         if name == 'knowledge-delivery' and 'text' in event:
             placements[event['receiving_player_request_id']].append(event)
-        elif name == 'knowledge-recall' and 'request_id' in event:
-            recalls[event['request_id']] = event
+        elif name == 'knowledge-recall':
+            outcome = event.get('outcome', event.get('reason'))
+            if modern and outcome == 'all-delivered':
+                recorded_skips += 1
+            elif not (modern and outcome == 'empty') and 'request_id' in event:
+                recalls[event['request_id']] = event
         elif name == 'response-complete' and event.get('request_role') == 'recall':
             costs[event['request_id']] = Decimal(event['counted_cost_usd'])
     active = ActiveLeads()
@@ -359,8 +582,11 @@ def replay_recall(events: list[dict], snapshots: dict, indexes: dict) -> dict:
         raise ValueError('unmatched recall attempt, cost or outcome')
     observed = sum(costs.values(), Decimal(0))
     avoided = sum((costs[rid] for rid in skips), Decimal(0))
-    return dict(fetches=len(fetched), all_delivered=len(skips), placement_silent=len(silent),
-                selected_omitted_from_index=len(omitted), observed_usd=observed, avoided_usd=avoided)
+    result = dict(fetches=len(fetched), all_delivered=len(skips), placement_silent=len(silent),
+                  selected_omitted_from_index=len(omitted), observed_usd=observed, avoided_usd=avoided)
+    if modern:
+        result['recorded_all_delivered'] = recorded_skips
+    return result
 
 
 @dataclass(frozen=True)
@@ -773,12 +999,13 @@ def replay_cuts(events: list[dict], snapshots: dict, projected_start: dict, cove
                 max_archive_overestimate_tokens=max_archive_over, max_archive_underestimate_tokens=max_archive_under)
 
 
-def benchmark(evidence: Path) -> dict:
-    runs = [evidence / f'{LINEAGE}-admission-{n:02d}' / 'run' for n in ADMISSIONS]
-    snapshots, sources = load_snapshots(runs)
+def benchmark(evidence: Path, *, lineage: str = '896-b') -> dict:
+    descriptor = LINEAGES[lineage]
+    runs = [evidence / f'{descriptor.prefix}-admission-{n:02d}' / 'run' for n in descriptor.admissions]
+    snapshots, sources = load_snapshots(runs, descriptor)
     versions = []
     indexes = {}
-    for version in (f'v{n}' for n in range(92)):
+    for version in descriptor.versions():
         snapshot = snapshots[version]
         titles = recall_index(snapshot, title_only=True)
         sent = recall_index(snapshot)
@@ -790,6 +1017,7 @@ def benchmark(evidence: Path) -> dict:
     indexes[None] = set()
 
     actors = []
+    updates = Counter()
     for run in runs:
         paths = sorted(run.glob('actors/*/host.jsonl'))
         if not paths:
@@ -797,6 +1025,7 @@ def benchmark(evidence: Path) -> dict:
         for path in paths:
             with path.open(encoding='utf-8') as stream:
                 events = [json.loads(line) for line in stream if line.strip()]
+            updates.update(replay_updates(events))
             with path.with_name('knowledge-updates.jsonl').open(encoding='utf-8') as stream:
                 coverage = {row['version']: row['operation_id']
                             for row in map(json.loads, stream) if row['schema'] == 'coverage-update-entry/1'
@@ -853,7 +1082,9 @@ def benchmark(evidence: Path) -> dict:
     recall['silent_or_skipped_pct'] = round(100 * (recall['all_delivered'] + recall['placement_silent']) / recall['fetches'], 2)
     cut = aggregate_cut('cut')
     cut_best_effort = aggregate_cut('cut_best_effort')
-    return dict(actors=actors, versions=versions, recall=dict(recall), cut=cut, cut_best_effort=cut_best_effort,
+    return dict(schema='player-host-replay-benchmark/2', lineage=lineage, actors=actors, versions=versions,
+                recall=dict(recall), updates=dict(updates), ancestor_frames=ancestor_frame_inventory(runs),
+                cut=cut, cut_best_effort=cut_best_effort,
                 caps_ok=all(a['projected_briefing_json_chars'] <= CUT_BRIEFING_CHARS for a in actors)
                 and all(max(v['title_chars'], v['sent_chars'], v['main_cut_chars'], v['proposed_cut_chars'])
                         <= CUT_BRIEFING_CHARS for v in versions),
@@ -862,8 +1093,13 @@ def benchmark(evidence: Path) -> dict:
 
 
 def markdown(result: dict) -> str:
+    if 'lineages' in result:
+        return '\n'.join(markdown(row) for row in result['lineages'].values())
+    lineage = result['lineage']
     recall, cut = result['recall'], result['cut']
-    lines = ['# Offline player host replay on sealed #896-b', '',
+    census = (f" The wider twelve-run census recorded {cut['wider_census_observed_holds']:,} holds."
+              if lineage == '896-b' else '')
+    lines = [f'# Offline player host replay on sealed #{lineage}', '',
              '## Actor-start briefing', '',
              '| Admission | Actor | Version | Observed framed chars | Observed JSON chars | Projected JSON chars | Omitted |',
              '| --- | --- | --- | ---: | ---: | ---: | ---: |']
@@ -880,8 +1116,7 @@ def markdown(result: dict) -> str:
               f"${recall['projected_usd']:.6f} ({recall['spend_reduction_pct']}% lower).",
               '', '## Cut hysteresis on the recorded schedule', '',
               f"- {cut['observed_holds']:,} observed holds and {cut['projected_holds']:,} projected edge holds "
-              f"({cut['hold_reduction_pct']}% lower) in #896-b. The wider twelve-run census recorded "
-              f"{cut['wider_census_observed_holds']:,} holds.",
+              f"({cut['hold_reduction_pct']}% lower) in #{lineage}.{census}",
               f"- Recorded cuts {cut['observed_cuts']:,}. Projected normal cuts {cut.get('cut', 0):,} and "
               f"strict-fit rescues {cut.get('rescue', 0):,}.",
               f"- {cut['observed_stops']:,} observed and {cut['projected_stops']:,} projected hard capacity stops "
@@ -924,16 +1159,22 @@ def markdown(result: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--evidence', type=Path, help='sealed evidence directory (default is the main checkout store)')
+    parser.add_argument('--lineage', choices=(*LINEAGES, 'all'), default='896-b')
     output = parser.add_mutually_exclusive_group()
     output.add_argument('--json', action='store_true')
     output.add_argument('--markdown', action='store_true')
     args = parser.parse_args(argv)
-    result = benchmark(args.evidence if args.evidence is not None else default_store())
+    evidence = args.evidence if args.evidence is not None else default_store()
+    lineages = {name: benchmark(evidence, lineage=name) for name in
+                (LINEAGES if args.lineage == 'all' else (args.lineage,))}
+    result = (dict(schema='player-host-replay-benchmark/2', lineages=lineages)
+              if args.lineage == 'all' else lineages[args.lineage])
     if args.json:
         print(json.dumps(result, indent=2, default=str))
     else:
         print(markdown(result), end='')
-    return int(not (result['caps_ok'] and result['best_effort_no_increase_in_projected_stops']))
+    return int(not all(row['caps_ok'] and row['best_effort_no_increase_in_projected_stops']
+                       for row in lineages.values()))
 
 
 if __name__ == '__main__':
