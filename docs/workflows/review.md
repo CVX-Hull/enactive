@@ -21,7 +21,7 @@ existing scoped review, not another approval stage or authority to reduce CI.
 | Trigger / artifact | Useful review and timing |
 | --- | --- |
 | Small mapping/bug fix with unchanged boundaries | Lead inspection and relevant regressions; native qualification as applicable. Include it in coherent integration review; no automatic product/architecture swarm before development. |
-| New input/ownership/persistence/schema/learning boundary | Independent architecture/risk review of the brief and alternatives before implementation commitment. Reversible isolated probes may inform that design within their declared controls. |
+| New input/ownership/persistence/schema/learning boundary | Independent architecture/risk review of the brief and alternatives before implementation commitment ([design discovery workflow](design-discovery.md)). Reversible isolated probes may inform that design within their declared controls. |
 | New player capability or observer workflow | Product/player or observer perspective on goals, acceptance and a working flow, diagram or prototype. Validate actual usability later; an agent persona is not a real user study. |
 | New memory/adaptation policy or consequential literature claim | Research/evidence perspective checks prior documents, primary support, transfer limits, conflicts and functional-versus-efficacy claims. No fresh full survey for each leaf fix. |
 | Permissions, external access or isolation change | Focused security/operations review at that boundary. This is not gameplay strategy review or a critic/approval per key. |

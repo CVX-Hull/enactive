@@ -25,6 +25,20 @@ deciding player host or a fallback for one: gameplay runs only through the
 Change instructions only in `AGENTS.md`, the documents it links and the shared role
 instructions in `.agents/roles/`.
 
+### Workflow skills
+
+Host-neutral playbooks live under `docs/workflows/` as the single source of truth.
+Where a workflow benefits from progressive-disclosure skill discovery across all three
+coding agents, track regular-file thin `SKILL.md` wrappers (standard `name` and
+`description` frontmatter only, pointing directly to the owning `docs/workflows/` page,
+with no duplicated rules and no symlinks):
+
+| Host | Discovered project skill path |
+| --- | --- |
+| Codex | `.agents/skills/<name>/SKILL.md` |
+| Antigravity | `.agents/skills/<name>/SKILL.md` |
+| Claude Code | `.claude/skills/<name>/SKILL.md` |
+
 ## The lead's duties on each coding agent
 
 [S-AGENT](../standards/agents.md#the-leads-duties) assigns these duties to the lead.

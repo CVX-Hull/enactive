@@ -37,7 +37,7 @@ approval stages.
 | Product capability and limits | [Overview](overview.md) | [Architecture](architecture.md) |
 | Ownership, state and failures | A component linked from architecture | [Contract index](protocol.md): [computer control](contracts/computer-control.md), [player host](contracts/player-host.md), [curator](contracts/curator.md), [evaluation records](contracts/evaluation-record.md); code and assertions |
 | Operate a finite run | [Setup](setup.md), [runbook](runbook.md) | [Campaign procedure](operations/campaign-run.md) |
-| Change scope and acceptance | GitHub Issue/PR | Affected parent/component, contract and [review policy](workflows/review.md) |
+| Change scope and acceptance | GitHub Issue/PR | Affected parent/component, contract, [review policy](workflows/review.md) and [design discovery](workflows/design-discovery.md) for open boundary leaves |
 | Evidence and remaining work | [Public Project](https://github.com/users/CVX-Hull/projects/2) and its issues | Run method in [development runs](development-runs.md); dated records in the [acceptance index](acceptance/index.md) and [change index](changes/index.md) |
 | Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
 | What can go wrong and what is done about it | [Risk register](risks.md) | [Controls](controls.md), then the [control rule](standards/authority.md#control-review) for adding or removing one |
