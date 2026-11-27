@@ -8,10 +8,12 @@ status: active
 
 ## What we are building
 
-Enactive lets a designated agent play CDDA-class survival/roguelike games from
-visible computer observations while a user watches and can stop automation.
-The [charter](charter.md) owns purpose and constraints. CDDA is the first actual
-target; no second game or unattended survival service is qualified.
+Enactive lets a designated agent play persistent, long-horizon CDDA-class games
+continuously—with operator-initiated pause and resume carrying over game knowledge
+and prior goals—from visible computer observations while a user watches and can stop
+automation. The [charter](charter.md) owns purpose, continuous-play scope and
+non-blocking latency constraints. CDDA is the first actual target; no second game or
+unattended survival service is qualified.
 The [glossary](glossary.md) defines the project's terms.
 
 The current source uses a basic computer-control boundary. The harness provides
@@ -22,11 +24,15 @@ all interpretation, save/load choices, plans, quantities, Work and success claim
 Curated knowledge and fallible player hints support continuity; ordinary input
 remains available when a hint fails and mechanical custody is healthy.
 
-The player does not maintain its own long-term memory. A separate
-[curator](components/curator.md) reads what happened, publishes cited facts and articles
-through a gate, and holds no custody. It can work beside play without making the player
-wait, and between runs. Each fact (`curator-fact/5`) carries an open scope map and
-typed links, so world-bound and context-scoped knowledge is delivered only to matching runs.
+A separate [curator](components/curator.md) is the sole writer of durable long-term
+memory (Kinds 1–5 only, with no recommendations or plans;
+[decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five)):
+it reads what happened, publishes cited facts and articles through a gate, and holds
+no custody. It works beside play without making the player wait, and between runs.
+Each fact (`curator-fact/5`) carries an open scope map and typed links, so
+world-bound and context-scoped knowledge is delivered only to matching runs.
+Player-owned ephemeral working state and self-directed goals stay separate from
+curated memory ([decision](decisions/owner-decisions.md#player-working-state-agenda-1026)).
 
 ## How it works
 
@@ -36,8 +42,10 @@ are responsibilities, not separate required models. The player interprets pixels
 custodian serializes basic actions through the SDL adapter; the game determines
 effects. The user can Pause independently. Curated knowledge and hints never grant custody.
 
-Each finite run freezes one [player host](components/player-interface.md) adapter
-behind the substitutable [player host contract](contracts/player-host.md). The selected
+Each finite test admission freezes one [player host](components/player-interface.md) adapter
+behind the substitutable [player host contract](contracts/player-host.md); finite
+admissions are bounded evaluation and budget slices rather than the product's
+intended play interruptions ([decision](decisions/owner-decisions.md#continuous-long-horizon-play-and-broader-pace-scope)). The selected
 route, model and effort are in [player host activation](operations/player-host.md); the
 exact route, metadata, context and limits are frozen per run, and the selection is not a
 claim of model quality or provider performance.
