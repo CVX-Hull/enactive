@@ -1133,6 +1133,20 @@
       },
       "visibility": "private"
     },
+    "long-horizon-offscreen-memory-research-review": {
+      "availability": "present",
+      "bytes": 48724,
+      "cited_by": [
+        "docs/research-long-horizon-offscreen-memory.md"
+      ],
+      "files": 7,
+      "manifest_sha256": "fae07753b8b64de42817b0c0621628f2be026f62bd359bee61bd9acf74163607",
+      "note": "Two independent clean-context reviews of the companion research page on long-horizon off-screen state and environmental tracking, their briefs and the lead's disposition of all verified findings",
+      "sources": {
+        ".": "session-scratch/review"
+      },
+      "visibility": "private"
+    },
     "malvern-trunk-paired-replay-829": {
       "availability": "present",
       "bytes": 36002169,
