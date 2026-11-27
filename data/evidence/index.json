@@ -2176,6 +2176,20 @@
       },
       "visibility": "private"
     },
+    "wave4c-943-stand-in": {
+      "availability": "present",
+      "bytes": 931706,
+      "cited_by": [
+        "docs/acceptance/2026-11-25-wave3-wave4-live-validation-price-proposal-943.md"
+      ],
+      "files": 301,
+      "manifest_sha256": "9fb3deefb39031aa6b66cce2459b5c307542eacab16c1cf5e4e2c01f7f31d3c6",
+      "note": "Wave 4C #943 live macOS Seatbelt WAL stand-in rehearsal report and artifacts (24/24 checks PASS, session 3a2f65b34f9341b78bcbad5b0f1c668f) sealed prior to removing the duplicate working directory.",
+      "sources": {
+        "stand-in": ".runtime/live-curator-stand-in-runs/wave4c-943-final"
+      },
+      "visibility": "private"
+    },
     "wilderness-delayed-memory-762": {
       "availability": "present",
       "bytes": 105395011,
