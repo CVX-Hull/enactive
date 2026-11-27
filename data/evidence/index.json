@@ -1116,6 +1116,37 @@
       },
       "visibility": "private"
     },
+    "long-horizon-offscreen-memory-research": {
+      "availability": "present",
+      "bytes": 876619,
+      "cited_by": [
+        "docs/research-long-horizon-offscreen-memory.md"
+      ],
+      "files": 77,
+      "manifest_sha256": "69287077e0b1bf584c747985a5c0c12643da67de98a14b0bf2d955b91eb9bbd3",
+      "note": "Phase 1 explorer critiques, Phase 2 reading briefs and full-text reports across three model families, reconciled digests, claims list and scripts behind the companion research page on long-horizon off-screen state and environmental tracking; downloaded source texts are not kept",
+      "sources": {
+        "explorers": "session-scratch/explorers",
+        "method": "session-scratch/method",
+        "readings": "session-scratch/readings",
+        "reconciled": "session-scratch/reconciled"
+      },
+      "visibility": "private"
+    },
+    "long-horizon-offscreen-memory-research-review": {
+      "availability": "present",
+      "bytes": 48724,
+      "cited_by": [
+        "docs/research-long-horizon-offscreen-memory.md"
+      ],
+      "files": 7,
+      "manifest_sha256": "fae07753b8b64de42817b0c0621628f2be026f62bd359bee61bd9acf74163607",
+      "note": "Two independent clean-context reviews of the companion research page on long-horizon off-screen state and environmental tracking, their briefs and the lead's disposition of all verified findings",
+      "sources": {
+        ".": "session-scratch/review"
+      },
+      "visibility": "private"
+    },
     "malvern-trunk-paired-replay-829": {
       "availability": "present",
       "bytes": 36002169,
