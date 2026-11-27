@@ -17,6 +17,7 @@ records external support and limits.
 | [Work items and flow](workflows/work-items.md) | Issues, the Project's statuses and fields, the Ready brief, capacity and forecasts |
 | [Development-first delivery](workflows/development.md) | Checkpoints from development play to formal acceptance and merge, gameplay as the feedback loop, minimum checks and escalation |
 | [Review by decision and risk](workflows/review.md) | Which review a change needs, risk-based assurance and milestone review |
+| [Design discovery and decision settlement](workflows/design-discovery.md) | Multi-lens pre-decision discovery and owner-decision settlement for open boundary leaves |
 | [Protected CI profiles](workflows/ci-profiles.md) | What the required check runs on pull requests and on main |
 | [Evidence and documentation cadence](workflows/evidence-cadence.md) | When to record evidence and update documents, efficient discovery and upkeep |
 | [Campaign-driven improvement](workflows/campaign-admission.md) | Campaign admission and finding disposition |
