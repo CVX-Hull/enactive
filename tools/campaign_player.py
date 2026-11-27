@@ -614,8 +614,6 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             record.update(events.finish())
             if not record['accounting_complete'] or not cleanup['process_absent'] or not cleanup['group_absent']:
                 raise ControlError('Host accounting or exact process-group quiescence is unresolved')
-            if stop_reason is not None:
-                reason=stop_reason;break
             settled=record['settled']
             if (target/'agenda-final.json').is_file():
                 try:
@@ -623,8 +621,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     validate_agenda(strict_loads(next_agenda, ControlError))
                     agenda_bytes = next_agenda
                 except (OSError, ValueError, ControlError):
-                    if child.returncode==0 and settled.get('ok') is True:
+                    if stop_reason is None and child.returncode==0 and settled.get('ok') is True:
                         raise
+            if stop_reason is not None:
+                reason=stop_reason;break
             if child.returncode!=0 or settled.get('ok') is not True:
                 reason='Deciding host ended unsuccessfully';break
             if settled.get('reason')=='handoff':

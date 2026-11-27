@@ -91,12 +91,20 @@ try {
     if (event.type === 'settled') settlement = event;
     else return output(event);
   }});
-  if (args['--agenda-out']) await writeAgenda(args['--agenda-out'], result.agenda);
+  let writeFailed = false;
+  if (args['--agenda-out']) {
+    try { await writeAgenda(args['--agenda-out'], result.agenda); }
+    catch (error) {
+      writeFailed = true;
+      process.stderr.write(`player_host: failed to write agenda output: ${error?.message ?? error}\n`);
+    }
+  }
   // campaign_player owns exclusive reservation of this exact final path; the
   // contract writes only the report from a direct accepted finish invocation.
   if (result.ok && ['task_complete', 'cannot_continue', 'external_stop_complete'].includes(result.reason)) await writeFile(args['-o'], result.finalText + '\n', {encoding:'utf8', signal:controller.signal});
+  // Always emit the real settlement with intact spend/request counts before setting non-zero exit on agenda-out I/O failure.
   output(settlement);
-  process.exitCode = result.ok ? 0 : 1;
+  process.exitCode = result.ok && !writeFailed ? 0 : 1;
 } catch (error) {
   output({type:'settled', wall_time:new Date().toISOString(), monotonic_ms:performance.now() - started, ok:false, reason:error instanceof HostError ? error.reason : 'invalid-input-or-output', native_cleanup_claimed:false});
   process.exitCode=1;

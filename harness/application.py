@@ -137,15 +137,14 @@ class Application:
                     envelope['clock_label'] = clock
                 return envelope, png
 
-            # 3. Historical journal source (gated by live disclosure for cross-session entries, never clickable).
+            # 3. Current-session journal source fallback (never fabricate aliases for cross-session sources).
             if self.journal.has_source(identity):
                 try:
                     value, png = self.journal.read_source(identity)
                 except PlayerError:
                     return dict(schema=SOURCE_READ_SCHEMA, status='unavailable', source_id=identity,
                                 reason='integrity-failed', read_wall=now), None
-                same_session = value.get('session') == self.runtime.session
-                if not same_session and not disclosed:
+                if value.get('session') != self.runtime.session:
                     return dict(schema=SOURCE_READ_SCHEMA, status='unavailable', source_id=identity,
                                 reason='unknown-or-out-of-scope', read_wall=now), None
                 if len(png) > IMAGE_LIMIT:
@@ -156,7 +155,7 @@ class Application:
                     status='available',
                     source_id=identity,
                     source=value,
-                    origin=dict(admission='current' if same_session else 's01', actor=actor_id or '001', step=None),
+                    origin=dict(admission='current', actor=actor_id or '001', step=None),
                     clickable=False,
                     read_wall=now,
                 )

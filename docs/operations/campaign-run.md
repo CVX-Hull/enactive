@@ -171,7 +171,11 @@ with `labels.lineage` when set, and `--context KEY=VALUE` for each declared run-
 `context`. The exporter selects every current record whose scope is satisfied by that target
 and blinds all raw world and lineage labels before drawing units. Omit `--world` to select
 unbound records alone. `--empty --package DIR` creates the required files with no units or
-coverage and takes the same selection options. Freeze the returned hashes in `files` and
+coverage and takes the same selection options. Then run
+`python -m tools.source_index --package DIR [--world WORLD --lineage LINEAGE --before-admission N] [--extra-run PRIOR_RUN ...] [--prior-agenda PRIOR_RUN/agenda-final.json]`
+to freeze `source-index.json` (`player-source-index/1`, empty when unbound/non-lineage) and
+`agenda.json` (`player-agenda-continuation/1`, empty when starting fresh or validated from a
+prior admission's `agenda-final.json`). Freeze all returned hashes in `files` and
 `private_files`. Preflight verifies the private selection against `labels.world`,
 `labels.lineage`, `context` and the delivered file's SHA-256. The
 [host contract](../contracts/player-host.md#delivered-knowledge-and-player-working-state-agenda) specifies
@@ -373,11 +377,11 @@ block is closed:
 | `reported_usd` | The sum of the cost the provider reported, over the responses that reported one |
 | `unpriced_requests` | Observed player attempts without a usable provider charge |
 | `unpriced_request_usd` | Player in-flight and ending planning bound from the route |
-| `unpriced_recall_requests` | Observed recall attempts without a usable provider charge |
-| `unpriced_recall_request_usd` | Recall in-flight and ending planning bound from the route |
+| `unpriced_recall_requests` | Constant `0` on `player-host/13` (retained for `campaign-receipt/7` / `player-driver/7` compatibility) |
+| `unpriced_recall_request_usd` | Constant `"0"` on `player-host/13` (retained for `campaign-receipt/7` / `player-driver/7` compatibility) |
 | `spent_usd` | Provider subtotal counted toward the dollar limit, equal to `reported_usd` |
-| `observed_attempts` | Player and recall HTTP starts read from the traces |
-| `observed_recall_attempts` | The recall subset |
+| `observed_attempts` | Player HTTP starts read from the traces |
+| `observed_recall_attempts` | Constant `0` on `player-host/13` (retained for `campaign-receipt/7` / `player-driver/7` compatibility) |
 | `spend_complete` | Whether [trace reconciliation](../contracts/player-host.md#spend) is complete. When false, the spend is unknown. |
 
 The dollar amounts are decimal text. The invoice is separate from the reported cost.

@@ -58,7 +58,7 @@ newer version during play, and the host delivers non-empty substantive deltas to
 running actor while suppressing empty updates ([a newer version during play](../contracts/player-host.md#a-newer-version-during-play)).
 Each knowledge read names the version it answers from.
 The [player guide](../player-guide.md#delivered-knowledge-and-working-state) describes how to check
-fallible leads and reminders against the current view. The
+fallible leads and deltas against the current view. The
 [curator repository](curator.md#facts-articles-and-grooming) stays outside the player
 runtime. After play, the evaluator reads [delivery evidence](../contracts/measurement-tools.md#adjudication-and-the-standing-use-measures).
 

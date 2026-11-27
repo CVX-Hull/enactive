@@ -4,9 +4,9 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { McpClient } from '@earendil-works/pi-mcp';
-import { reply } from './host-scenario.mjs';
-import { deliveryScenario, knowledge } from './delivery-scenario.mjs';
-import { AGENDA_SCHEMA, AGENDA_MAX_BYTES, AGENDA_MAX_ACTIVE, AGENDA_MAX_THREADS, AGENDA_MAX_SUB_ITEMS,
+import { reply, realDelay } from './host-scenario.mjs';
+import { deliveryScenario, knowledge, listUpdate } from './delivery-scenario.mjs';
+import { AGENDA_SCHEMA, AGENDA_MAX_BYTES, AGENDA_CUT_HEADROOM, AGENDA_MAX_ACTIVE, AGENDA_MAX_THREADS, AGENDA_MAX_SUB_ITEMS,
   AGENDA_MAX_REFS, AGENDA_TOMBSTONE_CUTS, emptyAgenda, validateAgenda, advanceAgendaCut,
   agendaForPrompt, agendaQueryText, agendaRefSet, applyAgendaTool } from '../agenda.mjs';
 
@@ -114,4 +114,61 @@ test('the MCP tool list cannot shadow player_agenda', async t => {
   const {result, payloads} = await deliveryScenario(await deliveryDirectory(t), {enabledTools:['observe']});
   assert.equal(result.reason, 'missing-required-tools');
   assert.equal(payloads.length, 0);
+});
+
+test('tool writes reserve cut headroom so advanceAgendaCut never overflows across digit growth', () => {
+  let agenda = {...emptyAgenda(), cut_count:999, threads:[]};
+  for (let i = 0; i < 6; i++) {
+    agenda = applyAgendaTool(agenda, {op:'upsert', id:`t-${i}`, status:'active', title:'x'.repeat(120),
+      notes:'y'.repeat(240)}, new Set()).agenda;
+  }
+  const probe = {op:'upsert', id:'fit', status:'active', title:'a', notes:'b'};
+  const baseBytes = Buffer.byteLength(JSON.stringify(applyAgendaTool(agenda, probe, new Set()).agenda));
+  const fill = (AGENDA_MAX_BYTES - AGENDA_CUT_HEADROOM) - baseBytes;
+  assert.ok(fill > 0 && fill < 240);
+  const full = applyAgendaTool(agenda, {...probe, notes:'b' + 'z'.repeat(fill)}, new Set()).agenda;
+  assert.equal(Buffer.byteLength(JSON.stringify(full)), AGENDA_MAX_BYTES - AGENDA_CUT_HEADROOM);
+  assert.throws(() => applyAgendaTool(agenda, {...probe, notes:'b' + 'z'.repeat(fill + 1)}, new Set()),
+    /tool headroom/);
+  const advanced = advanceAgendaCut(full);
+  assert.equal(advanced.cut_count, 1000);
+  assert.ok(Buffer.byteLength(JSON.stringify(advanced)) <= AGENDA_MAX_BYTES);
+});
+
+test('host-local agenda and affects_agenda stay in live prompts and never leak into knowledge telemetry', async t => {
+  const dir = await deliveryDirectory(t);
+  const secretTitle = 'Secret agenda task title';
+  const agenda = applyAgendaTool(emptyAgenda(), {op:'upsert', id:'secret-task', status:'active',
+    title:secretTitle, refs:['fact-alone']}, new Set(['fact-alone'])).agenda;
+  const v3 = knowledge('v3');
+  v3.facts.pop();
+  v3.history.ended = ['fact-alone'];
+  const {result, events, payloads} = await deliveryScenario(dir, {
+    agenda, knowledge:knowledge('v2'), knowledgeUpdates:true,
+    playerFetch:async n => {
+      if (n === 1) {
+        await listUpdate(dir, v3);
+        await realDelay(1200);
+        return reply(null, [['computer_input', {actions:[{type:'key', key:'x', modifiers:[]}]}]]);
+      }
+      return reply();
+    },
+  });
+  assert.equal(result.ok, true, result.reason);
+  const textOf = content => typeof content === 'string'
+    ? content
+    : (content ?? []).filter(part => part.type === 'text').map(part => part.text).join('');
+  const openingPrompt = textOf(payloads[0].messages[1].content);
+  const [knowledgePart, agendaPart] = openingPrompt.split('BEGIN PLAYER AGENDA');
+  assert.ok(agendaPart && agendaPart.includes(secretTitle), 'live opening prompt includes separate agenda block');
+  assert.ok(!knowledgePart.includes(secretTitle), 'BEGIN FALLIBLE KNOWLEDGE never embeds agenda');
+  const secondTexts = payloads[1].messages.map(message => textOf(message.content)).join('\n');
+  assert.ok(secondTexts.includes('"affects_agenda":true'), 'live update marks agenda impact');
+  const knowledgeEvents = events.filter(event => event.type === 'knowledge-delivery' || event.type === 'knowledge-undelivered');
+  assert.equal(knowledgeEvents.length, 2);
+  for (const event of knowledgeEvents) {
+    const serialized = JSON.stringify(event);
+    assert.ok(!serialized.includes(secretTitle), `agenda title leaked in ${event.kind}`);
+    assert.ok(!serialized.includes('affects_agenda'), `affects_agenda leaked in ${event.kind}`);
+  }
 });

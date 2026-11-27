@@ -1,6 +1,7 @@
 // Player-authored working state. The host only validates, stamps, and carries it.
 export const AGENDA_SCHEMA = 'player-agenda-continuation/1';
 export const AGENDA_MAX_BYTES = 3072;
+export const AGENDA_CUT_HEADROOM = 16;
 export const AGENDA_MAX_ACTIVE = 8;
 export const AGENDA_MAX_THREADS = 16;
 export const AGENDA_MAX_SUB_ITEMS = 6;
@@ -80,6 +81,9 @@ export const agendaQueryText = agenda => agenda.threads.filter(working)
   .flatMap(thread => [thread.title, thread.notes ?? '']).join(' ');
 export const agendaForPrompt = agenda => ({cut_count:agenda.cut_count, threads:agenda.threads.map(
   ({created_at_cut, updated_at_cut, ...thread}) => thread)});
+export const agendaPromptBlock = agenda => agenda?.threads.length
+  ? `BEGIN PLAYER AGENDA — host-local working threads; grants_authority=false\n${JSON.stringify(agendaForPrompt(agenda))}\nEND PLAYER AGENDA`
+  : '';
 
 export function applyAgendaTool(agenda, args, earnedRefs) {
   const allowed = args && Object.hasOwn(operationFields, args.op) ? operationFields[args.op] : null;
@@ -99,6 +103,9 @@ export function applyAgendaTool(agenda, args, earnedRefs) {
     else threads.push(thread);
   }
   const next = validateAgenda({...agenda, threads});
+  if (args.op !== 'read' && Buffer.byteLength(JSON.stringify(next)) > AGENDA_MAX_BYTES - AGENDA_CUT_HEADROOM) {
+    invalid(`exceeds ${AGENDA_MAX_BYTES - AGENDA_CUT_HEADROOM} UTF-8 bytes tool headroom (${AGENDA_MAX_BYTES} max)`);
+  }
   if (args.op === 'upsert') {
     for (const ref of args.refs ?? []) {
       if (!earnedRefs.has(ref)) invalid(`unearned ref ${JSON.stringify(ref)}`);

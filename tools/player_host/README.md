@@ -422,7 +422,7 @@ to analyze traces; future telemetry versions are not silently interpreted.
 The required `--delivered-knowledge` file is `delivered-knowledge/4`; it has no
 text-size cap. `validateKnowledge` accepts only its closed forms (articles,
 facts, `frame_clocks`, `history` and aliased `sN` sessions, as the
-[player host contract](../../docs/contracts/player-host.md#delivered-knowledge-and-recall)
+[player host contract](../../docs/contracts/player-host.md#delivered-knowledge-and-player-working-state-agenda)
 defines them) and refuses every other file. That includes a file whose revisions are
 out of order, or whose derived fields (`cited_by_articles`, `backlinks`, `shadowed_by`,
 `contradicted_by`, `lifecycle_state` and an article's inherited flags) disagree with

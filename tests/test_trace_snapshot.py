@@ -139,6 +139,13 @@ def test_snapshot_omits_agenda_files_calls_and_telemetry(tmp_path, ended):
                 dict(type='tool-start', tool='player_agenda', tool_call_id='agenda-edit', arguments={'text': secret}),
                 dict(type='tool-result', tool_call_id='agenda-edit', result={'structuredContent': {'id': secret}}),
                 dict(type='player-agenda', threads=[secret]),
+                dict(type='knowledge-delivery', kind='briefing', version='v1',
+                     text='BEGIN FALLIBLE KNOWLEDGE\n' + json.dumps({'leads': [], 'agenda': {'threads': [secret]}}) + '\nEND FALLIBLE KNOWLEDGE'),
+                dict(type='knowledge-undelivered', kind='update', version='v2',
+                     delta={'corrections': [{'old_id': 'fact-1', 'affects_agenda': True}]},
+                     text='BEGIN FALLIBLE KNOWLEDGE UPDATE (v2)\n'
+                          + json.dumps({'corrections': [{'old_id': 'fact-1', 'affects_agenda': True}]})
+                          + '\nEND FALLIBLE KNOWLEDGE UPDATE'),
             ]
             stream.writelines(json.dumps(event) + '\n' for event in events)
         operation = writer(op='step')['operation_id']
@@ -150,7 +157,9 @@ def test_snapshot_omits_agenda_files_calls_and_telemetry(tmp_path, ended):
         assert not (frozen.directory/'source-index.json').exists()
         log = (actor/'host.jsonl').read_text()
         assert operation in log
-        assert all(value not in log for value in (secret, 'agenda-edit', 'player_agenda', 'player-agenda'))
+        assert all(value not in log for value in (secret, 'agenda-edit', 'player_agenda', 'player-agenda', 'affects_agenda'))
+        parsed = [json.loads(line) for line in log.splitlines() if line.strip()]
+        assert {event['type'] for event in parsed} >= {'knowledge-delivery', 'knowledge-undelivered'}
         _, _, tools = _project(frozen.directory, tmp_path/'trace')
         assert all(tool['tool'] != 'player_agenda' for tool in tools['001'])
         writer(op='close')

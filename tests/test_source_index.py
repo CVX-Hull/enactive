@@ -351,8 +351,10 @@ def test_source_index_ancestry_security_disclosure_and_player_source_read_2(tmp_
         runtime.store.close()
 
 
-def test_998_v94_resolves_all_785_ancestor_frames_read_only():
-    """Read-only `#998` `v94` replay: build_source_index resolves all 785 ancestor frames on disk across A01-A03."""
+def test_998_v94_resolves_all_785_ancestor_frames_read_only(tmp_path):
+    """Read-only `#998` `v94` replay: all 785 ancestor frames resolve and SHA-verify through Application.read_player_source."""
+    from tools.knowledge_retrieval_benchmark import _project_v3_to_v4
+
     repo_root = Path(__file__).resolve().parents[1]
     if not (repo_root / '.runtime' / 'evidence' / 'multi-day-standard-build-998-admission-04').is_dir():
         alt = repo_root.parents[1] if repo_root.parent.name == 'worktrees' else repo_root
@@ -381,16 +383,67 @@ def test_998_v94_resolves_all_785_ancestor_frames_read_only():
     )
     assert set(built['roots'].keys()) == {'s01', 's02', 's03'}
     idx = SourceIndex(built, root_dir=repo_root)
-    missing = [sid for sid in ancestor_cited if not idx.contains(sid)]
-    assert missing == [], f'Unresolved #998 v94 ancestor frames: {missing[:5]}'
-    # Spot-check verified O_NOFOLLOW + SHA-256 reads across all 3 ancestor admissions (s01, s02, s03).
-    checked_roots = set()
-    for sid in ancestor_cited:
-        root_alias = idx.sources[sid]['root']
-        if root_alias in checked_roots:
-            continue
-        meta, png, origin = idx.read_verified(sid)
-        assert meta['source_id'] == sid and png.startswith(b'\x89PNG\r\n\x1a\n')
-        assert origin['admission'] == root_alias
-        checked_roots.add(root_alias)
-    assert checked_roots == {'s01', 's02', 's03'}
+
+    v94_v4 = _project_v3_to_v4(v94)
+    delivered_file = tmp_path / 'v94-delivered.json'
+    delivered_file.write_text(json.dumps(v94_v4), encoding='utf-8')
+    channel = _FakeChannel()
+    (tmp_path / 'computer').mkdir()
+    runtime = ComputerRuntime(
+        tmp_path / 'computer', a04_session, channel, _FakeProcess(),
+        time.monotonic() + 120, dict(max_inputs=10, max_requests=10, max_frames=10, max_bytes=1024 * 1024),
+    )
+    journal = Journal(tmp_path / 'player.sqlite3')
+    try:
+        app = Application(runtime, journal, tmp_path / 'contexts', knowledge=delivered_file, source_index=idx)
+        seen_roots = set()
+        for sid in ancestor_cited:
+            env, png = app.read_player_source(sid)
+            assert env['schema'] == 'player-source-read/2'
+            assert env['status'] == 'available', (sid, env)
+            assert env['clickable'] is False
+            assert env['source_id'] == sid and env['source']['source_id'] == sid
+            assert png is not None and png.startswith(b'\x89PNG\r\n\x1a\n')
+            seen_roots.add(env['origin']['admission'])
+        assert seen_roots == {'s01', 's02', 's03'}
+        assert channel.stopped_reasons == []
+    finally:
+        journal.close()
+        runtime.store.close()
+
+
+def test_source_index_cli_writes_index_and_carries_prior_agenda(tmp_path, capsys):
+    from tools.source_index import main as source_index_main
+
+    run1 = _make_closed_run(
+        tmp_path, '.runtime/runs/run1',
+        session='1' * 32, world='w1', lineage='lin1', admission=1,
+        sources={f"{'1' * 32}-1": PNG_1X1},
+    )
+    prior = tmp_path / 'agenda-final.json'
+    carried = dict(
+        schema='player-agenda-continuation/1', cut_count=3,
+        threads=[dict(id='t1', title='Carry goal', status='active', created_at_cut=1, updated_at_cut=2)],
+    )
+    prior.write_text(canonical(carried) + '\n', encoding='utf-8')
+    pkg = tmp_path / 'pkg'
+    code = source_index_main([
+        '--package', str(pkg), '--root', str(tmp_path),
+        '--world', 'w1', '--lineage', 'lin1', '--before-admission', '2',
+        '--extra-run', str(run1), '--no-sealed-evidence', '--prior-agenda', str(prior),
+    ])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    assert set(out) == {'source-index.json', 'agenda.json'}
+    assert hashlib.sha256((pkg / 'source-index.json').read_bytes()).hexdigest() == out['source-index.json']
+    assert hashlib.sha256((pkg / 'agenda.json').read_bytes()).hexdigest() == out['agenda.json']
+    idx = json.loads((pkg / 'source-index.json').read_text(encoding='utf-8'))
+    assert f"{'1' * 32}-1" in idx['sources']
+    assert json.loads((pkg / 'agenda.json').read_text(encoding='utf-8')) == carried
+
+    # Invalid prior agenda is refused cleanly.
+    bad = tmp_path / 'bad-agenda.json'
+    bad.write_text(json.dumps(dict(schema='player-agenda-continuation/99', cut_count=0, threads=[])), encoding='utf-8')
+    with pytest.raises(SystemExit) as exc:
+        source_index_main(['--package', str(tmp_path / 'pkg2'), '--root', str(tmp_path), '--prior-agenda', str(bad)])
+    assert exc.value.code == 1

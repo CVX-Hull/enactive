@@ -396,20 +396,44 @@ test('cut markers diff from the previous briefing even after mid-segment deliver
   assert.deepEqual(cutEvents(events).map(event => event.uncovered_turns), [0, 0]);
 });
 
-test('cut leaves an earlier agenda-related ending visible when the replacement omits it', async t => {
+test('cut leaves an earlier agenda-related ending visible when the replacement omits it, then retires it on the next cut', async t => {
   const agenda = applyAgendaTool(emptyAgenda(), {op:'upsert', id:'evidence', status:'active', title:'Carry evidence',
     refs:['fact-alone']}, new Set(['fact-alone'])).agenda;
-  const v2 = knowledge('v2'), v3 = knowledge('v3');
+  const v2 = knowledge('v2'), v3 = knowledge('v3'), v4 = knowledge('v4');
   v2.facts.pop();
   v2.history.ended = ['fact-alone'];
+  v4.articles[0].lead = 'Updated lead for cut two.';
   const {payloads} = await play(t, async (n, {dir, publish}) => {
     if (n === 1) { await listUpdate(dir, v2); await realDelay(1200); }
     if (n === 2) { await listUpdate(dir, v3); await publish(publication(1, 'v3')); }
-    return n === 3 ? reply() : observe(n, 1, 4000);
+    if (n === 3) { await listUpdate(dir, v4); await publish(publication(2, 'v4')); }
+    return n === 4 ? reply() : observe(n, 1, 4000);
   }, {agenda, maxImages:1});
-  const marker = JSON.parse(markerText(payloads[2]).split('\n')[1]);
-  assert.equal(marker.changes_since, undefined);
+  const marker1 = JSON.parse(markerText(payloads[2]).split('\n')[1]);
+  assert.equal(marker1.changes_since, undefined);
   assert.ok(payloads[2].messages.some(message => messageText(message).startsWith('BEGIN FALLIBLE KNOWLEDGE UPDATE (v2)')));
+  assert.ok(!payloads[3].messages.some(message => messageText(message).startsWith('BEGIN FALLIBLE KNOWLEDGE UPDATE (v2)')));
+});
+
+test('strict-fit rescue still succeeds when a carried agenda is already at the exact 3072-byte ceiling', async t => {
+  const threads = Array.from({length:6}, (_, i) => ({
+    id:`t-${i}`, status:'active', title:'x'.repeat(120), notes:'y'.repeat(240), created_at_cut:0, updated_at_cut:0,
+  }));
+  const base = {schema:'player-agenda-continuation/1', cut_count:9, threads:[...threads, {
+    id:'pad', status:'active', title:'a', notes:'b', created_at_cut:0, updated_at_cut:0,
+  }]};
+  const extra = 3072 - Buffer.byteLength(JSON.stringify(base));
+  assert.ok(extra > 0 && extra < 240);
+  base.threads[6].notes = 'b' + 'z'.repeat(extra);
+  assert.equal(Buffer.byteLength(JSON.stringify(base)), 3072);
+  const {result, events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 2) await publish(publication(1));
+    return n === 3 ? reply() : observe(n, 1, n === 2 ? 98_000 : 16);
+  }, {agenda:base, maxImages:12, contextCut:{low_mark:95_000, high_mark:99_900, min_free:10}});
+  assert.equal(result.ok, true);
+  assert.deepEqual(cutEvents(events).map(event => [event.outcome, event.cut_result]), [['cut', 'rescue']]);
+  assert.equal(result.agenda.cut_count, 9);
+  assert.ok(markerText(payloads[2]));
 });
 
 test('an accepted orderly stop fences new cuts and remains visible after an earlier cut', async t => {

@@ -36,7 +36,7 @@ Replayed all `102` sealed `#998` snapshots (`v0`–`v101`, projected to `deliver
 
 ## `$0` `#998 v94` 785-ancestor-frame replay
 
-Executed inside `tests/test_source_index.py::test_998_v94_785_ancestor_frames_resolve_and_verify`:
+Executed inside `tests/test_source_index.py::test_998_v94_resolves_all_785_ancestor_frames_read_only`:
 
 - `tools/source_index.build_source_index` indexed sealed `#998` Admissions 01–03 (`3` verified `sealed-evidence` roots, zero PNG copies, non-WAL read-only SQLite).
 - All `785/785` ancestor frames cited in `#998` Admission 04's `v94` `delivered-knowledge.json` resolved through `Application.read_player_source` (`player-source-read/2`, `status: "available"`, `clickable: false`, blinded `origin`, verified SHA-256).

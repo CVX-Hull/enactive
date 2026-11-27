@@ -8,7 +8,7 @@ from pathlib import Path
 import sqlite3
 from typing import Sequence
 
-from harness.jsonio import file_sha256, strict_loads
+from harness.jsonio import canonical, file_sha256, strict_loads
 from harness.player.source_index import (
     IMAGE_LIMIT,
     SOURCE_INDEX_SCHEMA,
@@ -195,6 +195,9 @@ def build_source_index(
                 ev_sha = entry.get('manifest_sha256')
                 if not isinstance(ev_sha, str) or len(ev_sha) != 64:
                     continue
+                ev_manifest = root / 'data' / 'evidence' / f'{name}.sha256'
+                if not ev_manifest.is_file() or ev_manifest.is_symlink() or file_sha256(ev_manifest) != ev_sha:
+                    continue
                 bundle_dir = root / '.runtime' / 'evidence' / name
                 run_dir = bundle_dir / 'run' if (bundle_dir / 'run' / 'manifest.json').is_file() else bundle_dir
                 found = _verified_run_root(
@@ -235,3 +238,77 @@ def build_source_index(
 
     result = dict(schema=SOURCE_INDEX_SCHEMA, world=world, lineage=lineage, roots=roots, sources=sources)
     return validate_source_index(result, root_dir=root, expected_world=world, expected_lineage=lineage, check_labels=True)
+
+
+def write_package_continuity(
+    package_dir: Path,
+    *,
+    root: Path,
+    world: str | None = None,
+    lineage: str | None = None,
+    before_admission: int | None = None,
+    extra_runs: Sequence[Path] = (),
+    include_sealed_evidence: bool = True,
+    prior_agenda: Path | None = None,
+) -> dict[str, str]:
+    """Write validated `source-index.json` and `agenda.json` into `package_dir` and return their SHA-256 digests."""
+    from harness.player.source_index import empty_agenda, validate_agenda
+
+    package_dir.mkdir(parents=True, exist_ok=True)
+    source_index = build_source_index(
+        root=root,
+        world=world,
+        lineage=lineage,
+        before_admission=before_admission,
+        extra_runs=extra_runs,
+        include_sealed_evidence=include_sealed_evidence,
+    )
+    if prior_agenda is not None:
+        _, agenda_obj = _read_json(prior_agenda, 1024 * 1024)
+        agenda = validate_agenda(agenda_obj)
+    else:
+        agenda = empty_agenda()
+
+    hashes: dict[str, str] = {}
+    for filename, payload in (('source-index.json', source_index), ('agenda.json', agenda)):
+        data = (canonical(payload) + '\n').encode('utf-8')
+        out_path = package_dir / filename
+        out_path.write_bytes(data)
+        hashes[filename] = hashlib.sha256(data).hexdigest()
+    return hashes
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='Build frozen source-index.json (player-source-index/1) and agenda.json (player-agenda-continuation/1) for a campaign package.'
+    )
+    parser.add_argument('--package', type=Path, required=True, help='Target package directory')
+    parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1], help='Project root directory')
+    parser.add_argument('--world', default=None, help='Package labels.world (omit for unbound)')
+    parser.add_argument('--lineage', default=None, help='Package labels.lineage (omit for non-lineage)')
+    parser.add_argument('--before-admission', type=int, default=None, help='Include only ancestor admissions strictly below N')
+    parser.add_argument('--extra-run', type=Path, action='append', default=[], help='Additional verified closed-session run directory')
+    parser.add_argument('--no-sealed-evidence', action='store_true', help='Skip data/evidence/index.json sealed bundles')
+    parser.add_argument('--prior-agenda', type=Path, default=None, help='Prior admission agenda-final.json to carry into agenda.json')
+    args = parser.parse_args(argv)
+    try:
+        hashes = write_package_continuity(
+            args.package,
+            root=args.root,
+            world=args.world,
+            lineage=args.lineage,
+            before_admission=args.before_admission,
+            extra_runs=args.extra_run,
+            include_sealed_evidence=not args.no_sealed_evidence,
+            prior_agenda=args.prior_agenda,
+        )
+    except (OSError, ValueError, SourceIndexError) as exc:
+        parser.exit(1, f'source_index refused: {exc}\n')
+    print(json.dumps(hashes, sort_keys=True))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

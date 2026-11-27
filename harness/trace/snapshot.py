@@ -347,11 +347,67 @@ def _receipt_schema(receipt: str) -> object:
     return value.get('schema') if isinstance(value, dict) else None
 
 
+def _scrub_agenda_from_delivery(line: bytes, event: dict | None) -> tuple[bytes, dict | None]:
+    """Defense-in-depth (#1026): strip any agenda or affects_agenda fields from delivery telemetry."""
+    if event is None or event.get('type') not in ('knowledge-delivery', 'knowledge-undelivered'):
+        return line, event
+    changed = False
+    cleaned = dict(event)
+    delta = cleaned.get('delta')
+    if isinstance(delta, dict):
+        new_delta = dict(delta)
+        if 'agenda' in new_delta:
+            new_delta.pop('agenda')
+            changed = True
+        if isinstance(new_delta.get('corrections'), list):
+            new_corrs = []
+            for row in new_delta['corrections']:
+                if isinstance(row, dict) and 'affects_agenda' in row:
+                    r = dict(row)
+                    r.pop('affects_agenda')
+                    new_corrs.append(r)
+                    changed = True
+                else:
+                    new_corrs.append(row)
+            new_delta['corrections'] = new_corrs
+        if changed:
+            cleaned['delta'] = new_delta
+    text = cleaned.get('text')
+    if isinstance(text, str):
+        parts = text.split('\n')
+        if len(parts) == 3:
+            try:
+                body = json.loads(parts[1])
+            except ValueError:
+                body = None
+            if isinstance(body, dict):
+                body_changed = False
+                if 'agenda' in body:
+                    body.pop('agenda')
+                    body_changed = True
+                if isinstance(body.get('corrections'), list):
+                    for row in body['corrections']:
+                        if isinstance(row, dict) and 'affects_agenda' in row:
+                            row.pop('affects_agenda')
+                            body_changed = True
+                if body_changed:
+                    parts[1] = json.dumps(body, separators=(',', ':'), ensure_ascii=False)
+                    cleaned['text'] = '\n'.join(parts)
+                    changed = True
+    if not changed:
+        return line, event
+    return (json.dumps(cleaned, separators=(',', ':'), ensure_ascii=False) + '\n').encode('utf-8'), cleaned
+
+
 def _cut(operations: list[dict], natives: dict[str, list[dict]], collected: set[str],
          lines: list[tuple[bytes, dict | None]], ended: bool) -> tuple[list[dict], list[bytes]]:
     """The included prefix of one actor's operations and its host log, by the module's rule."""
     agenda_calls: set[tuple[object, object]] = set()
-    lines = [(line, event) for line, event in lines if event is None or not _agenda_event(event, agenda_calls)]
+    lines = [
+        _scrub_agenda_from_delivery(line, event)
+        for line, event in lines
+        if event is None or not _agenda_event(event, agenda_calls)
+    ]
     answered: dict[str, int] = {}
     for index, (_, event) in enumerate(lines):
         if event is not None and event.get('type') == 'tool-result':

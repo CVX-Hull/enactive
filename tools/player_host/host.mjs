@@ -12,8 +12,8 @@ import { estimateContextTokens, estimateMessageTokens } from '@earendil-works/pi
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
 import { validateKnowledge, updateDelivery, updateEntry, coverageEntry,
   openingBriefing, cutBriefing, cutMarker, substantiveDelta, representsUpdate,
-  CUT_BRIEFING_CHARS, versionNumber } from './knowledge.mjs';
-import { advanceAgendaCut, agendaForPrompt, agendaRefSet, agendaToolParameters, applyAgendaTool,
+  redactDeliveryForTelemetry, CUT_BRIEFING_CHARS, versionNumber } from './knowledge.mjs';
+import { advanceAgendaCut, agendaForPrompt, agendaPromptBlock, agendaRefSet, agendaToolParameters, applyAgendaTool,
   emptyAgenda, validateAgenda } from './agenda.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
@@ -1046,7 +1046,7 @@ export async function runHost(options) {
   const settleDeliveries = (outcome, receivingId) => {
     for (const {value, target} of logicalDeliveries.splice(0)) {
       if (outcome === 'delivered') lastAnnouncedKnowledge = target;
-      emit('knowledge-delivery', {...value, outcome, receiving_player_request_id:receivingId});
+      emit('knowledge-delivery', {...redactDeliveryForTelemetry(value), outcome, receiving_player_request_id:receivingId});
     }
   };
   // Context manifest state: the latest projection's ordered images and the previous manifest
@@ -1164,7 +1164,7 @@ export async function runHost(options) {
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
     requireThat(options.knowledgeUpdates == null || text(options.knowledgeUpdates), 'invalid-input');
-    for (const thread of agenda.threads) for (const ref of thread.refs ?? []) earnedRefs.add(ref);
+    for (const ref of agendaRefSet(agenda)) earnedRefs.add(ref);
     knowledge = lastAnnouncedKnowledge = boundaryKnowledge = validateKnowledge(options.knowledge);
     earnKnowledgeRefs(knowledge);
     if (options.knowledgeUpdates) {
@@ -1406,8 +1406,8 @@ export async function runHost(options) {
       const at = validated.length;
       const notices = state === cutState ? [...placedNotices] : placedNotices.flatMap(notice => {
         if (notice.update) {
-          if (state.replacedUpdates.has(notice.update)) return [];
-          return [{...notice, at:Math.max(notice.at, state.cutMessageIndex)}];
+          if (state.replacedUpdates.has(notice.update) || notice.survivedCut) return [];
+          return [{...notice, at:Math.max(notice.at, state.cutMessageIndex), survivedCut:true}];
         }
         if (notice.at < state.cutMessageIndex) return [];
         const contextLine = notice.kinds?.indexOf('context-capacity') ?? -1;
@@ -1481,11 +1481,15 @@ export async function runHost(options) {
         let nextAgenda;
         try { nextAgenda = advanceAgendaCut(agenda); }
         catch {
-          // The next count can add a byte to an exactly full continuation.
-          const reason = 'insufficient-cover';
-          const edge = JSON.stringify([reason, effectiveCoveredOp]);
-          return {plan:original, demand, held:{edge, searchKey}, event:edge === heldCut?.edge ? null :
-            {...decision, outcome:'held-back', reason, available_turns:eligible, min_free:cfg.min_free}};
+          if (!rescue) {
+            // The next count can add a byte to an exactly full hand-crafted continuation.
+            const reason = 'insufficient-cover';
+            const edge = JSON.stringify([reason, effectiveCoveredOp]);
+            return {plan:original, demand, held:{edge, searchKey}, event:edge === heldCut?.edge ? null :
+              {...decision, outcome:'held-back', reason, available_turns:eligible, min_free:cfg.min_free}};
+          }
+          // Never allow an exactly full starting agenda to block an emergency hard-fit rescue cut.
+          nextAgenda = agenda;
         }
         // Leave room for the briefing envelope before assigning the remainder to substantive changes.
         const changesSince = substantiveDelta(boundaryKnowledge, target, {
@@ -1978,8 +1982,10 @@ export async function runHost(options) {
     });
     if (control) agent.steer(controlMessage);
     briefing = openingBriefing(knowledge, {queryText:options.prompt, agenda});
-    currentBriefingTokens = estimateMessageTokens(userMessage(briefing.text));
-    await agent.prompt(options.prompt + '\n\n' + briefing.text);
+    const agendaBlock = agendaPromptBlock(agenda);
+    const openingText = agendaBlock ? `${options.prompt}\n\n${briefing.text}\n\n${agendaBlock}` : `${options.prompt}\n\n${briefing.text}`;
+    currentBriefingTokens = estimateMessageTokens(userMessage(agendaBlock ? `${briefing.text}\n\n${agendaBlock}` : briefing.text));
+    await agent.prompt(openingText);
     if (!fatal && !handoff && !finish) stop('incomplete-terminal-response');
   } catch (error) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
@@ -1989,9 +1995,9 @@ export async function runHost(options) {
     flushRefusals();
     updatesClosed = true;
     closeUpdateReader();
-    if (briefing) emit('knowledge-undelivered', {...briefing, reason:'actor-ended'});
+    if (briefing) emit('knowledge-undelivered', {...redactDeliveryForTelemetry(briefing), reason:'actor-ended'});
     settleDeliveries('undelivered', requestId);
-    for (const {value} of unsentDeliveries) emit('knowledge-undelivered', {...value, reason:'actor-ended'});
+    for (const {value} of unsentDeliveries) emit('knowledge-undelivered', {...redactDeliveryForTelemetry(value), reason:'actor-ended'});
     clearTimeout(requestTimer); clearTimeout(workTimer);
     options.signal?.removeEventListener('abort', cancellation);
     await close();

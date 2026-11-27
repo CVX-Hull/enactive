@@ -179,3 +179,21 @@ test('CLI rejects a malformed agenda before opening the provider route', async t
   assert.equal((await run.finished)[0], 1);
   assert.equal(run.read().events.at(-1).reason, 'invalid-agenda');
 });
+
+test('CLI preserves real settled spend telemetry when --agenda-out cannot be written', async t => {
+  const finish = (_req, res) => {
+    res.writeHead(200, {'content-type':'text/event-stream'});
+    res.end('data: ' + JSON.stringify({id:'fixture', model:'fixture-backend',
+      choices:[{index:0, delta:{role:'assistant', tool_calls:[{index:0, id:'finish', type:'function',
+        function:{name:'player_finish', arguments:JSON.stringify({intent:'Report the fixture result',
+          disposition:'task_complete', report:'final answer', source_ids:[], control_id:null})}}]}, finish_reason:'tool_calls'}],
+      usage:{prompt_tokens:11, completion_tokens:5, total_tokens:16, cost:0.000038}}) + '\n\ndata: [DONE]\n\n');
+  };
+  const run = await cli(t, finish, {}, ['observe'], async dir => ['--agenda-out', dir]);
+  assert.equal((await run.finished)[0], 1);
+  const {events, stderr} = run.read();
+  assert.ok(stderr.length > 0);
+  const settled = events.at(-1);
+  assert.deepEqual([settled.type, settled.ok, settled.reason, settled.requests, settled.spent_usd],
+    ['settled', true, 'task_complete', 1, '0.000038']);
+});
