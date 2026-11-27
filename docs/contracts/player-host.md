@@ -227,6 +227,8 @@ other:
   optional `subject`, `when` (string), `state_key`, `anchor`, `anchor_display`, and `depiction_source_id`.
 - `history` holds `{replaced, ended, retracted}` for read-by-ID lookup and provenance
   inspection (`player-knowledge/4`; `replaced[*].reason` is `restated`, `narrowed`, `corrected`, or `changed`).
+  Delivered `stale_citations` contains only history record IDs (never raw `state_key` names); a lapsed
+  `state_key` `depends_on` pin sets `needs_review: true` without adding the key to `stale_citations`.
 
 `player-host-inputs/4` (`actors/NNN/frozen.json`) has `schema`, `actor_id`,
 `session`, `finish_reserve_usd`, `files` (the SHA-256 of `actor.json`, `route.json`,

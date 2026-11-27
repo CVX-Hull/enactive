@@ -26,7 +26,9 @@ CONTRADICTION_SIM_THRESHOLD = 0.35
 MAX_SECTION_BYTES = 16_384
 MAX_ITEMS_PER_SECTION = 25
 
-_WORD = re.compile(r'[a-z0-9]+')
+_WORD = re.compile(r'[^\W_]+', re.UNICODE)
+# Known English-only lexical coupling (advisory contradiction signal only; numeric divergence
+# in `_opposing_values` remains script-independent).
 _POLARITY_GROUPS = (
     frozenset(('open', 'opened', 'unlocked', 'passable', 'clear', 'present', 'available', 'lit', 'burning', 'full', 'on', 'active', 'safe')),
     frozenset(('closed', 'locked', 'impassable', 'blocked', 'absent', 'missing', 'gone', 'empty', 'out', 'extinguished', 'off', 'broken', 'damaged', 'dead')),
@@ -186,10 +188,7 @@ def worklist(records: list[dict]) -> dict:
             scope_tokens.add(k.lower())
             if isinstance(v, str):
                 scope_tokens.add(v.lower())
-    majority_tags = sorted(
-        dict(tag=tag, df=df, n=total_active)
-        for tag, df in tag_df.items() if total_active >= 2 and df * 2 > total_active
-    ) if False else [
+    majority_tags = [
         dict(tag=tag, df=df, n=total_active)
         for tag, df in sorted(tag_df.items(), key=lambda kv: (-kv[1], kv[0]))
         if total_active >= 2 and df * 2 > total_active

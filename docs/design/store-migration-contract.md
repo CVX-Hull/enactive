@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: Batch 1 store-migration PR lands or a frozen Batch 1 schema/operation changes
+review_trigger: Batch 2 player-host/13 and five-session archive cutover PR lands
 status: active
 ---
 
@@ -45,11 +45,11 @@ status: active
 | `when` | Replaced (`#1022`) | Optional nonblank UTF-8 string (omitted when unconditional). Replaces `{note, requires}` object. Zero structured condition DSL and zero `condition_unverified`. |
 | `depiction_source_id` | Added (`#1021`, `#1046`) | Optional `frame_source_id`. Must be a member of the fact's `citations`. Full-frame pointer only; `region` crop deferred per `#1046`. |
 | `superseded_reason` | Added (`#1020`) | Optional enum `["restated", "narrowed", "corrected", "changed"]`. Present if and only if `superseded_by` is present. |
-| `lifecycle_state` | Extended rule (`#1020`) | Unchanged five-value enum `["active", "contested", "superseded", "retracted", "ended"]`. On `changed` temporal supersession, the prior fact carries `lifecycle_state: "ended"`, `superseded_by: [new_id]`, `superseded_reason: "changed"`, `retired` omitted, and `valid_to` set to the successor's `valid_from` on a single surviving timeline (`null` on multi-lineage). |
+| `lifecycle_state` | Extended rule (`#1020`) | Unchanged five-value enum `["active", "contested", "superseded", "retracted", "ended"]`. On `changed` temporal supersession, the prior fact carries `lifecycle_state: "ended"`, `superseded_by` (one `changed` successor per ended surviving branch), `superseded_reason: "changed"`, and `valid_to` set to the successor's `valid_from` on a single surviving timeline (`null` across multiple ends or multi-lineage). A pre-change fork on which the prior reading is still alive may independently end it via `changed` or `retire_fact(ended)` (per-lineage ends may combine `changed` and `retired.events` with `valid_to: null`). |
 | `links` | Extended (`#1022`) | Closed relation enum `["depends_on", "contradicts", "part_of", "see_also"]`. For `depends_on`, `target` may name either a fact ID (reading pin) or a reserved `state_key` (entity-existence pin) in the unified global namespace. `statement_kind == "synthesis"` requires at least one `depends_on` link. |
 | `claim_kind`, `evidence_basis` | Deleted (`#1022`) | Removed with zero replacement (`S-MIGRATION`). |
 
-All other stored fact fields (`record`, `id`, `tags` ≤ 8, `text`, optional `subject`, `scope`, `citations`, `lineages`, `seen`, `valid_from`, `valid_to`, `stale_citations`, `needs_review`, `superseded_by`, `retired`, `retagged`, `published_in`, `session`) keep their `/5` shapes except where `lifecycle_state == "ended"` permits `superseded_by` with `superseded_reason == "changed"` (mutually exclusive with `retired`).
+All other stored fact fields (`record`, `id`, `tags` ≤ 8, `text`, optional `subject`, `scope`, `citations`, `lineages`, `seen`, `valid_from`, `valid_to`, `stale_citations`, `needs_review`, `superseded_by`, `retired`, `retagged`, `published_in`, `session`) keep their `/5` shapes except where `lifecycle_state == "ended"` permits `superseded_by` with `superseded_reason == "changed"` (and per-lineage ends across forks may combine `changed` successors with `retired.events`, setting `valid_to: null`).
 
 #### Stored article (`record: "article"`)
 
@@ -80,7 +80,7 @@ Bumps `schema` to `"curator-fact/6"`. All article fields (`id: "<slug>@vN"`, `sl
   - A `depends_on` target may name either a public record ID or a `state_key`.
   - The exporter treats a `depends_on` `state_key` target as satisfied whenever at least one delivered active or contested world fact carries that `state_key`: it is never added to `stale_citations` and never seeds `needs_review` (even when the key is `contested`).
   - Such a `depends_on` link survives public-link filtering while at least one delivered world fact carries that `state_key`, and its `backlinks` entry (`{"rel": "depends_on", "source": <dependent_id>}`) is attached to every delivered world fact carrying that `state_key`.
-  - When no delivered world fact carries that `state_key`, the link is dropped from `links` (the same as any other non-public target), and if no active or contested reading exists on the surviving timeline in the eligible snapshot, `stale_citations`/`needs_review` fires through `AltSupport` (§2.1).
+  - When no delivered world fact carries that `state_key`, the link is dropped from `links` (the same as any other non-public target), and if no active or contested reading exists on the surviving timeline in the eligible snapshot, `needs_review: true` fires and propagates through `AltSupport` (§2.1). Delivered `stale_citations` always names only history record IDs (never raw `state_key` names, because `delivered-knowledge/4` readers require `stale_citations ⊆ history`), so a lapsed `state_key` `depends_on` pin sets `needs_review: true` without placing the key inside delivered `stale_citations`.
 
 ### 1.5 `player-knowledge/4` (`harness/player/knowledge.py`, `harness/player_view.py`)
 

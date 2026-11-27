@@ -147,10 +147,10 @@ govern the fields.
 | `seen`, `valid_from`, `valid_to` | software | Sighting and end positions (`valid_to` is null until an `ended` retirement or single-timeline `changed` supersession sets it) |
 | `lineages` | software | Lineages observed on cited frames (world-bound facts only) |
 | `lifecycle_state` | software | `active`, `contested`, `superseded`, `retracted` or `ended` |
-| `stale_citations`, `needs_review` | software | Fixed-point review flags propagated over two-strength `depends_on` and citations |
+| `stale_citations`, `needs_review` | software | Fixed-point review flags propagated over two-strength `depends_on` and citations (stored `stale_citations` may record a lapsed `state_key`; delivered `stale_citations` names history record IDs only while `needs_review` still propagates) |
 | `published_in`, `session` | software | Version and curator session that published it |
 | `retagged` | software | Optional list of `{from, to, version}` tag reassignments |
-| `superseded_by` + `superseded_reason` or `retired` | software | Replacement ID list and `superseded_reason` (`restated`, `narrowed`, `corrected`, `changed`; lifecycle is `superseded`, `retracted`, or `ended` for `changed`), or retirement record (`wrong` or `ended` events); never both |
+| `superseded_by` + `superseded_reason` or `retired` | software | Replacement ID list and `superseded_reason` (`restated`, `narrowed`, `corrected`, `changed`; lifecycle is `superseded`, `retracted`, or `ended` for `changed`), or retirement record (`wrong` or `ended` events); mutually exclusive except per-lineage `ended` forks combining `changed` and `retired.events` with `valid_to: null` |
 
 - **Submitted and stored scope differ.** A submitted `scope` names only curator-declared
   axes (never `game` or `world`); the curator binds a fact to the cited world with

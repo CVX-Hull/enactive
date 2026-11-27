@@ -424,3 +424,17 @@ for (const terminal of ['pre-headers', '503', 'length', 'cost-unreported', 'retr
     assert.equal(response.reported_cost_usd, terminal === 'length' ? '0.01' : terminal === 'retry-success' ? '0.000038' : null);
   });
 }
+
+test('clock_label enforces 64 Unicode code points (astral-plane parity with Python)', () => {
+  const value = knowledge();
+  const src = value.facts[0].citation_source_ids[0];
+  const ok64 = '\u{1F31E}'.repeat(64); // 64 code points, 128 UTF-16 code units
+  value.frame_clocks = { [src]: ok64 };
+  value.facts[0].seen.clock_label = ok64;
+  delete value.facts[0].seen.prior_clock;
+  assert.equal(validateKnowledge(value).frame_clocks[src], ok64);
+  const bad65 = '\u{1F31E}'.repeat(65);
+  value.frame_clocks = { [src]: bad65 };
+  value.facts[0].seen.clock_label = bad65;
+  assert.throws(() => validateKnowledge(value), { message: 'invalid-delivered-knowledge' });
+});

@@ -2368,3 +2368,30 @@ def test_blinded_markers_drop_source_id_archived_facts_keep_type_and_anchors_omi
     resp = client.get(f'/api/view/run/mission/knowledge?actor={actor}')
     assert resp.status_code == 200
     assert 'raw-secret-world-run' not in resp.text and 'raw-secret-source' not in resp.text
+
+
+def test_curator_viewer_accepts_hygiene_session_kind_with_grooming_sha256():
+    import copy
+    from harness.viewer.curator import session_projection
+
+    sha = '0' * 64
+    base_manifest = dict(
+        schema='container-manifest/1', kind='curator-session', id='hygiene-1', owner_role='curator',
+        inputs=dict(session_kind='hygiene', trace_sessions=[], window_frames=0, window={},
+                    coverage=dict(schema='curator-coverage/2', session='s1', actor='001', last_step=5), drafts=[]),
+        pinned=dict(knowledge_version='v1', trace_manifest_sha256=sha, brief_sha256=sha, grooming_sha256=sha),
+        budgets=dict(wall_seconds=60, memory_bytes=1024, disk_bytes=1024, cap_usd='0.30'),
+        provenance=dict(seconds=1.2, peak_memory_bytes=512, peak_disk_bytes=512),
+        retention={},
+        lifecycle=dict(state='sealed', started_wall=1.0, ended_wall=2.2, stopped=None, returncode=0,
+                       survivors=[], errors=[], refused=[]),
+    )
+    record = dict(manifest=base_manifest, verdicts=[], drafts={}, published_after='v2')
+    header, _, _ = session_projection(record)
+    assert header['inputs']['session_kind'] == 'hygiene'
+    assert header['pinned']['grooming_sha256'] == sha
+
+    missing_groom_sha = copy.deepcopy(record)
+    del missing_groom_sha['manifest']['pinned']['grooming_sha256']
+    with pytest.raises(ValueError, match='incomplete prepared session'):
+        session_projection(missing_groom_sha)

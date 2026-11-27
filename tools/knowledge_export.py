@@ -445,15 +445,25 @@ class _TargetView:
         source = sources[0]
         return not (self.snapshot.timeline(source).keys() & self.snapshot.timeline(self.lineage).keys())
 
-    def _anchor_display(self, anchor: str, world: str | None, facts: dict[str, dict]) -> str:
-        live = [f for f in facts.values() if f.get('state_key') == anchor and f.get('subject')]
-        if live:
-            return max(live, key=lambda f: (f['seen']['order'], f['id']))['subject']
-        hist = [r for r in self.snapshot.rows.values()
+    def _anchor_display(self, anchor: str, delivered_facts: list[dict], *, withholds: bool) -> str:
+        live_all = [f for f in delivered_facts if f.get('state_key') == anchor]
+        if live_all:
+            live_subj = [f for f in live_all if f.get('subject')]
+            if live_subj:
+                return max(live_subj, key=lambda f: (f['seen']['order'], f['id']))['subject']
+            return anchor.replace('-', ' ')
+        if not withholds:
+            hist = [
+                r for r in self.snapshot.rows.values()
                 if r['record'] == 'fact' and r.get('state_key') == anchor
-                and r['scope'].get('world') == world and r.get('subject')]
-        if hist:
-            return max(hist, key=lambda r: (r['seen']['order'], r['id']))['subject']
+                and r['scope'].get('world') == self.world and r.get('subject')
+                and r['lifecycle_state'] != 'retracted'
+                and self.applicable(r) is True
+                and self.historical_lineage(r)
+                and not self.falsified(r['id'])
+            ]
+            if hist:
+                return max(hist, key=lambda r: (r['seen']['order'], r['id']))['subject']
         return anchor.replace('-', ' ')
 
     def eligible(self) -> tuple[dict, int]:
@@ -482,9 +492,6 @@ class _TargetView:
                 if kind == 'article' and not check.cited_facts(row) <= facts.keys():
                     continue
                 result[check.owner(row)] = _public_record(row, relation, facts, self.snapshot)
-        for fact in facts.values():
-            if 'anchor' in fact:
-                fact['anchor_display'] = self._anchor_display(fact['anchor'], self.world, facts)
         cited_frames = {src for f in facts.values() for src in f['citation_source_ids']}
         frame_clocks = {fid: label for fid, label in sorted(self.snapshot.frame_clocks.items()) if fid in cited_frames}
         return dict(frame_clocks=frame_clocks, articles=list(articles.values()), facts=list(facts.values())), excluded
@@ -545,10 +552,10 @@ class _TargetView:
                     if _publication(row) < int(public[slug]['revision'].rsplit('@v', 1)[1]):
                         history['replaced'][identity] = dict(reason='restated', by=[slug])
                     continue
-            if row.get('superseded_by'):
-                if row['record'] == 'fact' and (paths := follow(identity)):
-                    history['replaced'][identity] = dict(reason=max(paths.values(), key=ranks.get), by=sorted(paths))
-            elif not withholds:
+            replaced = row['record'] == 'fact' and row.get('superseded_by') and follow(identity)
+            if replaced:
+                history['replaced'][identity] = dict(reason=max(replaced.values(), key=ranks.get), by=sorted(replaced))
+            elif not withholds and not (row.get('superseded_by') and row['lifecycle_state'] != 'ended'):
                 if self.visible_end(row, self.lineage, self.snapshot):
                     history['ended'].append(slug)
                 elif row['lifecycle_state'] == 'retracted':
@@ -602,6 +609,24 @@ def _project(eligible: dict, draw_record: dict, *, withholds: bool, target: _Tar
     for f in delivered['facts']:
         if 'state_key' in f:
             delivered_by_key[f['state_key']].append(f['id'])
+    for f in delivered['facts']:
+        if 'anchor' not in f:
+            continue
+        anchor = f['anchor']
+        if target is not None:
+            f['anchor_display'] = target._anchor_display(anchor, delivered['facts'], withholds=withholds)
+        else:
+            live_all = [d for d in delivered['facts'] if d.get('state_key') == anchor]
+            if live_all:
+                live_subj = [d for d in live_all if d.get('subject')]
+                f['anchor_display'] = (
+                    max(live_subj, key=lambda d: (d['seen']['order'], d['id']))['subject']
+                    if live_subj else anchor.replace('-', ' ')
+                )
+            elif withholds and anchor in eligible_keys:
+                f['anchor_display'] = anchor.replace('-', ' ')
+            elif not f.get('anchor_display'):
+                f['anchor_display'] = anchor.replace('-', ' ')
 
     # Classify conflicts over delivered public links (excluding state_key targets, which only exist on depends_on).
     record_links: set[tuple[str, str, str]] = set()

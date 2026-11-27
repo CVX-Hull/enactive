@@ -32,7 +32,7 @@ const TOP_FIELDS = ['schema','version','commit','repository_id','coverage','fram
 const BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
 const nonblank = value => typeof value === 'string' && value.isWellFormed()
   && [...value].some(character => character === BYTE_ORDER_MARK || !/[\s\x1c-\x1f\x85]/.test(character));
-const validClockLabel = value => nonblank(value) && value.length >= 1 && value.length <= 64 && !CONTROL_CHARS.test(value);
+const validClockLabel = value => nonblank(value) && [...value].length <= 64 && !CONTROL_CHARS.test(value);
 const validPriorClock = value => exactly(value, ['label','step_offset'])
   && validClockLabel(value.label) && safeNatural(value.step_offset) && value.step_offset >= 1;
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);

@@ -246,3 +246,154 @@ def test_hygiene_session_boundaries_safe_merge_invariants_and_worklist(tmp_path)
     wl = hygiene.worklist(same_frame_recs)
     assert wl['key_alias_candidates'] == []  # same-frame nogood excludes co-cited distinct keys!
     assert wl['duplicate_candidates'] == []
+
+    # N3: Unicode tokenization works on non-Latin scripts without collapsing to empty tokens.
+    uni_recs = [
+        _fact('u1', text='キャンプの扉は閉じている。', citations=[F1]) | {'lifecycle_state': 'active', 'seen': FRAMES[F1]},
+        _fact('u2', text='キャンプの扉は閉じている。', citations=[F2]) | {'lifecycle_state': 'active', 'seen': FRAMES[F2]},
+    ]
+    assert hygiene.worklist(uni_recs)['duplicate_candidates'][0]['left'] == 'u1'
+
+
+def test_b1_fork_changed_and_restore_keyed_uniqueness(tmp_path):
+    """B1: Pre-change fork keeps keyed uniqueness, supports changed/retire(ended), and restore never wedges key reuse."""
+    from tools import knowledge_export
+
+    repo = _repo(tmp_path)
+    s_main = 'a' * 32
+    s_fork = 'b' * 32
+    s_fork2 = 'c' * 32
+    m1, m2, m3 = f'{s_main}-1', f'{s_main}-2', f'{s_main}-3'
+    fk1 = f'{s_fork}-1'
+    fk2 = f'{s_fork2}-1'
+    frames = {
+        m1: position('main-s1', 5, order_index=1),
+        m2: position('main-s1', 20, order_index=1),
+        m3: position('main-s1', 35, order_index=1),
+        fk1: position('fork-s1', 12, order_index=2),
+        fk2: position('fork2-s1', 12, order_index=3),
+    }
+    labels_main = {s_main: {'name': 'main-s1', 'world': 'w', 'lineage': 'main', 'admission': 1, 'context': {}}}
+    labels_fork = {
+        s_fork: {
+            'name': 'fork-s1', 'world': 'w', 'lineage': 'fork', 'admission': 1, 'context': {},
+            'branch': {'parent': 'main', 'fork_at': position('main-s1', 10, order_index=1), 'fork_version': 'v1'},
+        },
+    }
+    labels_fork2 = {
+        s_fork2: {
+            'name': 'fork2-s1', 'world': 'w', 'lineage': 'fork2', 'admission': 1, 'context': {},
+            'branch': {'parent': 'main', 'fork_at': position('main-s1', 10, order_index=1), 'fork_version': 'v1'},
+        },
+    }
+
+    def run(changes, name, labels, cov_sess, cov_step):
+        folder = tmp_path / 'b1' / name
+        folder.mkdir(parents=True, exist_ok=True)
+        body = dict(schema='curator-submission/3', base_version=repo.published(), summary=name, changes=changes)
+        (folder / 'submission.json').write_text(json.dumps(body), encoding='utf-8')
+        return gate(repo, folder, session_id=f's-{name}', window_frames=frames,
+                    coverage={'schema': 'curator-coverage/2', 'session': cov_sess, 'actor': '001', 'last_step': cov_step},
+                    session_kind='admission', session_labels=labels)
+
+    # v1: main adds door-open (key door-k) at step 5.
+    assert run([
+        {'op': 'add_fact', 'fact': _fact('door-open', statement_kind='state', state_key='door-k',
+                                         binds=['world'], text='Door is open.', citations=[m1])},
+    ], 'v1', labels_main, 'main-s1', 5)['status'] == 'published'
+
+    # v2: main transitions door-open -> door-closed via changed at step 20.
+    assert run([
+        {'op': 'supersede_fact', 'ids': ['door-open'], 'reason_kind': 'changed',
+         'fact': _fact('door-closed', statement_kind='state', state_key='door-k',
+                       binds=['world'], text='Door is closed.', citations=[m2])},
+    ], 'v2', labels_main, 'main-s1', 20)['status'] == 'published'
+
+    # Fork branched at step 10 (before m2): adding a fresh reading with same key WITHOUT changed/contradicts MUST fail!
+    dup_fork = run([
+        {'op': 'add_fact', 'fact': _fact('door-broken', statement_kind='state', state_key='door-k',
+                                         binds=['world'], text='Door is broken.', citations=[fk1])},
+    ], 'dup-fork', labels_fork, 'fork-s1', 12)
+    assert dup_fork['status'] == 'rejected' and 'duplicate active state_key' in dup_fork['diagnostics'][0]
+
+    # Duplicate end on main MUST fail (door-open is already visibly ended on main).
+    dup_main_end = run([
+        {'op': 'retire_fact', 'id': 'door-open', 'reason_kind': 'ended', 'reason': 'Again.',
+         'end': 'absence', 'end_citations': [m3]},
+    ], 'dup-main-end', labels_main, 'main-s1', 35)
+    assert dup_main_end['status'] == 'rejected' and 'already has a visible end' in dup_main_end['diagnostics'][0]
+
+    # v3: fork transitions door-open -> door-broken via changed!
+    fork_changed = run([
+        {'op': 'supersede_fact', 'ids': ['door-open'], 'reason_kind': 'changed',
+         'fact': _fact('door-broken', statement_kind='state', state_key='door-k',
+                       binds=['world'], text='Door is broken.', citations=[fk1])},
+    ], 'v3-fork-changed', labels_fork, 'fork-s1', 12)
+    assert fork_changed['status'] == 'published', fork_changed
+
+    # v4: fork2 (also branched before m2) retires door-open via ended (combining changed + retired.events)!
+    fork2_end = run([
+        {'op': 'retire_fact', 'id': 'door-open', 'reason_kind': 'ended', 'reason': 'Door vanished.',
+         'end': 'absence', 'end_citations': [fk2]},
+    ], 'v4-fork2-end', labels_fork2, 'fork2-s1', 12)
+    assert fork2_end['status'] == 'published', fork2_end
+
+    # Verify per-lineage delivery and history across main, fork, and fork2!
+    tip = repo.published()
+    d_main = knowledge_export.published(repo, tip, world='w', lineage='main')
+    d_fork = knowledge_export.published(repo, tip, world='w', lineage='fork')
+    d_fork2 = knowledge_export.published(repo, tip, world='w', lineage='fork2')
+    assert [f['id'] for f in d_main['facts']] == ['door-closed']
+    assert d_main['history']['replaced']['door-open'] == {'reason': 'changed', 'by': ['door-closed']}
+    assert [f['id'] for f in d_fork['facts']] == ['door-broken']
+    assert d_fork['history']['replaced']['door-open'] == {'reason': 'changed', 'by': ['door-broken']}
+    assert d_fork2['facts'] == []
+    assert 'door-open' in d_fork2['history']['ended']
+
+    # Same-lineage restore test: restore erasing an active keyed reading allows a fresh post-restore reading!
+    repo_r = Repository(tmp_path / 'k-restore', 'cdda')
+    repo_r.ensure()
+    sr = 'd' * 32
+    r1, r2, r3 = f'{sr}-1', f'{sr}-2', f'{sr}-3'
+    r_frames = {
+        r1: position('r-s1', 2, order_index=1),
+        r2: position('r-s1', 5, order_index=1),
+        r3: position('r-s1', 12, order_index=1),
+    }
+    r_labels_1 = {sr: {'name': 'r-s1', 'world': 'w', 'lineage': 'main', 'admission': 1, 'context': {}}}
+    f_add1 = tmp_path / 'r-sub1'
+    f_add1.mkdir()
+    (f_add1 / 'submission.json').write_text(json.dumps({
+        'schema': 'curator-submission/3', 'base_version': 'v0', 'summary': 'r1',
+        'changes': [{'op': 'add_fact', 'fact': _fact('lamp-on', statement_kind='state', state_key='lamp-k',
+                                                     binds=['world'], text='Lamp is on.', citations=[r2])}],
+    }))
+    assert gate(repo_r, f_add1, session_id='rs1', window_frames=r_frames,
+                coverage={'schema': 'curator-coverage/2', 'session': 'r-s1', 'actor': '001', 'last_step': 5},
+                session_kind='admission', session_labels=r_labels_1)['status'] == 'published'
+    # Restore back to step 2 at step 10 erases step 5 (`lamp-on`); fresh post-restore reading `lamp-off` at step 12 succeeds!
+    r_labels_2 = {
+        sr: {
+            'name': 'r-s1', 'world': 'w', 'lineage': 'main', 'admission': 1, 'context': {},
+            'restores': [{
+                'lineage': 'main',
+                'saved_at': position('r-s1', 2, order_index=1),
+                'restored_at': position('r-s1', 10, order_index=1),
+                'saved_version': 'v0',
+                'restored_version': 'v1',
+            }],
+        },
+    }
+    f_add2 = tmp_path / 'r-sub2'
+    f_add2.mkdir()
+    (f_add2 / 'submission.json').write_text(json.dumps({
+        'schema': 'curator-submission/3', 'base_version': 'v1', 'summary': 'r2',
+        'changes': [{'op': 'add_fact', 'fact': _fact('lamp-off', statement_kind='state', state_key='lamp-k',
+                                                     binds=['world'], text='Lamp is off.', citations=[r3])}],
+    }))
+    res_restore = gate(repo_r, f_add2, session_id='rs2', window_frames=r_frames,
+                       coverage={'schema': 'curator-coverage/2', 'session': 'r-s1', 'actor': '001', 'last_step': 12},
+                       session_kind='admission', session_labels=r_labels_2)
+    assert res_restore['status'] == 'published', res_restore
+    d_restored = knowledge_export.published(repo_r, repo_r.published(), world='w', lineage='main')
+    assert [f['id'] for f in d_restored['facts']] == ['lamp-off']

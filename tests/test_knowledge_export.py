@@ -774,3 +774,72 @@ def test_changed_clocks_anchor_display_mobile_frame_and_two_strength_depends_on(
     assert [r['id'] for r in fork_view.read('luxury-rv', by='id')['records']] == ['rv-parked-camp']
     assert fork_view.read('fire-beside-rv', by='id')['records'][0]['needs_review'] is False
     assert ff1 not in fork_view.value['frame_clocks']
+
+
+def test_b2_anchor_display_never_leaks_across_lineages_retracted_or_withheld_facts(tmp_path):
+    """B2: anchor_display uses delivered facts only (or surviving non-retracted lineage history when unwithheld)."""
+    from tests.synthetic_knowledge_repo import SyntheticKnowledgeBuilder, position
+    from tools import knowledge_export
+
+    builder = SyntheticKnowledgeBuilder(tmp_path / 'anchor_leak')
+    sid_main, sid_fork = '1' * 32, '2' * 32
+    builder.add_session(sid_main, 'main-s1', world='world', lineage='main', admission=1)
+    f1 = builder.add_frame(sid_main, 1, 10)
+    # v1: main adds subjectless van reading + a retracted reading with a misleading subject.
+    builder.records.append(builder.make_fact(
+        fact_id='van-parked', statement_kind='state', state_key='camp-van',
+        text='Van is parked by the road.', citations=[f1], published_in='v1', session='c1', bind_world=True,
+    ))
+    builder.records.append(builder.make_fact(
+        fact_id='van-wrong', statement_kind='state', state_key='camp-van', subject='Retracted Ghost Truck',
+        text='Wrong truck.', citations=[f1], published_in='v1', session='c1', bind_world=True,
+        links=[{'rel': 'contradicts', 'target': 'van-parked'}],
+    ))
+    builder.commit_version(coverage_session='main-s1', last_step=10)
+
+    # v2: fork branches at step 12; main retracts van-wrong and later changes van-parked -> van-burned (with subject).
+    builder.add_session(sid_fork, 'fork-s1', world='world', lineage='fork', admission=1,
+                        branch=dict(parent='main', fork_at=position('main-s1', 12), fork_version='v1'))
+    f2 = builder.add_frame(sid_main, 2, 20)
+    ff1 = builder.add_frame(sid_fork, 1, 15, order_index=2)
+    builder.retire_fact_wrong('van-wrong', reason='Misread.', citations=[f2], published_in='v2', session='c2')
+    builder.supersede_fact(
+        ['van-parked'],
+        builder.make_fact(fact_id='van-burned', statement_kind='state', state_key='camp-van',
+                          subject='Burned-out van wreck', text='The van burned out.',
+                          citations=[f2], published_in='v2', session='c2', bind_world=True),
+        reason_kind='changed',
+    )
+    builder.records.append(builder.make_fact(
+        fact_id='crate-in-van', statement_kind='observation', anchor='camp-van',
+        text='A wooden crate sits inside.', citations=[ff1], published_in='v2', session='c2', bind_world=True,
+    ))
+    builder.records.append(builder.make_fact(
+        fact_id='ash-in-van', statement_kind='observation', anchor='camp-van',
+        text='Ash coats the floor.', citations=[f2], published_in='v2', session='c2', bind_world=True,
+    ))
+    version = builder.commit_version(coverage_session='main-s1', last_step=20)
+
+    # Fork still has subjectless `van-parked` -> anchor_display MUST be 'camp van' (NEVER 'Burned-out van wreck' or 'Retracted Ghost Truck')!
+    fork_delivered = knowledge_export.published(builder.path, version, world='world', lineage='fork')
+    crate = next(f for f in fork_delivered['facts'] if f['id'] == 'crate-in-van')
+    assert crate['anchor_display'] == 'camp van'
+
+    # Withholding draw: if `van-burned` is withheld on main, `ash-in-van` MUST NOT leak 'Burned-out van wreck'!
+    main_full = knowledge_export.published(builder.path, version, world='world', lineage='main')
+    assert next(f for f in main_full['facts'] if f['id'] == 'ash-in-van')['anchor_display'] == 'Burned-out van wreck'
+    draw_rec = knowledge_export._draw_record(main_full, seed=0)
+    for unit in draw_rec['units']:
+        unit['withheld'] = (unit['id'] == 'van-burned')
+    filtered = knowledge_export.filter_delivery(main_full, draw_rec)
+    assert [f['id'] for f in filtered['facts']] == ['ash-in-van']
+    assert filtered['facts'][0]['anchor_display'] == 'camp van'
+
+    # Repo-level _project with withholding also never falls back into snapshot history when anchor is withheld.
+    target = knowledge_export._target(builder.path, version, 'world', 'main', {})
+    eligible, _ = target.knowledge()
+    repo_draw = knowledge_export._draw_record(eligible, seed=0)
+    for unit in repo_draw['units']:
+        unit['withheld'] = (unit['id'] == 'van-burned')
+    repo_filtered = knowledge_export._project(eligible, repo_draw, withholds=True, target=target)
+    assert repo_filtered['facts'][0]['anchor_display'] == 'camp van'

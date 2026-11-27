@@ -321,9 +321,6 @@
       },
       "allOf": [
         {
-          "not": {"required": ["superseded_by", "retired"]}
-        },
-        {
           "if": {"properties": {"scope": {"required": ["world"]}}},
           "then": {"required": ["lineages"]},
           "else": {
@@ -434,22 +431,50 @@
         {
           "if": {"properties": {"lifecycle_state": {"const": "ended"}}},
           "then": {
-            "oneOf": [
+            "anyOf": [
               {
                 "required": ["retired"],
-                "not": {"required": ["superseded_by"]},
                 "properties": {
                   "retired": {"properties": {"reason_kind": {"const": "ended"}}}
                 }
               },
               {
                 "required": ["superseded_by", "superseded_reason", "state_key"],
-                "not": {"required": ["retired"]},
                 "properties": {
                   "superseded_reason": {"const": "changed"},
-                  "superseded_by": {"minItems": 1, "maxItems": 1},
+                  "superseded_by": {"minItems": 1},
                   "scope": {"required": ["world"]}
                 }
+              }
+            ],
+            "allOf": [
+              {
+                "if": {"required": ["retired"]},
+                "then": {
+                  "properties": {
+                    "retired": {"properties": {"reason_kind": {"const": "ended"}}}
+                  }
+                }
+              },
+              {
+                "if": {"required": ["superseded_by"]},
+                "then": {
+                  "required": ["superseded_reason", "state_key"],
+                  "properties": {
+                    "superseded_reason": {"const": "changed"},
+                    "superseded_by": {"minItems": 1},
+                    "scope": {"required": ["world"]}
+                  }
+                }
+              },
+              {
+                "if": {
+                  "anyOf": [
+                    {"required": ["retired", "superseded_by"]},
+                    {"required": ["superseded_by"], "properties": {"superseded_by": {"minItems": 2}}}
+                  ]
+                },
+                "then": {"properties": {"valid_to": {"type": "null"}}}
               }
             ]
           }

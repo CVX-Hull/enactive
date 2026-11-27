@@ -741,3 +741,18 @@ def test_player_knowledge_4_contract_fixtures():
     assert query_doc['hits'] and all(hit['via'] == 'fuzzy' for hit in query_doc['hits'])
     fields = set().union(*(hit.keys() for hit in query_doc['hits']))
     assert {'statement_kind', 'when', 'state_key', 'anchor', 'anchor_display', 'depiction_source_id'} <= fields
+
+
+def test_clock_label_astral_code_point_length_parity():
+    doc = json.loads((FIXTURES / 'valid' / 'full-graph-and-history.json').read_text(encoding='utf-8'))
+    src = doc['facts'][0]['citation_source_ids'][0]
+    ok_label = '\U0001F31E' * 64  # 64 Unicode code points (128 UTF-16 code units)
+    doc['frame_clocks'][src] = ok_label
+    doc['facts'][0]['seen']['clock_label'] = ok_label
+    doc['facts'][0]['seen'].pop('prior_clock', None)
+    assert Knowledge.from_dict(doc).value['frame_clocks'][src] == ok_label
+    too_long = '\U0001F31E' * 65
+    doc['frame_clocks'][src] = too_long
+    doc['facts'][0]['seen']['clock_label'] = too_long
+    with pytest.raises(ValueError):
+        Knowledge.from_dict(doc)

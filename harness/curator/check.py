@@ -328,16 +328,18 @@ def _end_on_timeline(seen: dict, end: dict, lineage: str, provenance: dict) -> b
 
 
 def _visible_end(fact: dict, lineage: str, provenance: dict, by_id: dict[str, dict] | None = None) -> bool:
-    if 'retired' in fact:
-        return any(all(_end_on_timeline(fact['seen'], p, lineage, provenance)
-                       for p in _frame_positions(event['end_citations'], provenance))
-                   for event in fact['retired']['events'])
+    if 'retired' in fact and any(
+            all(_end_on_timeline(fact['seen'], p, lineage, provenance)
+                for p in _frame_positions(event['end_citations'], provenance))
+            for event in fact['retired']['events']):
+        return True
     if fact.get('superseded_reason') == 'changed' and by_id is not None:
-        succ = by_id.get(fact['superseded_by'][0])
-        if succ is None:
-            return False
-        return any(_end_on_timeline(fact['seen'], p, lineage, provenance)
-                   for p in _frame_positions(succ['citations'], provenance))
+        for succ_id in fact.get('superseded_by', ()):
+            succ = by_id.get(succ_id)
+            if succ is not None and any(
+                    _end_on_timeline(fact['seen'], p, lineage, provenance)
+                    for p in _frame_positions(succ['citations'], provenance)):
+                return True
     return False
 
 
@@ -544,7 +546,8 @@ def _article_fields(article: dict, facts: dict, provenance: dict) -> dict:
     return fields
 
 
-def _validate_successors(row: dict, replacements: list[dict], provenance: dict) -> None:
+def _validate_successors(row: dict, replacements: list[dict], provenance: dict, version: str,
+                         facts_by_id: dict[str, dict] | None = None) -> None:
     if not replacements:
         return
     identity = row['id']
@@ -553,6 +556,47 @@ def _validate_successors(row: dict, replacements: list[dict], provenance: dict) 
             raise ValueError(f'{identity!r} changes slug across revisions')
         return
     reason = row.get('superseded_reason')
+    if reason == 'changed':
+        if (row['lifecycle_state'] != 'ended' or 'world' not in row['scope']
+                or row.get('state_key') is None):
+            raise ValueError(f'{identity!r} has an invalid changed supersession')
+        for successor in replacements:
+            if row['scope'] != successor['scope'] or row['state_key'] != successor.get('state_key'):
+                raise ValueError(f'{identity!r} has an invalid changed supersession')
+        if 'retired' in row or len(replacements) > 1:
+            if row['valid_to'] is not None:
+                raise ValueError(f'{identity!r} multi-end changed supersession must have null valid_to')
+        earlier_events = [
+            ev for ev in row.get('retired', {}).get('events', ())
+            if int(ev['published_in'][1:]) < int(version[1:])
+        ]
+        earlier_changed = [
+            s['id'] for s in replacements
+            if int(s['published_in'][1:]) < int(version[1:])
+        ]
+        for successor in replacements:
+            if successor['published_in'] == version:
+                expected_valid_to = _changed_valid_to(row, successor, provenance)
+                if len(replacements) == 1 and 'retired' not in row and row['valid_to'] != expected_valid_to:
+                    raise ValueError(f'{identity!r} has incorrect changed valid_to')
+                if earlier_events or earlier_changed:
+                    s_lineages = successor.get('lineages', [])
+                    if len(s_lineages) != 1 or s_lineages[0] is None:
+                        raise ValueError(f'{identity!r} multi-end changed successor requires a single known lineage')
+                    prior = dict(row)
+                    if earlier_events:
+                        prior['retired'] = {'reason_kind': 'ended', 'events': earlier_events}
+                    else:
+                        prior.pop('retired', None)
+                    if earlier_changed:
+                        prior['superseded_by'] = earlier_changed
+                        prior['superseded_reason'] = 'changed'
+                    else:
+                        prior.pop('superseded_by', None)
+                        prior.pop('superseded_reason', None)
+                    if _visible_end(prior, s_lineages[0], provenance, facts_by_id):
+                        raise ValueError(f'{identity!r} duplicate visible changed end on lineage {s_lineages[0]!r}')
+        return
     if len(replacements) == 1:
         successor = replacements[0]
         if row['scope'] != successor['scope']:
@@ -564,12 +608,6 @@ def _validate_successors(row: dict, replacements: list[dict], provenance: dict) 
                     or row.get('when') != successor.get('when')
                     or not set(row['citations']) <= set(successor['citations'])):
                 raise ValueError(f'{identity!r} loses its kind, key, anchor, condition or evidence in a restatement')
-        elif reason == 'changed':
-            if row['lifecycle_state'] != 'ended' or row.get('state_key') is None or row.get('state_key') != successor.get('state_key'):
-                raise ValueError(f'{identity!r} has an invalid changed supersession')
-            expected_valid_to = _changed_valid_to(row, successor, provenance)
-            if row['valid_to'] != expected_valid_to:
-                raise ValueError(f'{identity!r} has incorrect changed valid_to')
         elif reason == 'corrected':
             if row['lifecycle_state'] != 'retracted':
                 raise ValueError(f'{identity!r} corrected supersession must be retracted')
@@ -588,34 +626,58 @@ def _stale_pairs(records: list[dict]) -> set[tuple[str, str]]:
     return {(owner(row), target) for row in records if current(row) for target in row['stale_citations']}
 
 
-def _co_live_on_timeline(left: dict, right: dict, provenance: dict) -> bool:
-    """Whether two current world-bound facts can coexist on a surviving timeline."""
+def _survives_on_lineage(row: dict, lineage: str, provenance: dict) -> bool:
+    lineages = row.get('lineages', [])
+    if len(lineages) != 1 or lineages[0] is None:
+        return True
+    src = lineages[0]
+    timeline = _timeline(lineage, provenance)
+    if src not in timeline:
+        return False
+    return all(_on_timeline(p, src, timeline, provenance)
+               for p in _frame_positions(row['citations'], provenance))
+
+
+def _alive_on_lineage(row: dict, lineage: str, provenance: dict, by_id: dict[str, dict] | None = None) -> bool:
+    if row['lifecycle_state'] in ('superseded', 'retracted'):
+        return False
+    if not _survives_on_lineage(row, lineage, provenance):
+        return False
+    if row['lifecycle_state'] == 'ended' and _visible_end(row, lineage, provenance, by_id):
+        return False
+    return True
+
+
+def _co_live_on_timeline(left: dict, right: dict, provenance: dict, by_id: dict[str, dict] | None = None) -> bool:
+    """Whether two world-bound facts can coexist alive on any surviving timeline."""
     ll, rl = left.get('lineages', []), right.get('lineages', [])
     if len(ll) != 1 or ll[0] is None or len(rl) != 1 or rl[0] is None:
         return True
     la, lb = ll[0], rl[0]
-    if la == lb:
-        return True
-    tb = _timeline(lb, provenance)
-    if la in tb and all(_on_timeline(p, la, tb, provenance) for p in _frame_positions(left['citations'], provenance)):
-        return True
-    ta = _timeline(la, provenance)
-    if lb in ta and all(_on_timeline(p, lb, ta, provenance) for p in _frame_positions(right['citations'], provenance)):
-        return True
-    return False
+    world = left['scope'].get('world')
+    candidates = {la, lb}
+    for sess in provenance['sessions'].values():
+        if sess.get('lineage') is not None and (world is None or sess.get('world') == world):
+            candidates.add(sess['lineage'])
+    return any(_alive_on_lineage(left, lin, provenance, by_id) and _alive_on_lineage(right, lin, provenance, by_id)
+               for lin in candidates)
 
 
 def _validate_keyed_uniqueness(records: list[dict], provenance: dict) -> None:
     """Enforce at most one active uncontested reading per `(world, surviving timeline, state_key)`."""
-    active_facts = [row for row in records if row['record'] == 'fact' and current(row)]
+    facts_by_id = {row['id']: row for row in records if row['record'] == 'fact'}
+    candidate_facts = [
+        row for row in facts_by_id.values()
+        if 'world' in row['scope'] and (current(row) or row['lifecycle_state'] == 'ended')
+    ]
     contradicts: set[tuple[str, str]] = set()
-    for row in active_facts:
+    for row in candidate_facts:
         for link in row['links']:
             if link['rel'] == 'contradicts':
                 contradicts.add((row['id'], link['target']))
                 contradicts.add((link['target'], row['id']))
     by_world_key: dict[tuple[str, str], list[dict]] = defaultdict(list)
-    for row in active_facts:
+    for row in candidate_facts:
         if 'state_key' in row:
             by_world_key[(row['scope']['world'], row['state_key'])].append(row)
     for (world, key), group in by_world_key.items():
@@ -623,7 +685,7 @@ def _validate_keyed_uniqueness(records: list[dict], provenance: dict) -> None:
             continue
         for i, left in enumerate(group):
             for right in group[i + 1:]:
-                if (left['id'], right['id']) not in contradicts and _co_live_on_timeline(left, right, provenance):
+                if (left['id'], right['id']) not in contradicts and _co_live_on_timeline(left, right, provenance, facts_by_id):
                     raise ValueError(
                         f'duplicate active state_key {key!r} in world {world!r}: '
                         f'{left["id"]!r} and {right["id"]!r} must be transitioned via changed or linked with contradicts'
@@ -693,14 +755,14 @@ def _validate_depends_on_acyclicity(records: list[dict], provenance: dict) -> No
             if target in all_keys:
                 targets = active_by_key.get((world, target), []) if world is not None else active_any_key.get(target, [])
                 for dst in targets:
-                    if world is None or _co_live_on_timeline(row, active[dst], provenance):
+                    if world is None or _co_live_on_timeline(row, active[dst], provenance, facts_by_id):
                         graph[key].add(dst)
             else:
                 resolved = target if target in active else (
                     restated_terminal(target, facts_by_id, incoming) if target in facts_by_id else None)
                 if resolved is not None and resolved in active:
                     if (world is None or 'world' not in active[resolved]['scope']
-                            or _co_live_on_timeline(row, active[resolved], provenance)):
+                            or _co_live_on_timeline(row, active[resolved], provenance, facts_by_id)):
                         graph[key].add(resolved)
 
     color: dict[str, int] = {}
@@ -854,7 +916,7 @@ class _Batch:
             raise ValueError(f'fact {identity!r} does not exist')
         if (identity in self.fact_targets or target['published_in'] == self.candidate.version
                 or not current(target) and not (allow_ended and target['lifecycle_state'] == 'ended'
-                                                and 'world' in target['scope'] and 'retired' in target)):
+                                                and 'world' in target['scope'])):
             raise ValueError(f'fact {identity!r} is not current or already changed in this submission')
         self.fact_targets.add(identity)
         return target
@@ -863,7 +925,7 @@ class _Batch:
         reason_kind = change['reason_kind']
         if self.session_kind == 'hygiene' and reason_kind in ('corrected', 'changed'):
             raise ValueError(f'hygiene session forbids {reason_kind!r} supersession')
-        targets = [self.fact_target(identity) for identity in change['ids']]
+        targets = [self.fact_target(identity, allow_ended=(reason_kind == 'changed')) for identity in change['ids']]
         target_ids = {t['id'] for t in targets}
         scope = targets[0]['scope']
         if any(target['scope'] != scope for target in targets):
@@ -916,10 +978,26 @@ class _Batch:
             new = self.make_fact(fact)
             if new['scope'] != scope:
                 raise ValueError('supersession requires the same fact scope')
+            provenance = self.candidate.provenance
+            new_lineages = new.get('lineages', [])
             for target in targets:
-                valid_to = _changed_valid_to(target, new, self.candidate.provenance)
-                target.update(lifecycle_state='ended', valid_to=valid_to,
-                              superseded_by=[new['id']], superseded_reason='changed')
+                if target['lifecycle_state'] == 'ended':
+                    if len(new_lineages) != 1 or new_lineages[0] is None:
+                        raise ValueError(
+                            f'fact {target["id"]!r} is already ended and requires a single known lineage where it is still alive'
+                        )
+                    lin = new_lineages[0]
+                    if not ended_still_alive(target, {'world': scope['world'], 'lineage': lin}, provenance, self.facts):
+                        raise ValueError(f'fact {target["id"]!r} already has a visible end on lineage {lin!r}')
+                valid_to = _changed_valid_to(target, new, provenance)
+                succs = list(target.get('superseded_by', ()))
+                succs.append(new['id'])
+                target.update(
+                    lifecycle_state='ended',
+                    valid_to=valid_to if len(succs) == 1 and 'retired' not in target else None,
+                    superseded_by=succs,
+                    superseded_reason='changed',
+                )
                 self.changed_or_ended_world_facts.add(target['id'])
         else:
             if not set(fact['citations']).difference(origins):
@@ -965,9 +1043,9 @@ class _Batch:
             raise ValueError('end_citations must be disjoint from stored and supporting citations')
         event = dict(reason=reason, end=change['end'], end_citations=ends, citations=citations, **self.metadata)
         event['valid_to'] = _end_event_time(fact, event, provenance)
-        if 'retired' in fact:
+        if fact['lifecycle_state'] == 'ended':
             lineage = _lineages(ends, provenance)[0]
-            if _visible_end(fact, lineage, provenance):
+            if _visible_end(fact, lineage, provenance, self.facts):
                 raise ValueError(f'fact {fact["id"]!r} already has a visible end on lineage {lineage!r}')
         fact.setdefault('retired', dict(reason_kind='ended', events=[]))['events'].append(event)
         fact.update(lifecycle_state='ended', valid_to=_fact_end_time(fact))
@@ -1114,6 +1192,8 @@ class _Batch:
 
 
 def _fact_end_time(fact: dict) -> dict | None:
+    if 'superseded_by' in fact:
+        return None
     events = fact['retired']['events']
     return events[0]['valid_to'] if len(events) == 1 and len(fact.get('lineages', [])) == 1 else None
 
@@ -1216,7 +1296,7 @@ def evaluate(data: dict, *, base_records: list[dict], base_provenance: dict, gam
         return None, [f'invalid candidate snapshot: {error}']
 
 
-def _validate_retirement(row: dict, provenance: dict, version: str) -> None:
+def _validate_retirement(row: dict, provenance: dict, version: str, facts_by_id: dict[str, dict] | None = None) -> None:
     retired = row['retired']
     if retired['reason_kind'] != 'ended':
         events = [retired]
@@ -1226,6 +1306,11 @@ def _validate_retirement(row: dict, provenance: dict, version: str) -> None:
             raise ValueError('invalid fact end time or number of end events')
     last_version = int(row['published_in'][1:])
     earlier_events = []
+    earlier_changed = [
+        sid for sid in row.get('superseded_by', ())
+        if row.get('superseded_reason') == 'changed' and facts_by_id is not None and sid in facts_by_id
+        and int(facts_by_id[sid]['published_in'][1:]) < int(version[1:])
+    ]
     for event in events:
         event_version = int(event['published_in'][1:])
         if not last_version < event_version <= int(version[1:]):
@@ -1245,9 +1330,20 @@ def _validate_retirement(row: dict, provenance: dict, version: str) -> None:
         if event['published_in'] == version:
             if event['valid_to'] != _end_event_time(row, event, provenance):
                 raise ValueError('incorrect end event valid_to')
-            if earlier_events and _visible_end(dict(row, retired={'events': earlier_events}),
-                                              _lineages(ends, provenance)[0], provenance):
-                raise ValueError('duplicate visible end event')
+            if earlier_events or earlier_changed:
+                prior = dict(row)
+                if earlier_events:
+                    prior['retired'] = {'reason_kind': 'ended', 'events': earlier_events}
+                else:
+                    prior.pop('retired', None)
+                if earlier_changed:
+                    prior['superseded_by'] = earlier_changed
+                    prior['superseded_reason'] = 'changed'
+                else:
+                    prior.pop('superseded_by', None)
+                    prior.pop('superseded_reason', None)
+                if _visible_end(prior, _lineages(ends, provenance)[0], provenance, facts_by_id):
+                    raise ValueError('duplicate visible end event')
         earlier_events.append(event)
 
 
@@ -1315,14 +1411,14 @@ def validate_snapshot(records: list[dict], provenance: dict, game: str, version:
                     raise ValueError('current article titles and slugs must be unique')
                 active_titles.add(row['title'])
                 active_slugs.add(public_id)
-        if 'retired' in row:
-            _validate_retirement(row, provenance, version)
     overlap = namespace.keys() & all_keys
     if overlap:
         raise ValueError(f'state_key collides with record ID or article slug: {sorted(overlap)!r}')
     facts = {identity: row for identity, row in by_id.items() if row['record'] == 'fact'}
     for row in records:
         identity = row['id']
+        if 'retired' in row:
+            _validate_retirement(row, provenance, version, facts)
         if row['record'] == 'article':
             derived = _article_fields(row, facts, provenance)
             if any(row.get(key) != value for key, value in derived.items()):
@@ -1345,7 +1441,7 @@ def validate_snapshot(records: list[dict], provenance: dict, game: str, version:
                     or int(replacement['published_in'][1:]) <= int(row['published_in'][1:])):
                 raise ValueError(f'{identity!r} has invalid supersession')
             replacements.append(replacement)
-        _validate_successors(row, replacements, provenance)
+        _validate_successors(row, replacements, provenance, version, facts)
     _validate_keyed_uniqueness(records, provenance)
     _validate_anchors(records)
     _validate_depends_on_acyclicity(records, provenance)
