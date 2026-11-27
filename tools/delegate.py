@@ -90,12 +90,44 @@ def content_digest(worktree: Path, name: str) -> tuple[str, str | None]:
         return "unreadable", None
 
 
-def snapshot(worktree: Path) -> tuple[str, dict[str, tuple[str, tuple[str, str | None]]]] | None:
-    head = (git(worktree, "rev-parse", "--verify", "HEAD") or "").strip()
+def staged_blobs(worktree: Path) -> dict[str, str]:
+    """Map tracked paths to their Git index mode and blob SHA."""
+    raw = git(worktree, "ls-files", "--stage", "-z")
+    if not raw:
+        return {}
+    entries = {}
+    for record in filter(None, raw.split("\0")):
+        meta, _, name = record.partition("\t")
+        if name:
+            entries[name] = meta
+    return entries
+
+
+def snapshot(worktree: Path) -> tuple[str, Path, dict[str, tuple[str, str | None, tuple[str, str | None]]]] | None:
+    top = (git(worktree, "rev-parse", "--show-toplevel") or "").strip()
     statuses = uncommitted(worktree)
-    if statuses is None:
+    if not top or statuses is None:
         return None
-    return head, {name: (code, content_digest(worktree, name)) for name, code in statuses.items()}
+    repo_root = Path(top).resolve()
+    head = (git(worktree, "rev-parse", "--verify", "HEAD") or "").strip()
+    staged = staged_blobs(repo_root)
+    return head, repo_root, {name: (code, staged.get(name), content_digest(repo_root, name))
+                             for name, code in statuses.items()}
+
+
+def normalize_owned_paths(owned_paths: list[str], worktree: Path, repo_root: Path) -> list[str]:
+    rel_worktree = worktree.resolve().relative_to(repo_root)
+    base = PurePosixPath() if rel_worktree == Path(".") else PurePosixPath(rel_worktree.as_posix())
+    prefixes = []
+    for raw in owned_paths:
+        if not raw or not raw.strip():
+            raise ValueError("--owned-paths entries must be non-empty relative paths")
+        path = PurePosixPath(raw)
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError(f"--owned-paths entry must stay inside the worktree: {raw!r}")
+        combined = base if path == PurePosixPath(".") else base / path
+        prefixes.append(combined.as_posix().rstrip("/"))
+    return prefixes
 
 
 def stop(process: subprocess.Popen) -> None:
@@ -350,32 +382,42 @@ def start(definitions: dict, *, coding_agent: str, model: str, effort: str, role
     else:
         result |= {"outcome": "handed_back", "hand_back": str(reply_file)}
 
-    if before is not None and after is not None:
-        head_after, dirty_after = after
-        dirty_before = before[1]
+    if before is not None and after is None:
+        result["unexpected_edits"] = {"commits": [], "paths": ["<worktree no longer a git repository>"]}
+    elif before is not None and after is not None:
+        head_after, repo_root, dirty_after = after
+        dirty_before = before[2]
         changed = {path for path in dirty_before.keys() | dirty_after.keys()
                    if dirty_before.get(path) != dirty_after.get(path)}
         commits = []
         if head_after and head_after != head_before:
             revision = f"{head_before}..{head_after}" if head_before else head_after
-            commits = (git(worktree, "rev-list", revision) or "").split()
-            diff = (git(worktree, "diff", "--no-renames", "--name-only", "-z", revision, "--") if head_before
-                    else git(worktree, "ls-tree", "-r", "--name-only", "-z", head_after))
-            changed.update(filter(None, (diff or "").split("\0")))
+            commits = (git(repo_root, "rev-list", revision) or "").split()
+            for commit in commits:
+                touched = git(repo_root, "diff-tree", "--no-commit-id", "--name-only", "-r", "-z",
+                              "--no-renames", "--root", commit)
+                changed.update(filter(None, (touched or "").split("\0")))
+            if not commits and head_before:
+                diff = git(repo_root, "diff", "--no-renames", "--name-only", "-z", revision, "--")
+                changed.update(filter(None, (diff or "").split("\0")))
         changed_paths = sorted(changed)
         result |= {"commits": commits, "uncommitted": list(dirty_after), "changed_paths": changed_paths}
         if how.get("read_only") is True and (head_after != head_before or commits or changed_paths):
-            unexpected_commits = commits or ([f"HEAD->{head_after}"] if head_after != head_before else [])
+            unexpected_commits = commits or ([f"HEAD->{head_after or 'unborn'}"] if head_after != head_before else [])
             result["unexpected_edits"] = {"commits": unexpected_commits, "paths": changed_paths}
         elif not how.get("read_only") and owned_paths:
-            prefixes = [PurePosixPath(prefix).as_posix().rstrip("/") for prefix in owned_paths]
+            prefixes = normalize_owned_paths(owned_paths, worktree, repo_root)
             outside = [path for path in changed_paths
                        if not any(prefix == "." or path == prefix or path.startswith(prefix + "/") for prefix in prefixes)]
             if outside:
                 result["unexpected_edits"] = {"commits": [], "paths": outside}
-    if (edits := result["unexpected_edits"]) is not None and result["outcome"] == "handed_back":
+    if (edits := result["unexpected_edits"]) is not None:
         details = [f"{kind}: {', '.join(values)}" for kind, values in edits.items() if values]
-        result |= {"outcome": "unexpected_edits", "hand_back": None, "detail": "Unexpected " + "; ".join(details)}
+        summary = "; ".join(details)
+        if result["outcome"] == "handed_back":
+            result |= {"outcome": "unexpected_edits", "hand_back": None, "detail": "Unexpected " + summary}
+        else:
+            result["detail"] = f"{result['detail']}; unexpected {summary}" if result["detail"] else "Unexpected " + summary
     if check:
         # Run again here, outside any sandbox the delegate had, whatever it reported: a delegate that could not
         # run the check, or returned nothing after editing, still leaves a tree the lead needs a result for.
@@ -429,6 +471,11 @@ def main(arguments: list[str] | None = None) -> int:
     brief = sys.stdin.read() if options.brief == "-" else Path(options.brief).read_text(encoding="utf-8")
     if not brief.strip():
         parser.error("the brief is empty")
+    if options.owned_paths:
+        for raw in options.owned_paths:
+            path = PurePosixPath(raw)
+            if not raw or not raw.strip() or path.is_absolute() or ".." in path.parts:
+                parser.error(f"--owned-paths entry must be a non-empty relative path inside the worktree: {raw!r}")
     result = start(definitions, coding_agent=options.coding_agent, model=options.model, effort=options.effort,
                    role=options.role, brief=brief, worktree=options.worktree.resolve(), out=options.out.resolve(),
                    check=options.check, timeout=options.timeout, owned_paths=options.owned_paths)

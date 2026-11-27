@@ -154,17 +154,21 @@ decision of 26 November 2026
 
 | Role | Codex | Claude Code | Antigravity |
 | --- | --- | --- | --- |
-| Worker | `codex exec --dangerously-bypass-approvals-and-sandbox` reads the brief on standard input. It leaves changes uncommitted; the lead inspects the diff and commits. | `claude -p --permission-mode auto` reads the brief on standard input. It runs checks and can commit through the hook. | `agy --mode auto -p BRIEF` edits files and runs commands. |
+| Worker | `codex exec --dangerously-bypass-approvals-and-sandbox` reads the brief on standard input. It runs checks and can commit through the hook or leave changes uncommitted, as the brief directs. | `claude -p --permission-mode auto` reads the brief on standard input. It runs checks and can commit through the hook. | `agy --mode auto -p BRIEF` edits files and runs commands. |
 | Reviewer | `codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral` reads the brief on standard input and starts clean. | `claude -p --permission-mode auto --no-session-persistence` reads the brief on standard input and starts clean, with the default output style. | `agy --mode auto -p BRIEF`. For clean context see [delegation roles](#delegation-roles). |
 | Explorer and locator | Use the reviewer's start. | Use the reviewer's start. | Use the reviewer's start. |
 
 - **Lightweight accidental-edit checks** ([R-DELEGATION-ERROR](../risks.md)): no start
-  confines a read-only role, so after the run `tools/delegate.py` compares a worktree
-  snapshot taken before it with one taken after. On a reviewer, explorer or locator any
-  change is unexpected; on a worker, `--owned-paths` names the paths it may change and
-  anything else is unexpected. The check is not adversarial: it catches accidents inside
-  the worktree and never reverts. The lead reads `changed_paths` and `reply.md` and
-  decides. Cost: under 0.1 s of git per delegation.
+  confines a read-only role, so after the run `tools/delegate.py` compares a Git worktree
+  snapshot taken before it with one taken after (covering `HEAD`, new commits and every
+  path each commit touches, tracked/untracked working-tree files, and staged index
+  entries). On a reviewer, explorer or locator any Git-visible change is unexpected; on a
+  worker, `--owned-paths` names the worktree-relative paths it may change and any path
+  outside them (including in intermediate commits) is unexpected. The check is not
+  adversarial and never reverts: it ignores gitignored paths (such as `.runtime/`,
+  `.cache/` and `.venv/`), skips non-Git directories, and attributes any concurrent edit
+  made in the same checkout during the run. The lead reads `changed_paths` and `reply.md`
+  and decides. Cost: under 0.1 s of git per delegation.
 - **Refusals.** When a run fails (non-zero exit or an exit-0 structured error such as
   `is_error: true`) or returns nothing, the call looks in its output — including any
   error reply text — for quota or sign-in wording listed for each coding agent in the
@@ -283,8 +287,9 @@ behind after the session ends, the incoming lead brings it up to date under the
 
 ## Per-user activation
 
-All three coding agents run in owner-managed automatic mode. The repository tracks no
-permission allowlists, and the project never edits user settings outside the
+Delegated starts through `tools/delegate.py` run all three coding agents in automatic mode;
+interactive sessions use whatever approval mode the owner sets in each host. The repository
+tracks no permission allowlists, and the project never edits user settings outside the
 repository ([decision log](../decisions/owner-decisions.md#all-harnesses-on-auto-with-lightweight-accident-checks)).
 Trust and activation are per user and are not automated here.
 

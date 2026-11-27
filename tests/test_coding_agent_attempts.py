@@ -184,7 +184,9 @@ def test_role_wrappers_match_routing_table_and_tool_policy():
         meta = frontmatter.loads((ROOT / '.agents/agents' / name / 'agent.md').read_text()).metadata
         assert meta['name'] == name and meta['model'] == alias and effort is None
         tools = meta.get('tools')
-        assert isinstance(tools, list) and tools
+        assert isinstance(tools, list)
+        expected_tools = ['edit_file', 'read_file', 'run_command', 'write_file'] if name == 'worker' else ['read_file', 'run_command']
+        assert sorted(tools) == expected_tools
 
     assert seen_claude == {p.stem for p in (ROOT / '.claude/agents').glob('*.md')}
     assert seen_codex == {p.stem for p in (ROOT / '.codex/agents').glob('*.toml')}

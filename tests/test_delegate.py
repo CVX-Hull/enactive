@@ -458,3 +458,94 @@ def test_the_tracked_definitions_offer_every_role_on_every_coding_agent():
             assert set(how) == {"argv", "brief", "reply", "read_only"}
     for role in ROLES:
         assert (ROOT / ".agents/roles" / f"{role}.md").is_file()
+
+
+def test_read_only_catches_deleted_git_staged_edit_and_subdir_worktree(stand_ins, tmp_path):
+    worktree = stand_ins.worktree
+    sub = worktree / "sub"
+    sub.mkdir()
+    (sub / "s.txt").write_text("v1")
+    subprocess.run(["git", "-C", str(worktree), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(worktree), "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit",
+                    "-q", "-m", "sub"], check=True)
+    # 1. Subdirectory worktree: editing an already-dirty file must be caught, and --owned-paths resolves relative to sub.
+    (sub / "s.txt").write_text("v2")
+    edit_sub = script(tmp_path / "edit_sub", "pathlib.Path('s.txt').write_text('v3')\nprint(json.dumps({'result': 'ok'}))")
+    stand_ins.definitions["coding_agents"]["edit_sub"] = {
+        "name": "EditSub", "version": [sys.executable, "-c", "print('1.0')"], "refusals": [],
+        "usage": stand_ins.definitions["coding_agents"]["second"]["usage"],
+        "roles": {
+            "reviewer": {"argv": [sys.executable, edit_sub], "brief": "stdin", "reply": {"stdout_json": "result"}, "read_only": True},
+            "worker": {"argv": [sys.executable, edit_sub], "brief": "stdin", "reply": {"stdout_json": "result"}, "read_only": False},
+        },
+    }
+    res = delegate.start(stand_ins.definitions, coding_agent="edit_sub", model="m", effort="low", role="reviewer",
+                         brief=BRIEF, worktree=sub, out=tmp_path / "out_sub_ro", check=None, timeout=None)
+    assert res["outcome"] == "unexpected_edits" and res["unexpected_edits"]["paths"] == ["sub/s.txt"]
+    res_ok = delegate.start(stand_ins.definitions, coding_agent="edit_sub", model="m", effort="low", role="worker",
+                            brief=BRIEF, worktree=sub, out=tmp_path / "out_sub_ok", check=None, timeout=None,
+                            owned_paths=["s.txt"])
+    assert res_ok["outcome"] == "handed_back" and res_ok["unexpected_edits"] is None
+
+    # 2. Staged-only change preserving MM status and working-tree content must be caught.
+    (sub / "s.txt").write_text("staged-a")
+    subprocess.run(["git", "-C", str(worktree), "add", "sub/s.txt"], check=True)
+    (sub / "s.txt").write_text("work-b")
+    restage = script(tmp_path / "restage",
+                     "import subprocess\npathlib.Path('sub/s.txt').write_text('staged-c')\n"
+                     "subprocess.run(['git', 'add', 'sub/s.txt'], check=True)\n"
+                     "pathlib.Path('sub/s.txt').write_text('work-b')\nprint(json.dumps({'result': 'ok'}))")
+    stand_ins.definitions["coding_agents"]["restage"] = {
+        "name": "Restage", "version": [sys.executable, "-c", "print('1.0')"], "refusals": [],
+        "usage": stand_ins.definitions["coding_agents"]["second"]["usage"],
+        "roles": {"reviewer": {"argv": [sys.executable, restage], "brief": "stdin", "reply": {"stdout_json": "result"}, "read_only": True}},
+    }
+    res_staged = delegate.start(stand_ins.definitions, coding_agent="restage", model="m", effort="low", role="reviewer",
+                                brief=BRIEF, worktree=worktree, out=tmp_path / "out_staged", check=None, timeout=None)
+    assert res_staged["outcome"] == "unexpected_edits" and "sub/s.txt" in res_staged["unexpected_edits"]["paths"]
+
+    # 3. Worker intermediate commit touching an out-of-scope path then reverting it must still be caught.
+    inter = script(tmp_path / "inter",
+                   "import subprocess\n"
+                   "pathlib.Path('outside.txt').write_text('oops')\n"
+                   "subprocess.run(['git', 'add', 'outside.txt'], check=True)\n"
+                   "subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'c1'], check=True)\n"
+                   "subprocess.run(['git', 'rm', '-q', 'outside.txt'], check=True)\n"
+                   "pathlib.Path('sub/ok.txt').write_text('good')\n"
+                   "subprocess.run(['git', 'add', 'sub/ok.txt'], check=True)\n"
+                   "subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'c2'], check=True)\n"
+                   "print(json.dumps({'result': 'ok'}))")
+    stand_ins.definitions["coding_agents"]["inter"] = {
+        "name": "Inter", "version": [sys.executable, "-c", "print('1.0')"], "refusals": [],
+        "usage": stand_ins.definitions["coding_agents"]["second"]["usage"],
+        "roles": {"worker": {"argv": [sys.executable, inter], "brief": "stdin", "reply": {"stdout_json": "result"}, "read_only": False}},
+    }
+    res_inter = delegate.start(stand_ins.definitions, coding_agent="inter", model="m", effort="low", role="worker",
+                               brief=BRIEF, worktree=worktree, out=tmp_path / "out_inter", check=None, timeout=None,
+                               owned_paths=["sub"])
+    assert res_inter["outcome"] == "unexpected_edits" and res_inter["unexpected_edits"]["paths"] == ["outside.txt"]
+
+    # 4. Deleted .git during a read-only run must be caught, not silently skipped.
+    rm_git = script(tmp_path / "rm_git", "import shutil\nshutil.rmtree('.git')\nprint(json.dumps({'result': 'ok'}))")
+    stand_ins.definitions["coding_agents"]["rm_git"] = {
+        "name": "RmGit", "version": [sys.executable, "-c", "print('1.0')"], "refusals": [],
+        "usage": stand_ins.definitions["coding_agents"]["second"]["usage"],
+        "roles": {"reviewer": {"argv": [sys.executable, rm_git], "brief": "stdin", "reply": {"stdout_json": "result"}, "read_only": True}},
+    }
+    res_rm = delegate.start(stand_ins.definitions, coding_agent="rm_git", model="m", effort="low", role="reviewer",
+                            brief=BRIEF, worktree=worktree, out=tmp_path / "out_rm", check=None, timeout=None)
+    assert res_rm["outcome"] == "unexpected_edits" and res_rm["unexpected_edits"]["paths"] == ["<worktree no longer a git repository>"]
+
+
+@pytest.mark.parametrize("bad_path", ["", "/etc/passwd", "../outside"])
+def test_invalid_owned_paths_are_rejected(stand_ins, tmp_path, bad_path):
+    definitions = tmp_path / "delegates.json"
+    definitions.write_text(json.dumps(stand_ins.definitions))
+    brief = tmp_path / "brief.txt"
+    brief.write_text(BRIEF)
+    with pytest.raises(SystemExit) as refused:
+        delegate.main(["--delegates", str(definitions), "--role", "worker", "--brief", str(brief),
+                       "--worktree", str(stand_ins.worktree), "--out", str(stand_ins.out),
+                       "--coding-agent", "second", "--model", "m", "--effort", "low",
+                       "--owned-paths", bad_path])
+    assert refused.value.code == 2
