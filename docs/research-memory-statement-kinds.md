@@ -3,7 +3,7 @@ owner: lead
 status: active
 date: 2026-11-26
 scope: 'Outside evidence from 79 works on what statements player memory can hold, who writes them, and how stale entries are found and retired'
-review_trigger: 'The owner settles time/landmark anchoring, condition/confidence metadata, findability and curation cadence, or a study tests Kinds 1–5 writing, keyed inertial state, player_agenda or a separate strategist in extended play'
+review_trigger: 'The owner settles condition/confidence metadata, findability and curation cadence, or a study tests Kinds 1–5 writing, keyed inertial state, kinematic anchors, player_agenda or a separate strategist in extended play'
 ---
 
 # Research on what a player's memory should hold and who writes it
@@ -11,13 +11,15 @@ review_trigger: 'The owner settles time/landmark anchoring, condition/confidence
 The search cutoff was **26 November 2026** (America/New_York). The current curator
 schema uses `curator-fact/5` (with `strategy` and `inferred`). Approved policy
 covers curator writing scope (Kinds 1–5 only, strategist deferred), player working
-state (`player_agenda`), keyed inertial world-state retirement, and earlier
-world-memory and belief-calculus priorities; empirical questions on time/landmark
-anchoring, condition/confidence signaling and findability remain open for study
-and design. [Curator contract](contracts/curator.md#facts-curator-fact5) ·
+state (`player_agenda`), keyed inertial world-state retirement, kinematic anchors
+with sparse per-frame game-time labels and on-demand depictions, and earlier
+world-memory and belief-calculus priorities; empirical questions on
+condition/confidence signaling, findability and extended-play grounding remain
+open for study and design. [Curator contract](contracts/curator.md#facts-curator-fact5) ·
 [Kinds 1–5 decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five) ·
 [Player working-state decision](decisions/owner-decisions.md#player-working-state-agenda-1026) ·
 [Keyed inertial state decision](decisions/owner-decisions.md#keyed-inertial-world-state-and-live-repair-1020) ·
+[Kinematic anchors and frame clock decision](decisions/owner-decisions.md#kinematic-anchors-frame-clock-and-on-demand-depictions-1021) ·
 [World memory first](decisions/owner-decisions.md#world-memory-first)
 
 The question arose in the [three-day campaign memory review (#1019)](https://github.com/CVX-Hull/enactive/issues/1019).
