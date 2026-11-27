@@ -247,8 +247,9 @@ def test_export_sealed_v3_tag_projects_v0_and_v1_without_live_exporter(tmp_path)
     git('init', '-q')
     git('config', 'user.name', 'Test')
     git('config', 'user.email', 'test@example.invalid')
-    (repo / 'README').write_text('seed\n', encoding='utf-8')
-    git('add', 'README')
+    (repo / 'knowledge.json').write_text(json.dumps({'schema': 'curator-knowledge/4', 'game': 'example'}),
+                                         encoding='utf-8')
+    git('add', 'knowledge.json')
     git('commit', '-q', '-m', 'v0')
     git('tag', 'v0')
 
@@ -275,6 +276,13 @@ def test_export_sealed_v3_tag_projects_v0_and_v1_without_live_exporter(tmp_path)
             'text': 'A world fact.', 'subject': 'camp',
             'scope': {'game': 'example', 'world': 'w1', 'ruleset': 'standard'},
             'lifecycle_state': 'active', 'needs_review': False, 'links': [{'rel': 'see_also', 'target': 'a1'}],
+            'citations': ['sess-a-4'], 'seen': seen,
+        },
+        {
+            'schema': 'curator-fact/5', 'record': 'fact', 'id': 'f-prev', 'published_in': 'v1',
+            'claim_kind': 'instance_state', 'evidence_basis': 'direct', 'tags': ['camp'],
+            'text': 'Earlier world fact.', 'scope': {'game': 'example', 'world': 'w1', 'ruleset': 'standard'},
+            'lifecycle_state': 'superseded', 'superseded_by': ['f1'], 'needs_review': False, 'links': [],
             'citations': ['sess-a-4'], 'seen': seen,
         },
         {
@@ -309,3 +317,12 @@ def test_export_sealed_v3_tag_projects_v0_and_v1_without_live_exporter(tmp_path)
     assert exported['articles'][0]['backlinks'] == [{'rel': 'see_also', 'source': 'f1'}]
     assert exported['coverage']['session'] == 's01'
     assert exported['history']['ended'] == ['f-old']
+    assert exported['history']['replaced']['f-prev'] == {'reason': 'restated', 'by': ['f1']}
+
+    (repo / 'knowledge.json').write_text(json.dumps({'schema': 'curator-knowledge/5', 'game': 'example'}),
+                                         encoding='utf-8')
+    git('add', 'knowledge.json')
+    git('commit', '-q', '-m', 'v2')
+    git('tag', 'v2')
+    with pytest.raises(ValueError, match='curator-knowledge/4'):
+        replay.export_sealed_v3_tag(repo, 'v2', selection)

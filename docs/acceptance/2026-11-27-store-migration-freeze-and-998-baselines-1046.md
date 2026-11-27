@@ -120,6 +120,8 @@ Measured by `tools/player_host_replay_benchmark.py --lineage all`:
 | Prior-admission ancestor PNGs on disk at admission start | — | A01 `0`, A02 `683`, A03 `1,410`, A04 `2,023` |
 | Actor-start briefing JSON chars (observed / projected) | up to `51,502` / `20,042` | `100`, `2,616`, `2,777`, `3,679` (`0` omitted) |
 
+Prior to Batch 1's `curator-knowledge/5` cutover, the self-contained benchmark reader `export_sealed_v3_tag()` in `tools/player_host_replay_benchmark.py` was checked against `tools.knowledge_export.published()` across all 102 sealed `#998` tags (`v0..v101`) with `0` differences.
+
 ---
 
 ## Limitations

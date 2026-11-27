@@ -236,6 +236,10 @@ def export_sealed_v3_tag(repo_path: Path, version: str, selection: dict) -> dict
     Avoids calling the live exporter so sealed `#998` replays continue working after `curator-knowledge/5`.
     """
     repo = Repository(repo_path)
+    meta_raw = repo.show(version, 'knowledge.json')
+    meta = json.loads(meta_raw) if meta_raw else {}
+    if meta.get('schema') != 'curator-knowledge/4':
+        raise ValueError(f'{version}: expected sealed curator-knowledge/4, got {meta.get("schema")!r}')
     world = selection['world']
     context = selection.get('context', {})
     if version == 'v0':
