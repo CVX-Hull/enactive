@@ -46,20 +46,32 @@ and preserve authentic engine behavior: no hidden state or save editing to win a
 demonstration.
 
 Current product constraint: designs must apply across CDDA-class games, not depend
-on this specific Cataclysm implementation. The working scope is turn-based
-survival/roguelike games with graphical or textual interfaces and persistent,
-long-horizon state. Game observations, actions and optional shortcuts may differ;
-the class is not defined by CDDA menu names, data formats or engine hooks. Record
-any narrower assumption explicitly. Broader game genres are a future extension,
-not a reason to build speculative infrastructure now. Only the user may relax
-this constraint; record a later relaxation as a versioned decision.
+on this specific Cataclysm implementation. The product target is continuous
+long-horizon play—with operator-initiated pause and resume carrying over game
+knowledge and prior player goals, just as a person resumes a long game—rather than
+play broken into separate admissions; finite admissions used in testing are bounded
+evaluation and budget slices ([decision](decisions/owner-decisions.md#continuous-long-horizon-play-and-broader-pace-scope)).
+The design and latency scope covers persistent, long-horizon games with graphical or
+textual interfaces across turn-based, real-time-with-pause and faster-paced play,
+while actual implementation and play stay CDDA-only until the owner names a second
+game ([decision](decisions/owner-decisions.md#research-and-play-stay-cdda-only)).
+Game observations, actions and optional shortcuts may differ; the class is not
+defined by CDDA menu names, data formats or engine hooks. Record any narrower
+assumption explicitly. Broader game genres beyond this scope are a future extension,
+not a reason to build speculative infrastructure now. Only the user may relax this
+constraint; record a later relaxation as a versioned decision.
 
 Gameplay must be apparently responsive to the observer. Admit the whole
 host/model/context/execution configuration on measured useful progress and
 quality. A slower model is acceptable only where useful execution covers its
 delay and the complete configuration still meets the declared cadence. Capability
-alone does not justify stalls. Numerical budgets belong in the prospective
-evaluation, with loading and long activities separately visible and bounded.
+alone does not justify stalls. Context cuts must be deterministic with zero
+foreground compaction pauses, background services (curation, recall and any optional
+reconciliation) must not block foreground play, and working-state updates must add
+zero mandatory overhead on routine or urgent turns
+([decision](decisions/owner-decisions.md#non-blocking-latency-contract-and-split-1026)).
+Numerical budgets belong in the prospective evaluation, with loading and long
+activities separately visible and bounded.
 
 Selected architecture constraint: the harness exposes only basic computer
 observation/control and mechanical custody, delivery, cancellation and resource
