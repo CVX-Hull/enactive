@@ -580,7 +580,121 @@ def compare_porter2(evidence: Path, results: dict, repeat: int, fold) -> dict:
     return gates
 
 
-def benchmark(evidence: Path, repeat: int, *, porter2=None) -> dict:
+@dataclass(frozen=True)
+class Probe998:
+    label: str
+    group: str
+    text: str
+    as_of_status: str
+    gold_articles: tuple[str, ...]
+    gold_facts: tuple[str, ...]
+    latest_facts: tuple[str, ...]
+    snippet_all: tuple[str, ...]
+    snippet_any: tuple[str, ...]
+    note: str
+
+
+PROBES_998 = (
+    Probe998(
+        label='start-time', group='live_998_a04',
+        text='Rowan starting time spring day 61 72 hours character creation clock',
+        as_of_status='current', gold_articles=('wilderness-start',),
+        gold_facts=('wilderness-default-calendar', 'rowan-starting-water-frozen'),
+        latest_facts=('wilderness-default-calendar',), snippet_all=('8:00 am',), snippet_any=(),
+        note='Verbatim live #998 A04 request-107; wilderness-default-calendar ranked 18th in v97 while wilderness-start lead omits 8:00 AM.',
+    ),
+    Probe998(
+        label='fire-ring', group='live_998_a03', text='fire ring fire fuel haul stick wood camp Rowan',
+        as_of_status='mixed-stale', gold_articles=('rowan-campground-spawn',),
+        gold_facts=('rowan-day-63-ring-fiddlehead-meal', 'rowan-day-63-bough-fire-craft-interruption',
+                    'rowan-day-62-existing-fire-ring', 'rowan-day-62-ring-fire-road',
+                    'rowan-day-62-fire-fuel-water-warning', 'rowan-day-62-outdoor-water-and-stick-menu',
+                    'rowan-day-62-hauled-stick-ring-filter', 'rowan-day-62-acorn-fire-rejected',
+                    'matchbook-stick-fire-ring-cooking', 'pine-bough-fire-ring-interrupted-cooking'),
+        latest_facts=('rowan-day-63-ring-fiddlehead-meal', 'rowan-day-63-bough-fire-craft-interruption'),
+        snippet_all=('fire ring',), snippet_any=(),
+        note='Verbatim live #998 A03 request-257; Day-62 fire-ring readings are stale at Day 64, Day-63 readings are latest, and rowan-campground-spawn lead mentions only the Day-64 brazier.',
+    ),
+    Probe998(
+        label='rv-door', group='diagnostic_998', text='Luxury RV door enter west side driver door',
+        as_of_status='partial-stale', gold_articles=('rowan-campground-spawn',),
+        gold_facts=('rowan-rv-access-and-condition', 'rowan-returned-rv-rear-bed'),
+        latest_facts=('rowan-rv-access-and-condition', 'rowan-returned-rv-rear-bed'),
+        snippet_all=('west-side', 'door'), snippet_any=(),
+        note='Battery/inventory readings in both facts became stale by Day 64 while the west-side driver door still held; rowan-campground-spawn lead omits RV door.',
+    ),
+    Probe998(
+        label='crafting-filter', group='diagnostic_998', text='crafting screen recipe filter reset clear query',
+        as_of_status='current', gold_articles=('crafting-controls',),
+        gold_facts=('crafting-filter-controls', 'crafting-replace-filter-and-prefixes',
+                    'crafting-filter-control-u', 'crafting-filter-control-backspace-appends'),
+        latest_facts=('crafting-filter-controls', 'crafting-replace-filter-and-prefixes',
+                      'crafting-filter-control-u', 'crafting-filter-control-backspace-appends'),
+        snippet_all=(), snippet_any=('ctrl-u', 'backspace', 'r to reset', 'r resets'),
+        note='Game-wide crafting filter controls; crafting-controls lead omits all reset/clear keys (Ctrl-U, Backspace, r).',
+    ),
+)
+
+
+def snippet_matches(snippet: str, probe: Probe998) -> bool:
+    folded = snippet.casefold()
+    return (all(term.casefold() in folded for term in probe.snippet_all)
+            and (not probe.snippet_any or any(term.casefold() in folded for term in probe.snippet_any)))
+
+
+def evaluate_probes_998(knowledge: production.Knowledge, probes: tuple[Probe998, ...],
+                        repeat: int, *, label: str) -> dict:
+    rows, samples = [], []
+    for probe in probes:
+        for _ in range(repeat):
+            start = time.perf_counter()
+            hits = knowledge.query(probe.text)['hits']
+            samples.append((time.perf_counter() - start) * 1000)
+        top5 = hits[:5]
+        article_rank = next((i for i, h in enumerate(top5, 1) if h['id'] in probe.gold_articles), None)
+        fact_rank = next((i for i, h in enumerate(hits, 1) if h['id'] in probe.gold_facts), None)
+        latest_rank = next((i for i, h in enumerate(hits, 1) if h['id'] in probe.latest_facts), None)
+        full_rank = latest_rank
+        if full_rank is None:
+            scores = knowledge._one_hop(probe.text, knowledge._bm25(probe.text))
+            order = sorted((-score, i) for i, score in enumerate(scores) if score > 0)
+            full_rank = next((rank for rank, (_, i) in enumerate(order, 1)
+                              if knowledge.records[i]['id'] in probe.latest_facts), None)
+        rows.append(dict(
+            label=probe.label, group=probe.group, as_of_status=probe.as_of_status, query=probe.text,
+            gold_articles=list(probe.gold_articles), gold_facts=list(probe.gold_facts),
+            latest_facts=list(probe.latest_facts),
+            hit_at_5=float(article_rank is not None or (fact_rank is not None and fact_rank <= 5)),
+            article_rank_at_5=article_rank, article_mrr_at_5=1 / article_rank if article_rank else 0.0,
+            fact_rank_at_10=fact_rank, latest_fact_rank_at_10=latest_rank, latest_fact_full_rank=full_rank,
+            top5_snippet_pass=any(snippet_matches(h['snippet'], probe) for h in top5),
+            gold_article_snippet_pass=any(h['id'] in probe.gold_articles and snippet_matches(h['snippet'], probe)
+                                          for h in top5),
+            top5_hits=[{k: h[k] for k in ('id', 'kind', 'via', 'snippet')} for h in top5],
+        ))
+    return dict(corpus=label, rows=rows, queries=len(rows), articles=len(knowledge.value['articles']),
+                facts=len(knowledge.value['facts']),
+                hit_at_5=statistics.fmean(row['hit_at_5'] for row in rows),
+                article_mrr_at_5=statistics.fmean(row['article_mrr_at_5'] for row in rows),
+                top5_snippet_pass_count=sum(row['top5_snippet_pass'] for row in rows),
+                gold_article_snippet_pass_count=sum(row['gold_article_snippet_pass'] for row in rows),
+                avg_ms=round(statistics.fmean(samples), 3), p95_ms=round(percentile(samples, 0.95), 3),
+                samples=len(samples))
+
+
+def load_corpora_998(admission: Path) -> dict[str, production.Knowledge]:
+    from tools.knowledge_export import published
+
+    run = admission / 'run'
+    path = run / 'curator-runner' / 'delivered' / 'v97.json'
+    selection = json.loads((run / 'private' / 'knowledge-full.json').read_text(encoding='utf-8'))['selection']
+    latest = published(admission / 'knowledge' / 'cdda' / 'cdda', 'v101',
+                       world=selection['world'], lineage=selection['lineage'], context=selection['context'])
+    return {'998_v97': production.Knowledge.from_dict(json.loads(path.read_text(encoding='utf-8')), str(path)),
+            '998_v101': production.Knowledge.from_dict(latest)}
+
+
+def benchmark(evidence: Path, repeat: int, *, porter2=None, include_998=True) -> dict:
     corpora = {name: Corpus.load(name, evidence / path) for name, path in CORPORA.items()}
     results = {name: retrieval(corpora[name], [q for q in QUERIES if q.corpus == name], repeat)
                for name in ('v91', 'v17')}
@@ -596,7 +710,11 @@ def benchmark(evidence: Path, repeat: int, *, porter2=None) -> dict:
     gate = overall_gate(results)
     pairs = folding_pairs(porter2)
     porter2_gate = compare_porter2(evidence, results, repeat, porter2) if porter2 is not None else None
-    return dict(schema='knowledge-retrieval-benchmark/1', repeat=repeat,
+    admission = evidence / 'multi-day-standard-build-998-admission-04'
+    probes_998 = ({name.removeprefix('998_'): evaluate_probes_998(knowledge, PROBES_998, repeat, label=name)
+                   for name, knowledge in load_corpora_998(admission).items()}
+                  if include_998 and admission.is_dir() else None)
+    return dict(schema='knowledge-retrieval-benchmark/2', repeat=repeat, probes_998=probes_998,
                 corpora={name: dict(path=CORPORA[name], articles=c.article_count,
                                     facts=c.fact_count, edges=sum(map(len, c.neighbours)) // 2,
                                     links=c.links, unresolved_links=c.unresolved_links)
@@ -705,6 +823,16 @@ def markdown(result: dict) -> str:
         row = compact[name]
         out.append(f'| {name} | {row["total_bytes"]:,} | {row["median_bytes"]:,.1f} | {row["max_bytes"]:,} | '
                    f'{row["avg_ms"]:.4f} | {row["p95_ms"]:.4f} | {row["samples"]:,} |')
+    if result.get('probes_998'):
+        out += ['', '## Sealed #998 retrieval probes', '',
+                '| Version | Probe | As of | Hit@5 | Article rank@5 | Latest fact rank | Top-5 snippet | Gold article snippet |',
+                '| --- | --- | --- | --- | --- | --- | --- | --- |']
+        for version, corpus in result['probes_998'].items():
+            for row in corpus['rows']:
+                cells = (row[key] for key in ('label', 'as_of_status', 'hit_at_5', 'article_rank_at_5',
+                                              'latest_fact_full_rank', 'top5_snippet_pass',
+                                              'gold_article_snippet_pass'))
+                out.append(f'| {version} | ' + ' | '.join(map(_cell, cells)) + ' |')
     return '\n'.join(out) + '\n'
 
 

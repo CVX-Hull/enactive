@@ -175,3 +175,63 @@ def test_best_effort_fallback_cuts_largest_strictly_reducing_prefix_when_tail_ex
     assert check(state2, policy, high, [smaller, non_shrinking], best_effort=True) == ('insufficient-cover', 0)
     state3 = replay.Hysteresis()
     assert check(state3, policy, high, [non_shrinking, non_shrinking], best_effort=True) == ('insufficient-cover', 0)
+
+
+def test_snapshot_v3_tiers_use_world_scope():
+    game = dict(id='game', claim_kind='mechanic', scope={'game': 'example'},
+                text='A mechanic', seen={'order': [1]})
+    world = dict(game, id='world', scope={'game': 'example', 'world': 'example-world'}, seen={'order': [2]})
+    store = replay.Snapshot(dict(schema='delivered-knowledge/3', version='v1',
+                                 coverage=None, articles=[], facts=[world, game]))
+    assert replay.instance_state(world)
+    assert not replay.instance_state(game)
+    assert store.tiers() == [game, world]
+
+
+def test_replay_updates_counts_delivered_payloads_and_briefing_pairs():
+    def delivery(kind, request, payload, outcome='delivered'):
+        return dict(type='knowledge-delivery', kind=kind, outcome=outcome,
+                    receiving_player_request_id=request, text=f'BEGIN\n{canonical(payload)}\nEND')
+
+    empty = dict(added=[], updated=[], removed=[])
+    events = [delivery('briefing', 'request-1', {}),
+              delivery('update', 'request-1', empty),
+              delivery('update', 'request-2', dict(empty, removed=[{'id': 'old'}])),
+              delivery('update', 'request-3', {'index': [{'id': 'new'}]}),
+              delivery('update', 'request-4', {'index': [], 'unlisted_entries': 0}),
+              delivery('update', 'request-5', empty, 'empty')]
+    assert replay.replay_updates(events) == dict(total=4, empty=2, non_empty=2, paired_with_briefing=1)
+
+
+def test_recall_v12_skips_without_fetch_keep_recorded_costs_matched():
+    store = snapshot()
+    events = [
+        dict(type='start', schema='player-host/12'),
+        dict(type='knowledge-recall', outcome='all-delivered', request_id='skipped'),
+        dict(type='knowledge-recall', status='not-made', reason='all-delivered'),
+        dict(type='knowledge-recall', outcome='empty', request_id='empty'),
+        dict(type='request-fetch-start', request_role='recall', request_id='fetched'),
+        dict(type='response-complete', request_role='recall', request_id='fetched', counted_cost_usd='0.10'),
+        dict(type='knowledge-recall', outcome='selected', request_id='fetched', version='v1'),
+    ]
+    outcome = replay.replay_recall(events, {'v1': store}, {'v1': {'candidate'}})
+    assert outcome['fetches'] == 1
+    assert outcome['all_delivered'] == 0
+    assert outcome['recorded_all_delivered'] == 2
+    assert str(outcome['observed_usd']) == '0.10'
+    assert str(outcome['avoided_usd']) == '0'
+
+
+def test_ancestor_frame_inventory_counts_only_prior_admission_png_files(tmp_path):
+    runs = [tmp_path / f'admission-{n:02d}' / 'run' for n in range(1, 4)]
+    for run, names in zip(runs, [('one.png', 'two.png', 'metadata.json'), (), ('one.png',)]):
+        sources = run / 'sources'
+        sources.mkdir(parents=True)
+        (sources / 'directory.png').mkdir()
+        for name in names:
+            (sources / name).touch()
+    assert replay.ancestor_frame_inventory(runs) == [
+        dict(admission='admission-01', pngs=2, ancestor_pngs=0),
+        dict(admission='admission-02', pngs=0, ancestor_pngs=2),
+        dict(admission='admission-03', pngs=1, ancestor_pngs=2),
+    ]
