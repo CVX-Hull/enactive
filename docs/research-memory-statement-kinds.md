@@ -9,13 +9,12 @@ review_trigger: 'The owner settles time/landmark anchoring, condition/confidence
 # Research on what a player's memory should hold and who writes it
 
 The search cutoff was **26 November 2026** (America/New_York). The current curator
-schema still uses `curator-fact/5` (with `strategy` and `inferred`); the owner has
-settled the target writing scope (Kinds 1–5 only, separate strategist deferred),
-the player working-state boundary (`player_agenda`), and keyed inertial world-state
-retirement (`#1020`), while time/landmark anchoring, condition/confidence metadata
-and findability questions remain unsettled for the coordinated store batch. The
-owner previously prioritized world facts and deferred procedures and belief
-calculus. [Curator contract](contracts/curator.md#facts-curator-fact5) ·
+schema uses `curator-fact/5` (with `strategy` and `inferred`). Approved policy
+covers curator writing scope (Kinds 1–5 only, strategist deferred), player working
+state (`player_agenda`), keyed inertial world-state retirement, and earlier
+world-memory and belief-calculus priorities; empirical questions on time/landmark
+anchoring, condition/confidence signaling and findability remain open for study
+and design. [Curator contract](contracts/curator.md#facts-curator-fact5) ·
 [Kinds 1–5 decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five) ·
 [Player working-state decision](decisions/owner-decisions.md#player-working-state-agenda-1026) ·
 [Keyed inertial state decision](decisions/owner-decisions.md#keyed-inertial-world-state-and-live-repair-1020) ·

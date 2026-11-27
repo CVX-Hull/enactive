@@ -18,19 +18,16 @@ project, a laboratory programme or a warehouse operation as much as solving
 isolated benchmark episodes.
 
 The question arose during the [three-day campaign memory review (#1019)](https://github.com/CVX-Hull/enactive/issues/1019)
-to inform the `#1020`–`#1027` memory decisions. Since publication, the owner has
-settled curator scope ([Kinds 1–5 only](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five),
+to inform memory design across `#1020`–`#1027`. Approved policy covers curator
+scope ([Kinds 1–5 only](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five),
 [strategist deferred](decisions/owner-decisions.md#separate-strategist-deferred-1024)),
-[player working state (#1026)](decisions/owner-decisions.md#player-working-state-agenda-1026),
-[keyed inertial world state (#1020)](decisions/owner-decisions.md#keyed-inertial-world-state-and-live-repair-1020),
+[player working state](decisions/owner-decisions.md#player-working-state-agenda-1026),
+[keyed inertial world state](decisions/owner-decisions.md#keyed-inertial-world-state-and-live-repair-1020),
 [zero-model lookup](decisions/owner-decisions.md#zero-model-lexical-index-embeddings-deferred-1020)
-and [interleaved hygiene-only live grooming](decisions/owner-decisions.md#interleaved-hygiene-only-live-grooming-1027);
-questions on [dated, anchored world facts (#1021)](https://github.com/CVX-Hull/enactive/issues/1021),
-[condition and confidence metadata (#1022)](https://github.com/CVX-Hull/enactive/issues/1022),
-[record findability and lookup (#1023)](https://github.com/CVX-Hull/enactive/issues/1023),
-[post-cut delivery, reminders and frame evidence (#1025)](https://github.com/CVX-Hull/enactive/issues/1025)
-and [live curation cadence and cost (#1027)](https://github.com/CVX-Hull/enactive/issues/1027)
-remain unsettled.
+and [interleaved hygiene-only live grooming](decisions/owner-decisions.md#interleaved-hygiene-only-live-grooming-1027).
+Empirical and design questions on time/landmark anchoring, condition/confidence
+signals, record findability, post-cut delivery and live curation cadence stay
+active here; issue status lives on the [Project](https://github.com/users/CVX-Hull/projects/2).
 Related research covers [memory statement kinds](research-memory-statement-kinds.md),
 [memory, ontology and oversight](research-curated-memory.md) and
 [belief under conflict](research-belief-under-conflict.md).
