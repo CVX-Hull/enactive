@@ -32,14 +32,12 @@ HIT_FIELDS = ('id', 'kind', 'title', 'subject', 'via', 'snippet')
 
 #: The versions of an actor's frozen inputs and delivered knowledge: the current ones for a current run, and
 #: the ones the sealed sessions of the archive index carry (S-MIGRATION, closed archive reads).
-CURRENT_SNAPSHOT = ('player-host-inputs/4', 'delivered-knowledge/4')
-ARCHIVED_DELIVERED_V3 = 'delivered-knowledge/3'
-ARCHIVED_DELIVERED_V3_SESSIONS = frozenset({
-    '3bf4413b14c83ceff112ca69a99e2715', '088ba6385ed4d42f6e728ad34d8fe943',
-    'f91a383e469ae6722febb75cf90a7bbd', 'f0e2b12efcfa5d83de53b49776897fdf',
-    'a6979727b98c9fde6e8e0f502fea128d',
-})
-ARCHIVED_SNAPSHOT = ('player-host-inputs/3', 'delivered-knowledge/1')
+CURRENT_SNAPSHOT = ('player-host-inputs/5', 'delivered-knowledge/4')
+LEGACY_SNAPSHOT = ('player-host-inputs/3', 'delivered-knowledge/1')
+SNAPSHOTS_BY_MANIFEST = {
+    MANIFEST_SCHEMA: CURRENT_SNAPSHOT,
+    'campaign-run/13': ('player-host-inputs/4', 'delivered-knowledge/3'),
+}
 #: Sealed `#889` packages: their delivered knowledge is `delivered-knowledge/2`, which nothing reads any more, so their
 #: snapshot is `hash_unavailable` and never misread as the archived `delivered-knowledge/1`.
 UNREAD_SNAPSHOT_MANIFESTS = frozenset(('campaign-run/12',))
@@ -279,7 +277,7 @@ def entry(value, kind, catalog, runs, schema=CURRENT_SNAPSHOT[1], facts=None):
     `facts` (the whole file's facts by ID). Its positions name session aliases, and any other session is withheld. An
     archived (`delivered-knowledge/1`) entry names `source_ids`, positions with a source ID, and plain links."""
     current = schema == CURRENT_SNAPSHOT[1]
-    blinded = schema != ARCHIVED_SNAPSHOT[1]
+    blinded = schema != LEGACY_SNAPSHOT[1]
     names = ('id', 'revision', 'title', 'subject', 'text', 'lead')
     if not blinded:
         names = (*names, 'type')
@@ -322,7 +320,21 @@ def entry(value, kind, catalog, runs, schema=CURRENT_SNAPSHOT[1], facts=None):
     return result
 
 
-def frozen_snapshot(directory, actor_parts, frozen_schema, knowledge_schemas, actor, session):
+def manifest_schema_for(directory, session):
+    try:
+        manifest = read_manifest(directory)
+    except EvaluationError:
+        return None
+    return manifest['schema'] if manifest.get('session') == session else None
+
+
+def snapshot_schemas(manifest_schema):
+    if manifest_schema is None or manifest_schema in UNREAD_SNAPSHOT_MANIFESTS:
+        return None, None
+    return SNAPSHOTS_BY_MANIFEST.get(manifest_schema, LEGACY_SNAPSHOT)
+
+
+def frozen_snapshot(directory, actor_parts, frozen_schema, knowledge_schema, actor, session):
     """(`snapshot_status`, the delivered-knowledge document when `verified`) of an actor's frozen snapshot.
 
     Each file of the run package is read once, without following a symlink and bounded at 16 MiB; the digest compared
@@ -345,7 +357,7 @@ def frozen_snapshot(directory, actor_parts, frozen_schema, knowledge_schemas, ac
     if snapshot['sha256'] != expected:
         return 'hash_mismatch', None
     value = loads(data, '/'.join(knowledge))
-    if not any(delivered_shape(value, schema) for schema in knowledge_schemas):
+    if not delivered_shape(value, knowledge_schema):
         raise ViewError(409, 'unsupported_knowledge')
     return 'verified', value
 
@@ -365,11 +377,9 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
     if request_id and request_id not in requests:
         raise ViewError(404, 'unknown_request', request_id)
     runs = catalog.runs()
-    try:
-        manifest_schema = read_manifest(directory)['schema']
-    except EvaluationError:
-        manifest_schema = None  # no supported manifest says which versions these files are
-    blinded_run = manifest_schema == MANIFEST_SCHEMA
+    manifest_schema = manifest_schema_for(directory, info.session)
+    frozen_schema, knowledge_schema = snapshot_schemas(manifest_schema)
+    blinded_run = manifest_schema in SNAPSHOTS_BY_MANIFEST
     matching = []
     for event in events:
         f = event.fields
@@ -399,28 +409,18 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
                 item['delivery_text_unavailable'] = True
         matching.append(item)
     snapshot = None
-    if manifest_schema == MANIFEST_SCHEMA:
-        frozen_schema, knowledge_schema = CURRENT_SNAPSHOT
-        knowledge_schemas = (knowledge_schema,)
-        if info.session in ARCHIVED_DELIVERED_V3_SESSIONS:
-            knowledge_schemas += (ARCHIVED_DELIVERED_V3,)
-    elif manifest_schema is None:
-        frozen_schema, knowledge_schemas = None, ()
-    else:
-        frozen_schema, knowledge_schema = ARCHIVED_SNAPSHOT
-        knowledge_schemas = (knowledge_schema,)
     if manifest_schema in UNREAD_SNAPSHOT_MANIFESTS:
         snapshot_status, value = 'hash_unavailable', None     # its files are never read, present or not
     else:
         try:
-            snapshot_status, value = frozen_snapshot(directory, ('actors', actor_dir.name), frozen_schema, knowledge_schemas,
+            snapshot_status, value = frozen_snapshot(directory, ('actors', actor_dir.name), frozen_schema, knowledge_schema,
                                                      actor, info.session)
         except EvaluationError as exc:
             raise ViewError(409, 'knowledge_unavailable', str(exc)) from exc
     if value is not None:
         knowledge_schema = value['schema']
         current = knowledge_schema == CURRENT_SNAPSHOT[1]
-        blinded = knowledge_schema != ARCHIVED_SNAPSHOT[1]
+        blinded = knowledge_schema != LEGACY_SNAPSHOT[1]
         articles, fact_rows = value['articles'], value['facts']
         # An article's anchors come from the facts it cites, wherever they fall in the file, before any selection.
         held = {f['id']: f for f in fact_rows if isinstance(f, dict) and isinstance(f.get('id'), str)} if blinded else None
@@ -455,7 +455,7 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
         add_ids(projected, 'returned_ids', record_ids(call))
         hits = returned_hits(call)
         current = result.get('schema') == 'player-knowledge/4'
-        archived = result.get('schema') == 'player-knowledge/3' and info.session in ARCHIVED_DELIVERED_V3_SESSIONS
+        archived = result.get('schema') == 'player-knowledge/3' and manifest_schema == 'campaign-run/13'
         projected['returned_hits'] = [compact_hit(hit, current, archived) for hit in hits[:HIT_LIMIT]]
         projected['returned_hits_omitted'] = len(hits) - len(projected['returned_hits'])
         projected['step'] = None if step is None else dict(seq=step[0], **fields({'source_id':step[1]}, ('source_id',)))

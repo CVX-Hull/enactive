@@ -29,21 +29,23 @@ def package(root, *, world=None, lineage=None, context=None, knowledge=None, liv
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     from harness.player.knowledge import empty
+    from harness.player.source_index import empty_agenda, empty_source_index
     from tools.knowledge_export import export
     hashes=export(directory,empty() if knowledge is None else knowledge,seed,world=world,lineage=lineage,context=context)
     values={
         # 1000 context tokens at $0.45 and 100 output tokens at $1.80 per million: $0.00063 for a request with no cost record.
-        'route.json':dict(schema='player-host/12',endpoint_costs=None,service_tier='default',context_reserve_tokens=200,context_cut=None,
+        'route.json':dict(schema='player-host/13',endpoint_costs=None,service_tier='default',context_reserve_tokens=200,context_cut=None,
             spend_limit_usd='1',unpriced_request_usd='0.00063',model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
         'target.json':dict(argv=[str(root/'native')],cwd=str(root),env={}),
+        'source-index.json':empty_source_index(world, lineage),
+        'agenda.json':empty_agenda(),
     }
-    values['route.json']['recall']=dict(model=values['route.json']['model'],every=5,unpriced_request_usd='0.00063',endpoint_costs=None)
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/13',context={} if context is None else context,session='a'*32,
+    profile=dict(schema='campaign-run/14',context={} if context is None else context,session='a'*32,
         source_commit='f'*40,live_knowledge_updates=live,
         labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=lineage,
                     admission=None if lineage is None else 1,world=world),
@@ -96,7 +98,7 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
-@pytest.mark.parametrize('version', [9, 10, 11])
+@pytest.mark.parametrize('version', [9, 10, 11, 12])
 def test_preflight_rejects_an_old_host_route_before_dispatch(tmp_path, version):
     directory,profile=package(tmp_path)
     rewrite_route(directory,profile,schema=f'player-host/{version}')
@@ -197,32 +199,45 @@ def test_capture_plan_hash_names_the_manifest_bytes_it_validated(tmp_path, capsy
     assert result['manifest_sha256'] == original_hash != hashlib.sha256(manifest.read_bytes()).hexdigest()
 
 
-def test_knowledge_is_required_private_hashes_are_closed_and_reserve_covers_both_bounds(tmp_path):
+def test_knowledge_source_index_and_agenda_are_required_and_reserve_covers_player_bound(tmp_path):
     directory,profile=package(tmp_path)
-    # Empty knowledge contributes zero to the recall part of the reserve.
     profile['ending_reserve']['usd']='0.00063'
     (directory/'manifest.json').write_text(json.dumps(profile))
     assert validate(directory,tmp_path)
-    tmp_path = tmp_path/'with-knowledge'
-    directory,profile=package(tmp_path, knowledge=KNOWLEDGE)
+    tmp_path_kb = tmp_path/'with-knowledge'
+    directory,profile=package(tmp_path_kb, knowledge=KNOWLEDGE)
+    # Recall is retired in player-host/13: ending_reserve.usd covers the player bound alone.
     profile['ending_reserve']['usd']='0.00063'
     (directory/'manifest.json').write_text(json.dumps(profile))
-    with pytest.raises(ControlError,match='ending_reserve.usd'):validate(directory,tmp_path)
-    profile['ending_reserve']['usd']='0.00126'
-    (directory/'manifest.json').write_text(json.dumps(profile))
-    assert validate(directory,tmp_path)
+    assert validate(directory,tmp_path_kb)
     profile['private_files']['unexpected.json']='0'*64
     (directory/'manifest.json').write_text(json.dumps(profile))
-    with pytest.raises(ControlError):validate(directory,tmp_path)
+    with pytest.raises(ControlError):validate(directory,tmp_path_kb)
     profile['private_files'].pop('unexpected.json');profile['files'].pop('delivered-knowledge.json')
     (directory/'manifest.json').write_text(json.dumps(profile))
-    with pytest.raises(ControlError,match='Freeze every'):validate(directory,tmp_path)
+    with pytest.raises(ControlError,match='Freeze every'):validate(directory,tmp_path_kb)
+    # Missing source-index.json or agenda.json is refused.
+    for missing_file in ('source-index.json', 'agenda.json'):
+        d2, p2 = package(tmp_path / f'missing-{missing_file}')
+        p2['files'].pop(missing_file)
+        (d2 / 'manifest.json').write_text(json.dumps(p2))
+        with pytest.raises(ControlError, match='Freeze every'):
+            validate(d2, tmp_path / f'missing-{missing_file}')
+    # Source index world/lineage mismatch is refused.
+    d3, p3 = package(tmp_path / 'bad-source-index', world='w1', lineage='l1')
+    bad_idx = json.loads((d3 / 'source-index.json').read_text())
+    bad_idx['world'] = 'other-world'
+    (d3 / 'source-index.json').write_text(json.dumps(bad_idx))
+    p3['files']['source-index.json'] = hashlib.sha256((d3 / 'source-index.json').read_bytes()).hexdigest()
+    (d3 / 'manifest.json').write_text(json.dumps(p3))
+    with pytest.raises(ControlError, match='Invalid frozen source index'):
+        validate(d3, tmp_path / 'bad-source-index')
 
 
 def test_preflight_requires_room_for_ordinary_work_beyond_ending_reserve_and_bound(tmp_path):
     """Ballot 7: `ending_reserve.usd + reserve_bound < spend_limit_usd` prevents Turn-1 deadlock."""
     directory, profile = package(tmp_path)
-    # Empty knowledge: reserve_bound == 0.00063; spend_limit_usd == 1.
+    # Player bound == 0.00063; spend_limit_usd == 1.
     for reserve_usd in ('0.99937', '0.9995'):
         profile['ending_reserve']['usd'] = reserve_usd
         (directory/'manifest.json').write_text(json.dumps(profile))
@@ -233,25 +248,19 @@ def test_preflight_requires_room_for_ordinary_work_beyond_ending_reserve_and_bou
     assert validate(directory, tmp_path)
     with_kb = tmp_path / 'with-kb'
     directory, profile = package(with_kb, knowledge=KNOWLEDGE)
-    # Populated knowledge: reserve_bound == 0.00126 (player + recall); equality fails.
-    profile['ending_reserve']['usd'] = '0.99874'
+    profile['ending_reserve']['usd'] = '0.99937'
     (directory/'manifest.json').write_text(json.dumps(profile))
     with pytest.raises(ControlError, match='below spend_limit_usd'):
         validate(directory, with_kb)
-    profile['ending_reserve']['usd'] = '0.99873'
+    profile['ending_reserve']['usd'] = '0.99936'
     (directory/'manifest.json').write_text(json.dumps(profile))
     assert validate(directory, with_kb)
 
 
-def test_live_knowledge_updates_is_a_required_boolean_that_reserves_a_recall_and_excludes_withholding(tmp_path):
-    """R-OVERSPEND: a recall can follow a version adopted from an empty frozen file, so the reserve holds its bound.
-    A newer version is exported whole, so it cannot be combined with a withholding draw."""
+def test_live_knowledge_updates_is_a_required_boolean_that_excludes_withholding(tmp_path):
+    """A newer version is exported whole, so live_knowledge_updates cannot be combined with a withholding draw."""
     directory,profile=package(tmp_path/'empty',live=True)
     profile['ending_reserve']['usd']='0.00063'
-    (directory/'manifest.json').write_text(json.dumps(profile))
-    with pytest.raises(ControlError,match=r'ending_reserve\.usd 0\.00063 must be at least unpriced_request_usd 0\.00126'):
-        validate(directory,tmp_path/'empty')
-    profile['ending_reserve']['usd']='0.00126'
     (directory/'manifest.json').write_text(json.dumps(profile))
     assert validate(directory,tmp_path/'empty')[0]['live_knowledge_updates'] is True
     for value in (None,'true',1,0):
@@ -291,11 +300,12 @@ def test_private_knowledge_hash_mismatch_refuses_preflight(tmp_path,name):
         validate(directory,tmp_path)
 
 
-@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','reservation_package','pre_delivery_package','attempt_limited_package','unscoped_package','frozen_knowledge_package','old_node','old_route','previous_route',
+@pytest.mark.parametrize('fault',['old','previous_package','previous_v13_package','previous_labelless','reservation_package','pre_delivery_package','attempt_limited_package','unscoped_package','frozen_knowledge_package','old_node','old_route','previous_route',
                                   'reservation_route','frozen_knowledge_route','untracked_adapter','partial','changed','dirty','credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     directory,profile=package(tmp_path)
     if fault=='old':profile['schema']='campaign-run/1'
+    if fault=='previous_v13_package':profile['schema']='campaign-run/13'
     # The version before delivery of a newer knowledge version to a running actor: no `live_knowledge_updates`.
     if fault=='frozen_knowledge_package':profile['schema']='campaign-run/11';del profile['live_knowledge_updates']
     if fault=='frozen_knowledge_route':rewrite_route(directory,profile,schema='player-host/8')
@@ -319,7 +329,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
         path=directory/'target.json';target=json.loads(path.read_text());target['env']['API_KEY']='fixture'
         path.write_text(json.dumps(target));profile['files']['target.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
-    expected={'old':'inert history','previous_package':'inert history','previous_labelless':'inert history','reservation_package':'inert history',
+    expected={'old':'inert history','previous_package':'inert history','previous_v13_package':'inert history','previous_labelless':'inert history','reservation_package':'inert history',
               'attempt_limited_package':'inert history','unscoped_package':'inert history','frozen_knowledge_package':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history','reservation_route':'inert history',
               'frozen_knowledge_route':'inert history',
               'untracked_adapter':'tracked by the clean source commit'}.get(fault)
@@ -400,8 +410,16 @@ def test_mismatched_private_selection_refuses_preflight_with_matching_manifest_h
         del full['selection']
     elif fault == 'world':
         profile['labels']['world'] = 'another world'
+        idx = json.loads((directory/'source-index.json').read_text())
+        idx['world'] = 'another world'
+        (directory/'source-index.json').write_text(json.dumps(idx))
+        profile['files']['source-index.json'] = hashlib.sha256((directory/'source-index.json').read_bytes()).hexdigest()
     elif fault == 'lineage':
         profile['labels'].update(lineage='different lineage', admission=1)
+        idx = json.loads((directory/'source-index.json').read_text())
+        idx['lineage'] = 'different lineage'
+        (directory/'source-index.json').write_text(json.dumps(idx))
+        profile['files']['source-index.json'] = hashlib.sha256((directory/'source-index.json').read_bytes()).hexdigest()
     elif fault == 'context':
         profile['context'] = {'ruleset': 'different'}
     elif fault == 'extra':
@@ -455,7 +473,7 @@ def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path
             return self.channel
         def wait_target(self):calls.append('wait')
         def close(self):return dict(native_absence_verified=True,normal_native_exit_zero=False)
-    with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY',unpriced_request_usd='0.00063',recall=dict(unpriced_request_usd='0.00063')),{})),\
+    with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY',unpriced_request_usd='0.00063'),{})),\
             patch.object(campaign_run,'OwnedTarget',Owner),patch.object(campaign_run.signal,'signal',side_effect=install),\
             patch.dict(os.environ,{'OFFLINE_KEY':'fixture-secret'}),patch.object(campaign_run,'run_hosts') as host:
         result=campaign_run.run_campaign(directory)
@@ -463,14 +481,14 @@ def test_prelaunch_cancellation_does_not_wait_for_target_or_admit_actor(tmp_path
     assert logs.exists() == (when == 'during')
     assert result['schema']=='campaign-receipt/7'
     # No host was started, so nothing was spent and the record is complete.
-    assert result['accounting']==dict(spend_limit_usd='1',reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,unpriced_request_usd='0.00063',unpriced_recall_request_usd='0.00063',
+    assert result['accounting']==dict(spend_limit_usd='1',reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,unpriced_request_usd='0.00063',unpriced_recall_request_usd='0',
         spent_usd='0',observed_attempts=0,observed_recall_attempts=0,spend_complete=True)
     assert result['deciding_hosts_quiescent']
     assert 'Cancelled' in result['reason']
 
 
 def test_receipt_spend_preserves_reported_cost_and_unknown_attempt_counts():
-    profile=dict(spend_limit_usd='5');route=dict(recall=dict(unpriced_request_usd='0'),unpriced_request_usd='0.4096')
+    profile=dict(spend_limit_usd='5');route=dict(unpriced_request_usd='0.4096')
     driver=dict(reported_usd='0.1337',unpriced_requests=2,unpriced_recall_requests=0,observed_attempts=31,observed_recall_attempts=0,spend_complete=True)
     assert campaign_run.accounting(profile,route,driver,True)==dict(spend_limit_usd='5',reported_usd='0.1337',unpriced_requests=2,unpriced_recall_requests=0,
         unpriced_request_usd='0.4096',unpriced_recall_request_usd='0',spent_usd='0.1337',observed_attempts=31,observed_recall_attempts=0,spend_complete=True)
@@ -696,7 +714,7 @@ def test_the_store_closes_only_after_input_authority_is_revoked(tmp_path,live):
         assert channel.stopped.is_set();events.append('close_store')
     driver=dict(outcome='player_task_complete_unassessed',actors=[],reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,
                 observed_attempts=0,observed_recall_attempts=0,spend_complete=True)
-    with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY',unpriced_request_usd='0.00063',recall=dict(unpriced_request_usd='0.00063')),{})),\
+    with patch.object(campaign_run,'preflight',return_value=(profile,dict(api_key_env='OFFLINE_KEY',unpriced_request_usd='0.00063'),{})),\
             patch.object(campaign_run,'OwnedTarget',Owner),patch.object(campaign_run,'ComputerRuntime',return_value=runtime),\
             patch.object(campaign_run,'Journal'),patch.object(campaign_run,'Application'),\
             patch.object(campaign_run,'serve',return_value=(server,Mock())),patch.object(campaign_run,'run_hosts',return_value=driver) as hosts,\

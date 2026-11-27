@@ -548,7 +548,7 @@ The exporter selects every current record whose `scope` is satisfied by the pack
 plus derived timeline history, sparse cited-frame `frame_clocks`, `anchor_display`, and aliases. The delivered `delivered-knowledge/4` file
 contains no raw `world` or `lineage` label anywhere in its bytes, including coverage
 stamps and aliased session identifiers.
-[Delivered knowledge and recall](player-host.md#delivered-knowledge-and-recall) owns the
+[Delivered knowledge and player working-state agenda](player-host.md#delivered-knowledge-and-player-working-state-agenda) owns the
 delivered format and its preflight checks,
 [freezing delivered knowledge](../operations/campaign-run.md#freeze-delivered-knowledge)
 owns the procedure, and the

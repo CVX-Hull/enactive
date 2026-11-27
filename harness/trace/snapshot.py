@@ -33,7 +33,7 @@ connection closed before the lock is released.
 
 **The cutoff, per actor, by identity across the store and the host's log.** An actor is
 included only when, before the read is admitted, its frozen manifest (`frozen.json`,
-`player-host-inputs/4`) is complete and so is every secret-guard input it has. Its frozen prompt
+`player-host-inputs/5`) is complete and so is every secret-guard input it has. Its frozen prompt
 and guide and the custody and route files are copied, each checked against the manifest's
 digest where it names one; a guard input the manifest does not bind (`host-process.json`,
 `mcp-template.json`) that does not parse yet leaves the actor out of this snapshot. An actor has
@@ -82,14 +82,14 @@ import sqlite3
 import time
 import uuid
 
-from .projection import SECRET_FILES, _result
+from .projection import SECRET_FILES, _agenda_event, _result
 from .stores import CURATOR_READ_LOCK, READ_HOLD_BOUND_SECONDS, STORE_CLOSING_MARKER
 
 TRANSACTION_BOUND_SECONDS = 1.5  # the read transaction is cancelled here, from the lock's taking
 STORE = 'session.sqlite3'
 STORE_SCHEMA = 'computer-session/1'
 STORE_VERSION = 1
-FROZEN_SCHEMA = 'player-host-inputs/4'
+FROZEN_SCHEMA = 'player-host-inputs/5'
 UNKNOWN_TRANSPORT = 'computer-transport/2'
 FROZEN_INPUTS = ('prompt.txt', 'context.txt')
 RUN_FILES = ('manifest.json', 'watch-start.json')
@@ -350,6 +350,8 @@ def _receipt_schema(receipt: str) -> object:
 def _cut(operations: list[dict], natives: dict[str, list[dict]], collected: set[str],
          lines: list[tuple[bytes, dict | None]], ended: bool) -> tuple[list[dict], list[bytes]]:
     """The included prefix of one actor's operations and its host log, by the module's rule."""
+    agenda_calls: set[tuple[object, object]] = set()
+    lines = [(line, event) for line, event in lines if event is None or not _agenda_event(event, agenda_calls)]
     answered: dict[str, int] = {}
     for index, (_, event) in enumerate(lines):
         if event is not None and event.get('type') == 'tool-result':

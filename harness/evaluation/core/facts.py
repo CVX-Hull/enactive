@@ -1,7 +1,7 @@
 """The `run_facts` table: what the run was configured to do (docs/contracts/evaluation-record.md).
 
 From the campaign manifest and the first host-start event. Operator labels come from the manifest. The caller
-may supply labels for a campaign-run/4 archive without them. Campaign-run/12 and /13 supply the world.
+may supply labels for a campaign-run/4 archive without them. Campaign-run/12 through /14 supply the world.
 The spend allowance comes from `spend_limit_usd` or, for archives predating that field, the ceiling minus
 what earlier admissions had reserved.
 """
@@ -27,7 +27,7 @@ def run_facts(manifest: dict, host: Mapping[str, Sequence[HostEvent]], actors: S
     manifest_labels = manifest.get('labels')
     raw_labels = manifest_labels if isinstance(manifest_labels, dict) else fallback_labels or {}
     labels = {key: raw_labels.get(key) for key in LABEL_KEYS}
-    world_manifest = manifest.get('schema') in (MANIFEST_SCHEMA, 'campaign-run/12')
+    world_manifest = manifest.get('schema') in (MANIFEST_SCHEMA, 'campaign-run/13', 'campaign-run/12')
     labels['world'] = manifest_labels.get('world') if (
         world_manifest and isinstance(manifest_labels, dict)) else None
     files = manifest.get('files') if isinstance(manifest.get('files'), dict) else {}

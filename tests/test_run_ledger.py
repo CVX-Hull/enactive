@@ -20,7 +20,7 @@ def package(root: Path, name: str = 'lh9a1', *, receipt: bool = True, **accounti
     """A finished package with $1.0 reported and one unknown-cost attempt."""
     directory = root / name
     directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={}, session=SESSION, live_knowledge_updates=False,
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/14', context={}, session=SESSION, live_knowledge_updates=False,
         source_commit=COMMIT, labels=dict(arm='long-horizon', start='S1', scenario='Evacuee', lineage='L9', admission=1))))
     (directory/'delivered-knowledge.json').write_text(json.dumps(empty()))
     if receipt:
@@ -119,8 +119,7 @@ def test_upper_bound_covers_possible_inflight_attempts_even_when_none_observed(t
     value=package_row(directory,study=999,label='upper-bound',upper_bound=True)
     assert value['unpriced_attempts']==value['unpriced_recall_attempts']==0
     assert value['provider_usd']==value['spend_usd']=='1.0'
-    # A recall is possible with frozen facts, and with live updates even from an empty frozen file.
-    expected=Decimal('5')+Decimal('0.4096')+int(has_units or live)*Decimal('0.2')
+    expected=Decimal('5.4096')
     assert value['attempts']==attempts
     assert Decimal(value['spend_upper_bound_usd'])==expected
     assert read_ledger(write(tmp_path/'ledger.jsonl',value))==[value]

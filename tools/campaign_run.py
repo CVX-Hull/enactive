@@ -18,7 +18,9 @@ if __package__ in (None,''):sys.path.insert(0,str(ROOT))
 from harness.application import Application
 from harness.computer.launch import OwnedTarget
 from harness.computer.runtime import ComputerRuntime
+from harness.jsonio import strict_loads
 from harness.player.journal import Journal
+from harness.player.source_index import SourceIndex, agenda_refs, validate_agenda
 from harness.server import serve
 from harness.trace.stores import CURATOR_READ_LOCK,READ_HOLD_BOUND_SECONDS,STORE_CLOSING_MARKER
 from tools.campaign_package import DELIVERED_DIRECTORY,RUNNER_DIRECTORY,preflight,usd_text
@@ -28,15 +30,15 @@ from tools.campaign_player import run_hosts,write_new
 def accounting(profile: dict,route: dict,driver: dict | None,hosts_started: bool) -> dict:
     """Preserve the observed provider subtotal and the unknown cost counts separately."""
     bound=Decimal(route['unpriced_request_usd'])
-    recall_bound=Decimal(route['recall']['unpriced_request_usd'])
-    recall_unpriced=driver['unpriced_recall_requests'] if driver else 0
+    recall_bound=Decimal(0)
+    recall_unpriced=0
     reported=Decimal(driver['reported_usd']) if driver else Decimal(0)
     unpriced=driver['unpriced_requests'] if driver else 0
     return dict(spend_limit_usd=profile['spend_limit_usd'],reported_usd=usd_text(reported),unpriced_requests=unpriced,
         unpriced_request_usd=usd_text(bound),unpriced_recall_requests=recall_unpriced,unpriced_recall_request_usd=usd_text(recall_bound),
         spent_usd=usd_text(reported),
         observed_attempts=driver['observed_attempts'] if driver else 0,
-        observed_recall_attempts=driver['observed_recall_attempts'] if driver else 0,
+        observed_recall_attempts=0,
         spend_complete=driver['spend_complete'] if driver else not hosts_started)
 
 
@@ -111,7 +113,20 @@ def run_campaign(directory: Path) -> dict:
         runtime=ComputerRuntime(directory,profile['session'],channel,owner.process,deadline,profile['limits'],max_actors=profile['max_hosts'])
         owner.wait_target()
         if stopped.is_set():raise ValueError('Cancelled before actor admission')
-        application=Application(runtime,memory,directory/'contexts',knowledge=directory/'delivered-knowledge.json')
+        source_index=SourceIndex.from_file(
+            directory/'source-index.json',
+            root_dir=ROOT,
+            expected_world=profile['labels']['world'],
+            expected_lineage=profile['labels']['lineage'],
+            check_labels=True,
+        )
+        initial_agenda=validate_agenda(strict_loads((directory/'agenda.json').read_bytes()))
+        application=Application(
+            runtime,memory,directory/'contexts',
+            knowledge=directory/'delivered-knowledge.json',
+            source_index=source_index,
+            initial_agenda_refs=agenda_refs(initial_agenda),
+        )
         server,server_thread=serve(application,profile['port'])
         write_new(directory/'ready.json',dict(schema='computer-ready/1',session=profile['session'],pid=owner.process.pid,
             viewer_url=f"http://127.0.0.1:{profile['port']}/",ready_wall=time.time()))

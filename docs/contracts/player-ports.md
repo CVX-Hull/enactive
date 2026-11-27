@@ -62,9 +62,27 @@ values (see the [native channel table](computer-control.md#native-channel)).
 Internal service envelopes, below the actor projection, are `player-response/1`,
 `player-error/1` and `player-transport/1` ([service](../../harness/server.py),
 [client](../../harness/player_client.py)), plus the per-tool results
-`player-service-result/2` and `player-source-read/1`. [The actor projection](../../harness/player_view.py)
+`player-service-result/2` and `player-source-read/2`. [The actor projection](../../harness/player_view.py)
 is their authority. It maps the internal error and transport envelopes to
 `player-error/2` and `player-transport/2` for the model.
+
+**Source retrieval (`player_source`, `player-source-index/1`, `player-source-read/2`).**
+Each `campaign-run/14` package freezes a read-only `player-source-index/1` (`source-index.json`)
+listing verified same-`(world, lineage)` ancestor session roots (`sealed-evidence` or
+verified `closed-session` checkpoints, never copying PNGs or opening live WAL stores).
+`player_source` resolves current-session frames directly and resolves ancestor frames only
+when the `source_id` is both eligible in the frozen index and disclosed to the player via
+delivered knowledge (`citation_source_ids` / `depiction_source_id`) or carried `player_agenda`
+refs (rejecting other worlds/lineages and undisclosed ancestor frames identically as
+`unavailable` without exposing raw paths or stopping input custody). `player-source-read/2` returns closed JSON with `schema`, `source_id`, `status`
+(`available` or `unavailable`) and `read_wall`:
+- When `status` is `available`: `source` (`computer-source/1`), blinded `origin`
+  (`{admission, actor, step}` where `admission` is `"current"` or a session alias `s01`…
+  with zero raw world/lineage labels), `clickable` (`true` on current-session frames,
+  `false` on ancestor frames) and optional `clock_label` from `delivered-knowledge/4`.
+- When `status` is `unavailable`: closed `reason` (`unknown-or-out-of-scope`, `missing`,
+  `integrity-failed` or `image-limit`). Ancestor I/O, missing-file, symlink, size-limit or
+  digest failures return a clean `unavailable` result and never trip `runtime.stop`.
 
 ## Player knowledge and executable proposals
 

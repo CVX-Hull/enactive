@@ -48,8 +48,8 @@ test('real production MCP discovery forwards all exact current actor-only tool s
     fetch:async(_url,init)=>{bodies.push(init.body);payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
   assert.equal(result.ok,true);
   assertRequestMetadata(events,bodies);
-  assert.deepEqual(payloads[0].tools.map(tool=>tool.function.name),[...chosen,'player_finish']);
-  for(const tool of payloads[0].tools.filter(tool=>tool.function.name!=='player_finish')) {
+  assert.deepEqual(payloads[0].tools.map(tool=>tool.function.name),[...chosen,'player_agenda','player_finish']);
+  for(const tool of payloads[0].tools.filter(tool=>!['player_finish','player_agenda'].includes(tool.function.name))) {
     assert.deepEqual(tool.function.parameters,expected[tool.function.name].schema);
     assert.equal(tool.function.description,expected[tool.function.name].description);
     for(const key of ['actor_id','session','token']) assert.equal(Object.hasOwn(tool.function.parameters.properties,key),false);
@@ -129,7 +129,7 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
       bodies.push(init.body);payloads.push(JSON.parse(init.body));
       return reply(null,[['computer_observe',{}],['player_handoff',{summary:'synthetic unfinished work'}],['computer_observe',{}]]);
     },onEvent:e=>events.push(e)});
-  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null});
+  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null,agenda:{schema:'player-agenda-continuation/1',cut_count:0,threads:[]}});
   assertRequestMetadata(events,bodies);
   assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),['computer_observe','player_handoff']);
   const sealed=events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result;

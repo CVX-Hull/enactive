@@ -20,7 +20,7 @@ const openRouterModel = { id: 'vendor/fixture', name: 'OpenRouter fixture', api:
   contextWindow: 100000, maxTokens: 1024,
   compat: { supportsDeveloperRole: false, supportsStore: false, supportsUsageInStreaming: true,
     openRouterRouting: { only: ['fixture-backend'], order: ['fixture-backend'], allow_fallbacks: false, require_parameters: true } } };
-const route = (overrides = {}) => ({ schema:'player-host/12',endpoint_costs:null,context_cut:null, context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),recall:{model:structuredClone(openRouterModel),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},
+const route = (overrides = {}) => ({ schema:'player-host/13',endpoint_costs:null,context_cut:null, context_reserve_tokens: 4096, service_tier: 'default', model: structuredClone(openRouterModel),
   api_key_env: 'OFFLINE_TEST_KEY', spend_limit_usd: '100', unpriced_request_usd: '0.25', max_context_images: 4, context_image_block: 2, request_timeout_seconds: 5, ...overrides });
 
 function reply(content, calls = [], prefix = 'call') {

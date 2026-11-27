@@ -804,7 +804,7 @@ def test_delivery_is_read_from_the_current_package_manifest(tmp_path):
     record_package(run, labels=dict(world='the farm', lineage='L1', admission=1))
     assert live_runner.delivery_target(run) == (False, 'the farm', 'L1', {}, SESSION_ID)
     record_package(run, labels=dict(lineage='L1', admission=1), schema='campaign-run/10')
-    with pytest.raises(ValueError, match='not a campaign-run/13 manifest'):
+    with pytest.raises(ValueError, match='not a campaign-run/14 manifest'):
         live_runner.delivery_target(run)
     (run/'manifest.json').unlink()
     with pytest.raises(OSError):

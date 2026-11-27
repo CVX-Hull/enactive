@@ -25,9 +25,6 @@ const output=execFileSync(python,['-m','tools.memory_measure','facts',measure,'-
 const facts=JSON.parse(await readFile(join(measure,'judged-facts.json'),'utf8'));
 if (facts.schema !== 'judged-facts/1') throw new Error('Builder failed');
 console.log(JSON.stringify({result:result.reason,briefings:events.filter(e => e.type === 'knowledge-delivery' && e.kind === 'briefing').length,
-  reminders:events.filter(e => e.type === 'knowledge-delivery' && e.kind === 'reminder').length,
-  silences:events.filter(e => e.type === 'knowledge-recall' && e.status === 'silence').length,
   reads:events.filter(e => e.type === 'tool-result' && e.tool === 'player_knowledge_read').length,
-  recall_costs:events.filter(e => e.type === 'response-complete' && e.request_role === 'recall').map(e => e.counted_cost_usd),
   spent_usd:events.at(-1).spent_usd,facts:join(measure,'judged-facts.json')},null,2));
 console.log(output.trim());

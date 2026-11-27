@@ -9,7 +9,7 @@ import copy
 
 from .computer.protocol import receipt, source
 from .player.contracts import PlayerError, common_arguments, references
-from .player.knowledge import QUERY_LIMIT, delivered_record, query_hit, revision_parts, version_number
+from .player.knowledge import ALIAS, QUERY_LIMIT, _clock_label, delivered_record, query_hit, revision_parts, version_number
 
 
 class UnsupportedResult(PlayerError):
@@ -225,10 +225,37 @@ def _project(value):
         result = _fields(value, {'schema', 'error', 'reason', 'submission'}, {'operation_id'})
         result.update(schema='player-error/2', error='request_error', reason=_diagnostic(result['reason'], result['error']), input_replayed=False)
         return result
-    if schema == 'player-source-read/1':
-        result = _fields(value, {'schema', 'source', 'read_wall'}, {'image_unavailable', 'image_limit_bytes', 'image_note'})
-        source(result['source'])
-        return result
+    if schema == 'player-source-read/2':
+        status = value.get('status')
+        if status == 'available':
+            result = _fields(value, {'schema', 'status', 'source_id', 'source', 'origin', 'clickable', 'read_wall'}, {'clock_label'})
+            source(result['source'])
+            origin = result['origin']
+            if (not isinstance(result['source_id'], str) or result['source_id'] != result['source']['source_id']
+                    or type(result['clickable']) is not bool or type(result['read_wall']) not in (int, float)
+                    or not isinstance(origin, dict) or set(origin) != {'admission', 'actor', 'step'}):
+                raise UnsupportedResult('Unsupported player source read result')
+            adm = origin['admission']
+            if adm != 'current' and (not isinstance(adm, str) or ALIAS.fullmatch(adm) is None):
+                raise UnsupportedResult('Unsupported player source read origin')
+            if adm != 'current' and result['clickable'] is not False:
+                raise UnsupportedResult('Ancestor player source cannot be clickable')
+            if not isinstance(origin['actor'], str) or not origin['actor'].strip():
+                raise UnsupportedResult('Unsupported player source read actor')
+            if origin['step'] is not None and (type(origin['step']) is not int or origin['step'] < 0):
+                raise UnsupportedResult('Unsupported player source read step')
+            if 'clock_label' in result:
+                if not _clock_label(result['clock_label']):
+                    raise UnsupportedResult('Unsupported player source clock_label')
+            return result
+        if status == 'unavailable':
+            result = _fields(value, {'schema', 'status', 'source_id', 'reason', 'read_wall'})
+            if (not isinstance(result['source_id'], str) or not result['source_id']
+                    or result['reason'] not in ('unknown-or-out-of-scope', 'missing', 'integrity-failed', 'image-limit')
+                    or type(result['read_wall']) not in (int, float)):
+                raise UnsupportedResult('Unsupported player source unavailable result')
+            return result
+        raise UnsupportedResult('Unsupported player source read status')
     if schema is None:
         result = _fields(value, {'stop_requested', 'native_pause_confirmed', 'reason'}, {'grants_authority'})
         result['reason'] = 'Input stop requested; application persistence and exit are not certified.'

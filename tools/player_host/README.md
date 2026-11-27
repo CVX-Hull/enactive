@@ -7,7 +7,7 @@ status: active
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/12`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/13`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [player interface component](../../docs/components/player-interface.md) describes
 the adapter's place in the run.
@@ -20,7 +20,7 @@ is independent of whether a particular model passes gameplay qualification.
 
 ## Invocation and settlement
 
-See the [adapter procedure](../../docs/operations/player-host.md#install-and-test-the-adapter) for installation, tests and invocation with the required mode and flags (`validate` with `--config`, `--mcp-config`, `--model` and `--effort`, and `run` with those flags plus `--context`, `--prompt`, `--session`, `--actor-id`, `--pending-control-id`, `--delivered-knowledge`, `--finish-reserve-usd`, `--timeout-seconds` and `-o`, and the one optional flag `--knowledge-updates`).
+See the [adapter procedure](../../docs/operations/player-host.md#install-and-test-the-adapter) for installation, tests and invocation with the required mode and flags (`validate` with `--config`, `--mcp-config`, `--model` and `--effort`, and `run` with those flags plus `--context`, `--prompt`, `--session`, `--actor-id`, `--pending-control-id`, `--delivered-knowledge`, `--finish-reserve-usd`, `--timeout-seconds` and `-o`, and optional `--knowledge-updates`, `--agenda` and `--agenda-out`).
 
 The runner requires regular files of at most 1 MiB for the route, MCP table,
 context and prompt. The delivered knowledge file has no text-size cap. Stdin
@@ -38,14 +38,13 @@ programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
 ## Frozen route and serving tier
 
-The closed route has exactly `schema: "player-host/12"`, `model`,
+The closed route has exactly `schema: "player-host/13"`, `model`,
 `api_key_env`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`), plus required safe-integer
 `context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`) and the two dollar
 amounts `spend_limit_usd` (above zero) and `unpriced_request_usd`, each plain decimal
-text ([the dollar limit](#the-dollar-limit)), the closed [recall configuration](#knowledge-delivery),
-required `endpoint_costs` and required `context_cut`. Set `context_cut` to null or a closed object with
+text ([the dollar limit](#the-dollar-limit)), required `endpoint_costs` and required `context_cut`. Set `context_cut` to null or a closed object with
 safe integers `1 <= low_mark < high_mark < model.contextWindow` and `min_free >= 1`.
 The bounds use the player model's window.
 The adapter rejects other schema versions and missing or invalid fields.
@@ -231,7 +230,7 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   final assistant result, so even a complete-looking tool call in the abandoned
   stream cannot enter the conversation or reach MCP. The same actor can make one
   fresh inference with a new request deadline and byte-identical payload. Its
-  projected charge and any in-flight recall must leave the ending reserve intact.
+  projected charge must leave the ending reserve intact.
   A computer stop, pending handoff or earlier computer input/observation without
   a confirmed completed operation receipt disables this recovery. Pending ending
   control, cancellation and the original host deadline take precedence. The
@@ -258,9 +257,8 @@ provider-requested retry delay over 60 seconds (the pinned helper's maintained d
 when no valid delay is supplied. Cancellation interrupts backoff and bounded error
 reading. An eligible refusal without usable cost records an unpriced attempt.
 Before an ordinary player fetch, including a retry, counted spend plus the
-in-flight recall bound, finish reserve, and proposed player request bound must
-be strictly below the limit. If only the in-flight recall bound prevents
-admission, the host waits for recall settlement and rechecks. At the reserve
+finish reserve, and proposed player request bound must be strictly below the limit.
+At the reserve
 the host emits `spend-reserve-reached` once and waits up to two seconds for
 orderly stop. The hard spend limit, EOF, cancellation, and deadlines retain
 their settlement reasons. A clean expiry settles as `spend-reserve-timeout`.
@@ -332,7 +330,7 @@ API keys, private provider errors and private reasoning are excluded.
 
 `response-first-chunk` is the first raw HTTP response-body chunk, including an
 error body, before Pi parses it. `response-backend` reports the backend model ID
-from parsed provider chunks. Each player or recall `response-complete` records
+from parsed provider chunks. Each `response-complete` records
 `reported_provider` from the first usable, sanitized SSE `provider` label, or
 null if it is unavailable. Player completions also retain this label in
 `response_progress`. A completion records the terminal stop reason and
@@ -432,25 +430,23 @@ the links and citations they are derived from. It agrees with
 `harness/player/knowledge.py` on every file in `tests/fixtures/delivered-knowledge-4/`.
 `--finish-reserve-usd` is the frozen reserve from the package.
 
-Every projected entry (briefing and reminder leads, recall and briefing index
-rows, cut briefing leads and index rows, update `added` and `updated` entries)
-carries `status` when any of these markers apply, in order: `contested`,
-`unverified_branch`, `needs_review`. A status change alone
-produces an `updated` entry. Actor-start and cut briefings and the first update
-from an empty store fit their final JSON within 24,000 UTF-16 code units, including
-coverage, escaping, and overflow counts. They keep at most 64 articles and 24
-standalone facts and clip snippets at 1,000 code units. Actor-start briefings
-give recall-selected leads first claim on the budget, then fill the index in
-tiers of articles, unbound standalone facts, and world-bound standalone facts. Each tier
-uses newest position first with delivered-order ties, and the kept entries
-appear in delivered order. Ordinary live updates carry full changed leads.
+Opening and cut briefings give the player deterministic article leads and a
+standalone fact index, capped at 64 articles, 24 facts and 24,000 serialized
+characters. The recency tiers are articles, unbound standalone facts and
+world-bound standalone facts. Under article or character pressure, zero-model
+`bm25_1hop` ranks entries against the mission prompt, active or paused agenda
+threads, and recent committed intents. The briefing reports omissions and
+orients the player to the delivery surfaces and available knowledge tools.
+Projected entries carry `status` when any of `contested`, `unverified_branch`, or
+`needs_review` apply.
+
 With `--knowledge-updates LIST`, an unref'd refresh in `runHost` (at start, every
 `UPDATE_POLL_MS` and after each player response, one at a time) reads the driver's
 list and its files through the isolated `update-reader.mjs` helper (terminated on
 settlement so a stalled read never blocks CLI exit) and stages verified candidates
 above its own (`updateEntry`, `validateKnowledge`, `updateDelivery` in
 `knowledge.mjs`) and coverage lines (`coverageEntry`). Building a player request
-jointly plans coverage, the cut, and the pending reminders for candidate versions
+jointly plans coverage, a possible cut, and knowledge delivery for candidate versions
 from newest to oldest. Adoption requires the final projection to fit below the
 context window with the configured token reserve. The
 [update rules](../../docs/contracts/player-host.md#a-newer-version-during-play)
@@ -465,28 +461,39 @@ when no prefix reaches both targets, falls back to the full covered prefix (`k =
 if it fits and strictly reduces estimated tokens (otherwise holding with
 `insufficient-cover`). Independent capacity rescue can remove fewer than
 `min_free` turns. The new prefix carries a bounded briefing and a marker with
-the omitted frames' sources and the last five distinct committed public intents.
+the omitted frames' sources, the last five distinct committed public intents,
+`uncovered_turns: 0`, and the committed agenda when populated.
 The
 [cut contract](../../docs/contracts/player-host.md#coverage-gated-context-cut)
 defines the boundaries, and the
 [telemetry contract](../../docs/contracts/player-host-telemetry.md#context-cut)
 defines the cut and holdback events.
 
-The route pins `recall:{model,every,unpriced_request_usd,endpoint_costs}` with the
-same provider and credential variable as the player. Recall validates its own
-endpoint tags and rates and makes one host HTTP attempt. Recall counts and
-request IDs begin at fetch. Recall sends a version-stable, title-first index
-within 24,000 UTF-16 code units and validates selections against its actual rows.
-The second message carries `already_in_context`, computed from complete leads
-that survive in the player projection. If every sent row is already present, the
-host skips recall. It filters completed reminders again when placing them, after
-any update or cut. Delivery telemetry records one outcome per logical placement
-at terminal settlement. A successful response with usable cost is `delivered`.
-Other terminal outcomes are `undelivered`. Pre-request update refusals are
-`refused`.
+Mid-segment updates append one bounded, version-labelled substantive delta
+against the last successfully announced version. Cut markers include
+`changes_since` against the last briefing boundary, budgeting that delta and
+the replacement briefing together. Both prioritize corrections and lifecycle
+changes, keyed readings, flag changes, new standalone facts and article claims.
+Explicit overflow names omitted rows and supplies IDs for follow-up reads.
+Cut projection retains earlier update notices unless their assertions are
+represented in the new briefing or marker. Delivery telemetry records
+`delivered` after a successful priced response, `undelivered` on a terminal
+delivery failure, `refused` for rejected input, and `empty-suppressed` for
+version adoption with no player-facing changes. Host telemetry version is 13.
 
-The [recall contract](../../docs/contracts/player-host.md#delivered-knowledge-and-recall)
-defines selection, delivery and accounting. For OpenRouter the adapter's `onPayload`
-hook sends a strict `response_format` of type `json_schema`, with only `articles`,
-an array of strings. The pinned upstream must accept it because the route sets
-`require_parameters: true`. Direct routes omit `response_format`.
+## Player agenda
+
+`player_agenda` and `player_finish` are host-local names reserved from MCP.
+The player can read, upsert, change status, or clear completed threads. There
+can be up to 16 threads, including up to eight active or paused threads. The
+host verifies references against earlier earned sources, delivered knowledge,
+and references from the frozen continuation. The player interprets verbatim
+`stop_when` and decides all status changes. A commit emits a dedicated
+`player-agenda` event. Each selected context cut advances the cut count,
+evicting done and dropped threads after two cuts.
+
+`--agenda PATH` loads a closed `player-agenda-continuation/1` object with a
+3 KiB serialized UTF-8 limit. Omission starts an empty agenda. The opening
+briefing and cut marker project the working threads as data.
+`--agenda-out PATH` atomically writes the last committed agenda before CLI
+settlement, so the driver can supply it to a successor or explicit resume.

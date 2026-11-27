@@ -1,4 +1,4 @@
-"""Player and recall reserves use the adapter-validated maximum endpoint rates."""
+"""Player reserve uses the adapter-validated maximum endpoint rates."""
 from decimal import Decimal
 
 import pytest
@@ -7,7 +7,7 @@ from tools.campaign_package import unpriced_request_usd
 
 
 @pytest.mark.parametrize("context, output, expected", [(1000, 100, "0.0047"), (2000, 200, "0.0094")],
-    ids=["player", "recall"])
+    ids=["small-window", "large-window"])
 def test_unpriced_request_bound_uses_per_category_maximum_rates(context, output, expected):
     route = dict(
         endpoint_costs={

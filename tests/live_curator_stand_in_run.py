@@ -201,7 +201,7 @@ def write_manifest(run: Path, session: str, commit: str) -> None:
     from harness.player.knowledge import empty
 
     run.mkdir(parents=True)
-    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', session=session, source_commit=commit,
+    (run/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/14', session=session, source_commit=commit,
                                                      labels=dict(world='stand-in-world', lineage=None, admission=None),
                                                      context=dict(ruleset='standard'),
                                                      live_knowledge_updates=True,
@@ -779,7 +779,7 @@ def live_delivery(out: Path, run: Path, repo, windows: list[dict], writer_live: 
     delivered = [u for u in host.get('updates', ()) if u.get('outcome') == 'delivered']
     others = [u for u in host.get('updates', ()) if u.get('outcome') != 'delivered']
     checks['host_delivered_the_newest_listed_version_to_its_next_request'] = (
-        host.get('ok') is True and host.get('host') == dict(schema='player-host/12', telemetry_version=12)
+        host.get('ok') is True and host.get('host') == dict(schema='player-host/13', telemetry_version=13)
         and len(delivered) == 1 and delivered[0]['type'] == 'knowledge-delivery' and delivered[0]['version'] == newest
         and delivered[0]['previous_version'] == actors[chosen]['frozen_version']
         and delivered[0]['coverage'] == exported[newest]['coverage']

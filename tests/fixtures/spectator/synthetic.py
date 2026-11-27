@@ -56,8 +56,8 @@ def cut(step: dict, applied: bool) -> dict:
     base = dict(request_id=f"request-{step['seq']}", knowledge_version=known[-1] if known else None, triggers=['high_mark'], tokens_before=61400,
         images_before=39)
     if applied:
-        return dict(base, outcome='applied', reason=None, tokens_after=24800, images_after=19, removed_turns=20)
-    return dict(base, outcome='held_back', reason='uncovered', tokens_after=None, images_after=None, removed_turns=None)
+        return dict(base, outcome='applied', reason=None, tokens_after=24800, images_after=19, removed_turns=20, uncovered_turns=0)
+    return dict(base, outcome='held_back', reason='uncovered', tokens_after=None, images_after=None, removed_turns=None, uncovered_turns=None)
 
 
 def feed(steps: list[dict], findings: list[dict], recorded: bool) -> list[dict]:
@@ -105,12 +105,12 @@ def host_telemetry(steps: list[dict]) -> dict:
     last = steps[-1]['seq']
     applied = [s for s in CUTS if s <= last]
     versions = [v for seq, v in sorted(UPDATES.items()) if seq <= last]
-    return dict(reported_cost_usd=spent(last), spent_usd=spent(last), player_requests=last, recall_requests=6, unpriced_requests=0,
+    return dict(reported_cost_usd=spent(last), spent_usd=spent(last), player_requests=last, recall_requests=0, unpriced_requests=0,
         unpriced_recall_requests=0, spend_complete=False, response_by_endpoint={'endpoint-a': last - 4, 'endpoint-b': 4},
         latest_provider='endpoint-b',     # the last to answer is not the most frequent
         context_cuts=dict(applied=len(applied), held_back=len([s for s in HELD if s <= last]), latest=dict(request_id=f'request-{applied[-1]}',
             knowledge_version=versions[-1], tokens_before=61400, tokens_after=24800, images_before=39, images_after=19, removed_turns=20,
-            triggers=['high_mark'], wall_time=steps[-1]['wall'])),
+            triggers=['high_mark'], uncovered_turns=0, wall_time=steps[-1]['wall'])),
         knowledge_updates=dict(count=len(versions), latest_version=versions[-1]),
         token_summary=dict(latest_prompt_tokens=34983, p50_prompt_tokens=32766, max_prompt_tokens=49902, cache_hit_share=0.9308))
 
@@ -131,7 +131,7 @@ def telemetry(steps: list[dict], summary: dict, recorded: bool) -> dict:
         rows.append(dict(index=index, request_id=entry['request_id'], actor=ACTOR, seq=step['seq'], wall=step['wall'],
             prompt_tokens=entry['prompt_tokens'], cache_read=entry['cache_read'], cache_write=entry['cache_write'], output_tokens=41,
             reported_provider=entry['reported_provider'], reported_cost_usd=entry['reported_cost_usd'], estimated_dollars=0.0125,
-            is_recall=step['seq'] % 40 == 5))
+            is_recall=False))
     cuts = [] if recorded else [dict(cut(s, s['seq'] in CUTS), index=s['seq'] - 1, seq=s['seq']) for s in steps if s['seq'] in CUTS or s['seq'] in HELD]
     host, curator = summary.get('host_telemetry') or {}, summary.get('curator_spend') or {}
     return dict(schema='spectator-view/3', source='evaluation_record' if recorded else 'host_trace', requests=rows, requests_total=len(rows),

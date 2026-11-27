@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/12` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/13` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -77,13 +77,12 @@ UNPRICED_REQUEST_USD = "0.25"
 RESPONSE_COST_USD = 0.004
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/12", spend_limit_usd="100") -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/13", spend_limit_usd="100") -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV,
                 spend_limit_usd=spend_limit_usd, unpriced_request_usd=UNPRICED_REQUEST_USD,
                 max_context_images=4, context_image_block=1, context_reserve_tokens=512, context_cut=None,
-                request_timeout_seconds=10, model=adapter.model(base_url), endpoint_costs=None,
-                recall=dict(model=adapter.model(base_url),every=5,unpriced_request_usd=UNPRICED_REQUEST_USD,endpoint_costs=None))
+                request_timeout_seconds=10, model=adapter.model(base_url), endpoint_costs=None)
 
 
 # ---------------------------------------------------------------- reference provider
@@ -301,9 +300,11 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/7", *(f"player-host/{version}" for version in (0, 1, 2, 3, 7, 8, 9, 10))):
+    for schema in ("pi-player-host/7", *(f"player-host/{version}" for version in (0, 1, 2, 3, 7, 8, 9, 10, 11, 12))):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
+    with_recall = dict(route(adapter, "http://127.0.0.1:9/v1"), recall=dict(model=adapter.model("http://127.0.0.1:9/v1"), every=5, unpriced_request_usd=UNPRICED_REQUEST_USD, endpoint_costs=None))
+    assert run_mode(adapter, ["validate", *validation_files(envelope=with_recall)]).returncode != 0
 
 
 def test_validate_accepts_a_closed_context_cut(adapter, validation_files):
@@ -369,7 +370,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/12" and events[0]["telemetry_version"] == 12
+    assert events[0]["schema"] == "player-host/13" and events[0]["telemetry_version"] == 13
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
@@ -418,10 +419,10 @@ def test_a_listed_newer_knowledge_version_is_delivered_and_an_entry_that_does_no
     delivered, = (e for e in deliveries if e["outcome"] == "delivered")
     assert (delivered["version"], delivered["previous_version"], delivered["coverage"], delivered["receiving_player_request_id"]) == (
         "v1", None, version["coverage"], "request-1")
-    assert (delivered["delivered_knowledge_schema"], delivered["grants_authority"], delivered["index_ids"]) == ("delivered-knowledge/4", False, ["article-a"])
+    assert (delivered["delivered_knowledge_schema"], delivered["grants_authority"]) == ("delivered-knowledge/4", False)
     begin, body, end = delivered["text"].split("\n")
     assert begin.startswith("BEGIN FALLIBLE KNOWLEDGE UPDATE (v1)") and end == "END FALLIBLE KNOWLEDGE UPDATE (v1)"
-    assert json.loads(body)["index"] == [dict(id="article-a", title="A subject", index="A useful lead")]
+    assert json.loads(body)["article_changes"] == [dict(id="article-a", change="added", title="A subject", lead="A useful lead. More.")]
     first, second = (json.loads(request["body"])["messages"] for request in hosted.provider.requests)
     texts = lambda messages: [m["content"] if isinstance(m["content"], str) else "".join(p.get("text", "") for p in m["content"] or [])
                               for m in messages if m["role"] == "user"]
@@ -471,7 +472,7 @@ def test_the_dollar_limit_refuses_the_next_request_and_the_receipt_totals_follow
     assert (actor["observed_attempts"], actor["reported_usd"], actor["unpriced_requests"], actor["spent_usd"],
             actor["spend_complete"]) == (3, "0.012", 0, "0.012", True)
     receipt = campaign_run.accounting(dict(spend_limit_usd="0.01"), hosted.route, actor, True)
-    assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.001", unpriced_recall_requests=0,unpriced_recall_request_usd="0.25",
+    assert receipt == dict(spend_limit_usd="0.01", reported_usd="0.012", unpriced_requests=0, unpriced_request_usd="0.001", unpriced_recall_requests=0, unpriced_recall_request_usd="0",
                            spent_usd="0.012", observed_attempts=3, observed_recall_attempts=0, spend_complete=True)
     # The overshoot is less than one response: the limit was not yet reached when the third request was sent.
     assert Decimal(receipt["spent_usd"]) - Decimal(receipt["spend_limit_usd"]) < Decimal("0.004")
@@ -628,7 +629,7 @@ def test_spend_notice_crosses_the_work_budget_threshold_and_keeps_prior_messages
     hosted = host_factory([*calls, finish], enabled_tools=("integer",), spend_limit_usd="2.10", finish_reserve_usd="0.10")
     assert hosted.start().wait() == 0
     events = hosted.events()
-    assert events[0]["telemetry_version"] == 12
+    assert events[0]["telemetry_version"] == 13
     notices = [e for e in events if e["type"] == "tail-notice"]
     # $2.00 work budget -> $0.30 after $1.70 crosses 100% ($0.30) on request-3;
     # $0.296 on request-4 stays above 50% ($0.15) and still admits ordinary work ($1.704 + $0.10 + $0.25 < $2.10).
@@ -668,3 +669,24 @@ def test_deadline_settles_unsuccessfully_within_the_original_allowance(adapter, 
         assert process_gone(hosted.mcp_pid())
     cleanup = close_group(hosted.process)
     assert cleanup["process_absent"] and cleanup["group_absent"] and cleanup["signals"] == []
+
+
+def test_player_agenda_persists_across_cli_and_writes_agenda_out(adapter, host_factory, tmp_path):
+    agenda_in = tmp_path / "agenda-in.json"
+    agenda_out = tmp_path / "agenda-out.json"
+    agenda_in.write_text(json.dumps(dict(schema="player-agenda-continuation/1", cut_count=0, threads=[])))
+    hosted = host_factory([
+        tool_response("player_agenda", dict(
+            intent="Record working thread", op="upsert", id="check-shelter",
+            title="Inspect shelter supplies", status="active",
+        )),
+        tool_response("player_finish", dict(disposition="task_complete", report="Done.", source_ids=[], control_id=None)),
+    ])
+    flags = [*hosted.flags(), "--agenda", str(agenda_in), "--agenda-out", str(agenda_out)]
+    assert hosted.start(["run", *flags]).wait() == 0
+    saved = json.loads(agenda_out.read_text())
+    assert saved["schema"] == "player-agenda-continuation/1"
+    assert [t["id"] for t in saved["threads"]] == ["check-shelter"]
+    agenda_events = [e for e in hosted.events() if e["type"] == "player-agenda"]
+    assert len(agenda_events) == 1 and agenda_events[0]["op"] == "upsert"
+    assert hosted.accounted()["accounting_complete"] is True

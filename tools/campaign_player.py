@@ -336,8 +336,7 @@ class HostEvents:
     def _sums(self) -> tuple[Decimal,int,int]:
         reported=self.counted_usd()
         unpriced=sum(key.startswith('request-') and self.costs.get(key) is None for key in self.requests)
-        recall_unpriced=sum(key.startswith('recall-') and self.costs.get(key) is None for key in self.requests)
-        return reported,unpriced,recall_unpriced
+        return reported,unpriced,0
 
     def spend(self,complete: bool) -> dict:
         reported,unpriced,recall_unpriced=self._sums()
@@ -347,10 +346,12 @@ class HostEvents:
 
     def _host_agrees(self) -> bool:
         """The host's own totals in `settled` are the driver's sums from the trace."""
-        spent,unpriced,recall_unpriced=self._sums()
+        spent,unpriced,_=self._sums()
         try:total=counted_usd(self.settled.get('spent_usd'),'settled spent_usd')
         except ControlError:return False
-        return total==spent and type(self.settled.get('unpriced_recall_requests')) is int and self.settled['unpriced_recall_requests']==recall_unpriced and type(self.settled.get('unpriced_requests')) is int and self.settled['unpriced_requests']==unpriced
+        return (total==spent and type(self.settled.get('unpriced_requests')) is int
+                and self.settled['unpriced_requests']==unpriced
+                and 'recall_requests' not in self.settled and 'unpriced_recall_requests' not in self.settled)
 
     def read(self) -> bool:
         if self.error is not None:
@@ -380,15 +381,15 @@ class HostEvents:
                 # These records are copied into the receipt. Reject data the writer cannot retain.
                 canonical(value).encode('utf-8')
             if kind=='host-start':
-                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=12
-                        or value.get('schema')!='player-host/12'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=13
+                        or value.get('schema')!='player-host/13'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='spend-reserve-reached':
                 if not self.started:raise ControlError('Host spend reserve event lacks current origin')
                 if self.spend_reserve_reached is None:
                     self.spend_reserve_reached=value
             elif kind=='request-start':
-                match=re.fullmatch(r'(request|recall)-([1-9][0-9]*)',value.get('request_id',''))
+                match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
                 if not self.started or not match:raise ControlError('Host request lacks current origin')
                 identity=value['request_id']
                 if identity in self.requests:raise ControlError('Host request accounting differs')
@@ -420,10 +421,9 @@ class HostEvents:
     def finish(self) -> dict:
         while self.read():pass
         observed=self.observations()
-        recalls=observed['observed_recall_attempts']
-        counts=dict(requests=len(self.requests),player_requests=len(self.requests)-recalls,recall_requests=recalls)
+        counts=dict(requests=len(self.requests),player_requests=len(self.requests))
         valid=(not self.buffer and self.started and self.settled is not None and self.requests==self.costs.keys()
-               and all({int(k.split('-')[1]) for k in self.requests if k.startswith(role+'-')}==set(range(1,1+sum(k.startswith(role+'-') for k in self.requests))) for role in ('request','recall'))
+               and {int(k.split('-')[1]) for k in self.requests}==set(range(1,1+len(self.requests)))
                and all(type(self.settled.get(name)) is int and self.settled[name]==count for name,count in counts.items())
                and self._host_agrees())
         return dict(accounting_complete=valid,settled=self.settled,handoff=self.handoff,player_finish=self.player_finish,
@@ -432,7 +432,7 @@ class HostEvents:
     def observations(self) -> dict:
         # These are lower bounds when the trace cannot be reconciled to settlement.
         return dict(observed_attempts=len(self.requests),
-            observed_recall_attempts=sum(k.startswith('recall-') for k in self.requests),
+            observed_recall_attempts=0,
             configured_estimate_usd=configured_estimate(self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
@@ -497,11 +497,17 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
               *,native_exit_zero: Callable[[], bool] | None=None) -> dict:
     """`live_updates` is the directory where newer delivered-knowledge versions arrive during the run,
     or None when the package does not deliver them (`LiveKnowledge`)."""
+    from harness.player.source_index import empty_agenda, validate_agenda
+
     actors=directory/'actors';actors.mkdir(mode=0o700)
     live=None
     total_attempts=0;total_recall_attempts=0;host_seconds_used=0.;records=[];context=None;ending_request=None
+    agenda_path = directory/'agenda.json'
+    agenda_bytes = (agenda_path.read_bytes() if agenda_path.is_file()
+                    else (canonical(empty_agenda()) + '\n').encode('utf-8'))
+    validate_agenda(strict_loads(agenda_bytes, ControlError))
     # The dollar limit: each actor gets what the actors before it left, counted from their traces.
-    limit=Decimal(profile['spend_limit_usd']);bound=Decimal(route['unpriced_request_usd']);recall_bound=Decimal(route['recall']['unpriced_request_usd']);spent=Decimal(0)
+    limit=Decimal(profile['spend_limit_usd']);bound=Decimal(route['unpriced_request_usd']);recall_bound=Decimal(0);spent=Decimal(0)
     outcome='incomplete';reason='Original actor allowance exhausted'
     for index in range(1,profile['max_hosts']+1):
         seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
@@ -552,10 +558,13 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             with (target/'delivered-knowledge.json').open('xb') as stream:
                 stream.write(live.begin(target))
             (target/'delivered-knowledge.json').chmod(0o600)
-            write_new(target/'frozen.json',dict(schema='player-host-inputs/4',actor_id=actor['actor_id'],session=profile['session'],
+            with (target/'agenda.json').open('xb') as stream:
+                stream.write(agenda_bytes)
+            (target/'agenda.json').chmod(0o600)
+            write_new(target/'frozen.json',dict(schema='player-host-inputs/5',actor_id=actor['actor_id'],session=profile['session'],
                 finish_reserve_usd=profile['ending_reserve']['usd'],
                 knowledge_updates=UPDATES_FILE if live_updates is not None else None,
-                files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt','delivered-knowledge.json')}))
+                files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt','delivered-knowledge.json','agenda.json')}))
             # A predecessor may have crossed a reserve after the driver's final live poll.
             # Bind the ending before a host can fetch or take input in that case.
             if ending_request is None:
@@ -563,7 +572,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     started+seconds-time.monotonic(),dollars,application.runtime.remaining())
             arguments=[*profile['host']['argv'],'run','--config',str(target/'route.json'),
                 '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--prompt',str(target/'prompt.txt'),
-                '--delivered-knowledge',str(target/'delivered-knowledge.json'),'--finish-reserve-usd',profile['ending_reserve']['usd'],
+                '--delivered-knowledge',str(target/'delivered-knowledge.json'),'--agenda',str(target/'agenda.json'),
+                '--agenda-out',str(target/'agenda-final.json'),'--finish-reserve-usd',profile['ending_reserve']['usd'],
                 '--session',profile['session'],'--actor-id',actor['actor_id'],'--model',route['model']['id'],
                 '--pending-control-id',ending_request['id'] if ending_request is not None else 'none',
                 '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt'),
@@ -607,6 +617,14 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             if stop_reason is not None:
                 reason=stop_reason;break
             settled=record['settled']
+            if (target/'agenda-final.json').is_file():
+                try:
+                    next_agenda = (target/'agenda-final.json').read_bytes()
+                    validate_agenda(strict_loads(next_agenda, ControlError))
+                    agenda_bytes = next_agenda
+                except (OSError, ValueError, ControlError):
+                    if child.returncode==0 and settled.get('ok') is True:
+                        raise
             if child.returncode!=0 or settled.get('ok') is not True:
                 reason='Deciding host ended unsuccessfully';break
             if settled.get('reason')=='handoff':
@@ -681,6 +699,13 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
         if outcome=='interrupted' or record.get('orchestration_error'):break
     if live is not None:live.close()
+    if not (directory/'agenda-final.json').exists():
+        try:
+            with (directory/'agenda-final.json').open('xb') as stream:
+                stream.write(agenda_bytes)
+            (directory/'agenda-final.json').chmod(0o600)
+        except OSError:
+            pass
     reported=usd_sum(Decimal(r['reported_usd']) for r in records);unpriced=sum(r['unpriced_requests'] for r in records)
     recall_unpriced=sum(r['unpriced_recall_requests'] for r in records)
     # The subtotal covers all costs observed, even if a trace could not be reconciled.

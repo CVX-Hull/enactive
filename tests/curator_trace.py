@@ -45,11 +45,11 @@ def frame_id(actor: int, step: int, session_id: str = SESSION_ID) -> str:
     return f'{session_id}-{actor * 1000 + step}'
 
 
-def record_package(session: Path, *, labels: dict, schema: str = 'campaign-run/13',
+def record_package(session: Path, *, labels: dict, schema: str = 'campaign-run/14',
                    session_id: str = SESSION_ID, live: bool = False, context: dict | None = None) -> None:
     source_commit = 'c' * 40
-    current = dict(live_knowledge_updates=live) if schema in ('campaign-run/12', 'campaign-run/13') else {}
-    if schema == 'campaign-run/13':
+    current = dict(live_knowledge_updates=live) if schema in ('campaign-run/12', 'campaign-run/13', 'campaign-run/14') else {}
+    if schema in ('campaign-run/13', 'campaign-run/14'):
         current['context'] = {} if context is None else context
     package = json.dumps(dict(schema=schema, session=session_id, source_commit=source_commit, **current,
                               labels=labels, private_files={'private-note': 'raw package sentinel'})).encode()
@@ -213,10 +213,10 @@ class _Writer:
     def freeze(self) -> dict:
         directory = self.actor['directory']
         names = ('actor.json', 'route.json', 'mcp.json', 'context.txt', 'prompt.txt')
-        self.write(directory/'frozen.json', dict(schema='player-host-inputs/4', actor_id=self.actor['id'],
+        self.write(directory/'frozen.json', dict(schema='player-host-inputs/5', actor_id=self.actor['id'],
             session=self.session, knowledge_updates=None,
             files={n: hashlib.sha256((directory/n).read_bytes()).hexdigest() for n in names}))
-        self.log(dict(type='host-start', schema='player-host/12', telemetry_version=12, actor_id=self.actor['id']))
+        self.log(dict(type='host-start', schema='player-host/13', telemetry_version=13, actor_id=self.actor['id']))
         return {}
 
     def frame(self) -> tuple[dict, bytes]:

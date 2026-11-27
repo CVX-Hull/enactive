@@ -20,7 +20,7 @@ import pytest
 
 from harness.trace import memory_reader
 from harness.trace.projection import ProjectionError, _result, project
-from tests.curator_trace import SESSION_ID, make_long_session, png, record_package
+from tests.curator_trace import SESSION_ID, make_long_session, png, record_package as shared_record_package
 
 ROOT = Path(__file__).resolve().parents[1]
 # A worktree has no evidence store; ENACTIVE_EVIDENCE_ROOT points at a checkout's sealed store.
@@ -82,6 +82,29 @@ def make_session(root: Path, name='s1') -> Path:
 
 def all_bytes(root: Path) -> bytes:
     return b''.join(p.read_bytes() for p in root.rglob('*') if p.is_file())
+
+
+def test_projection_omits_agenda_files_calls_and_telemetry(tmp_path):
+    session = make_session(tmp_path)
+    actor = session/'actors'/'001'
+    private = ('frozen-agenda-text', 'final-agenda-text', 'private-ancestry', 'private-thread-text')
+    files = (actor/'agenda.json', actor/'agenda-final.json', session/'source-index.json')
+    for path, value in zip(files, private[:3], strict=True):
+        path.write_text(json.dumps({'private': value}))
+    events = [
+        dict(type='tool-start', tool='player_agenda', tool_call_id='agenda-edit', arguments={'text': private[3]}),
+        dict(type='tool-result', tool_call_id='agenda-edit', result={'structuredContent': {'id': private[3]}}),
+        dict(type='tool-start', tool='player_agenda', tool_call_id='unfinished-agenda', arguments={'text': private[3]}),
+        dict(type='tool-refused', tool='player_agenda', tool_call_id='refused-agenda', reason=private[3]),
+        dict(type='player-agenda', threads=[private[3]]),
+    ]
+    with (actor/'host.jsonl').open('a') as stream:
+        stream.write('\n' + ''.join(json.dumps(e) + '\n' for e in events))
+    out = tmp_path/'trace'
+    package = project([session], out)
+    assert {'agenda.json', 'agenda-final.json', 'source-index.json'} <= set(package['never_projected'])
+    data = all_bytes(out)
+    assert all(value.encode() not in data for value in (*private, 'player_agenda', 'player-agenda', 'agenda-edit'))
 
 
 def test_projection_keeps_what_the_actor_saw_and_drops_every_secret(tmp_path):
@@ -303,16 +326,20 @@ def test_sealed_version_ten_package_supplies_no_world(tmp_path, lineage, admissi
         None, lineage, admission, None, None)
 
 
-def test_version_twelve_labels_require_closed_archive_index(tmp_path):
-    indexed_sid = '49964eb42a7d4dabaef0c5ff6230a9be'  # indexed #889 campaign-run/12 session
-    indexed = make_long_session(tmp_path, 'indexed-889', steps=1, actors=('001',), session_id=indexed_sid)
-    record_package(indexed, schema='campaign-run/12', session_id=indexed_sid,
-                   labels=dict(world='campground-889', lineage='l889', admission=1))
-    unindexed = make_long_session(tmp_path, 'unindexed-12', steps=1, actors=('001',), session_id='c' * 32)
-    record_package(unindexed, schema='campaign-run/12', session_id='c' * 32,
+@pytest.mark.parametrize(('schema', 'indexed_sid', 'context'), [
+    ('campaign-run/12', '49964eb42a7d4dabaef0c5ff6230a9be', None),
+    ('campaign-run/13', '3bf4413b14c83ceff112ca69a99e2715', dict(phase='late')),
+])
+def test_archived_labels_require_closed_archive_index(tmp_path, schema, indexed_sid, context):
+    indexed = make_long_session(tmp_path, 'indexed', steps=1, actors=('001',), session_id=indexed_sid)
+    record_package(indexed, schema=schema, session_id=indexed_sid, context=context,
+                   labels=dict(world='campground', lineage='survivor', admission=1))
+    unindexed = make_long_session(tmp_path, 'unindexed', steps=1, actors=('001',), session_id='c' * 32)
+    record_package(unindexed, schema=schema, session_id='c' * 32,
                    labels=dict(world='secret-world', lineage='secret-lineage', admission=1))
     ok, refused = project([indexed, unindexed], tmp_path/'trace')['sessions']
-    assert (ok['world'], ok['lineage'], ok['admission'], ok['label_check']) == ('campground-889', 'l889', 1, None)
+    assert (ok['world'], ok['lineage'], ok['admission'], ok['label_check']) == ('campground', 'survivor', 1, None)
+    assert ok['context'] == (context or {})
     assert (refused['world'], refused['lineage'], refused['admission'], refused['label_check']) == (
         None, None, None, 'manifest-schema')
 
@@ -331,6 +358,16 @@ def refresh_launch_digest(session: Path) -> None:
     opening = json.loads(launch.read_bytes())
     opening['manifest_sha256'] = hashlib.sha256((session/'manifest.json').read_bytes()).hexdigest()
     launch.write_text(json.dumps(opening))
+
+
+def record_package(session: Path, *, labels, schema='campaign-run/14', session_id=SESSION_ID, context=None):
+    if schema != 'campaign-run/14':
+        shared_record_package(session, labels=labels, schema=schema, session_id=session_id, context=context)
+        return
+    shared_record_package(session, labels=labels, schema=schema, session_id=session_id)
+    path = session/'manifest.json'
+    path.write_text(json.dumps(dict(json.loads(path.read_bytes()), context=context or {}, live_knowledge_updates=False)))
+    refresh_launch_digest(session)
 
 
 def assert_failed_labels(out: Path, labelled_sessions, check: str, diagnostic: str) -> None:

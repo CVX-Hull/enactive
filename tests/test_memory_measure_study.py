@@ -24,7 +24,7 @@ def study_fixture(tmp_path):
             units=[dict(u, withheld=index in next(r['withheld'] for r in design['assignment'] if r['unit_id'] == u['id']),
                         placebo=u['id'] == 'lone') for u in layout['units']])
         unit_path = save(package / 'private/units.json', record)
-        save(package / 'manifest.json', dict(schema='campaign-run/13', context={}, session=json.loads((package / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
+        save(package / 'manifest.json', dict(schema='campaign-run/14', context={}, session=json.loads((package / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
         available = ke.delivered_fact_ids(record)
         for actor, entry in facts['admissions'][package.name].items():
             all_facts = [fact for route in mm.ROUTES for fact in entry.get(route, [])]
@@ -89,7 +89,7 @@ def test_study_rejects_bad_draw_provenance_and_use_packets(tmp_path, fault):
         else:
             r['units'][0]['placebo'] = not r['units'][0]['placebo']
         unit_path = save(packages[1] / 'private/units.json', r)
-        save(packages[1] / 'manifest.json', dict(schema='campaign-run/13', context={}, session=json.loads((packages[1] / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
+        save(packages[1] / 'manifest.json', dict(schema='campaign-run/14', context={}, session=json.loads((packages[1] / 'manifest.json').read_text())['session'], private_files={'units.json': mm.file_sha256(unit_path)}))
     with pytest.raises(mm.MeasureError):
         mm.study(run, packages, path, draws=10)
     assert not (run / 'study.json').exists()
@@ -215,13 +215,13 @@ def test_facts_builder_reads_both_unit_record_versions_and_refuses_others(tmp_pa
     else:
         path = save(tmp_path / 'draw.json', ke.study_draw(value, 4, ['save:4'], 653, commit=COMMIT))
         hashes = ke.export(package, value, study=path, start_index=0, commit=COMMIT)
-    manifest = dict(schema='campaign-run/13', context={}, session='a' * 32, labels=dict(world=None, lineage=None),
+    manifest = dict(schema='campaign-run/14', context={}, session='a' * 32, labels=dict(world=None, lineage=None),
         files={'delivered-knowledge.json': hashes['delivered-knowledge.json']},
         private_files={n: hashes['private/' + n] for n in ('knowledge-full.json', 'units.json')})
     save(package / 'manifest.json', manifest)
     actor = package / 'actors/001'
     actor.mkdir(parents=True)
-    (actor / 'host.jsonl').write_text(json.dumps(dict(type='host-start', schema='player-host/12', telemetry_version=12, actor_id='actor')) + '\n')
+    (actor / 'host.jsonl').write_text(json.dumps(dict(type='host-start', schema='player-host/13', telemetry_version=13, actor_id='actor')) + '\n')
     record = mm.pilot_units(package, independent=False)
     result = mm.build_facts(tmp_path / 'memory-measure/facts', [package])['admissions']['package']['001']
     assert {f['id'] for f in result['index']} == ke.delivered_fact_ids(record)
