@@ -157,8 +157,11 @@ def _resolution(resolution, identity, resolved_from, records, version):
         current = revision_parts(records[0]['revision']) if article else None
         return (article and resolved_from == identity and revision is not None and current is not None
                 and revision[0] == records[0]['id'] and revision[1] <= current[1] <= version)
-    if resolution in ('restated', 'narrowed', 'corrected'):
+    if resolution in ('restated', 'narrowed', 'corrected', 'changed'):
         return bool(records) and all('body' not in r for r in records) and resolved_from == identity
+    if resolution == 'state_key':
+        return (bool(records) and all('body' not in r and r.get('state_key') == identity for r in records)
+                and resolved_from is None)
     if resolution in ('ended', 'retracted'):
         return records == [] and resolved_from == identity
     if resolution == 'title':
@@ -169,7 +172,7 @@ def _resolution(resolution, identity, resolved_from, records, version):
 
 
 def _knowledge(value):
-    """A discriminated `player-knowledge/3` read (`records`) or query (`hits`): its version, its resolution's row
+    """A discriminated `player-knowledge/4` read (`records`) or query (`hits`): its version, its resolution's row
     of the read table, and every record or compact hit closed and blinded. The empty file (`version` null) answers
     only `unknown` (with empty `records`) and `query` (with empty `hits`). Article and fact text is opaque data,
     never another envelope."""
@@ -205,7 +208,7 @@ def _knowledge(value):
 
 def _project(value):
     schema = value.get('schema')
-    if schema == 'player-knowledge/3':
+    if schema == 'player-knowledge/4':
         return _knowledge(value)
     if schema == 'computer-operation/1':
         return _operation(value)

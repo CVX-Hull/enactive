@@ -63,7 +63,7 @@ def units(knowledge: dict) -> dict:
     result.extend(dict(id=f['id'], article_id=None, fact_ids=[f['id']])
                   for f in knowledge['facts'] if f['id'] not in cited)
     return dict(units=sorted(result, key=lambda u: u['id']),
-                shared=[dict(fact_id=f, article_ids=sorted(owners)) for f, owners in sorted(cited.items()) if len(owners)>1])
+                shared=[dict(fact_id=f, article_ids=sorted(owners)) for f, owners in sorted(cited.items()) if len(owners) > 1])
 
 
 def delivered_fact_ids(record: dict) -> set[str]:
@@ -95,16 +95,15 @@ def _subset(knowledge: dict, record: dict) -> dict:
     delivered = copy.deepcopy(knowledge)
     delivered['articles'] = [a for a in delivered['articles'] if a['id'] in article_ids]
     delivered['facts'] = [f for f in delivered['facts'] if f['id'] in fact_ids]
+    cited_frames = {src for f in delivered['facts'] for src in f['citation_source_ids']}
+    delivered['frame_clocks'] = {fid: label for fid, label in sorted(delivered.get('frame_clocks', {}).items())
+                                 if fid in cited_frames}
     return delivered
 
 
 def blocked_assignment(rng: np.random.Generator, sizes: list[int], count: int,
                        half_sizes: np.ndarray | None = None, draws: int = 1) -> tuple[np.ndarray, np.ndarray]:
-    """Independent permutations per unit/block; odd blocks first toss a fair half-size coin.
-
-    Returns (draw, unit, start) booleans and (draw, unit, block) half sizes. Tests condition
-    on the sizes recorded by the study draw, while prospective simulations draw new sizes.
-    """
+    """Independent permutations per unit/block; odd blocks first toss a fair half-size coin."""
     result = np.zeros((draws, count, sum(sizes)), dtype=bool)
     halves = np.zeros((draws, count, len(sizes)), dtype=int)
     offset = 0
@@ -164,8 +163,8 @@ def _checked_study_draw(data: bytes) -> dict:
     if not isinstance(value, dict) or value.get('schema') != STUDY_DRAW_SCHEMA:
         raise ValueError(f'expected {STUDY_DRAW_SCHEMA}')
     expected = layout_draw(value['version'], value['layout'], len(value['starts']),
-        [f"{b['label']}:{b['count']}" for b in value['blocks']], value['seed'], value['placebo'],
-        commit=value['commit'], world=value['world'])
+                           [f"{b['label']}:{b['count']}" for b in value['blocks']], value['seed'], value['placebo'],
+                           commit=value['commit'], world=value['world'])
     if expected != value:
         raise ValueError('study draw differs from its seeded blocked assignment')
     return value
@@ -182,9 +181,9 @@ def study_record(knowledge: dict, path: Path, index: int, *, commit: str | None,
     block = value['starts'][index]['block']
     rows = {r['unit_id']: r for r in value['assignment'] if r['block'] == block}
     return dict(schema='knowledge-units/2', version=value['version'], seed=value['seed'],
-        draw_sha256=hashlib.sha256(data).hexdigest(), start_index=index, block=block,
-        units=[dict(u, withheld=index in rows[u['id']]['withheld'], placebo=u['id'] in value['placebo'])
-               for u in value['layout']['units']], shared=value['layout']['shared'])
+                draw_sha256=hashlib.sha256(data).hexdigest(), start_index=index, block=block,
+                units=[dict(u, withheld=index in rows[u['id']]['withheld'], placebo=u['id'] in value['placebo'])
+                       for u in value['layout']['units']], shared=value['layout']['shared'])
 
 
 def tag_commit(path: Path, version: str) -> str:
@@ -199,13 +198,6 @@ def _match(axes: dict, context: dict) -> bool | None:
     return True if axes.keys() <= context.keys() else None
 
 
-def _condition(row: dict, context: dict) -> bool | None:
-    if 'when' not in row:
-        return True
-    requires = row['when']['requires']
-    return _match(requires, context) if requires else None
-
-
 def _publication(row: dict) -> int:
     return int(row['published_in'][1:])
 
@@ -215,9 +207,11 @@ def _has_cut(branch: dict) -> bool:
 
 
 def _reason(row: dict) -> str:
+    if 'superseded_reason' in row:
+        return row['superseded_reason']
     if row['lifecycle_state'] == 'retracted':
         return 'corrected'
-    return 'narrowed' if len(row['superseded_by']) > 1 else 'restated'
+    return 'narrowed' if len(row.get('superseded_by', ())) > 1 else 'restated'
 
 
 class _Snapshot:
@@ -232,9 +226,46 @@ class _Snapshot:
         self.provenance = repo.provenance(version)
         self.branches = self.provenance['branches']
         self.lineages = {row['name']: row['lineage'] for row in self.provenance['sessions'].values()}
+        self.frame_clocks = dict(self.provenance.get('frame_clocks', {}))
         self.restores = defaultdict(list)
         for restore in sorted(self.provenance['restores'], key=lambda row: row['restored_at']['order']):
             self.restores[restore['lineage']].append(restore)
+        self.incoming = check._incoming_edges(list(self.rows.values()))
+        self.all_state_keys = check.state_keys(list(self.rows.values()))
+        self._pos_clocks: dict[tuple[str, str, int], str] = {}
+        self._segment_clocks: dict[tuple[str, str], list[tuple[int, str]]] = defaultdict(list)
+        for fid, label in self.frame_clocks.items():
+            pos = self.provenance['frames'].get(fid)
+            if pos is not None:
+                self._pos_clocks[(pos['session'], pos['actor'], pos['step'])] = label
+                self._segment_clocks[(pos['session'], pos['actor'])].append((pos['step'], label))
+        for items in self._segment_clocks.values():
+            items.sort()
+
+    def decorate_position(self, position: dict) -> dict:
+        """Attach direct `clock_label` or nearest earlier same-segment `prior_clock` to a position copy."""
+        out = dict(position)
+        key = (out['session'], out['actor'], out['step'])
+        direct = self._pos_clocks.get(key)
+        if direct is not None:
+            out['clock_label'] = direct
+            return out
+        lineage = self.lineages.get(out['session'])
+        earlier = None
+        for step, label in self._segment_clocks.get((out['session'], out['actor']), ()):
+            if step >= out['step']:
+                break
+            # Do not carry across a restore boundary inside the same actor segment.
+            if lineage is not None and any(
+                    r['restored_at']['session'] == out['session']
+                    and r['restored_at']['actor'] == out['actor']
+                    and step < r['restored_at']['step'] <= out['step']
+                    for r in self.restores.get(lineage, ())):
+                continue
+            earlier = (step, label)
+        if earlier is not None:
+            out['prior_clock'] = {'label': earlier[1], 'step_offset': out['step'] - earlier[0]}
+        return out
 
     def positions(self, row: dict) -> list[dict]:
         citations = (row['citations'] if row['record'] == 'fact' else
@@ -292,7 +323,7 @@ class _Snapshot:
 
     def uncertain_restore(self, row: dict, lineage: str) -> bool:
         return any(r['saved_at'] is None and any(p < r['restored_at']['order']
-                                               for p in self.own_positions(row, lineage))
+                                                 for p in self.own_positions(row, lineage))
                    for r in self.restores.get(lineage, ()))
 
 
@@ -324,12 +355,12 @@ class _TargetView:
         if lineage is None:
             return False
         if row['record'] == 'fact':
-            return check._visible_end(row, lineage, snap.provenance)
+            return check._visible_end(row, lineage, snap.provenance, snap.rows)
         retired = row['retired']
         version = retired['published_in']
         retirement = self.at(version)
         coverage = self.coverage(version) or {}
-        # The publication's stamp names the admitted trace. Grooming carries the last admission's stamp.
+        # The publication's stamp names the admitted trace. Grooming/hygiene carries the last admission's stamp.
         session = coverage.get('session') or retirement.provenance.get('last_admission', {}).get('coverage', {}).get('session')
         names = {name for name in (session or '').split(',') if name}
         if not (names <= retirement.lineages.keys() and {retirement.lineages[name] for name in names} == {lineage}):
@@ -387,8 +418,7 @@ class _TargetView:
         scope = row['scope']
         if 'world' in scope and scope['world'] != self.world:
             return False
-        matches = _match(check._axes(scope), self.context)
-        return _condition(row, self.context) is not False if matches is True else matches
+        return _match(check._axes(scope), self.context)
 
     def falsified(self, identity: str) -> bool:
         pending, visited = [identity], set()
@@ -400,6 +430,8 @@ class _TargetView:
             row = self.snapshot.rows[identity]
             if row['lifecycle_state'] == 'retracted':
                 return True
+            if row.get('superseded_reason') == 'changed':
+                continue
             successors = row.get('superseded_by', ())
             if len(successors) > 1:
                 successors = [i for i in successors if self.applicable(self.snapshot.rows[i]) is True]
@@ -411,9 +443,18 @@ class _TargetView:
         if self.lineage is None or len(sources) != 1 or sources[0] is None:
             return True
         source = sources[0]
-        # A source connected by known cuts is either an ancestor already resolved above,
-        # or a known non-ancestor. Disconnected roots have no verified relation.
         return not (self.snapshot.timeline(source).keys() & self.snapshot.timeline(self.lineage).keys())
+
+    def _anchor_display(self, anchor: str, world: str | None, facts: dict[str, dict]) -> str:
+        live = [f for f in facts.values() if f.get('state_key') == anchor and f.get('subject')]
+        if live:
+            return max(live, key=lambda f: (f['seen']['order'], f['id']))['subject']
+        hist = [r for r in self.snapshot.rows.values()
+                if r['record'] == 'fact' and r.get('state_key') == anchor
+                and r['scope'].get('world') == world and r.get('subject')]
+        if hist:
+            return max(hist, key=lambda r: (r['seen']['order'], r['id']))['subject']
+        return anchor.replace('-', ' ')
 
     def eligible(self) -> tuple[dict, int]:
         selected = self.resolved(self.lineage, self.version) if self.lineage is not None else {}
@@ -422,7 +463,7 @@ class _TargetView:
         facts, articles, excluded = {}, {}, 0
         for kind, result in (('fact', facts), ('article', articles)):
             for identity, (row, relation) in sorted(candidates.items(),
-                    key=lambda item: (check.owner(item[1][0]), _publication(item[1][0]))):
+                                                    key=lambda item: (check.owner(item[1][0]), _publication(item[1][0]))):
                 if row['record'] != kind:
                     continue
                 matches = self.applicable(row)
@@ -440,8 +481,13 @@ class _TargetView:
                         continue
                 if kind == 'article' and not check.cited_facts(row) <= facts.keys():
                     continue
-                result[check.owner(row)] = _public_record(row, relation, facts, self.context)
-        return dict(articles=list(articles.values()), facts=list(facts.values())), excluded
+                result[check.owner(row)] = _public_record(row, relation, facts, self.snapshot)
+        for fact in facts.values():
+            if 'anchor' in fact:
+                fact['anchor_display'] = self._anchor_display(fact['anchor'], self.world, facts)
+        cited_frames = {src for f in facts.values() for src in f['citation_source_ids']}
+        frame_clocks = {fid: label for fid, label in sorted(self.snapshot.frame_clocks.items()) if fid in cited_frames}
+        return dict(frame_clocks=frame_clocks, articles=list(articles.values()), facts=list(facts.values())), excluded
 
     def historical_lineage(self, row: dict) -> bool:
         """Whether this row's positions and publication would qualify if it were still current."""
@@ -455,7 +501,7 @@ class _TargetView:
         while lineage is not None:
             cut = snap.cut(lineage)
             if row['lineages'] == [lineage] and (cut is None or
-                    (_publication(row) > int(cut[2][1:]) and snap.after_restore(row, lineage))):
+                                                 (_publication(row) > int(cut[2][1:]) and snap.after_restore(row, lineage))):
                 return True
             if cut is None:
                 break
@@ -468,7 +514,7 @@ class _TargetView:
 
     def history(self, eligible: set[str], public: dict[str, dict], withholds: bool) -> dict:
         history = dict(replaced={}, ended=[], retracted=[])
-        ranks = {'restated': 0, 'narrowed': 1, 'corrected': 2}
+        ranks = {'restated': 0, 'narrowed': 1, 'changed': 2, 'corrected': 3}
         terminals = {}
 
         def follow(identity: str) -> dict[str, str]:
@@ -523,27 +569,23 @@ class _TargetView:
                     repository_id=tag_commit(self.repo.path, 'v0'), coverage=coverage, **records), excluded
 
 
-def _public_record(row: dict, relation: str | None, facts: dict, context: dict) -> dict:
+def _public_record(row: dict, relation: str | None, facts: dict, snapshot: _Snapshot) -> dict:
     scope = dict(row['scope'])
     if 'world' in scope:
         scope['world'] = None
     article = row['record'] == 'article'
-    fields = ('title', 'lead', 'body', 'last_confirmed') if article else (
-        'claim_kind', 'evidence_basis', 'text', 'subject', 'when', 'seen')
+    fields = ('title', 'lead', 'body') if article else (
+        'statement_kind', 'state_key', 'anchor', 'depiction_source_id', 'text', 'subject', 'when')
     value = {key: row[key] for key in fields if key in row}
     value.update(id=check.owner(row), scope=scope, branch_relation=relation, tags=row['tags'], links=row['links'],
                  unverified_branch=relation == 'unknown')
     if article:
         cited = [facts[i] for i in check.cited_facts(row)]
-        value.update(revision=row['id'], condition_unverified=any(f['condition_unverified'] for f in cited),
+        value.update(revision=row['id'], last_confirmed=snapshot.decorate_position(row['last_confirmed']),
                      unverified_branch=value['unverified_branch'] or any(f['unverified_branch'] for f in cited))
     else:
-        value.update(citation_source_ids=row['citations'], condition_unverified=_condition(row, context) is None)
+        value.update(citation_source_ids=row['citations'], seen=snapshot.decorate_position(row['seen']))
     return value
-
-
-def _dependencies(row: dict) -> set[str]:
-    return check._dependencies(dict(row, record='article' if 'body' in row else 'fact'))
 
 
 def _project(eligible: dict, draw_record: dict, *, withholds: bool, target: _TargetView | None = None) -> dict:
@@ -554,26 +596,78 @@ def _project(eligible: dict, draw_record: dict, *, withholds: bool, target: _Tar
     public = {r['id']: r for r in records}
     eligible_rows = eligible['articles'] + eligible['facts']
     eligible_ids = {r['id'] for r in eligible_rows}
+    eligible_keys = {f['state_key'] for f in eligible['facts'] if 'state_key' in f}
+    all_keys = target.snapshot.all_state_keys if target is not None else eligible_keys
+    delivered_by_key: dict[str, list[str]] = defaultdict(list)
+    for f in delivered['facts']:
+        if 'state_key' in f:
+            delivered_by_key[f['state_key']].append(f['id'])
 
-    # Measure staleness before the draw removes any dependencies, then classify the graph of public rows.
+    # Classify conflicts over delivered public links (excluding state_key targets, which only exist on depends_on).
+    record_links: set[tuple[str, str, str]] = set()
+    kept_links: dict[str, list[dict]] = {}
     for row in records:
-        row['stale_citations'] = sorted(
-            (_dependencies(row) - eligible_ids) | set(row.get('stale_citations', ())))
-    for row in records:
-        row['links'] = [link for link in row['links'] if link['target'] in public and link['target'] != row['id']]
-    links = {(r['id'], link['rel'], link['target']) for r in records for link in r['links']}
-    shadowed, contradicted = _classified(records, links)
+        filtered = []
+        for link in row['links']:
+            rel, dst = link['rel'], link['target']
+            if dst == row['id']:
+                continue
+            if rel == 'depends_on' and dst in delivered_by_key:
+                if dst != row.get('state_key'):
+                    filtered.append(link)
+            elif dst in public:
+                filtered.append(link)
+                record_links.add((row['id'], rel, dst))
+        kept_links[row['id']] = filtered
+
+    shadowed, contradicted = _classified(records, record_links)
     contested = {identity for identity, others in contradicted.items() if others}
     contested.update(a['id'] for a in delivered['articles'] if check.cited_facts(a) & contested)
     uncertain = contested | {r['id'] for r in records if r['unverified_branch']}
+
+    # Measure staleness before withholding removes targets, applying two-strength depends_on rules.
     dependents, seeds = defaultdict(set), set()
+    stale_by_id: dict[str, list[str]] = {}
+    snap_rows = target.snapshot.rows if target is not None else None
+    snap_incoming = target.snapshot.incoming if target is not None else None
+
     for row in records:
         identity = row['id']
-        relies = _dependencies(row)
-        if row['stale_citations'] or relies & uncertain:
+        stale: set[str] = set(row.get('stale_citations', ()))
+        uncertain_dep = False
+        if 'body' in row:
+            for fid in check.cited_facts(row):
+                if fid in eligible_ids:
+                    dependents[fid].add(identity)
+                    if fid in uncertain:
+                        uncertain_dep = True
+                else:
+                    stale.add(fid)
+        for link in row['links']:
+            if link['rel'] != 'depends_on':
+                continue
+            dst = link['target']
+            if dst in all_keys:
+                # Entity-existence pin: satisfied while any eligible active/contested reading carries `dst`.
+                if dst not in eligible_keys:
+                    stale.add(dst)
+                continue
+            if dst in eligible_ids:
+                resolved = dst
+            elif snap_rows is not None and dst in snap_rows:
+                cand = check.restated_terminal(dst, snap_rows, snap_incoming)
+                resolved = cand if cand in eligible_ids else None
+            else:
+                resolved = None
+            if resolved is None:
+                stale.add(dst)
+            else:
+                dependents[resolved].add(identity)
+                if resolved in uncertain:
+                    uncertain_dep = True
+        stale_by_id[identity] = sorted(stale)
+        if stale or uncertain_dep:
             seeds.add(identity)
-        for dependency in relies:
-            dependents[dependency].add(identity)
     review = check._propagate(dependents, seeds)
 
     if target is not None:
@@ -590,17 +684,31 @@ def _project(eligible: dict, draw_record: dict, *, withholds: bool, target: _Tar
     delivered['history'] = history
     named_history = set(history['replaced']) | set(history['ended']) | set(history['retracted'])
 
-    backlinks, citing = defaultdict(list), defaultdict(list)
-    for source, rel, destination in sorted(links):
+    # Emit backlinks: depends_on state_key targets attach backlinks to every delivered reading carrying that key.
+    backlink_tuples: set[tuple[str, str, str]] = set()
+    for row in records:
+        row['links'] = kept_links[row['id']]
+        for link in row['links']:
+            rel, dst = link['rel'], link['target']
+            if rel == 'depends_on' and dst in delivered_by_key:
+                for fid in delivered_by_key[dst]:
+                    backlink_tuples.add((row['id'], rel, fid))
+            else:
+                backlink_tuples.add((row['id'], rel, dst))
+    backlinks: dict[str, list[dict]] = defaultdict(list)
+    for source, rel, destination in sorted(backlink_tuples):
         backlinks[destination].append(dict(rel=rel, source=source))
+
+    citing: dict[str, list[str]] = defaultdict(list)
     for article in delivered['articles']:
         for fact in check.cited_facts(article):
             citing[fact].append(article['id'])
+
     for row in records:
         identity = row['id']
         row.update(lifecycle_state='contested' if identity in contested else 'active',
                    needs_review=identity in review,
-                   stale_citations=[i for i in row['stale_citations'] if i in named_history],
+                   stale_citations=[i for i in stale_by_id[identity] if i in named_history],
                    backlinks=backlinks[identity], shadowed_by=sorted(shadowed[identity]),
                    contradicted_by=sorted(contradicted[identity]))
         if 'body' not in row:
@@ -684,11 +792,11 @@ def export(package: Path, knowledge: dict | Path | Repository, seed: int | None 
     Knowledge.from_dict(full)
 
     package.mkdir(parents=True, exist_ok=True)
-    (package/'private').mkdir(exist_ok=True)
+    (package / 'private').mkdir(exist_ok=True)
 
     def write(name: str, value: dict) -> str:
-        data = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2)+'\n').encode()
-        with (package/name).open('xb') as stream:
+        data = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + '\n').encode()
+        with (package / name).open('xb') as stream:
             stream.write(data)
         return hashlib.sha256(data).hexdigest()
 

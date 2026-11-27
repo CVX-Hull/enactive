@@ -81,10 +81,11 @@ class _ValidatedHistory:
     commits: dict[str, bytes]
     origins: dict[str, tuple[str, str, str]]
     identities: set[str]
+    state_keys: set[str]
     reservations: dict
 
 
-def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], dict]:
+def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], dict, set[str]]:
     """Verify the tagged objects on every call and validate new snapshots in causal order."""
     required = {'knowledge.json', 'facts.jsonl', 'provenance.json', 'programs/.keep', 'tests/.keep'}
     snapshots, commits = {}, {}
@@ -95,12 +96,12 @@ def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], d
     if cached is not None and cached.game != repo.game:
         cached = None
     if cached is None:
-        origins, identities, reservations = {}, set(), check.empty_reservations()
+        origins, identities, keys, reservations = {}, set(), set(), check.empty_reservations()
     else:
         for version, oid in cached.commits.items():
             if commits.get(version) != oid:
                 raise KnowledgeError(f'incompatible history at {version}: published commit changed')
-        origins, identities = cached.origins.copy(), cached.identities.copy()
+        origins, identities, keys = cached.origins.copy(), cached.identities.copy(), cached.state_keys.copy()
         reservations = deepcopy(cached.reservations)
 
     schema_valid: set[str] = set()
@@ -139,8 +140,11 @@ def _history(repo: Repository) -> tuple[dict[str, dict[str, bytes]], set[str], d
         except (ValueError, KeyError, TypeError, RecursionError) as error:
             raise KnowledgeError(f'incompatible history at {version}: {error}') from error
         identities.update(check.owner(record) for record in rows)
-    repo._validated_history = _ValidatedHistory(repo.game, commits, origins, identities, reservations)
-    return snapshots, identities.copy(), deepcopy(reservations)
+        keys.update(check.state_keys(rows))
+        if identities & keys:
+            raise KnowledgeError(f'incompatible history at {version}: state_key collides with record ID or slug')
+    repo._validated_history = _ValidatedHistory(repo.game, commits, origins, identities, keys, reservations)
+    return snapshots, identities.copy(), deepcopy(reservations), keys.copy()
 
 
 def _publication(candidate: check.Candidate, coverage: dict, session_kind: str) -> dict[str, bytes]:
@@ -162,7 +166,7 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
          window_frames: dict[str, dict], coverage: dict, session_kind: str,
          session_labels: dict[str, dict] | None = None) -> dict:
     """Check and publish one submission, with a software-owned coverage stamp."""
-    if session_kind not in ('admission', 'grooming'):
+    if session_kind not in check.SESSION_KINDS:
         raise KnowledgeError('unknown session kind')
     if session_labels is None:
         session_labels = getattr(window_frames, 'sessions', {})
@@ -186,14 +190,15 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
             base = repo.published()
             diagnostics.extend(check.base_diagnostics(data, base))
         if not diagnostics:
-            snapshots, reserved_ids, reserved_sessions = _history(repo)
+            snapshots, reserved_ids, reserved_sessions, reserved_state_keys = _history(repo)
             snapshot = snapshots[base]
             records = [json.loads(line) for line in snapshot['facts.jsonl'].decode().split('\n') if line.strip()]
             candidate, problems = check.evaluate(
                 data, base_records=records, base_provenance=json.loads(snapshot['provenance.json']),
                 game=repo.game, base_version=base, reserved_ids=reserved_ids, reserved_sessions=reserved_sessions,
                 session_id=session_id, window_frames=window_frames, session_kind=session_kind,
-                session_labels=session_labels, declared_axes=check.declared_axes(reserved_sessions, session_labels))
+                session_labels=session_labels, declared_axes=check.declared_axes(reserved_sessions, session_labels),
+                reserved_state_keys=reserved_state_keys)
             diagnostics.extend(problems)
             if candidate is not None:
                 files = _publication(candidate, coverage, session_kind)
@@ -236,7 +241,7 @@ def restore(repo: Repository, *, expected_base: str, target: str) -> dict:
         failure = 'incompatible or unavailable history'
         try:
             current = repo.published()
-            snapshots, _, _ = _history(repo)
+            snapshots, _, _, _ = _history(repo)
             if expected_base != current:
                 failure = 'stale base'
                 raise KnowledgeError('stale base')

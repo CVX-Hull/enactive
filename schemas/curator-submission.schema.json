@@ -1,18 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "curator-submission/2: curator submission payload validated by harness/curator/check.py",
-  "description": "Closed shape for curator-submission/2 submissions and every allowed operation. Cross-record checks (base_version, declared axes, scope lattice, citation carry-over, end-frame novelty, old_text guards, grooming-only retag, fixed point) live in harness/curator/check.py.",
+  "title": "curator-submission/3: curator submission payload validated by harness/curator/check.py",
+  "description": "Closed shape for curator-submission/3 submissions and every allowed operation. Cross-record checks (base_version, frame_clocks in window_frames, declared axes, scope lattice, global id/slug/state_key namespace, keyed uniqueness, anchor forest, citation carry-over, end-frame novelty, atomic world-article repair, no-silent-omission, hygiene guards, fixed point) live in harness/curator/check.py.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "base_version", "summary", "changes"],
   "properties": {
-    "schema": {"const": "curator-submission/2"},
+    "schema": {"const": "curator-submission/3"},
     "base_version": {"$ref": "#/$defs/version"},
     "summary": {"type": "string"},
     "from_drafts": {
       "type": "array",
       "items": {"$ref": "#/$defs/id_or_slug"}
     },
+    "frame_clocks": {"$ref": "#/$defs/frame_clocks"},
     "changes": {
       "type": "array",
       "minItems": 1,
@@ -54,6 +55,18 @@
       "maxLength": 64,
       "not": {"pattern": "[^ -~]"}
     },
+    "clock_label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "\\S",
+      "not": {"pattern": "[\\u0000-\\u001f\\u007f]"}
+    },
+    "frame_clocks": {
+      "type": "object",
+      "propertyNames": {"$ref": "#/$defs/frame_source_id"},
+      "additionalProperties": {"$ref": "#/$defs/clock_label"}
+    },
     "tag": {
       "type": "string",
       "maxLength": 32,
@@ -66,31 +79,13 @@
       "uniqueItems": true,
       "items": {"$ref": "#/$defs/tag"}
     },
-    "claim_kind": {
+    "statement_kind": {
       "type": "string",
-      "enum": ["interface", "mechanic", "entity_property", "instance_state", "strategy"]
-    },
-    "evidence_basis": {
-      "type": "string",
-      "enum": ["observed", "inferred", "hinted"]
+      "enum": ["observation", "state", "outcome", "inference", "synthesis"]
     },
     "curator_scope": {
       "type": "object",
       "maxProperties": 7,
-      "propertyNames": {
-        "pattern": "^[a-z][a-z0-9_]{0,31}$",
-        "not": {
-          "anyOf": [
-            {"enum": ["game", "world", "lineage"]},
-            {"pattern": "\\n"}
-          ]
-        }
-      },
-      "additionalProperties": {"$ref": "#/$defs/axis_value"}
-    },
-    "requires_map": {
-      "type": "object",
-      "maxProperties": 8,
       "propertyNames": {
         "pattern": "^[a-z][a-z0-9_]{0,31}$",
         "not": {
@@ -107,15 +102,6 @@
       "maxItems": 1,
       "uniqueItems": true,
       "items": {"const": "world"}
-    },
-    "when": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["note", "requires"],
-      "properties": {
-        "note": {"$ref": "#/$defs/nonblank"},
-        "requires": {"$ref": "#/$defs/requires_map"}
-      }
     },
     "link": {
       "type": "object",
@@ -166,8 +152,7 @@
         "schema",
         "record",
         "id",
-        "claim_kind",
-        "evidence_basis",
+        "statement_kind",
         "tags",
         "text",
         "scope",
@@ -175,23 +160,54 @@
         "citations"
       ],
       "properties": {
-        "schema": {"const": "curator-fact/5"},
+        "schema": {"const": "curator-fact/6"},
         "record": {"const": "fact"},
         "id": {"$ref": "#/$defs/id_or_slug"},
-        "claim_kind": {"$ref": "#/$defs/claim_kind"},
-        "evidence_basis": {"$ref": "#/$defs/evidence_basis"},
+        "statement_kind": {"$ref": "#/$defs/statement_kind"},
+        "state_key": {"$ref": "#/$defs/id_or_slug"},
+        "anchor": {"$ref": "#/$defs/id_or_slug"},
+        "depiction_source_id": {"$ref": "#/$defs/frame_source_id"},
         "tags": {"$ref": "#/$defs/tags"},
         "text": {"$ref": "#/$defs/nonblank"},
         "subject": {"$ref": "#/$defs/nonblank"},
         "scope": {"$ref": "#/$defs/curator_scope"},
         "binds": {"$ref": "#/$defs/binds"},
-        "when": {"$ref": "#/$defs/when"},
+        "when": {"$ref": "#/$defs/nonblank"},
         "links": {"$ref": "#/$defs/links"},
         "citations": {"$ref": "#/$defs/citations_nonempty"}
       },
       "allOf": [
         {
-          "if": {"properties": {"claim_kind": {"const": "instance_state"}}},
+          "if": {"properties": {"statement_kind": {"const": "state"}}},
+          "then": {
+            "required": ["binds", "state_key"],
+            "properties": {
+              "binds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {"const": "world"}
+              }
+            }
+          }
+        },
+        {
+          "if": {"required": ["state_key"]},
+          "then": {
+            "required": ["binds"],
+            "properties": {
+              "statement_kind": {"enum": ["state", "synthesis"]},
+              "binds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {"const": "world"}
+              }
+            }
+          }
+        },
+        {
+          "if": {"required": ["anchor"]},
           "then": {
             "required": ["binds"],
             "properties": {
@@ -200,6 +216,20 @@
                 "minItems": 1,
                 "maxItems": 1,
                 "items": {"const": "world"}
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"statement_kind": {"const": "synthesis"}}},
+          "then": {
+            "properties": {
+              "links": {
+                "contains": {
+                  "type": "object",
+                  "required": ["rel"],
+                  "properties": {"rel": {"const": "depends_on"}}
+                }
               }
             }
           }
@@ -222,33 +252,50 @@
         "schema",
         "record",
         "id",
-        "claim_kind",
-        "evidence_basis",
+        "statement_kind",
         "tags",
         "text",
         "links",
         "citations"
       ],
       "properties": {
-        "schema": {"const": "curator-fact/5"},
+        "schema": {"const": "curator-fact/6"},
         "record": {"const": "fact"},
         "id": {"$ref": "#/$defs/id_or_slug"},
-        "claim_kind": {"$ref": "#/$defs/claim_kind"},
-        "evidence_basis": {"$ref": "#/$defs/evidence_basis"},
+        "statement_kind": {"$ref": "#/$defs/statement_kind"},
+        "state_key": {"$ref": "#/$defs/id_or_slug"},
+        "anchor": {"$ref": "#/$defs/id_or_slug"},
+        "depiction_source_id": {"$ref": "#/$defs/frame_source_id"},
         "tags": {"$ref": "#/$defs/tags"},
         "text": {"$ref": "#/$defs/nonblank"},
         "subject": {"$ref": "#/$defs/nonblank"},
         "scope": {"$ref": "#/$defs/curator_scope"},
         "binds": {"$ref": "#/$defs/binds"},
-        "when": {"$ref": "#/$defs/when"},
+        "when": {"$ref": "#/$defs/nonblank"},
         "links": {"$ref": "#/$defs/links"},
         "citations": {"$ref": "#/$defs/citations_any"}
       },
       "allOf": [
         {
+          "if": {"properties": {"statement_kind": {"const": "state"}}},
+          "then": {"required": ["state_key"]}
+        },
+        {
+          "if": {"required": ["state_key"]},
+          "then": {
+            "properties": {
+              "statement_kind": {"enum": ["state", "synthesis"]}
+            }
+          }
+        },
+        {
           "if": {
             "required": ["binds"],
-            "properties": {"claim_kind": {"const": "instance_state"}}
+            "anyOf": [
+              {"properties": {"statement_kind": {"const": "state"}}},
+              {"required": ["state_key"]},
+              {"required": ["anchor"]}
+            ]
           },
           "then": {
             "properties": {
@@ -257,6 +304,20 @@
                 "minItems": 1,
                 "maxItems": 1,
                 "items": {"const": "world"}
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"statement_kind": {"const": "synthesis"}}},
+          "then": {
+            "properties": {
+              "links": {
+                "contains": {
+                  "type": "object",
+                  "required": ["rel"],
+                  "properties": {"rel": {"const": "depends_on"}}
+                }
               }
             }
           }
@@ -286,7 +347,7 @@
         "links"
       ],
       "properties": {
-        "schema": {"const": "curator-fact/5"},
+        "schema": {"const": "curator-fact/6"},
         "record": {"const": "article"},
         "slug": {"$ref": "#/$defs/id_or_slug"},
         "title": {"$ref": "#/$defs/nonblank"},
@@ -333,20 +394,32 @@
         },
         "reason_kind": {
           "type": "string",
-          "enum": ["restated", "corrected"]
+          "enum": ["restated", "corrected", "changed"]
         },
         "fact": {"$ref": "#/$defs/superseded_fact"}
       },
-      "if": {"properties": {"reason_kind": {"const": "corrected"}}},
-      "then": {
-        "properties": {
-          "fact": {
+      "allOf": [
+        {
+          "if": {"properties": {"reason_kind": {"enum": ["corrected", "changed"]}}},
+          "then": {
             "properties": {
-              "citations": {"$ref": "#/$defs/citations_nonempty"}
+              "fact": {
+                "properties": {
+                  "citations": {"$ref": "#/$defs/citations_nonempty"}
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"reason_kind": {"const": "changed"}}},
+          "then": {
+            "properties": {
+              "fact": {"required": ["state_key"]}
             }
           }
         }
-      }
+      ]
     },
     "op_narrow_fact": {
       "type": "object",
@@ -522,7 +595,12 @@
       "required": ["op", "from", "to", "in"],
       "properties": {
         "op": {"const": "remap_citations"},
-        "from": {"$ref": "#/$defs/id_or_slug"},
+        "from": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id_or_slug"}
+        },
         "to": {"$ref": "#/$defs/id_or_slug"},
         "in": {
           "type": "array",

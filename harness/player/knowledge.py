@@ -1,6 +1,7 @@
 """Read only the delivered subset: the frozen file, or a newer version adopted during play. No curator or evaluation dependency."""
 from __future__ import annotations
 
+from collections import defaultdict
 import copy
 import json
 import math
@@ -9,14 +10,14 @@ import re
 
 from .contracts import PlayerError
 
-SCHEMA = 'delivered-knowledge/3'
-RESULT = 'player-knowledge/3'
+SCHEMA = 'delivered-knowledge/4'
+RESULT = 'player-knowledge/4'
 MAX_SAFE_INT = (1 << 53) - 1
 SNIPPET_LIMIT = 240
 HIT_CITED_BY_LIMIT = 3
-STATUS_MARKERS = ('contested', 'unverified_branch', 'needs_review', 'condition_unverified')
-HIT_VIA = frozenset(('match', 'hop'))
-FIELDS = frozenset(('schema', 'version', 'commit', 'repository_id', 'coverage', 'articles', 'facts', 'history'))
+STATUS_MARKERS = ('contested', 'unverified_branch', 'needs_review')
+HIT_VIA = frozenset(('match', 'hop', 'fuzzy'))
+FIELDS = frozenset(('schema', 'version', 'commit', 'repository_id', 'coverage', 'frame_clocks', 'articles', 'facts', 'history'))
 # `\Z`, never `$`: `$` also matches before a final newline, so `fullmatch` alone would not refuse `v1\n`.
 VERSION = re.compile(r'v(0|[1-9][0-9]*)\Z')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
@@ -27,19 +28,19 @@ ALIAS = re.compile(r's(?:0[1-9]|[1-9][0-9]+)\Z')
 TAG = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*\Z')
 AXIS = re.compile(r'[a-z][a-z0-9_]{0,31}\Z')
 ASCII = re.compile(r'[ -~]{1,64}\Z')
-CLAIM_KINDS = frozenset(('interface', 'mechanic', 'entity_property', 'instance_state', 'strategy'))
-EVIDENCE_BASES = frozenset(('observed', 'inferred', 'hinted'))
+CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
+STATEMENT_KINDS = frozenset(('observation', 'state', 'outcome', 'inference', 'synthesis'))
 LIFECYCLE_STATES = frozenset(('active', 'contested'))
 BRANCH_RELATIONS = frozenset(('same', 'inherited', 'unknown'))
 RELATIONS = frozenset(('depends_on', 'contradicts', 'part_of', 'see_also'))
-REASONS = frozenset(('restated', 'narrowed', 'corrected'))
+REASONS = frozenset(('restated', 'narrowed', 'corrected', 'changed'))
 READ_BY = ('any', 'id')
 EMPTY_HISTORY = {'replaced': {}, 'ended': [], 'retracted': []}
 
 
 def empty() -> dict:
-    return dict(schema=SCHEMA, version=None, commit=None, repository_id=None, coverage=None, articles=[], facts=[],
-                history=copy.deepcopy(EMPTY_HISTORY))
+    return dict(schema=SCHEMA, version=None, commit=None, repository_id=None, coverage=None, frame_clocks={},
+                articles=[], facts=[], history=copy.deepcopy(EMPTY_HISTORY))
 
 
 def _safe_digits(digits: str) -> int | None:
@@ -77,17 +78,19 @@ def revision_parts(value: object) -> tuple[str, int] | None:
 
 
 # The public record forms `tools/knowledge_export.py` writes; `tools/player_host/knowledge.mjs` checks the same ones,
-# and both readers are held to the shared fixtures in `tests/fixtures/delivered-knowledge-3/`.
+# and both readers are held to the shared fixtures in `tests/fixtures/delivered-knowledge-4/`.
 COVERAGE_FIELDS = frozenset(('schema', 'session', 'actor', 'last_step'))
-POSITION_FIELDS = frozenset(('session', 'actor', 'step', 'order'))
-FLAGS = ('needs_review', 'condition_unverified', 'unverified_branch')
+POSITION_REQUIRED = frozenset(('session', 'actor', 'step', 'order'))
+POSITION_FIELDS = POSITION_REQUIRED | {'clock_label', 'prior_clock'}
+FLAGS = ('needs_review', 'unverified_branch')
 SHARED_FIELDS = frozenset(('id', 'tags', 'scope', 'branch_relation', 'lifecycle_state', 'stale_citations', *FLAGS,
                            'links', 'backlinks', 'shadowed_by', 'contradicted_by'))
 ARTICLE_FIELDS = SHARED_FIELDS | {'revision', 'title', 'lead', 'body', 'last_confirmed'}
-FACT_REQUIRED = SHARED_FIELDS | {'claim_kind', 'evidence_basis', 'text', 'cited_by_articles', 'citation_source_ids', 'seen'}
-FACT_FIELDS = FACT_REQUIRED | {'subject', 'when'}
+FACT_REQUIRED = SHARED_FIELDS | {'statement_kind', 'text', 'cited_by_articles', 'citation_source_ids', 'seen'}
+FACT_FIELDS = FACT_REQUIRED | {'subject', 'when', 'state_key', 'anchor', 'anchor_display', 'depiction_source_id'}
 ARTICLE_HIT_REQUIRED = frozenset(('id', 'kind', 'revision', 'title', 'snippet', 'tags', 'via'))
-FACT_HIT_REQUIRED = frozenset(('id', 'kind', 'subject', 'claim_kind', 'scope', 'snippet', 'cited_by_articles', 'via'))
+FACT_HIT_REQUIRED = frozenset(('id', 'kind', 'subject', 'statement_kind', 'scope', 'snippet', 'cited_by_articles', 'via'))
+FACT_HIT_OPTIONAL = frozenset(('status', 'when', 'state_key', 'anchor', 'anchor_display', 'depiction_source_id'))
 
 
 def _matches(pattern: re.Pattern, value: object) -> bool:
@@ -106,6 +109,16 @@ def _valid_utf8(value: str) -> bool:
 
 def _nonblank(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip()) and _valid_utf8(value)
+
+
+def _clock_label(value: object) -> bool:
+    return (_nonblank(value) and 1 <= len(value) <= 64 and CONTROL_CHARS.search(value) is None)
+
+
+def _prior_clock(value: object) -> bool:
+    return (isinstance(value, dict) and set(value) == {'label', 'step_offset'}
+            and _clock_label(value['label'])
+            and _safe_nonneg_int(value['step_offset']) and int(value['step_offset']) >= 1)
 
 
 def _identifier(value: str) -> bool:
@@ -135,11 +148,29 @@ def _coverage(value: object) -> bool:
 
 
 def _position(value: object) -> bool:
-    return (isinstance(value, dict) and set(value) == POSITION_FIELDS
-            and _matches(ALIAS, value['session']) and _nonblank(value['actor']) and _safe_nonneg_int(value['step'])
+    if not isinstance(value, dict) or not POSITION_REQUIRED <= set(value) <= POSITION_FIELDS:
+        return False
+    if 'clock_label' in value and 'prior_clock' in value:
+        return False
+    if 'clock_label' in value and not _clock_label(value['clock_label']):
+        return False
+    if 'prior_clock' in value and not _prior_clock(value['prior_clock']):
+        return False
+    return (_matches(ALIAS, value['session']) and _nonblank(value['actor']) and _safe_nonneg_int(value['step'])
             and isinstance(value['order'], list) and len(value['order']) == 3
             and _safe_nonneg_int(value['order'][0]) and _valid_utf8(value['order'][1])
             and _safe_nonneg_int(value['order'][2]))
+
+
+def _frame_clocks(value: object, cited_sources: set[str] | None = None) -> bool:
+    if not isinstance(value, dict):
+        return False
+    for frame_id, label in value.items():
+        if not _matches(SOURCE, frame_id) or not _clock_label(label):
+            return False
+        if cited_sources is not None and frame_id not in cited_sources:
+            return False
+    return True
 
 
 def _tags(value: object) -> bool:
@@ -153,33 +184,35 @@ def _scope(value: object) -> bool:
                     for k, v in value.items()))
 
 
-def _when(value: object) -> bool:
-    return (isinstance(value, dict) and set(value) == {'note', 'requires'} and _nonblank(value['note'])
-            and isinstance(value['requires'], dict) and len(value['requires']) <= 8
-            and all(_matches(AXIS, k) and k not in ('game', 'world', 'lineage') and _matches(ASCII, v)
-                    for k, v in value['requires'].items()))
-
-
-def _links(value: object, end: str, owner: str, public) -> bool:
-    """Distinct typed links to other records, each end passing the predicate `public`."""
+def _links(value: object, end: str, owner: str, public, *, delivered_keys=None, own_key: str | None = None) -> bool:
+    """Distinct typed links to other records (or `state_key`s for outgoing `depends_on`)."""
     if not isinstance(value, list):
         return False
     pairs = set()
     for link in value:
         if (not isinstance(link, dict) or set(link) != {'rel', end} or not _member(link['rel'], RELATIONS)
-                or not isinstance(link[end], str) or link[end] == owner or not public(link[end])):
+                or not isinstance(link[end], str) or link[end] == owner):
             return False
-        pairs.add((link['rel'], link[end]))
+        target = link[end]
+        if end == 'target' and link['rel'] == 'depends_on' and delivered_keys is not None:
+            if target == own_key:
+                return False
+            if not (public(target) or delivered_keys(target)):
+                return False
+        elif not public(target):
+            return False
+        pairs.add((link['rel'], target))
     return len(pairs) == len(value)
 
 
-def _record(value: dict, public, history) -> bool:
+def _record(value: dict, public, history, *, delivered_keys=None) -> bool:
     """The fields articles and facts share, checked against predicates for the public set `P` and the public history
     set `H`. A world-bound record of unknown lineage is always delivered `unverified_branch`."""
     owner = value['id']
     if not _matches(IDENTIFIER, owner):
         return False
     bound = isinstance(value['scope'], dict) and 'world' in value['scope']
+    own_key = value.get('state_key') if isinstance(value.get('state_key'), str) else None
 
     def others(other: str) -> bool:
         return other != owner and public(other)
@@ -189,11 +222,12 @@ def _record(value: dict, public, history) -> bool:
             and _member(value['lifecycle_state'], LIFECYCLE_STATES) and all(type(value[flag]) is bool for flag in FLAGS)
             and (value['branch_relation'] != 'unknown' or value['unverified_branch'] is True)
             and _distinct(value['stale_citations'], history)
-            and _links(value['links'], 'target', owner, public) and _links(value['backlinks'], 'source', owner, public)
+            and _links(value['links'], 'target', owner, public, delivered_keys=delivered_keys, own_key=own_key)
+            and _links(value['backlinks'], 'source', owner, public)
             and _distinct(value['shadowed_by'], others) and _distinct(value['contradicted_by'], others))
 
 
-def _article(value: object, facts, public, history, version: int) -> bool:
+def _article(value: object, facts, public, history, version: int, *, delivered_keys=None) -> bool:
     """An article whose revision `<slug>@vM` is no later than the file's version `vN` (M <= N)."""
     if not isinstance(value, dict) or set(value) != ARTICLE_FIELDS:
         return False
@@ -203,20 +237,38 @@ def _article(value: object, facts, public, history, version: int) -> bool:
             and isinstance(value['body'], list) and bool(value['body'])
             and all(isinstance(c, dict) and set(c) == {'text', 'facts'} and _nonblank(c['text'])
                     and _distinct(c['facts'], facts, nonempty=True) for c in value['body'])
-            and _record(value, public, history))
+            and _record(value, public, history, delivered_keys=delivered_keys))
 
 
-def _fact(value: object, articles, public, history) -> bool:
+def _fact(value: object, articles, public, history, *, delivered_keys=None) -> bool:
     if not isinstance(value, dict) or not FACT_REQUIRED <= set(value) <= FACT_FIELDS:
         return False
     bound = isinstance(value['scope'], dict) and 'world' in value['scope']
-    return (_member(value['claim_kind'], CLAIM_KINDS) and _member(value['evidence_basis'], EVIDENCE_BASES)
-            and (value['claim_kind'] != 'instance_state' or bound)
-            and _nonblank(value['text']) and ('subject' not in value or _nonblank(value['subject']))
-            and ('when' not in value or _when(value['when'])) and _position(value['seen'])
+    kind = value['statement_kind']
+    if not _member(kind, STATEMENT_KINDS):
+        return False
+    if kind == 'state' and (not bound or 'state_key' not in value):
+        return False
+    if 'state_key' in value:
+        if not bound or kind not in ('state', 'synthesis') or not _matches(IDENTIFIER, value['state_key']):
+            return False
+    if 'anchor' in value:
+        if (not bound or not _matches(IDENTIFIER, value['anchor'])
+                or value['anchor'] == value.get('state_key')
+                or 'anchor_display' not in value or not _nonblank(value['anchor_display'])):
+            return False
+    elif 'anchor_display' in value:
+        return False
+    if 'depiction_source_id' in value:
+        if not _matches(SOURCE, value['depiction_source_id']):
+            return False
+        if not isinstance(value['citation_source_ids'], list) or value['depiction_source_id'] not in value['citation_source_ids']:
+            return False
+    return (_nonblank(value['text']) and ('subject' not in value or _nonblank(value['subject']))
+            and ('when' not in value or _nonblank(value['when'])) and _position(value['seen'])
             and _distinct(value['cited_by_articles'], articles)
             and _distinct(value['citation_source_ids'], lambda s: SOURCE.fullmatch(s) is not None, nonempty=True)
-            and _record(value, public, history))
+            and _record(value, public, history, delivered_keys=delivered_keys))
 
 
 def _history(value: object, articles: set[str], facts: set[str], revisions: dict[str, int]) -> bool:
@@ -247,25 +299,17 @@ def _history(value: object, articles: set[str], facts: set[str], revisions: dict
     return True
 
 
-def _constraint(record: dict) -> dict:
-    """A record's `scope` joined with its `when.requires`. Delivered world-bound records all hold `world: null`, so
-    two of them agree on `world`: they are bound to the one world being played."""
-    return {**record['scope'], **record.get('when', {}).get('requires', {})}
-
-
 def _classified(records: list[dict], links: set[tuple[str, str, str]]) -> tuple[dict, dict]:
-    """`shadowed_by` and `contradicted_by` as the scoping contract's table derives them from the delivered
-    `contradicts` pairs: disjoint constraints neither shadow nor conflict; compatible constraints with comparable,
-    unequal scopes let the specific record shadow the general one; equal or incomparable scopes conflict."""
+    """`shadowed_by` and `contradicted_by` derived from delivered `contradicts` pairs."""
     by_id = {r['id']: r for r in records}
     shadowed: dict[str, set[str]] = {r['id']: set() for r in records}
     contradicted: dict[str, set[str]] = {r['id']: set() for r in records}
     for pair in {frozenset((source, target)) for source, rel, target in links if rel == 'contradicts'}:
         a, b = (by_id[i] for i in sorted(pair))
-        left, right = _constraint(a), _constraint(b)
+        left, right = a['scope'], b['scope']
         if any(left[k] != right[k] for k in left.keys() & right.keys()):
             continue
-        general, specific = a['scope'].items(), b['scope'].items()
+        general, specific = left.items(), right.items()
         if general < specific:
             shadowed[a['id']].add(b['id'])
         elif specific < general:
@@ -277,15 +321,28 @@ def _classified(records: list[dict], links: set[tuple[str, str, str]]) -> tuple[
 
 
 def _derived(articles: list[dict], facts: list[dict]) -> bool:
-    """The derived fields agree with what they derive from: `cited_by_articles` with citations, `backlinks` with
-    `links`, `shadowed_by`, `contradicted_by` and `lifecycle_state` with the classified `contradicts` pairs, and an
-    article's inherited flags with the facts it cites (an article is no more certain than its facts, and citing a
-    contested fact makes it contested)."""
+    """The derived fields agree with what they derive from: `cited_by_articles`, `backlinks` (including expanded
+    `state_key` `depends_on` targets), `shadowed_by`, `contradicted_by`, `lifecycle_state`, and inherited
+    `unverified_branch` on articles."""
     records = articles + facts
-    links = {(r['id'], link['rel'], link['target']) for r in records for link in r['links']}
-    if links != {(back['source'], back['rel'], r['id']) for r in records for back in r['backlinks']}:
+    by_state_key: dict[str, set[str]] = defaultdict(set)
+    for f in facts:
+        if 'state_key' in f:
+            by_state_key[f['state_key']].add(f['id'])
+    expected_backlinks: set[tuple[str, str, str]] = set()
+    record_links: set[tuple[str, str, str]] = set()
+    for r in records:
+        for link in r['links']:
+            rel, target = link['rel'], link['target']
+            if rel == 'depends_on' and target in by_state_key:
+                for fid in by_state_key[target]:
+                    expected_backlinks.add((r['id'], rel, fid))
+            else:
+                expected_backlinks.add((r['id'], rel, target))
+                record_links.add((r['id'], rel, target))
+    if expected_backlinks != {(back['source'], back['rel'], r['id']) for r in records for back in r['backlinks']}:
         return False
-    shadowed, contradicted = _classified(records, links)
+    shadowed, contradicted = _classified(records, record_links)
     if any(set(r['shadowed_by']) != shadowed[r['id']] or set(r['contradicted_by']) != contradicted[r['id']]
            for r in records):
         return False
@@ -296,8 +353,7 @@ def _derived(articles: list[dict], facts: list[dict]) -> bool:
         cited = [by_id[f] for claim in a['body'] for f in claim['facts']]
         for f in cited:
             citing[f['id']].add(a['id'])
-        if (a['condition_unverified'] is not any(f['condition_unverified'] for f in cited)
-                or (any(f['unverified_branch'] for f in cited) and a['unverified_branch'] is not True)):
+        if any(f['unverified_branch'] for f in cited) and a['unverified_branch'] is not True:
             return False
         if any(f['id'] in contested for f in cited):
             contested.add(a['id'])
@@ -315,8 +371,6 @@ def status_of(record: dict) -> list[str]:
         markers.append('unverified_branch')
     if record['needs_review'] is True:
         markers.append('needs_review')
-    if record['condition_unverified'] is True:
-        markers.append('condition_unverified')
     return markers
 
 
@@ -332,15 +386,21 @@ def _clip_snippet(text: str, limit: int = SNIPPET_LIMIT) -> str:
     return text[:limit - 1].rstrip() + '…'
 
 
-def _hit(record: dict, via: str) -> dict:
-    """Compact `player-knowledge/3` query hit for one delivered article or fact."""
+def _hit(record: dict, via: str, *, snippet: str | None = None) -> dict:
+    """Compact `player-knowledge/4` query hit for one delivered article or fact."""
     if 'body' in record:
         hit = dict(id=record['id'], kind='article', revision=record['revision'], title=record['title'],
-                   snippet=_clip_snippet(record['lead']), tags=list(record['tags']), via=via)
+                   snippet=_clip_snippet(snippet if snippet is not None else record['lead']),
+                   tags=list(record['tags']), via=via)
     else:
-        hit = dict(id=record['id'], kind='fact', subject=record.get('subject'), claim_kind=record['claim_kind'],
-                   scope=copy.deepcopy(record['scope']), snippet=_clip_snippet(record['text']),
+        hit = dict(id=record['id'], kind='fact', subject=record.get('subject'),
+                   statement_kind=record['statement_kind'],
+                   scope=copy.deepcopy(record['scope']),
+                   snippet=_clip_snippet(snippet if snippet is not None else record['text']),
                    cited_by_articles=sorted(set(record['cited_by_articles']))[:HIT_CITED_BY_LIMIT], via=via)
+        for field in ('when', 'state_key', 'anchor', 'anchor_display', 'depiction_source_id'):
+            if field in record:
+                hit[field] = record[field]
     status = status_of(record)
     if status:
         hit['status'] = status
@@ -348,7 +408,7 @@ def _hit(record: dict, via: str) -> dict:
 
 
 def query_hit(value: object, version: object) -> bool:
-    """One closed compact `player-knowledge/3` query hit for `version`."""
+    """One closed compact `player-knowledge/4` query hit for `version`."""
     number = version_number(version)
     if number is None or not isinstance(value, dict):
         return False
@@ -363,12 +423,30 @@ def query_hit(value: object, version: object) -> bool:
                 and _tags(value['tags']) and _member(value['via'], HIT_VIA)
                 and ('status' not in value or _valid_status(value['status'])))
     if kind == 'fact':
-        if not FACT_HIT_REQUIRED <= set(value) <= (FACT_HIT_REQUIRED | {'status'}):
+        if not FACT_HIT_REQUIRED <= set(value) <= (FACT_HIT_REQUIRED | FACT_HIT_OPTIONAL):
+            return False
+        bound = isinstance(value['scope'], dict) and 'world' in value['scope']
+        sk = value['statement_kind']
+        if not _member(sk, STATEMENT_KINDS):
+            return False
+        if sk == 'state' and (not bound or 'state_key' not in value):
+            return False
+        if 'state_key' in value and (not bound or sk not in ('state', 'synthesis') or not _matches(IDENTIFIER, value['state_key'])):
+            return False
+        if 'anchor' in value:
+            if (not bound or not _matches(IDENTIFIER, value['anchor'])
+                    or value['anchor'] == value.get('state_key')
+                    or 'anchor_display' not in value or not _nonblank(value['anchor_display'])):
+                return False
+        elif 'anchor_display' in value:
+            return False
+        if 'when' in value and not _nonblank(value['when']):
+            return False
+        if 'depiction_source_id' in value and not _matches(SOURCE, value['depiction_source_id']):
             return False
         return (_matches(IDENTIFIER, value['id'])
                 and (value['subject'] is None or _nonblank(value['subject']))
-                and _member(value['claim_kind'], CLAIM_KINDS) and _scope(value['scope'])
-                and (value['claim_kind'] != 'instance_state' or 'world' in value['scope'])
+                and _scope(value['scope'])
                 and _nonblank(value['snippet']) and len(value['snippet']) <= SNIPPET_LIMIT
                 and _distinct(value['cited_by_articles'], _identifier)
                 and value['id'] not in value['cited_by_articles']
@@ -376,7 +454,7 @@ def query_hit(value: object, version: object) -> bool:
                 and value['cited_by_articles'] == sorted(value['cited_by_articles'])
                 and _member(value['via'], HIT_VIA)
                 and ('status' not in value or _valid_status(value['status']))
-                and ('world' in value['scope'] or 'unverified_branch' not in value.get('status', ())))
+                and (bound or 'unverified_branch' not in value.get('status', ())))
     return False
 
 
@@ -388,8 +466,8 @@ def delivered_record(value: object, version: object) -> bool:
     if number is None or not isinstance(value, dict):
         return False
     if 'body' in value:
-        return _article(value, _identifier, _identifier, _historical, number)
-    return _fact(value, _identifier, _identifier, _historical)
+        return _article(value, _identifier, _identifier, _historical, number, delivered_keys=_identifier)
+    return _fact(value, _identifier, _identifier, _historical, delivered_keys=_identifier)
 
 
 def _valid(value: object) -> bool:
@@ -397,10 +475,11 @@ def _valid(value: object) -> bool:
         return False
     if not all(isinstance(value[name], list) for name in ('articles', 'facts')):
         return False
-    # The empty file names no version, commit, repository, coverage, record or history.
+    # The empty file names no version, commit, repository, coverage, frame_clocks, record or history.
     if value['version'] is None:
         return (value['commit'] is None and value['repository_id'] is None and value['coverage'] is None
-                and value['articles'] == [] and value['facts'] == [] and value['history'] == EMPTY_HISTORY)
+                and value['frame_clocks'] == {} and value['articles'] == [] and value['facts'] == []
+                and value['history'] == EMPTY_HISTORY)
     if version_number(value['version']) is None or not _matches(COMMIT, value['commit']):
         return False
     if not _matches(COMMIT, value['repository_id']) or not _coverage(value['coverage']):
@@ -411,6 +490,10 @@ def _valid(value: object) -> bool:
     articles, facts = {a['id'] for a in value['articles']}, {f['id'] for f in value['facts']}
     if len(articles | facts) != len(records):
         return False
+    delivered_keys = {f['state_key'] for f in value['facts'] if isinstance(f.get('state_key'), str)}
+    public = articles | facts
+    if delivered_keys & public:
+        return False
     # Only well-formed revisions enter the map; an article with any other `revision` fails its own check below.
     revisions = {parts[0]: parts[1] for a in value['articles']
                  if (parts := revision_parts(a.get('revision'))) is not None}
@@ -418,10 +501,21 @@ def _valid(value: object) -> bool:
         return False
     history = value['history']
     public_history = set(history['replaced']) | set(history['ended']) | set(history['retracted'])
-    public = articles | facts
+    if delivered_keys & public_history:
+        return False
+    cited_sources = {
+        src for f in value['facts']
+        if isinstance(f.get('citation_source_ids'), list)
+        for src in f['citation_source_ids']
+        if isinstance(src, str)
+    }
+    if not _frame_clocks(value['frame_clocks'], cited_sources):
+        return False
     number = version_number(value['version'])
-    return (all(_article(a, facts, public.__contains__, public_history, number) for a in value['articles'])
-            and all(_fact(f, articles, public.__contains__, public_history) for f in value['facts'])
+    return (all(_article(a, facts, public.__contains__, public_history, number,
+                         delivered_keys=delivered_keys.__contains__) for a in value['articles'])
+            and all(_fact(f, articles, public.__contains__, public_history,
+                          delivered_keys=delivered_keys.__contains__) for f in value['facts'])
             and _derived(value['articles'], value['facts']))
 
 
@@ -444,14 +538,21 @@ class Knowledge:
         self.value = value
         self.records = value['articles'] + value['facts']
         self._index = [_weighted_terms(r) for r in self.records]
+        self._trigrams = [_record_trigrams(r) for r in self.records]
         self._position = {r['id']: i for i, r in enumerate(self.records)}
         self._revisions = {a['revision']: a for a in value['articles']}
+        self._state_keys: dict[str, list[dict]] = defaultdict(list)
+        self._state_key_positions: dict[str, list[int]] = defaultdict(list)
+        for i, r in enumerate(self.records):
+            if 'body' not in r and 'state_key' in r:
+                self._state_keys[r['state_key']].append(r)
+                self._state_key_positions[r['state_key']].append(i)
         self._titles: dict[str, dict] = {}
         self._casefolded_titles: dict[str, dict] = {}
         for a in value['articles']:
             self._titles.setdefault(a['title'], a)
             self._casefolded_titles.setdefault(a['title'].casefold(), a)
-        self._neighbours = _graph(self.records, self._position)
+        self._neighbours = _graph(self.records, self._position, self._state_key_positions)
 
     def _result(self, identity: str, resolution: str, resolved_from: str | None, records: list[dict]) -> dict:
         return dict(schema=RESULT, version=self.value['version'], grants_authority=False, identity=identity,
@@ -462,8 +563,7 @@ class Knowledge:
                     resolution='query', resolved_from=None, hits=hits)
 
     def read(self, identity: str, *, by: str = 'any') -> dict:
-        """One delivered record, or where an old identifier went. Rows are tried in this order, so an ID or slug
-        wins over an equal title, and exact literal title wins over a casefolded fallback; `by='id'` skips titles."""
+        """One delivered record, where an old identifier went, or all current readings for a `state_key`."""
         if by not in READ_BY:
             raise PlayerError('Knowledge read `by` must be "any" or "id"')
         history = self.value['history']
@@ -480,6 +580,8 @@ class Knowledge:
         for resolution in ('ended', 'retracted'):
             if identity in history[resolution]:
                 return self._result(identity, resolution, identity, [])
+        if identity in self._state_keys:
+            return self._result(identity, 'state_key', None, self._state_keys[identity])
         if by == 'any':
             if identity in self._titles:
                 return self._result(identity, 'title', None, [self._titles[identity]])
@@ -489,22 +591,45 @@ class Knowledge:
         return self._result(identity, 'unknown', None, [])
 
     def query(self, query: str) -> dict:
-        """`bm25_1hop`: BM25 seeds lift their graph neighbours one hop, best first. A record need not hold every
-        term, and a record no query term reaches through a seed is never returned."""
+        """`bm25_1hop` with deterministic pre-read shadow filtering (preserving current `contested`) and
+        zero-hit-only char-trigram fallback (`via: "fuzzy"`)."""
         scores = self._bm25(query)
-        order = sorted((-s, i) for i, s in enumerate(self._one_hop(query, scores)) if s > 0)
-        hits = [_hit(self.records[i], 'match' if scores[i] > 0 else 'hop') for _, i in order[:QUERY_LIMIT]]
+        combined = self._one_hop(query, scores)
+        order = sorted(
+            (-s, i) for i, s in enumerate(combined)
+            if s > 0 and not self.records[i]['shadowed_by']
+        )
+        if order:
+            hits = [_hit(self.records[i], 'match' if scores[i] > 0 else 'hop') for _, i in order[:QUERY_LIMIT]]
+            return self._query_result(query, hits)
+        q_tri = _trigrams(query)
+        if not q_tri:
+            return self._query_result(query, [])
+        fuzzy = []
+        for i, rec_tri in enumerate(self._trigrams):
+            if self.records[i]['shadowed_by'] or not rec_tri:
+                continue
+            union = len(q_tri | rec_tri)
+            sim = len(q_tri & rec_tri) / union if union else 0.0
+            if sim >= FUZZY_THRESHOLD:
+                fuzzy.append((-sim, i))
+        fuzzy.sort()
+        hits = [_hit(self.records[i], 'fuzzy') for _, i in fuzzy[:QUERY_LIMIT]]
         return self._query_result(query, hits)
 
     def _one_hop(self, query: str, scores: list[float] | None = None) -> list[float]:
         if scores is None:
             scores = self._bm25(query)
         combined = list(scores)
-        seeds = sorted((-s, i) for i, s in enumerate(scores) if s > 0 and self._neighbours[i])[:SEEDS]
+        seeds = sorted(
+            (-s, i) for i, s in enumerate(scores)
+            if s > 0 and self._neighbours[i] and not self.records[i]['shadowed_by']
+        )[:SEEDS]
         for negative, u in seeds:
             spread = HOP * -negative / math.sqrt(len(self._neighbours[u]))
             for v in self._neighbours[u]:
-                combined[v] += spread * (HOP_ARTICLE if 'body' in self.records[v] else HOP_FACT)
+                if not self.records[v]['shadowed_by']:
+                    combined[v] += spread * (HOP_ARTICLE if 'body' in self.records[v] else HOP_FACT)
         return combined
 
     def _bm25(self, query: str) -> list[float]:
@@ -524,18 +649,16 @@ class Knowledge:
         return scores
 
 
-# Ranked search: BM25 over casefolded word tokens, a title or subject counting three times a body or fact
-# word and a lead or tag twice; an underscore or hyphen separates words, so `crafting_recipe` is `crafting` and
-# `recipe`. `claim_kind` is not indexed. Standard BM25 constants; no tuning data exists.
-# One hop (`bm25_1hop`, #924, measured by #936): the SEEDS best records with a positive score and a neighbour
-# each add HOP * score / sqrt(degree) to every neighbour, times HOP_ARTICLE for an article and HOP_FACT for a
-# fact, over the undirected graph of claim citations and typed links. Ties keep delivered order. The first
-# QUERY_LIMIT are returned: #936 measured the rank-order coverage skip and dropped it, because it removed every
-# direct-answer fact that its citing article's prose omits.
+# Ranked search: BM25 over casefolded word tokens, a title or subject counting three times a body, fact or `when`
+# word and a lead, tag or resolved `anchor_display` twice. `id`, `state_key`, `statement_kind`, and `clock_label`
+# remain display-only. One hop (`bm25_1hop`, #924, #936, #1023) walks claim citations and non-`contradicts` links
+# (resolving `depends_on` `state_key` targets to current readings). Zero-hit queries fall back to char-trigram
+# similarity (`via: "fuzzy"`).
 QUERY_LIMIT = 10
 SEEDS = 10
 HOP, HOP_ARTICLE, HOP_FACT = 0.35, 1.25, 0.70
 BM25_K1, BM25_B = 1.2, 0.75
+FUZZY_THRESHOLD = 0.15
 _WORD = re.compile(r'[^\W_]+')
 _SUFFIXES = (('ies', 'y'), ('ing', ''), ('ed', ''), ('s', ''))
 
@@ -552,12 +675,32 @@ def terms_of(text: str) -> list[str]:
     return [_fold(w) for w in _WORD.findall(text.casefold())]
 
 
+def _trigrams(text: str) -> set[str]:
+    compact = ' '.join(_WORD.findall(text.casefold()))
+    if len(compact) < 3:
+        return {compact} if compact else set()
+    return {compact[i:i + 3] for i in range(len(compact) - 2)}
+
+
+def _record_trigrams(record: dict) -> set[str]:
+    tags = ' '.join(record['tags'])
+    if 'body' in record:
+        surface = f"{record['title']} {record['lead']} {tags} {' '.join(c['text'] for c in record['body'])}"
+    else:
+        surface = f"{record.get('subject', '')} {record.get('anchor_display', '')} {tags} {record['text']} {record.get('when', '')}"
+    return _trigrams(surface)
+
+
 def _weighted_terms(record: dict) -> tuple[dict[str, int], int]:
     tags = ' '.join(record['tags'])
     if 'body' in record:
         fields = ((3, record['title']), (2, f"{record['lead']} {tags}"), (1, ' '.join(c['text'] for c in record['body'])))
     else:
-        fields = ((3, record.get('subject', '')), (2, tags), (1, record['text']))
+        fields = (
+            (3, record.get('subject', '')),
+            (2, f"{tags} {record.get('anchor_display', '')}"),
+            (1, f"{record['text']} {record.get('when', '')}"),
+        )
     weights: dict[str, int] = {}
     length = 0
     for weight, text in fields:
@@ -567,12 +710,22 @@ def _weighted_terms(record: dict) -> tuple[dict[str, int], int]:
     return weights, length
 
 
-def _graph(records: list[dict], position: dict[str, int]) -> list[list[int]]:
-    """Undirected neighbours by delivered position: an article and each fact it cites, a record and each link target."""
+def _graph(records: list[dict], position: dict[str, int],
+           state_key_positions: dict[str, list[int]] | None = None) -> list[list[int]]:
+    """Undirected neighbours by delivered position: claim citations and non-`contradicts` links (expanding
+    `depends_on` `state_key` targets to every delivered reading carrying that key)."""
     neighbours: list[set[int]] = [set() for _ in records]
+    key_pos = state_key_positions or {}
     for i, record in enumerate(records):
         targets = {position[f] for claim in record.get('body', ()) for f in claim['facts']}
-        targets |= {position[link['target']] for link in record['links']}
+        for link in record['links']:
+            if link['rel'] == 'contradicts':
+                continue
+            target = link['target']
+            if link['rel'] == 'depends_on' and target in key_pos:
+                targets.update(key_pos[target])
+            elif target in position:
+                targets.add(position[target])
         targets.discard(i)
         for j in targets:
             neighbours[i].add(j)
