@@ -75,31 +75,35 @@ async function workspace(t) {
   for (const name of ['trace/frames', 'knowledge', 'submissions', 'drafts', 'scratch', 'workbench']) await mkdir(join(root, name), { recursive: true });
   await writeNodeFile(join(root, 'trace/frames/s-2.png'), png);
   await writeNodeFile(join(root, 'brief.md'), '# Session brief');
-  await writeNodeFile(join(root, 'knowledge/facts.jsonl'), '');
   return root;
 }
 
-// A minimal curator-knowledge/5 export at v0 and a validation context with one frame in the window.
+// A minimal curator-knowledge/5 backing snapshot at v0 and a validation context outside workspace/.
 const SEALED = '0123456789abcdef0123456789abcdef';
 const FRAME = `${SEALED}-1`;
-async function knowledge(root) {
+async function knowledge(root, t = null) {
   await stageWorkbench(root);
-  await writeNodeFile(join(root, 'knowledge/knowledge.json'), JSON.stringify({ schema: 'curator-knowledge/5', game: 'g' }));
-  await writeNodeFile(join(root, 'knowledge/provenance.json'), JSON.stringify({ frames: {}, frame_clocks: {}, sessions: {}, branches: {}, restores: [], last_admission: null }));
-  await writeNodeFile(join(root, 'knowledge/validation-context.json'), JSON.stringify({
+  const backing = `${root}.backing`;
+  if (t) t.after(() => rm(backing, { recursive: true, force: true }));
+  await mkdir(backing, { recursive: true });
+  await writeNodeFile(join(backing, 'facts.jsonl'), '');
+  await writeNodeFile(join(backing, 'knowledge.json'), JSON.stringify({ schema: 'curator-knowledge/5', game: 'g' }));
+  await writeNodeFile(join(backing, 'provenance.json'), JSON.stringify({ frames: {}, frame_clocks: {}, sessions: {}, branches: {}, restores: [], last_admission: null }));
+  await writeNodeFile(join(backing, 'validation-context.json'), JSON.stringify({
     base_version: 'v0', session_id: 'session', reserved_ids: [], reserved_state_keys: [], reserved_sessions: { sessions: {}, branches: {}, restores: [] },
     session_kind: 'admission', window_frames: { [FRAME]: { session: 's1', actor: '001', step: 1, order: [1, '001', 1] } },
     session_labels: { [SEALED]: { name: 's1', world: null, lineage: null, admission: null, context: {} } }, declared_axes: [] }));
+  return backing;
 }
 const addFact = (id, base) => JSON.stringify({ schema: 'curator-submission/3', base_version: base, summary: `add ${id}`,
   changes: [{ op: 'add_fact', fact: { schema: 'curator-fact/6', record: 'fact', id, statement_kind: 'observation',
     tags: [], text: 'An observed rule.', scope: {}, links: [], citations: [FRAME] } }] });
 const sha256 = async path => createHash('sha256').update(await readFile(path)).digest('hex');
-const validatorOptions = { python: PYTHON, env: { PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1' }, timeoutSeconds: 60 };
+const validatorOptions = backing => ({ python: PYTHON, env: { PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1', CURATOR_KNOWLEDGE_BACKING: backing }, timeoutSeconds: 60 });
 
 async function session(t, replies, overrides = {}, prepare = undefined) {
   const root = await workspace(t);
-  await prepare?.(root);
+  const backing = await prepare?.(root);
   const events = [], payloads = [];
   let index = 0;
   const fetch = async (url, init) => {
@@ -107,9 +111,11 @@ async function session(t, replies, overrides = {}, prepare = undefined) {
     const next = replies[index++];
     return typeof next === 'function' ? next(init) : next;
   };
+  const baseEnv = { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin',
+    ...(backing ? { CURATOR_KNOWLEDGE_BACKING: backing } : {}) };
   const result = await runCurator({ configuration: configuration(), systemPrompt: 'frozen prompt', brief: '# Session brief', cwd: root,
-    env: { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin' }, fetch,
-    ...overrides, onEvent: event => { events.push(event); overrides.onEvent?.(event); } });
+    ...overrides, env: { ...baseEnv, ...(overrides.env ?? {}), ...(backing && !overrides.env?.CURATOR_KNOWLEDGE_BACKING ? { CURATOR_KNOWLEDGE_BACKING: backing } : {}) }, fetch,
+    onEvent: event => { events.push(event); overrides.onEvent?.(event); } });
   return { root, events, payloads, result };
 }
 
@@ -278,11 +284,11 @@ test('validate_submission reports a validator that cannot run without leaking it
 test('validate_submission runs the real validator over the ordered prefix', async t => {
   requirePythonForValidator();
   const root = await workspace(t);
-  await knowledge(root);
+  const backing = await knowledge(root);
   await writeTool(root, { path: 'submissions/01/submission.json', content: addFact('f1', 'v7') });
   await writeTool(root, { path: 'submissions/02/submission.json', content: addFact('f2', 'v0') });
   await writeTool(root, { path: 'submissions/03/submission.json', content: addFact('f3', 'v1') });
-  const rejectedFirst = await validateSubmission(root, { submission: '02' }, validatorOptions);
+  const rejectedFirst = await validateSubmission(root, { submission: '02' }, validatorOptions(backing));
   assert.equal(rejectedFirst.isError, false);
   assert.deepEqual([rejectedFirst.validation.ok, rejectedFirst.validation.all_passed], [true, false]);
   assert.deepEqual(rejectedFirst.validation.prefix.map(row => row.status), ['rejected', 'passed']);
@@ -292,7 +298,7 @@ test('validate_submission runs the real validator over the ordered prefix', asyn
   assert.match(text, /- 01: rejected, v0 -> \(no new version\)\n {2}diagnostic: .*based on v7 but the published version is v0/);
   assert.match(text, /- 02: passed, v0 -> v1/);
   // A rejected earlier submission does not advance the version, so 03 (expecting v1) passes after 02.
-  const third = await validateSubmission(root, { submission: '03' }, validatorOptions);
+  const third = await validateSubmission(root, { submission: '03' }, validatorOptions(backing));
   assert.deepEqual(third.validation.prefix.map(row => [row.id, row.status, row.candidate_version]),
     [['01', 'rejected', null], ['02', 'passed', 'v1'], ['03', 'passed', 'v2']]);
 });
@@ -300,9 +306,9 @@ test('validate_submission runs the real validator over the ordered prefix', asyn
 test('validate_submission passes a submission directory name that starts with "-" as a value', async t => {
   requirePythonForValidator();
   const root = await workspace(t);
-  await knowledge(root);
+  const backing = await knowledge(root);
   await writeTool(root, { path: 'submissions/-repair/submission.json', content: addFact('f1', 'v0') });
-  const result = await validateSubmission(root, { submission: '-repair' }, validatorOptions);
+  const result = await validateSubmission(root, { submission: '-repair' }, validatorOptions(backing));
   assert.equal(result.isError, false, result.content[0].text);
   assert.deepEqual([result.validation.submission, result.validation.ok, result.validation.all_passed], ['-repair', true, true]);
   assert.deepEqual(result.validation.prefix.map(row => [row.id, row.status]), [['-repair', 'passed']]);

@@ -449,6 +449,7 @@ export async function runCurator(options) {
         if (event.type !== 'message_end' || event.message.role !== 'assistant') return;
         clearTimeout(requestTimer);
         const message = event.message;
+        pendingAppendedBytes += Buffer.byteLength(JSON.stringify(message));
         const text_ = narration(message.content);
         if (text_.text || text_.omitted_bytes) emit('assistant-text', { request_id: requestId ?? null, ...text_ });
         if (inFlight) {

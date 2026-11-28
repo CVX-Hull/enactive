@@ -39,6 +39,7 @@ TRACE_PACKAGE = Path(__file__).resolve().parents[1]/'trace'
 WRITABLE = ('submissions', 'drafts', 'scratch')
 WORKBENCH_DEPENDENCIES = ('numpy', 'PIL', 'jsonschema', 'jsonschema_specifications', 'referencing', 'attrs', 'rpds')
 PROVIDER_ERROR_EXIT_CODE = 75
+FLEX_DEFERRED_EXIT_CODE = 76
 MAX_SUBMISSIONS_BYTES = 16 << 20
 
 
@@ -408,7 +409,8 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         (record_dir/'manifest.json').write_text(json.dumps(manifest, indent=1, sort_keys=True))
         shutil.copyfile(workspace/'brief.md', record_dir/'brief.md')
         layout = sandbox.Layout(workspace=workspace, home=home, writable=tuple(workspace/n for n in WRITABLE),
-                                tools=(*config.tools, backing, *(r for r in dependencies if r not in config.tools)))
+                                tools=(*config.tools, *(r for r in dependencies if r not in config.tools)),
+                                readable=(backing,))
         env = dict(PYTHONPATH=os.pathsep.join([str(workspace/'workbench'), *map(str, dependencies)]),
                    **config.extra_env)
         env['CURATOR_KNOWLEDGE_BACKING'] = str(backing)
@@ -471,7 +473,10 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         errors.append(f'close-out: {len(survivors)} host processes survived; nothing was collected')
     provider_error = (result is not None and result.stopped is None
                       and result.returncode == PROVIDER_ERROR_EXIT_CODE)
-    aborted = bool(errors) or result is None or result.stopped is not None or (result.returncode != 0 and not provider_error)
+    flex_deferred = (result is not None and result.stopped is None
+                     and result.returncode == FLEX_DEFERRED_EXIT_CODE)
+    prefix_closeout = provider_error or flex_deferred
+    aborted = bool(errors) or result is None or result.stopped is not None or (result.returncode != 0 and not prefix_closeout)
     collectable = result is not None and not survivors
     refused: list[str] = []
     draft_report: dict = {}
@@ -498,20 +503,21 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         aborted = aborted or bool(errors)
         try:
             if drafts is not None and _plain_directory(workspace/'drafts'):
-                draft_report = drafts.collect(workspace/'drafts', session_id, before or {}, age=not aborted and not provider_error)
+                draft_report = drafts.collect(workspace/'drafts', session_id, before or {}, age=not aborted and not prefix_closeout)
         except Exception as exc:  # noqa: BLE001
             errors.append(f'close-out: drafts: {_error(exc)}')
         aborted = aborted or bool(errors)
         gated = record_dir/'submissions'
         if not aborted and gated.is_dir() and not any(r.startswith('submissions:') for r in refused):
             submissions = sorted(path for path in gated.iterdir() if path.is_dir())
-            if provider_error:
+            if prefix_closeout:
                 try:
                     count = _validated_prefix(record_dir, submissions)
                 except OSError as exc:
                     errors.append(f'close-out: validation events: {_error(exc)}')
                     count = 0
-                refused.extend(f'submission {path.name!r}: outside the validated provider-error prefix'
+                kind_label = 'flex-capacity-deferred' if flex_deferred else 'provider-error'
+                refused.extend(f'submission {path.name!r}: outside the validated {kind_label} prefix'
                                for path in submissions[count:])
                 submissions = submissions[:count]
             for submission in submissions:
@@ -536,8 +542,11 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         manifest = dict(schema='container-manifest/1', id=session_id, kind='curator-session', owner_role='curator',
                         inputs={}, pinned={}, budgets={}, lifecycle=dict(state='aborted'), provenance={},
                         retention=dict(policy='session record kept; workspace deleted'))
+    stopped_label = ('provider-error' if provider_error
+                     else 'flex-capacity-deferred' if flex_deferred
+                     else getattr(result, 'stopped', None))
     manifest['lifecycle'] = dict(manifest['lifecycle'], state='aborted' if aborted else 'sealed', ended_wall=time.time(),
-                                 stopped='provider-error' if provider_error else getattr(result, 'stopped', None),
+                                 stopped=stopped_label,
                                  returncode=getattr(result, 'returncode', None),
                                  survivors=survivors, errors=errors, refused=refused)
     if result is not None:

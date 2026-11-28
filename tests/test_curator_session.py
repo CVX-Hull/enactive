@@ -471,9 +471,12 @@ json.dump(data, open(p, 'w'))
     assert repo.provenance()['last_admission']['coverage']['last_step'] == 4
 
 
+@pytest.mark.parametrize('exit_code, expected_stop', [
+    (75, 'provider-error'),
+    (76, 'flex-capacity-deferred'),
+])
 @pytest.mark.parametrize('edited, published', [(None, 2), ('02', 1), ('01', 0)])
-def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world, monkeypatch, edited, published):
-    from harness.curator.session import PROVIDER_ERROR_EXIT_CODE
+def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world, monkeypatch, exit_code, expected_stop, edited, published):
     from harness.curator.validate import validate
 
     repo, traces = world
@@ -482,7 +485,7 @@ def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world,
     def scripted(_argv, layout, *, stdout, extra_env, **_kwargs):
         workspace = layout.workspace
         backing = Path(extra_env['CURATOR_KNOWLEDGE_BACKING'])
-        assert backing in layout.tools
+        assert backing in layout.readable and backing not in layout.tools
         assert not (workspace/'knowledge'/'validation-context.json').exists()
         monkeypatch.setenv('CURATOR_KNOWLEDGE_BACKING', str(backing))
         frame = next(iter(json.loads((backing/'validation-context.json').read_text())['window_frames']))
@@ -503,7 +506,7 @@ def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world,
         if edited:
             path = workspace/'submissions'/edited/'submission.json'
             path.write_text(path.read_text() + '\n')
-        return sandbox.Result(PROVIDER_ERROR_EXIT_CODE, None, 0, 0, 0.1, [])
+        return sandbox.Result(exit_code, None, 0, 0, 0.1, [])
 
     from harness.curator.containers import Drafts
     original_collect = Drafts.collect
@@ -516,7 +519,7 @@ def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world,
     monkeypatch.setattr(Drafts, 'collect', collect)
     result = run_session(repo, traces, SessionConfig(argv=('stand-in',)))
     life = result['manifest']['lifecycle']
-    assert life['state'] == 'sealed' and life['stopped'] == 'provider-error', result
+    assert life['state'] == 'sealed' and life['stopped'] == expected_stop, result
     assert [v['status'] for v in result['verdicts']] == ['published'] * published
     assert result['published_after'] == f'v{published}' and drafts_aged == [False]
     record_dir = repo.state/'sessions'/result['manifest']['id']

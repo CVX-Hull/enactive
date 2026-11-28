@@ -130,3 +130,13 @@ def test_concurrent_prefix_reservations_do_not_overspend(tmp_path, request_body)
     assert len(accepted) == 1
     assert results.count(('spend cap reached', 'prefix-suffix')) == workers - 1
     assert proxy.spent + proxy.reserved <= proxy.cap < proxy.spent + 2 * accepted[0]
+
+
+def test_zero_prompt_tokens_never_seeds_prefix_baseline(tmp_path):
+    proxy = _proxy(tmp_path, cap='10')
+    first = dict(model=MODEL, service_tier='default', stream=True, stream_options=dict(include_usage=True),
+                 max_completion_tokens=100, messages=[dict(role='user', content='hello')])
+    _seed(proxy, first, usage=dict(prompt_tokens=0, completion_tokens=5))
+    second = dict(first, messages=[*first['messages'], dict(role='assistant', content='ok')])
+    amount, mode = _reserve(proxy, second)
+    assert isinstance(amount, Decimal) and mode == 'full-bound'

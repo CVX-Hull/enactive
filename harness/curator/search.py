@@ -75,7 +75,10 @@ def _fields(row: dict, anchor_displays: dict[tuple[str, str], str]) -> tuple[tup
     if row['record'] == 'article':
         return ((3, row['title']), (2, f"{row['lead']} {tags}"),
                 (1, ' '.join(claim['text'] for claim in row['body'])))
-    anchor = row.get('anchor_display') or anchor_displays.get((row['scope'].get('world'), row.get('anchor')), '')
+    anchor_key = row.get('anchor')
+    anchor = (row.get('anchor_display')
+              or anchor_displays.get((row['scope'].get('world'), anchor_key))
+              or (anchor_key.replace('-', ' ') if isinstance(anchor_key, str) else ''))
     return ((3, row.get('subject', '')), (2, f'{tags} {anchor}'), (1, f"{row['text']} {row.get('when', '')}"))
 
 

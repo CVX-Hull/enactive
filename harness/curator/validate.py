@@ -17,8 +17,6 @@ def validate(workspace: Path, submission: str, backing: Path | None = None) -> d
         configured = os.environ.get('CURATOR_KNOWLEDGE_BACKING')
         if configured is not None:
             backing = Path(configured)
-        elif (workspace / 'knowledge' / 'facts.jsonl').is_file():
-            backing = workspace / 'knowledge'
         else:
             raise ValueError('knowledge backing is required')
     knowledge = backing

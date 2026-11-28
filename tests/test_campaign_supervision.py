@@ -497,7 +497,7 @@ def test_a_real_curator_runner_process_exits_promptly_on_sigterm(tmp_path):
     run.mkdir()
     (run/'curator-read.lock').touch()  # a reader is configured; the store does not exist yet
     config = tmp_path/'runner.json'
-    config.write_text(json.dumps(dict(schema='curator-runner-config/1', knowledge_root=str(runtime/'knowledge'/'live'),
+    config.write_text(json.dumps(dict(schema='curator-runner-config/2', knowledge_root=str(runtime/'knowledge'/'live'),
                                       arm='terra', cap_usd='1', upstream='http://127.0.0.1:9', poll_seconds=.2)))
     directory = run/'curator-runner'
     child = subprocess.Popen([sys.executable, '-m', 'tools.curator_host.live_runner', '--run', str(run), '--directory',

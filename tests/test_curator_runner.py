@@ -348,7 +348,7 @@ def test_a_refused_spend_reservation_without_publication_stops_without_blind_ste
     runner = world.runner()
     assert not runner.poll()
     now = status(world)
-    assert now['state'] == 'stopped' and now['stop_reason'] == live.SPEND_REFUSED
+    assert now['state'] == 'stopped' and now['stop_reason'] == live.SPEND_EXHAUSTED
     assert now['examined'][-1]['outcome'] == live.SPEND_REFUSED
     assert runner.cursor == {} and runner.session_failures() == 0
     assert now['covered_prefix']['end'] is None
@@ -467,23 +467,63 @@ def test_interleaved_hygiene_respects_cooldown_backlog_digest_and_two_failure_sh
 
 
 @pytest.mark.parametrize('refusal', [live.SPEND_REFUSED, live.SPEND_EXHAUSTED])
-def test_a_refusal_at_one_step_and_an_exhausted_cap_have_distinct_terminal_reasons(world, refusal):
+def test_a_refusal_at_one_step_and_an_exhausted_cap_both_stop_cleanly_as_spend_exhausted(world, refusal):
     world.reading = read({'001': 1}, ended=('001',))
     world.outcomes = [lambda window: Outcome(None, stop=refusal)]
     runner = world.runner()
     assert not runner.poll()
     assert runner.cursor == {}
-    assert status(world)['stop_reason'] == refusal
-    assert json.loads((world.directory/'stopped.json').read_text())['reason'] == refusal
+    assert status(world)['stop_reason'] == live.SPEND_EXHAUSTED
+    assert json.loads((world.directory/'stopped.json').read_text())['reason'] == live.SPEND_EXHAUSTED
 
 
-def test_a_spend_refusal_keeps_an_already_published_window(world):
+def test_a_spend_refusal_keeps_an_already_published_window_before_stopping_as_spend_exhausted(world):
     world.reading = read({'001': 20})
     world.outcomes = [lambda window: Outcome('sealed', ({'operation': 'submission', 'status': 'published',
                                                        'version': world.publish(window)},),
                                              stop=live.SPEND_REFUSED)]
     runner = world.runner()
-    assert runner.poll() and runner.cursor == {'001': 20}
+    assert not runner.poll()
+    assert runner.cursor == {'001': 20}
+    assert status(world)['stop_reason'] == live.SPEND_EXHAUSTED
+    assert status(world)['covered_prefix']['end']['operation'] == 'op-001-20'
+
+
+def test_hygiene_subcap_exhaustion_does_not_spin_across_idle_polls(tmp_path):
+    world = World(tmp_path/'runner', Settings(trigger_steps=20, ceiling_steps=20, poll_seconds=15, watch_seconds=60))
+    hygiene_calls = []
+
+    def subcap_exhausted(_reading, label):
+        hygiene_calls.append(label)
+        return Outcome(state=None, stop=live.HYGIENE_SUBCAP_EXHAUSTED)
+
+    runner = Runner(
+        world.directory, RUN, snapshot=world.snapshot, session_call=world.session, look=world.look,
+        settings=world.settings, clock=world.clock, sleep=lambda _: None,
+        hygiene_call=subcap_exhausted,
+        hygiene_check=lambda: dict(triggered=True, digest='dig-subcap', reasons=['stale_citations'], counts=dict(stale_citations=1)),
+        hygiene_settings=live.HygieneSettings(min_windows=5, max_unexamined_steps=10),
+    )
+    world.outcomes = ['accepted'] * 5
+    for n in range(1, 6):
+        world.reading = read({'001': 20 * n})
+        assert runner.poll()
+    # 20 idle polls after sub-cap exhaustion must dispatch hygiene at most once (resets 5-window cooldown).
+    for _ in range(20):
+        assert runner.poll()
+    assert len(hygiene_calls) == 1
+    rows = [json.loads(line) for line in (world.directory/'examined.jsonl').read_text().splitlines()]
+    assert len([r for r in rows if r.get('session_kind') == 'hygiene']) == 2
+
+
+def test_flex_deferral_with_validated_prefix_publication_advances_and_continues(world):
+    world.reading = read({'001': 20})
+    world.outcomes = [lambda window: Outcome('sealed', ({'operation': 'submission', 'status': 'published',
+                                                       'version': world.publish(window)},),
+                                             stop=live.FLEX_DEFERRED)]
+    runner = world.runner()
+    assert runner.poll()
+    assert runner.cursor == {'001': 20} and runner.flex_deferrals() == 0
     assert status(world)['covered_prefix']['end']['operation'] == 'op-001-20'
 
 
@@ -1180,7 +1220,7 @@ def test_live_sessions_detect_flex_capacity_deferral_and_hygiene_subcaps(tmp_pat
         return summary(directory, state='aborted', sandbox=dict(survivors=[], returncode=live_runner.FLEX_DEFERRED_EXIT_CODE))
 
     config = live_runner.read_config(
-        runner_config(tmp_path, cap_usd='2.00', service_tier='flex',
+        runner_config(tmp_path, cap_usd='4.00', service_tier='flex',
                       hygiene=dict(pass_cap_usd='0.30', max_spend_share='0.10', max_requests=10, wall_seconds=90)),
         tmp_path/'runtime',
     )
@@ -1201,15 +1241,22 @@ def test_live_sessions_detect_flex_capacity_deferral_and_hygiene_subcaps(tmp_pat
     hygiene_sessions.tools = {}
     hygiene_sessions.model_config = live_runner.session_host_configuration(
         config, hygiene_sessions.prices, Decimal('0.30'), text_only=True, max_requests=10, wall_seconds=90)
+    # With $0.50 cumulative spend out of a $4.00 cap, 10% share is $0.05 (< min_headroom ~0.083) -> not available.
+    closed(tmp_path/'runner'/'sessions'/RUN/'flex-win', '0.50')
+    assert hygiene_sessions.available() is False
+    assert hygiene_sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), 'hyg-too-early').stop == live.HYGIENE_SUBCAP_EXHAUSTED
+    # Once cumulative runner curation spend reaches $2.00, 10% cumulative spend is $0.20 (< $0.30 pass cap).
+    closed(tmp_path/'runner'/'sessions'/RUN/'flex-win', '2.00')
+    assert hygiene_sessions.available() is True
     h_out = hygiene_sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), 'hyg-1')
     assert h_out.stop is None and seen[-1]['session_kind'] == 'hygiene'
-    # 10% of $2.00 cap is $0.20, smaller than $0.30 pass_cap_usd.
     assert seen[-1]['cap'] == Decimal('0.20')
     assert seen[-1]['model_config']['text_only'] is True and seen[-1]['model_config']['max_context_images'] == 0
     assert seen[-1]['model_config']['max_requests'] == 10 and seen[-1]['wall_seconds'] == 90
 
-    # Once hygiene spend reaches 10% share ($0.20), further hygiene returns HYGIENE_SUBCAP_EXHAUSTED.
+    # Once hygiene spend reaches $0.18 of the $0.20 10% cumulative share, further hygiene is unavailable.
     closed(tmp_path/'runner'/'sessions'/'hygiene'/'hyg-1', '0.18')
+    assert hygiene_sessions.available() is False
     h_blocked = hygiene_sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), 'hyg-2')
     assert h_blocked.stop == live.HYGIENE_SUBCAP_EXHAUSTED and len(seen) == 2
 

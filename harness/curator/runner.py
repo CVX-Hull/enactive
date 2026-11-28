@@ -61,9 +61,9 @@ its read, `store-closed` when the run directory holds the custodian's `receipt.j
 `2 consecutive failed sessions`, `3 consecutive snapshots failed or passed their bound`,
 `read refused: no-read-lock` (no reader is configured), `error: <type>` (an unexpected exception
 in the runner itself), or a session's own stop reason: `proxy-revoked` (a charge passed its
-reservation), `spend-reservation-refused` (a window could not reserve spend without a confirmed
-close-out publication), `spend-cap-exhausted` (the runner's cap or session preflight headroom is
-spent), `flex-capacity-deferred` (consecutive non-real-time capacity deferrals hit their bound),
+reservation), `spend-cap-exhausted` (the runner's cap, session preflight headroom, or a refused
+reservation stopped the runner after recording any confirmed close-out publication),
+`flex-capacity-deferred` (consecutive non-real-time capacity deferrals hit their bound),
 `proxy-unsettled` (requests the proxy could not settle), `cleanup-unconfirmed` (host processes
 survived, or the host ran and its result is missing) and `host-unavailable: <why>`.
 
@@ -508,7 +508,7 @@ class Runner:
         count = 0
         for row in reversed(self._ends()):
             if row.get('session_kind') == 'hygiene':
-                if row['outcome'] not in (*NOT_RUN, 'interrupted'):
+                if row['outcome'] == HYGIENE_SUBCAP_EXHAUSTED or row['outcome'] not in (*NOT_RUN, 'interrupted'):
                     break
                 continue
             if row['label'] in confirmed_labels:
@@ -816,6 +816,13 @@ class Runner:
             return None
         if self.hygiene_failures() >= hs.max_consecutive_failures:
             return None
+        available = getattr(self.hygiene_call, 'available', None)
+        if callable(available):
+            try:
+                if not available():
+                    return None
+            except Exception:  # noqa: BLE001 - a hygiene preflight error never halts ingestion
+                return None
         cursor = self.cursor
         backlog = sum(max(0, len(a.operations) - cursor.get(a.directory, 0)) for a in read.actors)
         if backlog > hs.max_unexamined_steps:
@@ -897,20 +904,23 @@ class Runner:
         self._look()  # once after it returns
         how = classify(outcome)
         self._end(label, outcome, how)
-        if outcome.stop == FLEX_DEFERRED and how[0] == FLEX_DEFERRED:
-            if self.flex_deferrals() >= FLEX_DEFERRALS:
-                self._finish('stopped', FLEX_DEFERRED)
-                return False
-            self.state = 'polling'
-            self._write_status()
-            return True
-        if outcome.stop == SPEND_REFUSED:
-            confirmed, _, _ = self.publications()
-            if any(c['label'] == label for c in confirmed):
+        if outcome.stop == FLEX_DEFERRED:
+            if how[0] == FLEX_DEFERRED:
+                if self.flex_deferrals() >= FLEX_DEFERRALS:
+                    self._finish('stopped', FLEX_DEFERRED)
+                    return False
                 self.state = 'polling'
                 self._write_status()
                 return True
-            self._finish('stopped', SPEND_REFUSED)
+            if how[1]:
+                # A validated prefix published before the Flex 429: advance and keep polling.
+                self.state = 'polling'
+                self._write_status()
+                return True
+        if outcome.stop == SPEND_REFUSED:
+            # Per #1027: blind step halving is removed. Any gate-confirmed close-out publication
+            # already advanced covered_prefix via _end; stop cleanly as SPEND_EXHAUSTED either way.
+            self._finish('stopped', SPEND_EXHAUSTED)
             return False
         if outcome.stop is not None:
             self._finish('stopped', outcome.stop)

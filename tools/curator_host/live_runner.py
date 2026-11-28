@@ -335,15 +335,27 @@ class HygieneSessions:
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_path = shadow._write(self.config_dir/f'{self.config["arm"]}-hygiene.json', self.model_config)
 
-    def __call__(self, read: Reading, label: str) -> Outcome:
+    def min_headroom(self) -> Decimal:
+        return _min_session_headroom(self.prices, self.config['arm'], self.config['host']['max_output_tokens'])
+
+    def pass_cap(self) -> Decimal:
+        """Maximum spend allowed for the next hygiene pass under $0.30/pass and <= 10% cumulative runner spend."""
         hs: HygieneSettings = self.config['hygiene']
         total_spent = counted_spend(self.out)
         total_remaining = self.config['cap'] - total_spent
         hygiene_spent = counted_spend(self.out, lineage=self.LINEAGE)
-        share_remaining = (self.config['cap'] * hs.max_spend_share) - hygiene_spent
-        pass_cap = min(hs.pass_cap_usd, share_remaining, total_remaining)
-        min_headroom = _min_session_headroom(self.prices, self.config['arm'], self.config['host']['max_output_tokens'])
-        if pass_cap <= 0 or pass_cap < min_headroom:
+        max_hygiene_total = min(self.config['cap'] * hs.max_spend_share, total_spent * hs.max_spend_share)
+        share_remaining = max_hygiene_total - hygiene_spent
+        return min(hs.pass_cap_usd, share_remaining, total_remaining)
+
+    def available(self) -> bool:
+        cap = self.pass_cap()
+        return cap > 0 and cap >= self.min_headroom()
+
+    def __call__(self, read: Reading, label: str) -> Outcome:
+        hs: HygieneSettings = self.config['hygiene']
+        pass_cap = self.pass_cap()
+        if pass_cap <= 0 or pass_cap < self.min_headroom():
             return Outcome(state=None, stop=HYGIENE_SUBCAP_EXHAUSTED)
         if self.tools is None:
             try:

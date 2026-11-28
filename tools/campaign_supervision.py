@@ -466,7 +466,7 @@ def main(argv=None) -> int:
     parser.add_argument('--curator-sessions', action='append', default=[], metavar='LABEL=FILE')
     parser.add_argument('--curator-drafts', action='append', default=[], metavar='LABEL=DIR')
     parser.add_argument('--curator-runner', type=Path, default=None, metavar='CONFIG',
-        help='start the curator runner beside the custodian with this curator-runner-config/1 file')
+        help='start the curator runner beside the custodian with this curator-runner-config/2 file')
     options = parser.parse_args(argv)
     result = run_supervised(options.run, runs=options.runs, curator_results=options.curator_results,
                             curator_sessions=options.curator_sessions, curator_drafts=options.curator_drafts,

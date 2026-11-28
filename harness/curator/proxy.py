@@ -419,7 +419,7 @@ class ModelProxy:
             if (status == 200 and actual is not None and error is None and response_error is None and accounting_error is None
                     and settlement_error is None and not breach and usage is not None and isinstance(messages, list)):
                 prompt_tokens = _prompt_tokens(usage)
-                if prompt_tokens is not None:
+                if prompt_tokens is not None and prompt_tokens > 0:
                     self._settled_prefix = (prompt_tokens, [canonical_bytes(message) for message in messages],
                                             _prompt_header(request))
         return charge, breach, settlement_error
